@@ -85,6 +85,18 @@ import type { CrewRoleDb } from '../../types/database'
 /** `bookings.delivery_type`, renamed to Client Pickup by 0113 (Law 17). */
 export type DeliveryType = 'Client Pickup' | 'Babin Delivery' | 'Courier' | 'Third Party'
 
+/**
+ * The same enum as a list, so no screen can offer a mode the column rejects.
+ *
+ * `deliveryTypeFromLabel` below refuses anything outside this set, and this is
+ * what it refuses against — one list, one place, so a picker built from
+ * `DELIVERY_TYPES` and a label that reaches the mapper cannot disagree. The
+ * New Rental page offers these in its Delivery section and inside its add-item
+ * search; `itemCatalogue.DeliveryModeOption` explains why nothing more specific
+ * (a vehicle, a plate, a driver's rate) appears in either.
+ */
+export const DELIVERY_TYPES: readonly DeliveryType[] = ['Client Pickup', 'Babin Delivery', 'Courier', 'Third Party']
+
 /** `booking_lines.line_type`, read live from the enum on 16 Aug 2026. */
 export type BookingLineType = 'Equipment' | 'Bundle' | 'Accessory' | 'Service' | 'Sub-rental' | 'Manual item'
 

@@ -21,7 +21,9 @@
  * - **§26 the fields.** Name, bundle name, SKU, bundle code, serial, brand,
  *   category, tags — and every model *inside* a bundle, so "FX3" finds the
  *   Sony FX3 Documentary Kit.
- * - **§27 tabs.** All | Bundles | Equipment | Services, defaulting to All.
+ * - **§27 tabs.** All | Bundles | Equipment | Services | Crew | Delivery,
+ *   defaulting to All. The last two appear only when the page passed the
+ *   callback that acts on them — see `visibleTabs`.
  * - **§28–30 categories.** Derived from the catalogue, never typed. See
  *   `itemCatalogue.DERIVED_CATEGORIES`.
  * - **§32 availability.** Icon + label + colour on every row, filterable,
@@ -67,6 +69,7 @@ import {
   groupEquipmentResults,
   runQuery,
 } from './itemCatalogue'
+import type { DeliveryType } from '../../../actions/rentals/createRental'
 import type {
   AddBundleResult,
   AvailabilityLevel,
@@ -74,40 +77,46 @@ import type {
   BookingWindow,
   BundleResult,
   CrewMember,
+  CrewResult,
+  DeliveryModeOption,
+  DeliveryResult,
   EquipmentAvailabilitySource,
   EquipmentModelGroup,
   EquipmentResult,
   QueryGroup,
   ResultKind,
   SortKey,
-  TransportOption,
 } from './itemCatalogue'
 
 /* ── Tabs (§27) ────────────────────────────────────────────────────────── */
 
-type TabKey = 'all' | 'bundles' | 'equipment' | 'services' | 'crew' | 'transport'
+type TabKey = 'all' | 'bundles' | 'equipment' | 'services' | 'crew' | 'delivery'
 
 /**
  * Accessories are not a fifth tab. §25 groups them separately in the results
  * but they are equipment, so the Equipment tab shows both and the All tab
  * gives each its own heading.
+ *
+ * `needs` marks the two kinds that exist only where the page gave this panel
+ * something to call. `visibleTabs` drops the tab when that something is
+ * missing, so a kind it cannot act on is never a chip leading to an empty list.
  */
 const TAB_KINDS: Record<TabKey, ReadonlySet<ResultKind>> = {
-  all: new Set<ResultKind>(['bundle', 'equipment', 'accessory', 'service', 'crew', 'transport']),
+  all: new Set<ResultKind>(['bundle', 'equipment', 'accessory', 'service', 'crew', 'delivery']),
   bundles: new Set<ResultKind>(['bundle']),
   equipment: new Set<ResultKind>(['equipment', 'accessory']),
   services: new Set<ResultKind>(['service']),
   crew: new Set<ResultKind>(['crew']),
-  transport: new Set<ResultKind>(['transport']),
+  delivery: new Set<ResultKind>(['delivery']),
 }
 
-const TABS: ReadonlyArray<{ key: TabKey; label: string }> = [
+const TABS: ReadonlyArray<{ key: TabKey; label: string; /** The kind whose absence removes this tab. */ needs?: ResultKind }> = [
   { key: 'all', label: 'All' },
   { key: 'bundles', label: 'Bundles' },
   { key: 'equipment', label: 'Equipment' },
   { key: 'services', label: 'Services' },
-  { key: 'crew', label: 'Crew' },
-  { key: 'transport', label: 'Transport' },
+  { key: 'crew', label: 'Crew', needs: 'crew' },
+  { key: 'delivery', label: 'Delivery', needs: 'delivery' },
 ]
 
 /*
@@ -137,6 +146,8 @@ const AVAILABILITY_FILTERS: ReadonlyArray<{ value: AvailabilityLevel | 'any'; la
 type FlatOption =
   | { type: 'bundle'; groupKind: ResultKind; result: BundleResult; index: number }
   | { type: 'equipmentGroup'; groupKind: ResultKind; group: EquipmentModelGroup; index: number }
+  | { type: 'crew'; groupKind: ResultKind; result: CrewResult; index: number }
+  | { type: 'delivery'; groupKind: ResultKind; result: DeliveryResult; index: number }
 
 /**
  * ⛔ `groupKind` is carried so the list below can be RENDERED from this array
@@ -163,6 +174,14 @@ function flatten(groups: readonly QueryGroup[]): FlatOption[] {
     } else if (g.kind === 'equipment' || g.kind === 'accessory') {
       for (const group of groupEquipmentResults(g.results as EquipmentResult[])) {
         out.push({ type: 'equipmentGroup', groupKind: g.kind, group, index: out.length })
+      }
+    } else if (g.kind === 'crew') {
+      for (const r of g.results) {
+        out.push({ type: 'crew', groupKind: g.kind, result: r as CrewResult, index: out.length })
+      }
+    } else if (g.kind === 'delivery') {
+      for (const r of g.results) {
+        out.push({ type: 'delivery', groupKind: g.kind, result: r as DeliveryResult, index: out.length })
       }
     }
   }
@@ -226,17 +245,47 @@ export interface AddItemPanelProps {
    */
   bundles?: readonly BundleResult[]
   /**
-   * The crew pool to search, from `searchRoster` or the full roster.
+   * The crew pool to search.
    *
-   * Omitted, this panel searches the CREW_ROSTER from data/crew.ts.
+   * **No fallback.** The page already decides which roster it is willing to
+   * show — live from `listCrewMembers()`, or the seed with a warning already on
+   * screen — and this panel searches exactly that list, so the disclosure and
+   * the search can never disagree. Omitted, there is no Crew group and no Crew
+   * tab: twelve invented people are not an acceptable default for a control
+   * that adds a person to a booking.
    */
   crew?: readonly CrewMember[]
+  /** Ids of the people already on this booking — "On booking", never re-added. */
+  existingCrewIds?: readonly string[]
   /**
-   * The transport/delivery pool to search.
-   *
-   * Omitted, this panel searches the default delivery options.
+   * Adds a person to the booking. Receives the roster member's own id; the
+   * page owns the crew line, its rate and its extras. Omitted, the Crew tab and
+   * group disappear rather than render rows that would do nothing.
    */
-  transport?: readonly TransportOption[]
+  onAddCrew?: (crewId: string) => void
+  /**
+   * Money gating for crew day rates — pass the page's crew-money check.
+   *
+   * Separate from `showPrices` because the permissions are separate: booking
+   * lines and `booking_crew_lines` are gated by different rules
+   * (PERMISSIONS.md §3), so one boolean for both would either leak a crew rate
+   * or hide a booking rate. Defaults to `showPrices`.
+   */
+  showCrewRates?: boolean
+  /**
+   * The delivery modes to offer, in the page's own framing — built from
+   * `bookings.delivery_type` plus the charge already on the form. See
+   * `DeliveryModeOption`. Omitted, there is no Delivery group.
+   */
+  deliveryModes?: readonly DeliveryModeOption[]
+  /**
+   * Sets the booking's delivery mode. Receives the stored enum value.
+   *
+   * A different verb from `onAdd`: this sets a field rather than appending a
+   * line, which is why the row says so and why, absent this prop, the Delivery
+   * tab and group do not render at all.
+   */
+  onSetDeliveryMode?: (deliveryType: DeliveryType) => void
   /**
    * The state of the windowed availability read behind `equipment` (NR-09).
    *
@@ -271,7 +320,11 @@ export function AddItemPanel({
   equipment,
   bundles,
   crew,
-  transport,
+  existingCrewIds,
+  onAddCrew,
+  showCrewRates,
+  deliveryModes,
+  onSetDeliveryMode,
   availability: availabilitySource,
   onAdd,
   showPrices = true,
@@ -317,6 +370,32 @@ export function AddItemPanel({
   const triggerRef = useRef<HTMLButtonElement | null>(null)
 
   const existing = useMemo(() => new Set(existingLineIds), [existingLineIds])
+  const existingCrew = useMemo(() => new Set(existingCrewIds), [existingCrewIds])
+
+  /*
+   * §25's last two kinds exist only where the page can act on them.
+   *
+   * Crew and delivery are not equipment: choosing one does not append a
+   * `BookingLineDraft`, it calls the page. A kind with no callback behind it is a
+   * group heading over an empty list — rows that render, take a cursor slot,
+   * inflate "Show all N results" and then do nothing on Enter. So the kind is
+   * dropped from the query instead, `visibleTabs` takes its tab with it, and
+   * neither is ever on screen.
+   */
+  const visibleTabs = useMemo(
+    () => TABS.filter((t) => !t.needs || (t.needs === 'crew' ? Boolean(onAddCrew) : Boolean(onSetDeliveryMode))),
+    [onAddCrew, onSetDeliveryMode],
+  )
+  /** The tab actually in force — a tab that lost its callback falls back to All. */
+  const tabKey: TabKey = visibleTabs.some((t) => t.key === tab) ? tab : 'all'
+  const activeKinds = useMemo(() => {
+    const kinds = new Set(TAB_KINDS[tabKey])
+    if (!onAddCrew) kinds.delete('crew')
+    if (!onSetDeliveryMode) kinds.delete('delivery')
+    return kinds
+  }, [tabKey, onAddCrew, onSetDeliveryMode])
+  /** Crew day rates fall back to the booking gate unless the page says otherwise. */
+  const showCrewPrices = showCrewRates ?? showPrices
 
   const submitScan = async () => {
     const code = scanCode.trim()
@@ -343,18 +422,23 @@ export function AddItemPanel({
     () =>
       runQuery(bookingWindow, {
         query,
-        kinds: TAB_KINDS[tab],
+        kinds: activeKinds,
         category,
         availability: availability === 'any' ? null : availability,
         sort,
         minQueryChars,
-        existingLineIds: existing,
+        // Crew ids join the same set: both mean "already on this booking", the
+        // recommended sort pushes them down for either, and the namespaces
+        // cannot collide — equipment ids are `products.id`, crew ids are
+        // `crew_members.id`. Bundles read this set to skip a component already
+        // on the booking, and a crew id can never name a component.
+        existingLineIds: new Set([...existing, ...existingCrew]),
         ...(equipment ? { equipment } : {}),
         ...(bundles ? { bundles } : {}),
         ...(crew ? { crew } : {}),
-        ...(transport ? { transport } : {}),
+        ...(deliveryModes ? { deliveryModes } : {}),
       }),
-    [bookingWindow, query, tab, category, availability, sort, minQueryChars, existing, equipment, bundles, crew, transport],
+    [bookingWindow, query, activeKinds, category, availability, sort, minQueryChars, existing, existingCrew, equipment, bundles, crew, deliveryModes],
   )
 
   const previewResults = query.trim() === '' && category === null && availability === 'any' && !showAllResults
@@ -444,6 +528,32 @@ export function AddItemPanel({
     [bookingWindow, days, existing, includeCrewAndVehicle, applyBundleSaving, onAdd],
   )
 
+  /**
+   * §25's crew row. Adds the person and nothing else — the page's `addCrew`
+   * owns the crew line, its rate and its extras, and it already refuses a
+   * person who is already on the booking. The row says so first, so a refusal
+   * is never the answer to a tap the operator made.
+   */
+  const addCrewMember = useCallback(
+    (c: CrewResult) => {
+      if (!onAddCrew || existingCrew.has(c.id) || c.availability.level === 'unavailable') return
+      onAddCrew(c.id)
+    },
+    [onAddCrew, existingCrew],
+  )
+
+  /**
+   * §25's delivery row. Sets the mode on the form; it adds no line and it prices
+   * nothing — the delivery charge stays the Delivery section's own field, the
+   * only place §67 lets it be set.
+   */
+  const chooseDeliveryMode = useCallback(
+    (d: DeliveryResult) => {
+      onSetDeliveryMode?.(d.deliveryType)
+    },
+    [onSetDeliveryMode],
+  )
+
   /* ── Keyboard ───────────────────────────────────────────────────────── */
 
   function onKeyDown(e: ReactKeyboardEvent<HTMLInputElement>) {
@@ -481,6 +591,8 @@ export function AddItemPanel({
         // redesign v1 §2 — Enter on a model row is the keyboard equivalent of
         // tapping the model name: auto-pick the least-used free unit.
         if (opt.type === 'bundle') addBundle(opt.result)
+        else if (opt.type === 'crew') addCrewMember(opt.result)
+        else if (opt.type === 'delivery') chooseDeliveryMode(opt.result)
         else if (opt.group.autoPick) addEquipment(opt.group.autoPick)
         return
       }
@@ -781,8 +893,8 @@ export function AddItemPanel({
           <div style={{ padding: 10, borderBottom: '1px solid var(--border)', display: 'grid', gap: 9 }}>
             {/* ── Tabs (§27) ─────────────────────────────────────────── */}
             <div role="tablist" aria-label="Catalogue type" style={{ display: 'flex', gap: 'var(--sp-xs)', flexWrap: 'wrap' }}>
-              {TABS.map((t) => {
-                const on = tab === t.key
+              {visibleTabs.map((t) => {
+                const on = tabKey === t.key
                 return (
                   <button
                     key={t.key}
@@ -997,23 +1109,53 @@ export function AddItemPanel({
                           no second grouping pass can disagree with it. */}
                       {options
                         .filter((o) => o.groupKind === g.kind)
-                        .map((o) =>
-                          o.type === 'bundle' ? (
-                            <BundleRow
-                              key={o.result.id}
-                              id={`${listboxId}-opt-${o.index}`}
-                              result={o.result}
-                              active={o.index === activeIndex}
-                              showPrices={showPrices}
-                              onHover={() => setActiveIndex(o.index)}
-                              onAdd={() => addBundle(o.result)}
-                              onView={() => setPreview(o.result.record)}
-                            />
-                          ) : (
-                            // redesign v1 §2 — one row per model, one chip per unit.
-                            // NR-21 — keyed on the group's own identity (a
-                            // product uuid live, the model name in seed), never
-                            // on the display name two products can share.
+                        .map((o) => {
+                          if (o.type === 'bundle') {
+                            return (
+                              <BundleRow
+                                key={o.result.id}
+                                id={`${listboxId}-opt-${o.index}`}
+                                result={o.result}
+                                active={o.index === activeIndex}
+                                showPrices={showPrices}
+                                onHover={() => setActiveIndex(o.index)}
+                                onAdd={() => addBundle(o.result)}
+                                onView={() => setPreview(o.result.record)}
+                              />
+                            )
+                          }
+                          if (o.type === 'crew') {
+                            return (
+                              <CrewRow
+                                key={o.result.id}
+                                id={`${listboxId}-opt-${o.index}`}
+                                result={o.result}
+                                active={o.index === activeIndex}
+                                onBooking={existingCrew.has(o.result.id)}
+                                showRate={showCrewPrices}
+                                onHover={() => setActiveIndex(o.index)}
+                                onAdd={() => addCrewMember(o.result)}
+                              />
+                            )
+                          }
+                          if (o.type === 'delivery') {
+                            return (
+                              <DeliveryRow
+                                key={o.result.id}
+                                id={`${listboxId}-opt-${o.index}`}
+                                result={o.result}
+                                active={o.index === activeIndex}
+                                showCharge={showPrices}
+                                onHover={() => setActiveIndex(o.index)}
+                                onChoose={() => chooseDeliveryMode(o.result)}
+                              />
+                            )
+                          }
+                          // redesign v1 §2 — one row per model, one chip per unit.
+                          // NR-21 — keyed on the group's own identity (a
+                          // product uuid live, the model name in seed), never
+                          // on the display name two products can share.
+                          return (
                             <EquipmentGroupRow
                               key={o.group.key}
                               id={`${listboxId}-opt-${o.index}`}
@@ -1027,8 +1169,8 @@ export function AddItemPanel({
                               onPickUnit={(unit) => addEquipment(unit)}
                               onRequestOverride={(unit) => setOverrideUnit(unit)}
                             />
-                          ),
-                        )}
+                          )
+                        })}
                     </ul>
                   )}
                 </li>
@@ -1041,7 +1183,7 @@ export function AddItemPanel({
               </button>
             )}
 
-            {options.length === 0 && tab !== 'services' && (
+            {options.length === 0 && tabKey !== 'services' && (
               <EmptyResults
                 query={query}
                 searching={outcome.searching}
@@ -1052,7 +1194,7 @@ export function AddItemPanel({
                   setAvailability('any')
                 }}
                 onSearchAll={() => setTab('all')}
-                tab={tab}
+                tab={tabKey}
               />
             )}
           </div>
@@ -1128,6 +1270,237 @@ export function AddItemPanel({
 }
 
 /* ── Rows ──────────────────────────────────────────────────────────────── */
+
+/**
+ * §25's crew row — one person, one action.
+ *
+ * The day rate sits behind its own gate rather than `showPrices`: booking lines
+ * and `booking_crew_lines` are different money surfaces (PERMISSIONS.md §3), so
+ * the page passes two decisions and this row honours its own.
+ *
+ * "On booking" is a word and a glyph, and the row stops being a target: the
+ * page's `addCrew` refuses a person already on the booking, and a silent refusal
+ * is worse than a row that says it cannot be added.
+ */
+function CrewRow({
+  id,
+  result,
+  active,
+  onBooking,
+  showRate,
+  onHover,
+  onAdd,
+}: {
+  id: string
+  result: CrewResult
+  active: boolean
+  onBooking: boolean
+  showRate: boolean
+  onHover: () => void
+  onAdd: () => void
+}) {
+  const addable = !onBooking && result.availability.level !== 'unavailable'
+  const charge = showRate ? `${formatMoney(result.dayRatePaisa)} per day. ` : ''
+  return (
+    <li
+      id={id}
+      role="option"
+      aria-selected={active}
+      aria-label={`${result.name}. Crew, ${result.role}. ${result.availability.label} — ${result.availability.detail}. ${charge}${
+        onBooking
+          ? 'Already on this booking.'
+          : addable
+            ? 'Press Enter to add this person to the booking.'
+            : 'Cannot be added to this booking.'
+      }`}
+      onMouseMove={onHover}
+      onClick={() => {
+        if (addable) onAdd()
+      }}
+      style={{
+        display: 'grid',
+        gap: 'var(--sp-xs)',
+        minHeight: TOUCH,
+        padding: '9px 10px',
+        borderRadius: 'var(--r-btn)',
+        cursor: addable ? 'pointer' : 'default',
+        background: active ? 'var(--hover-row)' : 'transparent',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', minWidth: 0 }}>
+        <span style={{ display: 'inline-flex', flexShrink: 0, color: 'var(--text2)' }}>
+          <Icon name="person" size={15} />
+        </span>
+        <span
+          style={{
+            fontSize: 'var(--t-ui)',
+            fontWeight: 600,
+            color: 'var(--text)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {result.name}
+        </span>
+        {onBooking ? (
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              flexShrink: 0,
+              padding: '2px 8px',
+              borderRadius: 'var(--r-badge)',
+              border: '1px solid var(--border)',
+              background: 'var(--card2)',
+              color: 'var(--text2)',
+              fontSize: 'var(--t-meta)',
+              fontWeight: 700,
+            }}
+          >
+            <Icon name="check" size={12} />
+            On booking
+          </span>
+        ) : (
+          <span style={{ flexShrink: 0 }}>
+            <AvailabilityChip verdict={result.availability} />
+          </span>
+        )}
+        {showRate && addable && (
+          <span
+            className="figure"
+            style={{ marginLeft: 'auto', flexShrink: 0, fontSize: 'var(--t-ui)', fontWeight: 700, color: 'var(--text)' }}
+          >
+            {formatMoney(result.dayRatePaisa)}
+            <span style={{ fontSize: 'var(--t-meta)', fontWeight: 500, color: 'var(--text2)' }}> / day</span>
+          </span>
+        )}
+      </div>
+
+      <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+        Crew · {result.role} · <span className="identifier">{result.phone}</span>
+      </div>
+
+      {!addable && (
+        <div style={{ fontSize: 'var(--t-meta)', color: 'var(--danger-text)', fontWeight: 600 }}>
+          {onBooking ? 'Already on this booking.' : result.availability.detail}
+        </div>
+      )}
+    </li>
+  )
+}
+
+/**
+ * §25's delivery row — one member of `bookings.delivery_type`.
+ *
+ * The one row in this panel that does not add a line, and it says so in its own
+ * line and in its accessible name: Enter inside an *add item* search is
+ * otherwise read as "adds to the booking". It sets a field the booking already
+ * has and it prices nothing.
+ */
+function DeliveryRow({
+  id,
+  result,
+  active,
+  showCharge,
+  onHover,
+  onChoose,
+}: {
+  id: string
+  result: DeliveryResult
+  active: boolean
+  showCharge: boolean
+  onHover: () => void
+  onChoose: () => void
+}) {
+  const charge = showCharge
+    ? result.chargePaisa === null
+      ? 'No delivery charge set on this booking yet.'
+      : `${formatMoney(result.chargePaisa)} delivery charge on this booking. `
+    : ''
+  return (
+    <li
+      id={id}
+      role="option"
+      aria-selected={active}
+      aria-label={`${result.name}. Delivery mode. ${result.availability.detail}. ${charge}${
+        result.selected
+          ? 'This is the current mode.'
+          : 'Press Enter to set this booking\u2019s delivery mode.'
+      }`}
+      onMouseMove={onHover}
+      onClick={onChoose}
+      style={{
+        display: 'grid',
+        gap: 'var(--sp-xs)',
+        minHeight: TOUCH,
+        padding: '9px 10px',
+        borderRadius: 'var(--r-btn)',
+        cursor: 'pointer',
+        background: active ? 'var(--hover-row)' : 'transparent',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', minWidth: 0 }}>
+        <span style={{ display: 'inline-flex', flexShrink: 0, color: 'var(--text2)' }}>
+          <Icon name="truck" size={15} />
+        </span>
+        <span
+          style={{
+            fontSize: 'var(--t-ui)',
+            fontWeight: 600,
+            color: 'var(--text)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {result.name}
+        </span>
+        {result.selected && (
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              flexShrink: 0,
+              padding: '2px 8px',
+              borderRadius: 'var(--r-badge)',
+              border: '1px solid var(--border)',
+              background: 'var(--card2)',
+              color: 'var(--text2)',
+              fontSize: 'var(--t-meta)',
+              fontWeight: 700,
+            }}
+          >
+            <Icon name="check" size={12} />
+            Current
+          </span>
+        )}
+        {showCharge && (
+          <span
+            className="figure"
+            style={{
+              marginLeft: 'auto',
+              flexShrink: 0,
+              fontSize: 'var(--t-ui)',
+              fontWeight: 700,
+              color: result.chargePaisa === null ? 'var(--text2)' : 'var(--text)',
+            }}
+          >
+            {result.chargePaisa === null ? 'No charge set' : formatMoney(result.chargePaisa)}
+          </span>
+        )}
+      </div>
+
+      <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>{result.availability.detail}</div>
+
+      <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+        Sets this booking\u2019s delivery mode — it does not add a line.
+      </div>
+    </li>
+  )
+}
 
 /**
  * §31 — name, "Bundle · Category · N Items", price/day, availability, the

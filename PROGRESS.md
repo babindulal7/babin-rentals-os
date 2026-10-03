@@ -1,5 +1,52 @@
 # Progress Log
 
+## 2026-10-03 (h) — §25 unified search: crew and delivery are now real answers, not dead rows
+
+**Did**
+- `itemCatalogue.ts`: replaced the invented transport pool with the real one. Deleted `TransportOption`, `TransportResult`, `defaultTransportOptions` — which returned a hard-coded `Rs 5,000` "Babin Delivery" rate and ignored its own `_w` window argument — and replaced them with `DeliveryModeOption` / `DeliveryResult` over `bookings.delivery_type`, the enum the database actually enforces. `ResultKind`'s `transport` became `delivery`, matching the column and the page's own section title.
+- Removed the `CREW_ROSTER` seed fallback from `runQuery`. `data/crew.ts` holds twelve invented people with invented phone numbers and invented day rates; a crew row added from that pool books somebody who does not exist. Omitted `crew` or `deliveryModes` now yields no group at all rather than a plausible-looking one.
+- `crewToResult` no longer presents a roster state as a windowed availability answer. `listCrewMembers` derives `state` from `deactivated_at` alone, so `Available` means *free on today's roster*; every row now carries "These dates are not checked" in its own detail text.
+- Added `priceOf` / `byPrice`. Price sort previously required `ratePaisa` on both sides and silently fell through to name order for anything else, so crew day rates and delivery charges were unorderable.
+- `AddItemPanel.tsx`: `CrewRow` and `DeliveryRow`; `flatten()` now emits both, so they take cursor slots and count toward "Show all N results" instead of rendering a heading over an empty list. The Crew and Delivery **tabs and groups are removed entirely when the page passed no `onAddCrew` / `onSetDeliveryMode`** — a kind the panel cannot act on is never drawn. Added a separate `showCrewRates` gate because booking lines and `booking_crew_lines` are different money surfaces under Law 6.
+- `createRental.ts`: exported `DELIVERY_TYPES` next to `DeliveryType`, so a picker and the mapper cannot drift.
+- `NewRental.tsx`: wired `crew`, `existingCrewIds`, `onAddCrew`, `showCrewRates`, `deliveryModes`, `onSetDeliveryMode`. Extracted `rosterPool` so Section 3's `CrewSearch` and §25's Crew group read one list instead of two independent expressions that could disagree. Both callbacks are `useCallback` because the panel keys its query memo on them.
+
+**Ruled**
+- **A transport row sets a field; it does not add a line.** There is no vehicle table in this build — `booking_transport` stores vehicle, plate and driver as free text and nothing reads a fleet — so a row with a plate and a rate would be invented data wearing a booking UI. The row says "Sets this booking's delivery mode" in its own line and in its accessible name.
+- **A kind with no callback behind it does not ship.** The previous commit added Crew and Transport tabs that rendered, took a cursor slot, inflated the result count, and then did nothing on Enter. A tab whose verb the page cannot perform is removed from the panel, not merely disabled.
+- `DELIVERY_MEANING` names where the delivery charge is set (the Delivery section) rather than the panel setting it: §67 keeps pricing where it is, and the panel prices nothing.
+- Delivery charge is `null` = "not set yet" for any non-pickup mode with nothing typed, not `Rs 0`. Client Pickup is genuinely `Rs 0` (§9.2) and says so.
+
+**Verified**
+- `npm run typecheck`: PASS, 0 errors.
+- `npm run lint`: PASS, 0 warnings.
+- `npm test`: PASS, 3895/3895 across 283 files.
+- `npm run check:pglite`: PASS, 151/151 applied, 0 failed, 30 views checked (0 readable by anon), 21 functions checked (0 unauthorized).
+- `npm run check:lifecycle`: PASS, 24/24 green, 0 failed.
+- `npm run check:contrast`: PASS, 54/54 WCAG AA.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 51 / 51 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 50 | 48 · 2 · 0 · 0 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 41 / 41 (100%) | +0 |
+| Lifecycle | steps green / total | 24 / 24 (100%) | +0 |
+| Overall | mean of five | ≈ 100% | +0 |
+Migrations 151 files · check:pglite 151/151 applied, 0 failed. Suite: 3895/3895 passed (283 files).
+Gates read from .lifecycle-result.json, written 2026-10-03T09:01:00.377Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live database application and production verification for pending migrations (following corrected `BACKUP_PROTOCOL.md` and `docs/live/APPLY_PLAN_2026-10-03.md`).
+- Babin's decision on `docs/OPEN_DECISIONS.md` §7 (staff roster read scope).
+- Address remaining open audit items (C1, C4, C7).
+- Fix fabricated fallbacks in `src/lib/queries/crew.ts`:185,187 (phone `+977 980-0000000`, day rate `Rs 12,000`) — these flow into `seedCrewLine` and onto bookings.
+- Latent unsoundness in `NewRental.tsx`: `deliveryType` state is the 2-member union (`Client Pickup` | `Babin Delivery`) but loads from `data.deliveryType` (4-member DB enum); if a stored row is Courier/Third Party, state/type diverge.
+
+- `npm run build`: PASS, bundle and PWA service worker generated.
+
 ## 2026-10-03 (g) — Audit finding C2: Decompose NewRental.tsx (reduced by 1,436 lines) into modular domain subcomponents
 
 **Did**

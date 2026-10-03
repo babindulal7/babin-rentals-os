@@ -55,14 +55,18 @@ import { BOX_CATEGORIES, INVENTORY_MODELS, type InventoryModel } from '../../../
 import { ACTIVE_BUNDLES, ALL_CATEGORIES, factsOf, isPriced, type BundleFacts, type BundleLine, type BundleRecord } from '../../../lib/queries/bundles'
 import { bundlesUsing } from '../../../lib/queries/addEquipment'
 import { CATEGORY_OPTIONS, PARENTS, type InvStatus, type ParentRow } from '../../../lib/queries/inventory'
-import { CREW_ROSTER, type CrewMember } from '../../../lib/queries/crew'
+import type { CrewMember } from '../../../lib/queries/crew'
 import type { Paisa } from '../../../lib/money'
 /* Type-only, so this module keeps importing nothing that touches IO. */
 import type { ProductWindowAvailability } from '../../../lib/queries/productAvailability'
 import type { StatusKey } from '../../../lib/status'
 import type { IconName } from '../../../components/ui/Icon'
+/* `bookings.delivery_type` is a schema fact, so it is declared next to the
+   action that maps it and only borrowed as a type here — a screen that offers
+   the modes imports `DELIVERY_TYPES` from there, never a second list. */
+import type { DeliveryType } from '../../../actions/rentals/createRental'
 
-export { CREW_ROSTER, type CrewMember } from '../../../lib/queries/crew'
+export type { CrewMember } from '../../../lib/queries/crew'
 
 /* ── The draft a result hands back to the page ─────────────────────────── */
 
@@ -216,10 +220,14 @@ function overlaps(window: { from: number; to: number }, startAd: Date, endAd: Da
  * `equipment` catalogue filtered by the categories the system already calls
  * accessories, so nothing is duplicated and nothing is invented.
  * 
- * Crew and Transport are new kinds that unify the search across all
- * bookable items and people (Equipment, Bundles, Services, Crew, Transport).
+ * `crew` and `delivery` extend one query to the two things a booking needs that
+ * are not equipment: the people (`booking_crew_lines`) and how the gear gets
+ * there (`bookings.delivery_type`). Neither fabricates a pool — `runQuery`
+ * returns no crew group without a roster the caller passed, and no delivery
+ * group without the modes the caller framed, which is why AddItemPanel drops
+ * each kind when the page gave it no way to act on that kind.
  */
-export type ResultKind = 'bundle' | 'equipment' | 'accessory' | 'service' | 'crew' | 'transport'
+export type ResultKind = 'bundle' | 'equipment' | 'accessory' | 'service' | 'crew' | 'delivery'
 
 export interface EquipmentResult {
   kind: 'equipment' | 'accessory'
@@ -869,13 +877,21 @@ export const DERIVED_CATEGORIES: readonly string[] = Array.from(
   ]),
 ).sort((a, b) => a.localeCompare(b))
 
-/** True when a result belongs to `category` — a bundle counts if any line does. */
+/**
+ * True when a result belongs to `category` — a bundle counts if any line does.
+ *
+ * Crew and delivery answer `false` for every category, because neither has one:
+ * a person and a delivery mode are not stock, and `DERIVED_CATEGORIES` is
+ * derived from equipment and bundles so no category is invented to hold them.
+ * A category filter therefore narrows equipment and bundles only, which is why
+ * the panel labels that filter as applying to stock.
+ */
 export function inCategory(r: CatalogueResult, category: string): boolean {
   if (r.kind === 'bundle') {
     return r.category === category || r.record.lines.some((l) => l.group === category)
   }
-  if (r.kind === 'crew' || r.kind === 'transport') {
-    return false // Crew and Transport don't have categories
+  if (r.kind === 'crew' || r.kind === 'delivery') {
+    return false
   }
   return r.category === category
 }
@@ -891,13 +907,13 @@ export function inCategory(r: CatalogueResult, category: string): boolean {
  * the data layer's, not the tab's.
  *
  * TODO(decision) — PLAN.md §4: services (operator day, drone pilot, delivery,
- * data wrangling) are charged today but have no catalogue. Crew is priced
- * through `data/crew.ts` in Section 3 and transport through Section 3's
- * delivery/fuel fields, so a service catalogue must be defined against those
- * two rather than beside them.
+ * data wrangling) are charged today but have no catalogue. Crew and delivery are
+ * both reachable from this search (§25's last two groups) and are priced in the
+ * page's own Crew and Delivery fields, so a service catalogue must be defined
+ * against those two rather than beside them.
  */
 export const SERVICES_UNAVAILABLE_REASON =
-  'No service catalogue exists yet. Crew is added in Section 3 (Crew & Transport) and delivery and fuel are charged there too — nothing is lost, but a searchable service list needs a catalogue this build does not have.'
+  'No service catalogue exists yet. Crew and delivery are searchable above and are priced in the booking\u2019s own Crew and Delivery fields \u2014 nothing is lost, but a searchable service list needs a catalogue this build does not have.'
 
 /* ── Sort (§35) ────────────────────────────────────────────────────────── */
 
@@ -981,15 +997,24 @@ export interface QueryOptions {
   /**
    * The crew pool to search.
    *
-   * Omitted, it falls back to the CREW_ROSTER from data/crew.ts.
+   * **No fallback.** Unlike `equipment` and `bundles` this pool has no seed
+   * worth searching silently: `CREW_ROSTER` in `data/crew.ts` is an array
+   * literal of twelve invented people, their invented phone numbers and their
+   * invented day rates, and a crew row added from it books somebody who does not
+   * exist. A caller that wants crew in its results must pass the roster it
+   * already holds — `listCrewMembers()`, whose own seed fallback it has
+   * already disclosed on screen. Omitted, there is no Crew group.
    */
   crew?: readonly CrewMember[]
   /**
-   * The transport/delivery pool to search.
+   * The delivery modes to search, as the caller frames them.
    *
-   * Omitted, it falls back to the default delivery options.
+   * **No fallback and no invented rate.** There is no vehicle table to read, so
+   * the only real delivery data is `bookings.delivery_type` plus whatever charge
+   * the caller already holds — which is why this is a list the caller builds
+   * rather than one this module derives. Omitted, there is no Delivery group.
    */
-  transport?: readonly TransportOption[]
+  deliveryModes?: readonly DeliveryModeOption[]
 }
 
 export interface QueryGroup {
@@ -1013,30 +1038,29 @@ const GROUP_ORDER: ReadonlyArray<{ kind: ResultKind; heading: string }> = [
   { kind: 'accessory', heading: 'Accessories' },
   { kind: 'service', heading: 'Services' },
   { kind: 'crew', heading: 'Crew' },
-  { kind: 'transport', heading: 'Transport' },
+  { kind: 'delivery', heading: 'Delivery' },
 ]
 
-/**
- * Transport option for the catalogue — maps to a delivery method option.
- */
-export interface TransportOption {
-  id: string
-  name: string
-  type: 'Client Pickup' | 'Babin Delivery'
-  vehicle?: string
-  numberPlate?: string
-  driverName?: string
-  ratePaisa: Paisa
-}
+/* ── Crew and delivery (§25's last two groups) ──────────────────────────── */
 
 /**
- * Crew search result — maps a roster member to the catalogue shape.
+ * Crew search result — one person off the roster the caller passed.
+ *
+ * **The roster state is not a windowed availability read.** `listCrewMembers`
+ * selects `id, full_name, position, phone, day_rate, deactivated_at` and derives
+ * `state` from `deactivated_at` alone, so `Available` means *free on today's
+ * roster*, not *free for the dates this booking runs*. Every row therefore
+ * carries that caveat in its `availability.detail`, so the chip is never the
+ * only place the distinction is made, and `level` answers "may this person be
+ * offered at all" — a roster question, not a calendar one.
  */
 export interface CrewResult {
   kind: 'crew'
   id: string
   name: string
+  /** `CrewRole` as a string — §26 makes the role searchable. */
   role: string
+  /** `RosterState` verbatim, so the row says it in the roster's own words. */
   state: string
   phone: string
   dayRatePaisa: Paisa
@@ -1045,37 +1069,59 @@ export interface CrewResult {
 }
 
 /**
- * Transport/Delivery search result — maps a delivery option to the catalogue shape.
+ * A delivery mode the caller offers.
+ *
+ * **There is no vehicle catalogue in this build, and this type does not invent
+ * one.** `booking_transport` stores `vehicle`, `number_plate` and `driver` as
+ * free text and nothing in the app reads a fleet, so a transport row carrying a
+ * plate and a rate would be made-up data wearing a booking UI — the same defect
+ * `SERVICES_UNAVAILABLE_REASON` names for services. What *is* real is
+ * `bookings.delivery_type`, an enum the database enforces, so that is what a
+ * delivery row is: choosing one sets the mode. The charge shown is the one
+ * already on the booking form, or `null` for "none set" — never a default.
  */
-export interface TransportResult {
-  kind: 'transport'
+export interface DeliveryModeOption {
+  /** `bookings.delivery_type`. The stored value is also its own label. */
+  deliveryType: DeliveryType
+  /** The delivery charge already on the form, paisa. `null` = none set. */
+  chargePaisa: Paisa | null
+  /** True when this is the form's current mode — the row says so in words. */
+  selected: boolean
+}
+
+/** A delivery mode as a search result — same shape as every other row. */
+export interface DeliveryResult {
+  kind: 'delivery'
+  /** The stored enum value, which is the row's id. */
   id: string
   name: string
-  type: 'Client Pickup' | 'Babin Delivery'
-  vehicle?: string
-  numberPlate?: string
-  driverName?: string
-  ratePaisa: Paisa
+  deliveryType: DeliveryType
+  chargePaisa: Paisa | null
+  selected: boolean
   availability: AvailabilityVerdict
   haystack: readonly string[]
 }
 
 /**
- * Default transport options for a booking window.
- * In a live build this would query vehicle/driver availability.
+ * What picking each mode *means*, one sentence per mode, shown on the row so
+ * nothing about the choice is silent. The three modes Babin charges for name
+ * where the charge is set, because this panel does not set it — the form's
+ * Delivery section does, and §67 keeps it there.
  */
-function defaultTransportOptions(_w: BookingWindow): TransportOption[] {
-  return [
-    { id: 'pickup', name: 'Client Pickup', type: 'Client Pickup', ratePaisa: 0 as Paisa },
-    { id: 'delivery', name: 'Babin Delivery', type: 'Babin Delivery', ratePaisa: 500000 as Paisa }, // Rs 5,000 base
-  ]
+const DELIVERY_MEANING: Record<DeliveryType, string> = {
+  'Client Pickup': 'The client collects from Babin. No delivery charge.',
+  'Babin Delivery': 'Babin delivers and collects. Set the delivery charge in Delivery.',
+  Courier: 'A courier carries the gear. Set the delivery charge in Delivery.',
+  'Third Party': 'A third party moves the gear. Set the delivery charge in Delivery.',
 }
 
 /**
- * Maps a CrewMember to a CrewResult for the unified catalogue.
+ * Maps a roster member to a catalogue row. No default rate: `dayRatePaisa` is
+ * the person's own, and a crew row added at a made-up rate is the same defect
+ * `addBundleToBooking` refuses for bundles.
  */
 function crewToResult(m: CrewMember): CrewResult {
-  const available = m.state === 'Available' ? 'available' : 'unavailable'
+  const free = m.state === 'Available'
   return {
     kind: 'crew',
     id: m.id,
@@ -1083,43 +1129,55 @@ function crewToResult(m: CrewMember): CrewResult {
     role: m.role,
     state: m.state,
     phone: m.phone,
-    dayRatePaisa: m.dayRatePaisa ?? 0,
-    availability: verdict(available, m.state === 'Available' ? 'Available for work' : `${m.state} — not available`),
-    haystack: [
-      m.name.toLowerCase(),
-      m.role.toLowerCase(),
-      m.phone,
-      m.state.toLowerCase(),
-    ],
+    dayRatePaisa: m.dayRatePaisa,
+    availability: verdict(
+      free ? 'available' : 'unavailable',
+      free ? 'Free on the roster. These dates are not checked.' : `${m.state} — cannot be added to a booking.`,
+    ),
+    haystack: [m.name.toLowerCase(), m.role.toLowerCase(), m.phone.toLowerCase(), m.state.toLowerCase()],
   }
 }
 
-/**
- * Maps a TransportOption to a TransportResult for the unified catalogue.
- */
-function transportToResult(t: TransportOption): TransportResult {
-  const haystack: readonly string[] = [
-    t.name.toLowerCase(),
-    t.type.toLowerCase(),
-    t.vehicle?.toLowerCase() ?? '',
-    t.numberPlate?.toLowerCase() ?? '',
-    t.driverName?.toLowerCase() ?? '',
-  ]
+/** Maps a delivery mode to a catalogue row. Availability is "can be chosen". */
+function deliveryToResult(o: DeliveryModeOption): DeliveryResult {
+  const meaning = DELIVERY_MEANING[o.deliveryType]
   return {
-    kind: 'transport',
-    id: t.id,
-    name: t.name,
-    type: t.type,
-    vehicle: t.vehicle ?? undefined,
-    numberPlate: t.numberPlate ?? undefined,
-    driverName: t.driverName ?? undefined,
-    ratePaisa: t.ratePaisa,
-    availability: verdict(t.ratePaisa === 0 ? 'available' : 'available', t.type === 'Client Pickup' ? 'Client collects equipment' : 'Babin delivers to location'),
-    haystack,
-  } as TransportResult
+    kind: 'delivery',
+    id: o.deliveryType,
+    name: o.deliveryType,
+    deliveryType: o.deliveryType,
+    chargePaisa: o.chargePaisa,
+    selected: o.selected,
+    availability: verdict('available', meaning),
+    haystack: [o.deliveryType.toLowerCase(), meaning.toLowerCase()],
+  }
 }
 
-export type CatalogueResult = EquipmentResult | BundleResult | CrewResult | TransportResult
+export type CatalogueResult = EquipmentResult | BundleResult | CrewResult | DeliveryResult
+
+/**
+ * The one figure a price sort may order by, paisa. `null` means the row has no
+ * rate of its own — the comparator then falls back to name order rather than
+ * reading it as zero, which would rank every unpriced row above everything.
+ */
+function priceOf(r: CatalogueResult): Paisa | null {
+  switch (r.kind) {
+    case 'crew':
+      return r.dayRatePaisa
+    case 'delivery':
+      return r.chargePaisa
+    default:
+      return r.ratePaisa
+  }
+}
+
+/** Price order, paisa, falling back to name when either side has no rate. */
+function byPrice(a: CatalogueResult, b: CatalogueResult, direction: 1 | -1): number {
+  const pa = priceOf(a)
+  const pb = priceOf(b)
+  if (pa === null || pb === null) return a.name.localeCompare(b.name)
+  return direction * (pa - pb) || a.name.localeCompare(b.name)
+}
 
 /**
  * One query over the whole catalogue (§25). The operator never picks a type
@@ -1133,8 +1191,8 @@ export function runQuery(w: BookingWindow, o: QueryOptions): QueryOutcome {
   const pool: CatalogueResult[] = [
     ...(o.kinds.has('bundle') ? (o.bundles ?? bundleResults(w)) : []),
     ...(o.equipment ?? EQUIPMENT_RESULTS).filter((e) => o.kinds.has(e.kind)),
-    ...(o.kinds.has('crew') ? (o.crew ?? CREW_ROSTER).map(crewToResult) : []),
-    ...(o.kinds.has('transport') ? (o.transport ?? defaultTransportOptions(w)).map(transportToResult) : []),
+    ...(o.kinds.has('crew') ? (o.crew ?? []).map(crewToResult) : []),
+    ...(o.kinds.has('delivery') ? (o.deliveryModes ?? []).map(deliveryToResult) : []),
   ]
 
   const category = o.category
@@ -1150,9 +1208,9 @@ export function runQuery(w: BookingWindow, o: QueryOptions): QueryOutcome {
       case 'name':
         return a.name.localeCompare(b.name) || a.id.localeCompare(b.id)
       case 'price-asc':
-        return ('ratePaisa' in a && 'ratePaisa' in b) ? a.ratePaisa - b.ratePaisa || a.name.localeCompare(b.name) : a.name.localeCompare(b.name)
+        return byPrice(a, b, 1)
       case 'price-desc':
-        return ('ratePaisa' in a && 'ratePaisa' in b) ? b.ratePaisa - a.ratePaisa || a.name.localeCompare(b.name) : a.name.localeCompare(b.name)
+        return byPrice(a, b, -1)
       default: {
         // Recommended — what you can actually book first, then closest match.
         const onBooking = Number(o.existingLineIds.has(a.id)) - Number(o.existingLineIds.has(b.id))

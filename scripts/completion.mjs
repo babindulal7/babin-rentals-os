@@ -283,12 +283,17 @@ if (wantMigrations) {
 
 let testResult = 'not run this session'
 if (wantTests) {
+  // Invoke vitest directly via node — no shell, no `.cmd` spawn issues,
+  // no deprecation warning. vitest's ESM entry point is `vitest.mjs`.
+  const vitestBin = join(ROOT, 'node_modules', 'vitest', 'vitest.mjs')
   try {
-    execFileSync('npx', ['vitest', 'run', '--reporter=dot'], { cwd: ROOT, encoding: 'utf8', stdio: 'pipe' })
+    execFileSync(process.execPath, [vitestBin, 'run', '--reporter=dot'], { cwd: ROOT, encoding: 'utf8', stdio: 'pipe' })
     testResult = 'green'
   } catch (e) {
     const out = String(e.stdout ?? '')
-    testResult = (out.match(/Tests\s+.*?(\d+ failed.*)$/m) ?? [, 'failed'])[1]
+    // Strip ANSI: the dot reporter colours its own summary.
+    const plain = out.replace(/\u001b\[[0-9;]*m/g, '')
+    testResult = (plain.match(/Tests\s+.*?(\d+ failed.*?)$/m) ?? [, 'failed'])[1]
   }
 }
 

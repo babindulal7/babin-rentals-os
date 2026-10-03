@@ -33,7 +33,7 @@ import { formatMoney, rupees, roundHalfUp, toRupees } from '../../lib/money'
 import type { Paisa } from '../../lib/money'
 import { listClientRecords, type ClientRecord } from '../../lib/queries/clients'
 import { updateClient } from '../../actions/clients/updateClient'
-import { createRental, deliveryTypeFromLabel, type BookingLineType } from '../../actions/rentals/createRental'
+import { createRental, deliveryTypeFromLabel, DELIVERY_TYPES, type BookingLineType, type DeliveryType } from '../../actions/rentals/createRental'
 import {
   cancelDraft,
   convertDraft,
@@ -49,7 +49,7 @@ import { listBundleRecords } from '../../lib/queries/bundleRecords'
 import type { BundleRecord } from '../../data/bundles'
 import { planCreationUnits, type CreationUnitPlan } from '../../lib/queries/availability'
 import type { RentalWindow } from '../../lib/availability'
-import { bundleResults, equipmentConflicts, equipmentLineDraft, equipmentResultsFrom, type ConflictCheckLine } from './booking/itemCatalogue'
+import { bundleResults, equipmentConflicts, equipmentLineDraft, equipmentResultsFrom, type ConflictCheckLine, type DeliveryModeOption } from './booking/itemCatalogue'
 import type {
   AvailabilityVerdict,
   EquipmentAvailabilitySource,
@@ -1035,6 +1035,34 @@ export default function NewRental({ embedded = false, onDone, editBookingId }: N
   const returnTransportPaisa = returnPickupType === 'Client Return' ? 0 : returnPickupChargePaisa
   const transportPaisa = (outgoingTransportPaisa + returnTransportPaisa) as Paisa
 
+  /*
+   * The delivery modes this booking form can hold, for §25's Delivery group.
+   *
+   * Derived from `DELIVERY_TYPES` rather than retyped, so this list and
+   * `DeliverySection`'s select cannot drift, and filtered to the two the form
+   * actually offers — the enum's Courier and Third Party are real values
+   * `bookings.delivery_type` accepts but this form does not sell. Offering them
+   * here would put a choice on screen that `deliveryTypeFromLabel` accepts and
+   * the form cannot then represent, which is the same unsoundness the 2-member
+   * `deliveryType` state already has when an existing booking arrives with a
+   * Courier row. Logged in PROGRESS.md rather than decided here: which modes
+   * Babin books is Babin's call, not a search panel's.
+   */
+  const deliveryModeOptions: readonly DeliveryModeOption[] = useMemo(
+    () =>
+      DELIVERY_TYPES.filter(
+        (d): d is 'Client Pickup' | 'Babin Delivery' => d === 'Client Pickup' || d === 'Babin Delivery',
+      ).map((mode) => ({
+        deliveryType: mode,
+        // §9.2: Client Pickup is genuinely Rs 0. Any other mode with nothing
+        // typed into the Delivery section is `null` — "not set yet", which the
+        // row says, rather than a Rs 0 that reads as a free delivery.
+        chargePaisa: clientPickup ? (rupees(0) as Paisa) : deliveryChargePaisa > 0 ? deliveryChargePaisa : null,
+        selected: mode === deliveryType,
+      })),
+    [clientPickup, deliveryChargePaisa, deliveryType],
+  )
+
   const isStudentBundle = useMemo(
     () => lines.some((l) => l.bundleName?.toLowerCase().includes('student') || l.category?.toLowerCase().includes('student') || l.category?.toLowerCase().includes('college')),
     [lines],
@@ -1474,12 +1502,48 @@ export default function NewRental({ embedded = false, onDone, editBookingId }: N
     return match!.id
   }, [liveEquipment, lines, addDrafts, days])
 
-  const addCrew = (crewId: string) => {
-    const rosterPool = liveCrew && liveCrew.length > 0 ? liveCrew : CREW_ROSTER
-    const m = rosterPool.find((x) => x.id === crewId)
-    if (!m || crew.some((c) => c.crewId === crewId)) return
-    setCrew((p) => [...p, seedCrewLine(m)])
-  }
+  /*
+   * One roster for the whole screen.
+   *
+   * `liveCrew` is null until the read lands and is empty when the live table
+   * has nobody in it, so both fall back to the seed — the array literal in
+   * `data/crew.ts`, which the banner below already discloses. Section 3's
+   * `CrewSearch` and §25's Crew group now read this same list, so "who can be
+   * added to this booking" has one answer on the page instead of two
+   * independent expressions that could disagree.
+   */
+  const rosterPool: readonly CrewMember[] = useMemo(
+    () => (liveCrew && liveCrew.length > 0 ? liveCrew : CREW_ROSTER),
+    [liveCrew],
+  )
+
+  /**
+   * `useCallback` for one reason: this is now a prop on `AddItemPanel`, which
+   * keys `visibleTabs`, `activeKinds` and its query memo on it. A fresh closure
+   * every render would re-run the whole catalogue query on every keystroke
+   * elsewhere on the page.
+   */
+  const addCrew = useCallback(
+    (crewId: string) => {
+      const m = rosterPool.find((x) => x.id === crewId)
+      if (!m || crew.some((c) => c.crewId === crewId)) return
+      setCrew((p) => [...p, seedCrewLine(m)])
+    },
+    [rosterPool, crew],
+  )
+
+  /**
+   * §25's delivery row calls this. `deliveryTypeFromLabel` and the column accept
+   * all four members of the enum; this form offers two, so the guard is what
+   * keeps a mode the form cannot hold off the callback. It cannot be reached
+   * from the panel, which can only return a mode present in
+   * `deliveryModeOptions` — and narrowing here is why the form's own
+   * `deliveryType` state does not have to widen to modes `DeliverySection`
+   * does not offer. Same reasoning, same `useCallback` requirement as above.
+   */
+  const setOfferedDeliveryType = useCallback((mode: DeliveryType) => {
+    if (mode === 'Client Pickup' || mode === 'Babin Delivery') setDeliveryType(mode)
+  }, [])
 
   /** Take one person off the booking. `CrewSearch` offers them again immediately. */
   const removeCrew = (crewId: string) => {
@@ -3254,6 +3318,22 @@ export default function NewRental({ embedded = false, onDone, editBookingId }: N
                 showPrices={canBookingMoney}
                 inputStyle={inputStyle}
                 onScan={addScannedEquipment}
+                /*
+                 * §25 — the same search now answers for crew and delivery, and
+                 * each callback is what makes its kind exist at all: the panel
+                 * removes a tab and a group it cannot act on, so passing a pool
+                 * with no callback would leave rows that silently do nothing.
+                 *
+                 * Crew money is gated separately from booking money — `booking`
+                 * and `asset-finance` are different columns under Law 6, and a
+                 * Coordinator sees the first but not the second.
+                 */
+                crew={rosterPool}
+                existingCrewIds={crew.map((c) => c.crewId)}
+                onAddCrew={addCrew}
+                showCrewRates={canCrewMoney}
+                deliveryModes={deliveryModeOptions}
+                onSetDeliveryMode={setOfferedDeliveryType}
               />
             </div>
 
@@ -3584,7 +3664,7 @@ export default function NewRental({ embedded = false, onDone, editBookingId }: N
                 onBooking={crew}
                 onAdd={addCrew}
                 showRates={canCrewMoney}
-                roster={liveCrew && liveCrew.length > 0 ? liveCrew : CREW_ROSTER}
+                roster={rosterPool}
               />
               <div style={{ minWidth: 0 }}>
                 <DataTableShell ariaLabel="Assigned crew">
