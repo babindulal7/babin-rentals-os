@@ -817,14 +817,14 @@ export default function Finance() {
       value: countOf(outstanding),
       icon: 'invoice',
       accent: 'progress',
-      note: `${moneyOf(receivableTotal)} receivable`,
+      detail: `${moneyOf(receivableTotal)} receivable`,
     },
     {
       label: 'Overdue',
       value: countOf(overdue),
       icon: 'alert_triangle',
       accent: 'danger',
-      note: `${moneyOf(overdueTotal)} past due`,
+      detail: `${moneyOf(overdueTotal)} past due`,
     },
     {
       label: 'Received',

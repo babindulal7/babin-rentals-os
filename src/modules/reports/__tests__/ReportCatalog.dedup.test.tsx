@@ -139,7 +139,12 @@ describe('the catalog draws a tab deep-link differently from a report', () => {
     expect(CATALOG_ERRORS).toEqual([])
     expect(container.textContent).not.toContain('The report register does not reconcile')
     /* The footer states the count from the register itself, so the copy cannot
-       still say 45 while the list holds 43. */
-    expect(container.textContent).toContain(`${REPORTS.length} reports, each with one home`)
+       still say 45 while the list holds 43. It lives in the page's (i) tooltip,
+       so open that first. */
+    const info = container.querySelector('.footer-note button')
+    act(() => {
+      info?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+    })
+    expect(document.body.textContent).toContain(`${REPORTS.length} reports, each with one home`)
   })
 })
