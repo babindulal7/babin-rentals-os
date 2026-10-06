@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback, ReactNode } from 'react'
 import { supabase, IS_MOCK } from './supabase'
 import { getSetting } from './settingsStore'
+import { hydrateSettings, clearRemoteSettings } from './queries/settingsRemote'
 import { captureError } from './monitoring'
 import { purgeDeviceReadCaches } from './devicePurge'
 
@@ -137,6 +138,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
+
+  // G1: shared settings load once a staff session exists and are dropped when it ends.
+  const sessionUserId = user && user.role !== 'Client' ? user.id : null
+  useEffect(() => {
+    if (sessionUserId) void hydrateSettings()
+    else clearRemoteSettings()
+  }, [sessionUserId])
   const [loading, setLoading] = useState(true)
   const [isLocked, setLocked] = useState(false)
   const [isPasswordRecovery, setPasswordRecovery] = useState(false)

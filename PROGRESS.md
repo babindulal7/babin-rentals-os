@@ -1,5 +1,80 @@
 # Progress Log
 
+## 2026-10-07 (b) — G1: settings stored in the database (0158)
+
+**Did**
+- `0158_settings_table.sql`: `settings` (org/location scope; only `operationalDayStart` may be location-scoped), append-only `settings_history` written by trigger, audit trigger, Owner-write RLS, money keys read-gated, no delete.
+- `settingsStore.ts`: shared values resolve location → org → default once loaded; `DEVICE_KEYS` (density, language) stay local; before loading it falls back to localStorage as before.
+- New `lib/queries/settingsRemote.ts` (`hydrateSettings`, `saveSettings`, `resetSharedSettingsToDefaults`). `AuthProvider` loads on a staff session; the Settings page awaits the load, saves through `saveSettings`.
+- Coupon entry restricted to money-visible roles (R-07-02); `RentalPricingSection` promo block gated.
+
+**Ruled**
+- R-07-02 to R-07-05 in `RULINGS-2026-10-07.md` (D-1, D-3 confirmed by Babin).
+
+**Verified**
+- `check:pglite` 155/155 applied, 0 failed, anon gates clean. `check:lifecycle` 30/30 green.
+- New `scripts/test-settings-table.mjs` (15 checks: history, location rule, unique, no delete, Warehouse blind to money keys and refused write, Owner write) passes; fails without 0158 (exit 1). RLS is PGlite, not Supabase.
+- `tsc`, `eslint src --max-warnings 0` clean. Full `vitest run`: before the last test fix 4,088 passed / 12 failed (all `Settings.edit.test.tsx`, caused by the extra async load); after mocking `hydrateSettings` there, `vitest run src/modules/settings` passes (62). The full suite was not re-run after that fix. New `settingsShared.test.ts` + `settingsRemote.test.ts` (16) pass.
+- NOT verified: not driven in a browser; nothing applied to live Supabase (N-5); "device A saves, device B sees it" is proven against a fake table in a unit test, not two real devices.
+
+**Remaining / blocked**
+- No UI to set a location override and no branch id on `AuthUser`, so `setActiveLocation` is never called yet (single location).
+- Other consumers read synchronously, so they see shared values on their next read after sign-in, not live.
+- Owner-device values are not imported (R-07-05 TODO).
+- `docs/PERMISSIONS.md` §4.10 still says there is no settings table; update at merge.
+- G2 (saved views) next.
+
+## 2026-10-07 (a) — Booqable adoption spec §3: hardcoded promo codes removed
+
+**Did**
+- Confirmed the leak: `PROMO_CODES` (5 demo codes) was read by `RentalPricingSection` (Apply) and `useNewRentalPricing` (discount). Real codes THUNDER25, SUJAL15, WOMENINFILM, STUDENT10 existed nowhere in code.
+- Deleted the constant. New `src/lib/queries/promoLookup.ts` validates against the `coupons` table; the validated definition is cached per code so the pricing hook can read it synchronously.
+- Note: the spec says "repo at ...babin-rentals-os"; the `main` checkout there is stale (migrations to 0062, no `pricingPipeline.ts`). The 0156-state lives in this worktree (`claude/zen-swartz-228eaa`); all work was done here.
+
+**Ruled**
+- R-07-01 in `RULINGS-2026-10-07.md`.
+
+**Verified**
+- `tsc --noEmit`, eslint on touched files: PASS. `vitest run src/modules/rentals src/lib src/actions/rentals`: 174 files, 2,359 tests PASS.
+- NOT verified: Apply not driven in a browser; no test covers `lookupPromo` against a live/mocked `coupons` row; `check:pglite` / `check:lifecycle` not run (no migration changed).
+
+**Blocked / Remaining**
+- Money-blind roles cannot read `coupons` (RLS) — see R-07-01 TODO(decision).
+- Spec G1–G7 not started. G1/G2 need D-1 and D-3 answers from Babin.
+
+## 2026-10-06 (f) — KpiStrip: all extra information moves into one (i) tooltip
+
+**Did**
+- `KpiStrip` (`src/components/ui/Page.tsx`) now puts `definition`, `note` and the zero explanation in ONE `InfoTooltip` at the card's top-right (hover, focus or tap), reusing the existing component that `PageHeader` descriptions already use. Before: `note`/`zeroExplanation` were inline text and `definition` was a native `title` on a plain "i".
+- New `Kpi.detail` for a secondary FIGURE that must stay visible on the card. Finance's "receivable" and "past due" lines moved to it (their tests assert the figure is on the page).
+- `FooterNote` (the bar of extra lines at the bottom of ~50 pages) is now one "About this page" (i) tooltip holding the same lines. The hand-rolled `KpiCard`s in `Warehouses.tsx` and `settings/sections/shared.tsx` use the same tooltip for their note.
+- New `src/components/ui/__tests__/KpiStrip.info.test.tsx`; `ReportCatalog.dedup.test.tsx` now opens the footer tooltip before reading the report count.
+
+**Ruled**
+- RULING 2026-10-06: explanation goes in the tooltip, figures stay on the card face (R-39, fewer things on the card). Revert = restore the inline `note` block in `KpiStrip`.
+
+**Verified**
+- `tsc --noEmit`, `eslint src --max-warnings 0`: PASS. Full `vitest run`: PASS before the footer change (314 files, 4,084); after it 1 test needed updating (ReportCatalog.dedup) and `vitest run src/modules/reports src/components src/modules/inventory src/modules/settings` passes (58 files, 564 tests); the full suite was not re-run after that fix.
+- NOT verified in a browser: the mock app redirected to /login, so the tooltip was not seen rendered.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 52 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 54 | 52 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 154 files · check:pglite 154/154 applied, 0 failed (recorded 2026-10-06T12:03:51.251Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Gates read from .lifecycle-result.json, written 2026-10-06T12:04:09.917Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- ~25 other callers put a figure in `note` (e.g. Reports: "Avg Rs … / booking", WorkingCapitalReport, CashFlowReport, RentalReports). They now read as tooltip text; any that should stay on the face need `note` → `detail`.
+- Still inline: `ExpenseReports` KPI notes (status-coloured, carry figures), archive screens (`src/archive/*`), per-field helper text in settings rows. Footer lines like "As of …" and "Data as of …" now need a hover to read.
+- Confirm the tooltip renders and positions correctly on a phone-width viewport.
+
 ## 2026-10-06 (e) — Inventory Reports: fabricated figures removed (Law 16)
 
 **Did**

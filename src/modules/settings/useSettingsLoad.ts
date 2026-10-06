@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { readSettings, languageCodeOf } from '../../lib/settingsStore'
 import type { SettingsRecord } from '../../lib/settingsStore'
 import { applyLanguage } from '../../lib/i18n'
+import { hydrateSettings } from '../../lib/queries/settingsRemote'
 
 /**
  * **The settings load — §11.1: *"A settings page must show a loading state —
@@ -50,6 +51,7 @@ export function useSettingsLoad(): SettingsLoadResult {
 
     void (async () => {
       try {
+        await hydrateSettings()
         const settings = readSettings()
         /* The stored language is applied before the page is declared ready, so
            a Nepali session never paints an English first frame. */

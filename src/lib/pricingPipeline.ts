@@ -48,37 +48,6 @@ export interface DiscountDetails {
   isStudentBundle?: boolean
 }
 
-export const PROMO_CODES: Record<string, PromoCodeDefinition> = {
-  NEPALFILM: {
-    code: 'NEPALFILM',
-    discountPercent: 10,
-    active: true,
-    minSpendPaisa: 2000000 as Paisa,
-  },
-  MONSOON26: {
-    code: 'MONSOON26',
-    discountPercent: 15,
-    active: true,
-    minSpendPaisa: 5000000 as Paisa,
-  },
-  KATHMANDU: {
-    code: 'KATHMANDU',
-    discountPercent: 5,
-    active: true,
-    minSpendPaisa: 1000000 as Paisa,
-  },
-  KATHMANDU10: {
-    code: 'KATHMANDU10',
-    discountPercent: 10,
-    active: true,
-  },
-  FILMSTUDENT: {
-    code: 'FILMSTUDENT',
-    discountPercent: 15,
-    active: true,
-  },
-}
-
 export interface PricingPipelineInput {
   equipmentSubtotalPaisa: Paisa
   bundleSubtotalPaisa: Paisa

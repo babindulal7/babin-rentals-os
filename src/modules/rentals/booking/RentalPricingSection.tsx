@@ -1,3 +1,5 @@
+import { useCanViewMoney } from '../../../lib/moneyVisibility'
+import { lookupPromo } from '../../../lib/queries/promoLookup'
 import Icon from '../../../components/ui/Icon'
 import { Button, Input } from '../../../components/ui'
 import { Field, MoneyRow, Section, inputStyle } from './BookingFormWidgets'
@@ -7,7 +9,6 @@ import { formatMoney, toRupees } from '../../../lib/money'
 import {
   type PricingPipelineResult,
   DISCOUNT_STACKING_CAP_PERCENT,
-  PROMO_CODES,
 } from '../../../lib/pricingPipeline'
 
 const sub = {
@@ -97,6 +98,7 @@ export function RentalPricingSection({
   setDepositAuthorizedBy,
   title = 'Pricing & Terms',
 }: RentalPricingSectionProps) {
+  const canViewMoney = useCanViewMoney()
   return (
     <Section
       id="section-5"
@@ -292,6 +294,7 @@ export function RentalPricingSection({
               )}
 
               {/* Promo code */}
+{canViewMoney && (
               <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
                 <Field label="Promo Code *">
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -301,23 +304,20 @@ export function RentalPricingSection({
                         setPromoCodeInput(e.target.value.toUpperCase())
                         setPromoNotice(null)
                       }}
-                      placeholder="e.g. NEPALFILM, MONSOON26"
+                      placeholder="Promo code"
                       style={{ ...inputStyle, textTransform: 'uppercase' }}
                     />
                     <Button
                       variant="secondary"
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
                         const code = promoCodeInput.trim().toUpperCase()
-                        if (!code) {
-                          setPromoNotice({ tone: 'danger', text: 'Enter a promo code.' })
+                        const found = await lookupPromo(code)
+                        if (!found.ok) {
+                          setPromoNotice({ tone: 'danger', text: found.reason })
                           return
                         }
-                        const promo = PROMO_CODES[code]
-                        if (!promo) {
-                          setPromoNotice({ tone: 'danger', text: `Promo code "${code}" is invalid or expired.` })
-                          return
-                        }
+                        const promo = found.promo
                         if (!promo.active) {
                           setPromoNotice({ tone: 'danger', text: `Promo code "${code}" is no longer active.` })
                           return
@@ -383,6 +383,7 @@ export function RentalPricingSection({
                   </div>
                 )}
               </div>
+)}
 
               {/* Stacking cap indicator */}
               {pricing.discounts.capped && (

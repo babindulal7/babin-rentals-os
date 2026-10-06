@@ -462,33 +462,80 @@ export function validateSetting(key: SettingKey, value: SettingValue): string | 
   return spec.validate?.(value) ?? null
 }
 
+/**
+ * **G1 (RULING 2026-10-07)** — settings live in the `settings` table (0158), shared by
+ * every device. Once `lib/queries/settingsRemote.ts` has loaded them, a value resolves
+ * location → org → coded default. Until then (tests, mock mode, offline, no session)
+ * this store falls back to `localStorage` exactly as before.
+ *
+ * `localStorage` stays the home of the keys in `DEVICE_KEYS` only: per-device UI
+ * preferences. `language` is kept per device because it is a person's display choice,
+ * not a business rule (TODO(decision): confirm).
+ */
+export const DEVICE_KEYS: readonly SettingKey[] = ['density', 'language']
+
+/** The only key a location may override (R-07-03). */
+export const LOCATION_OVERRIDABLE_KEYS: readonly SettingKey[] = ['operationalDayStart']
+
+type Partials = Partial<Record<SettingKey, SettingValue>>
+let remoteOrg: Partials | null = null
+let remoteLocation: Partials = {}
+const listeners = new Set<() => void>()
+
+/** Called by the loader with what the database holds. Values that fail validation are dropped. */
+export function applyRemoteSettings(org: Partials, location: Partials = {}): void {
+  const clean = (src: Partials): Partials => {
+    const out: Partials = {}
+    for (const k of Object.keys(src) as SettingKey[]) {
+      if (!(k in SETTING_SPECS)) continue
+      const spec = SETTING_SPECS[k]
+      const v = spec.kind === 'number' ? Number(src[k]) : String(src[k])
+      if (spec.kind === 'number' && !Number.isFinite(v as number)) continue
+      if (validateSetting(k, v) !== null) {
+        captureError(new Error('Stored setting rejected'), { where: 'settingsStore.remote', key: k })
+        continue
+      }
+      out[k] = v
+    }
+    return out
+  }
+  remoteOrg = clean(org)
+  const loc = clean(location)
+  remoteLocation = {}
+  for (const k of LOCATION_OVERRIDABLE_KEYS) if (loc[k] !== undefined) remoteLocation[k] = loc[k]
+  listeners.forEach((l) => l())
+}
+
+export function clearRemoteSettings(): void {
+  remoteOrg = null
+  remoteLocation = {}
+  listeners.forEach((l) => l())
+}
+
+export function remoteSettingsLoaded(): boolean {
+  return remoteOrg !== null
+}
+
+/** Subscribe to the moment shared settings arrive or change. Returns the unsubscribe. */
+export function onSettingsChange(cb: () => void): () => void {
+  listeners.add(cb)
+  return () => listeners.delete(cb)
+}
+
 export function readSettings(): SettingsRecord {
   if (typeof window === 'undefined') return { ...SETTINGS_DEFAULTS }
   const out = { ...SETTINGS_DEFAULTS }
   for (const key of Object.keys(SETTING_SPECS) as SettingKey[]) {
-    /* Guarded — this sweep runs on the load path and WebKit can throw. */
+    if (remoteOrg !== null && !DEVICE_KEYS.includes(key)) {
+      // location → org → default
+      const shared = remoteLocation[key] ?? remoteOrg[key]
+      if (shared !== undefined) out[key] = shared
+      continue
+    }
     const raw = readLocal(PREFIX + key)
     if (raw === null) continue
     const spec = SETTING_SPECS[key]
     const parsed: SettingValue = spec.kind === 'number' ? Number(raw) : raw
-    /*
-     * ⚠ A stored value that no longer validates is DISCARDED and the default
-     * substituted. That is the right call — a hand-edited localStorage must not
-     * reach an invoice — but until 16 Aug 2026 it happened in total silence,
-     * and the operations rules made that dangerous rather than merely untidy.
-     *
-     * The case: an owner sets `unitAvailabilityRule` to 'Only In Stock'; a
-     * later build renames that option; the stored value stops validating and
-     * this loop quietly restores 'Condition only'. Availability LOOSENS, gear
-     * that was being held back becomes bookable again, and nothing anywhere
-     * says so. A VAT rate reverting is visible on the next invoice; a
-     * disqualifying-state set reverting is visible nowhere.
-     *
-     * Warning rather than throwing, because refusing to load settings at all
-     * would take the app down over one bad key. This does not make it safe — it
-     * makes it observable, which is the difference between a bug someone can
-     * find and one nobody can.
-     */
     const invalid = spec.kind === 'number' && !Number.isFinite(parsed as number) ? 'not a number' : validateSetting(key, parsed)
     if (invalid !== null) {
       console.warn(
@@ -504,7 +551,6 @@ export function readSettings(): SettingsRecord {
   return out
 }
 
-/** Writes only the keys in the patch. Refuses an invalid value rather than storing it. */
 export function writeSettings(patch: Partial<SettingsRecord>): void {
   if (typeof window === 'undefined') return
   for (const [k, v] of Object.entries(patch) as Array<[SettingKey, SettingValue]>) {

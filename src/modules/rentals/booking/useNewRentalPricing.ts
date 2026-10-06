@@ -1,8 +1,8 @@
+import { appliedPromo } from '../../../lib/queries/promoLookup'
 import { useMemo } from 'react'
 import {
   calculatePricingPipeline,
   type PricingPipelineResult,
-  PROMO_CODES,
 } from '../../../lib/pricingPipeline'
 import { rupees, type Paisa } from '../../../lib/money'
 import { rentalDaysBetween } from '../../../lib/rentalDays'
@@ -179,8 +179,7 @@ export function useNewRentalPricing({
   }, [manualDepositOverride, manualDepositAmount])
 
   const pricing = useMemo<PricingPipelineResult>(() => {
-    const promoCodeKey = promoCodeApplied ? String(promoCodeApplied).toUpperCase() : null
-    const promo = promoCodeKey ? (PROMO_CODES[promoCodeKey] ?? null) : null
+    const promo = appliedPromo(promoCodeApplied)
     return calculatePricingPipeline({
       equipmentSubtotalPaisa: equipmentPaisa,
       bundleSubtotalPaisa: bundlePaisa,

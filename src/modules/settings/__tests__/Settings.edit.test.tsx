@@ -25,6 +25,11 @@ import { readSettings, resetSettings } from '../../../lib/settingsStore'
 const role = { current: 'Owner' as string }
 
 vi.mock('../../../lib/moneyVisibility', () => ({ useCanViewMoney: () => true }))
+// No live client in this suite: shared settings never load, so the page uses the local fallback.
+vi.mock('../../../lib/queries/settingsRemote', async (orig) => ({
+  ...(await orig<typeof import('../../../lib/queries/settingsRemote')>()),
+  hydrateSettings: async () => false,
+}))
 vi.mock('../../../lib/auth', () => ({
   useAuth: () => ({
     user: { id: 'u-1', name: 'Babin Shrestha', role: role.current, isSharedDevice: false },
