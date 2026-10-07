@@ -148,7 +148,7 @@ export default function App() {
         <Route
           path="/clients/new"
           element={
-            <Shell crumbs={[{ label: 'Clients' }, { label: 'Add New Client' }]} search="Search client, company, PAN, phone…">
+            <Shell crumbs={[{ label: 'Clients', to: '/clients' }, { label: 'Add New Client' }]} search="Search client, company, PAN, phone…">
               <AddClient />
             </Shell>
           }
@@ -176,7 +176,7 @@ export default function App() {
         <Route
           path="/rentals/new"
           element={
-            <Shell crumbs={[{ label: 'Rentals List' }, { label: 'New Rental' }]} search="Search client, equipment…">
+            <Shell crumbs={[{ label: 'Rentals List', to: '/rentals' }, { label: 'New Rental' }]} search="Search client, equipment…">
               <NewRental />
             </Shell>
           }
@@ -279,7 +279,7 @@ export default function App() {
         <Route
           path="/inventory/new"
           element={
-            <Shell crumbs={[{ label: 'Inventory' }, { label: 'Add Equipment' }]} search="Search equipment, serial, SKU, category…">
+            <Shell crumbs={[{ label: 'Inventory', to: '/inventory' }, { label: 'Add Equipment' }]} search="Search equipment, serial, SKU, category…">
               <AddEquipment />
             </Shell>
           }
@@ -288,7 +288,7 @@ export default function App() {
         <Route
           path="/inventory/warehouses"
           element={
-            <Shell crumbs={[{ label: 'Inventory' }, { label: 'Warehouses' }]} search="Search warehouse, zone, bay…">
+            <Shell crumbs={[{ label: 'Inventory', to: '/inventory' }, { label: 'Warehouses' }]} search="Search warehouse, zone, bay…">
               <Warehouses />
             </Shell>
           }
@@ -297,7 +297,7 @@ export default function App() {
         <Route
           path="/inventory/stock-check"
           element={
-            <Shell crumbs={[{ label: 'Inventory' }, { label: 'Stock Check' }]} search="Scan or search equipment, serial…">
+            <Shell crumbs={[{ label: 'Inventory', to: '/inventory' }, { label: 'Stock Check' }]} search="Scan or search equipment, serial…">
               <StockCheck />
             </Shell>
           }
@@ -306,7 +306,7 @@ export default function App() {
         <Route
           path="/inventory/purchase-requests"
           element={
-            <Shell crumbs={[{ label: 'Inventory' }, { label: 'Purchase Requests' }]} search="Search request, item, supplier…">
+            <Shell crumbs={[{ label: 'Inventory', to: '/inventory' }, { label: 'Purchase Requests' }]} search="Search request, item, supplier…">
               <PurchaseRequests />
             </Shell>
           }
@@ -322,7 +322,7 @@ export default function App() {
         <Route
           path="/inventory/:assetId"
           element={
-            <Shell crumbs={[{ label: 'Inventory' }, { label: 'Asset' }]} search="Search equipment, serial, SKU, category…">
+            <Shell crumbs={[{ label: 'Inventory', to: '/inventory' }, { label: 'Asset' }]} search="Search equipment, serial, SKU, category…">
               <AssetDetail />
             </Shell>
           }
@@ -331,7 +331,7 @@ export default function App() {
         <Route
           path="/inventory/bundles/new"
           element={
-            <Shell crumbs={[{ label: 'Inventory' }, { label: 'Bundles' }, { label: 'New Bundle' }]} search="Search inventory, category…">
+            <Shell crumbs={[{ label: 'Inventory', to: '/inventory' }, { label: 'Bundles', to: '/inventory' }, { label: 'New Bundle' }]} search="Search inventory, category…">
               <AddBundle />
             </Shell>
           }
@@ -367,7 +367,7 @@ export default function App() {
         <Route
           path="/operations/cases"
           element={
-            <Shell crumbs={[{ label: 'Operations' }, { label: 'Cases' }]} search="Search case ID, title, client…">
+            <Shell crumbs={[{ label: 'Operations', to: '/operations' }, { label: 'Cases' }]} search="Search case ID, title, client…">
               <CasesWorkspace />
             </Shell>
           }
@@ -378,7 +378,7 @@ export default function App() {
         <Route
           path="/operations/cases/:id"
           element={
-            <Shell crumbs={[{ label: 'Operations' }, { label: 'Cases' }]} search="Search case ID, title, client…">
+            <Shell crumbs={[{ label: 'Operations', to: '/operations' }, { label: 'Cases', to: '/operations/cases' }]} search="Search case ID, title, client…">
               <CasesWorkspace />
             </Shell>
           }
@@ -391,7 +391,7 @@ export default function App() {
         <Route
           path="/operations/sub-rental"
           element={
-            <Shell crumbs={[{ label: 'Operations' }, { label: 'Sub Rental' }]} search="Search SR ID, equipment, partner…">
+            <Shell crumbs={[{ label: 'Operations', to: '/operations' }, { label: 'Sub Rental' }]} search="Search SR ID, equipment, partner…">
               <SubRental />
             </Shell>
           }
@@ -414,7 +414,7 @@ export default function App() {
         <Route
           path="/finance/payments"
           element={
-            <Shell crumbs={[{ label: 'Finance' }, { label: 'Payments' }]} search="Search payment no, transaction ref…">
+            <Shell crumbs={[{ label: 'Finance', to: '/finance' }, { label: 'Payments' }]} search="Search payment no, transaction ref…">
               <Payments />
             </Shell>
           }
@@ -426,7 +426,7 @@ export default function App() {
         <Route
           path="/finance/expenses"
           element={
-            <Shell crumbs={[{ label: 'Finance' }, { label: 'Expenses' }]} search="Search expense no, vendor, description…">
+            <Shell crumbs={[{ label: 'Finance', to: '/finance' }, { label: 'Expenses' }]} search="Search expense no, vendor, description…">
               <Expenses />
             </Shell>
           }
@@ -435,7 +435,7 @@ export default function App() {
         <Route
           path="/finance/documents"
           element={
-            <Shell crumbs={[{ label: 'Finance' }, { label: 'Tax & Invoices' }]} search="Search tax invoices…">
+            <Shell crumbs={[{ label: 'Finance', to: '/finance' }, { label: 'Tax & Invoices' }]} search="Search tax invoices…">
               <Documents />
             </Shell>
           }
@@ -444,7 +444,7 @@ export default function App() {
         <Route
           path="/reports/pulse"
           element={
-            <Shell crumbs={[{ label: 'Finance' }, { label: 'Reports' }, { label: 'Pulse' }]} search="Search reports…">
+            <Shell crumbs={[{ label: 'Finance', to: '/finance' }, { label: 'Reports', to: '/finance' }, { label: 'Pulse' }]} search="Search reports…">
               <Pulse />
             </Shell>
           }
@@ -454,7 +454,7 @@ export default function App() {
           path="/reports/expenses"
           element={
             <Shell
-              crumbs={[{ label: 'Finance' }, { label: 'Reports' }, { label: 'Expense Reports' }]}
+              crumbs={[{ label: 'Finance', to: '/finance' }, { label: 'Reports', to: '/finance' }, { label: 'Expense Reports' }]}
               search="Search expense, vendor, category, staff, note…"
             >
               <ExpenseReports />
@@ -465,7 +465,7 @@ export default function App() {
         <Route
           path="/reports/clients"
           element={
-            <Shell crumbs={[{ label: 'Finance' }, { label: 'Reports' }, { label: 'Client Ledger' }]}>
+            <Shell crumbs={[{ label: 'Finance', to: '/finance' }, { label: 'Reports', to: '/finance' }, { label: 'Client Ledger' }]}>
               <ClientReports />
             </Shell>
           }
@@ -474,7 +474,7 @@ export default function App() {
         <Route
           path="/reports/promotions"
           element={
-            <Shell crumbs={[{ label: 'Finance' }, { label: 'Reports' }, { label: 'Promotions' }]}>
+            <Shell crumbs={[{ label: 'Finance', to: '/finance' }, { label: 'Reports', to: '/finance' }, { label: 'Promotions' }]}>
               <PromotionsReports />
             </Shell>
           }
@@ -483,7 +483,7 @@ export default function App() {
         <Route
           path="/reports/staff"
           element={
-            <Shell crumbs={[{ label: 'Finance' }, { label: 'Reports' }, { label: 'Staff Performance' }]}>
+            <Shell crumbs={[{ label: 'Finance', to: '/finance' }, { label: 'Reports', to: '/finance' }, { label: 'Staff Performance' }]}>
               <StaffReports />
             </Shell>
           }
@@ -492,7 +492,7 @@ export default function App() {
         <Route
           path="/reports/inventory"
           element={
-            <Shell crumbs={[{ label: 'Finance' }, { label: 'Reports' }, { label: 'Inventory Reports' }]}>
+            <Shell crumbs={[{ label: 'Finance', to: '/finance' }, { label: 'Reports', to: '/finance' }, { label: 'Inventory Reports' }]}>
               <InventoryReports />
             </Shell>
           }
@@ -501,7 +501,7 @@ export default function App() {
         <Route
           path="/reports/equipment-performance"
           element={
-            <Shell crumbs={[{ label: 'Finance' }, { label: 'Reports' }, { label: 'Equipment Performance' }]}>
+            <Shell crumbs={[{ label: 'Finance', to: '/finance' }, { label: 'Reports', to: '/finance' }, { label: 'Equipment Performance' }]}>
               <EquipmentPerformance />
             </Shell>
           }
@@ -510,7 +510,7 @@ export default function App() {
         <Route
           path="/reports/forecasting"
           element={
-            <Shell crumbs={[{ label: 'Finance' }, { label: 'Reports' }, { label: 'Forecasting & AI' }]}>
+            <Shell crumbs={[{ label: 'Finance', to: '/finance' }, { label: 'Reports', to: '/finance' }, { label: 'Forecasting & AI' }]}>
               <ForecastingReports />
             </Shell>
           }
@@ -519,7 +519,7 @@ export default function App() {
         <Route
           path="/reports/cash-flow"
           element={
-            <Shell crumbs={[{ label: 'Finance' }, { label: 'Reports' }, { label: 'Cash Flow' }]} search="Search reports…">
+            <Shell crumbs={[{ label: 'Finance', to: '/finance' }, { label: 'Reports', to: '/finance' }, { label: 'Cash Flow' }]} search="Search reports…">
               <CashFlowReport />
             </Shell>
           }
@@ -528,7 +528,7 @@ export default function App() {
         <Route
           path="/reports/working-capital"
           element={
-            <Shell crumbs={[{ label: 'Finance' }, { label: 'Reports' }, { label: 'Working Capital' }]} search="Search reports…">
+            <Shell crumbs={[{ label: 'Finance', to: '/finance' }, { label: 'Reports', to: '/finance' }, { label: 'Working Capital' }]} search="Search reports…">
               <WorkingCapital />
             </Shell>
           }
@@ -537,7 +537,7 @@ export default function App() {
         <Route
           path="/clients/memberships"
           element={
-            <Shell crumbs={[{ label: 'Clients' }, { label: 'Directory & Membership' }]}>
+            <Shell crumbs={[{ label: 'Clients', to: '/clients' }, { label: 'Directory & Membership' }]}>
               <Membership />
             </Shell>
           }
@@ -546,7 +546,7 @@ export default function App() {
         <Route
           path="/clients/import"
           element={
-            <Shell crumbs={[{ label: 'Clients' }, { label: 'Import Clients' }]}>
+            <Shell crumbs={[{ label: 'Clients', to: '/clients' }, { label: 'Import Clients' }]}>
               <ImportCenter />
             </Shell>
           }
@@ -555,7 +555,7 @@ export default function App() {
         <Route
           path="/clients/duplicates"
           element={
-            <Shell crumbs={[{ label: 'Clients' }, { label: 'Duplicate & Merge Center' }]}>
+            <Shell crumbs={[{ label: 'Clients', to: '/clients' }, { label: 'Duplicate & Merge Center' }]}>
               <DuplicateCenter />
             </Shell>
           }
@@ -564,7 +564,7 @@ export default function App() {
         <Route
           path="/clients/referral/new"
           element={
-            <Shell crumbs={[{ label: 'Clients' }, { label: 'Referral' }, { label: 'Generate Referral Code' }]}>
+            <Shell crumbs={[{ label: 'Clients', to: '/clients' }, { label: 'Referral', to: '/clients' }, { label: 'Generate Referral Code' }]}>
               <GenerateReferralCode />
             </Shell>
           }
@@ -576,7 +576,7 @@ export default function App() {
         <Route
           path="/clients/:id"
           element={
-            <Shell crumbs={[{ label: 'Clients' }, { label: 'Client Profile' }]} search="Search client, company, PAN, phone…">
+            <Shell crumbs={[{ label: 'Clients', to: '/clients' }, { label: 'Client Profile' }]} search="Search client, company, PAN, phone…">
               <ClientDetail />
             </Shell>
           }
@@ -602,7 +602,7 @@ export default function App() {
         <Route
           path="/admin/audit"
           element={
-            <Shell crumbs={[{ label: 'Administration' }, { label: 'Immutable Audit Trail' }]}>
+            <Shell crumbs={[{ label: 'Administration', to: '/settings' }, { label: 'Immutable Audit Trail' }]}>
               <AuditSettings />
             </Shell>
           }
@@ -611,7 +611,7 @@ export default function App() {
         <Route
           path="/admin/audit-settings"
           element={
-            <Shell crumbs={[{ label: 'Admin' }, { label: 'Audit Settings' }]}>
+            <Shell crumbs={[{ label: 'Admin', to: '/settings' }, { label: 'Audit Settings' }]}>
               <AuditSettings />
             </Shell>
           }
@@ -633,7 +633,7 @@ export default function App() {
         <Route
           path="/tools/depreciation"
           element={
-            <Shell crumbs={[{ label: 'Tools' }, { label: 'Depreciation' }]}>
+            <Shell crumbs={[{ label: 'Tools', to: '/tools' }, { label: 'Depreciation' }]}>
               <DepreciationCalculator />
             </Shell>
           }
@@ -642,7 +642,7 @@ export default function App() {
         <Route
           path="/tools/pricing"
           element={
-            <Shell crumbs={[{ label: 'Tools' }, { label: 'Pricing' }]}>
+            <Shell crumbs={[{ label: 'Tools', to: '/tools' }, { label: 'Pricing' }]}>
               <PricingCalculator />
             </Shell>
           }
@@ -651,7 +651,7 @@ export default function App() {
         <Route
           path="/admin/audit-log"
           element={
-            <Shell crumbs={[{ label: 'Settings' }, { label: 'Audit Log' }]}>
+            <Shell crumbs={[{ label: 'Settings', to: '/settings' }, { label: 'Audit Log' }]}>
               <AuditLog />
             </Shell>
           }
@@ -660,7 +660,7 @@ export default function App() {
         <Route
           path="/admin/activity-log"
           element={
-            <Shell crumbs={[{ label: 'Settings' }, { label: 'Activity Log' }]}>
+            <Shell crumbs={[{ label: 'Settings', to: '/settings' }, { label: 'Activity Log' }]}>
               <ActivityLog />
             </Shell>
           }
@@ -669,7 +669,7 @@ export default function App() {
         <Route
           path="/admin/numbering"
           element={
-            <Shell crumbs={[{ label: 'Settings' }, { label: 'Numbering Sequences' }]}>
+            <Shell crumbs={[{ label: 'Settings', to: '/settings' }, { label: 'Numbering Sequences' }]}>
               <NumberingSequences />
             </Shell>
           }
@@ -678,7 +678,7 @@ export default function App() {
         <Route
           path="/admin/backup"
           element={
-            <Shell crumbs={[{ label: 'Settings' }, { label: 'Backup & Restore' }]}>
+            <Shell crumbs={[{ label: 'Settings', to: '/settings' }, { label: 'Backup & Restore' }]}>
               <BackupRestore />
             </Shell>
           }
@@ -693,7 +693,7 @@ export default function App() {
         <Route
           path="/tools/cinematography"
           element={
-            <Shell crumbs={[{ label: 'Tools' }, { label: 'Cinematography' }]} search="Search tools, formulas…">
+            <Shell crumbs={[{ label: 'Tools', to: '/tools' }, { label: 'Cinematography' }]} search="Search tools, formulas…">
               <CineTools />
             </Shell>
           }
@@ -795,7 +795,7 @@ const UNBUILT: Array<{ to: string; title: string; crumbs: Crumb[] }> = NAV.flatM
   const kids = (s.children ?? []).map((c) => ({
     to: c.to,
     title: c.label,
-    crumbs: [{ label: s.label }, { label: c.label }],
+    crumbs: [{ label: s.label, to: s.to }, { label: c.label }],
   }))
   return [self, ...kids]
 })
@@ -915,9 +915,11 @@ function BookingShell({
 }) {
   const { bookingNo } = useParams()
   const crumbs: Crumb[] = [
-    { label: 'Rentals List' },
-    { label: 'Bookings' },
-    { label: bookingNo ?? 'Booking' },
+    { label: 'Rentals List', to: '/rentals' },
+    { label: 'Bookings', to: '/rentals' },
+    tail && bookingNo
+      ? { label: bookingNo, to: `/rentals/${bookingNo}` }
+      : { label: bookingNo ?? 'Booking' },
     ...(tail ? [{ label: tail }] : []),
   ]
   return (
