@@ -1,5 +1,22 @@
 # Progress Log
 
+## 2026-10-07 — Codex's uncommitted 7 Oct UI work ported onto a branch
+
+**Did**
+- The dev server on :3000 was serving `.codex-temp/babin-rentals-current` (step1-foundation `e85a687`) with 225 uncommitted files. Codex was still running there, so nothing was committed in its folder.
+- Moved branch `claude/work-tree-feature-copy-2eb747` to `e85a687` (it had no commits of its own), copied the 222 changed/new files across, and committed them as 8 feature commits plus a docs commit, grouped by the session that last edited each file. Excluded `.pglite-result.json`, `.test-result.json` and `artifacts/` (3.8 MB of screenshots, still in Codex's folder).
+- New Rental reorganisation has no commit of its own: every file it touched was re-edited by a later session, so its code is inside the later New Rental commits. Earlier commits are not standalone: a shared file carries all earlier sessions' edits in whichever commit last touched it.
+
+**Verified**
+- Every copied file is byte-identical (ignoring CR) to Codex's folder; no Codex change is missing.
+- `tsc --noEmit` passed. `scripts/check-ui-copy.mjs`: 0 violations.
+- Full vitest: **4098 passed, 9 failed** (314 files). All 9 are in `ClientDetail.block.test.tsx` and `BookingDetail.honesty.test.tsx`; both files pass 27/27 on `e85a687`. Running them at each new commit: the audit commit breaks 1, the shell-clearance/popup commit 4 more, the orange-dates commit 4 more. The failures read like the menus/dialogs now render through body portals the tests don't look in. Not yet fixed.
+- Browser: live mode loads the login page on :3002. New Rental not driven: signing in to live needs the owner's credentials. Mock mode cannot be used on this base: `src/lib/supabase.ts:120` throws at load when `VITE_DATA_SOURCE=mock` (already on `e85a687`, not from this port).
+
+**Blocked**
+- 9 failing tests above need updating (or a real regression found).
+- Mock mode broken on step1-foundation (`supabase.ts` eager `supabase` export throws in mock mode).
+
 ## 2026-10-07 — Orange booking schedule dates
 
 **Did**
