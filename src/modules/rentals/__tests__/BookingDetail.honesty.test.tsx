@@ -306,21 +306,23 @@ afterEach(async () => {
 const text = () => container.textContent ?? ''
 const allButtons = () => [...container.querySelectorAll('button')]
 const button = (label: string) => allButtons().find((b) => b.textContent?.trim() === label)
-/** `Unavailable` puts its reason on the wrapper as `aria-label`, always in the DOM. */
+/** `Unavailable` puts its reason on the wrapper as `aria-label`, always in the DOM.
+ *  Overflow menus render through a body portal (7 Oct shell-clearance ruling),
+ *  so menu lookups read the whole document, not the mount node. */
 const reasons = () =>
-  [...container.querySelectorAll('span[aria-disabled]')].map((s) => s.getAttribute('aria-label') ?? '')
+  [...document.body.querySelectorAll('span[aria-disabled]')].map((s) => s.getAttribute('aria-label') ?? '')
 const hasReason = (fragment: string) => reasons().some((r) => r.includes(fragment))
 
 /** Idempotent — the trigger TOGGLES, so a second blind click would close it again. */
 async function openOverflow() {
-  if (container.querySelector('[role="menu"]')) return
+  if (document.body.querySelector('[role="menu"]')) return
   const trigger = container.querySelector('button[aria-label="More booking actions"]')
   await act(async () => {
     trigger?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
   })
 }
 const menuItem = (label: string) =>
-  [...container.querySelectorAll('[role="menuitem"]')].find((el) => (el.textContent ?? '').trim().startsWith(label))
+  [...document.body.querySelectorAll('[role="menuitem"]')].find((el) => (el.textContent ?? '').trim().startsWith(label))
 
 async function openOperationsMenu() {
   const trigger = button('Operations')

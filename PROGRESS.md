@@ -13,8 +13,9 @@
 - Full vitest: **4098 passed, 9 failed** (314 files). All 9 are in `ClientDetail.block.test.tsx` and `BookingDetail.honesty.test.tsx`; both files pass 27/27 on `e85a687`. Running them at each new commit: the audit commit breaks 1, the shell-clearance/popup commit 4 more, the orange-dates commit 4 more. The failures read like the menus/dialogs now render through body portals the tests don't look in. Not yet fixed.
 - Browser: live mode loads the login page on :3002. New Rental not driven: signing in to live needs the owner's credentials. Mock mode cannot be used on this base: `src/lib/supabase.ts:120` throws at load when `VITE_DATA_SOURCE=mock` (already on `e85a687`, not from this port).
 
+- Fixed after: both test files now look up menus, dialogs and reasons in `document.body` (where the portals render) instead of the mount node. No assertion changed. Full vitest **4107/4107 passed**, 314/314 files; ESLint clean on both files.
+
 **Blocked**
-- 9 failing tests above need updating (or a real regression found).
 - Mock mode broken on step1-foundation (`supabase.ts` eager `supabase` export throws in mock mode).
 
 ## 2026-10-07 — Orange booking schedule dates

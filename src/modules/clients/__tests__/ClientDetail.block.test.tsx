@@ -122,10 +122,12 @@ async function mount() {
   await click(container.querySelector('button[aria-label="More actions"]'))
 }
 
-const dialog = () => container.querySelector('[role="dialog"]')
+// Menus and their dialogs render through body portals (7 Oct shell-clearance
+// ruling), so an operator's view is the whole document, not the mount node.
+const dialog = () => document.body.querySelector('[role="dialog"]')
 
 /** Buttons matched by visible text — the handle an operator has. */
-function buttons(label: string, scope: ParentNode = container): HTMLButtonElement[] {
+function buttons(label: string, scope: ParentNode = document.body): HTMLButtonElement[] {
   return [...scope.querySelectorAll('button')].filter((b) => b.textContent?.trim() === label)
 }
 
@@ -147,7 +149,7 @@ async function typeReason(value: string) {
   })
 }
 
-const text = () => container.textContent ?? ''
+const text = () => document.body.textContent ?? ''
 
 beforeEach(() => {
   session.role = 'Owner'
