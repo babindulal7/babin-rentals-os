@@ -1,5 +1,98 @@
 # Progress Log
 
+## 2026-10-12 — Branch consolidation: Claude, Gemini and Codex work in one tree, now `main`
+
+The user asked for the Claude, Gemini and Codex changes to be in `main`. Built on
+`merge/codex-step1-into-main` (worktree `.claude/worktrees/merge-codex-step1`), on top of
+`step1-foundation`, the trunk. `main` took it on 8 Oct: `c86d657` merged it and `fd8458f` aligned
+`main` to it. `main`'s code is this branch's tree plus nine docs (the branch audit and three
+older audits) and `.env.mock` (mock placeholders only, checked). Snapshot tags
+`snapshot/2026-10-08/*` mark every branch head as it was before.
+
+**Did**
+- **`main`'s own commits (Claude), replayed one by one onto the trunk:** `7826cca` and `b647a78`
+  (an earlier session), then `79ec345`, `32c4d29`, `57bd2cb`, `1fafb77`, `49c592e` and `d7ca3bc`.
+  They were written against `main`'s August screens, which the trunk had rewritten, so each
+  feature was checked against the trunk and ported only where the trunk lacked it:
+  - Client is portal-only, through `STAFF_ROUTES` (RULINGS-2026-10-08, consolidation row 1).
+  - Cases workspace: loading and a failed read no longer show "No cases found".
+  - Operations: a search that hides every row gives an empty state with Clear filters.
+  - RentalsList: the empty list offers New Rental. Clients: no pager under an empty state.
+  - Pulse: the Maintenance and Cases tabs link to their pages. The Modal close button is
+    44×44. `.gitignore`, launch entries and `CONVENTIONS.md` came along.
+  - Already on the trunk in its own form, so not ported: breadcrumb links and phone header,
+    continuous scanning with torch and tones, BookingDetail on the canonical booking, Calendar
+    and floor-workspace states, the faceted Clients filter panel, money gating on reports.
+- **Gemini's Phase 9** (uncommitted in `main`'s folder; snapshotted as
+  `wip/main-phase9-offline-2026-10-08`):
+  - Offline replay now holds an update the server changed in the meantime, as a named conflict,
+    instead of overwriting it. The check reads only the written fields (consolidation row 5).
+  - A conflict banner and a two-sided review modal.
+  - `useList.lastFetchedAt`, with the trunk's age badge on Rentals, Today and Operations
+    (success-only time).
+  - Expenses refuse offline with the reason.
+  - Next-step buttons on empty Invoices, Payments and Expenses.
+- **Claude's `md-brief-gaps`**, merged with history: Fonepay, return countdown, Create & add
+  another, payment tap cards, mock column defaults. PLAN §4.61–4.62 collided with the trunk's
+  and became §4.64–4.65 (row 6).
+- **Codex:** the trunk itself, plus `ec480d1` (New Rental toolbar) merged in mid-way.
+  `work-tree-feature-copy`'s compact BS/AD dates (`5cb1127`) were already on the trunk: its
+  patch reverse-applies cleanly.
+- **Not ported, with reasons:** Inventory and Today KPI cuts (PLAN §4.0, row 2), Product
+  reports lists (fabricated figures, row 3), Pulse Revenue and Operations links (row 4),
+  `main`'s `*.states` tests (they drive `main`'s props API, so targeted tests replace them),
+  `main`'s `0159_grant_non_money_columns` (the trunk has it as `0162`).
+
+**Ruled**
+- RULINGS-2026-10-08.md, "Branch consolidation", rows 1–6. Row 1 (Client portal-only) also has
+  its `// RULING 2026-10-08` comment at `STAFF_ROUTES`.
+
+**Verified** (this worktree at `fd8458f`, the same tree as `main`'s commit)
+- Full suite **4224/4224, 330 files**. `npm run build` exit 0, which includes `tsc --noEmit`.
+  `check:pglite` 160/160 with the view-leak, function-leak and definer-hygiene gates green.
+  `check:lifecycle` 30/30.
+- 160 migration files with no duplicate prefix, identical to `step1-foundation`'s.
+- Each port has a test that fails on the trunk's version and passes on this one: Cases
+  skeleton and error, Operations empty-on-search, RentalsList New Rental for Owner but not
+  Accounts, Client nav empty, the replay conflict check (6), the RecordForm reset.
+- **Not driven in the browser.** `preview_start` here reads the `launch.json` of the folder this
+  session started in, which serves pre-consolidation code; this was confirmed and that server
+  stopped. The consolidated tree has not been clicked through. That is the first item below.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 52 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 53 | 51 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-12T11:02:25.804Z). Suite: 4114/4114 passed (recorded 2026-10-07T21:28:13.867Z).
+Gates read from .lifecycle-result.json, written 2026-10-12T11:07:03.724Z.
+Counted by `npm run completion`, not typed.
+(The Suite line is the last *recorded* run. Today's direct run was 4224/4224, above.)
+
+### Remaining
+- **Drive the consolidated app.** Client sign-in refused on staff routes, the age badges, the
+  Cases and Operations empty states, the Expenses offline refusal, the conflict banner.
+- **`main`'s folder has another session's uncommitted work** (53 modified files plus new ones:
+  creation drawer, global Add menu, Duplicate Rental dialog, `RULINGS-2026-10-09.md`), last
+  touched 9 Oct. This entry and the rulings rows are committed on
+  `merge/codex-step1-into-main`, one commit ahead of `main`. They reach `main` once that work is
+  committed. Expect a PROGRESS.md conflict; both sides only add at the top.
+- Babin Delivery shows a typed-in "Rs 5,000" rate in New Rental's add-item search
+  (`itemCatalogue.ts` `defaultTransportOptions`). OpenCode's `33de1a0` replaced it with the
+  booking's own delivery charge or "No delivery charge set". Not ported, because
+  `AddItemPanel.tsx` and `NewRental.tsx` are in the uncommitted work above.
+- Booking Detail has no age badge: Phase 9's came through a `useBooking` hook the trunk does
+  not have.
+- Product reports still draws several charts against PLAN Phase 6's ≤1-chart line (row 3).
+- `CONVENTIONS.md` (from `main`) is a generated index of third-party AI agents for Aider, not
+  product documentation.
+- The audit's archive and delete steps for old branches were not done. Nothing was pushed to
+  GitHub or the backup remote.
+
 ## 2026-10-08 — Mock mode: inserts get the `now()` / `CURRENT_DATE` defaults Postgres fills (payments no longer dated 1/1/1970)
 
 Branch `claude/md-brief-gaps`. Closes the "Mock only" bullet under Remaining in the entry below.
