@@ -57,9 +57,27 @@ older audits) and `.env.mock` (mock placeholders only, checked). Snapshot tags
 - Each port has a test that fails on the trunk's version and passes on this one: Cases
   skeleton and error, Operations empty-on-search, RentalsList New Rental for Owner but not
   Accounts, Client nav empty, the replay conflict check (6), the RecordForm reset.
-- **Not driven in the browser.** `preview_start` here reads the `launch.json` of the folder this
-  session started in, which serves pre-consolidation code; this was confirmed and that server
-  stopped. The consolidated tree has not been clicked through. That is the first item below.
+- **Browser, mock mode, 13 Oct**, this worktree at `c6b066c` (before reorganization step 1
+  merged in) on `localhost:3500`; `curl` of the served `ConflictNotificationBanner.tsx` and
+  `nav.ts` confirmed it was this code. After the reorg merge: `tsc` 0 and the nav, shell,
+  operations, rentals-render and replay-conflict suites 359/359.
+  - Owner: Today, Rentals and Operations each show "Updated Just now" in the header.
+  - Operations: a search that matches nothing shows "No jobs match these filters" with Clear
+    filters. Clicking Clear filters brings back all 25 rows and empties the search.
+  - Client: a test Client user was added to the local mock store for the check and removed
+    after. The nav is empty, and each of `/today`, `/rentals`, `/rentals/B-864`, `/calendar`,
+    `/inventory`, `/settings` and `/finance` shows "Your role (Client) does not have access to
+    this module."
+  - Warehouse keeps 10 nav items (all but Finance, as before), and Rentals loads 20 rows.
+  - Expenses: empty in the mock, so it shows the empty-state "Add Expense", which opens the form.
+    With the form filled and the app offline (its offline banner showing), Save Draft is refused
+    inline with "This device is offline. An expense is not queued for later…". No expense was
+    stored, and the entries stayed. Cancelled afterwards.
+  - Cases workspace: settles on "No cases found" (the mock holds none), with no stuck skeleton
+    and no error.
+  - Console: the only errors are 403s on font files, because this worktree borrows
+    `node_modules` through a junction and Vite does not serve files outside the worktree. The
+    test setup causes them; the app does not.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -76,12 +94,12 @@ Counted by `npm run completion`, not typed.
 (The Suite line is the last *recorded* run. Today's direct run was 4224/4224, above.)
 
 ### Remaining
-- **Drive the consolidated app.** Client sign-in refused on staff routes, the age badges, the
-  Cases and Operations empty states, the Expenses offline refusal, the conflict banner.
+- **Not driven:** the conflict banner and review modal. They need a real conflict in the
+  browser's offline queue; the replay check has unit tests, and the modal has Phase 9's 4 tests.
 - **`main` kept moving while this was logged.** Other sessions added `9af5068` (Rentals header,
   New Rental integration, Today layout), `c438125` (the Codex trunk tip `ea9518f`), the glass
-  theme and a Clients fix, up to `550909f` on 13 Oct. This branch merged each in. All 18
-  consolidated features were checked present by marker after those merges, and no migration
+  theme, a Clients fix and reorganization step 1 (`9840ea1`). This branch merged each in. All
+  18 consolidated features were checked present by marker after those merges, and no migration
   changed. This entry and the rulings rows are ahead of `main` and fast-forward it.
 - Babin Delivery shows a typed-in "Rs 5,000" rate in New Rental's add-item search
   (`itemCatalogue.ts` `defaultTransportOptions`). OpenCode's `33de1a0` replaced it with the
@@ -94,6 +112,40 @@ Counted by `npm run completion`, not typed.
   product documentation.
 - The audit's archive and delete steps for old branches were not done. Nothing was pushed to
   GitHub or the backup remote.
+
+## 2026-10-13 — App reorganization step 1 (cleanups + two Law 6 fixes)
+
+**Did**
+- `/admin/audit-settings` → `/admin/audit`, `/finance/closing` → `/finance?tab=closing` (duplicate mounts became redirects). Late Fee and Coupons & Promos added to `MONEY_ROUTES` and guarded in `ToolsLanding`. Out-of-date notes in `nav.ts`/`App.tsx` corrected; unused `TABS` export removed from `data/membership.ts`. Branch `claude/reorg-step1` from `main` (independent of the glass branch).
+
+**Ruled**
+- `RULINGS-2026-10-13.md` § "App reorganization — step 1", rows R1–R4, each with a revert.
+
+**Verified**
+- `tsc --noEmit` exit 0. Tools/nav/money tests 4 files, 68/68 (new Law 6 tests failed before the fix, pass after). Browser (mock, `localhost:3500`): as Owner, both redirects land correctly (Closing tab active with content). As Warehouse, Tools shows Overview · QR & Barcodes · Cinematography Suite only; typed `?tab=latefee` / `?tab=coupons` render no calculator and no rupee figure; cinematography still renders.
+- Full gates, same branch: vitest 338 files, 4312/4312; `vite build` exit 0; `lint:shell` 650 clean; `check:contrast` 54/54; `lint:progress` OK.
+- After merging `main` at `91a2b42` (merge `5b66436`, doc conflicts only, resolved as main + this entry): `tsc` 0; vitest 345 files, 4395/4395; `vite build` exit 0; `lint:shell` clean; `check:contrast` 64/64.
+
+- **Landed with the glass theme:** `main` fast-forwarded to glass (`a09db74`), then merged here (`73b54f6`, doc conflicts only). Combined: `tsc` 0; vitest 346 files, 4402/4402; `vite build` exit 0; `lint:shell` clean; `check:contrast` 82/82.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-13T09:55:17.733Z). Suite: 4329/4329 passed (recorded 2026-10-13T07:46:29.1524909Z).
+Gates read from .lifecycle-result.json, written 2026-10-12T20:38:59.536Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- On `main` (fast-forward, 13 Oct). Step 2 shrank: New Rental stays in the phone More sheet (nav item 1, locked eleven); Rentals header extras wait for `RentalsOperationsHeader.tsx` to be free.
+- Steps 2–4 of the reorganization plan (phone More sheet, Rentals extras, sub-rentals, Timesheet entry, Promotions/policies/Tools) — wait for the Desktop session to commit.
+
+
 
 ## 2026-10-13 — Glass on Light ("frosted"); Glass becomes a finish
 
