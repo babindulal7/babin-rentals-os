@@ -1,6 +1,6 @@
 # Progress Log
 
-## 2026-10-12 — Branch consolidation: Claude, Gemini and Codex work in one tree, now `main`
+## 2026-10-13 — Branch consolidation: Claude, Gemini and Codex work in one tree, now `main`
 
 The user asked for the Claude, Gemini and Codex changes to be in `main`. Built on
 `merge/codex-step1-into-main` (worktree `.claude/worktrees/merge-codex-step1`), on top of
@@ -47,8 +47,10 @@ older audits) and `.env.mock` (mock placeholders only, checked). Snapshot tags
 - RULINGS-2026-10-08.md, "Branch consolidation", rows 1–6. Row 1 (Client portal-only) also has
   its `// RULING 2026-10-08` comment at `STAFF_ROUTES`.
 
-**Verified** (this worktree at `fd8458f`, the same tree as `main`'s commit)
-- Full suite **4224/4224, 330 files**. `npm run build` exit 0, which includes `tsc --noEmit`.
+**Verified**
+- 13 Oct, on `main` at `550909f` plus this log: `tsc` 0, full suite **4399/4399, 346 files**.
+  Every consolidated feature was checked present by marker.
+- 12 Oct, on `fd8458f` (the tree `main` took at consolidation): full suite **4224/4224, 330 files**. `npm run build` exit 0, which includes `tsc --noEmit`.
   `check:pglite` 160/160 with the view-leak, function-leak and definer-hygiene gates green.
   `check:lifecycle` 30/30.
 - 160 migration files with no duplicate prefix, identical to `step1-foundation`'s.
@@ -76,10 +78,11 @@ Counted by `npm run completion`, not typed.
 ### Remaining
 - **Drive the consolidated app.** Client sign-in refused on staff routes, the age badges, the
   Cases and Operations empty states, the Expenses offline refusal, the conflict banner.
-- **`main` moved on after the verification above.** Another session committed its 9 Oct work
-  (Rentals header in the app bar, New Rental integration, Today layout; 88 files) as `9af5068`
-  on 12 Oct. This branch merged it, so this entry and the rulings rows sit one merge commit
-  ahead of `main` and can fast-forward it. The gates above ran on `fd8458f`, before `9af5068`.
+- **`main` kept moving while this was logged.** Other sessions added `9af5068` (Rentals header,
+  New Rental integration, Today layout), `c438125` (the Codex trunk tip `ea9518f`), the glass
+  theme and a Clients fix, up to `550909f` on 13 Oct. This branch merged each in. All 18
+  consolidated features were checked present by marker after those merges, and no migration
+  changed. This entry and the rulings rows are ahead of `main` and fast-forward it.
 - Babin Delivery shows a typed-in "Rs 5,000" rate in New Rental's add-item search
   (`itemCatalogue.ts` `defaultTransportOptions`). OpenCode's `33de1a0` replaced it with the
   booking's own delivery charge or "No delivery charge set". Not ported, because
