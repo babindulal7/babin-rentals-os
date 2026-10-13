@@ -6,7 +6,7 @@ import {
   type SetStateAction,
 } from 'react'
 import { rupees, type Paisa } from '../../../lib/money'
-import { CREW_ROSTER, type CrewMember } from '../../../lib/queries/crew'
+import { crewPool, type CrewMember } from '../../../lib/queries/crew'
 import type { QuoteSnapshot } from '../../../lib/queries/quoteEditor'
 import type { CrewLine } from './CrewSection'
 import type { TransportDetails } from './CrewAndTransportSection'
@@ -107,7 +107,7 @@ export function useNewRentalLogistics({
 
   const addCrew = useCallback(
     (crewId: string) => {
-      const rosterPool = liveCrew && liveCrew.length > 0 ? liveCrew : CREW_ROSTER
+      const rosterPool = crewPool(liveCrew)
       const m = rosterPool.find((x) => x.id === crewId)
       if (!m || crew.some((c) => c.crewId === crewId)) return
       setCrew((p) => [...p, seedCrewLine(m)])

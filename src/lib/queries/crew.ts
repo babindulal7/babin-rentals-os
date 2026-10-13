@@ -165,6 +165,21 @@ export async function listCrewAssignments(_filters?: ListFilters): Promise<ListQ
   }
 }
 
+/**
+ * The crew a booking may pick from: the live roster, or in mock mode only the
+ * seed roster.
+ *
+ * New Rental fell back to `CREW_ROSTER`, the seeded people in `data/crew.ts`,
+ * whenever the live read came back empty or failed. On the live project that
+ * offered made-up crew, with made-up day rates, to a real booking. Live mode
+ * now gets an empty list and says so, the way `CrewBooking` already did
+ * (`IS_MOCK ? CREW_ROSTER : []`). From OpenCode's `33de1a0`, ported 13 Oct 2026.
+ */
+export function crewPool(live: readonly CrewMember[] | null | undefined): readonly CrewMember[] {
+  if (live && live.length > 0) return live
+  return IS_MOCK ? CREW_ROSTER : []
+}
+
 export async function listCrewMembers(_filters?: ListFilters): Promise<ListQueryResult<CrewMember>> {
   try {
     const { data: memberRows, error } = await supabase

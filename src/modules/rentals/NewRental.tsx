@@ -1034,6 +1034,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
             poolError={poolError}
             conflictSummary={conflictSummary}
             deliveryType={deliveryType}
+            deliveryChargePaisa={deliveryChargePaisa}
             onSelectTransport={(type) => {
               setDeliveryType(type)
               setOpen((prev) => prev.map((v, j) => (j === 4 ? true : v)))

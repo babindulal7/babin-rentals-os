@@ -25,6 +25,7 @@ vi.mock('../../../lib/device', () => ({
   useCapability: () => ({ coarsePointer: false, hasHover: true, standalone: false, reducedMotion: false }),
 }))
 vi.mock('../../../lib/supabase', () => ({
+  IS_MOCK: false,
   newClientUuid: () => '00000000-0000-4000-8000-000000000000',
   supabase: { from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }) },
 }))
