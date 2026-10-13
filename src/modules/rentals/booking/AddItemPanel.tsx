@@ -2286,7 +2286,11 @@ function TransportRow({
       role="option"
       aria-selected={active}
       aria-label={`${result.name}. Transport mode: ${result.type}. ${
-        showPrices ? `${formatMoney(result.ratePaisa)}. ` : ''
+        showPrices
+          ? result.ratePaisa === null
+            ? 'No delivery charge set on this booking yet. '
+            : `${formatMoney(result.ratePaisa)}. `
+          : ''
       }${selected ? 'Currently selected.' : 'Press Enter to select transport mode.'}`}
       onMouseMove={onHover}
       onClick={onSelect}
@@ -2357,7 +2361,13 @@ function TransportRow({
             className="figure"
             style={{ marginLeft: 'auto', flexShrink: 0, fontSize: 'var(--t-ui)', fontWeight: 700, color: 'var(--text)' }}
           >
-            {result.ratePaisa === 0 ? 'Free (Rs 0)' : formatMoney(result.ratePaisa)}
+            {/* `null` = no delivery charge on the form yet. It is typed in the
+                Delivery section; this row never supplies a figure of its own. */}
+            {result.ratePaisa === null
+              ? 'No charge set yet'
+              : result.ratePaisa === 0
+                ? 'Free (Rs 0)'
+                : formatMoney(result.ratePaisa)}
           </span>
         )}
       </div>

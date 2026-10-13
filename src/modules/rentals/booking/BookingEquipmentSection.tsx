@@ -15,7 +15,7 @@ import {
   equipmentLineDraft,
   defaultTransportOptions,
 } from './itemCatalogue'
-import { CREW_ROSTER, type CrewMember } from '../../../lib/queries/crew'
+import { crewPool, type CrewMember } from '../../../lib/queries/crew'
 import type { PricingPipelineResult } from '../../../lib/pricingPipeline'
 import type { GateContext } from '../../../lib/fieldGating'
 import type { AuthUser } from '../../../lib/auth'
@@ -52,6 +52,8 @@ export interface BookingEquipmentSectionProps {
   poolError: string | null
   conflictSummary: EquipmentConflictSummary
   deliveryType: 'Client Pickup' | 'Babin Delivery'
+  /** The delivery charge on the form, shown on the Babin Delivery search row. */
+  deliveryChargePaisa: Paisa
   onSelectTransport: (type: 'Client Pickup' | 'Babin Delivery') => void
   onAddCrew: (crewId: string) => void
   canBookingMoney: boolean
@@ -80,6 +82,7 @@ export function BookingEquipmentSection({
   poolError,
   conflictSummary,
   deliveryType,
+  deliveryChargePaisa,
   onSelectTransport,
   onAddCrew,
   canBookingMoney,
@@ -259,8 +262,8 @@ export function BookingEquipmentSection({
           window={bookingWindow}
           {...(liveEquipment ? { equipment: liveEquipment, availability: availabilitySource } : {})}
           bundles={liveBundleResults}
-          crew={liveCrew && liveCrew.length > 0 ? liveCrew : CREW_ROSTER}
-          transport={defaultTransportOptions(bookingWindow)}
+          crew={crewPool(liveCrew)}
+          transport={defaultTransportOptions(bookingWindow, deliveryChargePaisa)}
           existingCrewIds={existingCrewIds}
           selectedTransportType={deliveryType}
           days={days || 1}

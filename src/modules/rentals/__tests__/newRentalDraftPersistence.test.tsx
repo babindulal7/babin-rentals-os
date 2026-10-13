@@ -45,6 +45,7 @@ vi.mock('../../../lib/device', () => ({
   useCapability: () => ({ coarsePointer: false, hasHover: true, standalone: false, reducedMotion: false }),
 }))
 vi.mock('../../../lib/supabase', () => ({
+  IS_MOCK: false,
   newClientUuid: () => crypto.randomUUID(),
   supabase: { from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) }) },
 }))
