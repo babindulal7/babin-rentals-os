@@ -1725,11 +1725,11 @@ export default function RentalsList() {
                       : []),
                   ]
                 : []),
-              {
-                label: 'Productions Hub',
-                icon: 'queues' as const,
-                onClick: () => navigate('/crew/productions'),
-              },
+              /* RULING 2026-10-13: "Productions Hub" removed. It pointed at
+                 /crew/productions, which has no route (it opened the not-found
+                 page), and rulings §1 (12 Aug) keep Productions deleted from
+                 Rentals. /rentals/productions still resolves (Law 3). Revert =
+                 restore the item with navigate('/rentals/productions'). */
               {
                 label: 'Scan Barcode',
                 icon: 'barcode' as const,

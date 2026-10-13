@@ -1,5 +1,36 @@
 # Progress Log
 
+## 2026-10-13 — App reorganization step 2 (one dead link removed; three items withdrawn)
+
+**Did**
+- Rentals ▸ More no longer offers "Productions Hub": it pointed at `/crew/productions`, which has no route and opened "Page not found", and rulings §1 (12 Aug) keep Productions deleted. `/rentals/productions` still resolves (Law 3). `rentalsList.render.test.tsx` +1: opens More and asserts no Productions door (the existing test never opened the menu).
+- Investigated and withdrew three planned items (reasons in `RULINGS-2026-10-13.md` § step 2): the Crew Timesheet page runs on hard-coded fabricated rows, so it stays unlinked until it is rebuilt on the real crew-day table from migration 0003; the Rentals Refresh/Scan "duplicates" are responsive fallbacks; sub-rentals have two different lenses (bookings vs supplier lines + directory), not two homes.
+
+**Ruled**
+- `RULINGS-2026-10-13.md` § "App reorganization — step 2", row R5, plus the withdrawn list. `RULING 2026-10-13` comment at the removed item.
+
+**Verified**
+- Test-first: the new test failed with the item present and passes without it. `tsc --noEmit` exit 0; Rentals 45 files, 430/430. Full suite: the first run had **2 failing files out of 346** under a machine pinned at 100% CPU (failures not captured); the re-run passed 346 files, 4403/4403. `vite build` exit 0; `lint:shell` clean; `check:contrast` 82/82.
+- Browser (mock Owner, `localhost:3500`, this branch): Rentals ▸ More = Fast Return · Record Payment · Scan Barcode · Refresh; `/rentals/productions` renders (not the 404); `/crew/productions` shows "Page not found" (the bug that was linked).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-13T09:55:17.733Z). Suite: 4329/4329 passed (recorded 2026-10-13T07:46:29.1524909Z).
+Gates read from .lifecycle-result.json, written 2026-10-12T20:38:59.536Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Identify the two intermittent test failures if they recur (rerun green; suspected CPU-starved timeouts — a Desktop `vite` dev server from 01:23 holds ~1.5 cores).
+- Crew Timesheet: rebuild on the migration-0003 crew-day table before giving it an entry point (feature work).
+- Reorg step 4 waits on Babin: Promotions home, business policies → Settings, Tools tabs. Booking-date colour (glass row 9) still open.
+
 ## 2026-10-13 — App reorganization step 1 (cleanups + two Law 6 fixes)
 
 **Did**
