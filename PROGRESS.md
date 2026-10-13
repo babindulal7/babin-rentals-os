@@ -101,13 +101,20 @@ Counted by `npm run completion`, not typed.
   theme, a Clients fix and reorganization step 1 (`9840ea1`). This branch merged each in. All
   18 consolidated features were checked present by marker after those merges, and no migration
   changed. This entry and the rulings rows are ahead of `main` and fast-forward it.
-- Babin Delivery shows a typed-in "Rs 5,000" rate in New Rental's add-item search
-  (`itemCatalogue.ts` `defaultTransportOptions`). OpenCode's `33de1a0` replaced it with the
-  booking's own delivery charge or "No delivery charge set". Not ported, because
-  `AddItemPanel.tsx` and `NewRental.tsx` were mid-edit in another session (now `9af5068`).
-- Booking Detail has no age badge: Phase 9's came through a `useBooking` hook the trunk does
-  not have.
-- Product reports still draws several charts against PLAN Phase 6's ≤1-chart line (row 3).
+- **Done 13 Oct, after the entries above:**
+  - `aa6d272`: OpenCode's remaining fix. On the live project New Rental offered the seed crew
+    (`CREW_ROSTER`) whenever the live roster read was empty or failed; `crewPool()` now gives
+    the seed roster in mock mode only. Babin Delivery's invented "Rs 5,000 base" is gone: the
+    row carries the form's delivery charge, or null, shown as "No charge set yet". That row
+    is no longer reachable from the search tabs, so the figure was removed rather than fixed
+    on screen. 6 new tests.
+  - `ed94885`: Booking Detail shows the age badge, the older of its head and line reads.
+    A layout test was added; it fails on the previous code.
+- **Closed without code: Product reports and "≤1 chart".** That line is one of
+  `Page Standard.md`'s layout rules. PLAN §4.0 (4 Aug) makes the module specs and their
+  renders govern, and the 8 Aug entry records that only that document's five-page-states
+  rule carried forward. So consolidation row 3's question is answered: build to the render,
+  not to a chart cap.
 - `CONVENTIONS.md` (from `main`) is a generated index of third-party AI agents for Aider, not
   product documentation.
 - The audit's archive and delete steps for old branches were not done. Nothing was pushed to
