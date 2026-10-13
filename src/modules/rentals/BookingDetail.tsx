@@ -16,6 +16,7 @@ import { Modal } from '../../components/ui/Modal'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { PageActions } from '../../components/ui/PageActions'
+import { DataAgeBadge } from '../../components/ui/DataAgeBadge'
 import { OverflowMenu, type OverflowMenuItem } from '../../components/ui/OverflowMenu'
 import { getRentalPrimaryAction } from '../../lib/rentalActions'
 import { useViewport } from '../../lib/device'
@@ -1006,6 +1007,8 @@ function BookingDetailView() {
   const [floor, setFloor] = useState<FloorBooking | null>(null)
   const [floorLoading, setFloorLoading] = useState(true)
   const [floorError, setFloorError] = useState<string | null>(null)
+  /** When the floor read last SUCCEEDED, for the age badge (PLAN.md Phase 9). */
+  const [floorFetchedAt, setFloorFetchedAt] = useState<Date | null>(null)
   /** Bumped after a unit release so the chip row re-reads what the database
    *  now says, instead of this screen editing its own copy of the truth. */
   const [floorVersion, setFloorVersion] = useState(0)
@@ -1017,6 +1020,7 @@ function BookingDetailView() {
       .then((b) => {
         if (cancelled) return
         setFloor(b)
+        setFloorFetchedAt(new Date())
         setFloorLoading(false)
       })
       .catch((err: unknown) => {
@@ -2145,6 +2149,20 @@ function BookingDetailView() {
                     }}
                   />
                 )}
+                {/* PLAN.md Phase 9 — how old this page is: the OLDER of its two
+                    reads (the booking head and its lines), so the badge never
+                    claims fresher data than is on screen. Main's Phase 9 had
+                    this through a `useBooking` hook the trunk does not use. */}
+                <DataAgeBadge
+                  loadedAt={
+                    head.lastFetchedAt && floorFetchedAt
+                      ? new Date(Math.min(head.lastFetchedAt.getTime(), floorFetchedAt.getTime()))
+                      : null
+                  }
+                  onRefresh={refreshBookingData}
+                  loading={head.loading || floorLoading}
+                  compact={onPhone}
+                />
                 {booking && (
                   <RentalMoreActions
                     key="rental-more-actions"

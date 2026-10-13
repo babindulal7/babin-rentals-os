@@ -300,6 +300,16 @@ describe('§4.2 — the six-step stepper, from the QUERIED stage', () => {
   })
 })
 
+/* PLAN.md Phase 9, from main's Phase 9 work (ported 13 Oct 2026): the header
+   says how old the page is, once BOTH of its reads have landed. */
+describe('Phase 9 — the age badge', () => {
+  it('reads "Updated Just now" once the booking and its lines have loaded', async () => {
+    await mount(1280)
+    expect(text()).toContain('Updated Just now')
+    expect(text()).not.toContain('No cache')
+  })
+})
+
 describe('§4.2 — the phone segmented control', () => {
   it('is absent above 768, where every section renders at once', async () => {
     await mount(1280)
