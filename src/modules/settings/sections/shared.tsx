@@ -12,6 +12,7 @@ import type { StatusKey, BrandKey } from '../../../lib/status'
 import { SETTING_SPECS, formatSetting } from '../../../lib/settingsStore'
 import type { SettingKey, SettingValue, SettingsRecord } from '../../../lib/settingsStore'
 import { useTheme } from '../../../lib/theme'
+import { useViewport } from '../../../lib/device'
 import { getAllowOverbooking, setAllowOverbooking } from '../../../lib/bookingRules'
 import { TEXT_SIZES, applyTextSize, readTextSize } from '../../../lib/textSize'
 import type { TextSize } from '../../../lib/textSize'
@@ -437,10 +438,20 @@ export function KpiCard({ k }: { k: KpiSpec }) {
 
 /** The KPI strip, sized for whichever column it lands in. */
 export function KeyFigures({ kpis }: { kpis: KpiSpec[] }) {
+  const viewport = useViewport()
   return (
     <section
       aria-label="Key figures"
-      style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(168px, 1fr))', gap: 'var(--sp-md)' }}
+      style={{
+        display: 'grid',
+        gridTemplateColumns:
+          viewport === 'phone'
+            ? '1fr'
+            : viewport === 'tablet'
+              ? 'repeat(2, minmax(0, 1fr))'
+              : 'repeat(auto-fit, minmax(168px, 1fr))',
+        gap: 'var(--sp-md)',
+      }}
     >
       {kpis.map((k) => (
         <KpiCard key={k.label} k={k} />
@@ -558,7 +569,7 @@ export function FieldRow({ f }: { f: Field }) {
   /* Null only outside the provider, which nothing in this module is. Optional
      rather than asserted so a future caller gets read-only, not a crash. */
   const edit = useContext(EditCtx)
-  const { theme, setMode } = useTheme()
+  const { theme, glass, choose } = useTheme()
   const [textSize, setTextSize] = useState<TextSize>(() => readTextSize())
   // redesign v1 §3 — the one Settings toggle that is actually wired (every
   // other Switch on this page is local-state-only, same as Theme/Text size
@@ -641,8 +652,10 @@ export function FieldRow({ f }: { f: Field }) {
         </span>
       ) : f.label === 'Theme' ? (
         <span style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-          {(['light', 'dark'] as const).map((m) => {
-            const on = theme === m
+          {(['light', 'dark', 'glass'] as const).map((m) => {
+            // RULING 2026-10-13: Glass is a finish on either base, so it can be
+            // pressed alongside Light or Dark.
+            const on = m === 'glass' ? glass : theme === m
             return (
               /* Same pair of reasons as Text size: `controlStyle` needs `tap`
                  to reach 44 vertically, and each button carries an icon plus a
@@ -651,7 +664,7 @@ export function FieldRow({ f }: { f: Field }) {
                 key={m}
                 type="button"
                 className="tap"
-                onClick={() => setMode(m)}
+                onClick={() => choose(m)}
                 aria-pressed={on}
                 style={{
                   ...controlStyle,
@@ -662,7 +675,7 @@ export function FieldRow({ f }: { f: Field }) {
                   textTransform: 'capitalize',
                 }}
               >
-                <Icon name={m === 'dark' ? 'moon' : 'sun'} size={13} />
+                <Icon name={m === 'glass' ? 'sparkles' : m === 'dark' ? 'moon' : 'sun'} size={13} />
                 {m}
               </button>
             )

@@ -1,3 +1,4 @@
+import { UnsavedChangesIndicator } from './UnsavedChangesIndicator'
 /**
  * src/components/ui/header/PageHeader.tsx — Babin Rentals OS
  *
@@ -9,7 +10,7 @@
  * money-blind (Law 6), single prominent primary CTA, and typed action registry driven.
  */
 
-import React, { cloneElement, isValidElement, useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import React, { cloneElement, isValidElement, useEffect, useLayoutEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import Icon, { type IconName } from '../Icon'
@@ -170,9 +171,9 @@ export function AddDropdownButton({ action }: { action: PageActionItem }) {
           minHeight: 44,
           padding: '0 14px',
           borderRadius: 'var(--r-btn, 8px)',
-          border: '1px solid var(--accent, #e65100)',
-          background: 'var(--accent, #e65100)',
-          color: '#fff',
+          border: '1px solid transparent',
+          background: 'var(--btn-primary-bg, var(--primary, #2456d6))',
+          color: 'var(--btn-primary-fg, #fff)',
           fontWeight: 600,
           fontSize: 'var(--t-meta, 13px)',
           display: 'inline-flex',
@@ -274,22 +275,22 @@ export function PageHeader({
   style,
 }: PageHeaderProps) {
   const ws = useOptionalWorkspace()
+  const setPageInfo = ws?.setPageInfo
+  const setHeaderData = ws?.setHeaderData
   const { user } = useAuth()
   const searchInputRef = useRef<HTMLInputElement>(null)
   const [activeConfirmAction, setActiveConfirmAction] = useState<PageActionItem | null>(null)
 
   // Sync page description into workspace if present
-  useEffect(() => {
-    if (ws && description) {
-      ws.setPageInfo(description)
-      return () => ws.setPageInfo(null)
-    }
-  }, [ws, description])
+  useLayoutEffect(() => {
+    setPageInfo?.(description ?? null)
+  }, [setPageInfo, description])
 
   // Sync header data into workspace shell when available
-  useEffect(() => {
-    if (!ws) return
-    ws.setHeaderData({
+  // RULING 2026-10-12: register through stable setters; context updates must not reset the header.
+  useLayoutEffect(() => {
+    if (!setHeaderData) return
+    setHeaderData({
       title,
       leading,
       icon,
@@ -311,11 +312,8 @@ export function PageHeader({
       creationContext,
       showAddMenu,
     })
-    return () => {
-      ws.setHeaderData(null)
-    }
   }, [
-    ws,
+    setHeaderData,
     title,
     leading,
     icon,
@@ -337,6 +335,11 @@ export function PageHeader({
     creationContext,
     showAddMenu,
   ])
+
+  useLayoutEffect(() => () => {
+    setHeaderData?.(null)
+    setPageInfo?.(null)
+  }, [setHeaderData, setPageInfo])
 
   // Global hotkey '/' to focus search input if not inside form controls
   useEffect(() => {
@@ -370,7 +373,9 @@ export function PageHeader({
         className={`page-header universal-page-header page-header--in-shell ${className}`}
         style={{ display: 'none', height: 0, padding: 0, margin: 0, border: 0, overflow: 'hidden' }}
         aria-hidden="true"
-      />
+      >
+        {leading}
+      </div>
     )
   }
 
@@ -486,17 +491,7 @@ export function PageHeader({
                 {!ws && description && <InfoTooltip content={description} size={16} />}
                 {status}
                 {hasDirty && (
-                  <span className="universal-page-header__dirty-indicator" title="Unsaved modifications">
-                    <span
-                      style={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: '50%',
-                        backgroundColor: '#d97706',
-                      }}
-                    />
-                    Unsaved changes
-                  </span>
+                  <UnsavedChangesIndicator />
                 )}
               </div>
             </div>

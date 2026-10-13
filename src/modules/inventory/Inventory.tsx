@@ -10,7 +10,6 @@ import { PageShell } from '../../components/ui/PageShell'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { FilterButton, FilterDrawer } from '../../components/ui/FilterDrawer'
 import { Pagination } from '../../components/ui/Pagination'
-import { AppPageToolbar } from '../../components/ui/AppPageToolbar'
 import { ListControlRow, ListWorkspace } from '../../components/ui/ListWorkspace'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { useFacetCounts } from '../../lib/queries/facetCounts'
@@ -1288,6 +1287,10 @@ export default function Inventory() {
     []
   )
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [bundleSearch, setBundleSearch] = useState('')
+  const [bundleFilterCount, setBundleFilterCount] = useState(0)
+  const [maintenanceSearch, setMaintenanceSearch] = useState('')
+  const [subRentalSearch, setSubRentalSearch] = useState('')
   const [sort, setSort] = useState<SortKey>('Equipment A–Z')
   const [view, setView] = useState<'table' | 'grid'>('table')
   const [density, setDensity] = useState<Density>('comfortable')
@@ -1589,9 +1592,10 @@ export default function Inventory() {
     tab === 'Equipment' && !isNew ? (
       <PageActions
         primary={<GlobalAddMenu module="inventory" />}
-        secondary={[
+        // RULING 2026-10-13: on a phone, Refresh and Export live in More so the title and Add keep the header.
+        secondary={phone ? [] : [
           <Button key="refresh" icon="refresh" onClick={refreshAll} aria-label="Refresh equipment">
-            {phone ? '' : 'Refresh'}
+            Refresh
           </Button>,
           <span
             key="export"
@@ -1599,11 +1603,15 @@ export default function Inventory() {
             title={`Exports the ${list.rows.length} models on this page. The list is paged server-side, so the file is the page, not the catalogue.`}
           >
             <Button icon="download" onClick={() => exportCsv(list.rows, money)} aria-label="Export equipment on this page">
-              {phone ? '' : 'Export'}
+              Export
             </Button>
           </span>,
         ]}
         overflow={[
+          ...(phone ? [
+            { label: 'Refresh equipment', icon: 'refresh' as const, onClick: refreshAll },
+            { label: 'Export this page', icon: 'download' as const, onClick: () => exportCsv(list.rows, money) },
+          ] : []),
           {
             label: 'Warranty Tracker',
             icon: 'check',
@@ -1624,7 +1632,7 @@ export default function Inventory() {
           leading: (
             <FilterButton
               onClick={() => setFiltersOpen((open) => !open)}
-              activeCount={tab === 'Equipment' ? activeFacetCount : 0}
+              activeCount={tab === 'Equipment' ? activeFacetCount : bundleFilterCount}
               controls={tab === 'Equipment' ? 'inventory-filters' : 'bundle-filters'}
               expanded={filtersOpen}
             />
@@ -1655,7 +1663,31 @@ export default function Inventory() {
                 onClear: () => setSearchTerm(''),
                 ariaLabel: 'Search inventory',
               }
-            : undefined
+            : tab === 'Bundles' && params.get('action') !== 'new'
+              ? {
+                  value: bundleSearch,
+                  onChange: setBundleSearch,
+                  placeholder: 'Search bundles, ID, or equipment… (press /)',
+                  onClear: () => setBundleSearch(''),
+                  ariaLabel: 'Search bundles',
+                }
+              : tab === 'Maintenance'
+                ? {
+                    value: maintenanceSearch,
+                    onChange: setMaintenanceSearch,
+                    placeholder: 'Search job, equipment, serial… (press /)',
+                    onClear: () => setMaintenanceSearch(''),
+                    ariaLabel: 'Search maintenance jobs',
+                  }
+                : tab === 'Sub-Rentals'
+                  ? {
+                      value: subRentalSearch,
+                      onChange: setSubRentalSearch,
+                      placeholder: 'Search SR ID, equipment, partner… (press /)',
+                      onClear: () => setSubRentalSearch(''),
+                      ariaLabel: 'Search sub-rentals',
+                    }
+                  : undefined
         }
         description="Find equipment, check availability, and manage stock."
         actions={equipmentActions}
@@ -1727,11 +1759,17 @@ export default function Inventory() {
           />
           </Suspense>
       ) : tab === 'Bundles' ? (
-        <Bundles filtersOpen={filtersOpen} onFiltersClose={() => setFiltersOpen(false)} />
+        <Bundles
+          filtersOpen={filtersOpen}
+          onFiltersClose={() => setFiltersOpen(false)}
+          searchQuery={bundleSearch}
+          onSearchChange={setBundleSearch}
+          onActiveFilterCountChange={setBundleFilterCount}
+        />
       ) : tab === 'Sub-Rentals' ? (
-        <SubRental embedded />
+        <SubRental embedded searchQuery={subRentalSearch} onSearchChange={setSubRentalSearch} />
       ) : tab === 'Maintenance' ? (
-        <Maintenance />
+        <Maintenance searchQuery={maintenanceSearch} onSearchChange={setMaintenanceSearch} />
       ) : tab === 'Stock Check' ? (
         /*
          * §7.3 as a pane. The same component still serves
@@ -1898,20 +1936,6 @@ export default function Inventory() {
               })}
             </div>
             <Card title={countedTitle} bodyStyle={{ padding: 0 }}>
-              {total !== null && (
-                <AppPageToolbar
-                  pagination={
-                    <Pagination
-                      page={page}
-                      total={total}
-                      pageSize={rowsPerPage}
-                      pageSizeOptions={[25, 50, 100]}
-                      onPageChange={setPage}
-                      onPageSizeChange={setRowsPerPage}
-                    />
-                  }
-                />
-              )}
               {selected.size > 0 && (
                 <div
                   style={{
