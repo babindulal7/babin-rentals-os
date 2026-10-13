@@ -31,8 +31,8 @@ import { BsAdDate } from '../../components/ui/BsAdDate'
 import { Badge } from '../../components/ui/Badge'
 import { STATUS } from '../../lib/status'
 import type { IconName } from '../../components/ui/Icon'
-import type { StatusKey, BrandKey } from '../../lib/status'
-import { formatMoney, toRupees, type Paisa } from '../../lib/money'
+import type { StatusKey } from '../../lib/status'
+import { formatMoney, toRupees } from '../../lib/money'
 import { listInvoices, payableInvoices } from '../../lib/queries/finance'
 import { businessNowAd } from '../../lib/queries/today'
 import { formatAd, getBusinessToday } from '../../lib/bs'
@@ -1712,11 +1712,11 @@ export default function RentalsList() {
                       : []),
                   ]
                 : []),
-              {
-                label: 'Productions Hub',
-                icon: 'queues' as const,
-                onClick: () => navigate(PRODUCTIONS_HUB_PATH),
-              },
+              /* RULING 2026-10-13: "Productions Hub" removed. It pointed at
+                 /crew/productions, which has no route (it opened the not-found
+                 page), and rulings §1 (12 Aug) keep Productions deleted from
+                 Rentals. /rentals/productions still resolves (Law 3). Revert =
+                 restore the item with navigate(PRODUCTIONS_HUB_PATH). */
               {
                 label: 'Scan Barcode',
                 icon: 'barcode' as const,

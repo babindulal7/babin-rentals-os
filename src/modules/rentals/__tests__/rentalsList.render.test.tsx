@@ -240,6 +240,17 @@ describe('§4.1 — one list, no tabs', () => {
     expect(button('Bookings')).toBeUndefined()
   })
 
+  it('offers no Productions door in the More menu either', async () => {
+    /* RULING 2026-10-13: "Productions Hub" came back in the More menu on 29 Sep
+       (e4feb86), pointing at /crew/productions — a path with no route, so it
+       opened the not-found page — while rulings §1 keep Productions deleted.
+       The assertion above reads the page without opening More, so it missed it. */
+    await mount(1280)
+    await openMore()
+    expect(menuItem('Productions Hub')).toBeUndefined()
+    expect(text()).not.toContain('Productions')
+  })
+
   it('draws the 5 operational view chips in order', async () => {
     await mount(1280)
     const chips = allButtons()
