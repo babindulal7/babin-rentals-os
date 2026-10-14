@@ -2104,6 +2104,13 @@ function BookingDetailView() {
             </div>
           }
           title={booking.clientName ? `${booking.bookingNo} · ${booking.clientName}` : booking.bookingNo}
+          status={
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              {!onPhone && <Badge status={stage} />}
+              {booking.isCancelled && <Badge flag="Cancelled" />}
+              {subRental && <SubRentedMark label="Sub-rental" />}
+            </span>
+          }
           description={
             booking.project || booking.projectType
               ? `${booking.project ?? 'Untitled project'} · ${displayProjectType(booking.projectType, booking.projectTypeOther)}`
@@ -2113,10 +2120,6 @@ function BookingDetailView() {
             <PageActions
             extra={
               <>
-                {/* On a phone the stepper's "Step n of 6 — Stage" already names it; the title keeps the width. */}
-                {!onPhone && <Badge status={stage} />}
-                {booking.isCancelled && <Badge flag="Cancelled" />}
-                {subRental && <SubRentedMark label="Sub-rental" />}
                 {booking && (
                   <WhatsAppShareButton
                     key="wa"
@@ -2143,32 +2146,6 @@ function BookingDetailView() {
                       deposit: canBookingMoney ? booking.depositRequired : null,
                       balance: canBookingMoney && hasInvoice ? (totals.outstanding as Paisa) : null,
                     }}
-                  />
-                )}
-                {booking && (
-                  <RentalMoreActions
-                    key="rental-more-actions"
-                    booking={{
-                      id: booking.id,
-                      bookingNo: booking.bookingNo,
-                      clientName: booking.clientName,
-                      clientId: booking.clientId,
-                      stage: booking.stage,
-                      isCancelled: booking.isCancelled,
-                      isClosed: booking.isClosed,
-                      itemCount: booking.itemCount,
-                      pickupDate: booking.pickupAtAd,
-                      returnDate: booking.returnAtAd,
-                      totalAmount: totals.total,
-                      paidAmount: totals.paid,
-                      outstandingAmount: totals.outstanding,
-                      depositRequired: booking.depositRequired,
-                    }}
-                    selectedCount={1}
-                    ariaLabel="More actions for rental"
-                    onActionCompleted={refreshBookingData}
-                    compact={onPhone}
-                    {...(onPhone ? { extraItems: phoneMoreItems } : {})}
                   />
                 )}
               </>
