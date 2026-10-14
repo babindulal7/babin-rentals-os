@@ -38,6 +38,9 @@
 .smart-intel-tab[aria-selected='true'] { color: var(--text); border-bottom-color: var(--primary); background: var(--w04); }
 .smart-intel-tab:hover { background: var(--w08); color: var(--text); }
 .smart-intel-count { font: 500 10px var(--font-mono); padding: 2px 4px; border-radius: 4px; background: var(--w08); color: var(--text); }
+/* Rental total, warning and tabs stay in view while long item lists scroll (14 Oct). */
+.smart-intel-summary { position: sticky; top: 0; z-index: 2; background: var(--hover-card, var(--card)); }
+.smart-intel-summary .smart-intel-tabs { position: static; }
 .smart-intel-panel { padding: 16px 4px 4px; min-width: 0; }
 .smart-intel-panel dl > div { padding: 8px 0; }
 .smart-intel-panel dd { overflow-wrap: anywhere; }

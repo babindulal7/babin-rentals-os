@@ -44,6 +44,17 @@ async function renderPage(page: 'rentals' | 'edit' | 'plain') {
 }
 
 describe('page ownership of the application header', () => {
+  it('preserves the command search hit area when sibling actions consume header space', async () => {
+    for (const viewport of ['tablet', 'desktop'] as const) {
+      state.viewport = viewport
+      await renderPage('plain')
+      const search = container.querySelector<HTMLButtonElement>('[aria-label="Search bookings, clients, equipment and pages"]')!
+      expect(search.style.minWidth).toBe('44px')
+      expect(search.style.minHeight).toBe('44px')
+      expect(search.style.flexShrink).toBe('0')
+      expect(container.querySelector<HTMLElement>('.app-global-header__center')!.style.minWidth).toBe('44px')
+    }
+  })
   it('reclaims healthy sync space on tablets but keeps every actionable sync state visible', async () => {
     state.viewport = 'tablet'
     await renderPage('plain')

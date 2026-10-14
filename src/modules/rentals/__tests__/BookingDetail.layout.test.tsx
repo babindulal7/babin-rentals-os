@@ -155,6 +155,13 @@ vi.mock('../../../lib/queries/bookingNotes', () => ({
   listBookingNotes: async () => ({ rows: [] }),
 }))
 
+// Keep every mount read at the query seam; no late live requests may outlast jsdom.
+vi.mock('../../../lib/queries/clients', () => ({ getClient: async () => null }))
+vi.mock('../../../lib/queries/documents', () => ({
+  documentsForBooking: (bookingId: string) => ({ chips: { booking_id: [bookingId] } }),
+  listDocuments: async () => ({ rows: [] }),
+}))
+
 vi.mock('../../../lib/queries/finance', () => {
   const INVOICE = {
     id: 'inv-1',
@@ -229,6 +236,8 @@ let container: HTMLDivElement
 let root: Root
 
 async function mount(width: number, as = 'Owner') {
+  if (root) await act(async () => root.unmount())
+  container?.remove()
   role = as
   Object.defineProperty(window, 'innerWidth', { value: width, configurable: true, writable: true })
   container = document.createElement('div')
@@ -413,6 +422,19 @@ describe('Law 16 — unwired surfaces do not invent booking data', () => {
 })
 
 describe('§4.2 header — [Operations ▾] and [⋮], with dead controls removed', () => {
+  it.each([375, 820])('keeps one compact More with the print and message actions at %ipx', async (width) => {
+    await mount(width)
+    expect(allButtons().some((b) => b.getAttribute('aria-label') === 'More booking actions')).toBe(false)
+    expect(button('Print booking')).toBeUndefined()
+    const more = allButtons().find((b) => b.getAttribute('aria-label') === 'More actions for rental')
+    expect(more).toBeDefined()
+    await act(async () => more?.dispatchEvent(new MouseEvent('click', { bubbles: true })))
+    const items = [...document.querySelectorAll('[role="menuitem"]')].map((item) => item.textContent?.trim())
+    expect(items).toContain('Print booking')
+    expect(items).toContain('Extend rental')
+    expect(items.some((label) => label?.startsWith('Message:'))).toBe(true)
+  })
+
   it('keeps Operations as its own control', async () => {
     await mount(1280)
     expect(button('Operations')).toBeDefined()

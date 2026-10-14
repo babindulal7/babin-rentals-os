@@ -945,7 +945,7 @@ function DemoPulse() {
                         onClick={() => setView(v)}
                         aria-pressed={on}
                         style={{
-                          height: 28,
+                          minHeight: 44,
                           padding: '0 10px',
                           borderRadius: 'var(--r-badge)',
                           border: `1px solid ${on ? 'var(--nav-active-accent)' : 'var(--border)'}`,

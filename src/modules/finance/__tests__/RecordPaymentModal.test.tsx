@@ -98,6 +98,26 @@ async function typeAmount(input: HTMLInputElement, value: string) {
 }
 
 describe('RecordPaymentModal — the amount default', () => {
+  it('disables both footer controls while a payment is pending and cannot double-submit', async () => {
+    recordPaymentSpy.mockClear()
+    let finish: ((value: { success: boolean; paymentId: string }) => void) | undefined
+    recordPaymentSpy.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    const success = vi.fn()
+    const c = await mount(success)
+    await typeAmount(amountInput(c), '1500')
+    await act(async () => { submitButton(c).click() })
+    const pending = Array.from(c.querySelectorAll('button')).find(b => b.textContent?.trim() === 'Recording...')
+    const cancel = Array.from(c.querySelectorAll('button')).find(b => b.textContent?.trim() === 'Cancel')
+    expect(pending?.disabled).toBe(true)
+    expect(cancel?.disabled).toBe(true)
+    await act(async () => { pending?.click() })
+    expect(recordPaymentSpy).toHaveBeenCalledTimes(1)
+    expect(success).not.toHaveBeenCalled()
+    await act(async () => { finish?.({ success: true, paymentId: 'PAY-0001' }) })
+    expect(success).toHaveBeenCalledTimes(1)
+    expect(submitButton(c).disabled).toBe(false)
+  })
+
   it('opens with an EMPTY amount field, not a pre-filled figure', async () => {
     const c = await mount(() => {})
     expect(amountInput(c).value).toBe('')

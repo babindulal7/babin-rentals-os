@@ -37,6 +37,7 @@
 .ui-button--ghost:hover:not(:disabled),
 .ui-button--tertiary:hover:not(:disabled) { background: var(--hover-card) !important; border-color: var(--input-border) !important; }
 .ui-button:focus-visible { outline: 2px solid var(--input-focus); outline-offset: 2px; }
+.info-tooltip__trigger:focus-visible { outline: 2px solid var(--input-focus); outline-offset: 2px; }
 .overflow-menu__item:hover:not(:disabled) { background: var(--hover-card) !important; }
 .overflow-menu__item:focus-visible { outline: 2px solid var(--input-focus); outline-offset: -2px; background: var(--hover-card) !important; }
 .filter-bar__option[aria-pressed='false']:hover { background: var(--hover-card) !important; }
@@ -471,7 +472,7 @@ input[type='search']::-webkit-search-results-decoration {
   display: flex;
   align-items: center;
   flex: 1;
-  min-width: 0;
+  min-width: max-content;
 }
 .lifecycle-step:last-child {
   flex: 0 0 auto;
@@ -487,19 +488,19 @@ input[type='search']::-webkit-search-results-decoration {
   margin-right: 0.5rem;
 }
 .lifecycle-step.is-done .lifecycle-step__marker {
-  background: #1e864a;
-  color: #ffffff;
+  background: var(--success);
+  color: var(--on-success);
 }
 .lifecycle-step.is-current .lifecycle-step__marker {
-  background: var(--brand, #2456d6);
-  color: #ffffff;
+  background: var(--primary);
+  color: var(--on-primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand, #2456d6) 25%, transparent);
 }
 .lifecycle-step__dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #ffffff;
+  background: currentColor;
 }
 .lifecycle-step.is-future .lifecycle-step__marker {
   background: var(--surface-2, #edf3fa);
@@ -530,8 +531,9 @@ input[type='search']::-webkit-search-results-decoration {
   min-width: 16px;
 }
 .lifecycle-step__connector.is-filled {
-  background: #1e864a;
+  background: var(--success);
 }
+.lifecycle-track:focus-visible { outline: 2px solid var(--input-focus); outline-offset: 2px; }
 
 /* ─── Universal Next Action Banner (Spec §18) ─── */
 .next-action-banner {

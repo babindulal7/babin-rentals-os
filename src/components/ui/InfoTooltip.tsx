@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, type ReactNode, type CSSProperties } from 'react'
+import { useState, useRef, useEffect, useCallback, useId, type ReactNode, type CSSProperties } from 'react'
 import Icon from './Icon'
 
 export interface InfoTooltipProps {
@@ -22,6 +22,7 @@ export function InfoTooltip({ content, label = 'More info', size = 14, style }: 
   const [coords, setCoords] = useState<{ top: number; left: number; placeAbove: boolean }>({ top: 0, left: 0, placeAbove: true })
   const triggerRef = useRef<HTMLButtonElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
+  const tooltipId = useId()
 
   const updatePosition = useCallback(() => {
     if (!triggerRef.current) return
@@ -114,8 +115,10 @@ export function InfoTooltip({ content, label = 'More info', size = 14, style }: 
       <button
         ref={triggerRef}
         type="button"
+        className="info-tooltip__trigger"
         aria-label={label}
         aria-expanded={isOpen}
+        aria-describedby={isOpen ? tooltipId : undefined}
         onClick={handleToggle}
         onMouseEnter={handleOpen}
         onMouseLeave={handleClose}
@@ -125,16 +128,19 @@ export function InfoTooltip({ content, label = 'More info', size = 14, style }: 
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
+          minWidth: 44,
+          minHeight: 44,
+          flexShrink: 0,
+          boxSizing: 'border-box',
           padding: 2,
           margin: 0,
-          background: isOpen ? 'var(--st-neutral-bg, rgba(255,255,255,0.08))' : 'transparent',
+          background: isOpen ? 'var(--hover-card)' : 'transparent',
           border: 'none',
           borderRadius: '50%',
-          color: isOpen ? 'var(--primary, #3b82f6)' : 'var(--muted, #94a3b8)',
+          color: 'var(--text2)',
           cursor: 'pointer',
           lineHeight: 1,
           transition: 'color 0.15s ease, background 0.15s ease',
-          outline: 'none',
         }}
       >
         <Icon name="info" size={size} />
@@ -143,6 +149,7 @@ export function InfoTooltip({ content, label = 'More info', size = 14, style }: 
       {isOpen && (
         <div
           ref={tooltipRef}
+          id={tooltipId}
           role="tooltip"
           style={{
             position: 'fixed',

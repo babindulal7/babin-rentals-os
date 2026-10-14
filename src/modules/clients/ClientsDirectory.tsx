@@ -284,6 +284,8 @@ function SortHeader({
         onClick={() => onSort(sortKey)}
         aria-label={`Sort by ${label}`}
         style={{
+          minHeight: 44,
+          minWidth: 44,
           display: 'inline-flex',
           alignItems: 'center',
           gap: 'var(--sp-xs)',
