@@ -29,13 +29,15 @@ vi.mock('../../supabase', () => ({
 
 import { getSalesVatReport } from '../salesVatReports'
 
-function invoice(id: string, date: string, subtotal: number, vat: number, paid: number) {
+function invoice(id: string, date: string, subtotal: number, vat: number, paid: number, rate = 0.13, status = 'Sent') {
   return {
     id, invoice_no: 'INV-' + id, booking_id: 'bk-' + id, client_id: 'cl-' + id,
     branch_id: 'br-1', issue_date: date, due_date: '2026-10-30',
-    subtotal, discount_amount: 0, tax_amount: vat,
-    grand_total: subtotal + vat, paid_amount: paid, status: 'Issued',
-    clients: { name: 'Test client ' + id, pan_number: '123456789' },
+    subtotal, discount_amount: 0, taxable_amount: subtotal, vat_rate: rate,
+    vat_amount: vat, total_amount: subtotal + vat,
+    paid_amount: paid, outstanding_amount: subtotal + vat - paid,
+    status, currency: 'NPR', voided_at: null,
+    clients: { name: 'Test client ' + id, pan_vat: '123456789' },
     bookings: { booking_no: 'BK-' + id },
   }
 }
@@ -86,5 +88,32 @@ describe('live Sales and Nepal VAT register — no invented business numbers', (
     expect(report.vat.monthlySchedule[0]?.grossSales).toBe(rupees(3390))
     expect(report.vat.monthlySchedule[0]?.vatAmount).toBe(rupees(390))
     expect(report.vat.monthlySchedule[0]?.bsMonth).toMatch(/2083/)
+    expect(report.vat.metrics.taxableTurnover).toBe(rupees(3000))
+    expect(report.vat.metrics.exemptTurnover).toBe(rupees(0))
+  })
+
+  it('excludes unissued drafts and voided invoices from statutory sales', async () => {
+    const voided = invoice('void', '2026-10-04', 300, 39, 0)
+    db.rows = [
+      invoice('draft', '2026-10-03', 9000, 1170, 0, 0.13, 'Draft'),
+      { ...voided, voided_at: '2026-10-10T12:00:00Z', status: 'Void' },
+      invoice('paid', '2026-10-04', 1000, 130, 1130, 0.13, 'Paid'),
+    ]
+    const report = await getSalesVatReport()
+    expect(report.sales.metrics.invoiceCount).toBe(1)
+    expect(report.sales.metrics.totalInvoiced).toBe(rupees(1130))
+    expect(report.vat.taxRegister).toHaveLength(1)
+  })
+
+  it('separates 0% non-VAT invoices from actual taxable sales', async () => {
+    db.rows = [
+      invoice('vat', '2026-10-05', 2000, 260, 0),
+      invoice('zero', '2026-10-05', 1000, 0, 1000, 0),
+    ]
+    const report = await getSalesVatReport()
+    expect(report.vat.metrics.taxableTurnover).toBe(rupees(2000))
+    expect(report.vat.metrics.exemptTurnover).toBe(rupees(1000))
+    expect(report.vat.metrics.totalOutputVat).toBe(rupees(260))
+    expect(report.vat.monthlySchedule[0]?.exemptSales).toBe(rupees(1000))
   })
 })
