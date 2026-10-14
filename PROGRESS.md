@@ -27,6 +27,58 @@
 Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-15T07:57:19.221Z). Suite: not run this session (static inspection; pass --tests to execute suite).
 Gates read from .lifecycle-result.json, written 2026-10-15T07:57:34.294Z.
 Counted by `npm run completion`, not typed.
+
+## Remaining
+- Complete the broader status/role/persisted-save matrix in docs/UI_UX_IMPROVEMENT_PLAN.md. Physical phone/iPad Safari, keyboard and native zoom acceptance remain unverified.
+- Reconcile the bundle add message: the mock notice currently states both bundle billing with zero-priced components and components billed at their own rates. This pre-existing contradictory copy needs a focused follow-up against the authoritative bundle pricing behavior.
+
+## 2026-10-15 — Booqable clean-list pass: one-line facts, uncrushed titles, unbroken money
+
+**Did**
+- Compared the Booqable scrape (`Desktop/scrape/BOOQABLE-AUDIT`, trial Orders screenshot) with our mock build measured at 1280×860, sidebar open. The ranked reasons are in `docs/booqable/WHY_BOOQABLE_FEELS_CLEAN_2026-10-15.md`: one row ≈ one line, a header of title + search + one primary, each fact said once, no icons in data, sentence-case headers, no reserved empty space, money as one token.
+- Rentals table (`RentalsList.tsx`): client name ≤ 2 lines and project 1 line, ellipsized with `title`. Removed the duplicated location, the per-line icons, the "Overdue" tag duplicating the status note, and the aria-hidden progress track (the now-dead `Track` helper is deleted). Time rides with the AD date. The action column is 60px with an `sr-only` label, column shares are normalized to fill, and the cell leading is 1.35. `rentals.css` drops its uppercase override so `theme.css`'s sentence-case header rule applies.
+- `BsAdDate` stacked layout: with `showTime`, date and time are each unbreakable and the time wraps whole. Layouts without a time are unchanged.
+- Shell `Header.tsx`: desktop module titles (one crumb) no longer shrink; the search yields first. Record titles and tablet/phone are unchanged.
+- Inventory and Clients: Refresh/Export move into More at every width, extending the 13 Oct phone ruling.
+- New opt-in `.money { white-space: nowrap }` on the Clients directory money cells and the Rentals total.
+- Tests: 4 new Rentals render tests, 2 header tests, and header-action assertions in the tier-1 Inventory/Clients tests.
+
+**Ruled**
+- `RULINGS-2026-10-15.md` rows 1–10, each with a revert. A flippable product call: the list row no longer prints pickup/return location (it stays on the hover card and Booking Detail).
+- Unchanged by design: BS-over-AD stacking (7 Oct), Project Type and Created Date columns, the desktop sync slot (13 Oct), 56px row and 44px target floors. No migration written or applied. No role, capability, money gate or write path changed.
+
+**Verified**
+- Browser, mock Owner, 1280×860: Rentals rows 166–200px → 85px; rows fully visible 2 → 5; action column 190 → 60px. Inventory title 14px ("I.") → 80px, header search 67 → 192px, right cluster 539 → 349px. Clients title full; 0 of 43 money cells wrap. Header overflow 0px and titles untruncated on Today, Rentals, New Rental, Calendar, Inventory, Clients, Finance and Settings. Inventory More holds Refresh equipment / Export this page / Warranty Tracker at 44px, and Refresh ran (menu closed, 25 rows). At 1024px the Rentals table uses auto layout with the narrow-width columns dropped, 85px rows and no horizontal scroll.
+- Booking Detail (`/rentals/902`) keeps its previous header behaviour: the record title is squeezed to ~37px by a 610px action cluster. **Pre-existing, not fixed.** A first attempt that froze all titles made its search 0px; the module/record split fixed that.
+- Mutation checks: restoring the Overdue tag, the location line, the desktop `0 1 auto` title flex, or a visible Clients Export each turned its new test red. Files restored and green.
+- Gates, this worktree after the changes: `tsc --noEmit` exit 0; `npm run lint` exit 0; `lint:shell` 653 files pass; `lint:ui-copy` pass; `check:contrast` 82/82; `npx vitest run` 347 files / 4,411 tests passed; `npm run build` exit 0 (PWA precache 296 entries); `check:lifecycle` 30/30 (PGlite, no JWT/PostgREST). `check:pglite` not rerun (no migration). A comment-only edit to `RentalsList.tsx` landed after the suite run.
+- Not verified: dark/glass themes by eye (token-only edits; contrast gate covers the tokens), phone widths (cards view untouched), native browser zoom, live data.
+
+**Did**
+- Increased shared catalogue View/Add Bundle, crew and transport actions from 26px painted controls to visible 44px minimum targets, with 16px icons, UI-sized labels, 8px action spacing and wrapping rows. The existing keyboard paths, callbacks and permission gates are retained.
+- Verified that the patch survived concurrent main merges (AddItemPanel last changed in 7256b99d). Updated the app-wide improvement plan; no migration, role or pricing change.
+
+**Ruled**
+- No new product ruling. Implements the existing 44px control minimum. This scoped pass does not close the app-wide acceptance plan.
+
+**Verified**
+- The sequential run started from f1bce01f plus this patch: typecheck passed; 353 test files / 4,481 tests passed; local PGlite 160/160 migrations and lifecycle 30/30 passed; production build completed. Scoped ESLint and contrast 82/82 passed. Logs: artifacts/catalogue-touch-2026-10-15/.
+- Fresh mock build completed. Saved Chromium viewport screenshots at 320, 390 and 768px; measured View and Add Bundle at 44px high, within each viewport, with document width equal to viewport width. Files: catalogue-320.jpg, catalogue-390.jpg, catalogue-768.jpg and measurements-final.json in that evidence folder. Temporary viewport override reset.
+- Earlier mock interaction pass opened bundle preview, cancelled without adding, and added the bundle. An attempted off-screen remove click had no effect; keyboard activation removed that line and the visible Remove all menu cleared the remaining bundle lines to zero items. No booking was submitted.
+- Other main merges landed after the test run. These logs certify the scoped patch at the tested checkout, not every later merged feature. The generated completion block below reads the current checkout and cached gate records; its suite-not-run sentence describes the counter invocation, not the separate full test run above.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-15T07:57:19.221Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Gates read from .lifecycle-result.json, written 2026-10-15T07:57:34.294Z.
+Counted by `npm run completion`, not typed.
 ## Remaining
 - Complete the broader status/role/persisted-save matrix in docs/UI_UX_IMPROVEMENT_PLAN.md. Physical phone/iPad Safari, keyboard and native zoom acceptance remain unverified.
 - Reconcile the bundle add message: the mock notice currently states both bundle billing with zero-priced components and components billed at their own rates. This pre-existing contradictory copy needs a focused follow-up against the authoritative bundle pricing behavior.

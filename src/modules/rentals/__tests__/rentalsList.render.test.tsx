@@ -100,7 +100,7 @@ const ROW: BookingListRow = {
 /* The mocked count, so a test can have more rows than one page. `vi.hoisted`
    because a `vi.mock` factory is hoisted above ordinary consts and cannot close
    over one. Reset in `afterEach`. */
-const stub = vi.hoisted(() => ({ total: 1, empty: false }))
+const stub = vi.hoisted(() => ({ total: 1, empty: false, row: null as Partial<BookingListRow> | null }))
 vi.mock('../../../actions/rentals/saveDraft', () => ({ listActiveDrafts: async () => [] }))
 vi.mock('../../../lib/queries/rentalViews', async (importOriginal) => { const real = await importOriginal<typeof import('../../../lib/queries/rentalViews')>(); return { ...real, listRentalViewCounts: async () => ({ rows: real.RENTAL_VIEWS.map(v => ({ id: v.id, count: 0 })) }) } })
 const authStub = vi.hoisted(() => ({ role: 'Owner' as SystemRole }))
@@ -110,7 +110,7 @@ const authStub = vi.hoisted(() => ({ role: 'Owner' as SystemRole }))
    renders. */
 vi.mock('../../../lib/queries/bookings', async (importOriginal) => {
   const real = await importOriginal<typeof import('../../../lib/queries/bookings')>()
-  return { ...real, listBookings: async () => (stub.empty ? { rows: [], total: 0 } : { rows: [ROW], total: stub.total }) }
+  return { ...real, listBookings: async () => (stub.empty ? { rows: [], total: 0 } : { rows: [{ ...ROW, ...stub.row }], total: stub.total }) }
 })
 
 vi.mock('../../../lib/moneyVisibility', () => ({ useCanViewMoney: () => true }))
@@ -207,6 +207,7 @@ afterEach(async () => {
   document.body.innerHTML = ''
   stub.total = 1
   stub.empty = false
+  stub.row = null
   lines.rows = []
   lines.shouldFail = false
   authStub.role = 'Owner'
@@ -335,6 +336,43 @@ describe('§4.1 — "action column stays visible; table scrolls horizontally"', 
     const lastCell = cells[cells.length - 1]
     expect(lastCell?.style.position).toBe('sticky')
     expect(lastCell?.style.background).not.toBe('')
+  })
+})
+
+describe('RULING 2026-10-15 — a row states each fact once (the Booqable density pass)', () => {
+  const firstRow = () => container.querySelector<HTMLTableRowElement>('tbody tr')!
+  const cellUnder = (header: string) => {
+    const index = [...container.querySelectorAll('thead th')].findIndex((th) => th.textContent?.trim() === header)
+    return firstRow().cells[index]!
+  }
+
+  it('prints no pickup or return location in the row — it is on the hover card', async () => {
+    stub.row = { pickupLocation: 'Kathmandu Main', returnLocation: 'Lalitpur Studio' }
+    await mount(1280)
+    expect(firstRow().textContent).not.toContain('Kathmandu Main')
+    expect(firstRow().textContent).not.toContain('Lalitpur Studio')
+  })
+
+  it('says a late return once, in the Status cell, and not again beside the booking number', async () => {
+    stub.row = { stage: 'On Rent', returnAtAd: '2026-08-18T10:30:00.000Z' }
+    await mount(1280)
+    expect(cellUnder('Status').textContent).toMatch(/days? late|Late today/)
+    expect(cellUnder('Booking ID').textContent).not.toContain('Overdue')
+  })
+
+  it('draws no icons inside the date cells; the time rides with the AD date', async () => {
+    await mount(1280)
+    const pickup = cellUnder('Pickup')
+    expect(pickup.querySelectorAll('svg')).toHaveLength(0)
+    expect(pickup.textContent).toMatch(/\d{1,2} \w{3,4} 2026 \d{2}:\d{2} [AP]M/)
+  })
+
+  it('sizes the action column to its ⋮ and names it only for assistive tech', async () => {
+    await mount(1280)
+    const cols = [...container.querySelectorAll('colgroup col')] as HTMLTableColElement[]
+    expect(cols.at(-1)?.style.width).toBe('60px')
+    const actions = [...container.querySelectorAll('thead th')].at(-1)!
+    expect(actions.querySelector('.sr-only')?.textContent).toBe('Actions')
   })
 })
 

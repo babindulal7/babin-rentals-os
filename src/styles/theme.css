@@ -1137,6 +1137,13 @@ td,
   font-variant-numeric: tabular-nums;
 }
 
+/* RULING 2026-10-15: an amount is one token — "Rs 74,940.75" never breaks
+   after "Rs" in a narrow column. Opt-in class, not `.figure`, which also
+   wraps names and badges in some tables. */
+.money {
+  white-space: nowrap;
+}
+
 /* §4.3.6 — KPI values and prominent figures */
 .kpi-value,
 .figure-lg {

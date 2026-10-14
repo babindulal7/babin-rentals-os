@@ -1875,7 +1875,7 @@ export function ClientsDirectory({
                           {money && (
                             <td style={td}>
                               {client.outstandingPaisa > 0 ? (
-                                <span className="figure client-outfit" style={{ fontWeight: 600, color: 'var(--danger-text)' }}>
+                                <span className="figure money client-outfit" style={{ fontWeight: 600, color: 'var(--danger-text)' }}>
                                   {formatMoney(client.outstandingPaisa)}
                                 </span>
                               ) : (
@@ -1888,7 +1888,7 @@ export function ClientsDirectory({
                             <td style={td}>
                               {client.depositHeldPaisa > 0 ? (
                                 <>
-                                  <span className="figure client-outfit" style={{ display: 'block', color: 'var(--text)' }}>
+                                  <span className="figure money client-outfit" style={{ display: 'block', color: 'var(--text)' }}>
                                     {formatMoney(client.depositHeldPaisa)}
                                   </span>
                                   {client.currentRentalsCount === 0 && (

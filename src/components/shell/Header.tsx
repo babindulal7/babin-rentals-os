@@ -324,7 +324,11 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             gap: 6,
             minWidth: isPhone ? 0 : '180px',
             // RULING 2026-10-13: on a phone the title takes whatever the controls leave, and ends in "…".
-            flex: isPhone ? '1 1 auto' : '0 1 auto',
+            // RULING 2026-10-15: on desktop a module title (one crumb — "Inventory") does not shrink;
+            // the search beside it yields first. Sharing the squeeze crushed it to "I." at 1280px.
+            // A record title (a crumb trail ending in "902 · Client name") is any length, so it
+            // still ellipsizes rather than taking the search's space.
+            flex: isPhone ? '1 1 auto' : isTablet || displayCrumbs.length > 1 ? '0 1 auto' : '0 0 auto',
             maxWidth: isPhone ? undefined : 'min(520px, 45vw)',
             overflow: 'hidden',
           }}
