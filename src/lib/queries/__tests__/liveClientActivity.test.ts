@@ -50,11 +50,11 @@ describe('live client activity is never made up', () => {
       { id: 'c', client_code: 'C-3', name: 'Client C', status: 'Inactive' },
     ]
     state.bookings = [
-      { client_id: 'a', stage: 'Confirmed', created_at: '2026-09-01T00:00:00Z' },
+      { client_id: 'a', stage: 'Booked', created_at: '2026-09-01T00:00:00Z' },
       { client_id: 'a', stage: 'Closed', created_at: '2026-10-01T00:00:00Z' },
-      { client_id: 'a', stage: 'Cancelled', created_at: '2026-10-05T00:00:00Z' },
+      { client_id: 'a', stage: 'Booked', created_at: '2026-10-05T00:00:00Z', cancelled_at: '2026-10-06T00:00:00Z' },
       { client_id: 'b', stage: 'Packed', created_at: '2026-09-20T00:00:00Z' },
-      { client_id: 'b', stage: 'Draft', created_at: '2026-10-07T00:00:00Z' },
+      { client_id: 'b', stage: 'Quote', created_at: '2026-10-07T00:00:00Z' },
       { client_id: 'outside-rls-directory', stage: 'Closed', created_at: '2026-10-09T00:00:00Z' },
     ]
     const r = await getLiveClientActivityReport()
