@@ -15,7 +15,8 @@ import type { BookingStatus, JobState } from '../../lib/workflow'
 import { BarcodeScannerModal } from '../../components/ui/BarcodeScannerModal'
 import { Input } from '../../components/ui/Input'
 import { Unavailable } from '../../components/ui/Unavailable'
-import { useViewport } from '../../lib/device'
+import { useFloorViewport } from '../operations/floorPanelContext'
+import { nextRequirement } from '../operations/nextRequirement'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../components/ui/Toast'
 import { RentalIntelFromFloor } from '../../components/intel/RentalIntelFromFloor'
@@ -488,6 +489,8 @@ export interface ReturnWorkspaceProps {
     isDirty: boolean
     label?: string
     error?: string | null
+    /** First requirement still unmet, worded for the footer beside a disabled Confirm. */
+    blockedReason?: string | null
   }) => void
 }
 
@@ -524,7 +527,7 @@ export default function ReturnWorkspace({
   const { user } = useAuth()
   const { showSuccessToast } = useToast()
   /* Law 13/14 — width decides, at v4.1 §7.7's 768 / 1280. */
-  const viewport = useViewport()
+  const viewport = useFloorViewport()
   const desktop = viewport === 'desktop'
   const phone = viewport === 'phone'
 
@@ -1144,9 +1147,11 @@ export default function ReturnWorkspace({
   }
 
   const isDirty = Object.keys(marks).length > 0 || sessionNotes.trim().length > 0 || sigReturning !== null || sigWarehouse !== null
+  const blockedReason = nextRequirement(gates.filter((g) => !g.pass).map((g) => g.label))
   useEffect(() => {
     onRegisterActions?.({
       canComplete,
+      blockedReason,
       dispatching,
       complete: completeSession,
       isDirty,
@@ -1154,7 +1159,7 @@ export default function ReturnWorkspace({
       error: dispatchError,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError])
+  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */
 
@@ -1374,11 +1379,13 @@ export default function ReturnWorkspace({
                      floor screen — Law 6, and §8.3 is why this file does not
                      import `lib/money` at all.
                 */}
+                {!embedded && (
                 <Unavailable reason="Printing a return report is not built. Nothing in the app generates a return-report document, and there is no print stylesheet, so this would send the whole workspace — filters, rails and buttons — to the printer instead of a report. The one printable document that exists is a money receipt, which a warehouse floor screen may not show.">
                   <Button icon="file" disabled>
                     Print Return Report
                   </Button>
                 </Unavailable>
+                )}
                 <Link to={`/rentals/${id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 44, padding: '0 12px', borderRadius: 'var(--r-btn)', border: '1px solid var(--btn-secondary-border)', background: 'var(--btn-secondary-bg)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontWeight: 600, textDecoration: 'none' }}>
                   <Icon name="external_link" size={14} />
                   View Booking
@@ -1389,6 +1396,8 @@ export default function ReturnWorkspace({
             {/* ── §4 booking strip — read-only, no money (§8.3). Every cell is
                 a real column off `fetchFloorBooking`; the seed build's
                 hardcoded 2026-07-19 dates and invented times are gone. ── */}
+            {/* RULING 2026-10-14 (R14-4): inside the shell/dock the sheet title and booking strip already say this. */}
+            {!embedded && (
             <div className="floor-summary-bar">
               {[
                 { l: 'Client', v: floor.clientName ?? '—', big: true },
@@ -1418,6 +1427,7 @@ export default function ReturnWorkspace({
                 </div>
               ))}
             </div>
+            )}
 
             {/* §4 — overrun as informational text, never a fabricated "Late
                 Return" flag. Computed by `lib/lateFee.lateBand` against the
@@ -1485,7 +1495,7 @@ export default function ReturnWorkspace({
               {/* ── centre — the triage list over the real rows ─────────────── */}
               <div style={{ minWidth: 0 }}>
                 <Card
-                  title="1 · Equipment Checklist"
+                  title="Equipment Checklist"
                   bodyStyle={{ padding: 0 }}
                   action={
                     phone ? (
@@ -1495,7 +1505,7 @@ export default function ReturnWorkspace({
                       </div>
                     ) : (
                       <>
-                        <Button icon="zap" onClick={checkInAllClean}>Check In All Clean (1-Click)</Button>
+                        <Button icon="zap" onClick={checkInAllClean}>Check In All Clean</Button>
                         <Button icon="camera" onClick={() => setShowScanner(true)}>Scan / Camera</Button>
                       </>
                     )
@@ -2227,7 +2237,8 @@ function ConditionPicker({
             aria-checked={on}
             onClick={() => onChange(c)}
             style={{
-              height: compact ? 24 : 30,
+              height: 'var(--tap)',
+              minWidth: 'var(--tap)',
               padding: compact ? '0 7px' : '0 10px',
               borderRadius: 'var(--r-xs)',
               border: `1px solid ${on ? STATUS[CONDITION_TONE[c]].fg : 'var(--border)'}`,

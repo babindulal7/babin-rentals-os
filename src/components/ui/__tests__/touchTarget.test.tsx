@@ -19,7 +19,7 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { act, StrictMode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { TouchTarget, CompactButton } from '../TouchTarget'
+import { TouchTarget, CompactButton, TapCheckbox } from '../TouchTarget'
 
 // Same flag the auth, settings and shell suites set. Without it React logs
 // "the current testing environment is not configured to support act(...)"
@@ -156,5 +156,37 @@ describe('CompactButton — tone uses fills, not on-fill ink', () => {
   it('still carries the word, so colour is never the only signal (Law 11)', async () => {
     await mount(<CompactButton label="Not Returned" tone="danger" onClick={() => {}} />)
     expect(container.textContent).toContain('Not Returned')
+  })
+})
+
+describe('TapCheckbox — the floor table checkbox', () => {
+  it('puts the 44px hit area inside the label, so tapping it toggles the box', async () => {
+    // The bare 13px browser checkbox was the packer's most-tapped control on a tablet table.
+    let checked = false
+    await mount(<TapCheckbox aria-label="Pack Sony A7S III" checked={checked} onChange={() => { checked = true }} />)
+    const label = container.querySelector('label')!
+    const input = label.querySelector('input')!
+    const hit = label.querySelector('span[aria-hidden="true"]') as HTMLSpanElement
+    expect(input.getAttribute('aria-label')).toBe('Pack Sony A7S III')
+    expect(hit.style.height).toBe('var(--tap)')
+    await act(async () => {
+      hit.click()
+    })
+    expect(checked).toBe(true)
+  })
+
+  it('forwards its ref, for the indeterminate toggle-all box', async () => {
+    let seen: HTMLInputElement | null = null
+    await mount(<TapCheckbox aria-label="Toggle all" checked={false} onChange={() => {}} ref={(el) => { seen = el }} />)
+    expect(seen).toBe(container.querySelector('input'))
+  })
+
+  it('does not toggle a disabled box', async () => {
+    let fired = false
+    await mount(<TapCheckbox aria-label="Recorded" checked disabled onChange={() => { fired = true }} />)
+    await act(async () => {
+      container.querySelector<HTMLSpanElement>('span[aria-hidden="true"]')!.click()
+    })
+    expect(fired).toBe(false)
   })
 })

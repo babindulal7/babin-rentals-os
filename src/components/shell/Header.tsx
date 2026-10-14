@@ -318,10 +318,10 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             display: 'flex',
             alignItems: 'center',
             gap: 6,
-            minWidth: 0,
+            minWidth: isPhone ? 0 : '180px',
             // RULING 2026-10-13: on a phone the title takes whatever the controls leave, and ends in "…".
             flex: isPhone ? '1 1 auto' : '0 1 auto',
-            maxWidth: isPhone ? undefined : isTablet ? '260px' : '360px',
+            maxWidth: isPhone ? undefined : 'min(520px, 45vw)',
             overflow: 'hidden',
           }}
         >
@@ -413,7 +413,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       display: 'inline-block',
-                      maxWidth: isPhone ? '100%' : isTablet ? '200px' : '300px',
+                      maxWidth: isPhone ? '100%' : 'min(420px, 36vw)',
                     }}
                   >
                     {labelText}
@@ -482,9 +482,9 @@ export default function Header({ crumbs, actions }: HeaderProps) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              flex: '1 1 auto',
+              flex: '0 1 420px',
               minWidth: 0,
-              maxWidth: isTablet ? '320px' : '460px',
+              maxWidth: isTablet ? '280px' : '420px',
               gap: 8,
               margin: '0 auto',
             }}
