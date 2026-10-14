@@ -848,6 +848,48 @@ begin
 end;
 $function$;
 
+-- A single manual discount may exceed 25%; combined discount rows may not.
+-- Preserve the existing Student / College / named-client exclusivity trigger.
+create or replace function public.enforce_booking_discount_stacking()
+returns trigger
+language plpgsql
+set search_path=public, pg_temp
+as $stack$
+declare
+  v_existing_sum numeric(5,2);
+  v_existing_count integer;
+  v_total numeric(5,2);
+  v_exclusive_sources discount_source[] :=
+    array['Student','College','Named-client rates']::discount_source[];
+begin
+  select coalesce(sum(percent),0),count(*) into v_existing_sum,v_existing_count
+  from public.booking_discounts
+  where booking_id=new.booking_id and id<>new.id;
+  v_total:=v_existing_sum+new.percent;
+  if v_total > 100 then
+    raise exception 'This booking total discount %% exceeds 100%%',v_total
+      using errcode='23514';
+  end if;
+  if v_existing_count > 0 and v_total > 25 then
+    raise exception 'Stacking discount rows above 25%% is not permitted; total %%',v_total
+      using errcode='23514';
+  end if;
+  if new.discount_source=any(v_exclusive_sources) then
+    if v_existing_sum > 0 then
+      raise exception '% cannot stack with other discounts',new.discount_source
+        using errcode='23514';
+    end if;
+  elsif exists (
+    select 1 from public.booking_discounts
+    where booking_id=new.booking_id and id<>new.id and discount_source=any(v_exclusive_sources)
+  ) then
+    raise exception 'A Student, College, or named-client discount is exclusive'
+      using errcode='23514';
+  end if;
+  return new;
+end;
+$stack$;
+
 revoke execute on function public.booking_estimate_total(uuid) from public, anon;
 grant execute on function public.booking_estimate_total(uuid) to authenticated,service_role;
 commit;
