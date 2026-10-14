@@ -219,7 +219,7 @@ export default function SalesVatReports() {
           formatAd(new Date(tr.issueDate)),
           tr.clientName,
           tr.clientPan || 'Unregistered',
-          formatMoney(tr.subtotal),
+          formatMoney(tr.taxableAmount ?? tr.subtotal),
           formatMoney(tr.taxAmount),
           formatMoney(tr.grandTotal),
         ]) ?? []),
@@ -541,7 +541,7 @@ export default function SalesVatReports() {
                       <td style={td}>{formatAd(new Date(tr.issueDate))}</td>
                       <td style={{ ...td, fontWeight: 600 }}>{tr.clientName}</td>
                       <td style={{ ...td, fontFamily: 'var(--font-id, sans-serif)', fontVariantNumeric: 'tabular-nums' }}>{tr.clientPan || 'Unregistered'}</td>
-                      <td style={{ ...td, textAlign: 'right' }}>{formatMoney(tr.subtotal)}</td>
+                      <td style={{ ...td, textAlign: 'right' }}>{formatMoney(tr.taxableAmount ?? tr.subtotal)}</td>
                       <td style={{ ...td, textAlign: 'right', fontWeight: 600, color: 'var(--status-success-text)' }}>
                         {formatMoney(tr.taxAmount)}
                       </td>
