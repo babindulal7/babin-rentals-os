@@ -164,12 +164,15 @@ function emptyRegister(): { sales: SalesReportData; vat: VatTaxReportData } {
       metrics: {
         totalGrossTurnover: rupees(0), taxableTurnover: rupees(0),
         totalOutputVat: rupees(0), exemptTurnover: rupees(0),
-        effectiveVatRate: 13, invoicesCount: 0,
+        effectiveVatRate: 0, invoicesCount: 0,
       },
       monthlySchedule: [], taxRegister: [],
     },
   }
 }
+
+/** The ledger works in integer paisa; never round completed invoices to whole rupees. */
+const asPaisa = (value: number): Paisa => value as Paisa
 
 /* ── Query Aggregations from PostgreSQL ─────────────────────────────────── */
 
@@ -281,7 +284,7 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
       curSt.amount += gTotal
       statusCounts[st] = curSt
 
-      const clientObj = r.clients as { name?: string; pan_number?: string } | null
+      const clientObj = r.clients as { name?: string; pan_vat?: string } | null
       const cId = r.client_id || 'unknown'
       const cName = clientObj?.name || 'Client'
       const curCl = clientSalesMap[cId] || { name: cName, count: 0, invoiced: 0, paid: 0, outstanding: 0 }
@@ -300,10 +303,10 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
         clientPan: clientObj?.pan_vat || undefined,
         issueDate: r.issue_date,
         dueDate: r.due_date,
-        subtotal: rupees(Math.round(sub / 100)),
-        taxAmount: rupees(Math.round(tax / 100)),
-        grandTotal: rupees(Math.round(gTotal / 100)),
-        paidAmount: rupees(Math.round(paid / 100)),
+        subtotal: asPaisa(sub),
+        taxAmount: asPaisa(tax),
+        grandTotal: asPaisa(gTotal),
+        paidAmount: asPaisa(paid),
         status: st,
       })
     }
@@ -314,7 +317,7 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
     const statusBreakdown: InvoiceStatusBreakdownItem[] = Object.entries(statusCounts).map(([st, val]) => ({
       status: st,
       count: val.count,
-      amount: rupees(Math.round(val.amount / 100)),
+      amount: asPaisa(val.amount),
       percent: Math.round((val.count / totalCount) * 100),
     }))
 
@@ -323,8 +326,8 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
         clientId: id,
         clientName: val.name,
         invoiceCount: val.count,
-        totalInvoiced: rupees(Math.round(val.invoiced / 100)),
-        totalPaid: rupees(Math.round(val.paid / 100)),
+        totalInvoiced: asPaisa(val.invoiced),
+        totalPaid: asPaisa(val.paid),
         balance: rupees(Math.round(Math.max(0, val.outstanding) / 100)),
       }))
       .sort((a, b) => (b.totalInvoiced as number) - (a.totalInvoiced as number))
@@ -374,12 +377,12 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
 
     const sales: SalesReportData = {
       metrics: {
-        totalInvoiced: rupees(Math.round(totalInvoiced / 100)),
-        netSales: rupees(Math.round(totalSubtotal / 100)),
-        totalVat: rupees(Math.round(totalTax / 100)),
-        totalDiscounts: rupees(Math.round(totalDiscounts / 100)),
-        totalCollected: rupees(Math.round(totalPaid / 100)),
-        totalOutstanding: rupees(Math.round(totalOutstanding / 100)),
+        totalInvoiced: asPaisa(totalInvoiced),
+        netSales: asPaisa(totalSubtotal),
+        totalVat: asPaisa(totalTax),
+        totalDiscounts: asPaisa(totalDiscounts),
+        totalCollected: asPaisa(totalPaid),
+        totalOutstanding: asPaisa(totalOutstanding),
         invoiceCount: totalCount,
         collectionRate,
       },
@@ -391,10 +394,10 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
 
     const vat: VatTaxReportData = {
       metrics: {
-        totalGrossTurnover: rupees(Math.round(totalInvoiced / 100)),
-        taxableTurnover: rupees(Math.round(totalTaxable / 100)),
-        totalOutputVat: rupees(Math.round(totalTax / 100)),
-        exemptTurnover: rupees(Math.round(totalNonVat / 100)),
+        totalGrossTurnover: asPaisa(totalInvoiced),
+        taxableTurnover: asPaisa(totalTaxable),
+        totalOutputVat: asPaisa(totalTax),
+        exemptTurnover: asPaisa(totalNonVat),
         effectiveVatRate: positiveVatBase ? Number((totalTax / positiveVatBase * 100).toFixed(2)) : 0,
         invoicesCount: totalCount,
       },
