@@ -1,5 +1,46 @@
 # Progress Log
 
+## 2026-10-15 — Clean UI improvements: header space recovery, single search unification and single-row directory toolbars
+
+**Did**
+- Resolved Booking Detail header action crowding: moved stage / cancellation / sub-rental badges from `PageActions.extra` to `PageHeader status={...}` so they render in Zone 1 (Left Zone) directly beside the title.
+- Updated `src/components/shell/shell.css` to collapse empty action slots globally via `.app-global-header__action-slot:not(:has(button, a)) { display: none; }`, recovering 150px-266px of unused header space on tablet and desktop viewports.
+- Relaxed breadcrumb and title capping in `src/components/shell/Header.tsx`: expanded container `maxWidth` to `min(520px, 45vw)` and inner label `maxWidth` to `min(420px, 36vw)` with a guaranteed `minWidth: 180px` on desktop/tablet, while center zone search yields space gracefully (`flex: 0 1 420px`), completely eliminating title squeezing down to 37px for bookings like `BK-2026-001 · John Doe`.
+- Eliminated in-page duplicate search in Inventory (`src/modules/inventory/Inventory.tsx`): removed redundant in-page `<SearchInput>` from `.inventory-list-toolbar`, utilizing the canonical `PageHeader search={...}` unified search in the application header.
+- Eliminated in-page duplicate search and fixed toolbar wrapping in Clients Directory (`src/modules/clients/ClientsDirectory.tsx`): removed duplicate `<SearchInput>`, aligned quick filter chips on the left, and grouped view toggles (Table/Cards), density control, and "Stats" button on the right into a non-wrapping single row (`overflow-x: auto; flex-wrap: nowrap`).
+- Streamlined Overdue Movement Cards in Today dashboard (`src/modules/today/dashboard.css`): reduced padding and row min-height (`min-height: 4.25rem`, `padding: 0.65rem 1.15rem`) while preserving overdue lateness facts and calm visual hierarchy.
+
+**Ruled**
+- No database migrations written or applied (N-5); strictly zero schema alterations. Anon key only in client.
+- Canonical 5 overflow actions in `BookingDetail` preserved (`Extend rental`, `Assign crew`, `Create sub-rental`, `Cancel booking`, `Message client`) with `aria-label="More booking actions"`.
+- Integer paisa and money-visibility rules intact; touch targets maintain >= 44px (Law 15).
+
+**Verified**
+- TypeScript strict typecheck passed exit 0 (`npm run typecheck`).
+- Focused module suites passed: BookingDetail tests (42/42), Today dashboard (118/118), Clients (114/114), Inventory (79/79), Shell (117/117).
+- Full test suite passed exit 0: 350 test files, 4,462 tests passed (`npm test`).
+- WCAG AA contrast check passed: 82/82 pass, 0 fail (`npm run check:contrast`).
+- Database verification gates passed: `npm run check:pglite` (160/160 migrations applied, 0 view leaks, 0 function leaks, 0 definer hygiene issues), `npm run check:lifecycle` (30/30 lifecycle steps green).
+- Production build passed exit 0 (`npm run build`), generating service worker and 296 precache assets.
+- Completion script run via `npm run completion`.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-14T22:28:25.992Z). Suite: 4462/4462 passed (recorded 2026-10-14T22:36:02.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-14T22:28:38.735Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Production deployment and live Supabase application after owner backup protocol (N-5).
+- Continuous visual alignment with future Booqable-style micro-interactions across remaining secondary modals.
+
 ## 2026-10-14 — Button audit fixes: browser finish and local verification
 
 **Did**

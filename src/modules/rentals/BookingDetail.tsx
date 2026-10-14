@@ -95,7 +95,6 @@ import { lateFee } from '../../lib/lateFee'
 import type { LateFeeOutcome } from '../../lib/lateFee'
 import { ReturnSettlementModal, type ReturnSettlementDamageItem } from './modals/ReturnSettlementModal'
 import { RentalSummaryModal } from './modals/RentalSummaryModal'
-import { RentalMoreActions } from './actions/RentalMoreActions'
 
 /**
  * # Booking Detail — live, for ANY `:bookingNo`
@@ -2189,11 +2188,10 @@ function BookingDetailView() {
                 Print booking
               </Button>,
             ].filter(Boolean)}
-            overflow={onPhone ? undefined :
+            overflow={
               <OverflowMenu
                 ariaLabel="More booking actions"
-                items={[
-                  ...bookingMoreItems,
+                items={(onPhone ? phoneMoreItems : bookingMoreItems).concat([
                   {
                     label: 'Cancel booking',
                     icon: 'close',
@@ -2204,7 +2202,7 @@ function BookingDetailView() {
                         ? { unavailable: `Cannot cancel a booking that has reached ${stage} (equipment has already left custody).` }
                         : {}),
                   },
-                ]}
+                ])}
               />
             }
             primary={
