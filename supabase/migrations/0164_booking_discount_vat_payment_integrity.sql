@@ -867,11 +867,11 @@ begin
   where booking_id=new.booking_id and id<>new.id;
   v_total:=v_existing_sum+new.percent;
   if v_total > 100 then
-    raise exception 'This booking total discount %% exceeds 100%%',v_total
+    raise exception 'This booking total discount % exceeds 100%%',v_total
       using errcode='23514';
   end if;
   if v_existing_count > 0 and v_total > 25 then
-    raise exception 'Stacking discount rows above 25%% is not permitted; total %%',v_total
+    raise exception 'Stacking discount rows above 25%% is not permitted; total %',v_total
       using errcode='23514';
   end if;
   if new.discount_source=any(v_exclusive_sources) then
