@@ -6,7 +6,7 @@ import Icon from '../../components/ui/Icon'
 import { Card, Rail } from '../../components/ui/Page'
 import { Button } from '../../components/ui/Button'
 import { OverflowMenu, type OverflowMenuItem } from '../../components/ui/OverflowMenu'
-import { WorkspaceHeaderRightActions } from '../../components/shell/WorkspacePortal'
+import { WorkspaceHeaderRightActions, WorkspaceHeaderSecondaryActions, WorkspaceHeaderMoreActions } from '../../components/shell/WorkspacePortal'
 import { useOptionalWorkspace } from '../../lib/workspaceContext'
 import { PageShell } from '../../components/ui/PageShell'
 import './rentals.css'
@@ -820,14 +820,18 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
       {/* The existing fixed-height app header owns the page title and actions.
           No nested PageHeader or second action/footer bar in the real shell. */}
       {workspace && (
-        <WorkspaceHeaderRightActions>
-          <div className="new-rental-header-actions" role="group" aria-label="New rental actions">
-            {!editBookingId && isDesktop && (
+        <>
+          {!editBookingId && isDesktop && (
+            <WorkspaceHeaderSecondaryActions>
               <Button variant="outline" disabled={actionBusy} onClick={() => void saveDraft()}>
                 Save draft
               </Button>
-            )}
+            </WorkspaceHeaderSecondaryActions>
+          )}
+          <WorkspaceHeaderMoreActions>
             <OverflowMenu items={secondaryHeaderActions} ariaLabel="More rental actions" />
+          </WorkspaceHeaderMoreActions>
+          <WorkspaceHeaderRightActions>
             <Button
               variant="primary"
               className="new-rental-header-primary"
@@ -839,8 +843,8 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
               <Icon name="check" size={17} />
               <span>{actionBusy ? 'Saving…' : actionLabel}</span>
             </Button>
-          </div>
-        </WorkspaceHeaderRightActions>
+          </WorkspaceHeaderRightActions>
+        </>
       )}
       {/* RULING 2026-10-08: direct section access on one continuous form. */}
       <nav className="new-rental-jumpbar" aria-label="Rental sections">

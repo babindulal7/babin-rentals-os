@@ -8,7 +8,7 @@ import Icon from '../../components/ui/Icon'
 import { FooterNote } from '../../components/ui/Page'
 import { RentalTimeline } from './RentalTimeline'
 import { RentalSummaryModal } from './modals/RentalSummaryModal'
-import { WorkspaceHeaderRightActions, WorkspaceHeaderSearch } from '../../components/shell/WorkspacePortal'
+import { WorkspaceHeaderSearch, WorkspaceHeaderSecondaryActions, WorkspaceHeaderMoreActions, WorkspaceHeaderPhoneSearchActions, WorkspaceHeaderAddActions } from '../../components/shell/WorkspacePortal'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { OverflowMenu } from '../../components/ui/OverflowMenu'
 import { Button } from '../../components/ui/Button'
@@ -1589,9 +1589,15 @@ export default function RentalsList() {
       </WorkspaceHeaderSearch>
 
       {/* Action portal into the shell's original fixed-height header */}
-      <WorkspaceHeaderRightActions>
-        <span className="rentals-header-actions" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          {/* Mobile search toggle: opens an overlay, does NOT grow the header */}
+      {/* Same button family = same shell position on every screen. */}
+      <FilterButton
+        onClick={() => setFiltersOpen((open) => !open)}
+        activeCount={f.activeCount}
+        controls="rentals-filters"
+        expanded={filtersOpen}
+      />
+      {viewport === 'phone' && (
+        <WorkspaceHeaderPhoneSearchActions>
           <button
             type="button"
             className="rentals-header-mobile-search-btn"
@@ -1602,43 +1608,34 @@ export default function RentalsList() {
           >
             <Icon name="search" size={16} />
           </button>
-
-          {viewport !== 'phone' && <FilterButton
-            onClick={() => setFiltersOpen((open) => !open)}
-            activeCount={f.activeCount}
-            controls="rentals-filters"
-            expanded={filtersOpen}
-            inHeader={false}
-          />}
-
-          {/* When exactly 1 rental is selected, expose its operations menu in the header */}
+        </WorkspaceHeaderPhoneSearchActions>
+      )}
+      <WorkspaceHeaderSecondaryActions>
+          {/* Booking operations stays available at all widths. */}
           {selectedHeaderRental && canOperate && (
             <BookingOperationsMenu
               bookingNo={selectedHeaderRental.bookingNo}
               bookingStatus={selectedHeaderRental.status as BookingStatus}
+              compact={viewport !== 'desktop'}
             />
           )}
 
-          {canWriteDesk && (
-            <Button
-              variant="primary"
-              size="sm"
-              icon="plus"
-              aria-label="New Rental"
-              onClick={() => navigate('/rentals/new')}
-            >
-              {viewport === 'phone' ? 'New' : 'New Rental'}
-            </Button>
-          )}
 
+          {/* Data freshness badge: visible only on 1920px+ viewports to protect header width */}
+          <span className="rentals-header-data-age">
+            <DataAgeBadge
+              loadedAt={list.lastFetchedAt}
+              onRefresh={refreshAll}
+              loading={list.loading}
+            />
+          </span>
+
+      </WorkspaceHeaderSecondaryActions>
+      <WorkspaceHeaderMoreActions>
           <OverflowMenu
             ariaLabel="More rentals actions"
             items={[
-              ...(viewport === 'phone' ? [{
-                label: f.activeCount > 0 ? `Filters (${f.activeCount})` : 'Filters',
-                icon: 'filter' as const,
-                onClick: () => setFiltersOpen((open) => !open),
-              }] : []),
+
               ...(selectedHeaderRental
                 ? [
                     {
@@ -1725,16 +1722,23 @@ export default function RentalsList() {
             ]}
           />
 
-          {/* Data freshness badge: visible only on 1920px+ viewports to protect header width */}
-          <span className="rentals-header-data-age">
-            <DataAgeBadge
-              loadedAt={list.lastFetchedAt}
-              onRefresh={refreshAll}
-              loading={list.loading}
-            />
-          </span>
-        </span>
-      </WorkspaceHeaderRightActions>
+
+      </WorkspaceHeaderMoreActions>
+      <WorkspaceHeaderAddActions>
+          {canWriteDesk && (
+            <Button
+              variant="primary"
+              size="sm"
+              icon="plus"
+              aria-label="New Rental"
+              onClick={() => navigate('/rentals/new')}
+            >
+              {viewport === 'phone' ? 'New' : 'New Rental'}
+            </Button>
+          )}
+
+
+      </WorkspaceHeaderAddActions>
 
       {/* Mobile search overlay — drops below the header when toggled, does not expand header */}
       {mobileSearchOpen && (

@@ -1,4 +1,4 @@
-import { useRef, useState, useMemo, useEffect, isValidElement, cloneElement, type ReactNode } from 'react'
+import { useRef, useState, useMemo, useEffect, isValidElement, type ReactNode } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import Icon, { type IconName } from '../ui/Icon'
 import { useAuth } from '../../lib/auth'
@@ -11,8 +11,8 @@ import { InfoTooltip } from '../ui/InfoTooltip'
 import InternalNotesDrawer from '../../modules/notes/InternalNotesDrawer'
 import { Button } from '../ui/Button'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
-import { OverflowMenu, type OverflowMenuItem } from '../ui/OverflowMenu'
-import { extractValidActions } from '../ui/PageActions'
+import type { OverflowMenuItem } from '../ui/OverflowMenu'
+import { extractValidActions, PageActions, ActionsOverflowMenu, type PageActionsProps } from '../ui/PageActions'
 import {
   type PageActionItem,
   type PageActionContext,
@@ -199,6 +199,50 @@ export default function Header({ crumbs, actions }: HeaderProps) {
     ...(hData?.actions ? extractValidActions(hData.actions) : []),
   ]
 
+  // Older pages pass a <PageActions/> element instead of the typed action
+  // registry. Split that element into the SAME shared header slots rather than
+  // rendering its whole toolbar inside the Save/Confirm position.
+  const legacyGroups = combinedLegacyActions
+    .filter((node) => isValidElement(node) && node.type === PageActions)
+    .map((node) => (node as React.ReactElement<PageActionsProps>).props)
+  const looseActions = combinedLegacyActions.filter((node) => !(isValidElement(node) && node.type === PageActions))
+  const loosePrimary = looseActions.filter(
+    (node) => isValidElement(node) && (node.props as { variant?: string }).variant === 'primary',
+  )
+  const looseSecondary = looseActions.filter((node) => !loosePrimary.includes(node))
+  const allLegacyPrimary = [
+    ...legacyGroups.flatMap((group) => extractValidActions(group.primary)),
+    ...loosePrimary,
+  ]
+  // Inventory, Clients and Bundles historically pass GlobalAddMenu as a
+  // PageActions primary. Treat that as ADD, never as the Save/Confirm CTA.
+  const legacyAdd = allLegacyPrimary.find((node) => isValidElement(node) && node.type === GlobalAddMenu)
+  const legacyPrimary = allLegacyPrimary.filter((node) => node !== legacyAdd)
+  // Extra includes contextual nav controls (Calendar Today/date steppers)
+  // and record badges. These are NOT secondary commands. Keep their own
+  // desktop positions visible even when secondary slots fill up.
+  const legacyContext = legacyGroups.flatMap((group) => extractValidActions(group.extra))
+  const legacySecondary = [
+    ...legacyGroups.flatMap((group) => extractValidActions(group.secondary)),
+    ...looseSecondary,
+    ...legacyPrimary.slice(1),
+  ]
+  const visibleLegacySecondaryCount = !isPhone && !isTablet ? Math.max(0, 2 - (resolved?.secondary.length ?? 0)) : 0
+  const visibleLegacySecondary = [
+    ...(!isPhone && !isTablet ? legacyContext : []),
+    ...legacySecondary.slice(0, visibleLegacySecondaryCount),
+  ]
+  const moreLegacySecondary = [
+    ...(isPhone || isTablet ? legacyContext : []),
+    ...legacySecondary.slice(visibleLegacySecondaryCount),
+  ]
+  const legacyOverflowItems = legacyGroups.flatMap((group) =>
+    Array.isArray(group.overflow) ? (group.overflow as OverflowMenuItem[]) : [],
+  )
+  const customLegacyOverflow = legacyGroups
+    .map((group) => !Array.isArray(group.overflow) ? group.overflow : null)
+    .filter((node): node is ReactNode => node != null)
+
   // Search configuration from workspace header data
   const isSearchConfig = Boolean(
     hData?.search &&
@@ -347,9 +391,6 @@ export default function Header({ crumbs, actions }: HeaderProps) {
               <Icon name={hData.icon} size={18} fill />
             </span>
           )}
-
-          {/* Page controls via workspace portal slot */}
-          <span className="workspace-page-actions" ref={ws?.setHeaderActionsElement} />
 
           {/* Breadcrumb / Title Navigation */}
           <nav aria-label="Breadcrumb" style={{ minWidth: 0, overflow: 'hidden' }}>
@@ -715,9 +756,6 @@ export default function Header({ crumbs, actions }: HeaderProps) {
           }}
         >
           {/* 1. Bulk Selection Mode Bar in Header */}
-          {isPhone && searchConfig && !ws?.hasPageSearch && (
-            <MobileHeaderSearch key={hData?.title ?? activeCrumb} config={searchConfig} title={hData?.title ?? activeCrumb} />
-          )}
           {hData?.bulkSelection && hData.bulkSelection.count > 0 ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 'var(--t-meta, 13px)', fontWeight: 600, color: 'var(--text)' }}>
@@ -754,85 +792,87 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             </div>
           ) : (
             <>
-              {/* 2. Universal Add Dropdown [Add ▼] */}
-              {resolved?.add ? (
-                <AddDropdownButton action={resolved.add} />
-              ) : !ws?.hasPageRightActions && !resolved?.primary && combinedLegacyActions.length === 0 && hData?.showAddMenu !== false ? (
-                <GlobalAddMenu
-                  module={hData?.module}
-                  contextData={hData?.creationContext}
-                />
-              ) : null}
+              {/* Context actions vary by page but never displace Filter or
+                  move a primary CTA past the More button. */}
+              <span className="app-global-header__action-slot app-global-header__action-slot--secondary" data-header-slot="secondary">
+                <span ref={ws?.setHeaderSecondaryActionsElement} className="workspace-header-secondary-actions" />
+                {!isPhone && !isTablet && visibleLegacySecondary.map((action, idx) => (
+                  <span key={isValidElement(action) && action.key != null ? String(action.key) : `hdr-secondary-${idx}`}>{action}</span>
+                ))}
+                {!isPhone && !isTablet && resolved?.secondary?.map((sec) => {
+                  const statusCheck = isActionEnabled(sec, actionContext)
+                  return (
+                    <Button
+                      key={sec.id}
+                      variant={sec.variant ?? 'secondary'}
+                      icon={sec.icon}
+                      onClick={(e) => handleActionClick(sec, e)}
+                      disabled={!statusCheck.enabled}
+                      style={{ minHeight: 44, padding: '0 12px' }}
+                      {...(statusCheck.reason ? { title: statusCheck.reason } : {})}
+                    >
+                      {sec.label}
+                    </Button>
+                  )
+                })}
+              </span>
 
-              {/* 3. Contextual Secondary Actions (Desktop only; up to 2 actions) */}
-              {!isPhone && !isTablet && resolved?.secondary && resolved.secondary.length > 0 && (
-                <>
-                  {resolved.secondary.map((sec) => {
-                    const statusCheck = isActionEnabled(sec, actionContext)
-                    return (
-                      <Button
-                        key={sec.id}
-                        variant={sec.variant ?? 'secondary'}
-                        icon={sec.icon}
-                        onClick={(e) => handleActionClick(sec, e)}
-                        disabled={!statusCheck.enabled}
-                        style={{ height: 38, minHeight: 44, padding: '0 12px' }}
-                        {...(statusCheck.reason ? { title: statusCheck.reason } : {})}
-                      >
-                        {sec.label}
-                      </Button>
-                    )
-                  })}
-                </>
-              )}
-
-              {/* 4. Single Prominent Primary Action [Save / Confirm / etc.] */}
-              {resolved?.primary && (
-                <Button
-                  variant={resolved.primary.variant ?? 'primary'}
-                  icon={resolved.primary.icon}
-                  onClick={(e) => handleActionClick(resolved.primary!, e)}
-                  disabled={resolved.primary.loading || resolved.primary.enabled === false}
-                  style={{
-                    height: 38,
-                    minHeight: 44,
-                    padding: '0 14px',
-                    fontWeight: 600,
-                  }}
-                  {...(resolved.primary.disabledReason ? { title: resolved.primary.disabledReason } : {})}
-                >
-                  {resolved.primary.loading
-                    ? resolved.primary.loadingLabel ?? `${resolved.primary.label}…`
-                    : resolved.primary.label}
-                </Button>
-              )}
-
-              {/* 5. More Actions Overflow [More ⋯] */}
-              {overflowItems.length > 0 && (
-                <OverflowMenu
-                  ariaLabel="More actions"
-                  items={overflowItems}
-                />
-              )}
-
-              {/* Mount point for pages that render their own actions into the application header */}
+              {/* CANONICAL BUTTON POSITIONS — same slots in every workspace:
+                  [Secondary] [Filters] [Add] [More] [Page CTA / Save / Confirm].
+                  Keep the page-owned portal after More, not before the title. */}
               <span
-                ref={ws?.setHeaderRightActionsElement}
-                className="workspace-header-right-actions"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  minWidth: 0,
-                }}
+                className="workspace-page-actions app-global-header__action-slot app-global-header__action-slot--filters"
+                data-header-slot="filters"
+                ref={ws?.setHeaderActionsElement}
               />
 
-              {/* 6. Legacy Actions (backwards compatibility for raw action props) */}
-              {combinedLegacyActions.map((action, idx) =>
-                isValidElement(action)
-                  ? cloneElement(action, { key: action.key ?? `hdr-legacy-${idx}` })
-                  : <span key={`hdr-legacy-${idx}`}>{action}</span>
-              )}
+              {/* All Add actions share one location; page-specific creation still
+                  honours its permissions and showAddMenu setting. */}
+              <span className="app-global-header__action-slot app-global-header__action-slot--add" data-header-slot="add">
+                <span ref={ws?.setHeaderAddActionsElement} className="workspace-header-add-actions" />
+                {resolved?.add ? (
+                  <AddDropdownButton action={resolved.add} />
+                ) : legacyAdd ? legacyAdd : !ws?.hasPageAddActions && !ws?.hasPageRightActions && !resolved?.primary && combinedLegacyActions.length === 0 && hData?.showAddMenu !== false ? (
+                  <GlobalAddMenu module={hData?.module} contextData={hData?.creationContext} />
+                ) : null}
+              </span>
+
+              <span className="app-global-header__action-slot app-global-header__action-slot--more" data-header-slot="more">
+                <span ref={ws?.setHeaderMoreActionsElement} className="workspace-header-more-actions" />
+                {(overflowItems.length > 0 || moreLegacySecondary.length > 0 || legacyOverflowItems.length > 0 || customLegacyOverflow.length > 0) && (
+                  <ActionsOverflowMenu
+                    ariaLabel="More actions"
+                    actions={moreLegacySecondary}
+                    overflowItems={[...overflowItems, ...legacyOverflowItems]}
+                    customOverflowNode={customLegacyOverflow.length > 0 ? <>{customLegacyOverflow}</> : undefined}
+                  />
+                )}
+              </span>
+
+              {/* The rightmost page slot is always the final action before the
+                  fixed Messages/Search/Profile chrome. This includes legacy
+                  and portaled New Rental / Save / Confirm buttons. */}
+              <span className="app-global-header__action-slot app-global-header__action-slot--primary" data-header-slot="primary">
+                <span
+                  ref={ws?.setHeaderRightActionsElement}
+                  className="workspace-header-right-actions"
+                />
+                {!resolved?.primary && legacyPrimary[0] && <span className="app-global-header__legacy-primary">{legacyPrimary[0]}</span>}
+                {resolved?.primary && (
+                  <Button
+                    variant={resolved.primary.variant ?? 'primary'}
+                    icon={resolved.primary.icon}
+                    onClick={(e) => handleActionClick(resolved.primary!, e)}
+                    disabled={resolved.primary.loading || resolved.primary.enabled === false}
+                    style={{ minHeight: 44, padding: '0 14px', fontWeight: 600 }}
+                    {...(resolved.primary.disabledReason ? { title: resolved.primary.disabledReason } : {})}
+                  >
+                    {resolved.primary.loading
+                      ? resolved.primary.loadingLabel ?? `${resolved.primary.label}…`
+                      : resolved.primary.label}
+                  </Button>
+                )}
+              </span>
             </>
           )}
 
@@ -847,17 +887,25 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             <Icon name="message" size={17} />
           </button>}
 
-          {/* 8. Phone Search Toggle Icon */}
-          {isPhone && !searchConfig && !isDispatch && !ws?.hasPageSearch && (
-            <button
-              type="button"
-              onClick={() => openCommandPalette()}
-              aria-label="Search"
-              title="Search"
-              style={iconBtn}
-            >
-              <Icon name="search" size={17} />
-            </button>
+          {/* Phone search is always in the same slot, whether a page has its
+              own search or uses the global command palette. */}
+          {isPhone && (
+            <span className="app-global-header__phone-search" data-header-slot="search">
+              <span ref={ws?.setHeaderPhoneSearchActionsElement} className="workspace-header-phone-search-actions" />
+              {searchConfig && !ws?.hasPageSearch ? (
+                <MobileHeaderSearch key={hData?.title ?? activeCrumb} config={searchConfig} title={hData?.title ?? activeCrumb} />
+              ) : !searchConfig && !isDispatch && !ws?.hasPageSearch ? (
+                <button
+                  type="button"
+                  onClick={() => openCommandPalette()}
+                  aria-label="Search"
+                  title="Search"
+                  style={iconBtn}
+                >
+                  <Icon name="search" size={17} />
+                </button>
+              ) : null}
+            </span>
           )}
 
           {/* 9. User Profile Trigger (Law 15: >= 44x44px hit area) */}
