@@ -820,9 +820,10 @@ export default function Header({ crumbs, actions }: HeaderProps) {
               {/* All Add actions share one location; page-specific creation still
                   honours its permissions and showAddMenu setting. */}
               <span className="app-global-header__action-slot app-global-header__action-slot--add" data-header-slot="add">
+                <span ref={ws?.setHeaderAddActionsElement} className="workspace-header-add-actions" />
                 {resolved?.add ? (
                   <AddDropdownButton action={resolved.add} />
-                ) : legacyAdd ? legacyAdd : !ws?.hasPageRightActions && !resolved?.primary && combinedLegacyActions.length === 0 && hData?.showAddMenu !== false ? (
+                ) : legacyAdd ? legacyAdd : !ws?.hasPageAddActions && !ws?.hasPageRightActions && !resolved?.primary && combinedLegacyActions.length === 0 && hData?.showAddMenu !== false ? (
                   <GlobalAddMenu module={hData?.module} contextData={hData?.creationContext} />
                 ) : null}
               </span>
