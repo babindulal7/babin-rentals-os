@@ -12,7 +12,7 @@ import InternalNotesDrawer from '../../modules/notes/InternalNotesDrawer'
 import { Button } from '../ui/Button'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { OverflowMenu, type OverflowMenuItem } from '../ui/OverflowMenu'
-import { extractValidActions } from '../ui/PageActions'
+import { extractValidActions, PageActions, ActionsOverflowMenu, type PageActionsProps } from '../ui/PageActions'
 import {
   type PageActionItem,
   type PageActionContext,
@@ -198,6 +198,37 @@ export default function Header({ crumbs, actions }: HeaderProps) {
     ...(actions ? extractValidActions(actions) : []),
     ...(hData?.actions ? extractValidActions(hData.actions) : []),
   ]
+
+  // Older pages pass a <PageActions/> element instead of the typed action
+  // registry. Split that element into the SAME shared header slots rather than
+  // rendering its whole toolbar inside the Save/Confirm position.
+  const legacyGroups = combinedLegacyActions
+    .filter((node) => isValidElement(node) && node.type === PageActions)
+    .map((node) => (node as React.ReactElement<PageActionsProps>).props)
+  const looseActions = combinedLegacyActions.filter((node) => !(isValidElement(node) && node.type === PageActions))
+  const loosePrimary = looseActions.filter(
+    (node) => isValidElement(node) && (node.props as { variant?: string }).variant === 'primary',
+  )
+  const looseSecondary = looseActions.filter((node) => !loosePrimary.includes(node))
+  const legacyPrimary = [
+    ...legacyGroups.flatMap((group) => extractValidActions(group.primary)),
+    ...loosePrimary,
+  ]
+  const legacySecondary = [
+    ...legacyGroups.flatMap((group) => extractValidActions(group.extra)),
+    ...legacyGroups.flatMap((group) => extractValidActions(group.secondary)),
+    ...looseSecondary,
+    ...legacyPrimary.slice(1),
+  ]
+  const visibleLegacySecondaryCount = !isPhone && !isTablet ? Math.max(0, 2 - (resolved?.secondary.length ?? 0)) : 0
+  const visibleLegacySecondary = legacySecondary.slice(0, visibleLegacySecondaryCount)
+  const moreLegacySecondary = legacySecondary.slice(visibleLegacySecondaryCount)
+  const legacyOverflowItems = legacyGroups.flatMap((group) =>
+    Array.isArray(group.overflow) ? (group.overflow as OverflowMenuItem[]) : [],
+  )
+  const customLegacyOverflow = legacyGroups
+    .map((group) => !Array.isArray(group.overflow) ? group.overflow : null)
+    .filter((node): node is ReactNode => node != null)
 
   // Search configuration from workspace header data
   const isSearchConfig = Boolean(
@@ -752,6 +783,9 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                   move a primary CTA past the More button. */}
               <span className="app-global-header__action-slot app-global-header__action-slot--secondary" data-header-slot="secondary">
                 <span ref={ws?.setHeaderSecondaryActionsElement} className="workspace-header-secondary-actions" />
+                {!isPhone && !isTablet && visibleLegacySecondary.map((action, idx) => (
+                  <span key={isValidElement(action) && action.key != null ? String(action.key) : `hdr-secondary-${idx}`}>{action}</span>
+                ))}
                 {!isPhone && !isTablet && resolved?.secondary?.map((sec) => {
                   const statusCheck = isActionEnabled(sec, actionContext)
                   return (
@@ -791,7 +825,14 @@ export default function Header({ crumbs, actions }: HeaderProps) {
 
               <span className="app-global-header__action-slot app-global-header__action-slot--more" data-header-slot="more">
                 <span ref={ws?.setHeaderMoreActionsElement} className="workspace-header-more-actions" />
-                {overflowItems.length > 0 && <OverflowMenu ariaLabel="More actions" items={overflowItems} />}
+                {(overflowItems.length > 0 || moreLegacySecondary.length > 0 || legacyOverflowItems.length > 0 || customLegacyOverflow.length > 0) && (
+                  <ActionsOverflowMenu
+                    ariaLabel="More actions"
+                    actions={moreLegacySecondary}
+                    overflowItems={[...overflowItems, ...legacyOverflowItems]}
+                    customOverflowNode={customLegacyOverflow.length > 0 ? <>{customLegacyOverflow}</> : undefined}
+                  />
+                )}
               </span>
 
               {/* The rightmost page slot is always the final action before the
@@ -802,11 +843,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                   ref={ws?.setHeaderRightActionsElement}
                   className="workspace-header-right-actions"
                 />
-                {combinedLegacyActions.map((action, idx) =>
-                  isValidElement(action)
-                    ? cloneElement(action, { key: action.key ?? `hdr-legacy-${idx}` })
-                    : <span key={`hdr-legacy-${idx}`}>{action}</span>
-                )}
+                {!resolved?.primary && legacyPrimary[0] && <span className="app-global-header__legacy-primary">{legacyPrimary[0]}</span>}
                 {resolved?.primary && (
                   <Button
                     variant={resolved.primary.variant ?? 'primary'}
