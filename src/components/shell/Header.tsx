@@ -877,6 +877,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
               own search or uses the global command palette. */}
           {isPhone && (
             <span className="app-global-header__phone-search" data-header-slot="search">
+              <span ref={ws?.setHeaderPhoneSearchActionsElement} className="workspace-header-phone-search-actions" />
               {searchConfig && !ws?.hasPageSearch ? (
                 <MobileHeaderSearch key={hData?.title ?? activeCrumb} config={searchConfig} title={hData?.title ?? activeCrumb} />
               ) : !searchConfig && !isDispatch && !ws?.hasPageSearch ? (
