@@ -70,3 +70,71 @@
 .app-side-panel { width: var(--app-panel-width, 320px); }
 .app-side-panel-body { min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 16px; }
 .app-side-panel-footer { padding: 16px; border-top: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
+
+/* HEADER POSITION CONTRACT — one row, one location for each action family.
+ * Desktop positions are right-anchored, not content-anchored: secondary labels
+ * may change but cannot move Filters / Add / More / Save along the header.
+ * Do not add a second header or change --header-h to solve crowding.
+ */
+.app-global-header__action-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 0;
+  min-height: 44px;
+  white-space: nowrap;
+}
+.app-global-header__action-slot--secondary { gap: 8px; }
+.app-global-header__action-slot--filters { width: 44px; flex-basis: 44px; }
+.app-global-header__action-slot--add { width: 156px; flex-basis: 156px; }
+.app-global-header__action-slot--more { width: 44px; flex-basis: 44px; }
+.app-global-header__action-slot--primary { width: 184px; flex-basis: 184px; gap: 6px; justify-content: flex-end; }
+.app-global-header__action-slot--primary > button,
+.app-global-header__action-slot--primary > a,
+.app-global-header__action-slot--primary .workspace-header-right-actions > button,
+.app-global-header__action-slot--primary .workspace-header-right-actions > a {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-global-header__action-slot--primary .workspace-header-right-actions {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  gap: 6px;
+}
+.app-global-header__phone-search { width: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; }
+/* In tight tablet layouts, defer secondary verbs to the existing overflow. */
+@media (max-width: 1279px) {
+  .app-global-header__action-slot--add { width: 106px; flex-basis: 106px; }
+  .app-global-header__action-slot--primary { width: 160px; flex-basis: 160px; }
+}
+@media (max-width: 767px) {
+  .app-global-header__action-slot--filters,
+  .app-global-header__action-slot--more,
+  .app-global-header__action-slot--add { width: 44px; flex-basis: 44px; }
+  .app-global-header__action-slot--primary { width: 56px; flex-basis: 56px; }
+  /* A registry Add trigger may still contain label text on phone; icon remains. */
+  .app-global-header__action-slot--add button {
+    width: 44px;
+    max-width: 44px;
+    min-width: 44px;
+    justify-content: center;
+    padding: 0 !important;
+    overflow: hidden;
+  }
+  .app-global-header__action-slot--add button span { display: none; }
+  /* Unused slots consume no phone space; live slots retain canonical ordering. */
+  .app-global-header__action-slot:not(:has(button, a)) { display: none; }
+  .app-global-header__action-slot--primary { overflow: hidden; }
+  .app-global-header__action-slot--primary button,
+  .app-global-header__action-slot--primary a {
+    max-width: 56px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
