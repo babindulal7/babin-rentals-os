@@ -8,7 +8,7 @@ import Icon from '../../components/ui/Icon'
 import { FooterNote } from '../../components/ui/Page'
 import { RentalTimeline } from './RentalTimeline'
 import { RentalSummaryModal } from './modals/RentalSummaryModal'
-import { WorkspaceHeaderRightActions, WorkspaceHeaderSearch, WorkspaceHeaderSecondaryActions, WorkspaceHeaderMoreActions, WorkspaceHeaderPhoneSearchActions } from '../../components/shell/WorkspacePortal'
+import { WorkspaceHeaderRightActions, WorkspaceHeaderSearch, WorkspaceHeaderSecondaryActions, WorkspaceHeaderMoreActions, WorkspaceHeaderPhoneSearchActions, WorkspaceHeaderAddActions } from '../../components/shell/WorkspacePortal'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { OverflowMenu } from '../../components/ui/OverflowMenu'
 import { Button } from '../../components/ui/Button'
@@ -1724,7 +1724,7 @@ export default function RentalsList() {
 
 
       </WorkspaceHeaderMoreActions>
-      <WorkspaceHeaderRightActions>
+      <WorkspaceHeaderAddActions>
           {canWriteDesk && (
             <Button
               variant="primary"
@@ -1738,7 +1738,7 @@ export default function RentalsList() {
           )}
 
 
-      </WorkspaceHeaderRightActions>
+      </WorkspaceHeaderAddActions>
 
       {/* Mobile search overlay — drops below the header when toggled, does not expand header */}
       {mobileSearchOpen && (
