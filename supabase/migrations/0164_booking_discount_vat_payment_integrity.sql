@@ -661,10 +661,10 @@ begin
   end if;
   -- New bookings pin a VAT fraction; legacy bookings retain supplied invoice VAT.
   select b.vat_rate into v_booking_vat_rate from public.bookings b where b.id=v_booking_id;
+  -- The booking's pinned tax mode is authoritative, including zero VAT.
+  -- The caller's current Settings value might have changed since the Quote;
+  -- do not let the later device setting reprice the client's agreed booking.
   if v_booking_vat_rate is not null then
-    if v_vat_rate is not null and abs(v_vat_rate-v_booking_vat_rate)>0.0001 then
-      raise exception 'GATE:gate.invoice.vat_mismatch|Invoice VAT differs from booking VAT. Nothing was created.' using errcode='P0001';
-    end if;
     v_vat_rate:=v_booking_vat_rate;
   end if;
   -- ── The header ────────────────────────────────────────────────────────────
