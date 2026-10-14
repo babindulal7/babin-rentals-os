@@ -604,6 +604,7 @@
   align-items: center;
   gap: var(--sp-sm, 8px);
   width: 100%;
+  min-height: var(--tap, 44px); /* Law 15: the whole row is the target */
   padding: 8px 10px;
   border-radius: var(--r-btn, 8px);
   border: 1px solid transparent;
