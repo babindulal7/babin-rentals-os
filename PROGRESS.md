@@ -1,5 +1,36 @@
 # Progress Log
 
+## 2026-10-14 — UI copy repair: sentences broken by an earlier bulk copy edit
+
+**Did**
+- Found and repaired the defect class behind two broken floor-screen sentences fixed in PR #5: a bulk "UI copy" edit had wrapped developer prose in comments and pasted replacement text after them, leaving fragments ("a bundle needs at least one…"), spaces before punctuation where "(§x)" was stripped ("…sections ."), dangling dashes, and untrue or developer-only text. Searched both shapes — JSX text after `*/}` and string literals after `/* … */` — across `src/` (about 70 JSX sites and 30 string sites reviewed; the four floor workspaces left to PR #5).
+- Repaired 17 files: Tools (storage, battery and rental-price panels; favourites, backup, registry, alerts, shortcuts and "What Tools owns" notes), `data/tools.ts` group notes and unavailable-tool reasons, Today "Deposit Pending" reason and Inventory brand / purchase-price filter reasons (they showed column names and migration line numbers), Add Bundle (8), Bundles (2), Add Equipment and its stock-unit / relationship / purchase / pricing sections, Calendar, Report Catalog (2), Pulse, five `lib/gates.ts` error messages, expense-report notes, and the close-gate label in `lib/workflow.ts`.
+
+**Ruled**
+- `docs/RULINGS-2026-10-14-ui-copy.md` (C14-1 … C14-4). Copy only — no behaviour, permission, schema or gate change. Developer detail kept as comments at each site.
+
+**Verified**
+- typecheck 0; eslint on `src` clean; lint:shell; lint:ui-copy 0 violations; contrast 82/82; full suite 350 files / 4,462 tests pass; production build exit 0 (301 precache entries).
+- Browser (seeded mock, Owner): 28 exact-text checks pass on the changed screens (Tools panels and cards, Report Catalog no-match, Add Bundle); a scan of every Tools tab, Today, Inventory, Report Catalog, Add Bundle, Add Equipment and the phone Calendar finds no space-before-punctuation, lowercase sentence start or dangling dash; zero page errors.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-14T11:29:11.991Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Gates read from .lifecycle-result.json, written 2026-10-14T20:37:10.038Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Tools ▸ Cinematography Suite shows a developer disposition table ("Where the render's fifteen categories went", `§` references) — remove or rewrite is a product call.
+- `lint:ui-copy` misses this class (no forbidden token); a check for `*/}` followed by a lowercase letter and for " ." inside strings would stop it recurring.
+- `src/modules/operations/BookingNotLoaded.tsx` is imported nowhere (dead code with developer copy).
+
 ## 2026-10-14 — Button audit fixes: browser finish and local verification
 
 **Did**
