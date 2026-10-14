@@ -218,15 +218,24 @@ export default function Header({ crumbs, actions }: HeaderProps) {
   // PageActions primary. Treat that as ADD, never as the Save/Confirm CTA.
   const legacyAdd = allLegacyPrimary.find((node) => isValidElement(node) && node.type === GlobalAddMenu)
   const legacyPrimary = allLegacyPrimary.filter((node) => node !== legacyAdd)
+  // Extra includes contextual nav controls (Calendar Today/date steppers)
+  // and record badges. These are NOT secondary commands. Keep their own
+  // desktop positions visible even when secondary slots fill up.
+  const legacyContext = legacyGroups.flatMap((group) => extractValidActions(group.extra))
   const legacySecondary = [
-    ...legacyGroups.flatMap((group) => extractValidActions(group.extra)),
     ...legacyGroups.flatMap((group) => extractValidActions(group.secondary)),
     ...looseSecondary,
     ...legacyPrimary.slice(1),
   ]
   const visibleLegacySecondaryCount = !isPhone && !isTablet ? Math.max(0, 2 - (resolved?.secondary.length ?? 0)) : 0
-  const visibleLegacySecondary = legacySecondary.slice(0, visibleLegacySecondaryCount)
-  const moreLegacySecondary = legacySecondary.slice(visibleLegacySecondaryCount)
+  const visibleLegacySecondary = [
+    ...(!isPhone && !isTablet ? legacyContext : []),
+    ...legacySecondary.slice(0, visibleLegacySecondaryCount),
+  ]
+  const moreLegacySecondary = [
+    ...(isPhone || isTablet ? legacyContext : []),
+    ...legacySecondary.slice(visibleLegacySecondaryCount),
+  ]
   const legacyOverflowItems = legacyGroups.flatMap((group) =>
     Array.isArray(group.overflow) ? (group.overflow as OverflowMenuItem[]) : [],
   )
