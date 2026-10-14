@@ -17,7 +17,7 @@ import { BarcodeScannerModal, type ScanOutcome } from '../../components/ui/Barco
 import { Input } from '../../components/ui/Input'
 import { Unavailable } from '../../components/ui/Unavailable'
 import { CompactButton } from '../../components/ui/TouchTarget'
-import { useViewport } from '../../lib/device'
+import { useFloorViewport } from '../operations/floorPanelContext'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../components/ui/Toast'
 import { RentalIntelFromFloor } from '../../components/intel/RentalIntelFromFloor'
@@ -505,7 +505,7 @@ export default function PackingWorkspace({
   const { user } = useAuth()
   const { showSuccessToast } = useToast()
   /* Law 13/14 — width decides, at v4.1 §7.7's 768 / 1280. */
-  const viewport = useViewport()
+  const viewport = useFloorViewport()
   const desktop = viewport === 'desktop'
   const phone = viewport === 'phone'
   const place = floorPlacements(desktop, phone)
@@ -1344,11 +1344,13 @@ export default function PackingWorkspace({
                   hover AND on a long-press, which is what the warehouse tablet
                   has.
                 */}
+                {!embedded && (
                 <Unavailable reason="Printing a packing list is not built. Nothing in the app generates a packing-list document, and there is no print stylesheet, so this would send the whole workspace — filters, rails and buttons — to the printer instead of a list.">
                   <Button icon="file" disabled>
                     Print Packing List
                   </Button>
                 </Unavailable>
+                )}
                 {/*
                  * The identity is the signed-in operator or there is no dispatch.
                  * `saveDraft` is still an unimplemented stub the dispatcher
@@ -1380,6 +1382,7 @@ export default function PackingWorkspace({
             {/* §4 — read-only booking summary, one compact row. BS above AD.
                 Every cell is a real column off `fetchFloorBooking`; the seed
                 build's invented Payment / Crew cells are gone rather than faked. */}
+            {!embedded && (
             <div className="floor-summary-bar">
               {[
                 { l: 'Client', v: floor.clientName ?? '—', big: true },
@@ -1404,6 +1407,7 @@ export default function PackingWorkspace({
                 </div>
               ))}
             </div>
+            )}
 
             {/*
               §3.2's three layouts, all of them REFLOW rather than hide (Rulings §7):
@@ -1421,7 +1425,7 @@ export default function PackingWorkspace({
             >
               {/* ── §5 left — bundle tree, counts derived from the real rows ── */}
               <FloorAside collapsible={desktop} side="left" width={260} label="Bundle / Item Tree" style={place.tree}>
-                <Card title="1 · Bundle / Item Tree">
+                <Card title="Bundle / Item Tree">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', paddingBottom: 9, borderBottom: '1px solid var(--border)' }}>
                     {/* --ready-text, not --st-progress-fg: this glyph carries no
                         yellow fill behind it, and the fg half of the pair is
@@ -1508,7 +1512,7 @@ export default function PackingWorkspace({
                   </div>
                 )}
                 <Card
-                  title="2 · Packing Checklist"
+                  title="Packing Checklist"
                   bodyStyle={{ padding: 0 }}
                   action={
                     phone ? (
@@ -1518,7 +1522,7 @@ export default function PackingWorkspace({
                       </div>
                     ) : (
                       <>
-                        <Button icon="zap" onClick={quickPackAll}>Quick Pack All (1-Click)</Button>
+                        <Button icon="zap" onClick={quickPackAll}>Quick Pack All</Button>
                         <Button icon="checklist" onClick={markPendingPacked}>Mark Pending Packed</Button>
                         <Button icon="camera" onClick={() => setShowScanner(true)}>Scan / Camera</Button>
                       </>
@@ -2088,7 +2092,7 @@ export default function PackingWorkspace({
                   </div>
                 )}
 
-                <Card title="3 · Packing Summary">
+                <Card title="Packing Summary">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-md)' }}>
                     <Ring pct={pct} />
                     <div>

@@ -1,5 +1,27 @@
 # Progress Log
 
+## 2026-10-14 (c) — Floor workflow audit: Pack / Handover / Return / Reset made calmer inside the shell
+
+**Did**
+- Audited all four stages in a browser (seeded mock, Owner, 1440 and 1024px), standalone routes and the queue dock. Measured before/after in the dock at 1440: Packing 1,360 → 1,120px of content before the layout fix.
+- Findings: (1) the same booking facts appeared four times before any equipment (panel title, shell strip, workspace header, 8-cell stats grid); (2) inside the dock the workspaces laid out as three desktop columns in ~470px, squeezing the checklist off-screen; (3) two permanently-disabled "Print…" buttons; (4) "(1-Click)" on four buttons and "1 · 2 · 3 ·" titles that imply a sequence the layout does not have; (5) Handover is ~5,300px tall with 18 units and a per-row Missing button.
+- Fixed (1)–(4): in `embedded` mode the stats grid and the unbuilt Print buttons no longer render; the dock provides `FloorPanelContext` so the workspaces take their one-column layout there (`operations/floorPanelContext.tsx`, `useFloorViewport` replaces `useViewport` in the four workspaces); "(1-Click)" and step numbers removed from labels.
+- Not changed: standalone `/rentals/:no/<stage>` pages (non-embedded) keep their header and stats; Handover length; Save Draft.
+
+**Ruled**
+- No product, permission, schema or migration change. Revert = `useFloorViewport` returns `useViewport()`; remove the three `!embedded` wraps per file.
+- `TODO(decision)` candidates, not built: Save Draft refuses (stub) — hide or build?; Handover per-row Missing vs a bulk "mark remaining missing"; one consistent primary action position on the standalone pages (Handover/Reset button sits at the page bottom, not sticky).
+
+**Verified**
+- typecheck 0; eslint clean; lint:shell, lint:ui-copy, contrast 82/82; full suite 349+1 files pass; new context test.
+- Browser (Chromium, seeded mock): dock screenshots for all four stages at 1440 reviewed after the change; zero page errors. Not driven: completing a stage end-to-end, phone/tablet, real data, touch.
+
+## Completion
+Not re-counted: no migration, action or capability changed; figures in the entries below stand.
+
+## Remaining
+- Drive a full Pack → Handover → Return → Reset run in the browser; phone and tablet passes; decide the three TODO(decision) items above; Handover length.
+
 ## 2026-10-14 (b) — Desktop Operations dock: keyboard rows and unsaved-work guard
 
 **Did**

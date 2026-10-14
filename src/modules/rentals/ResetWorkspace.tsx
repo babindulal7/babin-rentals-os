@@ -12,7 +12,7 @@ import { STATUS } from '../../lib/status'
 import type { StatusKey } from '../../lib/status'
 import { JOBS, statusToken } from '../../lib/workflow'
 import type { BookingStatus, JobState } from '../../lib/workflow'
-import { useViewport } from '../../lib/device'
+import { useFloorViewport } from '../operations/floorPanelContext'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../components/ui/Toast'
 import { captureError } from '../../lib/monitoring'
@@ -312,7 +312,7 @@ export default function ResetWorkspace({
     'Nobody is signed in, so this cleaning work cannot be recorded against anyone. ' +
     'A reset names who cleaned the unit and who QC’d it, and the QC gate compares the two. Sign in and reopen this workspace.'
   /* Law 13/14 — width decides, at v4.1 §7.7's 768 / 1280. */
-  const viewport = useViewport()
+  const viewport = useFloorViewport()
   const desktop = viewport === 'desktop'
   const phone = viewport === 'phone'
   const place = floorPlacements(desktop, phone)
@@ -1131,6 +1131,7 @@ export default function ResetWorkspace({
             </div>
 
             {/* §4 booking summary strip — Bento 2.0 bar with AD/BS duality */}
+            {!embedded && (
             <div className="floor-summary-bar">
               {[
                 { l: 'Client', v: floor.clientName ?? '—', big: true },
@@ -1154,6 +1155,7 @@ export default function ResetWorkspace({
                 </div>
               ))}
             </div>
+            )}
 
             {/* §3.1 — chip tiles, one per queue state, counted over the real rows. */}
             <div style={{ display: 'grid', gridTemplateColumns: phone ? 'repeat(2, minmax(0,1fr))' : 'repeat(4, minmax(0,1fr))', gap: 'var(--sp-md)' }}>
@@ -1354,7 +1356,7 @@ export default function ResetWorkspace({
                       </div>
                     ) : (
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <Button icon="zap" onClick={quickResetAll}>Quick Reset All (1-Click)</Button>
+                        <Button icon="zap" onClick={quickResetAll}>Quick Reset All</Button>
                         <Button icon="checklist" onClick={selectAllVisible}>Select All Visible</Button>
                       </div>
                     )
@@ -1625,7 +1627,7 @@ export default function ResetWorkspace({
                             }}
                           >
                             <Icon name="zap" size={14} />
-                            Quick Pass {selRows.length} to Ready (1-Click)
+                            Quick Pass {selRows.length} to Ready
                           </button>
                         </div>
                       )}

@@ -9,7 +9,7 @@ import { StickyFloorBar } from '../operations/StickyFloorBar'
 import { EmptyState, ErrorBanner } from '../../components/ui/StateViews'
 import { PageBody } from '../../components/ui/PageBody'
 import { Unavailable } from '../../components/ui/Unavailable'
-import { useViewport } from '../../lib/device'
+import { useFloorViewport } from '../operations/floorPanelContext'
 import { useAuth } from '../../lib/auth'
 import { RentalIntelFromFloor } from '../../components/intel/RentalIntelFromFloor'
 import { EquipmentIntelFromFloor } from '../../components/intel/EquipmentIntelFromFloor'
@@ -485,7 +485,7 @@ export default function HandoverWorkspace({
   const { user } = useAuth()
   const { showSuccessToast } = useToast()
   /* Law 13/14 — width decides, at v4.1 §7.7's 768 / 1280. */
-  const viewport = useViewport()
+  const viewport = useFloorViewport()
   const desktop = viewport === 'desktop'
   const phone = viewport === 'phone'
 
@@ -1431,6 +1431,7 @@ export default function HandoverWorkspace({
                 `fetchFloorBooking`. No money anywhere (Law 6 / §8.3): the seed
                 build's Payment cell was local state wearing a strip cell, and
                 is gone — gates 3 and 4 carry that fact, amount-free. */}
+            {!embedded && (
             <div className="floor-summary-bar">
               {[
                 { l: 'Client', v: floor.clientName ?? '—', big: true },
@@ -1451,6 +1452,7 @@ export default function HandoverWorkspace({
                 </div>
               ))}
             </div>
+            )}
 
             {/* §3.3 — checklist and gates left, summary rail right at desktop;
                 below 1280 the rail REFLOWS beneath (Rulings §7). */}
@@ -1489,7 +1491,7 @@ export default function HandoverWorkspace({
                           padding: '0 4px',
                         }}
                       >
-                        Verify Both (1-Click)
+                        Verify Both
                       </button>
                     ) : undefined
                   }
@@ -1576,7 +1578,7 @@ export default function HandoverWorkspace({
                       </div>
                     ) : (
                       <>
-                        <Button icon="zap" onClick={quickDispatchAll}>Quick Dispatch All (1-Click)</Button>
+                        <Button icon="zap" onClick={quickDispatchAll}>Quick Dispatch All</Button>
                         <Button icon="checklist" onClick={markReadyPickedUp}>Mark Ready Picked Up</Button>
                         <Button icon="camera" onClick={() => setShowScanner(true)}>Scan Barcode</Button>
                         <Button icon="truck" onClick={() => setShowDriverModal(true)}>Field Delivery</Button>

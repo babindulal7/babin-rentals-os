@@ -9,6 +9,7 @@ import { JOB_ORDER, BOOKING_STATUS, JOBS, type BookingStatus, type JobName } fro
 import { stepWriteGate, stepDotState } from '../../lib/operationsShell'
 import { fetchFloorBooking, type FloorBooking } from '../../lib/queries/bookings'
 import { DomainEvents, EVENT_TYPES } from '../../events/eventBus'
+import { FloorPanelContext } from './floorPanelContext'
 import './operationsShell.css'
 
 const PackingWorkspace = lazy(() => import('../rentals/PackingWorkspace'))
@@ -495,7 +496,7 @@ export default function OperationsShell({
             </div>
             <Button variant="ghost" icon="close" aria-label="Close panel (Esc)" onClick={requestClose} style={{ minHeight: 'var(--tap)' }}>Close</Button>
           </header>
-          <div className="operations-shell__panel-body">{bodyNode}</div>
+          <div className="operations-shell__panel-body"><FloorPanelContext.Provider value>{bodyNode}</FloorPanelContext.Provider></div>
           <footer className="operations-shell__panel-foot">{footerNode}</footer>
         </section>
         {discardDialog}
