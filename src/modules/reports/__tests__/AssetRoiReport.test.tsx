@@ -29,6 +29,7 @@ const state = vi.hoisted(() => ({
 
 vi.mock('../../../lib/moneyVisibility', () => ({
   useCanViewMoney: () => state.canSeeMoney,
+  useCanViewFinancialReports: () => state.canSeeMoney,
 }))
 
 vi.mock('../../../lib/supabase', () => ({

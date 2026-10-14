@@ -9,10 +9,12 @@ import { REPORT_FAMILIES, ReportFamiliesNav } from '../../../components/ui/Repor
 
 const state = vi.hoisted(() => ({
   canSeeMoney: true,
+  canSeeFinancialReports: true,
 }))
 
 vi.mock('../../../lib/moneyVisibility', () => ({
   useCanViewMoney: () => state.canSeeMoney,
+  useCanViewFinancialReports: () => state.canSeeFinancialReports,
 }))
 
 describe('ReportFamiliesNav', () => {
@@ -21,6 +23,7 @@ describe('ReportFamiliesNav', () => {
 
   beforeEach(() => {
     state.canSeeMoney = true
+    state.canSeeFinancialReports = true
     container = document.createElement('div')
     document.body.appendChild(container)
     root = createRoot(container)
@@ -101,6 +104,7 @@ describe('ReportFamiliesNav', () => {
 
   it('hides money-gated families (Revenue, Finance) for money-blind roles', async () => {
     state.canSeeMoney = false
+    state.canSeeFinancialReports = false
     await act(async () => {
       root!.render(
         <MemoryRouter>
@@ -117,5 +121,22 @@ describe('ReportFamiliesNav', () => {
     expect(linkTexts).toContain('Rentals')
     expect(linkTexts).toContain('Inventory')
     expect(linkTexts).toContain('Cases')
+  })
+
+  it('Coordinator: booking money keeps Clients and Finance links but not the company-wide Revenue report (C7)', async () => {
+    state.canSeeMoney = true
+    state.canSeeFinancialReports = false
+    await act(async () => {
+      root!.render(
+        <MemoryRouter>
+          <ReportFamiliesNav current="Dashboard" />
+        </MemoryRouter>,
+      )
+    })
+
+    const linkTexts = Array.from(container?.querySelectorAll('a') ?? []).map((l) => l.textContent?.trim())
+    expect(linkTexts).not.toContain('Revenue')
+    expect(linkTexts).toContain('Clients')
+    expect(container?.textContent).toContain('Not in your role’s view: Revenue.')
   })
 })
