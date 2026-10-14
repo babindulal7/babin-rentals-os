@@ -73,3 +73,16 @@ export function WorkspaceHeaderPhoneSearchActions({ children }: { children: Reac
   if (!workspace) return <>{children}</>
   return workspace.headerPhoneSearchActionsElement ? createPortal(children, workspace.headerPhoneSearchActionsElement) : null
 }
+
+/** Creation buttons always occupy Add, not the form Save/Confirm position. */
+export function WorkspaceHeaderAddActions({ children }: { children: ReactNode }) {
+  const workspace = useOptionalWorkspace()
+  const setActive = workspace?.setHasPageAddActions
+  useLayoutEffect(() => {
+    if (!setActive) return
+    setActive(true)
+    return () => setActive(false)
+  }, [setActive])
+  if (!workspace) return <>{children}</>
+  return workspace.headerAddActionsElement ? createPortal(children, workspace.headerAddActionsElement) : null
+}
