@@ -1136,6 +1136,7 @@ export default function ResetWorkspace({
             </div>
 
             {/* §4 booking summary strip — Bento 2.0 bar with AD/BS duality */}
+            {/* RULING 2026-10-14 (R14-4): inside the shell/dock the sheet title and booking strip already say this. */}
             {!embedded && (
             <div className="floor-summary-bar">
               {[
@@ -1960,6 +1961,7 @@ export default function ResetWorkspace({
               </p>
             </Card>
 
+            {/* RULING 2026-10-14 (R14-14): this standalone footer stays in-page; the shell and dock pin Confirm. */}
             {/* footer — job-level completion. Ungated by money or any booking
                 condition (§1.7). One EXIT and one primary, nothing else. */}
             {!embedded && (

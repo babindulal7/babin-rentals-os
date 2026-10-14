@@ -448,7 +448,7 @@ export default function OperationsQueues() {
     if (!match) { routeNavigate(route); return }
     const row = jobs.find((candidate) => candidate.bookingNo === match[1])
     if (!row) return
-    /* Desktop (≥1280): dock the job beside the queue; narrower widths keep the full-screen sheet. */
+    /* RULING 2026-10-14 (R14-1): desktop (≥1280) docks the job beside the queue; narrower widths keep the full-screen sheet. */
     if (viewport === 'desktop') requestDock({ bookingNo: row.bookingNo, stage: row.stage, job: row.job })
     else openOperations(row.bookingNo, row.stage, row.job)
   }
@@ -458,7 +458,7 @@ export default function OperationsQueues() {
   const [cursorNo, setCursorNo] = useState<string | null>(null)
   const dockDirty = useRef(false)
   const onDockDirty = useCallback((dirty: boolean) => { dockDirty.current = dirty }, [])
-  /* Swapping the docked booking would drop unsaved packing work, so ask first. */
+  /* RULING 2026-10-14 (R14-3): swapping the docked booking would drop unsaved packing work, so ask first. */
   const requestDock = (next: Dock) => {
     if (dock && dock.bookingNo !== next.bookingNo && dockDirty.current) setPendingDock(next)
     else setDock(next)
@@ -605,7 +605,7 @@ export default function OperationsQueues() {
     quotesQ.refetch()
   }
 
-  /* Desktop keyboard: J/K (or ↓/↑) move a cursor through the page, Enter opens the cursor row's job
+  /* RULING 2026-10-14 (R14-2): desktop keyboard — J/K (or ↓/↑) move a cursor through the page, Enter opens the cursor row's job
      in the dock. Moving never opens anything, so a cursor sweep cannot discard work in the panel. */
   useEffect(() => {
     if (viewport !== 'desktop') return

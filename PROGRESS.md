@@ -1,5 +1,38 @@
 # Progress Log
 
+## 2026-10-14 (g) — Rulings logged; Save Draft removed; Handover money note restored
+
+**Did**
+- Wrote `docs/RULINGS-2026-10-14.md` (R14-1 … R14-14 + the §15.4 session table) — the third place of the B-2 log, missing for this session's decisions until now. `RULINGS-*.md` files are not in this clean repository, and the source manifest allowlists only listed top-level files, so it lives in `docs/`. Added `RULING 2026-10-14 (R14-n)` comments at the code sites that lacked one.
+- **Correction:** entries (c)–(f) below called Packing's Save Draft "a stub that always refuses". That came from a stale code comment. In fact `saveDraft` is implemented; called with only an id it bumps `bookings.updated_at` and shows nothing, while the ticks already survive on the device. Removed the button (R14-12). A 390px phone's first equipment card now starts above the footer (26px visible, was 0).
+- Handover's money note rendered "Your role cannot view rental balances. your certification that…" — untrue for an Owner (the screen shows amounts to no role) and broken mid-sentence. Restored in plain words (R14-7). Same defect class as Reset's "per ," fix: an earlier bulk copy edit spliced replacement text after a JSX comment.
+- Ruled the two remaining floor calls without a change: Handover keeps one Missing per row (each needs its own ≥ 10-character reason, `0003_operations.sql` check) (R14-13); the standalone Handover / Reset pages keep their in-page Complete (R14-14).
+
+**Ruled**
+- R14-12, R14-7, R14-13, R14-14 in `docs/RULINGS-2026-10-14.md`, each with its revert. No permission, schema, migration or gate change.
+
+**Verified**
+- typecheck 0; eslint on `src` clean; lint:shell, lint:ui-copy (0 violations), contrast 82/82; full suite 352 files / 4,470 tests pass; production build exit 0 (302 precache entries); check:lifecycle 30/30 this run.
+- Browser (touch emulation, seeded mock, Owner): phone 390 and tablet 1024 runs still 12 taps, no hit area under 44px, no overflow, Confirm never covered, zero page errors.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | — |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | — |
+| Lifecycle | steps green / total | 30 / 30 (100%) | — |
+| Overall | mean of five | ≈ 99% | — |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-14T11:29:11.991Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Gates read from .lifecycle-result.json, written 2026-10-14T20:37:10.038Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Same mangled-copy pattern outside the floor screens: about 70 lines match `grep -rnE "\*/\}[A-Za-z(]" --include=*.tsx src`; confirmed broken ones in `settings/Tools.tsx` (~720, ~791, ~1401), `inventory/components/SectionRelationships.tsx` (~126), and `finance/DailyClosing.tsx` (~222, "Your role cannot view daily closings" — check it is true per role). Not fixed here (out of scope).
+- 360px phone: first equipment card still ~78px under the footer.
+- Real phone / iPad pass, including the on-screen keyboard with `Modal fill` (AUD-016).
+
 ## 2026-10-14 (f) — Handheld height budget: edge-to-edge floor sheet, one-row tablet footer
 
 **Did**

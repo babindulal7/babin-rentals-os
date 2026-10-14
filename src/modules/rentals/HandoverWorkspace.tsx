@@ -1436,6 +1436,7 @@ export default function HandoverWorkspace({
                 `fetchFloorBooking`. No money anywhere (Law 6 / §8.3): the seed
                 build's Payment cell was local state wearing a strip cell, and
                 is gone — gates 3 and 4 carry that fact, amount-free. */}
+            {/* RULING 2026-10-14 (R14-4): inside the shell/dock the sheet title and booking strip already say this. */}
             {!embedded && (
             <div className="floor-summary-bar">
               {[
@@ -1708,6 +1709,7 @@ export default function HandoverWorkspace({
                             )}
 
                             <span style={{ display: 'flex', gap: 'var(--sp-xs)', flexWrap: 'wrap' }}>
+                              {/* RULING 2026-10-14 (R14-13): one Missing per row, no bulk — each Missing line needs its own reason of ≥ 10 characters (0003 check). */}
                               {!recorded && s === 'Ready' && <RowAction label="Missing" onClick={() => markMissing(r.key)} />}
                               {!recorded && mark && <RowAction label="Undo" onClick={() => clearMark(r.key)} />}
                             </span>
@@ -1954,8 +1956,12 @@ export default function HandoverWorkspace({
                       Handing Over With Money Outstanding
                     </div>
                     <p style={{ margin: '4px 0 6px', fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.45 }}>
-                      {/* This screen is shown no amounts (Law 6), so it cannot tell you whether this booking owes
-                      anything. Gates 3 and 4 above are */}Your role cannot view rental balances. <strong>your certification</strong> that payment and
+                      {/* RULING 2026-10-14: an earlier bulk copy edit swapped this sentence's opening for "Your role
+                      cannot view rental balances." — untrue for an Owner (this screen shows amounts to no role)
+                      and it left "your certification" dangling mid-sentence. Restored in plain words; revert =
+                      put the swapped line back. */}
+                      This screen shows no amounts, so it cannot tell you whether this booking owes anything. The
+                      payment and deposit checks above are <strong>your certification</strong> that payment and
                       deposit are cleared — not a reading of the ledger. A reason written here is recorded with
                       the completion, but it does <strong>not</strong> open those gates and cannot release a
                       booking whose money is unresolved: this build has no way to hand over against outstanding
@@ -2169,6 +2175,7 @@ export default function HandoverWorkspace({
               </FloorAside>
             </div>
 
+            {/* RULING 2026-10-14 (R14-14): this standalone footer stays in-page; the shell and dock pin Confirm. */}
             {/* ── §12 footer — the single EXIT and the single primary. The seed
                 build's `Saving is automatic` was false (audit :1094): every
                 mark, checkbox and signature here is local until the dispatch

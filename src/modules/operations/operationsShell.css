@@ -59,7 +59,7 @@
 /* Why Confirm is disabled, in the footer beside it rather than far down the page. */
 .operations-shell__blocked { margin: 0; font-size: var(--t-meta); color: var(--text2); overflow-wrap: anywhere; }
 
-/* Phone: the four stage steps share ONE row (icon over name over state) instead of a 2×2 grid of
+/* RULING 2026-10-14 (R14-10). Phone: the four stage steps share ONE row (icon over name over state) instead of a 2×2 grid of
    three-line buttons, and the Booking / Client cells — already in the sheet title — drop out, so the
    first screen reaches the equipment instead of ending in chrome. State stays as text + icon. */
 .operations-shell__stage-name { font-weight: 600; }
@@ -73,7 +73,7 @@
   .operations-shell__strip-dup { display: none; }
 }
 
-/* Tablet and up, full-screen sheet: the "still needed" hint sits BETWEEN the two buttons on one
+/* RULING 2026-10-14 (R14-11). Tablet and up, full-screen sheet: the "still needed" hint sits BETWEEN the two buttons on one
    row instead of above them — a whole line of height back for the checklist. The dock keeps its
    stacked footer (it is too narrow for three things in a row). Phones keep the stacked footer. */
 @media (min-width: 768px) {

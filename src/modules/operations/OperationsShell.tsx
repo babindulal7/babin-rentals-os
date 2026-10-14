@@ -264,9 +264,10 @@ export default function OperationsShell({
             ? 'Confirm Return & Next'
             : 'Confirm Reset'
 
+  // RULING 2026-10-14 (R14-5): say what is still needed beside a disabled Confirm; the gates themselves are unchanged.
   const blockedHint = !isCurrentJobCompleted && actions && !actions.canComplete && !actions.dispatching ? (actions.blockedReason ?? null) : null
 
-  /* A toast sits bottom-right, exactly over the footer's Confirm button. Lift it to just above the
+  /* RULING 2026-10-14 (R14-6): a toast sits bottom-right, exactly over the footer's Confirm button. Lift it to just above the
      footer — measured, because the footer is taller on a phone (hint + two stacked buttons) than on
      a desktop — while a job is open. */
   const [footerEl, setFooterEl] = useState<HTMLElement | null>(null)
@@ -287,7 +288,7 @@ export default function OperationsShell({
     }
   }, [isOpen, footerEl])
 
-  /* The room the workspace actually has, not the window's width: the dock is always narrow, and a
+  /* RULING 2026-10-14 (R14-8): the room the workspace actually has, not the window's width: the dock is always narrow, and a
      tablet held upright gives the full-screen sheet ~780px, which a list-plus-rail layout cannot
      use. Narrow → the one-column layout. Width 0 (no layout engine) says nothing, so it is ignored. */
   const [bodyEl, setBodyEl] = useState<HTMLElement | null>(null)

@@ -1356,37 +1356,18 @@ export default function PackingWorkspace({
                   </Button>
                 </Unavailable>
                 )}
-                {/*
-                 * The identity is the signed-in operator or there is no dispatch.
-                 * `saveDraft` is still an unimplemented stub the dispatcher
-                 * refuses before `execute` — the refusal is surfaced in
-                 * `dispatchError`, the inline persistent line this screen
-                 * already renders (Law 12). A draft button that does nothing
-                 * and says nothing is indistinguishable from one that saved.
-                 */}
-                <Button
-                  onClick={() => {
-                    if (!user) {
-                      setDispatchError('You are not signed in, so this draft cannot be saved against anyone. Nothing was written.')
-                      return
-                    }
-                    setDispatchError(null)
-                    import('../../actions/rentals/index')
-                      .then((m) => m.saveDraft({ id: floor.id }, { userId: user.id, role: user.role }))
-                      .catch((err) => {
-                        captureError(err, { where: 'PackingWorkspace.saveDraft' })
-                        setDispatchError(formatGateError(err))
-                      })
-                  }}
-                >
-                  Save Draft
-                </Button>
+                {/* RULING 2026-10-14: Save Draft removed. It called `saveDraft({ id })`, which with no draft
+                    data only bumps `bookings.updated_at` — no tick, note or photo reached the server, and
+                    success showed nothing. The ticks already survive on this device (the restored-session
+                    banner above), so the button promised a save that did not happen. Revert = restore the
+                    button that dispatched `saveDraft({ id: floor.id }, …)` here. */}
               </div>
             </div>
 
             {/* §4 — read-only booking summary, one compact row. BS above AD.
                 Every cell is a real column off `fetchFloorBooking`; the seed
                 build's invented Payment / Crew cells are gone rather than faked. */}
+            {/* RULING 2026-10-14 (R14-4): inside the shell/dock the sheet title and booking strip already say this. */}
             {!embedded && (
             <div className="floor-summary-bar">
               {[

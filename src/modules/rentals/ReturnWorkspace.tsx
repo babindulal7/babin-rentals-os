@@ -1396,6 +1396,7 @@ export default function ReturnWorkspace({
             {/* ── §4 booking strip — read-only, no money (§8.3). Every cell is
                 a real column off `fetchFloorBooking`; the seed build's
                 hardcoded 2026-07-19 dates and invented times are gone. ── */}
+            {/* RULING 2026-10-14 (R14-4): inside the shell/dock the sheet title and booking strip already say this. */}
             {!embedded && (
             <div className="floor-summary-bar">
               {[
