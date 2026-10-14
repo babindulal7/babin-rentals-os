@@ -44,6 +44,8 @@ export interface SalesInvoiceItem {
   issueDate: string
   dueDate: string
   subtotal: Paisa
+  /** Actual VAT base after discounts; the raw subtotal is not necessarily taxable. */
+  taxableAmount?: Paisa
   taxAmount: Paisa
   grandTotal: Paisa
   paidAmount: Paisa
@@ -304,6 +306,7 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
         issueDate: r.issue_date,
         dueDate: r.due_date,
         subtotal: asPaisa(sub),
+        taxableAmount: asPaisa(taxable),
         taxAmount: asPaisa(tax),
         grandTotal: asPaisa(gTotal),
         paidAmount: asPaisa(paid),
