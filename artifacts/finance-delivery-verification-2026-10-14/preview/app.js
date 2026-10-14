@@ -641,8 +641,8 @@ var require_react_development = __commonJS({
           }
           return ReactElement(element.type, key, ref, self2, source, owner, props);
         }
-        function isValidElement7(object) {
-          return typeof object === "object" && object !== null && object.$$typeof === REACT_ELEMENT_TYPE;
+        function isValidElement7(object2) {
+          return typeof object2 === "object" && object2 !== null && object2.$$typeof === REACT_ELEMENT_TYPE;
         }
         var SEPARATOR2 = ".";
         var SUBSEPARATOR = ":";
@@ -1111,7 +1111,7 @@ var require_react_development = __commonJS({
           var dispatcher = resolveDispatcher();
           return dispatcher.useRef(initialValue);
         }
-        function useEffect160(create, deps) {
+        function useEffect161(create, deps) {
           var dispatcher = resolveDispatcher();
           return dispatcher.useEffect(create, deps);
         }
@@ -1123,7 +1123,7 @@ var require_react_development = __commonJS({
           var dispatcher = resolveDispatcher();
           return dispatcher.useLayoutEffect(create, deps);
         }
-        function useCallback70(callback, deps) {
+        function useCallback71(callback, deps) {
           var dispatcher = resolveDispatcher();
           return dispatcher.useCallback(callback, deps);
         }
@@ -1149,7 +1149,7 @@ var require_react_development = __commonJS({
           var dispatcher = resolveDispatcher();
           return dispatcher.useDeferredValue(value);
         }
-        function useId30() {
+        function useId31() {
           var dispatcher = resolveDispatcher();
           return dispatcher.useId();
         }
@@ -1890,12 +1890,12 @@ var require_react_development = __commonJS({
         exports.memo = memo2;
         exports.startTransition = startTransition3;
         exports.unstable_act = act;
-        exports.useCallback = useCallback70;
+        exports.useCallback = useCallback71;
         exports.useContext = useContext16;
         exports.useDebugValue = useDebugValue;
         exports.useDeferredValue = useDeferredValue;
-        exports.useEffect = useEffect160;
-        exports.useId = useId30;
+        exports.useEffect = useEffect161;
+        exports.useId = useId31;
         exports.useImperativeHandle = useImperativeHandle2;
         exports.useInsertionEffect = useInsertionEffect;
         exports.useLayoutEffect = useLayoutEffect16;
@@ -24930,17 +24930,17 @@ function createRoutesFromChildren(children2, parentPath = []) {
   });
   return routes3;
 }
-function isHtmlElement(object) {
-  return typeof HTMLElement !== "undefined" && object instanceof HTMLElement;
+function isHtmlElement(object2) {
+  return typeof HTMLElement !== "undefined" && object2 instanceof HTMLElement;
 }
-function isButtonElement(object) {
-  return isHtmlElement(object) && object.tagName.toLowerCase() === "button";
+function isButtonElement(object2) {
+  return isHtmlElement(object2) && object2.tagName.toLowerCase() === "button";
 }
-function isFormElement(object) {
-  return isHtmlElement(object) && object.tagName.toLowerCase() === "form";
+function isFormElement(object2) {
+  return isHtmlElement(object2) && object2.tagName.toLowerCase() === "form";
 }
-function isInputElement(object) {
-  return isHtmlElement(object) && object.tagName.toLowerCase() === "input";
+function isInputElement(object2) {
+  return isHtmlElement(object2) && object2.tagName.toLowerCase() === "input";
 }
 function isModifiedEvent(event) {
   return !!(event.metaKey || event.altKey || event.ctrlKey || event.shiftKey);
@@ -25106,17 +25106,17 @@ async function loadRouteModule(route, routeModulesCache) {
     });
   }
 }
-function isPageLinkDescriptor(object) {
-  return object != null && typeof object.page === "string";
+function isPageLinkDescriptor(object2) {
+  return object2 != null && typeof object2.page === "string";
 }
-function isHtmlLinkDescriptor(object) {
-  if (object == null) {
+function isHtmlLinkDescriptor(object2) {
+  if (object2 == null) {
     return false;
   }
-  if (object.href == null) {
-    return object.rel === "preload" && typeof object.imageSrcSet === "string" && typeof object.imageSizes === "string";
+  if (object2.href == null) {
+    return object2.rel === "preload" && typeof object2.imageSrcSet === "string" && typeof object2.imageSizes === "string";
   }
-  return typeof object.rel === "string" && typeof object.href === "string";
+  return typeof object2.rel === "string" && typeof object2.href === "string";
 }
 async function getKeyedPrefetchLinks(matches3, manifest, routeModules) {
   let links = await Promise.all(
@@ -28316,9 +28316,9 @@ var require_react_jsx_runtime_development = __commonJS({
         {
           propTypesMisspellWarningShown = false;
         }
-        function isValidElement7(object) {
+        function isValidElement7(object2) {
           {
-            return typeof object === "object" && object !== null && object.$$typeof === REACT_ELEMENT_TYPE;
+            return typeof object2 === "object" && object2 !== null && object2.$$typeof === REACT_ELEMENT_TYPE;
           }
         }
         function getDeclarationErrorAddendum() {
@@ -54002,8 +54002,8 @@ function createMemoryBackend() {
   const map = /* @__PURE__ */ new Map();
   return {
     get: async (key) => map.get(key),
-    put: async (object) => {
-      map.set(object.key, object);
+    put: async (object2) => {
+      map.set(object2.key, object2);
     },
     all: async () => [...map.values()]
   };
@@ -54042,7 +54042,7 @@ function createIndexedDbBackend() {
   }));
   return {
     get: (key) => run("readonly", (s) => s.get(key)),
-    put: (object) => run("readwrite", (s) => s.put(object)),
+    put: (object2) => run("readwrite", (s) => s.put(object2)),
     all: () => run("readonly", (s) => s.getAll())
   };
 }
@@ -55860,8 +55860,8 @@ var require_dexie = __commonJS({
               possiblePromises.forEach(function(p, i) {
                 return DexiePromise.resolve(p).then(function(value) {
                   return resolve(value);
-                }, function(failure) {
-                  failures[i] = failure;
+                }, function(failure2) {
+                  failures[i] = failure2;
                   if (!--remaining)
                     reject(new AggregateError(failures));
                 });
@@ -56833,9 +56833,9 @@ var require_dexie = __commonJS({
                   var offset = _b[_i];
                   var mappedOffset = offsetMap[Number(offset)];
                   if (mappedOffset != null) {
-                    var failure = failures[offset];
+                    var failure2 = failures[offset];
                     delete failures[offset];
-                    failures[mappedOffset] = failure;
+                    failures[mappedOffset] = failure2;
                   }
                 }
                 throw new BulkError("".concat(_this.name, ".bulkUpdate(): ").concat(numFailures, " of ").concat(numEntries, " operations failed"), failures);
@@ -104535,6 +104535,7 @@ function InfoTooltip({ content, label = "More info", size = 14, style }) {
   const [coords, setCoords] = (0, import_react17.useState)({ top: 0, left: 0, placeAbove: true });
   const triggerRef = (0, import_react17.useRef)(null);
   const tooltipRef = (0, import_react17.useRef)(null);
+  const tooltipId = (0, import_react17.useId)();
   const updatePosition = (0, import_react17.useCallback)(() => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
@@ -104609,8 +104610,10 @@ function InfoTooltip({ content, label = "More info", size = 14, style }) {
           {
             ref: triggerRef,
             type: "button",
+            className: "info-tooltip__trigger",
             "aria-label": label,
             "aria-expanded": isOpen,
+            "aria-describedby": isOpen ? tooltipId : void 0,
             onClick: handleToggle,
             onMouseEnter: handleOpen,
             onMouseLeave: handleClose,
@@ -104620,16 +104623,19 @@ function InfoTooltip({ content, label = "More info", size = 14, style }) {
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
+              minWidth: 44,
+              minHeight: 44,
+              flexShrink: 0,
+              boxSizing: "border-box",
               padding: 2,
               margin: 0,
-              background: isOpen ? "var(--st-neutral-bg, rgba(255,255,255,0.08))" : "transparent",
+              background: isOpen ? "var(--hover-card)" : "transparent",
               border: "none",
               borderRadius: "50%",
-              color: isOpen ? "var(--primary, #3b82f6)" : "var(--muted, #94a3b8)",
+              color: "var(--text2)",
               cursor: "pointer",
               lineHeight: 1,
-              transition: "color 0.15s ease, background 0.15s ease",
-              outline: "none"
+              transition: "color 0.15s ease, background 0.15s ease"
             },
             children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Icon, { name: "info", size })
           }
@@ -104638,6 +104644,7 @@ function InfoTooltip({ content, label = "More info", size = 14, style }) {
           "div",
           {
             ref: tooltipRef,
+            id: tooltipId,
             role: "tooltip",
             style: {
               position: "fixed",
@@ -113847,7 +113854,7 @@ function SmartHoverTabs({
   active,
   onChange
 }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime37.jsx)("div", { role: "tablist", "aria-label": "Preview sections", style: { display: "flex", flexWrap: "wrap", gap: 2, padding: "0 8px 8px", minWidth: 0 }, children: tabs.map((t) => {
+  return /* @__PURE__ */ (0, import_jsx_runtime37.jsx)("div", { role: "tablist", "aria-label": "Preview sections", style: { display: "flex", flexWrap: "wrap", gap: 2, padding: "0 8px 8px", minWidth: 0, position: "sticky", top: 0, zIndex: 1, background: "var(--surface-card, var(--card))" }, children: tabs.map((t) => {
     const selected = t.id === active;
     return /* @__PURE__ */ (0, import_jsx_runtime37.jsxs)(
       "button",
@@ -115025,6 +115032,10 @@ function IntelCard({ children: children2, glance, detailTitle, detailSubtitle, d
         }
       },
       onClick: (e) => {
+        if (e.target instanceof Element && (e.target.closest("[data-intel-overlay]") || sheetOpen && e.target.closest('[role="dialog"]'))) {
+          e.stopPropagation();
+          return;
+        }
         if (suppress.current) {
           suppress.current = false;
           e.stopPropagation();
@@ -115062,7 +115073,12 @@ function IntelCard({ children: children2, glance, detailTitle, detailSubtitle, d
                     leavePoint.current = { x: e.clientX, y: e.clientY };
                     scheduleClose();
                   },
-                  onClose: doClose,
+                  onClose: () => {
+                    doClose();
+                    restoringFocus.current = true;
+                    triggerRef.current?.focus();
+                    restoringFocus.current = false;
+                  },
                   content: /* @__PURE__ */ (0, import_jsx_runtime46.jsxs)(import_jsx_runtime46.Fragment, { children: [
                     linkedStack.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime46.jsx)("button", { type: "button", onClick: goBack, style: { minHeight: 44, border: "none", background: "transparent", color: "var(--link)", cursor: "pointer" }, children: "\u2190 Back" }) : null,
                     linkLoading ? /* @__PURE__ */ (0, import_jsx_runtime46.jsx)("p", { role: "status", children: "Loading linked record\u2026" }) : null,
@@ -127832,7 +127848,7 @@ function SignOnGlassModal({
                 placeholder: "Full name of person signing\u2026",
                 style: {
                   width: "100%",
-                  height: 42,
+                  minHeight: 44,
                   padding: "0 12px",
                   borderRadius: "var(--r-input, 6px)",
                   border: "1px solid var(--border)",
@@ -127850,7 +127866,7 @@ function SignOnGlassModal({
               "div",
               {
                 style: {
-                  height: 42,
+                  minHeight: 44,
                   display: "flex",
                   alignItems: "center",
                   padding: "0 12px",
@@ -128005,14 +128021,14 @@ function SignOnGlassModal({
             ]
           }
         ),
-        role === "receiver" && /* @__PURE__ */ (0, import_jsx_runtime97.jsxs)("label", { style: { display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", fontSize: "var(--t-meta, 12px)", color: "var(--text)" }, children: [
+        role === "receiver" && /* @__PURE__ */ (0, import_jsx_runtime97.jsxs)("label", { style: { display: "flex", alignItems: "center", minHeight: 44, gap: 10, cursor: "pointer", fontSize: "var(--t-meta, 12px)", color: "var(--text)" }, children: [
           /* @__PURE__ */ (0, import_jsx_runtime97.jsx)(
             "input",
             {
               type: "checkbox",
               checked: verifiedGovId,
               onChange: (e) => setVerifiedGovId(e.target.checked),
-              style: { width: 18, height: 18, marginTop: 2, accentColor: "var(--primary, #2563eb)" }
+              style: { width: 18, height: 18, flexShrink: 0, accentColor: "var(--primary, #2563eb)" }
             }
           ),
           /* @__PURE__ */ (0, import_jsx_runtime97.jsxs)("div", { children: [
@@ -128020,14 +128036,14 @@ function SignOnGlassModal({
             /* @__PURE__ */ (0, import_jsx_runtime97.jsx)("p", { style: { margin: "2px 0 0", color: "var(--text2)", fontSize: 11 }, children: 'Checks Gate 1 ("Receiver Verified") on the handover floor checklist automatically.' })
           ] })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime97.jsxs)("label", { style: { display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", fontSize: "var(--t-meta, 12px)", color: "var(--text)" }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime97.jsxs)("label", { style: { display: "flex", alignItems: "center", minHeight: 44, gap: 10, cursor: "pointer", fontSize: "var(--t-meta, 12px)", color: "var(--text)" }, children: [
           /* @__PURE__ */ (0, import_jsx_runtime97.jsx)(
             "input",
             {
               type: "checkbox",
               checked: agreedToTerms,
               onChange: (e) => setAgreedToTerms(e.target.checked),
-              style: { width: 18, height: 18, marginTop: 2, accentColor: "var(--primary, #2563eb)" }
+              style: { width: 18, height: 18, flexShrink: 0, accentColor: "var(--primary, #2563eb)" }
             }
           ),
           /* @__PURE__ */ (0, import_jsx_runtime97.jsxs)("div", { children: [
@@ -137133,7 +137149,8 @@ function CancelRentalModal({
           {
             style: {
               display: "flex",
-              alignItems: "flex-start",
+              alignItems: "center",
+              minHeight: 44,
               gap: "var(--sp-sm)",
               fontSize: "var(--t-meta)",
               color: "var(--text)",
@@ -137147,7 +137164,7 @@ function CancelRentalModal({
                   "aria-label": "I confirm that this booking is to be cancelled and all reserved equipment released back into stock",
                   checked: confirmed,
                   onChange: (e) => setConfirmed(e.target.checked),
-                  style: { marginTop: 2 }
+                  style: { width: 18, height: 18, flexShrink: 0 }
                 }
               ),
               /* @__PURE__ */ (0, import_jsx_runtime114.jsx)("span", { children: "I confirm that this booking is to be cancelled and all reserved equipment released back into stock." })
@@ -138371,8 +138388,8 @@ function FastReturnModal({
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 6,
-                minHeight: 34,
-                padding: "0 10px",
+                minHeight: 44,
+                padding: "0 12px",
                 borderRadius: "var(--r-badge)",
                 border: bookingRef === b.booking_no ? "1px solid var(--primary)" : "1px solid var(--border)",
                 background: bookingRef === b.booking_no ? "var(--hover-card)" : "transparent",
@@ -138465,9 +138482,9 @@ function FastReturnModal({
                       onChange: (e) => updateItemCondition(item.key, e.target.value),
                       "aria-label": `Condition for ${item.name}`,
                       style: {
-                        height: 28,
-                        padding: "0 6px",
-                        fontSize: "12px",
+                        minHeight: 44,
+                        padding: "0 8px",
+                        fontSize: "var(--t-meta)",
                         borderRadius: "var(--r-xs)",
                         border: "1px solid var(--input-border)",
                         background: "var(--input-bg)",
@@ -138491,9 +138508,9 @@ function FastReturnModal({
                       onChange: (e) => updateItemMissingReason(item.key, e.target.value),
                       style: {
                         width: "100%",
-                        height: 28,
-                        padding: "0 8px",
-                        fontSize: "12px",
+                        minHeight: 44,
+                        padding: "0 10px",
+                        fontSize: "var(--t-meta)",
                         borderRadius: "var(--r-input)",
                         border: "1px solid var(--danger)",
                         background: "var(--input-bg)",
@@ -138509,9 +138526,9 @@ function FastReturnModal({
                       "aria-label": `Decision for ${item.name}`,
                       style: {
                         width: "100%",
-                        height: 28,
-                        padding: "0 8px",
-                        fontSize: "12px",
+                        minHeight: 44,
+                        padding: "0 10px",
+                        fontSize: "var(--t-meta)",
                         borderRadius: "var(--r-input)",
                         border: "1px solid var(--input-border)",
                         background: "var(--input-bg)",
@@ -170345,7 +170362,7 @@ function DamageTab() {
               type: "number",
               value: draft ?? String(toRupees(f.chargePaisa)),
               onChange: (e) => setChargeDraft((d3) => ({ ...d3, [f.id]: e.target.value })),
-              style: { width: 140, height: 32, padding: "0 10px", borderRadius: "var(--r-input)", border: `1px solid ${validation.errors.charge ? "var(--danger)" : "var(--input-border)"}`, background: "var(--input-bg)", color: "var(--text)", fontSize: "var(--t-meta)", fontFamily: "inherit" }
+              style: { width: 140, minHeight: 44, padding: "0 10px", borderRadius: "var(--r-input)", border: `1px solid ${validation.errors.charge ? "var(--danger)" : "var(--input-border)"}`, background: "var(--input-bg)", color: "var(--text)", fontSize: "var(--t-meta)", fontFamily: "inherit" }
             }
           ),
           /* @__PURE__ */ (0, import_jsx_runtime165.jsxs)("span", { style: { fontSize: "var(--t-th)", color: "var(--muted)" }, children: [
@@ -170909,7 +170926,7 @@ function LogMaintenanceModal({
                 value: equipment,
                 onChange: (e) => setEquipment(e.target.value),
                 style: {
-                  height: 36,
+                  minHeight: 44,
                   padding: "0 12px",
                   borderRadius: "var(--r-btn)",
                   border: "1px solid var(--border)",
@@ -170930,7 +170947,7 @@ function LogMaintenanceModal({
                 value: serial,
                 onChange: (e) => setSerial(e.target.value),
                 style: {
-                  height: 36,
+                  minHeight: 44,
                   padding: "0 12px",
                   borderRadius: "var(--r-btn)",
                   border: "1px solid var(--border)",
@@ -170954,7 +170971,7 @@ function LogMaintenanceModal({
                 value: jobType,
                 onChange: (e) => setJobType(e.target.value),
                 style: {
-                  height: 36,
+                  minHeight: 44,
                   padding: "0 12px",
                   borderRadius: "var(--r-btn)",
                   border: "1px solid var(--border)",
@@ -170982,7 +170999,7 @@ function LogMaintenanceModal({
                 value: priority,
                 onChange: (e) => setPriority(e.target.value),
                 style: {
-                  height: 36,
+                  minHeight: 44,
                   padding: "0 12px",
                   borderRadius: "var(--r-btn)",
                   border: "1px solid var(--border)",
@@ -171011,7 +171028,7 @@ function LogMaintenanceModal({
                 value: technician,
                 onChange: (e) => setTechnician(e.target.value),
                 style: {
-                  height: 36,
+                  minHeight: 44,
                   padding: "0 12px",
                   borderRadius: "var(--r-btn)",
                   border: "1px solid var(--border)",
@@ -171032,7 +171049,7 @@ function LogMaintenanceModal({
                 value: vendor,
                 onChange: (e) => setVendor(e.target.value),
                 style: {
-                  height: 36,
+                  minHeight: 44,
                   padding: "0 12px",
                   borderRadius: "var(--r-btn)",
                   border: "1px solid var(--border)",
@@ -171056,7 +171073,7 @@ function LogMaintenanceModal({
                 placeholder: "0",
                 onChange: (e) => setCostRupees(Math.max(0, Number(e.target.value) || 0)),
                 style: {
-                  height: 36,
+                  minHeight: 44,
                   padding: "0 12px",
                   borderRadius: "var(--r-btn)",
                   border: "1px solid var(--border)",
@@ -171078,7 +171095,7 @@ function LogMaintenanceModal({
                 value: daysToComplete,
                 onChange: (e) => setDaysToComplete(Math.max(1, Number(e.target.value) || 1)),
                 style: {
-                  height: 36,
+                  minHeight: 44,
                   padding: "0 12px",
                   borderRadius: "var(--r-btn)",
                   border: "1px solid var(--border)",
@@ -171100,7 +171117,7 @@ function LogMaintenanceModal({
               value: bookingImpact,
               onChange: (e) => setBookingImpact(e.target.value),
               style: {
-                height: 36,
+                minHeight: 44,
                 padding: "0 12px",
                 borderRadius: "var(--r-btn)",
                 border: "1px solid var(--border)",
@@ -171166,10 +171183,10 @@ function DueForService({ onCreateJob } = {}) {
         setRows(due);
         setError(null);
       }
-    }).catch((failure) => {
+    }).catch((failure2) => {
       if (cancelled) return;
       setRows([]);
-      setError(failure instanceof Error ? failure.message : String(failure));
+      setError(failure2 instanceof Error ? failure2.message : String(failure2));
     });
     return () => {
       cancelled = true;
@@ -172956,7 +172973,7 @@ function StockCheck({ embedded = false } = {}) {
         emptyTitle: "No stock audits yet",
         emptyMessage: "No stock-take session exists in the record. Creating one from this screen is not wired yet; sessions appear here once they exist in the database.",
         children: selected && /* @__PURE__ */ (0, import_jsx_runtime169.jsxs)("div", { style: { display: "flex", flexDirection: "column", gap: "var(--sp-lg)" }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime169.jsx)(KpiStrip, { items: kpis, columns: 4 }),
+          /* @__PURE__ */ (0, import_jsx_runtime169.jsx)(KpiStrip, { items: kpis, columns: viewport === "phone" ? 1 : viewport === "tablet" ? 2 : 4 }),
           /* @__PURE__ */ (0, import_jsx_runtime169.jsx)(Card2, { children: /* @__PURE__ */ (0, import_jsx_runtime169.jsxs)("div", { style: { display: "flex", flexDirection: "column", gap: "var(--sp-sm)" }, children: [
             /* @__PURE__ */ (0, import_jsx_runtime169.jsxs)("div", { style: { display: "flex", alignItems: "baseline", gap: "var(--sp-sm)", flexWrap: "wrap" }, children: [
               /* @__PURE__ */ (0, import_jsx_runtime169.jsx)("span", { className: "identifier", style: { fontWeight: 700, color: "var(--text)" }, children: selected.auditNo }),
@@ -177839,7 +177856,7 @@ function ParentRowView({
               style: { accentColor: "var(--nav-active-accent)" }
             }
           ) }),
-          /* @__PURE__ */ (0, import_jsx_runtime184.jsx)("td", { style: { ...td43, width: 34 }, onClick: (e) => e.stopPropagation(), children: serialised ? /* @__PURE__ */ (0, import_jsx_runtime184.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime184.jsx)("td", { style: { ...td43, width: 44 }, onClick: (e) => e.stopPropagation(), children: serialised ? /* @__PURE__ */ (0, import_jsx_runtime184.jsx)(
             "button",
             {
               type: "button",
@@ -177847,8 +177864,8 @@ function ParentRowView({
               "aria-expanded": open2,
               "aria-label": `${open2 ? "Collapse" : "Expand"} ${row.name}`,
               style: {
-                width: 28,
-                height: 28,
+                width: 44,
+                height: 44,
                 borderRadius: 6,
                 border: "1px solid var(--border)",
                 background: open2 ? "var(--nav-active-bg)" : "var(--card2)",
@@ -177894,7 +177911,7 @@ function ParentRowView({
             /* @__PURE__ */ (0, import_jsx_runtime184.jsx)("td", { style: td43, children: /* @__PURE__ */ (0, import_jsx_runtime184.jsx)(ConditionBadge2, { condition: conditionOf(row) }) })
           ] }),
           money6 && showReplacement && /* @__PURE__ */ (0, import_jsx_runtime184.jsx)("td", { className: "figure", style: { ...td43, fontWeight: 600, textAlign: "right" }, children: row.replacementValue === null ? /* @__PURE__ */ (0, import_jsx_runtime184.jsx)("span", { style: { color: "var(--muted)" }, children: "\u2014" }) : formatMoney(row.replacementValue) }),
-          /* @__PURE__ */ (0, import_jsx_runtime184.jsx)("td", { style: { ...td43, width: 36, color: "var(--muted)" }, onClick: (e) => e.stopPropagation(), children: /* @__PURE__ */ (0, import_jsx_runtime184.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime184.jsx)("td", { style: { ...td43, width: 44, color: "var(--muted)" }, onClick: (e) => e.stopPropagation(), children: /* @__PURE__ */ (0, import_jsx_runtime184.jsx)(
             "button",
             {
               type: "button",
@@ -177907,8 +177924,8 @@ function ParentRowView({
                 background: "var(--card2)",
                 color: "var(--text2)",
                 cursor: "pointer",
-                width: 32,
-                height: 32,
+                width: 44,
+                height: 44,
                 display: "grid",
                 placeItems: "center",
                 transition: "all var(--dur-fast) var(--ease)"
@@ -179005,6 +179022,8 @@ function Inventory() {
                           },
                           style: {
                             display: "inline-flex",
+                            minHeight: 44,
+                            minWidth: 44,
                             alignItems: "center",
                             gap: 5,
                             border: "none",
@@ -179031,6 +179050,8 @@ function Inventory() {
                           },
                           style: {
                             display: "inline-flex",
+                            minHeight: 44,
+                            minWidth: 44,
                             alignItems: "center",
                             gap: 5,
                             border: "none",
@@ -179727,6 +179748,8 @@ function SortHeader({
             onClick: () => onSort(sortKey),
             "aria-label": `Sort by ${label}`,
             style: {
+              minHeight: 44,
+              minWidth: 44,
               display: "inline-flex",
               alignItems: "center",
               gap: "var(--sp-xs)",
@@ -181943,6 +181966,109 @@ var init_importClients = __esm({
   }
 });
 
+// src/lib/clientImportRecovery.ts
+function validDraft(value) {
+  if (!object(value) || !exactKeys(value, ["fileName", "rawRows", "hasHeaderRow", "mapping", "skippedRows", "batch", "outcomes"])) return false;
+  if (typeof value.fileName !== "string" || !value.fileName || typeof value.hasHeaderRow !== "boolean") return false;
+  if (!Array.isArray(value.rawRows) || !value.rawRows.length || !value.rawRows.every((row) => Array.isArray(row) && row.every((cell3) => typeof cell3 === "string"))) return false;
+  const rawRows = value.rawRows;
+  const dataRows = value.hasHeaderRow ? rawRows.slice(1) : rawRows;
+  const columns = rawRows[0]?.length ?? 0;
+  if (!object(value.mapping) || !Object.entries(value.mapping).every(([index, target]) => /^(0|[1-9]\d*)$/.test(index) && Number(index) < columns && IMPORT_TARGET_FIELDS.some((field2) => field2.key === target))) return false;
+  const validIndex = (index) => typeof index === "number" && Number.isInteger(index) && index >= 0 && index < dataRows.length;
+  if (!Array.isArray(value.skippedRows) || !value.skippedRows.every(validIndex) || new Set(value.skippedRows).size !== value.skippedRows.length) return false;
+  if (!Array.isArray(value.outcomes) || value.batch !== null && !Array.isArray(value.batch)) return false;
+  if (value.batch === null) return value.outcomes.length === 0;
+  if (!value.batch.length) return false;
+  const preview = buildImportPreview(dataRows, value.mapping, [], new Set(value.skippedRows));
+  const keys = /* @__PURE__ */ new Set(), indices = /* @__PURE__ */ new Set();
+  for (const row of value.batch) {
+    if (!object(row) || !exactKeys(row, ["rowIndex", "clientUuid", "values"]) || !validIndex(row.rowIndex) || typeof row.clientUuid !== "string" || !UUID3.test(row.clientUuid) || indices.has(row.rowIndex) || keys.has(row.clientUuid)) return false;
+    const source = preview[row.rowIndex];
+    if (!source?.record || source.skip || source.errors.length || !same(row.values, importClientValues(source.record))) return false;
+    keys.add(row.clientUuid);
+    indices.add(row.rowIndex);
+  }
+  const outcomes = /* @__PURE__ */ new Set();
+  for (const row of value.outcomes) {
+    if (!object(row) || !exactKeys(row, ["rowIndex", "status", "clientId", "clientCode", "message"]) || !validIndex(row.rowIndex) || !indices.has(row.rowIndex) || outcomes.has(row.rowIndex) || !["saved", "failed", "unconfirmed", "pending"].includes(String(row.status))) return false;
+    if (["clientId", "clientCode", "message"].some((key) => row[key] !== void 0 && typeof row[key] !== "string")) return false;
+    if (row.status === "saved" && (!row.clientId || !row.clientCode)) return false;
+    outcomes.add(row.rowIndex);
+  }
+  return true;
+}
+function storageOrBrowser(storage) {
+  return storage ?? window.localStorage;
+}
+function saveClientImportRecovery(actorId, draft, storage) {
+  if (!actorId || !validDraft(draft)) return { ok: false, error: "The import recovery data is invalid. Review the file before saving." };
+  try {
+    const target = storageOrBrowser(storage);
+    const encoded = JSON.stringify({ version: 1, actorId, draft });
+    if (target.getItem(KEY3) !== encoded) target.setItem(KEY3, encoded);
+    return { ok: true, error: null };
+  } catch {
+    return failure();
+  }
+}
+function discardClientImportRecovery(_actorId, storage) {
+  try {
+    storageOrBrowser(storage).removeItem(KEY3);
+    return { ok: true, error: null };
+  } catch {
+    return failure();
+  }
+}
+function loadClientImportRecovery(actorId, storage) {
+  try {
+    const target = storageOrBrowser(storage), encoded = target.getItem(KEY3);
+    if (!encoded) return { draft: null, error: null };
+    let stored;
+    try {
+      stored = JSON.parse(encoded);
+    } catch {
+      target.removeItem(KEY3);
+      return { draft: null, error: "The unfinished import could not be read. Choose the CSV file again." };
+    }
+    if (!actorId || !object(stored) || stored.actorId !== actorId) {
+      target.removeItem(KEY3);
+      return { draft: null, error: null };
+    }
+    if (stored.version !== 1 || !exactKeys(stored, ["version", "actorId", "draft"]) || !validDraft(stored.draft)) {
+      target.removeItem(KEY3);
+      return { draft: null, error: "The unfinished import is invalid. Choose the CSV file again." };
+    }
+    return { draft: stored.draft, error: null };
+  } catch {
+    return { draft: null, error: failure().error };
+  }
+}
+var KEY3, UUID3, object, same, exactKeys, failure;
+var init_clientImportRecovery = __esm({
+  "src/lib/clientImportRecovery.ts"() {
+    "use strict";
+    init_define_import_meta_env();
+    init_clientImport();
+    KEY3 = "babin.clientImportRecovery.v1";
+    UUID3 = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    object = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+    same = (left, right) => {
+      if (!object(left) || !object(right)) return left === right;
+      const keys = Object.keys(left);
+      return keys.length === Object.keys(right).length && keys.every((key) => left[key] === right[key]);
+    };
+    exactKeys = (value, keys) => Object.keys(value).every((key) => keys.includes(key));
+    failure = () => ({ ok: false, error: "This browser could not preserve the unfinished import. Keep this page open and retry recovery before saving." });
+  }
+});
+
+// src/modules/clients/import-center.css
+var init_import_center = __esm({
+  "src/modules/clients/import-center.css"() {
+  }
+});
+
 // src/modules/clients/ImportCenter.tsx
 function downloadSampleCsv() {
   const lines = [IMPORT_SAMPLE_HEADERS.join(","), IMPORT_SAMPLE_ROW.map(csvCell).join(",")];
@@ -181956,6 +182082,11 @@ function downloadSampleCsv() {
 }
 function ImportCenter(props = {}) {
   const { user: user2 } = useAuth();
+  const previousActor = (0, import_react153.useRef)(user2?.id);
+  (0, import_react153.useEffect)(() => {
+    if (previousActor.current && previousActor.current !== user2?.id) discardClientImportRecovery(previousActor.current);
+    previousActor.current = user2?.id;
+  }, [user2?.id]);
   if (!user2 || !canImportClients(user2.role)) return /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(RestrictedState, {});
   return /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(ClientImportForm, { ...props }, user2.id);
 }
@@ -181985,6 +182116,33 @@ function ClientImportForm({ embedded = false } = {}) {
   const [parseError, setParseError] = (0, import_react153.useState)(null);
   const [dragOver, setDragOver] = (0, import_react153.useState)(false);
   const [skippedRows, setSkippedRows] = (0, import_react153.useState)(/* @__PURE__ */ new Set());
+  const [recovery] = (0, import_react153.useState)(() => user2 ? loadClientImportRecovery(user2.id) : { draft: null, error: null });
+  const [resumeDraft, setResumeDraft] = (0, import_react153.useState)(recovery.draft);
+  const [recoveryError, setRecoveryError] = (0, import_react153.useState)(recovery.error);
+  const [discardOpen, setDiscardOpen] = (0, import_react153.useState)(false);
+  const resumedBatch = (0, import_react153.useRef)(false);
+  const persistDraft = (0, import_react153.useCallback)((nextBatch = batch, nextOutcomes = outcomes) => {
+    if (!user2 || !fileName || rawRows.length === 0) return false;
+    const draft = { fileName, rawRows, hasHeaderRow, mapping, skippedRows: [...skippedRows], batch: nextBatch, outcomes: nextOutcomes };
+    const result = saveClientImportRecovery(user2.id, draft);
+    setRecoveryError(result.error);
+    return result.ok;
+  }, [user2, fileName, rawRows, hasHeaderRow, mapping, skippedRows, batch, outcomes]);
+  (0, import_react153.useEffect)(() => {
+    if (!resumeDraft && fileName && rawRows.length > 0) persistDraft();
+  }, [fileName, rawRows, resumeDraft, persistDraft]);
+  function resumeImport() {
+    if (!resumeDraft) return;
+    setFileName(resumeDraft.fileName);
+    setRawRows(resumeDraft.rawRows);
+    setHasHeaderRow(resumeDraft.hasHeaderRow);
+    setMapping(resumeDraft.mapping);
+    setSkippedRows(new Set(resumeDraft.skippedRows));
+    setBatch(resumeDraft.batch);
+    setOutcomes(resumeDraft.outcomes);
+    resumedBatch.current = resumeDraft.batch !== null;
+    setResumeDraft(null);
+  }
   const [dupMatches, setDupMatches] = (0, import_react153.useState)(null);
   const [dupChecking, setDupChecking] = (0, import_react153.useState)(false);
   const [dupCheckError, setDupCheckError] = (0, import_react153.useState)(null);
@@ -182054,19 +182212,26 @@ function ClientImportForm({ embedded = false } = {}) {
       clientUuid: newClientUuid(),
       values: importClientValues(row.record)
     }));
+    const preparedOutcomes = prepared.map((row) => outcomes.find((outcome) => outcome.rowIndex === row.rowIndex) ?? { rowIndex: row.rowIndex, status: "pending" });
+    if (!persistDraft(prepared, preparedOutcomes)) {
+      setBusy(false);
+      submitGuard.current = false;
+      return;
+    }
     setBatch(prepared);
     setOutcomes((previous) => {
       const byIndex = new Map(previous.map((row) => [row.rowIndex, row]));
       return prepared.map((row) => byIndex.get(row.rowIndex) ?? { rowIndex: row.rowIndex, status: "pending" });
     });
     const confirmed = new Set(outcomes.filter((row) => row.status === "saved").map((row) => row.rowIndex));
-    const remaining = prepared.filter((row) => !confirmed.has(row.rowIndex));
+    const remaining = resumedBatch.current ? prepared : prepared.filter((row) => !confirmed.has(row.rowIndex));
+    let latestOutcomes = preparedOutcomes;
     function update(next) {
-      setOutcomes((previous) => {
-        const byIndex = new Map(previous.map((row) => [row.rowIndex, row]));
-        next.forEach((row) => byIndex.set(row.rowIndex, row));
-        return prepared.map((row) => byIndex.get(row.rowIndex) ?? { rowIndex: row.rowIndex, status: "pending" });
-      });
+      const byIndex = new Map(latestOutcomes.map((row) => [row.rowIndex, row]));
+      next.forEach((row) => byIndex.set(row.rowIndex, row));
+      latestOutcomes = prepared.map((row) => byIndex.get(row.rowIndex) ?? { rowIndex: row.rowIndex, status: "pending" });
+      persistDraft(prepared, latestOutcomes);
+      setOutcomes(latestOutcomes);
     }
     try {
       const result = await importClients({
@@ -182075,6 +182240,7 @@ function ClientImportForm({ embedded = false } = {}) {
         shouldStop: () => stopRequested.current
       }, { userId: user2.id, role: user2.role, isOnline: online });
       update(result.outcomes);
+      resumedBatch.current = false;
     } catch (error) {
       setCommitError(error instanceof Error ? error.message : "The import could not finish. Your file and mappings are still here.");
     } finally {
@@ -182120,6 +182286,14 @@ function ClientImportForm({ embedded = false } = {}) {
   }
   function reset() {
     if (busy) return;
+    if (user2) {
+      const result = discardClientImportRecovery(user2.id);
+      setRecoveryError(result.error);
+      if (!result.ok) return;
+    }
+    setResumeDraft(null);
+    setDiscardOpen(false);
+    resumedBatch.current = false;
     fileVersion.current += 1;
     setBatch(null);
     setOutcomes([]);
@@ -182138,7 +182312,7 @@ function ClientImportForm({ embedded = false } = {}) {
     { label: "Possible Duplicates", value: dupCheckDone ? String(duplicateRows.length) : "\u2014", icon: "users", accent: dupCheckDone && duplicateRows.length ? "progress" : "neutral" },
     { label: "Total Rows", value: String(dataRows.length), icon: "file", accent: "primary" }
   ] : [];
-  return /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)("div", { style: { display: "flex", flexDirection: "column", gap: "var(--sp-md)", paddingBottom: 32 }, children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)("div", { className: "client-import", style: { display: "flex", flexDirection: "column", gap: "var(--sp-md)", paddingBottom: 32 }, children: [
     /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(
       ScreenHeader,
       {
@@ -182149,7 +182323,28 @@ function ClientImportForm({ embedded = false } = {}) {
         actions: !embedded ? /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(Button3, { icon: "external_link", onClick: () => navigate("/clients"), children: "Back to Clients" }) : void 0
       }
     ),
-    rawRows.length === 0 && /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)("section", { style: { ...cardStyle, padding: 20, display: "flex", flexDirection: "column", gap: 14 }, children: [
+    recoveryError && /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)("p", { role: "alert", className: "client-import-recovery-error", children: [
+      recoveryError,
+      " Client saves wait until recovery storage is available."
+    ] }),
+    resumeDraft && /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)("section", { className: "client-import-recovery", "aria-label": "Saved import draft", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("h2", { children: "Resume client import" }),
+      /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)("p", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("strong", { children: resumeDraft.fileName }),
+        " \xB7 ",
+        resumeDraft.rawRows.length - (resumeDraft.hasHeaderRow ? 1 : 0),
+        " data rows"
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)("p", { children: [
+        resumeDraft.outcomes.filter((row) => row.status === "saved").length,
+        " confirmed saved. File columns, selected rows and retry keys are preserved on this device."
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)("div", { className: "client-import-actions", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(Button3, { variant: "primary", onClick: resumeImport, children: "Resume import" }),
+        /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(Button3, { onClick: () => setDiscardOpen(true), children: "Discard local draft" })
+      ] })
+    ] }),
+    rawRows.length === 0 && !resumeDraft && /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)("section", { style: { ...cardStyle, padding: 20, display: "flex", flexDirection: "column", gap: 14 }, children: [
       /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)(
         "div",
         {
@@ -182250,8 +182445,8 @@ function ClientImportForm({ embedded = false } = {}) {
               dataRows.length === 1 ? "" : "s"
             ] })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)("div", { style: { display: "flex", gap: "var(--sp-sm)", alignItems: "center" }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)("label", { style: { display: "flex", alignItems: "center", gap: 6, fontSize: "var(--t-meta)", color: "var(--text2)" }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)("div", { className: "client-import-actions", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)("label", { style: { display: "flex", alignItems: "center", gap: 6, minHeight: 44, fontSize: "var(--t-meta)", color: "var(--text2)" }, children: [
               /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(
                 "input",
                 {
@@ -182264,21 +182459,21 @@ function ClientImportForm({ embedded = false } = {}) {
               ),
               "First row is headers"
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(Button3, { icon: "close", onClick: reset, disabled: busy, children: "Choose Different File" })
+            /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(Button3, { icon: "close", onClick: () => setDiscardOpen(true), disabled: busy, children: "Choose Different File" })
           ] })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)("div", { children: [
           /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("h2", { style: { margin: "0 0 10px", fontSize: "var(--t-ui)", fontWeight: 700, color: "var(--text)" }, children: "Map Columns" }),
-          /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(DataTableShell, { ariaLabel: "CSV column mapping", "data-table-scroll": true, style: { overflowX: "auto" }, children: /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)("table", { style: { width: "100%", borderCollapse: "collapse", minWidth: 560 }, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(DataTableShell, { ariaLabel: "CSV column mapping", "data-table-scroll": true, style: { overflowX: "auto" }, children: /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)("table", { className: "client-import-mapping", style: { width: "100%", borderCollapse: "collapse", minWidth: 560 }, children: [
             /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)("tr", { style: { background: "var(--th-bg)" }, children: [
               /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("th", { style: th16, children: "CSV Column" }),
               /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("th", { style: th16, children: "Sample Value" }),
               /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("th", { style: th16, children: "Maps To" })
             ] }) }),
             /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("tbody", { children: headers.map((h, colIndex) => /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)("tr", { style: { borderBottom: "1px solid var(--border)" }, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("td", { style: { ...td13, fontWeight: 600 }, children: h || `Column ${colIndex + 1}` }),
-              /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("td", { style: { ...td13, color: "var(--muted)" }, children: dataRows[0]?.[colIndex] || "\u2014" }),
-              /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("td", { style: td13, children: /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("td", { "data-label": "CSV column", style: { ...td13, fontWeight: 600 }, children: h || `Column ${colIndex + 1}` }),
+              /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("td", { "data-label": "Sample value", style: { ...td13, color: "var(--muted)" }, children: dataRows[0]?.[colIndex] || "\u2014" }),
+              /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("td", { "data-label": "Maps to", style: td13, children: /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(
                 Select,
                 {
                   "aria-label": `Map column ${colIndex + 1}: ${h || "unnamed"}`,
@@ -182340,7 +182535,7 @@ function ClientImportForm({ embedded = false } = {}) {
             ]
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(Card2, { title: "Preview & Validate", bodyStyle: { padding: 0 }, children: /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(DataTableShell, { ariaLabel: "CSV import preview", "data-table-scroll": true, style: { overflowX: "auto", maxHeight: 420, overflowY: "auto" }, children: /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)("table", { style: { width: "100%", borderCollapse: "collapse", minWidth: 760 }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(Card2, { title: "Preview & Validate", bodyStyle: { padding: 0 }, children: /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(DataTableShell, { ariaLabel: "CSV import preview", "data-table-scroll": true, style: { overflowX: "auto", maxHeight: 420, overflowY: "auto" }, children: /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)("table", { className: "client-import-preview", style: { width: "100%", borderCollapse: "collapse", minWidth: 760 }, children: [
           /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)("tr", { style: { background: "var(--th-bg)" }, children: [
             /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("th", { style: { ...th16, width: 30 } }),
             /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("th", { style: th16, children: "Row" }),
@@ -182353,7 +182548,7 @@ function ClientImportForm({ embedded = false } = {}) {
             const skipped = skippedRows.has(r.rowIndex);
             const outcome = outcomes.find((row) => row.rowIndex === r.rowIndex);
             return /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)("tr", { style: { borderBottom: "1px solid var(--border)", opacity: skipped ? 0.5 : 1 }, children: [
-              /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("td", { style: { ...td13, width: 30 }, children: /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("td", { "data-label": "Include row", style: { ...td13, width: 30 }, children: /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(
                 "input",
                 {
                   type: "checkbox",
@@ -182369,11 +182564,11 @@ function ClientImportForm({ embedded = false } = {}) {
                   })
                 }
               ) }),
-              /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("td", { className: "figure", style: { ...td13, color: "var(--muted)" }, children: r.rowIndex + 1 }),
-              /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("td", { style: { ...td13, fontWeight: 600 }, children: r.record?.name || dataRows[r.rowIndex]?.[0] || "\u2014" }),
-              /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("td", { className: "figure", style: td13, children: r.record?.phone || "\u2014" }),
-              /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("td", { style: { ...td13, color: "var(--text2)" }, children: r.record?.clientType ?? "\u2014" }),
-              /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("td", { style: td13, children: outcome?.status === "saved" ? /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)("span", { style: { color: "var(--success-text)" }, children: [
+              /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("td", { "data-label": "Row", className: "figure", style: { ...td13, color: "var(--muted)" }, children: r.rowIndex + 1 }),
+              /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("td", { "data-label": "Name", style: { ...td13, fontWeight: 600 }, children: r.record?.name || dataRows[r.rowIndex]?.[0] || "\u2014" }),
+              /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("td", { "data-label": "Phone", className: "figure", style: td13, children: r.record?.phone || "\u2014" }),
+              /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("td", { "data-label": "Type", style: { ...td13, color: "var(--text2)" }, children: r.record?.clientType ?? "\u2014" }),
+              /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("td", { "data-label": "Status", style: td13, children: outcome?.status === "saved" ? /* @__PURE__ */ (0, import_jsx_runtime187.jsxs)("span", { style: { color: "var(--success-text)" }, children: [
                 /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(Icon, { name: "check", size: 14 }),
                 " Saved ",
                 /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(Link, { to: `/clients/${outcome.clientId}`, children: outcome.clientCode })
@@ -182425,8 +182620,8 @@ function ClientImportForm({ embedded = false } = {}) {
                 variant: "primary",
                 icon: "check",
                 onClick: () => void runImport(),
-                disabled: busy || !online || (batch ? !unresolved : !commitReady),
-                children: busy ? "Importing\u2026" : batch ? unresolved ? "Retry remaining rows" : "Import complete" : `Import ${readyRows.length} Client${readyRows.length === 1 ? "" : "s"}`
+                disabled: busy || !online || (batch ? !unresolved && !resumedBatch.current : !commitReady),
+                children: busy ? "Importing\u2026" : batch ? resumedBatch.current ? "Check saved rows & continue" : unresolved ? "Retry remaining rows" : "Import complete" : `Import ${readyRows.length} Client${readyRows.length === 1 ? "" : "s"}`
               }
             ),
             busy && /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(Button3, { disabled: stopping, onClick: () => {
@@ -182435,12 +182630,23 @@ function ClientImportForm({ embedded = false } = {}) {
             }, children: stopping ? "Stopping after this row\u2026" : "Stop after current row" }),
             savedCount > 0 && !busy && /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(Button3, { onClick: () => navigate("/clients"), children: "View Clients" })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("p", { style: { margin: 0, color: "var(--text2)", fontSize: "var(--t-meta)" }, children: "Keep the CSV and stay on this page while saving. Each row is saved separately; if one fails, later rows wait. A lost confirmation is checked with the same save when you retry." })
+          /* @__PURE__ */ (0, import_jsx_runtime187.jsx)("p", { style: { margin: 0, color: "var(--text2)", fontSize: "var(--t-meta)" }, children: "This device preserves the file, mappings and retry keys when you leave or refresh. Each row is saved separately; if one fails, later rows wait. A lost confirmation is checked with the same save when you retry." })
         ] })
       ] })
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(FooterNote, { extra: ["Only confirmed saves are counted. Existing clients and memberships are unchanged."] }),
-    /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(UnsavedLeaveDialog, {})
+    /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(UnsavedLeaveDialog, {}),
+    /* @__PURE__ */ (0, import_jsx_runtime187.jsx)(
+      ConfirmDialog,
+      {
+        isOpen: discardOpen,
+        onClose: () => setDiscardOpen(false),
+        onConfirm: reset,
+        title: "Discard local import draft?",
+        confirmLabel: "Discard local draft",
+        description: "This removes the file, mappings and unfinished retry keys from this device. Clients already saved remain in the directory. Keep the draft if any save confirmation is uncertain."
+      }
+    )
   ] });
 }
 var import_react153, import_jsx_runtime187, inputStyle3, th16, td13;
@@ -182465,6 +182671,9 @@ var init_ImportCenter = __esm({
     init_csv();
     init_clientImport();
     init_clients2();
+    init_ConfirmDialog();
+    init_clientImportRecovery();
+    init_import_center();
     import_jsx_runtime187 = __toESM(require_jsx_runtime(), 1);
     inputStyle3 = {
       minHeight: "var(--tap)",
@@ -182813,14 +183022,14 @@ function DuplicateCenter({ embedded = false } = {}) {
       return;
     }
     const landed = [];
-    let failure = null;
+    let failure2 = null;
     for (const c of closed) {
       try {
         await mergeClients2({ survivorId: survivor.id, duplicateId: c.id }, ctx2);
         landed.push(c);
       } catch (err) {
         captureError(err, { where: "DuplicateCenter.merge", clientId: c.id });
-        failure = { client: c, message: err instanceof Error ? err.message : String(err) };
+        failure2 = { client: c, message: err instanceof Error ? err.message : String(err) };
         break;
       }
     }
@@ -182835,7 +183044,7 @@ function DuplicateCenter({ embedded = false } = {}) {
         return next;
       });
     }
-    if (!failure) {
+    if (!failure2) {
       showSuccessToast(
         "Clients merged",
         `${landed.length} record${landed.length === 1 ? "" : "s"} merged into ${survivor.name}`
@@ -182844,7 +183053,7 @@ function DuplicateCenter({ embedded = false } = {}) {
     }
     const notAttempted = closed.length - landed.length - 1;
     setMergeError(
-      landed.length === 0 ? `Not merged \u2014 ${failure.message} Nothing was changed: all ${closed.length} record${closed.length === 1 ? " is" : "s are"} still separate.` : `Partially merged \u2014 ${landed.length} of ${closed.length} records merged into ${survivor.name} (${landed.map((c) => c.name).join(", ")}). ${failure.client.name} then failed: ${failure.message}` + (notAttempted > 0 ? ` The remaining ${notAttempted} record${notAttempted === 1 ? " was" : "s were"} not attempted and ${notAttempted === 1 ? "is" : "are"} still separate.` : "")
+      landed.length === 0 ? `Not merged \u2014 ${failure2.message} Nothing was changed: all ${closed.length} record${closed.length === 1 ? " is" : "s are"} still separate.` : `Partially merged \u2014 ${landed.length} of ${closed.length} records merged into ${survivor.name} (${landed.map((c) => c.name).join(", ")}). ${failure2.client.name} then failed: ${failure2.message}` + (notAttempted > 0 ? ` The remaining ${notAttempted} record${notAttempted === 1 ? " was" : "s were"} not attempted and ${notAttempted === 1 ? "is" : "are"} still separate.` : "")
     );
   }, [pendingMerge, merging, dispatchContext, showSuccessToast]);
   return /* @__PURE__ */ (0, import_jsx_runtime188.jsxs)("div", { style: { display: "flex", flexDirection: "column", gap: "var(--sp-md)" }, children: [
@@ -190577,7 +190786,7 @@ function DemoPulse() {
                     onClick: () => setView(v),
                     "aria-pressed": on,
                     style: {
-                      height: 28,
+                      minHeight: 44,
                       padding: "0 10px",
                       borderRadius: "var(--r-badge)",
                       border: `1px solid ${on ? "var(--nav-active-accent)" : "var(--border)"}`,
@@ -203466,7 +203675,7 @@ function Finance() {
             }
           } : {}
         } : money6 && tab === "Expenses" ? {
-          leading: /* @__PURE__ */ (0, import_jsx_runtime224.jsx)(
+          leading: !phone ? /* @__PURE__ */ (0, import_jsx_runtime224.jsx)(
             FilterButton,
             {
               onClick: () => setExpenseFiltersOpen((open2) => !open2),
@@ -203474,7 +203683,7 @@ function Finance() {
               controls: "expense-filters",
               expanded: expenseFiltersOpen
             }
-          ),
+          ) : void 0,
           search: {
             value: expenseSearch,
             onChange: setExpenseSearch,
@@ -203483,7 +203692,7 @@ function Finance() {
             ariaLabel: "Search expenses by expense number, vendor, or description"
           }
         } : tab === "Documents" ? {
-          leading: /* @__PURE__ */ (0, import_jsx_runtime224.jsx)(
+          leading: !phone ? /* @__PURE__ */ (0, import_jsx_runtime224.jsx)(
             FilterButton,
             {
               onClick: () => setDocumentFiltersOpen((open2) => !open2),
@@ -203491,7 +203700,7 @@ function Finance() {
               controls: "documents-filters",
               expanded: documentFiltersOpen
             }
-          ),
+          ) : void 0,
           search: {
             value: documentSearch,
             onChange: setDocumentSearch,
@@ -203511,7 +203720,14 @@ function Finance() {
         icon: "card",
         title: "Finance",
         module: tab === "Expenses" ? "expenses" : "payments",
-        ...money6 && (tab === "Dashboard" || tab === "Invoices") ? { actions: headerActions } : {}
+        ...money6 && (tab === "Dashboard" || tab === "Invoices") ? { actions: headerActions } : phone && (money6 && tab === "Expenses" || tab === "Documents") ? {
+          // RULING 2026-10-14: hosted Finance filters use phone More, matching Invoices and Calendar.
+          actions: /* @__PURE__ */ (0, import_jsx_runtime224.jsx)(PageActions, { overflow: [{
+            label: (tab === "Expenses" ? expenseFilterCount : documentFilterCount) > 0 ? `Filters (${tab === "Expenses" ? expenseFilterCount : documentFilterCount})` : "Filters",
+            icon: "filter",
+            onClick: () => tab === "Expenses" ? setExpenseFiltersOpen(true) : setDocumentFiltersOpen(true)
+          }] })
+        } : {}
       }
     ),
     /* @__PURE__ */ (0, import_jsx_runtime224.jsx)("div", { style: { overflowX: "auto", paddingBottom: 2, maxWidth: "100%" }, children: /* @__PURE__ */ (0, import_jsx_runtime224.jsx)(
@@ -211514,6 +211730,7 @@ function exportCsv3(rows) {
 function Warehouses() {
   const { user: user2 } = useAuth();
   const online = useNetwork();
+  const viewport = useViewport();
   const gctx = (0, import_react204.useMemo)(() => ctx(user2?.role ?? "Client"), [user2?.role]);
   const [query, setQuery] = (0, import_react204.useState)("");
   const [branch, setBranch] = (0, import_react204.useState)("All");
@@ -211779,7 +211996,11 @@ function Warehouses() {
           "section",
           {
             "aria-label": "Key figures",
-            style: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(132px, 1fr))", gap: "var(--sp-md)" },
+            style: {
+              display: "grid",
+              gridTemplateColumns: viewport === "phone" ? "repeat(2, minmax(0, 1fr))" : "repeat(auto-fit, minmax(132px, 1fr))",
+              gap: "var(--sp-md)"
+            },
             children: [
               /* @__PURE__ */ (0, import_jsx_runtime240.jsx)(
                 KpiCard4,
@@ -211881,7 +212102,11 @@ function Warehouses() {
           "section",
           {
             "aria-label": "Warehouses",
-            style: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(228px, 1fr))", gap: "var(--sp-md)" },
+            style: {
+              display: "grid",
+              gridTemplateColumns: viewport === "phone" ? "1fr" : "repeat(auto-fit, minmax(228px, 1fr))",
+              gap: "var(--sp-md)"
+            },
             children: WAREHOUSES2.map((w) => {
               const on = w.id === selectedId;
               return /* @__PURE__ */ (0, import_jsx_runtime240.jsxs)(
@@ -212022,13 +212247,14 @@ function Warehouses() {
                     "button",
                     {
                       type: "button",
+                      className: "tap",
                       onClick: () => setView(v),
                       "aria-pressed": view === v,
                       "aria-label": v === "table" ? "Table view" : "Card view",
                       title: v === "table" ? "Table view" : "Card view",
                       style: {
-                        width: 32,
-                        height: 32,
+                        minWidth: 44,
+                        minHeight: 44,
                         border: "none",
                         background: view === v ? "var(--nav-active-bg)" : "var(--input-bg)",
                         color: view === v ? "var(--nav-active-accent)" : "var(--text2)",
@@ -212160,10 +212386,12 @@ function Warehouses() {
                       "button",
                       {
                         type: "button",
+                        className: "tap",
                         onClick: () => openWarehouse(w.id),
                         "aria-label": `Open ${w.name}`,
                         title: `Open ${w.name}`,
                         style: {
+                          position: "relative",
                           width: 28,
                           height: 28,
                           borderRadius: "var(--r-xs)",
@@ -212330,7 +212558,7 @@ function Warehouses() {
                     onClick: () => setProfileTab(t.id),
                     "aria-current": on ? "page" : void 0,
                     style: {
-                      height: 36,
+                      minHeight: 44,
                       padding: "0 12px",
                       border: "none",
                       borderBottom: `2px solid ${on ? "var(--nav-active-accent)" : "transparent"}`,
@@ -212465,14 +212693,14 @@ function Warehouses() {
               profileTab === "map" && /* @__PURE__ */ (0, import_jsx_runtime240.jsxs)("div", { style: { padding: 14, display: "flex", flexDirection: "column", gap: 14 }, children: [
                 /* @__PURE__ */ (0, import_jsx_runtime240.jsx)(WarehouseMap, { warehouseId: selected.id }),
                 /* @__PURE__ */ (0, import_jsx_runtime240.jsx)(Unavailable, { reason: "AI Warehouse Assistant is not built \u2014 there is no query engine behind this prompt yet.", children: /* @__PURE__ */ (0, import_jsx_runtime240.jsxs)("div", { className: "focus-host", style: { background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--r-sm)", padding: "var(--sp-md)", display: "flex", alignItems: "center", gap: 10, width: "100%" }, children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime240.jsx)("span", { style: { display: "grid", placeItems: "center", width: 32, height: 32, borderRadius: "var(--r-sm)", background: "var(--btn-primary-bg)", color: "var(--btn-primary-fg)" }, children: /* @__PURE__ */ (0, import_jsx_runtime240.jsx)(Icon, { name: "message", size: 16 }) }),
+                  /* @__PURE__ */ (0, import_jsx_runtime240.jsx)("span", { style: { display: "grid", placeItems: "center", width: 36, height: 36, borderRadius: "var(--r-sm)", background: "var(--btn-primary-bg)", color: "var(--btn-primary-fg)" }, children: /* @__PURE__ */ (0, import_jsx_runtime240.jsx)(Icon, { name: "message", size: 16 }) }),
                   /* @__PURE__ */ (0, import_jsx_runtime240.jsx)(
                     "input",
                     {
                       type: "text",
                       disabled: true,
                       placeholder: "Ask AI Assistant (e.g. Which warehouse is full? Show empty storage...)",
-                      style: { height: 32, padding: "0 9px", borderRadius: "var(--r-input)", border: "none", background: "transparent", color: "var(--text)", fontSize: "var(--t-meta)", fontFamily: "inherit", flex: 1, minWidth: 0, outline: "none" }
+                      style: { minHeight: 44, padding: "0 9px", borderRadius: "var(--r-input)", border: "none", background: "transparent", color: "var(--text)", fontSize: "var(--t-meta)", fontFamily: "inherit", flex: 1, minWidth: 0, outline: "none" }
                     }
                   ),
                   /* @__PURE__ */ (0, import_jsx_runtime240.jsx)(Button3, { variant: "primary", disabled: true, children: "Ask" })
@@ -212863,6 +213091,7 @@ var init_Warehouses = __esm({
     init_bs();
     init_auth();
     init_network();
+    init_device();
     init_supabase();
     init_warehouses();
     init_inventory2();
@@ -214638,7 +214867,7 @@ function ExtendRentalModal({
                   setDays(Number.isFinite(next) ? next : 0);
                 },
                 style: {
-                  height: 36,
+                  minHeight: 44,
                   padding: "0 12px",
                   borderRadius: "var(--r-btn)",
                   border: "1px solid var(--border)",
@@ -214665,7 +214894,7 @@ function ExtendRentalModal({
                   setDailyRate(Number.isFinite(next) ? next : 0);
                 },
                 style: {
-                  height: 36,
+                  minHeight: 44,
                   padding: "0 12px",
                   borderRadius: "var(--r-btn)",
                   border: "1px solid var(--border)",
@@ -214726,13 +214955,14 @@ function ExtendRentalModal({
             ]
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime246.jsxs)("label", { style: { display: "flex", alignItems: "center", gap: "var(--sp-sm)", fontSize: "var(--t-meta)", cursor: "pointer" }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime246.jsxs)("label", { style: { display: "inline-flex", alignItems: "center", minHeight: 44, gap: "var(--sp-sm)", fontSize: "var(--t-meta)", cursor: "pointer" }, children: [
           /* @__PURE__ */ (0, import_jsx_runtime246.jsx)(
             "input",
             {
               type: "checkbox",
               checked: confirmed,
-              onChange: (e) => setConfirmed(e.target.checked)
+              onChange: (e) => setConfirmed(e.target.checked),
+              style: { width: 18, height: 18 }
             }
           ),
           "Client has authorized the extension and additional charges."
@@ -215403,7 +215633,9 @@ function LineItemTree({
                   {
                     type: "button",
                     onClick: () => setActiveFilter(mode),
+                    "aria-pressed": activeFilter === mode,
                     style: {
+                      minHeight: 44,
                       padding: "3px 10px",
                       fontSize: "0.775rem",
                       fontWeight: activeFilter === mode ? 600 : 500,
@@ -216879,8 +217111,8 @@ function ReturnSettlementModal({
                 ] })
               ] }),
               lateResult.band !== "None" && /* @__PURE__ */ (0, import_jsx_runtime252.jsxs)("div", { style: { marginTop: 6, paddingTop: 10, borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 10 }, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime252.jsxs)("div", { style: { display: "flex", alignItems: "center", gap: 12 }, children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime252.jsxs)("label", { style: { display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: "var(--t-meta, 12px)" }, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime252.jsxs)("div", { style: { display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime252.jsxs)("label", { style: { display: "inline-flex", alignItems: "center", minHeight: 44, gap: 6, cursor: "pointer", fontSize: "var(--t-meta, 12px)" }, children: [
                     /* @__PURE__ */ (0, import_jsx_runtime252.jsx)(
                       "input",
                       {
@@ -216888,7 +217120,7 @@ function ReturnSettlementModal({
                         name: "lateDecision",
                         checked: lateDecision === "Apply",
                         onChange: () => setLateDecision("Apply"),
-                        style: { accentColor: "var(--primary, #2563eb)" }
+                        style: { width: 16, height: 16, accentColor: "var(--primary, #2563eb)" }
                       }
                     ),
                     /* @__PURE__ */ (0, import_jsx_runtime252.jsxs)("span", { children: [
@@ -216897,7 +217129,7 @@ function ReturnSettlementModal({
                       ")"
                     ] })
                   ] }),
-                  /* @__PURE__ */ (0, import_jsx_runtime252.jsxs)("label", { style: { display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: "var(--t-meta, 12px)" }, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime252.jsxs)("label", { style: { display: "inline-flex", alignItems: "center", minHeight: 44, gap: 6, cursor: "pointer", fontSize: "var(--t-meta, 12px)" }, children: [
                     /* @__PURE__ */ (0, import_jsx_runtime252.jsx)(
                       "input",
                       {
@@ -216905,7 +217137,7 @@ function ReturnSettlementModal({
                         name: "lateDecision",
                         checked: lateDecision === "Waive",
                         onChange: () => setLateDecision("Waive"),
-                        style: { accentColor: "var(--primary, #2563eb)" }
+                        style: { width: 16, height: 16, accentColor: "var(--primary, #2563eb)" }
                       }
                     ),
                     /* @__PURE__ */ (0, import_jsx_runtime252.jsx)("span", { children: "Waive Late Fee" })
@@ -217030,7 +217262,7 @@ function ReturnSettlementModal({
                             "aria-label": `Damage charge for ${item.name}`,
                             style: {
                               width: 100,
-                              minHeight: 36,
+                              minHeight: 44,
                               padding: "0 8px",
                               borderRadius: "var(--r-input, 4px)",
                               border: "1px solid var(--input-border)",
@@ -221473,7 +221705,7 @@ function NotesCard({
       title: hint,
       className: "tap",
       style: {
-        height: 28,
+        minHeight: 44,
         padding: "0 12px",
         borderRadius: "var(--r-badge)",
         /* SELECTED is a control state, not a booking status. This used
@@ -221974,6 +222206,7 @@ function BookingDetailView() {
   const segments = canBookingMoney ? ["Items", "Money", "Docs"] : ["Items", "Docs"];
   const [segment, setSegment] = (0, import_react223.useState)("Items");
   const onPhone = viewport === "phone";
+  const compactHeader = viewport !== "desktop";
   const activeSegment = segments.includes(segment) ? segment : "Items";
   const showSegment = (s) => !onPhone || activeSegment === s;
   const factsCols = viewport === "desktop" ? "repeat(3, minmax(0,1fr))" : viewport === "tablet" ? "repeat(2, minmax(0,1fr))" : "1fr";
@@ -222233,7 +222466,7 @@ function BookingDetailView() {
       }
     ] : []
   ];
-  const phoneMoreItems = [
+  const compactMoreItems = [
     { label: "Print booking", icon: "file", onClick: () => window.print() },
     ...bookingMoreItems.flatMap(
       (item) => item.submenu ? item.submenu.map((sub5) => ({
@@ -222263,10 +222496,10 @@ function BookingDetailView() {
             PageActions,
             {
               extra: /* @__PURE__ */ (0, import_jsx_runtime259.jsxs)(import_jsx_runtime259.Fragment, { children: [
-                !onPhone && /* @__PURE__ */ (0, import_jsx_runtime259.jsx)(Badge, { status: stage }),
+                !compactHeader && /* @__PURE__ */ (0, import_jsx_runtime259.jsx)(Badge, { status: stage }),
                 booking.isCancelled && /* @__PURE__ */ (0, import_jsx_runtime259.jsx)(Badge, { flag: "Cancelled" }),
                 subRental && /* @__PURE__ */ (0, import_jsx_runtime259.jsx)(SubRentedMark, { label: "Sub-rental" }),
-                booking && /* @__PURE__ */ (0, import_jsx_runtime259.jsx)(
+                booking && !compactHeader && /* @__PURE__ */ (0, import_jsx_runtime259.jsx)(
                   WhatsAppShareButton,
                   {
                     clientPhone,
@@ -222309,13 +222542,13 @@ function BookingDetailView() {
                     selectedCount: 1,
                     ariaLabel: "More actions for rental",
                     onActionCompleted: refreshBookingData,
-                    compact: onPhone,
-                    ...onPhone ? { extraItems: phoneMoreItems } : {}
+                    compact: compactHeader,
+                    ...compactHeader ? { extraItems: compactMoreItems } : {}
                   },
                   "rental-more-actions"
                 )
               ] }),
-              secondary: onPhone ? [
+              secondary: compactHeader ? [
                 /* @__PURE__ */ (0, import_jsx_runtime259.jsx)(
                   BookingOperationsMenu,
                   {
@@ -222350,7 +222583,7 @@ function BookingDetailView() {
                 ),
                 /* @__PURE__ */ (0, import_jsx_runtime259.jsx)(Button3, { icon: "file", variant: "secondary", onClick: () => window.print(), children: "Print booking" }, "print")
               ].filter(Boolean),
-              overflow: onPhone ? void 0 : /* @__PURE__ */ (0, import_jsx_runtime259.jsx)(
+              overflow: compactHeader ? void 0 : /* @__PURE__ */ (0, import_jsx_runtime259.jsx)(
                 OverflowMenu,
                 {
                   ariaLabel: "More booking actions",
@@ -228799,7 +229032,7 @@ function CreatePurchaseRequestModal({
                 value: equipmentTitle,
                 onChange: (e) => setEquipmentTitle(e.target.value),
                 style: {
-                  height: 36,
+                  minHeight: 44,
                   padding: "0 12px",
                   borderRadius: "var(--r-btn)",
                   border: "1px solid var(--border)",
@@ -228818,7 +229051,7 @@ function CreatePurchaseRequestModal({
                 value: category,
                 onChange: (e) => setCategory(e.target.value),
                 style: {
-                  height: 36,
+                  minHeight: 44,
                   padding: "0 12px",
                   borderRadius: "var(--r-btn)",
                   border: "1px solid var(--border)",
@@ -228852,7 +229085,7 @@ function CreatePurchaseRequestModal({
                 value: quantity,
                 onChange: (e) => setQuantity(Math.max(1, Number(e.target.value) || 1)),
                 style: {
-                  height: 36,
+                  minHeight: 44,
                   padding: "0 12px",
                   borderRadius: "var(--r-btn)",
                   border: "1px solid var(--border)",
@@ -228874,7 +229107,7 @@ function CreatePurchaseRequestModal({
                 placeholder: "0",
                 onChange: (e) => setUnitCostRupees(Math.max(0, Number(e.target.value) || 0)),
                 style: {
-                  height: 36,
+                  minHeight: 44,
                   padding: "0 12px",
                   borderRadius: "var(--r-btn)",
                   border: "1px solid var(--border)",
@@ -228893,7 +229126,7 @@ function CreatePurchaseRequestModal({
                 value: priority,
                 onChange: (e) => setPriority(e.target.value),
                 style: {
-                  height: 36,
+                  minHeight: 44,
                   padding: "0 12px",
                   borderRadius: "var(--r-btn)",
                   border: "1px solid var(--border)",
@@ -228926,7 +229159,7 @@ function CreatePurchaseRequestModal({
               placeholder: "0",
               onChange: (e) => setTurnaways(Math.max(0, Number(e.target.value) || 0)),
               style: {
-                height: 36,
+                minHeight: 44,
                 padding: "0 12px",
                 borderRadius: "var(--r-btn)",
                 border: "1px solid var(--border)",
@@ -231051,6 +231284,12 @@ var init_ClientDetail = __esm({
 });
 
 // src/lib/queries/delivery.ts
+function deliveryReadRefusal(role) {
+  if (!role || role === "Client") return "Internal delivery records are not available to this session.";
+  if (role === "Driver") return "Assigned delivery records are unavailable until verified trip assignment access is connected.";
+  if (!IS_MOCK) return "Delivery records are unavailable: a server-backed delivery query and action are not connected. No live deliveries were loaded and nothing has been saved.";
+  return null;
+}
 function deliveryMutationRefusal(context) {
   if (!context.role || !canPerformOperations(context.role) || !canViewMoney(context.role)) {
     return "Your role cannot change delivery records.";
@@ -231069,18 +231308,20 @@ function kathmanduStamp(now = /* @__PURE__ */ new Date()) {
   const minutes = kathmanduMinutes(now.toISOString());
   return `${businessDayAd2(now)} ${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 }
-function getDeliveries() {
-  if (!IS_MOCK) return [];
-  if (typeof window === "undefined") return INITIAL_DELIVERIES;
+function getDeliveries(role) {
+  if (deliveryReadRefusal(role)) return [];
+  const visible = (records) => role && canViewMoney(role) ? records : records.map(({ deliveryFeeNpr: _fee, notes: _notes, ...record }) => record);
+  const initial = define_import_meta_env_default["VITE_MOCK_SEEDED"] === "true" ? INITIAL_DELIVERIES : [];
+  if (typeof window === "undefined") return visible(initial);
   try {
     const raw = localStorage.getItem(STORAGE_KEY5);
     if (!raw) {
-      localStorage.setItem(STORAGE_KEY5, JSON.stringify(INITIAL_DELIVERIES));
-      return INITIAL_DELIVERIES;
+      localStorage.setItem(STORAGE_KEY5, JSON.stringify(initial));
+      return visible(initial);
     }
-    return JSON.parse(raw);
+    return visible(JSON.parse(raw));
   } catch {
-    return INITIAL_DELIVERIES;
+    return visible(initial);
   }
 }
 function saveDeliveries(list, context) {
@@ -231090,7 +231331,7 @@ function saveDeliveries(list, context) {
 }
 function updateDeliveryStatus(id2, status, context, extra) {
   requireDeliveryMutation(context);
-  const current = getDeliveries();
+  const current = getDeliveries(context.role);
   const timeStr = kathmanduStamp();
   const next = current.map((d3) => {
     if (d3.id !== id2) return d3;
@@ -231112,7 +231353,7 @@ function updateDeliveryStatus(id2, status, context, extra) {
 }
 function assignDeliveryRider(id2, driverName, driverPhone, vehiclePlate, context) {
   requireDeliveryMutation(context);
-  const current = getDeliveries();
+  const current = getDeliveries(context.role);
   const next = current.map((d3) => {
     if (d3.id !== id2) return d3;
     return {
@@ -231139,7 +231380,7 @@ function nextDeliveryId(existing) {
 }
 function createDeliveryRecord(payload, context) {
   requireDeliveryMutation(context);
-  const current = getDeliveries();
+  const current = getDeliveries(context.role);
   const created = { ...payload, id: nextDeliveryId(current) };
   const next = [created, ...current];
   saveDeliveries(next, context);
@@ -231261,16 +231502,20 @@ __export(DeliveryWorkspace_exports, {
   default: () => DeliveryWorkspace_default
 });
 function DeliveryWorkspace() {
-  const [deliveries, setDeliveries] = (0, import_react240.useState)(() => getDeliveries());
+  const { user: user2 } = useAuth();
+  const [deliveries, setDeliveries] = (0, import_react240.useState)(() => getDeliveries(user2?.role ?? null));
+  (0, import_react240.useEffect)(() => {
+    setDeliveries(getDeliveries(user2?.role ?? null));
+  }, [user2?.role]);
   const [statusFilter, setStatusFilter] = (0, import_react240.useState)("All");
   const [searchQuery, setSearchQuery] = (0, import_react240.useState)("");
   const [viewMode, setViewMode] = (0, import_react240.useState)("table");
   const canMoney = useCanViewMoney();
-  const { user: user2 } = useAuth();
   const isOnline = useNetwork();
   const writeContext = { role: user2?.role ?? null, isOnline };
   const canChange = !!user2 && canPerformOperations(user2.role) && canViewMoney(user2.role);
   const writeRefusal = deliveryMutationRefusal(writeContext);
+  const readRefusal = deliveryReadRefusal(user2?.role ?? null);
   const [mutationError, setMutationError] = (0, import_react240.useState)(null);
   const viewport = useViewport();
   const isMobile = viewport === "phone";
@@ -231309,7 +231554,7 @@ function DeliveryWorkspace() {
   const readyCount = deliveries.filter((d3) => d3.status === "Ready").length;
   const scheduledCount = deliveries.filter((d3) => d3.status === "Scheduled").length;
   const deliveredCount = deliveries.filter((d3) => d3.status === "Delivered").length;
-  const totalRevenue = deliveries.reduce((acc, d3) => acc + (d3.status === "Delivered" ? d3.deliveryFeeNpr : 0), 0);
+  const totalRevenue = deliveries.reduce((acc, d3) => acc + (d3.status === "Delivered" ? d3.deliveryFeeNpr ?? 0 : 0), 0);
   const handleOpenAssign = (rec) => {
     if (writeRefusal) {
       setMutationError(writeRefusal);
@@ -231431,7 +231676,7 @@ function DeliveryWorkspace() {
           )
         }
       ),
-      children: /* @__PURE__ */ (0, import_jsx_runtime278.jsxs)(PageBody, { error: IS_MOCK ? null : "Delivery records are unavailable: a server-backed delivery query and action are not connected. No live deliveries were loaded and nothing has been saved.", children: [
+      children: /* @__PURE__ */ (0, import_jsx_runtime278.jsxs)(PageBody, { error: readRefusal, children: [
         (writeRefusal || mutationError) && /* @__PURE__ */ (0, import_jsx_runtime278.jsx)("div", { role: "alert", style: { padding: 12, color: "var(--st-danger-fg)", background: "var(--st-danger-bg)" }, children: mutationError || writeRefusal }),
         /* @__PURE__ */ (0, import_jsx_runtime278.jsxs)("div", { className: "delivery-workspace", children: [
           /* @__PURE__ */ (0, import_jsx_runtime278.jsxs)("div", { className: "delivery-kpi-grid", children: [
@@ -231542,7 +231787,9 @@ function DeliveryWorkspace() {
               kind: searchQuery || statusFilter !== "All" ? "no-results" : "nothing-yet",
               title: searchQuery || statusFilter !== "All" ? "No matching deliveries" : "No deliveries scheduled",
               description: searchQuery || statusFilter !== "All" ? "No dispatch records matched your active search query or status filter." : "Dispatch records and courier runs will appear here as bookings get scheduled for delivery.",
-              actionLabel: searchQuery || statusFilter !== "All" ? "Clear Filters" : canChange && !writeRefusal ? "+ New Dispatch" : void 0,
+              ...searchQuery || statusFilter !== "All" || canChange && !writeRefusal ? {
+                actionLabel: searchQuery || statusFilter !== "All" ? "Clear Filters" : "+ New Dispatch"
+              } : {},
               onAction: () => {
                 if (searchQuery || statusFilter !== "All") {
                   setSearchQuery("");
@@ -231818,7 +232065,7 @@ function DeliveryWorkspace() {
                       d3.deliveredAt.slice(11)
                     ] })
                   ] }),
-                  canMoney && /* @__PURE__ */ (0, import_jsx_runtime278.jsx)("td", { style: { fontWeight: 700, color: "var(--text)", fontVariantNumeric: "tabular-nums" }, children: formatMoney(rupees(d3.deliveryFeeNpr)) }),
+                  canMoney && /* @__PURE__ */ (0, import_jsx_runtime278.jsx)("td", { style: { fontWeight: 700, color: "var(--text)", fontVariantNumeric: "tabular-nums" }, children: d3.deliveryFeeNpr === void 0 ? "Unavailable" : formatMoney(rupees(d3.deliveryFeeNpr)) }),
                   /* @__PURE__ */ (0, import_jsx_runtime278.jsx)("td", { style: { textAlign: "right" }, children: /* @__PURE__ */ (0, import_jsx_runtime278.jsxs)("div", { style: { display: "inline-flex", gap: "6px", alignItems: "center" }, children: [
                     /* @__PURE__ */ (0, import_jsx_runtime278.jsxs)(
                       "button",
@@ -232377,7 +232624,7 @@ function DeliveryWorkspace() {
                       gatePassSlip.vehiclePlate || "N/A"
                     ] })
                   ] }),
-                  gatePassSlip.notes && /* @__PURE__ */ (0, import_jsx_runtime278.jsxs)("div", { style: { border: "1px dashed var(--border)", padding: "10px 12px", borderRadius: "var(--r-xs)", marginBottom: "20px", background: "var(--surface2)" }, children: [
+                  canMoney && gatePassSlip.notes && /* @__PURE__ */ (0, import_jsx_runtime278.jsxs)("div", { style: { border: "1px dashed var(--border)", padding: "10px 12px", borderRadius: "var(--r-xs)", marginBottom: "20px", background: "var(--surface2)" }, children: [
                     /* @__PURE__ */ (0, import_jsx_runtime278.jsx)("strong", { children: "Special Instructions:" }),
                     " ",
                     gatePassSlip.notes
@@ -232435,7 +232682,6 @@ var init_DeliveryWorkspace = __esm({
     init_auth();
     init_network();
     init_rbac();
-    init_supabase();
     init_delivery();
     init_Toast();
     init_bs();
@@ -236659,6 +236905,9 @@ var init_InternalNotesPage = __esm({
   }
 });
 
+// artifacts/finance-delivery-verification-2026-10-14/preview-entry.tsx
+init_define_import_meta_env();
+
 // src/main.tsx
 init_define_import_meta_env();
 var import_react248 = __toESM(require_react(), 1);
@@ -239308,7 +239557,7 @@ function Header({ crumbs, actions }) {
                 alignItems: "center",
                 justifyContent: "center",
                 flex: "1 1 auto",
-                minWidth: 0,
+                minWidth: !searchConfig && !isDispatch && !ws?.hasPageSearch ? 44 : 0,
                 maxWidth: isTablet ? "320px" : "460px",
                 gap: 8,
                 margin: "0 auto"
@@ -239393,17 +239642,18 @@ function Header({ crumbs, actions }) {
                       alignItems: "center",
                       gap: "var(--sp-sm)",
                       width: "100%",
-                      flexShrink: 1,
-                      minWidth: 0,
+                      flexShrink: 0,
+                      minWidth: 44,
                       height: 44,
                       minHeight: 44,
                       /* TouchInset compliant (Law 15) */
-                      padding: "0 14px",
+                      padding: "0 10px",
                       borderRadius: "var(--r-input)",
                       background: "var(--input-bg)",
                       border: "1px solid var(--input-border)",
                       boxShadow: "var(--specular-rim), 0 1px 3px rgba(0, 0, 0, 0.04)",
                       boxSizing: "border-box",
+                      overflow: "hidden",
                       cursor: "pointer",
                       textAlign: "left",
                       transition: "border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease)"
@@ -242454,6 +242704,10 @@ if (REFERENCE_CASE_ERROR) {
   if (IS_MOCK) void loadMockClient().then(renderApp);
   else renderApp();
 }
+
+// artifacts/finance-delivery-verification-2026-10-14/preview-entry.tsx
+init_supabase();
+Object.assign(window, { verificationBackend: supabase });
 /*! Bundled license information:
 
 react/cjs/react.development.js:

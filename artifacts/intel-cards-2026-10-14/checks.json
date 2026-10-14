@@ -152,5 +152,16 @@
     "entries": 2,
     "overflow": false,
     "viewport": 360
+  },
+  {
+    "check": "client-rental-link",
+    "url": "http://localhost:3000/clients",
+    "dialogs": 1,
+    "backAvailable": 1
+  },
+  {
+    "check": "client-back",
+    "url": "http://localhost:3000/clients",
+    "dialogs": 1
   }
 ]

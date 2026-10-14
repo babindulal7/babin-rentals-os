@@ -64,7 +64,7 @@ Exit 0 certifies only the named read-only checks. Exit 1 means assertion failure
 
 These expectations follow current `src/lib/rbac.ts` and the stricter permission authority. A broader module-level “Finance allowed” entry does not grant payment recording. Database enforcement remains the final authority.
 
-| Role | Money visible | Pay / `payment.create` online | Floor sessions / `operations.perform` | Settings mutation |
+| Role | Money visible | Pay / `payment.create` online | Floor sessions / `operations.perform` | Staff/system administration / `canManageSettings` |
 |---|---|---|---|---|
 | Owner | Yes | Allow | Allow | Allow |
 | Admin | Yes | Deny | Allow | Deny |
@@ -77,6 +77,8 @@ These expectations follow current `src/lib/rbac.ts` and the stricter permission 
 | Client | No | Deny | Deny | Deny |
 
 Delivery currently has **no implemented server action or verified assigned-trip access**. The local preview allows mutations only for the intersection of `canPerformOperations` and `canViewMoney` (Owner/Admin/Manager), refuses offline, and refuses every live mutation. Driver reads are refused until assignment access is connected. The floor-session column must not be assumed to authorize Dispatch/Confirm Delivered. This missing server contract is an additional release limitation; record-dependent local preview verification belongs in the integrated action report.
+
+The administration column describes the `canManageSettings` gate, not personal preferences or every specialized settings endpoint. Each specialized server operation retains its own authoritative permission check.
 
 For each real role session on staging:
 

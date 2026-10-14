@@ -1,0 +1,439 @@
+{
+  "results": [
+    {
+      "name": "Finance Owner Pay visibility",
+      "passed": true,
+      "payButtons": 25
+    },
+    {
+      "name": "Finance Owner actual payment inserts one row",
+      "passed": true,
+      "added": [
+        {
+          "id": "9610651d-ee1e-4e98-8734-05da08de7c2e",
+          "created_at": "2026-10-14T16:27:35.388Z",
+          "client_uuid": "c373feae-bcb9-44b5-8980-9820dbc8c136",
+          "payment_no": "PAY-2026-0001",
+          "booking_id": "2ed06474-7bd4-be0e-3e9b-25d0e925188d",
+          "invoice_id": "e023eb87-87dc-c600-fbfe-06d1755a69df",
+          "client_id": "62eb61b1-439b-d466-e6d6-0d9fc78fc798",
+          "branch_id": null,
+          "amount": 123.45,
+          "payment_type": "Advance Payment",
+          "status": "Received",
+          "transaction_ref": "LOCAL-VERIFY-Owner",
+          "notes": "Method: Bank Transfer",
+          "received_by": "8788b5fd-3e7f-1832-b14c-bc8298ef1b11",
+          "payment_date": "2026-10-14T16:27:35.388Z"
+        }
+      ]
+    },
+    {
+      "name": "Finance Owner amount and invoice preserved",
+      "passed": true
+    },
+    {
+      "name": "Finance Owner payment persists reload",
+      "passed": true
+    },
+    {
+      "name": "Finance Owner offline refusal is inline",
+      "passed": true
+    },
+    {
+      "name": "Finance Owner offline writes none",
+      "passed": true
+    },
+    {
+      "name": "Finance Admin Pay visibility",
+      "passed": true,
+      "payButtons": 0
+    },
+    {
+      "name": "Finance Manager Pay visibility",
+      "passed": true,
+      "payButtons": 0
+    },
+    {
+      "name": "Finance Coordinator Pay visibility",
+      "passed": true,
+      "payButtons": 25
+    },
+    {
+      "name": "Finance Coordinator actual payment inserts one row",
+      "passed": true,
+      "added": [
+        {
+          "id": "f7452ccf-40ac-4a0f-9860-be73ac8275cf",
+          "created_at": "2026-10-14T16:27:47.393Z",
+          "client_uuid": "58189874-4271-4949-acda-05e8a32ec5b3",
+          "payment_no": "PAY-2026-0001",
+          "booking_id": "2ed06474-7bd4-be0e-3e9b-25d0e925188d",
+          "invoice_id": "e023eb87-87dc-c600-fbfe-06d1755a69df",
+          "client_id": "62eb61b1-439b-d466-e6d6-0d9fc78fc798",
+          "branch_id": null,
+          "amount": 123.45,
+          "payment_type": "Advance Payment",
+          "status": "Received",
+          "transaction_ref": "LOCAL-VERIFY-Coordinator",
+          "notes": "Method: Bank Transfer",
+          "received_by": "8788b5fd-3e7f-1832-b14c-bc8298ef1b11",
+          "payment_date": "2026-10-14T16:27:47.393Z"
+        }
+      ]
+    },
+    {
+      "name": "Finance Coordinator amount and invoice preserved",
+      "passed": true
+    },
+    {
+      "name": "Finance Coordinator payment persists reload",
+      "passed": true
+    },
+    {
+      "name": "Finance Coordinator offline refusal is inline",
+      "passed": true
+    },
+    {
+      "name": "Finance Coordinator offline writes none",
+      "passed": true
+    },
+    {
+      "name": "Finance Accounts Pay visibility",
+      "passed": true,
+      "payButtons": 25
+    },
+    {
+      "name": "Finance Accounts actual payment inserts one row",
+      "passed": true,
+      "added": [
+        {
+          "id": "ea55fa72-8ceb-476f-893d-a2f223ff768c",
+          "created_at": "2026-10-14T16:27:53.572Z",
+          "client_uuid": "28daf13e-8ee7-4aac-b923-fb86a24bb79f",
+          "payment_no": "PAY-2026-0001",
+          "booking_id": "2ed06474-7bd4-be0e-3e9b-25d0e925188d",
+          "invoice_id": "e023eb87-87dc-c600-fbfe-06d1755a69df",
+          "client_id": "62eb61b1-439b-d466-e6d6-0d9fc78fc798",
+          "branch_id": null,
+          "amount": 123.45,
+          "payment_type": "Advance Payment",
+          "status": "Received",
+          "transaction_ref": "LOCAL-VERIFY-Accounts",
+          "notes": "Method: Bank Transfer",
+          "received_by": "8788b5fd-3e7f-1832-b14c-bc8298ef1b11",
+          "payment_date": "2026-10-14T16:27:53.572Z"
+        }
+      ]
+    },
+    {
+      "name": "Finance Accounts amount and invoice preserved",
+      "passed": true
+    },
+    {
+      "name": "Finance Accounts payment persists reload",
+      "passed": true
+    },
+    {
+      "name": "Finance Accounts offline refusal is inline",
+      "passed": true
+    },
+    {
+      "name": "Finance Accounts offline writes none",
+      "passed": true
+    },
+    {
+      "name": "Finance Warehouse Pay visibility",
+      "passed": true,
+      "payButtons": 0
+    },
+    {
+      "name": "Finance Warehouse money omitted",
+      "passed": true
+    },
+    {
+      "name": "Finance Technician Pay visibility",
+      "passed": true,
+      "payButtons": 0
+    },
+    {
+      "name": "Finance Technician money omitted",
+      "passed": true
+    },
+    {
+      "name": "Finance Driver Pay visibility",
+      "passed": true,
+      "payButtons": 0
+    },
+    {
+      "name": "Finance Driver money omitted",
+      "passed": true
+    },
+    {
+      "name": "Finance Client Pay visibility",
+      "passed": true,
+      "payButtons": 0
+    },
+    {
+      "name": "Finance Client money omitted",
+      "passed": true
+    },
+    {
+      "name": "Delivery Owner mutation visibility",
+      "passed": true
+    },
+    {
+      "name": "Delivery Owner dispatch local state",
+      "passed": true,
+      "record": {
+        "id": "DEL-2602",
+        "bookingNo": "BR-2611",
+        "clientName": "Kathmandu Ad Lab",
+        "clientPhone": "+977 9801122334",
+        "address": "Naxal, Kathmandu (Opposite Narayanhiti Gate 3)",
+        "neighborhood": "Naxal",
+        "mode": "Courier / Rider",
+        "driverName": "Ramesh Thapa (Pathao Rider)",
+        "driverPhone": "+977 9813009988",
+        "vehiclePlate": "Ba 92 Pa 3314",
+        "status": "In Transit",
+        "scheduledDate": "2026-07-14",
+        "scheduledTime": "11:00",
+        "deliveryFeeNpr": 1500,
+        "notes": "Collect advance Rs 24,500 before equipment release.",
+        "packageSealNo": "BR-SEAL-883",
+        "gatePassNo": "GP-0413",
+        "dispatchedAt": "2026-10-14 22:13"
+      }
+    },
+    {
+      "name": "Delivery Owner empty recipient disables confirmation",
+      "passed": true
+    },
+    {
+      "name": "Delivery Owner actual confirm local changes",
+      "passed": true,
+      "record": {
+        "id": "DEL-2602",
+        "bookingNo": "BR-2611",
+        "clientName": "Kathmandu Ad Lab",
+        "clientPhone": "+977 9801122334",
+        "address": "Naxal, Kathmandu (Opposite Narayanhiti Gate 3)",
+        "neighborhood": "Naxal",
+        "mode": "Courier / Rider",
+        "driverName": "Ramesh Thapa (Pathao Rider)",
+        "driverPhone": "+977 9813009988",
+        "vehiclePlate": "Ba 92 Pa 3314",
+        "status": "Delivered",
+        "scheduledDate": "2026-07-14",
+        "scheduledTime": "11:00",
+        "deliveryFeeNpr": 1500,
+        "notes": "Collect advance Rs 24,500 before equipment release. · Local test handover",
+        "packageSealNo": "BR-SEAL-883",
+        "gatePassNo": "GP-0413",
+        "dispatchedAt": "2026-10-14 22:13",
+        "deliveredAt": "2026-10-14 22:13",
+        "recipientName": "Local Verification Receiver"
+      }
+    },
+    {
+      "name": "Delivery Owner persisted reload",
+      "passed": true
+    },
+    {
+      "name": "Delivery Owner offline controls disabled",
+      "passed": true
+    },
+    {
+      "name": "Delivery Owner offline explanation",
+      "passed": true
+    },
+    {
+      "name": "Delivery Admin mutation visibility",
+      "passed": true
+    },
+    {
+      "name": "Delivery Admin dispatch local state",
+      "passed": true,
+      "record": {
+        "id": "DEL-2602",
+        "bookingNo": "BR-2611",
+        "clientName": "Kathmandu Ad Lab",
+        "clientPhone": "+977 9801122334",
+        "address": "Naxal, Kathmandu (Opposite Narayanhiti Gate 3)",
+        "neighborhood": "Naxal",
+        "mode": "Courier / Rider",
+        "driverName": "Ramesh Thapa (Pathao Rider)",
+        "driverPhone": "+977 9813009988",
+        "vehiclePlate": "Ba 92 Pa 3314",
+        "status": "In Transit",
+        "scheduledDate": "2026-07-14",
+        "scheduledTime": "11:00",
+        "deliveryFeeNpr": 1500,
+        "notes": "Collect advance Rs 24,500 before equipment release.",
+        "packageSealNo": "BR-SEAL-883",
+        "gatePassNo": "GP-0413",
+        "dispatchedAt": "2026-10-14 22:13"
+      }
+    },
+    {
+      "name": "Delivery Admin empty recipient disables confirmation",
+      "passed": true
+    },
+    {
+      "name": "Delivery Admin actual confirm local changes",
+      "passed": true,
+      "record": {
+        "id": "DEL-2602",
+        "bookingNo": "BR-2611",
+        "clientName": "Kathmandu Ad Lab",
+        "clientPhone": "+977 9801122334",
+        "address": "Naxal, Kathmandu (Opposite Narayanhiti Gate 3)",
+        "neighborhood": "Naxal",
+        "mode": "Courier / Rider",
+        "driverName": "Ramesh Thapa (Pathao Rider)",
+        "driverPhone": "+977 9813009988",
+        "vehiclePlate": "Ba 92 Pa 3314",
+        "status": "Delivered",
+        "scheduledDate": "2026-07-14",
+        "scheduledTime": "11:00",
+        "deliveryFeeNpr": 1500,
+        "notes": "Collect advance Rs 24,500 before equipment release. · Local test handover",
+        "packageSealNo": "BR-SEAL-883",
+        "gatePassNo": "GP-0413",
+        "dispatchedAt": "2026-10-14 22:13",
+        "deliveredAt": "2026-10-14 22:13",
+        "recipientName": "Local Verification Receiver"
+      }
+    },
+    {
+      "name": "Delivery Admin persisted reload",
+      "passed": true
+    },
+    {
+      "name": "Delivery Admin offline controls disabled",
+      "passed": true
+    },
+    {
+      "name": "Delivery Admin offline explanation",
+      "passed": true
+    },
+    {
+      "name": "Delivery Manager mutation visibility",
+      "passed": true
+    },
+    {
+      "name": "Delivery Manager dispatch local state",
+      "passed": true,
+      "record": {
+        "id": "DEL-2602",
+        "bookingNo": "BR-2611",
+        "clientName": "Kathmandu Ad Lab",
+        "clientPhone": "+977 9801122334",
+        "address": "Naxal, Kathmandu (Opposite Narayanhiti Gate 3)",
+        "neighborhood": "Naxal",
+        "mode": "Courier / Rider",
+        "driverName": "Ramesh Thapa (Pathao Rider)",
+        "driverPhone": "+977 9813009988",
+        "vehiclePlate": "Ba 92 Pa 3314",
+        "status": "In Transit",
+        "scheduledDate": "2026-07-14",
+        "scheduledTime": "11:00",
+        "deliveryFeeNpr": 1500,
+        "notes": "Collect advance Rs 24,500 before equipment release.",
+        "packageSealNo": "BR-SEAL-883",
+        "gatePassNo": "GP-0413",
+        "dispatchedAt": "2026-10-14 22:13"
+      }
+    },
+    {
+      "name": "Delivery Manager empty recipient disables confirmation",
+      "passed": true
+    },
+    {
+      "name": "Delivery Manager actual confirm local changes",
+      "passed": true,
+      "record": {
+        "id": "DEL-2602",
+        "bookingNo": "BR-2611",
+        "clientName": "Kathmandu Ad Lab",
+        "clientPhone": "+977 9801122334",
+        "address": "Naxal, Kathmandu (Opposite Narayanhiti Gate 3)",
+        "neighborhood": "Naxal",
+        "mode": "Courier / Rider",
+        "driverName": "Ramesh Thapa (Pathao Rider)",
+        "driverPhone": "+977 9813009988",
+        "vehiclePlate": "Ba 92 Pa 3314",
+        "status": "Delivered",
+        "scheduledDate": "2026-07-14",
+        "scheduledTime": "11:00",
+        "deliveryFeeNpr": 1500,
+        "notes": "Collect advance Rs 24,500 before equipment release. · Local test handover",
+        "packageSealNo": "BR-SEAL-883",
+        "gatePassNo": "GP-0413",
+        "dispatchedAt": "2026-10-14 22:13",
+        "deliveredAt": "2026-10-14 22:13",
+        "recipientName": "Local Verification Receiver"
+      }
+    },
+    {
+      "name": "Delivery Manager persisted reload",
+      "passed": true
+    },
+    {
+      "name": "Delivery Manager offline controls disabled",
+      "passed": true
+    },
+    {
+      "name": "Delivery Manager offline explanation",
+      "passed": true
+    },
+    {
+      "name": "Delivery Coordinator mutation visibility",
+      "passed": true
+    },
+    {
+      "name": "Delivery Accounts mutation visibility",
+      "passed": true
+    },
+    {
+      "name": "Delivery Warehouse mutation visibility",
+      "passed": true
+    },
+    {
+      "name": "Delivery Technician mutation visibility",
+      "passed": true
+    },
+    {
+      "name": "Delivery Driver mutation visibility",
+      "passed": true
+    },
+    {
+      "name": "Delivery Driver unscoped contacts omitted",
+      "passed": true
+    },
+    {
+      "name": "Delivery Driver explicit unavailable",
+      "passed": true
+    },
+    {
+      "name": "Delivery Client mutation visibility",
+      "passed": true
+    },
+    {
+      "name": "Delivery Client unscoped contacts omitted",
+      "passed": true
+    },
+    {
+      "name": "Delivery Client explicit unavailable",
+      "passed": true
+    },
+    {
+      "name": "No page errors",
+      "passed": true,
+      "errors": []
+    }
+  ],
+  "failures": [],
+  "errors": []
+}

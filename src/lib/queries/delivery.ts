@@ -69,7 +69,7 @@ export interface DeliveryRecord {
   scheduledTime: string
   dispatchedAt?: string
   deliveredAt?: string
-  deliveryFeeNpr: number
+  deliveryFeeNpr?: number
   notes?: string
   recipientName?: string
   packageSealNo?: string
@@ -173,16 +173,18 @@ const STORAGE_KEY = 'babin_rentals_deliveries_v1'
 export function getDeliveries(role: SystemRole | null): DeliveryRecord[] {
   // Local sample records cannot stand in for live deliveries.
   if (deliveryReadRefusal(role)) return []
-  if (typeof window === 'undefined') return INITIAL_DELIVERIES
+  const visible = (records: DeliveryRecord[]): DeliveryRecord[] => role && canViewMoney(role) ? records : records.map(({ deliveryFeeNpr: _fee, notes: _notes, ...record }) => record)
+  const initial = import.meta.env['VITE_MOCK_SEEDED'] === 'true' ? INITIAL_DELIVERIES : []
+  if (typeof window === 'undefined') return visible(initial)
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_DELIVERIES))
-      return INITIAL_DELIVERIES
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(initial))
+      return visible(initial)
     }
-    return JSON.parse(raw) as DeliveryRecord[]
+    return visible(JSON.parse(raw) as DeliveryRecord[])
   } catch {
-    return INITIAL_DELIVERIES
+    return visible(initial)
   }
 }
 

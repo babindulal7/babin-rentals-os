@@ -32,6 +32,9 @@ describe('KpiStrip extra information lives in one (i) tooltip', () => {
     expect(c.textContent).not.toContain('From orders in the period')
     const buttons = c.querySelectorAll('button[aria-label="About Revenue"]')
     expect(buttons).toHaveLength(1)
+    const trigger = buttons[0] as HTMLButtonElement
+    expect(trigger.style.minWidth).toBe('44px')
+    expect(trigger.style.minHeight).toBe('44px')
     act(() => {
       buttons[0]?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
       buttons[0]?.dispatchEvent(new FocusEvent('focus'))
@@ -39,6 +42,7 @@ describe('KpiStrip extra information lives in one (i) tooltip', () => {
     const tip = document.querySelector('[role="tooltip"]')
     expect(tip?.textContent).toContain('Excl. taxes')
     expect(tip?.textContent).toContain('From orders in the period')
+    expect(trigger.getAttribute('aria-describedby')).toBe(tip?.id)
   })
 
   it('shows no tooltip trigger when there is nothing to explain, and keeps `detail` visible', () => {

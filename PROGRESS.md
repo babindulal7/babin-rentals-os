@@ -1,5 +1,44 @@
 # Progress Log
 
+## 2026-10-14 — Equipment and Client Intel browser acceptance; sticky tabs and contained portal clicks
+
+**Did**
+- Reconnected the existing Chrome tab. Current server identified mock mode; checked the supplied sample records at measured 1440px desktop, 769px tablet and 360px phone CSS widths.
+- Fixed Equipment tabs scrolling out of view: shared Preview tabs now stay sticky across entity cards. Kept the existing rental sticky total/warning summary.
+- Reproduced Intel tab clicks opening Inventory's separate row quick-view drawer. Contained React portal clicks from the Intel overlay and touch sheet so card controls cannot activate the originating row. Extended the focused-control regression to assert the parent row action is not invoked.
+- Drove Equipment and Client tabs, complete Current lists, phone long press, Notes-only editor mounting, client-to-rental replacement and Back. Saved six screenshots and measured rectangles/counts under artifacts/intel-cards-2026-10-14/.
+- Disabled temporary touch emulation and successfully reset the viewport override. Preserved the existing browser zoom and all app records; no notes, block flags, payments or transitions were saved.
+
+**Ruled**
+- No new product, permission or workflow decision. Card interaction fixes preserve existing action and database authority.
+- No migration was WRITTEN, APPLIED or PRODUCTION-VERIFIED. Existing migration chain locally VERIFIED by both database gates. No live Supabase changes or production deployment.
+- Mock browser acceptance is not real authenticated-role acceptance. Requested an existing signed-in Warehouse or Accounts live test session, without asking for passwords. No such session was available during this run; live checks remain pending.
+
+**Verified**
+- Continuation session check: the only available Babin browser tab still displays the mock-mode banner. No signed-in live Warehouse/Accounts session is available; authenticated-role checks remain pending. No application records or permissions were changed.
+- Equipment: seven complete Current entries, no horizontal card overflow at all three measured widths, sticky tabs and final entries readable after scrolling. After the click fix, Notes to Current left exactly one dialog and zero notes editors in Current.
+- Client: both Current rentals rendered; no horizontal card overflow at all three widths. Notes had one editor; Current had zero. Phone long press opened the sheet; rental #825 replaced it with Back available, and Back restored the client while the route stayed /clients and one dialog remained.
+- Identifier-only hover: contact-cell hover produced zero dialogs; name hover opened the card after the delay. Pointer entry into the card stayed open for another 400ms. Wall-clock samples include tool transport: zero dialogs at 39/176/301ms, one at 424ms. Exact 299/300ms boundary remains automated, not claimed from those samples. Initial and adjacent hover timers both remain 300ms, touch 500ms.
+- Required sequence PASS, exit 0: typecheck; full suite 348 files / 4,446 tests; PGlite 160/160 plus exposure/definer gates; lifecycle 30/30; production build (297 PWA entries). Full source lint and contrast PASS, 82/82. Focus/portal regression passed in the full run.
+- npm run completion executed; its generated block follows. Evidence: artifacts/intel-cards-2026-10-14/README.md and checks.json; gate logs .intel-cards-next-*.log.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-14T16:14:13.531Z). Suite: 4446/4446 passed (recorded 2026-10-14T16:18:43.7928454Z).
+Gates read from .lifecycle-result.json, written 2026-10-14T16:14:23.983Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Real authenticated Warehouse/Accounts role checks and a blocked live client/rental need the signed-in test session requested from the user. Current mock directory has zero blocked clients; no client was blocked to manufacture a case.
+- Existing blocked-client and role-omission DOM/payload and local RLS tests pass. Live JWT/PostgREST acceptance and production verification remain pending; visual acceptance completed here covers the selected Equipment/Client mock records.
+- Production deployment and live migration application remain outside this local verification.
 ## 2026-10-14 — Smart Intel live visual checks: persistent totals, touch targets and focus dismissal
 
 **Did**

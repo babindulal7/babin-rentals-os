@@ -57,6 +57,16 @@ beforeEach(() => {
 })
 
 describe('delivery local preview fail-closed writes', () => {
+  it('does not seed sample deliveries in an ordinary clean mock database', () => {
+    expect(getDeliveries('Owner')).toEqual([])
+  })
+  it.each(['Warehouse', 'Technician'] as const)('omits money and unstructured notes for %s', (role) => {
+    seed([{ ...blank({ notes: 'Collect advance Rs 24,500', status: 'Ready' }), id: 'DEL-2601' }])
+    const records = getDeliveries(role)
+    expect(records).toHaveLength(1)
+    expect(records[0]).not.toHaveProperty('deliveryFeeNpr')
+    expect(records[0]).not.toHaveProperty('notes')
+  })
   it.each(['Driver', 'Client', null] as const)('refuses unscoped internal records for %s', (role) => {
     seed([{ ...blank({ status: 'Ready' }), id: 'DEL-2601' }])
     expect(getDeliveries(role)).toEqual([])

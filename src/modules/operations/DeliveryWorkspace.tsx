@@ -109,7 +109,7 @@ export function DeliveryWorkspace() {
   const readyCount = deliveries.filter((d) => d.status === 'Ready').length
   const scheduledCount = deliveries.filter((d) => d.status === 'Scheduled').length
   const deliveredCount = deliveries.filter((d) => d.status === 'Delivered').length
-  const totalRevenue = deliveries.reduce((acc, d) => acc + (d.status === 'Delivered' ? d.deliveryFeeNpr : 0), 0)
+  const totalRevenue = deliveries.reduce((acc, d) => acc + (d.status === 'Delivered' ? d.deliveryFeeNpr ?? 0 : 0), 0)
 
   const handleOpenAssign = (rec: DeliveryRecord) => {
     if (writeRefusal) { setMutationError(writeRefusal); return }
@@ -172,24 +172,24 @@ export function DeliveryWorkspace() {
     }
     setCreateError(null)
     try {
-    const created = createDeliveryRecord({
-      bookingNo: newBookingNo.toUpperCase(),
-      clientName: newClientName,
-      clientPhone: newClientPhone,
-      address: newAddress,
-      neighborhood: newNeighborhood || 'Kathmandu Valley',
-      mode: newMode,
-      status: 'Scheduled',
-      scheduledDate: newDate,
-      scheduledTime: newTime,
-      deliveryFeeNpr: newMode === 'Babin Delivery' ? 3500 : 1500,
-      notes: newNotes,
-      gatePassNo: `GP-${Math.floor(1000 + Math.random() * 9000)}`,
-      packageSealNo: `BR-SEAL-${Math.floor(100 + Math.random() * 900)}`,
-    }, writeContext)
-    setDeliveries([created, ...deliveries])
-    setNewModalOpen(false)
-    showSuccessToast(`Local preview: created delivery order ${created.id}`)
+      const created = createDeliveryRecord({
+        bookingNo: newBookingNo.toUpperCase(),
+        clientName: newClientName,
+        clientPhone: newClientPhone,
+        address: newAddress,
+        neighborhood: newNeighborhood || 'Kathmandu Valley',
+        mode: newMode,
+        status: 'Scheduled',
+        scheduledDate: newDate,
+        scheduledTime: newTime,
+        deliveryFeeNpr: newMode === 'Babin Delivery' ? 3500 : 1500,
+        notes: newNotes,
+        gatePassNo: `GP-${Math.floor(1000 + Math.random() * 9000)}`,
+        packageSealNo: `BR-SEAL-${Math.floor(100 + Math.random() * 900)}`,
+      }, writeContext)
+      setDeliveries([created, ...deliveries])
+      setNewModalOpen(false)
+      showSuccessToast(`Local preview: created delivery order ${created.id}`)
     } catch (error) { setCreateError(error instanceof Error ? error.message : 'Delivery changes could not be saved.') }
   }
 
@@ -656,7 +656,7 @@ export function DeliveryWorkspace() {
                           {/* Fee */}
                           {canMoney && (
                             <td style={{ fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
-                              {formatMoney(rupees(d.deliveryFeeNpr))}
+                              {d.deliveryFeeNpr === undefined ? 'Unavailable' : formatMoney(rupees(d.deliveryFeeNpr))}
                             </td>
                           )}
 

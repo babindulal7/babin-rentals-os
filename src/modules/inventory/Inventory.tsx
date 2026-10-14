@@ -617,7 +617,7 @@ function ParentRowView({
             style={{ accentColor: 'var(--nav-active-accent)' }}
           />
         </td>
-        <td style={{ ...td, width: 34 }} onClick={(e) => e.stopPropagation()}>
+        <td style={{ ...td, width: 44 }} onClick={(e) => e.stopPropagation()}>
           {serialised ? (
             <button
               type="button"
@@ -625,8 +625,8 @@ function ParentRowView({
               aria-expanded={open}
               aria-label={`${open ? 'Collapse' : 'Expand'} ${row.name}`}
               style={{
-                width: 28,
-                height: 28,
+                width: 44,
+                height: 44,
                 borderRadius: 6,
                 border: '1px solid var(--border)',
                 background: open ? 'var(--nav-active-bg)' : 'var(--card2)',
@@ -691,7 +691,7 @@ function ParentRowView({
             {row.replacementValue === null ? <span style={{ color: 'var(--muted)' }}>—</span> : formatMoney(row.replacementValue)}
           </td>
         )}
-        <td style={{ ...td, width: 36, color: 'var(--muted)' }} onClick={(e) => e.stopPropagation()}>
+        <td style={{ ...td, width: 44, color: 'var(--muted)' }} onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
             onClick={() => onInspect(row)}
@@ -703,8 +703,8 @@ function ParentRowView({
               background: 'var(--card2)',
               color: 'var(--text2)',
               cursor: 'pointer',
-              width: 32,
-              height: 32,
+              width: 44,
+              height: 44,
               display: 'grid',
               placeItems: 'center',
               transition: 'all var(--dur-fast) var(--ease)',
@@ -2101,6 +2101,8 @@ export default function Inventory() {
                               }}
                               style={{
                                 display: 'inline-flex',
+                                minHeight: 44,
+                                minWidth: 44,
                                 alignItems: 'center',
                                 gap: 5,
                                 border: 'none',
@@ -2125,6 +2127,8 @@ export default function Inventory() {
                               }}
                               style={{
                                 display: 'inline-flex',
+                                minHeight: 44,
+                                minWidth: 44,
                                 alignItems: 'center',
                                 gap: 5,
                                 border: 'none',

@@ -37,6 +37,7 @@
 .ui-button--ghost:hover:not(:disabled),
 .ui-button--tertiary:hover:not(:disabled) { background: var(--hover-card) !important; border-color: var(--input-border) !important; }
 .ui-button:focus-visible { outline: 2px solid var(--input-focus); outline-offset: 2px; }
+.info-tooltip__trigger:focus-visible { outline: 2px solid var(--input-focus); outline-offset: 2px; }
 .overflow-menu__item:hover:not(:disabled) { background: var(--hover-card) !important; }
 .overflow-menu__item:focus-visible { outline: 2px solid var(--input-focus); outline-offset: -2px; background: var(--hover-card) !important; }
 .filter-bar__option[aria-pressed='false']:hover { background: var(--hover-card) !important; }

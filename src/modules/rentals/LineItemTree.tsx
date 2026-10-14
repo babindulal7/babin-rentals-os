@@ -187,7 +187,9 @@ export function LineItemTree({
                 key={mode}
                 type="button"
                 onClick={() => setActiveFilter(mode)}
+                aria-pressed={activeFilter === mode}
                 style={{
+                  minHeight: 44,
                   padding: '3px 10px',
                   fontSize: '0.775rem',
                   fontWeight: activeFilter === mode ? 600 : 500,
