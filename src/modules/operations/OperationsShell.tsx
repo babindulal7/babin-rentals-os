@@ -67,6 +67,8 @@ export interface OperationsShellProps {
   isOpen: boolean
   onClose: () => void
   initialJob?: JobName
+  /** `modal` (default) is the full-screen sheet; `panel` docks beside the queue at desktop width. */
+  layout?: 'modal' | 'panel'
   progress?: Partial<Record<JobName, { done: number; total: number }>>
 }
 
@@ -77,6 +79,7 @@ export default function OperationsShell({
   isOpen,
   onClose,
   initialJob = 'Pack',
+  layout = 'modal',
   progress,
 }: OperationsShellProps) {
   const [job, setJob] = useState<JobName>(initialJob)
@@ -185,6 +188,19 @@ export default function OperationsShell({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isOpen, liveStatus, requestJob])
 
+  // Panel layout has no Modal to own Esc, so it listens itself.
+  useEffect(() => {
+    if (!isOpen || layout !== 'panel') return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      const t = e.target as HTMLElement | null
+      if (t?.closest('[role="dialog"], [role="alertdialog"]')) return
+      requestClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isOpen, layout, requestClose])
+
   // Progression upon successful confirmation
   const completed = useCallback(async () => {
     const next = NEXT_JOB[job]
@@ -258,15 +274,45 @@ export default function OperationsShell({
       <ResetWorkspace key={`${bookingNo}:Reset`} {...workspaceProps} />
     )
 
-  return (
-    <>
-      <Modal
-        isOpen={isOpen}
-        onClose={requestClose}
-        size="full"
-        title={`Operations · ${bookingNo}${floor?.clientName ? ` · ${floor.clientName}` : ''}`}
-        subtitle={`${LABEL[job]} · Status: ${liveStatus}`}
-        footer={
+  const discardDialog = (
+      <ConfirmDialog
+        isOpen={pending !== null}
+        onClose={() => setPending(null)}
+        onConfirm={() => {
+          const choice = pending
+          setPending(null)
+          setActions(null)
+          if (choice?.type === 'switch') setJob(choice.job)
+          else if (choice?.type === 'prev') setJob(choice.job)
+          else if (choice?.type === 'close') onClose()
+        }}
+        title={
+          pending?.type === 'close'
+            ? 'Discard unsaved operations work?'
+            : 'You have unsaved changes.'
+        }
+        description={
+          pending?.type === 'close'
+            ? 'You have changes that have not been saved.'
+            : pending?.type === 'prev'
+              ? `Discard changes and go back to ${LABEL[pending.job]}?`
+              : 'Discard them and switch operations?'
+        }
+        cancelLabel={pending?.type === 'close' ? 'Keep Editing' : 'Stay Here'}
+        confirmLabel={
+          pending?.type === 'close'
+            ? 'Discard Changes'
+            : pending?.type === 'prev'
+              ? 'Discard & Go Back'
+              : 'Discard & Switch'
+        }
+        variant="danger"
+      />
+  )
+
+  const title = `Operations · ${bookingNo}${floor?.clientName ? ` · ${floor.clientName}` : ''}`
+  const subtitle = `${LABEL[job]} · Status: ${liveStatus}`
+  const footerNode = (
           <div
             style={{
               width: '100%',
@@ -296,8 +342,9 @@ export default function OperationsShell({
               </Button>
             </div>
           </div>
-        }
-      >
+  )
+  const bodyNode = (
+    <>
         <nav
           aria-label="Operation stage"
           className="operations-shell__stages"
@@ -424,42 +471,43 @@ export default function OperationsShell({
         <Suspense fallback={<LoadingSkeleton type="card" label={`Loading ${LABEL[job]}…`} />}>
           {workspace}
         </Suspense>
+    </>
+  )
+
+  if (layout === 'panel') {
+    if (!isOpen) return null
+    return (
+      <>
+        <section className="operations-shell__panel" aria-label={title}>
+          <header className="operations-shell__panel-head">
+            <div style={{ minWidth: 0 }}>
+              <h2 className="operations-shell__panel-title">{title}</h2>
+              <p className="operations-shell__panel-sub">{subtitle}</p>
+            </div>
+            <Button variant="ghost" icon="close" aria-label="Close panel (Esc)" onClick={requestClose} style={{ minHeight: 'var(--tap)' }}>Close</Button>
+          </header>
+          <div className="operations-shell__panel-body">{bodyNode}</div>
+          <footer className="operations-shell__panel-foot">{footerNode}</footer>
+        </section>
+        {discardDialog}
+      </>
+    )
+  }
+
+  return (
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={requestClose}
+        size="full"
+        title={title}
+        subtitle={subtitle}
+        footer={footerNode}
+      >
+        {bodyNode}
       </Modal>
 
-      {/* Discard confirmation dialog */}
-      <ConfirmDialog
-        isOpen={pending !== null}
-        onClose={() => setPending(null)}
-        onConfirm={() => {
-          const choice = pending
-          setPending(null)
-          setActions(null)
-          if (choice?.type === 'switch') setJob(choice.job)
-          else if (choice?.type === 'prev') setJob(choice.job)
-          else if (choice?.type === 'close') onClose()
-        }}
-        title={
-          pending?.type === 'close'
-            ? 'Discard unsaved operations work?'
-            : 'You have unsaved changes.'
-        }
-        description={
-          pending?.type === 'close'
-            ? 'You have changes that have not been saved.'
-            : pending?.type === 'prev'
-              ? `Discard changes and go back to ${LABEL[pending.job]}?`
-              : 'Discard them and switch operations?'
-        }
-        cancelLabel={pending?.type === 'close' ? 'Keep Editing' : 'Stay Here'}
-        confirmLabel={
-          pending?.type === 'close'
-            ? 'Discard Changes'
-            : pending?.type === 'prev'
-              ? 'Discard & Go Back'
-              : 'Discard & Switch'
-        }
-        variant="danger"
-      />
+      {discardDialog}
     </>
   )
 }

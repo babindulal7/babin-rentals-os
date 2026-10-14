@@ -10,7 +10,7 @@ import { FastReturnModal } from '../rentals/modals/FastReturnModal'
 import { BarcodeLookupModal } from '../rentals/modals/BarcodeLookupModal'
 import { CasesWorkspace } from './CasesWorkspace'
 import { STATUS } from '../../lib/status'
-import { statusToken, JOBS as JOBS_META, type JobName } from '../../lib/workflow'
+import { statusToken, JOBS as JOBS_META, type JobName, type BookingStatus } from '../../lib/workflow'
 import { listBookings, overdue, quotesExpiring, type BookingListRow } from '../../lib/queries/bookings'
 import { useList, type ListResult } from '../../lib/queries/useList'
 import type { ListFilters } from '../../lib/queries/listQuery'
@@ -35,6 +35,7 @@ import {
 } from '../../lib/queries/operations'
 import AlertsPanel from '../today/AlertsPanel'
 import { useViewport } from '../../lib/device'
+import OperationsShell from './OperationsShell'
 import { kathmanduCivil, NPT_OFFSET_MIN, getBusinessToday } from '../../lib/bs'
 import { CalendarPopover, DateField } from '../../components/ui/DateField'
 import { FilterButton, FilterDrawer, FilterSection } from '../../components/ui/FilterDrawer'
@@ -445,8 +446,12 @@ export default function OperationsQueues() {
     const match = route.match(/^\/rentals\/([^/]+)\/(packing|handover|return|reset)$/)
     if (!match) { routeNavigate(route); return }
     const row = jobs.find((candidate) => candidate.bookingNo === match[1])
-    if (row) openOperations(row.bookingNo, row.stage, row.job)
+    if (!row) return
+    /* Desktop (≥1280): dock the job beside the queue; narrower widths keep the full-screen sheet. */
+    if (viewport === 'desktop') setDock({ bookingNo: row.bookingNo, stage: row.stage, job: row.job })
+    else openOperations(row.bookingNo, row.stage, row.job)
   }
+  const [dock, setDock] = useState<{ bookingNo: string; stage: BookingStatus; job: JobName } | null>(null)
   const [params, setParams] = useSearchParams()
   const [fastReturnOpen, setFastReturnOpen] = useState(false)
   const [barcodeModalOpen, setBarcodeModalOpen] = useState(false)
@@ -464,6 +469,7 @@ export default function OperationsQueues() {
   /* Law 13/14 — width decides, at v4.1 §7.7's 768 / 1280. */
   const viewport = useViewport()
   const tabular = viewport !== 'phone'
+  const dockOpen = dock !== null && viewport === 'desktop'
 
   /* The URL is the state (§5.1). `?queue=packing` and `?quick=pickup` are
      mutually exclusive — setting either clears the other — so a queue is
@@ -817,6 +823,7 @@ export default function OperationsQueues() {
       </>}
 
       {selected === 'Cases' ? <CasesWorkspace embedded /> : (
+        <div className={`operations-v2__split${dockOpen ? ' operations-v2__split--open' : ''}`}>
         <Card style={{ overflow: 'hidden' }} bodyStyle={{ padding: 0 }}>
           <PageBody
             loading={list.loading}
@@ -897,7 +904,8 @@ export default function OperationsQueues() {
                     {pagedJobs.map((job) => (
                       <tr
                         key={job.id}
-                        className="operations-v2__row"
+                        className={dockOpen && dock?.bookingNo === job.bookingNo ? 'operations-v2__row operations-v2__row--active' : 'operations-v2__row'}
+                        aria-selected={dockOpen && dock?.bookingNo === job.bookingNo ? true : undefined}
                         style={{ borderLeft: job.isPastDue ? '2px solid var(--danger)' : '2px solid transparent' }}
                         /* A click anywhere on the row's blank space opens the booking (8 Oct 2026,
                            RULINGS-2026-10-08.md). Links, buttons and the checkbox keep their own
@@ -986,6 +994,18 @@ export default function OperationsQueues() {
             </div>
           )}
         </Card>
+        {dockOpen && dock && (
+          <OperationsShell
+            key={dock.bookingNo}
+            layout="panel"
+            isOpen
+            bookingNo={dock.bookingNo}
+            bookingStatus={dock.stage}
+            initialJob={dock.job}
+            onClose={() => setDock(null)}
+          />
+        )}
+        </div>
       )}
       </div>
 

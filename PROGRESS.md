@@ -1,5 +1,34 @@
 # Progress Log
 
+## 2026-10-14 — Desktop Operations: job docks beside the queue (≥1280px)
+
+**Did**
+- At desktop width (`useViewport() === 'desktop'`) the queue row verb (Pack / Handover / Return / Reset) now opens the job in a docked side panel instead of a full-screen modal, so the queue stays visible and the active row is highlighted (`operations-v2__row--active`, `aria-selected`). Close with the X or Esc; stage tabs, 1–4 keys, dirty-discard dialog and confirm-and-next flow are the existing `OperationsShell` logic, unchanged.
+- `OperationsShell` gained `layout: 'modal' | 'panel'` (default modal, so Rentals List / Booking Detail callers are untouched). Tablet and phone keep the full-screen sheet. Files: `OperationsShell.tsx`, `OperationsQueues.tsx`, `operationsShell.css`.
+- Tests: `operationRoutes.test.tsx` now covers docked-at-desktop (panel, no dialog, one queue table, active row, close) and modal-below-desktop.
+
+**Ruled**
+- No product, permission, schema or migration change. Row click (opens booking) and booking link behaviour are unchanged (8 Oct ruling). Revert = remove the `dock` state and `<OperationsShell layout="panel">` block in `OperationsQueues.tsx`.
+
+**Verified**
+- `npm run typecheck` exit 0; eslint on `src/modules/operations` clean; `lint:shell` and `lint:ui-copy` pass; `check:contrast` 82/82; full suite 349 files / 4,452 tests passed; `check:lifecycle` 30/30.
+- Browser (Chromium, mock mode, owner sign-in): `/operations` loads at 1440 and 1024 with zero page errors. The mock database has no bookings, so **the dock itself was not driven in a browser**; it is verified by jsdom tests only. `check:pglite` was not re-run (no migration touched).
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Counted by `npm run completion`, not typed. check:pglite figure is from an earlier run (not re-run this session).
+
+## Remaining
+- Drive the dock in a browser with real booking rows at 1280/1440/1920 (needs seeded or staging bookings); check the table's 900px min-width scrolls acceptably beside a 44% panel.
+- Next desktop items: Rentals/Clients/Inventory density and detail rail, New Rental catalogue + summary, keyboard shortcuts (docs/audit/08_RESPONSIVE_AUDIT.md).
+
 ## 2026-10-14 — Button audit fixes: browser finish and local verification
 
 **Did**
