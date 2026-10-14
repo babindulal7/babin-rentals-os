@@ -2236,7 +2236,8 @@ function ConditionPicker({
             aria-checked={on}
             onClick={() => onChange(c)}
             style={{
-              height: compact ? 24 : 30,
+              height: 'var(--tap)',
+              minWidth: 'var(--tap)',
               padding: compact ? '0 7px' : '0 10px',
               borderRadius: 'var(--r-xs)',
               border: `1px solid ${on ? STATUS[CONDITION_TONE[c]].fg : 'var(--border)'}`,

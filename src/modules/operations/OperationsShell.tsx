@@ -1,5 +1,5 @@
 import { formatAd } from '../../lib/bs'
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { Button } from '../../components/ui/Page'
 import type { IconName } from '../../components/ui/Icon'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
@@ -9,7 +9,7 @@ import { JOB_ORDER, BOOKING_STATUS, JOBS, type BookingStatus, type JobName } fro
 import { stepWriteGate, stepDotState } from '../../lib/operationsShell'
 import { fetchFloorBooking, type FloorBooking } from '../../lib/queries/bookings'
 import { DomainEvents, EVENT_TYPES } from '../../events/eventBus'
-import { FloorPanelContext } from './floorPanelContext'
+import { FLOOR_TWO_COLUMN_MIN, FloorNarrowContext } from './floorPanelContext'
 import './operationsShell.css'
 
 const PackingWorkspace = lazy(() => import('../rentals/PackingWorkspace'))
@@ -266,14 +266,48 @@ export default function OperationsShell({
 
   const blockedHint = !isCurrentJobCompleted && actions && !actions.canComplete && !actions.dispatching ? (actions.blockedReason ?? null) : null
 
-  /* A toast sits bottom-right, exactly over the footer's Confirm button; lift it clear while a job is open. */
+  /* A toast sits bottom-right, exactly over the footer's Confirm button. Lift it to just above the
+     footer — measured, because the footer is taller on a phone (hint + two stacked buttons) than on
+     a desktop — while a job is open. */
+  const [footerEl, setFooterEl] = useState<HTMLElement | null>(null)
   useEffect(() => {
-    if (!isOpen) return
-    document.documentElement.style.setProperty('--toast-bottom', '104px')
+    if (!isOpen || !footerEl) return
+    const lift = () => {
+      const top = footerEl.getBoundingClientRect().top
+      document.documentElement.style.setProperty('--toast-bottom', `${Math.max(20, Math.round(window.innerHeight - top + 12))}px`)
+    }
+    lift()
+    window.addEventListener('resize', lift)
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(lift)
+    observer?.observe(footerEl)
     return () => {
+      window.removeEventListener('resize', lift)
+      observer?.disconnect()
       document.documentElement.style.removeProperty('--toast-bottom')
     }
-  }, [isOpen])
+  }, [isOpen, footerEl])
+
+  /* The room the workspace actually has, not the window's width: the dock is always narrow, and a
+     tablet held upright gives the full-screen sheet ~780px, which a list-plus-rail layout cannot
+     use. Narrow → the one-column layout. Width 0 (no layout engine) says nothing, so it is ignored. */
+  const [bodyEl, setBodyEl] = useState<HTMLElement | null>(null)
+  const [narrow, setNarrow] = useState(layout === 'panel')
+  useLayoutEffect(() => {
+    if (layout === 'panel') {
+      setNarrow(true)
+      return
+    }
+    if (!bodyEl) return
+    const measure = () => {
+      const width = bodyEl.getBoundingClientRect().width
+      if (width > 0) setNarrow(width < FLOOR_TWO_COLUMN_MIN)
+    }
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(measure)
+    observer.observe(bodyEl)
+    return () => observer.disconnect()
+  }, [layout, bodyEl])
 
   const workspaceProps = useMemo(
     () => ({
@@ -337,6 +371,7 @@ export default function OperationsShell({
   const subtitle = `${LABEL[job]} · Status: ${liveStatus}`
   const footerNode = (
           <div
+            ref={setFooterEl}
             style={{
               width: '100%',
               display: 'flex',
@@ -398,7 +433,6 @@ export default function OperationsShell({
                       : 'Not open yet'
 
             const countStr = measured ? ` ${measured.done}/${measured.total}` : ''
-            const displayLabel = `${LABEL[candidate]} · ${stateLabel}${countStr}`
 
             return (
               <Button
@@ -418,7 +452,9 @@ export default function OperationsShell({
                   opacity: isBlocked ? 0.6 : 1,
                 }}
               >
-                {displayLabel}
+                <span className="operations-shell__stage-name">{LABEL[candidate]}</span>
+                <span className="operations-shell__stage-sep"> · </span>
+                <span className="operations-shell__stage-state">{stateLabel}{countStr}</span>
               </Button>
             )
           })}
@@ -440,12 +476,12 @@ export default function OperationsShell({
               color: 'var(--text2)',
             }}
           >
-            <div>
+            <div className="operations-shell__strip-dup">
               <span style={{ color: 'var(--muted)', marginRight: 4 }}>Booking:</span>
               <strong style={{ color: 'var(--text)' }}>{bookingNo}</strong>
             </div>
             {floor.clientName && (
-              <div>
+              <div className="operations-shell__strip-dup">
                 <span style={{ color: 'var(--muted)', marginRight: 4 }}>Client:</span>
                 <strong style={{ color: 'var(--text)' }}>{floor.clientName}</strong>
               </div>
@@ -514,7 +550,7 @@ export default function OperationsShell({
             </div>
             <Button variant="ghost" icon="close" aria-label="Close panel (Esc)" onClick={requestClose} style={{ minHeight: 'var(--tap)' }}>Close</Button>
           </header>
-          <div className="operations-shell__panel-body"><FloorPanelContext.Provider value>{bodyNode}</FloorPanelContext.Provider></div>
+          <div className="operations-shell__panel-body"><FloorNarrowContext.Provider value={narrow}><div ref={setBodyEl}>{bodyNode}</div></FloorNarrowContext.Provider></div>
           <footer className="operations-shell__panel-foot">{footerNode}</footer>
         </section>
         {discardDialog}
@@ -532,7 +568,9 @@ export default function OperationsShell({
         subtitle={subtitle}
         footer={footerNode}
       >
-        {bodyNode}
+        <FloorNarrowContext.Provider value={narrow}>
+          <div ref={setBodyEl}>{bodyNode}</div>
+        </FloorNarrowContext.Provider>
       </Modal>
 
       {discardDialog}

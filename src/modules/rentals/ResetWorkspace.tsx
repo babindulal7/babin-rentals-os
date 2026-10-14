@@ -24,7 +24,7 @@ import { fetchFloorBooking, type FloorBooking, type FloorLine } from '../../lib/
 import type { ResetEntryInput } from '../../actions/rentals/floorVerb'
 import { SHARED_CLEAN_TASKS, DAMAGE_TYPES, SEVERITIES, PROBLEM_ROUTE, QUEUE_FILTERS } from '../../lib/queries/reset'
 import type { QueueState, ProblemState } from '../../lib/queries/reset'
-import { CompactButton, TouchTarget } from '../../components/ui/TouchTarget'
+import { CompactButton, TapCheckbox, TouchTarget } from '../../components/ui/TouchTarget'
 import { formatGateError } from '../../lib/gates'
 
 /**
@@ -1492,8 +1492,7 @@ export default function ResetWorkspace({
                             return (
                               <tr key={r.key} className="floor-table-row" style={{ borderBottom: '1px solid var(--border)' }}>
                                 <td style={{ ...td, width: 26 }}>
-                                  <input
-                                    type="checkbox"
+                                  <TapCheckbox
                                     checked={selected.has(r.key)}
                                     disabled={isException}
                                     aria-label={`Select ${r.name}`}
@@ -1621,7 +1620,7 @@ export default function ResetWorkspace({
                               justifyContent: 'center',
                               gap: 6,
                               width: '100%',
-                              minHeight: 40,
+                              minHeight: 'var(--tap)',
                               borderRadius: 'var(--r-btn)',
                               fontSize: 'var(--t-meta)',
                               fontWeight: 600,
@@ -1654,7 +1653,8 @@ export default function ResetWorkspace({
                               fontSize: '11px',
                               fontWeight: 600,
                               cursor: 'pointer',
-                              padding: '2px 6px',
+                              minHeight: 'var(--tap)',
+                              padding: '0 10px',
                               borderRadius: 'var(--r-xs)',
                             }}
                           >
@@ -1665,7 +1665,7 @@ export default function ResetWorkspace({
                           const doneCount = selRows.filter((r) => recOf(r.key).ticks.includes(task)).length
                           const allDone = doneCount === selRows.length
                           return (
-                            <label key={task} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '3px 0', fontSize: 'var(--t-meta)', color: 'var(--text)', cursor: 'pointer' }}>
+                            <label key={task} style={{ display: 'flex', alignItems: 'center', gap: 7, minHeight: 'var(--tap)', fontSize: 'var(--t-meta)', color: 'var(--text)', cursor: 'pointer' }}>
                               <input type="checkbox" checked={allDone} onChange={() => toggleShared(task)} />
                               <span style={{ flex: 1 }}>{task}</span>
                               <span className="figure" style={{ color: 'var(--muted)' }}>{doneCount}/{selRows.length}</span>
@@ -1690,7 +1690,7 @@ export default function ResetWorkspace({
                                 <span className="figure" style={{ marginLeft: 'auto', color: 'var(--muted)' }}>{rec.ticks.length}/{ROW_TASKS.length}</span>
                               </div>
                               {ROW_TASKS.map((task) => (
-                                <label key={task} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '3px 0', fontSize: 'var(--t-meta)', color: 'var(--text)', cursor: 'pointer' }}>
+                                <label key={task} style={{ display: 'flex', alignItems: 'center', gap: 7, minHeight: 'var(--tap)', fontSize: 'var(--t-meta)', color: 'var(--text)', cursor: 'pointer' }}>
                                   <input type="checkbox" checked={rec.ticks.includes(task)} onChange={() => toggleUnitTask(r.key, task)} />
                                   {task}
                                 </label>
@@ -1933,7 +1933,7 @@ export default function ResetWorkspace({
                   {selected.size}
                 </span>
                 <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>items selected</span>
-                <button type="button" onClick={clearSelection} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', color: 'var(--link)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--t-meta)' }}>
+                <button type="button" onClick={clearSelection} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', color: 'var(--link)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--t-meta)', minHeight: 'var(--tap)', padding: '0 10px' }}>
                   Clear Selection
                 </button>
               </div>

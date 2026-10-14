@@ -1,5 +1,31 @@
 # Progress Log
 
+## 2026-10-14 (e) — Phone and tablet pass of the Pack → Handover → Return → Reset run
+
+**Did**
+- Drove the same run by touch (`tap()`, touch + mobile emulation, seeded mock, Owner) at phones 360×740 and 390×844 and tablets 768×1024, 820×1180, 1024×768, 1194×834. Measured at every step: hit areas (counting the `TouchTarget` inset, not just the painted box), horizontal overflow, whether Confirm is on screen and not covered, taps from the queue row.
+- Before: 12 taps at every size, no horizontal overflow. Found: (1) the success toast still covered Confirm on phones (the 104px lift from entry (d) assumed the desktop footer); (2) 9–22 controls per stage under 44px — bare 13px row checkboxes in the ≥768 tables (Pack, Handover incl. toggle-all, Reset), Return's condition chips (24–30px), Packing's kit-dependency chips (23px) and tree rows (36px), Handover's Verify Both (18px), View All (20px), Capture/Re-sign (36px), Reset's Quick Pass (40px), Check All Tasks (19px), task tick rows (26px), Clear Selection (20px); (3) a tablet held upright (820) got the list-plus-rail layout in ~420px, clipping the checklist's Status column; (4) on phones the first screen ended in chrome — 2×2 three-line stage buttons and a duplicate Booking/Client strip — with no equipment visible.
+- Fixed: toast lift is now measured from the footer (`--toast-bottom`, ResizeObserver) so it clears the taller phone footer; new `TapCheckbox` (label + `TouchTarget`, forwards ref) at the table checkboxes; condition chips, dependency chips, tree rows, Verify Both, View All, Capture, Quick Pass, Check All Tasks, task rows, Clear Selection all take `var(--tap)`; the shell measures its own body and hands the workspaces the one-column layout when it is under 900px (`FloorNarrowContext`, replaces `FloorPanelContext`; the dock is always narrow); on phones the four stage steps share one row (icon / name / state, still text + icon) and the Booking/Client cells already in the sheet title are hidden.
+- After: no hit area under 44px at any of the six sizes, no overflow, Confirm never covered, still 12 taps, zero page errors.
+
+**Ruled**
+- No product, permission, schema or gate change. ⭐ `FLOOR_TWO_COLUMN_MIN = 900` (container width, not a window breakpoint): 820 portrait (≈780px, list ≈420px) clipped Status; 1024 landscape (≈960px) fits two columns. Revert = delete the Shell's measurement (`narrow` stays false for the modal); each fix above is a local style edit.
+- Row density on desktop tables rises slightly (44px chips, 44px dependency chips): Law 15 is "every device, never relaxed".
+
+**Verified**
+- typecheck 0; eslint on `src` clean; lint:shell, lint:ui-copy, contrast 82/82; full suite 351 files / 4,466 tests pass; new tests: `TapCheckbox` (hit area toggles, ref, disabled), narrow-container band at 780 / 1100 / no layout, footer-measured toast lift.
+- Browser, six sizes above, screenshots reviewed for phone 390 (Pack, Return, Reset) and tablet 820 / 1024 / 1194.
+- Not verified: a real phone or tablet (this is desktop Chromium with touch emulation: no iOS Safari, no on-screen keyboard, no safe-area insets, no gloves); the Sign-on-Glass pad and the camera scanner by touch; real data.
+
+## Completion
+Not re-counted: no migration, action or capability changed; figures in the entries below stand.
+
+## Remaining
+- On a 768-high landscape tablet only ~270px of the sheet is content (stage row, strip, progress and the scan bar come first) — fold the scan/filter bar or the progress block.
+- Phone footer is ~150px (hint + two stacked buttons).
+- Open decisions from entry (d) still stand: Handover per-row Missing, Save Draft stub, Complete position on standalone pages, the Owner "cannot view rental balances" text.
+- Hands-on pass on a real iPad and phone.
+
 ## 2026-10-14 (d) — Floor run end-to-end: footer says what is still needed; toast off the button; Reset copy
 
 **Did**

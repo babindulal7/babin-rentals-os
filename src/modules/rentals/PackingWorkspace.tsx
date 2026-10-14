@@ -16,7 +16,7 @@ import type { BookingStatus, JobState } from '../../lib/workflow'
 import { BarcodeScannerModal, type ScanOutcome } from '../../components/ui/BarcodeScannerModal'
 import { Input } from '../../components/ui/Input'
 import { Unavailable } from '../../components/ui/Unavailable'
-import { CompactButton } from '../../components/ui/TouchTarget'
+import { CompactButton, TapCheckbox } from '../../components/ui/TouchTarget'
 import { useFloorViewport } from '../operations/floorPanelContext'
 import { nextRequirement } from '../operations/nextRequirement'
 import { useAuth } from '../../lib/auth'
@@ -1683,7 +1683,8 @@ export default function PackingWorkspace({
                                               display: 'inline-flex',
                                               alignItems: 'center',
                                               gap: 4,
-                                              padding: '3px 7px',
+                                              minHeight: 'var(--tap)',
+                                              padding: '0 12px',
                                               borderRadius: 'var(--r-chip)',
                                               fontSize: '11px',
                                               fontWeight: 600,
@@ -1760,11 +1761,9 @@ export default function PackingWorkspace({
                             return (
                               <tr key={r.key} className={`floor-table-row ${s === 'Packed' ? 'is-packed' : s === 'Missing' ? 'is-missing' : ''}`} style={{ opacity: dim ? 0.35 : 1 }}>
                                 <td style={{ ...td, width: 26 }}>
-                                  <input
-                                    type="checkbox"
+                                  <TapCheckbox
                                     checked={s === 'Packed'}
                                     aria-label={`Pack ${r.name}`}
-                                    style={{ cursor: 'pointer' }}
                                     onChange={() => {
                                       if (s === 'Packed') clearMark(r.key)
                                       else pack(r.key, 'manual')
@@ -1802,7 +1801,8 @@ export default function PackingWorkspace({
                                                 display: 'inline-flex',
                                                 alignItems: 'center',
                                                 gap: 4,
-                                                padding: '2px 6px',
+                                                minHeight: 'var(--tap)',
+                                                padding: '0 12px',
                                                 borderRadius: 'var(--r-chip)',
                                                 fontSize: '11px',
                                                 fontWeight: 600,
@@ -2183,7 +2183,7 @@ export default function PackingWorkspace({
                 {/* §9 Evidence — ⭐ §4.31: ONE photo per booking, not per case.
                     Honest about its own maturity: the count is local, no file
                     is uploaded, and the Evidence Workspace owns the real files. */}
-                <Card title="Evidence" action={<Link to={`/rentals/${id}/evidence`} style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--link)', textDecoration: 'none' }}>View All</Link>}>
+                <Card title="Evidence" action={<Link to={`/rentals/${id}/evidence`} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 'var(--tap)', padding: '0 8px', fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--link)', textDecoration: 'none' }}>View All</Link>}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 'var(--t-meta)' }}>
                     <Icon
                       name={photoCount > 0 ? 'checklist' : 'alert_triangle'}

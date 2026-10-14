@@ -58,3 +58,17 @@
 
 /* Why Confirm is disabled, in the footer beside it rather than far down the page. */
 .operations-shell__blocked { margin: 0; font-size: var(--t-meta); color: var(--text2); overflow-wrap: anywhere; }
+
+/* Phone: the four stage steps share ONE row (icon over name over state) instead of a 2×2 grid of
+   three-line buttons, and the Booking / Client cells — already in the sheet title — drop out, so the
+   first screen reaches the equipment instead of ending in chrome. State stays as text + icon. */
+.operations-shell__stage-name { font-weight: 600; }
+@media (max-width: 767px) {
+  .operations-shell__stages { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .operations-shell__stages .ui-button { flex-direction: column; justify-content: flex-start; gap: 2px; padding: 6px 2px !important; }
+  .operations-shell__stages .ui-button__label { text-align: center; line-height: 1.15; }
+  .operations-shell__stage-name { display: block; font-size: 12px; }
+  .operations-shell__stage-sep { display: none; }
+  .operations-shell__stage-state { display: block; font-size: 11px; font-weight: 500; }
+  .operations-shell__strip-dup { display: none; }
+}

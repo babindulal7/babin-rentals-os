@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { WorkspaceActions } from '../OperationsShell'
+import { useFloorViewport } from '../floorPanelContext'
 
 ;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
 
@@ -29,7 +30,8 @@ function MockWorkspace({ bookingNo, onConfirmSuccess, onRegisterActions }: MockP
       error: mockError,
     })
   }, [onConfirmSuccess, onRegisterActions])
-  return <div>Workspace for {bookingNo}{mockError && <div role="alert">{mockError}</div>}</div>
+  const band = useFloorViewport()
+  return <div data-band={band}>Workspace for {bookingNo}{mockError && <div role="alert">{mockError}</div>}</div>
 }
 
 let mockStage = 'Booked'
@@ -62,6 +64,11 @@ vi.mock('../../../lib/queries/bookings', () => ({
       },
     ],
   })),
+}))
+
+vi.mock('../../../lib/device', async (orig) => ({
+  ...(await orig<typeof import('../../../lib/device')>()),
+  useViewport: () => 'tablet' as const,
 }))
 
 const { default: OperationsShell } = await import('../OperationsShell')
@@ -124,12 +131,34 @@ describe('why Confirm is disabled', () => {
     expect(container.ownerDocument.body.textContent).not.toContain('Still needed')
   })
 
-  it('lifts toasts clear of the footer while a job is open, and restores them on close', async () => {
+  it('lifts toasts to just above the footer while a job is open, and restores them on close', async () => {
     await mount(vi.fn(), 'Booked', 'Pack')
-    expect(document.documentElement.style.getPropertyValue('--toast-bottom')).toBe('104px')
+    // jsdom has no layout, so the footer's top is 0 and the lift is the whole window height + 12px;
+    // what matters is that it is measured from the footer (not a fixed 104px) and cleaned up.
+    expect(document.documentElement.style.getPropertyValue('--toast-bottom')).toBe(`${window.innerHeight + 12}px`)
     await act(async () => root.unmount())
     expect(document.documentElement.style.getPropertyValue('--toast-bottom')).toBe('')
     root = createRoot(container)
+  })
+})
+
+describe('the room the workspace has', () => {
+  const rect = (width: number) => ({ width, height: 100, top: 0, left: 0, right: width, bottom: 100, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect
+  const bandAt = async (width: number | null) => {
+    const spy = width === null ? null : vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(() => rect(width))
+    await mount(vi.fn(), 'Booked', 'Pack')
+    const band = container.querySelector('[data-band]')?.getAttribute('data-band')
+    spy?.mockRestore()
+    return band
+  }
+  it('gives a sheet narrower than two columns need the one-column layout', async () => {
+    expect(await bandAt(780)).toBe('phone')
+  })
+  it('leaves a wide sheet on the window-width layout', async () => {
+    expect(await bandAt(1100)).toBe('tablet')
+  })
+  it('says nothing when there is no layout to measure (width 0)', async () => {
+    expect(await bandAt(null)).toBe('tablet')
   })
 })
 

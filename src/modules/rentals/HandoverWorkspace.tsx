@@ -29,7 +29,7 @@ import { rentalDaysBetween } from '../../lib/rentalDays'
 import { newClientUuid } from '../../lib/supabase'
 import { fetchFloorBooking, type FloorBooking, type FloorLine } from '../../lib/queries/bookings'
 import type { FloorLineInput } from '../../actions/rentals/floorVerb'
-import { CompactButton } from '../../components/ui/TouchTarget'
+import { CompactButton, TapCheckbox } from '../../components/ui/TouchTarget'
 import { deliveryTypeLabel } from '../../lib/format'
 import { formatGateError } from '../../lib/gates'
 import { DriverHandoverModal } from '../operations/DriverHandoverModal'
@@ -1493,7 +1493,8 @@ export default function HandoverWorkspace({
                           fontSize: 'var(--t-meta)',
                           fontWeight: 600,
                           cursor: 'pointer',
-                          padding: '0 4px',
+                          minHeight: 'var(--tap)',
+                          padding: '0 10px',
                         }}
                       >
                         Verify Both
@@ -1727,8 +1728,7 @@ export default function HandoverWorkspace({
                         <thead>
                           <tr style={{ background: 'var(--th-bg)' }}>
                             <th style={{ ...th, width: 26 }}>
-                              <input
-                                type="checkbox"
+                              <TapCheckbox
                                 aria-label="Toggle all eligible units Picked Up"
                                 title={allEligiblePicked ? 'Unmark all eligible units' : 'Mark all eligible units Picked Up'}
                                 checked={allEligiblePicked}
@@ -1757,13 +1757,11 @@ export default function HandoverWorkspace({
                                 style={{ opacity: recorded ? 0.75 : 1 }}
                               >
                                 <td style={{ ...td, width: 26 }}>
-                                  <input
-                                    type="checkbox"
+                                  <TapCheckbox
                                     checked={s === 'Picked Up'}
                                     disabled={recorded}
                                     aria-label={`Mark ${r.name} picked up`}
                                     title={recorded ? 'Recorded in an earlier session' : undefined}
-                                    style={{ cursor: recorded ? 'not-allowed' : 'pointer' }}
                                     onChange={() => {
                                       if (mark?.state === 'Picked Up') clearMark(r.key)
                                       else pick(r.key, 'manual')
@@ -1985,7 +1983,7 @@ export default function HandoverWorkspace({
                   <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                       <span style={{ fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--text)', flex: 1 }}>Evidence</span>
-                      <Link to={`/rentals/${id}/evidence`} style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--link)', textDecoration: 'none' }}>View All</Link>
+                      <Link to={`/rentals/${id}/evidence`} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 'var(--tap)', padding: '0 8px', fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--link)', textDecoration: 'none' }}>View All</Link>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 'var(--t-meta)' }}>
                       <Icon
@@ -2459,7 +2457,6 @@ function SigRow({
           title="Re-sign"
           style={{
             ...capture,
-            minHeight: 36,
             padding: '0 10px',
             fontSize: 'var(--t-meta)',
             color: 'var(--text2)',
@@ -2483,7 +2480,6 @@ function SigRow({
               disabled={disabled}
               style={{
                 ...capture,
-                minHeight: 36,
                 padding: '0 10px',
                 fontSize: 'var(--t-meta)',
                 color: 'var(--text2)',

@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('../../../lib/device', () => ({ useViewport: () => 'desktop' }))
 
-const { FloorPanelContext, useFloorViewport } = await import('../floorPanelContext')
+const { FloorNarrowContext, useFloorViewport } = await import('../floorPanelContext')
 
 function Probe() {
   return <span data-vp={useFloorViewport()} />
@@ -17,7 +17,7 @@ async function band(inPanel: boolean) {
   const el = document.createElement('div')
   const root = createRoot(el)
   await act(async () => {
-    root.render(<FloorPanelContext.Provider value={inPanel}><Probe /></FloorPanelContext.Provider>)
+    root.render(<FloorNarrowContext.Provider value={inPanel}><Probe /></FloorNarrowContext.Provider>)
   })
   const v = el.querySelector('span')?.getAttribute('data-vp')
   await act(async () => root.unmount())
