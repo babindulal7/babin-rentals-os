@@ -6,6 +6,7 @@
 - Browser-verified the R-39 payment budgets from 2026-09-19 (d) and found a money-safety defect the D1/D2 prefill had introduced: on the Rentals list (header More → Record Payment) the dialog preselected the FIRST of every client's payable invoices and typed its outstanding in. With rental #903 (Lumbini Rentals) selected it opened on INV-91 for Dhaulagiri Weddings at Rs 33,448 — one press from an immutable payment against the wrong client. The Payments page and Finance's generic launcher passed the same list.
 - Fix: `defaultInvoiceId` in `RecordPaymentModal.tsx` preselects only when the choice is unambiguous (named by the caller, a single invoice, or one booking's invoices); otherwise a "Select an invoice…" placeholder shows and the amount stays empty. The Rentals list names the one selected rental's own payable invoice.
 - Measured in the browser (seeded mock, Owner, 1440px): Booking Detail → recorded payment 2 taps, 0 typed (budget ≤ 4); Rentals list with one rental selected → 4 taps, 0 typed (≤ 4); Rentals list with nothing selected and the Payments launcher open on the placeholder.
+- Main stopped compiling at `5c1bacc` ("Update BookingDetail.tsx"): removing the rental More from the Booking Detail header left `RentalMoreActions` and `phoneMoreItems` unused (TS6133 ×2), and `npm run build` runs tsc first. PR #15 removes only those two names; it is merged into this branch so this PR's CI runs against a main that compiles. No behaviour change.
 
 **Ruled**
 - `docs/RULINGS-2026-10-14-payment-default.md` (P14-1, P14-2). No permission, schema, gate or payment-write change.
@@ -13,6 +14,7 @@
 **Verified**
 - typecheck 0; eslint on `src` clean; lint:shell, lint:ui-copy (0), contrast 82/82; full suite 350 files / 4,466 tests pass (4 new: no preselection across bookings, refusal until chosen then prefill, a named invoice still wins, `defaultInvoiceId` cases); the two existing dialog suites updated to name their invoice where they relied on the old first-row default; production build exit 0.
 - Browser: the four entry states above, zero page errors.
+- Build fix (PR #15): both TS6133 reproduced on `5c1bacc` (where all 489 rentals tests still passed); after the fix tsc 0, eslint 0, build exit 0; Booking Detail header for B-902 identical before and after at 390px and 1440px, zero page errors.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -30,6 +32,7 @@ Counted by `npm run completion`, not typed.
 ### Remaining
 - Still unmeasured in a browser from the 19 Sep table: Cancel a booking, new client inline in New Rental, and New Rental → Booked (≤ 12).
 - Finance's row-level Record Payment launchers were not re-driven; they pass `initialInvoiceId`, which the rule honours.
+- Babin's call: `5c1bacc` removed the rental More at every width. Desktop keeps Cancel (More booking actions) and Print, but on a phone Booking Detail no longer reaches Cancel booking, Print booking, Message client, Extend rental, Create sub-rental, quote/invoice actions, Duplicate rental or Audit history — the phone ⋮ holds only Operations. The `RULING 2026-10-13` comment describing that phone menu went with the dead code. If unintended: labelled rows in the one phone ⋮, not the old ⋮ inside ⋮.
 
 ## 2026-10-14 — Button audit fixes: browser finish and local verification
 
