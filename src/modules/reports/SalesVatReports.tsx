@@ -142,7 +142,7 @@ export default function SalesVatReports() {
         value: `${m.effectiveVatRate}%`,
         icon: 'sparkles',
         accent: 'neutral',
-        note: 'Zero-rated exemptions: Rs 0',
+        note: 'Zero-VAT turnover: ${formatMoney(m.exemptTurnover)} (classification to verify)',
       },
     ]
   }, [data])
@@ -195,7 +195,7 @@ export default function SalesVatReports() {
         ['Statutory Tax Rate', `${data?.vat.metrics.effectiveVatRate ?? 0}%`],
         [],
         ['Monthly IRD Filing Schedule (Bikram Sambat Fiscal Periods)'],
-        ['Month (AD)', 'BS Month', 'Taxable Sales', '13% Output VAT', 'Exempt Sales', 'Gross Sales'],
+        ['AD invoice-date span', 'BS Month', 'VAT-taxable Sales', 'Output VAT', '0%-VAT Sales (review)', 'Gross Sales'],
         ...(data?.vat.monthlySchedule.map((ms): ReportCsvRow => [
           ms.month,
           ms.bsMonth,
@@ -256,7 +256,7 @@ export default function SalesVatReports() {
       <PageHeader
         icon="file"
         title="Sales & VAT Register"
-        description="Statutory sales ledger, payment collection status, and Nepal 13% VAT register for IRD filing."
+        description="Issued-invoice sales and VAT register; verify classification and reconciliation before filing."
       />
 
       {/* Shared Toolbar */}
@@ -472,7 +472,7 @@ export default function SalesVatReports() {
               Monthly VAT Filing Schedule (Inland Revenue Department Format)
             </h3>
             <p style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', marginBottom: 'var(--sp-md)' }}>
-              Summary of monthly taxable turnover and 13% VAT collected for monthly return submission on IRD Taxpayer Portal.
+              Summary of issued invoice VAT and zero-VAT amounts grouped by Nepal (BS) month. Validate rates, exemptions and totals with Accounts before statutory filing.
             </p>
 
             <DataTableShell ariaLabel="Monthly VAT Filing Schedule">
@@ -481,9 +481,9 @@ export default function SalesVatReports() {
                   <tr>
                     <th style={th}>Tax Period (AD)</th>
                     <th style={th}>Bikram Sambat Month</th>
-                    <th style={{ ...th, textAlign: 'right' }}>Taxable Sales (Rs)</th>
+                    <th style={{ ...th, textAlign: 'right' }}>VAT-taxable Sales (Rs)</th>
                     <th style={{ ...th, textAlign: 'right' }}>13% Output VAT (Rs)</th>
-                    <th style={{ ...th, textAlign: 'right' }}>Exempt Sales</th>
+                    <th style={{ ...th, textAlign: 'right' }}>0%-VAT Sales (review)</th>
                     <th style={{ ...th, textAlign: 'right' }}>Gross Invoiced Total</th>
                   </tr>
                 </thead>
