@@ -1755,7 +1755,7 @@ function BundleRow({
         so both are removed from the tab order and from the accessibility tree —
         the option's own label above states the Enter and Right Arrow paths.
       */}
-      <div aria-hidden="true" style={{ display: 'flex', gap: 6, marginTop: 2 }}>
+      <div aria-hidden="true" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
         <RowButton
           label="View"
           icon="eye"
@@ -2244,7 +2244,7 @@ function CrewRow({
         Crew · {result.role} · <span className="identifier">{result.phone}</span> · {result.state}
       </div>
 
-      <div aria-hidden="true" style={{ display: 'flex', gap: 6, marginTop: 2 }}>
+      <div aria-hidden="true" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
         <RowButton
           label={assigned ? 'Assigned' : 'Add to Crew'}
           icon={assigned ? 'check' : 'plus'}
@@ -2368,7 +2368,7 @@ function TransportRow({
         {result.numberPlate ? ` · ${result.numberPlate}` : ''}
       </div>
 
-      <div aria-hidden="true" style={{ display: 'flex', gap: 6, marginTop: 2 }}>
+      <div aria-hidden="true" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
         <RowButton
           label={selected ? 'Selected' : 'Select Mode'}
           icon={selected ? 'check' : 'plus'}
@@ -2428,20 +2428,20 @@ function RowButton({
         display: 'inline-flex',
         alignItems: 'center',
         gap: 5,
-        height: 26,
-        padding: '0 10px',
+        minHeight: TOUCH,
+        minWidth: TOUCH,
+        padding: '8px 12px',
         borderRadius: 'var(--r-btn)',
         border: `1px solid ${primary ? 'transparent' : 'var(--btn-secondary-border)'}`,
         background: primary ? 'var(--btn-primary-bg)' : 'var(--btn-secondary-bg)',
         color: primary ? 'var(--btn-primary-fg)' : 'var(--text)',
-        fontSize: 'var(--t-meta)',
+        fontSize: 'var(--t-ui)',
         fontWeight: 600,
         cursor: 'pointer',
         whiteSpace: 'nowrap',
       }}
     >
-      <TouchInset />
-      <Icon name={icon} size={13} />
+      <Icon name={icon} size={16} />
       {label}
     </button>
   )

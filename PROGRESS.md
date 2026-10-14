@@ -1,5 +1,40 @@
 # Progress Log
 
+## 2026-10-15 — Remaining work register evidence review
+
+**Did**
+- Reviewed `docs/REMAINING_WORK.md` against governance, current source, PROGRESS, open decisions, local result artifacts and the read-only migration planner. The supplied register remains unchanged for review.
+- Found an unsupported live baseline/range, occupied proposed migration number 0161, missing staging report/harness, unsupported suite/screen counts, stale BS coverage, and incomplete delivery/offline dependencies.
+- Confirmed Delivery still uses localStorage and G3 historical pricing persistence remains open. Operations already uses PageActions; header crowding requires fresh viewport evidence. Backup script prints its database URL, so READY TO RUN is not justified under N-8.
+- Recorded that the register omits the planner's rename, seed/collision and unexplained-live-row blockers. Physical offline acceptance depends on implementation as well as hardware.
+
+**Ruled**
+- No new product ruling. No application or migration changes; no backup, live access, deployment or production migration performed.
+- This is a source/evidence review, not fresh certification of runtime gates. Historical result timestamps and the September live export remain explicit limitations.
+
+**Verified**
+- All local Markdown path targets in REMAINING_WORK checked: two missing files, both staging-verification artifacts.
+- `npm run db:plan` refused to issue a plan (nonzero exit): 160 local files through prefix 0162; September export yields 80 pending, 7 rename candidates, two hazard classifications for the same seed file, and 2 unexplained live rows. These are snapshot results, not current production measurements.
+- `npm run completion` passed and generated the block below from existing evidence; runtime tests, PGlite, lifecycle and build were not rerun for this review.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-13T13:31:48.507Z). Suite: 4329/4329 passed (recorded 2026-10-13T07:46:29.1524909Z).
+Gates read from .lifecycle-result.json, written 2026-10-14T16:14:23.983Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Reconcile REMAINING_WORK's claims and dependencies against dated evidence before using it as an execution checklist.
+- Repair/redact backup URL logging before running that script; refresh the live migration export and resolve planner blockers before Babin's N-5 apply step.
+- Locate or implement the missing staging harness and record the exact commit/environment for future gate and browser acceptance results.
+
 ## 2026-10-13 — Higher-contrast button boundaries and persistent blue New Rental action
 
 **Did**
