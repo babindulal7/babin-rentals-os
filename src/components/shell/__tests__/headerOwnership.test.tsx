@@ -43,6 +43,25 @@ async function renderPage(page: 'rentals' | 'edit' | 'plain') {
   ))
 }
 
+describe('RULING 2026-10-15 — the title zone never shares the squeeze with the search', () => {
+  const zone = () => container.querySelector<HTMLElement>('.app-global-header__breadcrumbs')!
+
+  it('holds a module title at its width on desktop, so the search yields first', async () => {
+    await act(async () => root.render(<MemoryRouter><WorkspaceProvider><Header crumbs={[{ label: 'Inventory' }]} /></WorkspaceProvider></MemoryRouter>))
+    expect(zone().style.flex).toBe('0 0 auto')
+  })
+
+  it('lets a record title (a crumb trail of any length) and every tablet title still ellipsize', async () => {
+    await act(async () => root.render(<MemoryRouter><WorkspaceProvider>
+      <Header crumbs={[{ label: 'Rentals', to: '/rentals' }, { label: '902 · Annapurna Media Pvt. Ltd.' }]} />
+    </WorkspaceProvider></MemoryRouter>))
+    expect(zone().style.flex).toBe('0 1 auto')
+    state.viewport = 'tablet'
+    await act(async () => root.render(<MemoryRouter><WorkspaceProvider><Header crumbs={[{ label: 'Inventory' }]} /></WorkspaceProvider></MemoryRouter>))
+    expect(zone().style.flex).toBe('0 1 auto')
+  })
+})
+
 describe('page ownership of the application header', () => {
   it('reclaims healthy sync space on tablets but keeps every actionable sync state visible', async () => {
     state.viewport = 'tablet'

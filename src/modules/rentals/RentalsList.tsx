@@ -24,9 +24,9 @@ import { FilterBar } from '../../components/ui/FilterBar'
 import { Pagination } from '../../components/ui/Pagination'
 import { BsAdDate } from '../../components/ui/BsAdDate'
 import { Badge } from '../../components/ui/Badge'
-import { STATUS, BRAND } from '../../lib/status'
+import { STATUS } from '../../lib/status'
 import type { IconName } from '../../components/ui/Icon'
-import type { StatusKey, BrandKey } from '../../lib/status'
+import type { StatusKey } from '../../lib/status'
 import { formatMoney, toRupees, type Paisa } from '../../lib/money'
 import { listInvoices, payableInvoices } from '../../lib/queries/finance'
 import { businessNowAd } from '../../lib/queries/today'
@@ -295,39 +295,6 @@ function stageChipStyle(on: boolean) {
     transition: 'border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease)',
     boxShadow: on ? '0 1px 3px rgba(0, 0, 0, 0.08)' : 'none',
   }
-}
-
-/**
- * Four-step pipeline indicator — Booked → Packed → On Rent → Returned.
- *
- * It is never the only signal: the status pill beside it names the state in
- * words, so the dots add glanceable progress without carrying meaning alone.
- * The step comes from `BOOKING_STATUS[stage].order`, so it cannot disagree with
- * the pill it sits under.
- */
-function Track({ step, tone }: { step: number; tone: BrandKey }) {
-  return (
-    <span style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 6 }} aria-hidden>
-      {[0, 1, 2, 3].map((i) => (
-        <span key={i} style={{ display: 'flex', alignItems: 'center', flex: i < 3 ? 1 : '0 0 auto' }}>
-          <span
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: 'var(--r-badge)',
-              flexShrink: 0,
-              background: i < step ? BRAND[tone] : 'var(--disabled)',
-            }}
-          />
-          {i < 3 && (
-            <span
-              style={{ flex: 1, height: 2, background: i < step - 1 ? BRAND[tone] : 'var(--disabled)', minWidth: 8 }}
-            />
-          )}
-        </span>
-      ))}
-    </span>
-  )
 }
 
 /**
@@ -1426,6 +1393,7 @@ export default function RentalsList() {
     'Status',
     ...(show('Total Amount') ? ['Total Amount'] : []),
   ]
+  const shareSum = headers.reduce((sum, h) => sum + (RENTAL_COLUMN_SHARES[h] ?? 0.1), 0)
 
   /* `All` is the absence of a quick filter, not a value of one — it drops the
      param rather than writing `?quick=All`, so an unfiltered list has a clean
@@ -2228,8 +2196,13 @@ export default function RentalsList() {
                   >
                     {viewport === 'desktop' && <colgroup>
                       <col style={{ width: 44 }} />
-                      {headers.map((h) => <col key={h} style={{ width: `${83 * (RENTAL_COLUMN_SHARES[h] ?? 0.1)}%` }} />)}
-                      <col style={{ width: 146 }} />
+                      {/* The shares split what the two fixed columns leave, so a hidden
+                          column's width goes to the others instead of padding the
+                          checkbox and ⋮ columns. (Chrome ignores calc(% − px) on <col>.) */}
+                      {headers.map((h) => (
+                        <col key={h} style={{ width: `${(DATA_COLS_PCT * (RENTAL_COLUMN_SHARES[h] ?? 0.1)) / shareSum}%` }} />
+                      ))}
+                      <col style={{ width: ACTION_COL_W }} />
                     </colgroup>}
                     <thead>
                       <tr style={{ background: 'var(--th-bg)' }}>
@@ -2254,7 +2227,8 @@ export default function RentalsList() {
                         ))}
                         <th style={stickyTh}>
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                            Actions
+                            {/* The column is named for assistive tech; on screen the ⋮ in each row says it. */}
+                            <span className="sr-only">Actions</span>
                             <ColumnMenu
                               columns={optionalColumns}
                               hidden={hiddenCols}
@@ -2318,9 +2292,11 @@ export default function RentalsList() {
                               >
                                 {(r.status as string) === 'Draft' ? r.bookingNo : formatBookingNo(r.bookingNo)}
                               </Link>
-                              {(r.isOverdue || r.isCancelled || r.isExternal === true) && (
+                              {/* RULING 2026-10-15: lateness is named once per row — the Status
+                                  cell's "N days late", with the amber Return date showing where —
+                                  not again as a tag here. */}
+                              {(r.isCancelled || r.isExternal === true) && (
                                 <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                                  {r.isOverdue && <Tag text="Overdue" status="danger" />}
                                   {r.isCancelled && <Tag text="Cancelled" status="danger" />}
                                   {/* Law 11 — outline + icon + label, never
                                       the gold on its own. */}
@@ -2344,15 +2320,19 @@ export default function RentalsList() {
                           </td>
 
                           <td style={td}>
+                            {/* RULING 2026-10-15: the client name takes at most two lines and
+                                the project one, ellipsized with the full text on hover, instead
+                                of wrapping the row to six lines. The pickup location that also
+                                printed here is on the booking hover card. */}
                             <span style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                               <Avatar row={r} />
                               <span style={{ minWidth: 0 }}>
                                 <ClientIntelFromId clientId={r.clientId} name={r.client} context="rental-list" gateContext={gctx} actionContext={user ? { userId: user.id, role: user.role } : null}>
                                 <Link
                                   to={`/clients/${r.clientId}`}
+                                  title={r.client}
                                   style={{
-                                    display: 'block',
-                                    fontSize: 'var(--t-meta)',
+                                    ...twoLines,
                                     fontWeight: 700,
                                     color: 'var(--text)',
                                     textDecoration: 'none',
@@ -2366,27 +2346,14 @@ export default function RentalsList() {
                                     as a kit name, which is what this cell
                                     used to invent. */}
                                 {r.project && r.project !== '—' && <span
+                                  title={r.project}
                                   style={{
-                                    display: 'block',
-                                    fontSize: 'var(--t-meta)',
+                                    ...oneLine,
                                     color: 'var(--text2)',
                                     marginTop: 1,
                                   }}
                                 >
                                   {r.project}
-                                </span>}
-                                {/* `pickup_location` is free text and
-                                    nullable. The crew label that used to sit
-                                    beside it had no column at all. */}
-                                {r.pickupLocation && <span
-                                  style={{
-                                    display: 'block',
-                                    fontSize: 'var(--t-meta)',
-                                    color: 'var(--muted)',
-                                    marginTop: 1,
-                                  }}
-                                >
-                                  {r.pickupLocation}
                                 </span>}
                               </span>
                             </span>
@@ -2416,16 +2383,7 @@ export default function RentalsList() {
 
                           {show('Items') && (
                             <td style={td}>
-                              <span
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 'var(--sp-xs)',
-                                  fontSize: 'var(--t-meta)',
-                                  color: 'var(--text)',
-                                }}
-                              >
-                                <Icon name="box" size={12} style={{ color: 'var(--muted)' }} />
+                              <span style={{ ...oneLine, color: 'var(--text)' }}>
                                 {/* Units across live lines — `sum(qty)`, not
                                     a count of rows. */}
                                 <span className="figure">{r.itemCount}</span> item{r.itemCount === 1 ? '' : 's'}
@@ -2437,7 +2395,6 @@ export default function RentalsList() {
                             .filter((c) => show(c))
                             .map((c) => {
                               const m = c === 'Pickup' ? r.pickup : r.ret
-                              const place = c === 'Pickup' ? r.pickupLocation : r.returnLocation
                               const isOverdueReturn = c === 'Return' && r.isOverdue
                               return (
                                 <td key={c} style={td}>
@@ -2463,53 +2420,19 @@ export default function RentalsList() {
                                       aria-label={`Overdue return: ${m.date}`}
                                     >
                                       <Icon name="timer" size={12} style={{ color: 'var(--chip-amber-fg)' }} />
-                                      <BsAdDate date={m.ad} tone="booking" />
+                                      <BsAdDate date={m.ad} tone="booking" showTime />
                                     </span>
                                   ) : (
-                                    <span
-                                      style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 5,
-                                        fontSize: 'var(--t-meta)',
-                                        color: 'var(--text)',
-                                      }}
-                                    >
-                                      <Icon name="calendar" size={12} style={{ color: 'var(--muted)' }} />
-                                      {/* §3 / Law 7 — AD rendering belongs to
-                                          lib/bs.ts, in Kathmandu. */}
-                                      <BsAdDate date={m.ad} tone="booking" />
-                                    </span>
+                                    /* §3 / Law 7 — AD rendering belongs to lib/bs.ts, in
+                                       Kathmandu. RULING 2026-10-15: the time rides beside the AD
+                                       date when the column has room; no per-line icons in data
+                                       cells. */
+                                    <BsAdDate date={m.ad} tone="booking" showTime />
                                   )}
-                                  {m.time && <span
-                                    style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: 5,
-                                      fontSize: 'var(--t-meta)',
-                                      color: 'var(--text2)',
-                                      marginTop: 3,
-                                    }}
-                                  >
-                                    <Icon name="timer" size={12} style={{ color: 'var(--muted)' }} />
-                                    <span className="figure" style={{ color: 'var(--booking-date-text)' }}>{m.time}</span>
-                                  </span>}
-                                  {/* The named handler this cell used to show
-                                      ("Ramesh") had no column and no join.
-                                      The location does. */}
-                                  {place && <span
-                                    style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: 5,
-                                      fontSize: 'var(--t-meta)',
-                                      color: 'var(--text2)',
-                                      marginTop: 3,
-                                    }}
-                                  >
-                                    <Icon name="home" size={12} style={{ color: 'var(--muted)' }} />
-                                    {place}
-                                  </span>}
+                                  {/* RULING 2026-10-15: the pickup/return location is not printed in
+                                      the list row; it stays on the booking hover card
+                                      (rentalDetailGroups) and Booking Detail. Revert = render
+                                      r.pickupLocation / r.returnLocation here as one muted line. */}
                                 </td>
                               )
                             })}
@@ -2536,14 +2459,15 @@ export default function RentalsList() {
                                 {r.statusNote}
                               </span>
                             )}
-                            <Track step={r.progress} tone={r.progressTone} />
+                            {/* RULING 2026-10-15: the four-dot progress track under the pill
+                                was aria-hidden decoration restating the pill; removed. */}
                           </td>
 
                           {/* §8.3 — the cell is omitted, not emptied. */}
                           {show('Total Amount') && (
                             <td style={td}>
                               <span
-                                className="figure"
+                                className="figure money"
                                 style={{
                                   display: 'block',
                                   fontSize: 'var(--t-meta)',
@@ -2729,11 +2653,40 @@ export default function RentalsList() {
   )
 }
 // RULINGS-2026-10-07: reserve action space so Amount remains visible with
-// expanded navigation; the client/type/date cells can wrap within their share.
+// expanded navigation.
+// RULING 2026-10-15: shares sized to what each cell holds at 1280px with the
+// sidebar open (BS date ≈ 95px, money ≈ 85px), and the action column is the ⋮
+// it holds (ACTION_COL_W) rather than 146px of empty space.
 const RENTAL_COLUMN_SHARES: Record<string, number> = {
-  'Booking ID': 0.08, 'Created Date': 0.08, 'Client / Project': 0.15,
-  'Project Type': 0.09, Items: 0.06, Pickup: 0.12, Return: 0.12,
-  Status: 0.10, 'Total Amount': 0.10,
+  'Booking ID': 0.08, 'Created Date': 0.09, 'Client / Project': 0.17,
+  'Project Type': 0.09, Items: 0.065, Pickup: 0.13, Return: 0.13,
+  Status: 0.105, 'Total Amount': 0.11,
+}
+
+// 60 − 16px padding = the 44px Law 15 target of the row ⋮.
+const ACTION_COL_W = 60
+
+// ≈ 100% − (44 + ACTION_COL_W)px on the narrowest desktop table (975px at 1280
+// with the sidebar open); wider tables spread the small remainder.
+const DATA_COLS_PCT = 89
+
+/** One line, ellipsized; pair it with a `title` carrying the full text. */
+const oneLine = {
+  display: 'block',
+  fontSize: 'var(--t-meta)',
+  whiteSpace: 'nowrap' as const,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+}
+
+/** At most two lines (client names), ellipsized; pair it with a `title`. */
+const twoLines = {
+  display: '-webkit-box',
+  WebkitBoxOrient: 'vertical' as const,
+  WebkitLineClamp: 2,
+  fontSize: 'var(--t-meta)',
+  overflow: 'hidden',
+  overflowWrap: 'anywhere' as const,
 }
 
 const th = {
@@ -2775,6 +2728,8 @@ const td = {
   height: 'var(--row-min-h)',
   padding: '11px 8px',
   fontSize: 'var(--t-meta)',
+  // RULING 2026-10-15: dense data rows read at 1.35, not the 1.5 body leading.
+  lineHeight: 1.35,
   color: 'var(--text)',
   verticalAlign: 'top' as const,
   whiteSpace: 'normal' as const,
@@ -2793,8 +2748,8 @@ const td = {
  */
 const stickyTh = {
   ...th,
-  width: 146,
-  minWidth: 146,
+  width: ACTION_COL_W,
+  minWidth: ACTION_COL_W,
   textAlign: 'right' as const,
   position: 'sticky' as const,
   right: 0,
@@ -2805,8 +2760,8 @@ const stickyTh = {
 
 const stickyTd = {
   ...td,
-  width: 146,
-  minWidth: 146,
+  width: ACTION_COL_W,
+  minWidth: ACTION_COL_W,
   textAlign: 'right' as const,
   position: 'sticky' as const,
   right: 0,

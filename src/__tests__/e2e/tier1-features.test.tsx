@@ -462,6 +462,12 @@ describe('Tier 1: Feature Coverage (Happy Path & Isolations)', { timeout: 90000 
       expect(container.textContent).toContain('Inventory')
       expect(container.textContent).toContain('Equipment')
       expect(container.textContent).toContain('Bundles')
+      // RULING 2026-10-15: the header holds title, search and one primary — Refresh and
+      // Export are in More at every width, not buttons beside Add.
+      const visible = [...container.querySelectorAll('button')].map((b) => b.textContent?.trim())
+      expect(visible).not.toContain('Refresh')
+      expect(visible).not.toContain('Export')
+      expect(container.querySelector('button[aria-haspopup="menu"]')).not.toBeNull()
     }, 60_000)
 
     it('Clients Directory renders client table and section navigation', async () => {
@@ -471,6 +477,11 @@ describe('Tier 1: Feature Coverage (Happy Path & Isolations)', { timeout: 90000 
       expect(container.textContent).toContain('Clients')
       expect(container.textContent).toContain('Directory')
       expect(container.textContent).toContain('Membership')
+      // RULING 2026-10-15: the header holds title, search and one primary — Refresh and
+      // Export are in More at every width, not buttons beside Add.
+      const visible = [...container.querySelectorAll('button')].map((b) => b.textContent?.trim())
+      expect(visible).not.toContain('Export directory')
+      expect(container.querySelector('button[aria-haspopup="menu"]')).not.toBeNull()
     }, 60_000)
 
     it('Finance dashboard renders financial KPIs and invoices table', async () => {

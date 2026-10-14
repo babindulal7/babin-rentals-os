@@ -1,5 +1,45 @@
 # Progress Log
 
+## 2026-10-15 — Booqable clean-list pass: one-line facts, uncrushed titles, unbroken money
+
+**Did**
+- Compared the Booqable scrape (`Desktop/scrape/BOOQABLE-AUDIT`, trial Orders screenshot) with our mock build measured at 1280×860, sidebar open. The ranked reasons are in `docs/booqable/WHY_BOOQABLE_FEELS_CLEAN_2026-10-15.md`: one row ≈ one line, a header of title + search + one primary, each fact said once, no icons in data, sentence-case headers, no reserved empty space, money as one token.
+- Rentals table (`RentalsList.tsx`): client name ≤ 2 lines and project 1 line, ellipsized with `title`. Removed the duplicated location, the per-line icons, the "Overdue" tag duplicating the status note, and the aria-hidden progress track (the now-dead `Track` helper is deleted). Time rides with the AD date. The action column is 60px with an `sr-only` label, column shares are normalized to fill, and the cell leading is 1.35. `rentals.css` drops its uppercase override so `theme.css`'s sentence-case header rule applies.
+- `BsAdDate` stacked layout: with `showTime`, date and time are each unbreakable and the time wraps whole. Layouts without a time are unchanged.
+- Shell `Header.tsx`: desktop module titles (one crumb) no longer shrink; the search yields first. Record titles and tablet/phone are unchanged.
+- Inventory and Clients: Refresh/Export move into More at every width, extending the 13 Oct phone ruling.
+- New opt-in `.money { white-space: nowrap }` on the Clients directory money cells and the Rentals total.
+- Tests: 4 new Rentals render tests, 2 header tests, and header-action assertions in the tier-1 Inventory/Clients tests.
+
+**Ruled**
+- `RULINGS-2026-10-15.md` rows 1–10, each with a revert. A flippable product call: the list row no longer prints pickup/return location (it stays on the hover card and Booking Detail).
+- Unchanged by design: BS-over-AD stacking (7 Oct), Project Type and Created Date columns, the desktop sync slot (13 Oct), 56px row and 44px target floors. No migration written or applied. No role, capability, money gate or write path changed.
+
+**Verified**
+- Browser, mock Owner, 1280×860: Rentals rows 166–200px → 85px; rows fully visible 2 → 5; action column 190 → 60px. Inventory title 14px ("I.") → 80px, header search 67 → 192px, right cluster 539 → 349px. Clients title full; 0 of 43 money cells wrap. Header overflow 0px and titles untruncated on Today, Rentals, New Rental, Calendar, Inventory, Clients, Finance and Settings. Inventory More holds Refresh equipment / Export this page / Warranty Tracker at 44px, and Refresh ran (menu closed, 25 rows). At 1024px the Rentals table uses auto layout with the narrow-width columns dropped, 85px rows and no horizontal scroll.
+- Booking Detail (`/rentals/902`) keeps its previous header behaviour: the record title is squeezed to ~37px by a 610px action cluster. **Pre-existing, not fixed.** A first attempt that froze all titles made its search 0px; the module/record split fixed that.
+- Mutation checks: restoring the Overdue tag, the location line, the desktop `0 1 auto` title flex, or a visible Clients Export each turned its new test red. Files restored and green.
+- Gates, this worktree after the changes: `tsc --noEmit` exit 0; `npm run lint` exit 0; `lint:shell` 653 files pass; `lint:ui-copy` pass; `check:contrast` 82/82; `npx vitest run` 347 files / 4,411 tests passed; `npm run build` exit 0 (PWA precache 296 entries); `check:lifecycle` 30/30 (PGlite, no JWT/PostgREST). `check:pglite` not rerun (no migration). A comment-only edit to `RentalsList.tsx` landed after the suite run.
+- Not verified: dark/glass themes by eye (token-only edits; contrast gate covers the tokens), phone widths (cards view untouched), native browser zoom, live data.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-13T13:31:48.507Z). Suite: 4329/4329 passed (recorded 2026-10-13T07:46:29.1524909Z).
+Gates read from .lifecycle-result.json, written 2026-10-14T20:10:27.131Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Booking Detail header: a 610px action cluster squeezes the record title to ~37px at 1280px (pre-existing).
+- Today return cards state lateness four ways and run ~200px each; Inventory shows two search boxes; Clients/Inventory toolbars wrap. See `docs/booqable/WHY_BOOQABLE_FEELS_CLEAN_2026-10-15.md` follow-ups.
+- Babin to confirm or flip RULINGS-2026-10-15 row 2 (no location in the list row). Dark/glass and phone not inspected by eye this session.
+
 ## 2026-10-15 — Remaining work register evidence review
 
 **Did**

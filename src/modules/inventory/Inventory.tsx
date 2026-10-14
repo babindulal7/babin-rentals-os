@@ -1593,25 +1593,12 @@ export default function Inventory() {
       <PageActions
         primary={<GlobalAddMenu module="inventory" />}
         // RULING 2026-10-13: on a phone, Refresh and Export live in More so the title and Add keep the header.
-        secondary={phone ? [] : [
-          <Button key="refresh" icon="refresh" onClick={refreshAll} aria-label="Refresh equipment">
-            Refresh
-          </Button>,
-          <span
-            key="export"
-            style={{ display: 'inline-flex' }}
-            title={`Exports the ${list.rows.length} models on this page. The list is paged server-side, so the file is the page, not the catalogue.`}
-          >
-            <Button icon="download" onClick={() => exportCsv(list.rows, money)} aria-label="Export equipment on this page">
-              Export
-            </Button>
-          </span>,
-        ]}
+        // RULING 2026-10-15: at every width — at 1280px with the sidebar open the two buttons
+        // crushed the title to "I.". Header = title, search, one primary. Revert = restore the
+        // `phone ?` branches on secondary/overflow.
         overflow={[
-          ...(phone ? [
-            { label: 'Refresh equipment', icon: 'refresh' as const, onClick: refreshAll },
-            { label: 'Export this page', icon: 'download' as const, onClick: () => exportCsv(list.rows, money) },
-          ] : []),
+          { label: 'Refresh equipment', icon: 'refresh' as const, onClick: refreshAll },
+          { label: 'Export this page', icon: 'download' as const, onClick: () => exportCsv(list.rows, money) },
           {
             label: 'Warranty Tracker',
             icon: 'check',

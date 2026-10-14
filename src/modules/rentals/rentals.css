@@ -9,12 +9,13 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
   background: var(--card);
 }
+/* RULING 2026-10-15: no uppercase override here — theme.css already rules
+   operations-table headers sentence case, and uppercase + tracking pushed
+   "BOOKING ID" / "TOTAL AMOUNT" onto two lines at 1280px. */
 .rentals-v2 .operations-table > thead > tr > th {
   height: 48px;
-  font-size: 11.5px;
+  font-size: var(--t-meta);
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: var(--text2);
   background: var(--th-bg, var(--card2));
   border-bottom: 1px solid var(--border);
