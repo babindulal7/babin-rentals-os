@@ -97,3 +97,19 @@ From checking `D:\proects\md` against `step1-foundation`. Fonepay, the live retu
 - **§4.65 (a)** (filed as §4.62) — show which units Reset needs next, worked out from the next booking's pickup time (`data/reset.ts:163`). Is it wanted, as a label or a sort, and inside what window?
 - **§4.65 (b)** — a manager override for Handover gate 1 (receiver ID not verified): allowed at all, by whom, and where it is recorded (`HandoverWorkspace.tsx:89`, `OVERRIDE_UNAVAILABLE`).
 - **§4.65 (c)** — holding a citizenship card, passport or licence as the deposit: whether to record it, as a non-money record kept apart from deposits (Law 5); whether it satisfies gate 4; its "returned to client" terminal action; and who may see the ID photo (PII).
+
+---
+
+## 13. Interactive reports (14 October 2026) — what blocks Phases 2–3
+
+Phase 1 (real-data Revenue trend) is built; its rulings are in `RULINGS-2026-10-14.md`. These need a person:
+- **(a) Pulse revenue basis.** Pulse's Revenue view is "spread across rental days" (`PERIOD_BASIS`, a standing
+  `TODO(decision)`); the Revenue report is now **billed by invoice issue date**. Should Pulse adopt billed revenue
+  (one definition app-wide), or keep a separate recognised-revenue metric that needs its own source?
+- **(b) Cash-out policy** for the Cash Flow chart: which postings count as cash out (approved expenses, supplier and
+  crew payouts, deposit refunds), and whether loan principal is shown apart. Blocks the Cash Flow view.
+- **(c) Five-year scenario explorer (Phase 3):** who may type a *manual illustrative baseline* (proposal: Owner only),
+  and whether it is ever saved (proposal: never saved in the browser; if saved, a server table with RLS and audit).
+- **(d) `invoices.issue_date` defaults to the database's `current_date` (UTC).** An invoice issued 00:00–05:45 NPT
+  without an explicit date carries the previous day. Fixing it means a migration (Babin applies, N-5) and deciding
+  whether existing rows are left as they are (Law 3 says yes).
