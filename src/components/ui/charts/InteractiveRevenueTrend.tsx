@@ -62,7 +62,7 @@ export function InteractiveRevenueTrend({ months, onActivate }: Props) {
         <span>{months[0]?.label}</span><span>{months.length > 1 ? months[months.length-1]?.label : ''}</span>
       </div>
       <div aria-live="polite" style={{ minHeight: 46, marginTop: 12, color: 'var(--text)', fontSize: 'var(--t-meta)' }}>
-        {details ? <><strong>{details.label}</strong> · {formatMoney(details.amountPaisa)} · {details.invoiceCount} issued invoice{details.invoiceCount===1?'':'s'} <button type="button" onClick={() => setSelected(null)} style={{ marginLeft: 12, minHeight:44, border: '1px solid var(--border)', padding:'0 12px', borderRadius: 'var(--r-sm)', background: 'var(--card)', color: 'var(--text)' }}>Clear selection</button></> : 'Select a point with mouse, touch or keyboard. Arrow keys move between months.'}
+        {details ? <><strong>{details.label}</strong> · {formatMoney(details.amountPaisa)} · {details.invoiceCount} issued invoice{details.invoiceCount===1?'':'s'} <button type="button" onClick={() => setSelected(null)} style={{ marginLeft: 12, minHeight:44, border: '1px solid var(--border)', padding:'0 12px', borderRadius: 'var(--rad-sm)', background: 'var(--card)', color: 'var(--text)' }}>Clear selection</button></> : 'Select a point with mouse, touch or keyboard. Arrow keys move between months.'}
       </div>
       <details>
         <summary style={{ cursor:'pointer', padding:'10px 0', minHeight:44 }}>View accessible month-by-month table</summary>
