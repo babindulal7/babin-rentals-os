@@ -116,6 +116,26 @@ describe('live Sales and Nepal VAT register — no invented business numbers', (
     expect(report.vat.taxRegister).toHaveLength(1)
   })
 
+  it('reports post-discount net sales and taxable base, not gross line subtotal', async () => {
+    const discounted = {
+      ...invoice('discount', '2026-10-10', 10000, 1040, 4000),
+      discount_amount: 2000,
+      taxable_amount: 8000,
+      total_amount: 9040,
+      outstanding_amount: 5040,
+    }
+    db.rows = [discounted]
+    const result = await getSalesVatReport()
+    expect(result.sales.metrics.netSales).toBe(rupees(8000))
+    expect(result.sales.metrics.totalDiscounts).toBe(rupees(2000))
+    expect(result.sales.metrics.totalInvoiced).toBe(rupees(9040))
+    expect(result.sales.metrics.totalCollected).toBe(rupees(4000))
+    expect(result.sales.metrics.totalOutstanding).toBe(rupees(5040))
+    expect(result.vat.metrics.taxableTurnover).toBe(rupees(8000))
+    expect(result.vat.metrics.totalOutputVat).toBe(rupees(1040))
+    expect(result.vat.taxRegister[0]?.taxableAmount).toBe(rupees(8000))
+  })
+
   it('separates 0% non-VAT invoices from actual taxable sales', async () => {
     db.rows = [
       invoice('vat', '2026-10-05', 2000, 260, 0),
