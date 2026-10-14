@@ -1,4 +1,5 @@
 import { supabase } from '../supabase'
+import { kathmanduCivil } from '../bs'
 
 /** Confirmed, current or completed rentals — never quotes, drafts or cancellations. */
 export const RENTAL_ACTIVITY_STAGES = new Set(['Booked', 'Packed', 'On Rent', 'Returned', 'Closed'])
@@ -77,7 +78,9 @@ export async function getLiveClientActivityReport(): Promise<LiveClientActivityR
       name: client.name ?? 'Unnamed client',
       status: client.status ?? 'Unknown',
       bookingCount: booking?.count ?? 0,
-      lastBookingCreatedAd: booking?.lastCreated?.slice(0, 10) ?? null,
+      lastBookingCreatedAd: booking?.lastCreated
+        ? new Date(kathmanduCivil(new Date(booking.lastCreated))).toISOString().slice(0, 10)
+        : null,
     }
   }).sort((a, b) => b.bookingCount - a.bookingCount || a.name.localeCompare(b.name))
 
