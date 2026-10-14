@@ -108,7 +108,7 @@ interface ActionsOverflowMenuProps {
  * Dedicated overflow menu (•••) that hosts excess secondary actions and overflow items.
  * Meets Law 15 (>= 44x44px touch targets) and WCAG menu accessibility standards.
  */
-function ActionsOverflowMenu({
+export function ActionsOverflowMenu({
   actions,
   overflowItems,
   customOverflowNode,
