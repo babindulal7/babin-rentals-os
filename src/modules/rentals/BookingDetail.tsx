@@ -95,7 +95,6 @@ import { lateFee } from '../../lib/lateFee'
 import type { LateFeeOutcome } from '../../lib/lateFee'
 import { ReturnSettlementModal, type ReturnSettlementDamageItem } from './modals/ReturnSettlementModal'
 import { RentalSummaryModal } from './modals/RentalSummaryModal'
-import { RentalMoreActions } from './actions/RentalMoreActions'
 
 /**
  * # Booking Detail — live, for ANY `:bookingNo`
@@ -2066,26 +2065,6 @@ function BookingDetailView() {
           },
         ]
       : []),
-  ]
-
-  /*
-   * RULING 2026-10-13: a phone header keeps the title, the stage action, a 44px
-   * Operations button and ONE More. Print and the booking items join the rental
-   * More (which already carries Cancel), and WhatsApp choices are listed flat
-   * because that menu has no submenus. Desktop is unchanged.
-   */
-  const phoneMoreItems = [
-    { label: 'Print booking', icon: 'file' as const, onClick: () => window.print() },
-    ...bookingMoreItems.flatMap((item) =>
-      item.submenu
-        ? item.submenu.map((sub) => ({
-            label: `Message: ${sub.label}`,
-            icon: 'message' as const,
-            onClick: sub.onClick,
-            ...(sub.unavailable ? { unavailable: sub.unavailable } : {}),
-          }))
-        : [{ label: item.label, icon: item.icon, onClick: item.onClick, ...(item.unavailable ? { unavailable: item.unavailable } : {}) }]
-    ),
   ]
 
   return (
