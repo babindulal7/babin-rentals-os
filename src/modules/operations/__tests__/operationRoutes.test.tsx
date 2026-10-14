@@ -424,6 +424,34 @@ describe('Spec 03 §3.1 — queue chips filter ONE time-ordered list', () => {
     await act(async () => clear?.click())
     expect(text()).toContain('B-715')
   })
+
+  it('phone viewport: consolidates secondary buttons and filters into More menu (BLOCKER-02)', async () => {
+    viewport = 'phone'
+    await mount(<OperationsQueues />, '/operations')
+    const directButtons = buttons().map((b) => b.textContent?.trim() ?? '')
+    // Secondary buttons Delivery & Logistics and Sub-Rentals must NOT crowd the phone header
+    expect(directButtons).not.toContain('Delivery & Logistics')
+    expect(directButtons).not.toContain('Sub-Rentals')
+
+    // More actions button exists on phone
+    const moreBtn = buttons().find((b) => b.getAttribute('aria-label') === 'More actions')
+    expect(moreBtn).toBeDefined()
+
+    // Clicking More reveals the consolidated actions
+    await act(async () => moreBtn?.click())
+    const menuItems = [...document.querySelectorAll('[role="menuitem"]')].map((el) => el.textContent?.trim())
+    expect(menuItems).toContain('Delivery & Logistics')
+    expect(menuItems).toContain('Sub-Rentals')
+    expect(menuItems).toContain('Filters')
+  })
+
+  it('desktop viewport: renders secondary action buttons directly in header', async () => {
+    viewport = 'desktop'
+    await mount(<OperationsQueues />, '/operations')
+    const directButtons = buttons().map((b) => b.textContent?.trim() ?? '')
+    expect(directButtons).toContain('Delivery & Logistics')
+    expect(directButtons).toContain('Sub-Rentals')
+  })
 })
 
 describe('OperationsShell is the unified modal host', () => {

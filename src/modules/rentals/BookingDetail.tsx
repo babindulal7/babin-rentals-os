@@ -2150,6 +2150,7 @@ function BookingDetailView() {
                       balance: canBookingMoney && hasInvoice ? (totals.outstanding as Paisa) : null,
                     }}
                   />
+                )}
                 {/* PLAN.md Phase 9 — how old this page is: the OLDER of its two
                     reads (the booking head and its lines), so the badge never
                     claims fresher data than is on screen. */}

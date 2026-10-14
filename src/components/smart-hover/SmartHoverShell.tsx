@@ -13,6 +13,7 @@
 
 import { type CSSProperties, type ReactNode } from 'react'
 import { HOVER_DIMS, HOVER_TIMING } from '../../lib/smartHover'
+import './smart-intel.css'
 
 interface ShellProps {
   labelledBy: string
@@ -90,32 +91,21 @@ export function SmartHoverTabs({
   onChange: (id: string) => void
 }) {
   return (
-    <div role="tablist" aria-label="Preview sections" style={{ display: 'flex', flexWrap: 'wrap', gap: 2, padding: '0 8px 8px', minWidth: 0 }}>
+    <div role="tablist" aria-label="Preview sections" className="smart-intel-tabs">
       {tabs.map((t) => {
         const selected = t.id === active
         return (
           <button
             key={t.id}
             role="tab"
+            type="button"
+            className="smart-intel-tab"
             aria-selected={selected}
+            aria-label={typeof t.count === 'number' ? `${t.label} (${t.count})` : t.label}
             onClick={() => onChange(t.id)}
-            style={{
-              minHeight: 'var(--tap)',
-              padding: '8px 10px',
-              border: 'none',
-              borderBottom: selected ? '2px solid var(--primary)' : '2px solid transparent',
-              background: 'transparent',
-              color: selected ? 'var(--text)' : 'var(--muted)',
-              fontFamily: 'var(--font-display)',
-              fontSize: '12px',
-              fontWeight: selected ? 700 : 600,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              flex: '0 0 auto',
-            }}
           >
             {t.label}
-            {typeof t.count === 'number' ? <span style={{ color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}> ({t.count})</span> : null}
+            {typeof t.count === 'number' ? <span className="smart-intel-count" aria-hidden="true">{t.count}</span> : null}
           </button>
         )
       })}

@@ -34,14 +34,14 @@ export function ClientHoverCard({
   const tokens = STATUS[tone]
 
   return (
-    <div>
-      <div id="smart-hover-title">
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '14px 14px 8px' }}>
-          <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--w08)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+    <div className="smart-intel">
+      <div className="smart-intel-identity" id="smart-hover-title">
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '16px 4px 14px' }}>
+          <span className="smart-intel-avatar" aria-hidden="true" style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--w08)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
             {preview.name.slice(0, 2).toUpperCase()}
           </span>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15 }}>{preview.name}</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17 }}>{preview.name}</div>
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>
               {preview.company ? `${preview.company} · ` : ''}{preview.clientNo}
             </div>
@@ -69,7 +69,7 @@ export function ClientHoverCard({
         active={tab}
         onChange={setTab}
       />
-      <div role="tabpanel">
+      <div role="tabpanel" className="smart-intel-panel">
         {tab === 'info' ? <InfoTab preview={preview} canViewFinance={canViewFinance} /> : null}
         {tab === 'current' ? <CurrentTab preview={preview} onOpenRental={onOpenRental} /> : null}
         {tab === 'history' ? (

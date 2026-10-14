@@ -106,7 +106,7 @@ export function IntelDetailExtras({ entityType, entityId, gateContext, actionCon
   }
 
   return (
-    <div aria-label={`${entityType} Intel details`} style={{ display: 'grid', gap: 18, marginTop: 20 }}>
+    <div className="smart-intel-extras" aria-label={`${entityType} Intel details`} style={{ display: 'grid', gap: 18, marginTop: section === 'notes' ? 0 : 20 }}>
       {error && <div role="alert" style={{ color: 'var(--danger-text)' }}>{error} <button type="button" onClick={() => void reload()} style={{ minHeight: 44 }}>Retry</button></div>}
       {loading && <p role="status" style={{ color: 'var(--muted)', margin: 0 }}>{section === 'notes' ? 'Loading notes…' : section === 'fields' ? 'Loading custom fields…' : 'Loading notes and custom fields…'}</p>}
       {section !== 'fields' && <section aria-label="Notes">
