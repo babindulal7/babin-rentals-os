@@ -66,3 +66,10 @@ export function WorkspaceHeaderMoreActions({ children }: { children: ReactNode }
   if (!workspace) return <>{children}</>
   return workspace.headerMoreActionsElement ? createPortal(children, workspace.headerMoreActionsElement) : null
 }
+
+/** Phone-only contextual search button, anchored beside the avatar on every page. */
+export function WorkspaceHeaderPhoneSearchActions({ children }: { children: ReactNode }) {
+  const workspace = useOptionalWorkspace()
+  if (!workspace) return <>{children}</>
+  return workspace.headerPhoneSearchActionsElement ? createPortal(children, workspace.headerPhoneSearchActionsElement) : null
+}
