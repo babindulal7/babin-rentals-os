@@ -37,7 +37,7 @@ export function bookingDiscountRows(
       percent: source.effectivePercent ?? 0,
       reason: source.discountSource === 'Manual' ? (textReason || source.name) : source.name,
       approverId: null,
-      ...(source.discountSource === 'Coupon' ? { couponId: source.couponId } : {}),
+      ...(source.discountSource === 'Coupon' && source.couponId ? { couponId: source.couponId } : {}),
     }
   })
 }
