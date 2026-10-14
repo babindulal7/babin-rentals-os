@@ -1,5 +1,5 @@
 import { roundHalfUp, formatMoney, type Paisa } from './money'
-import { getBusinessToday } from './bs'
+import { getBusinessToday, kathmanduCivil } from './bs'
 
 /**
  * # Canonical Pricing Pipeline — Babin Rentals OS (Task 6)
@@ -23,6 +23,19 @@ import { getBusinessToday } from './bs'
 export const DISCOUNT_STACKING_CAP_PERCENT = 25
 export const DEFAULT_VAT_RATE_PERCENT = 13
 export const WOMEN_DOP_DISCOUNT_PERCENT = 5
+
+/** Promotions use the Kathmandu calendar date, not the UTC date of the pickup. */
+export function promotionDateAd(instant: Date): string {
+  if (!Number.isFinite(instant.getTime())) throw new Error('Invalid promotional booking date')
+  return new Date(kathmanduCivil(instant)).toISOString().slice(0, 10)
+}
+
+/** Legacy ISO inputs are normalized; date-only AD strings are preserved. */
+function normalizePromotionDate(value?: string): string {
+  if (!value) return getBusinessToday().toISOString().slice(0, 10)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value
+  return promotionDateAd(new Date(value))
+}
 
 export interface PromoCodeDefinition {
   code: string
@@ -82,6 +95,11 @@ export interface AppliedDiscountBreakdown {
     name: string
     percent: number
     applied: boolean
+    /** Database provenance; create_booking must preserve this source. */
+    discountSource?: 'Manual' | 'Membership' | 'Coupon' | 'Women-DoP 5%' | 'Student' | 'College' | 'Named-client rates'
+    couponId?: string
+    /** Actual percentage after stacking, as stored in booking_discounts. */
+    effectivePercent?: number
     exclusionReason?: string
   }>
   validationErrors: string[]
@@ -174,13 +192,9 @@ export function evaluateDiscounts(
   }
 
   const validationErrors: string[] = []
-  if (discounts.manualDiscountPercent && discounts.manualDiscountPercent > 0) {
-    if (!discounts.manualDiscountReason || discounts.manualDiscountReason.trim().length === 0) {
-      validationErrors.push('Manual discount requires an explanatory reason.')
-    }
-    if (!discounts.manualDiscountAuthorizedBy || discounts.manualDiscountAuthorizedBy.trim().length === 0) {
-      validationErrors.push('Manual discount requires an authorized approver.')
-    }
+  const manual = discounts.manualDiscountPercent ?? 0
+  if (!Number.isFinite(manual) || manual < 0 || manual > 100) {
+    validationErrors.push('Manual discount must be between 0% and 100%.')
   }
 
   const sources: AppliedDiscountBreakdown['sources'] = []
@@ -192,6 +206,7 @@ export function evaluateDiscounts(
     if (discounts.bundleSavingPercent && discounts.bundleSavingPercent > 0) {
       sources.push({
         name: 'Student Bundle Rate',
+        discountSource: 'Student',
         percent: discounts.bundleSavingPercent,
         applied: true,
       })
@@ -199,6 +214,7 @@ export function evaluateDiscounts(
     if (discounts.membershipPercent && discounts.membershipPercent > 0) {
       sources.push({
         name: 'Membership Discount',
+        discountSource: 'Membership',
         percent: discounts.membershipPercent,
         applied: false,
         exclusionReason: 'Student bundles do not stack with membership discounts',
@@ -207,6 +223,7 @@ export function evaluateDiscounts(
     if (discounts.durationPercent && discounts.durationPercent > 0) {
       sources.push({
         name: 'Duration Discount',
+        discountSource: 'Manual',
         percent: discounts.durationPercent,
         applied: false,
         exclusionReason: 'Student bundles do not stack with duration discounts',
@@ -224,6 +241,7 @@ export function evaluateDiscounts(
     if (discounts.womenDopEligible) {
       sources.push({
         name: 'Women DoP / Director Initiative',
+        discountSource: 'Women-DoP 5%',
         percent: WOMEN_DOP_DISCOUNT_PERCENT,
         applied: true,
       })
@@ -231,7 +249,8 @@ export function evaluateDiscounts(
     // Manual discount can override if authorized
     if (discounts.manualDiscountPercent && discounts.manualDiscountPercent > 0) {
       sources.push({
-        name: `Manual (${discounts.manualDiscountReason || 'Authorized'})`,
+        name: `Manual (${discounts.manualDiscountReason || 'Manual discount'})`,
+        discountSource: 'Manual',
         percent: discounts.manualDiscountPercent,
         applied: true,
       })
@@ -241,6 +260,7 @@ export function evaluateDiscounts(
     if (discounts.membershipPercent && discounts.membershipPercent > 0) {
       sources.push({
         name: 'Membership Discount',
+        discountSource: 'Membership',
         percent: discounts.membershipPercent,
         applied: true,
       })
@@ -248,6 +268,7 @@ export function evaluateDiscounts(
     if (discounts.durationPercent && discounts.durationPercent > 0) {
       sources.push({
         name: 'Duration Discount',
+        discountSource: 'Manual',
         percent: discounts.durationPercent,
         applied: true,
       })
@@ -255,6 +276,7 @@ export function evaluateDiscounts(
     if (discounts.bundleSavingPercent && discounts.bundleSavingPercent > 0) {
       sources.push({
         name: 'Bundle Benefit',
+        discountSource: 'Manual',
         percent: discounts.bundleSavingPercent,
         applied: true,
       })
@@ -262,6 +284,7 @@ export function evaluateDiscounts(
     if (discounts.womenDopEligible) {
       sources.push({
         name: 'Women DoP / Director Initiative',
+        discountSource: 'Women-DoP 5%',
         percent: WOMEN_DOP_DISCOUNT_PERCENT,
         applied: true,
       })
@@ -270,7 +293,7 @@ export function evaluateDiscounts(
     // Promo code validation
     if (discounts.promoCode) {
       const p = discounts.promoCode
-      const today = bookingDateAd || getBusinessToday().toISOString().slice(0, 10)
+      const today = normalizePromotionDate(bookingDateAd)
       let valid = p.active
       let failReason: string | undefined
 
@@ -289,6 +312,8 @@ export function evaluateDiscounts(
 
       sources.push({
         name: `Promo (${p.code})`,
+        discountSource: 'Coupon',
+        ...(p.couponId ? { couponId: p.couponId } : {}),
         percent: p.discountPercent,
         applied: valid,
         ...(failReason ? { exclusionReason: failReason } : {}),
@@ -298,7 +323,8 @@ export function evaluateDiscounts(
     // Manual discount
     if (discounts.manualDiscountPercent && discounts.manualDiscountPercent > 0) {
       sources.push({
-        name: `Manual (${discounts.manualDiscountReason || 'Authorized'})`,
+        name: `Manual (${discounts.manualDiscountReason || 'Manual discount'})`,
+        discountSource: 'Manual',
         percent: discounts.manualDiscountPercent,
         applied: true,
       })
@@ -310,9 +336,18 @@ export function evaluateDiscounts(
     .filter((s) => s.applied)
     .reduce((sum, s) => sum + s.percent, 0)
 
-  // Enforce 25% Stacking Cap
-  const capped = rawTotalPercent > DISCOUNT_STACKING_CAP_PERCENT
-  const appliedPercent = Math.min(DISCOUNT_STACKING_CAP_PERCENT, Math.max(0, rawTotalPercent))
+  // Standalone discounts are not stacks. The 25% cap applies when combining
+  // multiple benefits; a standalone manual adjustment may be up to 100%.
+  const stacking = sources.filter((source) => source.applied && source.percent > 0).length > 1
+  const limit = stacking ? DISCOUNT_STACKING_CAP_PERCENT : 100
+  const capped = rawTotalPercent > limit
+  const appliedPercent = Math.min(limit, Math.max(0, rawTotalPercent))
+  let remaining = appliedPercent
+  const allocatedSources = sources.map((source) => {
+    const effectivePercent = source.applied ? Math.min(Math.max(0, source.percent), remaining) : 0
+    remaining = Math.max(0, remaining - effectivePercent)
+    return { ...source, effectivePercent }
+  })
 
   const discountPaisa = toWholeRupeePaisa(grossSubtotalPaisa * (appliedPercent / 100))
 
@@ -321,7 +356,7 @@ export function evaluateDiscounts(
     appliedPercent,
     capped,
     discountPaisa,
-    sources,
+    sources: allocatedSources,
     validationErrors,
   }
 }
