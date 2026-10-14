@@ -751,6 +751,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
               {/* Context actions vary by page but never displace Filter or
                   move a primary CTA past the More button. */}
               <span className="app-global-header__action-slot app-global-header__action-slot--secondary" data-header-slot="secondary">
+                <span ref={ws?.setHeaderSecondaryActionsElement} className="workspace-header-secondary-actions" />
                 {!isPhone && !isTablet && resolved?.secondary?.map((sec) => {
                   const statusCheck = isActionEnabled(sec, actionContext)
                   return (
@@ -789,6 +790,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
               </span>
 
               <span className="app-global-header__action-slot app-global-header__action-slot--more" data-header-slot="more">
+                <span ref={ws?.setHeaderMoreActionsElement} className="workspace-header-more-actions" />
                 {overflowItems.length > 0 && <OverflowMenu ariaLabel="More actions" items={overflowItems} />}
               </span>
 
