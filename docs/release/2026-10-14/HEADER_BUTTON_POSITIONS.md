@@ -18,15 +18,16 @@ Desktop (right-anchored, after Page Title and Search):
 
 The order in the DOM is **secondary, filters, add, more, primary**. Secondary labels or absent actions do not move the four fixed action slots. Empty desktop slots reserve position; no fake, disabled button appears.
 
-Phone (<768px): same semantic ordering but invisible empty controls consume no space; button hit areas remain >=44px. Add reduces to its icon with an accessible label; primary truncates long text and retains its accessible name. Phone search has one fixed trailing `data-header-slot=search` location before the avatar, regardless of whether the page provides a contextual query or uses global search. It cannot turn into a second permanent header row.
+Phone (<768px): same semantic ordering but invisible empty controls consume no space; button hit areas remain >=44px and the primary position is compact (56px). Add reduces to its icon with an accessible label; primary truncates long text and retains its accessible name. Phone search has one fixed trailing `data-header-slot=search` location before the avatar, regardless of whether the page provides a contextual query or uses global search. It cannot turn into a second permanent header row.
 
 ## Compatible APIs
 
 - Preferred new screens: `<PageHeader actionsConfig={[...]}/>` — typed `priority: 'primary' | 'secondary' | 'overflow' | 'add'` with permissions and dynamic stage rules.
 - Existing screens using `<PageHeader actions={<PageActions ... />}/>` are partitioned by the shell into the same action slots, instead of rendering their whole action bar after Save. Excess secondary actions are placed in the More menu.
 - Unstructured legacy actions are recognized by `variant='primary'` and placed in the primary slot; other actions become secondary/overflow.
-- Portaled pages: `WorkspaceHeaderActions` (filters), `WorkspaceHeaderSecondaryActions`, `WorkspaceHeaderMoreActions`, `WorkspaceHeaderRightActions` (primary only).
+- Portaled pages: `WorkspaceHeaderActions` (filters), `WorkspaceHeaderSecondaryActions`, `WorkspaceHeaderAddActions` (create), `WorkspaceHeaderMoreActions`, `WorkspaceHeaderRightActions` (primary only), `WorkspaceHeaderPhoneSearchActions`. Each slot is owned by the one global header.
 - New Rental was converted from one three-button portal to three separate typed locations, retaining all click handlers, disabled rules and the draft/confirm paths.
+- Rentals List now places the New Rental creation action in **Add**, not Save/Confirm. This suppresses the generic Add fallback while the page owns that slot and restores it upon unmount.
 
 ## Do not
 
