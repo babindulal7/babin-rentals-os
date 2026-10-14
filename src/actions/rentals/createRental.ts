@@ -342,6 +342,9 @@ export const createRentalConfig: ActionConfig<CreateRentalInput, CreateRentalRes
       )
     }
     if (input.quoteExpiresAt != null) assertInstant(input.quoteExpiresAt, 'quoteExpiresAt')
+    if (input.vatRate !== undefined && (!Number.isFinite(input.vatRate) || input.vatRate < 0 || input.vatRate > 1)) {
+      throw new Error('Booking VAT must be a fraction between 0 and 1 (0 for no VAT, 0.13 for 13%). Nothing was sent.')
+    }
 
     if (input.clientUuid !== undefined && input.clientUuid.trim() === '') {
       throw new Error(
