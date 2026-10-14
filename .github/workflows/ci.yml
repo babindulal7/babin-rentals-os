@@ -47,6 +47,10 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # Enforce ESLint on every branch, rather than only in manual release checks.
+      - name: Lint source
+        run: npm run lint
+
       - name: Test (offline mock backend)
         env:
           VITE_DATA_SOURCE: mock
