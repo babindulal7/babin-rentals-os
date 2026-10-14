@@ -1,56 +1,65 @@
-import { formatAd } from '../../lib/bs'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { PageHeader, KpiStrip, cardStyle } from '../../components/ui/Page'
+import { PageHeader, KpiStrip, Button, cardStyle } from '../../components/ui/Page'
 import type { Kpi } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
-import { ReportToolbar } from '../../components/ui/ReportToolbar'
-import type { ReportCsvRow, ReportFilters } from '../../components/ui/ReportToolbar'
-import { LineChart, Donut, Legend, type Slice } from '../../components/ui/Charts'
+import { ReportToolbar, reportRangeDays } from '../../components/ui/ReportToolbar'
+import type { ReportCompare, ReportCsvRow, ReportFilters } from '../../components/ui/ReportToolbar'
 import { ReportFamiliesNav } from '../../components/ui/ReportFamiliesNav'
+import { SegmentedControl } from '../../components/ui/SegmentedControl'
+import { EmptyState, ErrorBanner, LoadingSkeleton, RestrictedState } from '../../components/ui/StateViews'
+import { InteractiveTrendChart, SERIES_STATUS_LABEL, type TrendSeries } from '../../components/ui/charts/InteractiveTrendChart'
 import Icon from '../../components/ui/Icon'
-import { formatMoney, rupees, type Paisa } from '../../lib/money'
-import { useCanViewMoney } from '../../lib/moneyVisibility'
+import { formatAd, formatAdDateTime, businessDayAd } from '../../lib/bs'
+import { formatMoney, type Paisa } from '../../lib/money'
+import { useAuth } from '../../lib/auth'
+import { useCanViewFinancialReports } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
-import { figuresFor } from '../../data/pulse'
+import { compactMoneyLabel, countLabel } from '../../lib/intel/chartScale'
+import {
+  bucketAxisLabel,
+  bucketLongLabel,
+  changeLabel,
+  coverageNotes,
+  summarySentence,
+  windowLabel,
+  type RevenueBucket,
+  type RevenueTrendReport,
+} from '../../lib/intel/revenueTrend'
+import { loadRevenueTrend, type RevenueTrendResult } from '../../lib/queries/reportRevenueTrend'
 import { listInvoices, type InvoiceListRow } from '../../lib/queries/finance'
 
-type RevenueTab = 'trends' | 'categories' | 'projects' | 'invoices'
+/*
+ * RULING 2026-10-14: the Revenue report shows only figures read from issued
+ * invoices. It used to chart the Pulse seed ledger (a generated, browser-side
+ * fixture) and print hardcoded category and project-type splits, fallback KPIs
+ * ("42 invoices", "Rs 35,000 average") and a KPI total that summed voided
+ * invoices. The category and project-type tabs are withdrawn until a verified
+ * attribution source exists. Revert = restore this file from git history.
+ */
 
-interface CategoryRevenue {
-  category: string
-  revenue: Paisa
-  sharePct: number
-  rentalDays: number
-  itemCount: number
-}
+type RevenueTab = 'trend' | 'invoices'
+type RevenueView = 'revenue' | 'gross' | 'count'
 
-interface ProjectTypeRevenue {
-  projectType: string
-  bookingCount: number
-  totalRevenue: Paisa
-  sharePct: number
-  avgBookingValue: Paisa
-}
-
-const CATEGORY_DATA: CategoryRevenue[] = [
-  { category: 'Cinema Cameras', revenue: rupees(540000), sharePct: 36, rentalDays: 48, itemCount: 12 },
-  { category: 'Cine Lenses', revenue: rupees(360000), sharePct: 24, rentalDays: 72, itemCount: 28 },
-  { category: 'Continuous Lighting', revenue: rupees(225000), sharePct: 15, rentalDays: 54, itemCount: 22 },
-  { category: 'Audio & Wireless', revenue: rupees(150000), sharePct: 10, rentalDays: 38, itemCount: 18 },
-  { category: 'Grip & Support', revenue: rupees(120000), sharePct: 8, rentalDays: 42, itemCount: 30 },
-  { category: 'Drones & Gimbals', revenue: rupees(75000), sharePct: 5, rentalDays: 16, itemCount: 6 },
-  { category: 'Power & Monitoring', revenue: rupees(30000), sharePct: 2, rentalDays: 25, itemCount: 14 },
+const VIEWS: ReadonlyArray<{ id: RevenueView; label: string; series: string }> = [
+  { id: 'revenue', label: 'Before VAT', series: 'Billed revenue (before VAT)' },
+  { id: 'gross', label: 'Incl. VAT', series: 'Invoiced, VAT included' },
+  { id: 'count', label: 'Invoices', series: 'Invoices issued' },
 ]
 
-const PROJECT_TYPE_DATA: ProjectTypeRevenue[] = [
-  { projectType: 'Commercial / TVC', bookingCount: 14, totalRevenue: rupees(620000), sharePct: 41, avgBookingValue: rupees(44285) },
-  { projectType: 'Feature Film', bookingCount: 4, totalRevenue: rupees(390000), sharePct: 26, avgBookingValue: rupees(97500) },
-  { projectType: 'Music Video', bookingCount: 12, totalRevenue: rupees(240000), sharePct: 16, avgBookingValue: rupees(20000) },
-  { projectType: 'Documentary', bookingCount: 6, totalRevenue: rupees(120000), sharePct: 8, avgBookingValue: rupees(20000) },
-  { projectType: 'Corporate / Brand', bookingCount: 8, totalRevenue: rupees(85000), sharePct: 6, avgBookingValue: rupees(10625) },
-  { projectType: 'Event / Concert', bookingCount: 5, totalRevenue: rupees(45000), sharePct: 3, avgBookingValue: rupees(9000) },
-]
+const DEFINITION_NOTE =
+  'Billed revenue is the amount on issued invoices after discount and before VAT, dated by the invoice issue date. Draft and voided invoices are not counted; security deposits and cash collected are separate measures.'
+
+const CATEGORY_UNAVAILABLE_NOTE =
+  'Revenue by equipment category and by project type is not shown: invoices do not yet record a verified split, and invented shares would not reconcile with the totals above.'
+
+function valueOf(b: RevenueBucket, view: RevenueView): number {
+  return view === 'revenue' ? b.revenue : view === 'gross' ? b.gross : b.invoiceCount
+}
+
+function fmtView(view: RevenueView, v: number): string {
+  return view === 'count' ? `${countLabel(v)} invoice${v === 1 ? '' : 's'}` : formatMoney(v as Paisa)
+}
 
 const th = {
   textAlign: 'left' as const,
@@ -70,232 +79,104 @@ const td = {
   borderBottom: '1px solid var(--border)',
 }
 
+const num = { ...td, textAlign: 'right' as const }
+
+type LoadState =
+  | { kind: 'loading' }
+  | { kind: 'error'; message: string }
+  | { kind: 'done'; result: RevenueTrendResult }
+
 export default function RevenueReport() {
-  const money = useCanViewMoney()
+  const permitted = useCanViewFinancialReports()
+  const { user } = useAuth()
   const viewport = useViewport()
-  const [activeTab, setActiveTab] = useState<RevenueTab>('trends')
+  const [tab, setTab] = useState<RevenueTab>('trend')
+  const [view, setView] = useState<RevenueView>('revenue')
   const [filters, setFilters] = useState<ReportFilters>({})
-  const [invoices, setInvoices] = useState<InvoiceListRow[]>([])
-  const [invoicesLoading, setInvoicesLoading] = useState(true)
+  const [compare, setCompare] = useState<ReportCompare>('off')
+  const [revision, setRevision] = useState(0)
+  const [state, setState] = useState<LoadState>({ kind: 'loading' })
 
-  // Reliable fallback figures from pulse ledger
-  const defaultFigures = useMemo(() => {
-    return figuresFor(new Date(2026, 6, 1), new Date(2026, 6, 31)) ?? {
-      from: new Date(2026, 6, 1),
-      to: new Date(2026, 6, 31),
-      days: 31,
-      revenue: rupees(1485000),
-      expenses: rupees(620000),
-      profit: rupees(865000),
-      collected: rupees(1124000),
-      collectedPct: 76,
-      netCash: rupees(450000),
-      cashIn: rupees(1124000),
-      cashOut: rupees(674000),
-      utilization: 68,
-      outstanding: rupees(361000),
-      buckets: [
-        { label: 'W1', revenue: rupees(340000), expenses: rupees(150000), profit: rupees(190000), cashIn: rupees(280000), cashOut: rupees(140000), netCash: rupees(140000), utilization: 62 },
-        { label: 'W2', revenue: rupees(410000), expenses: rupees(160000), profit: rupees(250000), cashIn: rupees(310000), cashOut: rupees(170000), netCash: rupees(140000), utilization: 74 },
-        { label: 'W3', revenue: rupees(380000), expenses: rupees(145000), profit: rupees(235000), cashIn: rupees(260000), cashOut: rupees(160000), netCash: rupees(100000), utilization: 69 },
-        { label: 'W4', revenue: rupees(355000), expenses: rupees(165000), profit: rupees(190000), cashIn: rupees(274000), cashOut: rupees(204000), netCash: rupees(70000), utilization: 67 },
-      ],
-      equipment: [],
-      exceptions: [],
-    }
-  }, [])
-
-  const pulseFigures = useMemo(() => {
-    if (filters.dateRange?.fromAd && filters.dateRange?.toAd) {
-      const from = new Date(filters.dateRange.fromAd)
-      const to = new Date(filters.dateRange.toAd)
-      const figs = figuresFor(from, to)
-      if (figs) return figs
-    }
-    return defaultFigures
-  }, [filters.dateRange, defaultFigures])
+  const { fromDay, toDay } = reportRangeDays(filters.dateRange)
+  // Compare needs a bounded period: "All dates" has no period before it.
+  const bounded = fromDay !== null && toDay !== null
+  const compareOn = bounded && compare === 'previous'
 
   useEffect(() => {
+    // Never fetch for a role that may not see the figures — not "fetch and hide".
+    if (!permitted) return
     let active = true
-    setInvoicesLoading(true)
-
-    void listInvoices({
-      page: { index: 0, size: 100 },
-      dateRange: filters.dateRange,
-    }).then((res) => {
-      if (active) {
-        setInvoices(res.rows)
-        setInvoicesLoading(false)
-      }
-    })
-
+    setState({ kind: 'loading' })
+    loadRevenueTrend({ fromDay, toDay, compare: compareOn, today: businessDayAd() })
+      .then((result) => {
+        if (active) setState({ kind: 'done', result })
+      })
+      .catch((cause: unknown) => {
+        if (active) setState({ kind: 'error', message: cause instanceof Error ? cause.message : 'The invoices could not be read.' })
+      })
     return () => {
       active = false
     }
-  }, [filters])
+  }, [permitted, fromDay, toDay, compareOn, revision])
 
-  // KPIs
-  const kpis = useMemo<Kpi[]>(() => {
-    if (!money) return []
+  const report: RevenueTrendReport | null = state.kind === 'done' && state.result.kind === 'report' ? state.result.report : null
 
-    const totalInvoiced = invoices.length > 0
-      ? rupees(invoices.reduce((s, inv) => s + (inv.totalAmount as number), 0))
-      : pulseFigures.revenue
-    const totalCollected = invoices.length > 0
-      ? rupees(invoices.reduce((s, inv) => s + (inv.paidAmount as number), 0))
-      : pulseFigures.collected
-    const collectionPct = (totalInvoiced as number) > 0
-      ? Math.round(((totalCollected as number) / (totalInvoiced as number)) * 100)
-      : 0
-    const totalOutstanding = rupees(Math.max(0, (totalInvoiced as number) - (totalCollected as number)))
-    const avgBookingValue = invoices.length > 0
-      ? rupees(Math.round((totalInvoiced as number) / invoices.length))
-      : rupees(35000)
-
-    return [
-      {
-        label: 'Total Invoiced Revenue',
-        value: formatMoney(totalInvoiced),
-        icon: 'dollar',
-        accent: 'primary',
-        note: `${pulseFigures.days} days reporting period`,
-      },
-      {
-        label: 'Collected Cash',
-        value: formatMoney(totalCollected),
-        icon: 'check',
-        accent: 'success',
-        note: `${collectionPct}% collection rate`,
-      },
-      {
-        label: 'Receivables / Outstanding',
-        value: formatMoney(totalOutstanding),
-        icon: 'timer',
-        accent: (totalOutstanding as number) > 0 ? 'warn' : 'neutral',
-        note: `${invoices.filter((i) => (i.outstandingAmount as number) > 0).length} unpaid invoices`,
-      },
-      {
-        label: 'Average Invoice Value',
-        value: formatMoney(avgBookingValue),
-        icon: 'receipt',
-        accent: 'neutral',
-        note: `${invoices.length > 0 ? invoices.length : 42} invoices generated`,
-      },
+  const csvRows = useMemo<ReportCsvRow[] | null>(() => {
+    if (!report) return null
+    const { current, previous } = report
+    const head: ReportCsvRow = [
+      'Period',
+      'Billed revenue (before VAT)',
+      'VAT',
+      'Invoiced (VAT included)',
+      'Invoices issued',
+      ...(previous ? ['Previous period', 'Previous billed revenue (before VAT)', 'Change'] : []),
     ]
-  }, [money, invoices, pulseFigures])
-
-  // Category slices for Donut
-  const categorySlices: Slice[] = useMemo(() => {
-    return CATEGORY_DATA.map((c) => ({
-      label: c.category,
-      value: c.sharePct,
-      display: formatMoney(c.revenue),
-      percent: `${c.sharePct}%`,
-    }))
-  }, [])
-
-  // Project type slices for Donut
-  const projectSlices: Slice[] = useMemo(() => {
-    return PROJECT_TYPE_DATA.map((p) => ({
-      label: p.projectType,
-      value: p.sharePct,
-      display: formatMoney(p.totalRevenue),
-      percent: `${p.sharePct}%`,
-    }))
-  }, [])
-
-  // CSV Export
-  function getCsvRows(): ReportCsvRow[] {
-    if (activeTab === 'trends') {
-      return [
-        ['Revenue Trends & Daily Realization Report'],
-        ['Bucket Period', 'Revenue', 'Operating Expense', 'Net Profit'],
-        ...pulseFigures.buckets.map((b): ReportCsvRow => [
-          b.label,
+    return [
+      ['Measure', DEFINITION_NOTE],
+      ['Data status', report.status === 'actual' ? 'Actual' : `Partial data: ${report.partialReasons.join(' ')}`],
+      ['Covers', windowLabel(current.window)],
+      ['Periods', current.granularity === 'month' ? 'AD calendar months' : 'Days'],
+      ['Calculated', formatAdDateTime(report.calculatedAt)],
+      [],
+      head,
+      ...current.buckets.map((b, i): ReportCsvRow => {
+        const p = previous?.buckets[i]
+        return [
+          bucketLongLabel(b, current.granularity),
           formatMoney(b.revenue),
-          formatMoney(b.expenses),
-          formatMoney(b.profit),
-        ]),
-      ]
-    } else if (activeTab === 'categories') {
-      return [
-        ['Revenue by Equipment Category Report'],
-        ['Category', 'Revenue', 'Share', 'Rental Days', 'Active Units'],
-        ...CATEGORY_DATA.map((c): ReportCsvRow => [
-          c.category,
-          formatMoney(c.revenue),
-          `${c.sharePct}%`,
-          c.rentalDays,
-          c.itemCount,
-        ]),
-      ]
-    } else if (activeTab === 'projects') {
-      return [
-        ['Revenue by Project Type Report'],
-        ['Project Type', 'Booking Count', 'Total Revenue', 'Share', 'Average Booking Value'],
-        ...PROJECT_TYPE_DATA.map((p): ReportCsvRow => [
-          p.projectType,
-          p.bookingCount,
-          formatMoney(p.totalRevenue),
-          `${p.sharePct}%`,
-          formatMoney(p.avgBookingValue),
-        ]),
-      ]
-    } else {
-      return [
-        ['Invoices Register Extract'],
-        ['Invoice No', 'Client Name', 'Issue Date', 'Status', 'Subtotal', 'Tax Amount', 'Total', 'Paid', 'Outstanding'],
-        ...invoices.map((inv): ReportCsvRow => [
-          inv.invoiceNo,
-          inv.clientName,
-          inv.issueDateAd,
-          inv.status,
-          formatMoney(inv.subtotal),
-          formatMoney(inv.vatAmount),
-          formatMoney(inv.totalAmount),
-          formatMoney(inv.paidAmount),
-          formatMoney(inv.outstandingAmount),
-        ]),
-      ]
-    }
-  }
+          formatMoney(b.vat),
+          formatMoney(b.gross),
+          b.invoiceCount,
+          ...(previous && p ? [bucketLongLabel(p, previous.granularity, previous.layout), formatMoney(p.revenue), changeLabel(b.revenue, p.revenue)] : []),
+        ]
+      }),
+      [
+        'Total',
+        formatMoney(current.totals.revenue),
+        formatMoney(current.totals.vat),
+        formatMoney(current.totals.gross),
+        current.totals.invoiceCount,
+        ...(previous
+          ? [windowLabel(previous.window), formatMoney(previous.totals.revenue), changeLabel(current.totals.revenue, previous.totals.revenue)]
+          : []),
+      ],
+    ]
+  }, [report])
 
-  if (!money) {
+  if (!permitted) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-        <PageHeader
-          icon="dollar"
-          title="Revenue Reports"
-          description="Invoiced revenue, project classification breakdown, category yield, and cash realization."
-        />
+        <PageHeader icon="dollar" title="Revenue Reports" description="Billed revenue from issued invoices." />
         <ReportFamiliesNav current="Revenue" />
-        <div
-          style={{
-            ...cardStyle,
-            padding: 'var(--sp-xl)',
-            textAlign: 'center',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 'var(--sp-sm)',
-          }}
-        >
-          <Icon name="lock" size={32} style={{ color: 'var(--muted)' }} />
-          <h3 style={{ margin: 0, fontSize: 'var(--t-h3)', color: 'var(--text)' }}>Revenue Intelligence Restricted</h3>
-          <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)', maxWidth: 440 }}>
-            {/* Invoiced revenues, client settlement totals, and financial yields are money-blind under Law 6. This view is restricted to Owner, Manager, and Accounts roles. */}Your role cannot view revenue reports. </p>
-        </div>
+        <RestrictedState reason="Your role cannot view revenue reports." requiredRole="Owner, Admin, Manager or Accounts" />
       </div>
     )
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-      <PageHeader
-        icon="dollar"
-        title="Revenue Reports"
-        description="Invoiced revenue, project classification breakdown, category yield, payment status, and cash realization."
-      />
+      <PageHeader icon="dollar" title="Revenue Reports" description="Billed revenue from issued invoices, by period, with the invoice register." />
 
       <ReportFamiliesNav current="Revenue" />
 
@@ -304,271 +185,393 @@ export default function RevenueReport() {
         value={filters}
         onChange={setFilters}
         dateColumn="issue_date"
-        csv={{
-          filename: `revenue-${activeTab}`,
-          build: getCsvRows,
-        }}
+        {...(bounded && tab === 'trend' ? { compare, onCompareChange: setCompare } : {})}
+        {...(tab === 'trend' && csvRows
+          ? { csv: { filename: 'revenue-billed', build: () => csvRows, generatedBy: user?.name } }
+          : {})}
       >
-        <div
-          role="group"
-          aria-label="Revenue report views"
-          className="report-view-toggle"
-          style={{ display: 'inline-flex' }}
-        >
-          {([
-            ['Revenue Trends', 'trends'],
-            ['Category & Equipment', 'categories'],
-            ['Project Types', 'projects'],
-            ['Invoices Register', 'invoices'],
-          ] as const).map(([label, tab]) => {
-            const active = activeTab === tab
-            return (
-              <button
-                key={tab}
-                type="button"
-                className="tap"
-                onClick={() => setActiveTab(tab)}
-                aria-pressed={active}
-                style={{
-                  minHeight: 44,
-                  padding: '0 14px',
-                  fontSize: 'var(--t-meta)',
-                  fontWeight: active ? 600 : 400,
-                  border: '1px solid var(--border)',
-                  background: active ? 'var(--nav-active-bg)' : 'transparent',
-                  color: active ? 'var(--nav-active-accent)' : 'var(--text2)',
-                  borderRadius:
-                    tab === 'trends'
-                      ? 'var(--rad-sm) 0 0 var(--rad-sm)'
-                      : tab === 'invoices'
-                        ? '0 var(--rad-sm) var(--rad-sm) 0'
-                        : 0,
-                  cursor: 'pointer',
-                }}
-              >
-                {label}
-              </button>
-            )
-          })}
-        </div>
+        <SegmentedControl<RevenueTab>
+          ariaLabel="Revenue report views"
+          size="sm"
+          value={tab}
+          onChange={setTab}
+          options={[
+            { id: 'trend', label: 'Revenue trend' },
+            { id: 'invoices', label: 'Invoice register' },
+          ]}
+        />
       </ReportToolbar>
 
-      {/* KPI Strip */}
-      <KpiStrip items={kpis} columns={viewport === 'phone' ? 1 : viewport === 'tablet' ? 2 : 4} />
+      {tab === 'trend' ? (
+        <TrendPanel
+          state={state}
+          view={view}
+          onView={setView}
+          onRetry={() => setRevision((r) => r + 1)}
+          kpiColumns={viewport === 'phone' ? 1 : viewport === 'tablet' ? 2 : 4}
+        />
+      ) : (
+        <InvoiceRegister filters={filters} />
+      )}
 
-      {/* Main Tab Content */}
-      {activeTab === 'trends' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-          <div style={{ ...cardStyle, padding: 'var(--sp-md)' }}>
-            <h3 style={{ margin: '0 0 var(--sp-sm)', fontSize: 'var(--t-h3)', color: 'var(--text)' }}>
-              Periodic Revenue Trajectory
+      <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.5 }}>
+        {CATEGORY_UNAVAILABLE_NOTE} Every invoice, with its payments and credit notes, is in{' '}
+        <Link to="/finance?tab=invoices" style={{ color: 'var(--link)', fontWeight: 600 }}>
+          Finance ▸ Invoices
+        </Link>
+        .
+      </p>
+    </div>
+  )
+}
+
+/* ── the trend tab ─────────────────────────────────────────────────────── */
+
+function TrendPanel({
+  state,
+  view,
+  onView,
+  onRetry,
+  kpiColumns,
+}: {
+  state: LoadState
+  view: RevenueView
+  onView: (v: RevenueView) => void
+  onRetry: () => void
+  kpiColumns: number
+}) {
+  if (state.kind === 'loading') return <LoadingSkeleton type="card" rows={4} label="Reading issued invoices…" />
+  if (state.kind === 'error') {
+    return <ErrorBanner title="Revenue could not be calculated" message={`${state.message} No figures are shown rather than incomplete ones.`} onRetry={onRetry} />
+  }
+
+  const result = state.result
+  if (result.kind === 'no-history') {
+    return (
+      <section aria-label="Revenue trend" style={cardStyle}>
+        <EmptyState kind="nothing-yet" title="No issued invoices yet" description="Revenue appears here once an invoice is issued. Drafts and voided invoices are not revenue." />
+      </section>
+    )
+  }
+  if (result.kind === 'future') {
+    return (
+      <section aria-label="Revenue trend" style={cardStyle}>
+        <EmptyState title="This period has not started" description="Actual revenue can only be shown up to today. Choose a period that has begun." />
+      </section>
+    )
+  }
+  if (result.kind === 'inverted') {
+    return (
+      <section aria-label="Revenue trend" style={cardStyle}>
+        <EmptyState title="The start date is after the end date" description="Swap the two dates to see this period." />
+      </section>
+    )
+  }
+  if (result.kind === 'too-long') {
+    return (
+      <section aria-label="Revenue trend" style={cardStyle}>
+        <EmptyState
+          title="Choose a period of five years or less"
+          description={`This range covers ${result.months} months; the trend reads up to 60 at a time.`}
+        />
+      </section>
+    )
+  }
+
+  return <TrendReport report={result.report} clampedToToday={result.clampedToToday} view={view} onView={onView} onRefresh={onRetry} kpiColumns={kpiColumns} />
+}
+
+function TrendReport({
+  report,
+  clampedToToday,
+  view,
+  onView,
+  onRefresh,
+  kpiColumns,
+}: {
+  report: RevenueTrendReport
+  clampedToToday: boolean
+  view: RevenueView
+  onView: (v: RevenueView) => void
+  onRefresh: () => void
+  kpiColumns: number
+}) {
+  const { current, previous } = report
+  const status = report.status === 'actual' ? 'actual' : 'partial'
+  const viewMeta = VIEWS.find((v) => v.id === view) ?? VIEWS[0]!
+  const g = current.granularity
+
+  const points = useMemo(
+    () => current.buckets.map((b) => ({ key: b.key, axisLabel: bucketAxisLabel(b, g), longLabel: bucketLongLabel(b, g) })),
+    [current, g],
+  )
+
+  const series = useMemo<TrendSeries[]>(() => {
+    const out: TrendSeries[] = [{ key: 'current', label: viewMeta.series, status, values: current.buckets.map((b) => valueOf(b, view)) }]
+    if (previous) {
+      out.push({ key: 'previous', label: 'Previous period', status, values: previous.buckets.map((b) => valueOf(b, view)), slot: 1, marker: 'square' })
+    }
+    return out
+  }, [current, previous, view, viewMeta.series, status])
+
+  const revenueDelta =
+    previous && current.totals.revenue !== previous.totals.revenue
+      ? {
+          direction: current.totals.revenue > previous.totals.revenue ? ('up' as const) : ('down' as const),
+          text: `${changeLabel(current.totals.revenue, previous.totals.revenue)} vs previous period`,
+          good: current.totals.revenue > previous.totals.revenue,
+        }
+      : null
+
+  const kpis: Kpi[] = [
+    {
+      label: 'Billed revenue',
+      value: formatMoney(current.totals.revenue),
+      icon: 'dollar',
+      accent: 'primary',
+      definition: 'Issued, non-voided invoices after discount and before VAT, by issue date.',
+      zeroExplanation: 'No invoices were issued in this period.',
+      ...(revenueDelta ? { delta: revenueDelta } : {}),
+    },
+    {
+      label: 'Output VAT',
+      value: formatMoney(current.totals.vat),
+      icon: 'receipt',
+      accent: 'neutral',
+      definition: 'VAT charged on the same invoices. It is owed to the government and is not revenue.',
+    },
+    {
+      label: 'Total incl. VAT',
+      value: formatMoney(current.totals.gross),
+      icon: 'invoice',
+      accent: 'neutral',
+      definition: 'The invoice totals as Finance ▸ Invoices shows them: billed revenue plus VAT.',
+    },
+    {
+      label: 'Invoices issued',
+      value: countLabel(current.totals.invoiceCount),
+      icon: 'file',
+      accent: 'neutral',
+      definition: 'Issued invoices in the period. Drafts and voided invoices are excluded.',
+      ...(previous ? { detail: `${countLabel(previous.totals.invoiceCount)} in the previous period` } : {}),
+    },
+  ]
+
+  const nothingIssued = current.totals.invoiceCount === 0 && (!previous || previous.totals.invoiceCount === 0)
+  const notes = [
+    ...coverageNotes(current),
+    ...(clampedToToday ? [`The chosen period ends after today, so the figures run to today, ${formatAd(new Date(`${current.window.toDay}T00:00:00.000Z`))}.`] : []),
+  ]
+
+  const describePoint = previous
+    ? (i: number) => {
+        const p = previous.buckets[i]
+        const c = current.buckets[i]
+        if (!p || !c) return null
+        return `Previous period, ${bucketLongLabel(p, previous.granularity, previous.layout)}: ${fmtView(view, valueOf(p, view))} (${changeLabel(valueOf(c, view), valueOf(p, view))})`
+      }
+    : undefined
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+      <KpiStrip items={kpis} columns={kpiColumns} />
+
+      <section aria-labelledby="revenue-trend-title" style={{ ...cardStyle, padding: 'var(--sp-md)', display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--sp-sm)' }}>
+          <div style={{ minWidth: 0 }}>
+            <h3 id="revenue-trend-title" style={{ margin: 0, fontSize: 'var(--t-h3)', color: 'var(--text)' }}>
+              Billed revenue by {g === 'month' ? 'month' : 'day'}
             </h3>
-            <p style={{ margin: '0 0 var(--sp-md)', fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-              Revenue movement per bucket period against daily operating expenses.
+            <p style={{ margin: '4px 0 0', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+              {windowLabel(current.window)} · {g === 'month' ? 'AD calendar months' : 'days'} · Data: {SERIES_STATUS_LABEL[status]}
+              {previous ? ` · Compared with ${windowLabel(previous.window)}` : ''}
             </p>
-            <LineChart
-              points={pulseFigures.buckets.map((b) => (b.revenue as number) / 100)}
-              labels={pulseFigures.buckets.map((b) => b.label)}
-              yTicks={[0, 100000, 200000, 300000, 400000].map((v) => `Rs ${v.toLocaleString('en-IN')}`)}
-              seriesLabel="Revenue"
-              format={(v) => formatMoney(Math.round(v * 100) as Paisa)}
-            />
           </div>
-
-          <DataTableShell ariaLabel="Periodic ledger buckets breakdown">
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  <th style={th}>Bucket Period</th>
-                  <th style={th}>Invoiced Revenue</th>
-                  <th style={th}>Operating Expense</th>
-                  <th style={th}>Net Profit</th>
-                  <th style={th}>Utilization Rate</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pulseFigures.buckets.map((b) => (
-                  <tr key={b.label}>
-                    <td style={td}><strong>{b.label}</strong></td>
-                    <td style={td} className="figure">{formatMoney(b.revenue)}</td>
-                    <td style={td} className="figure">{formatMoney(b.expenses)}</td>
-                    <td
-                      style={{
-                        ...td,
-                        color: (b.profit as number) >= 0 ? 'var(--success)' : 'var(--danger)',
-                      }}
-                      className="figure"
-                    >
-                      {formatMoney(b.profit)}
-                    </td>
-                    <td style={td} className="figure">{b.utilization}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </DataTableShell>
+          <SegmentedControl<RevenueView>
+            ariaLabel="Chart measure"
+            size="sm"
+            value={view}
+            onChange={onView}
+            options={VIEWS.map((v) => ({ id: v.id, label: v.label }))}
+          />
         </div>
-      )}
 
-      {activeTab === 'categories' && (
-        <div style={{ display: 'grid', gridTemplateColumns: viewport === 'phone' ? '1fr' : '320px 1fr', gap: 'var(--sp-md)', alignItems: 'start' }}>
-          <div style={{ ...cardStyle, padding: 'var(--sp-md)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <h4 style={{ margin: '0 0 var(--sp-md)', alignSelf: 'flex-start', fontSize: 'var(--t-h4)', color: 'var(--text)' }}>
-              Category Share
-            </h4>
-            <Donut slices={categorySlices} size={180} />
-            <div style={{ marginTop: 'var(--sp-md)', width: '100%' }}>
-              <Legend slices={categorySlices} />
+        {report.status === 'partial' && (
+          <div
+            role="note"
+            style={{ display: 'flex', gap: 10, padding: '10px 12px', borderRadius: 'var(--r-sm)', background: 'var(--st-warn-bg)', color: 'var(--st-warn-fg)', fontSize: 'var(--t-meta)' }}
+          >
+            <Icon name="alert_triangle" size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+            <div>
+              <strong>Partial data.</strong> {report.partialReasons.join(' ')}
             </div>
           </div>
+        )}
 
-          <DataTableShell ariaLabel="Revenue contribution by inventory category">
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  <th style={th}>Category</th>
-                  <th style={th}>Total Revenue</th>
-                  <th style={th}>Share</th>
-                  <th style={th}>Rental Days</th>
-                  <th style={th}>Fleet Units</th>
-                </tr>
-              </thead>
-              <tbody>
-                {CATEGORY_DATA.map((c) => (
-                  <tr key={c.category}>
-                    <td style={td}><strong>{c.category}</strong></td>
-                    <td style={td} className="figure">{formatMoney(c.revenue)}</td>
-                    <td style={td} className="figure">{c.sharePct}%</td>
-                    <td style={td} className="figure">{c.rentalDays} days</td>
-                    <td style={td} className="figure">{c.itemCount} units</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </DataTableShell>
+        {nothingIssued ? (
+          <p style={{ margin: 'var(--sp-sm) 0', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>No invoices were issued in this period, so there is no line to draw.</p>
+        ) : (
+          <InteractiveTrendChart
+            title={`${viewMeta.series} by ${g === 'month' ? 'month' : 'day'}`}
+            points={points}
+            series={series}
+            formatValue={(v) => fmtView(view, v)}
+            formatTick={view === 'count' ? countLabel : compactMoneyLabel}
+            minStep={view === 'count' ? 1 : 100}
+            showTable={false}
+            {...(describePoint ? { describePoint } : {})}
+          />
+        )}
+
+        <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <p style={{ margin: 0, color: 'var(--text)' }}>{summarySentence(current)}</p>
+          {notes.map((n) => (
+            <p key={n} style={{ margin: 0 }}>
+              {n}
+            </p>
+          ))}
+          <p style={{ margin: 0 }}>{DEFINITION_NOTE}</p>
         </div>
-      )}
 
-      {activeTab === 'projects' && (
-        <div style={{ display: 'grid', gridTemplateColumns: viewport === 'phone' ? '1fr' : '320px 1fr', gap: 'var(--sp-md)', alignItems: 'start' }}>
-          <div style={{ ...cardStyle, padding: 'var(--sp-md)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <h4 style={{ margin: '0 0 var(--sp-md)', alignSelf: 'flex-start', fontSize: 'var(--t-h4)', color: 'var(--text)' }}>
-              Project Types
-            </h4>
-            <Donut slices={projectSlices} size={180} />
-            <div style={{ marginTop: 'var(--sp-md)', width: '100%' }}>
-              <Legend slices={projectSlices} />
-            </div>
-          </div>
-
-          <DataTableShell ariaLabel="Revenue classification by shoot / production type">
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  <th style={th}>Project Type</th>
-                  <th style={th}>Bookings</th>
-                  <th style={th}>Total Revenue</th>
-                  <th style={th}>Share</th>
-                  <th style={th}>Avg Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {PROJECT_TYPE_DATA.map((p) => (
-                  <tr key={p.projectType}>
-                    <td style={td}><strong>{p.projectType}</strong></td>
-                    <td style={td} className="figure">{p.bookingCount}</td>
-                    <td style={td} className="figure">{formatMoney(p.totalRevenue)}</td>
-                    <td style={td} className="figure">{p.sharePct}%</td>
-                    <td style={td} className="figure">{formatMoney(p.avgBookingValue)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </DataTableShell>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--sp-sm)', fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
+          <span>Calculated {formatAdDateTime(report.calculatedAt)} from the invoices on record.</span>
+          <Button icon="refresh" onClick={onRefresh}>
+            Refresh
+          </Button>
         </div>
-      )}
+      </section>
 
-      {activeTab === 'invoices' && (
-        <DataTableShell ariaLabel="Detailed register of client invoices and settlement status">
-          {invoicesLoading ? (
-            <div style={{ padding: 'var(--sp-xl)', textAlign: 'center', color: 'var(--muted)' }}>
-              Loading invoice records…
-            </div>
-          ) : invoices.length === 0 ? (
-            <div style={{ padding: 'var(--sp-xl)', textAlign: 'center', color: 'var(--muted)' }}>
-              No invoices found for the selected period.
-            </div>
-          ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr>
-                  <th style={th}>Invoice No</th>
-                  <th style={th}>Client</th>
-                  <th style={th}>Issue Date</th>
-                  <th style={th}>Status</th>
-                  <th style={th}>Subtotal</th>
-                  <th style={th}>VAT</th>
-                  <th style={th}>Total Amount</th>
-                  <th style={th}>Paid Amount</th>
-                  <th style={th}>Outstanding</th>
+      <DataTableShell ariaLabel="Billed revenue by period">
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <caption className="sr-only">Billed revenue by period, with VAT and invoice counts</caption>
+          <thead>
+            <tr>
+              <th scope="col" style={th}>Period</th>
+              <th scope="col" style={{ ...th, textAlign: 'right' }}>Billed revenue (before VAT)</th>
+              <th scope="col" style={{ ...th, textAlign: 'right' }}>VAT</th>
+              <th scope="col" style={{ ...th, textAlign: 'right' }}>Invoiced, VAT included</th>
+              <th scope="col" style={{ ...th, textAlign: 'right' }}>Invoices</th>
+              {previous && <th scope="col" style={{ ...th, textAlign: 'right' }}>Previous period (before VAT)</th>}
+              {previous && <th scope="col" style={{ ...th, textAlign: 'right' }}>Change</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {current.buckets.map((b, i) => {
+              const p = previous?.buckets[i]
+              return (
+                <tr key={b.key}>
+                  <th scope="row" style={{ ...td, fontWeight: 600, textAlign: 'left' }}>
+                    {bucketLongLabel(b, g)}
+                  </th>
+                  <td style={num} className="figure">{formatMoney(b.revenue)}</td>
+                  <td style={num} className="figure">{formatMoney(b.vat)}</td>
+                  <td style={num} className="figure">{formatMoney(b.gross)}</td>
+                  <td style={num} className="figure">{countLabel(b.invoiceCount)}</td>
+                  {previous && <td style={num} className="figure">{p ? formatMoney(p.revenue) : '—'}</td>}
+                  {previous && <td style={num} className="figure">{p ? changeLabel(b.revenue, p.revenue) : '—'}</td>}
                 </tr>
-              </thead>
-              <tbody>
-                {invoices.map((inv) => (
-                  <tr key={inv.id}>
-                    <td style={td}>
-                      <Link to={`/finance?invoice=${inv.invoiceNo}`} style={{ color: 'var(--link)', fontWeight: 600, textDecoration: 'none' }}>
-                        {inv.invoiceNo}
-                      </Link>
-                    </td>
-                    <td style={td}>{inv.clientName}</td>
-                    <td style={td}>{formatAd(new Date(inv.issueDateAd))}</td>
-                    <td style={td}>
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          padding: '2px 8px',
-                          borderRadius: 'var(--rad-sm)',
-                          fontSize: 'var(--t-micro)',
-                          fontWeight: 600,
-                          background:
-                            inv.status === 'Paid'
-                              ? 'var(--success-surface)'
-                              : inv.status === 'Partially Paid'
-                                ? 'var(--warn-surface)'
-                                : 'var(--danger-surface)',
-                          color:
-                            inv.status === 'Paid'
-                              ? 'var(--success)'
-                              : inv.status === 'Partially Paid'
-                                ? 'var(--warn)'
-                                : 'var(--danger)',
-                        }}
-                      >
-                        {inv.status}
-                      </span>
-                    </td>
-                    <td style={td} className="figure">{formatMoney(inv.subtotal)}</td>
-                    <td style={td} className="figure">{formatMoney(inv.vatAmount)}</td>
-                    <td style={td} className="figure"><strong>{formatMoney(inv.totalAmount)}</strong></td>
-                    <td style={{ ...td, color: 'var(--success)' }} className="figure">{formatMoney(inv.paidAmount)}</td>
-                    <td
-                      style={{
-                        ...td,
-                        color: (inv.outstandingAmount as number) > 0 ? 'var(--danger)' : 'var(--text2)',
-                      }}
-                      className="figure"
-                    >
-                      {formatMoney(inv.outstandingAmount)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </DataTableShell>
-      )}
+              )
+            })}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row" style={{ ...td, fontWeight: 700, textAlign: 'left' }}>Total</th>
+              <td style={{ ...num, fontWeight: 700 }} className="figure">{formatMoney(current.totals.revenue)}</td>
+              <td style={{ ...num, fontWeight: 700 }} className="figure">{formatMoney(current.totals.vat)}</td>
+              <td style={{ ...num, fontWeight: 700 }} className="figure">{formatMoney(current.totals.gross)}</td>
+              <td style={{ ...num, fontWeight: 700 }} className="figure">{countLabel(current.totals.invoiceCount)}</td>
+              {previous && <td style={{ ...num, fontWeight: 700 }} className="figure">{formatMoney(previous.totals.revenue)}</td>}
+              {previous && <td style={{ ...num, fontWeight: 700 }} className="figure">{changeLabel(current.totals.revenue, previous.totals.revenue)}</td>}
+            </tr>
+          </tfoot>
+        </table>
+      </DataTableShell>
+    </div>
+  )
+}
+
+/* ── the invoice register tab ──────────────────────────────────────────── */
+
+const REGISTER_PAGE = 100
+
+function InvoiceRegister({ filters }: { filters: ReportFilters }) {
+  const [rows, setRows] = useState<InvoiceListRow[] | null>(null)
+  const [total, setTotal] = useState<number | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [revision, setRevision] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    setRows(null)
+    setError(null)
+    listInvoices({ page: { index: 0, size: REGISTER_PAGE }, dateRange: filters.dateRange, withCount: true })
+      .then((res) => {
+        if (!active) return
+        setRows(res.rows)
+        setTotal(res.total ?? null)
+      })
+      .catch((cause: unknown) => {
+        if (active) setError(cause instanceof Error ? cause.message : 'The invoices could not be read.')
+      })
+    return () => {
+      active = false
+    }
+  }, [filters.dateRange, revision])
+
+  if (error) return <ErrorBanner title="The invoice register could not be loaded" message={error} onRetry={() => setRevision((r) => r + 1)} />
+  if (rows === null) return <LoadingSkeleton rows={6} label="Loading invoices…" />
+  if (rows.length === 0) {
+    return (
+      <section aria-label="Invoice register" style={cardStyle}>
+        <EmptyState title="No invoices in this period" description="Choose a wider period, or issue an invoice from a rental." />
+      </section>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
+      <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+        {total !== null && total > rows.length
+          ? `Showing the ${rows.length} most recent of ${total} invoices. Finance ▸ Invoices lists them all.`
+          : `${rows.length} invoice${rows.length === 1 ? '' : 's'}, newest first.`}{' '}
+        Voided invoices are listed for the record; they are never counted as revenue.
+      </p>
+      <DataTableShell ariaLabel="Invoice register with settlement status">
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th scope="col" style={th}>Invoice</th>
+              <th scope="col" style={th}>Client</th>
+              <th scope="col" style={th}>Issued</th>
+              <th scope="col" style={th}>Status</th>
+              <th scope="col" style={{ ...th, textAlign: 'right' }}>Before VAT</th>
+              <th scope="col" style={{ ...th, textAlign: 'right' }}>VAT</th>
+              <th scope="col" style={{ ...th, textAlign: 'right' }}>Total</th>
+              <th scope="col" style={{ ...th, textAlign: 'right' }}>Paid</th>
+              <th scope="col" style={{ ...th, textAlign: 'right' }}>Outstanding</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((inv) => (
+              <tr key={inv.id}>
+                <td style={td}>
+                  <Link to={`/finance?invoice=${encodeURIComponent(inv.invoiceNo)}`} style={{ color: 'var(--link)', fontWeight: 600, textDecoration: 'none' }}>
+                    {inv.invoiceNo}
+                  </Link>
+                </td>
+                <td style={td}>{inv.clientName}</td>
+                <td style={td}>{inv.issueDateAd ? formatAd(new Date(`${inv.issueDateAd}T00:00:00.000Z`)) : '—'}</td>
+                <td style={td}>{inv.isVoid ? 'Void' : inv.status}</td>
+                <td style={num} className="figure">{formatMoney(inv.taxableAmount)}</td>
+                <td style={num} className="figure">{formatMoney(inv.vatAmount)}</td>
+                <td style={num} className="figure">{formatMoney(inv.totalAmount)}</td>
+                <td style={num} className="figure">{formatMoney(inv.paidAmount)}</td>
+                <td style={num} className="figure">{formatMoney(inv.outstandingAmount)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </DataTableShell>
     </div>
   )
 }
