@@ -337,7 +337,7 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
     // BS periods may cross AD month boundaries; all rows sharing a BS month
     // belong to the same bucket. An out-of-range BS date is clearly labelled AD.
     const periodBuckets = new Map<string, {
-      sortDate: string; label: string; bsMonth: string
+      sortDate: string; endDate: string; label: string; bsMonth: string
       subtotal: number; nonVat: number; tax: number; gross: number; paid: number
     }>()
     for (const invoice of ledgerPeriods) {
@@ -349,10 +349,11 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
         : `AD-${isoDay.slice(0, 7)}`
       const label = bs ? `${BS_MONTHS[bs.month - 1]} ${bs.year}` : `AD ${isoDay.slice(0, 7)}`
       const bucket = periodBuckets.get(key) ?? {
-        sortDate: isoDay, label, bsMonth: bs ? label : 'BS unavailable',
+        sortDate: isoDay, endDate: isoDay, label, bsMonth: bs ? label : 'BS unavailable',
         subtotal: 0, nonVat: 0, tax: 0, gross: 0, paid: 0,
       }
       if (isoDay < bucket.sortDate) bucket.sortDate = isoDay
+      if (isoDay > bucket.endDate) bucket.endDate = isoDay
       bucket.subtotal += invoice.taxable
       bucket.nonVat += invoice.nonVat
       bucket.tax += invoice.tax
@@ -367,7 +368,7 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
       collected: rupees(p.paid / 100),
     }))
     const monthlySchedule: VatMonthlyRow[] = periods.map((p) => ({
-      month: p.label,
+      month: `AD ${p.sortDate}${p.endDate !== p.sortDate ? ' – ' + p.endDate : ''}`,
       bsMonth: p.bsMonth,
       taxableSales: rupees(p.subtotal / 100),
       vatAmount: rupees(p.tax / 100),
