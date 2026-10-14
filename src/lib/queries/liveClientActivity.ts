@@ -1,7 +1,7 @@
 import { supabase } from '../supabase'
 
 /** Confirmed, current or completed rentals — never quotes, drafts or cancellations. */
-export const RENTAL_ACTIVITY_STAGES = new Set(['Confirmed', 'Packed', 'On Rent', 'Returned', 'Closed'])
+export const RENTAL_ACTIVITY_STAGES = new Set(['Booked', 'Packed', 'On Rent', 'Returned', 'Closed'])
 
 export interface LiveClientActivityRow {
   id: string
@@ -42,11 +42,11 @@ async function readClients(): Promise<Array<{ id: string; client_code: string | 
   }
 }
 
-async function readRentalBookings(): Promise<Array<{ client_id: string | null; stage: string; created_at: string | null }>> {
+async function readRentalBookings(): Promise<Array<{ client_id: string | null; stage: string; created_at: string | null; cancelled_at: string | null }>> {
   const all: Array<{ client_id: string | null; stage: string; created_at: string | null }> = []
   for (let offset = 0; ; offset += PAGE_SIZE) {
     const { data, error } = await supabase.from('bookings')
-      .select('client_id, stage, created_at')
+      .select('client_id, stage, created_at, cancelled_at')
       .order('created_at', { ascending: true })
       .range(offset, offset + PAGE_SIZE - 1)
     if (error) throw new Error('Unable to read client booking history.', { cause: error })
@@ -60,7 +60,7 @@ export async function getLiveClientActivityReport(): Promise<LiveClientActivityR
   const [clients, bookings] = await Promise.all([readClients(), readRentalBookings()])
   const activity = new Map<string, { count: number; lastCreated: string | null }>()
   for (const booking of bookings) {
-    if (!booking.client_id || !RENTAL_ACTIVITY_STAGES.has(booking.stage)) continue
+    if (!booking.client_id || booking.cancelled_at || !RENTAL_ACTIVITY_STAGES.has(booking.stage)) continue
     const record = activity.get(booking.client_id) ?? { count: 0, lastCreated: null }
     record.count++
     if (booking.created_at && (!record.lastCreated || booking.created_at > record.lastCreated)) {
