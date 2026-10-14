@@ -1,5 +1,34 @@
 # Progress Log
 
+## 2026-10-14 (f) — Handheld height budget: edge-to-edge floor sheet, one-row tablet footer
+
+**Did**
+- Measured the vertical budget of the floor sheet on touch (before → after), at the first screen of Packing: content region (`bodyVisible`), footer height, and how much of the first equipment row clears the footer.
+  - Phone 390×844: content 436 → 608px; header 111 → 76; footer 169 → 161; first equipment row 242px below the footer → 34px below (Quick Pack, the scan bar, search and filters are now above the fold; the first card is just under it).
+  - Phone 360×740: content 348 → 504px.
+  - Tablet 1024×768 (landscape): content 505 → 612px; footer 117 → 81; first row visible 32 → 133px.
+  - Tablet 1194×834: content 565 → 678px; footer 117 → 81. Tablet 820×1180: footer 117 → 81, first row fully visible before and after.
+- How: new opt-in `Modal fill` (phone and tablet only: no margin, no radius, no border, `100dvh`, tighter header/content/footer paddings, safe-area insets kept); the shell passes it. On tablet and up the "Still needed" hint sits between the two footer buttons on one row (the dock and phones keep the stacked footer); on short tablets the stage steps lose their extra padding (still ≥ 44px).
+- Re-ran the full touch matrix at 360, 390, 768, 820, 1024 and 1194: still 12 taps, no hit area under 44px, no overflow, Confirm never covered, zero page errors.
+
+**Ruled**
+- No product, permission, schema or gate change. `fill` is additive: desktop and every other caller render exactly as before (tests pin phone 85dvh and desktop 92dvh). Revert = drop `fill` from `OperationsShell`'s `<Modal>`; delete the two media-query blocks at the end of `operationsShell.css`.
+- Known trade-off, not ruled by the audit that capped phone dialogs at 85dvh (AUD-016, virtual-keyboard overflow): `fill` takes 100dvh. `dvh` follows the browser toolbar, not the on-screen keyboard; this needs a real-device check.
+
+**Verified**
+- typecheck 0; eslint on `src` clean; lint:shell, lint:ui-copy, contrast 82/82; full suite 352 files / 4,470 tests pass; new `Modal.fill.test.tsx` (phone/tablet fill, desktop unchanged, default unchanged).
+- Browser (touch + mobile emulation, seeded mock, Owner): numbers above; tablet 1024 and phone 390 screenshots reviewed.
+- Not verified: a real phone or tablet, the on-screen keyboard with `fill`, iOS Safari safe areas, the Sign-on-Glass pad and camera scanner by touch.
+
+## Completion
+Not re-counted: no migration, action or capability changed; figures in the entries below stand.
+
+## Remaining
+- On a phone the first equipment card still starts ~34px under the footer: the progress block and the Save Draft button take separate rows (Save Draft is the stub awaiting a decision), and the scan field is squeezed beside its two buttons ("Sca…").
+- Scan and filter bars are two separate rows on tablets; merging them is a markup change in four workspaces.
+- Open decisions from entry (d) still stand: Handover per-row Missing, Save Draft stub, Complete position on standalone pages, the Owner "cannot view rental balances" text.
+- Hands-on pass on a real iPad and phone, including the keyboard.
+
 ## 2026-10-14 (e) — Phone and tablet pass of the Pack → Handover → Return → Reset run
 
 **Did**

@@ -372,6 +372,7 @@ export default function OperationsShell({
   const footerNode = (
           <div
             ref={setFooterEl}
+            className="operations-shell__footer"
             style={{
               width: '100%',
               display: 'flex',
@@ -564,6 +565,7 @@ export default function OperationsShell({
         isOpen={isOpen}
         onClose={requestClose}
         size="full"
+        fill
         title={title}
         subtitle={subtitle}
         footer={footerNode}
