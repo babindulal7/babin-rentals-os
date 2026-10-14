@@ -166,6 +166,7 @@ export function AddDropdownButton({ action }: { action: PageActionItem }) {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}
+        aria-label={action.label}
         onClick={() => setOpen((v) => !v)}
         style={{
           minHeight: 44,
