@@ -211,7 +211,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div
         style={{
           position: 'fixed',
-          bottom: 20,
+          /* A floor job open in the Operations shell lifts this clear of its Confirm button. */
+          bottom: 'var(--toast-bottom, 20px)',
           right: 20,
           /* --z-system (10500), not the old literal 70. At 70 a toast painted
              BEHIND Calendar full view (200), the rentals dropdowns (1000),

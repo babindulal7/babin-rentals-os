@@ -5,7 +5,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
 import { Card, Button, KpiStrip, Rail } from '../../components/ui/Page'
-import { SearchInput } from '../../components/ui'
 import type { Kpi } from '../../components/ui/Page'
 import {
   ActiveFilterChips,
@@ -545,21 +544,6 @@ export function ClientsDirectory({
    */
   const activeFilter = filterFromParam(params.get('filter'), money)
   const searchQuery = params.get('q') ?? ''
-  const [searchInput, setSearchInput] = useState(searchQuery)
-
-  useEffect(() => {
-    setSearchInput(searchQuery)
-  }, [searchQuery])
-
-  useEffect(() => {
-    if (searchInput === searchQuery) return
-    const timer = setTimeout(() => {
-      const midBurst = Boolean(searchQuery) && Boolean(searchInput)
-      patchParams({ q: searchInput || null }, midBurst)
-    }, 250)
-    return () => clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- debounced search sync to URL
-  }, [searchInput, searchQuery])
 
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set())
@@ -1110,64 +1094,12 @@ export function ClientsDirectory({
           display: 'flex',
           alignItems: 'center',
           gap: 'var(--sp-sm)',
-          flexWrap: 'wrap',
+          flexWrap: 'nowrap',
+          overflowX: 'auto',
+          maxWidth: '100%',
+          paddingBottom: 2,
         }}
       >
-        <span style={{ order: 0, marginLeft: 0, display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', width: phone ? '100%' : 'auto', flex: phone ? '1 1 100%' : '1 1 360px', flexWrap: 'nowrap' }}>
-          <div style={{ flex: phone ? '1 1 0' : undefined, width: phone ? undefined : 280, minWidth: 0 }}>
-            <SearchInput
-              value={searchInput}
-              onChange={setSearchInput}
-              onClear={() => {
-                setSearchInput('')
-                patchParams({ q: null }, true)
-              }}
-              onSearchSubmit={(val) => {
-                const midBurst = Boolean(searchQuery) && Boolean(val)
-                patchParams({ q: val || null }, midBurst)
-              }}
-              placeholder="Search client, phone, email, PAN…"
-              aria-label="Search clients"
-            />
-          </div>
-
-          {tabular &&
-            (['Table', 'Cards'] as ViewKey[]).map((v) => (
-              <Button
-                key={v}
-                icon={v === 'Table' ? 'queues' : 'box'}
-                variant="secondary"
-                aria-pressed={view === v}
-                onClick={() => setView(v)}
-              >
-                {v}
-              </Button>
-            ))}
-              {!phone && (
-                <button
-                  type="button"
-                  onClick={() => setDensity((d) => (d === 'compact' ? 'comfortable' : 'compact'))}
-                  aria-pressed={density === 'compact'}
-                  aria-label={density === 'compact' ? 'Compact rows — click for comfortable' : 'Comfortable rows — click for compact'}
-                  title={density === 'compact' ? 'Compact rows — click for comfortable' : 'Comfortable rows — click for compact'}
-                  style={{
-                    marginLeft: 'auto',
-                    minWidth: 44,
-                    minHeight: 44,
-                    borderRadius: 'var(--r-input)',
-                    border: '1px solid var(--input-border)',
-                    background: density === 'compact' ? 'var(--nav-active-bg)' : 'var(--input-bg)',
-                    color: density === 'compact' ? 'var(--nav-active-accent)' : 'var(--text2)',
-                    cursor: 'pointer',
-                    display: 'grid',
-                    placeItems: 'center',
-                  }}
-                >
-                  <Icon name={density === 'compact' ? 'chevron_up' : 'chevron_down'} size={15} />
-                </button>
-              )}
-        </span>
-
         {visibleChips.map((c) => {
           const on = activeFilter === c.key
           return (
@@ -1192,7 +1124,7 @@ export function ClientsDirectory({
                 cursor: 'pointer',
                 fontFamily: 'inherit',
                 whiteSpace: 'nowrap',
-                order: 2,
+                flexShrink: 0,
               }}
             >
               {c.label}
@@ -1238,7 +1170,7 @@ export function ClientsDirectory({
             cursor: 'pointer',
             fontFamily: 'inherit',
             whiteSpace: 'nowrap',
-            order: 2,
+            flexShrink: 0,
           }}
         >
           <Icon name="alert_triangle" size={13} fill={overlays.blocked} />
@@ -1284,7 +1216,7 @@ export function ClientsDirectory({
               cursor: 'pointer',
               fontFamily: 'inherit',
               whiteSpace: 'nowrap',
-              order: 2,
+              flexShrink: 0,
             }}
           >
             <Icon name="lock" size={13} fill={true} />
@@ -1309,32 +1241,67 @@ export function ClientsDirectory({
           </button>
         )}
 
-        <button
-          type="button"
-          onClick={() => setShowKpis((s) => !s)}
-          aria-expanded={showKpis}
-          aria-label={showKpis ? 'Hide client statistics' : 'Show client statistics'}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            minHeight: 44,
-            padding: '0 12px',
-            borderRadius: 'var(--r-sm)',
-            border: `1px solid ${showKpis ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-            background: showKpis ? 'var(--nav-active-bg)' : 'var(--card)',
-            color: showKpis ? 'var(--nav-active-accent)' : 'var(--text2)',
-            fontSize: 'var(--t-meta)',
-            fontWeight: 600,
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-            order: 3,
-          }}
-        >
-          <Icon name="chart" size={14} />
-          <span>{showKpis ? 'Hide Stats' : 'Stats'}</span>
-        </button>
+        <div style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 'var(--sp-sm)', flexShrink: 0 }}>
+          {tabular &&
+            (['Table', 'Cards'] as ViewKey[]).map((v) => (
+              <Button
+                key={v}
+                icon={v === 'Table' ? 'queues' : 'box'}
+                variant="secondary"
+                aria-pressed={view === v}
+                onClick={() => setView(v)}
+              >
+                {v}
+              </Button>
+            ))}
+          {!phone && (
+            <button
+              type="button"
+              onClick={() => setDensity((d) => (d === 'compact' ? 'comfortable' : 'compact'))}
+              aria-pressed={density === 'compact'}
+              aria-label={density === 'compact' ? 'Compact rows — click for comfortable' : 'Comfortable rows — click for compact'}
+              title={density === 'compact' ? 'Compact rows — click for comfortable' : 'Comfortable rows — click for compact'}
+              style={{
+                minWidth: 44,
+                minHeight: 44,
+                borderRadius: 'var(--r-input)',
+                border: '1px solid var(--input-border)',
+                background: density === 'compact' ? 'var(--nav-active-bg)' : 'var(--input-bg)',
+                color: density === 'compact' ? 'var(--nav-active-accent)' : 'var(--text2)',
+                cursor: 'pointer',
+                display: 'grid',
+                placeItems: 'center',
+              }}
+            >
+              <Icon name={density === 'compact' ? 'chevron_up' : 'chevron_down'} size={15} />
+            </button>
+          )}
 
+          <button
+            type="button"
+            onClick={() => setShowKpis((s) => !s)}
+            aria-expanded={showKpis}
+            aria-label={showKpis ? 'Hide client statistics' : 'Show client statistics'}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              minHeight: 44,
+              padding: '0 12px',
+              borderRadius: 'var(--r-sm)',
+              border: `1px solid ${showKpis ? 'var(--nav-active-accent)' : 'var(--border)'}`,
+              background: showKpis ? 'var(--nav-active-bg)' : 'var(--card)',
+              color: showKpis ? 'var(--nav-active-accent)' : 'var(--text2)',
+              fontSize: 'var(--t-meta)',
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            <Icon name="chart" size={14} />
+            <span>{showKpis ? 'Hide Stats' : 'Stats'}</span>
+          </button>
+        </div>
       </div>
 
       {/*

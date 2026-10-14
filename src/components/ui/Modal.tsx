@@ -72,6 +72,12 @@ export interface ModalProps {
   sidePeek?: boolean
   swipeDismiss?: boolean
   peekHeight?: boolean
+  /**
+   * Edge-to-edge on phone and tablet: no margin, no corner radius, the full dynamic viewport height,
+   * tighter paddings. For work surfaces that need every pixel of height (the floor workflows).
+   * Desktop and every other caller are unchanged.
+   */
+  fill?: boolean
   portal?: boolean
 }
 
@@ -96,6 +102,7 @@ export function Modal({
   sidePeek = false,
   swipeDismiss = false,
   peekHeight = false,
+  fill = false,
   portal,
 }: ModalProps) {
   // Keeps the modal mounted for a beat after isOpen flips to false so the
@@ -208,9 +215,11 @@ export function Modal({
   const viewport = useViewport()
   const phone = viewport === 'phone'
   const tablet = viewport === 'tablet'
-  const maxWidth = sidePeek ? 480 : phone ? (sheet ? '100%' : 'calc(100% - 24px)') : tablet && sheet ? '60vw' : SIZE_MAX_WIDTH[size]
-  const surfaceMaxHeight = sidePeek ? '100dvh' : peekHeight ? '70dvh' : phone ? '85dvh' : sheet ? '85dvh' : size === 'full' ? '92dvh' : '85dvh'
-  const surfaceRadius = sidePeek ? '16px 0 0 16px' : phone ? (sheet ? '16px 16px 0 0' : 16) : sheet ? '16px 16px 0 0' : 16
+  /* RULING 2026-10-14: `fill` — see ModalProps. Revert = drop `fillScreen` from the five lines below. */
+  const fillScreen = fill && viewport !== 'desktop'
+  const maxWidth = fillScreen ? '100%' : sidePeek ? 480 : phone ? (sheet ? '100%' : 'calc(100% - 24px)') : tablet && sheet ? '60vw' : SIZE_MAX_WIDTH[size]
+  const surfaceMaxHeight = fillScreen ? '100dvh' : sidePeek ? '100dvh' : peekHeight ? '70dvh' : phone ? '85dvh' : sheet ? '85dvh' : size === 'full' ? '92dvh' : '85dvh'
+  const surfaceRadius = fillScreen ? 0 : sidePeek ? '16px 0 0 16px' : phone ? (sheet ? '16px 16px 0 0' : 16) : sheet ? '16px 16px 0 0' : 16
 
   // After every hook: `useViewport` is one, so the early return cannot precede it.
   if (!shouldRender) return null
@@ -230,7 +239,7 @@ export function Modal({
         display: 'flex',
         alignItems: sidePeek ? 'stretch' : sheet ? 'flex-end' : 'center',
         justifyContent: sidePeek ? 'flex-end' : 'center',
-        padding: sheet || sidePeek ? 0 : 'var(--sp-md)',
+        padding: sheet || sidePeek || fillScreen ? 0 : 'var(--sp-md)',
         background: 'var(--scrim)',
         opacity: isOpen ? 1 : 0,
         transition: 'opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -256,10 +265,11 @@ export function Modal({
           width: '100%',
           maxWidth,
           maxHeight: surfaceMaxHeight,
+          ...(fillScreen ? { height: '100dvh' } : {}),
           display: 'flex',
           flexDirection: 'column',
           background: 'var(--card)',
-          border: '1px solid var(--border2)',
+          border: fillScreen ? 'none' : '1px solid var(--border2)',
           borderRadius: surfaceRadius,
           boxShadow: 'var(--shadow-modal)',
           overflow: 'hidden',
@@ -281,7 +291,7 @@ export function Modal({
             alignItems: 'flex-start',
             justifyContent: 'space-between',
             gap: 'var(--sp-md)',
-            padding: phone ? 'calc(16px + env(safe-area-inset-top, 0px)) 20px 16px' : '16px 20px',
+            padding: fillScreen ? 'calc(12px + env(safe-area-inset-top, 0px)) 16px 12px' : phone ? 'calc(16px + env(safe-area-inset-top, 0px)) 20px 16px' : '16px 20px',
             borderBottom: '1px solid var(--border)',
             flexShrink: 0,
           }}
@@ -341,7 +351,7 @@ export function Modal({
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: 20 }}>{children}</div>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: fillScreen ? 16 : 20 }}>{children}</div>
 
         {/* Footer */}
         {footer && (
@@ -352,7 +362,7 @@ export function Modal({
               justifyContent: 'flex-end',
               flexWrap: 'wrap',
               gap: 'var(--sp-md)',
-              padding: phone || sheet ? '16px 20px calc(16px + env(safe-area-inset-bottom, 0px))' : '16px 20px',
+              padding: fillScreen ? '12px 16px calc(12px + env(safe-area-inset-bottom, 0px))' : phone || sheet ? '16px 20px calc(16px + env(safe-area-inset-bottom, 0px))' : '16px 20px',
               borderTop: '1px solid var(--border)',
               background: 'var(--card2)',
               flexShrink: 0,
