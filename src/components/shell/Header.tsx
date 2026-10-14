@@ -348,9 +348,6 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             </span>
           )}
 
-          {/* Page controls via workspace portal slot */}
-          <span className="workspace-page-actions" ref={ws?.setHeaderActionsElement} />
-
           {/* Breadcrumb / Title Navigation */}
           <nav aria-label="Breadcrumb" style={{ minWidth: 0, overflow: 'hidden' }}>
             <ol style={{ display: 'flex', alignItems: 'center', gap: 7, margin: 0, padding: 0, listStyle: 'none', minWidth: 0 }}>
@@ -754,85 +751,78 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             </div>
           ) : (
             <>
-              {/* 2. Universal Add Dropdown [Add ▼] */}
-              {resolved?.add ? (
-                <AddDropdownButton action={resolved.add} />
-              ) : !ws?.hasPageRightActions && !resolved?.primary && combinedLegacyActions.length === 0 && hData?.showAddMenu !== false ? (
-                <GlobalAddMenu
-                  module={hData?.module}
-                  contextData={hData?.creationContext}
-                />
-              ) : null}
-
-              {/* 3. Contextual Secondary Actions (Desktop only; up to 2 actions) */}
-              {!isPhone && !isTablet && resolved?.secondary && resolved.secondary.length > 0 && (
-                <>
-                  {resolved.secondary.map((sec) => {
-                    const statusCheck = isActionEnabled(sec, actionContext)
-                    return (
-                      <Button
-                        key={sec.id}
-                        variant={sec.variant ?? 'secondary'}
-                        icon={sec.icon}
-                        onClick={(e) => handleActionClick(sec, e)}
-                        disabled={!statusCheck.enabled}
-                        style={{ height: 38, minHeight: 44, padding: '0 12px' }}
-                        {...(statusCheck.reason ? { title: statusCheck.reason } : {})}
-                      >
-                        {sec.label}
-                      </Button>
-                    )
-                  })}
-                </>
-              )}
-
-              {/* 4. Single Prominent Primary Action [Save / Confirm / etc.] */}
-              {resolved?.primary && (
-                <Button
-                  variant={resolved.primary.variant ?? 'primary'}
-                  icon={resolved.primary.icon}
-                  onClick={(e) => handleActionClick(resolved.primary!, e)}
-                  disabled={resolved.primary.loading || resolved.primary.enabled === false}
-                  style={{
-                    height: 38,
-                    minHeight: 44,
-                    padding: '0 14px',
-                    fontWeight: 600,
-                  }}
-                  {...(resolved.primary.disabledReason ? { title: resolved.primary.disabledReason } : {})}
-                >
-                  {resolved.primary.loading
-                    ? resolved.primary.loadingLabel ?? `${resolved.primary.label}…`
-                    : resolved.primary.label}
-                </Button>
-              )}
-
-              {/* 5. More Actions Overflow [More ⋯] */}
-              {overflowItems.length > 0 && (
-                <OverflowMenu
-                  ariaLabel="More actions"
-                  items={overflowItems}
-                />
-              )}
-
-              {/* Mount point for pages that render their own actions into the application header */}
+              {/* CANONICAL BUTTON POSITIONS — same slots in every workspace:
+                  [Filters] [Secondary] [Add] [More] [Page CTA / Save / Confirm].
+                  Keep the page-owned portal after More, not before the title. */}
               <span
-                ref={ws?.setHeaderRightActionsElement}
-                className="workspace-header-right-actions"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  minWidth: 0,
-                }}
+                className="workspace-page-actions app-global-header__action-slot app-global-header__action-slot--filters"
+                data-header-slot="filters"
+                ref={ws?.setHeaderActionsElement}
               />
 
-              {/* 6. Legacy Actions (backwards compatibility for raw action props) */}
-              {combinedLegacyActions.map((action, idx) =>
-                isValidElement(action)
-                  ? cloneElement(action, { key: action.key ?? `hdr-legacy-${idx}` })
-                  : <span key={`hdr-legacy-${idx}`}>{action}</span>
-              )}
+              {/* Context actions vary by page but never displace Filter or
+                  move a primary CTA past the More button. */}
+              <span className="app-global-header__action-slot app-global-header__action-slot--secondary" data-header-slot="secondary">
+                {!isPhone && !isTablet && resolved?.secondary?.map((sec) => {
+                  const statusCheck = isActionEnabled(sec, actionContext)
+                  return (
+                    <Button
+                      key={sec.id}
+                      variant={sec.variant ?? 'secondary'}
+                      icon={sec.icon}
+                      onClick={(e) => handleActionClick(sec, e)}
+                      disabled={!statusCheck.enabled}
+                      style={{ minHeight: 44, padding: '0 12px' }}
+                      {...(statusCheck.reason ? { title: statusCheck.reason } : {})}
+                    >
+                      {sec.label}
+                    </Button>
+                  )
+                })}
+              </span>
+
+              {/* All Add actions share one location; page-specific creation still
+                  honours its permissions and showAddMenu setting. */}
+              <span className="app-global-header__action-slot app-global-header__action-slot--add" data-header-slot="add">
+                {resolved?.add ? (
+                  <AddDropdownButton action={resolved.add} />
+                ) : !ws?.hasPageRightActions && !resolved?.primary && combinedLegacyActions.length === 0 && hData?.showAddMenu !== false ? (
+                  <GlobalAddMenu module={hData?.module} contextData={hData?.creationContext} />
+                ) : null}
+              </span>
+
+              <span className="app-global-header__action-slot app-global-header__action-slot--more" data-header-slot="more">
+                {overflowItems.length > 0 && <OverflowMenu ariaLabel="More actions" items={overflowItems} />}
+              </span>
+
+              {/* The rightmost page slot is always the final action before the
+                  fixed Messages/Search/Profile chrome. This includes legacy
+                  and portaled New Rental / Save / Confirm buttons. */}
+              <span className="app-global-header__action-slot app-global-header__action-slot--primary" data-header-slot="primary">
+                <span
+                  ref={ws?.setHeaderRightActionsElement}
+                  className="workspace-header-right-actions"
+                />
+                {combinedLegacyActions.map((action, idx) =>
+                  isValidElement(action)
+                    ? cloneElement(action, { key: action.key ?? `hdr-legacy-${idx}` })
+                    : <span key={`hdr-legacy-${idx}`}>{action}</span>
+                )}
+                {resolved?.primary && (
+                  <Button
+                    variant={resolved.primary.variant ?? 'primary'}
+                    icon={resolved.primary.icon}
+                    onClick={(e) => handleActionClick(resolved.primary!, e)}
+                    disabled={resolved.primary.loading || resolved.primary.enabled === false}
+                    style={{ minHeight: 44, padding: '0 14px', fontWeight: 600 }}
+                    {...(resolved.primary.disabledReason ? { title: resolved.primary.disabledReason } : {})}
+                  >
+                    {resolved.primary.loading
+                      ? resolved.primary.loadingLabel ?? `${resolved.primary.label}…`
+                      : resolved.primary.label}
+                  </Button>
+                )}
+              </span>
             </>
           )}
 
