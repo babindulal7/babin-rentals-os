@@ -1,5 +1,45 @@
 # Progress Log
 
+## 2026-10-15 — Remaining work: 14 Oct branch merged, Operations/Settings headers, backup script, live registry refreshed
+
+**Did**
+- Found why the morning review called the staging harness "missing": the 14 Oct work (Delivery honesty guards, Finance role guards, client-import recovery, Intel drafts, `artifacts/staging-verification-2026-10-14/`, seven PROGRESS entries) sat on `fix/ci-mock-tests-and-baseline-2026-10-14` and never reached `main`. Merged it. Hand-resolved `RentalHoverCard.tsx`: the `fea7cdf` class layout and dates grid, plus 14 Oct's draft numbering, "Draft rental total", "Not recorded" and the sticky total/tabs summary (`.smart-intel-summary`).
+- BLOCKER-02 / Task 3.1. Measured first. At 375px Operations overflowed its header by 207px, with the title 0px wide, three controls off-screen and Filters overlapping Search. Settings' title was 0px, the profile button 2px off-screen, and "View audit log" 34px tall. At 768px both titles were still 0px. Below 1280px the secondary actions now live in More (`OperationsQueues.tsx`, `Settings.tsx`). Phones also move Filters into More and shorten the verbs ("Edit", "Add"). A fresh `DataAgeBadge` takes no width there (`quietWhenFresh`; Stale and Offline keep their words). The Settings phone header drops its redundant section badge. Fixed the Settings profile card, where the theme switcher covered the company name at 375px (flex basis).
+- `scripts/backup-db.ps1` printed the full DB URL, password included (N-8). It now never echoes it, passes the password via `PGPASSWORD` for one call, prompts with hidden input, writes to git-ignored `backups/`, renames a dump without pg_dump's completion footer to `.incomplete`, and prints size and SHA-256. Updated BACKUP_PROTOCOL §1 and CUTOVER_RUNBOOK step 1.1, which both told Babin to type the URL on the command line.
+- Read the live `supabase_migrations.schema_migrations` (read-only listing; nothing applied or changed) into `docs/live/schema_migrations_2026-10-15.txt`. Live records every local migration through 0156, so pending is **0157–0162**, not "0125–0160". Fixed `plan-migrations.mjs`, which dropped the three rows versioned `V1`/`V2`/`V3` (0150/0153/0155) and called them pending. Made its selftest's "new, not a rename" cases accept applied as well as pending.
+- Reconciled `docs/REMAINING_WORK.md` (correction table plus inline **[15 Oct]** marks) and BLOCKERS.md (BLOCKER-02 resolved; BLOCKER-03 pending set). Logged the previously unlogged `fea7cdf` catalogue fix (Task 3.2, 44px at 320/390/768).
+
+**Ruled**
+- `RULINGS-2026-10-15.md`: compact header below desktop; quiet fresh badge (same doctrine as the 13 Oct tablet sync chip); backup-script credential hygiene; planner parsing; merge resolution. Each row carries its revert, and `// RULING 2026-10-15` comments sit at the code sites. No permission, capability, handler, workflow gate or money visibility changed.
+- No migration was WRITTEN or APPLIED. The existing chain is locally VERIFIED (PGlite and lifecycle green in the same run). Live access was a single read-only migration listing. No backup was run: pg_dump is not installed here, and running it is Babin's step.
+
+**Verified**
+- Browser (mock build, Owner, emulated viewports). Operations and Settings at 360/375/390: header overflow 0, titles in full (Operations 78px, Settings 56px), every control 44×44, no overlaps, document overflow 0. At 768/1024 the titles are back (85/90px and 48/65px). At 1280 the desktop layout is unchanged and the audit link is now 44px. Driven at 390px: More → Filters opened the drawer and Escape closed it; More → Delivery & Logistics reached `/operations/delivery`; Settings Edit → Done, with More holding Discard/Reset/Export/Audit; Discard left edit mode; View audit log reached `/admin/audit`. Profile card: no overlap at 360/375. The merged rental Intel card rendered dates grid, sticky total (Rs 8,788) and tab counts. Console errors 0. Evidence: `artifacts/header-decrowding-2026-10-15/` (`measurements.json`, screenshots).
+- One emulator caveat: switching straight from 1280 desktop to 375 mobile emulation left the viewport hook on tablet until reload, while live 390→768 and 1024→1280 transitions updated. Recorded as an emulation artifact, not proven on a device.
+- Backup script against a stub pg_dump with a fake password containing `@`, `#` and `%21`. The password never appeared in output or in pg_dump's arguments, `PGPASSWORD` arrived decoded and was cleared afterwards, and the success, missing-footer, failing-exit, no-pg_dump and malformed-URL paths all behaved.
+- `npm run db:plan` on the 15 Oct export: 155 rows, 146 applied, pending 0047 (excluded seed) plus 0157–0162. It still exits 2 by design (7 renames, 0047, 2 unexplained rows await Babin). `db:plan:selftest` PASS 12/12 against both the 8 Sep and 15 Oct exports.
+- New and updated tests: Operations header phone/tablet/desktop (4; three fail with the fix switched off), Settings header (7 new; the Reset test now reaches Reset through More at jsdom's tablet width), DataAgeBadge `quietWhenFresh` (4).
+- Gates, this run: typecheck 0; lint 0; lint:shell 655 files PASS; lint:ui-copy PASS; contrast 82/82; check:fixtures 645 files, 0 imports; **check:pglite 160/160 plus view/RPC/definer gates and check:lifecycle 30/30 in the same run**; vitest 350 files / 4,479 tests, all passing (`.test-result.json` generated from the JSON reporter); build exit 0, 297 precache entries.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-14T19:58:31.669Z). Suite: 4479/4479 passed (recorded 2026-10-14T20:08:29.661Z).
+Gates read from .lifecycle-result.json, written 2026-10-14T19:59:10.541Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Babin: install the PostgreSQL client tools and run `.\scripts\backup-db.ps1` (it prompts; do not paste the URL on the command line). Then answer the cutover questions `npm run db:plan` lists (7 renames, 0047, 2 unexplained rows) and provision staging for the 0157–0162 rehearsal and the harness in `artifacts/staging-verification-2026-10-14/`.
+- Decisions that block code: PLAN §4.64(c)(1) for Delivery persistence (Task 2.1); G3 for pricing snapshots (Task 2.2, next free migration 0163).
+- Unblocked for the next agent session: Task 3.4 (five-state screens), Task 4.2 (125% zoom audit), Task 2.4 (outbox wiring). Physical phone/iPad checks of today's headers are still pending (Task 4.1).
+- This work is committed on `claude/remaining-task-49862e` (merge `345009d`, then the follow-ups) and is not on `main` yet.
+
 ## 2026-10-15 — Remaining work register evidence review
 
 **Did**

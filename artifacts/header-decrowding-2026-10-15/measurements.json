@@ -1,0 +1,34 @@
+{
+  "recorded": "2026-10-15",
+  "environment": "local mock build (vite --mode mock, port 3710), Claude desktop browser pane, emulated viewports; signed in as mock Owner. Not physical devices, not live JWT/PostgREST.",
+  "method": "header.app-global-header: scrollWidth - clientWidth (hOverflow), last breadcrumb li width (title), every visible button/link rect (off-screen, <44px, overlaps); documentElement.scrollWidth - innerWidth (docOverflow).",
+  "before": {
+    "375": {
+      "/operations": { "hOverflow": 207, "titleW": 0, "offscreen": ["Delivery & Logistics", "Sub-Rentals", "user profile"], "overlaps": [["Show filters panel", "Search Operations"]] },
+      "/settings": { "hOverflow": 2, "titleZoneW": 0, "offscreen": ["user profile"], "small": ["View audit log 123x34"] },
+      "/settings?tab=branches": { "title": "S… (status badge took the width)" },
+      "profileCard": "theme switcher overlapped company name; identity column squeezed"
+    },
+    "768": {
+      "/operations": { "titleW": 0, "searchInputW": 4 },
+      "/settings": { "titleW": 0, "searchInputW": 29, "overlaps": [["Settings info", "Search settings"]] }
+    }
+  },
+  "after": {
+    "360": { "/operations": { "hOverflow": 0, "titleW": 78 }, "/operations?queue=packing": { "hOverflow": 0, "titleW": 74, "truncated": false }, "/settings": { "titleW": 56 }, "/settings?tab=business": { "titleW": 56 }, "/settings?tab=branches": { "titleW": 56 }, "profileCardOverlap": false, "allControls44": true, "docOverflow": 0 },
+    "375": { "/operations": { "hOverflow": 0, "titleW": 78 }, "/settings": { "titleW": 56 }, "/settings?tab=business": { "titleW": 56, "controls": ["Search", "More", "Edit", "Profile"] }, "/settings?tab=branches": { "titleW": 56, "controls": ["Search", "More", "Add", "Profile"] }, "profileCardOverlap": false, "allControls44": true, "docOverflow": 0 },
+    "390": { "/operations": { "hOverflow": 0, "titleW": 78 }, "/settings*": { "titleW": 56 }, "editMode": { "controls": ["Search", "More", "Done", "Profile"], "more": ["Discard changes", "Reset to defaults", "Export config", "View audit log"] }, "allControls44": true, "docOverflow": 0 },
+    "768": { "/operations": { "titleW": 85, "truncated": false, "searchInputW": 202 }, "/settings": { "titleW": 48, "truncated": false, "searchInputW": 130 }, "/settings?tab=branches": { "titleW": 49 } },
+    "1024": { "/operations": { "titleW": 90 }, "/settings?tab=business": { "titleW": 65 }, "/settings?tab=branches": { "titleW": 65 } },
+    "1280": { "note": "desktop unchanged: Delivery & Logistics, Sub-Rentals, Edit settings, Export config, View audit log all visible; audit link now 44px tall (was 34)" }
+  },
+  "interactions_390": {
+    "operationsMore": ["Delivery & Logistics", "Sub-Rentals", "Filters"],
+    "filtersFromMore": "FilterDrawer #operations-filters opened (dialog, 86 jobs); Escape closed it",
+    "deliveryFromMore": "/operations/delivery",
+    "settingsEdit": "Edit -> Done; Discard changes from More left edit mode",
+    "auditFromMore": "/admin/audit"
+  },
+  "consoleErrors": 0,
+  "caveat": "Switching emulation straight from 1280 desktop to 375 mobile once left the viewport hook on the tablet band until reload; live transitions 390->768 and 1024->1280 updated without reload. Treated as an emulator artifact, not re-verified on a physical device."
+}

@@ -12,6 +12,12 @@ export interface DataAgeBadgeProps {
   loading?: boolean
   /** Whether to compact layout for tight toolbars */
   compact?: boolean
+  /**
+   * Fresh data takes no width: only the Refresh button renders, with the age in its
+   * tooltip. Stale and Offline keep their words (Law 11). For the phone header.
+   * RULING 2026-10-15: same doctrine as the 13 Oct tablet sync chip.
+   */
+  quietWhenFresh?: boolean
   className?: string
   style?: CSSProperties
 }
@@ -42,6 +48,7 @@ export function DataAgeBadge({
   onRefresh,
   loading = false,
   compact = false,
+  quietWhenFresh = false,
   className,
   style,
 }: DataAgeBadgeProps) {
@@ -58,6 +65,7 @@ export function DataAgeBadge({
   const now = Date.now()
 
   if (!loadedAt) {
+    if (quietWhenFresh) return null
     return (
       <div
         className={className}
@@ -98,6 +106,7 @@ export function DataAgeBadge({
   })
 
   const titleText = `${isOffline ? 'Offline cache' : isStale ? 'Stale data' : 'Fresh data'} (loaded at ${exactStamp})`
+  const showLabel = !quietWhenFresh || isOffline || isStale
 
   return (
     <div
@@ -109,7 +118,7 @@ export function DataAgeBadge({
         ...style,
       }}
     >
-      <div
+      {showLabel && <div
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -145,7 +154,7 @@ export function DataAgeBadge({
         <span>
           {isOffline ? `Offline · ${ageStr}` : isStale ? `Stale · ${ageStr}` : `Updated ${ageStr}`}
         </span>
-      </div>
+      </div>}
 
       {onRefresh && (
         <button
@@ -153,7 +162,7 @@ export function DataAgeBadge({
           onClick={() => void onRefresh()}
           disabled={loading}
           aria-label="Refresh data"
-          title="Refresh data from server"
+          title={showLabel ? 'Refresh data from server' : `Refresh data from server · updated ${ageStr.toLowerCase()}`}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
