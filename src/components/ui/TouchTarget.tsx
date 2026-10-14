@@ -1,3 +1,4 @@
+import { forwardRef, type InputHTMLAttributes } from 'react'
 
 /**
  * **A transparent 44×44 hit area centred on a control that is visually smaller.**
@@ -177,3 +178,35 @@ export function CompactButton({
     </button>
   )
 }
+
+/**
+ * A native checkbox with a 44px hit area, for the floor tables.
+ *
+ * RULING 2026-10-14: on a tablet the floor workspaces render their ≥768 table layout, and the
+ * row checkbox in it was the browser's bare 13px box with no label around it — the one control
+ * a packer taps most, at 30% of the Law 15 floor. The `<label>` makes the whole inflated area
+ * toggle the box; the glyph stays 18px so the table keeps its density. Rows are the §7.3
+ * 56px floor, so the 44px target never reaches the next row.
+ * Revert = swap `TapCheckbox` back to `<input type="checkbox">` at its call sites.
+ */
+export const TapCheckbox = forwardRef<HTMLInputElement, Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>>(function TapCheckbox(
+  { style, disabled, ...rest },
+  ref,
+) {
+  return (
+    <label
+      style={{
+        position: 'relative',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 22,
+        height: 22,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+      }}
+    >
+      <input ref={ref} type="checkbox" disabled={disabled} {...rest} style={{ width: 18, height: 18, margin: 0, cursor: 'inherit', ...style }} />
+      <TouchTarget />
+    </label>
+  )
+})
