@@ -1,4 +1,4 @@
-import { useRef, useState, useMemo, useEffect, isValidElement, cloneElement, type ReactNode } from 'react'
+import { useRef, useState, useMemo, useEffect, isValidElement, type ReactNode } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import Icon, { type IconName } from '../ui/Icon'
 import { useAuth } from '../../lib/auth'
@@ -11,7 +11,7 @@ import { InfoTooltip } from '../ui/InfoTooltip'
 import InternalNotesDrawer from '../../modules/notes/InternalNotesDrawer'
 import { Button } from '../ui/Button'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
-import { OverflowMenu, type OverflowMenuItem } from '../ui/OverflowMenu'
+import type { OverflowMenuItem } from '../ui/OverflowMenu'
 import { extractValidActions, PageActions, ActionsOverflowMenu, type PageActionsProps } from '../ui/PageActions'
 import {
   type PageActionItem,
