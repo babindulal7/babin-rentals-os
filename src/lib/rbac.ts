@@ -578,7 +578,7 @@ export function canExportClientPii(role: SystemRole): boolean {
  * Executive financial reports — the Revenue trend first (P&L, cash flow and
  * working capital belong here too as each is wired to real data).
  *
- * RULING 2026-10-14: Owner · Admin · Manager · Accounts, mirroring
+ * RULING 2026-10-14 (R14-15): Owner · Admin · Manager · Accounts, mirroring
  * `auth_is_finance_or_admin()` as 0117 last defined it. Coordinator holds
  * booking money (PERMISSIONS §5) but §3.1 C7 names the reports it may read —
  * Rentals, Clients, Operations, Fulfillment, Discounts — and Revenue is not one

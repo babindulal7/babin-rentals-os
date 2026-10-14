@@ -436,7 +436,7 @@ export function buildStore(options?: BuildStoreOptions): Store {
       outstanding_amount: money(b.breakdown.outstanding),
       issue_date: day(b.spec.pickupAt),
       due_date: day(new Date(b.spec.pickupAt.getTime() + 15 * 86_400_000)),
-      // `currency text not null default 'NPR'` (0006:83). The mock `create_invoice`
+      // RULING 2026-10-14 (R14-21): `currency text not null default 'NPR'` (0006:83). The mock `create_invoice`
       // already writes it; seeded rows now carry it too, as a live row would.
       currency: 'NPR',
       voided_at: null,

@@ -14,9 +14,9 @@ definitions Phase 1 implements. It is a dated measurement, not current status �
 Read in order: `docs/00_READ_FIRST.md`, `CLAUDE.md`, `docs/PERMISSIONS.md` (§3.1, §4, §5), `docs/PRODUCT_RULES.md`,
 `docs/CURRENT_STATE.md`, `PROGRESS.md` (newest entries + the 6 Oct Forecasting ruling), `docs/OPEN_DECISIONS.md`.
 
-- **`PLAN.md` and `RULINGS-*.md` are not in this clean repository** (`CLEAN_SOURCE_MANIFEST.md` §2 excludes
-  `PLAN.md`). Decisions from this work are logged in `RULINGS-2026-10-14.md`, `PROGRESS.md` and at the code site
-  (B-2). Open questions go to `docs/OPEN_DECISIONS.md`.
+- **`PLAN.md` is not in this clean repository** (`CLEAN_SOURCE_MANIFEST.md` §2 excludes it) and no `RULINGS-*.md`
+  was at the baseline. Decisions from this work are R14-15 … R14-21 in `docs/RULINGS-2026-10-14.md`, in `PROGRESS.md`
+  and at the code site (B-2). Open questions go to `docs/OPEN_DECISIONS.md`.
 - No rule in the brief needed overriding. Two points needed reconciling — see §4.
 
 ## 2. Open pull requests touching reports (checked 14 Oct 2026, 22:10 NPT)

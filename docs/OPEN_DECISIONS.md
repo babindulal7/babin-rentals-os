@@ -102,7 +102,7 @@ From checking `D:\proects\md` against `step1-foundation`. Fonepay, the live retu
 
 ## 13. Interactive reports (14 October 2026) — what blocks Phases 2–3
 
-Phase 1 (real-data Revenue trend) is built; its rulings are in `RULINGS-2026-10-14.md`. These need a person:
+Phase 1 (real-data Revenue trend) is built; its rulings are R14-15 … R14-21 in `docs/RULINGS-2026-10-14.md`. These need a person:
 - **(a) Pulse revenue basis.** Pulse's Revenue view is "spread across rental days" (`PERIOD_BASIS`, a standing
   `TODO(decision)`); the Revenue report is now **billed by invoice issue date**. Should Pulse adopt billed revenue
   (one definition app-wide), or keep a separate recognised-revenue metric that needs its own source?

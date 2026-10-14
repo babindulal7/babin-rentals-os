@@ -11,7 +11,7 @@
 - Supersedes draft babindulal7/babin-rentals-os#12 (same scope, never run locally; see audit §6).
 
 **Ruled**
-- RULINGS-2026-10-14 #1–#7 (`RULINGS-2026-10-14.md`): Revenue report = Owner · Admin · Manager · Accounts via `canViewFinancialReports` (C7; PERMISSIONS §3.1 C7 cell clarified in the same commit); billed-revenue definition; credit notes not subtracted twice; fabricated figures removed; previous-period semantics; window/bucket rules; mock currency default.
+- R14-15 … R14-21 in `docs/RULINGS-2026-10-14.md`: Revenue report = Owner · Admin · Manager · Accounts via `canViewFinancialReports` (C7; PERMISSIONS §3.1 C7 cell clarified in the same commit); billed-revenue definition; credit notes not subtracted twice; fabricated figures removed; previous-period semantics; window/bucket rules; mock currency default.
 - Open questions for Babin added as `docs/OPEN_DECISIONS.md` §13 (Pulse revenue basis, cash-out policy, Phase 3 manual baseline, `issue_date` UTC default).
 - No migration WRITTEN or APPLIED. Nothing touched on live Supabase (N-5).
 
@@ -39,6 +39,186 @@ Counted by `npm run completion`, not typed.
 - Phase 3 five-year illustrative scenario explorer: not started (needs §13(c)). Forecasting page unchanged ("Not computed yet").
 - Live verification against Supabase (Owner/Accounts/Coordinator JWTs) after Babin's apply; physical devices.
 - `rbac.canApproveDailyClosing` admits Coordinator though 0117 excludes it (N-3) — filed as a separate task.
+
+## 2026-10-14 (g) — Rulings logged; Save Draft removed; Handover money note restored
+
+**Did**
+- Wrote `docs/RULINGS-2026-10-14.md` (R14-1 … R14-14 + the §15.4 session table) — the third place of the B-2 log, missing for this session's decisions until now. `RULINGS-*.md` files are not in this clean repository, and the source manifest allowlists only listed top-level files, so it lives in `docs/`. Added `RULING 2026-10-14 (R14-n)` comments at the code sites that lacked one.
+- **Correction:** entries (c)–(f) below called Packing's Save Draft "a stub that always refuses". That came from a stale code comment. In fact `saveDraft` is implemented; called with only an id it bumps `bookings.updated_at` and shows nothing, while the ticks already survive on the device. Removed the button (R14-12). A 390px phone's first equipment card now starts above the footer (26px visible, was 0).
+- Handover's money note rendered "Your role cannot view rental balances. your certification that…" — untrue for an Owner (the screen shows amounts to no role) and broken mid-sentence. Restored in plain words (R14-7). Same defect class as Reset's "per ," fix: an earlier bulk copy edit spliced replacement text after a JSX comment.
+- Ruled the two remaining floor calls without a change: Handover keeps one Missing per row (each needs its own ≥ 10-character reason, `0003_operations.sql` check) (R14-13); the standalone Handover / Reset pages keep their in-page Complete (R14-14).
+
+**Ruled**
+- R14-12, R14-7, R14-13, R14-14 in `docs/RULINGS-2026-10-14.md`, each with its revert. No permission, schema, migration or gate change.
+
+**Verified**
+- typecheck 0; eslint on `src` clean; lint:shell, lint:ui-copy (0 violations), contrast 82/82; full suite 352 files / 4,470 tests pass; production build exit 0 (302 precache entries); check:lifecycle 30/30 this run.
+- Browser (touch emulation, seeded mock, Owner): phone 390 and tablet 1024 runs still 12 taps, no hit area under 44px, no overflow, Confirm never covered, zero page errors.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | — |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | — |
+| Lifecycle | steps green / total | 30 / 30 (100%) | — |
+| Overall | mean of five | ≈ 99% | — |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-14T11:29:11.991Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Gates read from .lifecycle-result.json, written 2026-10-14T20:37:10.038Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Same mangled-copy pattern outside the floor screens: about 70 lines match `grep -rnE "\*/\}[A-Za-z(]" --include=*.tsx src`; confirmed broken ones in `settings/Tools.tsx` (~720, ~791, ~1401), `inventory/components/SectionRelationships.tsx` (~126), and `finance/DailyClosing.tsx` (~222, "Your role cannot view daily closings" — check it is true per role). Not fixed here (out of scope).
+- 360px phone: first equipment card still ~78px under the footer.
+- Real phone / iPad pass, including the on-screen keyboard with `Modal fill` (AUD-016).
+
+## 2026-10-14 (f) — Handheld height budget: edge-to-edge floor sheet, one-row tablet footer
+
+**Did**
+- Measured the vertical budget of the floor sheet on touch (before → after), at the first screen of Packing: content region (`bodyVisible`), footer height, and how much of the first equipment row clears the footer.
+  - Phone 390×844: content 436 → 608px; header 111 → 76; footer 169 → 161; first equipment row 242px below the footer → 34px below (Quick Pack, the scan bar, search and filters are now above the fold; the first card is just under it).
+  - Phone 360×740: content 348 → 504px.
+  - Tablet 1024×768 (landscape): content 505 → 612px; footer 117 → 81; first row visible 32 → 133px.
+  - Tablet 1194×834: content 565 → 678px; footer 117 → 81. Tablet 820×1180: footer 117 → 81, first row fully visible before and after.
+- How: new opt-in `Modal fill` (phone and tablet only: no margin, no radius, no border, `100dvh`, tighter header/content/footer paddings, safe-area insets kept); the shell passes it. On tablet and up the "Still needed" hint sits between the two footer buttons on one row (the dock and phones keep the stacked footer); on short tablets the stage steps lose their extra padding (still ≥ 44px).
+- Re-ran the full touch matrix at 360, 390, 768, 820, 1024 and 1194: still 12 taps, no hit area under 44px, no overflow, Confirm never covered, zero page errors.
+
+**Ruled**
+- No product, permission, schema or gate change. `fill` is additive: desktop and every other caller render exactly as before (tests pin phone 85dvh and desktop 92dvh). Revert = drop `fill` from `OperationsShell`'s `<Modal>`; delete the two media-query blocks at the end of `operationsShell.css`.
+- Known trade-off, not ruled by the audit that capped phone dialogs at 85dvh (AUD-016, virtual-keyboard overflow): `fill` takes 100dvh. `dvh` follows the browser toolbar, not the on-screen keyboard; this needs a real-device check.
+
+**Verified**
+- typecheck 0; eslint on `src` clean; lint:shell, lint:ui-copy, contrast 82/82; full suite 352 files / 4,470 tests pass; new `Modal.fill.test.tsx` (phone/tablet fill, desktop unchanged, default unchanged).
+- Browser (touch + mobile emulation, seeded mock, Owner): numbers above; tablet 1024 and phone 390 screenshots reviewed.
+- Not verified: a real phone or tablet, the on-screen keyboard with `fill`, iOS Safari safe areas, the Sign-on-Glass pad and camera scanner by touch.
+
+## Completion
+Not re-counted: no migration, action or capability changed; figures in the entries below stand.
+
+## Remaining
+- On a phone the first equipment card still starts ~34px under the footer: the progress block and the Save Draft button take separate rows (Save Draft is the stub awaiting a decision), and the scan field is squeezed beside its two buttons ("Sca…").
+- Scan and filter bars are two separate rows on tablets; merging them is a markup change in four workspaces.
+- Open decisions from entry (d) still stand: Handover per-row Missing, Save Draft stub, Complete position on standalone pages, the Owner "cannot view rental balances" text.
+- Hands-on pass on a real iPad and phone, including the keyboard.
+
+## 2026-10-14 (e) — Phone and tablet pass of the Pack → Handover → Return → Reset run
+
+**Did**
+- Drove the same run by touch (`tap()`, touch + mobile emulation, seeded mock, Owner) at phones 360×740 and 390×844 and tablets 768×1024, 820×1180, 1024×768, 1194×834. Measured at every step: hit areas (counting the `TouchTarget` inset, not just the painted box), horizontal overflow, whether Confirm is on screen and not covered, taps from the queue row.
+- Before: 12 taps at every size, no horizontal overflow. Found: (1) the success toast still covered Confirm on phones (the 104px lift from entry (d) assumed the desktop footer); (2) 9–22 controls per stage under 44px — bare 13px row checkboxes in the ≥768 tables (Pack, Handover incl. toggle-all, Reset), Return's condition chips (24–30px), Packing's kit-dependency chips (23px) and tree rows (36px), Handover's Verify Both (18px), View All (20px), Capture/Re-sign (36px), Reset's Quick Pass (40px), Check All Tasks (19px), task tick rows (26px), Clear Selection (20px); (3) a tablet held upright (820) got the list-plus-rail layout in ~420px, clipping the checklist's Status column; (4) on phones the first screen ended in chrome — 2×2 three-line stage buttons and a duplicate Booking/Client strip — with no equipment visible.
+- Fixed: toast lift is now measured from the footer (`--toast-bottom`, ResizeObserver) so it clears the taller phone footer; new `TapCheckbox` (label + `TouchTarget`, forwards ref) at the table checkboxes; condition chips, dependency chips, tree rows, Verify Both, View All, Capture, Quick Pass, Check All Tasks, task rows, Clear Selection all take `var(--tap)`; the shell measures its own body and hands the workspaces the one-column layout when it is under 900px (`FloorNarrowContext`, replaces `FloorPanelContext`; the dock is always narrow); on phones the four stage steps share one row (icon / name / state, still text + icon) and the Booking/Client cells already in the sheet title are hidden.
+- After: no hit area under 44px at any of the six sizes, no overflow, Confirm never covered, still 12 taps, zero page errors.
+
+**Ruled**
+- No product, permission, schema or gate change. ⭐ `FLOOR_TWO_COLUMN_MIN = 900` (container width, not a window breakpoint): 820 portrait (≈780px, list ≈420px) clipped Status; 1024 landscape (≈960px) fits two columns. Revert = delete the Shell's measurement (`narrow` stays false for the modal); each fix above is a local style edit.
+- Row density on desktop tables rises slightly (44px chips, 44px dependency chips): Law 15 is "every device, never relaxed".
+
+**Verified**
+- typecheck 0; eslint on `src` clean; lint:shell, lint:ui-copy, contrast 82/82; full suite 351 files / 4,466 tests pass; new tests: `TapCheckbox` (hit area toggles, ref, disabled), narrow-container band at 780 / 1100 / no layout, footer-measured toast lift.
+- Browser, six sizes above, screenshots reviewed for phone 390 (Pack, Return, Reset) and tablet 820 / 1024 / 1194.
+- Not verified: a real phone or tablet (this is desktop Chromium with touch emulation: no iOS Safari, no on-screen keyboard, no safe-area insets, no gloves); the Sign-on-Glass pad and the camera scanner by touch; real data.
+
+## Completion
+Not re-counted: no migration, action or capability changed; figures in the entries below stand.
+
+## Remaining
+- On a 768-high landscape tablet only ~270px of the sheet is content (stage row, strip, progress and the scan bar come first) — fold the scan/filter bar or the progress block.
+- Phone footer is ~150px (hint + two stacked buttons).
+- Open decisions from entry (d) still stand: Handover per-row Missing, Save Draft stub, Complete position on standalone pages, the Owner "cannot view rental balances" text.
+- Hands-on pass on a real iPad and phone.
+
+## 2026-10-14 (d) — Floor run end-to-end: footer says what is still needed; toast off the button; Reset copy
+
+**Did**
+- Drove booking 818 through Pack → Handover → Return → Reset in the queue dock (seeded mock, Owner, 1440px) and counted taps from the queue row. Measured minimum taps to a committed stage: Pack 3 (open, Quick Pack, Confirm); Handover 5 from the Pack tab (Verify Both, Quick Dispatch, Mark Cleared ×2 for the payment and deposit gates, Confirm); Return 2 (Check In All, Confirm); Reset 2 (Reset All, Confirm). Within R-39 as far as the budgets in this repo say; the budget file itself (`RULINGS-2026-09-19.md`) is not in this repo, so no budget was compared.
+- Found and fixed: (1) a disabled Confirm gave no reason; the gate list sat ~2,500px down the Handover page. Each workspace now reports its first unmet requirement (`blockedReason`, worded by `operations/nextRequirement.ts`) and the shell footer shows "Still needed: <requirement> (+N more)" beside the disabled button, updating as items are ticked. (2) The success toast sat exactly over the footer's Confirm button; the shell lifts it (`--toast-bottom`, `Toast.tsx`) while a job is open. (3) Reset's guidance read "…and, per , changes no booking status" (a stripped reference) and named a database column; reworded to "The booking stays Returned."
+- Not changed: gate rules, payment/deposit certification, signatures, any action or permission.
+
+**Ruled**
+- No product, permission or schema change. Revert = drop `blockedReason`/`blockedHint` and the `--toast-bottom` effect; restore the Reset sentence.
+- Observed, not changed (TODO(decision)): the Handover "Handing Over With Money Outstanding" card tells an Owner session "Your role cannot view rental balances" in the mock; check whether that is the mock role or a real gate before touching it.
+
+**Verified**
+- typecheck 0; eslint on `src` clean; lint:shell, lint:ui-copy, contrast 82/82 pass; full suite 351 files / 4,460 tests pass; new tests: hint shown/hidden, toast offset set and cleared, `nextRequirement`.
+- Browser (seeded mock): hint text confirmed at each Handover step ("Receiver Verified (+5 more)" → … → none); toast and Confirm bounding boxes do not overlap; zero page errors. Reset and Return hints were not separately screenshotted. Phone/tablet, real data and touch not driven.
+
+## Completion
+Not re-counted: no migration, action or capability changed; figures in the entries below stand.
+
+## Remaining
+- Phone/tablet pass of the same run; the Handover length and per-row Missing decision; Save Draft stub decision; consistent Complete position on the standalone pages.
+
+## 2026-10-14 (c) — Floor workflow audit: Pack / Handover / Return / Reset made calmer inside the shell
+
+**Did**
+- Audited all four stages in a browser (seeded mock, Owner, 1440 and 1024px), standalone routes and the queue dock. Panel content height is not a useful measure (the one-column layout is taller, 1,360 → 3,046px for Packing, but the checklist is now on the first screen instead of clipped off-side).
+- Findings: (1) the same booking facts appeared four times before any equipment (panel title, shell strip, workspace header, 8-cell stats grid); (2) inside the dock the workspaces laid out as three desktop columns in ~470px, squeezing the checklist off-screen; (3) two permanently-disabled "Print…" buttons; (4) "(1-Click)" on four buttons and "1 · 2 · 3 ·" titles that imply a sequence the layout does not have; (5) Handover is ~5,300px tall with 18 units and a per-row Missing button.
+- Fixed (1)–(4): in `embedded` mode the stats grid and the unbuilt Print buttons no longer render; the dock provides `FloorPanelContext` so the workspaces take their one-column layout there (`operations/floorPanelContext.tsx`, `useFloorViewport` replaces `useViewport` in the four workspaces); "(1-Click)" and step numbers removed from labels.
+- Not changed: standalone `/rentals/:no/<stage>` pages (non-embedded) keep their header and stats; Handover length; Save Draft.
+
+**Ruled**
+- No product, permission, schema or migration change. Revert = `useFloorViewport` returns `useViewport()`; remove the three `!embedded` wraps per file.
+- `TODO(decision)` candidates, not built: Save Draft refuses (stub) — hide or build?; Handover per-row Missing vs a bulk "mark remaining missing"; one consistent primary action position on the standalone pages (Handover/Reset button sits at the page bottom, not sticky).
+
+**Verified**
+- typecheck 0; eslint clean; lint:shell, lint:ui-copy, contrast 82/82; full suite 349+1 files pass; new context test.
+- Browser (Chromium, seeded mock): dock screenshots for all four stages at 1440 reviewed after the change; zero page errors. Not driven: completing a stage end-to-end, phone/tablet, real data, touch.
+
+## Completion
+Not re-counted: no migration, action or capability changed; figures in the entries below stand.
+
+## Remaining
+- Drive a full Pack → Handover → Return → Reset run in the browser; phone and tablet passes; decide the three TODO(decision) items above; Handover length.
+
+## 2026-10-14 (b) — Desktop Operations dock: keyboard rows and unsaved-work guard
+
+**Did**
+- Desktop queue keyboard: J/K or ↓/↑ move a row cursor through the page, Enter opens the cursor row's job in the dock. Moving never opens anything. Keys are ignored inside inputs, buttons, links, dialogs and the panel itself.
+- Closed a gap in the dock from the entry below: choosing another row's verb while the panel held unsaved packing work replaced the panel silently. `OperationsShell` now reports `onDirtyChange`; the queue asks "Discard & Open" before swapping the docked booking.
+- Files: `OperationsQueues.tsx`, `OperationsShell.tsx`, `operationsShell.css`; tests in `operationRoutes.test.tsx` and `OperationsShell.test.tsx`.
+
+**Ruled**
+- No product, permission or schema change. Revert = delete the keyboard `useEffect` and the `pendingDock` ConfirmDialog in `OperationsQueues.tsx`.
+
+**Verified**
+- typecheck exit 0; eslint on `src/modules/operations` clean; `lint:shell` pass; full suite 349 files / 4,454 tests passed.
+- jsdom only: cursor + Enter opens the dock; the shell reports dirty and clears it on unmount. The discard dialog itself has no test, and nothing here was driven in a browser (mock DB has no bookings).
+
+## Completion
+Not re-counted this entry: no migration, action or capability changed; the figures in the entry below stand. `check:pglite`/`check:lifecycle` not re-run.
+
+## Remaining
+- Drive the dock, cursor and discard prompt in a browser with real bookings. Add a test for the discard dialog. Rentals/Clients/Inventory density and New Rental layout are still open.
+
+## 2026-10-14 — Desktop Operations: job docks beside the queue (≥1280px)
+
+**Did**
+- At desktop width (`useViewport() === 'desktop'`) the queue row verb (Pack / Handover / Return / Reset) now opens the job in a docked side panel instead of a full-screen modal, so the queue stays visible and the active row is highlighted (`operations-v2__row--active`, `aria-selected`). Close with the X or Esc; stage tabs, 1–4 keys, dirty-discard dialog and confirm-and-next flow are the existing `OperationsShell` logic, unchanged.
+- `OperationsShell` gained `layout: 'modal' | 'panel'` (default modal, so Rentals List / Booking Detail callers are untouched). Tablet and phone keep the full-screen sheet. Files: `OperationsShell.tsx`, `OperationsQueues.tsx`, `operationsShell.css`.
+- Tests: `operationRoutes.test.tsx` now covers docked-at-desktop (panel, no dialog, one queue table, active row, close) and modal-below-desktop.
+
+**Ruled**
+- No product, permission, schema or migration change. Row click (opens booking) and booking link behaviour are unchanged (8 Oct ruling). Revert = remove the `dock` state and `<OperationsShell layout="panel">` block in `OperationsQueues.tsx`.
+
+**Verified**
+- `npm run typecheck` exit 0; eslint on `src/modules/operations` clean; `lint:shell` and `lint:ui-copy` pass; `check:contrast` 82/82; full suite 349 files / 4,452 tests passed; `check:lifecycle` 30/30.
+- Browser (Chromium, mock mode, owner sign-in): `/operations` loads at 1440 and 1024 with zero page errors. The mock database has no bookings, so **the dock itself was not driven in a browser**; it is verified by jsdom tests only. `check:pglite` was not re-run (no migration touched).
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Counted by `npm run completion`, not typed. check:pglite figure is from an earlier run (not re-run this session).
+
+## Remaining
+- Drive the dock in a browser with real booking rows at 1280/1440/1920 (needs seeded or staging bookings); check the table's 900px min-width scrolls acceptably beside a 44% panel.
+- Next desktop items: Rentals/Clients/Inventory density and detail rail, New Rental catalogue + summary, keyboard shortcuts (docs/audit/08_RESPONSIVE_AUDIT.md).
 
 ## 2026-10-14 — Button audit fixes: browser finish and local verification
 

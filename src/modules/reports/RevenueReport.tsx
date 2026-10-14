@@ -30,7 +30,7 @@ import { loadRevenueTrend, type RevenueTrendResult } from '../../lib/queries/rep
 import { listInvoices, type InvoiceListRow } from '../../lib/queries/finance'
 
 /*
- * RULING 2026-10-14: the Revenue report shows only figures read from issued
+ * RULING 2026-10-14 (R14-18): the Revenue report shows only figures read from issued
  * invoices. It used to chart the Pulse seed ledger (a generated, browser-side
  * fixture) and print hardcoded category and project-type splits, fallback KPIs
  * ("42 invoices", "Rs 35,000 average") and a KPI total that summed voided

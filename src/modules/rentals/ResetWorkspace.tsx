@@ -12,7 +12,8 @@ import { STATUS } from '../../lib/status'
 import type { StatusKey } from '../../lib/status'
 import { JOBS, statusToken } from '../../lib/workflow'
 import type { BookingStatus, JobState } from '../../lib/workflow'
-import { useViewport } from '../../lib/device'
+import { useFloorViewport } from '../operations/floorPanelContext'
+import { nextRequirement } from '../operations/nextRequirement'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../components/ui/Toast'
 import { captureError } from '../../lib/monitoring'
@@ -23,7 +24,7 @@ import { fetchFloorBooking, type FloorBooking, type FloorLine } from '../../lib/
 import type { ResetEntryInput } from '../../actions/rentals/floorVerb'
 import { SHARED_CLEAN_TASKS, DAMAGE_TYPES, SEVERITIES, PROBLEM_ROUTE, QUEUE_FILTERS } from '../../lib/queries/reset'
 import type { QueueState, ProblemState } from '../../lib/queries/reset'
-import { CompactButton, TouchTarget } from '../../components/ui/TouchTarget'
+import { CompactButton, TapCheckbox, TouchTarget } from '../../components/ui/TouchTarget'
 import { formatGateError } from '../../lib/gates'
 
 /**
@@ -291,6 +292,8 @@ export interface ResetWorkspaceProps {
     isDirty: boolean
     label?: string
     error?: string | null
+    /** First requirement still unmet, worded for the footer beside a disabled Confirm. */
+    blockedReason?: string | null
   }) => void
 }
 
@@ -312,7 +315,7 @@ export default function ResetWorkspace({
     'Nobody is signed in, so this cleaning work cannot be recorded against anyone. ' +
     'A reset names who cleaned the unit and who QC’d it, and the QC gate compares the two. Sign in and reopen this workspace.'
   /* Law 13/14 — width decides, at v4.1 §7.7's 768 / 1280. */
-  const viewport = useViewport()
+  const viewport = useFloorViewport()
   const desktop = viewport === 'desktop'
   const phone = viewport === 'phone'
   const place = floorPlacements(desktop, phone)
@@ -992,9 +995,11 @@ export default function ResetWorkspace({
   }
 
   const isDirty = !untouched
+  const blockedReason = nextRequirement(gates.filter((g) => !g.pass).map((g) => g.label))
   useEffect(() => {
     onRegisterActions?.({
       canComplete,
+      blockedReason,
       dispatching,
       complete: completeResetJob,
       isDirty,
@@ -1002,7 +1007,7 @@ export default function ResetWorkspace({
       error: dispatchError,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError])
+  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */
 
@@ -1131,6 +1136,8 @@ export default function ResetWorkspace({
             </div>
 
             {/* §4 booking summary strip — Bento 2.0 bar with AD/BS duality */}
+            {/* RULING 2026-10-14 (R14-4): inside the shell/dock the sheet title and booking strip already say this. */}
+            {!embedded && (
             <div className="floor-summary-bar">
               {[
                 { l: 'Client', v: floor.clientName ?? '—', big: true },
@@ -1154,6 +1161,7 @@ export default function ResetWorkspace({
                 </div>
               ))}
             </div>
+            )}
 
             {/* §3.1 — chip tiles, one per queue state, counted over the real rows. */}
             <div style={{ display: 'grid', gridTemplateColumns: phone ? 'repeat(2, minmax(0,1fr))' : 'repeat(4, minmax(0,1fr))', gap: 'var(--sp-md)' }}>
@@ -1354,7 +1362,7 @@ export default function ResetWorkspace({
                       </div>
                     ) : (
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <Button icon="zap" onClick={quickResetAll}>Quick Reset All (1-Click)</Button>
+                        <Button icon="zap" onClick={quickResetAll}>Quick Reset All</Button>
                         <Button icon="checklist" onClick={selectAllVisible}>Select All Visible</Button>
                       </div>
                     )
@@ -1485,8 +1493,7 @@ export default function ResetWorkspace({
                             return (
                               <tr key={r.key} className="floor-table-row" style={{ borderBottom: '1px solid var(--border)' }}>
                                 <td style={{ ...td, width: 26 }}>
-                                  <input
-                                    type="checkbox"
+                                  <TapCheckbox
                                     checked={selected.has(r.key)}
                                     disabled={isException}
                                     aria-label={`Select ${r.name}`}
@@ -1614,7 +1621,7 @@ export default function ResetWorkspace({
                               justifyContent: 'center',
                               gap: 6,
                               width: '100%',
-                              minHeight: 40,
+                              minHeight: 'var(--tap)',
                               borderRadius: 'var(--r-btn)',
                               fontSize: 'var(--t-meta)',
                               fontWeight: 600,
@@ -1625,7 +1632,7 @@ export default function ResetWorkspace({
                             }}
                           >
                             <Icon name="zap" size={14} />
-                            Quick Pass {selRows.length} to Ready (1-Click)
+                            Quick Pass {selRows.length} to Ready
                           </button>
                         </div>
                       )}
@@ -1647,7 +1654,8 @@ export default function ResetWorkspace({
                               fontSize: '11px',
                               fontWeight: 600,
                               cursor: 'pointer',
-                              padding: '2px 6px',
+                              minHeight: 'var(--tap)',
+                              padding: '0 10px',
                               borderRadius: 'var(--r-xs)',
                             }}
                           >
@@ -1658,7 +1666,7 @@ export default function ResetWorkspace({
                           const doneCount = selRows.filter((r) => recOf(r.key).ticks.includes(task)).length
                           const allDone = doneCount === selRows.length
                           return (
-                            <label key={task} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '3px 0', fontSize: 'var(--t-meta)', color: 'var(--text)', cursor: 'pointer' }}>
+                            <label key={task} style={{ display: 'flex', alignItems: 'center', gap: 7, minHeight: 'var(--tap)', fontSize: 'var(--t-meta)', color: 'var(--text)', cursor: 'pointer' }}>
                               <input type="checkbox" checked={allDone} onChange={() => toggleShared(task)} />
                               <span style={{ flex: 1 }}>{task}</span>
                               <span className="figure" style={{ color: 'var(--muted)' }}>{doneCount}/{selRows.length}</span>
@@ -1683,7 +1691,7 @@ export default function ResetWorkspace({
                                 <span className="figure" style={{ marginLeft: 'auto', color: 'var(--muted)' }}>{rec.ticks.length}/{ROW_TASKS.length}</span>
                               </div>
                               {ROW_TASKS.map((task) => (
-                                <label key={task} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '3px 0', fontSize: 'var(--t-meta)', color: 'var(--text)', cursor: 'pointer' }}>
+                                <label key={task} style={{ display: 'flex', alignItems: 'center', gap: 7, minHeight: 'var(--tap)', fontSize: 'var(--t-meta)', color: 'var(--text)', cursor: 'pointer' }}>
                                   <input type="checkbox" checked={rec.ticks.includes(task)} onChange={() => toggleUnitTask(r.key, task)} />
                                   {task}
                                 </label>
@@ -1910,15 +1918,9 @@ export default function ResetWorkspace({
                     ))}
                     <p style={{ margin: '6px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
                       Exceptions do not block completion — a recorded problem routed the item out of this queue.
-                      {hasSerializedUnits ? (
-                        <>
-                          {' '}Completing writes <span className="identifier">reset_completed_at</span> on {readyAssetIds.length} unit{readyAssetIds.length === 1 ? '' : 's'} {/* and,
-                          per §1.5, changes no booking status. */}and, per , changes no booking status. </>
-                      ) : (
-                        <>
-                          {' '}{/* All items are quantity-tracked. Completing records warehouse floor reset verification and,
-                          per §1.5, changes no booking status. */}All items are quantity-tracked. Completing records warehouse floor reset verification and, per , changes no booking status. </>
-                      )}
+                      {' '}{hasSerializedUnits
+                        ? `Completing marks ${readyAssetIds.length} unit${readyAssetIds.length === 1 ? '' : 's'} reset. The booking stays Returned.`
+                        : 'Completing records the floor reset. The booking stays Returned.'}
                     </p>
                   </div>
                 </Card>
@@ -1932,7 +1934,7 @@ export default function ResetWorkspace({
                   {selected.size}
                 </span>
                 <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>items selected</span>
-                <button type="button" onClick={clearSelection} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', color: 'var(--link)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--t-meta)' }}>
+                <button type="button" onClick={clearSelection} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', color: 'var(--link)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--t-meta)', minHeight: 'var(--tap)', padding: '0 10px' }}>
                   Clear Selection
                 </button>
               </div>
@@ -1959,6 +1961,7 @@ export default function ResetWorkspace({
               </p>
             </Card>
 
+            {/* RULING 2026-10-14 (R14-14): this standalone footer stays in-page; the shell and dock pin Confirm. */}
             {/* footer — job-level completion. Ungated by money or any booking
                 condition (§1.7). One EXIT and one primary, nothing else. */}
             {!embedded && (

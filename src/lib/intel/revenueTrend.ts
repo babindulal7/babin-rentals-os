@@ -3,7 +3,7 @@ import { formatMoney, parseMoney, type Paisa } from '../money'
 /**
  * # Billed revenue — the one definition the Revenue report charts
  *
- * RULING 2026-10-14: Billed revenue = Σ `invoices.taxable_amount` (after discount,
+ * RULING 2026-10-14 (R14-16, R14-17): Billed revenue = Σ `invoices.taxable_amount` (after discount,
  * BEFORE VAT) over issued, non-voided NPR invoices, bucketed by `issue_date`
  * (an AD calendar date). Revert = change `measureOf` and the page copy together.
  *
@@ -173,7 +173,7 @@ export type WindowResolution =
   | { kind: 'too-long'; months: number }
 
 /**
- * The window the trend is drawn over.
+ * RULING 2026-10-14 (R14-20). The window the trend is drawn over.
  *
  * `fromDay`/`toDay` are what the report toolbar chose (either may be absent —
  * "All dates" is neither). An absent start becomes the first issued invoice; an
@@ -210,7 +210,7 @@ export function resolveWindow(input: {
 }
 
 /**
- * The comparison window: the same number of days, immediately before the
+ * RULING 2026-10-14 (R14-19). The comparison window: the same number of days, immediately before the
  * period — what the report toolbar's "Compare: previous period" promises.
  * "18 Jul – 15 Oct" (90 days) compares with "19 Apr – 17 Jul" (90 days).
  */
