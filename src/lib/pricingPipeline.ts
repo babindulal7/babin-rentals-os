@@ -199,6 +199,9 @@ export function evaluateDiscounts(
 
   const sources: AppliedDiscountBreakdown['sources'] = []
   const isStudent = Boolean(discounts.isStudentBundle)
+  if (isStudent && (discounts.bundleSavingPercent ?? 0) > 0 && (Boolean(discounts.womenDopEligible) || manual > 0)) {
+    validationErrors.push('Student bundle discounts are exclusive in the database. Remove the manual/Women DoP addition, or select a different bundle rate.')
+  }
 
   // 1. Student bundle protection:
   // If student bundle is chosen, policy excludes other extra discounts (membership, duration, promo)
