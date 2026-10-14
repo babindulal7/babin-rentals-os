@@ -1,3 +1,4 @@
+import { PRODUCTIONS_HUB_PATH, rentalAuditLogPath, rentalInvoicesPath } from '../../lib/routeTargets'
 import { calculateDraftTotal } from '../../lib/rentalDraftPricing'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { csvCell } from '../../lib/csv'
@@ -1683,7 +1684,7 @@ export default function RentalsList() {
                           {
                             label: `Find Invoices (${selectedHeaderRental.bookingNo})`,
                             icon: 'invoice' as const,
-                            onClick: () => navigate(`/finance/invoices?search=${encodeURIComponent(selectedHeaderRental.bookingNo)}`),
+                            onClick: () => navigate(rentalInvoicesPath(selectedHeaderRental.bookingNo)),
                           },
                         ]
                       : []),
@@ -1692,7 +1693,7 @@ export default function RentalsList() {
                           {
                             label: `Audit Log (${selectedHeaderRental.bookingNo})`,
                             icon: 'checklist' as const,
-                            onClick: () => navigate(`/audit?recordId=${encodeURIComponent(selectedHeaderRental.id)}`),
+                            onClick: () => navigate(rentalAuditLogPath(selectedHeaderRental.id)),
                           },
                         ]
                       : []),
@@ -1710,7 +1711,7 @@ export default function RentalsList() {
               {
                 label: 'Productions Hub',
                 icon: 'queues' as const,
-                onClick: () => navigate('/crew/productions'),
+                onClick: () => navigate(PRODUCTIONS_HUB_PATH),
               },
               {
                 label: 'Scan Barcode',

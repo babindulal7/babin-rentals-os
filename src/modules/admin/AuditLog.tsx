@@ -1,4 +1,6 @@
 import { Fragment, useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { AUDIT_LOG_PATH } from '../../lib/routeTargets'
 import type { CSSProperties } from 'react'
 import Icon from '../../components/ui/Icon'
 import { PageHeader, KpiStrip, FooterNote, cardStyle } from '../../components/ui/Page'
@@ -94,7 +96,7 @@ function countOf(list: { loading: boolean; error: string | null }, value: number
   return list.loading || list.error !== null || value === null ? '—' : String(value)
 }
 
-export default function AuditLog() {
+export default function AuditLog({ recordId = null }: { recordId?: string | null } = {}) {
   const viewport = useViewport()
   const { user } = useAuth()
 
@@ -124,6 +126,7 @@ export default function AuditLog() {
     chips: {
       module: module === ALL ? [] : [module],
       actor_role: role === ALL ? [] : [role],
+      ...(recordId ? { record_id: [recordId] } : {}),
     },
     page: { index: page, size: PAGE_SIZE },
   }
@@ -171,6 +174,12 @@ export default function AuditLog() {
 
       {/* KPI counts and the filter row would leak "how much history exists" to
           a session RLS refuses, so both render only past the restriction. */}
+      {!restriction.restricted && recordId && (
+        <p role="status" style={{ margin: 0, color: 'var(--text2)', fontSize: 'var(--t-meta)' }}>
+          Showing audit events for record <code>{recordId}</code>.{' '}
+          <Link to={AUDIT_LOG_PATH}>All records</Link>
+        </p>
+      )}
       {!restriction.restricted && (
         <>
           <KpiStrip items={kpis} columns={viewport === 'phone' ? 1 : viewport === 'tablet' ? 2 : 4} />

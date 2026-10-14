@@ -23,6 +23,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
+import { MemoryRouter } from 'react-router-dom'
 import type { Viewport } from '../../../lib/device'
 import * as auditQueries from '../../../lib/queries/audit'
 import type { AuditEventListRow } from '../../../lib/queries/audit'
@@ -97,7 +98,7 @@ const AUDIT_FIXTURES: AuditEventListRow[] = [
    suites mock it. The pure exports (restriction, filter constants) stay real. */
 vi.mock('../../../lib/queries/audit', async (orig) => ({
   ...(await orig<typeof import('../../../lib/queries/audit')>()),
-  listAuditEvents: async () => ({ rows: AUDIT_FIXTURES, total: AUDIT_FIXTURES.length }),
+  listAuditEvents: vi.fn(async () => ({ rows: AUDIT_FIXTURES, total: AUDIT_FIXTURES.length })),
 }))
 
 ;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
@@ -107,12 +108,12 @@ const { default: AuditLog } = await import('../AuditLog')
 let container: HTMLDivElement
 let root: Root
 
-async function mount() {
+async function mount(recordId?: string) {
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
   await act(async () => {
-    root.render(<AuditLog />)
+    root.render(<MemoryRouter><AuditLog recordId={recordId ?? null} /></MemoryRouter>)
   })
   /* The trail resolves `listAuditEvents` in an effect — the same flush the
      BookingDetail suites use to let the mocked read land. */
@@ -129,6 +130,7 @@ const buttonLabels = (): string[] =>
 beforeEach(() => {
   viewport = 'desktop'
   auth.role = 'Owner'
+  vi.mocked(auditQueries.listAuditEvents).mockClear()
 })
 
 afterEach(async () => {
@@ -193,6 +195,21 @@ describe('Audit Log — §10.4, view-only for every role including Owner', () =>
     expect(container.textContent).toContain('Booking Cancelled')
     expect(container.querySelectorAll('input[type="checkbox"]').length).toBe(0)
     expect(buttonLabels().some((l) => l.includes('delete'))).toBe(false)
+  })
+})
+
+describe('record-scoped audit navigation', () => {
+  it('filters audit queries by record_id and provides a link back to all events', async () => {
+    const recordId = '44444444-4444-4444-8444-444444444444'
+    await mount(recordId)
+    expect(vi.mocked(auditQueries.listAuditEvents)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        withCount: true,
+        chips: expect.objectContaining({ record_id: [recordId] }),
+      }),
+    )
+    expect(container.textContent).toContain('Showing audit events for record')
+    expect(container.querySelector('a[href="/admin/audit-log"]')?.textContent).toContain('All records')
   })
 })
 
