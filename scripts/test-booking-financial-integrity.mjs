@@ -74,6 +74,15 @@ try {
   requireMoney(stacked,'total',8475)
   console.log('PASS: Membership 20 + Women DoP 5 => NPR 8,475 with VAT')
 
+  try {
+    await booking({code:'990492',vatRate:0.13,
+      discountRows:[['Membership',20],['Women-DoP 5%',10]]})
+    throw new Error('Stacked discount above 25% was accepted')
+  } catch (error) {
+    if (!String(error.message).includes('Stacking discount rows above 25')) throw error
+  }
+  console.log('PASS: database refuses a 30% stacked discount')
+
   const zero=await booking({code:'990490',vatRate:0,
     discountRows:[['Manual',30]]})
   requireMoney(zero,'total',7000)
