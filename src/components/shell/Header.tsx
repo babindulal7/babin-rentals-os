@@ -751,15 +751,6 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             </div>
           ) : (
             <>
-              {/* CANONICAL BUTTON POSITIONS — same slots in every workspace:
-                  [Filters] [Secondary] [Add] [More] [Page CTA / Save / Confirm].
-                  Keep the page-owned portal after More, not before the title. */}
-              <span
-                className="workspace-page-actions app-global-header__action-slot app-global-header__action-slot--filters"
-                data-header-slot="filters"
-                ref={ws?.setHeaderActionsElement}
-              />
-
               {/* Context actions vary by page but never displace Filter or
                   move a primary CTA past the More button. */}
               <span className="app-global-header__action-slot app-global-header__action-slot--secondary" data-header-slot="secondary">
@@ -780,6 +771,15 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                   )
                 })}
               </span>
+
+              {/* CANONICAL BUTTON POSITIONS — same slots in every workspace:
+                  [Secondary] [Filters] [Add] [More] [Page CTA / Save / Confirm].
+                  Keep the page-owned portal after More, not before the title. */}
+              <span
+                className="workspace-page-actions app-global-header__action-slot app-global-header__action-slot--filters"
+                data-header-slot="filters"
+                ref={ws?.setHeaderActionsElement}
+              />
 
               {/* All Add actions share one location; page-specific creation still
                   honours its permissions and showAddMenu setting. */}
