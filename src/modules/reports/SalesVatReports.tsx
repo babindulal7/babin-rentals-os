@@ -45,6 +45,8 @@ export default function SalesVatReports() {
   const [activeTab, setActiveTab] = useState<FinanceReportTab>('sales')
   const [filters, setFilters] = useState<ReportFilters>({})
   const [data, setData] = useState<{ sales: SalesReportData; vat: VatTaxReportData } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
@@ -56,8 +58,15 @@ export default function SalesVatReports() {
       branchId,
     }
 
+    setLoading(true)
+    setLoadError(null)
+    setData(null)
     void getSalesVatReport(queryOpts).then((res) => {
       if (active) setData(res)
+    }).catch((error: unknown) => {
+      if (active) setLoadError(error instanceof Error ? error.message : 'Sales/VAT report unavailable.')
+    }).finally(() => {
+      if (active) setLoading(false)
     })
 
     return () => {
@@ -256,10 +265,9 @@ export default function SalesVatReports() {
         value={filters}
         onChange={setFilters}
         dateColumn="issue_date"
-        csv={{
-          filename: `finance-${activeTab}`,
-          build: getCsvRows,
-        }}
+        csv={!loading && !loadError && data && data.sales.metrics.invoiceCount > 0
+          ? { filename: `finance-${activeTab}`, build: getCsvRows }
+          : undefined}
       >
         <div
           role="group"
@@ -287,8 +295,23 @@ export default function SalesVatReports() {
         </div>
       </ReportToolbar>
 
+      {(loading || loadError || !data || data.sales.metrics.invoiceCount === 0) && (
+        <div
+          role={loadError ? 'alert' : 'status'}
+          style={{ ...cardStyle, padding: 'var(--sp-lg)', color: loadError ? 'var(--status-danger-text)' : 'var(--text2)' }}
+        >
+          {loading
+            ? 'Loading real invoice records…'
+            : loadError
+              ? 'Sales/VAT report unavailable. The invoice database could not be read; no sample totals or CSV can be displayed.'
+              : !data
+                ? 'Sales/VAT report unavailable. No verified invoice data was received.'
+                : 'No invoices found for this period. There are no figures to export.'}
+        </div>
+      )}
+
       {/* TAB 1: INVOICED SALES */}
-      {activeTab === 'sales' && (
+      {!loading && !loadError && data && data.sales.metrics.invoiceCount > 0 && activeTab === 'sales' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
           <KpiStrip items={salesKpis} />
 
@@ -439,7 +462,7 @@ export default function SalesVatReports() {
       )}
 
       {/* TAB 2: NEPAL 13% VAT REGISTER */}
-      {activeTab === 'vat' && (
+      {!loading && !loadError && data && data.sales.metrics.invoiceCount > 0 && activeTab === 'vat' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
           <KpiStrip items={vatKpis} />
 
