@@ -110,7 +110,7 @@ try {
 
   const noVatInvoice=(await sql('select public.create_invoice($1::jsonb) as result',
     [JSON.stringify({client_uuid:id(),created_by:ownerId,booking_id:zero.bookingId,
-      booking_no:zero.code,vat_rate:0})])).rows[0].result
+      booking_no:zero.code,vat_rate:0.13})])).rows[0].result
   if (!noVatInvoice) throw new Error('Zero VAT create_invoice returned nothing')
   const zeroInvoiceRow=(await sql('select vat_rate,total_amount from invoices where booking_id=$1',
     [zero.bookingId])).rows[0]
