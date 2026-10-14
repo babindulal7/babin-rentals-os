@@ -19,8 +19,10 @@ vi.mock('../../supabase', () => ({
         gte: (field: string) => { db.filters.push('from:' + field); return query },
         lte: (field: string) => { db.filters.push('to:' + field); return query },
         eq: (field: string) => { db.filters.push('branch:' + field); return query },
-        then: (accept: (result: { data: typeof db.rows; error: typeof db.error }) => unknown) =>
-          Promise.resolve({ data: db.rows, error: db.error }).then(accept),
+        range: (start: number, end: number) => ({
+          then: (accept: (result: { data: typeof db.rows; error: typeof db.error }) => unknown) =>
+            Promise.resolve({ data: db.rows?.slice(start, end + 1) ?? null, error: db.error }).then(accept),
+        }),
       }
       return query
     },
@@ -90,6 +92,15 @@ describe('live Sales and Nepal VAT register — no invented business numbers', (
     expect(report.vat.monthlySchedule[0]?.bsMonth).toMatch(/2083/)
     expect(report.vat.metrics.taxableTurnover).toBe(rupees(3000))
     expect(report.vat.metrics.exemptTurnover).toBe(rupees(0))
+  })
+
+  it('includes invoices from later PostgREST result pages, not just the first 500', async () => {
+    db.rows = Array.from({ length: 501 }, (_, n) => invoice(String(n), '2026-10-05', 1000, 130, 0))
+    const report = await getSalesVatReport()
+    expect(report.sales.metrics.invoiceCount).toBe(501)
+    expect(report.sales.metrics.totalInvoiced).toBe(rupees(501 * 1130))
+    expect(report.vat.taxRegister).toHaveLength(501)
+    expect(report.sales.invoices).toHaveLength(501)
   })
 
   it('excludes unissued drafts and voided invoices from statutory sales', async () => {
