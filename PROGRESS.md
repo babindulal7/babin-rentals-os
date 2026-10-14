@@ -1,5 +1,45 @@
 # Progress Log
 
+## 2026-10-14 — Interactive reports Phase 0/1: real billed-revenue trend and shared interactive chart
+
+**Did**
+- Phase 0 audit of every report's data source, permissions and correctness risk, with metric definitions: `docs/reports/INTERACTIVE_REPORTS_PHASE0_AUDIT.md`. Found the Revenue page charting the browser-generated Pulse seed ledger, hardcoded category/project tables, fallback KPIs ("42 invoices", "Rs 35,000") and a KPI total that summed voided invoices.
+- `src/lib/intel/revenueTrend.ts`: billed-revenue engine (issued, non-voided NPR invoices, `taxable_amount` before VAT, by `issue_date`), daily ≤ 62 days else AD months ≤ 60, month-to-date and part-month labels, future end clamped to today, previous period = equal-length window immediately before with shifted 1:1 buckets, per-invoice `taxable + VAT = total` check, bucket-vs-total reconciliation, credit-note Partial guard. `src/lib/intel/chartScale.ts`: nice ticks, lakh/crore axis labels, label thinning.
+- `src/lib/queries/reportRevenueTrend.ts`: bounded PostgREST read that pages by rows received and refuses unless it holds the server's exact count; no fallbacks. A test caught my first loop skipping rows under a response cap below the page size; fixed.
+- `src/components/ui/charts/InteractiveTrendChart.tsx`: shared SVG trend on the `--cat-1…8` tokens — value axis, legend with status in words, solid actual / dashed illustrative, square-marker comparison, null gaps, hover guide + tooltip (wide), tap-to-freeze / tap-away / Clear, one-tab-stop keyboard (←/→/Home/End/Esc, Enter only with a destination), readout below on narrow screens, optional values table.
+- `RevenueReport.tsx` rewritten: KPI strip, one chart with three measures (before VAT / incl. VAT / invoices), compare for bounded periods, period table with totals, CSV with definition and data status, Refresh, every state (loading, error + Retry, no history, future, inverted, too long, genuine zero, partial). Invoice register kept, now with count, error state and voids marked. Seeded mock invoices given `currency: 'NPR'` (schema default).
+- Supersedes draft babindulal7/babin-rentals-os#12 (same scope, never run locally; see audit §6).
+
+**Ruled**
+- RULINGS-2026-10-14 #1–#7 (`RULINGS-2026-10-14.md`): Revenue report = Owner · Admin · Manager · Accounts via `canViewFinancialReports` (C7; PERMISSIONS §3.1 C7 cell clarified in the same commit); billed-revenue definition; credit notes not subtracted twice; fabricated figures removed; previous-period semantics; window/bucket rules; mock currency default.
+- Open questions for Babin added as `docs/OPEN_DECISIONS.md` §13 (Pulse revenue basis, cash-out policy, Phase 3 manual baseline, `issue_date` UTC default).
+- No migration WRITTEN or APPLIED. Nothing touched on live Supabase (N-5).
+
+**Verified**
+- typecheck exit 0; lint exit 0; lint:shell 660 files, 0 violations; lint:ui-copy 0 violations (4/4 script tests); check:contrast 82/82.
+- Full suite with `VITE_DATA_SOURCE=mock` (as CI): 355 files / 4,542 tests passed, exit 0; re-run green after the last edits via `completion --tests`. (Without the mock env 116 suites fail at import on missing `VITE_SUPABASE_URL` — environment, not code.) New: engine 24, scale 10, adapter 12, chart 14, page 19, nav +1.
+- check:pglite 160/160, views/functions closed, definer paths pinned; check:lifecycle 30/30; check:anon all passed — same run. Production build exit 0 (300 precache entries).
+- Drove the app (Chromium, `dev:mock` seeded corpus) as Owner at 360/768/1280 in light and real dark theme, plus Accounts 1280 and Warehouse 360/1280: 136/136 checks — no horizontal page overflow, status in words, keyboard select/Esc, tap freeze/Clear, tooltip inside viewport on wide only, measure switch without refetch, compare (18 Jul–15 Oct vs 19 Apr–17 Jul), CSV download with definition and reconciling total, register tab, no page errors. Warehouse is stopped by the shell's module guard before the page mounts; no rupee figure in its DOM. Coordinator has no mock login: covered by page and nav tests only. Mock corpus figures, not live data; live JWT/PostgREST not exercised.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-14T22:39:30.348Z). Suite: green (all test files passed).
+Gates read from .lifecycle-result.json, written 2026-10-14T22:39:39.391Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Phase 2: Pulse views, Cash Flow (`queries/liquidity.ts` selects non-existent `invoices.total, balance`), Rentals, Equipment, Expenses — each needs its source verified first; decisions in OPEN_DECISIONS §13.
+- Phase 3 five-year illustrative scenario explorer: not started (needs §13(c)). Forecasting page unchanged ("Not computed yet").
+- Live verification against Supabase (Owner/Accounts/Coordinator JWTs) after Babin's apply; physical devices.
+- `rbac.canApproveDailyClosing` admits Coordinator though 0117 excludes it (N-3) — filed as a separate task.
+
 ## 2026-10-14 — Button audit fixes: browser finish and local verification
 
 **Did**
