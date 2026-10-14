@@ -67,6 +67,13 @@ describe('live client activity is never made up', () => {
     expect(r.rows.find((x) => x.clientCode === 'C-3')?.bookingCount).toBe(0)
   })
 
+  it('renders the Kathmandu civil date, not the previous UTC day', async () => {
+    state.clients = [{ id: 'a', client_code: 'C-1', name: 'Client A', status: 'Active' }]
+    state.bookings = [{ client_id: 'a', stage: 'Booked', created_at: '2026-10-13T18:20:00Z' }]
+    const result = await getLiveClientActivityReport()
+    expect(result.rows[0]?.lastBookingCreatedAd).toBe('2026-10-14')
+  })
+
   it('rejects RLS/query errors without displaying imaginary counts', async () => {
     state.failTable = 'bookings'
     await expect(getLiveClientActivityReport()).rejects.toThrow('Unable to read client booking history')
