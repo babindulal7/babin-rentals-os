@@ -43,7 +43,7 @@ async function readClients(): Promise<Array<{ id: string; client_code: string | 
 }
 
 async function readRentalBookings(): Promise<Array<{ client_id: string | null; stage: string; created_at: string | null; cancelled_at: string | null }>> {
-  const all: Array<{ client_id: string | null; stage: string; created_at: string | null }> = []
+  const all: Array<{ client_id: string | null; stage: string; created_at: string | null; cancelled_at: string | null }> = []
   for (let offset = 0; ; offset += PAGE_SIZE) {
     const { data, error } = await supabase.from('bookings')
       .select('client_id, stage, created_at, cancelled_at')
