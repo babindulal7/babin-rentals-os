@@ -210,10 +210,14 @@ export default function Header({ crumbs, actions }: HeaderProps) {
     (node) => isValidElement(node) && (node.props as { variant?: string }).variant === 'primary',
   )
   const looseSecondary = looseActions.filter((node) => !loosePrimary.includes(node))
-  const legacyPrimary = [
+  const allLegacyPrimary = [
     ...legacyGroups.flatMap((group) => extractValidActions(group.primary)),
     ...loosePrimary,
   ]
+  // Inventory, Clients and Bundles historically pass GlobalAddMenu as a
+  // PageActions primary. Treat that as ADD, never as the Save/Confirm CTA.
+  const legacyAdd = allLegacyPrimary.find((node) => isValidElement(node) && node.type === GlobalAddMenu)
+  const legacyPrimary = allLegacyPrimary.filter((node) => node !== legacyAdd)
   const legacySecondary = [
     ...legacyGroups.flatMap((group) => extractValidActions(group.extra)),
     ...legacyGroups.flatMap((group) => extractValidActions(group.secondary)),
@@ -818,7 +822,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
               <span className="app-global-header__action-slot app-global-header__action-slot--add" data-header-slot="add">
                 {resolved?.add ? (
                   <AddDropdownButton action={resolved.add} />
-                ) : !ws?.hasPageRightActions && !resolved?.primary && combinedLegacyActions.length === 0 && hData?.showAddMenu !== false ? (
+                ) : legacyAdd ? legacyAdd : !ws?.hasPageRightActions && !resolved?.primary && combinedLegacyActions.length === 0 && hData?.showAddMenu !== false ? (
                   <GlobalAddMenu module={hData?.module} contextData={hData?.creationContext} />
                 ) : null}
               </span>
