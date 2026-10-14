@@ -244,6 +244,7 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
 
     let totalInvoiced = 0
     let totalSubtotal = 0
+    let totalNetSales = 0
     let totalTax = 0
     let totalDiscounts = 0
     let totalPaid = 0
@@ -281,6 +282,7 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
 
       totalInvoiced += gTotal
       totalSubtotal += sub
+      totalNetSales += taxable
       totalTax += tax
       totalDiscounts += disc
       totalPaid += paid
@@ -395,7 +397,7 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
     const sales: SalesReportData = {
       metrics: {
         totalInvoiced: asPaisa(totalInvoiced),
-        netSales: asPaisa(totalSubtotal),
+        netSales: asPaisa(totalNetSales),
         totalVat: asPaisa(totalTax),
         totalDiscounts: asPaisa(totalDiscounts),
         totalCollected: asPaisa(totalPaid),
