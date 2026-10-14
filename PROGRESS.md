@@ -1,5 +1,36 @@
 # Progress Log
 
+## 2026-10-14 — Record Payment no longer preselects another client's invoice
+
+**Did**
+- Browser-verified the R-39 payment budgets from 2026-09-19 (d) and found a money-safety defect the D1/D2 prefill had introduced: on the Rentals list (header More → Record Payment) the dialog preselected the FIRST of every client's payable invoices and typed its outstanding in. With rental #903 (Lumbini Rentals) selected it opened on INV-91 for Dhaulagiri Weddings at Rs 33,448 — one press from an immutable payment against the wrong client. The Payments page and Finance's generic launcher passed the same list.
+- Fix: `defaultInvoiceId` in `RecordPaymentModal.tsx` preselects only when the choice is unambiguous (named by the caller, a single invoice, or one booking's invoices); otherwise a "Select an invoice…" placeholder shows and the amount stays empty. The Rentals list names the one selected rental's own payable invoice.
+- Measured in the browser (seeded mock, Owner, 1440px): Booking Detail → recorded payment 2 taps, 0 typed (budget ≤ 4); Rentals list with one rental selected → 4 taps, 0 typed (≤ 4); Rentals list with nothing selected and the Payments launcher open on the placeholder.
+
+**Ruled**
+- `docs/RULINGS-2026-10-14-payment-default.md` (P14-1, P14-2). No permission, schema, gate or payment-write change.
+
+**Verified**
+- typecheck 0; eslint on `src` clean; lint:shell, lint:ui-copy (0), contrast 82/82; full suite 350 files / 4,466 tests pass (4 new: no preselection across bookings, refusal until chosen then prefill, a named invoice still wins, `defaultInvoiceId` cases); the two existing dialog suites updated to name their invoice where they relied on the old first-row default; production build exit 0.
+- Browser: the four entry states above, zero page errors.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-14T11:29:11.991Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Gates read from .lifecycle-result.json, written 2026-10-14T20:37:10.038Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Still unmeasured in a browser from the 19 Sep table: Cancel a booking, new client inline in New Rental, and New Rental → Booked (≤ 12).
+- Finance's row-level Record Payment launchers were not re-driven; they pass `initialInvoiceId`, which the rule honours.
+
 ## 2026-10-14 — Button audit fixes: browser finish and local verification
 
 **Did**

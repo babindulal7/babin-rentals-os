@@ -125,6 +125,26 @@ const PAYMENT_METHODS: readonly ChoiceCardOption<PaymentMethod>[] = [
   { value: 'Cheque', label: 'Cheque', hint: 'Paper cheque', icon: 'file' },
 ]
 
+/**
+ * RULING 2026-10-14: preselect an invoice only when the choice is unambiguous — the caller named one,
+ * or every offered invoice belongs to one booking (Booking Detail). The Rentals list, the Payments
+ * page and Finance's generic launcher offer every client's payable invoices; preselecting the first
+ * put another client's invoice and its outstanding figure one press from an immutable payment
+ * (seen: rental #903 selected, INV-91 for a different client preselected at Rs 33,448).
+ * Revert = return `initialInvoiceId || invoices[0]?.id || ''`.
+ */
+export function defaultInvoiceId(
+  initialInvoiceId: string,
+  invoices: ReadonlyArray<{ id: string; booking?: string | undefined }>,
+): string {
+  if (initialInvoiceId) return initialInvoiceId
+  const first = invoices[0]
+  if (!first) return ''
+  if (invoices.length === 1) return first.id
+  const oneBooking = first.booking !== undefined && invoices.every((inv) => inv.booking === first.booking)
+  return oneBooking ? first.id : ''
+}
+
 export function RecordPaymentModal({
   isOpen,
   onClose,
@@ -137,11 +157,11 @@ export function RecordPaymentModal({
 }: RecordPaymentModalProps) {
   const { user } = useAuth()
   const isOnline = useNetwork()
-  const [invoiceId, setInvoiceId] = useState(initialInvoiceId || (invoices[0]?.id ?? ''))
+  const [invoiceId, setInvoiceId] = useState(() => defaultInvoiceId(initialInvoiceId, invoices))
   const prevInvoicesLen = useRef(invoices.length)
   useEffect(() => {
     if (prevInvoicesLen.current === 0 && invoices.length > 0 && !invoiceId) {
-      setInvoiceId(initialInvoiceId || (invoices[0]?.id ?? ''))
+      setInvoiceId(defaultInvoiceId(initialInvoiceId, invoices))
     }
     prevInvoicesLen.current = invoices.length
   }, [invoices, initialInvoiceId, invoiceId])
@@ -161,7 +181,7 @@ export function RecordPaymentModal({
   const outstandingOf = (id: string) =>
     invoices.find((i) => i.id === id)?.outstandingRupees
   const [amount, setAmount] = useState<number>(
-    initialAmount ?? outstandingOf(initialInvoiceId || invoices[0]?.id || '') ?? 0,
+    initialAmount ?? outstandingOf(defaultInvoiceId(initialInvoiceId, invoices)) ?? 0,
   )
   const [amountTouched, setAmountTouched] = useState(false)
   useEffect(() => {
@@ -584,6 +604,13 @@ export function RecordPaymentModal({
                 than rendered with an empty label — an operator has to be able to
                 tell "this invoice has not been issued yet" from "this row failed
                 to render". */}
+            {/* With nothing preselected the picker must SAY so; without this option the browser
+                paints the first invoice as if it were chosen while the form holds none. */}
+            {!invoiceId && (
+              <option value="" disabled>
+                Select an invoice…
+              </option>
+            )}
             {invoices.map((inv) => (
               <option key={inv.id} value={inv.id}>
                 {inv.invoiceNo ?? DRAFT_NO_NUMBER} — {inv.client} ({inv.amount})
