@@ -53,6 +53,10 @@ interface WorkspaceContextType {
   setHeaderSearchElement: (el: HTMLElement | null) => void
   hasPageSearch: boolean
   setHasPageSearch: (active: boolean) => void
+  headerAddActionsElement: HTMLElement | null
+  setHeaderAddActionsElement: (el: HTMLElement | null) => void
+  hasPageAddActions: boolean
+  setHasPageAddActions: (active: boolean) => void
   headerPhoneSearchActionsElement: HTMLElement | null
   setHeaderPhoneSearchActionsElement: (el: HTMLElement | null) => void
   headerSecondaryActionsElement: HTMLElement | null
@@ -78,6 +82,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [headerSearchElement, setHeaderSearchElement] = useState<HTMLElement | null>(null)
   const [hasPageSearch, setHasPageSearch] = useState(false)
   const [hasPageRightActions, setHasPageRightActions] = useState(false)
+  const [headerAddActionsElement, setHeaderAddActionsElement] = useState<HTMLElement | null>(null)
+  const [hasPageAddActions, setHasPageAddActions] = useState(false)
   const [headerPhoneSearchActionsElement, setHeaderPhoneSearchActionsElement] = useState<HTMLElement | null>(null)
   const [headerSecondaryActionsElement, setHeaderSecondaryActionsElement] = useState<HTMLElement | null>(null)
   const [headerMoreActionsElement, setHeaderMoreActionsElement] = useState<HTMLElement | null>(null)
@@ -123,6 +129,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       rightPanelElement, setRightPanelElement,
       headerActionsElement, setHeaderActionsElement,
       headerSearchElement, setHeaderSearchElement, hasPageSearch, setHasPageSearch,
+      headerAddActionsElement, setHeaderAddActionsElement, hasPageAddActions, setHasPageAddActions,
       headerPhoneSearchActionsElement, setHeaderPhoneSearchActionsElement,
       headerSecondaryActionsElement, setHeaderSecondaryActionsElement,
       headerMoreActionsElement, setHeaderMoreActionsElement,
