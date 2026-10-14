@@ -59,6 +59,9 @@ jobs:
       - name: Migrations build from scratch
         run: npm run check:pglite
 
+      - name: Booking and invoice financial integrity (isolated PGlite)
+        run: node scripts/test-booking-financial-integrity.mjs
+
       # R-27 (RULINGS-2026-09-08): one booking's whole life — create, confirm,
       # the floor, invoice, payment, close — driven through that same Postgres
       # with an assertion at every step, as a real role under real RLS.
