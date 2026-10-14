@@ -52,3 +52,17 @@ export function WorkspaceHeaderRightActions({ children }: { children: ReactNode 
   if (!workspace) return <>{children}</>
   return workspace.headerRightActionsElement ? createPortal(children, workspace.headerRightActionsElement) : null
 }
+
+/** Secondary page verbs have one canonical header slot, left of Filters. */
+export function WorkspaceHeaderSecondaryActions({ children }: { children: ReactNode }) {
+  const workspace = useOptionalWorkspace()
+  if (!workspace) return <>{children}</>
+  return workspace.headerSecondaryActionsElement ? createPortal(children, workspace.headerSecondaryActionsElement) : null
+}
+
+/** More/actions menus live between Add and Save, never inside the Save slot. */
+export function WorkspaceHeaderMoreActions({ children }: { children: ReactNode }) {
+  const workspace = useOptionalWorkspace()
+  if (!workspace) return <>{children}</>
+  return workspace.headerMoreActionsElement ? createPortal(children, workspace.headerMoreActionsElement) : null
+}
