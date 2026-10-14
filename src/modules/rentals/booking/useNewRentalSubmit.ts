@@ -185,6 +185,7 @@ export function useNewRentalSubmit({
               returnAt: returnAt.toISOString(),
               deliveryType: deliveryTypeFromLabel(deliveryType),
               depositRequired: toRupees(pricing.securityDeposit.requiredPaisa),
+              vatRate: pricing.vatRatePercent / 100,
               ...(pricing.discounts.discountPaisa > 0
                 ? {
                     discounts: bookingDiscountRows(
