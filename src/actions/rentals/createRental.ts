@@ -246,6 +246,8 @@ export type CreateRentalInput = {
   quoteExpiresAt?: string | null
   /** Deposits are liabilities (Law 5) — this never touches Rental Total. */
   depositRequired?: number
+  /** VAT rate as a decimal fraction (0 for no VAT, 0.13 for 13%). Pinned at booking creation. */
+  vatRate?: number
   lines: CreateRentalLine[]
   discounts?: CreateRentalDiscount[]
   /**
@@ -494,6 +496,7 @@ export const createRentalConfig: ActionConfig<CreateRentalInput, CreateRentalRes
       return_location: input.returnLocation ?? null,
       quote_expires_at: input.quoteExpiresAt ?? null,
       deposit_required: input.depositRequired ?? 0,
+      ...(input.vatRate !== undefined ? { vat_rate: input.vatRate } : {}),
       lines: input.lines.map((line, i) => {
         const isManual = line.lineType === 'Manual item'
         const desc = line.description?.trim() || (isManual ? 'Manual item' : null)
