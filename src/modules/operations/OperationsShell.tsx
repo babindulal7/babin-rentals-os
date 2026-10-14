@@ -69,6 +69,8 @@ export interface OperationsShellProps {
   initialJob?: JobName
   /** `modal` (default) is the full-screen sheet; `panel` docks beside the queue at desktop width. */
   layout?: 'modal' | 'panel'
+  /** Reports unsaved work so a host that can swap the booking can ask first. */
+  onDirtyChange?: (dirty: boolean) => void
   progress?: Partial<Record<JobName, { done: number; total: number }>>
 }
 
@@ -80,6 +82,7 @@ export default function OperationsShell({
   onClose,
   initialJob = 'Pack',
   layout = 'modal',
+  onDirtyChange,
   progress,
 }: OperationsShellProps) {
   const [job, setJob] = useState<JobName>(initialJob)
@@ -188,12 +191,18 @@ export default function OperationsShell({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isOpen, liveStatus, requestJob])
 
+  const isDirty = !!actions?.isDirty
+  useEffect(() => {
+    onDirtyChange?.(isDirty)
+    return () => onDirtyChange?.(false)
+  }, [isDirty, onDirtyChange])
+
   // Panel layout has no Modal to own Esc, so it listens itself.
   useEffect(() => {
     if (!isOpen || layout !== 'panel') return
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return
-      const t = e.target as HTMLElement | null
+      const t = e.target instanceof Element ? e.target : null
       if (t?.closest('[role="dialog"], [role="alertdialog"]')) return
       requestClose()
     }

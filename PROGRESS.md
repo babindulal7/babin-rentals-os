@@ -1,5 +1,25 @@
 # Progress Log
 
+## 2026-10-14 (b) — Desktop Operations dock: keyboard rows and unsaved-work guard
+
+**Did**
+- Desktop queue keyboard: J/K or ↓/↑ move a row cursor through the page, Enter opens the cursor row's job in the dock. Moving never opens anything. Keys are ignored inside inputs, buttons, links, dialogs and the panel itself.
+- Closed a gap in the dock from the entry below: choosing another row's verb while the panel held unsaved packing work replaced the panel silently. `OperationsShell` now reports `onDirtyChange`; the queue asks "Discard & Open" before swapping the docked booking.
+- Files: `OperationsQueues.tsx`, `OperationsShell.tsx`, `operationsShell.css`; tests in `operationRoutes.test.tsx` and `OperationsShell.test.tsx`.
+
+**Ruled**
+- No product, permission or schema change. Revert = delete the keyboard `useEffect` and the `pendingDock` ConfirmDialog in `OperationsQueues.tsx`.
+
+**Verified**
+- typecheck exit 0; eslint on `src/modules/operations` clean; `lint:shell` pass; full suite 349 files / 4,454 tests passed.
+- jsdom only: cursor + Enter opens the dock; the shell reports dirty and clears it on unmount. The discard dialog itself has no test, and nothing here was driven in a browser (mock DB has no bookings).
+
+## Completion
+Not re-counted this entry: no migration, action or capability changed; the figures in the entry below stand. `check:pglite`/`check:lifecycle` not re-run.
+
+## Remaining
+- Drive the dock, cursor and discard prompt in a browser with real bookings. Add a test for the discard dialog. Rentals/Clients/Inventory density and New Rental layout are still open.
+
 ## 2026-10-14 — Desktop Operations: job docks beside the queue (≥1280px)
 
 **Did**

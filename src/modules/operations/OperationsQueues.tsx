@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import { Card, PageHeader, PageActions, Button, FooterNote, cardStyle } from '../../components/ui/Page'
@@ -35,6 +35,7 @@ import {
 } from '../../lib/queries/operations'
 import AlertsPanel from '../today/AlertsPanel'
 import { useViewport } from '../../lib/device'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import OperationsShell from './OperationsShell'
 import { kathmanduCivil, NPT_OFFSET_MIN, getBusinessToday } from '../../lib/bs'
 import { CalendarPopover, DateField } from '../../components/ui/DateField'
@@ -448,10 +449,20 @@ export default function OperationsQueues() {
     const row = jobs.find((candidate) => candidate.bookingNo === match[1])
     if (!row) return
     /* Desktop (≥1280): dock the job beside the queue; narrower widths keep the full-screen sheet. */
-    if (viewport === 'desktop') setDock({ bookingNo: row.bookingNo, stage: row.stage, job: row.job })
+    if (viewport === 'desktop') requestDock({ bookingNo: row.bookingNo, stage: row.stage, job: row.job })
     else openOperations(row.bookingNo, row.stage, row.job)
   }
-  const [dock, setDock] = useState<{ bookingNo: string; stage: BookingStatus; job: JobName } | null>(null)
+  type Dock = { bookingNo: string; stage: BookingStatus; job: JobName }
+  const [dock, setDock] = useState<Dock | null>(null)
+  const [pendingDock, setPendingDock] = useState<Dock | null>(null)
+  const [cursorNo, setCursorNo] = useState<string | null>(null)
+  const dockDirty = useRef(false)
+  const onDockDirty = useCallback((dirty: boolean) => { dockDirty.current = dirty }, [])
+  /* Swapping the docked booking would drop unsaved packing work, so ask first. */
+  const requestDock = (next: Dock) => {
+    if (dock && dock.bookingNo !== next.bookingNo && dockDirty.current) setPendingDock(next)
+    else setDock(next)
+  }
   const [params, setParams] = useSearchParams()
   const [fastReturnOpen, setFastReturnOpen] = useState(false)
   const [barcodeModalOpen, setBarcodeModalOpen] = useState(false)
@@ -593,6 +604,36 @@ export default function OperationsQueues() {
     alertsQ.refetch()
     quotesQ.refetch()
   }
+
+  /* Desktop keyboard: J/K (or ↓/↑) move a cursor through the page, Enter opens the cursor row's job
+     in the dock. Moving never opens anything, so a cursor sweep cannot discard work in the panel. */
+  useEffect(() => {
+    if (viewport !== 'desktop') return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return
+      const t = event.target instanceof Element ? event.target : null
+      if (t?.closest('input, textarea, select, button, a, [contenteditable="true"], [role="dialog"], [role="alertdialog"]')) return
+      if (document.querySelector('.operations-shell__panel') && t?.closest('.operations-shell__panel')) return
+      const down = event.key === 'j' || event.key === 'ArrowDown'
+      const up = event.key === 'k' || event.key === 'ArrowUp'
+      if (down || up) {
+        if (pagedJobs.length === 0) return
+        event.preventDefault()
+        const at = pagedJobs.findIndex((j) => j.bookingNo === (cursorNo ?? dock?.bookingNo))
+        const next = at < 0 ? 0 : Math.min(pagedJobs.length - 1, Math.max(0, at + (down ? 1 : -1)))
+        const no = pagedJobs[next]!.bookingNo
+        setCursorNo(no)
+        document.querySelector(`tr[data-booking-no="${CSS.escape(no)}"]`)?.scrollIntoView?.({ block: 'nearest' })
+      } else if (event.key === 'Enter' && cursorNo) {
+        const row = pagedJobs.find((j) => j.bookingNo === cursorNo)
+        if (!row) return
+        event.preventDefault()
+        requestDock({ bookingNo: row.bookingNo, stage: row.stage, job: row.job })
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
 
   const refreshAll = () => {
     list.refetch()
@@ -904,7 +945,8 @@ export default function OperationsQueues() {
                     {pagedJobs.map((job) => (
                       <tr
                         key={job.id}
-                        className={dockOpen && dock?.bookingNo === job.bookingNo ? 'operations-v2__row operations-v2__row--active' : 'operations-v2__row'}
+                        className={`operations-v2__row${dockOpen && dock?.bookingNo === job.bookingNo ? ' operations-v2__row--active' : ''}${viewport === 'desktop' && cursorNo === job.bookingNo ? ' operations-v2__row--cursor' : ''}`}
+                        data-booking-no={job.bookingNo}
                         aria-selected={dockOpen && dock?.bookingNo === job.bookingNo ? true : undefined}
                         style={{ borderLeft: job.isPastDue ? '2px solid var(--danger)' : '2px solid transparent' }}
                         /* A click anywhere on the row's blank space opens the booking (8 Oct 2026,
@@ -1003,12 +1045,23 @@ export default function OperationsQueues() {
             bookingStatus={dock.stage}
             initialJob={dock.job}
             onClose={() => setDock(null)}
+            onDirtyChange={onDockDirty}
           />
         )}
         </div>
       )}
       </div>
 
+      <ConfirmDialog
+        isOpen={pendingDock !== null}
+        onClose={() => setPendingDock(null)}
+        onConfirm={() => { const next = pendingDock; setPendingDock(null); if (next) setDock(next) }}
+        title="You have unsaved changes."
+        description={`Discard them and open ${pendingDock?.bookingNo ?? 'the next job'}?`}
+        cancelLabel="Stay Here"
+        confirmLabel="Discard & Open"
+        variant="danger"
+      />
       <FastReturnModal isOpen={fastReturnOpen} onClose={() => setFastReturnOpen(false)} onSuccess={refreshAll} />
       <BarcodeLookupModal isOpen={barcodeModalOpen} onClose={() => setBarcodeModalOpen(false)} />
       <FilterDrawer

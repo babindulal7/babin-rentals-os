@@ -304,6 +304,19 @@ describe('Spec 03 §3.1 — queue chips filter ONE time-ordered list', () => {
     expect(container.querySelector('.operations-shell__panel')).toBeNull()
   })
 
+  it('moves a row cursor with J/K and opens the cursor row in the dock on Enter (desktop)', async () => {
+    viewport = 'desktop'
+    await mount(<OperationsQueues />, '/operations')
+    const key = async (k: string) => act(async () => { window.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true })) })
+    await key('j')
+    const cursor = container.querySelector('tr.operations-v2__row--cursor')
+    expect(cursor).not.toBeNull()
+    expect(container.querySelector('.operations-shell__panel')).toBeNull()
+    const no = cursor?.getAttribute('data-booking-no')
+    await key('Enter')
+    expect(container.querySelector('.operations-shell__panel')?.getAttribute('aria-label')).toContain(no ?? 'x')
+  })
+
   it('opens the row action in the global workspace below desktop width', async () => {
     viewport = 'tablet'
     await mount(<OperationsQueues />, '/operations')

@@ -107,6 +107,30 @@ afterEach(async () => {
   container.remove()
 })
 
+describe('panel layout', () => {
+  it('reports unsaved work to its host, and clears it on unmount', async () => {
+    dirty = true
+    const seen: boolean[] = []
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <OperationsShell bookingNo="B-715" bookingStatus="Booked" isOpen layout="panel" onClose={vi.fn()} onDirtyChange={(d) => seen.push(d)} />
+        </MemoryRouter>,
+      )
+    })
+    for (let i = 0; i < 3; i += 1) await act(async () => { await Promise.resolve() })
+    expect(container.querySelector('.operations-shell__panel')).not.toBeNull()
+    expect(container.querySelector('[role="dialog"]')).toBeNull()
+    expect(seen).toContain(true)
+    await act(async () => root.unmount())
+    expect(seen[seen.length - 1]).toBe(false)
+    root = createRoot(container)
+  })
+})
+
 describe('Task 5 — Operations popup navigation and state', () => {
   it('shows a workspace error once, without repeating it in the modal footer', async () => {
     mockError = 'Handover could not be recorded'

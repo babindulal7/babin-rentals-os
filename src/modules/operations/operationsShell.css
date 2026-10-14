@@ -54,3 +54,4 @@
   .operations-v2__split--open { grid-template-columns: minmax(0, 1fr) minmax(480px, 44%); }
 }
 .operations-v2__table tbody tr.operations-v2__row--active { background: color-mix(in srgb, var(--nav-active-bg) 60%, transparent); box-shadow: inset 3px 0 0 var(--primary); }
+.operations-v2__table tbody tr.operations-v2__row--cursor { outline: 2px solid var(--focus-ring, var(--primary)); outline-offset: -2px; }
