@@ -121,7 +121,7 @@ export default function SalesVatReports() {
         value: formatMoney(m.totalGrossTurnover),
         icon: 'dollar',
         accent: 'primary',
-        note: 'Total billing including 13% VAT',
+        note: 'Total issued-invoice billing including VAT',
       },
       {
         label: 'Taxable Turnover',
@@ -135,14 +135,21 @@ export default function SalesVatReports() {
         value: formatMoney(m.totalOutputVat),
         icon: 'file',
         accent: 'success',
-        note: 'Statutory liability to IRD Nepal',
+        note: 'Output VAT on issued invoices; verify before filing',
       },
       {
         label: 'Effective Tax Rate',
         value: `${m.effectiveVatRate}%`,
         icon: 'sparkles',
         accent: 'neutral',
-        note: 'Zero-VAT turnover: ${formatMoney(m.exemptTurnover)} (classification to verify)',
+        note: 'Output VAT divided by VAT-taxable sales',
+      },
+      {
+        label: '0% VAT Sales',
+        value: formatMoney(m.exemptTurnover),
+        icon: 'file',
+        accent: 'neutral',
+        note: 'Invoice VAT rate is 0%; legal tax category needs review',
       },
     ]
   }, [data])
@@ -187,7 +194,7 @@ export default function SalesVatReports() {
       ]
     } else {
       return [
-        ['Nepal Statutory 13% VAT Register (Inland Revenue Department)'],
+        ['Nepal VAT Sales Register — Internal Review, Not a Filing Receipt'],
         ['Metric', 'Value'],
         ['Gross Invoiced Turnover', formatMoney(data?.vat.metrics.totalGrossTurnover ?? (0 as Paisa))],
         ['Taxable Sales Turnover', formatMoney(data?.vat.metrics.taxableTurnover ?? (0 as Paisa))],
@@ -469,7 +476,7 @@ export default function SalesVatReports() {
           {/* Monthly IRD Schedule */}
           <div style={cardStyle}>
             <h3 style={{ fontSize: 'var(--t-h3)', fontWeight: 600, marginBottom: 'var(--sp-sm)' }}>
-              Monthly VAT Filing Schedule (Inland Revenue Department Format)
+              Monthly BS VAT Sales Schedule (Review Before Filing)
             </h3>
             <p style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', marginBottom: 'var(--sp-md)' }}>
               Summary of issued invoice VAT and zero-VAT amounts grouped by Nepal (BS) month. Validate rates, exemptions and totals with Accounts before statutory filing.
@@ -479,7 +486,7 @@ export default function SalesVatReports() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
-                    <th style={th}>Tax Period (AD)</th>
+                    <th style={th}>AD invoice-date span</th>
                     <th style={th}>Bikram Sambat Month</th>
                     <th style={{ ...th, textAlign: 'right' }}>VAT-taxable Sales (Rs)</th>
                     <th style={{ ...th, textAlign: 'right' }}>13% Output VAT (Rs)</th>
