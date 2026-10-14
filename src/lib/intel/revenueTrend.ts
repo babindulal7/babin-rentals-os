@@ -42,10 +42,6 @@ function asDate(s: string): Date {
   return value
 }
 
-function monthId(date: Date): string {
-  return date.toISOString().slice(0, 7)
-}
-
 function sourcePaisa(source: string | number): Paisa {
   const text = String(source)
   if (!MONEY_RE.test(text)) throw new Error('Unusable taxable invoice amount')
