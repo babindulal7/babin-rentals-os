@@ -712,9 +712,6 @@ export default function Header({ crumbs, actions }: HeaderProps) {
           }}
         >
           {/* 1. Bulk Selection Mode Bar in Header */}
-          {isPhone && searchConfig && !ws?.hasPageSearch && (
-            <MobileHeaderSearch key={hData?.title ?? activeCrumb} config={searchConfig} title={hData?.title ?? activeCrumb} />
-          )}
           {hData?.bulkSelection && hData.bulkSelection.count > 0 ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 'var(--t-meta, 13px)', fontWeight: 600, color: 'var(--text)' }}>
@@ -837,17 +834,24 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             <Icon name="message" size={17} />
           </button>}
 
-          {/* 8. Phone Search Toggle Icon */}
-          {isPhone && !searchConfig && !isDispatch && !ws?.hasPageSearch && (
-            <button
-              type="button"
-              onClick={() => openCommandPalette()}
-              aria-label="Search"
-              title="Search"
-              style={iconBtn}
-            >
-              <Icon name="search" size={17} />
-            </button>
+          {/* Phone search is always in the same slot, whether a page has its
+              own search or uses the global command palette. */}
+          {isPhone && (
+            <span className="app-global-header__phone-search" data-header-slot="search">
+              {searchConfig && !ws?.hasPageSearch ? (
+                <MobileHeaderSearch key={hData?.title ?? activeCrumb} config={searchConfig} title={hData?.title ?? activeCrumb} />
+              ) : !searchConfig && !isDispatch && !ws?.hasPageSearch ? (
+                <button
+                  type="button"
+                  onClick={() => openCommandPalette()}
+                  aria-label="Search"
+                  title="Search"
+                  style={iconBtn}
+                >
+                  <Icon name="search" size={17} />
+                </button>
+              ) : null}
+            </span>
           )}
 
           {/* 9. User Profile Trigger (Law 15: >= 44x44px hit area) */}
