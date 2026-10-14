@@ -29,8 +29,8 @@ export interface RevenueTrend {
   toAd: string
 }
 
-const DATE_RE = /^\\d{4}-\\d{2}-\\d{2}$/
-const MONEY_RE = /^(?:0|[1-9]\\d*)(?:\\.\\d{1,2})?$/
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+const MONEY_RE = /^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/
 const ISSUED = new Set(['Sent', 'Partially Paid', 'Paid'])
 
 function asDate(s: string): Date {
