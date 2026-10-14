@@ -1,4 +1,5 @@
-import { supabase } from '../supabase'
+import { IS_MOCK, supabase } from '../supabase'
+import { BS_MONTHS, toBs } from '../bs'
 import { rupees, type Paisa } from '../money'
 
 export interface SalesReportMetrics {
@@ -85,7 +86,7 @@ export interface ReportFilterOptions {
   branchId?: string | undefined
 }
 
-/* ── Fallback Seed Data (Hermetic baseline for mock mode & empty DB) ──────── */
+/* Demo fixtures — strictly mock mode. Never used as production accounting data. */
 
 const MOCK_SALES: SalesReportData = {
   metrics: {
@@ -148,9 +149,35 @@ const MOCK_VAT: VatTaxReportData = {
   taxRegister: MOCK_SALES.invoices,
 }
 
+/** An empty live register is zero, not example invoices from a different company. */
+function emptyRegister(): { sales: SalesReportData; vat: VatTaxReportData } {
+  return {
+    sales: {
+      metrics: {
+        totalInvoiced: rupees(0), netSales: rupees(0), totalVat: rupees(0),
+        totalDiscounts: rupees(0), totalCollected: rupees(0), totalOutstanding: rupees(0),
+        invoiceCount: 0, collectionRate: 0,
+      },
+      statusBreakdown: [], monthlyTrend: [], topClients: [], invoices: [],
+    },
+    vat: {
+      metrics: {
+        totalGrossTurnover: rupees(0), taxableTurnover: rupees(0),
+        totalOutputVat: rupees(0), exemptTurnover: rupees(0),
+        effectiveVatRate: 13, invoicesCount: 0,
+      },
+      monthlySchedule: [], taxRegister: [],
+    },
+  }
+}
+
 /* ── Query Aggregations from PostgreSQL ─────────────────────────────────── */
 
 export async function getSalesVatReport(options?: ReportFilterOptions): Promise<{ sales: SalesReportData; vat: VatTaxReportData }> {
+  // Mock builds have their own global demo-data banner. Live builds must never
+  // quietly replace unavailable or empty financial records with fictional totals.
+  if (IS_MOCK) return { sales: MOCK_SALES, vat: MOCK_VAT }
+
   try {
     let query = supabase
       .from('invoices')
@@ -180,9 +207,9 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
 
     const { data: rows, error } = await query
 
-    if (error || !rows || rows.length === 0) {
-      return { sales: MOCK_SALES, vat: MOCK_VAT }
-    }
+    if (error) throw new Error('Unable to read the Sales/VAT invoice ledger.', { cause: error })
+    if (!rows) throw new Error('The Sales/VAT invoice ledger returned no result.')
+    if (rows.length === 0) return emptyRegister()
 
     let totalInvoiced = 0
     let totalSubtotal = 0
@@ -261,6 +288,47 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
       .sort((a, b) => (b.totalInvoiced as number) - (a.totalInvoiced as number))
       .slice(0, 5)
 
+    // Derive period figures from these exact invoices, not the fixed mock trend.
+    // BS periods may cross AD month boundaries; all rows sharing a BS month
+    // belong to the same bucket. An out-of-range BS date is clearly labelled AD.
+    const periodBuckets = new Map<string, {
+      sortDate: string; label: string; bsMonth: string
+      subtotal: number; tax: number; gross: number; paid: number
+    }>()
+    for (const invoice of invoices) {
+      const isoDay = String(invoice.issueDate ?? '').slice(0, 10)
+      const date = new Date(isoDay + 'T12:00:00Z')
+      const bs = Number.isNaN(date.getTime()) ? null : toBs(date)
+      const key = bs
+        ? `BS-${bs.year}-${String(bs.month).padStart(2, '0')}`
+        : `AD-${isoDay.slice(0, 7)}`
+      const label = bs ? `${BS_MONTHS[bs.month - 1]} ${bs.year}` : `AD ${isoDay.slice(0, 7)}`
+      const bucket = periodBuckets.get(key) ?? {
+        sortDate: isoDay, label, bsMonth: bs ? label : 'BS unavailable',
+        subtotal: 0, tax: 0, gross: 0, paid: 0,
+      }
+      if (isoDay < bucket.sortDate) bucket.sortDate = isoDay
+      bucket.subtotal += Number(invoice.subtotal)
+      bucket.tax += Number(invoice.taxAmount)
+      bucket.gross += Number(invoice.grandTotal)
+      bucket.paid += Number(invoice.paidAmount)
+      periodBuckets.set(key, bucket)
+    }
+    const periods = [...periodBuckets.values()].sort((a, b) => a.sortDate.localeCompare(b.sortDate))
+    const monthlyTrend: SalesTrendPoint[] = periods.map((p) => ({
+      period: p.label,
+      invoiced: rupees(p.gross / 100),
+      collected: rupees(p.paid / 100),
+    }))
+    const monthlySchedule: VatMonthlyRow[] = periods.map((p) => ({
+      month: p.label,
+      bsMonth: p.bsMonth,
+      taxableSales: rupees(p.subtotal / 100),
+      vatAmount: rupees(p.tax / 100),
+      exemptSales: rupees(0),
+      grossSales: rupees(p.gross / 100),
+    }))
+
     const sales: SalesReportData = {
       metrics: {
         totalInvoiced: rupees(Math.round(totalInvoiced / 100)),
@@ -273,7 +341,7 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
         collectionRate,
       },
       statusBreakdown,
-      monthlyTrend: MOCK_SALES.monthlyTrend,
+      monthlyTrend,
       topClients,
       invoices: invoices.slice(0, 10),
     }
@@ -287,12 +355,14 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
         effectiveVatRate: 13.0,
         invoicesCount: totalCount,
       },
-      monthlySchedule: MOCK_VAT.monthlySchedule,
+      monthlySchedule,
       taxRegister: invoices.slice(0, 10),
     }
 
     return { sales, vat }
-  } catch {
-    return { sales: MOCK_SALES, vat: MOCK_VAT }
+  } catch (error) {
+    // Fail closed. The screen handles this explicit refusal and must not export
+    // imaginary financial values or confuse a query failure with zero revenue.
+    throw error instanceof Error ? error : new Error('Sales/VAT report unavailable.')
   }
 }
