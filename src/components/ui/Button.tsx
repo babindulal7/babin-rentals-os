@@ -1,0 +1,168 @@
+import { forwardRef } from 'react'
+import type { ButtonHTMLAttributes, CSSProperties, ReactNode } from 'react'
+import Icon, { type IconName } from './Icon'
+
+/**
+ * Rewritten from Tailwind utility classNames — `bg-blue-600 hover:bg-blue-700...` —
+ * to the app's real inline-style + CSS-variable system. Tailwind's Vite plugin is
+ * registered but no CSS file imports `tailwindcss`, so every one of those classes
+ * compiled to nothing and this component rendered fully unstyled wherever it was
+ * used. Same prop/API shape as before, so every existing call site is unaffected.
+ */
+
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'link' | 'tertiary' | undefined
+  size?: 'sm' | 'md' | 'lg' | undefined
+  loading?: boolean | undefined
+  icon?: ReactNode | IconName | undefined
+  iconRight?: ReactNode | IconName | undefined
+}
+
+const SIZE_STYLES: Record<
+  NonNullable<ButtonProps['size']>,
+  { minHeight: number; padding: string; fontSize: string; gap: number | string; iconSize: number }
+> = {
+  // Law 15: minimum 44px touch target on every device — never relaxed, even for `sm`.
+  sm: { minHeight: 44, padding: '0 12px', fontSize: 'var(--t-meta)', gap: 6, iconSize: 14 },
+  md: { minHeight: 44, padding: '0 16px', fontSize: 'var(--t-ui)', gap: 'var(--sp-sm)', iconSize: 16 },
+  lg: { minHeight: 48, padding: '0 24px', fontSize: 'var(--t-body)', gap: 10, iconSize: 18 },
+}
+
+/*
+ * No orange variant, deliberately. DESIGN_DIRECTION_SPEC_v4.2 §2.3: orange is a
+ * status hue only (the On Rent family) — "never on buttons". Blue is the one
+ * action colour; a Miraz-style `brand`/`action` orange button is a defect here.
+ */
+function variantStyle(variant: NonNullable<ButtonProps['variant']>): CSSProperties {
+  switch (variant) {
+    case 'primary':
+      return {
+        background: 'var(--btn-primary-bg)',
+        color: 'var(--btn-primary-fg)',
+        border: '1px solid transparent',
+        boxShadow: 'var(--shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.25)',
+      }
+    case 'secondary':
+      return {
+        background: 'var(--btn-secondary-bg)',
+        color: 'var(--text)',
+        border: '1px solid var(--btn-secondary-border)',
+      }
+    case 'outline':
+      return {
+        background: 'transparent',
+        color: 'var(--text2)',
+        border: '1px solid var(--input-border)',
+      }
+    case 'ghost':
+      return {
+        background: 'transparent',
+        color: 'var(--text2)',
+        border: '1px solid transparent',
+      }
+    case 'link':
+      return {
+        background: 'transparent',
+        color: 'var(--link)',
+        border: 'none',
+        padding: 0,
+        minWidth: 'auto',
+      }
+    case 'tertiary':
+      return {
+        background: 'var(--card2)',
+        color: 'var(--text)',
+        border: '1px solid var(--input-border)',
+      }
+    case 'danger':
+      return {
+        background: 'var(--btn-danger-bg)',
+        color: 'var(--btn-danger-fg)',
+        border: '1px solid transparent',
+        boxShadow: 'var(--shadow-card)',
+      }
+  }
+}
+
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button({
+  children,
+  variant = 'secondary',
+  size = 'sm',
+  loading = false,
+  disabled,
+  icon,
+  iconRight,
+  style,
+  className,
+  ...props
+}, ref) {
+  const sizing = SIZE_STYLES[size]
+  const isDisabled = disabled || loading
+  const isLink = variant === 'link'
+  const resolvedIcon = typeof icon === 'string' ? <Icon name={icon as IconName} size={sizing.iconSize} /> : icon
+  const resolvedIconRight = typeof iconRight === 'string' ? <Icon name={iconRight as IconName} size={sizing.iconSize} /> : iconRight
+
+  return (
+    <button
+      ref={ref}
+      disabled={isDisabled}
+      aria-busy={loading || undefined}
+      className={['ui-button', `ui-button--${variant}`, `ui-button--${size}`, 'press', className].filter(Boolean).join(' ')}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontWeight: isLink ? 500 : 600,
+        fontFamily: 'inherit',
+        whiteSpace: 'nowrap',
+        userSelect: 'none',
+        borderRadius: isLink ? 0 : 'var(--r-btn)',
+        transition: 'background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease)',
+        cursor: isDisabled ? 'not-allowed' : 'pointer',
+        position: 'relative',
+        opacity: isDisabled ? 0.45 : 1,
+        minHeight: sizing.minHeight,
+        minWidth: 'var(--control-height, 44px)',
+        padding: isLink ? 0 : sizing.padding,
+        fontSize: sizing.fontSize,
+        gap: sizing.gap,
+        ...variantStyle(variant),
+        ...style,
+      }}
+      {...props}
+    >
+      {/*
+        §5 — "loading keeps the button's width (label transparent, spinner
+        overlays) so layout never jumps."
+
+        This previously swapped the ICON SLOT for the spinner while leaving
+        `children` rendered, so a text-only button — the common case — GAINED a
+        spinner and grew wider the moment it started loading, shifting whatever
+        sat beside it. Now the label keeps its box and turns transparent, and
+        the spinner is absolutely positioned over it: the button occupies the
+        exact same rectangle loading or not.
+
+        Opacity retains the accessible name. Both icon slots keep their boxes
+        during loading, including icon-only buttons with an aria-label.
+      */}
+      {loading && (
+        <Icon
+          name="refresh"
+          size={sizing.iconSize}
+          style={{
+            animation: 'spin 0.8s linear infinite',
+            position: 'absolute',
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+          }}
+        />
+      )}
+      {resolvedIcon && <span className="ui-button__slot" style={{ display: 'inline-flex', flexShrink: 0, opacity: loading ? 0 : 1 }}>{resolvedIcon}</span>}
+      {children !== undefined && <span className="ui-button__label" style={{ opacity: loading ? 0 : 1 }}>{children}</span>}
+      {resolvedIconRight && <span className="ui-button__slot" style={{ display: 'inline-flex', flexShrink: 0, opacity: loading ? 0 : 1 }}>{resolvedIconRight}</span>}
+    </button>
+  )
+})
+
+Button.displayName = 'Button'

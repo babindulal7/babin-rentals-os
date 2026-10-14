@@ -1,0 +1,72 @@
+/* Mount point in the global header, before the page name (8 Oct 2026). */
+.workspace-page-actions:empty { display: none; }
+.workspace-page-actions { min-width: 0; flex-shrink: 0; }
+.workspace-page-actions > * { max-width: 100%; }
+.workspace-page-actions, .workspace-page-actions > div { display: flex; flex-wrap: nowrap; gap: 8px; align-items: center; }
+.workspace-page-actions button { min-height: 44px; }
+.app-global-header .header-sync-control { min-height: 44px; min-width: 44px; }
+.app-global-header button { min-height: 44px; min-width: 44px; }
+
+/* RULING 2026-10-13: contextual phone search opens temporarily below the single header. */
+.header-page-search { display: inline-flex; }
+.header-page-search__trigger {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--r-btn);
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+}
+.header-page-search__trigger[data-active='true'] { color: var(--primary-text); background: var(--ext-bg); }
+.header-page-search__dot {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  right: 7px;
+  top: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.header-page-search__panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--sidebar);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.header-page-search__panel input {
+  min-width: 0;
+  min-height: 44px;
+  flex: 1;
+  border: 1px solid var(--input-border);
+  border-radius: var(--r-input);
+  background: var(--input-bg);
+  color: var(--text);
+  padding: 0 12px;
+  font: inherit;
+  font-size: 16px;
+}
+.header-page-search__panel input::-webkit-search-cancel-button { display: none; }
+.header-page-search__panel button {
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--btn-secondary-border);
+  border-radius: var(--r-btn);
+  background: var(--btn-secondary-bg);
+  color: var(--text2);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.header-page-search :focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.app-navigation { min-height: 0; }
+.app-side-panel { width: var(--app-panel-width, 320px); }
+.app-side-panel-body { min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 16px; }
+.app-side-panel-footer { padding: 16px; border-top: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }

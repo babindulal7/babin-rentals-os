@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@babin-rentals/design-tokens": ["./packages/design-tokens/src"]
+    }
+  },
+  "include": ["src"],
+  /* `src/archive` holds screens ruled out of the application (12 Aug, executed
+     15 Aug). Law 3 keeps the files; excluding them from the program keeps them
+     from being compiled, bundled or counted as live code. Restoring one is a
+     move back into `src/modules` plus its route. */
+  "exclude": ["src/archive"]
+}

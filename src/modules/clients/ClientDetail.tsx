@@ -1,0 +1,1560 @@
+import { RecordForm } from '../../components/records/RecordForm'
+import { useSearchParams } from 'react-router-dom'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import Icon from '../../components/ui/Icon'
+import type { IconName } from '../../components/ui/Icon'
+import { Card, PageHeader, PageActions, Button, KpiStrip, FooterNote, SummaryRows } from '../../components/ui/Page'
+import type { OverflowMenuItem } from '../../components/ui/OverflowMenu'
+import type { Kpi } from '../../components/ui/Page'
+import { PageShell } from '../../components/ui/PageShell'
+import { Badge } from '../../components/ui/Badge'
+import { EditableRows } from '../../components/ui/EditableRows'
+import type { EditableRowDef } from '../../components/ui/EditableRows'
+import { EmptyState, ErrorBanner } from '../../components/ui/StateViews'
+import { useViewport } from '../../lib/device'
+import { PageBody } from '../../components/ui/PageBody'
+import { Unavailable } from '../../components/ui/Unavailable'
+import { Modal } from '../../components/ui/Modal'
+import { DataTableShell } from '../../components/ui/DataTable'
+import { useToast } from '../../components/ui/Toast'
+import { useClientProfile } from '../../lib/queries/useClients'
+import { useList } from '../../lib/queries/useList'
+import type { ListFilters } from '../../lib/queries/listQuery'
+import { listBookings, type BookingListRow } from '../../lib/queries/bookings'
+import { listInvoices, invoicesForClient, financeRestriction, type InvoiceListRow } from '../../lib/queries/finance'
+import { listDocuments, documentsForClient, type DocRow } from '../../lib/queries/documents'
+import { CreateDocumentModal } from '../documents/CreateDocumentModal'
+import { useEditMode } from '../../lib/edit/useEditMode'
+import type { FieldSpec } from '../../lib/edit/useEditMode'
+import { validateDiscount } from '../../lib/discount'
+import { statusToken } from '../../lib/workflow'
+import { formatAd } from '../../lib/bs'
+import { formatMoney } from '../../lib/money'
+import { useCanViewMoney } from '../../lib/moneyVisibility'
+import { useAuth } from '../../lib/auth'
+import { useNetwork } from '../../lib/network'
+import { canBlockClient } from '../../lib/rbac'
+import { newClientUuid } from '../../lib/supabase'
+import { gateContext, canViewPII, canViewOnStopReason, moneyScope } from '../../lib/fieldGating'
+import { STATUS } from '../../lib/status'
+import type { BrandKey } from '../../lib/status'
+import {
+  TIER_TONE,
+  creditStopFactsOf,
+  daysPastDue,
+  evaluateCreditStop,
+  readOverdueStopDays,
+  type ClientRecord,
+  type MembershipTier,
+  type KycStatus,
+} from '../../lib/queries/clients'
+import type { Paisa } from '../../lib/money'
+import { INVOICE_TOKEN } from '../../lib/queries/finance'
+import { AdjustCreditLimitModal } from './modals/AdjustCreditLimitModal'
+import { UpgradeTierModal } from './modals/UpgradeTierModal'
+import { VerifyKycModal } from './modals/VerifyKycModal'
+import { useDomainEvent } from '../../events/useDomainEvent'
+import { EVENT_TYPES } from '../../events/eventBus'
+import './clients.css'
+
+/**
+ * Client Detail — the confirmed gap named by three sources this session (the
+ * audit reconciliation, the earlier design pack, and a direct grep for
+ * `/clients/:id`): `ClientsDirectory.tsx` only ever showed a right-rail quick
+ * view, never a full page. This is that page.
+ *
+ * ## This page reads the database, and had to
+ *
+ * It used to be `CLIENTS_DATA.find((c) => c.id === id)`, and that was not merely
+ * unconverted — it was **broken the moment the directory started reading the
+ * database**. Every row in that table links to `/clients/${client.id}`, where
+ * `id` is `client_code` from `client_directory_v`; `CLIENTS_DATA`'s ids are
+ * `C-1`…`C-n`. So a real client's row led to "Client not found", and a seed id
+ * that happened to collide would have led to a DIFFERENT client's record —
+ * exactly the two-screens-disagree-about-one-record failure Law 2's Single Query
+ * Rule exists to prevent.
+ *
+ * ## Three cross-references were seed joins, and are now queries or gaps
+ *
+ * The rentals, invoices and documents tabs each used to filter a hand-typed
+ * array by `client.activeBookings` — a field the database mapper cannot fill
+ * (`toClientRecord` returns `[]` for it, deliberately), so every one of those
+ * joins would have matched nothing on a real client anyway while continuing to
+ * show seed rows for a seed one. Rentals and invoices now run real queries
+ * (`listBookings`, `listInvoices`) keyed on `clients.id`. Documents have no
+ * query module yet, and the tab says so rather than filtering a seed.
+ */
+
+type TabKey = 'overview' | 'rentals' | 'payments' | 'documents' | 'notes' | 'activity'
+
+interface TabDef {
+  key: TabKey
+  label: string
+  money?: boolean
+}
+
+const TAB_DEFS: TabDef[] = [
+  { key: 'overview', label: 'Overview' },
+  { key: 'rentals', label: 'Rentals' },
+  { key: 'payments', label: 'Payments', money: true },
+  { key: 'documents', label: 'Documents' },
+  { key: 'notes', label: 'Notes' },
+  { key: 'activity', label: 'Activity' },
+]
+
+/**
+ * The shortest a block reason may be, mirroring `blockClientConfig.validate`
+ * (`actions/clients/blockClient.ts`), which throws below ten characters. One
+ * number for one rule: a looser copy here would walk the operator into a
+ * refusal they could not see coming, and a stricter one would refuse a block
+ * the action would have taken.
+ */
+const BLOCK_REASON_MIN = 10
+
+function Tone({
+  text,
+  tone,
+  icon,
+  reason,
+  entity,
+}: {
+  text: string
+  /** Omitted for an `entity` mark, which takes no hue at all. */
+  tone?: keyof typeof STATUS
+  /** Law 11 — a chip whose colour carries meaning also carries a glyph. */
+  icon?: IconName
+  /**
+   * This chip names an ENTITY ATTRIBUTE, not an operational state.
+   *
+   * v4.1 §2 gives each of the seven hues exactly one meaning, so spending one
+   * on a client property teaches the eye that the hue means nothing in
+   * particular. VIP forced this: it was yellow here, blue in the booking
+   * combobox and `neutral` in the canonical FLAGS map, all at once — and
+   * yellow ("being worked in-house") was the worst reading of the three.
+   */
+  entity?: boolean
+  /** Shown as the accessible name and the hover text, so the reason is not hover-only. */
+  reason?: string
+}) {
+  const c = entity || tone === undefined ? null : STATUS[tone]
+  return (
+    <span
+      {...(reason ? { title: reason, 'aria-label': `${text} — ${reason}` } : {})}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: icon ? 4 : 0,
+        height: 21,
+        padding: '0 8px',
+        borderRadius: 'var(--r-chip)',
+        // An entity mark takes a recessed surface and no hue; a status takes
+        // its pair. Both keep the word, so §7.4 holds either way.
+        background: c ? c.bg : 'var(--surface-2)',
+        color: c ? c.fg : 'var(--text2)',
+        border: c ? (c.border ? `1px solid ${c.border}` : undefined) : '1px solid var(--border)',
+        fontSize: 'var(--t-th)',
+        fontWeight: c ? 600 : 700,
+        letterSpacing: c ? undefined : '0.02em',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {icon && <Icon name={icon} size={11} />}
+      {text}
+    </span>
+  )
+}
+
+/**
+ * `useEditMode` addresses fields by flat key, and `contactPerson` is a nested
+ * object on `ClientRecord`. Rather than teach the hook about paths — which
+ * would put a tiny expression language in the middle of every save — the record
+ * is flattened on the way in and folded back on the way out. The three
+ * `contact_*` keys below are the only place the two shapes differ.
+ */
+function toEditable(c: ClientRecord) {
+  const { contactPerson, ...flat } = c
+  return {
+    ...flat,
+    contact_name: contactPerson.name,
+    contact_designation: contactPerson.designation,
+    contact_phone: contactPerson.phone,
+  }
+}
+
+
+const CLIENT_FIELDS: FieldSpec[] = [
+  { key: 'name', validate: (v) => (String(v ?? '').trim() ? null : 'A client must have a name.') },
+  /* No `company` field. `clients` has no company column — an organisation's
+     company name IS `clients.name` (0005), and `type_parent` says which kind of
+     party it is. The row this drove rendered an em dash on every record and the
+     input could never have had anywhere to save to. */
+  /* §3 — phone stays required. It is the only unique key a client has, so
+     duplicate detection and the merge tool have nothing to match on without it.
+     Shape is left to `lib/phone.ts` at the Add Client gate; this only refuses
+     an empty one, because emptying it is what breaks merge. */
+  { key: 'phone', validate: (v) => (String(v ?? '').trim() ? null : 'Phone is required — duplicate detection and merge match on it.') },
+  { key: 'email' },
+  { key: 'pan' },
+  { key: 'address' },
+  { key: 'city' },
+  { key: 'district' },
+  { key: 'postalCode' },
+  { key: 'country' },
+  { key: 'businessRegistrationNo' },
+  { key: 'contact_name' },
+  { key: 'contact_designation' },
+  { key: 'contact_phone' },
+  { key: 'notes' },
+
+  /* §2.1 — a standing discount and the reason it exists are one write. Saving
+     the percentage alone leaves a discount on the account that nothing on the
+     screen can account for, and the 11 Aug audit found the stacking trigger is
+     INSERT-only, so an UPDATE may slip past the constraint that would refuse it. */
+  {
+    key: 'standingDiscountPercent',
+    group: 'discount',
+    validate: (v) => {
+      if (v === '' || v === null || v === undefined) return null
+      const pct = Number(v)
+      if (!Number.isFinite(pct)) return 'Enter a number.'
+      /* Law 10 as amended (D3, Babin's final word 31 Aug 2026: "don't put any
+         gate on discount") — the old >10% refusal this validator carried is
+         gone with the ceremony it enforced. `validateDiscount` now checks
+         arithmetic validity only: negative refused (a price rise), >100%
+         refused (a negative price). The live Booqable account runs standing
+         discounts of 20% with zero ceremony; this field now matches it. */
+      return validateDiscount(pct).error
+    },
+  },
+  {
+    key: 'discountSource',
+    group: 'discount',
+    validate: (v) => {
+      const s = String(v ?? '').trim()
+      if (!s) return null
+      return ['Type Rule', 'Membership', 'Named Client'].includes(s)
+        ? null
+        : 'Must be one of: Type Rule, Membership, Named Client.'
+    },
+  },
+
+  /* §2.2 — these are not this screen's to change, and a control that throws on
+     save is worse than no control. Each says where the real correction lives. */
+  { key: 'id', immutable: 'The client number is issued by Settings ▸ Numbering and never changes.' },
+  { key: 'outstandingPaisa', immutable: 'Derived from invoices and payments. Correct it with a payment or a credit note.' },
+  { key: 'depositHeldPaisa', immutable: 'Deposits are liabilities — moved by a deposit movement row, never edited.' },
+  { key: 'creditUsedPaisa', immutable: 'Derived from open bookings, not stored.' },
+  { key: 'creditLimitPaisa', immutable: 'A credit limit change is the `credit.override` action, which is Owner-only and logged.' },
+]
+
+/**
+ * The two per-client fetchers, at module scope so their identity is stable and
+ * `useList` cannot be retriggered by a re-render alone.
+ *
+ * Both open with the same guard, and it is the important line in each. An empty
+ * chip group means **no constraint** to `applyListFilters`, not "match nothing"
+ * — `in(client_id, [])` is not sent at all — so calling through with no client
+ * id would return the whole table and render another client's bookings and
+ * another client's invoices under this client's name. The short-circuit returns
+ * an empty result WITHOUT touching the network, which is also what should happen
+ * while the profile query that supplies the id is still in flight.
+ */
+async function fetchClientBookings(filters: ListFilters) {
+  if (!filters.chips?.['client_id']?.[0]) return { rows: [], total: 0 }
+  // No `withDeposit`: `bookings.deposit_required` is unmasked money on a base
+  // table (Law 6), and this list shows no deposit column.
+  return listBookings(filters)
+}
+
+async function fetchClientInvoices(filters: ListFilters) {
+  if (!filters.chips?.['client_id']?.[0]) return { rows: [], total: 0 }
+  return listInvoices(filters)
+}
+
+function ClientDetailView() {
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const money = useCanViewMoney()
+  const { user } = useAuth()
+  const online = useNetwork()
+  const { showSuccessToast } = useToast()
+  const role = user?.role ?? 'Client'
+  const gctx = useMemo(() => gateContext(role), [role])
+  const pii = canViewPII(gctx)
+  /**
+   * CL-06 — the real capability, not a guess about one. `actions/core.ts`
+   * maps `client.block` to exactly this function, so a role that fails here
+   * is a role the dispatcher would refuse.
+   */
+  const canBlock = canBlockClient(role)
+  /*
+    Spec 8.2 draws three layouts and this file had no width read at all — both
+    of its tables fell back to a horizontal scrollbar on a phone, which the
+    shell block of every spec forbids ("Tables become card rows below 768").
+    The record's own "one section at a time" requirement is already met by the
+    tab strip below, which exists at every width; what was missing is the
+    table→cards swap and a tab strip that scrolls instead of squashing.
+  */
+  const viewport = useViewport()
+  const tabular = viewport !== 'phone'
+
+  /**
+   * The record, from `client_directory_v` keyed on the code in the URL.
+   *
+   * `rows[0]` rather than a bespoke "one record" hook: `useClientProfile` is
+   * `useList` underneath, so "no such client" arrives as `isEmpty` — a
+   * successful query that matched nothing — and a failed read arrives as
+   * `error`. The old `?? null` collapsed both into one "not found" screen, which
+   * told an operator their link was wrong when the database was simply
+   * unreachable.
+   */
+  const profile = useClientProfile(id)
+  const loaded = profile.rows[0] ?? null
+
+  /**
+   * Edits live here, over the fetched record, and are lost on reload — see
+   * `onSave`. Held as an overlay rather than as the source so a refetch does not
+   * silently discard what the operator typed, and so the page renders the
+   * database's version until they touch it.
+   */
+  const [draft, setDraft] = useState<ClientRecord | null>(null)
+  const client = draft ?? loaded?.record ?? null
+  const [tab, setTab] = useState<TabKey>('overview')
+  const [isAdjustCreditOpen, setIsAdjustCreditOpen] = useState(false)
+  const [isUpgradeTierOpen, setIsUpgradeTierOpen] = useState(false)
+  const [isVerifyKycOpen, setIsVerifyKycOpen] = useState(false)
+
+  /* ── Block / Unblock — CL-06 ────────────────────────────────────────────
+     `null` means the dialog is shut; the two open states are the two
+     directions, so it cannot be open without knowing which verb it confirms. */
+  const [blockMode, setBlockMode] = useState<'block' | 'unblock' | null>(null)
+  const [blockReason, setBlockReason] = useState('')
+  const [blockBusy, setBlockBusy] = useState(false)
+  /*
+   * The wording the block dialog renders WHILE IT FADES OUT.
+   *
+   * `Modal` keeps its surface mounted for TRANSITION_MS (200 ms) after
+   * `isOpen` flips false, and renders from live props throughout — so deriving
+   * the title, the subtitle and the button verb from `blockMode`, which closing
+   * sets to `null`, flipped an "Unblock" dialog to the "Block" wording for the
+   * whole fade. Both branches read as a statement about the client, so the last
+   * thing the operator saw on dismissing an unblock was "Block {name}?".
+   *
+   * The last non-null mode is retained purely for the render; every DECISION
+   * still reads `blockMode`, so a closed dialog cannot act.
+   */
+  const lastBlockMode = useRef<'block' | 'unblock'>('block')
+  if (blockMode !== null) lastBlockMode.current = blockMode
+  const blockDialogMode: 'block' | 'unblock' = blockMode ?? lastBlockMode.current
+  /** Law 12 — a refused block stays on screen, in the dialog holding the reason. */
+  const [blockError, setBlockError] = useState<string | null>(null)
+  /**
+   * **Law 8** — one key per press, reused by every retry of that press. Minted
+   * when the dialog opens (the point `ClientsDirectory` mints its own), so
+   * pressing again after a network wobble replays the key instead of writing a
+   * second flag row.
+   */
+  const blockKey = useRef<string | null>(null)
+
+  useDomainEvent<{ clientId?: string; newLimitPaisa?: ClientRecord['creditLimitPaisa'] }>(EVENT_TYPES.CLIENT_CREDIT_ADJUSTED, (payload) => {
+    if (payload?.clientId === client?.id && payload?.newLimitPaisa !== undefined) {
+      /* Hoisted: the `!== undefined` narrowing above does not reach into the
+         updater closure. */
+      const newLimitPaisa = payload.newLimitPaisa
+      setDraft((d) => (d ? { ...d, creditLimitPaisa: newLimitPaisa } : d))
+    }
+  })
+
+  useDomainEvent<{ clientId?: string; newTier?: ClientRecord['membership']; discountPct?: number }>(EVENT_TYPES.MEMBERSHIP_TIER_CHANGED, (payload) => {
+    if (payload?.clientId === client?.id && payload?.newTier) {
+      const newTier = payload.newTier
+      const discountPct = payload.discountPct
+      setDraft((d) => {
+        if (!d) return d
+        const next: ClientRecord = { ...d, membership: newTier }
+        /* Optional means absent, never `undefined` (exactOptionalPropertyTypes). */
+        if (discountPct !== undefined) next.standingDiscountPercent = discountPct
+        return next
+      })
+    }
+  })
+
+  useDomainEvent<{ clientId?: string; newStatus?: ClientRecord['kycStatus'] }>(EVENT_TYPES.KYC_STATUS_UPDATED, (payload) => {
+    if (payload?.clientId === client?.id && payload?.newStatus) {
+      const newStatus = payload.newStatus
+      setDraft((d) => (d ? { ...d, kycStatus: newStatus } : d))
+    }
+  })
+
+  /* Law: errors inline, toasts for successes only — so a refused exit from edit
+     mode is a banner naming the fields, never a toast. */
+  const [leaveError, setLeaveError] = useState<string | null>(null)
+
+  const editRecord = useMemo(() => (client ? toEditable(client) : {}), [client])
+
+  /**
+   * RULING 2026-10-06: client edits are record-level. `Edit Client` opens `?action=edit` (the shared
+   * `RecordForm` with `Save changes`); there is no per-field save on this page. `useEditMode` is kept
+   * only so the read rows keep their layout, and it can never be unlocked here.
+   */
+  const onSave = useCallback(async () => {
+    throw new Error('Use Edit Client to change this record.')
+  }, [])
+
+  const openEdit = useCallback(() => {
+    setLeaveError(null)
+    const next = new URLSearchParams(location.search)
+    next.set('action', 'edit')
+    navigate({ pathname: location.pathname, search: next.toString() })
+  }, [navigate, location.pathname, location.search])
+
+  const edit = useEditMode({ record: editRecord, fields: CLIENT_FIELDS, onSave })
+
+  const tabs = useMemo(() => TAB_DEFS.filter((t) => money || !t.money), [money])
+  const activeTab: TabKey = tabs.some((t) => t.key === tab) ? tab : 'overview'
+
+  /**
+   * This client's bookings and invoices, both keyed on `clients.id` — the uuid,
+   * never the code. `invoicesForClient` says so in its own doc: a code returns
+   * zero rows rather than an error, so the mistake is silent.
+   *
+   * Both fetchers short-circuit while the profile is still in flight. An empty
+   * chip group means NO CONSTRAINT to `applyListFilters`, not "match nothing":
+   * sending `{ client_id: [] }` would return every booking and every invoice in
+   * the business, rendered under this one client's name.
+   */
+  const clientUuid = loaded?.id ?? null
+  const rentals = useList<BookingListRow>(
+    fetchClientBookings,
+    {
+      chips: { client_id: clientUuid ? [clientUuid] : [] },
+      sort: { column: 'pickup_at', ascending: false },
+    },
+    { isFilteredOverride: false },
+  )
+  const invoices = useList<InvoiceListRow>(
+    fetchClientInvoices,
+    clientUuid ? invoicesForClient(clientUuid) : { chips: { client_id: [] } },
+    { isFilteredOverride: false },
+  )
+  const documents = useList<DocRow>(
+    listDocuments,
+    clientUuid ? documentsForClient(clientUuid) : { chips: { client_id: [] } },
+    { isFilteredOverride: false },
+  )
+  const [showCreateDoc, setShowCreateDoc] = useState(false)
+
+  /* ── On Stop — RULING §11.2 ─────────────────────────────────────────────
+   *
+   * This is the ONE surface that can answer both limbs, because it is the only
+   * one that runs the invoices query. The directory can evaluate the credit
+   * limb alone and says so; here the overdue limb becomes answerable too.
+   *
+   * The predicate itself lives in `data/clients.ts` and is shared with the
+   * directory — §11.2.3: one function, so the chip on the row and the block on
+   * this page cannot disagree about the same client. *N* comes from Settings ▸
+   * Financial; no threshold is written here.
+   */
+  const stopThresholdDays = useMemo(() => readOverdueStopDays(), [])
+
+  /**
+   * Days past due on the client's most overdue **issued, unpaid** invoice.
+   *
+   * `0` means they hold none — a real answer. `null` means the question could
+   * not be asked, and the three ways that happens are all reported rather than
+   * flattened into `0` (§11.2.7):
+   *
+   *  · a money-blind session: `invoices` has no `_v` masking view, RLS gates it
+   *    whole-row, and a withheld list arrives as `[]` with HTTP 200 —
+   *    indistinguishable from "never invoiced". `financeRestriction` already
+   *    makes that point about the table below; the same ambiguity would make an
+   *    "on stop: no" here into a claim nobody checked.
+   *  · the query is still in flight, or it failed.
+   *  · a `due_date` that will not parse. One unreadable date makes the *worst*
+   *    overdue unknown, so the limb reports unknown rather than the best case.
+   *
+   * Draft invoices are excluded: a draft has not been issued to anybody, so it
+   * cannot be late. `invoicesForClient` already excludes voided rows.
+   */
+  const overdueDays = useMemo<number | null>(() => {
+    if (!money) return null
+    if (invoices.loading || invoices.error) return null
+    let worst = 0
+    for (const inv of invoices.rows) {
+      if (inv.status === 'Draft') continue
+      if (inv.outstandingAmount <= 0) continue
+      const late = daysPastDue(inv.dueDateAd)
+      if (late === null) return null
+      if (late > worst) worst = late
+    }
+    return worst
+  }, [money, invoices.loading, invoices.error, invoices.rows])
+
+  const creditStop = useMemo(
+    () =>
+      client
+        ? evaluateCreditStop(
+            creditStopFactsOf(client, { canViewMoney: money, daysPastDueOnOldestUnpaidInvoice: overdueDays }),
+            { overdueStopDays: stopThresholdDays, canViewMoney: money },
+          )
+        : null,
+    [client, money, overdueDays, stopThresholdDays],
+  )
+
+  if (!client) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+        <PageBody
+          loading={profile.loading}
+          error={profile.error}
+          onRetry={profile.refetch}
+          empty={profile.isEmpty}
+          noun="client"
+          skeleton="card"
+          emptyTitle="Client not found"
+          emptyMessage={`No client record matches "${id ?? ''}". It may have been renamed, merged into another account, or the link is out of date.`}
+          emptyActionLabel="Back to Clients"
+          onEmptyAction={() => navigate('/clients')}
+        >
+          {null}
+        </PageBody>
+      </div>
+    )
+  }
+
+  /**
+   * Open the block dialog in one direction, minting this press's Law 8 key.
+   *
+   * `client.id` is the **client code**, not the uuid —
+   * `queries/clients.ts:toClientRecord` sets `id` from `client_code` — and
+   * `BlockClientInput.clientCode` is documented as taking exactly that and
+   * resolving the uuid itself. So the code passed below is the shape the
+   * action asks for, not a code landing in a uuid column.
+   */
+  function openBlockDialog(mode: 'block' | 'unblock') {
+    setBlockReason('')
+    setBlockError(null)
+    blockKey.current = newClientUuid()
+    setBlockMode(mode)
+  }
+
+  /**
+   * The dispatch — awaited, and reported from its own outcome only.
+   *
+   * A block is refused by `blockClientConfig.validate` unless it carries a
+   * reason of at least ten characters, so this screen collects one and the
+   * dialog's button stays disabled until it has one. The action stays the
+   * backstop; it is not the first thing that says no, which is the failure
+   * shape where an operator fills a form and learns the rule afterwards.
+   *
+   * **TODO(decision)** — `client_flags.reason` is still physically nullable,
+   * and 0005's comment on that column says why: *"nullable ONLY because
+   * Blacklist.md leaves mandatory-reason unsettled while arguing it should be
+   * mandatory. Do not ship nullable for Blocked without that ruling."* Every
+   * block surface in the app enforces ten characters and the column enforces
+   * nothing. Which of the two moves is a schema ruling, not a screen's.
+   */
+  async function confirmBlockChange() {
+    if (!client || blockMode === null) return
+    const blocking = blockMode === 'block'
+    const reason = blockReason.trim()
+    if (blocking && reason.length < BLOCK_REASON_MIN) return
+
+    if (!user) {
+      setBlockError(
+        'You are not signed in, so this cannot be recorded — a block has to name who applied it. ' +
+          'Sign in and try again.',
+      )
+      return
+    }
+
+    setBlockBusy(true)
+    setBlockError(null)
+    try {
+      const { blockClient } = await import('../../actions/clients/blockClient')
+      const outcome = await blockClient(
+        {
+          clientCode: client.id,
+          blocked: blocking,
+          ...(reason ? { reason } : {}),
+          ...(blockKey.current ? { clientUuid: blockKey.current } : {}),
+        },
+        { userId: user.id, role: user.role, isOnline: online },
+      )
+      /* `isBlocked` is a database fact (`client_directory_v`, 0054), so the
+         page re-reads rather than deciding for itself what the row now says.
+         The draft overlay is patched as well, because while one exists it is
+         what renders and a refetch alone would be invisible. */
+      setDraft((d) => (d ? { ...d, isBlocked: outcome.blocked } : d))
+      profile.refetch()
+      showSuccessToast(
+        blocking ? 'Client blocked' : 'Block lifted',
+        `${outcome.clientName} (${outcome.clientCode})`,
+      )
+      setBlockMode(null)
+      setBlockReason('')
+    } catch (err) {
+      /* Law 12 — inline and persistent, inside the dialog that still holds the
+         reason, so a retry does not retype it. Never a toast. */
+      setBlockError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setBlockBusy(false)
+    }
+  }
+
+  const creditAvailablePaisa =
+    client.creditLimitPaisa !== undefined && client.creditUsedPaisa !== undefined
+      ? (Math.max(0, client.creditLimitPaisa - client.creditUsedPaisa) as Paisa)
+      : undefined
+
+  const kpis: Kpi[] = [
+    { label: 'On rent now', value: rentals.error || rentals.loading ? '—' : String(rentals.rows.filter(row => row.stage === 'On Rent' && !row.isCancelled && !row.isClosed).length), icon: 'checklist', accent: 'neutral', note: `${client.totalRentalsCount} total rentals` },
+    ...(money
+      ? [
+          { label: 'Outstanding', value: formatMoney(client.outstandingPaisa), icon: 'card' as const, accent: (client.outstandingPaisa > 0 ? 'danger' : 'neutral') as BrandKey },
+          ...(creditAvailablePaisa !== undefined
+            ? [{ label: 'Credit Available', value: formatMoney(creditAvailablePaisa), icon: 'card' as const, accent: 'neutral' as const }]
+            : [{ label: 'Deposit Held', value: formatMoney(client.depositHeldPaisa), icon: 'box' as const, accent: 'neutral' as const }]
+          ),
+          { label: 'Lifetime Spend', value: formatMoney(client.totalSpentPaisa), icon: 'activity' as const, accent: 'neutral' as const },
+        ]
+      : []),
+  ]
+
+  const overflowItems: OverflowMenuItem[] = [
+    ...(canBlock ? [{ label: client.isBlocked ? 'Unblock Client' : 'Block Client', icon: 'alert_triangle' as const, onClick: () => openBlockDialog(client.isBlocked ? 'unblock' : 'block') }] : []),
+    {
+      label: 'Verify KYC',
+      icon: 'checklist',
+      onClick: () => setIsVerifyKycOpen(true),
+    },
+    {
+      label: 'Merge Duplicate',
+      icon: 'users',
+      onClick: () => navigate('/clients/duplicates'),
+    },
+    ...(money
+      ? [
+          {
+            label: 'Adjust Credit Limit',
+            icon: 'card' as const,
+            onClick: () => setIsAdjustCreditOpen(true),
+          },
+          {
+            label: 'Upgrade Tier',
+            icon: 'sparkles' as const,
+            onClick: () => setIsUpgradeTierOpen(true),
+          },
+        ]
+      : []),
+  ]
+
+  return (
+    <PageShell
+      width="full"
+      className="client-detail-shell"
+      header={
+        <PageHeader
+          breadcrumb={
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+              <Link to="/clients" style={{ color: 'var(--link)', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                <Icon name="chevron_left" size={14} />
+                Clients
+              </Link>
+              <span>›</span>
+              <span style={{ color: 'var(--text)', fontWeight: 600 }}>{client.name}</span>
+            </div>
+          }
+          icon="users"
+          title={client.name}
+          description={`${client.id} · ${client.clientType}`}
+          actions={
+            <PageActions
+              extra={
+                <>
+                  {client.isVip && <Tone text="VIP" entity />}
+                  {client.isBlocked && <Tone text="Blocked" tone="danger" icon="alert_triangle" />}
+                  {creditStop?.onStop && (
+                    <Tone text="On Stop" tone="danger" icon="lock" reason={creditStop.reasons.join(' ')} />
+                  )}
+                </>
+              }
+              primary={
+                client.isBlocked ? (
+                  <Unavailable reason={`Blocked${client.blockReason ? `: ${client.blockReason}` : ''} — clear the block before starting a rental`}>
+                    <Button variant="primary" icon="plus" disabled>
+                      Start Rental
+                    </Button>
+                  </Unavailable>
+                ) : (
+                  <Button
+                    variant="primary"
+                    icon="plus"
+                    onClick={() => navigate(`/rentals/new?clientId=${encodeURIComponent(client.id)}`)}
+                  >
+                    Start Rental
+                  </Button>
+                )
+              }
+              secondary={
+                [
+                  <Button
+                    key="edit"
+                    icon="tool"
+                    onClick={openEdit}
+                  >
+                    Edit Client
+                  </Button>,
+
+                ]
+              }
+              overflow={overflowItems}
+            />
+          }
+        />
+      }
+    >
+
+      {/* HIS v2.1 §4.4 — the block itself is visible to everyone who tries to
+          book; only the reason and who set it are staff information. */}
+      {client.isBlocked && (
+        <ErrorBanner
+          title="Account blocked."
+          message={
+            canViewOnStopReason(gctx)
+              ? // `client_flags.reason` exists but `client_directory_v` publishes
+                // only the boolean, so the reason is genuinely not on this row.
+                // Saying that is the alternative to a stand-in sentence an
+                // operator would read as the recorded reason.
+                (client.blockReason ?? 'The reason is recorded on the flag but is not carried by this view.')
+              : 'Contact a manager for details.'
+          }
+        />
+      )}
+
+      {/* OS7 §18 — If client is on stop, display one strong warning panel */}
+      {creditStop?.onStop && !client.isBlocked && (
+        <ErrorBanner
+          title="Client On Stop."
+          message={
+            creditStop.reasons.length > 0
+              ? `${creditStop.reasons.join('. ')}. New rental confirmation is blocked until the account issue is resolved.`
+              : 'New rental confirmation is blocked until the account issue is resolved.'
+          }
+        />
+      )}
+
+      {leaveError && <ErrorBanner title="Unsaved changes." message={leaveError} />}
+
+      <KpiStrip items={kpis} columns={viewport === 'phone' ? 1 : viewport === 'tablet' ? 2 : kpis.length} />
+
+      {/* Spec 8.2 TABLET — "section tabs scroll". They used to squash instead,
+          because the row had no overflow behaviour of its own. */}
+      <div
+        role="tablist"
+        aria-label="Client detail sections"
+        style={{ display: 'flex', gap: 'var(--sp-xs)', borderBottom: '1px solid var(--border)', overflowX: 'auto', overscrollBehaviorX: 'contain' }}
+      >
+        {tabs.map((t) => {
+          const on = activeTab === t.key
+          return (
+            <button
+              key={t.key}
+              type="button"
+              role="tab"
+              id={`client-tab-${t.key}`}
+              aria-controls={`client-panel-${t.key}`}
+              aria-selected={on}
+              onClick={() => setTab(t.key)}
+              style={{
+                // Law 15 — this strip is the record's only section switch.
+                minHeight: 44,
+                flexShrink: 0,
+                padding: '0 12px',
+                border: 'none',
+                borderBottom: `2px solid ${on ? 'var(--nav-active-accent)' : 'transparent'}`,
+                background: 'transparent',
+                color: on ? 'var(--nav-active-accent)' : 'var(--text2)',
+                fontSize: 'var(--t-meta)',
+                fontWeight: on ? 700 : 500,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                marginBottom: -1,
+              }}
+            >
+              {t.label}
+            </button>
+          )
+        })}
+      </div>
+
+      <div role="tabpanel" id={`client-panel-${activeTab}`} aria-labelledby={`client-tab-${activeTab}`}>
+        {activeTab === 'overview' && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--sp-md)' }}>
+            <Card title="Identity">
+            <EditableRows
+              edit={edit}
+              rows={[
+                { key: 'name', label: 'Name', value: client.name },
+                /* No Company row — `clients` has no company column. For an
+                   organisation the company name IS `name`; see CLIENT_FIELDS. */
+                /* Client type, tags and KYC are rule-driven, not typed in — each
+                   is set by a flow that owns it, so none is an input here. */
+                { label: 'Client type', value: client.clientType },
+                /* `clients.tags` is a real `text[]` column that
+                   `client_directory_v` does not carry, so this reads '—' on
+                   every database record — absent from the query, not absent
+                   from the business. */
+                { label: 'Tags', value: client.tags?.length ? client.tags.join(', ') : '—' },
+                /* CL-09 — the one answer both clients screens now give, settled
+                   from the code rather than from taste. `clients.pan_vat` is
+                   nullable (0005:47) and `clients_pan_vat_nine_digits` reads
+                   `pan_vat is null or pan_vat ~ '^[0-9]{9}$'`;
+                   `createClient.validate` checks a PAN's SHAPE and never its
+                   presence; and neither `actions/rentals/confirmRental.ts` nor
+                   `createRental.ts` reads it — no migration adds a gate on it
+                   either. `AddClient` used to claim the opposite ("required
+                   before a booking can be confirmed"); it does not any more.
+                   New Rental's own Government ID / PAN box is a separate,
+                   page-level gate, so it is named as one. */
+                { key: 'pan', label: 'PAN', value: client.pan ?? 'Not on file', hint: 'Optional — a client without a PAN can still rent. New Rental asks for a PAN or citizenship number in its own box before Confirm.' },
+                { label: 'KYC', value: client.kycStatus },
+                { key: 'id', label: 'Client number', value: client.id },
+              ]}
+            />
+          </Card>
+
+          {/* HIS v2.1 §4.2 — phone/email/address were unconditional here
+              before this; a Warehouse or Technician session must not
+              construct this card at all, not just have it styled away. */}
+          {pii && (
+            <Card title="Contact">
+              <EditableRows
+                edit={edit}
+                rows={[
+                  { key: 'phone', label: 'Phone', value: client.phone, as: 'tel', hint: 'Required — duplicate detection and the merge tool match on it.' },
+                  { key: 'email', label: 'Email', value: client.email || '—', as: 'email' },
+                  { key: 'address', label: 'Address', value: client.address, hint: 'The single line the rest of the app reads.' },
+                  { key: 'city', label: 'City', value: client.city ?? '—' },
+                  { key: 'district', label: 'District', value: client.district ?? '—' },
+                  { key: 'postalCode', label: 'Postal code', value: client.postalCode ?? '—' },
+                  { key: 'country', label: 'Country', value: client.country ?? '—' },
+                  /* The Billing/Delivery breakdown is an array, and editing an
+                     array of addresses is a list UI, not a field. Left read-only
+                     rather than half-built. */
+                  ...(client.addresses ?? []).map((a) => ({
+                    label: `${a.kind} address`,
+                    value: a.address,
+                  })),
+                ]}
+              />
+            </Card>
+          )}
+
+          {pii && (
+            <Card title="Authorized Contact Person">
+              <EditableRows
+                edit={edit}
+                rows={[
+                  { key: 'contact_name', label: 'Name', value: client.contactPerson.name },
+                  { key: 'contact_designation', label: 'Designation', value: client.contactPerson.designation },
+                  { key: 'contact_phone', label: 'Phone', value: client.contactPerson.phone, as: 'tel' },
+                ]}
+              />
+              <p style={{ margin: '10px 0 0', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
+                {/* One contact per client today — a multi-contact model would be a schema change, not a display change. */}One contact is recorded for this client. </p>
+            </Card>
+          )}
+
+          <Card
+            title="Membership & Credit"
+            action={
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <Button variant="secondary" icon="activity" onClick={() => setIsUpgradeTierOpen(true)}>
+                  Change Tier
+                </Button>
+                {moneyScope(gctx) === 'full' && (
+                  <Button variant="secondary" icon="dollar" onClick={() => setIsAdjustCreditOpen(true)}>
+                    Adjust Credit
+                  </Button>
+                )}
+              </div>
+            }
+          >
+            <EditableRows
+              edit={edit}
+              rows={[
+                { label: 'Membership Tier', value: client.membership, ...(TIER_TONE[client.membership] === 'danger' ? { tone: 'danger' as const } : {}) },
+                // `lastRentalBs` carries its own " BS" suffix when it is a BS date and none
+                // when the query fell back to the AD date — nothing is appended here.
+                { label: 'Last Rental', value: client.lastRentalBs === '—' ? 'No rental yet' : `${client.lastRentalBs} · ${client.lastRentalAd}` },
+                // Open ⭐ #2 (HIS v2.1) — no benefit matrix is ruled yet.
+                { label: 'Benefits', value: /* Not yet defined (Open ⭐ #2) */ "Not recorded" },
+                ...(moneyScope(gctx) === 'full'
+                  ? ([
+                      /* §2.1 — grouped. Saving the percentage without its source
+                         leaves a discount on the account nothing can account for,
+                         so both keys go in one write and one bad member blocks it. */
+                      {
+                        key: 'standingDiscountPercent',
+                        label: 'Standing discount',
+                        value: client.standingDiscountPercent !== undefined ? `${client.standingDiscountPercent}%` : '—',
+                        as: 'number',
+                        hint: /* Saves together with Discount source. Any percent 0–100 — Law 10 carries no approval ceremony. */ "Save the discount and its source together.",
+                      },
+                      { key: 'discountSource', label: 'Discount source', value: client.discountSource ?? '—', hint: 'Type Rule · Membership · Named Client' },
+                      // Open ⭐ #1 (HIS v2.1) — no per-category deposit-% table is ruled yet.
+                      { label: 'Deposit override', value: /* Not set (Open ⭐ #1) */ "Not set" },
+                      { key: 'creditLimitPaisa', label: 'Credit limit', value: formatMoney(client.creditLimitPaisa) },
+                    ] satisfies EditableRowDef[])
+                  : []),
+              ]}
+            />
+            {/*
+              ── ⛔ ON STOP ──────────────────────────────────────────────────
+              Rulings §11.2 — derived here, never read off a flag, and stated
+              inside the CREDIT box the ruling names because that is where an
+              operator looks when a booking is refused.
+
+              **Law 6.** `reasons` is figure-free by construction and safe for
+              any role that reaches this page; `details` carries the amounts and
+              `evaluateCreditStop` only populates it when money was visible at
+              the point the verdict was computed. There is no second gate to
+              forget.
+
+              **§11.2.7.** A limb that could not run is listed as such — under
+              the verdict when the other limb fired, and on its own when neither
+              could. It never reads as "clear".
+            */}
+            {creditStop?.onStop && (
+              <div
+                role="alert"
+                style={{
+                  marginTop: 'var(--sp-sm)',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 10,
+                  padding: '11px 12px',
+                  borderRadius: 'var(--r-sm)',
+                  background: 'var(--st-danger-bg)',
+                  color: 'var(--st-danger-fg)',
+                }}
+              >
+                {/* Law 11 — icon + label + colour. */}
+                <Icon name="lock" size={15} fill style={{ flexShrink: 0, marginTop: 2 }} />
+                <span style={{ minWidth: 0, fontSize: 'var(--t-meta)', lineHeight: 1.5 }}>
+                  <span style={{ display: 'block', fontWeight: 700 }}>On stop</span>
+                  {creditStop.reasons.map((r) => (
+                    <span key={r} style={{ display: 'block', marginTop: 2 }}>
+                      {r}
+                    </span>
+                  ))}
+                  {creditStop.details.map((d) => (
+                    <span key={d} className="figure" style={{ display: 'block', marginTop: 2, opacity: 0.85 }}>
+                      {d}
+                    </span>
+                  ))}
+                  {creditStop.unavailable.map((u) => (
+                    <span key={u} style={{ display: 'block', marginTop: 2, opacity: 0.85 }}>
+                      {u}
+                    </span>
+                  ))}
+                  <span style={{ display: 'block', marginTop: 6, opacity: 0.85 }}>
+                    On Stop is worked out from the credit state each time this page is read, so it clears itself the moment
+                    the balance is settled. It is not a flag anybody has to remember to lift.
+                  </span>
+                </span>
+              </div>
+            )}
+
+            {/*
+              §11.2.7 again, and the edge that only showed up on a real screen:
+              this used to render only when EVERY limb was unavailable. On the
+              mock corpus — `lib/mock/corpus.ts:149`, no client carries an
+              approved credit limit — the overdue limb evaluates cleanly while
+              the credit limb cannot run, so the verdict was "not on stop" and
+              the card said nothing at all. A reader takes silence for "both
+              checks passed". One unavailable limb is enough to say so.
+            */}
+            {creditStop && !creditStop.onStop && creditStop.unavailable.length > 0 && (
+              <div
+                style={{
+                  marginTop: 'var(--sp-sm)',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 'var(--sp-sm)',
+                  padding: '10px 12px',
+                  borderRadius: 'var(--r-sm)',
+                  border: '1px dashed var(--border)',
+                  background: 'var(--card2)',
+                  fontSize: 'var(--t-meta)',
+                  color: 'var(--text2)',
+                }}
+              >
+                <Icon name="info" size={14} style={{ flexShrink: 0, marginTop: 2, color: 'var(--muted)' }} />
+                <span>
+                  <span style={{ display: 'block', fontWeight: 600, color: 'var(--text)' }}>
+                    {creditStop.indeterminate
+                      ? 'The on-stop check could not run.'
+                      : 'Part of the on-stop check could not run.'}
+                  </span>
+                  {creditStop.unavailable.map((u) => (
+                    <span key={u} style={{ display: 'block', marginTop: 2 }}>
+                      {u}
+                    </span>
+                  ))}
+                  <span style={{ display: 'block', marginTop: 4 }}>
+                    {creditStop.indeterminate
+                      ? 'This is not a statement that the client is clear — it is a statement that nothing here could check.'
+                      : 'The other limb ran and did not fire. This client is not reported as on stop, but they have not been cleared on the limb above.'}
+                  </span>
+                </span>
+              </div>
+            )}
+
+            {/*
+              The legacy manual annotation, kept and clearly labelled as such.
+              `ClientRecord.onStop` predates §11.2 and carries a **who** and a
+              **when** that no derivation can produce, so Law 3 keeps it — but
+              it is not what puts a client on stop any more, and it is not fed
+              back into the predicate: a stored flag is exactly what goes stale
+              after the client pays.
+            */}
+            {client.onStop && canViewOnStopReason(gctx) && (
+              <SummaryRows
+                rows={[
+                  { label: 'Earlier manual on-stop — set by', value: client.onStop.setBy },
+                  { label: 'Earlier manual on-stop — set on', value: client.onStop.setAd },
+                  { label: 'Recorded reason', value: client.onStop.reason },
+                ]}
+              />
+            )}
+            {/*
+              ⛔ The "Credit used · N / M · X headroom remaining" meter that used
+              to sit here is gone. All three figures came from
+              `creditUsedPaisa`, which has no column and no ruled formula —
+              `toClientRecord` hard-zeroes it and records why: outstanding is the
+              closest true number, but calling it credit-used asserts an
+              equivalence nobody has ruled. Against a database record the bar
+              would have read "Rs 0 used, full headroom" for every client,
+              including one at its limit. Outstanding is stated under its own
+              name on the Payments tab instead.
+            */}
+          </Card>
+
+          {/* Reliability [NEW] — counts visible to all staff; no ₨-recovered
+              figure is modelled yet, so nothing here needs money-gating. */}
+          {client.reliability && (
+            <Card title="Reliability">
+              <SummaryRows
+                rows={[
+                  { label: 'Late returns', value: `${client.reliability.lateReturns} / ${client.reliability.totalReturns}` },
+                  { label: 'Damage cases', value: String(client.reliability.damageCases) },
+                  { label: 'Missing cases', value: String(client.reliability.missingCases) },
+                  { label: 'Avg days late', value: client.reliability.avgDaysLateOverall.toFixed(1) },
+                ]}
+              />
+            </Card>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'rentals' && (
+        <Card
+          title={`Rentals (${rentals.rows.length} of ${client.totalRentalsCount} lifetime)`}
+          bodyStyle={{ padding: rentals.rows.length ? 0 : undefined }}
+        >
+          {/*
+            ⛔ No Amount column. `BookingListRow` carries no rental total, and
+            that is deliberate on the query's side: the total and the outstanding
+            are the Financial Engine's figures and live on the booking, not on a
+            list row (`queries/bookings.ts` states it in the same words). The
+            column this replaces read `r.amount` off a hand-typed seed row —
+            a rupee figure with no column behind it, on a page that also shows
+            real balances.
+          */}
+          <PageBody
+            loading={rentals.loading}
+            error={rentals.error}
+            onRetry={rentals.refetch}
+            hasRows={rentals.rows.length > 0}
+            empty={rentals.isEmpty}
+            noun="rentals"
+            emptyTitle="No rentals to show"
+            emptyMessage={
+              client.totalRentalsCount > 0
+                ? `The directory counts ${client.totalRentalsCount} lifetime rental(s) for this client, but the bookings query returned none — worth reporting, since the two read the same table.`
+                : 'This client has never rented anything.'
+            }
+          >
+            {!tabular ? (
+              /* Shell rule — below 768 a 640px table is a horizontal scrollbar
+                 hiding the columns that matter. One card per booking, one
+                 primary action. */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)', padding: 'var(--sp-sm)' }}>
+                {rentals.rows.map((r) => (
+                  <article key={r.id} style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '11px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+                      <span className="identifier" style={{ color: 'var(--link)', fontWeight: 700 }}>{r.bookingNo}</span>
+                      <Tone text={r.stage} tone={statusToken(r.stage)} />
+                      {r.isCancelled && <span style={{ color: 'var(--danger-text)', fontSize: 'var(--t-th)' }}>Cancelled</span>}
+                    </div>
+                    <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>{r.project ?? '—'}</div>
+                    <div style={{ fontSize: 'var(--t-meta)', color: 'var(--booking-date-text)' }}>Pickup {formatAd(new Date(r.pickupAtAd))}</div>
+                    <Link
+                      to={`/rentals/${r.bookingNo}`}
+                      style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44, borderRadius: 'var(--r-btn)', background: 'var(--btn-secondary-bg)', border: '1px solid var(--btn-secondary-border)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontWeight: 600, textDecoration: 'none' }}
+                    >
+                      Open booking
+                    </Link>
+                  </article>
+                ))}
+              </div>
+            ) : (
+            <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-card)', overflow: 'hidden' }}>
+              <DataTableShell ariaLabel="Client rentals" data-table-scroll className="client-table-shell" style={{ overflowX: 'auto' }}>
+                <table className="client-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
+                  <thead>
+                    <tr style={{ background: 'var(--card2)' }}>
+                      <th style={th}>Booking</th>
+                      <th style={th}>Project</th>
+                      <th style={th}>Status</th>
+                      <th style={th}>Pickup</th>
+                      <th style={{ ...th, textAlign: 'right' }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rentals.rows.map((r) => (
+                      <tr key={r.id} className="client-row" style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={td}>
+                          <span className="identifier client-mono" style={{ color: 'var(--link)', fontWeight: 600 }}>{r.bookingNo}</span>
+                        </td>
+                        {/* `project` is nullable on `bookings` — the em dash is the
+                            column being empty, not a lookup that failed. */}
+                        <td style={td}>{r.project ?? '—'}</td>
+                        <td style={td}>
+                          <Tone text={r.stage} tone={statusToken(r.stage)} />
+                          {/* §1.9 — Cancelled is a flag that coexists with the
+                              stage, never a stage of its own, so it is a second
+                              mark rather than a replacement for the pill. */}
+                          {r.isCancelled && (
+                            <span style={{ marginLeft: 6, color: 'var(--danger-text)', fontSize: 'var(--t-th)' }}>Cancelled</span>
+                          )}
+                        </td>
+                        <td className="figure client-mono" style={{ ...td, color: 'var(--booking-date-text)' }}>{formatAd(new Date(r.pickupAtAd))}</td>
+                        <td style={{ ...td, textAlign: 'right' }}>
+                          <Link to={`/rentals/${r.bookingNo}`} style={{ color: 'var(--link)', fontSize: 'var(--t-meta)', fontWeight: 600, textDecoration: 'none' }}>
+                            Open
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </DataTableShell>
+            </div>
+            )}
+          </PageBody>
+        </Card>
+      )}
+
+      {activeTab === 'payments' && money && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+          <Card title="Financial summary">
+            <SummaryRows
+              rows={[
+                { label: 'Outstanding', value: formatMoney(client.outstandingPaisa), ...(client.outstandingPaisa > 0 ? { tone: 'danger' as const } : {}) },
+                { label: 'Deposit Held', value: formatMoney(client.depositHeldPaisa) },
+                { label: 'Credit Limit', value: formatMoney(client.creditLimitPaisa) },
+                /* No 'Credit Used' row — see the Membership & Credit card. The
+                   column does not exist and the formula is unruled, so the Rs 0
+                   this used to print was not a balance. */
+                { label: 'Lifetime Spend', value: formatMoney(client.totalSpentPaisa) },
+              ]}
+            />
+          </Card>
+          <Card
+            title={`Invoices (${invoices.rows.length})`}
+            bodyStyle={{ padding: invoices.rows.length ? 0 : undefined }}
+          >
+            {/*
+              `financeRestriction` is spread even though this tab is already
+              money-gated, because the two gates answer different questions and
+              only one of them is about this page. `invoices` has no `_v` view:
+              RLS gates it WHOLE-ROW, so a money-blind session gets `[]` and
+              HTTP 200 — indistinguishable from "this client has never been
+              invoiced" unless the screen says which it is.
+            */}
+            <PageBody
+              loading={invoices.loading}
+              error={invoices.error}
+              onRetry={invoices.refetch}
+              hasRows={invoices.rows.length > 0}
+              empty={invoices.isEmpty}
+              noun="invoices"
+              emptyTitle="No invoices to show"
+              emptyMessage="Nothing has been invoiced to this client, or every invoice against it has been voided."
+              {...financeRestriction(money)}
+            >
+              {!tabular ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)', padding: 'var(--sp-sm)' }}>
+                  {invoices.rows.map((inv) => (
+                    <article key={inv.id} style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '11px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
+                        <span className="identifier" style={{ fontWeight: 700 }}>{inv.invoiceNo}</span>
+                        <Tone text={inv.status} tone={INVOICE_TOKEN[inv.status]} />
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 'var(--t-meta)' }}>
+                        <span style={{ color: 'var(--text2)' }}>Total</span>
+                        <span className="figure" style={{ fontWeight: 600 }}>{formatMoney(inv.totalAmount)}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 'var(--t-meta)' }}>
+                        <span style={{ color: 'var(--text2)' }}>Outstanding</span>
+                        <span className="figure" style={{ color: inv.outstandingAmount > 0 ? 'var(--danger-text)' : 'var(--text2)' }}>
+                          {formatMoney(inv.outstandingAmount)}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>Due {formatAd(new Date(inv.dueDateAd))}</div>
+                      <Link
+                        to={`/rentals/${inv.bookingNo}`}
+                        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minHeight: 44, borderRadius: 'var(--r-btn)', background: 'var(--btn-secondary-bg)', border: '1px solid var(--btn-secondary-border)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontWeight: 600, textDecoration: 'none' }}
+                      >
+                        Open {inv.bookingNo}
+                      </Link>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+              <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-card)', overflow: 'hidden' }}>
+                <DataTableShell ariaLabel="Client invoices" data-table-scroll className="client-table-shell" style={{ overflowX: 'auto' }}>
+                  <table className="client-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 680 }}>
+                    <thead>
+                      <tr style={{ background: 'var(--card2)' }}>
+                        <th style={th}>Invoice</th>
+                        <th style={th}>Booking</th>
+                        <th style={{ ...th, textAlign: 'right' }}>Total</th>
+                        <th style={{ ...th, textAlign: 'right' }}>Outstanding</th>
+                        <th style={th}>Status</th>
+                        <th style={th}>Due</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {invoices.rows.map((inv) => (
+                        <tr key={inv.id} className="client-row" style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={td}>
+                            <span className="identifier client-mono" style={{ fontWeight: 600 }}>{inv.invoiceNo}</span>
+                          </td>
+                          <td style={td}>
+                            <Link to={`/rentals/${inv.bookingNo}`} className="identifier client-mono" style={{ color: 'var(--link)', textDecoration: 'none' }}>
+                              {inv.bookingNo}
+                            </Link>
+                          </td>
+                          {/* Two columns, not one: the invoice carries seven
+                              distinct money columns and collapsing them into a
+                              single "Amount" string is what made `Finance.tsx`
+                              parse "Rs 1,234.50" back as Rs 1,23,450. */}
+                          <td style={{ ...td, textAlign: 'right' }}>
+                            <span className="figure client-mono" style={{ fontWeight: 600 }}>{formatMoney(inv.totalAmount)}</span>
+                          </td>
+                          <td style={{ ...td, textAlign: 'right' }}>
+                            <span
+                              className="figure client-mono"
+                              style={{ color: inv.outstandingAmount > 0 ? 'var(--danger-text)' : 'var(--text2)' }}
+                            >
+                              {formatMoney(inv.outstandingAmount)}
+                            </span>
+                          </td>
+                          <td style={td}>
+                            <Tone text={inv.status} tone={INVOICE_TOKEN[inv.status]} />
+                          </td>
+                          <td className="figure client-mono" style={{ ...td, color: 'var(--text2)' }}>{formatAd(new Date(inv.dueDateAd))}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </DataTableShell>
+              </div>
+              )}
+            </PageBody>
+          </Card>
+        </div>
+      )}
+
+      {activeTab === 'documents' && (
+        <Card
+          title={`Documents (${documents.rows.length})`}
+          action={
+            <Button
+              variant="secondary"
+              icon="plus"
+              onClick={() => setShowCreateDoc(true)}
+              disabled={client.isBlocked}
+            >
+              Add Document
+            </Button>
+          }
+          bodyStyle={{ padding: documents.rows.length ? 0 : undefined }}
+        >
+          <PageBody
+            loading={documents.loading}
+            error={documents.error}
+            onRetry={documents.refetch}
+            hasRows={documents.rows.length > 0}
+            empty={documents.isEmpty}
+            noun="documents"
+            emptyTitle="No documents on file"
+            emptyMessage="No documents have been recorded against this client yet. Click 'Add Document' to create a quotation, contract, or note."
+          >
+            <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-card)', overflow: 'hidden' }}>
+              <DataTableShell ariaLabel="Client documents" data-table-scroll className="client-table-shell" style={{ overflowX: 'auto' }}>
+                <table className="client-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
+                  <thead>
+                    <tr style={{ background: 'var(--card2)' }}>
+                      <th style={th}>Document No</th>
+                      <th style={th}>Type</th>
+                      <th style={th}>Category</th>
+                      <th style={th}>Date</th>
+                      <th style={th}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {documents.rows.map((doc) => (
+                      <tr key={doc.id} className="client-row" style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={td}>
+                          <span className="figure identifier client-mono" style={{ fontWeight: 600 }}>{doc.id}</span>
+                        </td>
+                        <td style={{ ...td, fontWeight: 600 }}>{doc.type}</td>
+                        <td style={{ ...td, color: 'var(--text2)' }}>{doc.category}</td>
+                        <td className="figure client-mono" style={{ ...td, color: 'var(--text2)' }}>{doc.createdTime}</td>
+                        <td style={td}>
+                          <Badge tone="neutral" label={doc.status} size="sm" />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </DataTableShell>
+            </div>
+          </PageBody>
+        </Card>
+      )}
+
+      {activeTab === 'notes' && (
+        <Card title="Notes">
+          {edit.editing ? (
+            <EditableRows edit={edit} rows={[{ key: 'notes', label: 'Notes', value: client.notes ?? '', as: 'textarea' }]} />
+          ) : client.notes ? (
+            <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--text)', whiteSpace: 'pre-wrap' }}>{client.notes}</p>
+          ) : (
+            <EmptyState
+              title="No notes yet"
+              description="Nothing has been written about this client. Press Edit Client to add one."
+              actionLabel="Edit Client"
+              onAction={openEdit}
+            />
+          )}
+        </Card>
+      )}
+
+      {activeTab === 'activity' && (
+        <Card title="Client facts">
+          <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <li style={{ display: 'flex', gap: 'var(--sp-sm)', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+              <Icon name="checklist" size={14} style={{ color: 'var(--success-text)', flexShrink: 0, marginTop: 2 }} />
+              KYC {client.kycStatus} · {client.kycDocsCount} document{client.kycDocsCount === 1 ? '' : 's'} on file
+            </li>
+            <li style={{ display: 'flex', gap: 'var(--sp-sm)', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+              <Icon name={client.currentRentalsCount > 0 ? 'truck' : 'dot'} size={14} style={{ color: 'var(--muted)', flexShrink: 0, marginTop: 2 }} />
+              {client.currentRentalsCount > 0 ? `${client.currentRentalsCount} rental(s) currently active` : 'No active rentals'}
+            </li>
+            <li style={{ display: 'flex', gap: 'var(--sp-sm)', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+              <Icon name="calendar" size={14} style={{ color: 'var(--muted)', flexShrink: 0, marginTop: 2 }} />
+              {client.lastRentalBs === '—' ? 'No rental history yet' : `Last rental ${client.lastRentalBs} (${client.lastRentalAd})`}
+            </li>
+            {client.isBlocked && (
+              <li style={{ display: 'flex', gap: 'var(--sp-sm)', fontSize: 'var(--t-meta)', color: 'var(--danger-text)' }}>
+                <Icon name="alert_triangle" size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+                Blocked{client.blockReason ? ` — ${client.blockReason}` : ' — reason not carried by this view'}
+              </li>
+            )}
+          </ul>
+          <p style={{ margin: '14px 0 0', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
+            {/* This is derived from fields already on the record, not an audit trail. `lib/audit.ts` exists
+            but nothing calls `logAuditEvent` for client records yet — a real timeline needs that wired
+            up first, not fabricated here. */}No activity recorded yet. </p>
+        </Card>
+      )}
+      </div>
+
+      <FooterNote extra={['Clients are never deleted — a closed account is retained and marked']} />
+
+      {client && (
+        <>
+          <AdjustCreditLimitModal
+            isOpen={isAdjustCreditOpen}
+            onClose={() => setIsAdjustCreditOpen(false)}
+            client={client}
+            onSuccess={(newLimitPaisa: Paisa) => {
+              setDraft((d) => (d ? { ...d, creditLimitPaisa: newLimitPaisa } : d))
+            }}
+          />
+          <UpgradeTierModal
+            isOpen={isUpgradeTierOpen}
+            onClose={() => setIsUpgradeTierOpen(false)}
+            client={client}
+            onSuccess={(newTier: MembershipTier) => {
+              setDraft((d) => (d ? { ...d, membership: newTier } : d))
+            }}
+          />
+          <VerifyKycModal
+            isOpen={isVerifyKycOpen}
+            onClose={() => setIsVerifyKycOpen(false)}
+            client={client}
+            onSuccess={(newStatus: KycStatus) => {
+              setDraft((d) => (d ? { ...d, kycStatus: newStatus } : d))
+            }}
+          />
+          <CreateDocumentModal
+            isOpen={showCreateDoc}
+            onClose={() => setShowCreateDoc(false)}
+            initialClientId={client.id}
+            onSuccess={() => {
+              setShowCreateDoc(false)
+              documents.refetch()
+            }}
+          />
+
+          {/*
+            ── CL-06 — the block dialog ────────────────────────────────────
+            Inline rather than in `./modals/`, which is outside this change's
+            files. It asks for what the action asks for: a reason of at least
+            ten characters on the way in, an optional one on the way out.
+          */}
+          <Modal
+            isOpen={blockMode !== null}
+            /* Guarded like Cancel beside it. Escape, the backdrop and the
+               header X all call this unconditionally, so without the guard the
+               dialog could be dismissed mid-dispatch — leaving the write in
+               flight with nowhere to report a failure, since `blockError`
+               renders inside this dialog. */
+            onClose={() => {
+              if (!blockBusy) setBlockMode(null)
+            }}
+            title={blockDialogMode === 'unblock' ? `Lift the block on ${client.name}?` : `Block ${client.name}?`}
+            subtitle={
+              blockDialogMode === 'unblock'
+                ? /* The block is lifted, not deleted — who applied it, why, and who lifted it all stay on the record (Law 3). */ "The blocking and unblocking history stays on the record."
+                : 'Start Rental is refused on this page while a block stands, and the clients directory reads the same flag. Existing bookings, invoices and rental history are untouched.'
+            }
+            footer={
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, width: '100%' }}>
+                <Button variant="secondary" onClick={() => setBlockMode(null)} disabled={blockBusy}>
+                  Cancel
+                </Button>
+                <Button
+                  variant={blockDialogMode === 'unblock' ? 'primary' : 'danger'}
+                  onClick={confirmBlockChange}
+                  disabled={blockBusy || (blockMode === 'block' && blockReason.trim().length < BLOCK_REASON_MIN)}
+                >
+                  {blockBusy ? 'Saving…' : blockDialogMode === 'unblock' ? 'Unblock Client' : 'Block Client'}
+                </Button>
+              </div>
+            }
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+              {/* Law 12 — inline, persistent, and beside the control that caused it. */}
+              {blockError && (
+                <ErrorBanner
+                  title={blockDialogMode === 'unblock' ? 'The block was not lifted' : 'This client was not blocked'}
+                  message={blockError}
+                />
+              )}
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 'var(--t-meta)' }}>
+                <span style={{ fontWeight: 600, color: 'var(--text2)' }}>
+                  {blockMode === 'unblock'
+                    ? 'Reason for lifting it (optional)'
+                    : `Reason (minimum ${BLOCK_REASON_MIN} characters)`}
+                </span>
+                <textarea
+                  value={blockReason}
+                  onChange={(e) => setBlockReason(e.target.value)}
+                  rows={3}
+                  placeholder={
+                    blockMode === 'unblock'
+                      ? 'e.g. Outstanding balance settled in full'
+                      : 'e.g. Repeated unreturned equipment, escalated to the owner'
+                  }
+                  style={{
+                    padding: 10,
+                    borderRadius: 'var(--r-input)',
+                    border: '1px solid var(--border)',
+                    background: 'var(--card2)',
+                    color: 'var(--text)',
+                    fontSize: 'var(--t-meta)',
+                    fontFamily: 'inherit',
+                    resize: 'vertical',
+                  }}
+                />
+                {/* A disabled control with no stated reason is what
+                    `Unavailable` exists to prevent; inside a dialog the same
+                    duty is a live count rather than a hover. */}
+                {blockMode === 'block' && blockReason.trim().length < BLOCK_REASON_MIN && (
+                  <span
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 'var(--sp-xs)',
+                      fontSize: 'var(--t-th)',
+                      color: 'var(--text2)',
+                    }}
+                  >
+                    <Icon name="info" size={12} style={{ flexShrink: 0, marginTop: 2 }} />
+                    <span>
+                      {BLOCK_REASON_MIN - blockReason.trim().length} more character
+                      {BLOCK_REASON_MIN - blockReason.trim().length === 1 ? '' : 's'} — a block whose reason nobody
+                      recorded becomes a block nobody dares remove.
+                    </span>
+                  </span>
+                )}
+              </label>
+            </div>
+          </Modal>
+        </>
+      )}
+
+    </PageShell>
+  )
+}
+
+const th = {
+  textAlign: 'left' as const,
+  padding: '9px 12px',
+  fontSize: 'var(--t-th)',
+  fontWeight: 600,
+  color: 'var(--text2)',
+  whiteSpace: 'nowrap' as const,
+  borderBottom: '1px solid var(--border)',
+}
+/*
+ * `height` on a `<td>` behaves as a MINIMUM, so this is the §7.3 row floor
+ * ("rows >= 56px") expressed with the token rather than with padding
+ * arithmetic. Horizontal padding is deliberately left alone — the floor is a
+ * vertical law and the columns were already spaced the way this page wants.
+ *
+ * This is a DATA-INTEGRITY fix, not a density preference. The floor is the
+ * precondition that makes the 44px hit area POSSIBLE: at 11 + 11 + a --t-meta
+ * line these rows stood around 39px, and a 44px target in a 39px row has
+ * nowhere to go but over the boundary into its neighbour. That overhang is
+ * exactly the bug commit 7d38cdf fixed on the floor workspaces — an absolutely
+ * positioned hit area wins the hit test, so the LATER row in the DOM takes a
+ * tap landing in the overlap band and the action is recorded against the wrong
+ * line. Both tables below carry a per-row destination ("Open" on the rentals
+ * table, the booking number on the invoices one), so here the same mis-tap
+ * sends the operator into somebody else's booking. Setting the floor first
+ * means those targets can be grown to 44 without re-creating the overlap.
+ */
+const td = { height: 'var(--row-min-h)', padding: '11px 12px', fontSize: 'var(--t-meta)', color: 'var(--text)', verticalAlign: 'top' as const }
+
+export default function ClientDetail() { const [params]=useSearchParams(); const route=useParams<{id:string}>(); return params.get("action")==="edit" && route.id ? <RecordForm kind="client" recordId={route.id}/> : <ClientDetailView/> }
