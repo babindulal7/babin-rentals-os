@@ -8,7 +8,7 @@ import { PageHeader } from '../../ui/header/PageHeader'
 import { PageActions } from '../../ui/PageActions'
 import { GlobalAddMenu } from '../../ui/creation/GlobalAddMenu'
 import { FilterButton } from '../../ui/FilterDrawer'
-import { WorkspaceHeaderMoreActions, WorkspaceHeaderRightActions, WorkspaceHeaderSecondaryActions } from '../WorkspacePortal'
+import { WorkspaceHeaderAddActions, WorkspaceHeaderMoreActions, WorkspaceHeaderRightActions, WorkspaceHeaderSecondaryActions } from '../WorkspacePortal'
 import Header from '../Header'
 
 const mock = vi.hoisted(() => ({ viewport: 'desktop' }))
@@ -76,6 +76,17 @@ describe('Babin Rentals OS — fixed button locations', () => {
     expect(slot('secondary')?.textContent).toContain('Save draft')
     expect(slot('more')?.querySelector('[aria-label="More rental actions"]')).not.toBeNull()
     expect(slot('primary')?.textContent).toContain('Confirm Booking')
+    expect(container.querySelectorAll('header')).toHaveLength(1)
+  })
+
+  it('anchors page-owned New Rental creation to Add without duplicating Global Add', async () => {
+    await act(async () => root.render(<MemoryRouter><WorkspaceProvider>
+      <Header crumbs={[{ label: 'Rentals' }]} />
+      <WorkspaceHeaderAddActions><button type="button" aria-label="New Rental">New Rental</button></WorkspaceHeaderAddActions>
+    </WorkspaceProvider></MemoryRouter>))
+    expect(slot('add')?.textContent).toContain('New Rental')
+    expect(slot('add')?.textContent).not.toContain('Global Add')
+    expect(slot('primary')?.textContent).not.toContain('New Rental')
     expect(container.querySelectorAll('header')).toHaveLength(1)
   })
 
