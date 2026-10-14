@@ -209,16 +209,29 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
         clients!client_id(name, pan_vat),
         bookings!booking_id(booking_no)
       `)
+      // A stable unique tie-breaker is required for page boundaries.
       .order('issue_date', { ascending: false })
+      .order('id', { ascending: true })
 
     if (options?.from) query = query.gte('issue_date', options.from)
     if (options?.to) query = query.lte('issue_date', options.to)
     if (options?.branchId) query = query.eq('branch_id', options.branchId)
 
-    const { data: rows, error } = await query
-
-    if (error) throw new Error('Unable to read the Sales/VAT invoice ledger.', { cause: error })
-    if (!rows) throw new Error('The Sales/VAT invoice ledger returned no result.')
+    // Read the full RLS-visible invoice ledger rather than silently reporting
+    // only PostgREST's first 1000 rows. Fixed-size pages also keep requests bounded.
+    const pageSize = 500
+    const first = await query.range(0, pageSize - 1)
+    if (first.error) throw new Error('Unable to read the Sales/VAT invoice ledger.', { cause: first.error })
+    if (!first.data) throw new Error('The Sales/VAT invoice ledger returned no result.')
+    const rows = [...first.data]
+    let page = first.data
+    for (let offset = pageSize; page.length === pageSize; offset += pageSize) {
+      const result = await query.range(offset, offset + pageSize - 1)
+      if (result.error) throw new Error('Unable to read the complete Sales/VAT invoice ledger.', { cause: result.error })
+      if (!result.data) throw new Error('A Sales/VAT invoice page was unavailable.')
+      page = result.data
+      rows.push(...page)
+    }
     if (rows.length === 0) return emptyRegister()
 
     // Only issued, non-void tax invoices belong to the Sales/VAT register.
@@ -393,7 +406,7 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
       statusBreakdown,
       monthlyTrend,
       topClients,
-      invoices: invoices.slice(0, 10),
+      invoices,
     }
 
     const vat: VatTaxReportData = {
@@ -406,7 +419,7 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
         invoicesCount: totalCount,
       },
       monthlySchedule,
-      taxRegister: invoices.slice(0, 10),
+      taxRegister: invoices,
     }
 
     return { sales, vat }
