@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { WorkspaceProvider } from '../../../lib/workspaceContext'
 import { PageHeader } from '../../ui/header/PageHeader'
 import { PageActions } from '../../ui/PageActions'
+import { GlobalAddMenu } from '../../ui/creation/GlobalAddMenu'
 import { FilterButton } from '../../ui/FilterDrawer'
 import { WorkspaceHeaderMoreActions, WorkspaceHeaderRightActions, WorkspaceHeaderSecondaryActions } from '../WorkspacePortal'
 import Header from '../Header'
@@ -53,6 +54,16 @@ describe('Babin Rentals OS — fixed button locations', () => {
     expect(slot('more')?.querySelector('button[aria-label="More actions"]')).not.toBeNull()
     expect(slot('primary')?.textContent).toContain('Confirm booking')
     expect(slot('add')?.textContent).not.toContain('Confirm booking')
+  })
+
+  it('puts Inventory and Clients GlobalAddMenu in Add, not in the primary Save slot', async () => {
+    await act(async () => root.render(<MemoryRouter><WorkspaceProvider>
+      <Header crumbs={[{ label: 'Inventory' }]} />
+      <PageHeader title="Inventory" actions={<PageActions primary={<GlobalAddMenu module="inventory" />} />} />
+    </WorkspaceProvider></MemoryRouter>))
+    expect(slot('add')?.textContent).toContain('Global Add')
+    expect(slot('primary')?.textContent).not.toContain('Global Add')
+    expect(container.querySelectorAll('header')).toHaveLength(1)
   })
 
   it('keeps page-owned New Rental actions in their individual stable slots', async () => {
