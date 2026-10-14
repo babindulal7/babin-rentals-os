@@ -166,6 +166,12 @@ begin
   -- Mark transaction as inside create_booking so the lines guard admits our writes
   perform set_config('app.in_create_booking', 'on', true);
 
+  -- Never let money-blind callers override VAT (including selecting 0%).
+  if p_payload ? 'vat_rate' and not auth_can_view_money() then
+    raise exception 'GATE:gate.vat.money_blind|Only authorized money-visible staff can select a booking VAT rate'
+      using errcode='42501';
+  end if;
+
   -- ── Discount gate for money-blind callers (Law 6) ─────────────────────────
   if jsonb_array_length(coalesce(p_payload -> 'discounts', '[]'::jsonb)) > 0 and not auth_can_view_money() then
     raise exception 'GATE:gate.discount.money_blind|Money-blind callers may not apply discounts (Law 6)'
