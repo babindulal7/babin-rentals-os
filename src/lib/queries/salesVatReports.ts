@@ -328,7 +328,7 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
         invoiceCount: val.count,
         totalInvoiced: asPaisa(val.invoiced),
         totalPaid: asPaisa(val.paid),
-        balance: rupees(Math.round(Math.max(0, val.outstanding) / 100)),
+        balance: asPaisa(Math.max(0, val.outstanding)),
       }))
       .sort((a, b) => (b.totalInvoiced as number) - (a.totalInvoiced as number))
       .slice(0, 5)
