@@ -9,6 +9,7 @@ import type { WorkspaceActions } from '../OperationsShell'
 
 let dirty = false
 let mockError: string | null = null
+let mockBlocked: string | null = null
 
 type MockProps = {
   bookingNo?: string
@@ -19,7 +20,8 @@ type MockProps = {
 function MockWorkspace({ bookingNo, onConfirmSuccess, onRegisterActions }: MockProps) {
   useEffect(() => {
     onRegisterActions?.({
-      canComplete: true,
+      canComplete: mockBlocked === null,
+      blockedReason: mockBlocked,
       dispatching: false,
       isDirty: dirty,
       label: 'Confirm Action',
@@ -100,11 +102,35 @@ async function mount(
 beforeEach(() => {
   dirty = false
   mockError = null
+  mockBlocked = null
 })
 
 afterEach(async () => {
   await act(async () => root.unmount())
   container.remove()
+})
+
+describe('why Confirm is disabled', () => {
+  it('says what is still needed beside a disabled Confirm, and nothing once it can complete', async () => {
+    mockBlocked = 'Every item packed or marked missing (+2 more)'
+    await mount(vi.fn(), 'Booked', 'Pack')
+    const confirm = [...container.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Confirm Packing & Next')
+    expect(confirm?.hasAttribute('disabled')).toBe(true)
+    expect(container.ownerDocument.body.textContent).toContain('Still needed: Every item packed or marked missing (+2 more)')
+    await act(async () => root.unmount())
+    container.remove()
+    mockBlocked = null
+    await mount(vi.fn(), 'Booked', 'Pack')
+    expect(container.ownerDocument.body.textContent).not.toContain('Still needed')
+  })
+
+  it('lifts toasts clear of the footer while a job is open, and restores them on close', async () => {
+    await mount(vi.fn(), 'Booked', 'Pack')
+    expect(document.documentElement.style.getPropertyValue('--toast-bottom')).toBe('104px')
+    await act(async () => root.unmount())
+    expect(document.documentElement.style.getPropertyValue('--toast-bottom')).toBe('')
+    root = createRoot(container)
+  })
 })
 
 describe('panel layout', () => {

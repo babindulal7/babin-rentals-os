@@ -60,6 +60,8 @@ export interface WorkspaceActions {
   isDirty: boolean
   label?: string
   error?: string | null
+  /** First requirement still unmet, shown beside a disabled Confirm so the operator need not hunt for it. */
+  blockedReason?: string | null
 }
 
 export interface OperationsShellProps {
@@ -262,6 +264,17 @@ export default function OperationsShell({
             ? 'Confirm Return & Next'
             : 'Confirm Reset'
 
+  const blockedHint = !isCurrentJobCompleted && actions && !actions.canComplete && !actions.dispatching ? (actions.blockedReason ?? null) : null
+
+  /* A toast sits bottom-right, exactly over the footer's Confirm button; lift it clear while a job is open. */
+  useEffect(() => {
+    if (!isOpen) return
+    document.documentElement.style.setProperty('--toast-bottom', '104px')
+    return () => {
+      document.documentElement.style.removeProperty('--toast-bottom')
+    }
+  }, [isOpen])
+
   const workspaceProps = useMemo(
     () => ({
       bookingNo,
@@ -331,6 +344,11 @@ export default function OperationsShell({
               gap: 8,
             }}
           >
+            {blockedHint && (
+              <p role="status" className="operations-shell__blocked">
+                Still needed: {blockedHint}
+              </p>
+            )}
             <div
               className="operations-shell__actions"
             >

@@ -16,6 +16,7 @@ import { BarcodeScannerModal } from '../../components/ui/BarcodeScannerModal'
 import { Input } from '../../components/ui/Input'
 import { Unavailable } from '../../components/ui/Unavailable'
 import { useFloorViewport } from '../operations/floorPanelContext'
+import { nextRequirement } from '../operations/nextRequirement'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../components/ui/Toast'
 import { RentalIntelFromFloor } from '../../components/intel/RentalIntelFromFloor'
@@ -488,6 +489,8 @@ export interface ReturnWorkspaceProps {
     isDirty: boolean
     label?: string
     error?: string | null
+    /** First requirement still unmet, worded for the footer beside a disabled Confirm. */
+    blockedReason?: string | null
   }) => void
 }
 
@@ -1144,9 +1147,11 @@ export default function ReturnWorkspace({
   }
 
   const isDirty = Object.keys(marks).length > 0 || sessionNotes.trim().length > 0 || sigReturning !== null || sigWarehouse !== null
+  const blockedReason = nextRequirement(gates.filter((g) => !g.pass).map((g) => g.label))
   useEffect(() => {
     onRegisterActions?.({
       canComplete,
+      blockedReason,
       dispatching,
       complete: completeSession,
       isDirty,
@@ -1154,7 +1159,7 @@ export default function ReturnWorkspace({
       error: dispatchError,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError])
+  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */
 

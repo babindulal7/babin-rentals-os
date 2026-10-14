@@ -18,6 +18,7 @@ import { Input } from '../../components/ui/Input'
 import { Unavailable } from '../../components/ui/Unavailable'
 import { CompactButton } from '../../components/ui/TouchTarget'
 import { useFloorViewport } from '../operations/floorPanelContext'
+import { nextRequirement } from '../operations/nextRequirement'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../components/ui/Toast'
 import { RentalIntelFromFloor } from '../../components/intel/RentalIntelFromFloor'
@@ -488,6 +489,8 @@ export interface PackingWorkspaceProps {
     isDirty: boolean
     label?: string
     error?: string | null
+    /** First requirement still unmet, worded for the footer beside a disabled Confirm. */
+    blockedReason?: string | null
   }) => void
 }
 
@@ -1137,9 +1140,11 @@ export default function PackingWorkspace({
     sessionNotes.trim().length > 0 ||
     photoCount > 0 ||
     Object.keys(verifiedKitDeps).length > 0
+  const blockedReason = nextRequirement(gates.filter((g) => !g.pass).map((g) => g.label))
   useEffect(() => {
     const actions = {
       canComplete,
+      blockedReason,
       dispatching,
       complete: completePacking,
       isDirty,
@@ -1149,7 +1154,7 @@ export default function PackingWorkspace({
     registerActions(actions)
     onRegisterActions?.(actions)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [registerActions, onRegisterActions, canComplete, dispatching, isDirty, dispatchError])
+  }, [registerActions, onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */
 

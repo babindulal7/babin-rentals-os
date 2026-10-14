@@ -10,6 +10,7 @@ import { EmptyState, ErrorBanner } from '../../components/ui/StateViews'
 import { PageBody } from '../../components/ui/PageBody'
 import { Unavailable } from '../../components/ui/Unavailable'
 import { useFloorViewport } from '../operations/floorPanelContext'
+import { nextRequirement } from '../operations/nextRequirement'
 import { useAuth } from '../../lib/auth'
 import { RentalIntelFromFloor } from '../../components/intel/RentalIntelFromFloor'
 import { EquipmentIntelFromFloor } from '../../components/intel/EquipmentIntelFromFloor'
@@ -468,6 +469,8 @@ export interface HandoverWorkspaceProps {
     isDirty: boolean
     label?: string
     error?: string | null
+    /** First requirement still unmet, worded for the footer beside a disabled Confirm. */
+    blockedReason?: string | null
   }) => void
 }
 
@@ -1268,9 +1271,11 @@ export default function HandoverWorkspace({
   }
 
   const isDirty = Object.keys(marks).length > 0 || sessionNotes.trim().length > 0 || signatures.receiver !== null || signatures.warehouse !== null
+  const blockedReason = nextRequirement(gates.filter((g) => !g.passing).map((g) => g.label))
   useEffect(() => {
     onRegisterActions?.({
       canComplete,
+      blockedReason,
       dispatching,
       complete: completeSession,
       isDirty,
@@ -1278,7 +1283,7 @@ export default function HandoverWorkspace({
       error: dispatchError,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError])
+  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */
 

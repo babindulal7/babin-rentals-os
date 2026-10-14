@@ -55,3 +55,6 @@
 }
 .operations-v2__table tbody tr.operations-v2__row--active { background: color-mix(in srgb, var(--nav-active-bg) 60%, transparent); box-shadow: inset 3px 0 0 var(--primary); }
 .operations-v2__table tbody tr.operations-v2__row--cursor { outline: 2px solid var(--focus-ring, var(--primary)); outline-offset: -2px; }
+
+/* Why Confirm is disabled, in the footer beside it rather than far down the page. */
+.operations-shell__blocked { margin: 0; font-size: var(--t-meta); color: var(--text2); overflow-wrap: anywhere; }

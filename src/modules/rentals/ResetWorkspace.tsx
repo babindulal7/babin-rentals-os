@@ -13,6 +13,7 @@ import type { StatusKey } from '../../lib/status'
 import { JOBS, statusToken } from '../../lib/workflow'
 import type { BookingStatus, JobState } from '../../lib/workflow'
 import { useFloorViewport } from '../operations/floorPanelContext'
+import { nextRequirement } from '../operations/nextRequirement'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../components/ui/Toast'
 import { captureError } from '../../lib/monitoring'
@@ -291,6 +292,8 @@ export interface ResetWorkspaceProps {
     isDirty: boolean
     label?: string
     error?: string | null
+    /** First requirement still unmet, worded for the footer beside a disabled Confirm. */
+    blockedReason?: string | null
   }) => void
 }
 
@@ -992,9 +995,11 @@ export default function ResetWorkspace({
   }
 
   const isDirty = !untouched
+  const blockedReason = nextRequirement(gates.filter((g) => !g.pass).map((g) => g.label))
   useEffect(() => {
     onRegisterActions?.({
       canComplete,
+      blockedReason,
       dispatching,
       complete: completeResetJob,
       isDirty,
@@ -1002,7 +1007,7 @@ export default function ResetWorkspace({
       error: dispatchError,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError])
+  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */
 
@@ -1912,15 +1917,9 @@ export default function ResetWorkspace({
                     ))}
                     <p style={{ margin: '6px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
                       Exceptions do not block completion — a recorded problem routed the item out of this queue.
-                      {hasSerializedUnits ? (
-                        <>
-                          {' '}Completing writes <span className="identifier">reset_completed_at</span> on {readyAssetIds.length} unit{readyAssetIds.length === 1 ? '' : 's'} {/* and,
-                          per §1.5, changes no booking status. */}and, per , changes no booking status. </>
-                      ) : (
-                        <>
-                          {' '}{/* All items are quantity-tracked. Completing records warehouse floor reset verification and,
-                          per §1.5, changes no booking status. */}All items are quantity-tracked. Completing records warehouse floor reset verification and, per , changes no booking status. </>
-                      )}
+                      {' '}{hasSerializedUnits
+                        ? `Completing marks ${readyAssetIds.length} unit${readyAssetIds.length === 1 ? '' : 's'} reset. The booking stays Returned.`
+                        : 'Completing records the floor reset. The booking stays Returned.'}
                     </p>
                   </div>
                 </Card>

@@ -1,5 +1,26 @@
 # Progress Log
 
+## 2026-10-14 (d) — Floor run end-to-end: footer says what is still needed; toast off the button; Reset copy
+
+**Did**
+- Drove booking 818 through Pack → Handover → Return → Reset in the queue dock (seeded mock, Owner, 1440px) and counted taps from the queue row. Measured minimum taps to a committed stage: Pack 3 (open, Quick Pack, Confirm); Handover 5 from the Pack tab (Verify Both, Quick Dispatch, Mark Cleared ×2 for the payment and deposit gates, Confirm); Return 2 (Check In All, Confirm); Reset 2 (Reset All, Confirm). Within R-39 as far as the budgets in this repo say; the budget file itself (`RULINGS-2026-09-19.md`) is not in this repo, so no budget was compared.
+- Found and fixed: (1) a disabled Confirm gave no reason; the gate list sat ~2,500px down the Handover page. Each workspace now reports its first unmet requirement (`blockedReason`, worded by `operations/nextRequirement.ts`) and the shell footer shows "Still needed: <requirement> (+N more)" beside the disabled button, updating as items are ticked. (2) The success toast sat exactly over the footer's Confirm button; the shell lifts it (`--toast-bottom`, `Toast.tsx`) while a job is open. (3) Reset's guidance read "…and, per , changes no booking status" (a stripped reference) and named a database column; reworded to "The booking stays Returned."
+- Not changed: gate rules, payment/deposit certification, signatures, any action or permission.
+
+**Ruled**
+- No product, permission or schema change. Revert = drop `blockedReason`/`blockedHint` and the `--toast-bottom` effect; restore the Reset sentence.
+- Observed, not changed (TODO(decision)): the Handover "Handing Over With Money Outstanding" card tells an Owner session "Your role cannot view rental balances" in the mock; check whether that is the mock role or a real gate before touching it.
+
+**Verified**
+- typecheck 0; eslint on `src` clean; lint:shell, lint:ui-copy, contrast 82/82 pass; full suite 351 files / 4,460 tests pass; new tests: hint shown/hidden, toast offset set and cleared, `nextRequirement`.
+- Browser (seeded mock): hint text confirmed at each Handover step ("Receiver Verified (+5 more)" → … → none); toast and Confirm bounding boxes do not overlap; zero page errors. Reset and Return hints were not separately screenshotted. Phone/tablet, real data and touch not driven.
+
+## Completion
+Not re-counted: no migration, action or capability changed; figures in the entries below stand.
+
+## Remaining
+- Phone/tablet pass of the same run; the Handover length and per-row Missing decision; Save Draft stub decision; consistent Complete position on the standalone pages.
+
 ## 2026-10-14 (c) — Floor workflow audit: Pack / Handover / Return / Reset made calmer inside the shell
 
 **Did**
