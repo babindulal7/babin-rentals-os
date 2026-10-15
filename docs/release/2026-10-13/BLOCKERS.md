@@ -36,7 +36,7 @@
 - **Description:** Similar to Calendar, these modules pass multiple contextual buttons into the header which crowd or truncate on 375px phone screens.
 - **Impact:** Header controls compete for width; titles truncate aggressively or push action buttons out of viewport.
 - **Required Resolution:** Consolidate secondary buttons into More menus, ensure page-level single primary action ownership, and align with the 64px single-header specification.
-- **Status:** **ACTIVE SPRINT / QUEUED NEXT (Follows Calendar Acceptance)**
+- **Status:** **RESOLVED & LOCALLY VERIFIED (15 Oct 2026)**. Finance was done 13 Oct. Operations and Settings were done 15 Oct for phone **and tablet**: at 768px both titles also measured 0px wide. Below 1280px the secondary actions live in More; measured clean at 360/375/390/768/1024/1280 in the mock build (measurements in PROGRESS 2026-10-15; screenshots kept on the old line, commit `4224763`, `artifacts/header-decrowding-2026-10-15/`). Physical devices are still pending (Task 4.1).
 
 ---
 
@@ -45,7 +45,7 @@
 - **Description:** While local PGlite passes 160 migrations, 30 lifecycle steps, and anon exposure checks, verification against a live network-accessible Supabase project using real authenticated JWTs (Owner, Coordinator, Warehouse, Client) has not yet been executed for this release commit.
 - **Impact:** Network-level RLS, PostgREST view serializations, real token expiry, and storage bucket policies cannot be certified on PGlite alone.
 - **Hard Stop:** Under N-5, no automated or unreviewed database push may be performed. The Owner must review the release artifact, rehearse `BACKUP_PROTOCOL.md`, and authorize migration execution.
-- **Status:** **HOLD (Pending Staging Provisioning & Owner Sign-off)**
+- **Status:** **HOLD (Pending Staging Provisioning & Owner Sign-off)**. 15 Oct: the live registry records everything through 0156, so the pending set is 0157–0162 (`docs/live/schema_migrations_2026-10-15.txt`, `npm run db:plan`). The read-only harness is not in this clean repository; it is on the old-line branches `fix/ci-mock-tests-and-baseline-2026-10-14` and `claude/remaining-task-49862e` (`artifacts/staging-verification-2026-10-14/`).
 
 ---
 

@@ -37,7 +37,9 @@
   align-items: center;
   gap: 16px;
   min-width: 0;
-  flex: 1;
+  /* A real basis, so a narrow card wraps the theme switcher onto its own line
+     instead of squeezing the name and branch underneath it (seen at 375px). */
+  flex: 1 1 260px;
 }
 
 .app-settings-avatar-wrap {
