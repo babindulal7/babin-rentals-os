@@ -1,3 +1,4 @@
+import { PRODUCTIONS_HUB_PATH, rentalAuditLogPath, rentalInvoicesPath } from '../../lib/routeTargets'
 import { calculateDraftTotal } from '../../lib/rentalDraftPricing'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { csvCell } from '../../lib/csv'
@@ -8,7 +9,7 @@ import Icon from '../../components/ui/Icon'
 import { FooterNote } from '../../components/ui/Page'
 import { RentalTimeline } from './RentalTimeline'
 import { RentalSummaryModal } from './modals/RentalSummaryModal'
-import { WorkspaceHeaderRightActions, WorkspaceHeaderSearch } from '../../components/shell/WorkspacePortal'
+import { WorkspaceHeaderSearch, WorkspaceHeaderSecondaryActions, WorkspaceHeaderMoreActions, WorkspaceHeaderPhoneSearchActions, WorkspaceHeaderAddActions } from '../../components/shell/WorkspacePortal'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { OverflowMenu } from '../../components/ui/OverflowMenu'
 import { Button } from '../../components/ui/Button'
@@ -1589,9 +1590,15 @@ export default function RentalsList() {
       </WorkspaceHeaderSearch>
 
       {/* Action portal into the shell's original fixed-height header */}
-      <WorkspaceHeaderRightActions>
-        <span className="rentals-header-actions" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          {/* Mobile search toggle: opens an overlay, does NOT grow the header */}
+      {/* Same button family = same shell position on every screen. */}
+      <FilterButton
+        onClick={() => setFiltersOpen((open) => !open)}
+        activeCount={f.activeCount}
+        controls="rentals-filters"
+        expanded={filtersOpen}
+      />
+      {viewport === 'phone' && (
+        <WorkspaceHeaderPhoneSearchActions>
           <button
             type="button"
             className="rentals-header-mobile-search-btn"
@@ -1602,43 +1609,34 @@ export default function RentalsList() {
           >
             <Icon name="search" size={16} />
           </button>
-
-          {viewport !== 'phone' && <FilterButton
-            onClick={() => setFiltersOpen((open) => !open)}
-            activeCount={f.activeCount}
-            controls="rentals-filters"
-            expanded={filtersOpen}
-            inHeader={false}
-          />}
-
-          {/* When exactly 1 rental is selected, expose its operations menu in the header */}
+        </WorkspaceHeaderPhoneSearchActions>
+      )}
+      <WorkspaceHeaderSecondaryActions>
+          {/* Booking operations stays available at all widths. */}
           {selectedHeaderRental && canOperate && (
             <BookingOperationsMenu
               bookingNo={selectedHeaderRental.bookingNo}
               bookingStatus={selectedHeaderRental.status as BookingStatus}
+              compact={viewport !== 'desktop'}
             />
           )}
 
-          {canWriteDesk && (
-            <Button
-              variant="primary"
-              size="sm"
-              icon="plus"
-              aria-label="New Rental"
-              onClick={() => navigate('/rentals/new')}
-            >
-              {viewport === 'phone' ? 'New' : 'New Rental'}
-            </Button>
-          )}
 
+          {/* Data freshness badge: visible only on 1920px+ viewports to protect header width */}
+          <span className="rentals-header-data-age">
+            <DataAgeBadge
+              loadedAt={list.lastFetchedAt}
+              onRefresh={refreshAll}
+              loading={list.loading}
+            />
+          </span>
+
+      </WorkspaceHeaderSecondaryActions>
+      <WorkspaceHeaderMoreActions>
           <OverflowMenu
             ariaLabel="More rentals actions"
             items={[
-              ...(viewport === 'phone' ? [{
-                label: f.activeCount > 0 ? `Filters (${f.activeCount})` : 'Filters',
-                icon: 'filter' as const,
-                onClick: () => setFiltersOpen((open) => !open),
-              }] : []),
+
               ...(selectedHeaderRental
                 ? [
                     {
@@ -1683,7 +1681,7 @@ export default function RentalsList() {
                           {
                             label: `Find Invoices (${selectedHeaderRental.bookingNo})`,
                             icon: 'invoice' as const,
-                            onClick: () => navigate(`/finance/invoices?search=${encodeURIComponent(selectedHeaderRental.bookingNo)}`),
+                            onClick: () => navigate(rentalInvoicesPath(selectedHeaderRental.bookingNo)),
                           },
                         ]
                       : []),
@@ -1692,7 +1690,7 @@ export default function RentalsList() {
                           {
                             label: `Audit Log (${selectedHeaderRental.bookingNo})`,
                             icon: 'checklist' as const,
-                            onClick: () => navigate(`/audit?recordId=${encodeURIComponent(selectedHeaderRental.id)}`),
+                            onClick: () => navigate(rentalAuditLogPath(selectedHeaderRental.id)),
                           },
                         ]
                       : []),
@@ -1710,7 +1708,7 @@ export default function RentalsList() {
               {
                 label: 'Productions Hub',
                 icon: 'queues' as const,
-                onClick: () => navigate('/crew/productions'),
+                onClick: () => navigate(PRODUCTIONS_HUB_PATH),
               },
               {
                 label: 'Scan Barcode',
@@ -1725,16 +1723,23 @@ export default function RentalsList() {
             ]}
           />
 
-          {/* Data freshness badge: visible only on 1920px+ viewports to protect header width */}
-          <span className="rentals-header-data-age">
-            <DataAgeBadge
-              loadedAt={list.lastFetchedAt}
-              onRefresh={refreshAll}
-              loading={list.loading}
-            />
-          </span>
-        </span>
-      </WorkspaceHeaderRightActions>
+
+      </WorkspaceHeaderMoreActions>
+      <WorkspaceHeaderAddActions>
+          {canWriteDesk && (
+            <Button
+              variant="primary"
+              size="sm"
+              icon="plus"
+              aria-label="New Rental"
+              onClick={() => navigate('/rentals/new')}
+            >
+              {viewport === 'phone' ? 'New' : 'New Rental'}
+            </Button>
+          )}
+
+
+      </WorkspaceHeaderAddActions>
 
       {/* Mobile search overlay — drops below the header when toggled, does not expand header */}
       {mobileSearchOpen && (
@@ -2676,6 +2681,11 @@ export default function RentalsList() {
         <RecordPaymentModal
           isOpen={paymentModalOpen}
           onClose={() => setPaymentModalOpen(false)}
+          /* RULING 2026-10-14: with exactly one rental selected, its own payable invoice is the
+             default; otherwise nothing is preselected (see `defaultInvoiceId`). */
+          initialInvoiceId={
+            (selectedHeaderRental && availableInvoices.find((inv) => inv.booking === selectedHeaderRental.bookingNo)?.id) || ''
+          }
           invoices={availableInvoices}
           invoicesError={availableInvoicesError}
           onRetryInvoices={() => void fetchAvailableInvoices()}

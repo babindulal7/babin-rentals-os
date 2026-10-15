@@ -419,7 +419,7 @@ export const EXPENSES: ExpenseRow[] = [
     branch: 'Boudha (Head Office)',
     recurring: false,
     attachments: 1,
-    note: /* A government fee is a genuine expense; VAT and TDS are not (§4.1). */ "A government fee is a genuine expense; VAT and TDS are not .",
+    note: /* A government fee is a genuine expense; VAT and TDS are not (§4.1). */ "A government fee is a genuine expense; VAT and TDS are not.",
   },
   {
     id: 'EXP-2026-0712',
@@ -461,7 +461,7 @@ export const EXPENSES: ExpenseRow[] = [
     branch: 'Boudha (Head Office)',
     recurring: false,
     attachments: 1,
-    note: /* Consumables stay expenses; a serialised body above the threshold would be an asset (§3.1). */ "Consumables stay expenses; a serialised body above the threshold would be an asset .",
+    note: /* Consumables stay expenses; a serialised body above the threshold would be an asset (§3.1). */ "Consumables stay expenses; a serialised body above the threshold would be an asset.",
   },
   {
     id: 'EXP-2026-0710',
@@ -728,7 +728,7 @@ export const EXPENSES: ExpenseRow[] = [
     branch: 'Boudha (Head Office)',
     recurring: false,
     attachments: 0,
-    note: /* Rejected — not a company cost. The submitter may edit and resubmit (§7.2). */ "Rejected — not a company cost. The submitter may edit and resubmit .",
+    note: /* Rejected — not a company cost. The submitter may edit and resubmit (§7.2). */ "Rejected — not a company cost. The submitter may edit and resubmit.",
   },
   {
     id: 'EXP-2026-0698',
@@ -749,7 +749,7 @@ export const EXPENSES: ExpenseRow[] = [
     branch: 'Boudha (Head Office)',
     recurring: false,
     attachments: 0,
-    note: /* Cancelled after the duplicate check flagged the same vendor and bill number (§7.3). */ "Cancelled after the duplicate check flagged the same vendor and bill number .",
+    note: /* Cancelled after the duplicate check flagged the same vendor and bill number (§7.3). */ "Cancelled after the duplicate check flagged the same vendor and bill number.",
   },
 ]
 

@@ -52,3 +52,37 @@ export function WorkspaceHeaderRightActions({ children }: { children: ReactNode 
   if (!workspace) return <>{children}</>
   return workspace.headerRightActionsElement ? createPortal(children, workspace.headerRightActionsElement) : null
 }
+
+/** Secondary page verbs have one canonical header slot, left of Filters. */
+export function WorkspaceHeaderSecondaryActions({ children }: { children: ReactNode }) {
+  const workspace = useOptionalWorkspace()
+  if (!workspace) return <>{children}</>
+  return workspace.headerSecondaryActionsElement ? createPortal(children, workspace.headerSecondaryActionsElement) : null
+}
+
+/** More/actions menus live between Add and Save, never inside the Save slot. */
+export function WorkspaceHeaderMoreActions({ children }: { children: ReactNode }) {
+  const workspace = useOptionalWorkspace()
+  if (!workspace) return <>{children}</>
+  return workspace.headerMoreActionsElement ? createPortal(children, workspace.headerMoreActionsElement) : null
+}
+
+/** Phone-only contextual search button, anchored beside the avatar on every page. */
+export function WorkspaceHeaderPhoneSearchActions({ children }: { children: ReactNode }) {
+  const workspace = useOptionalWorkspace()
+  if (!workspace) return <>{children}</>
+  return workspace.headerPhoneSearchActionsElement ? createPortal(children, workspace.headerPhoneSearchActionsElement) : null
+}
+
+/** Creation buttons always occupy Add, not the form Save/Confirm position. */
+export function WorkspaceHeaderAddActions({ children }: { children: ReactNode }) {
+  const workspace = useOptionalWorkspace()
+  const setActive = workspace?.setHasPageAddActions
+  useLayoutEffect(() => {
+    if (!setActive) return
+    setActive(true)
+    return () => setActive(false)
+  }, [setActive])
+  if (!workspace) return <>{children}</>
+  return workspace.headerAddActionsElement ? createPortal(children, workspace.headerAddActionsElement) : null
+}

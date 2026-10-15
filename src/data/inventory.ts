@@ -864,7 +864,7 @@ export const FILTER_RAIL: RailRow[] = [
     label: 'Brand',
     icon: 'flag',
     reason:
-      /* products.brand is a real column (0004:90) — what is missing is the list of brands to tick. That is a distinct-value query, and lib/queries/inventory.ts filters the catalogue rather than enumerating it. */ "products.brand is a real column (0004:90) — what is missing is the list of brands to tick. That is a distinct-value query, and shared tools filters the catalogue rather than enumerating it.",
+      /* products.brand is a real column (0004:90) — what is missing is the list of brands to tick. That is a distinct-value query, and lib/queries/inventory.ts filters the catalogue rather than enumerating it. */ "Brands are recorded, but the list of brands to choose from is not built yet.",
   },
   { kind: 'live', key: 'Status', label: 'Status', icon: 'activity', options: INV_ORDER },
   {
@@ -914,7 +914,7 @@ export const FILTER_RAIL: RailRow[] = [
     label: 'Purchase Value',
     icon: 'dollar',
     reason:
-      /* products_v.purchase_price is a real, money-masked column (0048:616-619). Like Purchase Date it needs a range control this rail does not have — and the query module deliberately never names purchase_price in a select. */ "products_v.purchase_price is a real, money-masked column (0048:616-619). Like Purchase Date it needs a range control this rail does not have — and the recorded details deliberately never names purchase_price in a select.",
+      /* products_v.purchase_price is a real, money-masked column (0048:616-619). Like Purchase Date it needs a range control this rail does not have — and the query module deliberately never names purchase_price in a select. */ "Filtering by purchase price needs a range control this panel does not have yet.",
     money: true,
   },
   { kind: 'live', key: 'Condition', label: 'Condition', icon: 'eye', options: CONDITIONS },

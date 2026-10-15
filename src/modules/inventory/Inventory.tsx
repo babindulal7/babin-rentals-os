@@ -11,7 +11,6 @@ import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { FilterButton, FilterDrawer } from '../../components/ui/FilterDrawer'
 import { Pagination } from '../../components/ui/Pagination'
 import { ListControlRow, ListWorkspace } from '../../components/ui/ListWorkspace'
-import { SearchInput } from '../../components/ui/SearchInput'
 import { useFacetCounts } from '../../lib/queries/facetCounts'
 import type { Kpi } from '../../components/ui/Page'
 import { PageBody } from '../../components/ui/PageBody'
@@ -1789,15 +1788,6 @@ export default function Inventory() {
           )}
 
           <div className="inventory-list-toolbar" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ order: 0, flex: '1 1 180px', maxWidth: 360, minWidth: 0 }}>
-              <SearchInput
-                value={searchTerm}
-                onChange={setSearchTerm}
-                onClear={() => setSearchTerm('')}
-                placeholder="Search equipment or asset code"
-                aria-label="Search inventory"
-              />
-            </div>
             <button
               type="button"
               onClick={() => setShowStats((s) => !s)}

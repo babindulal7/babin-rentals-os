@@ -53,6 +53,16 @@ interface WorkspaceContextType {
   setHeaderSearchElement: (el: HTMLElement | null) => void
   hasPageSearch: boolean
   setHasPageSearch: (active: boolean) => void
+  headerAddActionsElement: HTMLElement | null
+  setHeaderAddActionsElement: (el: HTMLElement | null) => void
+  hasPageAddActions: boolean
+  setHasPageAddActions: (active: boolean) => void
+  headerPhoneSearchActionsElement: HTMLElement | null
+  setHeaderPhoneSearchActionsElement: (el: HTMLElement | null) => void
+  headerSecondaryActionsElement: HTMLElement | null
+  setHeaderSecondaryActionsElement: (el: HTMLElement | null) => void
+  headerMoreActionsElement: HTMLElement | null
+  setHeaderMoreActionsElement: (el: HTMLElement | null) => void
   headerRightActionsElement: HTMLElement | null
   setHeaderRightActionsElement: (el: HTMLElement | null) => void
   hasPageRightActions: boolean
@@ -72,6 +82,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [headerSearchElement, setHeaderSearchElement] = useState<HTMLElement | null>(null)
   const [hasPageSearch, setHasPageSearch] = useState(false)
   const [hasPageRightActions, setHasPageRightActions] = useState(false)
+  const [headerAddActionsElement, setHeaderAddActionsElement] = useState<HTMLElement | null>(null)
+  const [hasPageAddActions, setHasPageAddActions] = useState(false)
+  const [headerPhoneSearchActionsElement, setHeaderPhoneSearchActionsElement] = useState<HTMLElement | null>(null)
+  const [headerSecondaryActionsElement, setHeaderSecondaryActionsElement] = useState<HTMLElement | null>(null)
+  const [headerMoreActionsElement, setHeaderMoreActionsElement] = useState<HTMLElement | null>(null)
   const [headerRightActionsElement, setHeaderRightActionsElement] = useState<HTMLElement | null>(null)
   const [pageInfo, setPageInfo] = useState<ReactNode | null>(null)
   const [headerData, setHeaderDataState] = useState<WorkspaceHeaderData | null>(null)
@@ -114,6 +129,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       rightPanelElement, setRightPanelElement,
       headerActionsElement, setHeaderActionsElement,
       headerSearchElement, setHeaderSearchElement, hasPageSearch, setHasPageSearch,
+      headerAddActionsElement, setHeaderAddActionsElement, hasPageAddActions, setHasPageAddActions,
+      headerPhoneSearchActionsElement, setHeaderPhoneSearchActionsElement,
+      headerSecondaryActionsElement, setHeaderSecondaryActionsElement,
+      headerMoreActionsElement, setHeaderMoreActionsElement,
       headerRightActionsElement, setHeaderRightActionsElement,
       hasPageRightActions, setHasPageRightActions,
       pageInfo, setPageInfo,

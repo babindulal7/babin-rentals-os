@@ -56,3 +56,9 @@ Typecheck, source lint, 21 focused tests, a 4,296-test full run, 160 local migra
 - The pre-refresh New Rental catalogue stayed within the phone viewport, but its View/Add Bundle buttons measured 26px tall. Recheck the current shared-button build and bring these controls to 44px in the next pass. Screenshot/measurement: `artifacts/workflow-responsive-2026-10-13/`.
 - Patch verification: typecheck; scoped lint; 4,405 tests in 347 files (including 12 Operations, 6 header ownership and 2 booking lookup tests); local PGlite 160/160 and lifecycle 30/30; production and mock builds. Theme contrast at follow-up: 82/82. Concurrent changes made after these runs are outside this evidence.
 - Browser cache was temporarily bypassed for the test tab because it retained the old offline build; cache settings and viewport overrides were restored afterward. Evidence covers dark Chromium viewport emulation, not physical iPad Safari or native zoom.
+
+## Catalogue follow-up — 15 October 2026
+
+- New Rental catalogue View/Add Bundle, crew assignment and transport selection buttons now have visible 44px minimum dimensions, larger labels/icons and wrapping action rows with 8px gaps. The previous 26px painted controls depended on an invisible touch inset. Existing selection callbacks and permission gates are unchanged.
+- The earlier apparent bundle removal failure was an off-screen browser click: keyboard activation removed the selected line, and the visible bundle menu's Remove all action cleared the remaining lines and returned the summary to zero items. This is local mock interaction evidence, not persisted booking acceptance.
+- Current-run verification and screenshots are recorded in the newest `PROGRESS.md` entry. Physical iPad Safari, native zoom, all booking statuses, roles and persisted writes remain in the app-wide acceptance queue.

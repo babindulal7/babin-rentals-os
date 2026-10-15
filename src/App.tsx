@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { AUDIT_LOG_PATH, PRODUCTIONS_HUB_PATH, financeTabPath, type FinanceTabSlug } from './lib/routeTargets'
 import Sidebar from './components/shell/Sidebar'
 import BottomBar, { BAR_BOX } from './components/shell/BottomBar'
 import HeaderBar from './components/shell/Header'
@@ -83,6 +84,11 @@ const TimesheetTab      = lazy(() => import('./modules/crew/TimesheetTab'))
 const ProductionsList   = lazy(() => import('./modules/rentals/ProductionsList'))
 const WarrantyTracker   = lazy(() => import('./modules/inventory/WarrantyTracker'))
 const InternalNotesPage = lazy(() => import('./modules/notes/InternalNotesPage'))
+
+function FinanceTabRedirect({ tab }: { tab: FinanceTabSlug }) {
+  const { search, hash } = useLocation()
+  return <Navigate to={financeTabPath(tab, search, hash)} replace />
+}
 
 function RentalsNewRedirect() {
   const [searchParams] = useSearchParams()
@@ -191,7 +197,7 @@ export default function App() {
         />
 
         <Route
-          path="/rentals/productions"
+          path={PRODUCTIONS_HUB_PATH}
           element={
             <Shell crumbs={[{ label: 'Rentals', to: '/rentals' }, { label: 'Productions Hub' }]} search="Search productions, client, shoot…">
               <ProductionsList />
@@ -495,12 +501,12 @@ export default function App() {
             standalone mount went the way of its five siblings below. Still a
             money surface by the `/finance` prefix. Revert = restore the Shell +
             <DailyClosing /> route. */}
-        <Route path="/finance/closing" element={<Navigate to="/finance?tab=closing" replace />} />
-        <Route path="/finance/invoices" element={<Navigate to="/finance?tab=invoices" replace />} />
-        <Route path="/finance/payments" element={<Navigate to="/finance?tab=payments" replace />} />
-        <Route path="/finance/expenses" element={<Navigate to="/finance?tab=expenses" replace />} />
-        <Route path="/finance/documents" element={<Navigate to="/finance?tab=documents" replace />} />
-        <Route path="/finance/reports" element={<Navigate to="/finance?tab=reports" replace />} />
+        <Route path="/finance/closing" element={<FinanceTabRedirect tab="closing" />} />
+        <Route path="/finance/invoices" element={<FinanceTabRedirect tab="invoices" />} />
+        <Route path="/finance/payments" element={<FinanceTabRedirect tab="payments" />} />
+        <Route path="/finance/expenses" element={<FinanceTabRedirect tab="expenses" />} />
+        <Route path="/finance/documents" element={<FinanceTabRedirect tab="documents" />} />
+        <Route path="/finance/reports" element={<FinanceTabRedirect tab="reports" />} />
 
         <Route
           path="/reports/pulse"
@@ -763,10 +769,10 @@ export default function App() {
         <Route path="/tools/pricing" element={<Navigate to="/tools?tab=pricing" replace />} />
 
         <Route
-          path="/admin/audit-log"
+          path={AUDIT_LOG_PATH}
           element={
             <Shell crumbs={[{ label: 'Settings', to: '/settings' }, { label: 'Audit Log' }]}>
-              <AuditLog />
+              <AuditLog recordId={new URLSearchParams(location.search).get('recordId')} />
             </Shell>
           }
         />

@@ -16,8 +16,9 @@ import type { BookingStatus, JobState } from '../../lib/workflow'
 import { BarcodeScannerModal, type ScanOutcome } from '../../components/ui/BarcodeScannerModal'
 import { Input } from '../../components/ui/Input'
 import { Unavailable } from '../../components/ui/Unavailable'
-import { CompactButton } from '../../components/ui/TouchTarget'
-import { useViewport } from '../../lib/device'
+import { CompactButton, TapCheckbox } from '../../components/ui/TouchTarget'
+import { useFloorViewport } from '../operations/floorPanelContext'
+import { nextRequirement } from '../operations/nextRequirement'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../components/ui/Toast'
 import { RentalIntelFromFloor } from '../../components/intel/RentalIntelFromFloor'
@@ -488,6 +489,8 @@ export interface PackingWorkspaceProps {
     isDirty: boolean
     label?: string
     error?: string | null
+    /** First requirement still unmet, worded for the footer beside a disabled Confirm. */
+    blockedReason?: string | null
   }) => void
 }
 
@@ -505,7 +508,7 @@ export default function PackingWorkspace({
   const { user } = useAuth()
   const { showSuccessToast } = useToast()
   /* Law 13/14 — width decides, at v4.1 §7.7's 768 / 1280. */
-  const viewport = useViewport()
+  const viewport = useFloorViewport()
   const desktop = viewport === 'desktop'
   const phone = viewport === 'phone'
   const place = floorPlacements(desktop, phone)
@@ -1137,9 +1140,11 @@ export default function PackingWorkspace({
     sessionNotes.trim().length > 0 ||
     photoCount > 0 ||
     Object.keys(verifiedKitDeps).length > 0
+  const blockedReason = nextRequirement(gates.filter((g) => !g.pass).map((g) => g.label))
   useEffect(() => {
     const actions = {
       canComplete,
+      blockedReason,
       dispatching,
       complete: completePacking,
       isDirty,
@@ -1149,7 +1154,7 @@ export default function PackingWorkspace({
     registerActions(actions)
     onRegisterActions?.(actions)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [registerActions, onRegisterActions, canComplete, dispatching, isDirty, dispatchError])
+  }, [registerActions, onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */
 
@@ -1344,42 +1349,26 @@ export default function PackingWorkspace({
                   hover AND on a long-press, which is what the warehouse tablet
                   has.
                 */}
+                {!embedded && (
                 <Unavailable reason="Printing a packing list is not built. Nothing in the app generates a packing-list document, and there is no print stylesheet, so this would send the whole workspace — filters, rails and buttons — to the printer instead of a list.">
                   <Button icon="file" disabled>
                     Print Packing List
                   </Button>
                 </Unavailable>
-                {/*
-                 * The identity is the signed-in operator or there is no dispatch.
-                 * `saveDraft` is still an unimplemented stub the dispatcher
-                 * refuses before `execute` — the refusal is surfaced in
-                 * `dispatchError`, the inline persistent line this screen
-                 * already renders (Law 12). A draft button that does nothing
-                 * and says nothing is indistinguishable from one that saved.
-                 */}
-                <Button
-                  onClick={() => {
-                    if (!user) {
-                      setDispatchError('You are not signed in, so this draft cannot be saved against anyone. Nothing was written.')
-                      return
-                    }
-                    setDispatchError(null)
-                    import('../../actions/rentals/index')
-                      .then((m) => m.saveDraft({ id: floor.id }, { userId: user.id, role: user.role }))
-                      .catch((err) => {
-                        captureError(err, { where: 'PackingWorkspace.saveDraft' })
-                        setDispatchError(formatGateError(err))
-                      })
-                  }}
-                >
-                  Save Draft
-                </Button>
+                )}
+                {/* RULING 2026-10-14: Save Draft removed. It called `saveDraft({ id })`, which with no draft
+                    data only bumps `bookings.updated_at` — no tick, note or photo reached the server, and
+                    success showed nothing. The ticks already survive on this device (the restored-session
+                    banner above), so the button promised a save that did not happen. Revert = restore the
+                    button that dispatched `saveDraft({ id: floor.id }, …)` here. */}
               </div>
             </div>
 
             {/* §4 — read-only booking summary, one compact row. BS above AD.
                 Every cell is a real column off `fetchFloorBooking`; the seed
                 build's invented Payment / Crew cells are gone rather than faked. */}
+            {/* RULING 2026-10-14 (R14-4): inside the shell/dock the sheet title and booking strip already say this. */}
+            {!embedded && (
             <div className="floor-summary-bar">
               {[
                 { l: 'Client', v: floor.clientName ?? '—', big: true },
@@ -1404,6 +1393,7 @@ export default function PackingWorkspace({
                 </div>
               ))}
             </div>
+            )}
 
             {/*
               §3.2's three layouts, all of them REFLOW rather than hide (Rulings §7):
@@ -1421,7 +1411,7 @@ export default function PackingWorkspace({
             >
               {/* ── §5 left — bundle tree, counts derived from the real rows ── */}
               <FloorAside collapsible={desktop} side="left" width={260} label="Bundle / Item Tree" style={place.tree}>
-                <Card title="1 · Bundle / Item Tree">
+                <Card title="Bundle / Item Tree">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', paddingBottom: 9, borderBottom: '1px solid var(--border)' }}>
                     {/* --ready-text, not --st-progress-fg: this glyph carries no
                         yellow fill behind it, and the fg half of the pair is
@@ -1508,7 +1498,7 @@ export default function PackingWorkspace({
                   </div>
                 )}
                 <Card
-                  title="2 · Packing Checklist"
+                  title="Packing Checklist"
                   bodyStyle={{ padding: 0 }}
                   action={
                     phone ? (
@@ -1518,7 +1508,7 @@ export default function PackingWorkspace({
                       </div>
                     ) : (
                       <>
-                        <Button icon="zap" onClick={quickPackAll}>Quick Pack All (1-Click)</Button>
+                        <Button icon="zap" onClick={quickPackAll}>Quick Pack All</Button>
                         <Button icon="checklist" onClick={markPendingPacked}>Mark Pending Packed</Button>
                         <Button icon="camera" onClick={() => setShowScanner(true)}>Scan / Camera</Button>
                       </>
@@ -1674,7 +1664,8 @@ export default function PackingWorkspace({
                                               display: 'inline-flex',
                                               alignItems: 'center',
                                               gap: 4,
-                                              padding: '3px 7px',
+                                              minHeight: 'var(--tap)',
+                                              padding: '0 12px',
                                               borderRadius: 'var(--r-chip)',
                                               fontSize: '11px',
                                               fontWeight: 600,
@@ -1751,11 +1742,9 @@ export default function PackingWorkspace({
                             return (
                               <tr key={r.key} className={`floor-table-row ${s === 'Packed' ? 'is-packed' : s === 'Missing' ? 'is-missing' : ''}`} style={{ opacity: dim ? 0.35 : 1 }}>
                                 <td style={{ ...td, width: 26 }}>
-                                  <input
-                                    type="checkbox"
+                                  <TapCheckbox
                                     checked={s === 'Packed'}
                                     aria-label={`Pack ${r.name}`}
-                                    style={{ cursor: 'pointer' }}
                                     onChange={() => {
                                       if (s === 'Packed') clearMark(r.key)
                                       else pack(r.key, 'manual')
@@ -1793,7 +1782,8 @@ export default function PackingWorkspace({
                                                 display: 'inline-flex',
                                                 alignItems: 'center',
                                                 gap: 4,
-                                                padding: '2px 6px',
+                                                minHeight: 'var(--tap)',
+                                                padding: '0 12px',
                                                 borderRadius: 'var(--r-chip)',
                                                 fontSize: '11px',
                                                 fontWeight: 600,
@@ -2088,7 +2078,7 @@ export default function PackingWorkspace({
                   </div>
                 )}
 
-                <Card title="3 · Packing Summary">
+                <Card title="Packing Summary">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-md)' }}>
                     <Ring pct={pct} />
                     <div>
@@ -2174,7 +2164,7 @@ export default function PackingWorkspace({
                 {/* §9 Evidence — ⭐ §4.31: ONE photo per booking, not per case.
                     Honest about its own maturity: the count is local, no file
                     is uploaded, and the Evidence Workspace owns the real files. */}
-                <Card title="Evidence" action={<Link to={`/rentals/${id}/evidence`} style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--link)', textDecoration: 'none' }}>View All</Link>}>
+                <Card title="Evidence" action={<Link to={`/rentals/${id}/evidence`} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 'var(--tap)', padding: '0 8px', fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--link)', textDecoration: 'none' }}>View All</Link>}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 'var(--t-meta)' }}>
                     <Icon
                       name={photoCount > 0 ? 'checklist' : 'alert_triangle'}
