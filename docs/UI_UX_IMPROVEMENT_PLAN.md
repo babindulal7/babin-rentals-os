@@ -5,7 +5,7 @@ Started 13 October 2026. Active goal: improve button placement and user experien
 ## Design guidance
 
 Requested skills located and read:
-- `.agents/skills/high-end-visual-design/SKILL.md`.
+- `C:/Users/use/Desktop/Rental workspasce/.agents/skills/high-end-visual-design/SKILL.md` (relocated copy).
 - `C:/Users/use/.gemini/config/skills/agency-ui-designer/SKILL.md`.
 - `C:/Users/use/.gemini/config/skills/agency-ux-architect/SKILL.md`.
 - `C:/Users/use/.gemini/config/skills/agency-evidence-collector/SKILL.md`.
@@ -62,3 +62,12 @@ Typecheck, source lint, 21 focused tests, a 4,296-test full run, 160 local migra
 - New Rental catalogue View/Add Bundle, crew assignment and transport selection buttons now have visible 44px minimum dimensions, larger labels/icons and wrapping action rows with 8px gaps. The previous 26px painted controls depended on an invisible touch inset. Existing selection callbacks and permission gates are unchanged.
 - The earlier apparent bundle removal failure was an off-screen browser click: keyboard activation removed the selected line, and the visible bundle menu's Remove all action cleared the remaining lines and returned the summary to zero items. This is local mock interaction evidence, not persisted booking acceptance.
 - Current-run verification and screenshots are recorded in the newest `PROGRESS.md` entry. Physical iPad Safari, native zoom, all booking statuses, roles and persisted writes remain in the app-wide acceptance queue.
+
+
+## Selected-item follow-up — 16 October 2026
+
+- Selected equipment uses labelled cards when its pane is at most 900px wide, keeping the same cells, permission gates and callbacks. Wider panes retain the table. Quantity/day steppers, bundle toggles and item action triggers have visible 44px controls.
+- Bundle feedback now reports the number of components actually added, states that their rental charge is included, and no longer instructs staff to apply a second bundle discount.
+- Browser checks on current main covered actual CSS viewport widths 320, 390, 768, 1024, 1280 and 1440px without document overflow. Quantity 1 → 2 and days 2 → 3 gave Rs 2,700 for a Rs 450/day item. The tablet action menu was visible; Remove returned to the empty state. No booking was confirmed. Native browser zoom was retained; viewport overrides were reset.
+- Evidence: `artifacts/selected-items-2026-10-15/phone-390.png`, `tablet-768-menu.png`, and `responsive-measurements.json`. Automated checks and their timing are recorded in PROGRESS.md. These checks are Chromium viewport emulation, not physical iPad Safari acceptance.
+- Follow-up: the 768px screenshot exposes crowding in the shared header between Search and More. Keep this separate from the now-readable selected-item cards. The app-wide status/role/persistence matrix remains open.

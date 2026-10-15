@@ -1,5 +1,39 @@
 # Progress Log
 
+## 2026-10-16 — Selected rental items: responsive cards and interaction verification
+
+**Did**
+- Completed the selected-item follow-up begun 15 October: cards below a 900px pane width, labelled quantity/days/prices/availability, and visible 44px steppers, bundle toggles and action triggers. The table remains at wider pane widths. Existing cells, callbacks and money/read-only gates are reused. These changes were incorporated into main by the concurrent integration.
+- Corrected bundle feedback to count components actually added and describe their included charge; removed the instruction to apply a second bundle discount.
+- Removed an unused `womenDopEligible` destructured binding from useNewRentalSubmit after the resumed production build reported TS6133. The option contract and pricing behavior are unchanged.
+- Updated the app-wide plan and retained the separate 768px shared-header crowding finding.
+
+**Ruled**
+- No new product or permission ruling. Implements the existing touch-target and responsive requirements. No live migrations or booking submission.
+
+**Verified**
+- Original implementation run: typecheck, scoped ESLint, 356 test files / 4,508 tests passed, including the quantity/day/read-only regression and bundle pricing feedback assertion. Other sessions subsequently integrated additional changes; this count does not certify those later edits.
+- Resumed main at 9b74008c plus the unused-binding fix: typecheck; 21 targeted tests across RentalLineItemsTree, newRentalBusinessLogic and useNewRentalSubmit; scoped ESLint; local PGlite 163/163 migrations and lifecycle 30/30 passed. Contrast 82/82 passed. Production build passed (297 PWA precache entries).
+- Current-main Chromium checks: actual CSS viewport widths 320/390/768/1024/1280/1440 had document width equal to viewport width; cards at narrow pane widths and tables at wider widths. Controls compute to 44px. Quantity 1→2 and days 2→3 gave Rs 2,700 for a Rs 450/day line; tablet menu opened visibly and removal restored the empty state. No booking was confirmed. Existing native zoom retained; viewport overrides reset.
+- Screenshots and measurement JSON: artifacts/selected-items-2026-10-15/. The generated completion block below reads repository cached suite data (4,609); that is distinct from this session's full and targeted invocations above.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-15T20:30:13.256Z). Suite: 4609/4609 passed (recorded 2026-10-15T20:16:18.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-15T20:30:24.487Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Physical iPad/Safari, screen-reader acceptance, all booking statuses/roles, offline/error paths and persisted writes remain in the app-wide acceptance plan.
+- Shared header Search/More crowding at 768px remains a separate follow-up. No full-app completion claim.
+
 ## 2026-10-16 — Integration: Claude UX improvements, Delivery dispatch persistence, and Revenue credit reconciliation
 
 **Did**
