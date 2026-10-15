@@ -7,6 +7,8 @@
 - **Voided taxable amount:** sum of taxable_amount for voided invoices *issued in the window*. It is excluded from the displayed revenue and is not a second deduction.
 - **Paid void mismatch:** a voided invoice with paid_amount > 0 whose linked credit note amounts do not sum to paid_amount. This is a **manual review warning**, not an automatic write-off.
 - **Notes on active invoices:** displayed separately for review. Their tax meaning requires a dedicated legally reviewed credit-note adjustment ledger.
+- **Currency guard:** because credit_notes has no currency field, voided invoices and any invoice linked to a credit note must be NPR-denominated or the reconciliation refuses to display a combined NPR number. Other currencies require separate currency-aware reporting.
+- **Restatement:** the chart is a current snapshot of nonvoid invoices grouped by original issue date. Later voids can change prior-month totals. It is not a point-in-time issued-sales ledger.
 - Notes attached to invoices issued **outside** the selected window are not evaluated by this invoice-issue-date report, even if the note was created during the period. A true credit-note-period ledger will require separate date-basis reconciliation.
 
 ## Read path / access
@@ -33,6 +35,7 @@ Run on the dedicated branch, without live Supabase:
 ## Outside scope / release gates
 
 - Need a legally reviewed credit-note taxonomy (taxable base, VAT, adjustment effective date, partial credits) before publishing audited net revenue.
+- Review grant baseline 0093, credit-notes RLS in 0117, and security-definer void RPC in 0150; source-only review does not prove effective deployed grants, applied migrations, tenant isolation or complete visibility in live Supabase.
 - Need report-by-note-date and cross-period journal reconciliation, including all notes whose original invoice date falls outside the window.
 - Need accounting-system totals and bank/payment reconciliation with a read-only authorized role; synthetic tests alone do not substantiate finance statements.
 - Need live read-only RLS verification on a safely configured staging environment before release (particularly money-blind users).
