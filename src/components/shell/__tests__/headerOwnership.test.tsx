@@ -222,4 +222,22 @@ describe('page ownership of the application header', () => {
     expect(onSave).not.toHaveBeenCalled()
   })
 
+  it('protects bulk actions in the standalone PageHeader too', async () => {
+    state.role = 'Warehouse'
+    const onRestricted = vi.fn()
+    const selection = { count: 1, onClear: vi.fn(), actions: [
+      { id: 'payment', label: 'Record Payment', isMoneyAction: true, onClick: onRestricted },
+      { id: 'hold', label: 'Mark reviewed', enabled: () => false, disabledReason: 'Check units first', onClick: onRestricted },
+    ] }
+    await act(async () => root.render(<MemoryRouter>
+      <PageHeader title="Inventory" bulkSelection={selection} />
+    </MemoryRouter>))
+    expect(container.textContent).not.toContain('Record Payment')
+    const review = Array.from(container.querySelectorAll('button')).find((b) => b.textContent === 'Mark reviewed')
+    expect(review?.disabled).toBe(true)
+    expect(review?.title).toBe('Check units first')
+    await act(async () => review?.click())
+    expect(onRestricted).not.toHaveBeenCalled()
+  })
+
 })
