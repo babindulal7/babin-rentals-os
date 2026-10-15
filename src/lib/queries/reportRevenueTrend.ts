@@ -1,31 +1,86 @@
 import { supabase } from '../supabase'
-import { aggregateIssuedRevenue, type IssuedInvoiceSource, type RevenueTrend } from '../intel/revenueTrend'
+import {
+  aggregateIssuedRevenue,
+  reconcileInvoiceCredits,
+  type IssuedInvoiceWithPayment,
+  type InvoiceCreditNoteSource,
+  type RevenueTrend,
+  type RevenueCreditReconciliation,
+} from '../intel/revenueTrend'
 
-const FIELDS = 'id, issue_date, status, taxable_amount, currency, voided_at'
+const INVOICE_FIELDS = 'id, issue_date, status, taxable_amount, paid_amount, currency, voided_at'
+const CREDIT_FIELDS = 'id, invoice_id, amount'
 const PAGE_SIZE = 500
+const MAX_ROWS = 50_000
+const INVOICE_ID_BATCH = 100
+
+export interface IssuedRevenueReport extends RevenueTrend {
+  creditReconciliation: RevenueCreditReconciliation
+}
 
 /**
- * Read only financial invoice data. Call ONLY from a role authorized to read
- * executive revenue reporting; never fetch first and hide it afterwards.
- * Supabase RLS is the second and authoritative boundary.
+ * One authoritative report reader. Only call from authorized money-facing
+ * screens. Supabase RLS protects BOTH invoices and credit_notes.
+ *
+ * Include voided invoices in the read to reconcile their paid-amount credit
+ * notes. The trend itself still includes only issued NONVOID invoices.
+ * A credit note amount is a settlement/paid value, not a taxable sales credit.
+ * Do not subtract it from revenue.
+ *
+ * Pagination failures, inaccessible note rows and invalid values must not
+ * silently turn into "zero revenue" or an audited net sales claim.
  */
-export async function getIssuedRevenueTrend(fromAd: string, toAd: string): Promise<RevenueTrend> {
-  const rows: IssuedInvoiceSource[] = []
-  for (let page = 0; page < 100; page++) {
+export async function getIssuedRevenueTrend(fromAd: string, toAd: string): Promise<IssuedRevenueReport> {
+  // Validate the range before any database request.
+  aggregateIssuedRevenue([], fromAd, toAd)
+  const invoices: IssuedInvoiceWithPayment[] = []
+  let invoiceReadComplete = false
+
+  for (let offset = 0; offset < MAX_ROWS; offset += PAGE_SIZE) {
     const { data, error } = await supabase
       .from('invoices')
-      .select(FIELDS)
+      .select(INVOICE_FIELDS)
       .gte('issue_date', fromAd)
       .lte('issue_date', toAd)
-      .in('status', ['Sent', 'Partially Paid', 'Paid'])
-      .is('voided_at', null)
       .order('issue_date', { ascending: true })
       .order('id', { ascending: true })
-      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
+      .range(offset, offset + PAGE_SIZE - 1)
+
     if (error) throw new Error('Revenue source unavailable: ' + error.message)
     if (!data) throw new Error('Revenue source returned no confirmed dataset')
-    rows.push(...(data as unknown as IssuedInvoiceSource[]))
-    if (data.length < PAGE_SIZE) return aggregateIssuedRevenue(rows, fromAd, toAd)
+    invoices.push(...(data as IssuedInvoiceWithPayment[]))
+    if (data.length < PAGE_SIZE) {
+      invoiceReadComplete = true
+      break
+    }
   }
-  throw new Error('Revenue source exceeds safe report limit; narrow the period')
+  if (!invoiceReadComplete) throw new Error('Revenue source exceeds safe report limit; narrow the period')
+
+  const notes: InvoiceCreditNoteSource[] = []
+  const ids = invoices.map(row => row.id)
+  for (let start = 0; start < ids.length; start += INVOICE_ID_BATCH) {
+    const batch = ids.slice(start, start + INVOICE_ID_BATCH)
+    let creditReadComplete = false
+    for (let offset = 0; offset < MAX_ROWS; offset += PAGE_SIZE) {
+      const { data, error } = await supabase
+        .from('credit_notes')
+        .select(CREDIT_FIELDS)
+        .in('invoice_id', batch)
+        .order('id', { ascending: true })
+        .range(offset, offset + PAGE_SIZE - 1)
+      if (error) throw new Error('Credit-note source unavailable: ' + error.message)
+      if (!data) throw new Error('Credit-note source returned no confirmed dataset')
+      notes.push(...(data as InvoiceCreditNoteSource[]))
+      if (notes.length > MAX_ROWS) throw new Error('Credit-note report exceeds safe limit')
+      if (data.length < PAGE_SIZE) {
+        creditReadComplete = true
+        break
+      }
+    }
+    if (!creditReadComplete) throw new Error('Credit-note source exceeds safe report limit')
+  }
+
+  const trend = aggregateIssuedRevenue(invoices, fromAd, toAd)
+  const creditReconciliation = reconcileInvoiceCredits(invoices, notes)
+  return { ...trend, creditReconciliation }
 }
