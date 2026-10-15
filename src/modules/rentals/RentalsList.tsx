@@ -2681,6 +2681,11 @@ export default function RentalsList() {
         <RecordPaymentModal
           isOpen={paymentModalOpen}
           onClose={() => setPaymentModalOpen(false)}
+          /* RULING 2026-10-14: with exactly one rental selected, its own payable invoice is the
+             default; otherwise nothing is preselected (see `defaultInvoiceId`). */
+          initialInvoiceId={
+            (selectedHeaderRental && availableInvoices.find((inv) => inv.booking === selectedHeaderRental.bookingNo)?.id) || ''
+          }
           invoices={availableInvoices}
           invoicesError={availableInvoicesError}
           onRetryInvoices={() => void fetchAvailableInvoices()}

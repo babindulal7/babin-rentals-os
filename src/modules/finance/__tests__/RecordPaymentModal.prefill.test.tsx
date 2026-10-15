@@ -38,13 +38,19 @@ window.matchMedia = ((q: string) => ({
 })) as unknown as typeof window.matchMedia
 ;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
 
-const { RecordPaymentModal } = await import('../modals/RecordPaymentModal')
+const { RecordPaymentModal, defaultInvoiceId } = await import('../modals/RecordPaymentModal')
 
 const INV_A = '11111111-1111-4111-8111-111111111111'
 const INV_B = '22222222-2222-4222-8222-222222222222'
+// One booking with two invoices — the Booking Detail case, where preselecting the first is safe.
 const INVOICES = [
-  { id: INV_A, invoiceNo: 'INV-492', client: 'ABC Films', amount: 'Rs 1,39,506', status: 'Sent', outstandingRupees: 12_000 },
-  { id: INV_B, invoiceNo: 'INV-511', client: 'Manaslu', amount: 'Rs 51,867', status: 'Sent', outstandingRupees: 5_500 },
+  { id: INV_A, invoiceNo: 'INV-492', client: 'ABC Films', amount: 'Rs 1,39,506', status: 'Sent', booking: 'B-715', outstandingRupees: 12_000 },
+  { id: INV_B, invoiceNo: 'INV-511', client: 'ABC Films', amount: 'Rs 51,867', status: 'Sent', booking: 'B-715', outstandingRupees: 5_500 },
+]
+// Two clients' bookings — the Rentals list / Payments / Finance launcher case.
+const MIXED = [
+  { id: INV_A, invoiceNo: 'INV-91', client: 'Dhaulagiri Weddings', amount: 'Rs 33,448', status: 'Sent', booking: 'B-888', outstandingRupees: 33_448 },
+  { id: INV_B, invoiceNo: 'INV-101', client: 'Deepak Lama', amount: 'Rs 1,40,685', status: 'Sent', booking: 'B-903', outstandingRupees: 140_685 },
 ]
 
 async function mount(props: Record<string, unknown> = {}) {
@@ -155,5 +161,38 @@ describe('RecordPaymentModal — invoice fetch failure honesty (sweep D6)', () =
     const btn = Array.from(c.querySelectorAll('button')).find((b) => b.textContent === 'Try again')!
     await act(async () => { btn.click() })
     expect(retry).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('RecordPaymentModal — no wrong-client default (14 Oct 2026)', () => {
+  it('preselects nothing when the invoices span bookings: the picker says so and the amount stays empty', async () => {
+    const c = await mount({ invoices: MIXED })
+    expect(invoiceSelect(c).value).toBe('')
+    expect(invoiceSelect(c).options[invoiceSelect(c).selectedIndex]?.text).toBe('Select an invoice…')
+    expect(amountInput(c).value).toBe('')
+  })
+
+  it('refuses to record until an invoice is chosen, then prefills that invoice\'s outstanding', async () => {
+    const c = await mount({ invoices: MIXED })
+    const submit = Array.from(c.querySelectorAll('button')).find((b) => /Record Payment/.test(b.textContent ?? ''))!
+    await act(async () => { submit.click() })
+    expect(c.textContent).toContain('Please select an invoice.')
+    await changeSelect(invoiceSelect(c), INV_B)
+    expect(amountInput(c).value).toBe('140685')
+  })
+
+  it('still honours an invoice the caller names, such as the one selected rental', async () => {
+    const c = await mount({ invoices: MIXED, initialInvoiceId: INV_B })
+    expect(invoiceSelect(c).value).toBe(INV_B)
+    expect(amountInput(c).value).toBe('140685')
+  })
+
+  it('defaultInvoiceId: named → that one; one invoice → it; one booking → first; mixed or unknown bookings → none', () => {
+    expect(defaultInvoiceId(INV_B, MIXED)).toBe(INV_B)
+    expect(defaultInvoiceId('', [MIXED[0]!])).toBe(INV_A)
+    expect(defaultInvoiceId('', INVOICES)).toBe(INV_A)
+    expect(defaultInvoiceId('', MIXED)).toBe('')
+    expect(defaultInvoiceId('', [{ id: INV_A }, { id: INV_B }])).toBe('')
+    expect(defaultInvoiceId('', [])).toBe('')
   })
 })

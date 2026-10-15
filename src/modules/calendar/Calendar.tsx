@@ -1323,7 +1323,7 @@ function DayJobList({
       {overlayNote && (
         <p style={{ margin: 0, fontSize: 'var(--t-th)', color: 'var(--muted)', lineHeight: 1.45 }}>
           {/* Crew, maintenance and transport layers are desktop-only (§5.1 Notes), so this list shows the booking
-          layer only. */}Crew, maintenance and transport layers are desktop-only , so this list shows the booking layer only. </p>
+          layer only. */}Crew, maintenance and transport layers are desktop-only, so this list shows the booking layer only. </p>
       )}
     </div>
   )

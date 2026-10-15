@@ -1,5 +1,5 @@
 import { formatAd } from '../../lib/bs'
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { Button } from '../../components/ui/Page'
 import type { IconName } from '../../components/ui/Icon'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
@@ -9,6 +9,7 @@ import { JOB_ORDER, BOOKING_STATUS, JOBS, type BookingStatus, type JobName } fro
 import { stepWriteGate, stepDotState } from '../../lib/operationsShell'
 import { fetchFloorBooking, type FloorBooking } from '../../lib/queries/bookings'
 import { DomainEvents, EVENT_TYPES } from '../../events/eventBus'
+import { FLOOR_TWO_COLUMN_MIN, FloorNarrowContext } from './floorPanelContext'
 import './operationsShell.css'
 
 const PackingWorkspace = lazy(() => import('../rentals/PackingWorkspace'))
@@ -59,6 +60,8 @@ export interface WorkspaceActions {
   isDirty: boolean
   label?: string
   error?: string | null
+  /** First requirement still unmet, shown beside a disabled Confirm so the operator need not hunt for it. */
+  blockedReason?: string | null
 }
 
 export interface OperationsShellProps {
@@ -67,6 +70,10 @@ export interface OperationsShellProps {
   isOpen: boolean
   onClose: () => void
   initialJob?: JobName
+  /** `modal` (default) is the full-screen sheet; `panel` docks beside the queue at desktop width. */
+  layout?: 'modal' | 'panel'
+  /** Reports unsaved work so a host that can swap the booking can ask first. */
+  onDirtyChange?: (dirty: boolean) => void
   progress?: Partial<Record<JobName, { done: number; total: number }>>
 }
 
@@ -77,6 +84,8 @@ export default function OperationsShell({
   isOpen,
   onClose,
   initialJob = 'Pack',
+  layout = 'modal',
+  onDirtyChange,
   progress,
 }: OperationsShellProps) {
   const [job, setJob] = useState<JobName>(initialJob)
@@ -185,6 +194,25 @@ export default function OperationsShell({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isOpen, liveStatus, requestJob])
 
+  const isDirty = !!actions?.isDirty
+  useEffect(() => {
+    onDirtyChange?.(isDirty)
+    return () => onDirtyChange?.(false)
+  }, [isDirty, onDirtyChange])
+
+  // Panel layout has no Modal to own Esc, so it listens itself.
+  useEffect(() => {
+    if (!isOpen || layout !== 'panel') return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      const t = e.target instanceof Element ? e.target : null
+      if (t?.closest('[role="dialog"], [role="alertdialog"]')) return
+      requestClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isOpen, layout, requestClose])
+
   // Progression upon successful confirmation
   const completed = useCallback(async () => {
     const next = NEXT_JOB[job]
@@ -236,6 +264,52 @@ export default function OperationsShell({
             ? 'Confirm Return & Next'
             : 'Confirm Reset'
 
+  // RULING 2026-10-14 (R14-5): say what is still needed beside a disabled Confirm; the gates themselves are unchanged.
+  const blockedHint = !isCurrentJobCompleted && actions && !actions.canComplete && !actions.dispatching ? (actions.blockedReason ?? null) : null
+
+  /* RULING 2026-10-14 (R14-6): a toast sits bottom-right, exactly over the footer's Confirm button. Lift it to just above the
+     footer — measured, because the footer is taller on a phone (hint + two stacked buttons) than on
+     a desktop — while a job is open. */
+  const [footerEl, setFooterEl] = useState<HTMLElement | null>(null)
+  useEffect(() => {
+    if (!isOpen || !footerEl) return
+    const lift = () => {
+      const top = footerEl.getBoundingClientRect().top
+      document.documentElement.style.setProperty('--toast-bottom', `${Math.max(20, Math.round(window.innerHeight - top + 12))}px`)
+    }
+    lift()
+    window.addEventListener('resize', lift)
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(lift)
+    observer?.observe(footerEl)
+    return () => {
+      window.removeEventListener('resize', lift)
+      observer?.disconnect()
+      document.documentElement.style.removeProperty('--toast-bottom')
+    }
+  }, [isOpen, footerEl])
+
+  /* RULING 2026-10-14 (R14-8): the room the workspace actually has, not the window's width: the dock is always narrow, and a
+     tablet held upright gives the full-screen sheet ~780px, which a list-plus-rail layout cannot
+     use. Narrow → the one-column layout. Width 0 (no layout engine) says nothing, so it is ignored. */
+  const [bodyEl, setBodyEl] = useState<HTMLElement | null>(null)
+  const [narrow, setNarrow] = useState(layout === 'panel')
+  useLayoutEffect(() => {
+    if (layout === 'panel') {
+      setNarrow(true)
+      return
+    }
+    if (!bodyEl) return
+    const measure = () => {
+      const width = bodyEl.getBoundingClientRect().width
+      if (width > 0) setNarrow(width < FLOOR_TWO_COLUMN_MIN)
+    }
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(measure)
+    observer.observe(bodyEl)
+    return () => observer.disconnect()
+  }, [layout, bodyEl])
+
   const workspaceProps = useMemo(
     () => ({
       bookingNo,
@@ -258,16 +332,48 @@ export default function OperationsShell({
       <ResetWorkspace key={`${bookingNo}:Reset`} {...workspaceProps} />
     )
 
-  return (
-    <>
-      <Modal
-        isOpen={isOpen}
-        onClose={requestClose}
-        size="full"
-        title={`Operations · ${bookingNo}${floor?.clientName ? ` · ${floor.clientName}` : ''}`}
-        subtitle={`${LABEL[job]} · Status: ${liveStatus}`}
-        footer={
+  const discardDialog = (
+      <ConfirmDialog
+        isOpen={pending !== null}
+        onClose={() => setPending(null)}
+        onConfirm={() => {
+          const choice = pending
+          setPending(null)
+          setActions(null)
+          if (choice?.type === 'switch') setJob(choice.job)
+          else if (choice?.type === 'prev') setJob(choice.job)
+          else if (choice?.type === 'close') onClose()
+        }}
+        title={
+          pending?.type === 'close'
+            ? 'Discard unsaved operations work?'
+            : 'You have unsaved changes.'
+        }
+        description={
+          pending?.type === 'close'
+            ? 'You have changes that have not been saved.'
+            : pending?.type === 'prev'
+              ? `Discard changes and go back to ${LABEL[pending.job]}?`
+              : 'Discard them and switch operations?'
+        }
+        cancelLabel={pending?.type === 'close' ? 'Keep Editing' : 'Stay Here'}
+        confirmLabel={
+          pending?.type === 'close'
+            ? 'Discard Changes'
+            : pending?.type === 'prev'
+              ? 'Discard & Go Back'
+              : 'Discard & Switch'
+        }
+        variant="danger"
+      />
+  )
+
+  const title = `Operations · ${bookingNo}${floor?.clientName ? ` · ${floor.clientName}` : ''}`
+  const subtitle = `${LABEL[job]} · Status: ${liveStatus}`
+  const footerNode = (
           <div
+            ref={setFooterEl}
+            className="operations-shell__footer"
             style={{
               width: '100%',
               display: 'flex',
@@ -275,6 +381,11 @@ export default function OperationsShell({
               gap: 8,
             }}
           >
+            {blockedHint && (
+              <p role="status" className="operations-shell__blocked">
+                Still needed: {blockedHint}
+              </p>
+            )}
             <div
               className="operations-shell__actions"
             >
@@ -296,8 +407,9 @@ export default function OperationsShell({
               </Button>
             </div>
           </div>
-        }
-      >
+  )
+  const bodyNode = (
+    <>
         <nav
           aria-label="Operation stage"
           className="operations-shell__stages"
@@ -323,7 +435,6 @@ export default function OperationsShell({
                       : 'Not open yet'
 
             const countStr = measured ? ` ${measured.done}/${measured.total}` : ''
-            const displayLabel = `${LABEL[candidate]} · ${stateLabel}${countStr}`
 
             return (
               <Button
@@ -343,7 +454,9 @@ export default function OperationsShell({
                   opacity: isBlocked ? 0.6 : 1,
                 }}
               >
-                {displayLabel}
+                <span className="operations-shell__stage-name">{LABEL[candidate]}</span>
+                <span className="operations-shell__stage-sep"> · </span>
+                <span className="operations-shell__stage-state">{stateLabel}{countStr}</span>
               </Button>
             )
           })}
@@ -365,12 +478,12 @@ export default function OperationsShell({
               color: 'var(--text2)',
             }}
           >
-            <div>
+            <div className="operations-shell__strip-dup">
               <span style={{ color: 'var(--muted)', marginRight: 4 }}>Booking:</span>
               <strong style={{ color: 'var(--text)' }}>{bookingNo}</strong>
             </div>
             {floor.clientName && (
-              <div>
+              <div className="operations-shell__strip-dup">
                 <span style={{ color: 'var(--muted)', marginRight: 4 }}>Client:</span>
                 <strong style={{ color: 'var(--text)' }}>{floor.clientName}</strong>
               </div>
@@ -424,42 +537,46 @@ export default function OperationsShell({
         <Suspense fallback={<LoadingSkeleton type="card" label={`Loading ${LABEL[job]}…`} />}>
           {workspace}
         </Suspense>
+    </>
+  )
+
+  if (layout === 'panel') {
+    if (!isOpen) return null
+    return (
+      <>
+        <section className="operations-shell__panel" aria-label={title}>
+          <header className="operations-shell__panel-head">
+            <div style={{ minWidth: 0 }}>
+              <h2 className="operations-shell__panel-title">{title}</h2>
+              <p className="operations-shell__panel-sub">{subtitle}</p>
+            </div>
+            <Button variant="ghost" icon="close" aria-label="Close panel (Esc)" onClick={requestClose} style={{ minHeight: 'var(--tap)' }}>Close</Button>
+          </header>
+          <div className="operations-shell__panel-body"><FloorNarrowContext.Provider value={narrow}><div ref={setBodyEl}>{bodyNode}</div></FloorNarrowContext.Provider></div>
+          <footer className="operations-shell__panel-foot">{footerNode}</footer>
+        </section>
+        {discardDialog}
+      </>
+    )
+  }
+
+  return (
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={requestClose}
+        size="full"
+        fill
+        title={title}
+        subtitle={subtitle}
+        footer={footerNode}
+      >
+        <FloorNarrowContext.Provider value={narrow}>
+          <div ref={setBodyEl}>{bodyNode}</div>
+        </FloorNarrowContext.Provider>
       </Modal>
 
-      {/* Discard confirmation dialog */}
-      <ConfirmDialog
-        isOpen={pending !== null}
-        onClose={() => setPending(null)}
-        onConfirm={() => {
-          const choice = pending
-          setPending(null)
-          setActions(null)
-          if (choice?.type === 'switch') setJob(choice.job)
-          else if (choice?.type === 'prev') setJob(choice.job)
-          else if (choice?.type === 'close') onClose()
-        }}
-        title={
-          pending?.type === 'close'
-            ? 'Discard unsaved operations work?'
-            : 'You have unsaved changes.'
-        }
-        description={
-          pending?.type === 'close'
-            ? 'You have changes that have not been saved.'
-            : pending?.type === 'prev'
-              ? `Discard changes and go back to ${LABEL[pending.job]}?`
-              : 'Discard them and switch operations?'
-        }
-        cancelLabel={pending?.type === 'close' ? 'Keep Editing' : 'Stay Here'}
-        confirmLabel={
-          pending?.type === 'close'
-            ? 'Discard Changes'
-            : pending?.type === 'prev'
-              ? 'Discard & Go Back'
-              : 'Discard & Switch'
-        }
-        variant="danger"
-      />
+      {discardDialog}
     </>
   )
 }

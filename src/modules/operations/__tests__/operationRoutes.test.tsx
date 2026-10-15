@@ -285,7 +285,40 @@ describe('Spec 03 §3.1 — queue chips filter ONE time-ordered list', () => {
     expect(labels.some((l) => l.startsWith('Custom'))).toBe(true)
   })
 
-  it('opens the row action in the global workspace without changing route', async () => {
+  it('docks the job beside the queue at desktop width, keeping the table', async () => {
+    viewport = 'desktop'
+    await mount(<OperationsQueues />, '/operations')
+    const pack = buttons().find((b) => b.textContent === 'Pack')
+    await act(async () => {
+      pack?.click()
+    })
+    expect(path).toBe('/operations')
+    expect(container.querySelector('[role="dialog"]')).toBeNull()
+    expect(container.querySelector('.operations-shell__panel')).not.toBeNull()
+    expect(container.querySelectorAll('table.operations-v2__table')).toHaveLength(1)
+    expect(container.querySelector('.operations-v2__row--active')).not.toBeNull()
+    const close = buttons().find((b) => b.getAttribute('aria-label')?.startsWith('Close panel'))
+    await act(async () => {
+      close?.click()
+    })
+    expect(container.querySelector('.operations-shell__panel')).toBeNull()
+  })
+
+  it('moves a row cursor with J/K and opens the cursor row in the dock on Enter (desktop)', async () => {
+    viewport = 'desktop'
+    await mount(<OperationsQueues />, '/operations')
+    const key = async (k: string) => act(async () => { window.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true })) })
+    await key('j')
+    const cursor = container.querySelector('tr.operations-v2__row--cursor')
+    expect(cursor).not.toBeNull()
+    expect(container.querySelector('.operations-shell__panel')).toBeNull()
+    const no = cursor?.getAttribute('data-booking-no')
+    await key('Enter')
+    expect(container.querySelector('.operations-shell__panel')?.getAttribute('aria-label')).toContain(no ?? 'x')
+  })
+
+  it('opens the row action in the global workspace below desktop width', async () => {
+    viewport = 'tablet'
     await mount(<OperationsQueues />, '/operations')
     const pack = buttons().find((b) => b.textContent === 'Pack')
     await act(async () => {
@@ -293,6 +326,7 @@ describe('Spec 03 §3.1 — queue chips filter ONE time-ordered list', () => {
     })
     expect(path).toBe('/operations')
     expect(container.querySelector('[role="dialog"]')).not.toBeNull()
+    expect(container.querySelector('.operations-shell__panel')).toBeNull()
   })
 
   it('opens the booking from a click on blank row space, but not from the row controls (8 Oct 2026)', async () => {

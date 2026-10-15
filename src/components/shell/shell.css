@@ -85,6 +85,8 @@
   min-height: 44px;
   white-space: nowrap;
 }
+/* Unused slots consume no space; live slots retain canonical ordering. */
+.app-global-header__action-slot:not(:has(button, a)) { display: none; }
 .app-global-header__action-slot--secondary { gap: 8px; }
 .app-global-header__action-slot--filters { width: 44px; flex-basis: 44px; }
 .app-global-header__action-slot--add { width: 156px; flex-basis: 156px; }
