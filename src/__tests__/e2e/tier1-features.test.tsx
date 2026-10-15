@@ -334,14 +334,13 @@ describe('Tier 1: Feature Coverage (Happy Path & Isolations)', { timeout: 90000 
       // Primary header
       expect(container.textContent).toContain('Today')
 
-      // Dispatch date control (8 Oct 2026): no label, and "Today" is only
-      // offered once you have stepped away from today.
+      // Dispatch date controls (RULING 2026-10-15): Pickups and Returns each carry
+      // their own accessible date filter in their panel header.
       expect(container.textContent).not.toContain('Sync dispatch day:')
-      expect(container.querySelector('button[aria-label="Today"]')).toBeNull()
-      const prevDayBtn = container.querySelector('button[aria-label="Previous day"]')
-      expect(prevDayBtn).not.toBeNull()
-      const nextDayBtn = container.querySelector('button[aria-label="Next day"]')
-      expect(nextDayBtn).not.toBeNull()
+      const pickupDateFilter = container.querySelector('[aria-label="Date filter for pickups"]')
+      const returnDateFilter = container.querySelector('[aria-label="Date filter for returns"]')
+      expect(pickupDateFilter).not.toBeNull()
+      expect(returnDateFilter).not.toBeNull()
 
       // Express counter search bar
       const counterInput = container.querySelector('input[type="search"]')

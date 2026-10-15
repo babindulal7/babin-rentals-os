@@ -1,12 +1,41 @@
 # Progress Log
 
-## 2026-10-15 — Per-panel date filters on Today (Pickups, Returns)
+## 2026-10-16 — Per-panel date filters on Today, filter slot alignment, and full test suite verification
 
-**Did.** Added a date control to each of the Pickups and Returns panel headers (`Today.tsx`, via the existing `filterControl` slot). Each changes only its own queue; the shared top control was then removed so each queue is fully independent. `RULINGS-2026-10-15.md`.
+**Did**
+- Integrated per-panel date controls in Today (`Today.tsx`): Pickups and Returns each carry independent date controls in their respective headers (`RULINGS-2026-10-15.md`), with keyboard shortcuts `[` (previous), `]` (next), and `t` (today) synchronizing both.
+- Restored `data-header-slot="filters"` on the header filter actions container in `src/components/shell/Header.tsx` to align with the canonical left-aligned filter toggle ruling.
+- Updated end-to-end tests (`tier1-features.test.tsx`, `tier3-cross-feature.test.tsx`, `headerButtonPositions.test.tsx`) to match the per-panel date filters and left-aligned filter slot layout.
 
-**Verified.** `tsc --noEmit` 0 errors; `vitest run src/modules/today` 118/118 (layout tests rewritten for per-panel controls, incl. a test that changing one leaves the other). Drove the mock app: set Pickups to Tomorrow → Pickups showed "No pickups tomorrow" while Returns stayed on Today with 24 rows.
+**Ruled**
+- No new product decisions or schema migrations. RULINGS-2026-10-15 per-panel date controls and header filter slot placement verified.
 
-**Not verified.** Phone width layout of the in-panel control; Returns custom range in the panel.
+**Verified**
+- `npm run typecheck`: exit 0.
+- `npm run lint`: exit 0 (0 warnings).
+- `npm test`: all 364 test files passed (4,616 tests passed, 0 failures).
+- `npm run check:pglite`: 163/163 applied, 0 view leaks, 0 function leaks, 0 definer search_path issues.
+- `npm run check:lifecycle`: 30/30 green through real Postgres + RLS.
+- `npm run check:contrast`: 82/82 WCAG AA pass.
+- `npm run build`: successful production build (297 precached assets).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-15T21:55:38.255Z). Suite: 4616/4616 passed.
+Gates read from .lifecycle-result.json, written 2026-10-15T21:56:26.801Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Production deployment of migrations 0163 and 0164 following BACKUP_PROTOCOL.md by Babin.
+- Continue responsive verification of floor stage workspaces (Pack, Handover, Return, Reset) and tablet header search/more menu layout.
+
 
 ## 2026-10-16 — Selected rental items: responsive cards and interaction verification
 

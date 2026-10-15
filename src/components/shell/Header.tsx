@@ -334,7 +334,11 @@ export default function Header({ crumbs, actions }: HeaderProps) {
           }}
         >
           {/* RULING 2026-10-15: the page's filter toggle is always the first control at the very left of the header, and its drawer opens from the left. */}
-          <span className="workspace-page-actions" ref={ws?.setHeaderActionsElement} />
+          <span
+            className="workspace-page-actions app-global-header__action-slot app-global-header__action-slot--filters"
+            data-header-slot="filters"
+            ref={ws?.setHeaderActionsElement}
+          />
 
           {/* Back navigation button if registered */}
           {hData?.backHref && (
