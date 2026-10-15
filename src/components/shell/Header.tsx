@@ -18,6 +18,7 @@ import {
   type PageActionContext,
   resolvePageActions,
   isActionEnabled,
+  isActionVisible,
 } from '../ui/header/pageActionRegistry'
 import { AddDropdownButton } from '../ui/header/PageHeader'
 import { GlobalAddMenu } from '../ui/creation/GlobalAddMenu'
@@ -184,6 +185,9 @@ export default function Header({ crumbs, actions }: HeaderProps) {
   const resolved = hData?.actionsConfig
     ? resolvePageActions(hData.actionsConfig, actionContext)
     : null
+  const primaryActionStatus = resolved?.primary ? isActionEnabled(resolved.primary, actionContext) : null
+  // Bulk actions use the same permissions, predicates and loading gates as ordinary actions.
+  const visibleBulkActions = hData?.bulkSelection?.actions.filter((action) => isActionVisible(action, actionContext)) ?? []
 
   const handleActionClick = (action: PageActionItem, e?: React.MouseEvent) => {
     if (action.confirm) {
@@ -777,18 +781,22 @@ export default function Header({ crumbs, actions }: HeaderProps) {
               >
                 Clear
               </button>
-              {hData.bulkSelection.actions.map((act) => (
-                <Button
-                  key={act.id}
-                  variant={act.variant ?? 'secondary'}
-                  icon={act.icon}
-                  onClick={() => handleActionClick(act)}
-                  disabled={act.enabled === false}
-                  style={{ height: 38, minHeight: 44, padding: '0 12px' }}
-                >
-                  {act.label}
-                </Button>
-              ))}
+              {visibleBulkActions.map((act) => {
+                const status = isActionEnabled(act, actionContext)
+                return (
+                  <Button
+                    key={act.id}
+                    variant={act.variant ?? 'secondary'}
+                    icon={act.icon}
+                    onClick={() => handleActionClick(act)}
+                    disabled={!status.enabled}
+                    style={{ height: 38, minHeight: 44, padding: '0 12px' }}
+                    {...(status.reason ? { title: status.reason } : {})}
+                  >
+                    {act.loading ? act.loadingLabel ?? `${act.label}…` : act.label}
+                  </Button>
+                )
+              })}
             </div>
           ) : (
             <>
@@ -863,9 +871,9 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                     variant={resolved.primary.variant ?? 'primary'}
                     icon={resolved.primary.icon}
                     onClick={(e) => handleActionClick(resolved.primary!, e)}
-                    disabled={resolved.primary.loading || resolved.primary.enabled === false}
+                    disabled={!primaryActionStatus?.enabled}
                     style={{ minHeight: 44, padding: '0 14px', fontWeight: 600 }}
-                    {...(resolved.primary.disabledReason ? { title: resolved.primary.disabledReason } : {})}
+                    {...(primaryActionStatus?.reason ? { title: primaryActionStatus.reason } : {})}
                   >
                     {resolved.primary.loading
                       ? resolved.primary.loadingLabel ?? `${resolved.primary.label}…`

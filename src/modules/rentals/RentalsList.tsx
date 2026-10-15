@@ -16,6 +16,9 @@ import { Button } from '../../components/ui/Button'
 import { DataAgeBadge } from '../../components/ui/DataAgeBadge'
 import { PageBody } from '../../components/ui/PageBody'
 import { PageShell } from '../../components/ui/PageShell'
+import { PageHeader } from '../../components/ui/header/PageHeader'
+import type { PageHeaderBulkSelection } from '../../lib/workspaceContext'
+import { useOptionalWorkspace } from '../../lib/workspaceContext'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { ContextDrawer } from '../../components/ui/ContextDrawer'
 import { DataTableShell } from '../../components/ui/DataTable'
@@ -824,6 +827,7 @@ function ColumnMenu({
 export default function RentalsList() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const workspace = useOptionalWorkspace()
   const role: SystemRole = user ? user.role : 'Client'
   const canWriteDesk = canWriteBookingDesk(role)
   const canOperate = canPerformOperations(role)
@@ -1492,6 +1496,34 @@ export default function RentalsList() {
     URL.revokeObjectURL(url)
   }, [list.rows, selectedIds, money, hiddenCols, savedViewQuery])
 
+  // Keep the same selected-row callbacks, but in the canonical application
+  // header instead of a second fixed bottom toolbar. Standalone previews use
+  // the old floating control as a fallback when no workspace shell exists.
+  const clearRentalSelection = useCallback(() => setSelectedIds(new Set()), [])
+  const headerBulkSelection = useMemo<PageHeaderBulkSelection | null>(() => {
+    if (selectedIds.size === 0) return null
+    const actions: PageHeaderBulkSelection['actions'] = [
+      {
+        id: 'export-selected-rentals',
+        label: 'Export CSV',
+        icon: 'download',
+        onClick: handleBulkExport,
+        enabled: !bulkProcessing,
+        ...(bulkProcessing ? { disabledReason: 'Another action is in progress' } : {}),
+      },
+      ...(canOperate ? [{
+        id: 'open-fast-return',
+        label: 'Fast Return',
+        icon: 'return_arrow' as const,
+        // Opens the existing lookup modal. This is NOT a batch custody transition.
+        onClick: () => setFastReturnOpen(true),
+        enabled: !bulkProcessing,
+        ...(bulkProcessing ? { disabledReason: 'Another action is in progress' } : {}),
+      }] : []),
+    ]
+    return { count: selectedIds.size, onClear: clearRentalSelection, actions }
+  }, [selectedIds.size, handleBulkExport, canOperate, bulkProcessing, clearRentalSelection])
+
   // Bulk Pack & Bulk Handover removed per Steps 2 & 3: packing and handover are
   // physical floor operations requiring equipment resolution and stage gates in
   // PackingWorkspace / HandoverWorkspace, never blind row selection.
@@ -1575,6 +1607,13 @@ export default function RentalsList() {
 
   return (
     <PageShell className="rentals-v2">
+      {workspace && headerBulkSelection && (
+        <PageHeader
+          title="Rentals"
+          bulkSelection={headerBulkSelection}
+          showAddMenu={false}
+        />
+      )}
       {/* Search portal into the shell's original fixed-height header */}
       <WorkspaceHeaderSearch>
         <SearchInput
@@ -2636,7 +2675,7 @@ export default function RentalsList() {
         />
       )}
 
-      <FloatingBulkActionBar
+      {!workspace && <FloatingBulkActionBar
         selectedCount={selectedIds.size}
         totalCount={list.rows.length}
         onClearSelection={() => setSelectedIds(new Set())}
@@ -2662,7 +2701,7 @@ export default function RentalsList() {
               ]
             : []),
         ]}
-      />
+      />}
 
       <FastReturnModal
         isOpen={fastReturnOpen}

@@ -24,6 +24,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter, useLocation } from 'react-router-dom'
+import { WorkspaceProvider, useWorkspace } from '../../../lib/workspaceContext'
 import type { BookingListRow } from '../../../lib/queries/bookings'
 import type { SystemRole } from '../../../types/database'
 
@@ -57,7 +58,7 @@ const lines = vi.hoisted(() => ({
 vi.mock('../../../lib/supabase', () => {
   const build = () => {
     const chain: Record<string, unknown> = {}
-    for (const method of ['select', 'in', 'is', 'eq', 'order', 'range']) chain[method] = () => chain
+    for (const method of ['select', 'in', 'is', 'eq', 'order', 'range', 'limit']) chain[method] = () => chain
     chain['then'] = (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) => {
       if (lines.shouldFail) {
         if (reject) return reject(new Error('Subrental query failed'))
@@ -155,8 +156,24 @@ function LocationProbe() {
   return null
 }
 
+/** Observe the selection contract registered for the existing application header.
+ * The shell test suite independently tests actual button rendering and action gates. */
+function SelectionContextProbe() {
+  const { headerData } = useWorkspace()
+  const selection = headerData?.bulkSelection
+  return <section data-testid="rental-selection-header">
+    <output aria-label="Registered selected rental count">{selection?.count ?? 0}</output>
+    {selection?.actions.map(action => (
+      <button key={action.id} type="button" onClick={() => void action.onClick?.()}>
+        {action.label}
+      </button>
+    ))}
+    {selection && <button type="button" onClick={selection.onClear}>Clear selected rentals</button>}
+  </section>
+}
+
 /** v4.1 §7.7's breakpoints — 768 and 1280. Width only (Law 14). */
-async function mount(width: number, entry = '/rentals') {
+async function mount(width: number, entry = '/rentals', inWorkspace = false) {
   if (root) {
     await act(async () => root.unmount())
     container?.remove()
@@ -168,7 +185,12 @@ async function mount(width: number, entry = '/rentals') {
   await act(async () => {
     root.render(
       <MemoryRouter initialEntries={[entry]}>
-        <RentalsList />
+        {inWorkspace ? (
+          <WorkspaceProvider>
+            <SelectionContextProbe />
+            <RentalsList />
+          </WorkspaceProvider>
+        ) : <RentalsList />}
         <LocationProbe />
       </MemoryRouter>,
     )
@@ -609,5 +631,71 @@ describe('empty list — the New Rental step', () => {
     await mount(1280)
     expect(text()).toContain('No rentals yet')
     expect(button('New Rental')).toBeUndefined()
+  })
+})
+
+
+describe('selected rentals use the canonical header selection mode', () => {
+  it('moves Export CSV and Fast Return to the shared header, without a second dock', async () => {
+    await mount(1280, '/rentals', true)
+    const count = container.querySelector('output[aria-label="Registered selected rental count"]')
+    expect(count?.textContent).toBe('0')
+    expect(container.querySelector('[aria-label="Bulk actions for selected items"]')).toBeNull()
+
+    const checkbox = container.querySelector<HTMLInputElement>('tbody input[type="checkbox"]')!
+    await act(async () => checkbox.click())
+    expect(count?.textContent).toBe('1')
+    const selectionHeader = container.querySelector('[data-testid="rental-selection-header"]')!
+    expect(selectionHeader.textContent).toContain('Export CSV')
+    expect(selectionHeader.textContent).toContain('Fast Return')
+    expect(container.querySelector('[aria-label="Bulk actions for selected items"]')).toBeNull()
+
+    const createUrl = vi.fn().mockReturnValue('blob:rentals-test')
+    const revokeUrl = vi.fn()
+    window.URL.createObjectURL = createUrl
+    window.URL.revokeObjectURL = revokeUrl
+    const exportBtn = [...selectionHeader.querySelectorAll('button')].find(b => b.textContent === 'Export CSV')
+    await act(async () => exportBtn?.click())
+    expect(createUrl).toHaveBeenCalledTimes(1)
+    expect(revokeUrl).toHaveBeenCalledTimes(1)
+
+    const clear = [...selectionHeader.querySelectorAll('button')].find(b => b.textContent === 'Clear selected rentals')
+    await act(async () => clear?.click())
+    expect(count?.textContent).toBe('0')
+    expect(container.querySelector<HTMLInputElement>('tbody input[type="checkbox"]')?.checked).toBe(false)
+    expect(selectionHeader.textContent).not.toContain('Export CSV')
+  })
+
+  it('keeps the Fast Return callback and does not run a bulk custody transition', async () => {
+    await mount(1280, '/rentals', true)
+    const checkbox = container.querySelector<HTMLInputElement>('tbody input[type="checkbox"]')!
+    await act(async () => checkbox.click())
+    const selectionHeader = container.querySelector('[data-testid="rental-selection-header"]')!
+    const fastReturn = [...selectionHeader.querySelectorAll('button')].find(b => b.textContent === 'Fast Return')
+    expect(fastReturn).toBeDefined()
+    await act(async () => fastReturn?.click())
+    expect(document.body.textContent).toContain('Fast Return')
+    // No booking is passed directly to a transition; the normal lookup modal
+    // still requires the user to identify and reconcile the actual return.
+  })
+
+  it('omits Fast Return when the operator role cannot perform floor operations', async () => {
+    authStub.role = 'Client'
+    await mount(1280, '/rentals', true)
+    const checkbox = container.querySelector<HTMLInputElement>('tbody input[type="checkbox"]')!
+    await act(async () => checkbox.click())
+    const selectionHeader = container.querySelector('[data-testid="rental-selection-header"]')!
+    expect(selectionHeader.textContent).toContain('Export CSV')
+    expect(selectionHeader.textContent).not.toContain('Fast Return')
+  })
+
+  it('releases the selection mode when filters invalidate the selected rows', async () => {
+    await mount(1280, '/rentals', true)
+    const checkbox = container.querySelector<HTMLInputElement>('tbody input[type="checkbox"]')!
+    await act(async () => checkbox.click())
+    expect(container.querySelector('output[aria-label="Registered selected rental count"]')?.textContent).toBe('1')
+    const out = [...container.querySelectorAll('button')].find(b => b.getAttribute('aria-label') === 'Out')!
+    await act(async () => out.click())
+    expect(container.querySelector('output[aria-label="Registered selected rental count"]')?.textContent).toBe('0')
   })
 })
