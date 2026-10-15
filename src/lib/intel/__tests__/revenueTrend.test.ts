@@ -53,10 +53,19 @@ describe('resolveWindow', () => {
   })
 
   it('distinguishes no history, an inverted range and an over-long range', () => {
-    expect(resolveWindow({ fromDay: null, toDay: null, earliestIssuedDay: null, today: TODAY })).toEqual({ kind: 'no-history' })
-    expect(resolveWindow({ fromDay: null, toDay: '2026-01-01', earliestIssuedDay: '2026-03-01', today: TODAY })).toEqual({ kind: 'no-history' })
+    expect(resolveWindow({ fromDay: null, toDay: null, earliestIssuedDay: null, today: TODAY })).toEqual({ kind: 'no-history', until: null })
+    // Invoices exist, just not by the chosen end: a different sentence on the page.
+    expect(resolveWindow({ fromDay: null, toDay: '2026-01-01', earliestIssuedDay: '2026-03-01', today: TODAY })).toEqual({ kind: 'no-history', until: '2026-01-01' })
     expect(resolveWindow({ fromDay: '2026-09-02', toDay: '2026-09-01', earliestIssuedDay: null, today: TODAY })).toEqual({ kind: 'inverted' })
     expect(resolveWindow({ fromDay: '2020-01-01', toDay: TODAY, earliestIssuedDay: null, today: TODAY })).toEqual({ kind: 'too-long', months: 82 })
+  })
+
+  it('accepts any five-year period, even one touching 61 calendar months, and refuses longer', () => {
+    // 15 Oct 2021 – 14 Oct 2026 is exactly five years and touches Oct 2021 … Oct 2026.
+    const five = resolveWindow({ fromDay: '2021-10-15', toDay: TODAY, earliestIssuedDay: null, today: TODAY })
+    expect(five.kind === 'ok' && emptyBuckets(five.window, five.granularity, TODAY)).toHaveLength(61)
+    expect(resolveWindow({ fromDay: null, toDay: null, earliestIssuedDay: '2021-10-20', today: TODAY }).kind).toBe('ok')
+    expect(resolveWindow({ fromDay: '2021-09-30', toDay: TODAY, earliestIssuedDay: null, today: TODAY })).toEqual({ kind: 'too-long', months: 62 })
   })
 })
 
@@ -71,6 +80,16 @@ describe('emptyBuckets', () => {
     ])
     expect(bucketLongLabel(b[3]!, 'month')).toBe('1–14 October 2026 (month to date)')
     expect(bucketLongLabel(b[0]!, 'month')).toBe('17–31 July 2026 (part month)')
+  })
+
+  it('the month holding today is month to date even on its last day', () => {
+    const b = emptyBuckets({ fromDay: '2026-08-03', toDay: '2026-10-31' }, 'month', '2026-10-31')
+    expect(b[b.length - 1]!.coverage).toBe('in-progress')
+    expect(bucketLongLabel(b[b.length - 1]!, 'month')).toBe('1–31 October 2026 (month to date)')
+    const s = aggregateRevenue([], { fromDay: '2026-08-03', toDay: '2026-10-31' }, 'month', '2026-10-31')
+    expect(coverageNotes(s)[0]).toBe('Oct 2026 is month to date, through 31 Oct 2026.')
+    // A past month that ends on its last day is complete.
+    expect(emptyBuckets({ fromDay: '2026-08-01', toDay: '2026-09-30' }, 'month', TODAY).map((x) => x.coverage)).toEqual(['full', 'full'])
   })
 
   it('crosses a year boundary and marks only today as in progress for days', () => {
@@ -238,6 +257,9 @@ describe('copy helpers', () => {
     expect(changeLabel(rupees(900), rupees(1000))).toBe('−10%')
     expect(changeLabel(rupees(5), 0)).toBe('new')
     expect(changeLabel(0, 0)).toBe('no change')
+    // A real change too small for one decimal is never "+0%".
+    expect(changeLabel(rupees(2500500), rupees(2500000))).toBe('+<0.1%')
+    expect(changeLabel(rupees(2499500), rupees(2500000))).toBe('−<0.1%')
   })
 
   it('summarises the period with the exact formatter', () => {

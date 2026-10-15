@@ -1,5 +1,52 @@
 # Progress Log
 
+## 2026-10-15 — Interactive reports Phase 1: review round (11 fixes)
+
+**Did**
+- Ran an independent review of the PR #16 diff: four reviewers (money/dates, data access/permissions, chart interaction/accessibility, page states), each finding checked by a skeptic told to refute it. 9 confirmed, 1 refuted (Coordinator does read `invoices` through the permissive `invoices_money_blind` policy, 0014:156, so the R14-15 note is right); I checked the 6 left unverified myself.
+- Fixed, each with a test that fails on the old code:
+  - The month holding today is now "month to date" even on its last day (it read as a finished month on the 31st).
+  - Month cap 60 → 61 (`MAX_MONTH_BUCKETS`): a five-year period starting mid-month touches 61 calendar months and was refused under "choose five years or less".
+  - A real change too small for one decimal reads "+<0.1%", never "+0%" beside an up arrow.
+  - A to-only range ending before the first invoice says "No invoices issued by …", not "No issued invoices yet".
+  - Invoice register: issued invoices and voids only (unnumbered Drafts sorted first under All dates); links go to `/finance?tab=invoices&search=<no>` — the deep link Finance reads — instead of `/finance?invoice=`, which nothing read.
+  - Chart:
+    - Dense charts keep sparse markers, so each series keeps its circle/square shape and never differs by colour alone.
+    - A tap on the readout or legend, or a scroll, no longer clears a frozen selection (dismiss on an outside `click`, not `pointerdown`).
+    - Previous/Next buttons (44px) step periods precisely where columns are ~8px wide.
+    - Clear returns focus to the chart.
+    - A chart that mounts empty measures its width when points arrive.
+    - Thinned axis labels no longer overprint the last one.
+- Not fixed, documented at `queries/reportRevenueTrend.ts`: offset paging can miss one row if, between page reads of a 500+ invoice window, one invoice is voided and another issued. Too unlikely for this volume to justify a single-snapshot SQL aggregate yet.
+
+**Ruled**
+- R14-20 amended in `docs/RULINGS-2026-10-14.md`: up to 61 calendar months (five years). No other ruling changed; no migration; nothing applied to live (N-5).
+
+**Verified**
+- typecheck 0, lint 0, lint:shell 662 files, lint:ui-copy 0, contrast 82/82, build 0.
+- Full suite with `VITE_DATA_SOURCE=mock`: 358 files / 4,570 tests passed (+9 tests on this round), exit 0.
+- Chromium against the `dev:mock` seeded corpus:
+  - Fix pass, 16/16: on the phone, 1–31 Jul daily, Previous/Next stepping with 44px buttons, and the selection survives a readout tap and a scroll; comparison squares vs current circles on 31 points; Clear keeps focus; register link opens Finance ▸ Invoices with the number searched; no Draft rows.
+  - Original pass re-run: 136/136.
+- check:pglite / check:lifecycle not re-run this round (no SQL change since the merged-tree run: 160/160, 30/30).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-14T23:13:41.156Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Gates read from .lifecycle-result.json, written 2026-10-14T23:13:52.235Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Phase 2 and Phase 3 as in the entry below; decisions in `docs/OPEN_DECISIONS.md` §13.
+- Coordinator still has no mock login (covered by unit tests); live Supabase not exercised.
+
 ## 2026-10-14 — Interactive reports Phase 0/1: real billed-revenue trend and shared interactive chart
 
 **Did**

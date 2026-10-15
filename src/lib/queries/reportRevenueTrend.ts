@@ -38,6 +38,13 @@ import {
  * cap were below `PAGE_SIZE`. So every read asks for the exact count and the
  * adapter refuses to aggregate unless it holds exactly that many distinct rows.
  * Any failure throws; nothing here returns a fallback figure.
+ *
+ * Known limit (offset paging): if, between two page reads of a period with more
+ * than PAGE_SIZE invoices, one counted invoice is voided AND another is issued,
+ * the count is unchanged but the offsets shift and one row can be missed until
+ * Refresh. It needs 500+ invoices in the window and both writes inside the
+ * milliseconds between pages; a single-snapshot SQL aggregate (see above)
+ * removes it when volume warrants that RPC.
  */
 
 const INVOICE_FIELDS =

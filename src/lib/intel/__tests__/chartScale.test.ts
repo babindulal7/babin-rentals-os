@@ -60,6 +60,15 @@ describe('visibleLabelIndexes', () => {
     for (let i = 1; i < idx.length; i += 1) expect(idx[i]! - idx[i - 1]!).toBeGreaterThanOrEqual(3)
   })
 
+  it('never keeps a label less than one full step before the end-anchored last label', () => {
+    for (const [count, width] of [[24, 300], [30, 235], [61, 900], [13, 330]] as const) {
+      const idx = visibleLabelIndexes(count, width)
+      const fit = Math.max(2, Math.floor(width / 64))
+      const step = Math.ceil((count - 1) / (fit - 1))
+      if (idx.length > 2) expect(idx[idx.length - 1]! - idx[idx.length - 2]!).toBeGreaterThanOrEqual(step)
+    }
+  })
+
   it('handles zero and one point', () => {
     expect(visibleLabelIndexes(0, 300)).toEqual([])
     expect(visibleLabelIndexes(1, 300)).toEqual([0])

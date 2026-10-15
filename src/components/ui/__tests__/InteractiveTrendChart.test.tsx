@@ -123,8 +123,67 @@ describe('InteractiveTrendChart', () => {
 
     act(() => column(0).dispatchEvent(new MouseEvent('click', { bubbles: true })))
     expect(readout()).toMatch(/^August 2026/)
+    // A scroll that merely starts on the page (pointerdown, no click) keeps it.
     act(() => { document.body.dispatchEvent(new Event('pointerdown', { bubbles: true })) })
+    expect(readout()).toMatch(/^August 2026/)
+    act(() => { document.body.dispatchEvent(new MouseEvent('click', { bubbles: true })) })
     expect(readout()).toBeNull()
+  })
+
+  it('tapping the readout or legend keeps the frozen selection', () => {
+    observedWidth = 340
+    render()
+    act(() => column(1).dispatchEvent(new MouseEvent('click', { bubbles: true })))
+    const r = container.querySelector('[data-testid="trend-readout"]') as HTMLElement
+    act(() => { r.dispatchEvent(new MouseEvent('click', { bubbles: true })) })
+    act(() => { (container.querySelector('ul[aria-label="Series"]') as HTMLElement).dispatchEvent(new MouseEvent('click', { bubbles: true })) })
+    expect(readout()).toMatch(/^September 2026/)
+  })
+
+  it('Previous and Next step between periods and stop at the ends', () => {
+    observedWidth = 340
+    render()
+    act(() => column(0).dispatchEvent(new MouseEvent('click', { bubbles: true })))
+    const btn = (name: string) => container.querySelector(`button[aria-label="${name}"]`) as HTMLButtonElement
+    expect(btn('Previous period').disabled).toBe(true)
+    act(() => btn('Next period').click())
+    expect(readout()).toMatch(/^September 2026/)
+    act(() => btn('Next period').click())
+    expect(readout()).toMatch(/month to date/)
+    expect(btn('Next period').disabled).toBe(true)
+    act(() => btn('Previous period').click())
+    expect(readout()).toMatch(/^September 2026/)
+    expect(btn('Next period').style.minHeight).toBe('44px')
+  })
+
+  it('a dense chart still draws each series in its own marker shape', () => {
+    observedWidth = 340
+    const many = Array.from({ length: 30 }, (_, i) => ({ key: `d${i}`, axisLabel: `${i + 1}`, longLabel: `Day ${i + 1}` }))
+    render({
+      points: many,
+      series: [
+        { key: 'c', label: 'Current', status: 'actual', values: many.map((_, i) => 1000 + i) },
+        { key: 'p', label: 'Previous', status: 'actual', values: many.map((_, i) => 900 + i), slot: 1, marker: 'square' },
+      ],
+    })
+    const groups = container.querySelectorAll('svg[aria-hidden] > g')
+    const seriesGroups = [...groups].filter((g) => g.querySelector('path'))
+    const circles = seriesGroups[0]!.querySelectorAll('circle').length
+    const squares = seriesGroups[1]!.querySelectorAll('rect').length
+    expect(circles).toBeGreaterThan(2)
+    expect(circles).toBeLessThan(30)
+    expect(squares).toBe(circles)
+  })
+
+  it('measures its width once points arrive after an empty first render', () => {
+    observedWidth = 340
+    render({ points: [], series: [] })
+    expect(container.textContent).toContain('No periods to show.')
+    render()
+    act(() => column(0).dispatchEvent(new MouseEvent('click', { bubbles: true })))
+    // Narrow (340px) behaviour: values print below, no floating tooltip.
+    expect(container.querySelector('[data-testid="trend-tooltip"]')).toBeNull()
+    expect(container.querySelector('[data-testid="trend-readout"]')!.className).toBe('')
   })
 
   it('the Clear button dismisses a frozen selection', () => {
@@ -134,6 +193,8 @@ describe('InteractiveTrendChart', () => {
     expect(clear).toBeTruthy()
     act(() => clear.click())
     expect(readout()).toBeNull()
+    // Focus returns to the chart rather than falling to <body>.
+    expect(document.activeElement).toBe(chart())
   })
 
   it('on a wide chart, shows a tooltip for the selection and keeps the readout for screen readers only', () => {

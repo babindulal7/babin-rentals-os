@@ -37,8 +37,12 @@ export type Granularity = 'day' | 'month'
 
 /** At most 62 daily points — two months — before the trend switches to months. */
 export const MAX_DAY_BUCKETS = 62
-/** Five years of months. Beyond that a monthly line stops being readable. */
-export const MAX_MONTH_BUCKETS = 60
+/**
+ * Five years of months. A five-year period that starts mid-month touches 61
+ * calendar months (Oct 2021 … Oct 2026), so the cap is 61: anything refused is
+ * longer than five years. Beyond that a monthly line stops being readable.
+ */
+export const MAX_MONTH_BUCKETS = 61
 
 /** One invoice as PostgREST returns it. `numeric(14,2)` arrives as a JSON number or string. */
 export interface InvoiceRevenueSource {
@@ -165,8 +169,12 @@ function monthsSpanned(window: RevenueWindow): number {
 
 export type WindowResolution =
   | { kind: 'ok'; window: RevenueWindow; granularity: Granularity; clampedToToday: boolean }
-  /** No start was chosen and no issued invoice exists on or before the end. */
-  | { kind: 'no-history' }
+  /**
+   * No start was chosen and no issued invoice exists on or before the end.
+   * `until` is the end the reader chose, or null when no invoice was ever issued
+   * at all — two different sentences on the page.
+   */
+  | { kind: 'no-history'; until: string | null }
   /** The whole period lies after today; no actual figure can exist for it. */
   | { kind: 'future' }
   | { kind: 'inverted' }
@@ -196,7 +204,8 @@ export function resolveWindow(input: {
 
   let fromDay = input.fromDay
   if (!fromDay) {
-    if (!input.earliestIssuedDay || input.earliestIssuedDay > toDay) return { kind: 'no-history' }
+    if (!input.earliestIssuedDay) return { kind: 'no-history', until: null }
+    if (input.earliestIssuedDay > toDay) return { kind: 'no-history', until: toDay }
     fromDay = input.earliestIssuedDay
   }
 
@@ -258,8 +267,10 @@ export function emptyBuckets(window: RevenueWindow, granularity: Granularity, to
     const last = dayOf(y, m, lastDayOfMonth(y, m))
     const startDay = first < window.fromDay ? window.fromDay : first
     const endDay = last > window.toDay ? window.toDay : last
+    // The month holding today is "to date" even on its last day: invoices for
+    // today can still be issued until the day ends.
     const coverage: BucketCoverage =
-      endDay === today && endDay < last ? 'in-progress' : startDay > first || endDay < last ? 'clipped' : 'full'
+      today >= startDay && today <= endDay ? 'in-progress' : startDay > first || endDay < last ? 'clipped' : 'full'
     out.push({ key: monthKey(y, m), startDay, endDay, coverage, revenue: ZERO, vat: ZERO, gross: ZERO, invoiceCount: 0 })
     m += 1
     if (m === 12) {
@@ -486,13 +497,18 @@ export function coverageNotes(series: RevenueSeries): string[] {
   return notes
 }
 
-/** "+12.5%", "−4%", "new" (nothing before), "no change". Never a percentage of zero. */
+/**
+ * "+12.5%", "−4%", "+<0.1%", "new" (nothing before), "no change". Never a
+ * percentage of zero: a real change too small to show at one decimal reads
+ * "<0.1%", never "+0%" beside an up arrow.
+ */
 export function changeLabel(current: Paisa | number, previous: Paisa | number): string {
   if (previous === 0) return current === 0 ? 'no change' : 'new'
   const pct = ((current - previous) / previous) * 100
   if (pct === 0) return 'no change'
+  const sign = pct > 0 ? '+' : '−'
   const rounded = Math.round(Math.abs(pct) * 10) / 10
-  return `${pct > 0 ? '+' : '−'}${rounded}%`
+  return rounded === 0 ? `${sign}<0.1%` : `${sign}${rounded}%`
 }
 
 /** One-sentence summary under the chart. */

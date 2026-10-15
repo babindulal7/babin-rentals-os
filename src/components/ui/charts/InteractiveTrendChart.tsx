@@ -84,7 +84,8 @@ function dashFor(status: SeriesStatus): string | undefined {
   return status === 'illustrative' || status === 'estimated' ? '7 5' : undefined
 }
 
-function useWidth(): [RefObject<HTMLDivElement>, number] {
+/** `mounted` re-arms the measurement when the measured element first appears (a chart that mounted empty). */
+function useWidth(mounted: boolean): [RefObject<HTMLDivElement>, number] {
   const ref = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(FALLBACK_WIDTH)
   useLayoutEffect(() => {
@@ -101,7 +102,7 @@ function useWidth(): [RefObject<HTMLDivElement>, number] {
     })
     observer.observe(el)
     return () => observer.disconnect()
-  }, [])
+  }, [mounted])
   return [ref, width]
 }
 
@@ -135,11 +136,12 @@ export function InteractiveTrendChart({
   onActivate,
   showTable = true,
 }: InteractiveTrendChartProps) {
-  const [wrapRef, width] = useWidth()
+  const n = points.length
+  const [wrapRef, width] = useWidth(n > 0)
+  const rootRef = useRef<HTMLDivElement>(null)
   const [hover, setHover] = useState<number | null>(null)
   const [selected, setSelected] = useState<number | null>(null)
   const descId = useId()
-  const n = points.length
   const narrow = width < NARROW
 
   // A stale index from a previous data set must not survive a period change.
@@ -150,15 +152,17 @@ export function InteractiveTrendChart({
     setSelected(null)
   }, [pointsKey])
 
-  // Tap / click outside the chart dismisses a frozen selection.
+  // A tap or click outside the whole chart (legend, plot, readout, table)
+  // dismisses a frozen selection. `click`, not `pointerdown`: a scroll that
+  // starts anywhere on the page fires no click, so scrolling keeps it.
   useEffect(() => {
     if (selected === null) return
-    const onDown = (e: globalThis.PointerEvent) => {
-      if (wrapRef.current && e.target instanceof Node && !wrapRef.current.contains(e.target)) setSelected(null)
+    const onClick = (e: MouseEvent) => {
+      if (rootRef.current && e.target instanceof Node && !rootRef.current.contains(e.target)) setSelected(null)
     }
-    document.addEventListener('pointerdown', onDown)
-    return () => document.removeEventListener('pointerdown', onDown)
-  }, [selected, wrapRef])
+    document.addEventListener('click', onClick)
+    return () => document.removeEventListener('click', onClick)
+  }, [selected])
 
   const scale = useMemo(() => niceScale(series.flatMap((s) => [...s.values]), { minStep }), [series, minStep])
   const tickText = scale.ticks.map(formatTick)
@@ -168,7 +172,12 @@ export function InteractiveTrendChart({
   const span = scale.max - scale.min || 1
   const x = (i: number) => (n <= 1 ? left + plotW / 2 : left + (i * plotW) / (n - 1))
   const y = (v: number) => MARGIN.top + plotH * (1 - (v - scale.min) / span)
-  const showMarkers = n <= 1 || plotW / Math.max(1, n - 1) >= 12
+  const colW = n <= 1 ? plotW : plotW / (n - 1)
+  const showMarkers = n <= 1 || colW >= 12
+  // Dense charts still draw a marker every ~14px, so each series keeps its
+  // shape (circle / square) and two series never differ by colour alone.
+  const markerStride = showMarkers ? 1 : Math.ceil(14 / colW)
+  const markerAt = (i: number) => i === active || i % markerStride === 0 || i === n - 1
   const labelIdx = new Set(visibleLabelIndexes(n, plotW))
   const active = selected ?? hover
 
@@ -245,8 +254,26 @@ export function InteractiveTrendChart({
 
   const tipAlign = active === null ? 'center' : x(active) < width * 0.33 ? 'start' : x(active) > width * 0.67 ? 'end' : 'center'
 
+  const clearSelection = () => {
+    setSelected(null)
+    // The Clear button unmounts with the selection; keep keyboard focus on the chart.
+    wrapRef.current?.focus()
+  }
+
+  const stepButton = {
+    minHeight: 44,
+    minWidth: 44,
+    padding: '0 12px',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--r-btn, var(--r-sm))',
+    background: 'var(--card)',
+    color: 'var(--text)',
+    fontSize: 'var(--t-meta)',
+    cursor: 'pointer',
+  } as const
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)', minWidth: 0 }}>
+    <div ref={rootRef} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)', minWidth: 0 }}>
       <ul aria-label="Series" style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexWrap: 'wrap', gap: '6px 18px' }}>
         {series.map((s, i) => (
           <li key={s.key} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
@@ -318,7 +345,7 @@ export function InteractiveTrendChart({
                   strokeLinecap="round"
                 />
                 {s.values.map((v, i) =>
-                  v === null || (!showMarkers && i !== active) ? null : (
+                  v === null || !markerAt(i) ? null : (
                     <Marker key={i} shape={s.marker ?? 'circle'} x={x(i)} y={y(v)} size={i === active ? 5 : 3.25} color={color} />
                   ),
                 )}
@@ -397,24 +424,18 @@ export function InteractiveTrendChart({
           </span>
         )}
         {selected !== null && (
-          <button
-            type="button"
-            className="tap"
-            onClick={() => setSelected(null)}
-            style={{
-              minHeight: 44,
-              padding: '0 14px',
-              marginLeft: narrow ? 0 : 'auto',
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--r-btn, var(--r-sm))',
-              background: 'var(--card)',
-              color: 'var(--text)',
-              fontSize: 'var(--t-meta)',
-              cursor: 'pointer',
-            }}
-          >
-            Clear selection
-          </button>
+          <div style={{ display: 'flex', gap: 'var(--sp-xs, 6px)', marginLeft: narrow ? 0 : 'auto' }}>
+            {/* Precise stepping where a finger cannot hit an 8px column. */}
+            <button type="button" className="tap" aria-label="Previous period" disabled={selected === 0} onClick={() => move(selected - 1)} style={stepButton}>
+              ‹ Previous
+            </button>
+            <button type="button" className="tap" aria-label="Next period" disabled={selected === n - 1} onClick={() => move(selected + 1)} style={stepButton}>
+              Next ›
+            </button>
+            <button type="button" className="tap" onClick={clearSelection} style={stepButton}>
+              Clear selection
+            </button>
+          </div>
         )}
       </div>
 

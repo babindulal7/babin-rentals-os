@@ -21,6 +21,8 @@ import {
   bucketLongLabel,
   changeLabel,
   coverageNotes,
+  dayLabel,
+  MAX_MONTH_BUCKETS,
   summarySentence,
   windowLabel,
   type RevenueBucket,
@@ -249,7 +251,14 @@ function TrendPanel({
   if (result.kind === 'no-history') {
     return (
       <section aria-label="Revenue trend" style={cardStyle}>
-        <EmptyState kind="nothing-yet" title="No issued invoices yet" description="Revenue appears here once an invoice is issued. Drafts and voided invoices are not revenue." />
+        {result.until === null ? (
+          <EmptyState kind="nothing-yet" title="No issued invoices yet" description="Revenue appears here once an invoice is issued. Drafts and voided invoices are not revenue." />
+        ) : (
+          <EmptyState
+            title={`No invoices issued by ${dayLabel(result.until)}`}
+            description="The first issued invoice is later than this period. Choose a later end date, or All dates."
+          />
+        )}
       </section>
     )
   }
@@ -272,7 +281,7 @@ function TrendPanel({
       <section aria-label="Revenue trend" style={cardStyle}>
         <EmptyState
           title="Choose a period of five years or less"
-          description={`This range covers ${result.months} months; the trend reads up to 60 at a time.`}
+          description={`This range touches ${result.months} calendar months; the trend reads up to ${MAX_MONTH_BUCKETS} (five years) at a time.`}
         />
       </section>
     )
@@ -494,6 +503,13 @@ function TrendReport({
 
 const REGISTER_PAGE = 100
 
+/**
+ * Issued invoices and voids — not Drafts. A Draft has no number and no issue
+ * date yet (0086 `invoices_issued_together`), so under "All dates" it would
+ * sort first (nulls first, newest-first order) with nothing to link to.
+ */
+const REGISTER_STATUSES: Array<InvoiceListRow['status']> = ['Sent', 'Partially Paid', 'Paid', 'Overdue', 'Void']
+
 function InvoiceRegister({ filters }: { filters: ReportFilters }) {
   const [rows, setRows] = useState<InvoiceListRow[] | null>(null)
   const [total, setTotal] = useState<number | null>(null)
@@ -504,7 +520,7 @@ function InvoiceRegister({ filters }: { filters: ReportFilters }) {
     let active = true
     setRows(null)
     setError(null)
-    listInvoices({ page: { index: 0, size: REGISTER_PAGE }, dateRange: filters.dateRange, withCount: true })
+    listInvoices({ page: { index: 0, size: REGISTER_PAGE }, dateRange: filters.dateRange, chips: { status: REGISTER_STATUSES }, withCount: true })
       .then((res) => {
         if (!active) return
         setRows(res.rows)
@@ -534,7 +550,7 @@ function InvoiceRegister({ filters }: { filters: ReportFilters }) {
         {total !== null && total > rows.length
           ? `Showing the ${rows.length} most recent of ${total} invoices. Finance ▸ Invoices lists them all.`
           : `${rows.length} invoice${rows.length === 1 ? '' : 's'}, newest first.`}{' '}
-        Voided invoices are listed for the record; they are never counted as revenue.
+        Voided invoices are listed for the record; they are never counted as revenue. Drafts are not listed until they are issued.
       </p>
       <DataTableShell ariaLabel="Invoice register with settlement status">
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -555,9 +571,16 @@ function InvoiceRegister({ filters }: { filters: ReportFilters }) {
             {rows.map((inv) => (
               <tr key={inv.id}>
                 <td style={td}>
-                  <Link to={`/finance?invoice=${encodeURIComponent(inv.invoiceNo)}`} style={{ color: 'var(--link)', fontWeight: 600, textDecoration: 'none' }}>
-                    {inv.invoiceNo}
-                  </Link>
+                  {inv.invoiceNo ? (
+                    <Link
+                      to={`/finance?tab=invoices&search=${encodeURIComponent(inv.invoiceNo)}`}
+                      style={{ color: 'var(--link)', fontWeight: 600, textDecoration: 'none' }}
+                    >
+                      {inv.invoiceNo}
+                    </Link>
+                  ) : (
+                    'No number'
+                  )}
                 </td>
                 <td style={td}>{inv.clientName}</td>
                 <td style={td}>{inv.issueDateAd ? formatAd(new Date(`${inv.issueDateAd}T00:00:00.000Z`)) : '—'}</td>

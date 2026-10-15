@@ -100,7 +100,9 @@ export function visibleLabelIndexes(count: number, plotWidth: number, minLabelWi
   for (let i = 0; i < count - 1; i += step) out.push(i)
   const last = count - 1
   const prev = out[out.length - 1] as number
-  if (last - prev < step / 2 && out.length > 1) out.pop()
+  // A label closer than one full step to the (end-anchored) last label would
+  // overprint it; drop it, never the first.
+  if (last - prev < step && out.length > 1) out.pop()
   out.push(last)
   return out
 }

@@ -84,7 +84,7 @@ with the previous day. The report reads the stored date as written.
 | Completeness | Stops paging at the first short page — silently truncates if PostgREST `max-rows` is below 500. | Advances by rows received, requires the server's exact count, refuses on mismatch or change mid-read. |
 | Axis | No value axis; the chart is unreadable without hovering. | Labelled lakh/crore value axis, thinned period labels, legend with status in words. |
 | Current month | Plotted as a complete month. | *Month to date* label; clipped edges labelled *part month*. |
-| Window | Last 90 days only; "All dates" ignored. | All dates = from first issued invoice; daily ≤ 62 days, else monthly; ≤ 60 months. |
+| Window | Last 90 days only; "All dates" ignored. | All dates = from first issued invoice; daily ≤ 62 days, else monthly; up to five years (61 calendar months). |
 | Compare | — | The equal-length window immediately before (as the toolbar promises); each bucket is compared with the same-length span shifted back, so buckets align 1:1 and both totals reconcile. Offered only for a bounded period. |
 | Views | — | One chart, three measures: before VAT / incl. VAT / invoice count. |
 | Register | Removed (it was real data). | Kept, with count, error state, and voids marked. |

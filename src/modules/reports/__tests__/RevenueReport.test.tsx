@@ -169,10 +169,24 @@ describe('RevenueReport — figures', () => {
   })
 
   it('no issued invoice ever: an empty state, not a chart of zeros', async () => {
-    state.load.mockResolvedValue({ kind: 'no-history' })
+    state.load.mockResolvedValue({ kind: 'no-history', until: null })
     await render()
     expect(text()).toContain('No issued invoices yet')
     expect(container.querySelector('[aria-roledescription="interactive chart"]')).toBeNull()
+  })
+
+  it('a period ending before the first invoice says so, not "no invoices yet"', async () => {
+    state.load.mockResolvedValue({ kind: 'no-history', until: '2026-01-31' })
+    await render()
+    expect(text()).toContain('No invoices issued by 31 Jan 2026')
+    expect(text()).not.toContain('No issued invoices yet')
+  })
+
+  it('an over-long period names the real limit', async () => {
+    state.load.mockResolvedValue({ kind: 'too-long', months: 62 })
+    await render()
+    expect(text()).toContain('Choose a period of five years or less')
+    expect(text()).toContain('touches 62 calendar months; the trend reads up to 61 (five years) at a time.')
   })
 
   it('a complete query over a quiet period shows a genuine zero and no line', async () => {
@@ -221,7 +235,13 @@ describe('RevenueReport — invoice register', () => {
     await render()
     const tab = [...container.querySelectorAll('[role="tab"]')].find((b) => b.textContent === 'Invoice register')!
     await act(async () => (tab as HTMLElement).click())
-    expect(state.listInvoices).toHaveBeenCalledWith(expect.objectContaining({ withCount: true }))
+    expect(state.listInvoices).toHaveBeenCalledWith(
+      expect.objectContaining({ withCount: true, chips: { status: ['Sent', 'Partially Paid', 'Paid', 'Overdue', 'Void'] } }),
+    )
+    // The deep link Finance actually reads (tab + search), not a parameter nothing reads.
+    const link = [...container.querySelectorAll('a')].find((a) => a.textContent === 'INV-7')!
+    expect(link.getAttribute('href')).toBe('/finance?tab=invoices&search=INV-7')
+    expect(text()).toContain('Drafts are not listed until they are issued.')
     expect(text()).toContain('Showing the 1 most recent of 240 invoices.')
     expect(text()).toContain('they are never counted as revenue')
     expect(text()).toContain('INV-7')

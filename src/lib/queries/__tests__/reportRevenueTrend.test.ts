@@ -140,7 +140,7 @@ describe('loadRevenueTrend', () => {
 
   it('says there is no history rather than drawing a zero line when nothing was ever issued', async () => {
     server.tables['invoices'] = [invoice(1, { status: 'Draft' })]
-    expect(await loadRevenueTrend({ fromDay: null, toDay: null, compare: false, today: TODAY })).toEqual({ kind: 'no-history' })
+    expect(await loadRevenueTrend({ fromDay: null, toDay: null, compare: false, today: TODAY })).toEqual({ kind: 'no-history', until: null })
   })
 
   it('fetches the comparison window with the same definition', async () => {
