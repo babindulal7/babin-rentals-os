@@ -33,6 +33,7 @@ import {
   type PageActionContext,
   resolvePageActions,
   isActionEnabled,
+  isActionVisible,
 } from './pageActionRegistry'
 import { GlobalAddMenu } from '../creation/GlobalAddMenu'
 import './pageHeader.css'
@@ -390,6 +391,8 @@ export function PageHeader({
   }
 
   const resolved = actionsConfig ? resolvePageActions(actionsConfig, actionContext) : null
+  // Bulk-selection actions must obey the same visibility and enabled gates as the page actions.
+  const visibleBulkActions = bulkSelection?.actions.filter((action) => isActionVisible(action, actionContext)) ?? []
 
   // Handler execution with confirmation dialog gate
   const handleActionClick = (action: PageActionItem, e?: React.MouseEvent) => {
@@ -440,18 +443,21 @@ export function PageHeader({
               </button>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {bulkSelection.actions.map((act: PageActionItem) => (
-                <Button
-                  key={act.id}
-                  variant={act.variant ?? 'secondary'}
-                  icon={act.icon}
-                  onClick={() => handleActionClick(act)}
-                  disabled={act.enabled === false}
-                  {...(act.disabledReason ? { title: act.disabledReason } : {})}
-                >
-                  {act.label}
-                </Button>
-              ))}
+              {visibleBulkActions.map((act) => {
+                const status = isActionEnabled(act, actionContext)
+                return (
+                  <Button
+                    key={act.id}
+                    variant={act.variant ?? 'secondary'}
+                    icon={act.icon}
+                    onClick={() => handleActionClick(act)}
+                    disabled={!status.enabled}
+                    {...(status.reason ? { title: status.reason } : {})}
+                  >
+                    {act.loading ? act.loadingLabel ?? `${act.label}…` : act.label}
+                  </Button>
+                )
+              })}
             </div>
           </div>
         ) : (
