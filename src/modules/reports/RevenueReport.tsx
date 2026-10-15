@@ -8,8 +8,7 @@ import { InteractiveRevenueTrend } from '../../components/ui/charts/InteractiveR
 import { formatMoney } from '../../lib/money'
 import { businessDayAd } from '../../lib/bs'
 import { useAuth } from '../../lib/auth'
-import { getIssuedRevenueTrend } from '../../lib/queries/reportRevenueTrend'
-import type { RevenueTrend } from '../../lib/intel/revenueTrend'
+import { getIssuedRevenueTrend, type IssuedRevenueReport } from '../../lib/queries/reportRevenueTrend'
 
 /**
  * This report displays ONLY successfully fetched taxable issued-invoice values.
@@ -37,7 +36,7 @@ export default function RevenueReport() {
   const permitted = Boolean(user && EXECUTIVE_ROLES.has(user.role))
   const today = businessDayAd()
   const [filters, setFilters] = useState<ReportFilters>({})
-  const [report, setReport] = useState<RevenueTrend | null>(null)
+  const [report, setReport] = useState<IssuedRevenueReport | null>(null)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [revision, setRevision] = useState(0)
@@ -70,7 +69,12 @@ export default function RevenueReport() {
     return [
       ['Issued invoice taxable revenue — actual (NPR), before VAT'],
       ['AD window', report.fromAd, report.toAd],
-      ['Status', 'Issued invoice subset; credit-note netting not yet reconciled'],
+      ['Status', 'Issued nonvoid invoices; credit notes reconciled as paid-amount records, not subtracted from taxable sales'],
+      ['Credit notes on invoices issued in window', report.creditReconciliation.creditNoteCount],
+      ['Credit-note paid amounts (not taxable deductions)', formatMoney(report.creditReconciliation.creditNoteAmountPaisa)],
+      ['Voided invoice taxable amounts excluded', formatMoney(report.creditReconciliation.voidedTaxablePaisa)],
+      ['Paid voids needing credit review', report.creditReconciliation.paidVoidMismatchCount],
+      ['Credit notes on active invoices for review', report.creditReconciliation.activeInvoiceCreditNoteCount],
       ['Month', 'Taxable value', 'Issued invoices'],
       ...report.months.map(m => [m.label, formatMoney(m.amountPaisa), m.invoiceCount] as ReportCsvRow),
       ['Total', formatMoney(report.totalPaisa), report.issuedCount],
@@ -94,7 +98,7 @@ export default function RevenueReport() {
             <h3 style={{margin:'0 0 8px',color:'var(--text)'}}>Monthly issued invoice revenue</h3>
             <p style={{color:'var(--text2)',fontSize:'var(--t-meta)',margin:'0 0 14px'}}>
               Actual taxable invoice amounts before VAT · AD calendar months · {from} to {to}.
-              Draft and void invoices excluded. Credit-note and adjustment netting is not yet reconciled;
+              Draft and void invoices excluded. Credit notes record paid amounts, not taxable sales deductions. They are checked separately;
               this chart is not a full audited net-sales statement.
             </p>
             {!windowIsValid ? (
@@ -111,6 +115,27 @@ export default function RevenueReport() {
                   <div><small>Issued invoices</small><strong style={{display:'block',fontSize:23}}>{report.issuedCount}</strong></div>
                 </div>
                 <InteractiveRevenueTrend months={report.months} />
+                <section aria-label="Credit-note reconciliation for selected invoice dates" style={{marginTop:20,paddingTop:14,borderTop:'1px solid var(--border)'}}>
+                  <h4 style={{margin:'0 0 8px'}}>Credit-note reconciliation</h4>
+                  <p style={{color:'var(--text2)',fontSize:'var(--t-meta)'}}>
+                    For invoices issued {from} to {to}, including voided invoices omitted from the chart.
+                    Credit-note amounts reflect paid-value corrections, not taxable sales credits;
+                    notes issued for invoices outside this period are not in this check.
+                  </p>
+                  <dl style={{display:'flex',flexWrap:'wrap',gap:24}}>
+                    <div><dt>Voided invoice taxable amount excluded</dt><dd>{formatMoney(report.creditReconciliation.voidedTaxablePaisa)} ({report.creditReconciliation.voidedInvoiceCount} invoices)</dd></div>
+                    <div><dt>Credit-note amount (settlement basis)</dt><dd>{formatMoney(report.creditReconciliation.creditNoteAmountPaisa)} ({report.creditReconciliation.creditNoteCount} notes)</dd></div>
+                  </dl>
+                  {report.creditReconciliation.paidVoidMismatchCount > 0 || report.creditReconciliation.activeInvoiceCreditNoteCount > 0 ? (
+                    <p role="alert">
+                      Manual ledger review needed: {report.creditReconciliation.paidVoidMismatchCount} paid voided invoice(s)
+                      with credit-note amounts not matching paid amounts, and {report.creditReconciliation.activeInvoiceCreditNoteCount}
+                      credit note(s) on nonvoid invoices. Do not treat this as audited net sales.
+                    </p>
+                  ) : (
+                    <p role="status">No paid-void credit mismatches found in this invoice-date window. This is not an audited net-sales statement.</p>
+                  )}
+                </section>
                 {report.issuedCount===0 && <p>No issued invoices recorded for the selected period.</p>}
               </>
             ) : <p role="status">Loading…</p>}
