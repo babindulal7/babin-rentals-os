@@ -19,7 +19,7 @@
 
 **Verified**
 - `npm run typecheck`: exit 0 (clean TypeScript compiler pass).
-- Focused vitest suites: `src/modules/operations/` & `src/modules/settings/` (12 files, 180/180 passed), `src/modules/rentals/` (46 files, 446/446 passed).
+- Focused vitest suites: `src/modules/operations/` & `src/modules/settings/` (12 files, 180/180 passed), `src/modules/rentals/` (46 files, 446/446 passed). Full test suite: 358 files, 4,546/4,546 passed.
 - Database & lifecycle gates: `npm run check:pglite` (160/160 migrations applied, 0 view leaks, 0 function leaks, 0 definer hygiene issues), `npm run check:lifecycle` (30/30 green through real Postgres + RLS).
 - Contrast: `npm run check:contrast` (82/82 WCAG AA pass, 0 FAIL).
 - Production build: `npm run build` (`tsc --noEmit && vite build`, exit 0, 296 precache entries).
@@ -34,7 +34,7 @@
 | Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
 | Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
 | Overall | mean of five | ≈ 99% | +0 |
-Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-15T19:13:38.995Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-15T19:13:38.995Z). Suite: 4546/4546 passed (recorded 2026-10-15T19:21:55.000Z).
 Gates read from .lifecycle-result.json, written 2026-10-15T19:13:58.009Z.
 Counted by `npm run completion`, not typed.
 
