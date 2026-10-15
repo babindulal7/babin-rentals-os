@@ -11,6 +11,47 @@ do $$ begin
   end if;
 end $$;
 
+-- VAT is financial data. The RPC validates callers but PostgreSQL also
+-- exposes an authorized table write path. Enforce the same rule at that boundary,
+-- including INSERT of a new booking and UPDATE of an existing quotation.
+create or replace function public.guard_booking_vat_write()
+returns trigger
+language plpgsql
+set search_path=public, pg_temp
+as $vat_guard$
+begin
+  if current_user not in ('authenticated','anon') then
+    return new;
+  end if;
+
+  if tg_op='INSERT' then
+    if new.vat_rate is not null and not coalesce(auth_can_view_money(),false) then
+      raise exception 'GATE:gate.vat.money_blind|This staff role cannot set booking VAT'
+        using errcode='42501';
+    end if;
+  elsif new.vat_rate is distinct from old.vat_rate then
+    if not coalesce(auth_can_view_money(),false) then
+      raise exception 'GATE:gate.vat.money_blind|This staff role cannot change booking VAT'
+        using errcode='42501';
+    end if;
+    if old.stage <> 'Quote' or exists (
+      select 1 from public.invoices i
+      where i.booking_id=old.id
+    ) then
+      raise exception 'GATE:gate.vat.locked|Booking VAT is fixed after Quote or invoicing'
+        using errcode='23514';
+    end if;
+  end if;
+  return new;
+end;
+$vat_guard$;
+
+drop trigger if exists trg_bookings_vat_write_guard on public.bookings;
+create trigger trg_bookings_vat_write_guard
+before insert or update on public.bookings
+for each row execute function public.guard_booking_vat_write();
+revoke all on function public.guard_booking_vat_write() from public, anon;
+
 CREATE OR REPLACE FUNCTION public.booking_estimate_total(p_booking_id uuid)
  RETURNS numeric
  LANGUAGE plpgsql
@@ -167,7 +208,7 @@ begin
   perform set_config('app.in_create_booking', 'on', true);
 
   -- Never let money-blind callers override VAT (including selecting 0%).
-  if p_payload ? 'vat_rate' and not auth_can_view_money() then
+  if p_payload ? 'vat_rate' and not coalesce(auth_can_view_money(),false) then
     raise exception 'GATE:gate.vat.money_blind|Only authorized money-visible staff can select a booking VAT rate'
       using errcode='42501';
   end if;
