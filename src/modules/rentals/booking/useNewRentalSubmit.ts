@@ -321,7 +321,6 @@ export function useNewRentalSubmit({
     pricing,
     manualDiscountReason,
     manualDiscountAuthorizedBy,
-    womenDopEligible,
     crew,
     clientPickup,
     deliveryChargePaisa,
