@@ -17,6 +17,7 @@
 - src/lib/queries/revenueTrend.ts is a backwards-compatible re-export, not another database reader.
 - Read all period invoices, including voided, in ordered 500-row pages; read linked credit_notes in bounded ID batches and ordered pages.
 - All queries use the authenticated user Supabase client; both invoice and credit-note RLS must be enforced in the deployed database. This change does **not** alter security policies, schemas or permissions.
+- **Security review observation:** source migration `0011_rls_policies.sql` guards `invoices` SELECT by `auth_is_finance_or_admin()`, and `0117_invoice_void_discipline.sql` uses the same predicate for credit_notes; these predicates contain no explicit `branch_id` or tenant restriction. Confirm that finance roles are intentionally global before enabling branch-scoped reporting. This feature does not strengthen those existing policies.
 - An invalid date, ambiguous amount, source error, duplicate, unsafe total or pagination cap throws; the screen does not substitute demo/zero data.
 - UI is explicitly permission-gated for Owner/Admin/Manager/Accounts; floor roles never initiate this read.
 
