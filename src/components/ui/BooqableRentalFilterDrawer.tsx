@@ -399,7 +399,6 @@ export function BooqableRentalFilterDrawer({
       portal={portal}
       side="left"
       desktopMode="overlay"
-      width={360}
       resultCount={resultCount}
       noun={resultCount === 1 ? 'rental' : 'rentals'}
       activeCount={activeCount}

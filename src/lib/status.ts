@@ -71,7 +71,7 @@ export const STATUS: Record<StatusKey, StatusTokens> = {
   in: { bg: 'var(--st-in-bg)', fg: 'var(--st-in-fg)' },
   danger: { bg: 'var(--st-danger-bg)', fg: 'var(--st-danger-fg)' },
   dim: { bg: 'var(--st-dim-bg)', fg: 'var(--st-dim-fg)' },
-  ext: { bg: 'var(--ext-bg)', fg: 'var(--ext-fg)', border: 'var(--ext-line)' },
+  ext: { bg: 'var(--select-bg)', fg: 'var(--select-fg)', border: 'var(--ext-line)' },
 }
 
 /**

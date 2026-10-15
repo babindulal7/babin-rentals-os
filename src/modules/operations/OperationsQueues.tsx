@@ -40,6 +40,7 @@ import OperationsShell from './OperationsShell'
 import { kathmanduCivil, NPT_OFFSET_MIN, getBusinessToday } from '../../lib/bs'
 import { CalendarPopover, DateField } from '../../components/ui/DateField'
 import { FilterButton, FilterDrawer, FilterSection } from '../../components/ui/FilterDrawer'
+import { FilterDatePicker } from '../../components/ui/FilterDatePicker'
 import { AppPageToolbar } from '../../components/ui/AppPageToolbar'
 import { Pagination } from '../../components/ui/Pagination'
 import { DataTableShell } from '../../components/ui/DataTable'
@@ -48,7 +49,6 @@ import { useOperationsWorkspace } from './OperationsWorkspaceContext'
 import { useDomainEvent } from '../../events/useDomainEvent'
 import { EVENT_TYPES } from '../../events/eventBus'
 import { listCases, type Case } from '../../lib/queries/cases'
-import { BsAdDate } from '../../components/ui/BsAdDate'
 
 
 const th = {
@@ -353,8 +353,8 @@ function chipStyle(on: boolean) {
     padding: '0 14px',
     borderRadius: 'var(--r-btn)',
     border: `1px solid ${on ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-    background: on ? 'var(--nav-active-bg)' : 'var(--card)',
-    color: on ? 'var(--nav-active-accent)' : 'var(--text2)',
+    background: on ? 'var(--select-bg)' : 'var(--card)',
+    color: on ? 'var(--select-fg)' : 'var(--text2)',
     fontSize: 'var(--t-meta)',
     fontWeight: 600,
     fontFamily: 'inherit',
@@ -719,6 +719,14 @@ export default function OperationsQueues() {
       : group
         ? GROUP_LABEL[group]
         : 'All jobs'
+  // One line on the date button: "Today", else the English date (a range shows both ends).
+  const adLabel = (day: string) => new Date(`${day}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+  const dateButtonLabel =
+    scope === 'today' ? 'Today'
+    : scope === 'tomorrow' ? adLabel(dayOffsetFromToday(1))
+    : scope === 'custom'
+      ? (!range ? 'All days' : customFrom && customTo && customFrom !== customTo ? `${adLabel(customFrom)} – ${adLabel(customTo)}` : customFrom ? adLabel(customFrom) : 'Custom range')
+      : SCOPE_LABEL[scope]
   const scopeLabel = scope === 'custom' && !range ? 'all days' : SCOPE_LABEL[scope].toLowerCase()
   const emptyTitle = isFiltered ? `Nothing in ${listLabel} for ${scopeLabel}` : 'No jobs right now'
   const emptyMessage = activeJob
@@ -841,8 +849,7 @@ export default function OperationsQueues() {
       {selected !== 'Cases' && <><div className="operations-v2__filters" aria-label="Operations filters">
         <div ref={dateMenuRef} className="operations-v2__date-wrap">
           <Button variant="outline" icon="calendar" iconRight={<Icon name={showDateMenu ? 'chevron_up' : 'chevron_down'} size={14} />} onClick={() => setShowDateMenu((open) => !open)} aria-expanded={showDateMenu} aria-controls="operations-date-menu">
-            {scope === 'custom' ? (range ? 'Custom range' : 'All days') : SCOPE_LABEL[scope]}
-            <BsAdDate date={todayNepal} />
+            {dateButtonLabel}
           </Button>
           {showDateMenu && (
             <div id="operations-date-menu" className="operations-v2__popover operations-v2__date-popover">
@@ -1092,27 +1099,14 @@ export default function OperationsQueues() {
         standardFooter
         onApply={() => setShowMoreFilters(false)}
       >
-        <div style={{ display: 'grid', gap: 'var(--sp-xs)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 'var(--sp-xs)' }}>
           <FilterSection title="Date range">
-            <div className="operations-v2__facet-grid">
-              {DISPLAY_SCOPE_ORDER.map((item) => (
-                <Button
-                  key={item}
-                  variant={scope === item ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className="operations-v2__facet"
-                  onClick={() => setScope(item)}
-                >
-                  {SCOPE_LABEL[item]}
-                </Button>
-              ))}
-            </div>
-            {scope === 'custom' && (
-              <div className="operations-v2__custom-range" style={{ marginTop: 'var(--sp-sm)' }}>
-                <label>From<DateField ariaLabel="Queue from this day" value={customFrom} onChange={(value) => patch({ from: value || null })} showBs={false} clearable /></label>
-                <label>To<DateField ariaLabel="Queue up to this day" value={customTo} onChange={(value) => patch({ to: value || null })} showBs={false} clearable align="right" /></label>
-              </div>
-            )}
+            <FilterDatePicker
+              from={scope === 'custom' ? customFrom : ''}
+              to={scope === 'custom' ? customTo : ''}
+              presets={(['today', 'tomorrow', 'week'] as const).map((item) => ({ key: item, label: SCOPE_LABEL[item], active: scope === item, onSelect: () => setScope(item) }))}
+              onRange={({ from, to }) => patch({ day: 'custom', from, to })}
+            />
           </FilterSection>
 
           <FilterSection title="Queue side">

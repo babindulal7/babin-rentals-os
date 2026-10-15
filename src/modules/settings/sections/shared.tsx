@@ -640,8 +640,8 @@ export function FieldRow({ f }: { f: Field }) {
                 style={{
                   ...controlStyle,
                   borderColor: on ? 'var(--nav-active-accent)' : 'var(--border)',
-                  background: on ? 'var(--nav-active-bg)' : 'var(--card)',
-                  color: on ? 'var(--nav-active-accent)' : 'var(--text2)',
+                  background: on ? 'var(--select-bg)' : 'var(--card)',
+                  color: on ? 'var(--select-fg)' : 'var(--text2)',
                   fontWeight: on ? 600 : 500,
                 }}
               >
@@ -669,8 +669,8 @@ export function FieldRow({ f }: { f: Field }) {
                 style={{
                   ...controlStyle,
                   borderColor: on ? 'var(--nav-active-accent)' : 'var(--border)',
-                  background: on ? 'var(--nav-active-bg)' : 'var(--card)',
-                  color: on ? 'var(--nav-active-accent)' : 'var(--text2)',
+                  background: on ? 'var(--select-bg)' : 'var(--card)',
+                  color: on ? 'var(--select-fg)' : 'var(--text2)',
                   fontWeight: on ? 600 : 500,
                   textTransform: 'capitalize',
                 }}
@@ -887,8 +887,8 @@ export function ActivityList({ entries, moreDest }: { entries: ActivityEntry[]; 
               display: 'grid',
               placeItems: 'center',
               flexShrink: 0,
-              background: a.system ? 'var(--nav-active-bg)' : 'var(--card2)',
-              color: a.system ? 'var(--nav-active-accent)' : 'var(--text2)',
+              background: a.system ? 'var(--select-bg)' : 'var(--card2)',
+              color: a.system ? 'var(--select-fg)' : 'var(--text2)',
               border: '1px solid var(--border)',
               fontSize: 'var(--t-th)',
               fontWeight: 700,

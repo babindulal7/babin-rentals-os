@@ -628,8 +628,8 @@ function ParentRowView({
                 height: 28,
                 borderRadius: 6,
                 border: '1px solid var(--border)',
-                background: open ? 'var(--nav-active-bg)' : 'var(--card2)',
-                color: open ? 'var(--nav-active-accent)' : 'var(--text2)',
+                background: open ? 'var(--select-bg)' : 'var(--card2)',
+                color: open ? 'var(--select-fg)' : 'var(--text2)',
                 cursor: 'pointer',
                 display: 'grid',
                 placeItems: 'center',
@@ -857,8 +857,8 @@ function ParentCardView({
             padding: '0 14px',
             borderRadius: 'var(--r-btn)',
             border: '1px solid var(--border)',
-            background: open ? 'var(--nav-active-bg)' : 'var(--card2)',
-            color: open ? 'var(--nav-active-accent)' : 'var(--text)',
+            background: open ? 'var(--select-bg)' : 'var(--card2)',
+            color: open ? 'var(--select-fg)' : 'var(--text)',
             fontSize: 'var(--t-meta)',
             fontWeight: 600,
             cursor: 'pointer',
@@ -1047,8 +1047,8 @@ function FilterRail({
                     borderRadius: 'var(--r-badge)',
                     display: 'grid',
                     placeItems: 'center',
-                    background: 'var(--nav-active-bg)',
-                    color: 'var(--nav-active-accent)',
+                    background: 'var(--select-bg)',
+                    color: 'var(--select-fg)',
                     fontSize: 'var(--t-th)',
                     fontWeight: 700,
                   }}
@@ -1790,8 +1790,8 @@ export default function Inventory() {
                 padding: '0 14px',
                 borderRadius: 'var(--r-btn, 8px)',
                 border: `1px solid ${showStats ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-                background: showStats ? 'var(--nav-active-bg)' : 'var(--card)',
-                color: showStats ? 'var(--nav-active-accent)' : 'var(--text)',
+                background: showStats ? 'var(--select-bg)' : 'var(--card)',
+                color: showStats ? 'var(--select-fg)' : 'var(--text)',
                 fontSize: 'var(--t-meta)',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -1848,7 +1848,7 @@ export default function Inventory() {
                 aria-pressed={density === 'compact'}
                 aria-label={density === 'compact' ? 'Comfortable rows' : 'Compact rows'}
                 title={density === 'compact' ? 'Comfortable rows' : 'Compact rows'}
-                style={{ width: 44, height: 44, borderRadius: 'var(--r-sm)', border: '1px solid var(--border)', background: density === 'compact' ? 'var(--nav-active-bg)' : 'var(--card)', color: density === 'compact' ? 'var(--nav-active-accent)' : 'var(--text2)', cursor: 'pointer' }}
+                style={{ width: 44, height: 44, borderRadius: 'var(--r-sm)', border: '1px solid var(--border)', background: density === 'compact' ? 'var(--select-bg)' : 'var(--card)', color: density === 'compact' ? 'var(--select-fg)' : 'var(--text2)', cursor: 'pointer' }}
               >
                 <Icon name={density === 'compact' ? 'chevron_up' : 'chevron_down'} size={15} />
               </button>

@@ -134,7 +134,7 @@ export function FilterDrawer({
   noun = 'results',
   activeCount = 0,
   onClearAll,
-  width = 360,
+  width = 256,
   desktopMode = 'overlay',
   railStyle,
   side = 'left',
@@ -225,6 +225,16 @@ export function FilterDrawer({
       restoreFocusTo.current?.focus()
     }
   }, [open, onClose, phone])
+
+  // Slide, don't cover: while the drawer is open on desktop/tablet the workspace
+  // makes room for it (padding transition in ui-v2.css), so nothing hides behind it.
+  const pushing = mounted && !phone && !rail && open
+  useEffect(() => {
+    if (!pushing) return
+    const root = document.documentElement
+    root.style.setProperty('--filter-drawer-w', `${width}px`)
+    return () => { root.style.removeProperty('--filter-drawer-w') }
+  }, [pushing, width])
 
   if (!mounted) return null
 
@@ -385,9 +395,11 @@ export function FilterDrawer({
             flex: 1,
             minHeight: 0,
             overflowY: 'auto',
+            overflowX: 'hidden',
             overscrollBehavior: 'contain',
-            padding: '14px 16px',
+            padding: '14px 12px',
             display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1fr)',
             alignContent: 'start',
             gap: 'var(--sp-md)',
           }}
@@ -584,15 +596,15 @@ function FilterToggle({
         padding: 0,
         borderRadius: 'var(--r-btn)',
         border: `1px solid ${expanded || activeCount > 0 ? 'var(--primary)' : 'var(--btn-secondary-border)'}`,
-        background: expanded ? 'var(--nav-active-bg)' : 'transparent',
-        color: expanded || activeCount > 0 ? 'var(--primary)' : 'var(--text)',
+        background: expanded ? 'var(--select-bg)' : 'transparent',
+        color: expanded ? 'var(--select-fg)' : activeCount > 0 ? 'var(--primary-text)' : 'var(--text)',
         fontFamily: 'inherit',
         fontSize: 'var(--t-ui)',
         fontWeight: 600,
         cursor: 'pointer',
       }}
     >
-      <Icon name={expanded ? 'panel_left_close' : 'panel_left_open'} size={19} />
+      <Icon name="filters" size={20} />
       {activeCount > 0 && (
         <span
           className="figure"
@@ -716,10 +728,10 @@ export function ActiveFilterChips({
             padding: '0 4px 0 10px',
             borderRadius: 'var(--r-badge)',
             border: 'none',
-            background: 'var(--chip-blue-bg)',
+            background: 'var(--select-bg)',
             fontSize: 'var(--t-meta)',
             fontWeight: 600,
-            color: 'var(--chip-blue-fg)',
+            color: 'var(--select-fg)',
           }}
         >
           {f.label}
@@ -969,7 +981,7 @@ export function FilterOptionList({
                   aria-label={`Filter by ${text}`}
                   checked={on}
                   onChange={() => onToggle(o.value)}
-                  style={{ width: 16, height: 16, flexShrink: 0, accentColor: 'var(--primary)' }}
+                  style={{ width: 16, height: 16, flexShrink: 0, accentColor: 'var(--fs-accent, var(--select-bg))' }}
                 />
                 <span style={{ flex: 1, minWidth: 0, fontWeight: on ? 700 : 400 }}>{text}</span>
                 {o.count !== undefined && (
@@ -1013,6 +1025,15 @@ export interface FilterSectionProps {
   id?: string
 }
 
+const SECTION_ACCENTS = ['#2456d6', '#0f7a55', '#a15c00', '#b23a6b', '#6b4bd1', '#0b7285'] as const
+
+/** A stable colour per section title, so "Date range" is the same colour on every page. */
+function sectionAccent(title: string): string {
+  let h = 0
+  for (const ch of title) h = (h * 31 + ch.charCodeAt(0)) >>> 0
+  return SECTION_ACCENTS[h % SECTION_ACCENTS.length] as string
+}
+
 export function FilterSection({
   title,
   defaultOpen = true,
@@ -1033,10 +1054,14 @@ export function FilterSection({
 
   return (
     <section
+      className="filter-section"
       aria-labelledby={`${sectionId}-heading`}
       style={{
+        ['--fs-accent' as string]: sectionAccent(title),
+        borderLeft: '4px solid var(--fs-accent)',
         borderBottom: '1px solid var(--border)',
-        paddingBottom: open ? 'var(--sp-md)' : 0,
+        borderRadius: 'var(--r-sm)',
+        padding: open ? '0 0 var(--sp-md) 8px' : '0 0 0 8px',
         marginBottom: 'var(--sp-xs)',
       }}
     >

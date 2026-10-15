@@ -134,9 +134,9 @@
 }
 
 .finance-filter-chip.is-active {
-  background: var(--nav-active-bg);
-  border-color: var(--nav-active-accent);
-  color: var(--nav-active-accent);
+  background: var(--select-bg);
+  border-color: var(--select-fg);
+  color: var(--select-fg);
   font-weight: 600;
   box-shadow: 0 0 0 1px var(--nav-active-accent), 0 2px 6px rgba(0, 0, 0, 0.05);
 }

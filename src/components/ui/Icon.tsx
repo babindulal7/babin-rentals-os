@@ -77,6 +77,7 @@ import {
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
   IconFilter,
+  IconAdjustmentsHorizontal,
   IconBuildingBank,
   IconCash,
   IconQrcode,
@@ -110,6 +111,7 @@ const REGISTRY = {
   external_link: IconExternalLink,
   edit: IconEdit,
   filter: IconFilter,
+  filters: IconAdjustmentsHorizontal,
   copy: IconCopy,
   archive: IconArchive,
 

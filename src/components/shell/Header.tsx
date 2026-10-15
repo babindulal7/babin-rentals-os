@@ -333,6 +333,9 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             overflow: 'hidden',
           }}
         >
+          {/* RULING 2026-10-15: the page's filter toggle is always the first control at the very left of the header, and its drawer opens from the left. */}
+          <span className="workspace-page-actions" ref={ws?.setHeaderActionsElement} />
+
           {/* Back navigation button if registered */}
           {hData?.backHref && (
             <Link
@@ -831,14 +834,8 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                 })}
               </span>
 
-              {/* CANONICAL BUTTON POSITIONS — same slots in every workspace:
-                  [Secondary] [Filters] [Add] [More] [Page CTA / Save / Confirm].
-                  Keep the page-owned portal after More, not before the title. */}
-              <span
-                className="workspace-page-actions app-global-header__action-slot app-global-header__action-slot--filters"
-                data-header-slot="filters"
-                ref={ws?.setHeaderActionsElement}
-              />
+              {/* CANONICAL BUTTON POSITIONS — [Secondary] [Add] [More] [Page CTA / Save / Confirm].
+                  The Filters toggle is NOT here: it is the first control at the far left (RULING 2026-10-15). */}
 
               {/* All Add actions share one location; page-specific creation still
                   honours its permissions and showAddMenu setting. */}
