@@ -108,3 +108,94 @@ export function aggregateIssuedRevenue(
   }
   return { months, totalPaisa: total as Paisa, issuedCount, fromAd, toAd }
 }
+
+
+/**
+ * Credit notes currently record the paid/refunded rupee amount (migration 0117,
+ * void_invoice in 0150), not a VAT-exclusive sales adjustment. Do not subtract
+ * credit_notes.amount from taxable revenue or label it net sales.
+ *
+ * This audit joins notes to ALL invoices issued in the selected AD window,
+ * including voided invoices excluded from the revenue chart. Credit notes on
+ * invoices issued outside the window belong to a different audit population.
+ */
+export interface IssuedInvoiceWithPayment extends IssuedInvoiceSource {
+  paid_amount: string | number
+}
+
+export interface InvoiceCreditNoteSource {
+  id: string
+  invoice_id: string
+  amount: string | number
+}
+
+export interface RevenueCreditReconciliation {
+  voidedInvoiceCount: number
+  voidedTaxablePaisa: Paisa
+  creditNoteCount: number
+  creditNoteAmountPaisa: Paisa
+  paidVoidMismatchCount: number
+  activeInvoiceCreditNoteCount: number
+}
+
+/** No fallback or estimated values: missing/malformed source records fail closed. */
+export function reconcileInvoiceCredits(
+  invoices: readonly IssuedInvoiceWithPayment[],
+  notes: readonly InvoiceCreditNoteSource[],
+): RevenueCreditReconciliation {
+  const byId = new Map<string, IssuedInvoiceWithPayment>()
+  const noteAmounts = new Map<string, number>()
+  const seenNotes = new Set<string>()
+  let creditNoteAmount = 0
+  let voidedTaxable = 0
+  let voidedInvoiceCount = 0
+  let activeInvoiceCreditNoteCount = 0
+
+  for (const invoice of invoices) {
+    if (byId.has(invoice.id)) throw new Error('Duplicate invoice in credit reconciliation')
+    asDate(invoice.issue_date)
+    byId.set(invoice.id, invoice)
+    if (invoice.voided_at !== null || invoice.status === 'Void') {
+      // Credit notes have no currency column: only an NPR parent establishes
+      // that settlement and taxable amounts can be displayed as NPR.
+      if (invoice.currency !== 'NPR') throw new Error('Mixed-currency voided invoices require separate reconciliation')
+      voidedInvoiceCount++
+      const taxable = sourcePaisa(invoice.taxable_amount)
+      voidedTaxable += taxable
+      if (!Number.isSafeInteger(voidedTaxable)) throw new Error('Voided taxable amount exceeds safe paisa')
+    }
+  }
+
+  for (const note of notes) {
+    if (seenNotes.has(note.id)) throw new Error('Duplicate credit note in report source')
+    seenNotes.add(note.id)
+    const invoice = byId.get(note.invoice_id)
+    if (!invoice) throw new Error('Credit note has no invoice in the report source')
+    if (invoice.currency !== 'NPR') throw new Error('Mixed-currency credit notes require separate reconciliation')
+    const amount = sourcePaisa(note.amount)
+    if (amount <= 0) throw new Error('Credit note must carry a positive amount')
+    creditNoteAmount += amount
+    const combined = (noteAmounts.get(note.invoice_id) ?? 0) + amount
+    if (!Number.isSafeInteger(combined) || !Number.isSafeInteger(creditNoteAmount)) {
+      throw new Error('Credit note totals exceed safe paisa')
+    }
+    noteAmounts.set(note.invoice_id, combined)
+    if (invoice.voided_at === null && invoice.status !== 'Void') activeInvoiceCreditNoteCount++
+  }
+
+  let paidVoidMismatchCount = 0
+  for (const invoice of invoices) {
+    if (invoice.voided_at === null && invoice.status !== 'Void') continue
+    const paid = sourcePaisa(invoice.paid_amount)
+    if (paid > 0 && (noteAmounts.get(invoice.id) ?? 0) !== paid) paidVoidMismatchCount++
+  }
+
+  return {
+    voidedInvoiceCount,
+    voidedTaxablePaisa: voidedTaxable as Paisa,
+    creditNoteCount: notes.length,
+    creditNoteAmountPaisa: creditNoteAmount as Paisa,
+    paidVoidMismatchCount,
+    activeInvoiceCreditNoteCount,
+  }
+}
