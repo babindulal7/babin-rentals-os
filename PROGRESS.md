@@ -1,5 +1,43 @@
 # Progress Log
 
+## 2026-10-15 — R-39 budgets measured in the browser: New Rental, inline client and cancel
+
+**Did**
+- Measured the three R-39 rows that were still unmeasured, on current main (`62c9795`), seeded mock, Owner, 1440px, starting from each flow's own entry point. Gestures are counted one per tap; a native `<select>` counts as two (open, choose). Typed = fields typed, not characters.
+  - **New Rental → Booked** (Today → Create → New Rental → client → project type → Equipment → one equipment item → Confirm Booking): **10 gestures, 0 typed**. Budget ⭐ ≤12: within. Committed: "Booking Confirmed — Rental 918 is now Booked".
+  - **New client inline** (New Rental → New client → company name, phone → Create & Select Client → Continue Booking): **3 gestures, 2 typed**. The required fields are the company name and the phone, confirmed by submitting the form empty. Budget ≤3 required: within. Committed: "Client created C-1 · … is selected on this booking", and the rental's client field shows the name.
+  - **Cancel a booking** (Rentals list → row ⋮ → Cancel Booking → reason → "I confirm" checkbox → Cancel Booking): **4 gestures, 1 typed**. The 19 Sep row says 3 taps; the dialog also requires the "I confirm" checkbox, which is part of the named-action gate. Budget stays "gated". **Not committed in the mock:** the store refuses with `[mock] rpc("cancel_booking") is not implemented in the local store`. The refusal is honest (no false success), but the commit is unverified here.
+- Found, not fixed:
+  - **Bundles cannot be confirmed in mock mode.** Add Bundle → Confirm Booking is refused with "line 2 carries a productId that is not a uuid (`BND-14::Aputure LS 600d Pro`). Nothing was sent." Single equipment items commit. Not checked against the live data path.
+  - **Booking Detail's header ⋮ cannot reach Cancel with a mouse at 1440px.** The first ⋮ ("More actions") opens a menu whose only entry is another ⋮ ("More booking actions"). Clicking the inner ⋮ closes both menus, so the items inside it (Extend rental, Assign crew, Create sub-rental, Cancel booking, Message client) are not reachable from the header. The nested menu is also present on `21fb260` (before `5c1bacc`), which I saw but did not click through there. The Rentals list row ⋮ still offers Cancel Booking.
+
+**Ruled**
+- None. No product rule, budget or permission changed. The 19 Sep table is not edited in this entry; its cancel row and its New Rental row need correcting (see Remaining).
+
+**Verified**
+- Browser (seeded mock, Owner, 1440px): the three flows above, outcomes quoted from the app's own toasts and dialogs. Screens checked: the Create menu, the client picker, the equipment catalogue, the review panel, the Booking Confirmed dialog, the inline new-client form and its success card, the Rentals list row menu and the cancel dialog. Zero page errors in every run.
+- No code changed. `npm run completion` counted below; `npm run lint:progress` run.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-15T07:57:19.221Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Gates read from .lifecycle-result.json, written 2026-10-14T20:37:10.038Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Booking Detail's nested ⋮: proposed fix is one menu holding the five booking items, so Cancel is one ⋮ away from the header. It moves the header layout, so it needs a decision.
+- Bundles: check the live path before changing anything. The composite `BND-14::…` productId may be a mock-only artefact, or the app may build it for live bundles too.
+- Cancel's committed success needs the live `cancel_booking` RPC, or a mock implementation. Neither is done.
+- Correct the 19 Sep table: Cancel a booking 3 → 4 gestures (+1 typed); New Rental, Dashboard → Booked, 6–8 estimate → 10 gestures measured.
+- The 2026-10-15 "Clean UI improvements" entry exists only in `a995169`, not on main. Restore it, or leave it, at the owner's call.
+
 ## 2026-10-15 — Merged payment preselection safety, interactive revenue charts & clean UI verified
 
 **Did**
