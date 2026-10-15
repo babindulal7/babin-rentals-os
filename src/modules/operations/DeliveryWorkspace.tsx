@@ -66,6 +66,7 @@ export function DeliveryWorkspace() {
   const [newDate, setNewDate] = useState(() => businessDayAd())
   const [newTime, setNewTime] = useState('10:00')
   const [newNotes, setNewNotes] = useState('')
+  const [createError, setCreateError] = useState<string | null>(null)
 
   const [gatePassSlip, setGatePassSlip] = useState<DeliveryRecord | null>(null)
 
@@ -135,9 +136,10 @@ export function DeliveryWorkspace() {
   const handleCreateDelivery = (e: React.FormEvent) => {
     e.preventDefault()
     if (!newBookingNo || !newClientName || !newAddress) {
-      showSuccessToast('Please fill all required delivery details')
+      setCreateError('Please fill all required delivery details (Booking Number, Client Name, and Delivery Address).')
       return
     }
+    setCreateError(null)
     const created = createDeliveryRecord({
       bookingNo: newBookingNo.toUpperCase(),
       clientName: newClientName,
@@ -867,8 +869,29 @@ export function DeliveryWorkspace() {
 
           {/* Modal: New Delivery Dispatch Order */}
           {newModalOpen && (
-            <Modal isOpen onClose={() => setNewModalOpen(false)} title="Create New Delivery Dispatch">
+            <Modal
+              isOpen
+              onClose={() => {
+                setNewModalOpen(false)
+                setCreateError(null)
+              }}
+              title="Create New Delivery Dispatch"
+            >
               <form onSubmit={handleCreateDelivery} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {createError && (
+                  <div
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: 'var(--r-btn)',
+                      background: 'var(--st-danger-bg)',
+                      color: 'var(--st-danger-fg)',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {createError}
+                  </div>
+                )}
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>

@@ -131,6 +131,9 @@ export default defineConfig({
   server: {
     port: process.env['PORT'] ? Number(process.env['PORT']) : 3000,
     host: true,
+    fs: {
+      allow: ['..', path.resolve(__dirname, '../../..')],
+    },
     allowedHosts: [
       '.ngrok-free.app', '.ngrok-free.dev', '.ngrok.app', '.ngrok.io',
       /* Pinggy hands out a different suffix per tunnel type — a free tunnel

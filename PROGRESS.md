@@ -1,5 +1,54 @@
 # Progress Log
 
+## 2026-10-08 (a) — Operational success toasts & Law 12 enforcement across workspaces
+
+**Did**
+- Added `showSuccessToast` across all operational floor workspaces and modals following Law 12 ("Toasts carry successes only. Errors remain inline in their own surface"):
+  - `PackingWorkspace.tsx`: `Packing Completed` toast on transition to Packed.
+  - `HandoverWorkspace.tsx`: `Handover Completed` toast on transition to On Rent.
+  - `ReturnWorkspace.tsx` & `FastReturnModal.tsx`: `Return Completed` toast on equipment return.
+  - `ResetWorkspace.tsx`: `Reset Completed` toast on equipment reset.
+  - `useNewRentalSubmit.ts`: `Booking Confirmed` toast on quote confirmation.
+  - `useNewRentalDraft.ts`: `Draft Cancelled` toast on draft cancellation.
+  - `EvidenceWorkspace.tsx`: `Evidence Reviewed` toast on photo review.
+  - `BookingDetail.tsx`: `Project Type Updated` toast on project type save.
+  - `RentalsList.tsx`: `Payment Recorded` toast on recording invoice payment.
+  - `LogCaseModal.tsx` & `ResolveCaseModal.tsx`: `Incident Logged` & `Case Resolved` toasts.
+  - `RefundPaymentModal.tsx` & `VoidInvoiceModal.tsx`: `Payment Reversed` & `Invoice Voided` toasts.
+  - `DriverHandoverModal.tsx`: `Handover Completed` toast on online field delivery.
+  - `DeliveryWorkspace.tsx`: Removed invalid success toast on validation error, replaced with inline `createError` message banner adhering to Law 12.
+- Made `useToast()` resilient with a fallback `NOOP_TOAST` when rendered outside `ToastProvider` in unit tests.
+
+**Ruled**
+- Law 12: Success toasts only. Failures and validation errors remain inline.
+- Toasts carry crisp titles with booking/item references (`Rental 6 is now Packed`).
+
+**Verified**
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (`eslint src --max-warnings 0`).
+- `npx vitest run src/modules/rentals/`: 41 files passed, 398 tests passed.
+- `npx vitest run src/modules/operations/ src/modules/finance/`: 16 files passed, 243 tests passed.
+- `npm run check:pglite`: 156/156 applied, 0 failed.
+- `npm run check:lifecycle`: 30/30 green.
+- `npm run build`: built in 53s cleanly.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 52 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 54 | 52 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 156 files · check:pglite 156/156 applied, 0 failed (recorded 2026-10-08T17:31:01.936Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Gates read from .lifecycle-result.json, written 2026-10-08T17:31:23.157Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live push migration verification (N-5, Babin applies after backup protocol).
+- End-to-end browser regression checks on production build.
+
 ## 2026-10-07 (b) — G1: settings stored in the database (0158)
 
 **Did**

@@ -652,6 +652,7 @@ export default function NewRental({ embedded = false, onDone, editBookingId }: N
     dispatchContext,
     setActionError,
     setConfirmedSuccess,
+    showSuccessToast,
     client,
     lines,
     equipmentLines,

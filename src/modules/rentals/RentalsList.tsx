@@ -75,6 +75,7 @@ import { RecordPaymentModal } from '../finance/modals/RecordPaymentModal'
 import { captureError } from '../../lib/monitoring'
 import { TouchTarget } from '../../components/ui/TouchTarget'
 import BookingOperationsMenu from './BookingOperationsMenu'
+import { useToast } from '../../components/ui/Toast'
 import './rentals.css'
 import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext'
 /**
@@ -972,6 +973,7 @@ export default function RentalsList() {
   const [fastReturnOpen, setFastReturnOpen] = useState(false)
   const [barcodeModalOpen, setBarcodeModalOpen] = useState(false)
   const [paymentModalOpen, setPaymentModalOpen] = useState(false)
+  const { showSuccessToast } = useToast()
   const bulkProcessing = false
 
   /**
@@ -2679,6 +2681,7 @@ export default function RentalsList() {
           onSuccess={() => {
             setPaymentModalOpen(false)
             refreshAll()
+            showSuccessToast('Payment Recorded', 'Payment recorded successfully')
           }}
         />
       )}

@@ -213,6 +213,7 @@ function ProjectTypeEditor({
   role: ActionContext['role']
   onSaved: (projectType: string | null, projectTypeOther: string | null) => void
 }) {
+  const { showSuccessToast } = useToast()
   const [draft, setDraft] = useState(currentType ?? '')
   const [draftOther, setDraftOther] = useState(currentOther ?? '')
   const [saving, setSaving] = useState(false)
@@ -241,6 +242,7 @@ function ProjectTypeEditor({
         { userId, role },
       )
       onSaved(out.projectType, out.projectTypeOther)
+      showSuccessToast('Project Type Updated', `Updated to ${out.projectType ?? 'None / Unset'}`)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not update project type. Your previous value has been restored.')
     } finally {
