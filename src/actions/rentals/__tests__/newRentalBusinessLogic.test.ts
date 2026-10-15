@@ -68,6 +68,9 @@ describe('Task 6 — New Rental Business Logic & Validation', () => {
 
       const children = res.lines.filter((l) => l.isIncluded)
       expect(children.length).toBeGreaterThan(0)
+      expect(res.notes[0]).toContain(`${children.length} component lines added with no extra rental charge`)
+      expect(res.notes.join(' ')).not.toContain('apply that in Pricing')
+      expect(res.notes.join(' ')).not.toContain('own daily rates')
 
       for (const child of children) {
         // Enforce DB CHECK `booking_lines_bundle_child_is_free`

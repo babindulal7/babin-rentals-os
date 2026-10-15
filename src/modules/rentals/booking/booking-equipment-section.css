@@ -40,32 +40,6 @@
   border-radius: var(--r-input);
 }
 
-/* Names and row actions remain available while the wide line table scrolls. */
-.new-rental-equipment-selection th:first-child,
-.new-rental-equipment-selection td:first-child {
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  min-width: 180px;
-  background: var(--card);
-  border-right: 1px solid var(--border);
-}
-
-.new-rental-equipment-selection th:last-child,
-.new-rental-equipment-selection td:last-child {
-  position: sticky;
-  right: 0;
-  z-index: 1;
-  min-width: 44px;
-  background: var(--card);
-  border-left: 1px solid var(--border);
-}
-
-.new-rental-equipment-selection th:first-child,
-.new-rental-equipment-selection th:last-child {
-  background: var(--th-bg);
-}
-
 .new-rental-equipment-extras {
   container: equipment-extras / inline-size;
   margin-top: 16px;
@@ -176,13 +150,5 @@
 
   .new-rental-equipment-line-details.has-supplier {
     grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-@container equipment-selection (max-width: 480px) {
-  .new-rental-equipment-selection th:first-child,
-  .new-rental-equipment-selection td:first-child {
-    min-width: 140px;
-    max-width: 160px !important;
   }
 }

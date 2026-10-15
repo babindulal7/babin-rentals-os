@@ -1,5 +1,35 @@
 # Progress Log
 
+## 2026-10-15 — New Rental catalogue targets and responsive evidence
+
+**Did**
+- Increased shared catalogue View/Add Bundle, crew and transport actions from 26px painted controls to visible 44px minimum targets, with 16px icons, UI-sized labels, 8px action spacing and wrapping rows. The existing keyboard paths, callbacks and permission gates are retained.
+- Verified that the patch survived concurrent main merges (AddItemPanel last changed in 7256b99d). Updated the app-wide improvement plan; no migration, role or pricing change.
+
+**Ruled**
+- No new product ruling. Implements the existing 44px control minimum. This scoped pass does not close the app-wide acceptance plan.
+
+**Verified**
+- The sequential run started from f1bce01f plus this patch: typecheck passed; 353 test files / 4,481 tests passed; local PGlite 160/160 migrations and lifecycle 30/30 passed; production build completed. Scoped ESLint and contrast 82/82 passed. Logs: artifacts/catalogue-touch-2026-10-15/.
+- Fresh mock build completed. Saved Chromium viewport screenshots at 320, 390 and 768px; measured View and Add Bundle at 44px high, within each viewport, with document width equal to viewport width. Files: catalogue-320.jpg, catalogue-390.jpg, catalogue-768.jpg and measurements-final.json in that evidence folder. Temporary viewport override reset.
+- Earlier mock interaction pass opened bundle preview, cancelled without adding, and added the bundle. An attempted off-screen remove click had no effect; keyboard activation removed that line and the visible Remove all menu cleared the remaining bundle lines to zero items. No booking was submitted.
+- Other main merges landed after the test run. These logs certify the scoped patch at the tested checkout, not every later merged feature. The generated completion block below reads the current checkout and cached gate records; its suite-not-run sentence describes the counter invocation, not the separate full test run above.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-15T07:57:19.221Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Gates read from .lifecycle-result.json, written 2026-10-15T07:57:34.294Z.
+Counted by `npm run completion`, not typed.
+## Remaining
+- Complete the broader status/role/persisted-save matrix in docs/UI_UX_IMPROVEMENT_PLAN.md. Physical phone/iPad Safari, keyboard and native zoom acceptance remain unverified.
+- Reconcile the bundle add message: the mock notice currently states both bundle billing with zero-priced components and components billed at their own rates. This pre-existing contradictory copy needs a focused follow-up against the authoritative bundle pricing behavior.
 ## 2026-10-15 — Merged payment preselection safety, interactive revenue charts & clean UI verified
 
 **Did**
