@@ -92,6 +92,7 @@ declare
   v_job public.delivery_jobs%rowtype;
 begin
   if v_actor is null or v_role not in ('Owner','Admin','Manager','Coordinator')
+     or not exists (select 1 from public.users u where u.id=v_actor and u.is_active)
      or p_key is null or p_leg not in ('Outbound','Return') or p_scheduled_at is null then
     raise exception 'Delivery creation is not authorized or required fields are missing' using errcode='42501';
   end if;
@@ -138,6 +139,7 @@ declare
   v_receipt public.delivery_job_events%rowtype;
 begin
   if v_actor is null or v_role not in ('Owner','Admin','Manager','Coordinator')
+     or not exists (select 1 from public.users u where u.id=v_actor and u.is_active)
      or p_job_id is null or p_driver_id is null or p_request_key is null then
     raise exception 'Driver assignment not authorized' using errcode='42501';
   end if;
@@ -155,6 +157,9 @@ begin
       return p_job_id;
     end if;
     raise exception 'Assignment key belongs to a different request';
+  end if;
+  if not exists (select 1 from public.bookings b where b.id=v_job.booking_id and b.cancelled_at is null) then
+    raise exception 'Cancelled booking cannot receive a driver assignment';
   end if;
   if v_job.status not in ('Scheduled','Ready') then
     raise exception 'Driver cannot be reassigned during or after dispatch';
@@ -192,7 +197,8 @@ declare
   v_warehouse boolean;
   v_assigned_driver boolean;
 begin
-  if v_actor is null or p_job_id is null or p_request_key is null then
+  if v_actor is null or p_job_id is null or p_request_key is null
+     or not exists (select 1 from public.users u where u.id=v_actor and u.is_active) then
     raise exception 'Delivery transition requires an authenticated actor' using errcode='42501';
   end if;
   select * into v_job from public.delivery_jobs where id=p_job_id for update;
@@ -240,9 +246,13 @@ begin
      and v_booking.stage not in ('Packed','On Rent') then
     raise exception 'Packing must finish before outbound dispatch';
   end if;
-  if p_next_status='In Transit' and v_job.assigned_driver_id is null then
-    raise exception 'An active assigned driver is required before dispatch';
-  end if;
+  if p_next_status='In Transit' and (
+    v_job.assigned_driver_id is null or not exists (
+      select 1 from public.users u
+      where u.id=v_job.assigned_driver_id and u.primary_role='Driver'
+        and u.is_active and u.branch_id=v_job.branch_id
+    )
+  ) then raise exception 'An active assigned driver is required before dispatch'; end if;
   if p_next_status='Delivered' and length(btrim(coalesce(p_recipient,'')))<2 then
     raise exception 'Delivery receipt requires the recipient name';
   end if;
