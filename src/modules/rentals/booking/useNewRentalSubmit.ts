@@ -3,6 +3,7 @@ import type { ActionContext } from '../../../actions/core'
 import { createRental, deliveryTypeFromLabel, type BookingLineType } from '../../../actions/rentals/createRental'
 import { convertDraft, saveDraft as persistRentalDraft, type RentalDraftData } from '../../../actions/rentals/saveDraft'
 import { transportInstructions } from '../../../lib/bookingTransportForm'
+import { bookingDiscountRows } from '../../../lib/bookingDiscountRows'
 import { toRupees, type Paisa } from '../../../lib/money'
 import type { PricingPipelineResult } from '../../../lib/pricingPipeline'
 import { planCreationUnits, type CreationUnitPlan } from '../../../lib/queries/availability'
@@ -109,7 +110,7 @@ export function useNewRentalSubmit({
   draftBookingKey,
 }: UseNewRentalSubmitOptions) {
   const createdQuote = useRef<{ id: string; no: string; stage?: string } | null>(null)
-  const discountKey = useRef<string | null>(null)
+  const discountKeys = useRef<string[]>([])
   const crewKeys = useRef<string[]>([])
   const transportKey = useRef<string | null>(null)
 
@@ -184,17 +185,18 @@ export function useNewRentalSubmit({
               returnAt: returnAt.toISOString(),
               deliveryType: deliveryTypeFromLabel(deliveryType),
               depositRequired: toRupees(pricing.securityDeposit.requiredPaisa),
+              vatRate: pricing.vatRatePercent / 100,
               ...(pricing.discounts.discountPaisa > 0
                 ? {
-                    discounts: [
-                      {
-                        clientUuid: discountKey.current ?? (discountKey.current = newClientUuid()),
-                        discountSource: 'Manual',
-                        percent: pricing.discounts.appliedPercent,
-                        reason: manualDiscountReason.trim() || (womenDopEligible ? 'Women DoP/Director Discount' : 'Quotation Discount'),
-                        approverId: manualDiscountAuthorizedBy.trim() || null,
-                      },
-                    ],
+                    discounts: bookingDiscountRows(
+                      pricing.discounts,
+                      manualDiscountReason,
+                      manualDiscountAuthorizedBy,
+                    ).map((discount, index) => ({
+                      ...discount,
+                      clientUuid: discountKeys.current[index] ??
+                        (discountKeys.current[index] = newClientUuid()),
+                    })),
                   }
                 : {}),
               ...(crew.length > 0
@@ -279,7 +281,7 @@ export function useNewRentalSubmit({
 
         confirmKey.current = null
         createdQuote.current = null
-        discountKey.current = null
+        discountKeys.current = []
         crewKeys.current = []
         transportKey.current = null
         setSaveState('saved')

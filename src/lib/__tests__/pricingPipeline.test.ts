@@ -5,8 +5,10 @@ import {
   evaluateDiscounts,
   DISCOUNT_STACKING_CAP_PERCENT,
   WOMEN_DOP_DISCOUNT_PERCENT,
+  promotionDateAd,
 } from '../pricingPipeline'
 import { rupees } from '../money'
+import { bookingDiscountRows } from '../bookingDiscountRows'
 
 describe('pricingPipeline — 13-step calculation order & business logic (Task 6)', () => {
   it('calculates standard rental with equipment, bundle, service, crew and delivery correctly', () => {
@@ -225,5 +227,68 @@ describe('pricingPipeline — 13-step calculation order & business logic (Task 6
     // > 10,000 NPR -> 50%
     expect(calculateAdvanceRequired(rupees(12000))).toBe(rupees(6000))
     expect(calculateAdvanceRequired(rupees(50000))).toBe(rupees(25000))
+  })
+})
+
+describe('New Rental pricing regressions — October 2026', () => {
+  it('accepts a standalone 30% manual discount without incorrectly applying the stacking cap or an approval gate', () => {
+    const quote = evaluateDiscounts({ manualDiscountPercent: 30 }, rupees(100000))
+    expect(quote.validationErrors).toEqual([])
+    expect(quote.capped).toBe(false)
+    expect(quote.appliedPercent).toBe(30)
+    expect(quote.discountPaisa).toBe(rupees(30000))
+    expect(bookingDiscountRows(quote)).toMatchObject([{ discountSource: 'Manual', percent: 30 }])
+  })
+
+  it('keeps the 25% combined-benefit cap and allocates exactly what the client was quoted', () => {
+    const quote = evaluateDiscounts({ membershipPercent: 20, bundleSavingPercent: 10 }, rupees(100000))
+    expect(quote.capped).toBe(true)
+    expect(quote.appliedPercent).toBe(25)
+    const rows = bookingDiscountRows(quote)
+    expect(rows).toMatchObject([
+      { discountSource: 'Membership', percent: 20 },
+      { discountSource: 'Manual', percent: 5 },
+    ])
+    expect(rows.reduce((sum, row) => sum + row.percent, 0)).toBe(25)
+  })
+
+  it('checks coupon validity using the Kathmandu calendar, including the final valid day', () => {
+    const promo = { code: 'LASTDAY', couponId: '11111111-1111-4111-8111-111111111111', discountPercent: 10, active: true, validFrom: '2026-10-14', validTo: '2026-10-14' }
+    const lateUtc = new Date('2026-10-13T18:15:00.000Z')
+    expect(promotionDateAd(lateUtc)).toBe('2026-10-14')
+    expect(evaluateDiscounts({ promoCode: promo }, rupees(10000), lateUtc.toISOString()).appliedPercent).toBe(10)
+    expect(evaluateDiscounts({ promoCode: promo }, rupees(10000), '2026-10-14').appliedPercent).toBe(10)
+    const nextDay = evaluateDiscounts({ promoCode: promo }, rupees(10000), '2026-10-14T18:15:00.000Z')
+    expect(nextDay.appliedPercent).toBe(0)
+    expect(nextDay.sources[0]?.exclusionReason).toContain('expired')
+  })
+
+  it('saves coupon IDs and Women DoP discounts as their own database sources', () => {
+    const couponId = '11111111-1111-4111-8111-111111111111'
+    const quote = evaluateDiscounts({ manualDiscountPercent: 5, womenDopEligible: true,
+      promoCode: { code: 'FESTIVAL', couponId, discountPercent: 10, active: true } }, rupees(10000), '2026-10-14')
+    const rows = bookingDiscountRows(quote, 'Approved campaign', 'Accounts desk')
+    expect(rows).toHaveLength(3)
+    expect(rows.map((row) => row.discountSource)).toEqual(['Women-DoP 5%', 'Coupon', 'Manual'])
+    expect(rows[1]).toMatchObject({ discountSource: 'Coupon', couponId, percent: 10 })
+    expect(rows[2]?.reason).toContain('Accounts desk')
+    expect(rows.reduce((sum, row) => sum + row.percent, 0)).toBe(20)
+  })
+
+  it('rejects an unverified coupon without a real coupon ID at persistence time', () => {
+    const quote = evaluateDiscounts({ promoCode: { code: 'FAKE', discountPercent: 10, active: true } }, rupees(10000))
+    expect(() => bookingDiscountRows(quote)).toThrow(/database coupon ID/)
+  })
+
+  it('refuses the student-plus-Women discount combination which the live database forbids', () => {
+    const quote = evaluateDiscounts({ isStudentBundle: true, bundleSavingPercent: 15, womenDopEligible: true }, rupees(10000))
+    expect(quote.validationErrors).toEqual(expect.arrayContaining([expect.stringContaining('exclusive')]))
+    expect(() => bookingDiscountRows(quote)).toThrow(/exclusive/)
+  })
+
+  it('rejects invalid discounts rather than clipping a 150% request without warning', () => {
+    const quote = evaluateDiscounts({ manualDiscountPercent: 150 }, rupees(10000))
+    expect(quote.validationErrors).toHaveLength(1)
+    expect(() => bookingDiscountRows(quote)).toThrow(/between 0% and 100%/)
   })
 })
