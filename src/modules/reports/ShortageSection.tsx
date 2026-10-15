@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { useMemo, useState, useSyncExternalStore } from 'react'
 import { Link } from 'react-router-dom'
 import { Button, cardStyle } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { DateField } from '../../components/ui/DateField'
+import { EmptyState, ErrorBanner, LoadingSkeleton } from '../../components/ui/StateViews'
+import { useLoad } from '../../lib/queries/useLoad'
 import { findShortages, type ShortageRow } from '../../lib/shortages'
 import { readShortageInputs, type ShortageInputs } from '../../lib/queries/shortages'
 import { availabilityRules } from '../../lib/queries/availability'
@@ -26,29 +28,12 @@ export default function ShortageSection() {
   const startMinutes = useSyncExternalStore(subscribeSettings, dayStart, () => OPERATIONAL_DAY_START_DEFAULT_MINUTES)
   const [fromDay, setFromDay] = useState(() => defaultShortageDays(new Date(), startMinutes).from)
   const [toDay, setToDay] = useState(() => defaultShortageDays(new Date(), startMinutes).to)
-  const [inputs, setInputs] = useState<ShortageInputs | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [reload, setReload] = useState(0)
-
-  useEffect(() => {
-    let active = true
-    setInputs(null)
-    setError(null)
-    void readShortageInputs()
-      .then((next) => {
-        if (!active) return
-        setInputs(next)
-        setError(null)
-      })
-      .catch((err: unknown) => {
-        if (!active) return
-        setInputs(null)
-        setError(err instanceof Error ? err.message : String(err))
-      })
-    return () => {
-      active = false
-    }
-  }, [reload])
+  /* Phase 6 — the shared read: skeleton while in flight, the failure as an
+     inline banner with Retry (worded as offline when it is). It hand-rolled a
+     plain-text error and a "Reading bookings…" line before. */
+  const load = useLoad<ShortageInputs>(readShortageInputs)
+  const inputs = load.data
+  const error = load.error
 
   const window = useMemo(() => shortagePeriod(fromDay, toDay, startMinutes), [fromDay, toDay, startMinutes])
 
@@ -78,7 +63,7 @@ export default function ShortageSection() {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--sp-md)', marginTop: 'var(--sp-sm)' }}>
           <DateField label="From" ariaLabel="From" showBs={false} clearable value={fromDay} onChange={setFromDay} />
           <DateField label="To" ariaLabel="To" showBs={false} clearable value={toDay} onChange={setToDay} />
-          <Button icon="refresh" onClick={() => setReload(value => value + 1)}>Refresh shortages</Button>
+          <Button icon="refresh" onClick={load.reload}>Refresh shortages</Button>
         </div>
         <p style={{ margin: 'var(--sp-sm) 0 0', color: 'var(--text2)', fontSize: 'var(--t-meta)' }}>
           Includes each selected operational day, starting at {String(Math.floor(startMinutes / 60)).padStart(2, '0')}:{String(startMinutes % 60).padStart(2, '0')} Nepal time.
@@ -91,19 +76,31 @@ export default function ShortageSection() {
       </div>
 
       {displayError && (
-        <p role="alert" style={{ margin: 0, padding: 'var(--sp-md)', fontSize: 'var(--t-meta)', color: 'var(--danger-text)' }}>
-          {displayError}
-        </p>
+        <div style={{ padding: 'var(--sp-md)' }}>
+          <ErrorBanner
+            title={error ? 'Could not read the bookings for shortages' : 'Availability could not be calculated'}
+            message={displayError}
+            {...(error ? { onRetry: load.reload } : {})}
+          />
+        </div>
       )}
 
-      {!displayError && rows === null && window && (
-        <p style={{ margin: 0, padding: 'var(--sp-md)', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>Reading bookings…</p>
+      {!displayError && load.loading && rows === null && window && (
+        <div style={{ padding: 'var(--sp-md)' }}>
+          <LoadingSkeleton rows={3} label="Reading bookings…" />
+        </div>
       )}
 
+      {/* No RESULTS for the chosen period — the answer to the question asked,
+          not a missing table. */}
       {!displayError && rows !== null && rows.length === 0 && (
-        <p style={{ margin: 0, padding: 'var(--sp-md)', fontSize: 'var(--t-meta)' }}>
-          No product is over-committed in this period.
-        </p>
+        <div style={{ padding: 'var(--sp-md)' }}>
+          <EmptyState
+            kind="no-results"
+            title="No shortages in this period"
+            description="No product is over-committed in this period."
+          />
+        </div>
       )}
 
       {!displayError && rows !== null && rows.length > 0 && (

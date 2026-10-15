@@ -56,19 +56,26 @@ export function sharePercent(count: number, total: number): number | null {
   return total > 0 ? Math.round((count / total) * 100) : null
 }
 
-/** Returns `null` when any read fails — the page then says it could not load. */
-export async function getInventoryReportSummary(): Promise<InventoryReportSummary | null> {
-  try {
-    const results = await Promise.all(
-      INVENTORY_STATES.map((status) =>
-        supabase.from('product_units_v').select('id', { count: 'exact', head: true }).eq('status', status),
-      ),
-    )
-    if (results.some((r) => r.error || r.count === null)) return null
-    return summariseStatusCounts(
-      INVENTORY_STATES.map((status, i): StatusCount => ({ status, count: results[i]?.count ?? 0 })),
-    )
-  } catch {
-    return null
-  }
+/**
+ * Throws when any read fails, so the page draws Error + Retry.
+ *
+ * RULING 2026-10-15: this returned `null` on failure and the page printed
+ * "Could not load unit counts" with no way to retry; it now throws the first
+ * failure's reason for `useLoad`. A count of `null` is a failure too — a
+ * figure the read did not return is not a zero (Law 16). Revert = restore the
+ * try/catch returning `null`.
+ */
+export async function getInventoryReportSummary(): Promise<InventoryReportSummary> {
+  const results = await Promise.all(
+    INVENTORY_STATES.map((status) =>
+      supabase.from('product_units_v').select('id', { count: 'exact', head: true }).eq('status', status),
+    ),
+  )
+  results.forEach((r, i) => {
+    if (r.error) throw new Error(`getInventoryReportSummary failed on ${INVENTORY_STATES[i]}: ${r.error.message}`)
+    if (r.count === null) throw new Error(`getInventoryReportSummary: no count returned for ${INVENTORY_STATES[i]}`)
+  })
+  return summariseStatusCounts(
+    INVENTORY_STATES.map((status, i): StatusCount => ({ status, count: results[i]?.count ?? 0 })),
+  )
 }

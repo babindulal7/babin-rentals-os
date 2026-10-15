@@ -17,9 +17,9 @@ vi.mock('../../supabase', () => ({
 }))
 
 describe('activity query module', () => {
-  it('returns empty rows and zero total on database error', async () => {
-    const res = await listActivityEvents()
-    expect(res.rows).toEqual([])
-    expect(res.total).toBe(0)
+  /* RULING 2026-10-15: a failed read throws (Activity Log draws Error + Retry
+     from it). It used to resolve to zero rows — an outage drawn as an empty log. */
+  it('throws on a database error instead of reporting an empty log', async () => {
+    await expect(listActivityEvents()).rejects.toThrow('listActivityEvents failed: Simulated database error')
   })
 })

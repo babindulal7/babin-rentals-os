@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageHeader, KpiStrip, cardStyle } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { ReportToolbar } from '../../components/ui/ReportToolbar'
+import { PageBody } from '../../components/ui/PageBody'
+import { useLoad } from '../../lib/queries/useLoad'
 import type { ReportCsvRow } from '../../components/ui/ReportToolbar'
 import { getInventoryReportSummary, sharePercent, type InventoryReportSummary } from '../../lib/queries/inventoryReports'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
@@ -44,23 +45,11 @@ export function inventoryCsv(summary: InventoryReportSummary | null, money: bool
 export default function InventoryReports() {
   const money = useCanViewMoney()
   const viewport = useViewport()
-  const [summary, setSummary] = useState<InventoryReportSummary | null>(null)
-  const [loaded, setLoaded] = useState(false)
-
-  useEffect(() => {
-    let active = true
-    void getInventoryReportSummary().then((res) => {
-      if (active) {
-        setSummary(res)
-        setLoaded(true)
-      }
-    })
-    return () => {
-      active = false
-    }
-  }, [])
-
-  const countValue = (n: number | undefined): string => (summary && n !== undefined ? String(n) : loaded ? 'Unavailable' : '…')
+  /* Phase 6 — one read, one ladder. A failed count used to print "Could not
+     load unit counts" with no Retry, and the KPIs read "…" then "Unavailable";
+     both now come from `PageBody` (skeleton · banner with Retry · nothing-yet). */
+  const load = useLoad<InventoryReportSummary>(getInventoryReportSummary)
+  const summary = load.data
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
@@ -84,25 +73,33 @@ export default function InventoryReports() {
         </Link>
       </div>
 
+      <PageBody
+        noun="unit counts"
+        loading={load.loading}
+        error={load.error}
+        onRetry={load.reload}
+        hasRows={summary !== null}
+        skeleton="kpi"
+        empty={summary !== null && summary.totalUnits === 0}
+        emptyTitle="No units recorded yet"
+        emptyMessage="Unit counts appear here once the first piece of equipment is added to Inventory."
+      >
+      {summary && (
+        <>
       {/* Real counts only (Law 16). A figure with no source reads "Not measured",
-          never 0 or a plausible default; before the read lands it reads "…". */}
+          never 0 or a plausible default. */}
       <KpiStrip
         columns={viewport === 'phone' ? 1 : viewport === 'tablet' ? 2 : 4}
         items={[
-          { label: 'Total Assets', value: countValue(summary?.activeUnits), icon: 'box', accent: 'primary', note: 'Units not retired' },
+          { label: 'Total Assets', value: String(summary.activeUnits), icon: 'box', accent: 'primary', note: 'Units not retired' },
           { label: 'Utilization', value: 'Not measured', icon: 'activity', accent: 'progress', note: 'No rate-over-time source yet' },
-          { label: 'Available', value: countValue(summary?.inStock), icon: 'check', accent: 'success', note: 'Units In Stock right now' },
+          { label: 'Available', value: String(summary.inStock), icon: 'check', accent: 'success', note: 'Units In Stock right now' },
           { label: 'Inventory Accuracy', value: 'Not measured', icon: 'checklist', accent: 'success', note: 'Needs audit variance data' },
         ]}
       />
 
-      {/* C7 — the one list of over-committed products for a period. Real holds and
-          real stock. */}
-      <ShortageSection />
-
       <section aria-label="Units by status" style={cardStyle}>
         <div style={{ fontSize: 'var(--t-body)', fontWeight: 600, padding: 'var(--sp-md)', borderBottom: '1px solid var(--border)' }}>Units by Status</div>
-        {summary ? (
           <DataTableShell ariaLabel="Units by Status">
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 'var(--t-meta)' }}>
               <thead>
@@ -126,12 +123,15 @@ export default function InventoryReports() {
               </tbody>
             </table>
           </DataTableShell>
-        ) : (
-          <div role={loaded ? 'alert' : undefined} style={{ padding: 'var(--sp-md)', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-            {loaded ? 'Could not load unit counts.' : 'Loading…'}
-          </div>
-        )}
       </section>
+        </>
+      )}
+      </PageBody>
+
+      {/* C7 — the one list of over-committed products for a period. Real holds and
+          real stock. Outside the ladder above: it has its own read and its own
+          states, and a failed unit count must not hide it. */}
+      <ShortageSection />
 
       {money && (
         <section aria-label="Top Categories by Value" style={cardStyle}>
