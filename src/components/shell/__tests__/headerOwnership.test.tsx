@@ -63,6 +63,43 @@ describe('RULING 2026-10-15 — the title zone never shares the squeeze with the
   })
 })
 
+/*
+ * RULING 2026-10-16: at 375px Booking Detail's header held back, title, Operations, More, a
+ * 182px stage action, Search and the avatar. It overflowed by 37px and the title got 0px. A
+ * page whose own More carries Search registers `searchInMore`, and the shell drops its phone
+ * Search button. Tablet and desktop keep their search.
+ */
+describe('RULING 2026-10-16 — a page whose More carries Search frees the phone header', () => {
+  async function renderRecord(searchInMore: boolean) {
+    await act(async () => root.render(<MemoryRouter><WorkspaceProvider>
+      <Header crumbs={[{ label: 'Rentals', to: '/rentals' }, { label: '873' }]} />
+      <PageHeader title="873 · Machhapuchhre Studios Pvt. Ltd." {...(searchInMore ? { searchInMore: true } : {})} />
+    </WorkspaceProvider></MemoryRouter>))
+  }
+  const phoneSearch = () => container.querySelector('header [aria-label="Search"]')
+  const desktopSearch = () => container.querySelector('header [aria-label="Search bookings, clients, equipment and pages"]')
+
+  it('drops the phone Search button when the page carries Search in its More', async () => {
+    state.viewport = 'phone'
+    await renderRecord(true)
+    expect(phoneSearch()).toBeNull()
+  })
+
+  it('keeps the phone Search button for every other page', async () => {
+    state.viewport = 'phone'
+    await renderRecord(false)
+    expect(phoneSearch()).not.toBeNull()
+  })
+
+  it('leaves the tablet and desktop search where it was', async () => {
+    for (const vp of ['tablet', 'desktop']) {
+      state.viewport = vp
+      await renderRecord(true)
+      expect(desktopSearch(), vp).not.toBeNull()
+    }
+  })
+})
+
 describe('page ownership of the application header', () => {
   it('reclaims healthy sync space on tablets and desktops but keeps every actionable sync state visible', async () => {
     for (const viewport of ['tablet', 'desktop'] as const) {

@@ -20,6 +20,7 @@ import { DataAgeBadge } from '../../components/ui/DataAgeBadge'
 import type { OverflowMenuItem } from '../../components/ui/OverflowMenu'
 import { getRentalPrimaryAction } from '../../lib/rentalActions'
 import { useViewport } from '../../lib/device'
+import { openCommandPalette } from '../../components/shell/CommandPalette'
 import type { Viewport } from '../../lib/device'
 import { STATUS, STATUS_ICON, BRAND, BRAND_ON, BRAND_TEXT, PAYMENT_STATUS_TONE } from '../../lib/status'
 import type { BrandKey } from '../../lib/status'
@@ -363,6 +364,18 @@ export function ItemBadge({ text }: { text: string; kind?: 'bundle' | 'required'
  * re-typed. **Law 11:** every node carries fill state, the stage's icon, and
  * the stage's name; the current step carries `aria-current="step"`.
  */
+/*
+ * RULING 2026-10-16: the stage action's phone face — its icon over one word, like the
+ * bottom bar's tabs, at the 11px type floor and the 44px target. 44–60px wide.
+ */
+const PHONE_STAGE_FACE: React.CSSProperties = {
+  flexDirection: 'column',
+  gap: 2,
+  padding: '0 6px',
+  fontSize: 'var(--t-th)',
+  lineHeight: 1.1,
+}
+
 const STAGE_ICON: Record<BookingStatus, IconName> = {
   Quote: 'file',
   Booked: 'check',
@@ -2096,9 +2109,24 @@ function BookingDetailView() {
    * 37px at 1280. "Message client" keeps its nested choices.
    */
   const moreItems: OverflowMenuItem[] = [
+    /* RULING 2026-10-16: on a phone the shell's Search button lives here (`searchInMore`). */
+    ...(onPhone ? [{ label: 'Search', icon: 'search' as const, onClick: openCommandPalette }] : []),
     { label: 'Print booking', icon: 'file' as const, onClick: () => window.print() },
     ...bookingMoreItems,
   ]
+
+  /*
+   * RULING 2026-10-16: at 375px the header held back 44, the title, Operations 44, More 44,
+   * the stage action, Search 44 and the avatar 44. "Receive Overdue Return" (182px) overflowed
+   * it by 37px and left the title 0px. On a phone the stage action shows one word of its label
+   * under its icon (PHONE_STAGE_FACE); the full label stays its accessible name and tooltip, and
+   * a busy state shows the spinner rather than a longer word. Tablet and desktop are unchanged.
+   * Revert = return `{ children: busy || label }` on every width.
+   */
+  const stageFace = (label: string, busy?: string | false) =>
+    onPhone
+      ? { 'aria-label': label, title: label, loading: Boolean(busy), style: PHONE_STAGE_FACE, children: primaryAction.shortLabel }
+      : { children: busy || label }
 
   return (
     <PageShell
@@ -2116,6 +2144,7 @@ function BookingDetailView() {
             </div>
           }
           title={booking.clientName ? `${booking.bookingNo} · ${booking.clientName}` : booking.bookingNo}
+          searchInMore={onPhone}
           description={
             booking.project || booking.projectType
               ? `${booking.project ?? 'Untitled project'} · ${displayProjectType(booking.projectType, booking.projectTypeOther)}`
@@ -2190,52 +2219,55 @@ function BookingDetailView() {
                 primaryAction.actionType === 'confirm' ? (
                   cancelledReason ? (
                     <Unavailable reason={`${booking.bookingNo} is cancelled — a cancelled booking is not confirmed.`}>
-                      <Button icon="plus" variant="primary" disabled>
-                        Confirm Booking
-                      </Button>
+                      <Button icon="plus" variant="primary" disabled {...stageFace('Confirm Booking')} />
                     </Unavailable>
                   ) : (
-                    <Button icon="plus" variant="primary" onClick={confirmBooking} disabled={confirming}>
-                      {confirming ? 'Confirming…' : 'Confirm Booking'}
-                    </Button>
+                    <Button
+                      icon="plus"
+                      variant="primary"
+                      onClick={confirmBooking}
+                      disabled={confirming}
+                      {...stageFace('Confirm Booking', confirming && 'Confirming…')}
+                    />
                   )
                 ) : primaryAction.actionType === 'fulfill' ? (
                   cancelledReason ? (
                     <Unavailable reason={cancelledReason}>
-                      <Button icon="check" variant="primary" disabled>
-                        {primaryAction.label}
-                      </Button>
+                      <Button icon="check" variant="primary" disabled {...stageFace(primaryAction.label)} />
                     </Unavailable>
                   ) : (
-                    <Button icon="check" variant="primary" onClick={fulfillService} disabled={fulfilling}>
-                      {fulfilling ? 'Fulfilling…' : primaryAction.label}
-                    </Button>
+                    <Button
+                      icon="check"
+                      variant="primary"
+                      onClick={fulfillService}
+                      disabled={fulfilling}
+                      {...stageFace(primaryAction.label, fulfilling && 'Fulfilling…')}
+                    />
                   )
                 ) : primaryAction.actionType === 'close' ? (
                   cancelledReason ? (
                     <Unavailable reason={cancelledReason}>
-                      <Button icon="check" variant="primary" disabled>
-                        Close Rental
-                      </Button>
+                      <Button icon="check" variant="primary" disabled {...stageFace('Close Rental')} />
                     </Unavailable>
                   ) : (
-                    <Button icon="check" variant="primary" onClick={closeBooking} disabled={closing}>
-                      {closing ? 'Closing…' : 'Close Rental'}
-                    </Button>
+                    <Button
+                      icon="check"
+                      variant="primary"
+                      onClick={closeBooking}
+                      disabled={closing}
+                      {...stageFace('Close Rental', closing && 'Closing…')}
+                    />
                   )
                 ) : primaryAction.actionType === 'summary' ? (
                   <Button
                     icon="eye"
                     variant="primary"
                     onClick={() => setShowSummaryModal(true)}
-                  >
-                    {primaryAction.label}
-                  </Button>
+                    {...stageFace(primaryAction.label)}
+                  />
                 ) : primaryAction.disabled ? (
                   <Unavailable reason={primaryAction.reason || 'Action unavailable'}>
-                    <Button icon={primaryAction.icon} variant="primary" disabled>
-                      {primaryAction.label}
-                    </Button>
+                    <Button icon={primaryAction.icon} variant="primary" disabled {...stageFace(primaryAction.label)} />
                   </Unavailable>
                 ) : (
                   <Button
@@ -2246,9 +2278,8 @@ function BookingDetailView() {
                         openOperations(booking.bookingNo, stage, primaryAction.job)
                       }
                     }}
-                  >
-                    {primaryAction.label}
-                  </Button>
+                    {...stageFace(primaryAction.label)}
+                  />
                 )
               ) : null
             }

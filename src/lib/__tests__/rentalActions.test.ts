@@ -144,3 +144,36 @@ describe('getRentalPrimaryAction', () => {
   })
 })
 
+
+/*
+ * RULING 2026-10-16: the phone header shows `shortLabel` and names the button with `label`.
+ * The word must be one word of the label (the label starts with it or contains it as a
+ * word stem), so speech users can say what they see (WCAG 2.5.3).
+ */
+describe('shortLabel — one word of the label, for the phone header', () => {
+  const stages = ['Quote', 'Booked', 'Packed', 'On Rent', 'Partial Return', 'Returned', 'Reset Complete', 'Closed', 'Cancelled', 'Mystery']
+  const factSets = [
+    {},
+    { isOverdue: true },
+    { isServiceOnly: true },
+    { canCloseRental: false },
+    { isCancelled: true },
+    { isClosed: true },
+  ]
+
+  it('is a single word that appears in the full label, in every state', () => {
+    for (const stage of stages) {
+      for (const facts of factSets) {
+        const a = getRentalPrimaryAction(stage, { bookingNo: NO, ...facts })
+        const where = `${stage} ${JSON.stringify(facts)} → ${a.label}`
+        expect(a.shortLabel, where).toMatch(/^\S+$/)
+        expect(a.label.toLowerCase(), where).toContain(a.shortLabel.toLowerCase())
+      }
+    }
+  })
+
+  it('names the overdue return in full and shows "Return"', () => {
+    const a = getRentalPrimaryAction('On Rent', { bookingNo: NO, isOverdue: true })
+    expect([a.label, a.shortLabel]).toEqual(['Receive Overdue Return', 'Return'])
+  })
+})

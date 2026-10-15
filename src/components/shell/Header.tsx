@@ -918,12 +918,15 @@ export default function Header({ crumbs, actions }: HeaderProps) {
 
           {/* Phone search is always in the same slot, whether a page has its
               own search or uses the global command palette. */}
+          {/* RULING 2026-10-16: a page whose own More carries Search (Booking Detail) gives the
+              palette button's 50px to its title; at 375px the title had 0px. Revert = drop
+              `searchInMore` from the condition below. */}
           {isPhone && (
             <span className="app-global-header__phone-search" data-header-slot="search">
               <span ref={ws?.setHeaderPhoneSearchActionsElement} className="workspace-header-phone-search-actions" />
               {searchConfig && !ws?.hasPageSearch ? (
                 <MobileHeaderSearch key={hData?.title ?? activeCrumb} config={searchConfig} title={hData?.title ?? activeCrumb} />
-              ) : !searchConfig && !isDispatch && !ws?.hasPageSearch ? (
+              ) : !searchConfig && !isDispatch && !ws?.hasPageSearch && !hData?.searchInMore ? (
                 <button
                   type="button"
                   onClick={() => openCommandPalette()}

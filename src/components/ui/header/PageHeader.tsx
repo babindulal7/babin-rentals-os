@@ -103,6 +103,12 @@ export interface PageHeaderProps {
   /** Whether to render the Universal GlobalAddMenu dropdown in Zone 3 (defaults to true) */
   showAddMenu?: boolean | undefined
 
+  /**
+   * The page's own More carries a Search row, so a phone header drops the shell's Search
+   * button and gives its width to the title. Tablet and desktop are unaffected.
+   */
+  searchInMore?: boolean | undefined
+
   className?: string | undefined
   style?: CSSProperties | undefined
 }
@@ -273,6 +279,7 @@ export function PageHeader({
   module,
   creationContext,
   showAddMenu,
+  searchInMore,
   className = '',
   style,
 }: PageHeaderProps) {
@@ -313,6 +320,7 @@ export function PageHeader({
       module,
       creationContext,
       showAddMenu,
+      searchInMore,
     })
   }, [
     setHeaderData,
@@ -336,6 +344,7 @@ export function PageHeader({
     module,
     creationContext,
     showAddMenu,
+    searchInMore,
   ])
 
   useLayoutEffect(() => () => {

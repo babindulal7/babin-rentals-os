@@ -39,6 +39,8 @@ export interface WorkspaceHeaderData {
   module?: string | undefined
   creationContext?: Record<string, unknown> | undefined
   showAddMenu?: boolean | undefined
+  /** The page's own More carries Search, so a phone header drops its Search button (RULING 2026-10-16). */
+  searchInMore?: boolean | undefined
 }
 
 interface WorkspaceContextType {
@@ -115,7 +117,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         prev.breadcrumb === data.breadcrumb &&
         prev.module === data.module &&
         prev.creationContext === data.creationContext &&
-        prev.showAddMenu === data.showAddMenu
+        prev.showAddMenu === data.showAddMenu &&
+        prev.searchInMore === data.searchInMore
       ) {
         return prev
       }
