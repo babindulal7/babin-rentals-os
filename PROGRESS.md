@@ -57,7 +57,29 @@ Counted by `npm run completion`, not typed.
 - Earlier mock interaction pass opened bundle preview, cancelled without adding, and added the bundle. An attempted off-screen remove click had no effect; keyboard activation removed that line and the visible Remove all menu cleared the remaining bundle lines to zero items. No booking was submitted.
 - Other main merges landed after the test run. These logs certify the scoped patch at the tested checkout, not every later merged feature. The generated completion block below reads the current checkout and cached gate records; its suite-not-run sentence describes the counter invocation, not the separate full test run above.
 
-## Completion
+## 2026-10-15 — Booking Detail header: title, search, one primary
+
+**Did**
+- Triaged every control in Booking Detail's header (`BookingDetail.tsx`). The layout is now the same at every width: the stage action, the 44px Operations icon, and ONE More ("More booking actions"). The More holds Print booking, Message client (with its choices nested), Extend rental, Assign crew, Create sub-rental, then Quote, Invoice, Duplicate, Audit History and Cancel Rental.
+- Removed from the header: the stage badge (the stepper names the stage), the WhatsApp ▾ button (a duplicate of Message client that used a placeholder business phone), the second ⋮ menu and its duplicate "Cancel booking" (with the page's now-unreachable `CancelRentalModal` mount), Print booking, and the Returned-stage Cleaning & Reset button (it is Operations' fourth row).
+- `RentalMoreActions`: extra rows wrap refusals in `Unavailable` and render `submenu` as a nested group, and the menu scrolls at the viewport height. The merge keeps the old ⋮ menu's honesty, and the phone More regains it.
+- Shell `Header.tsx`: the parent-crumb link gets a 44px hit height (it measured 45×17). Row 8's module-vs-record flex rule is unchanged.
+- Tests: a new 6-case suite in `BookingDetail.layout.test.tsx` (header controls at 420/1024/1280/1440, no stage badge, one More with one Cancel). Run against the old cluster first, it failed 6 of 6. Four older tests that pinned the old cluster or found Operations by visible text were updated to the merged More and the accessible name.
+
+**Ruled**
+- `RULINGS-2026-10-15.md` rows 11–18, each with a revert. A flippable call: Operations stays visible as an icon instead of moving into More (row 16). Row 8 was left alone, with the reason logged.
+- No migration written or applied. No role, capability, money gate or write path changed. The kept Cancel is the stricter of the two gates (B-1).
+
+**Verified**
+- Browser, mock Owner, measured with `getBoundingClientRect`. At 1280×860 with the sidebar open, before: right cluster 610px, record title 37px, header search button 84px. After, title shown/full · search · right cluster: 902 Closed 219/267 · 303 · 208; 873 On Rent "Receive Overdue Return" 144/314 · 188 · 398; 716 Booked 168/288 · 224 · 338; 893 Returned 175/350 · 222 · 333.
+- At 1440: titles 220–234px, search 272–348px. At 1024 (tablet band, sidebar rail): titles 134px (the 13 Oct tablet cap), search 246–320px.
+- Header overflow 0 and page overflow 0 in all 12 desktop/tablet measurements. Every header control is ≥44×44 and the header is 64px tall.
+- An intermediate run with the labelled 107px Operations gave 114px/154px (title/search) on 873 at 1280. That is why Operations became the icon.
+- More at 1280 on 716: 10 rows at 44px. Message client expands to 3 choices, with the refusal reasons kept. One Cancel. The menu fits on screen (ends at y=724 of 860).
+- Gates, this worktree after the changes: `tsc --noEmit` exit 0; `npm run lint` exit 0; `lint:shell` 653 files pass; `lint:ui-copy` 0 violations, 4/4; `npx vitest run` 347 files / 4,417 tests passed; `npm run build` exit 0 (PWA precache 296 entries); `check:lifecycle` 30/30 (PGlite). `check:pglite` not rerun (no migration). A comment-only reflow in `BookingDetail.tsx` landed after the suite run; eslint on the edited files ran after it, exit 0. The Completion block's "Suite 4329/4329" is the value recorded on 13 Oct, not this run.
+- Not verified: dark/glass themes by eye, live data, a real touch long-press. Phone 375px: 902 shows a 91px title with overflow 0. **873 at 375 still overflows 37px with a 0px title.** That predates this change (the old phone header had the same controls plus WhatsApp) and comes from the 182px primary.
+
+### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
 | Backend | actions implemented / total | 53 / 53 (100%) | +0 |
@@ -70,9 +92,11 @@ Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10
 Gates read from .lifecycle-result.json, written 2026-10-15T07:57:34.294Z.
 Counted by `npm run completion`, not typed.
 
-## Remaining
-- Complete the broader status/role/persisted-save matrix in docs/UI_UX_IMPROVEMENT_PLAN.md. Physical phone/iPad Safari, keyboard and native zoom acceptance remain unverified.
-- Reconcile the bundle add message: the mock notice currently states both bundle billing with zero-priced components and components billed at their own rates. This pre-existing contradictory copy needs a focused follow-up against the authoritative bundle pricing behavior.
+### Remaining
+- Phone 375px: a long primary ("Receive Overdue Return", 182px) still overflows the Booking Detail header by 37px and leaves the title 0px. Predates this change.
+- Desktop worst case is a 144px record title at 1280. More room needs row 8's shrink rule or the 13 Oct reserved 104px sync slot; both are shell-wide.
+- The rental registry's own rows (Duplicate, Audit, Cancel) still give refusals by `title` only, not `Unavailable`.
+- Babin to confirm or flip rows 11–18, especially row 16 (Operations stays visible as an icon instead of moving into More).
 
 ## 2026-10-15 — Remaining work register evidence review
 

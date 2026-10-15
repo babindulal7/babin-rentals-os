@@ -324,8 +324,11 @@ async function openOverflow() {
 const menuItem = (label: string) =>
   [...document.body.querySelectorAll('[role="menuitem"]')].find((el) => (el.textContent ?? '').trim().startsWith(label))
 
+/** What a screen reader announces — the Operations trigger is a 44px icon at every width (RULING 2026-10-15). */
+const accessibleName = (b: HTMLButtonElement) => b.getAttribute('aria-label') ?? b.textContent?.trim()
+
 async function openOperationsMenu() {
-  const trigger = button('Operations')
+  const trigger = allButtons().find((b) => accessibleName(b) === 'Operations')
   await act(async () => {
     trigger?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
   })
@@ -453,7 +456,7 @@ describe('BD-04 — one booking-scoped Operations dropdown', () => {
   it('keeps every operation visible but unavailable at Quote', async () => {
     stage = 'Quote'
     await mount()
-    expect(allButtons().filter((item) => item.textContent?.trim() === 'Operations')).toHaveLength(1)
+    expect(allButtons().filter((item) => accessibleName(item) === 'Operations')).toHaveLength(1)
     await openOperationsMenu()
     const items = [...container.querySelectorAll('[role="menuitem"]')]
     expect(items).toHaveLength(4)
@@ -464,7 +467,7 @@ describe('BD-04 — one booking-scoped Operations dropdown', () => {
   it('offers Packing at Booked without adding another launcher', async () => {
     stage = 'Booked'
     await mount()
-    expect(allButtons().filter((item) => item.textContent?.trim() === 'Operations')).toHaveLength(1)
+    expect(allButtons().filter((item) => accessibleName(item) === 'Operations')).toHaveLength(1)
     await openOperationsMenu()
     expect(menuItem('Packing')?.getAttribute('aria-disabled')).toBe('false')
   })

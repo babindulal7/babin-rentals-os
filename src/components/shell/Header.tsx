@@ -431,7 +431,9 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                   <li key={`${i}-${c.label}`} style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, flexShrink: last ? 1 : 0 }}>
                     {i > 0 && <Icon name="chevron_right" size={13} style={{ color: 'var(--muted)', flexShrink: 0 }} />}
                     {c.to && !last ? (
-                      <Link to={c.to} style={{ textDecoration: 'none', color: 'inherit', display: 'inline-flex', minWidth: 0 }}>
+                      // RULING 2026-10-15: a parent crumb is a link, so it gets the 44px hit height (Law 15);
+                      // it measured 45×17 on Booking Detail. Width and the flex rule above are unchanged.
+                      <Link to={c.to} style={{ textDecoration: 'none', color: 'inherit', display: 'inline-flex', alignItems: 'center', minHeight: 44, minWidth: 0 }}>
                         {labelEl}
                       </Link>
                     ) : (
