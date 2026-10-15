@@ -2,7 +2,10 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { useNewRentalSubmit } from '../useNewRentalSubmit'
+import { useNewRentalSubmit, type UseNewRentalSubmitOptions } from '../useNewRentalSubmit'
+import { createRental } from '../../../../actions/rentals/createRental'
+import { confirmRental } from '../../../../actions/rentals/confirmRental'
+import { convertDraft } from '../../../../actions/rentals/saveDraft'
 import type { ClientRecord } from '../../../../lib/queries/clients'
 import type { PricingPipelineResult } from '../../../../lib/pricingPipeline'
 import type { Paisa } from '../../../../lib/money'
@@ -49,9 +52,12 @@ vi.mock('../../../../lib/supabase', () => ({
 describe('useNewRentalSubmit', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(createRental).mockResolvedValue({ success: true, bookingId: 'test-booking-id-123', bookingNo: '6', stage: 'Quote', lineCount: 0, replayed: false, crewLines: 0, transportWritten: false })
+    vi.mocked(confirmRental).mockResolvedValue({ success: true, bookingId: 'test-booking-id-123', bookingNo: '6', clientId: 'client-db-1', stage: { from: 'Quote', to: 'Booked' }, lines: 0, units: 0, unitsReserved: 0, quantityReserved: 0, quantityHolds: 0 })
+    vi.mocked(convertDraft).mockResolvedValue({} as Awaited<ReturnType<typeof convertDraft>>)
   })
 
-  it('triggers showSuccessToast with Booking Confirmed and booking number when confirmBooking succeeds', async () => {
+  it.each(['success', 'rapid repeat', 'confirm retry', 'draft link retry', 'create retry', 'blocked', 'no session', 'missing client'] as const)('handles %s without losing the booking identity', async (scenario) => {
     const host = document.createElement('div')
     document.body.appendChild(host)
     const root = createRoot(host)
@@ -91,6 +97,20 @@ describe('useNewRentalSubmit', () => {
       securityDeposit: { requiredPaisa: 0 },
       discounts: { discountPaisa: 0, appliedPercent: 0 },
     } as unknown as PricingPipelineResult
+
+    let releaseCreate: (() => void) | undefined
+    if (scenario === 'rapid repeat') {
+      vi.mocked(createRental).mockImplementationOnce(() => new Promise((resolve) => {
+        releaseCreate = () => resolve({ success: true, bookingId: 'test-booking-id-123', bookingNo: '6', stage: 'Quote', lineCount: 0, replayed: false, crewLines: 0, transportWritten: false })
+      }))
+    }
+    if (scenario === 'confirm retry') vi.mocked(confirmRental).mockRejectedValueOnce(new Error('Confirmation unavailable'))
+    if (scenario === 'draft link retry') vi.mocked(convertDraft).mockRejectedValueOnce(new Error('Draft link unavailable'))
+    if (scenario === 'create retry') vi.mocked(createRental).mockRejectedValueOnce(new Error('Connection interrupted'))
+    const overrides: Partial<UseNewRentalSubmitOptions> = scenario === 'blocked' ? { confirmBlocked: true }
+      : scenario === 'no session' ? { dispatchContext: () => null }
+      : scenario === 'missing client' ? { client: null }
+      : scenario === 'draft link retry' ? { draftId: 'draft-1' } : {}
 
     function TestComponent() {
       submitHook = useNewRentalSubmit({
@@ -137,6 +157,7 @@ describe('useNewRentalSubmit', () => {
         kindOther: '',
         confirmKey,
         draftBookingKey,
+        ...overrides,
       })
       return null
     }
@@ -147,8 +168,34 @@ describe('useNewRentalSubmit', () => {
       })
 
       await act(async () => {
-        await submitHook.confirmBooking()
+        submitHook.confirmBooking()
+        if (scenario === 'rapid repeat') submitHook.confirmBooking()
       })
+      if (scenario === 'blocked' || scenario === 'no session' || scenario === 'missing client') {
+        expect(createRental).not.toHaveBeenCalled()
+        expect(confirmRental).not.toHaveBeenCalled()
+        expect(showSuccessToast).not.toHaveBeenCalled()
+        if (scenario !== 'blocked') expect(setActionError).toHaveBeenCalledWith(expect.stringContaining('Not confirmed'))
+        return
+      }
+      if (scenario === 'rapid repeat') {
+        expect(createRental).toHaveBeenCalledTimes(1)
+        await act(async () => releaseCreate?.())
+      }
+      if (scenario === 'confirm retry' || scenario === 'draft link retry' || scenario === 'create retry') {
+        expect(setSaveState).toHaveBeenCalledWith('error')
+        expect(showSuccessToast).not.toHaveBeenCalled()
+        await act(async () => { submitHook.confirmBooking() })
+      }
+      expect(createRental).toHaveBeenCalledTimes(scenario === 'create retry' ? 2 : 1)
+      if (scenario === 'create retry') {
+        expect(vi.mocked(createRental).mock.calls[0]?.[0].clientUuid).toBe(vi.mocked(createRental).mock.calls[1]?.[0].clientUuid)
+      }
+      expect(confirmRental).toHaveBeenCalledTimes(scenario === 'confirm retry' ? 2 : 1)
+      if (scenario === 'confirm retry') {
+        expect(vi.mocked(confirmRental).mock.calls[0]?.[0].id).toBe(vi.mocked(confirmRental).mock.calls[1]?.[0].id)
+      }
+      if (scenario === 'draft link retry') expect(convertDraft).toHaveBeenCalledTimes(2)
 
       // Toast must be dispatched per Law 12
       expect(showSuccessToast).toHaveBeenCalledTimes(1)

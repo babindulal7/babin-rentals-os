@@ -112,9 +112,10 @@ export function useNewRentalSubmit({
   const discountKeys = useRef<string[]>([])
   const crewKeys = useRef<string[]>([])
   const transportKey = useRef<string | null>(null)
+  const confirming = useRef(false)
 
   const confirmBooking = useCallback(() => {
-    if (editBookingId || confirmBlocked || saveState === 'saving') return
+    if (editBookingId || confirmBlocked || saveState === 'saving' || confirming.current) return
     const ctx = dispatchContext()
     if (!ctx) {
       setActionError('Not confirmed — you are not signed in, so this booking cannot be attributed to anyone. Sign in and confirm again.')
@@ -127,6 +128,7 @@ export function useNewRentalSubmit({
       return
     }
 
+    confirming.current = true
     setActionError(null)
     setSaveState('saving')
     if (!confirmKey.current) confirmKey.current = draftBookingKey.current ?? newClientUuid()
@@ -304,6 +306,8 @@ export function useNewRentalSubmit({
             `Not confirmed — ${reason}. Nothing was written, and nothing entered here has been lost.`,
           )
         }
+      } finally {
+        confirming.current = false
       }
     })()
   }, [
