@@ -1270,7 +1270,6 @@ export function addBundleToBooking(
   const availability = bundleAvailability(b, facts, w)
   const existing = o.existingLineIds ?? new Set<string>()
   const days = Math.max(1, Math.round(o.days) || 1)
-  const discountPct = 0
   const lines: BookingLineDraft[] = []
   const skipped: Array<{ model: string; reason: string }> = []
 
@@ -1315,7 +1314,7 @@ export function addBundleToBooking(
     if (!priced && !o.includeCrewAndVehicle) {
       skipped.push({
         model: l.model,
-        reason: l.kind === 'crew' ? 'Crew is added in Section 3' : 'Transport is charged in Section 3',
+        reason: l.kind === 'crew' ? 'Add crew separately in Crew' : 'Add transport separately in Delivery & Transport',
       })
       continue
     }
@@ -1357,23 +1356,20 @@ export function addBundleToBooking(
   }
 
   const notes: string[] = []
+  const includedCount = lines.filter((line) => line.isIncluded).length
   notes.push(
-    `Bundle ${b.name} (${b.id}) added: bundle billed at daily rate; ${b.lines.length} component line${
-      b.lines.length === 1 ? '' : 's'
-    } included at Rs 0 to reserve inventory without double charging (${days} day${days === 1 ? '' : 's'}).`,
+    `${b.name}: bundle rate applied for ${days} day${days === 1 ? '' : 's'}; ${includedCount} component line${
+      includedCount === 1 ? '' : 's'
+    } added with no extra rental charge.`,
   )
   if (!o.includeCrewAndVehicle && (facts.crew > 0 || facts.vehicle > 0)) {
     notes.push(
-      `Crew (${facts.crew}) and vehicle (${facts.vehicle}) are not added — both are priced in Section 3, Crew & Transport.`,
+      `Crew (${facts.crew}) and vehicle (${facts.vehicle}) are not added. Add them separately in Crew and Delivery & Transport.`,
     )
   }
-  if (discountPct > 0) {
+  if (facts.savingPct > 0) {
     notes.push(
-      `Each line carries the bundle's ${discountPct}% saving. The rounded percentage lands near the advertised bundle rate, not exactly on it.`,
-    )
-  } else if (facts.savingPct > 0) {
-    notes.push(
-      `Components are added at their own daily rates. The bundle rate is ${facts.savingPct}% lower than the sum of parts — apply that in Pricing if it is being honoured.`,
+      'The bundle price already includes its saving; no additional bundle discount is needed.',
     )
   }
   if (availability.level !== 'available') {
