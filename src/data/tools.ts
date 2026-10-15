@@ -406,25 +406,25 @@ export const TOOL_GROUPS: readonly ToolGroup[] = [
   {
     key: 'camera',
     title: 'Camera & Lens',
-    note: /* §2 — the valuable half of the render, and valuable because nothing else in the product does it. Formulas are stated in §3 so every implementation agrees. */ "the valuable half of the render, and valuable because nothing else in the product does it. Formulas are stated in so every implementation agrees.",
+    note: /* §2 — the valuable half of the render, and valuable because nothing else in the product does it. Formulas are stated in §3 so every implementation agrees. */ "Camera, lens and exposure maths nothing else in the app does. Each calculator states its formula.",
     accent: 'primary',
   },
   {
     key: 'finance',
     title: 'Rental & Finance',
-    note: /* §5 — every one calls the owning engine. A rental calculator that disagrees with the booking page is worse than none, because someone will quote from it. */ "every one calls the owning engine. A rental calculator that disagrees with the booking page is worse than none, because someone will quote from it.",
+    note: /* §5 — every one calls the owning engine. A rental calculator that disagrees with the booking page is worse than none, because someone will quote from it. */ "Each one uses the same engine as the module it belongs to, so a quote here matches the booking page.",
     accent: 'success',
   },
   {
     key: 'production',
     title: 'Production, Labels & QR',
-    note: /* §1 — label and QR generation stay with Tools. Packing lists and equipment checklists already have a home and are deep-linked. */ "label and QR generation stay with Tools. Packing lists and equipment checklists already have a home and are deep-linked.",
+    note: /* §1 — label and QR generation stay with Tools. Packing lists and equipment checklists already have a home and are deep-linked. */ "Label and QR generation live here. Packing lists and equipment checklists open in their own modules.",
     accent: 'progress',
   },
   {
     key: 'deeplink',
     title: 'Deep links',
-    note: /* §1 — anything with a module is opened there, never reimplemented. Each carries the owning module’s permissions, not this page’s. */ "anything with a module is opened there, never reimplemented. Each carries the owning module’s permissions, not this page’s.",
+    note: /* §1 — anything with a module is opened there, never reimplemented. Each carries the owning module’s permissions, not this page’s. */ "Anything that has a module opens there, with that module's permissions.",
     accent: 'neutral',
   },
 ]
@@ -569,7 +569,7 @@ export const TOOLS: readonly Tool[] = [
     group: 'finance',
     action: {
       kind: 'blocked',
-      reason: /* §5 requires the owning Currencies engine. There is no rate source in the build, and a hardcoded rate is a wrong number that looks right. */ "requires the owning Currencies engine. There is no rate source in the build, and a hardcoded rate is a wrong number that looks right.",
+      reason: /* §5 requires the owning Currencies engine. There is no rate source in the build, and a hardcoded rate is a wrong number that looks right. */ "Needs a currency-rate source, which the app does not have yet. A fixed rate would be a wrong number that looks right.",
     },
     money: true,
   },
@@ -600,7 +600,7 @@ export const TOOLS: readonly Tool[] = [
     action: {
       kind: 'blocked',
       reason:
-        /* §1 keeps this with Tools — it has no other home — but nothing in the build issues a code. The scanner (⌘B) reads them; no screen generates or prints one yet. */ "keeps this with Tools — it has no other home — but nothing in the build issues a code. The scanner (⌘B) reads them; no screen generates or prints one yet.",
+        /* §1 keeps this with Tools — it has no other home — but nothing in the build issues a code. The scanner (⌘B) reads them; no screen generates or prints one yet. */ "Belongs in Tools, but nothing in the app issues a code yet. The scanner (⌘B) reads codes; no screen generates or prints one yet.",
     },
   },
   {
@@ -612,7 +612,7 @@ export const TOOLS: readonly Tool[] = [
     action: {
       kind: 'blocked',
       reason:
-        /* §4 calls this "the one clearly yours", using weights the item master already holds. It does not hold them: there is no weight or dimension field on an item, and no Transport module to name a vehicle. */ "calls this \"the one clearly yours\", using weights the item master already holds. It does not hold them: there is no weight or dimension field on an item, and no Transport module to name a vehicle.",
+        /* §4 calls this "the one clearly yours", using weights the item master already holds. It does not hold them: there is no weight or dimension field on an item, and no Transport module to name a vehicle. */ "Needs item weights and dimensions, which the inventory does not record yet, and a Transport module to name a vehicle.",
     },
   },
   {
@@ -692,7 +692,7 @@ export const TOOLS: readonly Tool[] = [
     group: 'deeplink',
     action: {
       kind: 'blocked',
-      reason: /* §0 places this in Administration ▸ Integrations. That screen is not built, so there is nothing to open — and Tools must not grow a second one (§1). */ "places this in Administration ▸ Integrations. That screen is not built, so there is nothing to open — and Tools must not grow a second one .",
+      reason: /* §0 places this in Administration ▸ Integrations. That screen is not built, so there is nothing to open — and Tools must not grow a second one (§1). */ "Belongs in Administration ▸ Integrations, which is not built yet, so there is nothing to open.",
     },
   },
   {
@@ -703,7 +703,7 @@ export const TOOLS: readonly Tool[] = [
     group: 'deeplink',
     action: {
       kind: 'blocked',
-      reason: /* §0 — import belongs to each module, not to a central centre. No module exposes one yet, so there is no destination to send you to. */ "import belongs to each module, not to a central centre. No module exposes one yet, so there is no destination to send you to.",
+      reason: /* §0 — import belongs to each module, not to a central centre. No module exposes one yet, so there is no destination to send you to. */ "Import belongs to each module. No module offers it yet, so there is nothing to open.",
     },
   },
   {
@@ -714,7 +714,7 @@ export const TOOLS: readonly Tool[] = [
     group: 'deeplink',
     action: {
       kind: 'blocked',
-      reason: /* §1 deep-links bulk operations to the owning module’s own table. No module offers multi-select editing yet. */ "deep-links bulk operations to the owning module’s own table. No module offers multi-select editing yet.",
+      reason: /* §1 deep-links bulk operations to the owning module’s own table. No module offers multi-select editing yet. */ "Bulk edits happen in each module's own table. No module offers multi-select editing yet.",
     },
   },
 ]

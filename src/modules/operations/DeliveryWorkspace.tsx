@@ -1,3 +1,5 @@
+import { IS_MOCK } from '../../lib/supabase'
+import LiveTransportPlans from './LiveTransportPlans'
 import { DateField } from '../../components/ui/DateField'
 import { useState, useMemo, useEffect } from 'react'
 import { Link } from 'react-router-dom'
@@ -43,6 +45,10 @@ const STATUS_BADGE_STYLE: Record<DeliveryStatus, { bg: string; color: string; bo
 type ViewMode = 'table' | 'kanban'
 
 export function DeliveryWorkspace() {
+  return IS_MOCK ? <MockDeliveryWorkspace /> : <LiveTransportPlans />
+}
+
+function MockDeliveryWorkspace() {
   const { user } = useAuth()
   const [deliveries, setDeliveries] = useState<DeliveryRecord[]>(() => getDeliveries(user?.role ?? null))
   useEffect(() => { setDeliveries(getDeliveries(user?.role ?? null)) }, [user?.role])
