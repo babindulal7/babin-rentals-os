@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useMemo, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
 import { PageHeader, Card, ReflowRail, FooterNote, Button, cardStyle, useRailGridColumns } from '../../components/ui/Page'
@@ -7,6 +8,7 @@ import { PageShell } from '../../components/ui/PageShell'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { LineChart, GroupedBars } from '../../components/ui/Charts'
 import { EmptyState, ErrorBanner } from '../../components/ui/StateViews'
+import { PageBody } from '../../components/ui/PageBody'
 import { ReportToolbar, reportDateRange } from '../../components/ui/ReportToolbar'
 import type { ReportCsvRow } from '../../components/ui/ReportToolbar'
 import { BRAND, BRAND_ON, STATUS } from '../../lib/status'
@@ -15,6 +17,8 @@ import { formatMoney, grouped, toRupees } from '../../lib/money'
 import type { Paisa } from '../../lib/money'
 import { getBusinessToday, toBs, formatBs, formatAd } from '../../lib/bs'
 import { useAuth } from '../../lib/auth'
+import { canWriteBookingDesk, isStaff } from '../../lib/rbac'
+import { useLoad } from '../../lib/queries/useLoad'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
 import './reports.css'
@@ -35,10 +39,10 @@ import {
   rangeLabel,
   dueStatus,
   getPulseLiveSummary,
+  isPulseNothingYet,
   type ChartView,
   type PeriodFigures,
   type EquipmentRow,
-  type PulseLiveSummary,
 } from '../../lib/queries/pulse'
 
 /*
@@ -362,24 +366,72 @@ function KpiCard({ c }: { c: CardModel }) {
 
 /* ── page ──────────────────────────────────────────────────────────────── */
 
+/**
+ * Phase 6 — the five states, drawn once for both bodies.
+ *
+ * Pulse reads the store before it draws (`getPulseLiveSummary`), and that read
+ * is the one every state hangs off: Loading while it is in flight, Error with
+ * Retry when it fails (an offline failure says so, and retries on reconnect —
+ * `useLoad`), and the "nothing yet" Empty when it succeeds with no bookings and
+ * no units — a different sentence from the "this period has no figures" Empty
+ * further down, which is about the chosen period, not the business.
+ *
+ * Restricted is the shell's first (a money-blind role never reaches
+ * `/reports/*`) and this ladder's second: a Client session is refused here
+ * rather than shown a hollowed page, and the read is never sent for it.
+ * Within the page a money-blind staff role still has its rupee cards omitted
+ * outright (§8.3). Offline is the shell's bar plus the read's own reason.
+ */
+type PulseStates = (children: ReactNode) => ReactNode
+
 export default function Pulse() {
   const money = useCanViewMoney()
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const role = user?.role ?? 'Client'
+  const staff = isStaff(role)
+  const live = useLoad(getPulseLiveSummary, { enabled: staff })
+
+  const states: PulseStates = (children) => (
+    <PageBody
+      noun="the business pulse"
+      restricted={!staff}
+      restrictedReason="Pulse summarises the whole business for Babin Rentals staff. Clients see their own bookings in the client portal."
+      restrictedRequiredRole="Staff"
+      loading={live.loading}
+      error={live.error}
+      onRetry={live.reload}
+      hasRows={live.data !== null}
+      skeleton="kpi"
+      empty={live.data !== null && isPulseNothingYet(live.data)}
+      emptyTitle="Nothing recorded yet"
+      emptyMessage="Pulse summarises bookings and the fleet. It fills in once the first rental or unit is recorded."
+      {...(canWriteBookingDesk(role) ? { emptyActionLabel: 'New rental', onEmptyAction: () => navigate('/rentals/new') } : {})}
+    >
+      {children}
+    </PageBody>
+  )
+
   if (!IS_MOCK) return (
     <PageShell>
       <PageHeader title="Pulse" description="Business overview" />
-      <section aria-label="Key figures" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 'var(--sp-md)' }}>
-        {(money
-          ? ['Revenue', 'Cash', 'Equipment utilisation', 'Exceptions']
-          : ['Equipment utilisation', 'Exceptions']
-        ).map((label) => <Card key={label} title={label}><p style={{ margin: 0, color: 'var(--muted)' }}>Not tracked yet.</p></Card>)}
-      </section>
-      <Card title="Reports"><p style={{ margin: 0 }}>Open a report to see recorded invoices, collections, and rental activity.</p><Link to="/finance?tab=reports" style={{ color: 'var(--link)', display: 'inline-block', padding: '12px 0', minHeight: 44 }}>Browse reports</Link></Card>
+      {states(
+        <>
+          <section aria-label="Key figures" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 'var(--sp-md)' }}>
+            {(money
+              ? ['Revenue', 'Cash', 'Equipment utilisation', 'Exceptions']
+              : ['Equipment utilisation', 'Exceptions']
+            ).map((label) => <Card key={label} title={label}><p style={{ margin: 0, color: 'var(--muted)' }}>Not tracked yet.</p></Card>)}
+          </section>
+          <Card title="Reports"><p style={{ margin: 0 }}>Open a report to see recorded invoices, collections, and rental activity.</p><Link to="/finance?tab=reports" style={{ color: 'var(--link)', display: 'inline-block', padding: '12px 0', minHeight: 44 }}>Browse reports</Link></Card>
+        </>,
+      )}
     </PageShell>
   )
-  return <DemoPulse />
+  return <DemoPulse states={states} />
 }
 
-function DemoPulse() {
+function DemoPulse({ states }: { states: PulseStates }) {
   const money = useCanViewMoney()
   const { user } = useAuth()
   const periodRef = useRef<HTMLSelectElement>(null)
@@ -392,17 +444,6 @@ function DemoPulse() {
   const [periodKey, setPeriodKey] = useState<string>(DEFAULT_PERIOD)
   const [compareOn, setCompareOn] = useState(true)
   const [view, setView] = useState<ChartView>('revenue')
-  const [, setLiveSummary] = useState<PulseLiveSummary | null>(null)
-
-  useEffect(() => {
-    let active = true
-    void getPulseLiveSummary().then((res) => {
-      if (active) setLiveSummary(res)
-    })
-    return () => {
-      active = false
-    }
-  }, [])
 
   const period = PERIODS.find((p) => p.key === periodKey) ?? null
   const range = period?.range ?? null
@@ -587,12 +628,19 @@ function DemoPulse() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
         {header}
-        {periodBar}
-        <EmptyState
-          icon={<Icon name="calendar" size={26} />}
-          title="This period cannot be reported on"
-          description={period?.why ?? 'Pick a period the ledger covers.'}
-        />
+        {states(
+          <>
+            {periodBar}
+            {/* No RESULTS for the chosen period — not the "nothing yet" Empty,
+                which the states ladder draws when the business has no records. */}
+            <EmptyState
+              kind="no-results"
+              icon={<Icon name="calendar" size={26} />}
+              title="This period cannot be reported on"
+              description={period?.why ?? 'Pick a period the ledger covers.'}
+            />
+          </>,
+        )}
         <FooterNote />
       </div>
     )
@@ -690,7 +738,7 @@ function DemoPulse() {
   let drawn = true
   const blank = (title: string, description: string) => {
     drawn = false
-    return <EmptyState icon={<Icon name="chart" size={26} />} title={title} description={description} />
+    return <EmptyState kind="no-results" icon={<Icon name="chart" size={26} />} title={title} description={description} />
   }
 
   const chart = (() => {
@@ -822,6 +870,8 @@ function DemoPulse() {
   return (
     <PageShell width="full" className="report-v2">
       {header}
+      {states(
+      <>
       {assertions}
       {disclosure}
       {periodBar}
@@ -1161,7 +1211,7 @@ function DemoPulse() {
                 </table>
               </DataTableShell>
               <p style={{ margin: 0, padding: '10px 12px', borderTop: '1px solid var(--border)', fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-                Ageing is measured from {formatAd(figures.to)}{/* , the period's last day — the one clock this page uses (§4.3). */}, the period's last day — the one clock this page uses. </p>
+                Ageing is measured from {formatAd(figures.to)}{/* , the period's last day — the one clock this page uses (§4.3). */}, the period's last day — the one clock this page uses . </p>
             </Card>
           )}
         </div>
@@ -1288,6 +1338,8 @@ function DemoPulse() {
           </Card>
         </ReflowRail>
       </div>
+      </>,
+      )}
 
       <FooterNote
         extra={[
