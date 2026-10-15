@@ -6,7 +6,7 @@ import type { IconName } from '../../components/ui/Icon'
 import { Card, PageHeader, Button, FooterNote, SummaryRows } from '../../components/ui/Page'
 import { PageShell } from '../../components/ui/PageShell'
 import { PageActions } from '../../components/ui/PageActions'
-import { ErrorBanner, LoadingSkeleton } from '../../components/ui/StateViews'
+import { EmptyState, ErrorBanner, LoadingSkeleton } from '../../components/ui/StateViews'
 import { toBs, formatBs, formatAd, getBusinessToday } from '../../lib/bs'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
@@ -350,6 +350,22 @@ export default function Settings() {
             </>
           }
           onRetry={reload}
+        />
+      )
+    }
+
+    /* Phase 6 — no RESULTS, not "nothing yet": every section exists, the search
+       matched none of them. Before this the section list emptied while the
+       pane went on showing the default section's fields, which read as if
+       those fields were the match. */
+    if (tabs.length === 0) {
+      return (
+        <EmptyState
+          kind="no-results"
+          title="No settings match this search"
+          description={`No section (${TABS.filter((t) => money || !t.money).map((t) => t.label).join(', ')}) mentions “${searchQuery.trim()}”.`}
+          actionLabel="Clear search"
+          onAction={() => setSearchQuery('')}
         />
       )
     }
