@@ -115,6 +115,21 @@ describe('the RPC call itself', () => {
     expect(Object.keys(rpc.state.calls[0]?.args ?? {})).toEqual(['p_payload'])
   })
 
+  it('pins an explicitly selected 0% or 13% VAT fraction into the booking payload', async () => {
+    await run({ vatRate: 0 })
+    await run({ vatRate: 0.13 })
+    const payload0 = (rpc.state.calls[0]?.args as { p_payload: Record<string, unknown> }).p_payload
+    const payload13 = (rpc.state.calls[1]?.args as { p_payload: Record<string, unknown> }).p_payload
+    expect(payload0['vat_rate']).toBe(0)
+    expect(payload13['vat_rate']).toBe(0.13)
+  })
+
+  it('refuses a malformed VAT fraction before performing any booking write', async () => {
+    await expect(run({ vatRate: -0.01 })).rejects.toThrow(/VAT must be a fraction/)
+    await expect(run({ vatRate: 13 })).rejects.toThrow(/VAT must be a fraction/)
+    await expect(run({ vatRate: Number.NaN })).rejects.toThrow(/VAT must be a fraction/)
+    expect(rpc.state.calls).toHaveLength(0)
+  })
   it('sends snake_case keys, because the payload is read by SQL on both backends', async () => {
     await run()
     const p = (rpc.state.calls[0]?.args as { p_payload: Record<string, unknown> }).p_payload

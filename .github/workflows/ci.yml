@@ -47,6 +47,10 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # Enforce ESLint on every branch, rather than only in manual release checks.
+      - name: Lint source
+        run: npm run lint
+
       - name: Test (offline mock backend)
         env:
           VITE_DATA_SOURCE: mock
@@ -58,6 +62,9 @@ jobs:
       # `supabase/migrations` still applies in filename order.
       - name: Migrations build from scratch
         run: npm run check:pglite
+
+      - name: Booking and invoice financial integrity (isolated PGlite)
+        run: node scripts/test-booking-financial-integrity.mjs
 
       # R-27 (RULINGS-2026-09-08): one booking's whole life — create, confirm,
       # the floor, invoice, payment, close — driven through that same Postgres

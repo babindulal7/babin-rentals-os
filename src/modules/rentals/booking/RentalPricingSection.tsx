@@ -8,7 +8,7 @@ import { formatMoney, toRupees } from '../../../lib/money'
 import { lookupCouponByCode } from '../../../lib/queries/couponLookup'
 import {
   type PricingPipelineResult,
-  DISCOUNT_STACKING_CAP_PERCENT,
+  promotionDateAd,
   type PromoCodeDefinition,
 } from '../../../lib/pricingPipeline'
 import './rental-pricing.css'
@@ -158,11 +158,11 @@ export function RentalPricingSection({
                 <Input
                   type="number"
                   min={0}
-                  max={DISCOUNT_STACKING_CAP_PERCENT}
+                  max={100}
                   value={discountPct}
                   onChange={(e) =>
                     setDiscountPct(
-                      Math.min(DISCOUNT_STACKING_CAP_PERCENT, Math.max(0, Number(e.target.value) || 0)),
+                      Math.min(100, Math.max(0, Number(e.target.value) || 0)),
                     )
                   }
                   style={inputStyle}
@@ -173,7 +173,7 @@ export function RentalPricingSection({
 
             {discountPct > 0 && (
               <div className="new-rental-pricing-discount-details">
-                <Field label="Discount Reason *">
+                <Field label="Discount Reason (optional)">
                   <Input
                     value={manualDiscountReason}
                     onChange={(e) => setManualDiscountReason(e.target.value)}
@@ -181,7 +181,7 @@ export function RentalPricingSection({
                     style={inputStyle}
                   />
                 </Field>
-                <Field label="Authorized By *">
+                <Field label="Authorized By (optional note)">
                   <Input
                     value={manualDiscountAuthorizedBy}
                     onChange={(e) => setManualDiscountAuthorizedBy(e.target.value)}
@@ -252,7 +252,7 @@ export function RentalPricingSection({
                             return
                           }
                           /* RULING 2026-10-07: a code is a `coupons` row, never an in-code constant. */
-                          const today = (pickupAt ?? new Date()).toISOString().slice(0, 10)
+                          const today = promotionDateAd(pickupAt ?? new Date())
                           const found = await lookupCouponByCode(code, today)
                           if (!found.ok) {
                             setPromoNotice({ tone: 'danger', text: found.reason })

@@ -170,20 +170,23 @@ describe('Task 6 — New Rental Business Logic & Validation', () => {
       expect(discounts.appliedPercent).toBe(20)
     })
 
-    it('requires reason and authorizing approver when manual discount is granted', () => {
+    it('allows standalone manual discounts without obsolete reason or approver gates', () => {
       const subtotal = 5000000 as Paisa
       const discounts = evaluateDiscounts(
         {
-          manualDiscountPercent: 10,
-          manualDiscountReason: '', // missing
-          manualDiscountAuthorizedBy: '', // missing
+          manualDiscountPercent: 30,
+          manualDiscountReason: '',
+          manualDiscountAuthorizedBy: '',
         },
         subtotal,
       )
 
-      expect(discounts.validationErrors).toHaveLength(2)
-      expect(discounts.validationErrors[0]).toContain('reason')
-      expect(discounts.validationErrors[1]).toContain('approver')
+      // 31 Aug owner ruling: standalone manual discount, no approval gate.
+      // Only combining multiple benefits invokes the 25% stacking limit.
+      expect(discounts.validationErrors).toEqual([])
+      expect(discounts.appliedPercent).toBe(30)
+      expect(discounts.capped).toBe(false)
+      expect(discounts.discountPaisa).toBe(1500000)
     })
 
     it('applies women DoP / Director 5% initiative', () => {

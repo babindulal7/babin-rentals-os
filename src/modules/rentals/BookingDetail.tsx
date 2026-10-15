@@ -2107,6 +2107,7 @@ function BookingDetailView() {
           }
           status={
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--sp-xs)' }}>
+              {/* The stage is named by the stepper below ("Closed — current stage"), so no badge here. */}
               {booking.isCancelled && <Badge flag="Cancelled" />}
               {subRental && <SubRentedMark label="Sub-rental" />}
               {/* PLAN.md Phase 9 — how old this page is: the OLDER of its two

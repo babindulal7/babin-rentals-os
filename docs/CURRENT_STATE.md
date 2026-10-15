@@ -1,5 +1,7 @@
 # Babin Rentals OS — Current State
 
+> **14 October 2026 live verification notice — DO NOT USE THE FIGURES BELOW AS CURRENT RELEASE STATUS.** GitHub CI passed for the initial clean-source commit, but actual production release has **not** been verified. Live Supabase project `sxguwvgoserhdolewibb` had 133/133 public tables with RLS enabled and 0/30 public views selectable by `anon`, but six privileged business RPCs were anonymously executable and the security advisor raised additional view/function findings. Source contains 160 existing migrations through `0162`; live ledger had 155 entries and does not record the six latest names. Migration `0163` is proposed on a review branch, **not applied live**. Deployment stays **HOLD** pending backups, reconciliation, staging, real-JWT smoke tests and owner-approved N-5 cutover. See [the current evidence and action register](release/2026-10-14/LIVE_SECURITY_AUDIT.md). The report below is preserved as a historical snapshot dated 4 October.
+
 **Evidence Date:** 4 October 2026  
 **Last Verified Status:** Full Audit Remediation Complete (G1–G4 Operational Closures, Security Leaks D1–D7 Closed, A1 Schema Guard Mounted, Cross-Tab Synchronization Active, All Gates Certified)  
 **Verification Environment:** Local PGlite 0.5.8 (WASM), Node v24+, Vitest v3.2.7  

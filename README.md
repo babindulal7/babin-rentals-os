@@ -1,5 +1,7 @@
 # Babin Rentals OS
 
+> **Current status (14 Oct 2026):** Source and GitHub CI exist, but the application has **not been released or verified against live Supabase**. This README contains a historical **16 August** capability snapshot; do not use its counts or stub claims to describe the current build. Read [the October live security audit](docs/release/2026-10-14/LIVE_SECURITY_AUDIT.md), [October blocker register](docs/release/2026-10-13/BLOCKERS.md) and [deployment runbook](DEPLOYMENT.md) before making release decisions. A proposed security migration remains **unapplied live**.
+
 React 18 · TypeScript · Vite · Tailwind v4 · Supabase
 
 **Specs:** [`../mds and photos/Babin Rentals OS/`](../mds%20and%20photos/Babin%20Rentals%20OS/)
