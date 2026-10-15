@@ -2105,28 +2105,28 @@ function BookingDetailView() {
               ? `${booking.project ?? 'Untitled project'} · ${displayProjectType(booking.projectType, booking.projectTypeOther)}`
               : undefined
           }
+          status={
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--sp-xs)' }}>
+              {/* The stage is named by the stepper below ("Closed — current stage"), so no badge here. */}
+              {booking.isCancelled && <Badge flag="Cancelled" />}
+              {subRental && <SubRentedMark label="Sub-rental" />}
+              {/* PLAN.md Phase 9 — how old this page is: the OLDER of its two
+                  reads (the booking head and its lines), so the badge never
+                  claims fresher data than is on screen. */}
+              <DataAgeBadge
+                loadedAt={
+                  head.lastFetchedAt && floorFetchedAt
+                    ? new Date(Math.min(head.lastFetchedAt.getTime(), floorFetchedAt.getTime()))
+                    : null
+                }
+                onRefresh={refreshBookingData}
+                loading={head.loading || floorLoading}
+                compact={onPhone}
+              />
+            </div>
+          }
           actions={
             <PageActions
-            extra={
-              <>
-                {/* The stage is named by the stepper below ("Closed — current stage"), so no badge here. */}
-                {booking.isCancelled && <Badge flag="Cancelled" />}
-                {subRental && <SubRentedMark label="Sub-rental" />}
-                {/* PLAN.md Phase 9 — how old this page is: the OLDER of its two
-                    reads (the booking head and its lines), so the badge never
-                    claims fresher data than is on screen. */}
-                <DataAgeBadge
-                  loadedAt={
-                    head.lastFetchedAt && floorFetchedAt
-                      ? new Date(Math.min(head.lastFetchedAt.getTime(), floorFetchedAt.getTime()))
-                      : null
-                  }
-                  onRefresh={refreshBookingData}
-                  loading={head.loading || floorLoading}
-                  compact={onPhone}
-                />
-              </>
-            }
             secondary={[
               /* The 44px icon at every width (its name stays "Operations"): the labelled
                  trigger cost 64px more of the record title at 1280. Cleaning & Reset is
