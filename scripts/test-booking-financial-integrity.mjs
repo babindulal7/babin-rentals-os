@@ -127,6 +127,30 @@ try {
   requireMoney(zeroInvoiceRow,'total_amount',7000)
   console.log('PASS: zero-VAT quote survives invoice creation unchanged')
 
+  // Direct PostgREST inserts bypass create_booking. Ensure that a money-blind
+  // staff account cannot select VAT even through the raw bookings table.
+  const warehouseId='00000000-0000-0000-0000-000000000490'
+  await sql(`insert into users
+    (id,client_uuid,employee_code,email,full_name,mobile,primary_role,branch_id,is_active,created_by)
+    values ($1,gen_random_uuid(),'EMP-FIN-490','warehouse-finance-probe@babinrentals.com',
+      'Warehouse Finance Probe','+977-9800000490','Warehouse',$2,true,$3)
+    on conflict(id) do update set primary_role='Warehouse'`,[warehouseId,branch,ownerId])
+  await db.exec(`select set_config('app.current_user_id','${warehouseId}',false); set role authenticated;`)
+  try {
+    await sql(`insert into bookings
+      (client_uuid,booking_no,client_id,branch_id,stage,pickup_at,return_at,
+       delivery_type,deposit_required,vat_rate,created_by,updated_by)
+      values (gen_random_uuid(),'990495',$1,$2,'Quote',
+       '2027-02-10 10:00:00+00','2027-02-11 10:00:00+00',
+       'Client Pickup',0,0,$3,$3)`,[client,branch,warehouseId])
+    throw new Error('Money-blind direct INSERT accepted a zero-VAT booking')
+  } catch (error) {
+    if (!String(error.message).includes('gate.vat.money_blind')) throw error
+  } finally {
+    await db.exec(`reset role; select set_config('app.current_user_id','${ownerId}',false);`)
+  }
+  console.log('PASS: money-blind direct booking INSERT cannot select zero VAT')
+
   console.log('FINANCIAL INTEGRITY VERIFIED IN ISOLATED PGLITE')
 } finally {
   await db.close()
