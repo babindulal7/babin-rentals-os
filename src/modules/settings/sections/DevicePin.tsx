@@ -199,6 +199,32 @@ export function DevicePinControl() {
             Remove
           </Button>
         </>
+      ) : status?.unavailable ? (
+        <>
+          {/* Phase 6 — the check FAILED, which is not the same fact as "Not
+              set". Inline and persistent (never a toast), with its Retry. Set
+              a PIN stays: under-claiming is still the safe direction. */}
+          <span
+            role="alert"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 'var(--sp-xs)',
+              fontSize: 'var(--t-th)',
+              fontWeight: 700,
+              color: 'var(--danger-text)',
+            }}
+          >
+            <Icon name="alert_triangle" size={13} fill />
+            Could not check the PIN. {status.unavailable}
+          </span>
+          <Button variant="ghost" icon="refresh" onClick={() => void refresh()}>
+            Retry
+          </Button>
+          <Button variant="secondary" onClick={() => setOpen(true)}>
+            Set a PIN
+          </Button>
+        </>
       ) : (
         <>
           <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>Not set</span>
