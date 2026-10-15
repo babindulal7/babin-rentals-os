@@ -1,5 +1,47 @@
 # Progress Log
 
+## 2026-10-16 — Consolidation: phone header de-crowding, single shared header selection & clean UI
+
+**Did**
+- Resolved phone and tablet header action crowding (BLOCKER-02):
+  - `src/modules/operations/OperationsQueues.tsx`: Portaled `FilterButton` now renders only on desktop/tablet (`!phone`); on phone it moves to `PageActions overflow=[...]`. Secondary buttons (`Delivery & Logistics`, `Sub-Rentals`) and `DataAgeBadge` collapse into More actions on phone, ensuring the 64px header zone keeps the title unclipped and uncompressed.
+  - `src/modules/settings/Settings.tsx`: Refactored raw button JSX into standard `PageActions` with `primary` ("Edit" / "Done" / "Add Branch"), `secondary` for desktop, and `overflow` More menu for phone/tablet (`Export config`, `View audit log`, `Discard`, `Reset`).
+- Merged single shared header selection (`feat/2026-10-16-rentals-selection-header` / `RentalsList.tsx`): route selected-row actions through unified `PageHeaderBulkSelection` with full permission gating, single shared selection state, and dynamic primary disabled state.
+- Dropped dead "Productions Hub" item from Rentals More menu per RULING 2026-10-13 step 2 (`src/modules/rentals/RentalsList.tsx`).
+- Live roster safety in New Rental: `crewPool()` returns live roster, or seed roster in mock mode only; no invented delivery rates without a set form charge (`src/lib/queries/crew.ts`, `src/modules/rentals/booking/itemCatalogue.ts`).
+- Excluded `.claude/**` worktrees from test discovery in `vitest.config.ts`.
+- Verified and retained `RULINGS-2026-10-13.md` and `RULINGS-2026-10-15.md`.
+
+**Ruled**
+- Follows phone header de-crowding pattern established in Calendar, Inventory, and Finance.
+- Zero database migrations written or applied (N-5 hold); strictly zero schema alterations.
+- Touch target floors (Law 15, >=44px) and money-blindness gates (Law 6) strictly maintained.
+
+**Verified**
+- `npm run typecheck`: exit 0 (clean TypeScript compiler pass).
+- Focused vitest suites: `src/modules/operations/` & `src/modules/settings/` (12 files, 180/180 passed), `src/modules/rentals/` (46 files, 446/446 passed).
+- Database & lifecycle gates: `npm run check:pglite` (160/160 migrations applied, 0 view leaks, 0 function leaks, 0 definer hygiene issues), `npm run check:lifecycle` (30/30 green through real Postgres + RLS).
+- Contrast: `npm run check:contrast` (82/82 WCAG AA pass, 0 FAIL).
+- Production build: `npm run build` (`tsc --noEmit && vite build`, exit 0, 296 precache entries).
+- ESLint: `npm run lint` (`eslint src --max-warnings 0`, exit 0).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-15T19:13:38.995Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Gates read from .lifecycle-result.json, written 2026-10-15T19:13:58.009Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Manual cross-browser visual spot-check at 375px, 820px, and 1440px in light, dark, and high-contrast modes.
+- Production deployment and production verification remain pending under N-5.
+
 ## 2026-10-15 — New Rental catalogue targets and responsive evidence
 
 **Did**
