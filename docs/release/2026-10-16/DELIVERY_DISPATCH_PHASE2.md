@@ -11,8 +11,8 @@ PR #10 merged the **live read-only** delivery and transport plan screen. It read
 
 ## What Phase 2 adds in source code
 
-- `delivery_jobs`: one job per booking leg (Outbound/Return), durable UUID identity, schedule, assignment, status, server-stamped timestamps, recipient proof, version and actor.
-- `delivery_job_events`: append-only transition receipts with unique request IDs, actor ID, previous/next states and server timestamps. No fee, deposit, client phone, image or payment value is copied into event metadata.
+- `delivery_jobs`: one job per booking leg (Outbound/Return), durable UUID identity, schedule, assignment, status, server-stamped timestamps, receiver-name acknowledgment, version and actor. A receiver name is not a cryptographic signature or signed handover document.
+- `delivery_job_events`: append-only transition receipts with unique request IDs, actor ID, previous/next states and server timestamps. No fee, deposit, client phone, image, payment, receiver name or free-text note is copied into event metadata; the event keeps a request-key-bound fingerprint for exact replay checks.
 - Three `SECURITY DEFINER` RPCs with *explicit* authentication, active-user, branch and role validation; no `anon` EXECUTE permission:
   - `delivery_create_job(booking_id, leg, scheduled_at, key)`
   - `delivery_assign_driver(job_id, driver_id, request_key)`
@@ -26,7 +26,7 @@ PR #10 merged the **live read-only** delivery and transport plan screen. It read
 |---|---|---|---|
 | Scheduled | Ready | Owner/Admin, same-branch Manager/Coordinator/Warehouse | Outbound booking must be Packed or On Rent |
 | Ready | In Transit | Owner/Admin, same-branch Manager/Coordinator, assigned Driver | Active assigned driver, and outbound packed |
-| In Transit | Delivered | Owner/Admin, same-branch Manager/Coordinator, assigned Driver | Recipient name at least two characters |
+| In Transit | Delivered | Owner/Admin, same-branch Manager/Coordinator, assigned Driver | Recipient name at least two characters; signed proof-of-delivery remains a later requirement |
 | Scheduled/Ready/In Transit | Failed | Owner/Admin, same-branch Manager/Coordinator | Explanatory note at least 10 characters |
 | Delivered/Failed | anything | No one | Immutable terminal state; new authorized job/recovery policy is a separate decision |
 
