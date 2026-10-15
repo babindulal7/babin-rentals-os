@@ -425,7 +425,8 @@ describe('Law 16 — unwired surfaces do not invent booking data', () => {
 describe('§4.2 header — [Operations ▾] and [⋮], with dead controls removed', () => {
   it('keeps Operations as its own control', async () => {
     await mount(1280)
-    expect(button('Operations')).toBeDefined()
+    // RULING 2026-10-15: the 44px icon at every width; its accessible name is still "Operations".
+    expect(allButtons().find((b) => b.getAttribute('aria-label') === 'Operations')).toBeDefined()
   })
 
   it('moves Extend, Assign Crew and Sub-Rental into the overflow rather than dropping them', async () => {
@@ -440,16 +441,60 @@ describe('§4.2 header — [Operations ▾] and [⋮], with dead controls remove
     const items = [...document.querySelectorAll('[role="menuitem"]')].map((i) => i.textContent?.trim())
     /* All remaining rows lead to a real action. The former Save draft entry
        had no persistence path and was removed rather than masquerading as a
-       disabled action. */
-    expect(items.filter((i) => i !== 'Message client')).toEqual([
+       disabled action. RULING 2026-10-15: the booking's own rows lead the one
+       More, ahead of the rental groups; its Cancel is the rental group's. */
+    expect(items.slice(0, 5)).toEqual([
+      'Print booking',
+      'Message client',
       'Extend rental',
       'Assign crew',
       'Create sub-rental',
-      'Cancel booking',
     ])
-    expect(items).toContain('Message client')
-    expect(items).toHaveLength(5)
+    expect(items).toContain('Cancel Rental')
+    expect(items).not.toContain('Cancel booking')
     expect(items).not.toContain('Save draft')
+  })
+})
+
+/*
+ * RULING 2026-10-15 (Booking Detail header): the header holds the title, the
+ * search and ONE primary. Operations stays as the booking's floor door, and
+ * every other control lives in ONE More. The old desktop cluster (stage badge,
+ * WhatsApp, More ▾, Operations ▾, Print booking and a second ⋮) was 610px and
+ * squeezed "902 · Annapurna Media Pvt. Ltd." to 37px at 1280 with the sidebar
+ * open. This suite fails on that cluster.
+ */
+describe('15 Oct header rule — the stage action, Operations and ONE More, at every width', () => {
+  /** What a screen reader announces for each header control, in order. */
+  const headerControls = () =>
+    [...(container.querySelector('.page-actions')?.querySelectorAll('button') ?? [])].map(
+      (b) => b.getAttribute('aria-label') ?? b.textContent?.trim() ?? '',
+    )
+
+  for (const width of [420, 1024, 1280, 1440]) {
+    it(`renders exactly Operations, More and the stage action at ${width}px`, async () => {
+      await mount(width)
+      expect(headerControls()).toEqual(['Operations', 'More booking actions', 'Start Packing'])
+    })
+  }
+
+  it('leaves the stage to the stepper rather than repeating it as a header badge', async () => {
+    await mount(1280)
+    expect(container.querySelector('.page-actions')?.textContent?.toLowerCase()).not.toContain('booked')
+    expect(container.querySelector('li[aria-current="step"]')?.textContent).toContain('Booked')
+  })
+
+  it('keeps every moved action one menu away, with one Cancel', async () => {
+    await mount(1280)
+    const more = allButtons().find((b) => b.getAttribute('aria-label') === 'More booking actions')
+    await act(async () => {
+      more?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    const items = [...document.querySelectorAll('[role="menuitem"]')].map((i) => i.textContent?.trim() ?? '')
+    for (const label of ['Print booking', 'Message client', 'Extend rental', 'Assign crew', 'Create sub-rental']) {
+      expect(items, `${label} should be in More`).toContain(label)
+    }
+    expect(items.filter((i) => i.startsWith('Cancel'))).toEqual(['Cancel Rental'])
   })
 })
 
