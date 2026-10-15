@@ -2028,7 +2028,7 @@ export default function PackingWorkspace({
                       justifyContent: 'center',
                       gap: 7,
                       width: '100%',
-                      minHeight: 44,
+                      minHeight: 56,
                       padding: '0 16px',
                       borderRadius: 'var(--r-btn)',
                       fontSize: 'var(--t-ui)',

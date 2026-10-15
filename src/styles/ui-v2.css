@@ -27,7 +27,8 @@
 }
 .surface-card__header { background: var(--surface); }
 .ui-button { transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), filter var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
-.ui-button:active:not(:disabled) { filter: brightness(0.96); }
+.ui-button:active:not(:disabled) { filter: brightness(0.96); transform: none; }
+.ui-button:hover:not(:disabled) { transform: none; }
 /* Button.tsx sets resting fills inline; hover must override them as a pair. */
 .ui-button--primary:hover:not(:disabled) { background: var(--hover-button) !important; color: var(--btn-primary-fg) !important; box-shadow: var(--shadow-primary-glow), var(--specular-rim); }
 .ui-button--link:hover:not(:disabled) { text-decoration: underline; }

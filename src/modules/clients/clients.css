@@ -52,7 +52,6 @@
   background: var(--card2, var(--hover-card));
   border-color: var(--border2, var(--border));
   color: var(--text);
-  transform: translateY(-1px);
 }
 
 .client-filter-chip.is-active {
@@ -86,7 +85,6 @@
   background: var(--card2, var(--hover-card));
   border-color: var(--nav-active-accent);
   color: var(--text);
-  transform: translateY(-1px);
 }
 
 .client-overlay-chip.is-active {
@@ -148,7 +146,6 @@
 .client-bento-card:hover {
   border-color: var(--border2, var(--border));
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-  transform: translateY(-2px);
 }
 
 .client-card-header {
@@ -341,7 +338,6 @@
 .membership-plan-card:hover {
   border-color: var(--border2, var(--border));
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
-  transform: translateY(-2px);
 }
 
 .membership-plan-header {
@@ -414,5 +410,4 @@
 
 .credit-policy-card:hover {
   border-color: var(--border2, var(--border));
-  transform: translateY(-1px);
 }

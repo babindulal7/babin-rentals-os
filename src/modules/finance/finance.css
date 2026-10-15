@@ -38,7 +38,6 @@
 .finance-kpi-card:hover {
   border-color: var(--border2, var(--border));
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
-  transform: translateY(-2px);
 }
 
 .finance-kpi-header {
@@ -130,7 +129,6 @@
   background: var(--hover-card, var(--card2));
   border-color: var(--border2, var(--border));
   color: var(--text);
-  transform: translateY(-1px);
 }
 
 .finance-filter-chip.is-active {

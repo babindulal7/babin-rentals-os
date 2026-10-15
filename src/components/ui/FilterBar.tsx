@@ -188,7 +188,7 @@ export function FilterBar({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 6,
+            gap: 'var(--sp-sm, 8px)',
             ...(isDesktop
               ? { flexWrap: 'wrap' as const }
               : { overflowX: 'auto' as const, paddingBottom: 2 }),

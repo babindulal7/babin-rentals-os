@@ -89,7 +89,6 @@
 .calendar-kind-chip:hover {
   border-color: var(--border2, var(--border));
   color: var(--text);
-  transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
@@ -177,7 +176,6 @@
 .calendar-day-cell:hover {
   border-color: var(--border2, var(--border));
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
-  transform: translateY(-1px);
 }
 
 .calendar-day-cell.is-today {
@@ -258,7 +256,6 @@
 
 .calendar-chip:hover {
   filter: brightness(1.04);
-  transform: translateY(-0.5px);
 }
 
 .calendar-more-badge {
@@ -284,11 +281,11 @@
   width: 7px;
   height: 7px;
   border-radius: var(--r-badge, 9999px);
-  transition: transform var(--dur-fast, 150ms) var(--ease);
+  transition: opacity var(--dur-fast, 150ms) var(--ease);
 }
 
 .calendar-dot:hover {
-  transform: scale(1.25);
+  opacity: 0.8;
 }
 
 /* ── Timeline & Resource Lane Grid ──────────────────────────────────────── */
@@ -358,7 +355,6 @@
 
 .calendar-timeline-bar-btn:hover {
   filter: brightness(1.05);
-  transform: translateY(-1px);
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
 }
 
@@ -392,7 +388,6 @@ button.calendar-agenda-item:hover {
   background: var(--card);
   border-color: var(--border2, var(--border));
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
-  transform: translateY(-1px);
 }
 
 /* ── Stepper Buttons (44x44px min tap target) ───────────────────────────── */
@@ -417,7 +412,6 @@ button.calendar-agenda-item:hover {
   background: var(--hover-card, var(--card2));
   border-color: var(--border2, var(--border));
   color: var(--text);
-  transform: translateY(-1px);
 }
 
 .calendar-stepper-btn:disabled {

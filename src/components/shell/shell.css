@@ -112,7 +112,7 @@
 /* In tight tablet layouts, defer secondary verbs to the existing overflow. */
 @media (max-width: 1279px) {
   .app-global-header__action-slot--add { width: 106px; flex-basis: 106px; }
-  .app-global-header__action-slot--primary { width: 160px; flex-basis: 160px; }
+  .app-global-header__action-slot--primary { width: auto; min-width: 44px; max-width: 160px; flex-basis: auto; }
 }
 @media (max-width: 767px) {
   .app-global-header__action-slot--filters,
@@ -141,6 +141,10 @@
   }
 }
 
-/* RULING 2026-10-15: the filter toggle sits in the left zone of the header; that zone always keeps room for it. */
-.app-global-header__breadcrumbs { min-width: 52px !important; }
+/* RULING 2026-10-15: the filter toggle sits in the left zone of the header; that zone always keeps room for it.
+   On tablet and desktop, maintain at least 140px so module and booking titles are not crushed to 0px. */
+.app-global-header__breadcrumbs { min-width: 140px; }
+@media (max-width: 767px) {
+  .app-global-header__breadcrumbs { min-width: 52px; }
+}
 .app-global-header__breadcrumbs .workspace-page-actions { flex-shrink: 0; }

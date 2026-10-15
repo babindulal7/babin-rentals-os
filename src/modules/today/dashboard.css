@@ -124,7 +124,7 @@
 }
 
 .dashboard-master-date-control__btn:active {
-  transform: scale(0.96);
+  filter: brightness(0.96);
 }
 
 .dashboard-master-date-control__date-btn {
@@ -1290,7 +1290,7 @@
   font-size: var(--t-th);
   font-weight: 700;
   cursor: pointer;
-  transition: background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+  transition: background var(--dur-fast) var(--ease), filter var(--dur-fast) var(--ease);
 }
 
 .dashboard-alert__action:hover {
@@ -1299,7 +1299,7 @@
 }
 
 .dashboard-alert__action:active {
-  transform: translateY(0);
+  filter: brightness(0.96);
 }
 
 /* ─── Mobile Segmented Nav Container ─── */
@@ -2159,7 +2159,6 @@
 .movement-card__cta-btn.is-dominant:hover {
   background: var(--hover-button);
   filter: brightness(1.08);
-  transform: translateY(-1px);
 }
 
 .movement-card__cta-btn.is-prep {
@@ -2172,19 +2171,10 @@
   background: var(--surface-2);
   border-color: var(--border-strong, var(--border));
   color: var(--dashboard-accent-strong);
-  transform: translateY(-1px);
 }
 
 .movement-card__cta-btn:active {
   filter: brightness(0.98);
-}
-
-.movement-card__cta-btn .ui-icon {
-  transition: transform var(--dur-fast) var(--ease);
-}
-
-.movement-card__cta-btn:hover .ui-icon {
-  transform: translateX(2px);
 }
 
 /* Empty state icon colorized */
@@ -3052,16 +3042,8 @@
   outline-offset: 2px;
 }
 
-.rental-dashboard .movement-card__cta-btn svg {
-  transition: transform var(--dur-fast) var(--ease);
-}
-
-.rental-dashboard .movement-card__cta-btn:hover svg {
-  transform: translateX(2px);
-}
-
 .rental-dashboard .movement-card__cta-btn:active {
-  transform: scale(0.98);
+  filter: brightness(0.96);
 }
 
 /* Meaningful rows (8 Oct 2026): the time column replaces the initials as the

@@ -46,7 +46,6 @@
   background: var(--card2, var(--hover-card));
   border-color: var(--border2, var(--border));
   color: var(--text);
-  transform: translateY(-1px);
 }
 
 .inventory-filter-chip.is-active {
@@ -214,7 +213,6 @@
 
 .inventory-grid-item:hover {
   border-color: var(--nav-active-accent);
-  transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
 }
 
@@ -395,7 +393,6 @@
 
 .bundle-grid-card:hover {
   border-color: var(--border2, var(--border));
-  transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
 }
 
@@ -429,7 +426,6 @@
   background: color-mix(in srgb, var(--nav-active-bg) 50%, var(--card2));
   border-color: var(--nav-active-accent);
   color: var(--nav-active-accent);
-  transform: translateY(-1px);
 }
 
 .bundle-savings-badge {

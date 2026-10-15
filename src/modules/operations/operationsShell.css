@@ -65,12 +65,15 @@
 .operations-shell__stage-name { font-weight: 600; }
 @media (max-width: 767px) {
   .operations-shell__stages { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-  .operations-shell__stages .ui-button { flex-direction: column; justify-content: flex-start; gap: 2px; padding: 6px 2px !important; }
-  .operations-shell__stages .ui-button__label { text-align: center; line-height: 1.15; }
-  .operations-shell__stage-name { display: block; font-size: 12px; }
+  .operations-shell__stages .ui-button { flex-direction: column; justify-content: flex-start; gap: 2px; padding: 6px 2px !important; min-height: 44px; }
+  .operations-shell__stages .ui-button__label { text-align: center; line-height: 1.15; max-width: 100%; overflow: hidden; }
+  .operations-shell__stage-name { display: block; font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
   .operations-shell__stage-sep { display: none; }
-  .operations-shell__stage-state { display: block; font-size: 11px; font-weight: 500; }
+  .operations-shell__stage-state { display: block; font-size: 10.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
   .operations-shell__strip-dup { display: none; }
+}
+@media (max-width: 359px) {
+  .operations-shell__stages { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* RULING 2026-10-14 (R14-11). Tablet and up, full-screen sheet: the "still needed" hint sits BETWEEN the two buttons on one

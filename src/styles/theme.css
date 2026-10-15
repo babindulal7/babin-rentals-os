@@ -1284,6 +1284,17 @@ a.btn:active,
   filter: brightness(0.96);
 }
 
+button:hover,
+button:active,
+a.btn:hover,
+a.btn:active,
+[role="button"]:hover,
+[role="button"]:active,
+.ui-button:hover,
+.ui-button:active {
+  transform: none;
+}
+
 /* ── Smooth Form Inputs with Glow Focus Rings ── */
 input:not([type="checkbox"]):not([type="radio"]),
 select,

@@ -324,21 +324,21 @@
 .new-rental-shoot-presets {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
   margin-bottom: 12px;
 }
 .new-rental-preset-chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  min-height: 28px;
-  padding: 2px 10px;
+  gap: 6px;
+  min-height: 44px;
+  padding: 6px 14px;
   border-radius: var(--r-badge);
   border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
   background: var(--card2);
   color: var(--text2);
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);

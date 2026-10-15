@@ -1985,7 +1985,7 @@ export default function ResetWorkspace({
                     disabled={!canComplete}
                     onClick={completeResetJob}
                     style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 7, minHeight: 44, padding: '0 16px', borderRadius: 'var(--r-btn)',
+                      display: 'inline-flex', alignItems: 'center', gap: 7, minHeight: 56, padding: '0 16px', borderRadius: 'var(--r-btn)',
                       fontSize: 'var(--t-ui)', fontWeight: 600, fontFamily: 'inherit', cursor: canComplete ? 'pointer' : 'not-allowed',
                       ...(canComplete ? BLUE_PRIMARY : { background: 'var(--card2)', color: 'var(--muted)', border: '1px solid var(--border)' }),
                     }}

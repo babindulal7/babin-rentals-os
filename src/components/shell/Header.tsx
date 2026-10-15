@@ -322,7 +322,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             display: 'flex',
             alignItems: 'center',
             gap: 6,
-            minWidth: isPhone ? 0 : '180px',
+            minWidth: isPhone ? 0 : isTablet ? '140px' : '180px',
             // RULING 2026-10-13: on a phone the title takes whatever the controls leave, and ends in "…".
             // RULING 2026-10-15: on desktop a module title (one crumb — "Inventory") does not shrink;
             // the search beside it yields first. Sharing the squeeze crushed it to "I." at 1280px.
@@ -474,7 +474,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
           {/* Page Info Tooltip */}
           <span
             style={{
-              display: isPhone ? 'none' : 'inline-flex',
+              display: isPhone || isTablet ? 'none' : 'inline-flex',
               flexShrink: 0,
               visibility: effectiveInfo ? 'visible' : 'hidden',
             }}
@@ -765,7 +765,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: isPhone ? 6 : 8,
+            gap: 8,
             flexShrink: 0,
             marginLeft: 'auto',
             minWidth: 0,
@@ -803,10 +803,11 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                     icon={act.icon}
                     onClick={() => handleActionClick(act)}
                     disabled={!status.enabled}
-                    style={{ height: 38, minHeight: 44, padding: '0 12px' }}
-                    {...(status.reason ? { title: status.reason } : {})}
+                    style={{ height: 38, minHeight: 44, padding: isTablet && act.icon ? '0 8px' : '0 12px' }}
+                    title={status.reason ?? act.label}
+                    aria-label={act.label}
                   >
-                    {act.loading ? act.loadingLabel ?? `${act.label}…` : act.label}
+                    {isTablet && act.icon ? null : (act.loading ? act.loadingLabel ?? `${act.label}…` : act.label)}
                   </Button>
                 )
               })}

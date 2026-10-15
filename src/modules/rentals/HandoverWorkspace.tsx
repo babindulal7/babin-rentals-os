@@ -2207,7 +2207,7 @@ export default function HandoverWorkspace({
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 7,
-                      minHeight: 44,
+                      minHeight: 56,
                       padding: '0 16px',
                       borderRadius: 'var(--r-btn)',
                       fontSize: 'var(--t-ui)',
