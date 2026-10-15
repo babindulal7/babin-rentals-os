@@ -528,8 +528,8 @@ export function BranchesPane({
                 ...controlStyle,
                 minHeight: 'var(--tap)',
                 borderColor: on ? 'var(--nav-active-accent)' : 'var(--border)',
-                background: on ? 'var(--nav-active-bg)' : 'var(--card)',
-                color: on ? 'var(--nav-active-accent)' : 'var(--text2)',
+                background: on ? 'var(--select-bg)' : 'var(--card)',
+                color: on ? 'var(--select-fg)' : 'var(--text2)',
               }}
             >
               <Icon name={v.icon} size={13} />
@@ -587,8 +587,8 @@ export function BranchesPane({
                         style={{
                           fontSize: 'var(--t-th)',
                           fontWeight: 700,
-                          color: 'var(--nav-active-accent)',
-                          background: 'var(--nav-active-bg)',
+                          color: 'var(--select-fg)',
+                          background: 'var(--select-bg)',
                           borderRadius: 'var(--r-badge)',
                           padding: '1px 7px',
                         }}

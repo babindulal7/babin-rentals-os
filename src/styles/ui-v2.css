@@ -139,8 +139,8 @@ input[type='search']::-webkit-search-results-decoration {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  background: var(--nav-active-bg);
-  color: var(--nav-active-accent);
+  background: var(--select-bg);
+  color: var(--select-fg);
   border: 1px solid color-mix(in srgb, var(--nav-active-accent) 22%, transparent);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
@@ -551,8 +551,8 @@ input[type='search']::-webkit-search-results-decoration {
   border-color: var(--border, #dbe5f0);
 }
 .next-action-banner--primary {
-  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
-  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+  background: var(--select-bg);
+  border-color: var(--select-bg);
 }
 .next-action-banner--out {
   background: color-mix(in srgb, var(--warn) 10%, var(--surface));
@@ -633,3 +633,32 @@ input[type='search']::-webkit-search-results-decoration {
     margin-right: 12px;
   }
 }
+
+/* RULING 2026-10-15: filter drawers slide in at nav-bar width and push the workspace instead of covering it;
+   each FilterSection carries its own solid accent (--fs-accent). */
+.app-workspace {
+  padding-left: var(--filter-drawer-w, 0px);
+  transition: padding-left var(--dur-drawer, 220ms) ease-out;
+}
+@media (max-width: 767px) { .app-workspace { padding-left: 0; } }
+.filter-section .filter-chip,
+.filter-section .operations-v2__facet {
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-btn, 8px);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--t-meta);
+  font-weight: 600;
+  cursor: pointer;
+}
+.filter-section .filter-chip[aria-pressed='true'],
+.filter-section .ui-button--secondary,
+.filter-section .operations-v2__facet.ui-button--secondary {
+  background: var(--fs-accent, var(--primary));
+  border-color: var(--fs-accent, var(--primary));
+  color: #fff;
+}
+.filter-section > div:first-child > button:first-child span:first-child { color: var(--text); }
+.filter-section { min-width: 0; }

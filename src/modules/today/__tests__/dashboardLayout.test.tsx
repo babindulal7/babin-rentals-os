@@ -69,7 +69,8 @@ afterEach(async () => {
 describe('focused pickup and return dashboard', () => {
   it('places the date beside queues and refreshes both queues from More', async () => {
     await mount()
-    expect(container.querySelector('.dashboard-workbar [aria-label="Dispatch day for pickups and returns"]')).not.toBeNull()
+    expect(container.querySelector('[aria-label="Date filter for pickups"]')).not.toBeNull()
+    expect(container.querySelector('[aria-label="Date filter for returns"]')).not.toBeNull()
     expect(buttonByLabel('More Today actions')).toBeDefined()
     await act(async () => buttonByLabel('More Today actions')!.click())
     const menu = document.querySelector('[role="menu"][aria-label="More Today actions"]')!
@@ -89,13 +90,14 @@ describe('focused pickup and return dashboard', () => {
     const panels = [...layout.querySelectorAll('.movement-panel')]
     const initialPanelStyles = panels.map((panel) => panel.className)
 
-    await act(async () => buttonByLabel('choose dispatch date filter')!.click())
+    await act(async () => buttonByLabel('choose pickups date filter')!.click())
     queueResults.counts = [0, 3]
-    const today = [...document.querySelectorAll<HTMLButtonElement>('#dispatch-date-dialog button')].find((button) => button.textContent === 'Today')!
+    const today = [...document.querySelectorAll<HTMLButtonElement>('.dashboard-calendar button')].find((button) => button.textContent === 'Today')!
     await act(async () => today.click())
 
     expect(window.sessionStorage.getItem('dashboard.pickupDateFilter')).toContain('Today')
     expect(container.textContent).toContain('3 coming back')
+    expect(window.sessionStorage.getItem('dashboard.returnDateFilter')).toContain('Tomorrow')
     expect(layout.className).toBe(initialLayout)
     expect([...layout.querySelectorAll('.movement-panel')]).toEqual(panels)
     expect(panels.map((panel) => panel.className)).toEqual(initialPanelStyles)
@@ -110,14 +112,13 @@ describe('focused pickup and return dashboard', () => {
     expect(container.textContent).not.toContain('Cash due')
   })
 
-  it('keeps the dispatch date control small: one picker door, day name over BS · AD (8 Oct 2026)', async () => {
+  it('keeps each date control a single compact button: "Today", or the English date (15 Oct 2026)', async () => {
     await mount()
-    const control = container.querySelector('.dashboard-master-date-control')!
-    expect(control.textContent).not.toContain('Sync dispatch day')
-    expect(control.querySelector('button[aria-label="Dispatch calendar"]')).toBeNull()
+    const control = container.querySelector('[aria-label="Date filter for pickups"]')!
     expect(control.querySelectorAll('[aria-haspopup="dialog"]')).toHaveLength(1)
+    expect(control.querySelector('button[aria-label="Previous day"]')).toBeNull()
     expect(control.querySelector('.dashboard-master-date-control__primary')?.textContent).toBe('Today')
-    expect(control.querySelector('.dashboard-master-date-control__secondary')?.textContent).toMatch(/^\d+ \S+ · \d+ [A-Z][a-z]{2}$/)
+    expect(control.querySelector('.dashboard-master-date-control__secondary')).toBeNull()
   })
 
   it('carries no count tiles above the lists (ruled 8 Oct 2026)', async () => {
@@ -127,11 +128,11 @@ describe('focused pickup and return dashboard', () => {
     expect(container.textContent).not.toContain('Packing due tomorrow')
   })
 
-  it('gives both panels one accessible calendar control', async () => {
+  it('gives each panel its own accessible calendar control', async () => {
     await mount()
-    expect(buttons().filter((b) => b.getAttribute('aria-label')?.includes('choose dispatch date filter'))).toHaveLength(1)
-    expect(buttonByLabel('Choose pickup date filter')).toBeUndefined()
-    expect(buttonByLabel('Choose return date filter')).toBeUndefined()
+    expect(buttons().filter((b) => b.getAttribute('aria-label')?.includes('choose pickups date filter'))).toHaveLength(1)
+    expect(buttons().filter((b) => b.getAttribute('aria-label')?.includes('choose returns date filter'))).toHaveLength(1)
+    expect(buttonByLabel('choose dispatch date filter')).toBeUndefined()
   })
 
   /*
@@ -143,8 +144,8 @@ describe('focused pickup and return dashboard', () => {
    * name carries the period, not just that the period is on screen.
    */
   it.each([
-    ['choose dispatch date filter', 'pickup'],
-    ['choose dispatch date filter', 'return'],
+    ['choose pickups date filter'],
+    ['choose returns date filter'],
   ])('names the %s control after the period it shows', async (label) => {
     await mount()
     const button = buttonByLabel(label)
@@ -153,39 +154,33 @@ describe('focused pickup and return dashboard', () => {
     expect(button?.getAttribute('aria-label') ?? '').toContain(visible)
   })
 
-  it('changes the pickup period and returns together', async () => {
+  it('changes only the panel whose date filter was used', async () => {
     await mount()
-    const pickup = buttonByLabel('choose dispatch date filter')
-    const returns = buttonByLabel('choose dispatch date filter')
-    expect(pickup).toBe(returns)
-
-    await act(async () => pickup?.click())
-    // The open calendar is portaled to document.body, outside the mount
-    // container — query it in the document, not the container.
-    const tomorrow = [...document.querySelectorAll<HTMLButtonElement>('#dispatch-date-dialog button')].find((button) => button.textContent === 'Tomorrow')
+    await act(async () => buttonByLabel('choose pickups date filter')?.click())
+    // The open calendar is portaled to document.body, outside the mount container.
+    const tomorrow = [...document.querySelectorAll<HTMLButtonElement>('.dashboard-calendar button')].find((button) => button.textContent === 'Tomorrow')
     await act(async () => tomorrow?.click())
-
     expect(window.sessionStorage.getItem('dashboard.pickupDateFilter')).toContain('Tomorrow')
-    expect(window.sessionStorage.getItem('dashboard.returnDateFilter')).toContain('Tomorrow')
+    expect(window.sessionStorage.getItem('dashboard.returnDateFilter')).toContain('Today')
+
+    await act(async () => buttonByLabel('choose returns date filter')?.click())
+    const next7 = [...document.querySelectorAll<HTMLButtonElement>('.dashboard-calendar button')].find((button) => button.textContent === 'Next 7 Days')
+    await act(async () => next7?.click())
+    expect(window.sessionStorage.getItem('dashboard.returnDateFilter')).toContain('Next 7 Days')
+    expect(window.sessionStorage.getItem('dashboard.pickupDateFilter')).toContain('Tomorrow')
   })
 
-  it('selects a date range with the shared calendar and synchronizes both panels', async () => {
+  it('selects a single day in one panel without touching the other, with no range toggle', async () => {
     await mount()
-    await act(async () => buttonByLabel('choose dispatch date filter')?.click())
-    const dialog = document.querySelector('#dispatch-date-dialog')!
-    expect(dialog.textContent).toContain('Single day')
-    expect(dialog.textContent).toContain('Date range')
+    await act(async () => buttonByLabel('choose returns date filter')?.click())
+    const dialog = document.querySelector('.dashboard-calendar')!
+    expect(dialog.textContent).not.toContain('Single day')
+    expect(dialog.textContent).not.toContain('Date range')
     expect(dialog.textContent).toContain('BS')
-
-    const rangeButton = [...dialog.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent === 'Date range')!
-    await act(async () => rangeButton.click())
-    await act(async () => dialog.querySelectorAll<HTMLButtonElement>('[role="gridcell"]')[0]?.click())
-    expect(dialog.textContent).toContain('Choose an end date')
-    await act(async () => dialog.querySelectorAll<HTMLButtonElement>('[role="gridcell"]')[1]?.click())
-
-    expect(document.querySelector('#dispatch-date-dialog')).toBeNull()
-    expect(window.sessionStorage.getItem('dashboard.pickupDateFilter')).toBe(window.sessionStorage.getItem('dashboard.returnDateFilter'))
-    expect(window.sessionStorage.getItem('dashboard.dispatchDateFilter')).toContain('custom')
+    await act(async () => dialog.querySelectorAll<HTMLButtonElement>('[role="gridcell"]')[3]?.click())
+    expect(document.querySelector('.dashboard-calendar')).toBeNull()
+    expect(window.sessionStorage.getItem('dashboard.returnDateFilter')).toContain('custom')
+    expect(window.sessionStorage.getItem('dashboard.pickupDateFilter')).toContain('Today')
   })
 
   it('does not contain a duplicate New Rental button in the page header', async () => {
@@ -201,14 +196,14 @@ describe('focused pickup and return dashboard', () => {
 
   it('restores focus after choosing a filter and after Escape', async () => {
     await mount()
-    const pickup = buttonByLabel('choose dispatch date filter')!
+    const pickup = buttonByLabel('choose pickups date filter')!
     await act(async () => pickup.click())
     expect(document.activeElement?.getAttribute('role')).toBe('dialog')
-    await act(async () => [...document.querySelectorAll<HTMLButtonElement>('#dispatch-date-dialog button')].find((button) => button.textContent === 'Tomorrow')!.click())
+    await act(async () => [...document.querySelectorAll<HTMLButtonElement>('.dashboard-calendar button')].find((button) => button.textContent === 'Tomorrow')!.click())
     expect(document.activeElement).toBe(pickup)
     await act(async () => pickup.click())
     await act(async () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
-    expect(document.querySelector('#dispatch-date-dialog')).toBeNull()
+    expect(document.querySelector('.dashboard-calendar')).toBeNull()
     expect(document.activeElement).toBe(pickup)
   })
 
@@ -219,7 +214,7 @@ describe('focused pickup and return dashboard', () => {
   ])('recovers from invalid stored date ranges: %j', async (range) => {
     window.sessionStorage.setItem('dashboard.pickupDateFilter', JSON.stringify({ kind: 'custom', ...range }))
     await mount()
-    expect(buttonByLabel('choose dispatch date filter')).toBeDefined()
+    expect(buttonByLabel('choose pickups date filter')).toBeDefined()
     expect(window.sessionStorage.getItem('dashboard.pickupDateFilter')).toContain('Today')
   })
 })

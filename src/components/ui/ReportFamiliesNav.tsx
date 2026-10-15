@@ -73,8 +73,8 @@ export function ReportFamiliesNav({ current }: ReportFamiliesNavProps) {
               style={{
                 ...tabStyle,
                 border: `1px solid ${t.current ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-                background: t.current ? 'var(--nav-active-bg)' : 'var(--card)',
-                color: t.current ? 'var(--nav-active-accent)' : 'var(--text2)',
+                background: t.current ? 'var(--select-bg)' : 'var(--card)',
+                color: t.current ? 'var(--select-fg)' : 'var(--text2)',
               }}
             >
               {t.label}

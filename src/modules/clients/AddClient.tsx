@@ -620,8 +620,8 @@ export default function AddClient({ embedded = false, onDone }: AddClientProps =
                   width: 34,
                   height: 34,
                   borderRadius: 9,
-                  background: 'var(--nav-active-bg)',
-                  color: 'var(--nav-active-accent)',
+                  background: 'var(--select-bg)',
+                  color: 'var(--select-fg)',
                   display: 'grid',
                   placeItems: 'center',
                   flexShrink: 0,
@@ -701,7 +701,7 @@ export default function AddClient({ embedded = false, onDone }: AddClientProps =
             {TYPE_OPTIONS.map((opt) => {
               const on = clientType === opt.value
               return (
-                <div key={opt.value} style={{ display: 'flex', gap: 10, padding: 10, borderRadius: 'var(--r-sm)', border: `1px solid ${on ? 'var(--nav-active-accent)' : 'var(--border)'}`, background: on ? 'var(--nav-active-bg)' : 'var(--card2)' }}>
+                <div key={opt.value} style={{ display: 'flex', gap: 10, padding: 10, borderRadius: 'var(--r-sm)', border: `1px solid ${on ? 'var(--nav-active-accent)' : 'var(--border)'}`, background: on ? 'var(--select-bg)' : 'var(--card2)' }}>
                   <Icon name={opt.icon} size={18} style={{ color: 'var(--nav-active-accent)', flexShrink: 0, marginTop: 2 }} />
                   <span style={{ minWidth: 0 }}>
                     <span style={{ display: 'block', fontWeight: 700, color: 'var(--text)', fontSize: 'var(--t-meta)' }}>{opt.label}</span>
@@ -818,8 +818,8 @@ export default function AddClient({ embedded = false, onDone }: AddClientProps =
                           padding: '0 10px',
                           borderRadius: 'var(--r-btn)',
                           border: `1px solid ${on ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-                          background: on ? 'var(--nav-active-bg)' : 'var(--card2)',
-                          color: on ? 'var(--nav-active-accent)' : 'var(--text)',
+                          background: on ? 'var(--select-bg)' : 'var(--card2)',
+                          color: on ? 'var(--select-fg)' : 'var(--text)',
                           fontWeight: on ? 700 : 500,
                           fontSize: 'var(--t-meta)',
                           fontFamily: 'inherit',
@@ -1063,9 +1063,9 @@ export default function AddClient({ embedded = false, onDone }: AddClientProps =
                           aria-pressed={on}
                           style={{
                             padding: '6px 12px', borderRadius: 'var(--r-badge)', fontSize: 'var(--t-meta)', fontFamily: 'inherit', cursor: 'pointer',
-                            background: on ? 'var(--nav-active-bg)' : 'var(--card2)',
+                            background: on ? 'var(--select-bg)' : 'var(--card2)',
                             border: `1px solid ${on ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-                            color: on ? 'var(--nav-active-accent)' : 'var(--text)'
+                            color: on ? 'var(--select-fg)' : 'var(--text)'
                           }}
                         >
                           {p}
@@ -1090,9 +1090,9 @@ export default function AddClient({ embedded = false, onDone }: AddClientProps =
                         aria-pressed={on}
                         style={{
                           padding: '6px 12px', borderRadius: 'var(--r-badge)', fontSize: 'var(--t-meta)', fontFamily: 'inherit', cursor: 'pointer',
-                          background: on ? 'var(--nav-active-bg)' : 'var(--card2)',
+                          background: on ? 'var(--select-bg)' : 'var(--card2)',
                           border: `1px solid ${on ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-                          color: on ? 'var(--nav-active-accent)' : 'var(--text)'
+                          color: on ? 'var(--select-fg)' : 'var(--text)'
                         }}
                       >
                         {s}
@@ -1248,7 +1248,7 @@ export default function AddClient({ embedded = false, onDone }: AddClientProps =
                 padding: '22px 16px',
                 textAlign: 'center',
                 cursor: 'pointer',
-                background: dragOver ? 'var(--nav-active-bg)' : 'var(--card2)',
+                background: dragOver ? 'var(--select-bg)' : 'var(--card2)',
               }}
             >
               <Icon name="upload" size={22} style={{ color: 'var(--muted)' }} />

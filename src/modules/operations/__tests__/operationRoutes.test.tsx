@@ -277,7 +277,9 @@ describe('Spec 03 §3.1 — queue chips filter ONE time-ordered list', () => {
     const labels = buttons().map((b) => b.textContent ?? '')
     expect(labels.some((l) => l.startsWith('Today'))).toBe(true)
     expect(labels.some((l) => l.startsWith('Tomorrow'))).toBe(true)
-    expect(labels.some((l) => l.startsWith('Custom'))).toBe(true)
+    // The custom range is picked on the app's own calendar now, not behind a "Custom" button.
+    expect(labels.some((l) => l.startsWith('This Week'))).toBe(true)
+    expect(document.querySelectorAll('#operations-filters [role="gridcell"]').length).toBeGreaterThan(27)
   })
 
   it('opens the row action in the global workspace without changing route', async () => {

@@ -69,7 +69,7 @@ export function SectionStockUnits() {
                       padding: '10px 12px',
                       borderRadius: 'var(--r-sm)',
                       border: `1px solid ${on ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-                      background: on ? 'var(--nav-active-bg)' : 'var(--card2)',
+                      background: on ? 'var(--select-bg)' : 'var(--card2)',
                       textAlign: 'left',
                       cursor: 'pointer',
                       display: 'flex',

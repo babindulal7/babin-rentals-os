@@ -542,8 +542,8 @@ export default function EvidenceWorkspace() {
                       padding: '0 14px',
                       borderRadius: 'var(--r-btn)',
                       border: `1px solid ${on ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-                      background: on ? 'var(--nav-active-bg)' : 'var(--card)',
-                      color: on ? 'var(--nav-active-accent)' : 'var(--text2)',
+                      background: on ? 'var(--select-bg)' : 'var(--card)',
+                      color: on ? 'var(--select-fg)' : 'var(--text2)',
                       fontSize: 'var(--t-meta)',
                       fontWeight: 600,
                       fontFamily: 'inherit',
@@ -675,8 +675,8 @@ export default function EvidenceWorkspace() {
                           padding: '0 8px',
                           borderRadius: 7,
                           border: 'none',
-                          background: on ? 'var(--nav-active-bg)' : 'transparent',
-                          color: on ? 'var(--nav-active-accent)' : 'var(--text2)',
+                          background: on ? 'var(--select-bg)' : 'transparent',
+                          color: on ? 'var(--select-fg)' : 'var(--text2)',
                           fontSize: 'var(--t-meta)',
                           fontWeight: on ? 600 : 500,
                           cursor: 'pointer',
@@ -740,7 +740,7 @@ export default function EvidenceWorkspace() {
                             type="button"
                             onClick={() => setFilter(f)}
                             aria-pressed={on}
-                            style={{ minHeight: 44, padding: '0 12px', borderRadius: 'var(--r-btn, 7px)', border: `1px solid ${on ? 'var(--nav-active-accent)' : 'var(--border)'}`, background: on ? 'var(--nav-active-bg)' : 'transparent', color: on ? 'var(--nav-active-accent)' : 'var(--text2)', fontSize: 'var(--t-meta)', fontWeight: on ? 600 : 500, cursor: 'pointer', fontFamily: 'inherit' }}
+                            style={{ minHeight: 44, padding: '0 12px', borderRadius: 'var(--r-btn, 7px)', border: `1px solid ${on ? 'var(--nav-active-accent)' : 'var(--border)'}`, background: on ? 'var(--select-bg)' : 'transparent', color: on ? 'var(--select-fg)' : 'var(--text2)', fontSize: 'var(--t-meta)', fontWeight: on ? 600 : 500, cursor: 'pointer', fontFamily: 'inherit' }}
                           >
                             {f}
                           </button>
@@ -753,7 +753,7 @@ export default function EvidenceWorkspace() {
                       HO-10: all seven were enabled and none had a handler. See
                       BULK_UNAVAILABLE for the reason each one carries. */}
                   {selected.length > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 12px', borderBottom: '1px solid var(--border)', background: 'var(--nav-active-bg)', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 12px', borderBottom: '1px solid var(--border)', background: 'var(--select-bg)', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--nav-active-accent)' }}>{selected.length} selected</span>
                       {BULK_ACTIONS.map((b) => (
                         <Unavailable key={b} reason={BULK_UNAVAILABLE[b]}>

@@ -1928,7 +1928,7 @@ export default function ResetWorkspace({
             {/* §9.3 — the selection bar shows only the count and Clear Selection. No second primary. */}
             {selected.size > 0 && (
               <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px' }}>
-                <span className="figure" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 20, height: 20, borderRadius: 'var(--r-badge)', background: 'var(--nav-active-bg)', color: 'var(--nav-active-accent)', fontSize: 'var(--t-meta)', fontWeight: 700 }}>
+                <span className="figure" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 20, height: 20, borderRadius: 'var(--r-badge)', background: 'var(--select-bg)', color: 'var(--select-fg)', fontSize: 'var(--t-meta)', fontWeight: 700 }}>
                   {selected.size}
                 </span>
                 <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>items selected</span>

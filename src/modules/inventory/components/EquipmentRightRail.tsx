@@ -33,8 +33,8 @@ export function EquipmentRightRail() {
                         textDecoration: 'none',
                         fontSize: 'var(--t-meta)',
                         fontWeight: on ? 700 : 500,
-                        color: on ? 'var(--text)' : 'var(--text2)',
-                        background: on ? 'var(--nav-active-bg)' : 'transparent',
+                        color: on ? 'var(--select-fg)' : 'var(--text2)',
+                        background: on ? 'var(--select-bg)' : 'transparent',
                         border: `1px solid ${on ? 'var(--border)' : 'transparent'}`,
                       }}
                     >

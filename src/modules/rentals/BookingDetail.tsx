@@ -672,8 +672,8 @@ function NotesCard({
            from the same accent. `aria-pressed` carries the state to a screen
            reader either way, so nothing rests on the colour. */
         border: `1px solid ${noteType === t ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-        background: noteType === t ? 'var(--nav-active-bg)' : 'var(--card2)',
-        color: noteType === t ? 'var(--nav-active-accent)' : 'var(--text2)',
+        background: noteType === t ? 'var(--select-bg)' : 'var(--card2)',
+        color: noteType === t ? 'var(--select-fg)' : 'var(--text2)',
         fontSize: 'var(--t-meta)',
         fontWeight: 600,
         cursor: 'pointer',

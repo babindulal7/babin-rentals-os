@@ -19,7 +19,7 @@
   color: var(--text2);
   cursor: pointer;
 }
-.header-page-search__trigger[data-active='true'] { color: var(--primary-text); background: var(--ext-bg); }
+.header-page-search__trigger[data-active='true'] { color: var(--select-fg); background: var(--select-bg); }
 .header-page-search__dot {
   position: absolute;
   width: 5px;
@@ -70,3 +70,7 @@
 .app-side-panel { width: var(--app-panel-width, 320px); }
 .app-side-panel-body { min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 16px; }
 .app-side-panel-footer { padding: 16px; border-top: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
+
+/* RULING 2026-10-15: the filter toggle is the first control at the very left of the header; the left zone always keeps room for it. */
+.app-global-header__breadcrumbs { min-width: 52px !important; }
+.app-global-header__breadcrumbs .workspace-page-actions { flex-shrink: 0; }

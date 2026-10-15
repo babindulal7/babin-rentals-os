@@ -318,8 +318,8 @@ export default function CustomReport() {
                   fontSize: 'var(--t-meta)',
                   fontWeight: active ? 600 : 400,
                   border: '1px solid var(--border)',
-                  background: active ? 'var(--nav-active-bg)' : 'transparent',
-                  color: active ? 'var(--nav-active-accent)' : 'var(--text2)',
+                  background: active ? 'var(--select-bg)' : 'transparent',
+                  color: active ? 'var(--select-fg)' : 'var(--text2)',
                   borderRadius:
                     d === 'rentals'
                       ? 'var(--rad-sm) 0 0 var(--rad-sm)'
@@ -385,8 +385,8 @@ export default function CustomReport() {
                   fontSize: 'var(--t-meta)',
                   fontWeight: isSelected ? 600 : 400,
                   border: `1px solid ${isSelected ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-                  background: isSelected ? 'var(--nav-active-bg)' : 'transparent',
-                  color: isSelected ? 'var(--nav-active-accent)' : 'var(--muted)',
+                  background: isSelected ? 'var(--select-bg)' : 'transparent',
+                  color: isSelected ? 'var(--select-fg)' : 'var(--muted)',
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',

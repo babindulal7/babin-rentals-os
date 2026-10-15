@@ -118,8 +118,8 @@ export function SegmentedControl<T extends string = string>({
                   fontWeight: 700,
                   padding: '1px 6px',
                   borderRadius: 'var(--r-badge, 999px)',
-                  background: isSelected ? 'var(--nav-active-bg)' : 'var(--surface-2, rgba(255,255,255,0.08))',
-                  color: isSelected ? 'var(--nav-active-accent)' : 'var(--muted)',
+                  background: isSelected ? 'var(--select-bg)' : 'var(--surface-2, rgba(255,255,255,0.08))',
+                  color: isSelected ? 'var(--select-fg)' : 'var(--muted)',
                   lineHeight: 1.3,
                 }}
               >

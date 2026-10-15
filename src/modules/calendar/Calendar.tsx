@@ -821,7 +821,7 @@ function Timeline({
             const bs = toBs(d)
             const today = isToday(d)
             const off = isOffDay(d)
-            const ink = today ? 'var(--nav-active-accent)' : off ? 'var(--danger-text)' : 'var(--text)'
+            const ink = today ? 'var(--select-fg)' : off ? 'var(--danger-text)' : 'var(--text)'
             return (
               <div
                 key={d.getTime()}
@@ -836,7 +836,7 @@ function Timeline({
                   textAlign: 'center',
                   borderRight: i < n - 1 ? '1px solid var(--border)' : 'none',
                   borderLeft: today ? '2px solid var(--nav-active-accent)' : undefined,
-                  background: today ? 'var(--nav-active-bg)' : off ? 'var(--card2)' : 'transparent',
+                  background: today ? 'var(--select-bg)' : off ? 'var(--card2)' : 'transparent',
                 }}
               >
                 {today && (
@@ -923,7 +923,7 @@ function Timeline({
                     gridRow: 1,
                     borderRight: i < n - 1 ? '1px solid var(--border)' : 'none',
                     borderLeft: isToday(d) ? '2px solid var(--nav-active-accent)' : undefined,
-                    background: isToday(d) ? 'var(--nav-active-bg)' : isOffDay(d) ? 'var(--card2)' : 'transparent',
+                    background: isToday(d) ? 'var(--select-bg)' : isOffDay(d) ? 'var(--card2)' : 'transparent',
                   }}
                 />
               ))}
@@ -1050,7 +1050,7 @@ function MonthGrid({
                 textAlign: 'left',
                 fontFamily: 'inherit',
                 cursor: 'pointer',
-                background: today ? 'var(--nav-active-bg)' : 'var(--card)',
+                background: today ? 'var(--select-bg)' : 'var(--card)',
                 border: today ? '1px solid var(--nav-active-accent)' : '1px solid var(--border)',
                 boxShadow: picked ? '0 0 0 2px var(--nav-active-accent)' : 'none',
               }}
@@ -1072,7 +1072,7 @@ function MonthGrid({
                     fontSize: 'var(--t-ui)',
                     fontWeight: 700,
                     lineHeight: 1.1,
-                    color: today ? 'var(--nav-active-accent)' : isOffDay(d) ? 'var(--danger-text)' : 'var(--text)',
+                    color: today ? 'var(--select-fg)' : isOffDay(d) ? 'var(--danger-text)' : 'var(--text)',
                   }}
                 >
                   {bs ? bs.day : d.getUTCDate()}
@@ -1598,8 +1598,8 @@ function MiniMonth({
                 minHeight: TOUCH,
                 borderRadius: 'var(--r-badge)',
                 border: 'none',
-                background: today ? 'var(--nav-active-accent)' : 'transparent',
-                color: today ? 'var(--app)' : isWeekend(d) ? 'var(--danger-text)' : 'var(--text)',
+                background: today ? 'var(--select-bg)' : 'transparent',
+                color: today ? 'var(--select-fg)' : isWeekend(d) ? 'var(--danger-text)' : 'var(--text)',
                 fontSize: 'var(--t-th)',
                 fontWeight: today ? 700 : 500,
                 fontFamily: 'inherit',
@@ -2928,8 +2928,8 @@ export default function Calendar() {
                   padding: '7px 9px',
                   borderRadius: 'var(--r-sm)',
                   border: on ? '1px solid var(--nav-active-accent)' : '1px solid transparent',
-                  background: on ? 'var(--nav-active-bg)' : 'transparent',
-                  color: on ? 'var(--nav-active-accent)' : 'var(--text2)',
+                  background: on ? 'var(--select-bg)' : 'transparent',
+                  color: on ? 'var(--select-fg)' : 'var(--text2)',
                   fontSize: 'var(--t-meta)',
                   fontWeight: on ? 700 : 500,
                   fontFamily: 'inherit',

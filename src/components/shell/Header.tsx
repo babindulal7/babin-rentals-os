@@ -281,6 +281,9 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             overflow: 'hidden',
           }}
         >
+          {/* RULING 2026-10-15: the page's filter toggle is always the first control at the very left of the header, and its drawer opens from the left. */}
+          <span className="workspace-page-actions" ref={ws?.setHeaderActionsElement} />
+
           {/* Back navigation button if registered */}
           {hData?.backHref && (
             <Link
@@ -347,9 +350,6 @@ export default function Header({ crumbs, actions }: HeaderProps) {
               <Icon name={hData.icon} size={18} fill />
             </span>
           )}
-
-          {/* Page controls via workspace portal slot */}
-          <span className="workspace-page-actions" ref={ws?.setHeaderActionsElement} />
 
           {/* Breadcrumb / Title Navigation */}
           <nav aria-label="Breadcrumb" style={{ minWidth: 0, overflow: 'hidden' }}>

@@ -1241,10 +1241,10 @@ export default function ReturnWorkspace({
                   gap: 12,
                   padding: '10px 14px',
                   borderRadius: 'var(--r-card)',
-                  background: 'color-mix(in srgb, var(--primary) 10%, var(--surface))',
+                  background: 'var(--select-bg)',
                   border: '1px solid color-mix(in srgb, var(--primary) 30%, transparent)',
                   fontSize: 'var(--t-meta)',
-                  color: 'var(--text)',
+                  color: 'var(--select-fg)',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

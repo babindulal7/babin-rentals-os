@@ -888,8 +888,8 @@ function DemoPulse() {
                 style={{
                   ...tabStyle,
                   border: `1px solid ${t.current ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-                  background: t.current ? 'var(--nav-active-bg)' : 'var(--card)',
-                  color: t.current ? 'var(--nav-active-accent)' : 'var(--text2)',
+                  background: t.current ? 'var(--select-bg)' : 'var(--card)',
+                  color: t.current ? 'var(--select-fg)' : 'var(--text2)',
                 }}
               >
                 {t.label}
@@ -949,8 +949,8 @@ function DemoPulse() {
                           padding: '0 10px',
                           borderRadius: 'var(--r-badge)',
                           border: `1px solid ${on ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-                          background: on ? 'var(--nav-active-bg)' : 'var(--card2)',
-                          color: on ? 'var(--nav-active-accent)' : 'var(--text2)',
+                          background: on ? 'var(--select-bg)' : 'var(--card2)',
+                          color: on ? 'var(--select-fg)' : 'var(--text2)',
                           fontSize: 'var(--t-meta)',
                           fontWeight: 600,
                           fontFamily: 'inherit',

@@ -139,6 +139,9 @@
 
   --primary: #2456d6;
   --on-primary: #ffffff;
+  /* RULING 2026-10-15: selected/active state is a solid NEUTRAL, not blue — blue is for primary actions. */
+  --select-bg: #1e293b;
+  --select-fg: #ffffff;
   --primary-text: #1e49b8;
 
   --success: #1e864a;
@@ -293,6 +296,8 @@
 
   --primary: #386af7;      /* WCAG AA 4.59:1 with white on-primary */
   --on-primary: #ffffff;
+  --select-bg: #3b475c;
+  --select-fg: #ffffff;
   --primary-text: #7ea2ff; /* text-safe blue on --surface */
 
   /* ---- §3.2 status hues + their on-colours ---- */
@@ -424,6 +429,8 @@
 
   --primary: #facc15;
   --on-primary: #000000;
+  --select-bg: var(--primary);
+  --select-fg: var(--on-primary);
   --primary-text: #fde047;
 
   --success: #22c55e;

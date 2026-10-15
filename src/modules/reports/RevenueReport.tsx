@@ -335,8 +335,8 @@ export default function RevenueReport() {
                   fontSize: 'var(--t-meta)',
                   fontWeight: active ? 600 : 400,
                   border: '1px solid var(--border)',
-                  background: active ? 'var(--nav-active-bg)' : 'transparent',
-                  color: active ? 'var(--nav-active-accent)' : 'var(--text2)',
+                  background: active ? 'var(--select-bg)' : 'transparent',
+                  color: active ? 'var(--select-fg)' : 'var(--text2)',
                   borderRadius:
                     tab === 'trends'
                       ? 'var(--rad-sm) 0 0 var(--rad-sm)'

@@ -30,7 +30,7 @@
   background: var(--hover-row, rgba(255, 255, 255, 0.035));
 }
 .rentals-v2 .operations-table > tbody > tr.is-selected {
-  background: var(--nav-active-bg);
+  background: var(--select-bg);
 }
 .rentals-v2 .page-toolbar { margin-top: 0; }
 
@@ -57,8 +57,8 @@
   filter: brightness(1.02);
 }
 .rentals-card-item.is-selected {
-  border-color: var(--nav-active-accent);
-  background: var(--nav-active-bg);
+  border-color: var(--select-fg);
+  background: var(--select-bg);
 }
 .rentals-card-item.is-overdue {
   border-left: 3px solid var(--danger, #dc2626);
@@ -219,7 +219,7 @@
   transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
 }
 .new-rental-stage-pill:hover {
-  background: var(--nav-active-bg);
+  background: var(--select-bg);
   border-color: var(--border2);
 }
 .new-rental-stage-pill:active {
@@ -622,8 +622,8 @@
 }
 
 .floor-group-item-btn.is-active {
-  background: color-mix(in srgb, var(--primary) 12%, var(--card));
-  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+  background: var(--select-bg);
+  border-color: var(--select-bg);
   color: var(--text);
   font-weight: 600;
 }
@@ -672,7 +672,7 @@
 
 .unit-barcode-chip:hover {
   border-color: var(--primary, #2563eb) !important;
-  background: color-mix(in srgb, var(--primary, #2563eb) 8%, var(--card)) !important;
+  background: var(--select-bg) !important;
 }
 
 .unit-barcode-chip button:hover {

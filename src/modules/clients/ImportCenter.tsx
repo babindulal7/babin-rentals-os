@@ -335,7 +335,7 @@ function ClientImportForm({ embedded = false }: ImportCenterProps = {}) {
               padding: '36px 16px',
               textAlign: 'center',
               cursor: 'pointer',
-              background: dragOver ? 'var(--nav-active-bg)' : 'var(--card2)',
+              background: dragOver ? 'var(--select-bg)' : 'var(--card2)',
             }}
           >
             <Icon name="upload" size={28} style={{ color: 'var(--muted)' }} />

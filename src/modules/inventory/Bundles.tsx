@@ -947,8 +947,8 @@ export function Bundles({
                       display: 'grid',
                       placeItems: 'center',
                       border: 'none',
-                      background: effectiveView === v ? 'var(--nav-active-bg)' : 'var(--card)',
-                      color: effectiveView === v ? 'var(--nav-active-accent)' : 'var(--text2)',
+                      background: effectiveView === v ? 'var(--select-bg)' : 'var(--card)',
+                      color: effectiveView === v ? 'var(--select-fg)' : 'var(--text2)',
                       cursor: 'pointer',
                     }}
                   >
