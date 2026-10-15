@@ -1,0 +1,353 @@
+# Every commit this worktree does not have
+
+This worktree is at `fd7ad62` (16 Aug). Generated 2026-10-07.
+
+## 1. Shared foundation — 280 commits (in every other branch)
+
+- `ebbdbeb` 2026-08-19 WIP snapshot before the Step 1 foundation work
+- `3d4c11d` 2026-08-19 The operating day comes from the clock, not from a constant
+- `2d6f7de` 2026-08-23 Ignore the coverage artifact and the stray docs.zip
+- `ab77734` 2026-08-23 Phases 1-3: wire the floor loop and money paths, remove fabricated success, unify structure
+- `ed2df42` 2026-08-23 Migration 0064 (file only, NOT applied): narrow purchase approval at the RLS layer
+- `ee554ec` 2026-08-23 purchase.approve follows 0064: the finance/admin five decide purchases
+- `f807e88` 2026-08-23 The 0062 fix package: narrow every echo, and migration 0065 (file only, NOT applied)
+- `a150aeb` 2026-08-25 WIP: v4.1 repaint, Badge as the single status renderer, Wave-0 responsive
+- `08d9757` 2026-08-25 The idle lock never signs anyone out, and is off until switched on
+- `c5a70af` 2026-08-25 Wire check:db, so the 0062 proof has a name
+- `f445f94` 2026-08-25 check-db counts on id, not *, so it survives 0062
+- `9b0a2ec` 2026-08-26 Idle lock moves to Security > Access; check:db gains --local
+- `4faa953` 2026-08-26 Law 14: 44px hit areas, and the three overlaps the pass itself created
+- `09f4c8e` 2026-08-26 check-db refuses to let Client witness Law 6
+- `6c28755` 2026-08-26 People tab renders what it exports
+- `8cea0e9` 2026-08-26 The 56px row floor, and the wrong filter it was silently removing
+- `28c88a2` 2026-08-26 Archive CasesQueue, record the AddBundle ruling — a clean marker before the push
+- `cdf7132` 2026-08-26 check:dump — prove the backup is a backup, not just a file
+- `57ab481` 2026-08-27 Pre-flight 0062 against the live schema — and prove the check can fail
+- `c09849a` 2026-08-30 UI/UX audit Track 1 — accessibility remediation and design-system alignment
+- `7b3e6cf` 2026-08-30 Record audit-receipt output from the review session
+- `369b373` 2026-08-30 Stop tracking plugin receipt telemetry
+- `1f80eb3` 2026-08-30 Delete orphaned CalendarPanel.tsx left behind by the Dashboard rename
+- `398d6aa` 2026-08-30 Catch the errors React's render path never sees
+- `4f918ca` 2026-08-31 Merge the 31 Aug rules-check pack (core.zip) into the governance docs
+- `889f991` 2026-09-01 Record the 4.38(a) breakpoint follow-up as done and verified
+- `9c81017` 2026-09-01 Land the 31 Aug - 1 Sep wave: 0077 applied, sync WIP adopted, gate green
+- `8bfd6df` 2026-09-01 Close the standing list: sync error surfaced, two docs falsified by 0077 fixed
+- `8f2e6b4` 2026-09-01 Fix what the v4.2 light flip broke: invisible ink, notched corners, a dark splash
+- `baa1605` 2026-09-01 Land the rest of the 1 Sep wave: the ink sweep finished, BS dates stop hiding
+- `b3b58fa` 2026-09-01 Build WHATSAPP_LINKS_SPEC v1.0 sections 5.1 and 5.2
+- `3079922` 2026-09-01 Build spec section 5.3: the toast can carry one action, receipt reads its balance back
+- `48de09c` 2026-09-01 Stop tracking the impeccable hook cache
+- `dd85101` 2026-09-01 Build the Daily Closing screen, and ship the spec's section 5.4 digest
+- `60f3e0a` 2026-09-01 Fix BUG-001: stop rendering red [Icon:...] debug text at clients
+- `3b45588` 2026-09-01 Draft 0078_daily_closings - the record an APPROVE writes. NOT APPLIED
+- `d15906a` 2026-09-01 Take the Booqable token out of four scripts and read it from the environment
+- `5bb4e88` 2026-09-01 Fix BUG-002: drop the fake "12 unread", make the dead header controls say why
+- `c8a6926` 2026-09-01 Apply 0078_daily_closings to the live project (owner-approved)
+- `d477fce` 2026-09-01 Fix BUG-003: delete the Client Ledger pager, which had no page 2 to reach
+- `8e63bbc` 2026-09-01 Build the closing write path: APPROVE now persists
+- `02aa030` 2026-09-01 Track the six functional-audit documents
+- `18ee65e` 2026-09-02 Remove the hardcoded anon key from the three sync scripts
+- `7e41e20` 2026-09-02 Land the 2 Sep session: BUG-004…009 fixed, and four findings that block the next stage
+- `cf11998` 2026-09-02 Execute the §4.41 ruling: ProductReports ships, four files leave the program
+- `5ec635e` 2026-09-02 Phase 2, client half: New Rental reads live clients and dispatches CREATE_RENTAL
+- `cad819c` 2026-09-02 Make the migration set build a database from scratch, and gate it so it stays that way
+- `adc1dbc` 2026-09-02 Fix the seven 1 Sep Dashboard findings; the mock engine compares instants
+- `23e8833` 2026-09-02 Narrow PLAN.md 4.42 (b) and (c): measure the money divergence, name the deadline
+- `6c978a5` 2026-09-02 Draft 0079: make invoices.vat_rate authoritative, and fix two errors in 4.42(c)
+- `c058cfd` 2026-09-02 Stop 0047 claiming that re-applying it is a no-op — it fails closed now, and says so
+- `1a3c7b7` 2026-09-03 Land the TODO sweep: lint made real, stubs flagged, A2-A13 fixed
+- `3785d5f` 2026-09-03 Audit of the from-scratch fix: redesign 0047 to the ruled shapes, un-hold 0062, harden the gate
+- `b7356ce` 2026-09-03 Wire lib/monitoring: console.* → captureError across src, gate auditLogger, drop the last stub log
+- `682c9ab` 2026-09-03 Full system audit, 3 Sep: NOT READY - lifecycle verified live, money and Close missing
+- `4adad61` 2026-09-03 Audit addendum A: resilience cluster (score 46), three offline P1s pending refutation
+- `bd1fb4c` 2026-09-03 Audit addendum B: delivery cluster (score 50); overall 56 -> 52; two self-corrections
+- `da8f19c` 2026-09-03 Audit addendum C: forms cluster (58) + refutation verdicts folded
+- `122a9a8` 2026-09-03 Audit: new P0-4 (live booking numbering is bricked) + addenda D-F
+- `c014d69` 2026-09-03 Land the P1 wave: the mock finally advances a stage, and booking_line_units has a writer
+- `7177267` 2026-09-04 Audit complete: all 12 clusters, 7 P0 blockers, overall 50 -> 45
+- `08bd422` 2026-09-04 Bring the 4 Sep rulings and Phase 0 specs into the repo, where they can be found
+- `2c3a680` 2026-09-04 Close the device-cache money leak and precache the Nepali faces
+- `f46cdca` 2026-09-04 Settle the on-device architecture, and three schema defects under it
+- `58846c3` 2026-09-04 P0 groundwork, built to the 4 Sep rulings rather than to my own design
+- `5761dc6` 2026-09-04 Phase 0 step 2: booking numbers go bare — 0085 written, helpers wired, full_sync quarantined
+- `a930db5` 2026-09-04 0085 verified from scratch — and running it found three defects reading it had not
+- `7cf67d2` 2026-09-04 Finish the 3 Sep console sweep: the four §4.36 audit-failure captures it missed
+- `e6c306e` 2026-09-04 Calendar reads the database; the New Rental pickers become search fields
+- `d998bc6` 2026-09-04 One date picker everywhere, with the BS date on it
+- `bee8e36` 2026-09-04 Update the last two date-input tests to the DateField contract
+- `52c2190` 2026-09-04 Fix the audit's P0s: numbering, the terminal step, crew billing, the R-06 gate
+- `cb8aa17` 2026-09-05 Unfreeze the clock, and fix the day Daily Closing was reading
+- `a921aeb` 2026-09-05 BS coverage: one month to eighteen years, and the anchor was wrong by a day
+- `a399bce` 2026-09-05 Three screens read the database, and /clients/:id resolves a uuid again
+- `a25d5d5` 2026-09-05 Close two security holes, and correct an audit finding that was mine
+- `732a6ed` 2026-09-05 Booking Detail stops asserting things it does not know
+- `fc35a64` 2026-09-05 Dashboard says "Still out"; New Rental shows what a bundle add did; four rulings recorded
+- `5d63421` 2026-09-05 Warehouses: the Transfer Center reads the database; the cards stay seeded, on purpose
+- `f697c53` 2026-09-05 Lifecycle audit: close NR-07, which the WIP commit had already fixed
+- `467e7f1` 2026-09-05 New Rental stops claiming work it did not do
+- `23e8eb0` 2026-09-06 State the grants, prove them in the gate, and re-scope my own 0092 claim
+- `49569cf` 2026-09-06 Clients: a label, a rescinded cap, and a feature switched off by a stale comment
+- `67a6bf8` 2026-09-06 0093 would have broken live; fixing it reversed yesterday's withdrawal
+- `b1b74d3` 2026-09-06 New Rental answers the booking's dates, not today's stock
+- `3194b11` 2026-09-06 0094: booking_stage_transitions is actually the sole door now
+- `e0b3962` 2026-09-06 Remediation audit (Spec v1.0): 147 issues, 7 P0, NOT READY; nothing fixed
+- `34cfaae` 2026-09-06 Add Equipment: the warehouse picker offered four facilities that do not exist
+- `1189e26` 2026-09-06 Packing: the floor stops recording what did not happen
+- `b4c4822` 2026-09-07 The masking views stop accepting writes, and the numbering stops truncating
+- `2950cc0` 2026-09-07 Confirm can work on the live catalogue: availability grows its quantity half
+- `d7683eb` 2026-09-07 Stock transfers and the category picker: two more pickers that offered rows the database does not have
+- `1ad105b` 2026-09-07 The bundle detail page exists, and the create flow lands on it
+- `76e277b` 2026-09-07 An invoice can exist: one transaction writes it, the modal previews it
+- `0aeb65f` 2026-09-07 Add Bundle: the category picker reads its table, and the tree is scoped rather than half-migrated
+- `91ab0df` 2026-09-07 Handover and Evidence: a screen that steered toward a false certification
+- `b043587` 2026-09-07 The three close gates stop passing on the wrong question
+- `fc52513` 2026-09-07 Audit report: correct the numbering instructions, add two findings, record what landed
+- `66817a2` 2026-09-07 Booqable spec bundle: label what is trustworthy, and give it a build shortlist
+- `bc42ea4` 2026-09-07 0089 applied to PRODUCTION: live numbering no longer truncates, and the transfer key exists
+- `f274367` 2026-09-07 R-19: flag that the booking counter lands on one side of the OPEN PLAN §4.48
+- `4c35d98` 2026-09-07 PERMISSIONS.md: file the permissions authority, then correct it against the database it describes
+- `574fcee` 2026-09-07 Add Bundle builds from the real catalogue, and the silent skip that hid it is gone
+- `424dd93` 2026-09-07 Return and Reset: a booking that could not receive its own item
+- `0b34581` 2026-09-08 DB-01 is fixed on production, and the migrations are no longer unverifiable
+- `7ddf9a0` 2026-09-08 R-23: record that the placement work landed inside 0b34581
+- `fef2575` 2026-09-08 Register: the capability strings are coarser than the permission grid
+- `e57d282` 2026-09-08 chore(git): give line endings one authority
+- `79f43ac` 2026-09-08 chore(security): purge the Claude worktrees that still held the Booqable token
+- `aa10bef` 2026-09-08 fix(db): money-blind roles cannot write booking money (Law 6, S0-5)
+- `bfe5355` 2026-09-08 chore(progress): count completion instead of estimating it (R-29, S0-8)
+- `6e6d4b5` 2026-09-08 fix(progress): a gate is green only when a step actually asserts it
+- `4c45a3a` 2026-09-08 docs: STAGE_0 as built, the live migration ledger, R-30..R-33, and the first counted PROGRESS entry
+- `eb38050` 2026-09-08 feat(users): a staff role can be assigned at all (V-14, R-27, 0101)
+- `38aa6b4` 2026-09-08 test(law17): guard the whole UI layer, not five hand-picked modules
+- `98965d0` 2026-09-08 feat(bundles): a bundle can be modified (R-34, PLAN §4.52)
+- `0510a14` 2026-09-08 feat(clients): the faceted filter panel P6 called the highest-value unbuilt item
+- `a0cdb29` 2026-09-08 feat(inventory): the filter rail becomes the same overlay panel, with counts
+- `517630b` 2026-09-08 db: apply 0079-0103 to production, and record what is now live
+- `0ea9966` 2026-09-08 test(db): track the lifecycle gate itself
+- `7e44e33` 2026-09-08 db: 0104 record the reservation conflicts 0100 could only print (S0-6 step 5)
+- `cf5c7ee` 2026-09-09 feat(dev): a local Postgres and object store, without Docker and without Supabase
+- `98f2da3` 2026-09-09 fix(ios): the app white-screened on every Apple device, for four reasons
+- `821ae75` 2026-09-09 feat: remove Booqable entirely — the OS masters its own data (R-36)
+- `9637cd9` 2026-09-09 feat(mock): file storage in the browser, so uploads have somewhere to go
+- `9075751` 2026-09-09 fix(inventory): Add Bundle stops answering "free now" to a windowed question (R-37)
+- `e0bdcc1` 2026-09-09 feat(ops): deterministic operation session id (R-22)
+- `fac6dc4` 2026-09-09 docs(finance): update 0081 references to 0098 (S0-3)
+- `aeb61e2` 2026-09-09 fix(rentals): confirmRental delegates reservation writing to database (R-26)
+- `b96a3a7` 2026-09-09 docs(finance): update 0081 reference in mock client (S0-3)
+- `6b4939f` 2026-09-09 feat(inventory): preventive maintenance warning & service plan (R-28), narrow case.resolve (R-25)
+- `5d4cb26` 2026-09-09 ci: wire check:pglite, check:lifecycle, and lint:progress gates (S0-7, S0-8)
+- `a270dd4` 2026-09-09 docs: rulings 07/08/09 incl. R-22..R-37, PLAN, PERMISSIONS, and audit verification
+- `7bdeac4` 2026-09-09 chore(progress): record Stage 0 exit and completion status
+- `d9ba26a` 2026-09-09 feat(db): stage-gate trigger requires floor rows for Packed and On Rent (L6, Stage 1)
+- `2fda5b8` 2026-09-09 feat(db): close gate requires invoice and settlement (L11, Stage 1)
+- `ff0d784` 2026-09-09 chore(progress): record Stage 1 progress for L6 and L11 (DB enforcement 7/9, Lifecycle 11/13)
+- `6924d67` 2026-09-09 feat(db): payments validation guards in Postgres (L9, Stage 1)
+- `45102e3` 2026-09-09 chore(progress): record Stage 1 progress for L9 payments validation (Lifecycle 12/13, Overall 70%)
+- `814fa4c` 2026-09-09 feat(db): issue_invoice RPC and invoice immutability gate (8/9 DB enforcement, Stage 1)
+- `aa6276b` 2026-09-09 chore(progress): record Stage 1 progress for issue_invoice (DB enforcement 8/9, Overall 72%)
+- `dba0aa0` 2026-09-09 feat(db): cancel_booking RPC, client own rows RLS, updateClient and cancelRental actions (9/9 DB gates)
+- `71db05e` 2026-09-09 chore(progress): record Stage 1 progress for cancel_booking and client own rows (DB enforcement 9/9 100%, Overall 75%)
+- `4087fef` 2026-09-09 feat(rentals): implement extendRental action and extend_booking RPC (Backend 55%, Overall 76%)
+- `8e95c5d` 2026-09-09 chore(progress): record Stage 1 progress for extend_booking and extendRental (Backend 55%, Overall 76%)
+- `81b63e9` 2026-09-09 feat(rentals): implement saveDraft action (Backend 57%)
+- `4111501` 2026-09-09 chore(progress): record Stage 1 progress for saveDraft (Backend 57%)
+- `5e77e36` 2026-09-09 feat(cases): implement resolveCase action (Backend 60%)
+- `1753ead` 2026-09-09 chore(progress): record Stage 1 progress for resolveCase (Backend 60%)
+- `ffccd7d` 2026-09-09 feat(db): open missing case on partial return (L7 green, Lifecycle 100%, Overall 78%)
+- `71658fc` 2026-09-09 chore(progress): record Stage 1 progress for L7 trigger (Lifecycle 100%, Overall 78%)
+- `e74b232` 2026-09-09 feat(maintenance): implement createMaintenanceJob and completeMaintenance actions (Backend 64%)
+- `40940fd` 2026-09-09 chore(progress): record Stage 1 progress for maintenance actions (Backend 64%, Overall 79%)
+- `22bf2f1` 2026-09-09 feat(clients): implement mergeClients action (Backend 67%)
+- `b8a7401` 2026-09-09 chore(progress): record Stage 1 progress for mergeClients (Backend 67%)
+- `893e235` 2026-09-09 feat(payments): implement refundPayment action (Backend 69%, Overall 80%)
+- `eee3392` 2026-09-09 chore(progress): record Stage 1 progress for refundPayment (Backend 69%, Overall 80%)
+- `aad9df5` 2026-09-09 feat(documents): implement createDocument action (Backend 71%)
+- `a8c1bb1` 2026-09-09 chore(progress): record Stage 1 progress for createDocument (Backend 71%)
+- `a173117` 2026-09-09 feat(inventory): implement reconcileStockCheck action (Backend 74%, Overall 81%)
+- `ec11104` 2026-09-09 chore(progress): record Stage 1 progress for reconcileStockCheck (Backend 74%, Overall 81%)
+- `4b01e7e` 2026-09-09 feat(crew): implement bookCrew action (Backend 76%)
+- `a6656fb` 2026-09-09 chore(progress): record Stage 1 progress for bookCrew (Backend 76%, Overall 81%)
+- `c5c5d7e` 2026-09-09 feat(subrentals): implement createSubRental action (Backend 79%, Overall 82%)
+- `0470b94` 2026-09-09 chore(progress): record Stage 1 progress for createSubRental (Backend 79%, Overall 82%)
+- `0c9a931` 2026-09-09 feat(rentals): implement reviewEvidence action (Backend 81%, Overall 82%)
+- `6ace404` 2026-09-09 chore(progress): record Stage 1 progress for reviewEvidence (Backend 81%, Overall 82%)
+- `23d251f` 2026-09-09 feat(rentals): implement startReturn action (Backend 83%, Overall 83%)
+- `e3e6298` 2026-09-09 chore(progress): record Stage 1 progress for startReturn (Backend 83%, Overall 83%)
+- `443e350` 2026-09-09 feat(rentals): implement completePickup action (Backend 86%, Overall 83%)
+- `03e6beb` 2026-09-09 chore(progress): record Stage 1 progress for completePickup (Backend 86%, Overall 83%)
+- `c95dccb` 2026-09-09 feat(inventory): implement packEquipment action (Backend 88%, Overall 84%)
+- `83c63c7` 2026-09-09 chore(progress): record Stage 1 progress for packEquipment (Backend 88%, Overall 84%)
+- `f4175c0` 2026-09-09 feat(inventory): implement readyForPickup action (Backend 90%, Overall 84%)
+- `7852a16` 2026-09-09 chore(progress): record Stage 1 progress for readyForPickup (Backend 90%, Overall 84%)
+- `8268f99` 2026-09-09 feat(inventory): implement reserveEquipment action (Backend 93%, Overall 85%)
+- `a9df6c0` 2026-09-09 docs(progress): log reserveEquipment completion (Backend 93%, Overall 85%)
+- `1a6f902` 2026-09-10 feat(cases): wire CasesWorkspace to real database query layer (Real data 9 DB-only)
+- `ead53a1` 2026-09-10 feat(documents): wire Documents screen to real database query layer (Real data 10 DB-only)
+- `aecc63a` 2026-09-10 feat(subrentals): wire SubRental screen to real database query layer (Real data 11 DB-only)
+- `a517d5d` 2026-09-10 feat(crew): wire CrewBooking screen to real database query layer (Real data 12 DB-only)
+- `2d1146b` 2026-09-10 feat(activity): wire ActivityLog screen to real database query layer (Real data 13 DB-only)
+- `eb88ca9` 2026-09-10 feat(audit): wire AuditSettings screen to real database query layer (Real data 14 DB-only)
+- `4687f67` 2026-09-10 feat(membership): wire Membership screen to real database query layer (Real data 15 DB-only, 51% Real Data)
+- `bc0a0f9` 2026-09-10 docs: update PROGRESS.md with 51% Real Data milestone and test results
+- `f8c2fb5` 2026-09-10 feat(reports): eliminate all seed routes across reports and tools suites (Real data 27 DB-only, 0 seed, 0 none, Overall 93%)
+- `2bd2a81` 2026-09-10 feat: finalize tab redirects and in-place cases queue embedding
+- `fc9d49e` 2026-09-10 feat(data): advance real data to 45 DB-only routes across clients, calendar, finance, rentals, operations, today, and settings (Overall 96%)
+- `6beb9d8` 2026-09-10 feat(foundation): achieve 100% real data across all 48 routes and full test suite green
+- `c2045ac` 2026-09-11 db: 0113 Law 17 — delivery_type Client Pickup (R-33)
+- `395ffba` 2026-09-11 feat(ui): port 8 core design system primitives to css tokens and enforce laws 6, 11, and 15
+- `62cf2be` 2026-09-11 db: 0114 product_units.status owned by recompute_unit_status; direct writes refused
+- `96bb57f` 2026-09-11 test(db): lifecycle L6/L7/L14 red — sessions not required yet
+- `a47de3a` 2026-09-11 db: 0115 stage gates in apply_booking_stage_transition; cancel and reopen rules; auth_is_manager_or_above
+- `906c2a1` 2026-09-11 db: 0116 close gate — no invoice, unsettled, deposit, case, live reservation
+- `0f5d7f9` 2026-09-11 db: 0117 invoice void discipline; credit_notes
+- `d35e149` 2026-09-11 db: 0118 payment ceiling; booking_estimate_total; client mismatch
+- `86aef10` 2026-09-11 db: 0119 server-side prices for money-blind callers; booking_lines insert guard
+- `3dbf3d3` 2026-09-11 db: 0120 users visibility, role ceiling, deactivation resolves to Client
+- `5914f5f` 2026-09-11 feat(stage1): S1-9 lifecycle 17/17, write-probes, permissions docs and DB enforcement 9/9
+- `cdcd9f0` 2026-09-11 feat(stage2): gate error parser, voidInvoice action, and workspace inline handling
+- `59549b3` 2026-09-11 feat(rentals): CancelRentalModal, crew and subrental payload fixes, and inline gate error handling
+- `fd299f7` 2026-09-11 fix(rentals): clean button attributes in RentalsList
+- `73256b1` 2026-09-11 feat(settings): StaffDirectory inline gate error formatting and reports navigation linking
+- `be9331a` 2026-09-11 feat: FilterDrawer overlay, BS/AD datePresets, floor quick actions and responsive reflow
+- `261ed21` 2026-09-11 feat(scanner): ZXing continuous camera decode, torch controls, cooldown, and 390px shell polish
+- `2353123` 2026-09-11 feat(offline): ActionOfflineError explicit gating reasons and DataAgeBadge operational freshness
+- `ed46bff` 2026-09-12 feat(pwa): true resolution icons with maskable safe-zone and beforeinstallprompt install flow
+- `ff782c1` 2026-09-12 feat(ui): redesign CalendarPopover, add CheckAvailabilityModal and calendar availability inspection
+- `ad5bdb4` 2026-09-12 fix: resolve exactOptionalPropertyTypes and finalize Calendar check availability parity
+- `f62db24` 2026-09-12 fix(ui, reports, auth): fix calendar embedded flow, hook violations, and auth HMR resilience
+- `c0fb9d5` 2026-09-14 Refactor rental operations application
+- `48c7a4d` 2026-09-19 chore: ignore .codex-temp, refresh lint and script config
+- `2df7310` 2026-09-19 docs(audit): stage 1-8 audit reports and fix backlog
+- `8efbb2c` 2026-09-19 feat(db): migrations 0124-0129 — reservations follow dates, rental drafts, perf indexes, serialized cinema assets, audit view, documents bucket
+- `b24ee2f` 2026-09-19 test(scripts): live verification scripts for audit fixes, env-based credentials
+- `01cb34f` 2026-09-19 refactor(queries): purge mock fallbacks across 16 query modules (AUD-008)
+- `f6e679b` 2026-09-19 feat(scanner): shared scanner lookup, feedback helpers, FAB viewport gating (AUD-014)
+- `b4d7d91` 2026-09-19 feat(operations): popup stage navigation, dirty-state guards, floor scan persistence
+- `5c4801e` 2026-09-19 feat(documents): PDF generation wired to Supabase Storage (AUD-010)
+- `385e995` 2026-09-19 feat(rentals): list/detail/new-rental hardening, timeline, booking helpers and actions
+- `3741d8f` 2026-09-19 feat(shell): canonical 7-item navigation, simplified today dashboard, movement panels
+- `a22c5aa` 2026-09-19 feat: modules sweep — finance, clients, inventory, maintenance, reports, ui primitives, marketing polish
+- `a981072` 2026-09-19 docs: progress log through step 6.3, session commit record, design notes
+- `bf4b06a` 2026-09-20 feat(ui): canonical design system foundation — tokens, primitives, segmented control, phase contract tests
+- `1b21132` 2026-09-20 feat(rentals): migrate list to canonical UI foundation; fix undefined-token rendering bugs (R-40)
+- `c463643` 2026-09-20 feat(modules): hardening sweep across operations, clients, inventory, finance, reports, settings, calendar
+- `c632e3e` 2026-09-20 fix(actions,lib): column-grant-safe client creation, query hardening, onboarding progress helpers
+- `54f0f18` 2026-09-20 chore(scripts,db): law-6 exposure probes, cinema asset check, migration touch-ups
+- `678eea7` 2026-09-20 docs: progress log, R-39 ease-of-use ruling + footprint, R-40 token-drift law, design supersession note
+- `b31d452` 2026-09-23 docs: restructure doc library; archive completed plans and audits
+- `55b369e` 2026-09-23 feat(db): pending-damage close gate, atomic crew+transport creation, bucket renumber (WRITTEN, verified locally, NOT applied — N-5)
+- `36fcfaf` 2026-09-23 feat(ui): responsive shell redesign + known-bug sweep + iOS build pipeline
+- `e1ca0ba` 2026-09-23 feat(today,dashboard,shell): dispatch-operator search and keyboard flow; sidebar hover polish
+- `4a0b970` 2026-09-25 feat(ui,data): decouple operationsShell domain logic to achieve 100% real data; audit remediation sweep
+- `bd12030` 2026-09-25 test: add Gemma audit post-remediation regression tests
+- `dc96d3c` 2026-09-25 feat(inventory,rentals): implement bundle component soft-deactivation (§4.52) and zero-value close override (§4.51)
+- `fa6c095` 2026-09-25 feat(ui): add multi-sensory scan feedback, high-contrast mode, and dual BS date ergonomics
+- `9b9721d` 2026-09-26 feat: implement 4 strategic pillars from Gemma engineering audit
+- `1e959ab` 2026-09-26 feat(floor): wire acoustic feedback, flight case scan-to-verify, and sign-on-glass modal
+- `afc261d` 2026-09-26 feat(return): complete return inspection loop with acoustic feedback, optical QC, and sign-on-glass
+- `b73c1c4` 2026-09-26 feat(rentals): automated damage & late-fee settlement, WhatsApp return receipt, and pre-dispatch kit-build verification
+- `0e5b9a2` 2026-09-26 feat(intelligence): enterprise rental intelligence, B&H product catalog, and UI harmonization
+- `3019599` 2026-09-26 feat(filters-actions): Booqable filter and quick action research, specifications, and UI components
+- `9f67fbd` 2026-09-27 docs(skin): Gemma 26B architectural audit and reference skin migration proposal
+- `6b746d6` 2026-09-27 fix(ui): resolve unused imports and touch coordinate safety in filter/action drawers
+- `366347d` 2026-09-27 feat(tokens): integrate 5-tier Obsidian elevation ladder and 9-tier alpha border system
+- `1636659` 2026-09-27 feat(ui): update Badge, Card, and status primitives with luminous borders and surface gradients
+- `eae1e2a` 2026-09-27 feat(rentals): apply Obsidian skin to RentalsList table, status chips, and action drawers
+- `8ff17c9` 2026-09-27 feat(dashboard): harmonize Today board with Obsidian dark skin, bento shortcuts, and luminous alerts
+- `d99fed8` 2026-09-27 fix(dashboard): use danger-text for alert banner text and borders across dark and light themes
+- `a046b68` 2026-09-27 feat(shell): add operational date, Bikram Sambat context, and live clock to persistent global header
+- `e7ee17c` 2026-09-27 feat(shell): place contextual info tooltip at persistent global header for all screens
+- `29057a1` 2026-09-27 fix(quality): restore WCAG AA contrast tokens, integer Paisa settlement math, and Law 6 role gating
+- `c774c7e` 2026-09-27 feat(shell): integrate page action toolbar into global header and remove in-page header row
+- `dd61c0a` 2026-09-27 revert: feat(shell): integrate page action toolbar into global header and remove in-page header row
+- `fb78db8` 2026-09-27 feat(ui): simplify UI density and information architecture (M1-M7)
+- `d391361` 2026-09-27 fix(lint): eliminate explicit any types and record M1-M7 completion in PROGRESS.md
+- `5eed2c6` 2026-09-28 feat(electron): add Electron desktop shell with SPA static server, Reset/QC yellow unification, and UI density pass
+- `e4feb86` 2026-09-29 feat: consolidate rental workflows and expand operations tools
+- `3231157` 2026-09-29 design audit: fix UI/UX issues, integrate design tokens, add date presets
+- `c0f131b` 2026-09-29 feat(rentals): Trial 13 gaps — return bundle grouping, subrental return-by (0138), non-physical return exemption (0139), stock adjustments (0140), consumable exemption + handover deduction (0141/0142, L21)
+- `735a9f2` 2026-10-01 feat(intel): integrate direct tabbed Smart Hover card system and preview loaders
+- `9e37c9f` 2026-10-01 feat(actions): implement updateBookingProject action with permission mapping
+- `cf18755` 2026-10-01 feat(layout): align shell navigation, list workspaces, and error boundary recovery
+- `7ffa142` 2026-10-01 fix(rentals): enhance rental workflows, dual booking lookup, barcode scanning, and bundle authoring
+- `6281ec9` 2026-10-01 docs: update deployment runbook, environment ignores, and progress ledger
+- `244c28f` 2026-10-01 fix(finance): enforce formatMoney and dynamic Kathmandu business today across queries, modals, and reports
+- `83dee62` 2026-10-01 fix(dates,format): enforce grouped formatting and Kathmandu business date sync across modals, actions, and pricing
+- `151b60f` 2026-10-03 feat(workflows): implement consistent add, edit, and booking workflows with atomic persistence
+- `8937db8` 2026-10-03 feat(inventory): formalize updateEquipment action with createAction and permissions
+- `a2a0f41` 2026-10-03 feat(architecture): elevate real data score to 43/45 DB-only and overall completion to 100%
+- `ee6827e` 2026-10-03 security: close three anon-readable views and add a durable gate (0148)
+- `aadd839` 2026-10-03 test: expand coverage to actions and modules (audit C5)
+- `63c317b` 2026-10-03 fix(security): resolve audit D4-D7, add anon RPC leak gate, non-physical line exemptions, and dedicated report suites
+- `3238cdf` 2026-10-03 refactor(rentals): extract NewRental pure utilities to newRentalUtils.ts (audit C2)
+- `756fb7f` 2026-10-03 fix(ui): resolve audit E1, E2, E6, E7, E8 with tokenized actions, touch target floor, and component archival
+- `f5c1c17` 2026-10-03 docs: update PROGRESS.md for session 2026-10-03 (f)
+- `a3f1e4b` 2026-10-03 refactor(rentals): decompose NewRental.tsx into modular domain subcomponents (audit C2)
+- `1292efb` 2026-10-03 chore(migrations): renumber duplicate prefixes 0056×3, 0076×2 → 0073, 0081, 0082 (audit C1)
+
+## 2. Only on feat/unified-crew-delivery-search
+
+- `33de1a0` 2026-10-03 feat: unified search — Crew and Delivery are now functional in AddItemPanel
+
+## 3. step1-foundation (also in zen-swartz and booqable)
+
+- `a47d084` 2026-10-03 chore(migrations): remove old duplicate migration filenames after renumbering (audit C1)
+- `1498e89` 2026-10-03 fix(completion): exclude placeholder modules from seed fixture scoring (audit C9)
+- `2c29f0a` 2026-10-03 fix(security): resolve audit C6 & C8, load script anon keys from env, gate auditLogger console output
+- `83f6fe8` 2026-10-03 docs(live): generate zero-downtime production cutover runbook for migrations 0079-0150
+- `196be0b` 2026-10-03 docs: full-app audit report 2026-10-03
+- `96a4da0` 2026-10-03 chore(booking): export defaultTransportOptions from itemCatalogue for DeliverySection parity
+- `ed1c46e` 2026-10-03 feat(rentals): unified crew and transport search and viewport recentering
+- `0c9970e` 2026-10-03 feat(numbering): resolve Babin rulings for staff directory (Option b) and short payment sequence PAY-94 (migration 0151)
+- `a9cc34e` 2026-10-04 fix(rentals): unclip dropdowns in ClientCombobox and AddItemPanel
+- `d9866b5` 2026-10-04 feat(sync): add cross-tab broadcast synchronization, unified reports navigation, and floor test harness
+- `48816ef` 2026-10-04 chore(scripts): include forbidden native dialog check in check-page-shell-lint.mjs
+- `484ea88` 2026-10-04 feat(audit): complete Item 11 audit, form touch ergonomics, and vocabulary sync
+- `7c0465f` 2026-10-05 feat(data): purge all user data, client records, and AI-generated sample data from app
+- `667ad2e` 2026-10-05 feat(floor-a11y): form auto-labeling, keyboard focus, triage & workbook sync
+- `dc85295` 2026-10-05 style(ui): use tokenized font-id and tabular-nums over raw monospace in scanner and gates
+- `89b734c` 2026-10-06 feat(rentals): decompose NewRental into RentalLineItemsTree, CrewSection, and RentalPricingSection (Item 13)
+- `d1a0ed1` 2026-10-06 feat(rentals): complete Item 13 NewRental decomposition and workbook sync
+- `bf42b31` 2026-10-06 feat(rentals): allow close deposit skip with written reason (0155) and adopt Deep Spec v2 safe additions (0154)
+- `266ae8b` 2026-10-06 feat(rentals): keep an unsaved New Rental on the device; split NewRental into hooks and sections
+- `465ece5` 2026-10-06 chore: stop tracking the dist-mockcheck build output
+- `991e007` 2026-10-06 fix(audit): record the acting user on operation-session audit rows (0156)
+- `71a90de` 2026-10-06 docs(progress): record 0156 applied to live and verified
+- `4191388` 2026-10-06 docs(progress): 0150/0153/0155 are recorded on live; versions are placeholders
+- `da77c0f` 2026-10-06 docs(rulings): rule PLAN 4.36 - the database is the audit of record
+- `310cb77` 2026-10-06 feat(rentals,reports): product deposits raise the recommended deposit; shortage list for a period
+- `c4c01bc` 2026-10-06 fix(reports): restore src/data/inventoryReports.ts removed by mistake in 310cb77
+- `9c3031f` 2026-10-06 fix(ui): scanner clears save bar, membership Back, crew empty-state filters, money-blind expense filters
+- `e85a687` 2026-10-06 feat(audit): database audit triggers for four trigger-less tables (0157)
+
+## 4. Only on claude/zen-swartz-228eaa
+
+- `6c354ed` 2026-10-06 fix(reports): Inventory Reports shows real unit counts, not seeded figures (Law 16)
+- `06c0dcf` 2026-10-06 chore(reports): drop the restored inventoryReports seed file; nothing imports it
+- `4459fb9` 2026-10-07 KpiStrip: move extra information into one (i) tooltip
+- `994d2ac` 2026-10-07 Shared settings table (0158); promo codes read from coupons only
+
+## 5. Only on claude/booqable-babin-adoption-spec-de72fa
+
+- `58736f9` 2026-10-07 fix(rentals): checkout reads promo codes from coupons table, delete demo PROMO_CODES
+- `5491272` 2026-10-07 feat(settings): shared settings table, history, Owner-only RPC, store overlay (0158, G1)
+- `2aca416` 2026-10-07 feat(views): shared saved views with built-in system views (0159, G2)
+- `1db7797` 2026-10-07 feat(rentals): show bundle kit capacity and limiting component (G4)
+- `7f82a99` 2026-10-07 feat(export): audit row per export, column-faithful Rentals export, client PII gated (G5)
+- `eada29f` 2026-10-07 feat(audit): Login and Logout audit rows (G6)
+- `f4817e1` 2026-10-07 feat(pricing): pricing structures + rulesets tables, quote engine, product terms reader (0160, G3 foundation)
+- `a598f35` 2026-10-07 docs(rulings): RULINGS-2026-10-07 and open decisions for the Booqable adoption
+- `792c1b3` 2026-10-07 docs(progress): Booqable adoption session log; fix Settings and Rentals tests for DB-backed settings/views
+- `8eeff57` 2026-10-07 chore(dev): add launch config for the worktree dev server on port 3001
+- `15f15e9` 2026-10-07 fix(bookings): Today and Rentals failed on live - 0144 columns were never granted (0161 + fallback)
+- `633cd80` 2026-10-07 feat(today): redesign the dispatch-day control - one date button, Today chip only away from today, stable arrows
+- `661f134` 2026-10-07 test(e2e): restore tier3 dispatch-sync test to its pre-redesign assertions
+- `298032e` 2026-10-07 fix(views): saved views keep working on this device until 0159 is applied, no raw DB error
+- `a32fbe1` 2026-10-07 fix(rentals): promo code field is optional - drop the required asterisk
+- `d09ab4a` 2026-10-07 fix(bundles): quantity-tracked components read their real free stock - bundles no longer show Unavailable on live
+- `4bf41a2` 2026-10-07 test: remove the bundleRecords quantity-path test added in d09ab4a
+
+## 6. Only on main
+
+- `7826cca` 2026-08-16 The 13 Aug rulings: line-level Sub-Rental, credit-derived On Stop, deduplicated catalog
+- `b647a78` 2026-10-07 test(availability): add tests for bundle line expansion and floor unit projection rollback

@@ -9,6 +9,13 @@
       "autoPort": false
     },
     {
+      "name": "feature-copy-3002",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["../../../node_modules/vite/bin/vite.js", "--host", "127.0.0.1", "--port", "3002", "--strictPort"],
+      "port": 3002,
+      "autoPort": false
+    },
+    {
       "name": "babin-rentals-os-mock",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev:mock"],
