@@ -58,6 +58,17 @@ describe('credit-note audit is not net-sales accounting', () => {
     expect(() => reconcileInvoiceCredits([invoice()], [credit({amount:'0'})])).toThrow(/positive/)
   })
 
+  it('rejects foreign-currency voids even when no credit note was issued', () => {
+    expect(() => reconcileInvoiceCredits([invoice({currency:'USD'})], []))
+      .toThrow(/Mixed-currency voided/)
+  })
+
+  it('rejects credit notes without NPR-denominated parent invoice context', () => {
+    const row = invoice({currency:'USD', status:'Draft', voided_at:null, taxable_amount:'0', paid_amount:'0'})
+    expect(() => reconcileInvoiceCredits([row], [credit()]))
+      .toThrow(/Mixed-currency credit/)
+  })
+
   it('reconciles multiple partial notes to one paid void exactly in integer paisa', () => {
     const result = reconcileInvoiceCredits([invoice()], [
       credit({id:'c1', amount:'100.10'}),
