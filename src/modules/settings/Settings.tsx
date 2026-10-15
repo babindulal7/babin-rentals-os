@@ -1,10 +1,11 @@
 import { useCallback, useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import './settings.css'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
 import { Card, PageHeader, Button, FooterNote, SummaryRows } from '../../components/ui/Page'
 import { PageShell } from '../../components/ui/PageShell'
+import { PageActions } from '../../components/ui/PageActions'
 import { ErrorBanner, LoadingSkeleton } from '../../components/ui/StateViews'
 import { toBs, formatBs, formatAd, getBusinessToday } from '../../lib/bs'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
@@ -90,6 +91,7 @@ export default function Settings() {
   const desktop = viewport === 'desktop'
 
   const [params, setParams] = useSearchParams()
+  const navigate = useNavigate()
   const [addOpen, setAddOpen] = useState(false)
   const [branches, setBranches] = useState<Branch[]>(BRANCHES)
 
@@ -193,8 +195,64 @@ export default function Settings() {
 
   const exportBranches = () => downloadCsv('babin-branches.csv', branchCsvRows(branches, money))
 
+  const finishEditing = () => {
+    const outcome = edit.stopEditing()
+    setLeaveError(
+      outcome.ok
+        ? null
+        : `Unsaved: ${outcome.unsaved.join(', ')}. Save or cancel each before leaving edit mode.`,
+    )
+  }
+  const discardEdits = () => {
+    edit.cancelAll()
+    setLeaveError(null)
+  }
+  const resetToDefaults = () => {
+    void (async () => {
+      resetSettings()
+      try {
+        await resetSharedSettings()
+        setLeaveError(null)
+      } catch (e) {
+        setLeaveError(e instanceof Error ? e.message : 'Reset was refused.')
+      }
+      reload()
+      edit.cancelAll()
+    })()
+  }
+  const startEditing = () => { setLeaveError(null); edit.startEditing() }
+
+  /* RULING 2026-10-15: below desktop only the one primary verb stays beside the title;
+     Export, the audit log and the edit-mode extras move into More (BLOCKER-02 — the
+     title measured 0px wide at both 375px and 768px, the audit link 34px tall). A phone
+     also shortens the verb. Revert = drop the `compactHeader` branch below. */
+  const compactHeader = !desktop
+  const compactHeaderActions =
+    active === 'branches' && !onPhoneList ? (
+      <PageActions
+        primary={<Button icon="plus" variant="primary" aria-label="Add Branch" onClick={() => setAddOpen(true)}>{phone ? 'Add' : 'Add Branch'}</Button>}
+        overflow={[{ label: 'Export branches', icon: 'download', onClick: exportBranches }]}
+      />
+    ) : (
+      <PageActions
+        primary={mayEdit && !onPhoneList ? (
+          edit.editing
+            ? <Button icon="check" variant="primary" onClick={finishEditing}>Done</Button>
+            : <Button icon="tool" aria-label="Edit settings" onClick={startEditing}>{phone ? 'Edit' : 'Edit settings'}</Button>
+        ) : undefined}
+        overflow={[
+          ...(mayEdit && !onPhoneList && edit.editing ? [
+            { label: 'Discard changes', icon: 'close' as const, onClick: discardEdits },
+            { label: 'Reset to defaults', icon: 'refresh' as const, onClick: resetToDefaults },
+          ] : []),
+          { label: 'Export config', icon: 'download', onClick: exportConfig },
+          { label: 'View audit log', icon: 'checklist', onClick: () => navigate('/admin/audit') },
+        ]}
+      />
+    )
+
   const headerActions =
-    load.status !== 'ready' ? null : active === 'branches' && !onPhoneList ? (
+    load.status !== 'ready' ? null : compactHeader ? compactHeaderActions : active === 'branches' && !onPhoneList ? (
       <>
         <Button icon="download" onClick={exportBranches}>
           Export
@@ -209,59 +267,25 @@ export default function Settings() {
           !onPhoneList &&
           (edit.editing ? (
             <>
-              <Button
-                icon="check"
-                variant="primary"
-                onClick={() => {
-                  const outcome = edit.stopEditing()
-                  setLeaveError(
-                    outcome.ok
-                      ? null
-                      : `Unsaved: ${outcome.unsaved.join(', ')}. Save or cancel each before leaving edit mode.`,
-                  )
-                }}
-              >
+              <Button icon="check" variant="primary" onClick={finishEditing}>
                 Done
               </Button>
-              <Button
-                icon="close"
-                variant="ghost"
-                onClick={() => {
-                  edit.cancelAll()
-                  setLeaveError(null)
-                }}
-              >
+              <Button icon="close" variant="ghost" onClick={discardEdits}>
                 Discard
               </Button>
-              <Button
-                icon="refresh"
-                variant="ghost"
-                onClick={() => {
-                  void (async () => {
-                    resetSettings()
-                    try {
-                      await resetSharedSettings()
-                      setLeaveError(null)
-                    } catch (e) {
-                      setLeaveError(e instanceof Error ? e.message : 'Reset was refused.')
-                    }
-                    reload()
-                    edit.cancelAll()
-                  })()
-                }}
-              >
+              <Button icon="refresh" variant="ghost" onClick={resetToDefaults}>
                 Reset to defaults
               </Button>
             </>
           ) : (
-            <Button icon="tool" onClick={() => { setLeaveError(null); edit.startEditing() }}>
+            <Button icon="tool" onClick={startEditing}>
               Edit settings
             </Button>
           ))}
         <Button icon="download" onClick={exportConfig}>
           Export config
         </Button>
-        <Link to="/admin/audit" className="tap" style={{ ...controlStyle, minHeight: 34 }}>
+        <Link to="/admin/audit" className="tap" style={{ ...controlStyle, minHeight: 44 }}>
           <Icon name="checklist" size={14} />
           View audit log
         </Link>
@@ -500,11 +524,14 @@ export default function Settings() {
                 icon="settings"
                 title="Settings"
                 description="System preferences, organization profile, security, and workspace policies."
-                status={
+                /* On a phone the section is named by the back bar under the header,
+                   and on the section list no section is open, so the badge only
+                   costs the title its width there. */
+                status={phone ? undefined : (
                   <span className="badge badge-neutral" style={{ fontWeight: 600 }}>
                     {activeTab?.label ?? 'General'}
                   </span>
-                }
+                )}
                 isDirty={edit.dirtyKeys.length > 0}
                 search={{
                   value: searchQuery,

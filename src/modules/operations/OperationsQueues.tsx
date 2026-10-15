@@ -479,8 +479,14 @@ export default function OperationsQueues() {
   const dateMenuRef = useRef<HTMLDivElement | null>(null)
   /* Law 13/14 — width decides, at v4.1 §7.7's 768 / 1280. */
   const viewport = useViewport()
-  const tabular = viewport !== 'phone'
+  const phone = viewport === 'phone'
+  const tabular = !phone
   const dockOpen = dock !== null && viewport === 'desktop'
+  /* RULING 2026-10-15: below desktop the two workspace links live in More and a fresh
+     data badge takes no width, so the page title keeps the header (BLOCKER-02: at 375px
+     the header overflowed by 207px; at 768px the title measured 0px). Revert = set this
+     to `false`. */
+  const compactHeader = viewport !== 'desktop'
 
   /* The URL is the state (§5.1). `?queue=packing` and `?quick=pickup` are
      mutually exclusive — setting either clears the other — so a queue is
@@ -732,8 +738,9 @@ export default function OperationsQueues() {
           alignItems: 'start',
         }}
       >
-      {/* Renders in the global header beside the page name (FilterButton's default). */}
-      {selected !== 'Cases' && (
+      {/* Renders in the global header beside the page name (FilterButton's default).
+          On a phone it moves into More with the two links (see `compactHeader`). */}
+      {selected !== 'Cases' && !phone && (
         <FilterButton
           onClick={() => setShowMoreFilters((open) => !open)}
           activeCount={operationFilterCount}
@@ -779,7 +786,7 @@ export default function OperationsQueues() {
           }
           actions={
             <PageActions
-              secondary={[
+              secondary={compactHeader ? [] : [
                 <Button
                   key="delivery"
                   variant="outline"
@@ -797,7 +804,16 @@ export default function OperationsQueues() {
                   Sub-Rentals
                 </Button>,
               ]}
-              extra={<DataAgeBadge loadedAt={list.lastFetchedAt} onRefresh={refreshAll} loading={list.loading} />}
+              overflow={compactHeader ? [
+                { label: 'Delivery & Logistics', icon: 'truck', onClick: () => routeNavigate('/operations/delivery') },
+                { label: 'Sub-Rentals', icon: 'box', onClick: () => routeNavigate('/operations/sub-rental') },
+                ...(phone && selected !== 'Cases' ? [{
+                  label: operationFilterCount > 0 ? `Filters (${operationFilterCount})` : 'Filters',
+                  icon: 'filter' as const,
+                  onClick: () => setShowMoreFilters(true),
+                }] : []),
+              ] : undefined}
+              extra={<DataAgeBadge loadedAt={list.lastFetchedAt} onRefresh={refreshAll} loading={list.loading} quietWhenFresh={compactHeader} />}
             />
           }
         />

@@ -11,12 +11,25 @@ To take a complete backup of your production Supabase database:
    - Scroll down to **Connection String** > **URI**
    - It will look like: `postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres`
 
-2. Run the provided script from the project root:
+2. Run the provided script from the project root, **without** the URL on the command line:
    ```powershell
-   .\scripts\backup-db.ps1 -DbUrl "your-connection-string"
+   .\scripts\backup-db.ps1
    ```
 
-   This will execute `pg_dump --clean --if-exists --quote-all-identifiers` and produce a `.sql` file with a timestamp in the current directory.
+   It prompts for the connection string with hidden input. Do not pass `-DbUrl "…"` or
+   set `$env:… = "…"` by hand: either one writes the password into the PowerShell
+   history file (N-8, corrected 15 Oct 2026). The script never prints the URL, hands the
+   password to `pg_dump` through `PGPASSWORD` for that one call rather than on its
+   command line, and shows only host, port and database name.
+
+   It runs `pg_dump --clean --if-exists --quote-all-identifiers` (needs the PostgreSQL
+   client tools on PATH, same major version as the server or newer) and writes
+   `backups\production_backup_<timestamp>.sql`. `backups/` is git-ignored because the
+   dump holds client PII and auth tables. The run only succeeds when pg_dump's
+   `PostgreSQL database dump complete` footer is present; a failed or truncated dump is
+   renamed `….sql.incomplete`. It prints the size and SHA-256 to record with the
+   off-site copy. Prefer the session pooler (port 5432) or the direct connection; the
+   script warns when it sees the transaction pooler (6543).
 
 ## 2. Restoring a Backup (Disaster Recovery)
 
