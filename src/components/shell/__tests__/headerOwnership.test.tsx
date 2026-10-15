@@ -8,9 +8,9 @@ import { PageHeader } from '../../ui/header/PageHeader'
 import { WorkspaceHeaderRightActions, WorkspaceHeaderSearch } from '../WorkspacePortal'
 import Header from '../Header'
 
-const state = vi.hoisted(() => ({ viewport: 'desktop', syncStatus: 'synced', pendingCount: 0 }))
+const state = vi.hoisted(() => ({ viewport: 'desktop', syncStatus: 'synced', pendingCount: 0, role: 'Owner' }))
 vi.mock('../../../lib/device', () => ({ useViewport: () => state.viewport }))
-vi.mock('../../../lib/auth', () => ({ useAuth: () => ({ user: { name: 'Babin', role: 'Owner' }, logout: vi.fn(), lockNow: vi.fn(), hasPin: false }) }))
+vi.mock('../../../lib/auth', () => ({ useAuth: () => ({ user: { name: 'Babin', role: state.role }, logout: vi.fn(), lockNow: vi.fn(), hasPin: false }) }))
 vi.mock('../../../lib/syncContext', () => ({ useSync: () => ({ status: state.syncStatus, pendingCount: state.pendingCount }) }))
 vi.mock('../../ui/creation/GlobalAddMenu', () => ({ GlobalAddMenu: () => <button>Global Add</button> }))
 
@@ -21,6 +21,7 @@ beforeEach(() => {
   state.viewport = 'desktop'
   state.syncStatus = 'synced'
   state.pendingCount = 0
+  state.role = 'Owner'
   container = document.createElement('div')
   document.body.append(container)
   root = createRoot(container)
@@ -153,4 +154,72 @@ describe('page ownership of the application header', () => {
     expect(container.querySelector('[role="dialog"][aria-label="User profile"]')).toBeNull()
     expect(document.activeElement).toBe(profile)
   })
+  it('applies role, loading and enabled predicates to bulk header actions', async () => {
+    const onMoney = vi.fn()
+    const onOwner = vi.fn()
+    const onPending = vi.fn()
+    const onLoading = vi.fn()
+    const onClear = vi.fn()
+    const bulkSelection = {
+      count: 2,
+      onClear,
+      actions: [
+        { id: 'money', label: 'Record Payment', isMoneyAction: true, onClick: onMoney },
+        { id: 'owner', label: 'Owner action', permission: (role: string) => role === 'Owner', onClick: onOwner },
+        { id: 'pending', label: 'Restricted until ready', enabled: () => false, disabledReason: 'Still needs inspection', onClick: onPending },
+        { id: 'loading', label: 'Uploading', loading: true, loadingLabel: 'Uploading…', onClick: onLoading },
+      ],
+    }
+    const page = <MemoryRouter><WorkspaceProvider>
+      <Header crumbs={[{ label: 'Rentals' }]} />
+      <PageHeader title="Rentals" bulkSelection={bulkSelection} />
+    </WorkspaceProvider></MemoryRouter>
+
+    state.role = 'Warehouse'
+    await act(async () => root.render(page))
+    expect(container.textContent).toContain('2 selected')
+    expect(container.textContent).not.toContain('Record Payment')
+    expect(container.textContent).not.toContain('Owner action')
+    const pending = Array.from(container.querySelectorAll('button')).find((b) => b.textContent === 'Restricted until ready')
+    expect(pending?.disabled).toBe(true)
+    expect(pending?.title).toBe('Still needs inspection')
+    const loading = Array.from(container.querySelectorAll('button')).find((b) => b.textContent === 'Uploading…')
+    expect(loading?.disabled).toBe(true)
+    await act(async () => { pending?.click(); loading?.click() })
+    expect(onPending).not.toHaveBeenCalled()
+    expect(onLoading).not.toHaveBeenCalled()
+
+    state.role = 'Owner'
+    await act(async () => root.render(<MemoryRouter><WorkspaceProvider>
+      <Header crumbs={[{ label: 'Rentals' }]} />
+      <PageHeader title="Rentals" bulkSelection={bulkSelection} />
+    </WorkspaceProvider></MemoryRouter>))
+    expect(container.textContent).toContain('Record Payment')
+    expect(container.textContent).toContain('Owner action')
+    const ownerAction = Array.from(container.querySelectorAll('button')).find((b) => b.textContent === 'Owner action')
+    await act(async () => ownerAction?.click())
+    expect(onOwner).toHaveBeenCalledTimes(1)
+    const clearButton = Array.from(container.querySelectorAll('button')).find((b) => b.textContent === 'Clear')
+    await act(async () => clearButton?.click())
+    expect(onClear).toHaveBeenCalledTimes(1)
+    expect(container.querySelectorAll('header')).toHaveLength(1)
+  })
+
+  it('disables a registered primary action when its dynamic enabled predicate refuses', async () => {
+    const onSave = vi.fn()
+    const actionsConfig = [
+      { id: 'confirm', label: 'Confirm Booking', priority: 'primary' as const,
+        enabled: () => false, disabledReason: 'Verify the client first', onClick: onSave },
+    ]
+    await act(async () => root.render(<MemoryRouter><WorkspaceProvider>
+      <Header crumbs={[{ label: 'New Rental' }]} />
+      <PageHeader title="New Rental" actionsConfig={actionsConfig} />
+    </WorkspaceProvider></MemoryRouter>))
+    const confirm = Array.from(container.querySelectorAll('button')).find((b) => b.textContent === 'Confirm Booking')
+    expect(confirm?.disabled).toBe(true)
+    expect(confirm?.title).toBe('Verify the client first')
+    await act(async () => confirm?.click())
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
 })
