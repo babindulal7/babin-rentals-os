@@ -231,8 +231,8 @@ begin
        and v_receipt.previous_status=p_expected_status
        and v_receipt.next_status=p_next_status
        and v_receipt.metadata->>'request_fingerprint' = md5(
-         p_request_key::text || '|' ||
-         coalesce(btrim(p_recipient),'') || '|' || coalesce(btrim(p_note),'')
+         jsonb_build_array(p_request_key::text, coalesce(btrim(p_recipient),''),
+                           coalesce(btrim(p_note),''))::text
        ) then
       return p_job_id;
     end if;
@@ -283,8 +283,8 @@ begin
     (request_key,job_id,event_kind,previous_status,next_status,actor_id,metadata)
   values (p_request_key,p_job_id,'Transition',p_expected_status,p_next_status,v_actor,
           jsonb_build_object('request_fingerprint',md5(
-            p_request_key::text || '|' ||
-            coalesce(btrim(p_recipient),'') || '|' || coalesce(btrim(p_note),'')
+            jsonb_build_array(p_request_key::text, coalesce(btrim(p_recipient),''),
+                              coalesce(btrim(p_note),''))::text
           )));
   return p_job_id;
 end;
