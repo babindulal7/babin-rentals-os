@@ -727,6 +727,15 @@ export const mergeByTime = <T extends { at: number }>(...lists: T[][]): T[] =>
 export const timeOf = (m: { at: number }) => clockPad(m.at)
 
 /**
+ * The row's own movement instant (`pickup_at` outgoing, `return_at` incoming),
+ * rebuilt as UTC from the Kathmandu day and minutes the row already carries, so
+ * a date component can render it without the row growing a third copy of the
+ * same moment. Nepal keeps no daylight saving, so the fixed +05:45 is exact.
+ */
+export const movementAtAd = (m: { atDayAd: string; at: number }): string =>
+  new Date(Date.parse(`${m.atDayAd}T00:00:00.000Z`) + (m.at - NPT_OFFSET_MIN) * 60_000).toISOString()
+
+/**
  * The solid dot colour a movement wears on the Timeline and in the calendar's
  * day list. One map, read by both, so the same booking cannot be a different
  * colour in two panels that sit side by side.

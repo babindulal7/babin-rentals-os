@@ -1,5 +1,50 @@
 # Progress Log
 
+## 2026-10-15 — Today rows: each fact once (Booqable follow-up #2)
+
+**Did**
+- Today Pickups/Returns cards (`DashboardMovementPanel.tsx`, last layer of `dashboard.css`) restructured into one row. Cells: name over project (one 44px link); booking number (its own 44×44 link) · units; a pickup's readiness and mode tags; this movement's date; the 56px verb.
+- Lateness is now said once: "86 days late" in `--danger-text`, under the date it counts from. Removed: the "86d late" rail, the red inset edge, the pink fill, the "Overdue ·" prefix and its icon.
+- One date per card, this movement's, in `BsAdDate` stacked format (BS over AD, time on the AD line). A row on today shows the time alone, since the day control already names the day. The Pickup/Return captions are `sr-only`. The other movement's date stays on the booking hover card. Returns lose the "Due back …" tag. The dead aria-hidden column-head row is removed.
+- New `movementAtAd` in `data/today.ts`: rebuilds the row's instant from `atDayAd` + `at`.
+- Layout follows the queue's own width (container query at 28rem): one row when wide; when narrow, the verb sits beside the booking number.
+- Tests: 5 new render tests in `movementPanel.test.tsx` ("one row, each fact once"); 3 existing ones updated to the new card; a `movementAtAd` round-trip in `todayQuery.test.ts`.
+- **Branch:** this work sits on the OLD line, `claude/nervous-swartz-57bbce` on top of `ba48b42`, NOT on `main`. Local `main` was reset on 15 Oct onto an unrelated GitHub history (`f1bce01`). Porting is Babin's call.
+
+**Ruled**
+- `RULINGS-2026-10-15.md` rows 11–15, each with a revert. Unchanged by design: blue pickups / green returns / amber packing tag / red only when late (7 Oct), 56px verbs, 44px targets, stable queue layout (9 Oct), tap path (R-39 row 2). No migration, role, capability, money gate or write path changed.
+
+**Verified**
+- Browser, mock Owner (seed anchored 31 Jul, so every return is late), Returns cards, before → after:
+
+| Width | Card height | Cards fully visible | Lateness signals per card |
+|---|---|---|---|
+| 1280×860 | 204 → 104px | 2 → 5 | 4 (rail text, edge, fill, status text) → 1 text + 1 ink colour |
+| 390×844 | 240 → 131px | 1 → 3 (above the bottom bar) | 3 (edge, fill, status text) → 1 text + 1 ink colour |
+
+- Pickup cards (31 Jul–6 Aug view): 126px at 1280. No horizontal overflow at 390. Targets measured: client link 44px, booking link 44×44, verb 56px. One tap on "Return & Inspect" opened Operations · 887 · Return & Inspection.
+- Mutation check: with the HEAD panel and CSS restored, the 5 new tests and 2 updated ones fail (e.g. `['late','Overdue','late']` ≠ `['late']`; overdue CSS rule lacks `box-shadow: none`). Files restored.
+- Gates: `tsc --noEmit` 0; `npm run lint` 0; `lint:ui-copy` pass; `lint:shell` 653 pass; `check:contrast` 82/82; `check:lifecycle` 30/30 (PGlite). Today suites + tier-2: 6 files / 131 tests green. `npx vitest run` 347 files / 4,415 tests passed; `npm run build` exit 0.
+- Not verified: dark/glass by eye (the only colour used is the contrast-gated `--danger-text`), live data, a not-yet-late return in the browser (mock has none; the countdown is unit-tested).
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-13T13:31:48.507Z). Suite: 4329/4329 passed (recorded 2026-10-13T07:46:29.1524909Z).
+Gates read from .lifecycle-result.json, written 2026-10-15T07:03:06.218Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Babin: decide whether the old line's 15 Oct work (ba48b42 + this branch) is ported onto the new `main` (f1bce01); flip any of RULINGS-2026-10-15 rows 11–15.
+- Pickup rows still pair a readiness tag with a verb that implies it ("Not packed yet" + "Start Packing"); kept because the amber tag is the 7 Oct packing colour.
+- Dark/glass not inspected by eye; a not-yet-late return not seen in the browser (mock seed has none).
+
 ## 2026-10-15 — Booqable clean-list pass: one-line facts, uncrushed titles, unbroken money
 
 **Did**

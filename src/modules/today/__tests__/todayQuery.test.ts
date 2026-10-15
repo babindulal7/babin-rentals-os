@@ -41,6 +41,7 @@ import {
   kathmanduMinutes,
   mergeByTime,
   monogramOf,
+  movementAtAd,
   overdueAlert,
   periodRange,
   pickedStages,
@@ -131,6 +132,18 @@ describe('toMovementRow · which instant the row sits at', () => {
 
   it('puts an incoming row at its return_at', () => {
     expect(toMovementRow(raw(), 'incoming', NOW_AD).at).toBe(6 * 60)
+  })
+
+  // RULING 2026-10-15: the Today row renders its own instant from these two fields.
+  it('rebuilds the exact instant from the Kathmandu day and minutes, either side of midnight', () => {
+    for (const side of ['outgoing', 'incoming'] as const) {
+      const row = toMovementRow(raw(), side, NOW_AD)
+      expect(movementAtAd(row)).toBe(side === 'outgoing' ? raw().pickupAtAd : raw().returnAtAd)
+    }
+    // 19:00Z is 00:45 the next morning in Kathmandu — the day moves, the instant must not.
+    const late = toMovementRow(raw({ returnAtAd: '2026-07-31T19:00:00.000Z' }), 'incoming', NOW_AD)
+    expect(late.atDayAd).toBe('2026-08-01')
+    expect(movementAtAd(late)).toBe('2026-07-31T19:00:00.000Z')
   })
 })
 
