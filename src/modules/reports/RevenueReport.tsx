@@ -98,8 +98,9 @@ export default function RevenueReport() {
             <h3 style={{margin:'0 0 8px',color:'var(--text)'}}>Monthly issued invoice revenue</h3>
             <p style={{color:'var(--text2)',fontSize:'var(--t-meta)',margin:'0 0 14px'}}>
               Actual taxable invoice amounts before VAT · AD calendar months · {from} to {to}.
-              Draft and void invoices excluded. Credit notes record paid amounts, not taxable sales deductions. They are checked separately;
-              this chart is not a full audited net-sales statement.
+              Current nonvoid invoice snapshot grouped by issue month: later voids may restate older months.
+              Draft and void invoices excluded. Credit notes record paid amounts, not taxable sales deductions.
+              Credit notes are checked separately; this is not a full audited net-sales statement.
             </p>
             {!windowIsValid ? (
               <p role="alert">Choose a valid report window of no more than 24 calendar months.</p>
