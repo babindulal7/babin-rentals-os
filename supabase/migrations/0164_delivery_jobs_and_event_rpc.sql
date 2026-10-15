@@ -59,18 +59,17 @@ revoke all on public.delivery_job_events from public, anon, authenticated;
 grant select on public.delivery_jobs to authenticated;
 grant select on public.delivery_job_events to authenticated;
 
+-- Direct staff-role reads below bind role to auth.uid() *and* active staff row.
+-- No client-supplied role, claim override or app.current_user_id fallback is trusted.
 create policy delivery_jobs_authenticated_read on public.delivery_jobs
   for select to authenticated using (
-    auth.uid() is not null and (
-      public.auth_user_role() in ('Owner', 'Admin')
-      or (
-        public.auth_user_role() in ('Manager', 'Coordinator', 'Warehouse')
-        and exists (
-          select 1 from public.users u
-          where u.id = auth.uid() and u.branch_id = delivery_jobs.branch_id
-        )
+    auth.uid() is not null and exists (
+      select 1 from public.users u where u.id = auth.uid() and u.is_active and (
+        u.primary_role in ('Owner','Admin')
+        or (u.primary_role in ('Manager','Coordinator','Warehouse')
+            and u.branch_id = delivery_jobs.branch_id)
+        or (u.primary_role = 'Driver' and delivery_jobs.assigned_driver_id = u.id)
       )
-      or (public.auth_user_role() = 'Driver' and assigned_driver_id = auth.uid())
     )
   );
 
@@ -87,7 +86,10 @@ language plpgsql security definer set search_path = public, pg_temp
 as $$
 declare
   v_actor uuid := auth.uid();
-  v_role text := public.auth_user_role()::text;
+  v_role text := (
+    select u.primary_role::text from public.users u
+    where u.id = auth.uid() and u.is_active
+  );
   v_booking public.bookings%rowtype;
   v_job public.delivery_jobs%rowtype;
 begin
@@ -134,7 +136,10 @@ language plpgsql security definer set search_path = public, pg_temp
 as $$
 declare
   v_actor uuid := auth.uid();
-  v_role text := public.auth_user_role()::text;
+  v_role text := (
+    select u.primary_role::text from public.users u
+    where u.id = auth.uid() and u.is_active
+  );
   v_job public.delivery_jobs%rowtype;
   v_receipt public.delivery_job_events%rowtype;
 begin
@@ -189,7 +194,10 @@ language plpgsql security definer set search_path = public, pg_temp
 as $$
 declare
   v_actor uuid := auth.uid();
-  v_role text := public.auth_user_role()::text;
+  v_role text := (
+    select u.primary_role::text from public.users u
+    where u.id = auth.uid() and u.is_active
+  );
   v_job public.delivery_jobs%rowtype;
   v_booking public.bookings%rowtype;
   v_receipt public.delivery_job_events%rowtype;
