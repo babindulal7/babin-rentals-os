@@ -21,8 +21,8 @@ browser at 1280×860 with the sidebar open (the narrowest desktop: a 1024px head
 | 5 | **Headers are sentence case, one line.** | Uppercase with letter-spacing forced "BOOKING / ID" and "TOTAL / AMOUNT" onto two lines. `theme.css` already ruled operations-table headers sentence case; `rentals.css` overrode it. | The override is removed. |
 | 6 | **Space is not reserved for nothing.** | The Actions column measured **190px** for one ⋮ button. | 60px, which is the 44px touch target plus padding. |
 | 7 | **An amount is one token.** "Rs.100.00" never breaks. | Clients' Outstanding wrapped to "Rs" / "74,940.75". | 0 of 43 money cells wrap. |
-| 8 | **One search per page.** | Inventory shows the header search *and* an in-page search with the same placeholder. | Not changed (follow-up). |
-| 9 | **Filters are a quiet vertical panel with counts.** | Horizontal chip rows wrap. The Clients toolbar drops "Stats" onto a second line. | Not changed (follow-up). |
+| 8 | **One search per page.** | Inventory shows the header search *and* an in-page search with the same placeholder. Clients does too. | One search (the header's), and `/` focuses it. RULINGS rows 11–12. |
+| 9 | **Filters are a quiet vertical panel with counts.** | Horizontal chip rows wrap. The Clients toolbar drops "Stats" onto a second line. | One line at 1280px on both. Stats is in More, and the chips lead the row. RULINGS rows 13–15. |
 
 The first four reasons account for most of the visual gap. Both products use a grey canvas with
 bordered white cards. The difference is how much text each row carries and how many times it
@@ -61,5 +61,5 @@ line. It is not padding and should not be squeezed further.
    record title to ~37px. This was already the behaviour before this pass, on the same code path.
 2. **Today return cards** say lateness four ways ("86d late", red edge, pink fill, "Overdue · 86
    days late"), and each card is ~200px. Booqable's dashboard row is one line.
-3. **Inventory's double search** (header and in-page).
-4. **List toolbars that wrap** (Clients' Stats; Inventory's chips).
+3. ~~**Inventory's double search** (header and in-page).~~ Done the same day, RULINGS rows 11–12.
+4. ~~**List toolbars that wrap** (Clients' Stats; Inventory's chips).~~ Done the same day, RULINGS rows 13–15. Still wraps at 1024px with the sidebar open and an Inventory chip active.

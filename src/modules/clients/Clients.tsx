@@ -62,6 +62,8 @@ export default function Clients() {
   const [params, setParams] = useSearchParams()
   const [directoryFiltersOpen, setDirectoryFiltersOpen] = useState(false)
   const [membershipFiltersOpen, setMembershipFiltersOpen] = useState(false)
+  /** The directory's KPI strip. Toggled from More, so the directory toolbar keeps one line. */
+  const [showStats, setShowStats] = useState(false)
 
   /**
    * Every panel on this screen now reads the database. The directory comes from
@@ -220,6 +222,9 @@ export default function Clients() {
             // RULING 2026-10-15: at every width (title read "Cli…" at 1280px). Revert = restore
             // the `phone ?` branches on secondary/overflow.
             overflow={[
+              // RULING 2026-10-15: Stats is a secondary toggle, so it lives here and the
+              // directory toolbar keeps one line. Revert = restore the toolbar's Stats button.
+              ...(activeTab === 'clients' ? [{ label: showStats ? 'Hide statistics' : 'Show statistics', icon: 'chart' as const, onClick: () => setShowStats((s) => !s) }] : []),
               ...(!clientsLoading && !clientsError ? [{ label: 'Export loaded directory', icon: 'download' as const, onClick: exportCsv }] : []),
               ...(user && canImportClients(user.role) ? [{ label: 'Import Clients', icon: 'upload' as const, onClick: () => setTab('import') }] : []),
               { label: 'Duplicate Center', icon: 'users', onClick: () => setTab('duplicates') },
@@ -257,6 +262,7 @@ export default function Clients() {
               onBlockChanged={refresh}
               filtersOpen={directoryFiltersOpen}
               onFiltersOpenChange={setDirectoryFiltersOpen}
+              showStats={showStats}
             />
           </PageBody>
         </>

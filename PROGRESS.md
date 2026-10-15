@@ -1,5 +1,43 @@
 # Progress Log
 
+## 2026-10-15 — One search per list page, one toolbar line (Inventory, Clients)
+
+**This work sits on the old line (`ba48b42`, branch `claude/peaceful-grothendieck-10d979`), not on `main`.** Local `main` was reset at 03:05 NPT onto an unrelated GitHub history (`f1bce01`). Which line is canonical is Babin's call, so nothing was merged into `main`.
+
+**Did**
+- Inventory and Clients each had two search boxes over the same `?q=`. The in-page copies are removed and the header search is the page's one search. Clients' `searchInput` state and its debounce went with it.
+- `/` focused nothing at tablet or desktop width, even though the header placeholder says "(press /)". `Header.tsx` now focuses its search on `/`. It skips typing targets, modals and keys already handled. Pages with their own `/` handler still win.
+- Inventory: the status chips lead the toolbar row instead of taking their own row. Clients: the chips lead and Table/Cards/density sit at the right. On both, Stats moved to the header's More ("Show/Hide statistics").
+- New `src/__tests__/e2e/listPageToolbars.render.test.tsx` (6 tests). It renders each page inside the shell under the real `Header` and checks: one search box and it is the header's; `/` focuses it; every chip is still in the toolbar; Stats is in More.
+
+**Ruled**
+- `RULINGS-2026-10-15.md` rows 11–15, each with a revert. Findings doc follow-ups 3 and 4 are marked done.
+
+**Verified**
+- Browser, mock Owner, sidebar open. Inventory at 1280: 2 → 1 search boxes. Toolbar 52px plus a separate 61px chip row → one 52px line, with or without a chip active. Clients at 1280: 2 → 1 search boxes, toolbar 2 lines · 104px → 1 · 52px, still one line with the VIP chip active. Clients at 1024 (sidebar open): 2 lines · 104px → 1 · 52px. Inventory at 1024 (sidebar open): one 52px line with no filter. With a chip active it is 2 lines · 112px (sort/view wraps, no chip clipped), where before it was 104px plus the 61px chip row. Inventory at 1024 on the default rail: one 52px line in both states. No horizontal page scroll anywhere measured, and no toolbar button under 44px.
+- Driven in the browser: `/` then typing "Aputure" → `?q=Aputure`, 5 models. `/` then "Bagmati" → `?q=Bagmati`, 2 clients. A reload of `?q=Bagmati&filter=active` restored the search text and the pressed chip. The "Blocked Clients" saved view → `?blocked=1`; "VIP Clients" → `?filter=vip`. More → Show statistics opened the Clients KPI strip.
+- Mutation check: against the original four source files, all 6 new tests fail, including "expected length 1 but got 2" for both pages. Files restored, then green.
+- Gates, this worktree after the changes: `tsc --noEmit` exit 0; `npm run lint` exit 0; `lint:shell` 653 files pass; `lint:ui-copy` exit 0; `npx vitest run` 348 files / 4,417 tests passed; `npm run build` exit 0 (PWA precache 296 entries). `check:pglite` and `check:lifecycle` were not rerun (no migration). The lifecycle figures below come from the trunk's `.lifecycle-result.json` (14 Oct), copied into this worktree.
+- Not verified: phone widths by eye (structure only; the chip track keeps its phone scroll); dark/glass themes (no token change); Clients at 1024 on the default rail (729px fits, so 921px should); live data.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-13T13:31:48.507Z). Suite: 4329/4329 passed (recorded 2026-10-13T07:46:29.1524909Z).
+Gates read from .lifecycle-result.json, written 2026-10-14T16:14:23.983Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Babin: which line is canonical. This commit sits on `ba48b42`, and `main` is now the unrelated `f1bce01`. If the old line is ported, this diff (Header, Inventory, Clients, ClientsDirectory, the new test) is replayed together with the other 15 Oct sessions' diffs.
+- At 1024px with the sidebar open and an Inventory chip active, the sort/view cluster still wraps to a second line (112px). Fitting it means moving the view switch into a menu, a tap-budget trade-off left for Babin.
+- Inventory's chip row shows All/Available/On Rent only. Reserved/Maintenance/Missing/Damaged are reachable from Filters and `?chip=`, but an active one has no visible chip (pre-existing).
+
 ## 2026-10-15 — Booqable clean-list pass: one-line facts, uncrushed titles, unbroken money
 
 **Did**

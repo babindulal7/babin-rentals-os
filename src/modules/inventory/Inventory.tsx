@@ -11,7 +11,6 @@ import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { FilterButton, FilterDrawer } from '../../components/ui/FilterDrawer'
 import { Pagination } from '../../components/ui/Pagination'
 import { ListControlRow, ListWorkspace } from '../../components/ui/ListWorkspace'
-import { SearchInput } from '../../components/ui/SearchInput'
 import { useFacetCounts } from '../../lib/queries/facetCounts'
 import type { Kpi } from '../../components/ui/Page'
 import { PageBody } from '../../components/ui/PageBody'
@@ -1597,6 +1596,9 @@ export default function Inventory() {
         // crushed the title to "I.". Header = title, search, one primary. Revert = restore the
         // `phone ?` branches on secondary/overflow.
         overflow={[
+          // RULING 2026-10-15: Stats is a secondary toggle, so it lives here and the list
+          // toolbar keeps one line. Revert = restore the toolbar's Stats button.
+          { label: showStats ? 'Hide statistics' : 'Show statistics', icon: 'chart' as const, onClick: () => setShowStats((s) => !s) },
           { label: 'Refresh equipment', icon: 'refresh' as const, onClick: refreshAll },
           { label: 'Export this page', icon: 'download' as const, onClick: () => exportCsv(list.rows, money) },
           {
@@ -1775,50 +1777,44 @@ export default function Inventory() {
             </div>
           )}
 
+          {/*
+            RULING 2026-10-15: one search per page and one toolbar line. The header search is
+            the page's search — it holds `?q=` and answers `/` — so the in-page copy with the
+            same placeholder is gone. The status chips lead this row instead of taking a row
+            of their own; Stats is in the header's More. The chip group shrinks only on a
+            phone, where it scrolls; at 1024–1280 the sort/view cluster wraps before any chip
+            is clipped. Revert = restore the in-page `SearchInput`, the Stats button, and the
+            chip track as its own row above the table card.
+          */}
           <div className="inventory-list-toolbar" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ order: 0, flex: '1 1 180px', maxWidth: 360, minWidth: 0 }}>
-              <SearchInput
-                value={searchTerm}
-                onChange={setSearchTerm}
-                onClear={() => setSearchTerm('')}
-                placeholder="Search equipment or asset code"
-                aria-label="Search inventory"
-              />
+            <div className="inventory-chip-track" role="group" aria-label="Equipment status" style={{ flex: '0 1 auto' }}>
+              {PRIMARY_EQUIPMENT_CHIPS.map((c) => {
+                const key = chipKey(c)
+                const on = chipKey(chip) === key
+                const tone = c.kind === 'all' ? 'var(--text2)' : c.kind === 'status' ? INV_DOT[c.status] : CONDITION_INK[c.condition]
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => { setChip(c); setPage(1) }}
+                    aria-pressed={on}
+                    className={`inventory-filter-chip ${on ? 'is-active' : ''}`}
+                    style={!on && tone ? { color: tone } : undefined}
+                  >
+                    {c.kind === 'status' && <Icon name={INV_STYLE[c.status].icon} size={12} />}
+                    {c.kind === 'condition' && <Icon name="eye" size={12} />}
+                    {c.label}
+                    <span className="figure" style={{ color: 'var(--muted)' }}>{chipCounts.loading || chipCounts.error ? '—' : chipCounts.rows.find(row => row.id === chipSlug(c))?.count ?? '—'}</span>
+                  </button>
+                )
+              })}
             </div>
-            <button
-              type="button"
-              onClick={() => setShowStats((s) => !s)}
-              aria-expanded={showStats}
-              aria-label={showStats ? 'Hide inventory statistics' : 'Show inventory statistics'}
-              style={{
-                order: 2,
-                flexShrink: 0,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                minHeight: 44,
-                padding: '0 14px',
-                borderRadius: 'var(--r-btn, 8px)',
-                border: `1px solid ${showStats ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-                background: showStats ? 'var(--nav-active-bg)' : 'var(--card)',
-                color: showStats ? 'var(--nav-active-accent)' : 'var(--text)',
-                fontSize: 'var(--t-meta)',
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                transition: 'all var(--dur-fast) var(--ease)',
-              }}
-            >
-              <Icon name="chart" size={14} />
-              {!phone && <span>{showStats ? 'Hide Stats' : 'Stats'}</span>}
-            </button>
 
             {filtersOn && <button
               type="button"
               onClick={clearFilters}
               title="Clear the status chip and every filter"
               style={{
-                order: 3,
                 flexShrink: 0,
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -1900,28 +1896,6 @@ export default function Inventory() {
               `FilterDrawer` is `position: fixed`, so the grid is one column and
               the table keeps the width the rail was taking.
             */}
-            <div className="inventory-chip-track" style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>
-              {PRIMARY_EQUIPMENT_CHIPS.map((c) => {
-                const key = chipKey(c)
-                const on = chipKey(chip) === key
-                const tone = c.kind === 'all' ? 'var(--text2)' : c.kind === 'status' ? INV_DOT[c.status] : CONDITION_INK[c.condition]
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => { setChip(c); setPage(1) }}
-                    aria-pressed={on}
-                    className={`inventory-filter-chip ${on ? 'is-active' : ''}`}
-                    style={!on && tone ? { color: tone } : undefined}
-                  >
-                    {c.kind === 'status' && <Icon name={INV_STYLE[c.status].icon} size={12} />}
-                    {c.kind === 'condition' && <Icon name="eye" size={12} />}
-                    {c.label}
-                    <span className="figure" style={{ color: 'var(--muted)' }}>{chipCounts.loading || chipCounts.error ? '—' : chipCounts.rows.find(row => row.id === chipSlug(c))?.count ?? '—'}</span>
-                  </button>
-                )
-              })}
-            </div>
             <Card title={countedTitle} bodyStyle={{ padding: 0 }}>
               {selected.size > 0 && (
                 <div

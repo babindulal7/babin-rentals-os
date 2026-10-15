@@ -208,6 +208,29 @@ export default function Header({ crumbs, actions }: HeaderProps) {
   )
   const searchConfig = isSearchConfig ? (hData?.search as PageHeaderSearchConfig) : null
 
+  // RULING 2026-10-15: the header search is the page's one search, and its placeholder
+  // says "(press /)". On a phone MobileHeaderSearch answers the key; at tablet and desktop
+  // nothing did, so `/` focused nothing. A page that wires its own `/` (Today, Rentals,
+  // Queues, Notes) still wins: it prevents default first, or refocuses after this runs.
+  // Revert = delete this effect and `searchWrapRef`.
+  const searchWrapRef = useRef<HTMLDivElement>(null)
+  const hasHeaderSearch = !isPhone && searchConfig !== null
+  useEffect(() => {
+    if (!hasHeaderSearch) return
+    const handleSlash = (e: KeyboardEvent) => {
+      if (e.key !== '/' || e.defaultPrevented || e.isComposing || e.ctrlKey || e.metaKey || e.altKey) return
+      const target = e.target instanceof Element ? e.target : null
+      if (target?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="dialog"]')) return
+      if (document.querySelector('[role="dialog"][aria-modal="true"], dialog[open]')) return
+      const input = searchWrapRef.current?.querySelector('input')
+      if (!input) return
+      e.preventDefault()
+      input.focus()
+    }
+    window.addEventListener('keydown', handleSlash)
+    return () => window.removeEventListener('keydown', handleSlash)
+  }, [hasHeaderSearch])
+
   // Overflow items: excess secondary actions + overflow registry actions
   const overflowItems: OverflowMenuItem[] = useMemo(() => {
     if (!resolved) return []
@@ -455,6 +478,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             {/* If the active page provided a search configuration, render the unified search input */}
             {searchConfig ? (
               <div
+                ref={searchWrapRef}
                 style={{
                   display: 'flex',
                   alignItems: 'center',

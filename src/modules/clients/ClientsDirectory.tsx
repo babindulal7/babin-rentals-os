@@ -5,7 +5,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
 import { Card, Button, KpiStrip, Rail } from '../../components/ui/Page'
-import { SearchInput } from '../../components/ui'
 import type { Kpi } from '../../components/ui/Page'
 import {
   ActiveFilterChips,
@@ -424,6 +423,7 @@ export function ClientsDirectory({
   onBlockChanged,
   filtersOpen: controlledFiltersOpen,
   onFiltersOpenChange,
+  showStats = false,
 }: {
   clients: ClientRecord[]
   onRequestAdd: () => void
@@ -441,6 +441,8 @@ export function ClientsDirectory({
   onBlockChanged: () => void
   filtersOpen?: boolean
   onFiltersOpenChange?: (open: boolean) => void
+  /** The KPI strip. Toggled from the page header's More, not from this toolbar. */
+  showStats?: boolean
 }) {
   const navigate = useNavigate()
   const money = useCanViewMoney()
@@ -516,7 +518,6 @@ export function ClientsDirectory({
      *hide*, so at tablet the Filters/Saved Views and Client-profile content
      renders inline rather than going into `CollapsibleAside`'s handle. */
   const viewport = useViewport()
-  const phone = viewport === 'phone'
   const tabular = viewport !== 'phone'
   const desktop = viewport === 'desktop'
   /** Tablet keeps the table but not nine columns of it — see the `<table>` below. */
@@ -544,22 +545,8 @@ export function ClientsDirectory({
    * further down, after `stopCheckRan` — validating `?stop=` needs it.
    */
   const activeFilter = filterFromParam(params.get('filter'), money)
+  // RULING 2026-10-15: `?q=` is written by the page header's search, the page's one search.
   const searchQuery = params.get('q') ?? ''
-  const [searchInput, setSearchInput] = useState(searchQuery)
-
-  useEffect(() => {
-    setSearchInput(searchQuery)
-  }, [searchQuery])
-
-  useEffect(() => {
-    if (searchInput === searchQuery) return
-    const timer = setTimeout(() => {
-      const midBurst = Boolean(searchQuery) && Boolean(searchInput)
-      patchParams({ q: searchInput || null }, midBurst)
-    }, 250)
-    return () => clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- debounced search sync to URL
-  }, [searchInput, searchQuery])
 
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set())
@@ -572,7 +559,6 @@ export function ClientsDirectory({
   const [perPage, setPerPage] = useState<number>(CLIENT_ROWS_PER_PAGE[1])
   const [page, setPage] = useState(1)
   const [activeSavedView, setActiveSavedView] = useState<string | null>(null)
-  const [showKpis, setShowKpis] = useState(false)
   const [showBulkBlock, setShowBulkBlock] = useState(false)
   const [bulkBlockReason, setBulkBlockReason] = useState('')
   /** Which direction the open dialog is going. Law 3 — a block is lifted, never deleted. */
@@ -1101,9 +1087,14 @@ export function ClientsDirectory({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-      {showKpis && <KpiStrip items={kpis} columns={kpis.length} />}
+      {showStats && <KpiStrip items={kpis} columns={kpis.length} />}
 
-      {/* ── quick filters + view switch ───────────────────────────────── */}
+      {/* ── quick filters + view switch ───────────────────────────────────
+          RULING 2026-10-15: one search per page and one toolbar line. The page header's
+          search already writes `?q=` (and answers `/`), so the in-page copy is gone; Stats
+          is in the header's More. Filters lead, the view switch sits at the right and is the
+          first thing to wrap — a filter chip is never hidden. Revert = restore the
+          `SearchInput` span ahead of the chips and the Stats button after them. */}
       <div
         className="client-chip-track"
         style={{
@@ -1113,61 +1104,6 @@ export function ClientsDirectory({
           flexWrap: 'wrap',
         }}
       >
-        <span style={{ order: 0, marginLeft: 0, display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', width: phone ? '100%' : 'auto', flex: phone ? '1 1 100%' : '1 1 360px', flexWrap: 'nowrap' }}>
-          <div style={{ flex: phone ? '1 1 0' : undefined, width: phone ? undefined : 280, minWidth: 0 }}>
-            <SearchInput
-              value={searchInput}
-              onChange={setSearchInput}
-              onClear={() => {
-                setSearchInput('')
-                patchParams({ q: null }, true)
-              }}
-              onSearchSubmit={(val) => {
-                const midBurst = Boolean(searchQuery) && Boolean(val)
-                patchParams({ q: val || null }, midBurst)
-              }}
-              placeholder="Search client, phone, email, PAN…"
-              aria-label="Search clients"
-            />
-          </div>
-
-          {tabular &&
-            (['Table', 'Cards'] as ViewKey[]).map((v) => (
-              <Button
-                key={v}
-                icon={v === 'Table' ? 'queues' : 'box'}
-                variant="secondary"
-                aria-pressed={view === v}
-                onClick={() => setView(v)}
-              >
-                {v}
-              </Button>
-            ))}
-              {!phone && (
-                <button
-                  type="button"
-                  onClick={() => setDensity((d) => (d === 'compact' ? 'comfortable' : 'compact'))}
-                  aria-pressed={density === 'compact'}
-                  aria-label={density === 'compact' ? 'Compact rows — click for comfortable' : 'Comfortable rows — click for compact'}
-                  title={density === 'compact' ? 'Compact rows — click for comfortable' : 'Comfortable rows — click for compact'}
-                  style={{
-                    marginLeft: 'auto',
-                    minWidth: 44,
-                    minHeight: 44,
-                    borderRadius: 'var(--r-input)',
-                    border: '1px solid var(--input-border)',
-                    background: density === 'compact' ? 'var(--nav-active-bg)' : 'var(--input-bg)',
-                    color: density === 'compact' ? 'var(--nav-active-accent)' : 'var(--text2)',
-                    cursor: 'pointer',
-                    display: 'grid',
-                    placeItems: 'center',
-                  }}
-                >
-                  <Icon name={density === 'compact' ? 'chevron_up' : 'chevron_down'} size={15} />
-                </button>
-              )}
-        </span>
-
         {visibleChips.map((c) => {
           const on = activeFilter === c.key
           return (
@@ -1309,32 +1245,45 @@ export function ClientsDirectory({
           </button>
         )}
 
-        <button
-          type="button"
-          onClick={() => setShowKpis((s) => !s)}
-          aria-expanded={showKpis}
-          aria-label={showKpis ? 'Hide client statistics' : 'Show client statistics'}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            minHeight: 44,
-            padding: '0 12px',
-            borderRadius: 'var(--r-sm)',
-            border: `1px solid ${showKpis ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-            background: showKpis ? 'var(--nav-active-bg)' : 'var(--card)',
-            color: showKpis ? 'var(--nav-active-accent)' : 'var(--text2)',
-            fontSize: 'var(--t-meta)',
-            fontWeight: 600,
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-            order: 3,
-          }}
-        >
-          <Icon name="chart" size={14} />
-          <span>{showKpis ? 'Hide Stats' : 'Stats'}</span>
-        </button>
-
+        {tabular && (
+          <span
+            role="group"
+            aria-label="List view"
+            style={{ order: 3, marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', flexShrink: 0 }}
+          >
+            {(['Table', 'Cards'] as ViewKey[]).map((v) => (
+              <Button
+                key={v}
+                icon={v === 'Table' ? 'queues' : 'box'}
+                variant="secondary"
+                aria-pressed={view === v}
+                onClick={() => setView(v)}
+              >
+                {v}
+              </Button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setDensity((d) => (d === 'compact' ? 'comfortable' : 'compact'))}
+              aria-pressed={density === 'compact'}
+              aria-label={density === 'compact' ? 'Compact rows — click for comfortable' : 'Comfortable rows — click for compact'}
+              title={density === 'compact' ? 'Compact rows — click for comfortable' : 'Comfortable rows — click for compact'}
+              style={{
+                minWidth: 44,
+                minHeight: 44,
+                borderRadius: 'var(--r-input)',
+                border: '1px solid var(--input-border)',
+                background: density === 'compact' ? 'var(--nav-active-bg)' : 'var(--input-bg)',
+                color: density === 'compact' ? 'var(--nav-active-accent)' : 'var(--text2)',
+                cursor: 'pointer',
+                display: 'grid',
+                placeItems: 'center',
+              }}
+            >
+              <Icon name={density === 'compact' ? 'chevron_up' : 'chevron_down'} size={15} />
+            </button>
+          </span>
+        )}
       </div>
 
       {/*
