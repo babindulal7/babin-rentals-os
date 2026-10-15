@@ -373,6 +373,24 @@ describe('Spec 03 §3.1 — queue chips filter ONE time-ordered list', () => {
     expect(visibleButtonText('Sub-Rentals')).toBe(true)
   })
 
+  /* Zoom audit, 15 Oct 2026: a 1920px laptop at 150% is a 1280px desktop, and with the
+     sidebar open its header is 1024px — the title measured 55px, truncated. The compact
+     header follows the header's own width (`lib/headerRoom.ts`). */
+  it('uses the compact header on a desktop whose open sidebar leaves a 1024px header', async () => {
+    const header = document.createElement('header')
+    header.className = 'app-global-header'
+    header.getBoundingClientRect = () => ({ width: 1024, height: 64, top: 0, left: 256, right: 1280, bottom: 64, x: 256, y: 0, toJSON: () => ({}) }) as DOMRect
+    document.body.appendChild(header)
+    try {
+      await mount(<OperationsQueues />, '/operations')
+      expect(visibleButtonText('Delivery & Logistics')).toBe(false)
+      expect(buttons().some((b) => b.getAttribute('aria-controls') === 'operations-filters')).toBe(true)
+      expect((await moreItems()).map((i) => i.textContent?.trim())).toEqual(['Delivery & Logistics', 'Sub-Rentals'])
+    } finally {
+      header.remove()
+    }
+  })
+
   /* From main's d7ca3bc, ported 8 Oct 2026: a search that hides every row is
      an empty state with Clear filters, not a bare table. */
   it('says nothing matches, with Clear filters, when the search hides every row', async () => {

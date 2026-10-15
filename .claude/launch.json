@@ -4,40 +4,105 @@
     {
       "name": "babin-rentals-os",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "--port", "3000", "--strictPort"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "3000",
+        "--strictPort"
+      ],
       "port": 3000,
       "autoPort": false
     },
     {
       "name": "babin-rentals-os-mock",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev:mock", "--", "--port", "3100", "--strictPort"],
+      "runtimeArgs": [
+        "run",
+        "dev:mock",
+        "--",
+        "--port",
+        "3100",
+        "--strictPort"
+      ],
       "port": 3100
     },
     {
       "name": "babin-rentals-os-3001",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "--port", "3001", "--strictPort"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "3001",
+        "--strictPort"
+      ],
       "port": 3001,
       "autoPort": false
     },
     {
       "name": "babin-rentals-codex",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "C:/Users/use/.codex-temp/babin-rentals-current", "run", "dev", "--", "--port", "3200", "--strictPort"],
+      "runtimeArgs": [
+        "--prefix",
+        "C:/Users/use/.codex-temp/babin-rentals-current",
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "3200",
+        "--strictPort"
+      ],
       "port": 3200
     },
     {
       "name": "babin-rentals-codex-mock",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "C:/Users/use/.codex-temp/babin-rentals-current", "run", "dev:mock", "--", "--port", "3300", "--strictPort"],
+      "runtimeArgs": [
+        "--prefix",
+        "C:/Users/use/.codex-temp/babin-rentals-current",
+        "run",
+        "dev:mock",
+        "--",
+        "--port",
+        "3300",
+        "--strictPort"
+      ],
       "port": 3300
     },
     {
       "name": "babin-md-brief-gaps-mock",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "C:/Users/use/Desktop/babin-rentals-os/.claude/worktrees/md-brief-gaps", "run", "dev:mock", "--", "--port", "3400", "--strictPort"],
+      "runtimeArgs": [
+        "--prefix",
+        "C:/Users/use/Desktop/babin-rentals-os/.claude/worktrees/md-brief-gaps",
+        "run",
+        "dev:mock",
+        "--",
+        "--port",
+        "3400",
+        "--strictPort"
+      ],
       "port": 3400
+    },
+    {
+      "name": "zoom-audit-mock",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "C:/Users/use/Desktop/babin-rentals-os/.claude/worktrees/intelligent-ptolemy-050b04",
+        "run",
+        "dev:mock",
+        "--",
+        "--port",
+        "3910",
+        "--strictPort",
+        "--config",
+        "tmp/vite.zoom.config.ts"
+      ],
+      "port": 3910
     }
   ]
 }

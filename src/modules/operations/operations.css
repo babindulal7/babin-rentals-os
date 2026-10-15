@@ -27,7 +27,10 @@
 .operations-v2__facet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .operations-v2__facet { min-height: var(--tap) !important; justify-content: flex-start !important; padding: 0 10px !important; }
 .operations-v2__table-card { overflow: hidden; }
-.operations-v2__table { width: 100%; border-collapse: collapse; min-width: 900px; }
+/* RULING 2026-10-15 (zoom audit): no forced 900px floor. The eight columns need 777px, so the
+   floor alone scrolled ACTION and the row link off a 911px window (1366px laptop at 150%).
+   Nowrap cells still make a narrower box scroll rather than squash. Revert = `min-width: 900px`. */
+.operations-v2__table { width: 100%; border-collapse: collapse; }
 .operations-v2__table th { height: 48px; background: var(--th-bg); color: var(--text2); font-size: 12px; text-transform: none; letter-spacing: 0; }
 .operations-v2__table thead th { position: sticky; top: 0; z-index: 2; }
 .operations-v2__table tr { border-bottom: 1px solid var(--border); }

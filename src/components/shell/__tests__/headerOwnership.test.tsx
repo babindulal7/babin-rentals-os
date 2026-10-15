@@ -51,14 +51,21 @@ describe('page ownership of the application header', () => {
       const search = container.querySelector<HTMLButtonElement>('[aria-label="Search bookings, clients, equipment and pages"]')!
       expect(search.style.minWidth).toBe('44px')
       expect(search.style.minHeight).toBe('44px')
-      expect(search.style.flexShrink).toBe('0')
+      /* Zoom audit, 15 Oct: it shrinks to fit beside a visible sync chip instead of
+         spilling over the title zone; the 44px floor above keeps the hit area. */
+      expect(search.style.flexShrink).toBe('1')
       expect(container.querySelector<HTMLElement>('.app-global-header__center')!.style.minWidth).toBe('44px')
     }
   })
-  it('reclaims healthy sync space on tablets but keeps every actionable sync state visible', async () => {
+  it('reclaims healthy sync space on tablets and desktops but keeps every actionable sync state visible', async () => {
+    for (const viewport of ['tablet', 'desktop'] as const) {
+      state.viewport = viewport
+      state.syncStatus = 'synced'
+      state.pendingCount = 0
+      await renderPage('plain')
+      expect(container.querySelector<HTMLElement>('.header-sync-context')?.style.display).toBe('none')
+    }
     state.viewport = 'tablet'
-    await renderPage('plain')
-    expect(container.querySelector<HTMLElement>('.header-sync-context')?.style.display).toBe('none')
     for (const status of ['offline', 'pending', 'syncing', 'error']) {
       state.syncStatus = status
       await renderPage('plain')
@@ -72,6 +79,30 @@ describe('page ownership of the application header', () => {
     await renderPage('plain')
     expect(container.querySelector<HTMLElement>('.header-sync-context')?.style.display).toBe('flex')
     expect(container.querySelector('.header-sync-context')?.textContent).toContain('2 Queued')
+  })
+
+  it('makes the whole 44px search box focus the field on tablet and desktop', async () => {
+    /* Zoom audit, 15 Oct: the input alone measured 22px tall inside its 44px box. */
+    function SearchPage() {
+      const [query, setQuery] = useState('')
+      return <PageHeader title="Inventory" search={{ value: query, onChange: setQuery, ariaLabel: 'Search inventory' }} />
+    }
+    for (const viewport of ['tablet', 'desktop'] as const) {
+      state.viewport = viewport
+      await act(async () => root.render(<MemoryRouter><WorkspaceProvider>
+        <Header crumbs={[{ label: 'Inventory' }]} /><SearchPage />
+      </WorkspaceProvider></MemoryRouter>))
+      const input = container.querySelector<HTMLInputElement>('[aria-label="Search inventory"]')!
+      const box = input.closest('label')
+      expect(box).not.toBeNull()
+      expect(box!.style.minHeight).toBe('44px')
+      expect(input.style.height).toBe('100%')
+      /* The title keeps the header: the search yields first, but never below a box that
+         still takes typing. */
+      const center = box!.closest<HTMLElement>('.app-global-header__center')!
+      expect(center.style.flex).toBe('1 20 auto')
+      expect(center.style.minWidth).toBe('120px')
+    }
   })
 
   it('uses the contextual phone search, preserves its query on Escape and clears without closing', async () => {

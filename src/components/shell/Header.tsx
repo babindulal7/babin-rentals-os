@@ -441,8 +441,13 @@ export default function Header({ crumbs, actions }: HeaderProps) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              flex: '1 1 auto',
-              minWidth: !searchConfig && !isDispatch && !ws?.hasPageSearch ? 44 : 0,
+              /* RULING 2026-10-15 (zoom audit): the title keeps the header. When the bar is
+                 full the search gives way first (shrink 20 to the title zone's 1), down to a
+                 120px box that still takes typing; only then does the title truncate. At 911px
+                 Inventory's and Finance's titles lost 5–7px while the search kept 130–250px.
+                 Revert = `flex: '1 1 auto'` and the old 44/0 minimum. */
+              flex: '1 20 auto',
+              minWidth: searchConfig || ws?.hasPageSearch ? 120 : !isDispatch ? 44 : 0,
               maxWidth: isTablet ? '320px' : '460px',
               gap: 8,
               margin: '0 auto',
@@ -450,13 +455,16 @@ export default function Header({ crumbs, actions }: HeaderProps) {
           >
             {/* If the active page provided a search configuration, render the unified search input */}
             {searchConfig ? (
-              <div
+              /* RULING 2026-10-15 (zoom audit): a label, so the whole 44px box focuses the
+                 field. The input alone measured 22px tall on every page (Law 15). */
+              <label
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,
                   width: '100%',
                   minWidth: 0,
+                  cursor: 'text',
                   height: 44,
                   minHeight: 44, /* TouchInset compliant (Law 15) */
                   padding: '0 12px',
@@ -483,6 +491,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                     fontSize: 'var(--t-ui)',
                     outline: 'none',
                     width: '100%',
+                    height: '100%',
                     minWidth: 0,
                     fontFamily: 'inherit',
                   }}
@@ -510,7 +519,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                     <Icon name="close" size={13} />
                   </button>
                 )}
-              </div>
+              </label>
             ) : !isDispatch && !ws?.hasPageSearch ? (
               <button
                 type="button"
@@ -521,7 +530,10 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                   alignItems: 'center',
                   gap: 'var(--sp-sm)',
                   width: '100%',
-                  flexShrink: 0,
+                  /* RULING 2026-10-15 (zoom audit): shrinks to fit beside a visible sync chip
+                     instead of spilling 56px over the title zone (Finance info button covered
+                     at 1280/1536). The 44px floor below still holds the hit area. */
+                  flexShrink: 1,
                   minWidth: 44,
                   height: 44,
                   minHeight: 44, /* TouchInset compliant (Law 15) */
@@ -595,7 +607,10 @@ export default function Header({ crumbs, actions }: HeaderProps) {
               aria-hidden={isAbnormalSync ? undefined : true}
               style={{
                 // RULING 2026-10-13: tablets reclaim the healthy sync placeholder for the page title/search.
-                display: isTablet && !isAbnormalSync ? 'none' : 'flex',
+                // RULING 2026-10-15 (zoom audit): desktops too. The hidden 104px slot plus its gap
+                // truncated Finance's title at 1280 and pushed the search over its info button.
+                // Revert = `isTablet && !isAbnormalSync ? 'none' : 'flex'`.
+                display: !isAbnormalSync ? 'none' : 'flex',
                 alignItems: 'center',
                 gap: 8,
                 flexShrink: 0,

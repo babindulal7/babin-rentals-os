@@ -10,6 +10,7 @@ import { ErrorBanner, LoadingSkeleton } from '../../components/ui/StateViews'
 import { toBs, formatBs, formatAd, getBusinessToday } from '../../lib/bs'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
+import { useCompactHeader } from '../../lib/headerRoom'
 import { useEditMode } from '../../lib/edit/useEditMode'
 import type { FieldSpec } from '../../lib/edit/useEditMode'
 import {
@@ -225,8 +226,10 @@ export default function Settings() {
   /* RULING 2026-10-15: below desktop only the one primary verb stays beside the title;
      Export, the audit log and the edit-mode extras move into More (BLOCKER-02 — the
      title measured 0px wide at both 375px and 768px, the audit link 34px tall). A phone
-     also shortens the verb. Revert = drop the `compactHeader` branch below. */
-  const compactHeader = !desktop
+     also shortens the verb. Revert = drop the `compactHeader` branch below.
+     RULING 2026-10-15 (zoom audit): decided by the header's own width (sidebar open at
+     1280px left the title 55px). */
+  const compactHeader = useCompactHeader()
   const compactHeaderActions =
     active === 'branches' && !onPhoneList ? (
       <PageActions

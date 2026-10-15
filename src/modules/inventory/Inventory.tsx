@@ -22,6 +22,7 @@ import { Badge } from '../../components/ui/Badge'
 import { formatMoney, grouped } from '../../lib/money'
 import { useAuth } from '../../lib/auth'
 import { useTabularLayout, useViewport } from '../../lib/device'
+import { useCompactHeader } from '../../lib/headerRoom'
 import { canViewMoneyField, gateContext } from '../../lib/fieldGating'
 import type { GateContext } from '../../lib/fieldGating'
 import type { SystemRole } from '../../types/database'
@@ -524,7 +525,7 @@ function ChildRowView({
       )}
       {/* §7.1's row menu has no screen behind it yet, so it states that rather than
           rendering a control that swallows the click. */}
-      <td style={{ ...td, width: 30, color: 'var(--muted)' }}>
+      <td className="inventory-actions-cell" style={{ ...td, width: 30, color: 'var(--muted)' }}>
         <Unavailable reason={/* Row actions are not built — no row action in §7.1 has a screen yet, and §4.1 rules out the status edit outright. */ "Open the equipment record to see available actions."}>
           <Icon name="more_vert" size={14} />
         </Unavailable>
@@ -691,7 +692,7 @@ function ParentRowView({
             {row.replacementValue === null ? <span style={{ color: 'var(--muted)' }}>—</span> : formatMoney(row.replacementValue)}
           </td>
         )}
-        <td style={{ ...td, width: 44, color: 'var(--muted)' }} onClick={(e) => e.stopPropagation()}>
+        <td className="inventory-actions-cell" style={{ ...td, width: 44, color: 'var(--muted)' }} onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
             onClick={() => onInspect(row)}
@@ -1321,6 +1322,9 @@ export default function Inventory() {
   const tabular = useTabularLayout()
   /** Width only, Law 14 — 768 / 1280. The rail reflows below 1280, never hides. */
   const viewport = useViewport()
+  /** The header's own width (`lib/headerRoom.ts`): compact on any tablet, and on a desktop
+      whose open sidebar leaves the header no more room than a tablet's. */
+  const compactHeader = useCompactHeader()
   const role = user?.role ?? 'Client'
   const gctx = useMemo(() => gateContext(role), [role])
   /**
@@ -1593,7 +1597,9 @@ export default function Inventory() {
       <PageActions
         primary={<GlobalAddMenu module="inventory" />}
         // RULING 2026-10-13: on a phone, Refresh and Export live in More so the title and Add keep the header.
-        secondary={phone ? [] : [
+        // RULING 2026-10-15 (zoom audit): and wherever the header is compact — the title measured
+        // 0px at 911px and 14px at 1280px with the sidebar open. Revert = `phone` in both places.
+        secondary={compactHeader ? [] : [
           <Button key="refresh" icon="refresh" onClick={refreshAll} aria-label="Refresh equipment">
             Refresh
           </Button>,
@@ -1608,7 +1614,7 @@ export default function Inventory() {
           </span>,
         ]}
         overflow={[
-          ...(phone ? [
+          ...(compactHeader ? [
             { label: 'Refresh equipment', icon: 'refresh' as const, onClick: refreshAll },
             { label: 'Export this page', icon: 'download' as const, onClick: () => exportCsv(list.rows, money) },
           ] : []),
@@ -1639,8 +1645,11 @@ export default function Inventory() {
           ),
         } : {})}
         title="Inventory"
+        /* RULING 2026-10-15 (zoom audit): a compact header drops the model count — the
+           list card's own heading says "N Models found" — because with Filters and info it
+           filled the tablet title zone's 260px and cut "Inventory" short at 1093px. */
         status={
-          tab === 'Equipment' && !isNew && !list.loading ? (
+          tab === 'Equipment' && !isNew && !list.loading && !compactHeader ? (
             <span
               className="eyebrow-pill"
               style={{
@@ -2079,7 +2088,12 @@ export default function Inventory() {
                   </div>
                 ) : (
                   <DataTableShell ariaLabel="Equipment inventory" className="inventory-table-shell" style={{ overflowX: 'auto' }}>
-                    <table className="inventory-table operations-table" aria-label="Equipment inventory" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1060 }}>
+                    {/* RULING 2026-10-15 (zoom audit): no forced 1060px floor — the columns need
+                        949px, so a 1094px or 1280px-with-sidebar window fits them, and the Actions
+                        column is pinned (`.inventory-actions-cell`) for narrower ones. The floor
+                        hid Replacement and Actions behind a 75–252px scroll at 125–150% scaling.
+                        Revert = `minWidth: 1060` and drop the cell class. */}
+                    <table className="inventory-table operations-table" aria-label="Equipment inventory" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 0 }}>
                       <thead>
                         <tr style={{ background: 'var(--th-bg)' }}>
                           <th style={{ ...th, width: 26 }}>
@@ -2154,8 +2168,8 @@ export default function Inventory() {
                               the SKU's own figure; the mock's parent value was a
                               sum of its children and the schema states no such
                               rule. */}
-                          {showReplacement && <th style={{ ...th, textAlign: 'right' }}>Replacement / unit (NPR)</th>}
-                          <th style={{ ...th, width: 30 }}>Actions</th>
+                          {showReplacement && <th style={{ ...th, textAlign: 'right', whiteSpace: 'normal', minWidth: 96 }}>Replacement / unit (NPR)</th>}
+                          <th className="inventory-actions-cell" style={{ ...th, width: 30 }}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>

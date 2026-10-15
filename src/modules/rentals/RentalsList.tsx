@@ -2775,6 +2775,10 @@ const td = {
  */
 const stickyTh = {
   ...th,
+  /* RULING 2026-10-15 (zoom audit): 12px on the right, because "Choose columns" is a 24px
+     button with a 44px touch inset that reaches 10px past it. At 8px the inset overhung the
+     scroller by 2px and gave every width a 2px horizontal scrollbar. */
+  paddingRight: 12,
   width: 146,
   minWidth: 146,
   textAlign: 'right' as const,

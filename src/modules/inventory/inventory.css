@@ -111,6 +111,44 @@
   background: color-mix(in srgb, var(--nav-active-bg) 40%, transparent);
 }
 
+/* RULING 2026-10-15 (zoom audit): the Actions column stays pinned to the scroller's right
+   edge while a narrow table scrolls — Rentals' §4.1 pattern ("action column stays visible;
+   table scrolls horizontally"). Each state repaints the cell opaque, so columns sliding under
+   it never show through; the divider is a shadow because collapsed borders drop a sticky
+   cell's own border. Revert = delete this block and the class in Inventory.tsx. */
+.inventory-table .inventory-actions-cell {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  background: var(--card);
+  box-shadow: inset 1px 0 0 var(--border);
+}
+
+.inventory-table thead tr th.inventory-actions-cell {
+  z-index: 3;
+  background: var(--th-bg, var(--card2));
+}
+
+.inventory-parent-row:hover .inventory-actions-cell {
+  background: linear-gradient(color-mix(in srgb, var(--nav-active-bg) 35%, transparent), color-mix(in srgb, var(--nav-active-bg) 35%, transparent)), var(--card);
+}
+
+.inventory-parent-row.is-open .inventory-actions-cell {
+  background: linear-gradient(color-mix(in srgb, var(--nav-active-bg) 20%, var(--card2)), color-mix(in srgb, var(--nav-active-bg) 20%, var(--card2))), var(--card);
+}
+
+.inventory-parent-row.is-selected .inventory-actions-cell {
+  background: linear-gradient(color-mix(in srgb, var(--nav-active-bg) 40%, transparent), color-mix(in srgb, var(--nav-active-bg) 40%, transparent)), var(--card);
+}
+
+.inventory-parent-row.is-inspected .inventory-actions-cell {
+  background: linear-gradient(var(--nav-active-bg), var(--nav-active-bg)), var(--card);
+}
+
+.inventory-child-row .inventory-actions-cell {
+  background: linear-gradient(color-mix(in srgb, var(--card2) 75%, transparent), color-mix(in srgb, var(--card2) 75%, transparent)), var(--card);
+}
+
 /* Nested unit child row */
 .inventory-child-row {
   border-bottom: 1px solid var(--border);

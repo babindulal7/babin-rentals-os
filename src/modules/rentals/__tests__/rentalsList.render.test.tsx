@@ -314,6 +314,16 @@ describe('§4.1 — "action column stays visible; table scrolls horizontally"', 
     expect(lastCell?.style.position).toBe('sticky')
     expect(lastCell?.style.background).not.toBe('')
   })
+
+  /* Zoom audit, 15 Oct 2026: "Choose columns" is a 24px button whose 44px touch inset
+     reaches 10px past it. With 8px of cell padding the inset overhung the scroller by 2px,
+     so a table that fitted still showed a 2px horizontal scrollbar at every width. */
+  it('keeps the column chooser’s touch inset inside the scroller', async () => {
+    await mount(1280)
+    const chooser = container.querySelector('button[aria-label="Choose columns"]')
+    const cell = chooser?.closest('th')
+    expect(cell?.style.paddingRight).toBe('12px')
+  })
 })
 
 /** The Filters button — `aria-controls` rather than its label, which is shared. */

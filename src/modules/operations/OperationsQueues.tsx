@@ -35,6 +35,7 @@ import {
 } from '../../lib/queries/operations'
 import AlertsPanel from '../today/AlertsPanel'
 import { useViewport } from '../../lib/device'
+import { useCompactHeader } from '../../lib/headerRoom'
 import { kathmanduCivil, NPT_OFFSET_MIN, getBusinessToday } from '../../lib/bs'
 import { CalendarPopover, DateField } from '../../components/ui/DateField'
 import { FilterButton, FilterDrawer, FilterSection } from '../../components/ui/FilterDrawer'
@@ -468,8 +469,9 @@ export default function OperationsQueues() {
   /* RULING 2026-10-15: below desktop the two workspace links live in More and a fresh
      data badge takes no width, so the page title keeps the header (BLOCKER-02: at 375px
      the header overflowed by 207px; at 768px the title measured 0px). Revert = set this
-     to `false`. */
-  const compactHeader = viewport !== 'desktop'
+     to `false`. RULING 2026-10-15 (zoom audit): decided by the header's own width, so a
+     1280px desktop with the sidebar open (header 1024px) is compact too. */
+  const compactHeader = useCompactHeader()
 
   /* The URL is the state (§5.1). `?queue=packing` and `?quick=pickup` are
      mutually exclusive — setting either clears the other — so a queue is

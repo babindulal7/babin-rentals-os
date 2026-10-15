@@ -1,0 +1,1697 @@
+{
+ "recorded": "2026-10-15/16",
+ "task": "REMAINING_WORK Task 4.2 — Windows 125%/150% display scaling on 1366px and 1920px laptops",
+ "environment": "local mock build (vite --mode mock, port 3910, private dep cache), Claude desktop browser pane, emulated CSS viewports, signed in as mock Owner; fresh load per width with the sidebar in its default state (tablet: 64px rail; desktop: 256px expanded, set explicitly via br-collapsed:sidebar:main). Host dpr 1.25. Not physical laptops, not live JWT/PostgREST. The 34px mock-mode banner is not in production.",
+ "widths": {
+  "1093x489": "1366x768 at 125%",
+  "911x387": "1366x768 at 150%",
+  "1536x739": "1920x1080 at 125%",
+  "1280x595": "1920x1080 at 150%"
+ },
+ "heights": "viewport height = screen/scale minus ~125px of taskbar + browser chrome",
+ "method": "tmp-only script (not committed): header.app-global-header scrollWidth-clientWidth (hOv); aria-current title span width and scrollWidth>clientWidth (truncated); every visible header control rect (off-screen, <44px — an input measured by its label, overlaps); every visible table: scroller scrollWidth-clientWidth, last <th> right edge vs scroller/viewport, columns past the edge, sticky last cell; sticky/fixed elements; documentElement.scrollWidth-innerWidth. Page ready = title + table drawn + nothing aria-busy + header controls stable.",
+ "before": {
+  "1093": {
+   "/rentals": {
+    "vw": 1094,
+    "vh": 490,
+    "hook": "tablet",
+    "hOv": 0,
+    "title": {
+     "text": "Rentals",
+     "w": 60,
+     "truncated": false
+    },
+    "tz": 114,
+    "sW": 320,
+    "ctl": 7,
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [
+     "Rentals:2"
+    ],
+    "tables": [
+     "Rentals|cols9|scroll2|last:ACTIONS@1066 vis=true|hidden:|stickyLast=true|row1@380|rowH139"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/inventory": {
+    "vw": 1094,
+    "vh": 490,
+    "hook": "tablet",
+    "hOv": 0,
+    "title": {
+     "text": "Inventory",
+     "w": 65,
+     "truncated": true
+    },
+    "tz": 252,
+    "sW": 134,
+    "ctl": 10,
+    "off": [],
+    "small": [
+     "Search inventory 134x22"
+    ],
+    "ovl": [],
+    "doc": 0,
+    "hs": [
+     "Equipment inventory:75"
+    ],
+    "tables": [
+     "Equipment inventory|cols9|scroll75|last:ACTIONS@1141 vis=false|hidden:REPLACEMENT / UNIT (NPR)/ACTIONS|stickyLast=false|row1@440|rowH65"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/finance": {
+    "vw": 1094,
+    "vh": 490,
+    "hook": "tablet",
+    "hOv": 0,
+    "title": {
+     "text": "Finance",
+     "w": 58,
+     "truncated": true
+    },
+    "tz": 136,
+    "sW": null,
+    "ctl": 7,
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Outstanding invoices|cols4|scroll0|last:OUTSTANDING@1066 vis=true|hidden:|stickyLast=false|row1@529|rowH56"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/operations": {
+    "vw": 1094,
+    "vh": 490,
+    "hook": "tablet",
+    "hOv": 0,
+    "title": {
+     "text": "Operations",
+     "w": 92,
+     "truncated": false
+    },
+    "tz": 196,
+    "sW": 271,
+    "ctl": 6,
+    "off": [],
+    "small": [
+     "Search operations 271x22"
+    ],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Operations queues|cols8|scroll0|last:(blank)@1066 vis=true|hidden:|stickyLast=false|row1@319|rowH65"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/settings": {
+    "vw": 1094,
+    "vh": 490,
+    "hook": "tablet",
+    "hOv": 0,
+    "title": {
+     "text": "Settings",
+     "w": 66,
+     "truncated": false
+    },
+    "tz": 206,
+    "sW": 271,
+    "ctl": 6,
+    "off": [],
+    "small": [
+     "Search settings 271x22"
+    ],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Membership matrix|cols4|scroll0|last:Priority@1036 vis=true|hidden:|stickyLast=false|row1@3497|rowH56"
+    ],
+    "sticky": [],
+    "offPage": []
+   }
+  },
+  "911": {
+   "/rentals": {
+    "vw": 911,
+    "vh": 387,
+    "hook": "tablet",
+    "hOv": 0,
+    "title": {
+     "text": "Rentals",
+     "w": 58,
+     "truncated": false
+    },
+    "tz": 112,
+    "sW": 320,
+    "ctl": 7,
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [
+     "Filter by operational view:25",
+     "Rentals:48"
+    ],
+    "tables": [
+     "Rentals|cols9|scroll48|last:ACTIONS@886 vis=true|hidden:|stickyLast=true|row1@388|rowH161"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/inventory": {
+    "vw": 911,
+    "vh": 387,
+    "hook": "tablet",
+    "hOv": 0,
+    "title": {
+     "text": "Inventory",
+     "w": 0,
+     "truncated": true
+    },
+    "tz": 146,
+    "sW": 58,
+    "ctl": 10,
+    "off": [],
+    "small": [
+     "Search inventory 58x22"
+    ],
+    "ovl": [],
+    "doc": 0,
+    "hs": [
+     "Equipment inventory:252"
+    ],
+    "tables": [
+     "Equipment inventory|cols9|scroll252|last:ACTIONS@1138 vis=false|hidden:REPLACEMENT / UNIT (NPR)/ACTIONS|stickyLast=false|row1@437|rowH65"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/finance": {
+    "vw": 911,
+    "vh": 387,
+    "hook": "tablet",
+    "hOv": 0,
+    "title": {
+     "text": "Finance",
+     "w": 0,
+     "truncated": true
+    },
+    "tz": 73,
+    "sW": null,
+    "ctl": 7,
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Outstanding invoices|cols4|scroll0|last:OUTSTANDING@886 vis=true|hidden:|stickyLast=false|row1@518|rowH56"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/operations": {
+    "vw": 911,
+    "vh": 387,
+    "hook": "tablet",
+    "hOv": 0,
+    "title": {
+     "text": "Operations",
+     "w": 88,
+     "truncated": false
+    },
+    "tz": 192,
+    "sW": 271,
+    "ctl": 6,
+    "off": [],
+    "small": [
+     "Search operations 271x22"
+    ],
+    "ovl": [],
+    "doc": 0,
+    "hs": [
+     "Operations queues:92"
+    ],
+    "tables": [
+     "Operations queues|cols8|scroll92|last:(blank)@978 vis=false|hidden:ACTION/(blank)|stickyLast=false|row1@316|rowH65"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/settings": {
+    "vw": 911,
+    "vh": 387,
+    "hook": "tablet",
+    "hOv": 0,
+    "title": {
+     "text": "Settings",
+     "w": 63,
+     "truncated": false
+    },
+    "tz": 204,
+    "sW": 258,
+    "ctl": 6,
+    "off": [],
+    "small": [
+     "Search settings 258x22"
+    ],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Membership matrix|cols4|scroll0|last:Priority@870 vis=true|hidden:|stickyLast=false|row1@3576|rowH56"
+    ],
+    "sticky": [],
+    "offPage": []
+   }
+  },
+  "1536_sidebarOpen": {
+   "/rentals": {
+    "vw": 1536,
+    "vh": 739,
+    "nav": 256,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Rentals",
+     "w": 66,
+     "truncated": false
+    },
+    "tz": 120,
+    "sW": 348,
+    "ctl": [
+     "Rentals info",
+     "Search rentals",
+     "Show filters panel",
+     "New Rental",
+     "More rentals actions",
+     "Refresh data",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [
+     "Rentals:2"
+    ],
+    "tables": [
+     "Rentals|cols11|scroll2|last:ACTIONS@1506 vis=true|hidden:|stickyLast=true|row1@381|rowH161"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/inventory": {
+    "vw": 1536,
+    "vh": 739,
+    "nav": 256,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Inventory",
+     "w": 85,
+     "truncated": false
+    },
+    "tz": 272,
+    "sW": 252,
+    "ctl": [
+     "Show filters panel",
+     "Inventory info",
+     "Search inventory",
+     "Refresh equipment",
+     "Export equipment on this page",
+     "More actions",
+     "New Equipment",
+     "More create options",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [
+     "Search inventory 252x24"
+    ],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Equipment inventory|cols9|scroll0|last:ACTIONS@1506 vis=true|hidden:|stickyLast=false|row1@452|rowH65"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/finance": {
+    "vw": 1536,
+    "vh": 739,
+    "nav": 256,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Finance",
+     "w": 70,
+     "truncated": false
+    },
+    "tz": 148,
+    "sW": null,
+    "ctl": [
+     "Finance info",
+     "Search bookings, clients, equipment and ",
+     "Create Invoice",
+     "Export invoices",
+     "Record Payment",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [],
+    "ovl": [
+     [
+      "Finance info",
+      "Search bookings, clients, equipment and "
+     ]
+    ],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Outstanding invoices|cols4|scroll0|last:OUTSTANDING@1206 vis=true|hidden:|stickyLast=false|row1@543|rowH56"
+    ],
+    "sticky": [
+     {
+      "cls": "ASIDE",
+      "pos": "sticky",
+      "top": "76px",
+      "x": 1220,
+      "y": 326,
+      "w": 288,
+      "h": 287,
+      "offRight": 0
+     }
+    ],
+    "offPage": []
+   },
+   "/operations": {
+    "vw": 1536,
+    "vh": 739,
+    "nav": 256,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Operations",
+     "w": 101,
+     "truncated": false
+    },
+    "tz": 205,
+    "sW": 290,
+    "ctl": [
+     "Show filters panel",
+     "Search operations",
+     "Refresh data",
+     "Delivery & Logistics",
+     "Sub-Rentals",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [
+     "Search operations 290x24"
+    ],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Operations queues|cols8|scroll0|last:(blank)@1506 vis=true|hidden:|stickyLast=false|row1@331|rowH65"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/settings": {
+    "vw": 1536,
+    "vh": 739,
+    "nav": 256,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Settings",
+     "w": 73,
+     "truncated": false
+    },
+    "tz": 216,
+    "sW": 299,
+    "ctl": [
+     "Settings info",
+     "Search settings",
+     "Edit settings",
+     "Export config",
+     "View audit log",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [
+     "Search settings 299x24"
+    ],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Membership matrix|cols4|scroll0|last:Priority@1379 vis=true|hidden:|stickyLast=false|row1@3695|rowH56"
+    ],
+    "sticky": [
+     {
+      "cls": "app-settings-sidebar settings-nav-col",
+      "pos": "sticky",
+      "top": "16px",
+      "x": 385,
+      "y": 222,
+      "w": 260,
+      "h": 265,
+      "offRight": 0
+     }
+    ],
+    "offPage": []
+   }
+  },
+  "1280_sidebarOpen": {
+   "/rentals": {
+    "vw": 1280,
+    "vh": 595,
+    "nav": 256,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Rentals",
+     "w": 62,
+     "truncated": false
+    },
+    "tz": 116,
+    "sW": 251,
+    "ctl": [
+     "Rentals info",
+     "Search rentals",
+     "Show filters panel",
+     "New Rental",
+     "More rentals actions",
+     "Refresh data",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [
+     "Rentals:2"
+    ],
+    "tables": [
+     "Rentals|cols11|scroll2|last:ACTIONS@1251 vis=true|hidden:|stickyLast=true|row1@372|rowH181"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/inventory": {
+    "vw": 1280,
+    "vh": 595,
+    "nav": 256,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Inventory",
+     "w": 14,
+     "truncated": true
+    },
+    "tz": 201,
+    "sW": 67,
+    "ctl": [
+     "Show filters panel",
+     "Inventory info",
+     "Search inventory",
+     "Refresh equipment",
+     "Export equipment on this page",
+     "More actions",
+     "New Equipment",
+     "More create options",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [
+     "Search inventory 67x22"
+    ],
+    "ovl": [],
+    "doc": 0,
+    "hs": [
+     "Equipment inventory:84"
+    ],
+    "tables": [
+     "Equipment inventory|cols9|scroll84|last:ACTIONS@1335 vis=false|hidden:REPLACEMENT / UNIT (NPR)/ACTIONS|stickyLast=false|row1@449|rowH65"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/finance": {
+    "vw": 1280,
+    "vh": 595,
+    "nav": 256,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Finance",
+     "w": 15,
+     "truncated": true
+    },
+    "tz": 93,
+    "sW": null,
+    "ctl": [
+     "Finance info",
+     "Search bookings, clients, equipment and ",
+     "Create Invoice",
+     "Export invoices",
+     "Record Payment",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [],
+    "ovl": [
+     [
+      "Finance info",
+      "Search bookings, clients, equipment and "
+     ]
+    ],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Outstanding invoices|cols4|scroll0|last:OUTSTANDING@951 vis=true|hidden:|stickyLast=false|row1@526|rowH56"
+    ],
+    "sticky": [
+     {
+      "cls": "ASIDE",
+      "pos": "sticky",
+      "top": "76px",
+      "x": 964,
+      "y": 312,
+      "w": 288,
+      "h": 282,
+      "offRight": 0
+     }
+    ],
+    "offPage": []
+   },
+   "/operations": {
+    "vw": 1280,
+    "vh": 595,
+    "nav": 256,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Operations",
+     "w": 55,
+     "truncated": true
+    },
+    "tz": 159,
+    "sW": 80,
+    "ctl": [
+     "Show filters panel",
+     "Search operations",
+     "Refresh data",
+     "Delivery & Logistics",
+     "Sub-Rentals",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [
+     "Search operations 80x22"
+    ],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Operations queues|cols8|scroll0|last:(blank)@1251 vis=true|hidden:|stickyLast=false|row1@329|rowH65"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/settings": {
+    "vw": 1280,
+    "vh": 595,
+    "nav": 256,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Settings",
+     "w": 55,
+     "truncated": true
+    },
+    "tz": 195,
+    "sW": 123,
+    "ctl": [
+     "Settings info",
+     "Search settings",
+     "Edit settings",
+     "Export config",
+     "View audit log",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [
+     "Search settings 123x22"
+    ],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Membership matrix|cols4|scroll0|last:Priority@1225 vis=true|hidden:|stickyLast=false|row1@3652|rowH56"
+    ],
+    "sticky": [
+     {
+      "cls": "app-settings-sidebar settings-nav-col",
+      "pos": "sticky",
+      "top": "16px",
+      "x": 283,
+      "y": 213,
+      "w": 260,
+      "h": 265,
+      "offRight": 0
+     }
+    ],
+    "offPage": []
+   }
+  },
+  "1536_rail": {
+   "/rentals": {
+    "vw": 1536,
+    "vh": 739,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Rentals",
+     "w": 66,
+     "truncated": false
+    },
+    "tz": 120,
+    "sW": 348,
+    "ctl": 8,
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [
+     "Rentals:2"
+    ],
+    "tables": [
+     "Rentals|cols11|scroll2|last:ACTIONS@1506 vis=true|hidden:|stickyLast=true|row1@381|rowH127"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/inventory": {
+    "vw": 1536,
+    "vh": 739,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Inventory",
+     "w": 85,
+     "truncated": false
+    },
+    "tz": 272,
+    "sW": 299,
+    "ctl": 10,
+    "off": [],
+    "small": [
+     "Search inventory 299x24"
+    ],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Equipment inventory|cols9|scroll0|last:ACTIONS@1506 vis=true|hidden:|stickyLast=false|row1@444|rowH65"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/finance": {
+    "vw": 1536,
+    "vh": 739,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Finance",
+     "w": 70,
+     "truncated": false
+    },
+    "tz": 148,
+    "sW": null,
+    "ctl": 7,
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Outstanding invoices|cols4|scroll0|last:OUTSTANDING@1206 vis=true|hidden:|stickyLast=false|row1@535|rowH56"
+    ],
+    "sticky": [
+     {
+      "cls": "ASIDE",
+      "pos": "sticky",
+      "top": "76px",
+      "x": 1220,
+      "y": 318,
+      "w": 288,
+      "h": 287,
+      "offRight": 0
+     }
+    ],
+    "offPage": []
+   },
+   "/operations": {
+    "vw": 1536,
+    "vh": 739,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Operations",
+     "w": 101,
+     "truncated": false
+    },
+    "tz": 205,
+    "sW": 299,
+    "ctl": 7,
+    "off": [],
+    "small": [
+     "Search operations 299x24"
+    ],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Operations queues|cols8|scroll0|last:(blank)@1506 vis=true|hidden:|stickyLast=false|row1@323|rowH65"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/settings": {
+    "vw": 1536,
+    "vh": 739,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Settings",
+     "w": 73,
+     "truncated": false
+    },
+    "tz": 216,
+    "sW": 299,
+    "ctl": 7,
+    "off": [],
+    "small": [
+     "Search settings 299x24"
+    ],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Membership matrix|cols4|scroll0|last:Priority@1283 vis=true|hidden:|stickyLast=false|row1@3687|rowH56"
+    ],
+    "sticky": [
+     {
+      "cls": "app-settings-sidebar settings-nav-col",
+      "pos": "sticky",
+      "top": "16px",
+      "x": 289,
+      "y": 214,
+      "w": 260,
+      "h": 265,
+      "offRight": 0
+     }
+    ],
+    "offPage": []
+   }
+  },
+  "1280_rail": {
+   "/rentals": {
+    "vw": 1280,
+    "vh": 595,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Rentals",
+     "w": 62,
+     "truncated": false
+    },
+    "tz": 116,
+    "sW": 348,
+    "ctl": 8,
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [
+     "Rentals:2"
+    ],
+    "tables": [
+     "Rentals|cols11|scroll2|last:ACTIONS@1251 vis=true|hidden:|stickyLast=true|row1@372|rowH161"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/inventory": {
+    "vw": 1280,
+    "vh": 595,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Inventory",
+     "w": 80,
+     "truncated": false
+    },
+    "tz": 267,
+    "sW": 193,
+    "ctl": 10,
+    "off": [],
+    "small": [
+     "Search inventory 193x22"
+    ],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Equipment inventory|cols9|scroll0|last:ACTIONS@1251 vis=true|hidden:|stickyLast=false|row1@449|rowH65"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/finance": {
+    "vw": 1280,
+    "vh": 595,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Finance",
+     "w": 60,
+     "truncated": true
+    },
+    "tz": 138,
+    "sW": null,
+    "ctl": 7,
+    "off": [],
+    "small": [],
+    "ovl": [
+     [
+      "Finance info",
+      "Search bookings, clients, equipment and "
+     ]
+    ],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Outstanding invoices|cols4|scroll0|last:OUTSTANDING@951 vis=true|hidden:|stickyLast=false|row1@526|rowH56"
+    ],
+    "sticky": [
+     {
+      "cls": "ASIDE",
+      "pos": "sticky",
+      "top": "76px",
+      "x": 964,
+      "y": 312,
+      "w": 288,
+      "h": 282,
+      "offRight": 0
+     }
+    ],
+    "offPage": []
+   },
+   "/operations": {
+    "vw": 1280,
+    "vh": 595,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Operations",
+     "w": 96,
+     "truncated": false
+    },
+    "tz": 200,
+    "sW": 232,
+    "ctl": 7,
+    "off": [],
+    "small": [
+     "Search operations 232x22"
+    ],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Operations queues|cols8|scroll0|last:(blank)@1251 vis=true|hidden:|stickyLast=false|row1@329|rowH65"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/settings": {
+    "vw": 1280,
+    "vh": 595,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Settings",
+     "w": 68,
+     "truncated": false
+    },
+    "tz": 209,
+    "sW": 299,
+    "ctl": 7,
+    "off": [],
+    "small": [
+     "Search settings 299x22"
+    ],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Membership matrix|cols4|scroll0|last:Priority@1129 vis=true|hidden:|stickyLast=false|row1@3652|rowH56"
+    ],
+    "sticky": [
+     {
+      "cls": "app-settings-sidebar settings-nav-col",
+      "pos": "sticky",
+      "top": "16px",
+      "x": 187,
+      "y": 213,
+      "w": 260,
+      "h": 265,
+      "offRight": 0
+     }
+    ],
+    "offPage": []
+   }
+  }
+ },
+ "after": {
+  "1093": {
+   "/rentals": {
+    "vw": 1093,
+    "vh": 489,
+    "nav": 64,
+    "hook": "tablet",
+    "hOv": 0,
+    "title": {
+     "text": "Rentals",
+     "w": 60,
+     "truncated": false
+    },
+    "tz": 114,
+    "sW": 208,
+    "ctl": [
+     "Rentals info",
+     "Search rentals",
+     "Syncing…",
+     "Show filters panel",
+     "New Rental",
+     "More rentals actions",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Rentals|cols9|scroll0|last:ACTIONS@1066 vis=true|hidden:|stickyLast=true|row1@381|rowH139"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/inventory": {
+    "vw": 1093,
+    "vh": 489,
+    "nav": 64,
+    "hook": "tablet",
+    "hOv": 0,
+    "title": {
+     "text": "Inventory",
+     "w": 77,
+     "truncated": false
+    },
+    "tz": 181,
+    "sW": 271,
+    "ctl": [
+     "Show filters panel",
+     "Inventory info",
+     "Search inventory",
+     "More actions",
+     "New Equipment",
+     "More create options",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Equipment inventory|cols9|scroll0|last:ACTIONS@1066 vis=true|hidden:|stickyLast=true|row1@449|rowH65"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/finance": {
+    "vw": 1093,
+    "vh": 489,
+    "nav": 64,
+    "hook": "tablet",
+    "hOv": 0,
+    "title": {
+     "text": "Finance",
+     "w": 64,
+     "truncated": false
+    },
+    "tz": 142,
+    "sW": null,
+    "ctl": [
+     "Finance info",
+     "Search bookings, clients, equipment and ",
+     "More actions",
+     "Record Payment",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Outstanding invoices|cols4|scroll0|last:OUTSTANDING@1066 vis=true|hidden:|stickyLast=false|row1@530|rowH56"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/operations": {
+    "vw": 1093,
+    "vh": 489,
+    "nav": 64,
+    "hook": "tablet",
+    "hOv": 0,
+    "title": {
+     "text": "Operations",
+     "w": 92,
+     "truncated": false
+    },
+    "tz": 196,
+    "sW": 271,
+    "ctl": [
+     "Show filters panel",
+     "Search operations",
+     "Refresh data",
+     "More actions",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Operations queues|cols8|scroll0|last:(blank)@1066 vis=true|hidden:|stickyLast=false|row1@326|rowH65"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/settings": {
+    "vw": 1093,
+    "vh": 489,
+    "nav": 64,
+    "hook": "tablet",
+    "hOv": 0,
+    "title": {
+     "text": "Settings",
+     "w": 66,
+     "truncated": false
+    },
+    "tz": 206,
+    "sW": 271,
+    "ctl": [
+     "Settings info",
+     "Search settings",
+     "More actions",
+     "Edit settings",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Membership matrix|cols4|scroll0|last:Priority@1036 vis=true|hidden:|stickyLast=false|row1@3516|rowH56"
+    ],
+    "sticky": [],
+    "offPage": []
+   }
+  },
+  "911": {
+   "/rentals": {
+    "vw": 911,
+    "vh": 387,
+    "nav": 64,
+    "hook": "tablet",
+    "hOv": 0,
+    "title": {
+     "text": "Rentals",
+     "w": 58,
+     "truncated": false
+    },
+    "tz": 112,
+    "sW": 320,
+    "ctl": [
+     "Rentals info",
+     "Search rentals",
+     "Show filters panel",
+     "New Rental",
+     "More rentals actions",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [
+     "Filter by operational view:27",
+     "Rentals:47"
+    ],
+    "tables": [
+     "Rentals|cols9|scroll47|last:ACTIONS@886 vis=true|hidden:|stickyLast=true|row1@388|rowH162"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/inventory": {
+    "vw": 911,
+    "vh": 387,
+    "nav": 64,
+    "hook": "tablet",
+    "hOv": 0,
+    "title": {
+     "text": "Inventory",
+     "w": 73,
+     "truncated": false
+    },
+    "tz": 260,
+    "sW": 133,
+    "ctl": [
+     "Show filters panel",
+     "Inventory info",
+     "Search inventory",
+     "More actions",
+     "New Equipment",
+     "More create options",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [
+     "Search inventory 133x42"
+    ],
+    "ovl": [],
+    "doc": 0,
+    "hs": [
+     "Equipment inventory:71"
+    ],
+    "tables": [
+     "Equipment inventory|cols9|scroll71|last:ACTIONS@886 vis=true|hidden:REPLACEMENT / UNIT (NPR)|stickyLast=true|row1@446|rowH65"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/finance": {
+    "vw": 911,
+    "vh": 387,
+    "nav": 64,
+    "hook": "tablet",
+    "hOv": 0,
+    "title": {
+     "text": "Finance",
+     "w": 61,
+     "truncated": false
+    },
+    "tz": 139,
+    "sW": null,
+    "ctl": [
+     "Finance info",
+     "Search bookings, clients, equipment and ",
+     "More actions",
+     "Record Payment",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Outstanding invoices|cols4|scroll0|last:OUTSTANDING@886 vis=true|hidden:|stickyLast=false|row1@527|rowH56"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/operations": {
+    "vw": 911,
+    "vh": 387,
+    "nav": 64,
+    "hook": "tablet",
+    "hOv": 0,
+    "title": {
+     "text": "Operations",
+     "w": 88,
+     "truncated": false
+    },
+    "tz": 192,
+    "sW": 271,
+    "ctl": [
+     "Show filters panel",
+     "Search operations",
+     "Refresh data",
+     "More actions",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [
+     "Search operations 271x42"
+    ],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Operations queues|cols8|scroll0|last:(blank)@886 vis=true|hidden:|stickyLast=false|row1@324|rowH65"
+    ],
+    "sticky": [],
+    "offPage": []
+   },
+   "/settings": {
+    "vw": 911,
+    "vh": 387,
+    "nav": 64,
+    "hook": "tablet",
+    "hOv": 0,
+    "title": {
+     "text": "Settings",
+     "w": 63,
+     "truncated": false
+    },
+    "tz": 204,
+    "sW": 257,
+    "ctl": [
+     "Settings info",
+     "Search settings",
+     "More actions",
+     "Edit settings",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [
+     "Search settings 257x42"
+    ],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Membership matrix|cols4|scroll0|last:Priority@870 vis=true|hidden:|stickyLast=false|row1@3587|rowH56"
+    ],
+    "sticky": [],
+    "offPage": []
+   }
+  },
+  "1536_sidebarOpen": {
+   "/rentals": {
+    "vw": 1536,
+    "vh": 739,
+    "nav": 256,
+    "hOv": 0,
+    "title": {
+     "text": "Rentals",
+     "w": 66,
+     "truncated": false
+    },
+    "sW": 460,
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Rentals|cols11|scroll0|last:ACTIONS@1506 vis=true|stickyLast=true"
+    ]
+   },
+   "/inventory": {
+    "vw": 1536,
+    "vh": 739,
+    "nav": 256,
+    "hOv": 0,
+    "title": {
+     "text": "Inventory",
+     "w": 85,
+     "truncated": false
+    },
+    "sW": 362,
+    "ctl": [
+     "Show filters panel",
+     "Inventory info",
+     "Search inventory",
+     "Refresh equipment",
+     "Export equipment on this page",
+     "More actions",
+     "New Equipment",
+     "More create options",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Equipment inventory|cols9|scroll0|last:ACTIONS@1506 vis=true|stickyLast=true"
+    ]
+   },
+   "/finance": {
+    "vw": 1536,
+    "vh": 739,
+    "nav": 256,
+    "hOv": 0,
+    "title": {
+     "text": "Finance",
+     "w": 70,
+     "truncated": false
+    },
+    "ctl": [
+     "Finance info",
+     "Search bookings, clients, equipment and ",
+     "Create Invoice",
+     "Export invoices",
+     "Record Payment",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Outstanding invoices|cols4|scroll0|last:OUTSTANDING@1206 vis=true"
+    ],
+    "sticky": [
+     {
+      "cls": "ASIDE",
+      "pos": "sticky",
+      "top": "76px",
+      "x": 1220,
+      "y": 326,
+      "w": 288,
+      "h": 288
+     }
+    ]
+   },
+   "/operations": {
+    "vw": 1536,
+    "vh": 739,
+    "nav": 256,
+    "hOv": 0,
+    "title": {
+     "text": "Operations",
+     "w": 101,
+     "truncated": false
+    },
+    "sW": 400,
+    "ctl": [
+     "Show filters panel",
+     "Search operations",
+     "Refresh data",
+     "Delivery & Logistics",
+     "Sub-Rentals",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Operations queues|cols8|scroll0|last:(blank)@1506 vis=true"
+    ]
+   },
+   "/settings": {
+    "vw": 1536,
+    "vh": 739,
+    "nav": 256,
+    "hOv": 0,
+    "title": {
+     "text": "Settings",
+     "w": 73,
+     "truncated": false
+    },
+    "sW": 411,
+    "ctl": [
+     "Settings info",
+     "Search settings",
+     "Edit settings",
+     "Export config",
+     "View audit log",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Membership matrix|cols4|scroll0|last:Priority@1379 vis=true"
+    ]
+   }
+  },
+  "1280_sidebarOpen": {
+   "/rentals": {
+    "vw": 1280,
+    "vh": 595,
+    "nav": 256,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Rentals",
+     "w": 63,
+     "truncated": false
+    },
+    "tz": 117,
+    "sW": 362,
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Rentals|cols11|scroll0|last:ACTIONS@1251 vis=true|hidden:|stickyLast=true|row1@381|rowH181"
+    ]
+   },
+   "/inventory": {
+    "vw": 1280,
+    "vh": 595,
+    "nav": 256,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Inventory",
+     "w": 80,
+     "truncated": false
+    },
+    "tz": 184,
+    "sW": 385,
+    "ctl": [
+     "Show filters panel",
+     "Inventory info",
+     "Search inventory",
+     "More actions",
+     "New Equipment",
+     "More create options",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Equipment inventory|cols9|scroll0|last:ACTIONS@1251 vis=true|hidden:|stickyLast=true|row1@451|rowH65"
+    ]
+   },
+   "/finance": {
+    "vw": 1280,
+    "vh": 595,
+    "nav": 256,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Finance",
+     "w": 66,
+     "truncated": false
+    },
+    "tz": 144,
+    "sW": null,
+    "ctl": [
+     "Finance info",
+     "Search bookings, clients, equipment and ",
+     "More actions",
+     "Record Payment",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Outstanding invoices|cols4|scroll0|last:OUTSTANDING@951 vis=true|hidden:|stickyLast=false|row1@535|rowH56"
+    ],
+    "sticky": [
+     {
+      "cls": "ASIDE",
+      "pos": "sticky",
+      "top": "76px",
+      "x": 965,
+      "y": 321,
+      "w": 288,
+      "h": 283,
+      "offRight": 0
+     }
+    ]
+   },
+   "/operations": {
+    "vw": 1280,
+    "vh": 595,
+    "nav": 256,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Operations",
+     "w": 96,
+     "truncated": false
+    },
+    "tz": 200,
+    "sW": 411,
+    "ctl": [
+     "Show filters panel",
+     "Search operations",
+     "Refresh data",
+     "More actions",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Operations queues|cols8|scroll0|last:(blank)@1251 vis=true|hidden:|stickyLast=false|row1@328|rowH65"
+    ]
+   },
+   "/settings": {
+    "vw": 1280,
+    "vh": 595,
+    "nav": 256,
+    "hook": "desktop",
+    "hOv": 0,
+    "title": {
+     "text": "Settings",
+     "w": 68,
+     "truncated": false
+    },
+    "tz": 209,
+    "sW": 411,
+    "ctl": [
+     "Settings info",
+     "Search settings",
+     "More actions",
+     "Edit settings",
+     "Team internal notes",
+     "BA — user profile"
+    ],
+    "off": [],
+    "small": [],
+    "ovl": [],
+    "doc": 0,
+    "hs": [],
+    "tables": [
+     "Membership matrix|cols4|scroll0|last:Priority@1225 vis=true|hidden:|stickyLast=false|row1@3671|rowH56"
+    ],
+    "sticky": [
+     {
+      "cls": "app-settings-sidebar settings-nav-col",
+      "pos": "sticky",
+      "top": "16px",
+      "x": 283,
+      "y": 221,
+      "w": 260,
+      "h": 265,
+      "offRight": 0
+     }
+    ]
+   }
+  }
+ },
+ "summary": {
+  "before": [
+   "911: Inventory and Finance titles 0px; Inventory search 58px; Inventory table hid Replacement+Actions (252px scroll); Operations table hid Action + row link (92px scroll, forced 900px floor)",
+   "1093: Inventory title 65px and Finance 58px, truncated; Inventory table hid Replacement+Actions (75px)",
+   "1280 sidebar open (default fresh desktop): titles Inventory 14px, Finance 15px, Operations 55px, Settings 55px; Finance info button under the search; Inventory table 84px scroll hiding Actions",
+   "1536 sidebar open: Finance info button under the search (palette spill from the hidden 104px sync slot)",
+   "every width: header search input 22-24px tall inside its 44px box; Rentals table 2px horizontal scrollbar (column chooser touch inset overhang)"
+  ],
+  "after": [
+   "all four widths: header overflow 0, document overflow 0, no off-screen, undersized or overlapping header control, every title complete",
+   "911: Inventory table scrolls 71px with Actions pinned (Rentals 47px, likewise pinned — Rentals spec §4.1); every other table fits",
+   "1093, 1280, 1536: every table fits, Actions visible"
+  ]
+ },
+ "interactions": {
+  "1280_sidebarOpen_finance": "More → [Create Invoice, Export invoices]; Create Invoice opened the Create Invoice dialog; Escape closed it, nothing saved"
+ },
+ "routeSweep": "53 static routes, header-only, with and without the search-yields-first rule on the same load at 911 (rail) and 1280 (rail): no route gained an overlap, off-screen control or header overflow; Clients tabs at 911 trade search for title (title 54->138px, search box held at 120px).",
+ "notMeasured": [
+  "1280 with the rail after the fixes (header 1216px: full desktop header by rule; sweep before the priority change showed no overlap)",
+  "physical Windows laptops (Task 4.1)",
+  "vertical room: at 911x387 the first Rentals/Inventory row starts below the fold (y 388/446 incl. the 34px mock banner)"
+ ],
+ "observations": [
+  "A route visited in the sweep wrote br-collapsed:sidebar:main=1 (a page toggles the user's sidebar preference); not chased",
+  "Reports/Pulse and other titles truncate at their own zone caps — outside this task's five pages"
+ ]
+}
