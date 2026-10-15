@@ -58,7 +58,7 @@ const lines = vi.hoisted(() => ({
 vi.mock('../../../lib/supabase', () => {
   const build = () => {
     const chain: Record<string, unknown> = {}
-    for (const method of ['select', 'in', 'is', 'eq', 'order', 'range']) chain[method] = () => chain
+    for (const method of ['select', 'in', 'is', 'eq', 'order', 'range', 'limit']) chain[method] = () => chain
     chain['then'] = (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) => {
       if (lines.shouldFail) {
         if (reject) return reject(new Error('Subrental query failed'))
