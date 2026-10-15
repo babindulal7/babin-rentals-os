@@ -51,64 +51,50 @@ export interface ExpenseReportsSummary {
  * Queries PostgreSQL database for expenses and financial reporting data.
  */
 export async function getExpenseReportsSummary(): Promise<ExpenseReportsSummary> {
-  try {
-    const { data, error } = await supabase
-      .from('expenses')
-      .select('id, expense_no, amount, status, expense_date, description, vendor_name')
-      .order('expense_date', { ascending: false })
+  // RULING 2026-10-15: a failed read throws, so Expense Reports draws Error +
+  // Retry. It resolved to zero rows, which the page drew as "no expenses" — an
+  // outage presented as an empty ledger. Revert = restore the try/catch and the
+  // `if (error)` branch returning the empty summary.
+  const { data, error } = await supabase
+    .from('expenses')
+    .select('id, expense_no, amount, status, expense_date, description, vendor_name')
+    .order('expense_date', { ascending: false })
 
-    if (error) {
-      return {
-        rows: [],
-        categories: CATEGORIES,
-        branches: BRANCHES,
-        totalSpent: 0 as Paisa,
-        pendingApproval: 0 as Paisa,
-      }
-    }
+  if (error) throw new Error(`getExpenseReportsSummary failed: ${error.message}`)
 
-    const rows: ExpenseRow[] = (data ?? []).map((d) => {
-      const amountPaisa = rupees(Number(d.amount) || 0)
-      const r: ExpenseRow = {
-        id: d.expense_no || d.id,
-        // Fields not yet in the DB query — stubs, not seed values.
-        // Extend the select() above when the DB columns are ready.
-        billNo: null,
-        date: new Date(d.expense_date),
-        category: 'Miscellaneous',
-        subCategory: 'Other',
-        vendor: d.vendor_name || '-',
-        vendorPan: null,
-        description: d.description || '-',
-        amount: amountPaisa,
-        vat: null,
-        method: 'Cash',
-        methodDetail: '',
-        status: (d.status as ExpenseRow['status']) || 'Draft',
-        paidBy: null,
-        submittedBy: '-',
-        branch: 'Boudha (Head Office)',
-        recurring: false,
-        attachments: 0,
-      }
-      return r
-    })
+  const rows: ExpenseRow[] = (data ?? []).map((d) => {
+    const amountPaisa = rupees(Number(d.amount) || 0)
+    const r: ExpenseRow = {
+      id: d.expense_no || d.id,
+      // Fields not yet in the DB query — stubs, not seed values.
+      // Extend the select() above when the DB columns are ready.
+      billNo: null,
+      date: new Date(d.expense_date),
+      category: 'Miscellaneous',
+      subCategory: 'Other',
+      vendor: d.vendor_name || '-',
+      vendorPan: null,
+      description: d.description || '-',
+      amount: amountPaisa,
+      vat: null,
+      method: 'Cash',
+      methodDetail: '',
+      status: (d.status as ExpenseRow['status']) || 'Draft',
+      paidBy: null,
+      submittedBy: '-',
+      branch: 'Boudha (Head Office)',
+      recurring: false,
+      attachments: 0,
+    }
+    return r
+  })
 
-    const totals = totalsOf(rows)
-    return {
-      rows,
-      categories: CATEGORIES,
-      branches: BRANCHES,
-      totalSpent: totals.paid as unknown as Paisa,
-      pendingApproval: totals.pending as unknown as Paisa,
-    }
-  } catch {
-    return {
-      rows: [],
-      categories: CATEGORIES,
-      branches: BRANCHES,
-      totalSpent: 0 as Paisa,
-      pendingApproval: 0 as Paisa,
-    }
+  const totals = totalsOf(rows)
+  return {
+    rows,
+    categories: CATEGORIES,
+    branches: BRANCHES,
+    totalSpent: totals.paid as unknown as Paisa,
+    pendingApproval: totals.pending as unknown as Paisa,
   }
 }
