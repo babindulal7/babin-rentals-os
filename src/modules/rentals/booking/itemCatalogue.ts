@@ -1509,8 +1509,13 @@ export function groupEquipmentResults(results: readonly EquipmentResult[]): Equi
 
 /** The single-row equivalent — one equipment result becomes one draft. */
 export function equipmentLineDraft(e: EquipmentResult, days: number): BookingLineDraft {
+  const isAccessory = e.kind === 'accessory'
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  const resolvedProductId = isUuid.test(e.productKey) ? e.productKey : isUuid.test(e.id) ? e.id : null
   return {
     id: e.id,
+    lineType: isAccessory ? 'Accessory' : 'Equipment',
+    ...(resolvedProductId ? { productId: resolvedProductId } : {}),
     name: e.name,
     serial: e.serial,
     category: e.category,

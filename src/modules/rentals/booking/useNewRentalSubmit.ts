@@ -250,7 +250,15 @@ export function useNewRentalSubmit({
                   ...(isBundle
                     ? { bundleId: l.bundleId ?? null, description: l.name }
                     : inventoryLine
-                      ? { productId: l.productId ?? l.id }
+                      ? {
+                          productId:
+                            l.productId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(l.productId)
+                              ? l.productId
+                              : l.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(l.id)
+                                ? l.id
+                                : null,
+                          description: l.name,
+                        }
                       : { description: l.name }),
                   qty: l.qty,
                   days: l.days,

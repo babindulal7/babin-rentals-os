@@ -1,5 +1,44 @@
 # Progress Log
 
+## 2026-10-16 — Fix New Booking quote-save fallback: equipment line description preservation and robust availability product mode queries
+
+**Did**
+- Fixed line serialization in `src/modules/rentals/booking/useNewRentalSubmit.ts` so equipment and inventory lines always carry `description: l.name` (previously description was placed in the ternary `else` branch, omitting descriptions from all equipment lines and storing `description = NULL` in `booking_lines`).
+- Enforced UUID sanitization for inventory line `productId` in `useNewRentalSubmit.ts` and explicit `lineType` ('Accessory' vs 'Equipment') and `productId` resolution in `src/modules/rentals/booking/itemCatalogue.ts` (`equipmentLineDraft`).
+- Hardened `readProductModes` in `src/lib/queries/availability.ts` to fall back to the base `products` table (`id, tracking_mode, total_quantity`) when `products_v` omits product rows, ensuring holds and assignments are never blocked by view projection/filtering differences.
+- Improved label resolution in `readLines` (`availability.ts`) to fall back to `${row.line_type} (${row.product_id.slice(0, 8)})` rather than a bare generic type string, preventing opaque `"Equipment"` error messages.
+- Added comprehensive unit tests in `src/modules/rentals/booking/__tests__/useNewRentalSubmit.test.tsx` and `itemCatalogue.window.test.ts`.
+
+**Ruled**
+- Preserved existing product and financial rules (Law 1, Law 5, integer paisa). No new schema migrations or product rule changes.
+
+**Verified**
+- `npm run typecheck`: exit 0.
+- `npm run lint`: exit 0 (0 warnings).
+- `npm test`: all targeted and suite tests passed (including `confirmRental.test.ts`, `availability.test.ts`, `itemCatalogue.window.test.ts`, and `useNewRentalSubmit.test.tsx`).
+- `npm run check:pglite`: 163/163 applied, 0 view leaks, 0 function leaks, 0 definer search_path issues.
+- `npm run check:lifecycle`: 30/30 green through real Postgres + RLS.
+- `npm run check:contrast`: 82/82 WCAG AA pass.
+- `npm run build`: successful production build (297 precached assets).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-15T22:48:32.247Z). Suite: 4609/4609 passed (recorded 2026-10-15T20:16:18.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-15T22:49:00.000Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Production deployment of migrations 0163 and 0164 following BACKUP_PROTOCOL.md by Babin.
+- Continue responsive verification of floor stage workspaces (Pack, Handover, Return, Reset) and tablet header search/more menu layout.
+
+
 ## 2026-10-16 — Per-panel date filters on Today, filter slot alignment, and full test suite verification
 
 **Did**

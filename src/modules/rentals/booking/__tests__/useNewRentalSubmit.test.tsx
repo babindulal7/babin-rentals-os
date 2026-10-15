@@ -214,4 +214,141 @@ describe('useNewRentalSubmit', () => {
       host.remove()
     }
   })
+
+  it('formats lines with description and valid productId for equipment and bundle lines', async () => {
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const root = createRoot(host)
+
+    const dummyClient = {
+      dbId: 'client-db-1',
+      id: 'CL-001',
+      name: 'Test Client',
+      phone: '9841000000',
+    } as unknown as ClientRecord
+
+    const dummyPricing = {
+      securityDeposit: { requiredPaisa: 0 },
+      discounts: { discountPaisa: 0, appliedPercent: 0 },
+    } as unknown as PricingPipelineResult
+
+    const sampleLines = [
+      {
+        id: 'line-bundle-1',
+        name: 'Cinema Camera Kit',
+        lineType: 'Bundle' as const,
+        bundleId: '11111111-1111-4111-8111-111111111111',
+        qty: 1,
+        days: 2,
+        ratePaisa: 1000000 as any,
+      },
+      {
+        id: '22222222-2222-4222-8222-222222222222',
+        name: 'Sony FX3 Cinema Camera',
+        lineType: 'Equipment' as const,
+        productId: '22222222-2222-4222-8222-222222222222',
+        qty: 1,
+        days: 2,
+        ratePaisa: 500000 as any,
+      },
+      {
+        id: '33333333-3333-4333-8333-333333333333',
+        name: 'Heavy Duty Tripod',
+        // lineType undefined defaults to Equipment
+        qty: 1,
+        days: 2,
+        ratePaisa: 100000 as any,
+      },
+    ]
+
+    let submitHook!: ReturnType<typeof useNewRentalSubmit>
+    function TestComponent() {
+      submitHook = useNewRentalSubmit({
+        confirmBlocked: false,
+        saveState: 'saved',
+        setSaveState: vi.fn(),
+        dispatchContext: () => ({ userId: 'user-1', role: 'Coordinator' }),
+        setActionError: vi.fn(),
+        setConfirmedSuccess: vi.fn(),
+        showSuccessToast: vi.fn(),
+        client: dummyClient,
+        lines: sampleLines as any,
+        equipmentLines: sampleLines.slice(1) as any,
+        project: 'Commercial',
+        pickupAt: new Date('2026-11-01T09:00:00Z'),
+        returnAt: new Date('2026-11-03T18:00:00Z'),
+        deliveryType: 'Client Pickup',
+        pricing: dummyPricing,
+        manualDiscountReason: '',
+        manualDiscountAuthorizedBy: '',
+        womenDopEligible: false,
+        crew: [],
+        clientPickup: true,
+        deliveryChargePaisa: 0 as any,
+        fuelChargePaisa: 0 as any,
+        returnPickupType: 'Client Return',
+        returnPickupAddress: '',
+        returnPickupTime: '18:00',
+        returnPickupChargePaisa: 0,
+        returnTransportPaisa: 0,
+        vehicle: '',
+        numberPlate: '',
+        driverContact: '',
+        pickupLocation: '',
+        returnLocation: '',
+        specialInstructions: '',
+        days: 2,
+        draftId: null,
+        draftBookingNo: null,
+        draftHasUnsavedChanges: false,
+        draftData: {} as any,
+        setSavedDraftFingerprint: vi.fn(),
+        kind: 'Commercial',
+        kindOther: '',
+        confirmKey: { current: null },
+        draftBookingKey: { current: null },
+      })
+      return null
+    }
+
+    try {
+      await act(async () => {
+        root.render(<TestComponent />)
+      })
+
+      await act(async () => {
+        submitHook.confirmBooking()
+      })
+
+      expect(createRental).toHaveBeenCalledTimes(1)
+      const payload = vi.mocked(createRental).mock.calls[0]?.[0]
+      expect(payload?.lines).toHaveLength(3)
+
+      // Bundle line
+      expect(payload?.lines[0]).toMatchObject({
+        lineType: 'Bundle',
+        bundleId: '11111111-1111-4111-8111-111111111111',
+        description: 'Cinema Camera Kit',
+      })
+
+      // Equipment line with explicit productId
+      expect(payload?.lines[1]).toMatchObject({
+        lineType: 'Equipment',
+        productId: '22222222-2222-4222-8222-222222222222',
+        description: 'Sony FX3 Cinema Camera',
+      })
+
+      // Equipment line with lineType undefined defaulting to Equipment and id as productId
+      expect(payload?.lines[2]).toMatchObject({
+        lineType: 'Equipment',
+        productId: '33333333-3333-4333-8333-333333333333',
+        description: 'Heavy Duty Tripod',
+      })
+    } finally {
+      await act(async () => {
+        root.unmount()
+      })
+      host.remove()
+    }
+  })
 })
