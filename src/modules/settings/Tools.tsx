@@ -667,12 +667,13 @@ function StorageCalculator() {
         ]}
       />
       <Gap>
-        <strong style={{ color: 'var(--text)' }}>Not yet inventory-aware.</strong> {/* §2.1 wants camera, codec, resolution and
-        frame rate picked from the item master, the result to name the card size, and a stock check offering to add that
-        card to the booking — "the step that turns a calculator into revenue". The item master in */}Enter the bitrate from your camera settings to estimate storage. {' '}
-        <code>data/inventory.ts</code> carries no codec or bitrate field, so the bitrate is typed and no card is named. A
-        seeded bitrate table would be a figure nobody supplied. <strong style={{ color: 'var(--text)' }}>{/* TODO(decision) */}Not available yet </strong> —
-        add codec and bitrate to the item master, or drop the inventory-aware claim.
+        {/* RULING 2026-10-14: a bulk copy edit half-replaced this sentence; restored as plain copy. §2.1 wants camera, codec, resolution and frame rate
+            picked from the item master, the card size named and a stock check offering to add that card to the booking.
+            The item master carries no codec or bitrate field, and a seeded bitrate table would be a figure nobody
+            supplied. TODO(decision): add codec and bitrate to the item master, or drop the inventory-aware claim. */}
+        <strong style={{ color: 'var(--text)' }}>Not yet inventory-aware.</strong> Enter the bitrate from your camera settings
+        to estimate storage. The inventory does not record codecs or bitrates yet, so no card is suggested.{' '}
+        <strong style={{ color: 'var(--text)' }}>Not available yet:</strong> suggesting a card from the inventory.
       </Gap>
     </>
   )
@@ -714,11 +715,13 @@ batteries needed = ceil(shoot hours ÷ runtime) + 1  spare`}</Formula>
         ]}
       />
       <Gap>
-        <strong style={{ color: 'var(--text)' }}>Draw is typed, not looked up.</strong> {/* §3.8 says draw comes from the item
-        master, "measured per body — not a manufacturer figure", and §12 asks Babin directly whether those figures are
-        measured or specified. Neither the watt-hours nor the draw exists in the build, and seeding either would be
-        inventing the number the whole answer rests on. */}says draw comes from the item master, "measured per body — not a manufacturer figure", and asks Babin directly whether those figures are measured or specified. Neither the watt-hours nor the draw exists in the build, and seeding either would be inventing the number the whole answer rests on. {' '}
-        <strong style={{ color: 'var(--text)' }}>{/* TODO(decision) */}Not available yet </strong> — measured per body, or manufacturer spec?
+        {/* RULING 2026-10-14: a bulk copy edit half-replaced this sentence; restored as plain copy. §3.8 says draw comes from the item master, "measured
+            per body — not a manufacturer figure", and §12 asks whether those figures are measured or specified. Neither
+            the watt-hours nor the draw exists in the build, and seeding either would invent the number the answer rests
+            on. TODO(decision): measured per body, or manufacturer spec? */}
+        <strong style={{ color: 'var(--text)' }}>Draw is typed, not looked up.</strong> Battery watt-hours and power draw are
+        not recorded in the inventory yet, so enter both from the equipment.{' '}
+        <strong style={{ color: 'var(--text)' }}>Not available yet:</strong> filling them in from the inventory.
       </Gap>
     </>
   )
@@ -782,17 +785,18 @@ Each step rounds half-up to the whole rupee. Nothing is recomputed here. */ "Pri
             label: 'Outstanding',
             value: formatMoney(breakdown.outstanding),
             tone: breakdown.outstanding > 0 ? 'danger' : 'success',
-            note: /* Deposits are liabilities and never enter this figure (§2.2). */ "Deposits are liabilities and never enter this figure .",
+            note: /* Deposits are liabilities and never enter this figure (§2.2). */ "Deposits are liabilities and never enter this figure.",
           },
         ]}
       />
       <Gap>
-        {/* §5 — “a rental calculator that produces a different price to the booking page is worse than no calculator, because
-        someone will quote from it.” Every figure above comes from */}Use the rental pricing calculator for a quote. <code>{/* lib/money.ts */}Shared rental pricing </code>’s <code>price()</code>, the
-        same call the booking page makes. The spec’s last line, “a Manager may open the same figures in a real quotation
-        with one action”, needs a booking draft to hand off to; <code>/rentals/new</code> takes no prefill, so that action
-        is not drawn rather than drawn dead.{' '}
-        <strong style={{ color: 'var(--text)' }}>{/* TODO(decision) */}Not available yet </strong> — what should a quotation handoff carry?
+        {/* RULING 2026-10-14: a bulk copy edit half-replaced this sentence; restored as plain copy. §5 — “a rental calculator that produces a different
+            price to the booking page is worse than no calculator, because someone will quote from it.” Every figure above
+            comes from lib/money.ts's price(), the same call the booking page makes. The spec's “a Manager may open the same
+            figures in a real quotation with one action” needs a booking draft to hand off to; /rentals/new takes no
+            prefill, so that action is not drawn. TODO(decision): what should a quotation handoff carry? */}
+        These figures use the same pricing as the booking page, so a quote from here matches the rental.{' '}
+        <strong style={{ color: 'var(--text)' }}>Not available yet:</strong> opening these figures as a new rental.
       </Gap>
     </>
   )
@@ -1397,8 +1401,8 @@ export default function Tools({ embedded = false }: ToolsProps = {}) {
             <Card title="Favourite Tools">
               {favouriteTools.length === 0 ? (
                 <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.55 }}>
-                  {/* Nothing flagged yet. The flag on a tool adds it here, and the list is kept in this browser — §6 makes
-                  favourite a flag on a tool, never a slice of the total. */}Nothing flagged yet. The flag on a tool adds it here, and the list is kept in this browser — makes favourite a flag on a tool, never a slice of the total. </p>
+                  {/* RULING 2026-10-14: a bulk copy edit half-replaced this sentence; restored as plain copy. §6 makes favourite a flag on a tool, never a slice of the total. */}
+                  Nothing flagged yet. The flag on a tool adds it here, and the list is kept in this browser. </p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {favouriteTools.map((t) => (
@@ -1446,8 +1450,9 @@ export default function Tools({ embedded = false }: ToolsProps = {}) {
                 More — show every tool →
               </button>
               <p style={{ margin: '10px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.5 }}>
-                {/* §0 — */}Not tracked yet. <strong style={{ color: 'var(--text)' }}>Backup Database</strong> {/* is deliberately not here. The render
-                puts it one press from a Rental Officer, against Administration §25.2’s Owner-only, 2FA-gated rule. */}Restore is available in Settings. </p>
+                {/* RULING 2026-10-14: a bulk copy edit half-replaced this sentence; restored as plain copy. §0 — Backup Database is deliberately not here: the
+                    render puts it one press from a Rental Officer, against Administration §25.2's Owner-only, 2FA-gated rule. */}
+                <strong style={{ color: 'var(--text)' }}>Backup Database</strong> is not on this page — backup and restore are in Settings. </p>
             </Card>
           </div>
 
@@ -1514,15 +1519,17 @@ export default function Tools({ embedded = false }: ToolsProps = {}) {
               <RailRow label="Opened this session" value={String(recent.length)} flag />
             </div>
             <p style={{ margin: '10px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.5 }}>
-              {/* §6 — */}Not tracked yet. <span className="figure">Available + Unavailable = Registered</span>, and favourite and recently used
-              are flags that overlap available, never segments beside it. Both figures are counted from the registry, so
-              they cannot drift the way the render’s 98 + 6 = 104 against 118 does.
+              {/* RULING 2026-10-14: a bulk copy edit half-replaced this sentence; restored as plain copy. §6 — favourite and recently used are flags that overlap
+                  Available, never segments beside it; both are counted from the registry so they cannot drift (the render's
+                  98 + 6 = 104 against 118). */}
+              <span className="figure">Available + Unavailable = Registered</span>. Favourite and recently used tools are counted
+              inside Available, never added beside it.
             </p>
           </Card>
 
           <Card title="What Tools owns">
             <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.55 }}>
-              <strong style={{ color: 'var(--text)' }}>Tools owns only what has no home elsewhere</strong> {/* (§1). A
+              <strong style={{ color: 'var(--text)' }}>Tools owns only what has no home elsewhere</strong>{/* (§1). A
               deep-linked tool opens the owning module with the right filter and carries */}. A deep-linked tool opens the owning module with the right filter and carries {' '}
               <em>that module’s</em> permissions — backup, integrations and diagnostics answer to Administration, not to
               this page.
@@ -1541,10 +1548,10 @@ export default function Tools({ embedded = false }: ToolsProps = {}) {
           */}
           <Card title="Alerts">
             <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.55 }}>
-              {/* Empty on purpose. §10 — */}Empty on purpose. <strong style={{ color: 'var(--text)' }}>alerts read the owning module</strong>, and
-              none of the render’s four belongs to Tools: labels are Inventory’s, warranties are Inventory ▸ Maintenance’s,
-              the backup state is Administration’s and pending approvals are Documents’. Restating them here is how the
-              render ends up claiming a backup was missed while the Backup module records one at 02:15 the same morning.
+              {/* RULING 2026-10-14: a bulk copy edit half-replaced this sentence; restored as plain copy. §10 — alerts read the owning module; restating them here is how
+                  the render ended up claiming a backup was missed while the Backup module recorded one that morning. */}
+              Empty on purpose. <strong style={{ color: 'var(--text)' }}>Alerts appear in the module they belong to</strong>: labels
+              in Inventory, warranties in Inventory ▸ Maintenance, backups in Administration and pending approvals in Documents.
             </p>
           </Card>
 
@@ -1562,10 +1569,11 @@ export default function Tools({ embedded = false }: ToolsProps = {}) {
               <ShortcutRow keys="Ctrl / ⌘ + B" what="Scanner" />
             </div>
             <p style={{ margin: '10px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.5 }}>
-              {/* Only the two the shell actually binds are listed. §7 proposes ⌘K as the primary way into a tool — type */}Use the keyboard shortcuts shown below. {' '}
-              <span className="figure">dof</span> or <span className="figure">timecode</span> and it opens — but the
-              palette indexes navigation only and cannot reach this registry. The shell owns it; see the note in the
-              handover.
+              {/* RULING 2026-10-14: a bulk copy edit half-replaced this sentence; restored as plain copy. Only the two shortcuts the shell actually binds are listed. §7
+                  proposes ⌘K as the primary way into a tool ("type dof or timecode and it opens"), but the palette indexes
+                  navigation only and cannot reach this registry; the shell owns that change. */}
+              The search palette (<span className="figure">Ctrl / ⌘ + K</span>) finds pages, not individual tools — use the
+              shortcuts above.
             </p>
           </Card>
         </Rail>

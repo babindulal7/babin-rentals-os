@@ -1161,7 +1161,7 @@ function DemoPulse() {
                 </table>
               </DataTableShell>
               <p style={{ margin: 0, padding: '10px 12px', borderTop: '1px solid var(--border)', fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-                Ageing is measured from {formatAd(figures.to)}{/* , the period's last day — the one clock this page uses (§4.3). */}, the period's last day — the one clock this page uses . </p>
+                Ageing is measured from {formatAd(figures.to)}{/* , the period's last day — the one clock this page uses (§4.3). */}, the period's last day — the one clock this page uses. </p>
             </Card>
           )}
         </div>
