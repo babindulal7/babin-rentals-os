@@ -1,9 +1,10 @@
 # Progress Log
 
-## 2026-10-15 — Record Payment preselection safety merged & clean UI improvements verified
+## 2026-10-15 — Merged payment preselection safety, interactive revenue charts & clean UI verified
 
 **Did**
 - Merged `origin/claude/payment-no-wrong-client-default` into `main`: fixes critical money-safety bug where opening Record Payment from the Rentals list or Finance modal preselected the first payable invoice across all clients and filled its outstanding balance. Now `defaultInvoiceId` in `RecordPaymentModal.tsx` preselects only when unambiguous (caller named an invoice, a single invoice, or all invoices belong to one booking); otherwise displays "Select an invoice…" placeholder with empty amount. The Rentals list explicitly passes the selected booking's payable invoice.
+- Merged `origin/feat/interactive-revenue-charts-20261015` into `main`: replaced fabricated/mock revenue statistics with live ledger-aggregated issued invoice monthly trends (`reportRevenueTrend.ts`, `revenueTrend.ts`), added accessible `InteractiveRevenueTrend.tsx` chart with responsive touch/keyboard focus, added 10 unit tests (`src/lib/intel/revenueTrend.test.ts`), and metric provenance audit (`docs/INTERACTIVE_REPORT_CHARTS_PHASE1.md`).
 - Verified clean UI layout improvements from 2026-10-15 in `main`:
   - Resolved Booking Detail header action crowding: moved status, cancellation, and sub-rental badges to `PageHeader status={...}` in Zone 1.
   - Collapsed empty action slots globally in `src/components/shell/shell.css`, recovering 150px–266px header space.
@@ -19,8 +20,8 @@
 
 **Verified**
 - TypeScript strict typecheck passed exit 0 (`npm run typecheck`).
-- Unit and modal tests passed: `RecordPaymentModal.test.tsx` and `RecordPaymentModal.prefill.test.tsx` (21/21 passed).
-- Full test suite passed exit 0: 350 test files, 4,466 tests passed (`npm test`).
+- Unit and modal tests passed: `RecordPaymentModal.test.tsx` and `RecordPaymentModal.prefill.test.tsx` (21/21 passed), `revenueTrend.test.ts` (10/10 passed).
+- Full test suite passed exit 0: 356 test files, 4,507 tests passed (`npm test`).
 - WCAG AA contrast check passed: 82/82 pass, 0 fail (`npm run check:contrast`).
 - Database verification gates passed: `npm run check:pglite` (160/160 migrations applied, 0 view leaks, 0 function leaks, 0 definer hygiene issues), `npm run check:lifecycle` (30/30 lifecycle steps green).
 - Production build passed exit 0 (`npm run build`).
@@ -34,12 +35,13 @@
 | Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
 | Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
 | Overall | mean of five | ≈ 99% | +0 |
-Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-15T07:45:25.274Z). Suite: 4497/4497 passed (recorded 2026-10-15T07:45:11.000Z).
-Gates read from .lifecycle-result.json, written 2026-10-15T07:45:38.684Z.
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-15T07:57:19.221Z). Suite: 4507/4507 passed (recorded 2026-10-15T07:57:06.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-15T07:57:34.294Z.
 Counted by `npm run completion`, not typed.
 
 ### Remaining
 - Production deployment and live Supabase application after owner backup protocol (N-5).
+- Review `origin/fix/2026-10-15-discount-vat-payment-integrity` with database migration 0164.
 - Continuous visual alignment with future Booqable-style micro-interactions across remaining secondary modals.
 
 ## 2026-10-14 — Record Payment no longer preselects another client's invoice
