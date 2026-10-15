@@ -1,5 +1,31 @@
 # Progress Log
 
+## 2026-10-08 — Extend Rental's fields are named for screen readers
+
+**Did**
+- `ExtendRentalModal`: "Additional Days", "Daily Extension Rate (Rs)" and "Reason for Extension" had visible labels bound to nothing (`input.labels` empty, unnamed in the accessibility tree). Each control now has an id (`extend-rental-days` / `-daily-rate` / `-reason`) and its label a matching `htmlFor`; visible text and the `*` markers are unchanged. The authorization checkbox kept its wrapping label and also got `extend-rental-authorized` + `htmlFor`.
+- New `modals/__tests__/ExtendRentalModal.test.tsx`: every input/select/textarea has `label[for]` / `aria-label` / `aria-labelledby` and is focusable (the RecordPaymentModal pattern), and each control's `labels` reads its exact visible text.
+
+**Verified**
+- New test 2/2; both fail against the unfixed modal. tsc clean. `lint:ui-copy` clean. `lint:shell` reports only the known `RentalPricingSection.tsx:459`. Rentals suite 403/404 — the one failure is the known `BookingClientSection` New Rental test. Full suite not re-run.
+- Browser (mock, served from this branch) on B-864 → More booking actions → Extend rental: all four controls return their label from `.labels`, each id is unique on the page, clicking each label focuses its control (the checkbox label still toggles it), Tab goes days → rate → reason, and the summary reads 23/7/2026 · Rs 3,000 for 2 × 1,500. Confirm was not pressed (no mock `extend_booking`). The browser pane's tree names the textarea by its placeholder — it does the same for a plain `<label for>` + `<input placeholder>` probe, so that is the inspector, not the page.
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 52 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 53 | 51 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-07T21:50:54.010Z). Suite: 4114/4114 passed (recorded 2026-10-07T21:28:13.867Z).
+Gates read from .lifecycle-result.json, written 2026-10-08T09:15:16.981Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Same dialog, not touched: inputs are 36px tall and the checkbox is browser-default size, below the 44px floor (Law 15) — `lint:shell` does not flag them. The reason textarea renders typed text in the browser's monospace default.
+- The extension itself is still not exercisable in mock mode (no `extend_booking` in the mock store).
+
 ## 2026-10-08 — Every page's filter toggle in the global header
 
 **Did**

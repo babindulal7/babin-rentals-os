@@ -237,10 +237,11 @@ export function ExtendRentalModal({
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-md)' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
+            <label htmlFor="extend-rental-days" style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
               Additional Days <span style={{ color: 'var(--danger)' }}>*</span>
             </label>
             <input
+              id="extend-rental-days"
               type="number"
               min={1}
               /* 0 renders as an empty box, never a typed-looking "0": the state
@@ -264,10 +265,11 @@ export function ExtendRentalModal({
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
+            <label htmlFor="extend-rental-daily-rate" style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
               Daily Extension Rate (Rs) <span style={{ color: 'var(--danger)' }}>*</span>
             </label>
             <input
+              id="extend-rental-daily-rate"
               type="number"
               min={1}
               value={dailyRate === 0 ? '' : dailyRate}
@@ -289,10 +291,11 @@ export function ExtendRentalModal({
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <label style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
+          <label htmlFor="extend-rental-reason" style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
             Reason for Extension <span style={{ color: 'var(--danger)' }}>*</span>
           </label>
           <textarea
+            id="extend-rental-reason"
             rows={2}
             placeholder="e.g. Weather delay, shoot extension requested by director..."
             value={reason}
@@ -337,8 +340,9 @@ export function ExtendRentalModal({
           </div>
         </div>
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', fontSize: 'var(--t-meta)', cursor: 'pointer' }}>
+        <label htmlFor="extend-rental-authorized" style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', fontSize: 'var(--t-meta)', cursor: 'pointer' }}>
           <input
+            id="extend-rental-authorized"
             type="checkbox"
             checked={confirmed}
             onChange={(e) => setConfirmed(e.target.checked)}
