@@ -45,7 +45,7 @@ export default defineConfig({
        the behaviour of code that is no longer mounted, so a failure there would
        report a defect in something nobody can reach. Restoring a screen means
        moving it back and its suite comes with it. */
-    exclude: ['node_modules/**', 'src/archive/**'],
+    exclude: ['node_modules/**', 'src/archive/**', '.claude/**'],
     // Explicit imports from 'vitest' in every file — no ambient globals, so
     // `tsc --noEmit` typechecks the suites with the same strictness as `src/`.
     globals: false,
