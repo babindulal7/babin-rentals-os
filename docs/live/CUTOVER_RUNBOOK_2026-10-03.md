@@ -52,11 +52,14 @@ Before any migration is executed, perform a physical database snapshot:
 ### Step 1.1: Capture Timestamped Dump
 Run from the repository root:
 ```powershell
-# In PowerShell:
-$env:DB_URL = "postgresql://postgres.[project-ref]:[password]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
-.\scripts\backup-db.ps1 -DbUrl $env:DB_URL
+# In PowerShell. The script prompts for the connection string with hidden input.
+# Do not type the URL on the command line or into $env:… — that writes the
+# password into PowerShell history (N-8, corrected 15 Oct 2026).
+.\scripts\backup-db.ps1
 ```
-*Output file:* `production_backup_YYYYMMDD_HHmmss.sql`
+*Output file:* `backups\production_backup_YYYYMMDD_HHmmss.sql` (git-ignored; holds client PII).
+The script fails, and renames the file `….sql.incomplete`, unless pg_dump's
+`PostgreSQL database dump complete` footer is present. It prints size and SHA-256.
 
 ### Step 1.2: Verify Dump Integrity
 Verify the dump is non-empty and contains valid DDL/data:

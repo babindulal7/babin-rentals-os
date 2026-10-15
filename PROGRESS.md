@@ -1,5 +1,45 @@
 # Progress Log
 
+## 2026-10-15 — Remaining work: 14 Oct branch merged, Operations/Settings headers, backup script, live registry refreshed
+
+**Did**
+- Found why the morning review called the staging harness "missing": the 14 Oct work (Delivery honesty guards, Finance role guards, client-import recovery, Intel drafts, `artifacts/staging-verification-2026-10-14/`, seven PROGRESS entries) sat on `fix/ci-mock-tests-and-baseline-2026-10-14` and never reached `main`. Merged it. Hand-resolved `RentalHoverCard.tsx`: the `fea7cdf` class layout and dates grid, plus 14 Oct's draft numbering, "Draft rental total", "Not recorded" and the sticky total/tabs summary (`.smart-intel-summary`).
+- BLOCKER-02 / Task 3.1. Measured first. At 375px Operations overflowed its header by 207px, with the title 0px wide, three controls off-screen and Filters overlapping Search. Settings' title was 0px, the profile button 2px off-screen, and "View audit log" 34px tall. At 768px both titles were still 0px. Below 1280px the secondary actions now live in More (`OperationsQueues.tsx`, `Settings.tsx`). Phones also move Filters into More and shorten the verbs ("Edit", "Add"). A fresh `DataAgeBadge` takes no width there (`quietWhenFresh`; Stale and Offline keep their words). The Settings phone header drops its redundant section badge. Fixed the Settings profile card, where the theme switcher covered the company name at 375px (flex basis).
+- `scripts/backup-db.ps1` printed the full DB URL, password included (N-8). It now never echoes it, passes the password via `PGPASSWORD` for one call, prompts with hidden input, writes to git-ignored `backups/`, renames a dump without pg_dump's completion footer to `.incomplete`, and prints size and SHA-256. Updated BACKUP_PROTOCOL §1 and CUTOVER_RUNBOOK step 1.1, which both told Babin to type the URL on the command line.
+- Read the live `supabase_migrations.schema_migrations` (read-only listing; nothing applied or changed) into `docs/live/schema_migrations_2026-10-15.txt`. Live records every local migration through 0156, so pending is **0157–0162**, not "0125–0160". Fixed `plan-migrations.mjs`, which dropped the three rows versioned `V1`/`V2`/`V3` (0150/0153/0155) and called them pending. Made its selftest's "new, not a rename" cases accept applied as well as pending.
+- Reconciled `docs/REMAINING_WORK.md` (correction table plus inline **[15 Oct]** marks) and BLOCKERS.md (BLOCKER-02 resolved; BLOCKER-03 pending set). Logged the previously unlogged `fea7cdf` catalogue fix (Task 3.2, 44px at 320/390/768).
+
+**Ruled**
+- `RULINGS-2026-10-15.md`: compact header below desktop; quiet fresh badge (same doctrine as the 13 Oct tablet sync chip); backup-script credential hygiene; planner parsing; merge resolution. Each row carries its revert, and `// RULING 2026-10-15` comments sit at the code sites. No permission, capability, handler, workflow gate or money visibility changed.
+- No migration was WRITTEN or APPLIED. The existing chain is locally VERIFIED (PGlite and lifecycle green in the same run). Live access was a single read-only migration listing. No backup was run: pg_dump is not installed here, and running it is Babin's step.
+
+**Verified**
+- Browser (mock build, Owner, emulated viewports). Operations and Settings at 360/375/390: header overflow 0, titles in full (Operations 78px, Settings 56px), every control 44×44, no overlaps, document overflow 0. At 768/1024 the titles are back (85/90px and 48/65px). At 1280 the desktop layout is unchanged and the audit link is now 44px. Driven at 390px: More → Filters opened the drawer and Escape closed it; More → Delivery & Logistics reached `/operations/delivery`; Settings Edit → Done, with More holding Discard/Reset/Export/Audit; Discard left edit mode; View audit log reached `/admin/audit`. Profile card: no overlap at 360/375. The merged rental Intel card rendered dates grid, sticky total (Rs 8,788) and tab counts. Console errors 0. Evidence: `artifacts/header-decrowding-2026-10-15/` (`measurements.json`, screenshots).
+- One emulator caveat: switching straight from 1280 desktop to 375 mobile emulation left the viewport hook on tablet until reload, while live 390→768 and 1024→1280 transitions updated. Recorded as an emulation artifact, not proven on a device.
+- Backup script against a stub pg_dump with a fake password containing `@`, `#` and `%21`. The password never appeared in output or in pg_dump's arguments, `PGPASSWORD` arrived decoded and was cleared afterwards, and the success, missing-footer, failing-exit, no-pg_dump and malformed-URL paths all behaved.
+- `npm run db:plan` on the 15 Oct export: 155 rows, 146 applied, pending 0047 (excluded seed) plus 0157–0162. It still exits 2 by design (7 renames, 0047, 2 unexplained rows await Babin). `db:plan:selftest` PASS 12/12 against both the 8 Sep and 15 Oct exports.
+- New and updated tests: Operations header phone/tablet/desktop (4; three fail with the fix switched off), Settings header (7 new; the Reset test now reaches Reset through More at jsdom's tablet width), DataAgeBadge `quietWhenFresh` (4).
+- Gates, this run: typecheck 0; lint 0; lint:shell 655 files PASS; lint:ui-copy PASS; contrast 82/82; check:fixtures 645 files, 0 imports; **check:pglite 160/160 plus view/RPC/definer gates and check:lifecycle 30/30 in the same run**; vitest 350 files / 4,479 tests, all passing (`.test-result.json` generated from the JSON reporter); build exit 0, 297 precache entries.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-14T19:58:31.669Z). Suite: 4479/4479 passed (recorded 2026-10-14T20:08:29.661Z).
+Gates read from .lifecycle-result.json, written 2026-10-14T19:59:10.541Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Babin: install the PostgreSQL client tools and run `.\scripts\backup-db.ps1` (it prompts; do not paste the URL on the command line). Then answer the cutover questions `npm run db:plan` lists (7 renames, 0047, 2 unexplained rows) and provision staging for the 0157–0162 rehearsal and the harness in `artifacts/staging-verification-2026-10-14/`.
+- Decisions that block code: PLAN §4.64(c)(1) for Delivery persistence (Task 2.1); G3 for pricing snapshots (Task 2.2, next free migration 0163).
+- Unblocked for the next agent session: Task 3.4 (five-state screens), Task 4.2 (125% zoom audit), Task 2.4 (outbox wiring). Physical phone/iPad checks of today's headers are still pending (Task 4.1).
+- This work is committed on `claude/remaining-task-49862e` (merge `345009d`, then the follow-ups) and is not on `main` yet.
+
 ## 2026-10-15 — Remaining work register evidence review
 
 **Did**
@@ -34,6 +74,265 @@ Counted by `npm run completion`, not typed.
 - Reconcile REMAINING_WORK's claims and dependencies against dated evidence before using it as an execution checklist.
 - Repair/redact backup URL logging before running that script; refresh the live migration export and resolve planner blockers before Babin's N-5 apply step.
 - Locate or implement the missing staging harness and record the exact commit/environment for future gate and browser acceptance results.
+
+## 2026-10-14 — Equipment and Client Intel browser acceptance; sticky tabs and contained portal clicks
+
+**Did**
+- Reconnected the existing Chrome tab. Current server identified mock mode; checked the supplied sample records at measured 1440px desktop, 769px tablet and 360px phone CSS widths.
+- Fixed Equipment tabs scrolling out of view: shared Preview tabs now stay sticky across entity cards. Kept the existing rental sticky total/warning summary.
+- Reproduced Intel tab clicks opening Inventory's separate row quick-view drawer. Contained React portal clicks from the Intel overlay and touch sheet so card controls cannot activate the originating row. Extended the focused-control regression to assert the parent row action is not invoked.
+- Drove Equipment and Client tabs, complete Current lists, phone long press, Notes-only editor mounting, client-to-rental replacement and Back. Saved six screenshots and measured rectangles/counts under artifacts/intel-cards-2026-10-14/.
+- Disabled temporary touch emulation and successfully reset the viewport override. Preserved the existing browser zoom and all app records; no notes, block flags, payments or transitions were saved.
+
+**Ruled**
+- No new product, permission or workflow decision. Card interaction fixes preserve existing action and database authority.
+- No migration was WRITTEN, APPLIED or PRODUCTION-VERIFIED. Existing migration chain locally VERIFIED by both database gates. No live Supabase changes or production deployment.
+- Mock browser acceptance is not real authenticated-role acceptance. Requested an existing signed-in Warehouse or Accounts live test session, without asking for passwords. No such session was available during this run; live checks remain pending.
+
+**Verified**
+- Continuation session check: the only available Babin browser tab still displays the mock-mode banner. No signed-in live Warehouse/Accounts session is available; authenticated-role checks remain pending. No application records or permissions were changed.
+- Equipment: seven complete Current entries, no horizontal card overflow at all three measured widths, sticky tabs and final entries readable after scrolling. After the click fix, Notes to Current left exactly one dialog and zero notes editors in Current.
+- Client: both Current rentals rendered; no horizontal card overflow at all three widths. Notes had one editor; Current had zero. Phone long press opened the sheet; rental #825 replaced it with Back available, and Back restored the client while the route stayed /clients and one dialog remained.
+- Identifier-only hover: contact-cell hover produced zero dialogs; name hover opened the card after the delay. Pointer entry into the card stayed open for another 400ms. Wall-clock samples include tool transport: zero dialogs at 39/176/301ms, one at 424ms. Exact 299/300ms boundary remains automated, not claimed from those samples. Initial and adjacent hover timers both remain 300ms, touch 500ms.
+- Required sequence PASS, exit 0: typecheck; full suite 348 files / 4,446 tests; PGlite 160/160 plus exposure/definer gates; lifecycle 30/30; production build (297 PWA entries). Full source lint and contrast PASS, 82/82. Focus/portal regression passed in the full run.
+- npm run completion executed; its generated block follows. Evidence: artifacts/intel-cards-2026-10-14/README.md and checks.json; gate logs .intel-cards-next-*.log.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-14T16:14:13.531Z). Suite: 4446/4446 passed (recorded 2026-10-14T16:18:43.7928454Z).
+Gates read from .lifecycle-result.json, written 2026-10-14T16:14:23.983Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Real authenticated Warehouse/Accounts role checks and a blocked live client/rental need the signed-in test session requested from the user. Current mock directory has zero blocked clients; no client was blocked to manufacture a case.
+- Existing blocked-client and role-omission DOM/payload and local RLS tests pass. Live JWT/PostgREST acceptance and production verification remain pending; visual acceptance completed here covers the selected Equipment/Client mock records.
+- Production deployment and live migration application remain outside this local verification.
+## 2026-10-14 — Smart Intel live visual checks: persistent totals, touch targets and focus dismissal
+
+**Did**
+- Drove the existing Chrome Rentals tab through desktop, tablet and phone card checks. Reproduced totals/tabs disappearing during long-list scroll and a 19.5px-high phone identifier target.
+- Kept the rental total, warning and tabs in a compact sticky summary while all item lines scroll. Shared Intel wrappers now have a 44px height/width floor.
+- Reproduced Escape restoring focus and immediately reopening Intel. Programmatic focus return now skips the ordinary focus-open handler; the Close control also returns focus without reopening. Added a regression using actual focused card controls.
+- Authorized rentals without a persisted total say Not recorded; empty Notes says No notes recorded. Neither state fabricates a financial amount or readiness.
+- Saved phone/tablet screenshots and exact observed checks/limits under artifacts/intel-visual-2026-10-14/README.md. No note, record, payment or workflow transition was saved during browser checks.
+
+**Ruled**
+- No new product decision, permission, financial arithmetic or workflow authority. Notes remain isolated to Notes and role payload boundaries remain unchanged.
+- No migration was WRITTEN, APPLIED or PRODUCTION-VERIFIED. Existing migration chain locally VERIFIED by both database gates; live Supabase application remains pending.
+- Browser connection detached during later checks. Supported recovery/reclaim did not restore it. Remaining browser and authenticated-role acceptance is pending; no complete multi-role production acceptance is claimed.
+
+**Verified**
+- Live Chrome: seven complete draft item lines and matching list/card total; scrolling to the final item with total/tabs visible in phone and tablet; no measured horizontal card overflow. Phone trigger increased from 45.18 by 19.5px to 45.18 by 44px.
+- Touch long press opened the sheet without leaving Rentals; close dismissed it. Client link replaced the active card and Back restored the draft. Desktop Enter, adjacent-identifier ArrowDown, and corrected Escape dismissal/focus return were observed. The booked rental loaded eight complete lines representing ten item quantities, without asserting clearance or inventing its missing total.
+- Final required sequence PASS: typecheck; full suite 348 files / 4,446 tests; PGlite 160/160 with view/RPC exposure and definer hygiene gates; lifecycle 30/30; production build with 297 PWA entries. Full source lint PASS, contrast 82/82 PASS.
+- Earlier mid-edit checks failed while the focus correction and concurrent Delivery/Import changes were being completed. Fresh final checks passed; final Smart Intel regressions include both Escape and Close focus return, 300ms hover and touch long press.
+- npm run completion executed; generated block follows. Detailed local logs: .intel-visual-final-*.log.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-14T15:51:56.059Z). Suite: 4446/4446 passed (recorded 2026-10-14T15:52:33.8620383Z).
+Gates read from .lifecycle-result.json, written 2026-10-14T15:52:10.252Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Inventory/Clients directory visual acceptance, complete live pointer timing/safe-travel measurements, remaining core surfaces and alternate authenticated-role checks need a working browser connection. Current session proves selected Rentals flows, not every app surface or role.
+- Hover timing, blocked-client behavior and role omission passed automated checks; those conditions were not all independently exercised against live authenticated roles. Live JWT/PostgREST and production verification remain pending.
+- Temporary viewport reset could not be confirmed after debugger detachment; touch emulation had been disabled before desktop verification. Existing Chrome zoom was preserved; requested 390px phone override measured approximately 355 CSS px.
+- No production deployment or live migration application was performed.
+## 2026-10-14 — Button audit fixes: browser finish and local verification
+
+**Did**
+- Finished the attached button audit corrections already present in current source: shared Finance/Delivery/bulk CTAs, neutral accessible WhatsApp link, canonical lifecycle Badge/StatusKey/icon mapping, unified pending-edit indicators, and shared hover tokens. Preserved concurrent shared-boundary and hover-foreground improvements.
+- Browser discovered that the general floor button selector outranked the primary-verb selector. Raised the primary selector specificity in src/styles/theme.css so ordinary floor controls stay 48px and primary floor verbs actually reach 56px.
+- Fixed overlapping phone lifecycle labels through content-sized steps and contained horizontal scrolling; made the track keyboard-focusable, with visible focus and theme-token markers (src/components/ui/LifecycleProgress.tsx, src/styles/ui-v2.css).
+- Corrected the invalid justifyContent CSS declaration in src/modules/operations/delivery.css.
+- Saved exact change/contrast/verification report, JSON measurements, logs and screenshots under artifacts/button-consistency-2026-10-14/. No application redesign, calculation, permission, handler, schema or live-data change.
+
+**Ruled**
+- No new product or permission decision. Enforced the existing 44px ordinary / 48px floor / 56px primary-floor requirements and centralized status meanings.
+
+**Verified**
+- Fresh typecheck and full source lint passed exit 0. Full test runner summary: 347 files / 4,413 tests passed; final focused run after the later visual edits: 5 files / 71 tests, exit 0. A subsequent concurrent suite result may appear in the completion counter below; it is separate from this run's saved full-suite summary.
+- check:contrast passed 82/82, exit 0. check:pglite and check:lifecycle passed together in this run: 160/160 migrations, 30/30 lifecycle steps, both exit 0. No migration was written or applied to live Supabase.
+- Production build passed exit 0, including service worker generation and 296 precache entries. lint:shell passed 654 files; lint:ui-copy passed with zero violations. Scoped diff whitespace check passed for this continuation's application files.
+- Chrome standalone source preview: 42 recorded checks, zero page errors, exit 0. The 18 component combinations cover 375/820/1440px × light/dark/high-contrast × normal/floor. Verified contrast including hover brightness, visible keyboard focus, loading width, ordinary/floor/primary-floor heights and nonoverlapping lifecycle labels. Actual Finance/Delivery empty screens passed at all three widths in light/dark; Finance has exactly one 64px header.
+- Ordinary Vite HTML requests timed out, so browser verification used a standalone bundle of current source, CSS, fonts and the mock client. It is separate from the successful production build.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-14T08:30:35.694Z). Suite: 4415/4415 passed (recorded 2026-10-14T08:27:01.2822920Z).
+Gates read from .lifecycle-result.json, written 2026-10-14T08:30:44.919Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- The clean mock database has no invoices or delivery records: actual row Pay and status-dependent Dispatch/Confirm Delivered screen clicks remain unverified in the browser. Their source palette/state contracts and Finance capability gates passed component and focused tests; no records were fabricated for screenshots.
+- Full audit page-by-page acceptance, native devices, other browsers, and live JWT/PostgREST/production verification are outside this local finish. See artifacts/button-consistency-2026-10-14/REPORT.md for explicit coverage.
+
+## 2026-10-14 — Smart Intel saved drafts: complete items, consistent totals and honest workflow guidance
+
+**Did**
+- Fixed saved draft identifiers falling through the booking-only Intel loader. Active drafts now show every persisted item, client and dates, plus a role-authorized draft rental total.
+- Added a shared draft pricing selector using the existing financial engine. Rental list and Intel use the same total; included equipment, crew days, client pickup, VAT and advance separation follow the New Rental calculations.
+- Continue draft opens the saved New Rental draft. Converted and cancelled snapshots are refused as editable drafts. Missing client identifiers do not produce a broken client link.
+- Saved instructions appear only in Notes. Drafts do not mount the booking-notes writer against a draft ID. Packing and Payments explain that reservations and the rental ledger do not exist yet; draft readiness remains unknown.
+- Added loader, pricing and rendered-tab regressions for full lists, totals, note isolation, role/context omission and inactive draft refusal.
+
+**Ruled**
+- Opaque draft JSON is requested only where both existing booking-money and personal-data visibility allow it; database RLS remains authoritative. Money-free floor contexts refuse the draft read even for Owner.
+- No new migration was WRITTEN or APPLIED. Existing migration chain locally VERIFIED with both database gates; live application and PRODUCTION-VERIFIED remain pending. No live Supabase changes.
+- User selected automated checks after browser clicking/window activation failed. No live card or responsive browser acceptance is claimed for this entry.
+
+**Verified**
+- Required sequence PASS: typecheck, full suite 347 files / 4,415 tests, PGlite 160/160 with exposure/definer gates, lifecycle 30/30, production build (296 PWA entries).
+- Lint PASS; contrast 82/82 PASS. Full suite includes draft DOM, complete item list, Notes-only content and restricted payload coverage.
+- npm run completion executed; its generated block follows. Local gate logs retained as .intel-drafts-*.log.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-13T20:00:39.059Z). Suite: 4415/4415 passed (recorded 2026-10-14T08:27:01.2822920Z).
+Gates read from .lifecycle-result.json, written 2026-10-13T20:00:51.294Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live app checks at desktop, tablet and phone widths remain pending, per the user's automated-check preference. Automated DOM checks do not certify visual overflow in a real browser.
+- Live Supabase JWT/PostgREST and production verification remain pending Babin's application process. No migration application or production deployment was performed.
+## 2026-10-14 — Release baseline audit and Calendar phone header acceptance
+
+**Did**
+- Executed full baseline verification of all release gates: TypeScript typecheck, ESLint, PageShell lint (654 files), UI copy lint (4 tests), contrast check (82/82 WCAG AA), check:fixtures (644 files), PGlite migrations (160/160), lifecycle suite (30/30), Vitest suite (347 files, 4,405 tests), and production build (296 PWA assets).
+- Executed optional security and durability gates: check:anon (130 tables RLS, 20 public RPCs, denial invariants), test:audit-coverage (4 tables audited), test:race (concurrency invariants).
+- Published docs/release/2026-10-13/BASELINE.md and updated docs/release/2026-10-13/BLOCKERS.md.
+- Expanded src/modules/calendar/__tests__/CalendarHeader.test.tsx (4 tests) verifying phone de-crowding, Availability modal trigger, Filters drawer opening from More menu, and >=44px touch targets.
+
+**Ruled**
+- Follows RULINGS-2026-10-13 (Calendar phone header de-crowding and single 64px header standard).
+- No new migration was WRITTEN or APPLIED. The existing 160-migration chain is locally VERIFIED; production deployment and PRODUCTION-VERIFIED status remain HOLD under N-5 pending staging PostgREST/JWT verification and Owner sign-off.
+
+**Verified**
+- npm run typecheck: 0 errors. npm run lint: 0 errors.
+- npm run check:pglite: 160/160 applied cleanly.
+- npm run check:lifecycle: 30/30 steps green.
+- npm test: 347 files / 4,405 tests passed.
+- npm run build: production bundle built in 33.2s.
+- CalendarHeader.test.tsx: 4/4 tests passed in 1,096ms.
+- Contrast: 82/82 passed. Anon checks, audit trigger coverage, and race conditions all passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-13T20:00:39.059Z). Suite: 4329/4329 passed (recorded 2026-10-13T07:46:29.1524909Z).
+Gates read from .lifecycle-result.json, written 2026-10-13T20:00:51.294Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Address BLOCKER-02: De-crowd phone headers on Finance, Operations, and Settings.
+- Perform staging JWT & PostgREST verification for all 9 roles once staging environment is provisioned.
+- Physical iPad Safari and native browser zoom acceptance across remaining surfaces.
+
+## 2026-10-14 — Tablet header and Operations responsive acceptance
+
+**Did**
+- Completed the tablet healthy-sync spacing fix, Operations stage grid and phone footer, and local mock booking-number parity introduced on 13 October. Existing records and fixture IDs are preserved; legacy links resolve; local number aliases share a counter across reload.
+- Saved browser evidence at 320/390/768/1440px and updated the UI improvement plan and one-header acceptance record.
+
+**Ruled**
+- Follows RULINGS-2026-10-13: healthy tablet sync takes no width, abnormal states stay available; stage labels wrap and phone confirmation is 56px. No workflow gate, permission or pricing change.
+- No migration was WRITTEN or APPLIED. The existing chain is locally VERIFIED; production deployment and PRODUCTION-VERIFIED status remain pending.
+
+**Verified**
+- Typecheck and scoped ESLint passed. Full patch suite: 347 files / 4,405 tests passed, including Operations (12), header ownership (6), and mock booking navigation (2). Local PGlite 160/160 and lifecycle 30/30 passed; production and refreshed mock builds passed. Follow-up theme contrast: 82/82.
+- Browser: full Today title in a 64px header at 768px; Operations two-column stage navigation at 320/390px and four columns at 768/1440px; no document horizontal overflow. Phone confirmation measured 56px and Back 44px, both full-width.
+- Mock booking 864 opened two lines/four units. Completed Packing was read-only, Return reopened, Cleaning remained locked and incomplete return gates kept confirmation disabled. No booking or custody changes were submitted.
+- Evidence: artifacts/workflow-responsive-2026-10-13/. Browser cache bypass and viewport overrides were restored after testing. Dark Chromium emulation only; this is not physical iPad, native zoom or live JWT/PostgREST verification.
+- Concurrent sessions changed the shared checkout after the full run; those subsequent edits are not certified here. The generated counter below retains the shared recorded suite timestamp; the 4,405-test run is separately preserved in tests.log.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-13T13:31:48.507Z). Suite: 4329/4329 passed (recorded 2026-10-13T07:46:29.1524909Z).
+Gates read from .lifecycle-result.json, written 2026-10-13T13:32:03.077Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Recheck the newest shared-button build and enlarge New Rental catalogue View/Add Bundle controls: the earlier preview measured 26px height.
+- Complete remaining page, status, role, persistence and error-state acceptance in docs/UI_UX_IMPROVEMENT_PLAN.md; full-app acceptance is incomplete.
+- Physical iPad Safari, native browser zoom and staging JWT/PostgREST checks remain pending. No live migration was applied.
+## 2026-10-14 — Scrape adoption completed: client CSV saving, export scope and shortage drill-downs
+
+**Did**
+- Completed the remaining archive-adoption work: client CSV commits use the existing atomic record-editor action; strict field/mapping validation, database duplicate checks, immutable per-row retry keys, confirmed progress, client links and stop/retry controls replace the previous disabled commit surface.
+- Kept each row independent and auditable. A failure or uncertain confirmation leaves later rows pending. Equal names are never collapsed. Unsupported membership/separate-company mappings are explained before saving; existing client records are not merged or overwritten.
+- Added explicit export row scope to audit metadata and loaded-directory guidance. Retained the 7 October rental visible-column/integer-paisa/deposit-separation fix. Reused the shared CSV quoter.
+- Corrected shortage windows to the configured Nepal operational day. Added equipment/calendar/booking links, refresh, strict invalid-date handling and refusal on an unreadable hold. Removed state mutation from shortage render calculation.
+- Added engine/action/UI regressions and an isolated browser harness. Updated the original assessment with the implementation follow-up and evidence under artifacts/scrape-adoption-2026-10-13/README.md.
+
+**Ruled**
+- The existing 13 October ruling records the implementation: CSV import requires creation plus full client-contact access (Owner/Admin/Manager/Coordinator); Warehouse retains walk-in intake and Accounts retains reads without creation. No capability or database grant was widened. Shared client defaults remain authoritative.
+- No new migration was WRITTEN, APPLIED or PRODUCTION-VERIFIED. Existing migration chain was locally VERIFIED by both database gates. No live Supabase data or configuration was changed.
+
+**Verified**
+- Runtime gates captured 13 October: typecheck and lint PASS; full suite 345 files / 4,392 tests PASS; PGlite 160/160, view/RPC exposure and definer hygiene PASS; lifecycle 30/30 PASS; production build PASS (296 PWA entries); contrast 82/82 PASS; UI-copy lint and its four checker tests PASS; fixture source/bundle isolation PASS.
+- Browser acceptance completed 14 October using a separately compiled mock build and fabricated records: two equal-name/different-phone clients saved, both persisted after reload, repeated import blocked as duplicates; phone document 390px at a 390px viewport, no page errors. Screenshots and browser-result.json are retained.
+- Initial development-server browser attempts timed out. The compiled harness reached the app; first-use onboarding was dismissed, then the actual file-upload and save controls were driven successfully. This is local mock acceptance, not production JWT/PostgREST certification.
+- npm run completion executed. The copied counter block below reads the older shared stored test snapshot (4,329); the fresh 4,392-test run is in this session's tests.log. Percentages were generated by the script, not typed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-13T13:31:48.507Z). Suite: 4329/4329 passed (recorded 2026-10-13T07:46:29.1524909Z).
+Gates read from .lifecycle-result.json, written 2026-10-13T13:32:03.077Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- No source work remains in the approved reuse scope.
+- Retry keys and mappings for an unfinished import remain only while its screen is open; keep the CSV and use Retry before leaving. Reload recovery of an unfinished batch is not implemented. Membership remains in the existing Membership workflow.
+- Live JWT/PostgREST acceptance and deployment remain outside this local implementation; no production migration or write was performed.
 
 ## 2026-10-13 — Higher-contrast button boundaries and persistent blue New Rental action
 

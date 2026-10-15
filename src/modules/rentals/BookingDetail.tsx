@@ -660,7 +660,7 @@ function NotesCard({
       title={hint}
       className="tap"
       style={{
-        height: 28,
+        minHeight: 44,
         padding: '0 12px',
         borderRadius: 'var(--r-badge)',
         /* SELECTED is a control state, not a booking status. This used
@@ -1562,6 +1562,7 @@ function BookingDetailView() {
   const segments: PhoneSegment[] = canBookingMoney ? ['Items', 'Money', 'Docs'] : ['Items', 'Docs']
   const [segment, setSegment] = useState<PhoneSegment>('Items')
   const onPhone = viewport === 'phone'
+  const compactHeader = viewport !== 'desktop'
   const activeSegment: PhoneSegment = segments.includes(segment) ? segment : 'Items'
   /** On phone each segment owns the page; at every other width all three show. */
   const showSegment = (s: PhoneSegment) => !onPhone || activeSegment === s
@@ -2069,12 +2070,12 @@ function BookingDetailView() {
   ]
 
   /*
-   * RULING 2026-10-13: a phone header keeps the title, the stage action, a 44px
+   * RULING 2026-10-14: phone and tablet headers keep the title, the stage action, a 44px
    * Operations button and ONE More. Print and the booking items join the rental
    * More (which already carries Cancel), and WhatsApp choices are listed flat
-   * because that menu has no submenus. Desktop is unchanged.
+   * because that menu has no submenus. Tablets share this geometry; desktop is unchanged.
    */
-  const phoneMoreItems = [
+  const compactMoreItems = [
     { label: 'Print booking', icon: 'file' as const, onClick: () => window.print() },
     ...bookingMoreItems.flatMap((item) =>
       item.submenu
@@ -2114,10 +2115,10 @@ function BookingDetailView() {
             extra={
               <>
                 {/* On a phone the stepper's "Step n of 6 — Stage" already names it; the title keeps the width. */}
-                {!onPhone && <Badge status={stage} />}
+                {!compactHeader && <Badge status={stage} />}
                 {booking.isCancelled && <Badge flag="Cancelled" />}
                 {subRental && <SubRentedMark label="Sub-rental" />}
-                {booking && (
+                {booking && !compactHeader && (
                   <WhatsAppShareButton
                     key="wa"
                     clientPhone={clientPhone}
@@ -2167,13 +2168,13 @@ function BookingDetailView() {
                     selectedCount={1}
                     ariaLabel="More actions for rental"
                     onActionCompleted={refreshBookingData}
-                    compact={onPhone}
-                    {...(onPhone ? { extraItems: phoneMoreItems } : {})}
+                    compact={compactHeader}
+                    {...(compactHeader ? { extraItems: compactMoreItems } : {})}
                   />
                 )}
               </>
             }
-            secondary={onPhone ? [
+            secondary={compactHeader ? [
               <BookingOperationsMenu
                 key="ops"
                 bookingNo={id}
@@ -2212,7 +2213,7 @@ function BookingDetailView() {
                 Print booking
               </Button>,
             ].filter(Boolean)}
-            overflow={onPhone ? undefined :
+            overflow={compactHeader ? undefined :
               <OverflowMenu
                 ariaLabel="More booking actions"
                 items={[

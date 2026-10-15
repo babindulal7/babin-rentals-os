@@ -5,6 +5,23 @@
 **Governing Authority:** [`docs/00_READ_FIRST.md`](00_READ_FIRST.md) · [`CLAUDE.md`](../CLAUDE.md) · [`AGENTS.md`](../AGENTS.md) · [`docs/PERMISSIONS.md`](PERMISSIONS.md)  
 **Current Phase:** **Phase 7 — Pre-Deployment Production Verification & Migration Cutover**  
 **Production Release Status:** **HOLD** (Governed by Rule N-5: No unreviewed or un-rehearsed database pushes to live Supabase).
+**Reconciled:** 15 October 2026 against PROGRESS, the merged 14 Oct branch and a fresh read-only export of the live migration registry. Corrections are marked **[15 Oct]**; see the table directly below.
+
+---
+
+## Reconciliation — 15 October 2026
+
+| Register claim (v1.0.0) | Evidence | Corrected status |
+|---|---|---|
+| Production at ~0124; 0125–0160 pending (36) | Live `schema_migrations` read 15 Oct (`docs/live/schema_migrations_2026-10-15.txt`): every local migration through **0156** is recorded, incl. 0150/0153/0155 under versions V1–V3 | Pending = **0157–0162 (6)**. The 0047 seed stays excluded; 7 renames and 2 unexplained live rows still need Babin's confirmation (`npm run db:plan`) |
+| Task 1.1 backup READY TO RUN | `scripts/backup-db.ps1` printed the full URL, password included (N-8) | Script repaired 15 Oct. Ready for **Babin** to run; needs the PostgreSQL client tools (pg_dump is not installed on this machine) |
+| Staging harness and report missing | They lived on the unmerged branch `fix/ci-mock-tests-and-baseline-2026-10-14` | Merged 15 Oct: `artifacts/staging-verification-2026-10-14/` |
+| Task 2.2 migration `0161_…` | 0161 and 0162 are already taken | Next free number is **0163**; G3 is still an open decision |
+| Task 3.1 Operations/Settings headers ACTIVE | Measured 15 Oct: 207px overflow at 375px; titles 0px wide at 375 and 768 | **DONE 15 Oct** (phone and tablet), evidence `artifacts/header-decrowding-2026-10-15/` |
+| Task 3.2 catalogue buttons 26px | `fea7cdf`; `artifacts/catalogue-touch-2026-10-15/measurements.json` | **DONE**: 44px at 320/390/768 |
+| Task 2.1 Delivery unimplemented | 14 Oct branch: live mode refuses reads and writes with an explanation; seed rows only with `VITE_MOCK_SEEDED` | Still not persisted. **Blocked on PLAN §4.64(c)(1)** (where a delivery lives) |
+| Suite 348 files / 4,446 tests | 14 Oct branch run | Superseded by the 15 Oct run (PROGRESS) |
+| BS table "through 2083" | `src/lib/bs.ts` covers **2078–2095**; only 2083 was cross-checked against the gazette | Re-verify 2084+ against the official publication when issued |
 
 ---
 
@@ -27,7 +44,7 @@ Despite the local test suite being 100% green, **production deployment remains o
 
 ### Task 1.1: Docker-Free Production Database Backup
 - **Priority:** P0 (Release Blocker)
-- **Status:** READY TO RUN
+- **Status:** READY FOR BABIN TO RUN **[15 Oct]**. The script no longer prints the URL, keeps the password off the command line, prompts with hidden input, writes to git-ignored `backups/`, and fails unless pg_dump's completion footer is present. Requires the PostgreSQL client tools on PATH.
 - **Affected Subsystem:** Remote Supabase Database (`sxguwvgoserhdolewibb`)
 - **Specification:** [`BACKUP_PROTOCOL.md`](../BACKUP_PROTOCOL.md)
 - **Description:** Before any migration is applied to production, a non-destructive remote database dump must be generated using [`scripts/backup-db.ps1`](../scripts/backup-db.ps1). The backup script extracts schema, table rows, and authentication tables via Postgres SSL without requiring local Docker daemon installation.
@@ -39,13 +56,13 @@ Despite the local test suite being 100% green, **production deployment remains o
 - **Affected Subsystem:** Supabase Staging Environment
 - **Specification:** [`docs/release/2026-10-13/BLOCKERS.md`](release/2026-10-13/BLOCKERS.md) (BLOCKER-03)
 - **Description:** 
-  - Production database is currently at migration state ~0124. Migrations `0125` through `0160` (36 migrations) are verified locally in PGlite but have never run against a real Supabase cloud project.
+  - **[15 Oct]** Production records every migration through `0156` (read-only export, `docs/live/schema_migrations_2026-10-15.txt`). Pending: `0157`–`0162` (6), verified locally in PGlite only. The one-shot seed `0047_seed_reference_corpus` stays excluded.
   - The Owner must provision an isolated, active Supabase staging project and provide its configuration via secure environment variables:
     - `BABIN_STAGING_SUPABASE_URL`
     - `BABIN_STAGING_PROJECT_REF`
     - `BABIN_STAGING_ANON_KEY`
-  - Execute migrations `0125` through `0160` sequentially on staging, validating that all triggers, views, and RLS policies compile without syntax or role errors.
-- **Verification Criteria:** Staging database successfully reaches version `0160` with zero schema errors.
+  - Execute migrations `0157` through `0162` sequentially on a staging copy of live, validating that all triggers, views, and RLS policies compile without syntax or role errors.
+- **Verification Criteria:** Staging database successfully reaches version `0162` with zero schema errors.
 
 ### Task 1.3: Nine-Role Read-Only Staging Verification
 - **Priority:** P0 (Release Blocker)
@@ -66,7 +83,7 @@ Despite the local test suite being 100% green, **production deployment remains o
 - **Status:** HOLD (Gated on Tasks 1.1, 1.2, and 1.3)
 - **Affected Subsystem:** Remote Supabase Production Database
 - **Specification:** [`BACKUP_PROTOCOL.md`](../BACKUP_PROTOCOL.md) · [`docs/live/APPLY_PLAN_2026-10-03.md`](live/APPLY_PLAN_2026-10-03.md)
-- **Description:** Under Rule N-5, only after successful staging certification and owner sign-off, apply pending migrations `0125` through `0160` to the production database via Supabase SQL Editor or approved migration runner.
+- **Description:** Under Rule N-5, only after successful staging certification and owner sign-off, apply pending migrations `0157` through `0162` **[15 Oct]** to the production database via Supabase SQL Editor or approved migration runner, in the order `npm run db:plan` prints.
 - **Verification Criteria:** PostgREST schema cache reloads cleanly (`NOTIFY pgrst, 'reload schema'`); all production tables and views report zero migration failure.
 
 ### Task 1.5: Production Smoke Test & Session Sign-Off
@@ -82,7 +99,7 @@ Despite the local test suite being 100% green, **production deployment remains o
 
 ### Task 2.1: Delivery Workspace Database Persistence
 - **Priority:** P1 (High)
-- **Status:** UNIMPLEMENTED (Currently in LocalStorage)
+- **Status:** BLOCKED on decision PLAN §4.64(c)(1) **[15 Oct]**. Since 14 Oct the live build refuses delivery reads and writes with an explanation instead of showing local records, and seed rows appear only in a seeded mock build. Persistence itself is still unimplemented.
 - **Affected Files:** 
   - [`src/modules/operations/DeliveryWorkspace.tsx`](../src/modules/operations/DeliveryWorkspace.tsx)
   - [`src/lib/queries/delivery.ts`](../src/lib/queries/delivery.ts)
@@ -99,7 +116,7 @@ Despite the local test suite being 100% green, **production deployment remains o
 
 ### Task 2.2: G3 Pricing Structure Invoice Breakdown Persistence
 - **Priority:** P1 (High)
-- **Status:** BLOCKED on Schema Migration 0161
+- **Status:** BLOCKED on open decision G3 **[15 Oct: 0161 and 0162 are taken; the next free number is 0163]**
 - **Affected Files:**
   - [`supabase/migrations/`](../supabase/migrations/)
   - [`src/actions/rentals/createRental.ts`](../src/actions/rentals/createRental.ts)
@@ -108,7 +125,7 @@ Despite the local test suite being 100% green, **production deployment remains o
 - **Description:**
   - Complex pricing structures (seasonal rates, weekend tiers, multi-day tiers) correctly price a **quote** in the frontend pricing engine, but the database `create_booking` RPC currently does not store line-item price breakdown snapshots.
   - Invoices generated later cannot reliably reproduce the exact pricing calculation without hardcoding flat rates.
-  - Author migration `0161_pricing_structure_snapshot.sql` adding `price_breakdown jsonb` to `booking_lines` and updating `create_booking(jsonb)` to persist line-level breakdowns.
+  - Author migration `0163_pricing_structure_snapshot.sql` adding `price_breakdown jsonb` to `booking_lines` and updating `create_booking(jsonb)` to persist line-level breakdowns.
   - Verify migration passes `npm run check:pglite` and `npm run check:lifecycle`.
 - **Verification Criteria:** Generating an invoice from a structure-priced booking renders the exact historical line breakdown without arithmetic drift.
 
@@ -142,7 +159,7 @@ Despite the local test suite being 100% green, **production deployment remains o
 
 ### Task 3.1: Phone Header De-Crowding (Operations & Settings)
 - **Priority:** P1 (Pre-Deployment Critical)
-- **Status:** ACTIVE SPRINT
+- **Status:** DONE 15 Oct 2026 **[15 Oct]**, phone and tablet (the 768px titles were 0px wide too). Measured at 360/375/390/768/1024/1280; evidence `artifacts/header-decrowding-2026-10-15/`.
 - **Affected Files:**
   - [`src/modules/operations/OperationsQueues.tsx`](../src/modules/operations/OperationsQueues.tsx)
   - [`src/modules/settings/Settings.tsx`](../src/modules/settings/Settings.tsx)
@@ -155,7 +172,7 @@ Despite the local test suite being 100% green, **production deployment remains o
 
 ### Task 3.2: Touch Target Enforcement on New Rental Catalogue
 - **Priority:** P1 (Pre-Deployment Critical)
-- **Status:** OPEN
+- **Status:** DONE **[15 Oct]**: `fea7cdf` (`booking/AddItemPanel.tsx` RowButton); View/Add Bundle measured 44px at 320/390/768 (`artifacts/catalogue-touch-2026-10-15/measurements.json`).
 - **Affected Files:** 
   - [`src/modules/rentals/NewRental.tsx`](../src/modules/rentals/NewRental.tsx)
   - [`src/modules/rentals/rentals.css`](../src/modules/rentals/rentals.css)
@@ -307,7 +324,7 @@ Despite the local test suite being 100% green, **production deployment remains o
 - **Status:** BLOCKED EXTERNALLY
 - **Affected Files:** [`src/lib/bs.ts`](../src/lib/bs.ts)
 - **Specification:** [`docs/OPEN_DECISIONS.md §5`](OPEN_DECISIONS.md#L41)
-- **Description:** The BS calendar engine in [`src/lib/bs.ts`](../src/lib/bs.ts) currently anchors month lengths through BS 2083. Expanding beyond 2083 requires official month-length publications from the Nepal Calendar Determination Committee (*Nepal Panchanga Nirnayak Bikas Samiti*) to guarantee accurate dates on tax invoices.
+- **Description:** The BS calendar engine in [`src/lib/bs.ts`](../src/lib/bs.ts) **[15 Oct]** covers BS 2078–2095 (transcribed from the `bikram-sambat` package); only 2083 was cross-checked against the gazette. Trusting 2084+ on tax invoices requires official month-length publications from the Nepal Calendar Determination Committee (*Nepal Panchanga Nirnayak Bikas Samiti*) to guarantee accurate dates on tax invoices.
 
 ### Dependency 6.2: Google Play Console Release (Android)
 - **Priority:** P3 (Post-Launch)
@@ -332,15 +349,15 @@ Despite the local test suite being 100% green, **production deployment remains o
 
 | Task / Item | Category | Priority | Blocker / Dependency | Assigned Actor |
 |---|---|---|---|---|
-| **Task 1.1** Remote Database Backup | Database | **P0** | Supabase remote access | Integration Agent |
+| **Task 1.1** Remote Database Backup | Database | **P0** | pg_dump installed; Babin runs it | Owner |
 | **Task 1.2** Staging Provisioning & Rehearsal | Database | **P0** | Staging project creation | Owner + Agent |
 | **Task 1.3** Nine-Role Read-Only Staging Check | Security / Auth | **P0** | Staging JWTs provided | Agent + Owner |
 | **Task 1.4** Apply Migrations to Production | Database | **P0** | Tasks 1.1–1.3 certified | Owner (Sign-off) |
 | **Task 1.5** Production Smoke Verification | Deployment | **P0** | Task 1.4 applied | Owner + Agent |
-| **Task 2.1** Delivery Workspace DB Persistence | Backend | **P1** | Schema design | Engineer |
-| **Task 2.2** G3 Pricing Breakdown Persistence | Backend | **P1** | Migration 0161 authoring | Engineer |
-| **Task 3.1** Phone Header De-Crowding | UI / UX | **P1** | None (Unblocked) | Frontend Engineer |
-| **Task 3.2** New Rental 44px Touch Targets | UI / UX | **P1** | None (Unblocked) | Frontend Engineer |
+| **Task 2.1** Delivery Workspace DB Persistence | Backend | **P1** | Decision §4.64(c)(1) | Babin, then Engineer |
+| **Task 2.2** G3 Pricing Breakdown Persistence | Backend | **P1** | Decision G3; migration 0163 | Babin, then Engineer |
+| ~~**Task 3.1** Phone Header De-Crowding~~ | UI / UX | Done 15 Oct | — | — |
+| ~~**Task 3.2** New Rental 44px Touch Targets~~ | UI / UX | Done 15 Oct | — | — |
 | **Task 3.3** Browser Workflow Transitions Check | UI / UX | **P1** | Test data seeding | QA / Agent |
 | **Task 4.1** Physical Mobile & iPad Acceptance | Testing | **P1** | Physical devices | QA / Owner |
 | **Task 4.3** Airplane Mode PWA Validation | Testing | **P1** | Physical tablet | QA / Warehouse |
@@ -355,12 +372,9 @@ Despite the local test suite being 100% green, **production deployment remains o
 
 ## 8. Immediate Next Unblocked Actions
 
-For developers or agents picking up work while awaiting Staging Provisioning and Owner Decisions:
+**[15 Oct]** Tasks 3.1 and 3.2 are done and the backup script is repaired. What is left is either Babin's or blocked on a decision:
 
-1. **Execute Task 3.1 & 3.2 (UI/UX Finish):**
-   - De-crowd the phone headers on [`src/modules/operations/OperationsQueues.tsx`](../src/modules/operations/OperationsQueues.tsx) and [`src/modules/settings/Settings.tsx`](../src/modules/settings/Settings.tsx).
-   - Enlarge catalogue action buttons in [`src/modules/rentals/NewRental.tsx`](../src/modules/rentals/NewRental.tsx) from 26px to ≥44px.
-2. **Execute Task 2.1 (Delivery Database Wiring):**
-   - Author the database table and server actions to replace the mock `localStorage` in [`src/modules/operations/DeliveryWorkspace.tsx`](../src/modules/operations/DeliveryWorkspace.tsx).
-3. **Execute Task 1.1 (Production Backup):**
-   - Run [`scripts/backup-db.ps1`](../scripts/backup-db.ps1) to secure the current production snapshot before any staging or production cutover.
+1. **Babin, Task 1.1:** install the PostgreSQL client tools and run `.\scripts\backup-db.ps1`. It prompts for the connection string; do not paste it on the command line.
+2. **Babin, cutover questions:** confirm the 7 renames, the 0047 exclusion and the 2 unexplained live rows that `npm run db:plan` lists (proposed answers in `docs/live/CUTOVER_RUNBOOK_2026-10-03.md` §2), then provision staging for Tasks 1.2–1.3.
+3. **Babin, decisions:** PLAN §4.64(c)(1) unblocks Task 2.1 (Delivery persistence); G3 unblocks Task 2.2.
+4. **Agent, unblocked:** Task 3.4 (five-state screens), Task 4.2 (125% zoom audit) and Task 2.4 (outbox wiring) need no ruling.

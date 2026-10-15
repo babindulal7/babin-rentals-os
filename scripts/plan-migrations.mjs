@@ -120,7 +120,10 @@ const live = []
 for (const line of liveRaw.split('\n')) {
   const t = line.trim()
   if (!t || t.startsWith('#')) continue
-  const m = t.match(/^(\d+)\s+(\S+)$/)
+  // RULING 2026-10-15: any version token, not only digits. Live records 0150, 0153 and
+  // 0155 under versions V1/V2/V3; a digits-only match dropped them silently and
+  // reported three applied migrations as pending.
+  const m = t.match(/^(\S+)\s+(\S+)$/)
   if (m) live.push({ version: m[1], name: m[2] })
 }
 if (live.length === 0) {
@@ -367,12 +370,14 @@ const SELFTEST = [
   // is a genuinely new migration. Re-asserted because swallowing them would tell
   // Babin to skip real work — and because `0047` losing its seed hazard is how the
   // bug hid itself.
+  // RULING 2026-10-15: "new" means pending OR applied by its own name, never renamed.
+  // Pinning these as `pending` broke once live applied them (the 15 Oct export).
   ['0047_seed_reference_corpus.sql', 'pending'],
-  ['0099_create_booking_discount_audit_class.sql', 'pending'],
-  ['0122_inspection_operation_session.sql', 'pending'],
-  ['0123_categorize_equipment_inventory.sql', 'pending'],
-  ['0130_law6_arm_money_grants_remaining_tables.sql', 'pending'],
-  ['0132_create_booking_crew_transport.sql', 'pending'],
+  ['0099_create_booking_discount_audit_class.sql', 'new'],
+  ['0122_inspection_operation_session.sql', 'new'],
+  ['0123_categorize_equipment_inventory.sql', 'new'],
+  ['0130_law6_arm_money_grants_remaining_tables.sql', 'new'],
+  ['0132_create_booking_crew_transport.sql', 'new'],
 ]
 
 if (args.includes('--selftest')) {
@@ -390,7 +395,7 @@ if (args.includes('--selftest')) {
   let failed = 0
   for (const [file, expect] of SELFTEST) {
     const got = classOf(file)
-    const ok = got === expect
+    const ok = expect === 'new' ? got === 'pending' || got === 'applied' : got === expect
     if (!ok) failed++
     console.log(`  ${ok ? 'ok  ' : 'FAIL'}  ${file.padEnd(52)} ${got}${ok ? '' : `  (expected ${expect})`}`)
   }
@@ -420,8 +425,12 @@ console.log(`unexplained   ${orphans.length}   live rows with no local file`)
 console.log(`dup prefixes  ${dupPrefixes.length}`)
 
 // staleness: the newest live version vs today
-const newest = live.reduce((a, b) => (a.version > b.version ? a : b))
+// Only timestamp versions order in time; "V3" would otherwise sort above them all.
+const timestamped = live.filter((r) => /^\d+$/.test(r.version))
+const newest = (timestamped.length ? timestamped : live).reduce((a, b) => (a.version > b.version ? a : b))
 console.log(`live newest   ${newest.name}  (version ${newest.version})`)
+const untimed = live.filter((r) => !/^\d+$/.test(r.version))
+if (untimed.length) console.log(`non-timestamp ${untimed.map((r) => `${r.name} (${r.version})`).join(', ')}`)
 
 let blockers = 0
 
