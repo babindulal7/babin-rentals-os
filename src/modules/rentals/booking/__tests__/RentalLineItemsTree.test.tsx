@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act } from 'react'
+import { act, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
@@ -52,7 +52,7 @@ const sampleLines: Line[] = [
     qty: 1,
     discountPct: 0,
     location: 'Kathmandu HQ',
-    committedTo: '—',
+    committedTo: 'â€”',
   },
   {
     id: 'line-2',
@@ -66,7 +66,7 @@ const sampleLines: Line[] = [
     qty: 1,
     discountPct: 0,
     location: 'Kathmandu HQ',
-    committedTo: '—',
+    committedTo: 'â€”',
   },
 ]
 
@@ -236,4 +236,36 @@ describe('RentalLineItemsTree', () => {
       host.remove()
     }
   })
+  it('updates bulk quantities and rental days while keeping read-only lines locked', async () => {
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const root = createRoot(host)
+    function Harness({ readOnly = false }: { readOnly?: boolean }) {
+      const [lines, setLines] = useState<Line[]>([{ ...sampleLines[0]!, serial: '—' }])
+      return <MemoryRouter><RentalLineItemsTree
+        lines={lines} setLines={setLines} collapsedBundles={{}} setCollapsedBundles={vi.fn()}
+        canBookingMoney={true} conflictSummary={{ verdictByLineId: new Map() }}
+        gateContext={{ role: 'Owner', surface: 'default' }} navigate={vi.fn()}
+        totalUnits={lines[0]?.qty ?? 0} bundleCount={0} days={2} pricing={mockPricing} readOnly={readOnly}
+      /></MemoryRouter>
+    }
+    try {
+      await act(async () => root.render(<Harness />))
+      const button = (label: string) => host.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)
+      await act(async () => button('Increase quantity for Sony FX3')?.click())
+      expect(host.querySelector('[data-label="Quantity"]')?.textContent).toBe('2')
+      await act(async () => button('Increase days for Sony FX3')?.click())
+      expect(host.querySelector('[data-label="Days"]')?.textContent).toBe('3')
+      await act(async () => root.render(<Harness readOnly />))
+      expect(button('Increase quantity for Sony FX3')?.disabled).toBe(true)
+      expect(button('Decrease quantity for Sony FX3')?.disabled).toBe(true)
+      expect(button('Increase days for Sony FX3')?.disabled).toBe(true)
+      expect(button('Decrease days for Sony FX3')?.disabled).toBe(true)
+      expect(button('Actions for Sony FX3')).toBeNull()
+    } finally {
+      await act(async () => root.unmount())
+      host.remove()
+    }
+  })
+
 })

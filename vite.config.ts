@@ -144,7 +144,7 @@ export default defineConfig({
       '.trycloudflare.com',
     ],
     watch: {
-      ignored: ['**/__rar_*', '**/*.rartemp', '**/*.rar', '**/.tmp-*'],
+      ignored: ['**/__rar_*', '**/*.rartemp', '**/*.rar', '**/.tmp-*', '**/.claude/**', '**/artifacts/**', '**/.system_generated/**'],
     },
   },
   preview: {

@@ -1,4 +1,5 @@
 import { Fragment, useMemo } from 'react'
+import './rental-line-items.css'
 import { Link } from 'react-router-dom'
 import Icon from '../../../components/ui/Icon'
 import type { IconName } from '../../../components/ui/Icon'
@@ -214,8 +215,8 @@ export function RentalLineItemsTree({
     const pill = linePill(l)
     const intelRow = l.productId ? liveEquipment?.find((candidate) => candidate.productKey === l.productId) : undefined
     return (
-      <tr key={l.id} style={{ borderBottom: '1px solid var(--border)' }}>
-        <td style={{ ...td, whiteSpace: 'normal', maxWidth: 260, paddingLeft: child ? 26 : 9 }}>
+      <tr role="row" className={child ? "rental-line-row rental-line-child" : "rental-line-row"} key={l.id} style={{ borderBottom: '1px solid var(--border)' }}>
+        <td role="cell" data-label="Item" style={{ ...td, whiteSpace: 'normal', maxWidth: 260, paddingLeft: child ? 26 : 9 }}>
           <span style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
             {child && (
               <span aria-hidden="true" style={{ color: 'var(--muted)', fontSize: 'var(--t-th)', flexShrink: 0 }}>
@@ -327,8 +328,8 @@ export function RentalLineItemsTree({
             )}
           </span>
         </td>
-        <td style={{ ...td, color: 'var(--text2)' }}>{l.category}</td>
-        <td style={{ ...td, textAlign: 'right' }} title={l.serial !== '—' ? 'One serialized unit per row' : undefined}>
+        <td role="cell" data-label="Category" style={{ ...td, color: 'var(--text2)' }}>{l.category}</td>
+        <td role="cell" data-label="Quantity" style={{ ...td, textAlign: 'right' }} title={l.serial !== '—' ? 'One serialized unit per row' : undefined}>
           <NumberStepper
             value={l.qty}
             disabled={readOnly || l.serial !== '—'}
@@ -336,7 +337,7 @@ export function RentalLineItemsTree({
             onChange={(n) => setLines((p) => p.map((x) => (x.id === l.id ? { ...x, qty: n } : x)))}
           />
         </td>
-        <td style={{ ...td, textAlign: 'right' }}>
+        <td role="cell" data-label="Days" style={{ ...td, textAlign: 'right' }}>
           <NumberStepper
             value={l.days}
             disabled={readOnly}
@@ -348,10 +349,10 @@ export function RentalLineItemsTree({
         </td>
         {canBookingMoney && (
           <>
-            <td className="figure" style={{ ...td, textAlign: 'right', color: 'var(--text2)' }}>
+            <td role="cell" data-label="Rate / day" className="figure" style={{ ...td, textAlign: 'right', color: 'var(--text2)' }}>
               {formatMoney(l.ratePaisa)}
             </td>
-            <td style={{ ...td, textAlign: 'right' }}>
+            <td role="cell" data-label="Discount" style={{ ...td, textAlign: 'right' }}>
               {l.discountPct > 0 ? (
                 <span
                   className="figure"
@@ -374,12 +375,12 @@ export function RentalLineItemsTree({
                 <span style={{ color: 'var(--muted)' }}>—</span>
               )}
             </td>
-            <td className="figure" style={{ ...td, textAlign: 'right', fontWeight: 700 }}>
+            <td role="cell" data-label="Amount" className="figure" style={{ ...td, textAlign: 'right', fontWeight: 700 }}>
               {formatMoney(lineAmountPaisa(l))}
             </td>
           </>
         )}
-        <td style={td}>
+        <td role="cell" data-label="Availability" style={td}>
           <span
             title={pill.title}
             style={{
@@ -399,7 +400,7 @@ export function RentalLineItemsTree({
             {pill.label}
           </span>
         </td>
-        <td style={{ ...td, width: 34, textAlign: 'right' }}>
+        <td role="cell" data-label="Actions" style={{ ...td, width: 34, textAlign: 'right' }}>
           {!readOnly && (
             menuItems ? (
               <RowMenu label={`Actions for ${l.name}`} items={menuItems} />
@@ -444,18 +445,19 @@ export function RentalLineItemsTree({
 
   return (
     <>
-      <DataTableShell ariaLabel="Booking equipment and bundles">
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 860 }}>
-          <thead>
-            <tr style={{ background: 'var(--th-bg)' }}>
+      <div className="rental-line-items">
+      <DataTableShell className="rental-line-items-shell" ariaLabel="Booking equipment and bundles">
+        <table role="table" aria-label="Selected rental items" className="rental-line-table">
+          <thead role="rowgroup">
+            <tr role="row" style={{ background: 'var(--th-bg)' }}>
               {equipmentColumns.map((c, i) => (
-                <th key={c.key || `col-${i}`} scope="col" style={{ ...th, textAlign: c.align }}>
+                <th role="columnheader" key={c.key || `col-${i}`} scope="col" style={{ ...th, textAlign: c.align }}>
                   {c.key}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody role="rowgroup">
             {lineGroups.map((g) => {
               const nested = isNested(g)
               const isCollapsed = Boolean(collapsedBundles[g.key])
@@ -487,8 +489,8 @@ export function RentalLineItemsTree({
               return (
                 <Fragment key={g.key}>
                   {nested ? (
-                    <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--card2)' }}>
-                      <td style={{ ...td, whiteSpace: 'normal', maxWidth: 260 }}>
+                    <tr role="row" className="rental-line-row rental-line-group" style={{ borderBottom: '1px solid var(--border)', background: 'var(--card2)' }}>
+                      <td role="cell" data-label="Item" style={{ ...td, whiteSpace: 'normal', maxWidth: 260 }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <button
                             type="button"
@@ -517,23 +519,23 @@ export function RentalLineItemsTree({
                             : `${g.lines.length} units${isCollapsed ? ' (collapsed)' : ''}`}
                         </span>
                       </td>
-                      <td style={{ ...td, color: 'var(--text2)' }}>{g.lines[0]?.category ?? '—'}</td>
-                      <td className="figure" style={{ ...td, textAlign: 'right', fontWeight: 700 }}>
+                      <td role="cell" data-label="Category" style={{ ...td, color: 'var(--text2)' }}>{g.lines[0]?.category ?? '—'}</td>
+                      <td role="cell" data-label="Quantity" className="figure" style={{ ...td, textAlign: 'right', fontWeight: 700 }}>
                         {groupUnits}
                       </td>
-                      <td className="figure" style={{ ...td, textAlign: 'right', fontWeight: 700 }}>
+                      <td role="cell" data-label="Days" className="figure" style={{ ...td, textAlign: 'right', fontWeight: 700 }}>
                         {minDays === maxDays ? minDays : `${minDays}–${maxDays}`}
                       </td>
                       {canBookingMoney && (
                         <>
-                          <td style={{ ...td, textAlign: 'right', color: 'var(--muted)' }}>—</td>
-                          <td style={{ ...td, textAlign: 'right', color: 'var(--muted)' }}>—</td>
-                          <td className="figure" style={{ ...td, textAlign: 'right', fontWeight: 700 }}>
+                          <td role="cell" data-label="Rate / day" style={{ ...td, textAlign: 'right', color: 'var(--muted)' }}>—</td>
+                          <td role="cell" data-label="Discount" style={{ ...td, textAlign: 'right', color: 'var(--muted)' }}>—</td>
+                          <td role="cell" data-label="Amount" className="figure" style={{ ...td, textAlign: 'right', fontWeight: 700 }}>
                             {formatMoney(groupAmountPaisa)}
                           </td>
                         </>
                       )}
-                      <td style={td}>
+                      <td role="cell" data-label="Availability" style={td}>
                         <span
                           title={parentPill.title}
                           style={{
@@ -553,7 +555,7 @@ export function RentalLineItemsTree({
                           {parentPill.label}
                         </span>
                       </td>
-                      <td style={{ ...td, width: 34, textAlign: 'right' }}>
+                      <td role="cell" data-label="Actions" style={{ ...td, width: 34, textAlign: 'right' }}>
                         {!readOnly && <RowMenu label={`Actions for ${g.label}`} items={menuItems} />}
                       </td>
                     </tr>
@@ -566,6 +568,7 @@ export function RentalLineItemsTree({
           </tbody>
         </table>
       </DataTableShell>
+      </div>
 
       <div
         style={{
