@@ -190,9 +190,16 @@ describe('BookingDetail Simplification (Task 4)', () => {
     expect(mockOpenOperations).toHaveBeenCalledWith('B-715', 'Booked', 'Pack')
   })
 
-  it('renders Print booking button in secondary actions', async () => {
+  // RULING 2026-10-15: Print booking lives in the one More at every width, not in the header.
+  it('offers Print booking from the More menu', async () => {
     await mount()
-    expect(button('Print booking')).toBeDefined()
+    expect(button('Print booking')).toBeUndefined()
+    const more = [...container.querySelectorAll('button')].find((b) => b.getAttribute('aria-label') === 'More booking actions')
+    await act(async () => {
+      more?.click()
+    })
+    const print = [...document.body.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent?.trim() === 'Print booking')
+    expect(print).toBeDefined()
   })
 
   it('links client name to client detail page and shows contact phone', async () => {

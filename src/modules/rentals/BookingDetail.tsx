@@ -16,7 +16,7 @@ import { Modal } from '../../components/ui/Modal'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { PageActions } from '../../components/ui/PageActions'
-import { OverflowMenu, type OverflowMenuItem } from '../../components/ui/OverflowMenu'
+import type { OverflowMenuItem } from '../../components/ui/OverflowMenu'
 import { getRentalPrimaryAction } from '../../lib/rentalActions'
 import { useViewport } from '../../lib/device'
 import type { Viewport } from '../../lib/device'
@@ -55,7 +55,6 @@ import { AssignCrewModal } from './modals/AssignCrewModal'
 import { BookingCrewList } from './BookingCrewList'
 import { canAssignPricedCrew } from '../../lib/crewAssignment'
 import { CreateSubRentalModal } from './modals/CreateSubRentalModal'
-import { CancelRentalModal } from './modals/CancelRentalModal'
 import { RecordPaymentModal } from '../finance/modals/RecordPaymentModal'
 import { CreateInvoiceModal } from '../finance/modals/CreateInvoiceModal'
 import { CreateDocumentModal } from '../documents/CreateDocumentModal'
@@ -84,7 +83,6 @@ import { whatsappActionsFor } from '../../lib/whatsappActions'
 import { paymentReceipt } from '../../lib/whatsappTemplates'
 import { buildWaLink } from '../../lib/whatsapp'
 import { openWaLink } from '../../lib/whatsapp'
-import { WhatsAppShareButton } from '../../components/ui/WhatsAppShareButton'
 import { getSetting, readSettings } from '../../lib/settingsStore'
 import { releaseBookingLineUnit } from '../../actions/rentals/releaseBookingLineUnit'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
@@ -503,7 +501,8 @@ function dotTone(stage: BookingStatus, current: BookingStatus): BrandKey {
 }
 
 /**
- * §4.2's header overflow uses the shared OverflowMenu component from src/components/ui/OverflowMenu.
+ * §4.2's header overflow is the rental More (`RentalMoreActions`); this page's own
+ * items ride in it as `OverflowMenuItem`s (RULING 2026-10-15).
  */
 
 /**
@@ -940,7 +939,6 @@ function BookingDetailView() {
   const [showSubRentalModal, setShowSubRentalModal] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [showCreateInvoice, setShowCreateInvoice] = useState(false)
-  const [showCancelModal, setShowCancelModal] = useState(false)
   const [showCreateDocument, setShowCreateDocument] = useState(false)
   const { showSuccessToast } = useToast()
   const { openOperations } = useOperationsWorkspace()
@@ -2071,21 +2069,15 @@ function BookingDetailView() {
   /*
    * RULING 2026-10-13: a phone header keeps the title, the stage action, a 44px
    * Operations button and ONE More. Print and the booking items join the rental
-   * More (which already carries Cancel), and WhatsApp choices are listed flat
-   * because that menu has no submenus. Desktop is unchanged.
+   * More (which already carries Cancel).
+   * RULING 2026-10-15: the same at every width — title, search, one primary;
+   * the 44px Operations stays and everything else is in this ONE More. The
+   * desktop cluster it replaces was 610px and squeezed the record title to
+   * 37px at 1280. "Message client" keeps its nested choices.
    */
-  const phoneMoreItems = [
+  const moreItems: OverflowMenuItem[] = [
     { label: 'Print booking', icon: 'file' as const, onClick: () => window.print() },
-    ...bookingMoreItems.flatMap((item) =>
-      item.submenu
-        ? item.submenu.map((sub) => ({
-            label: `Message: ${sub.label}`,
-            icon: 'message' as const,
-            onClick: sub.onClick,
-            ...(sub.unavailable ? { unavailable: sub.unavailable } : {}),
-          }))
-        : [{ label: item.label, icon: item.icon, onClick: item.onClick, ...(item.unavailable ? { unavailable: item.unavailable } : {}) }]
-    ),
+    ...bookingMoreItems,
   ]
 
   return (
@@ -2113,67 +2105,15 @@ function BookingDetailView() {
             <PageActions
             extra={
               <>
-                {/* On a phone the stepper's "Step n of 6 — Stage" already names it; the title keeps the width. */}
-                {!onPhone && <Badge status={stage} />}
+                {/* The stage is named by the stepper below ("Closed — current stage"), so no badge here. */}
                 {booking.isCancelled && <Badge flag="Cancelled" />}
                 {subRental && <SubRentedMark label="Sub-rental" />}
-                {booking && (
-                  <WhatsAppShareButton
-                    key="wa"
-                    clientPhone={clientPhone}
-                    facts={{
-                      clientName: booking.clientName,
-                      bookingNo: booking.bookingNo,
-                      stage: (stage as import('../../lib/whatsappTemplates').WaStage) ?? 'Quote',
-                      startIso: booking.pickupAtAd,
-                      endIso: booking.returnAtAd,
-                      itemCount: booking.itemCount,
-                      topLines: (floor?.lines ?? [])
-                        .slice(0, 3)
-                        .map((l) => l.productName ?? l.description)
-                        .filter((x): x is string => Boolean(x)),
-                      isOverdue:
-                        booking.stage === 'On Rent' &&
-                        !booking.isClosed &&
-                        !booking.isCancelled &&
-                        booking.actualReturnAtAd === null &&
-                        new Date(booking.returnAtAd) < new Date(),
-                      total: canBookingMoney && hasInvoice ? (totals.total as Paisa) : null,
-                      advance: canBookingMoney && hasInvoice ? (totals.paid as Paisa) : null,
-                      deposit: canBookingMoney ? booking.depositRequired : null,
-                      balance: canBookingMoney && hasInvoice ? (totals.outstanding as Paisa) : null,
-                    }}
-                  />
-                )}
-                {booking && (
-                  <RentalMoreActions
-                    key="rental-more-actions"
-                    booking={{
-                      id: booking.id,
-                      bookingNo: booking.bookingNo,
-                      clientName: booking.clientName,
-                      clientId: booking.clientId,
-                      stage: booking.stage,
-                      isCancelled: booking.isCancelled,
-                      isClosed: booking.isClosed,
-                      itemCount: booking.itemCount,
-                      pickupDate: booking.pickupAtAd,
-                      returnDate: booking.returnAtAd,
-                      totalAmount: totals.total,
-                      paidAmount: totals.paid,
-                      outstandingAmount: totals.outstanding,
-                      depositRequired: booking.depositRequired,
-                    }}
-                    selectedCount={1}
-                    ariaLabel="More actions for rental"
-                    onActionCompleted={refreshBookingData}
-                    compact={onPhone}
-                    {...(onPhone ? { extraItems: phoneMoreItems } : {})}
-                  />
-                )}
               </>
             }
-            secondary={onPhone ? [
+            secondary={[
+              /* The 44px icon at every width (its name stays "Operations"): the labelled
+                 trigger cost 64px more of the record title at 1280. Cleaning & Reset is
+                 its fourth row, so it has no button of its own. */
               <BookingOperationsMenu
                 key="ops"
                 bookingNo={id}
@@ -2182,52 +2122,34 @@ function BookingDetailView() {
                 primary={false}
                 compact
               />,
-            ] : [
-              stage === 'Returned' && canCloseRental(gctx.role) && (
-                cancelledReason ? (
-                  <Unavailable key="reset" reason={cancelledReason}>
-                    <Button icon="refresh" variant="secondary" disabled>
-                      Cleaning & Reset
-                    </Button>
-                  </Unavailable>
-                ) : (
-                  <Button
-                    key="reset"
-                    icon="refresh"
-                    variant="secondary"
-                    onClick={() => openOperations(booking.bookingNo, stage, 'Reset')}
-                  >
-                    Cleaning & Reset
-                  </Button>
-                )
-              ),
-              <BookingOperationsMenu
-                key="ops"
-                bookingNo={id}
-                bookingStatus={stage}
-                unavailable={operationsUnavailable}
-                primary={false}
-              />,
-              <Button key="print" icon="file" variant="secondary" onClick={() => window.print()}>
-                Print booking
-              </Button>,
-            ].filter(Boolean)}
-            overflow={onPhone ? undefined :
-              <OverflowMenu
+            ]}
+            overflow={
+              /* The one More. WhatsApp choices are its "Message client" row, built from the
+                 business settings; the old header button duplicated them with a placeholder
+                 business phone. Its Cancel is the registry's, which also checks role. */
+              <RentalMoreActions
+                key="rental-more-actions"
+                booking={{
+                  id: booking.id,
+                  bookingNo: booking.bookingNo,
+                  clientName: booking.clientName,
+                  clientId: booking.clientId,
+                  stage: booking.stage,
+                  isCancelled: booking.isCancelled,
+                  isClosed: booking.isClosed,
+                  itemCount: booking.itemCount,
+                  pickupDate: booking.pickupAtAd,
+                  returnDate: booking.returnAtAd,
+                  totalAmount: totals.total,
+                  paidAmount: totals.paid,
+                  outstandingAmount: totals.outstanding,
+                  depositRequired: booking.depositRequired,
+                }}
+                selectedCount={1}
                 ariaLabel="More booking actions"
-                items={[
-                  ...bookingMoreItems,
-                  {
-                    label: 'Cancel booking',
-                    icon: 'close',
-                    onClick: () => setShowCancelModal(true),
-                    ...(booking.isCancelled
-                      ? { unavailable: `${booking.bookingNo} is already cancelled.` }
-                      : ['On Rent', 'Returned', 'Closed'].includes(stage)
-                        ? { unavailable: `Cannot cancel a booking that has reached ${stage} (equipment has already left custody).` }
-                        : {}),
-                  },
-                ]}
+                onActionCompleted={refreshBookingData}
+                compact
+                extraItems={moreItems}
               />
             }
             primary={
@@ -3176,17 +3098,6 @@ function BookingDetailView() {
         bookingId={id}
         onSuccess={(subR) => {
           showSuccessToast('Sub-Rental Created', `${subR.itemName} — ${subR.vendor}`)
-        }}
-      />
-
-      <CancelRentalModal
-        isOpen={showCancelModal}
-        onClose={() => setShowCancelModal(false)}
-        bookingId={booking.id}
-        bookingNo={booking.bookingNo}
-        stage={stage}
-        onSuccess={() => {
-          refetchHead()
         }}
       />
 
