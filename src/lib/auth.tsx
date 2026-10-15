@@ -5,6 +5,7 @@ import { hydrateSharedSettings } from './settingsSync'
 import { recordLogin, recordLogout } from './authAudit'
 import { captureError } from './monitoring'
 import { purgeDeviceReadCaches } from './devicePurge'
+import { loadFailureReason } from './queries/useLoad'
 
 /**
  * The session role IS the system role. They were separate unions until 8 Aug 2026,
@@ -60,6 +61,13 @@ export interface PinStatus {
   setAt?: string | null | undefined
   lockedUntil?: string | null | undefined
   lastUsedAt?: string | null | undefined
+  /**
+   * Set when the status check itself FAILED — the reason, worded for an
+   * operator. `hasPin` is still `false` in that case (the under-claim below
+   * stands, and the lock trigger reads only `hasPin`), but the Settings row can
+   * now say "could not check" instead of a bare "Not set" it does not know.
+   */
+  unavailable?: string | undefined
 }
 
 interface AuthContextType {
@@ -507,7 +515,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
      */
     try {
       const { data, error } = await supabase.rpc('staff_pin_status')
-      if (error || !data) return { hasPin: false }
+      if (error) return { hasPin: false, unavailable: loadFailureReason(error.message) }
+      if (!data) return { hasPin: false, unavailable: 'The PIN status check returned nothing.' }
 
       const status = data as Record<string, unknown>
       return {
@@ -516,8 +525,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         lockedUntil: (status['locked_until'] as string | null) ?? null,
         lastUsedAt: (status['last_used_at'] as string | null) ?? null,
       }
-    } catch {
-      return { hasPin: false }
+    } catch (cause) {
+      return { hasPin: false, unavailable: loadFailureReason(cause) }
     }
   }, [])
 
