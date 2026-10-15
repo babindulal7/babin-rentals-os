@@ -156,6 +156,9 @@ export function reconcileInvoiceCredits(
     asDate(invoice.issue_date)
     byId.set(invoice.id, invoice)
     if (invoice.voided_at !== null || invoice.status === 'Void') {
+      // Credit notes have no currency column: only an NPR parent establishes
+      // that settlement and taxable amounts can be displayed as NPR.
+      if (invoice.currency !== 'NPR') throw new Error('Mixed-currency voided invoices require separate reconciliation')
       voidedInvoiceCount++
       const taxable = sourcePaisa(invoice.taxable_amount)
       voidedTaxable += taxable
@@ -168,6 +171,7 @@ export function reconcileInvoiceCredits(
     seenNotes.add(note.id)
     const invoice = byId.get(note.invoice_id)
     if (!invoice) throw new Error('Credit note has no invoice in the report source')
+    if (invoice.currency !== 'NPR') throw new Error('Mixed-currency credit notes require separate reconciliation')
     const amount = sourcePaisa(note.amount)
     if (amount <= 0) throw new Error('Credit note must carry a positive amount')
     creditNoteAmount += amount
