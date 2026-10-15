@@ -1,5 +1,52 @@
 # Progress Log
 
+## 2026-10-22 — Today: one-statement card ported onto main's redesigned card
+
+**Did**
+- Ported the Today one-statement card (`2d1358a1`, RULINGS-2026-10-15 rows 19–23) onto `main`'s 17 Oct card (OpenCode, `12db6af1`), on a branch cut from `07fd34f3`. Babin asked on 22 Oct to finish the remaining items; on 19 Oct they had kept `main`'s card, and this keeps its new features instead of replacing them.
+- Card now: one row of client + project, booking + items, a pickup's tags, this movement's date (BS over AD, time alone on today's rows) with lateness said once beside it, and the verb. The lateness rail, avatar, visible Pickup/Return captions and the "Overdue · N days late" badge are gone.
+- Kept from `main`'s card: the "Window passed · Reschedule or Cancel" status (in the status row, and instead of, not in addition to, the lateness line), the overflow menu (View Booking, Reschedule Dates, Cancel No-Show) in one `movement-card__actions` cell with the verb, "Awaiting dispatch" for a late pickup (not the 16 Oct "Overdue pickup" wording), and "View in Rentals".
+- `dashboard.css`: the card's grid is the existing "One row per movement" block plus a `movement-card__actions` cell. `main`'s narrow-width card rules for the old layout were dropped; its page-level stacking rules stay.
+- Tests: 3 new in `movementPanel.test.tsx` (late pickup once, "Window passed" not doubled, overflow menu in the actions cell), the existing one-row tests, and a `movementAtAd` round-trip.
+
+**Ruled**
+- RULINGS-2026-10-15: the "Not landed" note on rows 19–23 became "Landed 22 Oct", and row 26 records how the two cards merged, with its revert. Follow-up 2 in `docs/booqable/WHY_BOOQABLE_FEELS_CLEAN_2026-10-15.md` now reads done.
+- No migration, role, capability, money gate or write path changed.
+
+**Verified**
+- Browser, mock Owner, two mock builds served by `vite preview` (this branch and `main` `07fd34f3`), same session:
+
+| Check | `main` | This branch |
+|---|---|---|
+| Returns card, 1280 | 194px, 2 fully visible | 104px, 5 |
+| Pickups card, 1280 | 198px, 2 | 152px, 3 |
+| Returns card, 390 | 210px, 1 | 119px, 2 |
+| Pickups card, 390 | 212px, 1 | 133px, 2 |
+| Lateness statements, returns card | 2 ("93d late" rail + "Overdue · 93 days late") | 1 ("93 days late") |
+
+  Controls at least 44px and no page or card overflow in every reading. The overflow menu opened with its 3 items at 44px each.
+- Mutation check: removing the `!isWindowExpired` guard turned the new "Window passed" test red. Restored.
+- Gates on this branch: `tsc --noEmit` 0; `npm run lint` 0; `lint:shell` 701 files pass; `lint:ui-copy` pass; `check:contrast` 82/82; `npx vitest run` 411 files / 5,194 tests passed; `npm run build` exit 0; `check:lifecycle` 31/31 (PGlite, no JWT or PostgREST).
+- Not verified: dark/glass by eye, live data, native phone hardware.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 98% | — |
+Migrations 168 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-10-22T13:13:11.038Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+## Remaining
+- The card's main action button is 44px on `main`, against the 56px floor-verb rule in `UI_UX_RULES.md` §3. That predates this change: `main`'s own CSS sets it. Decide whether to restore 56px.
+- Babin to confirm or flip RULINGS-2026-10-15 rows 19–23 and 26.
+
 ## 2026-10-22 — Mobile & Touch UI polish: secondary view states and touch target enforcement
 
 **Did**
