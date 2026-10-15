@@ -65,41 +65,33 @@ function mapModuleToActivityModule(m: string | null | undefined): ActivityModule
 }
 
 export async function listActivityEvents(_filters?: ListFilters): Promise<ListQueryResult<ActivityRow>> {
-  try {
-    const { data, error } = await supabase
-      .from('audit_events')
-      .select('id, created_at, action, module, status, record_id, table_name, ip_address')
-      .order('created_at', { ascending: false })
-      .limit(100)
+  // RULING 2026-10-15: a failed read throws, so Activity Log draws Error +
+  // Retry. It returned zero rows, which the page drew as "No activity matches
+  // this filter" — an outage presented as an empty log. Revert = restore the
+  // try/catch returning { rows: [], total: 0 }.
+  const { data, error } = await supabase
+    .from('audit_events')
+    .select('id, created_at, action, module, status, record_id, table_name, ip_address')
+    .order('created_at', { ascending: false })
+    .limit(100)
 
-    if (error) {
-      return {
-        rows: [],
-        total: 0,
-      }
-    }
+  if (error) throw new Error(`listActivityEvents failed: ${error.message}`)
 
-    const rows: ActivityRow[] = ((data ?? []) as unknown as AuditEventRowDb[]).map((e, idx) => ({
-      id: `ACT-${String(idx + 1).padStart(3, '0')}`,
-      timestamp: e.created_at,
-      user: 'Staff Member',
-      action: e.action || 'Performed action',
-      module: mapModuleToActivityModule(e.module),
-      target: e.table_name ? { kind: e.table_name, code: null, ...(e.record_id ? { label: e.record_id } : {}) } : null,
-      where: `${e.module || 'System'} ▸ ${e.action || 'Activity'}`,
-      status: e.status === 'failure' || e.status === 'Failed' ? 'Failed' : 'Success',
-      ip: e.ip_address || '127.0.0.1',
-      location: 'Kathmandu, NP',
-    }))
+  const rows: ActivityRow[] = ((data ?? []) as unknown as AuditEventRowDb[]).map((e, idx) => ({
+    id: `ACT-${String(idx + 1).padStart(3, '0')}`,
+    timestamp: e.created_at,
+    user: 'Staff Member',
+    action: e.action || 'Performed action',
+    module: mapModuleToActivityModule(e.module),
+    target: e.table_name ? { kind: e.table_name, code: null, ...(e.record_id ? { label: e.record_id } : {}) } : null,
+    where: `${e.module || 'System'} ▸ ${e.action || 'Activity'}`,
+    status: e.status === 'failure' || e.status === 'Failed' ? 'Failed' : 'Success',
+    ip: e.ip_address || '127.0.0.1',
+    location: 'Kathmandu, NP',
+  }))
 
-    return {
-      rows,
-      total: rows.length,
-    }
-  } catch {
-    return {
-      rows: [],
-      total: 0,
-    }
+  return {
+    rows,
+    total: rows.length,
   }
 }

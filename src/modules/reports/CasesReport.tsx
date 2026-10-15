@@ -1,10 +1,11 @@
 import { formatAd } from '../../lib/bs'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageHeader, KpiStrip, cardStyle } from '../../components/ui/Page'
 import type { Kpi } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
-import { ReportToolbar } from '../../components/ui/ReportToolbar'
+import { ReportToolbar, withinReportRange } from '../../components/ui/ReportToolbar'
+import { PageBody } from '../../components/ui/PageBody'
 import type { ReportCsvRow, ReportFilters } from '../../components/ui/ReportToolbar'
 import { Donut, Legend, type Slice } from '../../components/ui/Charts'
 import { ReportFamiliesNav } from '../../components/ui/ReportFamiliesNav'
@@ -12,6 +13,7 @@ import Icon from '../../components/ui/Icon'
 import { formatMoney, rupees } from '../../lib/money'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
+import { useLoad } from '../../lib/queries/useLoad'
 import {
   listCases,
   type Case,
@@ -45,24 +47,24 @@ export default function CasesReport() {
   const viewport = useViewport()
   const [activeTab, setActiveTab] = useState<CasesTab>('overview')
   const [filters, setFilters] = useState<ReportFilters>({})
-  const [cases, setCases] = useState<Case[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    let active = true
-    setLoading(true)
-
-    void listCases().then((res) => {
-      if (active) {
-        setCases(res.rows)
-        setLoading(false)
-      }
-    })
-
-    return () => {
-      active = false
-    }
-  }, [filters])
+  /*
+   * Phase 6. The read used to be `void listCases().then(...)` with no catch:
+   * `listCases` throws on a failed read (as it should), so a failure left the
+   * page "Loading…" forever behind KPIs that read 0. `useLoad` turns the throw
+   * into the Error state with Retry (worded as offline when it is).
+   *
+   * The toolbar's date range never narrowed anything — `listCases` was called
+   * without it and does not apply `dateRange`. It is applied here, on the
+   * client, with the toolbar's own comparison, so "no cases in this range" is
+   * a real no-results state rather than the full register under a range that
+   * says otherwise.
+   */
+  const load = useLoad(() => listCases())
+  const allCases = useMemo<Case[]>(() => load.data?.rows ?? [], [load.data])
+  const cases = useMemo(
+    () => allCases.filter((c) => withinReportRange(c.openedAd, filters.dateRange)),
+    [allCases, filters.dateRange],
+  )
 
   // KPIs
   const kpis = useMemo<Kpi[]>(() => {
@@ -257,6 +259,23 @@ export default function CasesReport() {
         </div>
       </ReportToolbar>
 
+      <PageBody
+        noun="cases"
+        loading={load.loading}
+        error={load.error}
+        onRetry={load.reload}
+        hasRows={allCases.length > 0}
+        skeleton="kpi"
+        empty={load.data !== null && cases.length === 0}
+        emptyIsFiltered={allCases.length > 0}
+        onClearFilters={() => setFilters({})}
+        {...(allCases.length === 0
+          ? {
+              emptyTitle: 'No incident cases yet',
+              emptyMessage: 'Cases are opened from a return, a damage finding or the Cases queue. None has been opened.',
+            }
+          : { emptyTitle: 'No cases opened in this range' })}
+      >
       {/* KPI Strip */}
       <KpiStrip items={kpis} columns={viewport === 'phone' ? 1 : viewport === 'tablet' ? 2 : 4} />
 
@@ -416,15 +435,7 @@ export default function CasesReport() {
 
       {activeTab === 'register' && (
         <DataTableShell ariaLabel="Exhaustive register of all incident cases and claim settlements">
-          {loading ? (
-            <div style={{ padding: 'var(--sp-xl)', textAlign: 'center', color: 'var(--muted)' }}>
-              Loading cases register…
-            </div>
-          ) : cases.length === 0 ? (
-            <div style={{ padding: 'var(--sp-xl)', textAlign: 'center', color: 'var(--muted)' }}>
-              No incident cases found.
-            </div>
-          ) : (
+          {/* Loading and empty are drawn once, by the PageBody above. */}
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
@@ -491,9 +502,9 @@ export default function CasesReport() {
                 ))}
               </tbody>
             </table>
-          )}
         </DataTableShell>
       )}
+      </PageBody>
     </div>
   )
 }

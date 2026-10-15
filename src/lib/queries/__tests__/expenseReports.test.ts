@@ -32,7 +32,7 @@ describe('expenseReports queries', () => {
     expect(totals.total).toBe(totals.paid + totals.pending)
   })
 
-  it('loads empty expense reports summary with 0 spend when empty or error', async () => {
+  it('loads an empty expense summary with 0 spend when the read returns no rows', async () => {
     const mockOrder = vi.fn().mockResolvedValue({
       data: [],
       error: null,
@@ -50,6 +50,14 @@ describe('expenseReports queries', () => {
     expect(summary.branches).toEqual(BRANCHES)
     expect(summary.totalSpent).toBe(0)
     expect(summary.pendingApproval).toBe(0)
+  })
+
+  it('throws on a failed read rather than reporting an empty ledger', async () => {
+    const mockOrder = vi.fn().mockResolvedValue({ data: null, error: { message: 'permission denied for table expenses' } })
+    ;(supabase.from as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      select: vi.fn().mockReturnValue({ order: mockOrder }),
+    })
+    await expect(getExpenseReportsSummary()).rejects.toThrow('permission denied for table expenses')
   })
 
   it('maps expenses and computes totals when rows present', async () => {

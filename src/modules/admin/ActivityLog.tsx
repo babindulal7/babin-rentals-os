@@ -1,10 +1,12 @@
 import { formatAd } from '../../lib/bs'
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import Icon from '../../components/ui/Icon'
 import { PageHeader, KpiStrip, FooterNote, cardStyle } from '../../components/ui/Page'
 import type { Kpi } from '../../components/ui/Page'
 import { EmptyState } from '../../components/ui/StateViews'
+import { PageBody } from '../../components/ui/PageBody'
+import { useLoad } from '../../lib/queries/useLoad'
 import { useViewport } from '../../lib/device'
 import { useAuth } from '../../lib/auth'
 import {
@@ -54,19 +56,15 @@ export default function ActivityLog() {
   const viewport = useViewport()
   const { user } = useAuth()
   const showNetwork = user?.role === 'Owner' || user?.role === 'Manager' || user?.role === 'Admin'
-  const [timeline, setTimeline] = useState<readonly ActivityRow[]>([])
-
-  useEffect(() => {
-    let active = true
-    listActivityEvents().then((res) => {
-      if (active) {
-        setTimeline(res.rows)
-      }
-    }).catch(() => {})
-    return () => {
-      active = false
-    }
-  }, [])
+  /*
+   * Phase 6. The read was `listActivityEvents().then(...).catch(() => {})` over
+   * a query that also swallowed its own errors, so loading, a failure and a
+   * genuinely empty log all drew the same "No activity matches this filter".
+   * `useLoad` separates them: skeleton, banner with Retry (offline-worded when
+   * it is), and a "nothing yet" Empty distinct from the filtered one below.
+   */
+  const load = useLoad(() => listActivityEvents())
+  const timeline = useMemo<readonly ActivityRow[]>(() => load.data?.rows ?? [], [load.data])
 
   const [who, setWho] = useState<string>(ALL)
   const [mod, setMod] = useState<string>(ALL)
@@ -120,6 +118,16 @@ export default function ActivityLog() {
         description="Who did what, where — newest first. Usage, not state changes; those live in the Audit Log."
       />
 
+      <PageBody
+        noun="activity"
+        loading={load.loading}
+        error={load.error}
+        onRetry={load.reload}
+        hasRows={timeline.length > 0}
+        empty={load.data !== null && timeline.length === 0}
+        emptyTitle="No activity recorded yet"
+        emptyMessage="Sign-ins, exports and other usage appear here as they happen."
+      >
       <KpiStrip items={kpis} columns={viewport === 'phone' ? 1 : viewport === 'tablet' ? 2 : 4} />
 
       <div
@@ -136,8 +144,11 @@ export default function ActivityLog() {
         <Filter label="Date" value={day} onChange={setDay} options={dayOptions} />
       </div>
 
+      {/* Reached only with a non-empty log, so this is always no RESULTS —
+          the "nothing yet" case is the PageBody's. */}
       {groups.length === 0 ? (
         <EmptyState
+          kind="no-results"
           icon={<Icon name="search" size={22} />}
           title="No activity matches this filter"
           description="Try a wider date, another module, or clear the filters to see the whole timeline."
@@ -177,6 +188,7 @@ export default function ActivityLog() {
           ))}
         </div>
       )}
+      </PageBody>
 
       <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.6 }}>{RETENTION_NOTE}</p>
 
