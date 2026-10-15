@@ -76,7 +76,10 @@ async function mount(onSuccess: (p: unknown) => void) {
   await act(async () => {
     root.render(
       <StrictMode>
-        <RecordPaymentModal isOpen onClose={() => {}} onSuccess={onSuccess as never} invoices={INVOICES} />
+        {/* The two invoices belong to two bookings, so since 14 Oct nothing is preselected for them
+            (`defaultInvoiceId`); these tests are about conversion, Drafts and idempotency, so they name
+            the invoice the way Booking Detail and a selected Rentals row do. */}
+        <RecordPaymentModal isOpen onClose={() => {}} onSuccess={onSuccess as never} invoices={INVOICES} initialInvoiceId={INVOICE_UUID} />
       </StrictMode>,
     )
   })

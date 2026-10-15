@@ -1,5 +1,82 @@
 # Progress Log
 
+## 2026-10-15 — Merged payment preselection safety, interactive revenue charts & clean UI verified
+
+**Did**
+- Merged `origin/claude/payment-no-wrong-client-default` into `main`: fixes critical money-safety bug where opening Record Payment from the Rentals list or Finance modal preselected the first payable invoice across all clients and filled its outstanding balance. Now `defaultInvoiceId` in `RecordPaymentModal.tsx` preselects only when unambiguous (caller named an invoice, a single invoice, or all invoices belong to one booking); otherwise displays "Select an invoice…" placeholder with empty amount. The Rentals list explicitly passes the selected booking's payable invoice.
+- Merged `origin/feat/interactive-revenue-charts-20261015` into `main`: replaced fabricated/mock revenue statistics with live ledger-aggregated issued invoice monthly trends (`reportRevenueTrend.ts`, `revenueTrend.ts`), added accessible `InteractiveRevenueTrend.tsx` chart with responsive touch/keyboard focus, added 10 unit tests (`src/lib/intel/revenueTrend.test.ts`), and metric provenance audit (`docs/INTERACTIVE_REPORT_CHARTS_PHASE1.md`).
+- Verified clean UI layout improvements from 2026-10-15 in `main`:
+  - Resolved Booking Detail header action crowding: moved status, cancellation, and sub-rental badges to `PageHeader status={...}` in Zone 1.
+  - Collapsed empty action slots globally in `src/components/shell/shell.css`, recovering 150px–266px header space.
+  - Relaxed breadcrumb and label capping in `src/components/shell/Header.tsx` (`min(520px, 45vw)` and `min(420px, 36vw)` with `minWidth: 180px`), eliminating title squeezing down to 37px.
+  - Removed duplicate in-page `<SearchInput>` in Inventory (`src/modules/inventory/Inventory.tsx`) and Clients Directory (`src/modules/clients/ClientsDirectory.tsx`).
+  - Aligned quick filter chips and grouped controls (Table/Cards view, density, Stats) into a non-wrapping single row in Clients Directory.
+  - Streamlined Overdue Movement cards in Today dashboard (`src/modules/today/dashboard.css`).
+
+**Ruled**
+- `docs/RULINGS-2026-10-14-payment-default.md` (P14-1, P14-2). No database migrations written or applied (N-5); strictly zero schema alterations. Anon key only in client.
+- Canonical 5 overflow actions in `BookingDetail` preserved (`Extend rental`, `Assign crew`, `Create sub-rental`, `Cancel booking`, `Message client`) with `aria-label="More booking actions"`.
+- Integer paisa and money-visibility rules intact; touch targets maintain >= 44px (Law 15).
+
+**Verified**
+- TypeScript strict typecheck passed exit 0 (`npm run typecheck`).
+- Unit and modal tests passed: `RecordPaymentModal.test.tsx` and `RecordPaymentModal.prefill.test.tsx` (21/21 passed), `revenueTrend.test.ts` (10/10 passed).
+- Full test suite passed exit 0: 356 test files, 4,507 tests passed (`npm test`).
+- WCAG AA contrast check passed: 82/82 pass, 0 fail (`npm run check:contrast`).
+- Database verification gates passed: `npm run check:pglite` (160/160 migrations applied, 0 view leaks, 0 function leaks, 0 definer hygiene issues), `npm run check:lifecycle` (30/30 lifecycle steps green).
+- Production build passed exit 0 (`npm run build`).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-15T07:57:19.221Z). Suite: 4507/4507 passed (recorded 2026-10-15T07:57:06.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-15T07:57:34.294Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Production deployment and live Supabase application after owner backup protocol (N-5).
+- Review `origin/fix/2026-10-15-discount-vat-payment-integrity` with database migration 0164.
+- Continuous visual alignment with future Booqable-style micro-interactions across remaining secondary modals.
+
+## 2026-10-14 — Record Payment no longer preselects another client's invoice
+
+**Did**
+- Browser-verified the R-39 payment budgets from 2026-09-19 (d) and found a money-safety defect the D1/D2 prefill had introduced: on the Rentals list (header More → Record Payment) the dialog preselected the FIRST of every client's payable invoices and typed its outstanding in. With rental #903 (Lumbini Rentals) selected it opened on INV-91 for Dhaulagiri Weddings at Rs 33,448 — one press from an immutable payment against the wrong client. The Payments page and Finance's generic launcher passed the same list.
+- Fix: `defaultInvoiceId` in `RecordPaymentModal.tsx` preselects only when the choice is unambiguous (named by the caller, a single invoice, or one booking's invoices); otherwise a "Select an invoice…" placeholder shows and the amount stays empty. The Rentals list names the one selected rental's own payable invoice.
+- Measured in the browser (seeded mock, Owner, 1440px): Booking Detail → recorded payment 2 taps, 0 typed (budget ≤ 4); Rentals list with one rental selected → 4 taps, 0 typed (≤ 4); Rentals list with nothing selected and the Payments launcher open on the placeholder.
+- Main stopped compiling at `5c1bacc` (two names left unused in Booking Detail, TS6133; `npm run build` runs tsc first). I opened #15 to delete them, but Babin's `a995169` fixed it first by reusing `phoneMoreItems` as the phone items of More booking actions, so #15 was closed unmerged (merging it would have broken main again: TS2304) and this branch carries main's Booking Detail unchanged.
+
+**Ruled**
+- `docs/RULINGS-2026-10-14-payment-default.md` (P14-1, P14-2). No permission, schema, gate or payment-write change.
+
+**Verified**
+- typecheck 0; eslint on `src` clean; lint:shell, lint:ui-copy (0), contrast 82/82; full suite 350 files / 4,466 tests pass (4 new: no preselection across bookings, refusal until chosen then prefill, a named invoice still wins, `defaultInvoiceId` cases); the two existing dialog suites updated to name their invoice where they relied on the old first-row default; production build exit 0.
+- Browser: the four entry states above, zero page errors.
+- Merge check: `f1bce01` tsc 0; `f1bce01` + #15 → TS2304 `phoneMoreItems`, confirming the close.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-14T22:28:25.992Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Gates read from .lifecycle-result.json, written 2026-10-14T20:37:10.038Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Still unmeasured in a browser from the 19 Sep table: Cancel a booking, new client inline in New Rental, and New Rental → Booked (≤ 12).
+- Finance's row-level Record Payment launchers were not re-driven; they pass `initialInvoiceId`, which the rule honours.
+
 ## 2026-10-14 — UI copy repair: sentences broken by an earlier bulk copy edit
 
 **Did**
