@@ -488,6 +488,62 @@ describe('15 Oct header rule — the stage action, Operations and ONE More, at e
   })
 })
 
+/*
+ * RULING 2026-10-16 (phone header): at 375px the header held back 44, the title, Operations 44,
+ * More 44, the stage action, Search 44 and the avatar 44. "Receive Overdue Return" (182px)
+ * overflowed it by 37px and left the title 0px. On a phone the stage action is an icon over one
+ * word (its full name stays the accessible name and tooltip), and Search moves into the More.
+ * Measured in the mock at 375 and 390; jsdom has no layout, so this pins the structure.
+ */
+describe('16 Oct phone header — a one-word stage action and Search in the More', () => {
+  const stageAction = () =>
+    [...(container.querySelector('.page-actions')?.querySelectorAll('button') ?? [])].find(
+      (b) => (b.getAttribute('aria-label') ?? b.textContent?.trim()) === 'Start Packing',
+    )
+  const openMore = async () => {
+    const more = allButtons().find((b) => b.getAttribute('aria-label') === 'More booking actions')
+    await act(async () => {
+      more?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    return [...document.querySelectorAll('[role="menuitem"]')]
+  }
+
+  for (const width of [375, 390]) {
+    it(`shows the stage action as one word, still named in full, at ${width}px`, async () => {
+      await mount(width)
+      const action = stageAction()
+      expect(action).toBeDefined()
+      expect(action?.querySelector('.ui-button__label')?.textContent).toBe('Pack')
+      expect(action?.getAttribute('title')).toBe('Start Packing')
+      // Law 15: the stacked form keeps the 44px floor.
+      expect(action?.style.minHeight).toBe('44px')
+    })
+
+    it(`puts Search in the More, where it opens the command palette, at ${width}px`, async () => {
+      await mount(width)
+      const opened = vi.fn()
+      window.addEventListener('open-command-palette', opened)
+      const search = (await openMore()).find((i) => i.textContent?.trim() === 'Search')
+      expect(search).toBeDefined()
+      await act(async () => {
+        search?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      })
+      window.removeEventListener('open-command-palette', opened)
+      expect(opened).toHaveBeenCalledTimes(1)
+    })
+  }
+
+  for (const width of [768, 1280]) {
+    it(`keeps the full label and no Search row at ${width}px`, async () => {
+      await mount(width)
+      expect(stageAction()?.textContent?.trim()).toBe('Start Packing')
+      expect(stageAction()?.hasAttribute('aria-label')).toBe(false)
+      const items = (await openMore()).map((i) => i.textContent?.trim())
+      expect(items).not.toContain('Search')
+    })
+  }
+})
+
 /**
  * Law 17 on the READ path — PLAN.md §6.1, "the word customer appears nowhere
  * in the UI".

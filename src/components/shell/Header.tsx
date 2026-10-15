@@ -854,7 +854,9 @@ export default function Header({ crumbs, actions }: HeaderProps) {
           </button>}
 
           {/* 8. Phone Search Toggle Icon */}
-          {isPhone && !searchConfig && !isDispatch && !ws?.hasPageSearch && (
+          {/* RULING 2026-10-16: a page whose own More carries Search (Booking Detail) gives this
+              button's 50px to its title; at 375px the title had 0px. Revert = drop `searchInMore`. */}
+          {isPhone && !searchConfig && !isDispatch && !ws?.hasPageSearch && !hData?.searchInMore && (
             <button
               type="button"
               onClick={() => openCommandPalette()}
