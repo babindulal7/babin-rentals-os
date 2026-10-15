@@ -65,7 +65,10 @@ export async function getPulseLiveSummary(): Promise<PulseLiveSummary> {
   const [bookingsRes, invoicesRes, paymentsRes, unitsRes] = await Promise.all([
     supabase.from('bookings').select('id, stage'),
     supabase.from('invoices').select('id, total_amount, status'),
-    supabase.from('payments').select('id, amount, status').eq('status', 'Completed'),
+    // `payment_status` is Received / Refunded / Failed / Cancelled (0001). This
+    // filtered on 'Completed', which Postgres rejects; the old zero-fallback hid
+    // that, so collected cash always read Rs 0. Surfaced by the throw below.
+    supabase.from('payments').select('id, amount, status').eq('status', 'Received'),
     supabase.from('product_units').select('id, status'),
   ])
 
