@@ -23,7 +23,7 @@
 
 **Verified**
 - `npm run typecheck`: clean pass (exit 0).
-- Vitest targeted test runs: 6 files, 68/68 passed (including Pulse states, Settings states, BookingDetail layout, Delivery dispatch workflow, Revenue credits, Report revenue trend).
+- Full Vitest suite: 364 files, 4,609/4,609 passed (0 failures).
 - `npm run check:pglite`: 163/163 migrations applied from scratch in PGlite, 0 failed, 0 view leaks, 0 definer hygiene issues.
 - `npm run check:lifecycle`: 30/30 green through real Postgres + RLS.
 - `npm run check:contrast`: 82/82 WCAG AA pass (0 FAIL).
@@ -38,7 +38,7 @@
 | Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
 | Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
 | Overall | mean of five | ≈ 99% | +0 |
-Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-15T20:13:51.106Z). Suite: 4546/4546 passed (recorded 2026-10-15T19:21:55.000Z).
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-15T20:13:51.106Z). Suite: 4609/4609 passed (recorded 2026-10-15T20:16:18.000Z).
 Gates read from .lifecycle-result.json, written 2026-10-15T20:14:33.408Z.
 Counted by `npm run completion`, not typed.
 
