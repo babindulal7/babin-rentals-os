@@ -1,5 +1,51 @@
 # Progress Log
 
+## 2026-10-16 — Integration: Claude UX improvements, Delivery dispatch persistence, and Revenue credit reconciliation
+
+**Did**
+- Fully integrated Claude's UI compaction & state hardening across the app:
+  - **Booking Detail Compact Header** (`src/modules/rentals/BookingDetail.tsx`): Eliminated the 610px button cluster squeezing desktop record titles down to 37px. Unified header across all widths to stage action, 44px Operations menu, and single `RentalMoreActions` overflow. Relocated badges into Zone 1 `PageHeader status={...}`.
+  - **Pulse 5-State Ladder** (`src/modules/reports/Pulse.tsx`, `src/lib/queries/pulse.ts`): Replaced silent zero-swallowing with throwing on query failures (Law 16). Fixed `payment_status` filter from non-existent `'Completed'` to `'Received'`. Wrapped dashboard in `PageBody` five-state ladder with retry and "nothing recorded yet" first-run detection.
+  - **Settings State Hardening** (`src/modules/settings/`): Added skeleton loading, empty state distinction (directory with no staff vs filtered empty), offline failure messaging, and Device PIN check retry.
+  - **Standardized `useLoad` Hook** (`src/lib/queries/useLoad.ts`): One-shot query lifecycle with error recovery and reconnect auto-retry.
+- Integrated branch `fix/revenue-credit-reconciliation-20261016`:
+  - Reconciled issued-window invoice credits without false net sales (`src/modules/reports/RevenueReport.tsx`, `src/lib/queries/reportRevenueTrend.ts`, `src/lib/intel/revenueTrend.ts`).
+  - Added full test coverage in `src/lib/intel/__tests__/revenueCredits.test.ts` and `src/lib/queries/__tests__/reportRevenueTrend.test.ts`.
+- Integrated branch `feat/2026-10-16-delivery-dispatch-persistence`:
+  - Added UI-validation workflow model for safe delivery dispatch transitions (`src/lib/deliveryDispatchWorkflow.ts`, `src/lib/__tests__/deliveryDispatchWorkflow.test.ts`).
+  - Sequenced delivery jobs and event RPC migration as `supabase/migrations/0165_delivery_jobs_and_event_rpc.sql`.
+- Verified live app running on port 3000 (`npm run dev:mock`).
+
+**Ruled**
+- Credit note amounts reflect paid settlements, not taxable sales deductions; revenue reporting never subtracts them from taxable sales.
+- Delivery events and stage transitions remain server-authoritative RPCs; client UI enforces no client-side authority.
+- N-5 preserved: migrations written and locally validated in PGlite (0163, 0164, 0165); zero remote migrations applied.
+
+**Verified**
+- `npm run typecheck`: clean pass (exit 0).
+- Vitest targeted test runs: 6 files, 68/68 passed (including Pulse states, Settings states, BookingDetail layout, Delivery dispatch workflow, Revenue credits, Report revenue trend).
+- `npm run check:pglite`: 163/163 migrations applied from scratch in PGlite, 0 failed, 0 view leaks, 0 definer hygiene issues.
+- `npm run check:lifecycle`: 30/30 green through real Postgres + RLS.
+- `npm run check:contrast`: 82/82 WCAG AA pass (0 FAIL).
+- `npm run build`: tsc clean, 297 precached assets generated.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-15T20:13:51.106Z). Suite: 4546/4546 passed (recorded 2026-10-15T19:21:55.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-15T20:14:33.408Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Manual cross-browser visual verification of the compact headers and state ladders at 375px, 820px, and 1440px.
+- Live staging testing for Phase 2 delivery persistence prior to production authorization under N-5.
+
 ## 2026-10-16 — Consolidation: phone header de-crowding, single shared header selection & clean UI
 
 **Did**
