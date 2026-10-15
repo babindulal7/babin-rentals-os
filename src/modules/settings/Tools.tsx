@@ -935,7 +935,7 @@ function FavouriteButton({ on, name, onToggle }: { on: boolean; name: string; on
           height: 26,
           borderRadius: 7,
           border: `1px solid ${on ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-          background: on ? 'var(--nav-active-bg)' : 'var(--card)',
+          background: on ? 'var(--select-bg)' : 'var(--card)',
           display: 'grid',
           placeItems: 'center',
         }}
@@ -1294,8 +1294,8 @@ export default function Tools({ embedded = false }: ToolsProps = {}) {
                     padding: '0 12px',
                     borderRadius: 'var(--r-btn)',
                     border: `1px solid ${onlyFavourites ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-                    background: onlyFavourites ? 'var(--nav-active-bg)' : 'var(--card)',
-                    color: onlyFavourites ? 'var(--nav-active-accent)' : 'var(--text2)',
+                    background: onlyFavourites ? 'var(--select-bg)' : 'var(--card)',
+                    color: onlyFavourites ? 'var(--select-fg)' : 'var(--text2)',
                     fontSize: 'var(--t-meta)',
                     fontWeight: 600,
                     fontFamily: 'inherit',
@@ -1335,8 +1335,8 @@ export default function Tools({ embedded = false }: ToolsProps = {}) {
                       placeItems: 'center',
                       borderRadius: 'var(--r-btn)',
                       border: `1px solid ${view === v ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-                      background: view === v ? 'var(--nav-active-bg)' : 'var(--card)',
-                      color: view === v ? 'var(--nav-active-accent)' : 'var(--muted)',
+                      background: view === v ? 'var(--select-bg)' : 'var(--card)',
+                      color: view === v ? 'var(--select-fg)' : 'var(--muted)',
                       cursor: 'pointer',
                     }}
                   >

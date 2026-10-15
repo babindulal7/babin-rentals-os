@@ -140,3 +140,7 @@
     white-space: nowrap;
   }
 }
+
+/* RULING 2026-10-15: the filter toggle sits in the left zone of the header; that zone always keeps room for it. */
+.app-global-header__breadcrumbs { min-width: 52px !important; }
+.app-global-header__breadcrumbs .workspace-page-actions { flex-shrink: 0; }

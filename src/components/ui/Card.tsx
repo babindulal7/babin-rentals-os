@@ -153,13 +153,13 @@ export function KpiCard({ label, value, subtext, trend, icon, onClick }: KpiCard
         {icon && (
           <span
             style={{
-              color: 'var(--nav-active-accent)',
+              color: 'var(--select-fg)',
               display: 'grid',
               placeItems: 'center',
               width: 28,
               height: 28,
               borderRadius: 'var(--r-sm)',
-              background: 'var(--nav-active-bg)',
+              background: 'var(--select-bg)',
             }}
           >
             {icon}

@@ -295,8 +295,8 @@ export default function ToolsLanding() {
                         borderRadius: 'var(--r-sm)',
                         display: 'grid',
                         placeItems: 'center',
-                        background: 'var(--nav-active-bg)',
-                        color: 'var(--nav-active-accent)',
+                        background: 'var(--select-bg)',
+                        color: 'var(--select-fg)',
                         flexShrink: 0,
                       }}
                     >

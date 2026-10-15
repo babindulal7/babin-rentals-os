@@ -181,9 +181,15 @@
 }
 
 .calendar-day-cell.is-today {
-  background: var(--nav-active-bg);
-  border-color: var(--nav-active-accent);
+  background: var(--select-bg);
+  border-color: var(--select-bg);
+  color: var(--select-fg);
 }
+
+.calendar-day-cell.is-today .calendar-day-bs,
+.calendar-day-cell.is-today .calendar-day-num,
+.calendar-day-cell.is-today .calendar-day-ad,
+.calendar-day-cell.is-today strong { color: var(--on-primary); }
 
 .calendar-day-cell.is-picked {
   box-shadow: 0 0 0 2px var(--nav-active-accent);
@@ -216,7 +222,7 @@
 }
 
 .calendar-day-bs.is-today-accent {
-  color: var(--nav-active-accent);
+  color: var(--select-fg);
 }
 
 .calendar-day-bs.is-offday-accent {
@@ -327,8 +333,9 @@
 }
 
 .calendar-timeline-col-header.is-today {
-  background: var(--nav-active-bg);
-  border-left: 2px solid var(--nav-active-accent);
+  background: var(--select-bg);
+  border-left: 2px solid var(--select-bg);
+  color: var(--select-fg);
 }
 
 .calendar-timeline-bar-btn {

@@ -1,5 +1,13 @@
 # Progress Log
 
+## 2026-10-15 — Per-panel date filters on Today (Pickups, Returns)
+
+**Did.** Added a date control to each of the Pickups and Returns panel headers (`Today.tsx`, via the existing `filterControl` slot). Each changes only its own queue; the shared top control was then removed so each queue is fully independent. `RULINGS-2026-10-15.md`.
+
+**Verified.** `tsc --noEmit` 0 errors; `vitest run src/modules/today` 118/118 (layout tests rewritten for per-panel controls, incl. a test that changing one leaves the other). Drove the mock app: set Pickups to Tomorrow → Pickups showed "No pickups tomorrow" while Returns stayed on Today with 24 rows.
+
+**Not verified.** Phone width layout of the in-panel control; Returns custom range in the panel.
+
 ## 2026-10-16 — Selected rental items: responsive cards and interaction verification
 
 **Did**
