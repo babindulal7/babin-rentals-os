@@ -453,7 +453,7 @@ export function planTransition(req: TransitionRequest): TransitionPlan {
     if (req.gates === undefined) {
       blockers.push({
         rule: 'close-gate',
-        label: /* §1.7 — all four close gates must pass */ "all four close gates must pass",
+        label: /* §1.7 — all four close gates must pass */ "All four close gates must pass",
         blocking: 'not evaluated: no CloseGateInput was supplied',
       })
     } else {

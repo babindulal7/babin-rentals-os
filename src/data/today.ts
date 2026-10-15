@@ -664,7 +664,7 @@ export const FILTER_SUPPORT: Readonly<Record<string, FilterSupport>> = {
   'Deposit Pending': {
     kind: 'unavailable',
     reason:
-      /* bookings.deposit_required is the figure REQUIRED; nothing on the booking records what has been received, and the column is unmasked money (Law 6). */ "bookings.deposit_required is the figure REQUIRED; nothing on the booking records what has been received, and the column is unmasked money .",
+      /* bookings.deposit_required is the figure REQUIRED; nothing on the booking records what has been received, and the column is unmasked money (Law 6). */ "A booking records the deposit required, not what has been received, so there is nothing to filter on yet.",
   },
   'Payment Pending': {
     kind: 'unavailable',
