@@ -1,5 +1,34 @@
 # Progress Log
 
+## 2026-10-16 — Smart Intel role acceptance preflight
+
+**Did**
+- Checked the current Supabase connector project inventory and local staging configuration by variable names/presence only. The connector exposes two inactive projects. No staging variables are present in the process environment or local env files. Kept all credentials out of output.
+- Ran the existing read-only staging verifier; it recorded INCOMPLETE under artifacts/staging-verification/2026-10-16T17-48-14-308Z/. The user supplied the production API origin, sxguwvgoserhdolewibb.supabase.co; the existing production refusal was retained. Requested the actual app URL and an authenticated Warehouse session for read-only inspection.
+- Browser inventory exposes only the in-app browser and MCP Apps, both without open tabs. No connected real-role browser or physical iPad/Safari session was available.
+
+**Ruled**
+- Production API access is not staging certification. No project activation, provisioning, schema changes, migration application, role changes or financial writes were performed.
+
+**Verified**
+- Four focused Smart Intel suites passed 27/27 checks: role-filtered loaders, Accounts note visibility, complete lists, money omission from Warehouse payloads/DOM, named readiness blockers, Escape focus return and touch sheet behavior. These are local automated checks with test doubles, not authenticated Supabase acceptance.
+- The staging verifier's own tests passed 2/2, including production rejection and refusing to certify missing identities/fixtures. No application source changed in this pass, so no fresh full build or full-suite run is claimed.
+- Ran npm run completion; its block below reflects repository cached gate results. Focused-test log: artifacts/intel-role-acceptance-2026-10-16.log.
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 165 files · check:pglite 165/165 applied, 0 failed (recorded 2026-10-16T12:24:37.055Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T12:24:43.211Z.
+Counted by `npm run completion`, not typed.
+### Remaining
+- Real Warehouse/Accounts/Manager card acceptance requires the app URL and authenticated sessions. Staging sign-off additionally requires an active isolated project and known-record fixtures; the provided origin is production.
+- Physical iPad/Safari verification remains pending an available device/session. Deployment and production verification remain pending the established backup/application process.
 ## 2026-10-16 — Phone header acceptance and staging access preflight
 
 **Did**

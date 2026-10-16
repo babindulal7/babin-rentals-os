@@ -1,0 +1,12 @@
+{
+  "status": "INCOMPLETE",
+  "checks": [
+    {
+      "name": "Staging configuration, fixtures or connectivity unavailable. Credentials and response bodies are suppressed.",
+      "status": "INCOMPLETE"
+    }
+  ],
+  "at": "2026-10-16T17:48:14.311Z",
+  "environment": "isolated staging",
+  "mode": "GET requests and read-only SQL only"
+}
