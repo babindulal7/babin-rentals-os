@@ -542,6 +542,8 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                     outline: 'none',
                     width: '100%',
                     minWidth: 0,
+                    minHeight: 44,
+                    padding: 0,
                     fontFamily: 'inherit',
                   }}
                 />

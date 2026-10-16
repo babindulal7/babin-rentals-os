@@ -761,7 +761,7 @@ export default function OperationsQueues() {
           title="Operations"
           module="operations"
           status={
-            selected ? (
+            selected && !phone ? (
               <span
                 className="eyebrow-pill"
                 style={{

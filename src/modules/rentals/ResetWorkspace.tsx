@@ -5,7 +5,7 @@ import Icon from '../../components/ui/Icon'
 import { Card, Button, cardStyle } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
-import { FloorAside, floorPlacements } from '../operations/FloorAside'
+import { OperationAside } from '../operations/FloorAside'
 import { EmptyState, ErrorBanner } from '../../components/ui/StateViews'
 import { PageBody } from '../../components/ui/PageBody'
 import { STATUS } from '../../lib/status'
@@ -316,9 +316,7 @@ export default function ResetWorkspace({
     'A reset names who cleaned the unit and who QC’d it, and the QC gate compares the two. Sign in and reopen this workspace.'
   /* Law 13/14 — width decides, at v4.1 §7.7's 768 / 1280. */
   const viewport = useFloorViewport()
-  const desktop = viewport === 'desktop'
   const phone = viewport === 'phone'
-  const place = floorPlacements(desktop, phone)
 
   /* ── the read — fetchFloorBooking, same cancellation rule as BookingDetail ── */
   const [floor, setFloor] = useState<FloorBooking | null>(null)
@@ -1273,84 +1271,18 @@ export default function ResetWorkspace({
               />
             </div>
 
-            {/* §3.5 — groups rail · queue · batch panel; the rails reflow rather
-                than collapse below 1280 (Rulings §7). */}
-            <div
+            {/* RULING 2026-10-16: batch progress and groups share one right-side column. */}
+            <div className="operation-workspace-grid"
               style={{
                 display: 'grid',
-                gridTemplateColumns: desktop ? 'auto minmax(0,1fr) auto' : phone ? '1fr' : 'minmax(0,1fr) 320px',
+                gridTemplateColumns: phone ? 'minmax(0,1fr)' : 'minmax(0,1fr) 300px',
                 gap: 'var(--sp-md)',
                 alignItems: 'start',
               }}
             >
-              {/* ── left — groups, derived from the bundle tree ─────────────── */}
-              <FloorAside collapsible={desktop} side="left" width={220} label="Groups" style={place.tree}>
-                <Card title="Groups">
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {groups.map((g) => {
-                      const ready = g.rows.filter((r) => recOf(r.key).queueState === 'Ready' && recOf(r.key).problem === 'No Problems').length
-                      const allDone = ready === g.rows.length
-                      return (
-                        <div
-                          key={g.name}
-                          className="floor-group-item-btn"
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 'var(--sp-sm)',
-                            padding: '8px 10px',
-                            borderRadius: 'var(--r-sm)',
-                            background: allDone ? 'var(--st-in-bg)' : 'transparent',
-                            color: allDone ? 'var(--st-in-fg)' : 'inherit',
-                          }}
-                        >
-                          <Icon
-                            name={allDone ? 'checklist' : 'box'}
-                            size={14}
-                            style={{
-                              color: allDone ? 'var(--success-text)' : 'var(--text3)',
-                              flexShrink: 0,
-                            }}
-                          />
-                          <span
-                            style={{
-                              flex: 1,
-                              minWidth: 0,
-                              fontSize: 'var(--t-meta)',
-                              fontWeight: allDone ? 600 : 500,
-                              color: 'var(--text)',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                            }}
-                          >
-                            {g.name}
-                          </span>
-                          <span
-                            className="figure"
-                            style={{
-                              fontSize: 'var(--t-meta)',
-                              fontWeight: 600,
-                              color: allDone ? 'var(--success-text)' : 'var(--muted)',
-                              background: 'var(--card2)',
-                              padding: '1px 6px',
-                              borderRadius: 'var(--r-badge)',
-                            }}
-                          >
-                            {ready}/{g.rows.length}
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                  <p style={{ margin: '9px 0 0', paddingTop: 9, borderTop: '1px solid var(--border)', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
-                    Group counts are derived from the booking&apos;s live lines and always sum to {rows.length}.
-                  </p>
-                </Card>
-              </FloorAside>
 
               {/* ── centre — the queue, over the real rows ──────────────────── */}
-              <div style={{ minWidth: 0, ...place.list }}>
+              <div style={{ minWidth: 0 }}>
                 <Card
                   title="Reset Queue"
                   bodyStyle={{ padding: 0 }}
@@ -1596,7 +1528,8 @@ export default function ResetWorkspace({
               </div>
 
               {/* ── right — the batch panel, the gate checklist ─────────────── */}
-              <FloorAside collapsible={desktop} side="right" width={320} label="Reset selected items" style={place.rail}>
+              <div className="operation-workspace-sidebar">
+              <OperationAside label="Reset selected items">
                 <Card title={`Reset Selected Items (${selected.size})`} action={selected.size > 0 ? <button type="button" onClick={clearSelection} aria-label="Clear selected reset items" style={{ minHeight: 44, padding: '0 8px', border: 'none', background: 'transparent', color: 'var(--link)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--t-meta)' }}>Clear</button> : undefined}>
                   {selRows.length === 0 ? (
                     <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>Select items from the queue to work a batch.</p>
@@ -1924,7 +1857,72 @@ export default function ResetWorkspace({
                     </p>
                   </div>
                 </Card>
-              </FloorAside>
+              </OperationAside>
+              <OperationAside label="Groups">
+                <Card title="Groups">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {groups.map((g) => {
+                      const ready = g.rows.filter((r) => recOf(r.key).queueState === 'Ready' && recOf(r.key).problem === 'No Problems').length
+                      const allDone = ready === g.rows.length
+                      return (
+                        <div
+                          key={g.name}
+                          className="floor-group-item-btn"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 'var(--sp-sm)',
+                            padding: '8px 10px',
+                            borderRadius: 'var(--r-sm)',
+                            background: allDone ? 'var(--st-in-bg)' : 'transparent',
+                            color: allDone ? 'var(--st-in-fg)' : 'inherit',
+                          }}
+                        >
+                          <Icon
+                            name={allDone ? 'checklist' : 'box'}
+                            size={14}
+                            style={{
+                              color: allDone ? 'var(--success-text)' : 'var(--text3)',
+                              flexShrink: 0,
+                            }}
+                          />
+                          <span
+                            style={{
+                              flex: 1,
+                              minWidth: 0,
+                              fontSize: 'var(--t-meta)',
+                              fontWeight: allDone ? 600 : 500,
+                              color: 'var(--text)',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {g.name}
+                          </span>
+                          <span
+                            className="figure"
+                            style={{
+                              fontSize: 'var(--t-meta)',
+                              fontWeight: 600,
+                              color: allDone ? 'var(--success-text)' : 'var(--muted)',
+                              background: 'var(--card2)',
+                              padding: '1px 6px',
+                              borderRadius: 'var(--r-badge)',
+                            }}
+                          >
+                            {ready}/{g.rows.length}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <p style={{ margin: '9px 0 0', paddingTop: 9, borderTop: '1px solid var(--border)', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
+                    Group counts are derived from the booking&apos;s live lines and always sum to {rows.length}.
+                  </p>
+                </Card>
+              </OperationAside>
+              </div>
             </div>
 
             {/* §9.3 — the selection bar shows only the count and Clear Selection. No second primary. */}

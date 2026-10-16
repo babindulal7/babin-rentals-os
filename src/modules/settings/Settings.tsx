@@ -408,20 +408,6 @@ export default function Settings() {
     if (phone) {
       return (
         <div className="app-settings-mobile-subpage">
-          <div className="app-settings-mobile-back-bar">
-            <button
-              type="button"
-              className="app-settings-back-btn tap"
-              onClick={toList}
-              aria-label="Back to settings"
-            >
-              <Icon name="chevron_left" size={18} />
-              <span>Settings</span>
-            </button>
-            <div className="app-settings-mobile-current-title">{activeTab?.label ?? 'Overview'}</div>
-            <div style={{ width: 44 }} aria-hidden="true" />
-          </div>
-
           <div className="app-settings-pane">
             {panel}
             {active === 'branches' && rail && (
@@ -538,11 +524,12 @@ export default function Settings() {
             <div className="settings-v2">
               <PageHeader
                 icon="settings"
-                title="Settings"
+                title={phone && !onPhoneList ? (activeTab?.label ?? 'Settings') : 'Settings'}
+                onBack={phone && !onPhoneList ? toList : undefined}
+                backLabel="Back to settings"
                 description="System preferences, organization profile, security, and workspace policies."
-                /* On a phone the section is named by the back bar under the header,
-                   and on the section list no section is open, so the badge only
-                   costs the title its width there. */
+                /* On a phone the section is named by the title and back button,
+                   so the badge is omitted to prevent title squeeze. */
                 status={phone ? undefined : (
                   <span className="badge badge-neutral" style={{ fontWeight: 600 }}>
                     {activeTab?.label ?? 'General'}

@@ -39,10 +39,10 @@ function validDraft(value: unknown): value is ClientImportRecoveryDraft {
   const preview = buildImportPreview(dataRows, value.mapping as Record<number, ImportTargetField>, [], new Set(value.skippedRows))
   const keys = new Set<string>(), indices = new Set<number>()
   for (const row of value.batch) {
-    if (!object(row) || !exactKeys(row, ['rowIndex', 'clientUuid', 'values']) || !validIndex(row.rowIndex) || typeof row.clientUuid !== 'string' || !UUID.test(row.clientUuid) || indices.has(row.rowIndex) || keys.has(row.clientUuid)) return false
+    if (!object(row) || !exactKeys(row, ['rowIndex', 'clientUuid', 'values']) || !validIndex(row.rowIndex) || typeof row.clientUuid !== 'string' || !UUID.test(row.clientUuid) || indices.has(row.rowIndex) || keys.has(row.clientUuid.toLowerCase())) return false
     const source = preview[row.rowIndex]
     if (!source?.record || source.skip || source.errors.length || !same(row.values, importClientValues(source.record))) return false
-    keys.add(row.clientUuid); indices.add(row.rowIndex)
+    keys.add(row.clientUuid.toLowerCase()); indices.add(row.rowIndex)
   }
   const outcomes = new Set<number>()
   for (const row of value.outcomes) {

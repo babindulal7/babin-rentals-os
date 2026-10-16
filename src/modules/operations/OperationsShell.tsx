@@ -10,6 +10,7 @@ import { stepWriteGate, stepDotState } from '../../lib/operationsShell'
 import { fetchFloorBooking, type FloorBooking } from '../../lib/queries/bookings'
 import { DomainEvents, EVENT_TYPES } from '../../events/eventBus'
 import { FLOOR_TWO_COLUMN_MIN, FloorNarrowContext } from './floorPanelContext'
+import { RentalMoreActions } from '../rentals/actions/RentalMoreActions'
 import './operationsShell.css'
 
 const PackingWorkspace = lazy(() => import('../rentals/PackingWorkspace'))
@@ -22,6 +23,10 @@ const LABEL: Record<JobName, string> = {
   Handover: 'Handover',
   Return: 'Return & Inspection',
   Reset: 'Cleaning & Reset',
+}
+
+const STEP_LABEL: Record<JobName, string> = {
+  Pack: 'Packing', Handover: 'Handover', Return: 'Return', Reset: 'Cleaning',
 }
 
 /* One icon per stage (8 Oct 2026, RULINGS-2026-10-08.md). A stage that is not
@@ -441,20 +446,22 @@ export default function OperationsShell({
                 key={candidate}
                 size="sm"
                 variant={selected ? 'primary' : 'secondary'}
+                className="operations-shell__stage"
+                aria-label={`${LABEL[candidate]} · ${stateLabel}${countStr}`}
                 aria-current={selected ? 'step' : undefined}
                 disabled={isBlocked}
                 title={!gate.allowed ? gate.reason ?? undefined : undefined}
                 onClick={() => requestJob(candidate)}
                 icon={isCompleted ? 'check' : isBlocked ? 'lock' : STEP_ICON[candidate]}
                 style={{
-                  minHeight: 'var(--tap)',
+                  minHeight: 64,
                   minWidth: 0,
                   whiteSpace: 'normal',
                   padding: '10px 12px',
                   opacity: isBlocked ? 0.6 : 1,
                 }}
               >
-                <span className="operations-shell__stage-name">{LABEL[candidate]}</span>
+                <span className="operations-shell__stage-name">{STEP_LABEL[candidate]}</span>
                 <span className="operations-shell__stage-sep"> · </span>
                 <span className="operations-shell__stage-state">{stateLabel}{countStr}</span>
               </Button>
@@ -518,6 +525,20 @@ export default function OperationsShell({
                 <strong style={{ color: 'var(--text)' }}>{floor.lines.length}</strong>
               </div>
             )}
+            <RentalMoreActions
+              compact
+              ariaLabel="Booking actions"
+              booking={{
+                id: floor.id,
+                bookingNo,
+                clientName: floor.clientName,
+                stage: liveStatus,
+                isCancelled: floor.isCancelled,
+                isClosed: floor.isClosed,
+                isPackingInProgress: floor.lines.some((line) => line.units.some((unit) => unit.packed)),
+              }}
+              onActionCompleted={() => { void refreshFloor(); onClose() }}
+            />
           </div>
         )}
 

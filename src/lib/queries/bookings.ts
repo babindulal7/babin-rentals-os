@@ -447,6 +447,8 @@ function canUsePre0144Columns(filters: ListFilters): boolean {
 }
 
 export interface BookingListOptions extends ListFilters {
+  /** Default rental list only; searching includes archived history. */
+  excludeArchived?: boolean
   /** Ask for the total matching count. Costs an extra planner pass, so it is opt-in. */
   withCount?: boolean
   /**
@@ -530,11 +532,15 @@ async function readDeposits(ids: string[]): Promise<Map<string, number | null>> 
 }
 
 export async function listBookings(opts: BookingListOptions = {}): Promise<ListQueryResult<BookingListRow>> {
-  const { withCount, withDeposit, withTotalAmount, headOnly, ...filters } = opts
+  const { withCount, withDeposit, withTotalAmount, headOnly, excludeArchived, ...filters } = opts
+  let useArchiveFilter = Boolean(excludeArchived && !filters.search?.trim())
+  const missingArchiveColumn = (error: BookingQueryError | null) =>
+    Boolean(error && (error.code === '42703' || error.code === 'PGRST204') && error.message.includes('archived_at'))
 
   if (headOnly) {
     const countBookings = async (legacy: boolean): Promise<{ count: number | null; error: BookingQueryError | null }> => {
       const base = supabase.from('bookings').select('id', { count: 'exact', head: true })
+      if (useArchiveFilter) base.is('archived_at', null)
       const query = applyListFilters(base, {
         ...filters,
         search: filters.search === undefined ? undefined : parseBookingNoSearch(filters.search),
@@ -544,6 +550,10 @@ export async function listBookings(opts: BookingListOptions = {}): Promise<ListQ
     }
 
     let { count, error } = await countBookings(false)
+    if (missingArchiveColumn(error)) {
+      useArchiveFilter = false // Old databases have no archived bookings; keep read-only lists available.
+      ;({ count, error } = await countBookings(false))
+    }
     if (missingProjectTypeColumn(error) && canUsePre0144Columns(filters)) {
       ;({ count, error } = await countBookings(true))
     }
@@ -588,6 +598,7 @@ export async function listBookings(opts: BookingListOptions = {}): Promise<ListQ
       .select(legacy ? PRE_0144_COLUMNS : BASE_COLUMNS, withCount ? { count: 'exact' } : undefined)
       // Law 3: a removed line is voided, never deleted, so it must not be counted.
       .is('booking_lines.voided_at', null)
+    if (useArchiveFilter) base.is('archived_at', null)
 
     const query = applyListFilters(base, {
       ...filters,
@@ -617,6 +628,10 @@ export async function listBookings(opts: BookingListOptions = {}): Promise<ListQ
   }
 
   let { data, error, count } = await fetchBookings(false)
+  if (missingArchiveColumn(error)) {
+    useArchiveFilter = false
+    ;({ data, error, count } = await fetchBookings(false))
+  }
   if (missingProjectTypeColumn(error) && canUsePre0144Columns(filters)) {
     ;({ data, error, count } = await fetchBookings(true))
   }

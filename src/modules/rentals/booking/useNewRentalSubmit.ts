@@ -311,7 +311,7 @@ export function useNewRentalSubmit({
           )
         } else {
           setActionError(
-            `Not confirmed — ${reason}. Nothing was written, and nothing entered here has been lost.`,
+            `Not confirmed — ${reason}. Your entries have been kept. Retry uses the same booking reference.`,
           )
         }
       } finally {

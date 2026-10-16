@@ -6,7 +6,7 @@ import type { IconName } from '../../components/ui/Icon'
 import { Card, Button, cardStyle } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
-import { FloorAside, floorPlacements } from '../operations/FloorAside'
+import { OperationAside } from '../operations/FloorAside'
 import { useOperationShell } from '../operations/RentalOperationShell'
 import { EmptyState, ErrorBanner } from '../../components/ui/StateViews'
 import { PageBody } from '../../components/ui/PageBody'
@@ -32,7 +32,7 @@ import { deliveryTypeLabel } from '../../lib/format'
 import { readServiceDue } from '../../lib/queries/serviceDue'
 import { serviceStatus, type ServiceRow } from '../../lib/serviceDue'
 import { formatGateError } from '../../lib/gates'
-import { clearFloorScan, loadFloorScan, saveFloorScan } from '../../lib/floorScanStorage'
+import { clearFloorScan, loadFloorScan, saveFloorScan, recordFloorScanEvent } from '../../lib/floorScanStorage'
 import { rentalDaysBetween } from '../../lib/rentalDays'
 import { NON_PACKABLE_LINE_TYPES } from '../../lib/bookingLineTypes'
 import { useFloorPresence } from '../../lib/floorPresence'
@@ -509,9 +509,7 @@ export default function PackingWorkspace({
   const { showSuccessToast } = useToast()
   /* Law 13/14 — width decides, at v4.1 §7.7's 768 / 1280. */
   const viewport = useFloorViewport()
-  const desktop = viewport === 'desktop'
   const phone = viewport === 'phone'
-  const place = floorPlacements(desktop, phone)
 
   /* ── the read — fetchFloorBooking, same cancellation rule as BookingDetail ── */
   const [floor, setFloor] = useState<FloorBooking | null>(null)
@@ -870,16 +868,44 @@ export default function PackingWorkspace({
     const row = rows.find((r) => r.key === key)
     if (!row) {
       setScanLog((p) => [`✕ ${key} is not on this checklist`, ...p].slice(0, 5))
+      if (via === 'scan' && floor?.id) {
+        void recordFloorScanEvent({
+          bookingId: floor.id,
+          context: 'packing',
+          code: key,
+          result: 'rejected',
+          resultReason: 'is not on this booking checklist',
+        })
+      }
       return { ok: false, message: 'is not on this booking checklist — nothing was ticked.' }
     }
     const current = stateOf(key)
     if (current === 'Packed') {
       setScanLog((p) => [`• ${row.name} was already ticked — nothing changed`, ...p].slice(0, 5))
+      if (via === 'scan' && floor?.id) {
+        void recordFloorScanEvent({
+          bookingId: floor.id,
+          context: 'packing',
+          code: row.serial ?? row.name,
+          result: 'warning',
+          resultReason: 'was already ticked packed',
+          resolvedUnitId: row.assetId,
+        })
+      }
       return { ok: false, message: 'was already ticked packed — nothing changed.' }
     }
 
     markPacked(key, via)
     const how = via === 'scan' ? 'scanned and ticked packed' : 'ticked packed by hand'
+    if (via === 'scan' && floor?.id) {
+      void recordFloorScanEvent({
+        bookingId: floor.id,
+        context: 'packing',
+        code: row.serial ?? row.name,
+        result: 'accepted',
+        resolvedUnitId: row.assetId,
+      })
+    }
 
     if (current === 'Missing') {
       // The unit turned up. Say that the reason is gone rather than losing it
@@ -1395,88 +1421,19 @@ export default function PackingWorkspace({
             </div>
             )}
 
-            {/*
-              §3.2's three layouts, all of them REFLOW rather than hide (Rulings §7):
-               · desktop ≥1280 — tree │ list │ progress, three columns;
-               · tablet 768–1279 — list and progress side by side, tree beneath;
-               · phone <768 — one column: list → progress → tree.
-            */}
-            <div
+            {/* RULING 2026-10-16: the list stays beside one right-side column;
+                on narrow screens progress and filters follow the list. */}
+            <div className="operation-workspace-grid"
               style={{
                 display: 'grid',
-                gridTemplateColumns: desktop ? 'auto minmax(0,1fr) auto' : phone ? '1fr' : 'minmax(0,1fr) 320px',
+                gridTemplateColumns: phone ? 'minmax(0,1fr)' : 'minmax(0,1fr) 300px',
                 gap: 'var(--sp-md)',
                 alignItems: 'start',
               }}
             >
-              {/* ── §5 left — bundle tree, counts derived from the real rows ── */}
-              <FloorAside collapsible={desktop} side="left" width={260} label="Bundle / Item Tree" style={place.tree}>
-                <Card title="Bundle / Item Tree">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', paddingBottom: 9, borderBottom: '1px solid var(--border)' }}>
-                    {/* --ready-text, not --st-progress-fg: this glyph carries no
-                        yellow fill behind it, and the fg half of the pair is
-                        near-black ink meant to sit ON the yellow block — on the
-                        dark card (#15171B) that ink is all but invisible. The
-                        text-safe yellow is gated in both themes. */}
-                    <Icon name="box" size={17} style={{ color: 'var(--ready-text)' }} />
-                    <span style={{ minWidth: 0 }}>
-                      <span style={{ display: 'block', fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--text)' }}>
-                        {floor.project ?? floor.bookingNo}
-                      </span>
-                      <span style={{ display: 'block', fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-                        {totalUnits} units · {floor.lines.length} line{floor.lines.length === 1 ? '' : 's'}
-                      </span>
-                    </span>
-                  </div>
-
-                  <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {groups.map((g) => {
-                      const done = g.rows.filter((r) => stateOf(r.key) === 'Packed').length
-                      const isActive = highlight === g.name
-                      return (
-                        <button
-                          key={g.name}
-                          type="button"
-                          onClick={() => setHighlight(isActive ? null : g.name)}
-                          className={`floor-group-item-btn ${isActive ? 'is-active' : ''}`}
-                        >
-                          <Icon
-                            name={done === g.rows.length ? 'checklist' : 'box'}
-                            size={14}
-                            style={{ color: done === g.rows.length ? 'var(--success-text)' : 'var(--muted)', flexShrink: 0 }}
-                          />
-                          <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</span>
-                          <span className="figure" style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-                            {done}/{g.rows.length}
-                          </span>
-                        </button>
-                      )
-                    })}
-                  </div>
-
-                  <div style={{ marginTop: 11, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
-                    <div style={{ fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--text)', marginBottom: 7 }}>Bundle Summary</div>
-                    {[
-                      { l: 'Total Rows', v: rows.length, tone: 'var(--text)' },
-                      { l: 'Packed', v: packedRows.length, tone: 'var(--success-text)' },
-                      { l: 'Pending', v: pendingRows.length, tone: 'var(--progress-text)' },
-                      { l: 'Missing', v: missingRows.length, tone: 'var(--danger-text)' },
-                    ].map((r) => (
-                      <div key={r.l} style={{ display: 'flex', gap: 'var(--sp-sm)', padding: '3px 0', fontSize: 'var(--t-meta)' }}>
-                        <span style={{ flex: 1, color: 'var(--text2)' }}>{r.l}</span>
-                        <span className="figure" style={{ fontWeight: 700, color: r.tone }}>{r.v}</span>
-                      </div>
-                    ))}
-                    {/* §5 — the invariant, stated where it is visible. */}
-                    <p style={{ margin: '9px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
-                      Group counts are derived from the booking&apos;s live lines and always sum to {rows.length}.
-                    </p>
-                  </div>
-                </Card>
-              </FloorAside>
 
               {/* ── §6 centre — checklist over the real rows ─────────────────── */}
-              <div style={{ minWidth: 0, ...place.list }}>
+              <div style={{ minWidth: 0 }}>
                 {presence.presenceBanner && (
                   <div
                     style={{
@@ -1888,7 +1845,8 @@ export default function PackingWorkspace({
               </div>
 
               {/* ── §9 right — progress, the gate checklist, the completion gate ── */}
-              <FloorAside collapsible={desktop} side="right" width={300} label="Packing progress" style={place.rail}>
+              <div className="operation-workspace-sidebar">
+              <OperationAside label="Packing progress">
                 <Card title="Progress">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-md)' }}>
                     <Ring pct={pct} />
@@ -2213,7 +2171,72 @@ export default function PackingWorkspace({
                     </div>
                   </div>
                 )}
-              </FloorAside>
+              </OperationAside>
+              <OperationAside label="Bundle / Item Tree">
+                <Card title="Bundle / Item Tree">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', paddingBottom: 9, borderBottom: '1px solid var(--border)' }}>
+                    {/* --ready-text, not --st-progress-fg: this glyph carries no
+                        yellow fill behind it, and the fg half of the pair is
+                        near-black ink meant to sit ON the yellow block — on the
+                        dark card (#15171B) that ink is all but invisible. The
+                        text-safe yellow is gated in both themes. */}
+                    <Icon name="box" size={17} style={{ color: 'var(--ready-text)' }} />
+                    <span style={{ minWidth: 0 }}>
+                      <span style={{ display: 'block', fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--text)' }}>
+                        {floor.project ?? floor.bookingNo}
+                      </span>
+                      <span style={{ display: 'block', fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
+                        {totalUnits} units · {floor.lines.length} line{floor.lines.length === 1 ? '' : 's'}
+                      </span>
+                    </span>
+                  </div>
+
+                  <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {groups.map((g) => {
+                      const done = g.rows.filter((r) => stateOf(r.key) === 'Packed').length
+                      const isActive = highlight === g.name
+                      return (
+                        <button
+                          key={g.name}
+                          type="button"
+                          onClick={() => setHighlight(isActive ? null : g.name)}
+                          className={`floor-group-item-btn ${isActive ? 'is-active' : ''}`}
+                        >
+                          <Icon
+                            name={done === g.rows.length ? 'checklist' : 'box'}
+                            size={14}
+                            style={{ color: done === g.rows.length ? 'var(--success-text)' : 'var(--muted)', flexShrink: 0 }}
+                          />
+                          <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.name}</span>
+                          <span className="figure" style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
+                            {done}/{g.rows.length}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  <div style={{ marginTop: 11, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--text)', marginBottom: 7 }}>Bundle Summary</div>
+                    {[
+                      { l: 'Total Rows', v: rows.length, tone: 'var(--text)' },
+                      { l: 'Packed', v: packedRows.length, tone: 'var(--success-text)' },
+                      { l: 'Pending', v: pendingRows.length, tone: 'var(--progress-text)' },
+                      { l: 'Missing', v: missingRows.length, tone: 'var(--danger-text)' },
+                    ].map((r) => (
+                      <div key={r.l} style={{ display: 'flex', gap: 'var(--sp-sm)', padding: '3px 0', fontSize: 'var(--t-meta)' }}>
+                        <span style={{ flex: 1, color: 'var(--text2)' }}>{r.l}</span>
+                        <span className="figure" style={{ fontWeight: 700, color: r.tone }}>{r.v}</span>
+                      </div>
+                    ))}
+                    {/* §5 — the invariant, stated where it is visible. */}
+                    <p style={{ margin: '9px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
+                      Group counts are derived from the booking&apos;s live lines and always sum to {rows.length}.
+                    </p>
+                  </div>
+                </Card>
+              </OperationAside>
+              </div>
             </div>
 
             <BarcodeScannerModal

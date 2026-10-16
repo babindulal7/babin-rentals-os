@@ -431,6 +431,11 @@ export function canCloseRental(role: SystemRole, isOnline: boolean = true): bool
   return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Accounts'
 }
 
+// RULING 2026-10-16: corrections before handover and terminal archive are M+, online.
+export function canManageRentalLifecycle(role: SystemRole, isOnline = true): boolean {
+  return isOnline && (role === 'Owner' || role === 'Admin' || role === 'Manager')
+}
+
 /** Check if role can manage operations sessions (pack, handover, return, reset) */
 export function canPerformOperations(role: SystemRole): boolean {
   return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Warehouse' || role === 'Technician'

@@ -1,12 +1,19 @@
 /**
- * Floor Scan Storage Adapter
+ * Floor Scan Storage Adapter & Scan Event Queue
  *
- * Persists active warehouse floor scanning sessions (Packing & Return/Inspection)
- * in localStorage so technicians never lose scanned serials or inspection notes
- * if the browser tab suspends, refreshes, or loses connectivity.
+ * Persists active warehouse floor scanning sessions (Packing, Handover & Return/Inspection)
+ * in storage and queues non-custodial scan events into Dexie IndexedDB outbox.
+ *
+ * Enforces:
+ *  - Technicians never lose scanned serials or inspection notes across tab disconnects.
+ *  - Non-custodial barcode scan events are queued offline via Dexie with client_uuid idempotency keys.
+ *  - Custodial stage transitions remain fail-closed online RPCs (Law 1, Rule R-40).
  */
 
-export type FloorVerb = 'pack' | 'return'
+import { enqueueMutation, drainQueue } from './offlineQueue'
+import { newClientUuid, IS_MOCK } from './supabase'
+
+export type FloorVerb = 'pack' | 'return' | 'handover'
 
 export interface FloorScanRecord<T> {
   bookingId: string
@@ -102,4 +109,49 @@ export function loadFloorScan<T>(verb: FloorVerb, bookingId: string): FloorScanR
 export function clearFloorScan(verb: FloorVerb, bookingId: string): void {
   if (!bookingId) return
   removeStorageItem(storageKey(verb, bookingId))
+}
+
+export interface FloorScanEventParams {
+  bookingId: string
+  context: 'packing' | 'handover' | 'return' | 'lookup' | 'stock_check'
+  code: string
+  codeType?: 'barcode' | 'qr_code' | 'manual_entry' | 'rfid'
+  result?: 'accepted' | 'rejected' | 'warning' | 'override'
+  resultReason?: string | null
+  resolvedUnitId?: string | null
+  sessionId?: string | null
+  deviceId?: string
+}
+
+/**
+ * Records a non-custodial scan event into the Dexie offline queue (Law 8).
+ * Replays automatically via drainQueue() when network connectivity is present.
+ */
+export async function recordFloorScanEvent(params: FloorScanEventParams): Promise<boolean> {
+  const clientUuid = newClientUuid()
+  const payload = {
+    client_uuid: clientUuid,
+    context: params.context,
+    booking_id: params.bookingId,
+    session_id: params.sessionId ?? null,
+    code: params.code,
+    code_type: params.codeType ?? 'barcode',
+    resolved_unit_id: params.resolvedUnitId ?? null,
+    result: params.result ?? 'accepted',
+    result_reason: params.resultReason ?? null,
+    scanned_at: new Date().toISOString(),
+    queued_offline: typeof navigator !== 'undefined' ? !navigator.onLine : false,
+    device_id: params.deviceId ?? (typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 50) : 'device-web'),
+  }
+
+  try {
+    const enqueued = await enqueueMutation('scan_events', 'insert', payload, clientUuid)
+    if (typeof navigator !== 'undefined' && navigator.onLine && !IS_MOCK) {
+      void drainQueue().catch(() => {})
+    }
+    return enqueued
+  } catch (err) {
+    console.warn('[FloorScanStorage] Non-critical: could not queue scan event', err)
+    return false
+  }
 }

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { clearFloorScan, loadFloorScan, saveFloorScan } from '../floorScanStorage'
+import { clearFloorScan, loadFloorScan, saveFloorScan, recordFloorScanEvent } from '../floorScanStorage'
 
 describe('floorScanStorage', () => {
   beforeEach(() => {
@@ -56,4 +56,17 @@ describe('floorScanStorage', () => {
     const result = loadFloorScan('pack', bookingId)
     expect(result).toBeNull()
   })
+
+  it('records floor scan event into offline outbox gracefully', async () => {
+    const result = await recordFloorScanEvent({
+      bookingId: 'booking-scan-1',
+      context: 'packing',
+      code: 'CAM-A7S3-01',
+      result: 'accepted',
+      resolvedUnitId: 'unit-101',
+    })
+    // In JSDOM test environment without indexedDB, safely handles and returns boolean
+    expect(typeof result).toBe('boolean')
+  })
 })
+

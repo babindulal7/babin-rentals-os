@@ -1224,6 +1224,7 @@ export default function RentalsList() {
 
         const res = await listBookings({
           ...dbFilters,
+          excludeArchived: true,
           page: undefined,
           range: { from: 0, to: slotsRemaining - 1 },
           withCount: true,
@@ -1244,6 +1245,7 @@ export default function RentalsList() {
       const bookingOffset = windowStart - totalDrafts
       const res = await listBookings({
         ...dbFilters,
+        excludeArchived: true,
         page: undefined,
         range: { from: bookingOffset, to: bookingOffset + pageSize - 1 },
         withCount: true,

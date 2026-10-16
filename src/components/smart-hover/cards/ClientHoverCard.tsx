@@ -36,7 +36,7 @@ export function ClientHoverCard({
   return (
     <div className="smart-intel">
       <div className="smart-intel-identity" id="smart-hover-title">
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '16px 4px 14px' }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <span className="smart-intel-avatar" aria-hidden="true" style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--w08)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
             {preview.name.slice(0, 2).toUpperCase()}
           </span>

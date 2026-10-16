@@ -159,7 +159,7 @@ export function useNewRentalDraft({
     () => ({
       version: 1,
       selectedClientId,
-      clientDbId: client?.dbId ?? draftClientDbId,
+      clientDbId: selectedClientId ? client?.dbId ?? draftClientDbId : null,
       clientName: client?.name,
       project,
       kind,
@@ -301,6 +301,7 @@ export function useNewRentalDraft({
 
   const restoreLocalDraft = useCallback(() => {
     if (!localDraftOffer) return
+    setDraftClientDbId(localDraftOffer.data.clientDbId)
     applyDraftFields(localDraftOffer.data)
     setDraftBookingNo(null)
     setLocalDraftOffer(null)
@@ -340,6 +341,7 @@ export function useNewRentalDraft({
           )
         }
         const data = draft.data
+        setDraftClientDbId(data.clientDbId)
         setDraftId(draft.id)
         draftCreateKey.current = draft.clientUuid
         draftBookingKey.current = draft.bookingClientUuid

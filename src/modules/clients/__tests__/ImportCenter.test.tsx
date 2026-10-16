@@ -35,6 +35,7 @@ afterEach(async () => {
   await act(async () => root?.unmount())
   root = undefined
   container?.remove()
+  vi.restoreAllMocks()
 })
 async function mount() {
   container = document.createElement('div'); document.body.appendChild(container)
@@ -64,15 +65,57 @@ describe('client import interaction', () => {
     await act(async () => root!.unmount()); root = undefined; container.remove()
     await mount()
     expect(container.textContent).toContain('Resume client import')
-    expect(container.textContent).toContain('1 confirmed saved')
+    expect(container.textContent).toContain('1 previously confirmed saved')
     await act(async () => button('Resume import').click())
     const skip = container.querySelector<HTMLInputElement>('input[aria-label="Include row 3 (Skip)"]')!
     expect(skip.checked).toBe(false)
     expect(skip.disabled).toBe(true)
+    expect(container.textContent).toContain('0 of 2 clients confirmed saved.')
     await act(async () => button('Check saved rows & continue').click())
     const retry = mocks.save.mock.calls[1]![0] as ImportClientsInput
     expect(retry.rows.map(row => row.clientUuid)).toEqual(original.rows.map(row => row.clientUuid))
     expect(container.textContent).toContain('2 of 2 clients confirmed saved.')
+  })
+  it('rechecks a restored complete batch and does not retain stale saved claims after a replay failure', async () => {
+    await mount(); await upload('name,phone\nOne,9801234567\nTwo,9807654321')
+    await act(async () => button('Import 2 Clients').click())
+    const original = mocks.save.mock.calls[0]![0] as ImportClientsInput
+    await act(async () => root!.unmount()); root = undefined; container.remove()
+    await mount()
+    await act(async () => button('Resume import').click())
+    expect(button('Check saved rows & continue').disabled).toBe(false)
+    expect(container.querySelector('a[href="/clients/id-1"]')).toBeNull()
+    mocks.save.mockImplementationOnce(async (input: ImportClientsInput) => {
+      const outcomes = [{ rowIndex: 0, status: 'failed' as const, message: 'Server could not confirm this receipt.' }, { rowIndex: 1, status: 'pending' as const }]
+      input.onProgress?.(outcomes)
+      return { outcomes }
+    })
+    await act(async () => button('Check saved rows & continue').click())
+    const replay = mocks.save.mock.calls[1]![0] as ImportClientsInput
+    expect(replay.rows.map(row => row.clientUuid)).toEqual(original.rows.map(row => row.clientUuid))
+    expect(container.textContent).toContain('0 of 2 clients confirmed saved.')
+    expect(container.textContent).toContain('Server could not confirm this receipt.')
+    expect(container.querySelector('a[href="/clients/id-1"]')).toBeNull()
+  })
+  it('refuses client writes when recovery storage is unavailable', async () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('Storage full') })
+    await mount(); await upload('name,phone\nOne,9801234567')
+    await act(async () => button('Import 1 Client').click())
+    expect(mocks.save).not.toHaveBeenCalled()
+    expect(container.textContent).toContain('Client saves wait until recovery storage is available.')
+  })
+  it('requests a stop before the next row when recovery storage fails after a save', async () => {
+    mocks.save.mockImplementationOnce(async (input: ImportClientsInput) => {
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('Storage full') })
+      const outcomes = [{ rowIndex: 0, status: 'saved' as const, clientId: 'first', clientCode: 'C-1' }, { rowIndex: 1, status: 'pending' as const }]
+      input.onProgress?.(outcomes)
+      expect(input.shouldStop?.()).toBe(true)
+      return { outcomes }
+    })
+    await mount(); await upload('name,phone\nOne,9801234567\nTwo,9807654321')
+    await act(async () => button('Import 2 Clients').click())
+    expect(container.textContent).toContain('1 of 2 clients confirmed saved.')
+    expect(container.textContent).toContain('Client saves wait until recovery storage is available.')
   })
   it('requires explicit confirmation to discard a draft and explains saved clients remain', async () => {
     await mount(); await upload('name,phone\nOne,9801234567')

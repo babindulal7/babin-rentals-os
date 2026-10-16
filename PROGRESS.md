@@ -1,5 +1,129 @@
 # Progress Log
 
+## 2026-10-16 — Smart Intel visual organization and responsive review
+
+**Did**
+- Organized the shared card layout with consistent identity spacing, a single scrollable tab strip, count badges, clear selected states, labeled pickup/return columns, a prominent authorized rental total, quantity markers and contained Notes inputs. Completed the rental root styling and removed duplicated client header padding in this continuation.
+- Preserved complete lists, Notes-only note content, 300 ms hover timing, role-filtered data and existing action gates. No entity data, pricing or transition logic changed.
+- Removed four unused desktop declarations from concurrently edited floor workspaces after the production build reported TS6133; retained their surrounding changes.
+
+**Ruled**
+- Existing Babin tokens and typography govern these operational cards. No new product or permission ruling; no migration WRITTEN, APPLIED or PRODUCTION-VERIFIED in this pass.
+
+**Verified**
+- Typecheck passed. Full Vitest suite passed: 364 files / 4,620 tests. Local PGlite 163/163 and lifecycle 30/30 passed together; lint and contrast 82/82 passed. Final production build is being checked after removing the unused declarations.
+- Chromium local mock review at desktop 1440x960, tablet 1024x900 and phone 390x844: rental list contained all five record lines, equipment contained all seven relationship rows, no horizontal card overflow; tabs measured 44 px. Notes textarea stayed inside the phone card. A touch long press opened the full-width bottom sheet and Close dismissed it. Light and dark views reviewed; touch emulation, temporary viewport and light theme restored afterward.
+- Screenshots and verification logs: artifacts/smart-intel-layout-2026-10-16/. Mock preview: http://127.0.0.1:3019/. No production data was changed. Generated completion below reads an older cached suite count; the fresh command log records the 4,620 passing tests above.
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-16T01:51:19.833Z). Suite: 4609/4609 passed (recorded 2026-10-15T20:16:18.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T01:51:23.158Z.
+Counted by `npm run completion`, not typed.
+### Remaining
+- Live Supabase role/JWT acceptance and production verification remain pending the established application process; this pass used an isolated local mock origin.
+- Physical iPad/Safari acceptance remains pending. Other sessions' in-progress changes are preserved.
+## 2026-10-16 — New Rental validation, draft restore and confirmation acceptance
+
+**Did**
+- Added an immediate confirmation-in-flight lock, covering rapid repeated calls before React updates the button. Expanded submit tests for success, rapid repeat, failed creation retry with the same idempotency key, failed confirmation retry of the same Quote, draft-link retry after confirmation, blocked forms, missing sessions and missing clients. The lock and submit tests were incorporated by the concurrent main integration before the final checks.
+- Fixed restored drafts losing their client database reference when the live client directory is unavailable. Both device-copy and saved-draft restoration now retain that reference; clearing the client selection writes a null reference rather than the previous client. Strengthened resave assertions for the client reference, dates, discount and VAT.
+- Corrected ambiguous confirmation failure copy: entries are retained and retries reuse the same booking reference, without promising that an uncertain network response means nothing was written.
+
+**Ruled**
+- No new product, permission, schema or migration ruling. Existing required-field, warning, pricing and server-authoritative confirmation rules are retained.
+
+**Verified**
+- Final sequence: typecheck passed; 61 tests across six focused suites passed; local PGlite 163/163 migrations and lifecycle 30/30 passed together; production build passed (297 PWA precache entries). Scoped ESLint passed. Logs: artifacts/new-rental-acceptance-2026-10-16/.
+- Chromium against isolated local mock origin 127.0.0.1:3018: incomplete Confirm exposed required-field guidance; Save draft created #918; reload restored the project and dates. Added a demo client, Personal / Test Shoot type and one Aputure Amaran 200x line; Confirm showed Rental 918 Confirmed. Open Rental Detail and reload retained Booked status and the test project. This exercised local mock persistence, not production Supabase. No payment, invoice or live migration was submitted.
+- Screenshots: restored-draft.png, confirmed.png, booked-after-reload.png. Existing browser size/theme retained. Other sessions' unrelated working changes were preserved.
+- Generated completion below reads cached repository suite data; this invocation ran the 61 focused tests above, not the cached full-suite count.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-16T01:35:28.599Z). Suite: 4609/4609 passed (recorded 2026-10-15T20:16:18.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T01:35:39.358Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Live JWT/PostgREST acceptance, physical iPad/Safari, all roles and the broader cross-app status/error matrix remain in docs/UI_UX_IMPROVEMENT_PLAN.md.
+- The local demo contains the explicitly named test rental #918 on port 3018. No production booking was created by this check.
+
+## 2026-10-16 — Mobile Header De-Crowding, Delivery Workspace Persistence, and Dexie Offline Floor Scans (/goal)
+
+**Did**
+- **Track 1: Mobile Header De-Crowding & Responsive Polish**:
+  - `src/modules/operations/OperationsQueues.tsx`: Guarded header status pill with `selected && !phone` so narrow mobile viewports (≤ 360px) do not crowd or crush the title.
+  - `src/modules/settings/Settings.tsx`: Dynamically set subpage title (`activeTab?.label ?? 'Settings'`) and added `onBack={toList}` on phone viewports to provide native header back navigation without duplicate back-button bars.
+  - Ensured single-row 64px header invariant with zero horizontal overflow across 320px, 360px, 375px, and 390px viewports.
+- **Track 2: Delivery Workspace Supabase Persistence**:
+  - `src/modules/operations/LiveTransportPlans.tsx`: Transformed from static read-only table into a reactive live workspace connected to Supabase view `booking_transport_v` joined with `bookings`.
+  - Added live text search (booking number, client, vehicle, destination), delivery method filter chips (`All`, `Babin Delivery`, `Courier`, `Third Party`), and real-time domain event subscriptions (`RENTAL_HANDED_OVER`, `RENTAL_CONFIRMED`, `RENTAL_PICKED_UP`).
+  - Integrated "Deliver & Sign" action column launching `DriverHandoverModal` with touch signature capture and geolocation coordinates.
+  - Enforced Law 6 (money-blindness) so monetary transport columns (`delivery_charge`, `fuel_charge`) are requested only when `canViewMoney(role)` is true.
+- **Track 3: Dexie Offline Outbox UI Wire-Up for Floor Operations**:
+  - `src/lib/floorScanStorage.ts`: Added `recordFloorScanEvent` to asynchronously queue non-custodial barcode scan events (`context: 'packing' | 'handover' | 'return' | 'lookup' | 'stock_check'`) into Dexie IndexedDB (`scan_events` table) with idempotency `client_uuid` and `scanned_at` timestamp, auto-replaying via `drainQueue()`.
+  - `src/modules/rentals/PackingWorkspace.tsx`: Integrated `recordFloorScanEvent` in `pack(key, via)` for accepted, rejected, and warning scans.
+  - `src/modules/rentals/HandoverWorkspace.tsx`: Integrated `recordFloorScanEvent` in `pick(key, via)` for accepted, rejected, and duplicate scans.
+  - `src/modules/rentals/ReturnWorkspace.tsx`: Integrated `recordFloorScanEvent` in `receive(key, via)` and ambient barcode/flight-case scan handler for accepted, rejected, and warning scans.
+  - Maintained custodial stage transitions as online fail-closed RPCs (`apply_booking_stage_transition`) per Rule R-40.
+  - Added unit test coverage for `recordFloorScanEvent` in `src/lib/__tests__/floorScanStorage.test.ts`.
+- **Track 4: Full Multi-Step Verification & Acceptance Gates**:
+  - Verified `npm run typecheck`: exit 0.
+  - Verified `npm run lint`: exit 0 (0 warnings, 0 errors).
+  - Verified `npm run check:contrast`: 82/82 pass (exit 0).
+  - Verified `npm run check:pglite`: 163/163 applied, 0 view leaks, 0 function leaks, 0 definer search_path issues (exit 0).
+  - Verified `npm run check:lifecycle`: 30/30 green through real Postgres + RLS (exit 0).
+  - Verified `npm test`: 364 files passed, 4,620 tests passed (exit 0).
+  - Verified `npm run build`: successful production build, 297 assets precached (exit 0).
+
+**Ruled**
+- Non-custodial operations events (barcode reads, item ticks, triage notes) are queued locally into Dexie IndexedDB outbox with client-minted UUIDs so warehouse staff can scan uninterrupted in warehouse dead zones (Law 8).
+- Custody stage transitions (`apply_booking_stage_transition`) strictly remain online, fail-closed database RPCs and are never queued offline (Rule R-40, Law 1).
+- Money-blind roles (Warehouse, Driver, Technician, Client) cannot view or request delivery charges, fuel fees, or rental amounts (Law 6).
+- All floor primary verb actions maintain ≥ 56px touch targets; secondary buttons ≥ 44px touch targets (Law 14).
+
+**Verified**
+- `npm run typecheck`: exit 0.
+- `npm run lint`: exit 0 (0 errors, 0 warnings).
+- `npm run check:contrast`: 82/82 pass (exit 0).
+- `npm run check:pglite`: 163/163 applied (exit 0).
+- `npm run check:lifecycle`: 30/30 green (exit 0).
+- `npm test`: 364 test files passed, 4620 tests passed (exit 0).
+- `npm run build`: exit 0.
+- `npm run lint:progress`: exit 0.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-16T00:58:48.121Z). Suite: 4609/4609 passed (recorded 2026-10-15T20:16:18.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T00:58:59.853Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Production deployment of migrations 0163 and 0164 following BACKUP_PROTOCOL.md by Babin.
+- Continue responsive verification of floor stage workspaces and tablet header layouts across remaining secondary modules.
+
+
 ## 2026-10-16 — Eliminate jumping buttons, rogue hover/active transforms, and border layout shifts across app
 
 **Did**

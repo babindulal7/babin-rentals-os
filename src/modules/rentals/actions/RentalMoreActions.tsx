@@ -36,6 +36,9 @@ import { RentalAuditDrawer, type AuditCategoryFilter } from './RentalAuditDrawer
 import { QuotePreviewModal } from './QuoteActionsMenu'
 import { InvoicePaymentStatusModal } from './InvoiceActionsMenu'
 import { CreateInvoiceModal } from '../../finance/modals/CreateInvoiceModal'
+import { canManageRentalLifecycle } from '../../../lib/rbac'
+import { rentalCanArchive, rentalRevertTargets } from '../../../lib/rentalLifecycle'
+import { RentalLifecycleDialog } from './RentalLifecycleDialog'
 
 export interface ExtraOverflowAction {
   label: string
@@ -89,6 +92,7 @@ export function RentalMoreActions({
 
   // Dialog & Drawer states
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const [lifecycleAction, setLifecycleAction] = useState<'revert' | 'archive' | null>(null)
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false)
   const [auditDrawerOpen, setAuditDrawerOpen] = useState(false)
   const [auditInitialCategory, setAuditInitialCategory] = useState<AuditCategoryFilter>('all')
@@ -644,6 +648,19 @@ export function RentalMoreActions({
                 </button>
               )}
 
+              {/* RULING 2026-10-16: shared correction and terminal archive actions. */}
+              {booking && selectedCount === 1 && user && canManageRentalLifecycle(user.role) &&
+                (['revert', 'archive'] as const).filter(action => action === 'revert'
+                  ? rentalRevertTargets(booking).length > 0 : rentalCanArchive(booking)).map(action => (
+                  <button key={action} type="button" role="menuitem"
+                    disabled={typeof navigator !== 'undefined' && !navigator.onLine}
+                    onClick={() => { closeMenu(); setLifecycleAction(action) }}
+                    style={{ minHeight: 44, padding: '0 10px', textAlign: 'left', border: 0,
+                      background: 'transparent', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Icon name={action === 'archive' ? 'archive' : 'arrow_left'} size={15} />
+                    {action === 'archive' ? 'Archive booking' : 'Revert stage…'}
+                  </button>
+                ))}
               {/* 5. CANCEL RENTAL (Destructive, visually separated at bottom) */}
               {cancelGroup && (
                 <>
@@ -691,6 +708,8 @@ export function RentalMoreActions({
       </div>
 
       {/* MODALS & DRAWERS */}
+      {booking && lifecycleAction && <RentalLifecycleDialog booking={booking} action={lifecycleAction}
+        onClose={() => setLifecycleAction(null)} onSuccess={() => onActionCompleted?.()} />}
       {booking && (
         <>
           <CancelRentalDialog

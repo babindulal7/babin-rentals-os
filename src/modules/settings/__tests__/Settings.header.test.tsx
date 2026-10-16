@@ -124,6 +124,17 @@ describe('Settings header — phone', () => {
     expect(visible('Edit settings')).toHaveLength(0)
   })
 
+  it('a section uses one title and one back action to return to the section list', async () => {
+    await mount('?tab=business')
+    expect(container.querySelectorAll('h1')).toHaveLength(1)
+    expect(container.querySelector('h1')?.textContent).toBe('Business')
+    const back = container.querySelectorAll('button[aria-label="Back to settings"]')
+    expect(back).toHaveLength(1)
+    await click(back[0])
+    expect(container.querySelector('h1')?.textContent).toBe('Settings')
+    expect(container.querySelector('button[aria-label="Edit settings"]')).toBeNull()
+  })
+
   it('edit mode keeps Done in the header and puts Discard and Reset in More', async () => {
     await mount('?tab=business')
     await click(container.querySelector('button[aria-label="Edit settings"]'))

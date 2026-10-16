@@ -71,3 +71,11 @@ Typecheck, source lint, 21 focused tests, a 4,296-test full run, 160 local migra
 - Browser checks on current main covered actual CSS viewport widths 320, 390, 768, 1024, 1280 and 1440px without document overflow. Quantity 1 → 2 and days 2 → 3 gave Rs 2,700 for a Rs 450/day item. The tablet action menu was visible; Remove returned to the empty state. No booking was confirmed. Native browser zoom was retained; viewport overrides were reset.
 - Evidence: `artifacts/selected-items-2026-10-15/phone-390.png`, `tablet-768-menu.png`, and `responsive-measurements.json`. Automated checks and their timing are recorded in PROGRESS.md. These checks are Chromium viewport emulation, not physical iPad Safari acceptance.
 - Follow-up: the 768px screenshot exposes crowding in the shared header between Search and More. Keep this separate from the now-readable selected-item cards. The app-wide status/role/persistence matrix remains open.
+
+
+## New Rental functional acceptance — 16 October 2026
+
+- Confirm is protected against rapid repeated calls before the saving state renders. Retry checks retain the original creation key, Quote, or confirmed booking through create/confirm/draft-link failures; success feedback waits for completion.
+- Draft restoration preserves the client database reference even when directory data has not loaded. Clearing the selection does not resave the previous client's reference. Saved and device-copy regression checks cover the reference, project, dates, discount and VAT.
+- 61 focused tests, TypeScript, scoped lint, local database gates and production build passed. Browser evidence covers blocked confirmation, saving/reloading draft #918, completing its required fields, confirming it, and reloading its Booked detail in the isolated mock origin on port 3018. The test project is "Draft acceptance check". Screenshots/logs: artifacts/new-rental-acceptance-2026-10-16/.
+- This completes the selected local New Rental validation/save/restore/confirm pass. Live Supabase, broader roles/statuses and physical-device acceptance remain open.

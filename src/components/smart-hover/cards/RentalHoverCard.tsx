@@ -40,8 +40,8 @@ export function RentalHoverCard({
   const total = preview.rentalTotalPaisa ?? preview.payments?.summary.totalPaisa
 
   return (
-    <div>
-      <div id="smart-hover-title" style={{ padding: '16px 14px 14px' }}>
+    <div className="smart-intel">
+      <div className="smart-intel-identity" id="smart-hover-title">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
           <span className="identifier" style={{ fontWeight: 800, fontSize: 16 }}>{preview.isDraft ? '' : '#'}{preview.rentalNo}</span>
           <span style={{ background: safeTone.bg, color: safeTone.fg, borderRadius: 'var(--r-chip)', padding: '4px 8px', fontSize: 11, fontWeight: 800, display: 'inline-flex', gap: 6, alignItems: 'center' }}>

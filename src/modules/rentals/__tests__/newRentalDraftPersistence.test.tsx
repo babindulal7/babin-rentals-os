@@ -188,6 +188,14 @@ describe('New Rental Save Draft reporting', () => {
         data: expect.objectContaining({
           bookingNo: '1052',
           project: 'Test Documentary',
+          clientDbId: SAMPLE_DRAFT_RECORD.data.clientDbId,
+          pickup: '2026-09-20',
+          pickupTime: '09:00',
+          returnDate: '2026-09-25',
+          returnTime: '18:00',
+          discountPct: 5,
+          vatOn: true,
+          vatRatePercent: 13,
         }),
       }),
       expect.anything(),
@@ -243,6 +251,15 @@ describe('New Rental keeps an unsaved booking on this device', () => {
     expect(window.localStorage.getItem(KEY)).toBeNull()
     // Restoring is local only: no server draft is created until Save draft is pressed.
     expect(persistRentalDraft).not.toHaveBeenCalled()
+
+    state.failSave = false
+    await clickSave()
+    expect(persistRentalDraft).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        project: 'Kept on this device',
+        clientDbId: SAMPLE_DRAFT_RECORD.data.clientDbId,
+      }),
+    }), expect.anything())
   })
 
   it('Discard drops the copy without touching the form', async () => {

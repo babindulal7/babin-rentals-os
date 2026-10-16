@@ -81,4 +81,11 @@ describe('unfinished client import recovery', () => {
     expect(saveClientImportRecovery('actor', preview, storage).ok).toBe(true)
     expect(loadClientImportRecovery('actor', storage).draft?.batch).toBeNull()
   })
+  it('refuses two case variants of a single Postgres receipt key', () => {
+    const storage = store(), value = draft()
+    value.batch![0]!.clientUuid = 'abcdefab-0000-4000-8000-000000000000'
+    value.batch![1]!.clientUuid = value.batch![0]!.clientUuid.toUpperCase()
+    expect(saveClientImportRecovery('actor', value, storage).ok).toBe(false)
+    expect(storage.setItem).not.toHaveBeenCalled()
+  })
 })

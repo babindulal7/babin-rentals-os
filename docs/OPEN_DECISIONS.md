@@ -97,3 +97,11 @@ From checking `D:\proects\md` against `step1-foundation`. Fonepay, the live retu
 - **§4.65 (a)** (filed as §4.62) — show which units Reset needs next, worked out from the next booking's pickup time (`data/reset.ts:163`). Is it wanted, as a label or a sort, and inside what window?
 - **§4.65 (b)** — a manager override for Handover gate 1 (receiver ID not verified): allowed at all, by whom, and where it is recorded (`HandoverWorkspace.tsx:89`, `OVERRIDE_UNAVAILABLE`).
 - **§4.65 (c)** — holding a citizenship card, passport or licence as the deposit: whether to record it, as a non-money record kept apart from deposits (Law 5); whether it satisfies gate 4; its "returned to client" terminal action; and who may see the ID photo (PII).
+
+
+## 16 October 2026 — Rental revert and archive scope (pending user choice)
+
+- **TODO(decision):** Babin requested reverting to Handover/Booked/Quote and adding Archive. Existing workflow ordering is forward-only; PERMISSIONS.md defines M+ reopen of Closed bookings but does not settle arbitrary reversal of custody steps. No existing booking Archive writer or persisted archive field was found.
+- Pending question: restrict manager reversals to before handover, or also undo completed handover/return with audited reasons? Post-handover reversal additionally needs rules for sessions, reservations and physical custody.
+- Pending question: Archive only Closed/Cancelled bookings, keeping them searchable, or allow active bookings too? Active archival must not hide unresolved custody or liabilities.
+- **Unblocked:** unify four-step UI and expose the existing role/stage-aware cancellation action. No reverse/Archive control is presented as functional pending these decisions and backend implementation.
