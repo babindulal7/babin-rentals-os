@@ -1,5 +1,48 @@
 # Progress Log
 
+## 2026-10-17 — New Rental (/rentals?action=new) layout, navigation & UX audit remediation
+
+**Did**
+- Resolved New Rental view UX audit findings across layout, state clarity, and input polish:
+  1. Unified 2-Column Grid Architecture: Eliminated the broken outer setup canvas that caused mid-page vertical gutter shifts (45%/55% vs 68%/32%). Rebuilt layout into a single unified 2-column workspace (minmax(0, 68fr) minmax(320px, 32fr)), stacking Client & Dates, Equipment, Logistics, and Pricing in the left column, while the Booking Summary rail sticks from the top of the viewport in the right column.
+  2. Financial Math Consolidation: Removed duplicate financial charges breakdown from the main RentalPricingSection column, reserving it solely for inputs (discounts, VAT toggle, manual deposit override), and consolidated full line-by-line financial math (subtotal, taxable amount, VAT, total, deposit, advance) into the sticky BookingSummaryCard.
+  3. Deconflicted Primary CTAs: Styled draft Restore it button as an outline secondary button within an amber alert banner, leaving Confirm Booking as the undisputed solitary primary CTA.
+  4. Contradictory Review Checkmark & Sub-Nav State: Replaced premature review checkmark with warning icon and amber pill badge (${count} remaining) when required checks are missing, transitioning to a green ready pill once complete. Added scroll-synced IntersectionObserver to highlight active section in the subnav bar with an active bottom border.
+  5. Incomplete Confirm Button Treatment: Added muted visual state (opacity-60 via new-rental-header-primary--incomplete), comprehensive tooltip listing all missing blocking notices, and smooth-scrolling with an inline CSS shake animation targeting the first invalid section or review card when clicked while incomplete.
+  6. Standardized Global Search Placeholder: Standardized top header search placeholder to Search or scan… with right-aligned Ctrl+K / ⌘K badge across all pages.
+  7. Form Inputs & Draft Banner Polish: Enriched local draft restoration banner with informative metadata (Unsaved draft from {date} ({client} · {items} · {amount})). Shortened search combobox placeholders (Search client by name, phone, PAN, or ID… and Search equipment, bundles, SKU, or serial…). Added active preset styling to date quick-pills and introduced a 2 days duration pill.
+
+**Ruled**
+- Sub-nav jumpbar Review state strictly reflects completion status: amber warning badge and counter pill while blocking notices remain; checkmark and ready pill only when confirmation is unblocked.
+- Local draft restore button remains secondary/outline inside alert banner; page header action cluster maintains exactly one primary button at any time.
+
+**Verified**
+- TypeScript typecheck (tsc --noEmit): Clean (0 errors across entire repo).
+- Vitest targeted suite: 48/48 test files in src/modules/rentals/ passed (471/471 tests green, including newRentalSimplification.test.tsx, RentalPricingSection.test.tsx, BookingSummaryCard.test.tsx, DatePresets.test.tsx, newRentalDraftPersistence.test.tsx, and tier1-features.test.tsx).
+- Migration & PGlite gates (npm run check:pglite): 166/166 applied, 0 failed, 0 leaks.
+- Real Postgres lifecycle (npm run check:lifecycle): 31/31 steps green.
+- Color Contrast (npm run check:contrast): 82/82 passed (WCAG AA across light/dark/high-contrast/glass).
+- ESLint (npx eslint src/modules/rentals/NewRental.tsx): 0 errors, 0 warnings.
+- Progress lint (npm run lint:progress): Passed cleanly.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 166 files · check:pglite 166/166 applied, 0 failed (recorded 2026-10-16T19:58:20.357Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T19:59:16.341Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply of 0157–0168 by Babin after BACKUP_PROTOCOL.md; refresh docs/live/schema_migrations_<today>.txt, re-run db:plan. Staging JWT/PostgREST needs an isolated project + fixtures.
+- Suite cache still reads the older 4646 count; the fresh full run supersedes it on the next counter refresh. Full lint rerun on a faster machine.
+- Physical iPad/Safari + native zoom; app-wide status/role matrix; open product calls (§4.64/§4.65, D-2); border-merge decision.
+
 ## 2026-10-17 — Today view (/today) audit remediation & situational awareness enhancements
 
 **Did**
@@ -47,48 +90,6 @@ Counted by `npm run completion`, not typed.
 - Physical iPad/Safari + native zoom; app-wide status/role matrix; open product calls (§4.64/§4.65, D-2); border-merge decision.
 
 
-## 2026-10-17 — New Rental (/rentals?action=new) layout, navigation & UX audit remediation
-
-**Did**
-- Resolved New Rental view UX audit findings across layout, state clarity, and input polish:
-  1. Unified 2-Column Grid Architecture: Eliminated the broken outer setup canvas that caused mid-page vertical gutter shifts (45%/55% vs 68%/32%). Rebuilt layout into a single unified 2-column workspace (minmax(0, 68fr) minmax(320px, 32fr)), stacking Client & Dates, Equipment, Logistics, and Pricing in the left column, while the Booking Summary rail sticks from the top of the viewport in the right column.
-  2. Financial Math Consolidation: Removed duplicate financial charges breakdown from the main RentalPricingSection column, reserving it solely for inputs (discounts, VAT toggle, manual deposit override), and consolidated full line-by-line financial math (subtotal, taxable amount, VAT, total, deposit, advance) into the sticky BookingSummaryCard.
-  3. Deconflicted Primary CTAs: Styled draft Restore it button as an outline secondary button within an amber alert banner, leaving Confirm Booking as the undisputed solitary primary CTA.
-  4. Contradictory Review Checkmark & Sub-Nav State: Replaced premature review checkmark with warning icon and amber pill badge (${count} remaining) when required checks are missing, transitioning to a green ready pill once complete. Added scroll-synced IntersectionObserver to highlight active section in the subnav bar with an active bottom border.
-  5. Incomplete Confirm Button Treatment: Added muted visual state (opacity-60 via new-rental-header-primary--incomplete), comprehensive tooltip listing all missing blocking notices, and smooth-scrolling with an inline CSS shake animation targeting the first invalid section or review card when clicked while incomplete.
-  6. Standardized Global Search Placeholder: Standardized top header search placeholder to Search or scan… with right-aligned Ctrl+K / ⌘K badge across all pages.
-  7. Form Inputs & Draft Banner Polish: Enriched local draft restoration banner with informative metadata (Unsaved draft from {date} ({client} · {items} · {amount})). Shortened search combobox placeholders (Search client by name, phone, PAN, or ID… and Search equipment, bundles, SKU, or serial…). Added active preset styling to date quick-pills and introduced a 2 days duration pill.
-
-**Ruled**
-- Sub-nav jumpbar Review state strictly reflects completion status: amber warning badge and counter pill while blocking notices remain; checkmark and ready pill only when confirmation is unblocked.
-- Local draft restore button remains secondary/outline inside alert banner; page header action cluster maintains exactly one primary button at any time.
-
-**Verified**
-- TypeScript typecheck (tsc --noEmit): Clean (0 errors across entire repo).
-- Vitest targeted suite: 48/48 test files in src/modules/rentals/ passed (471/471 tests green, including newRentalSimplification.test.tsx, RentalPricingSection.test.tsx, BookingSummaryCard.test.tsx, DatePresets.test.tsx, newRentalDraftPersistence.test.tsx, and tier1-features.test.tsx).
-- Migration & PGlite gates (npm run check:pglite): 166/166 applied, 0 failed, 0 leaks.
-- Real Postgres lifecycle (npm run check:lifecycle): 31/31 steps green.
-- Color Contrast (npm run check:contrast): 82/82 passed (WCAG AA across light/dark/high-contrast/glass).
-- ESLint (npx eslint src/modules/rentals/NewRental.tsx): 0 errors, 0 warnings.
-- Progress lint (npm run lint:progress): Passed cleanly.
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
-| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
-| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
-| Overall | mean of five | ≈ 99% | +0 |
-Migrations 166 files · check:pglite 166/166 applied, 0 failed (recorded 2026-10-16T19:58:20.357Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
-Gates read from .lifecycle-result.json, written 2026-10-16T19:59:16.341Z.
-Counted by `npm run completion`, not typed.
-
-### Remaining
-- Live apply of 0157–0168 by Babin after BACKUP_PROTOCOL.md; refresh docs/live/schema_migrations_<today>.txt, re-run db:plan. Staging JWT/PostgREST needs an isolated project + fixtures.
-- Suite cache still reads the older 4646 count; the fresh full run supersedes it on the next counter refresh. Full lint rerun on a faster machine.
-- Physical iPad/Safari + native zoom; app-wide status/role matrix; open product calls (§4.64/§4.65, D-2); border-merge decision.
 
 ## 2026-10-17 — Operations View Light/Glass mode audit remediation & floor workflow refinement
 
