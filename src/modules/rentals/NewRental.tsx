@@ -1264,7 +1264,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
             reflows after pricing, with all notices still reachable. */}
         {isDesktop && (
           <div className="new-rental-summary-rail">
-            <Rail width={undefined}>
+            <Rail>
               {bookingSummaryCard}
             </Rail>
           </div>
