@@ -355,6 +355,17 @@ describe('periodRange · all six chips are real ranges', () => {
     expect(periodRange('This Week', '2026-08-02')).toEqual({ from: '2026-07-27', to: '2026-08-02' })
   })
 
+  it('This Week follows weekStarts without moving the Monday default', () => {
+    // ADOPTIONS item 5: 0 = Sunday start (org regional setting, DATE_TIME
+    // SPEC section 1). 31 Jul 2026 is a Friday: Sun 26 Jul - Sat 1 Aug.
+    expect(periodRange('This Week', '2026-07-31', 0)).toEqual({ from: '2026-07-26', to: '2026-08-01' })
+    // Sunday itself opens its own week; Saturday closes it.
+    expect(periodRange('This Week', '2026-07-26', 0)).toEqual({ from: '2026-07-26', to: '2026-08-01' })
+    expect(periodRange('This Week', '2026-08-01', 0)).toEqual({ from: '2026-07-26', to: '2026-08-01' })
+    // Explicit Monday matches the default exactly.
+    expect(periodRange('This Week', '2026-07-31', 1)).toEqual(periodRange('This Week', '2026-07-31'))
+  })
+
   it('Next Month is the next AD calendar month, first to last', () => {
     expect(periodRange('Next Month', '2026-07-31')).toEqual({ from: '2026-08-01', to: '2026-08-31' })
     // A 30-day month, and a year rollover.

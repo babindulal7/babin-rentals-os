@@ -914,14 +914,31 @@ const shiftDay = (dayAd: string, days: number) => isoDay(new Date(dayStart(dayAd
  *
  *  - **Next 7 Days** is today plus the next six — seven days INCLUDING today,
  *    the reading that matches how the chip sits beside "Today" and "Tomorrow".
- *  - **This Week** runs Monday→Sunday, because `CAL_WEEKDAYS` above starts the
- *    app's week on MON. (`bs.ts`'s `isWeekend` shades Saturday, which is Nepal's
+ *  - **This Week** runs `weekStarts`-plus-six (Monday-Sunday by default,
+ *    matching `CAL_WEEKDAYS` above; pass `0` for a Sunday start per the org's
+ *    regional setting - DATE_TIME SPEC section 1). The default keeps every
+ *    existing caller exactly where it was; no product decision is taken by
+ *    adding the input. (`bs.ts`'s `isWeekend` shades Saturday, which is Nepal's
  *    weekend day; that is which day is off, not which day starts the week.)
  *
  * **Next Month** is the next AD calendar month, first to last — Law 7, AD is
  * what is stored and queried, BS is rendered.
+ *
+ * What this deliberately does NOT take: `operationalDayStart`. These are day
+ * markers (`YYYY-MM-DD`), not instants - the 06:00 day boundary is applied
+ * downstream where markers become bounds (`queries/bookings.ts` reads the
+ * setting per call, D4). A day-range function that also shifted days would
+ * answer two questions at once and disagree with the named filter sets.
+ *
+ * ADOPTIONS item 5: the backward-looking half (`data/pulse.ts` PERIODS -
+ * frozen at import, seed-ledger-bound, BS-anchored fiscal) is NOT merged here.
+ * New code takes forward ranges from this function and instants from
+ * `businessNowAd`; PERIODS is legacy for the pulse screens until its callers
+ * migrate one by one. Retiring it is a migration of callers, not an edit here.
  */
-export function periodRange(period: LivePeriod, todayAd: string): DayRange | null {
+/** First day of the week: `0` Sunday, `1` Monday (DATE_TIME SPEC section 1). */
+export type WeekStarts = 0 | 1
+export function periodRange(period: LivePeriod, todayAd: string, weekStarts: WeekStarts = 1): DayRange | null {
   switch (period) {
     case 'All':
       return null
@@ -934,9 +951,9 @@ export function periodRange(period: LivePeriod, todayAd: string): DayRange | nul
     case 'Next 7 Days':
       return { from: todayAd, to: shiftDay(todayAd, 6) }
     case 'This Week': {
-      // getUTCDay: 0 Sun … 6 Sat. Days elapsed since the Monday of this week.
-      const sinceMonday = (dayStart(todayAd).getUTCDay() + 6) % 7
-      return { from: shiftDay(todayAd, -sinceMonday), to: shiftDay(todayAd, 6 - sinceMonday) }
+      // getUTCDay: 0 Sun … 6 Sat. Days elapsed since the weekStarts day of this week.
+      const sinceStart = (dayStart(todayAd).getUTCDay() - weekStarts + 7) % 7
+      return { from: shiftDay(todayAd, -sinceStart), to: shiftDay(todayAd, 6 - sinceStart) }
     }
     case 'Next Month': {
       const d = dayStart(todayAd)

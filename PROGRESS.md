@@ -1,5 +1,37 @@
 # Progress Log
 
+## 2026-10-17 — G3 wiring + full verification (quote totals end-to-end)
+
+**Did**
+- Closed the G3 client half: `useNewRentalSubmit.ts` fetches per-product terms (`fetchProductPricingTerms`), quotes via `quoteUnitPrice` on the Kathmandu civil pickup day with NPT wall-clock times (single `NPT_OFFSET_MIN`, no second copy), and sends `lineTotal` + `priceBreakdown` snapshot on structure/rules-priced lines only. Flat lines, bundles, money-blind roles (`canViewMoney` gate + RLS), and any fetch/quote failure stay on the server-computed path — quoting never blocks booking.
+- Fixed my own test fragility: `await import()` of the mocked terms module returned the unmocked module in full-suite runs (green standalone, 2 red in full). Static import — mocked by construction — 11/11 in-file and full-suite clean.
+- A concurrent session joined two lines in `rentalViews.test.ts` mid-run (transform failure, 0 tests lost); it was repaired before my check and the file is 5/5 standalone. No action taken beyond verifying.
+
+**Ruled**
+- No product call taken. Snapshot shape (`pricing-quote-v1`: product, method, days, charged days, unit total, adjustments, notes) is persistence engineering, not a pricing promise — the invoice reproduces the AMOUNT; re-derivation inputs ride along honestly. `src/types/database.ts` stays stale by choice (regen needs local stack).
+
+**Verified**
+- Full `npm test`: 4652/4652 tests passed, 365/366 files (the 1 file = the transient concurrent-edit transform failure above, green on re-run). Typecheck EXIT:0. `check:pglite` 166/166 + `check:lifecycle` 31/31. `check:contrast` 82/82. `npm run build` EXIT:0 (289 PWA entries). Full `lint` still times out on this machine — scoped work only. Logs: `artifacts/fulltest-20261017b.log`, `artifacts/typecheck-0168b.log`, `artifacts/build-20261017.log`.
+- 0168 + wiring are VERIFIED locally, NOT APPLIED live, NOT PRODUCTION-VERIFIED. Cutover script now covers 0157–0168 (12 files) for Babin's USER-RUN.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 166 files · check:pglite 166/166 applied, 0 failed (recorded 2026-10-16T18:41:39.939Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T18:42:43.728Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply of 0157–0168 by Babin after `BACKUP_PROTOCOL.md`; refresh `docs/live/schema_migrations_<today>.txt`, re-run `db:plan`. Staging JWT/PostgREST needs an isolated project + fixtures.
+- Suite cache still reads the older 4646 count; the fresh full run above (4652/4652) supersedes it on the next counter refresh. Full `lint` rerun on a faster machine.
+- Physical iPad/Safari + native zoom; app-wide status/role matrix; open product calls (§4.64/§4.65, D-2); border-merge decision.
+
 ## 2026-10-16 — G3 line-total persistence (0168) plus user-run cutover script
 
 **Did**

@@ -1,7 +1,8 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback, type CSSProperties } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
-import Icon from '../../components/ui/Icon'
+import Icon, { type IconName } from '../../components/ui/Icon'
 import { Card, PageHeader, PageActions, Button, FooterNote, cardStyle } from '../../components/ui/Page'
+import { formatBookingNo } from '../../lib/format'
 import { SearchInput } from '../../components/ui'
 import { PageShell } from '../../components/ui/PageShell'
 import { PageBody } from '../../components/ui/PageBody'
@@ -345,15 +346,96 @@ function chipStyle(on: boolean) {
     minHeight: 44,
     padding: '0 14px',
     borderRadius: 'var(--r-btn)',
-    border: `1px solid ${on ? 'var(--nav-active-accent)' : 'var(--border)'}`,
+    border: `1.5px solid ${on ? 'var(--primary, #2456d6)' : 'var(--border)'}`,
     background: on ? 'var(--select-bg)' : 'var(--card)',
-    color: on ? 'var(--select-fg)' : 'var(--text2)',
+    color: on ? 'var(--select-fg)' : 'var(--text)',
     fontSize: 'var(--t-meta)',
     fontWeight: 600,
     fontFamily: 'inherit',
     cursor: 'pointer',
     whiteSpace: 'nowrap' as const,
     flexShrink: 0,
+    boxShadow: on ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
+    transition: 'all 120ms ease',
+  }
+}
+
+function formatOperationBookingId(bookingNo: string | null | undefined): string {
+  if (!bookingNo) return '—'
+  const trimmed = bookingNo.trim().replace(/^#/, '')
+  const isDigits = /^\d+$/.test(trimmed)
+  return isDigits ? `#${trimmed.padStart(4, '0')}` : formatBookingNo(bookingNo)
+}
+
+function getJobButtonProps(job: JobName): {
+  icon: IconName
+  style: CSSProperties
+} {
+  switch (job) {
+    case 'Pack':
+      return {
+        icon: 'package',
+        style: {
+          minWidth: 104,
+          minHeight: 38,
+          justifyContent: 'center',
+          gap: 6,
+          background: 'color-mix(in srgb, var(--primary, #2563eb) 12%, var(--card))',
+          border: '1px solid color-mix(in srgb, var(--primary, #2563eb) 45%, transparent)',
+          color: 'var(--primary-text, #1d4ed8)',
+          fontWeight: 600,
+          borderRadius: 'var(--r-btn, 8px)',
+          boxShadow: '0 1px 2px rgba(37, 99, 235, 0.08)',
+        },
+      }
+    case 'Handover':
+      return {
+        icon: 'truck',
+        style: {
+          minWidth: 104,
+          minHeight: 38,
+          justifyContent: 'center',
+          gap: 6,
+          background: 'color-mix(in srgb, var(--success, #16a34a) 12%, var(--card))',
+          border: '1px solid color-mix(in srgb, var(--success, #16a34a) 45%, transparent)',
+          color: 'var(--success-text, #15803d)',
+          fontWeight: 600,
+          borderRadius: 'var(--r-btn, 8px)',
+          boxShadow: '0 1px 2px rgba(22, 163, 74, 0.08)',
+        },
+      }
+    case 'Return':
+      return {
+        icon: 'return_arrow',
+        style: {
+          minWidth: 104,
+          minHeight: 38,
+          justifyContent: 'center',
+          gap: 6,
+          background: 'color-mix(in srgb, var(--warn, #ea580c) 12%, var(--card))',
+          border: '1px solid color-mix(in srgb, var(--warn, #ea580c) 45%, transparent)',
+          color: 'var(--warn-text, #c2410c)',
+          fontWeight: 600,
+          borderRadius: 'var(--r-btn, 8px)',
+          boxShadow: '0 1px 2px rgba(234, 88, 12, 0.08)',
+        },
+      }
+    case 'Reset':
+      return {
+        icon: 'tool',
+        style: {
+          minWidth: 104,
+          minHeight: 38,
+          justifyContent: 'center',
+          gap: 6,
+          background: 'color-mix(in srgb, var(--ready, #ca8a04) 14%, var(--card))',
+          border: '1px solid color-mix(in srgb, var(--ready, #ca8a04) 45%, transparent)',
+          color: 'var(--ready-text, #a16207)',
+          fontWeight: 600,
+          borderRadius: 'var(--r-btn, 8px)',
+          boxShadow: '0 1px 2px rgba(202, 138, 4, 0.08)',
+        },
+      }
   }
 }
 
@@ -382,7 +464,7 @@ function QueueChip({ queue, active, total, loading, error, onToggle }: QueueChip
   return (
     <button type="button" onClick={onToggle} aria-pressed={active} style={chipStyle(active)} {...(error ? { title: error } : {})}>
       {/* Law 11 — the queue's stage tone never carries the meaning alone; the icon and the word are both present. */}
-      <Icon name={queue.icon} size={15} style={{ color: tok.fg, flexShrink: 0 }} />
+      <Icon name={queue.icon} size={15} style={{ color: active ? 'var(--select-fg)' : 'var(--text2)', flexShrink: 0 }} />
       {queue.title}
       <span
         className="figure"
@@ -395,8 +477,8 @@ function QueueChip({ queue, active, total, loading, error, onToggle }: QueueChip
           height: 20,
           padding: '0 6px',
           borderRadius: 'var(--r-badge)',
-          background: tok.bg,
-          color: tok.fg,
+          background: active ? 'var(--select-fg)' : tok.bg,
+          color: active ? 'var(--select-bg)' : tok.fg,
           fontSize: 'var(--t-meta)',
           fontWeight: 700,
         }}
@@ -705,6 +787,8 @@ export default function OperationsQueues() {
     })
   }
 
+  const overdueCount = useMemo(() => jobs.filter((j) => j.isPastDue).length, [jobs])
+
   const listLabel = exception
     ? (EXCEPTION_FACETS.find((ef) => ef.key === exception)?.label ?? exception)
     : activeJob
@@ -715,11 +799,12 @@ export default function OperationsQueues() {
   // One line on the date button: "Today", else the English date (a range shows both ends).
   const adLabel = (day: string) => new Date(`${day}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
   const dateButtonLabel =
-    scope === 'today' ? 'Today'
-    : scope === 'tomorrow' ? adLabel(dayOffsetFromToday(1))
-    : scope === 'custom'
-      ? (!range ? 'All days' : customFrom && customTo && customFrom !== customTo ? `${adLabel(customFrom)} – ${adLabel(customTo)}` : customFrom ? adLabel(customFrom) : 'Custom range')
-      : SCOPE_LABEL[scope]
+    scope === 'today'
+      ? (overdueCount > 0 ? `Today & Overdue (${overdueCount})` : 'Today')
+      : scope === 'tomorrow' ? adLabel(dayOffsetFromToday(1))
+      : scope === 'custom'
+        ? (!range ? 'All days' : customFrom && customTo && customFrom !== customTo ? `${adLabel(customFrom)} – ${adLabel(customTo)}` : customFrom ? adLabel(customFrom) : 'Custom range')
+        : SCOPE_LABEL[scope]
   const scopeLabel = scope === 'custom' && !range ? 'all days' : SCOPE_LABEL[scope].toLowerCase()
   const emptyTitle = isFiltered ? `Nothing in ${listLabel} for ${scopeLabel}` : 'No jobs right now'
   const emptyMessage = activeJob
@@ -768,23 +853,6 @@ export default function OperationsQueues() {
               </span>
             ) : null
           }
-          search={
-            selected === 'Cases'
-              ? {
-                  value: params.get('q') ?? '',
-                  onChange: (val) => patch({ q: val || null }),
-                  onClear: () => patch({ q: null }),
-                  placeholder: 'Search case ID, title, client… (press /)',
-                  ariaLabel: 'Search cases by ID, title, or client',
-                }
-              : {
-                  value: searchInput,
-                  onChange: setSearchInput,
-                  onClear: () => setSearchInput(''),
-                  placeholder: 'Search ID, client, project… (press /)',
-                  ariaLabel: 'Search operations',
-                }
-          }
           actions={
             <PageActions
               secondary={compactHeader ? [] : [
@@ -832,10 +900,63 @@ export default function OperationsQueues() {
       >
 
       <div className="operations-v2__queues" role="group" aria-label="Operational queues">
+        <button
+          type="button"
+          onClick={() => setActive(null)}
+          aria-pressed={selected === null && group === null && exception === null}
+          style={chipStyle(selected === null && group === null && exception === null)}
+        >
+          <Icon name="checklist" size={15} style={{ color: (selected === null && group === null && exception === null) ? 'var(--select-fg)' : 'var(--text2)', flexShrink: 0 }} />
+          All Active
+          <span
+            className="figure"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minWidth: 22,
+              height: 20,
+              padding: '0 6px',
+              borderRadius: 'var(--r-badge)',
+              background: (selected === null && group === null && exception === null) ? 'var(--select-fg)' : 'var(--border)',
+              color: (selected === null && group === null && exception === null) ? 'var(--select-bg)' : 'var(--text2)',
+              fontSize: 'var(--t-meta)',
+              fontWeight: 700,
+            }}
+          >
+            {list.total ?? jobs.length}
+          </span>
+        </button>
         {CHIPS.map((q) => <QueueChip key={q.job} queue={q} active={selected === q.job} total={counts[q.job].total} loading={counts[q.job].loading} error={counts[q.job].error} onToggle={() => setActive(selected === q.job ? null : q.job)} />)}
-        <Link to="/inventory/cases" onClick={(event) => { event.preventDefault(); patch({ queue: selected === 'Cases' ? null : 'cases', quick: null }) }} aria-pressed={selected === 'Cases'} className="operations-v2__queue" style={{ ...chipStyle(selected === 'Cases'), textDecoration: 'none' }}>
-          <Icon name="eye" size={15} style={{ color: openCases ? STATUS.danger.fg : STATUS.neutral.fg }} /> Cases
-          <span className="figure" title={casesList.error ?? undefined} style={{ minWidth: 22, padding: '1px 6px', borderRadius: 'var(--r-badge)', background: openCases ? STATUS.danger.bg : STATUS.neutral.bg, color: openCases ? STATUS.danger.fg : STATUS.neutral.fg, textAlign: 'center' }}>{openCases ?? '—'}</span>
+        <Link
+          to="/inventory/cases"
+          onClick={(event) => { event.preventDefault(); patch({ queue: selected === 'Cases' ? null : 'cases', quick: null }) }}
+          aria-pressed={selected === 'Cases'}
+          className="operations-v2__queue"
+          style={{ ...chipStyle(selected === 'Cases'), textDecoration: 'none' }}
+        >
+          <Icon name="briefcase" size={15} style={{ color: selected === 'Cases' ? 'var(--select-fg)' : 'var(--text2)', flexShrink: 0 }} />
+          Cases
+          <span
+            className="figure"
+            title={casesList.error ?? undefined}
+            style={{
+              minWidth: 22,
+              height: 20,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 6px',
+              borderRadius: 'var(--r-badge)',
+              background: selected === 'Cases' ? 'var(--select-fg)' : openCases ? STATUS.danger.bg : STATUS.neutral.bg,
+              color: selected === 'Cases' ? 'var(--select-bg)' : openCases ? STATUS.danger.fg : STATUS.neutral.fg,
+              textAlign: 'center',
+              fontSize: 'var(--t-meta)',
+              fontWeight: 700,
+            }}
+          >
+            {openCases ?? '—'}
+          </span>
         </Link>
       </div>
 
@@ -847,7 +968,17 @@ export default function OperationsQueues() {
           {showDateMenu && (
             <div id="operations-date-menu" className="operations-v2__popover operations-v2__date-popover">
               <div className="operations-v2__date-options" role="group" aria-label="Date range">
-                {DISPLAY_SCOPE_ORDER.map((item) => <Button key={item} variant={scope === item ? 'secondary' : 'ghost'} size="sm" className="operations-v2__date-option" onClick={() => { setScope(item); setShowDateMenu(item === 'custom') }}>{SCOPE_LABEL[item]}</Button>)}
+                {DISPLAY_SCOPE_ORDER.map((item) => (
+                  <Button
+                    key={item}
+                    variant={scope === item ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="operations-v2__date-option"
+                    onClick={() => { setScope(item); setShowDateMenu(item === 'custom') }}
+                  >
+                    {item === 'today' && overdueCount > 0 ? `Today & Overdue (${overdueCount})` : SCOPE_LABEL[item]}
+                  </Button>
+                ))}
               </div>
               <div className="operations-v2__calendar-range">
                 {scope === 'custom' ? <>
@@ -861,14 +992,35 @@ export default function OperationsQueues() {
             </div>
           )}
         </div>
+        {scope === 'today' && overdueCount > 0 && (
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '4px 10px',
+              borderRadius: 'var(--r-badge, 9999px)',
+              background: 'var(--st-danger-bg, #fee2e2)',
+              color: 'var(--st-danger-fg, #b91c1c)',
+              fontSize: 'var(--t-meta, 12px)',
+              fontWeight: 600,
+              border: '1px solid var(--st-danger-border, #fca5a5)',
+              flexShrink: 0,
+            }}
+            title={`${overdueCount} orders are past due and displayed in today's queue`}
+          >
+            <Icon name="alert_circle" size={13} />
+            {overdueCount} Overdue
+          </span>
+        )}
         <div style={{ flex: '1 1 240px', minWidth: 180 }}>
           <SearchInput
             ref={queueSearchRef}
             value={searchInput}
             onChange={setSearchInput}
             onClear={() => setSearchInput('')}
-            placeholder="Search ID, client, project…"
-            aria-label="Search ID, client, project"
+            placeholder="Filter current queue… (press /)"
+            aria-label="Filter current queue"
           />
         </div>
         {(isFiltered || search || clientFilter !== 'all' || projectFilter !== 'all') && <Button variant="ghost" onClick={clearOperationFilters}>Clear filters</Button>}
