@@ -68,7 +68,7 @@ export function Table<T extends Record<string, unknown>>({
         width: '100%',
         overflowX: 'auto',
         borderRadius: 'var(--r-card)',
-        border: '1px solid var(--border)',
+        border: '1.5px solid var(--border)',
         background: 'var(--card)',
         boxShadow: 'var(--shadow-card), var(--specular-rim)',
       }}
@@ -87,7 +87,7 @@ export function Table<T extends Record<string, unknown>>({
             textTransform: 'uppercase',
             letterSpacing: '0.04em',
             color: 'var(--muted)',
-            borderBottom: '1px solid var(--border)',
+            borderBottom: '1.5px solid var(--border)',
             position: 'sticky',
             top: 0,
             zIndex: 10,

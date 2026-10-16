@@ -1,5 +1,70 @@
 # Progress Log
 
+## 2026-10-16 — G3 line-total persistence (0168) plus user-run cutover script
+
+**Did**
+- WRITTEN then locally VERIFIED migration `0168_booking_line_totals_and_breakdown.sql`: `booking_lines.line_total` + `price_breakdown` (jsonb), `invoice_lines.price_breakdown`, backfill from the exact invoice formula, coherence/check constraints, Law 6 guard extension (no base-table grant, mirroring rate), masked `booking_lines_v` columns appended at end (OR REPLACE rejects mid-list inserts), `create_booking` accepts optional per-line `line_total` + `price_breakdown` with fail-closed validation (non-negative, whole paisa, object, never one without the other; money-blind callers get server figures), `create_invoice` prefers the stored total and copies the breakdown.
+- Fixed one PGlite failure (`cannot change name of view column`) by appending view columns at end; second run clean.
+- Client slice in `src/actions/rentals/createRental.ts`: optional `lineTotal`/`priceBreakdown` on `CreateRentalLine`, validated by name (negative total / orphan breakdown refused), passed as `line_total`/`price_breakdown` only when stated. New suite `src/actions/rentals/__tests__/createRentalLineTotal.test.ts` 4/4.
+- Wrote `scripts/cutover-0157-0167-USER-RUN.ps1` (extended to 0157–0168, 12 files): hidden-prompt DB URL (N-8), backup proof required, one file per transaction, stop at first failure, records `schema_migrations`, skips 0047 seed + 7 renames. USER-RUN ONLY under N-5; no remote apply by agent.
+- Four uncommitted `1px→1.5px` border edits (`FilterBar.tsx`, `Page.tsx`, `Table.tsx`, `RentalsList.tsx`) re-appeared after a revert — identical blob hashes, so a concurrent session owns them. Left untouched to avoid a revert war; they conflict with the fixed-border + box-shadow ring rule (layout shift) and need a merge decision, not a silent overwrite.
+- Delivery audit (read-only): live route is 100% Supabase `booking_transport_v`; `localStorage` seed lives only behind `IS_MOCK` (`lib/queries/delivery.ts`, `MockDeliveryWorkspace`). Rescheduling semantics stay an open product call (§4.64).
+
+**Ruled**
+- G3 engineering close-out of the persistence half only; no product call taken. Quote-to-booking wiring (`fetchProductPricingTerms` still has no UI caller) and all §4.64/§4.65/D-2 decisions stay `TODO(decision)`. `src/types/database.ts` `booking_lines` block is stale (predates real columns) — left untouched; regen needs the local stack.
+
+**Verified**
+- `check:pglite` 166/166 + `check:lifecycle` 31/31 green together = 0168 VERIFIED locally, NOT APPLIED live, NOT PRODUCTION-VERIFIED. Leak gates: 0 anon views, 0 unauthorized RPCs, 74/74 definer paths pinned.
+- Targeted vitest: 36 files / 423 tests passed (`src/actions/rentals`, `src/modules/rentals/booking`), including the new 4. Typecheck green (background log, EXIT:0).
+- NOT rerun: full suite (completion block below reads the cached 4646 count), production build, contrast, lint (machine timeouts on full runs — scoped work only). Logs: `artifacts/check-pglite-0168b.log`, `artifacts/check-lifecycle-0168.log`, `artifacts/baseline-typecheck.log`.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 166 files · check:pglite 166/166 applied, 0 failed (recorded 2026-10-16T18:07:18.498Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T18:06:37.103Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply of 0157–0168 by Babin after `BACKUP_PROTOCOL.md` using the USER-RUN script; then refresh `docs/live/schema_migrations_<today>.txt` and re-run `db:plan` (expect 0047-only pending). Staging JWT/PostgREST verification still needs an isolated project + fixtures.
+- Quote-to-booking wiring: compute `lineTotal`/`priceBreakdown` from `pricingStructures.ts` + `fetchProductPricingTerms` in New Rental; invoice already prefers stored totals.
+- Full `npm test`, `npm run build`, `check:contrast`, `lint` rerun on a faster machine; physical iPad/Safari + native zoom acceptance; app-wide status/role matrix in `docs/UI_UX_IMPROVEMENT_PLAN.md`.
+
+## 2026-10-16 — Reconnected Babin and inspected live Intel protections read-only
+
+**Did**
+- Verified the reconnected Supabase connector can access sxguwvgoserhdolewibb; project reports ACTIVE_HEALTHY. This supersedes the earlier connector-access blocker, not the separate staging/session requirements.
+- Inspected public database catalogs, Intel policies, role helpers, masked-view definitions, unique write keys and audit triggers using explicit read-only transactions. Saved schema evidence and a scoped report in artifacts/intel-live-readonly-2026-10-16/.
+
+**Ruled**
+- Database connector access is not an authenticated application role session or isolated staging environment. No migration, DDL, persistent role change or business-data write was performed.
+
+**Verified**
+- Live RLS enabled on booking_notes, intel_entity_notes, intel_field_definitions and intel_field_values. Management and operations note predicates, custom-field classification rules, client_uuid unique indexes and enabled audit triggers are present.
+- Live booking_lines_v/products_v mask financial columns via auth_can_view_money(), whose role set excludes Warehouse/Technician/Driver/Client. Finance-table read predicates use money/finance helpers; finance helper is Owner/Admin/Manager/Accounts. The masked views lack anon SELECT grants; protected base-table grants rely on RLS.
+- Migration ledger includes 0143_smart_intel_notes_fields. No inference of complete migration parity or runtime role acceptance is made from the ledger.
+- Ran npm run completion. Only documentation/evidence changed in this pass; no fresh full suite or production build is claimed. The generated counts below read repository cached results.
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 166 files · check:pglite 166/166 applied, 0 failed (recorded 2026-10-16T18:07:18.498Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T18:06:37.103Z.
+Counted by `npm run completion`, not typed.
+### Remaining
+- Authenticated Warehouse/Accounts/Manager PostgREST, payload and card DOM checks require real application sessions. No note contents, custom-field values or financial rows were read through the administrative connector.
+- Isolated staging acceptance, physical iPad/Safari, and production release sign-off remain pending the existing backup/application process.
 ## 2026-10-16 — Smart Intel role acceptance preflight
 
 **Did**

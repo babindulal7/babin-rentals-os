@@ -216,7 +216,7 @@ export function FilterBar({
                   minHeight: 44,
                   padding: '0 12px',
                   borderRadius: 'var(--r-btn, 8px)',
-                  border: `1px solid ${isSelected ? 'var(--nav-active-accent, #3b82f6)' : 'var(--border, #e2e8f0)'}`,
+                  border: `1.5px solid ${isSelected ? 'var(--nav-active-accent, #3b82f6)' : 'var(--border, #e2e8f0)'}`,
                   background: isSelected ? 'var(--nav-active-bg, rgba(59, 130, 246, 0.1))' : 'var(--card, #ffffff)',
                   color: isSelected ? 'var(--text, #0f172a)' : 'var(--text2, #475569)',
                   fontSize: 'var(--t-meta, 12px)',

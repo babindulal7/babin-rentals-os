@@ -270,7 +270,7 @@ function stageChipStyle(on: boolean) {
     height: 44,
     padding: '0 14px',
     borderRadius: 'var(--r-btn, 8px)',
-    border: `1px solid ${on ? 'var(--nav-active-accent)' : 'var(--border)'}`,
+    border: `1.5px solid ${on ? 'var(--nav-active-accent)' : 'var(--border)'}`,
     background: on ? 'var(--select-bg)' : 'var(--card)',
     color: on ? 'var(--select-fg)' : 'var(--text2)',
     fontSize: 'var(--t-meta)',
@@ -301,7 +301,7 @@ function Avatar({ row }: { row: RentalListRow }) {
         borderRadius: 'var(--r-badge)',
         background: c.bg,
         color: c.fg,
-        border: c.border ? `1px solid ${c.border}` : undefined,
+        border: c.border ? `1.5px solid ${c.border}` : undefined,
         display: 'grid',
         placeItems: 'center',
         textAlign: 'center',
@@ -1995,7 +1995,7 @@ export default function RentalsList() {
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0, flex: 1 }}>
-        <div style={{ background: 'var(--card)', borderRadius: 'var(--r-card)', border: '1px solid var(--border)', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--card)', borderRadius: 'var(--r-card)', border: '1.5px solid var(--border)', overflow: 'hidden' }}>
             <PageBody
               loading={list.loading || (subOn && subPending)}
               error={subOn && !subPending && subIds === null ? SUB_RENTAL_UNANSWERED : list.error}
@@ -2054,7 +2054,7 @@ export default function RentalsList() {
                               gap: 'var(--sp-sm)',
                               padding: 'var(--sp-md)',
                               background: 'var(--card)',
-                              border: '1px solid var(--border)',
+                              border: '1.5px solid var(--border)',
                               borderRadius: 'var(--r-card)',
                               boxShadow: 'var(--shadow-card)',
                               ...externalRowStyle(r.isExternal),
@@ -2064,7 +2064,7 @@ export default function RentalsList() {
                               flexDirection: 'column',
                               gap: 'var(--sp-sm)',
                               padding: '13px 14px',
-                              borderBottom: '1px solid var(--border)',
+                              borderBottom: '1.5px solid var(--border)',
                               // §4.1 — "gold outline row = external gear". Fires
                               // only on a real `true`; `null` is "not answered" and
                               // leaves the row unmarked (§11.1, Law 11).
@@ -2172,7 +2172,7 @@ export default function RentalsList() {
                             height: 44,
                             flex: 1,
                             borderRadius: 'var(--r-btn, 8px)',
-                            border: '1px solid var(--border)',
+                            border: '1.5px solid var(--border)',
                             background: 'var(--card2)',
                             color: 'var(--text)',
                             fontSize: 'var(--t-ui)',
@@ -2732,7 +2732,7 @@ const th = {
   fontWeight: 600,
   color: 'var(--text2)',
   whiteSpace: 'normal' as const,
-  borderBottom: '1px solid var(--border)',
+  borderBottom: '1.5px solid var(--border)',
 }
 
 /*
@@ -2791,7 +2791,7 @@ const stickyTh = {
   right: 0,
   zIndex: 2,
   background: 'var(--th-bg)',
-  boxShadow: 'inset 1px 0 0 var(--border)',
+  boxShadow: 'inset 1.5px 0 0 var(--border)',
 }
 
 const stickyTd = {
@@ -2803,5 +2803,5 @@ const stickyTd = {
   right: 0,
   zIndex: 1,
   background: 'var(--card)',
-  boxShadow: 'inset 1px 0 0 var(--border)',
+  boxShadow: 'inset 1.5px 0 0 var(--border)',
 }

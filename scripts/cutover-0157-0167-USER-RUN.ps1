@@ -1,4 +1,4 @@
-# Babin Rentals OS — Live cutover 0157→0167 — USER-RUN ONLY (N-5)
+﻿# Babin Rentals OS — Live cutover 0157→0167 — USER-RUN ONLY (N-5)
 # You run this. Agents never run it. Backup first, then apply, stop at first failure.
 # Skips: 0047 one-shot seed (NEVER apply to live), 7 renames (already live under old names).
 #
@@ -22,7 +22,8 @@ $Files = @(
   '0164_booking_discount_vat_payment_integrity.sql',
   '0165_delivery_jobs_and_event_rpc.sql',
   '0166_booking_transport_dispatch.sql',
-  '0167_rental_revert_archive.sql'
+  '0167_rental_revert_archive.sql',
+  '0168_booking_line_totals_and_breakdown.sql'
 )
 
 $RepoRoot = Split-Path -Parent $PSScriptRoot
@@ -56,7 +57,7 @@ try {
 } catch { Write-Error 'Could not parse connection string as URI.'; exit 1 }
 
 # Confirm explicitly.
-$confirm = Read-Host 'Apply 11 migrations 0157-0167 to LIVE now? Type APPLY-LIVE to continue'
+$confirm = Read-Host 'Apply 12 migrations 0157-0168 to LIVE now? Type APPLY-LIVE to continue'
 if ($confirm -ne 'APPLY-LIVE') { Write-Host 'Aborted (no changes made).'; $DbUrl = $null; exit 0 }
 
 # 2. Apply one file per transaction, stop at first failure.
@@ -68,7 +69,7 @@ foreach ($f in $Files) {
   $idx += 1
   $path = Join-Path $Migrations $f
   $base = [System.IO.Path]::GetFileNameWithoutExtension($f)
-  Write-Host ("[{0}/11] {1} …" -f $idx, $f)
+  Write-Host ("[{0}/12] {1} …" -f $idx, $f)
   # psql reads the URL from the command line arg only for this process; $DbUrl is cleared in finally.
   & psql $DbUrl -v ON_ERROR_STOP=1 -q -f $path
   if ($LASTEXITCODE -ne 0) {
@@ -86,7 +87,7 @@ foreach ($f in $Files) {
 }
 
 Write-Host ''
-Write-Host ("Done: {0}/11 applied and recorded." -f $applied)
+Write-Host ("Done: {0}/12 applied and recorded." -f $applied)
 Write-Host 'Next, in Supabase SQL Editor, run the 3 post-cutover checks (CUTOVER_RUNBOOK §5) + these:'
 Write-Host '  -- 0163: expect 0 rows (no anon business RPCs)'
 Write-Host "  select proname from pg_proc p where p.pronamespace='public'::regnamespace and has_function_privilege('anon',p.oid,'execute') and proname in ('create_booking','issue_invoice','cancel_booking','extend_booking','void_invoice','record_payment');"

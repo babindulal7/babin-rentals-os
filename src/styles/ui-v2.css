@@ -395,7 +395,7 @@ input[type='search']::-webkit-search-results-decoration {
 .rental-stepper__item.is-upcoming .rental-stepper__indicator {
   background: var(--surface-2, #edf3fa);
   color: var(--muted, #6d7e95);
-  border: 1px solid var(--border, #dbe5f0);
+  border: 1.5px solid var(--border, #dbe5f0);
 }
 .rental-stepper__text {
   display: flex;
@@ -504,7 +504,7 @@ input[type='search']::-webkit-search-results-decoration {
 }
 .lifecycle-step.is-future .lifecycle-step__marker {
   background: var(--surface-2, #edf3fa);
-  border: 1px solid var(--border, #dbe5f0);
+  border: 1.5px solid var(--border, #dbe5f0);
 }
 .lifecycle-step__circle {
   width: 6px;
@@ -544,7 +544,7 @@ input[type='search']::-webkit-search-results-decoration {
   gap: 1rem;
   padding: 0.875rem 1.25rem;
   border-radius: var(--r-card, 12px);
-  border: 1px solid transparent;
+  border: 1.5px solid transparent;
   min-height: 52px;
 }
 .next-action-banner--dim,
