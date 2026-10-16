@@ -50,7 +50,7 @@ export function Card({
 }: CardProps) {
   const rootStyle: CSSProperties = {
     background: 'var(--surface-card, var(--card))',
-    border: '1px solid var(--border)',
+    border: '1.5px solid var(--border)',
     ...(statusColor ? { borderLeft: `3px solid ${statusColor}` } : {}),
     borderRadius: 'var(--r-card)',
     boxShadow: 'var(--shadow-card), var(--specular-rim)',
@@ -73,7 +73,7 @@ export function Card({
             justifyContent: 'space-between',
             gap: 'var(--sp-md)',
             padding: 'var(--space-3) var(--space-4)',
-            borderBottom: '1px solid var(--border)',
+            borderBottom: '1.5px solid var(--border)',
           }}
         >
           <div>
@@ -95,7 +95,7 @@ export function Card({
           style={{
             padding: '14px 20px',
             background: 'var(--card2)',
-            borderTop: '1px solid var(--border)',
+            borderTop: '1.5px solid var(--border)',
             borderBottomLeftRadius: 'var(--r-card)',
             borderBottomRightRadius: 'var(--r-card)',
           }}
@@ -135,7 +135,7 @@ export function KpiCard({ label, value, subtext, trend, icon, onClick }: KpiCard
       className={['surface-card', 'kpi-card', onClick ? 'lift' : ''].filter(Boolean).join(' ')}
       style={{
         background: 'var(--card)',
-        border: '1px solid var(--border)',
+        border: '1.5px solid var(--border)',
         borderRadius: 'var(--r-card)',
         boxShadow: 'var(--shadow-card), var(--specular-rim)',
         padding: '18px 22px',

@@ -187,7 +187,7 @@ export const Badge: React.FC<BadgeProps> = ({
         userSelect: 'none',
         background: tokens.bg,
         color: tokens.fg,
-        border: isExt ? `1px solid ${tokens.border}` : '1px solid transparent',
+        border: `1.5px solid ${tokens.border || (isExt ? 'var(--ext-line)' : 'color-mix(in srgb, currentColor 45%, transparent)')}`,
         borderRadius: isExt ? shape.borderRadius : variantRadius,
         fontWeight: variantFontWeight,
         letterSpacing: variantLetterSpacing,

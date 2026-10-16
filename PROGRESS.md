@@ -76,7 +76,7 @@ Counted by `npm run completion`, not typed.
 - Existing Babin tokens and typography govern these operational cards. No new product or permission ruling; no migration WRITTEN, APPLIED or PRODUCTION-VERIFIED in this pass.
 
 **Verified**
-- Typecheck passed. Full Vitest suite passed: 364 files / 4,620 tests. Local PGlite 163/163 and lifecycle 30/30 passed together; lint and contrast 82/82 passed. Final production build is being checked after removing the unused declarations.
+- Typecheck passed. Full Vitest suite passed: 364 files / 4,620 tests. Local PGlite 163/163 and lifecycle 30/30 passed together; lint and contrast 82/82 passed. Final production build passed after removing the unused declarations (289 PWA precache entries); Vite reported its existing large-chunk advisory.
 - Chromium local mock review at desktop 1440x960, tablet 1024x900 and phone 390x844: rental list contained all five record lines, equipment contained all seven relationship rows, no horizontal card overflow; tabs measured 44 px. Notes textarea stayed inside the phone card. A touch long press opened the full-width bottom sheet and Close dismissed it. Light and dark views reviewed; touch emulation, temporary viewport and light theme restored afterward.
 - Screenshots and verification logs: artifacts/smart-intel-layout-2026-10-16/. Mock preview: http://127.0.0.1:3019/. No production data was changed. Generated completion below reads an older cached suite count; the fresh command log records the 4,620 passing tests above.
 ### Completion
