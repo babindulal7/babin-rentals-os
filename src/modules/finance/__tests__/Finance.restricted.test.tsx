@@ -34,6 +34,14 @@ import { FINANCE_RESTRICTED_REASON, FINANCE_REQUIRED_ROLE } from '../../../lib/q
  */
 const auth = vi.hoisted(() => ({ role: 'Owner' as string }))
 
+/* Permissions, not layout: pin a roomy desktop so every launcher is a button on the page.
+   At jsdom's 1024px (a tablet) Create Invoice and Export live in More since the 15 Oct
+   zoom audit; `Finance.header.test.tsx` covers that placement. */
+vi.mock('../../../lib/device', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../lib/device')>()
+  return { ...actual, useViewport: () => (window.innerWidth < 768 ? 'phone' as const : 'desktop' as const) }
+})
+
 vi.mock('../../../lib/auth', () => ({
   useAuth: () => ({ user: { id: 'USR-REAL', name: 'Tester', role: auth.role, isSharedDevice: false } }),
 }))
