@@ -1856,18 +1856,27 @@ export default function RentalsList() {
       >
         {RENTAL_VIEWS.map((viewItem) => {
           const isAll = viewItem.id === 'All'
-          const isActive = isAll
-            ? stageChips.length === 0 && chip === 'All'
-            : viewItem.id === 'Upcoming'
-              ? statusFilter.size === 3 && statusFilter.has('Quote') && statusFilter.has('Booked') && statusFilter.has('Packed')
-              : viewItem.stages.length === 1 && viewItem.stages[0] !== undefined && stageChips.length === 1 && stageChips.includes(viewItem.stages[0])
+          const isCancelledView = viewItem.id === 'Cancelled'
+          const isActive = isCancelledView
+            // Cancelled is a presence flag, not a stage (Law 3 / 0015) — its
+            // active state is the quick chip, never the stage group.
+            ? chip === 'Cancelled'
+            : isAll
+              ? stageChips.length === 0 && chip === 'All'
+              : viewItem.id === 'Upcoming'
+                ? statusFilter.size === 3 && statusFilter.has('Quote') && statusFilter.has('Booked') && statusFilter.has('Packed')
+                : viewItem.stages.length === 1 && viewItem.stages[0] !== undefined && stageChips.length === 1 && stageChips.includes(viewItem.stages[0])
 
           return (
             <button
               key={viewItem.id}
               type="button"
               onClick={() => {
-                if (isAll) {
+                if (isCancelledView) {
+                  // Opt into / out of the excluded population. The stage group
+                  // is left alone — rentalsQuery intersects it either way.
+                  pickChip(isActive ? 'All' : 'Cancelled')
+                } else if (isAll) {
                   f.setChipGroup('stage', [])
                   if (chip !== 'All') pickChip('All')
                 } else if (isActive) {

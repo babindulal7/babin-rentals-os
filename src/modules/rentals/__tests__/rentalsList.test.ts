@@ -669,6 +669,24 @@ describe('the Intel card is built from the queried row, not from the seed', () =
     expect(JSON.stringify(rentalDetailGroups(map({ depositRequired: rupees(50_000) }), WAREHOUSE))).not.toContain('50,000')
   })
 
+  it('omits money for every money-blind role and on floor surfaces, with no Rs figure anywhere', () => {
+    // ADOPTIONS item 6 audit: Warehouse · Technician · Driver · Client, plus a
+    // money-capable role on a floor surface (context gate stacks, stricter wins).
+    const blind = ['Warehouse', 'Technician', 'Driver', 'Client'] as const
+    for (const role of blind) {
+      const gctx = gateContext(role)
+      const glance = rentalGlance(map({ depositRequired: rupees(50_000) }), gctx)
+      expect(JSON.stringify(glance)).not.toContain('Rs')
+      expect(JSON.stringify(glance)).not.toContain('Deposit')
+      expect(rentalDetailGroups(map({ depositRequired: rupees(50_000) }), gctx).map((g) => g.title)).not.toContain('Money')
+    }
+    const floorOwner = gateContext('Owner', { surface: 'floor' })
+    expect(JSON.stringify(rentalGlance(map({ depositRequired: rupees(50_000) }), floorOwner))).not.toContain('Rs')
+    expect(
+      rentalDetailGroups(map({ depositRequired: rupees(50_000) }), floorOwner).map((g) => g.title),
+    ).not.toContain('Money')
+  })
+
   it('shows it to a role that may see booking money', () => {
     const glance = rentalGlance(map({ depositRequired: rupees(50_000) }), OWNER)
     expect(glance.lines?.some((l) => l.includes('Deposit required'))).toBe(true)

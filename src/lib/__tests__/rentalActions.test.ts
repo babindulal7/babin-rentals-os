@@ -111,5 +111,18 @@ describe('getRentalPrimaryAction', () => {
     expect(getRentalPrimaryAction('Quote', { bookingNo: NO, isServiceOnly: true }).actionType).toBe('confirm')
     expect(getRentalPrimaryAction('Returned', { bookingNo: NO, isServiceOnly: true }).actionType).toBe('close')
   })
+
+  it('falls through to a non-operable View on unknown input, never an invented transition', () => {
+    // ADOPTIONS item 3: one verb per booking. Unknown input must not mint a
+    // transition — the resolver's own contract (rentalActions.ts:82).
+    for (const stage of ['Something New', undefined] as const) {
+      const view = getRentalPrimaryAction(stage, { bookingNo: NO })
+      expect(view.label).toBe('View Booking')
+      expect(view.actionType).toBe('view')
+      expect(view.isOperable).toBe(false)
+      expect(view.job).toBeUndefined()
+      expect(view.route).toBeUndefined()
+    }
+  })
 })
 

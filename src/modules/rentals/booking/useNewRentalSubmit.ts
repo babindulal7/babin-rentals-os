@@ -8,6 +8,10 @@ import { toRupees, type Paisa } from '../../../lib/money'
 import type { PricingPipelineResult } from '../../../lib/pricingPipeline'
 import { planCreationUnits, type CreationUnitPlan } from '../../../lib/queries/availability'
 import type { ClientRecord } from '../../../lib/queries/clients'
+import { fetchProductPricingTerms, type ProductPricingTerms } from '../../../lib/queries/productPricingTerms'
+import { canViewMoney } from '../../../lib/rbac'
+import { quoteUnitPrice } from '../../../lib/pricingStructures'
+import { kathmanduCivil, NPT_OFFSET_MIN } from '../../../lib/bs'
 import { newClientUuid, supabase } from '../../../lib/supabase'
 import type { CrewRoleDb } from '../../../types/database'
 import type { CrewLine } from './CrewSection'
@@ -61,6 +65,51 @@ export interface UseNewRentalSubmitOptions {
 
   confirmKey: React.MutableRefObject<string | null>
   draftBookingKey: React.MutableRefObject<string | null>
+}
+
+const PRODUCT_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * 0168 (G3) — quote totals for one booking line.
+ *
+ * A structure/fixed quote does not divide into a per-day rate without a paisa
+ * discrepancy, so the quoted total plus its snapshot ride the line and the
+ * invoice reproduces the quote. Returns `{}` (flat-rate path) when the product
+ * carries no terms or the quote fails — quoting must never block booking.
+ */
+function quoteFieldsForLine(
+  line: Line,
+  terms: ReadonlyMap<string, ProductPricingTerms>,
+  pickupDay: string,
+  pickupTime: string,
+  returnTime: string,
+): { lineTotal?: number; priceBreakdown?: Record<string, unknown> } {
+  const productId = line.productId && PRODUCT_UUID_RE.test(line.productId) ? line.productId : null
+  const lineTerms = productId ? terms.get(productId) : undefined
+  if (!lineTerms || (!lineTerms.structure && lineTerms.rules.length === 0)) return {}
+  try {
+    const base = lineTerms.structure
+      ? { method: 'structure' as const, structure: lineTerms.structure }
+      : { method: 'flat' as const, perDayPaisa: line.ratePaisa }
+    const quote = quoteUnitPrice({ base, rules: lineTerms.rules, pickupDay, days: line.days, pickupTime, returnTime })
+    return {
+      lineTotal: toRupees((quote.unitTotalPaisa * line.qty) as Paisa),
+      priceBreakdown: {
+        source: 'pricing-quote-v1',
+        productId,
+        method: base.method,
+        pickupDay,
+        days: line.days,
+        qty: line.qty,
+        chargedDays: quote.chargedDays,
+        unitTotalPaisa: quote.unitTotalPaisa,
+        adjustments: quote.adjustments.map((a) => ({ rule: a.rule, deltaPaisa: a.deltaPaisa })),
+        notes: quote.notes,
+      },
+    }
+  } catch {
+    return {}
+  }
 }
 
 export function useNewRentalSubmit({
@@ -173,6 +222,32 @@ export function useNewRentalSubmit({
             creationUnitPlan = null
           }
 
+          /* 0168 (G3) — structure/fixed quote totals ride the lines so the
+             invoice reproduces the quote. Terms are a database read (RLS
+             returns nothing money-blind, and the gate below keeps them off
+             the payload for those roles); any failure falls back to the
+             flat-rate path rather than blocking the press. */
+          let pricingTerms: ReadonlyMap<string, ProductPricingTerms> = new Map()
+          if (canViewMoney(ctx.role)) {
+            const termIds = [
+              ...new Set(
+                lines.map((l) => l.productId).filter((id): id is string => !!id && PRODUCT_UUID_RE.test(id)),
+              ),
+            ]
+            if (termIds.length > 0) {
+              try {
+                pricingTerms = await fetchProductPricingTerms(termIds)
+              } catch {
+                pricingTerms = new Map()
+              }
+            }
+          }
+          const pickupDay = new Date(kathmanduCivil(pickupAt)).toISOString().slice(0, 10)
+          const nptClock = (d: Date): string =>
+            new Date(d.getTime() + NPT_OFFSET_MIN * 60_000).toISOString().slice(11, 16)
+          const pickupTime = nptClock(pickupAt)
+          const returnTime = nptClock(returnAt)
+
           const created = await createRental(
             {
               clientUuid: pressKey,
@@ -263,6 +338,7 @@ export function useNewRentalSubmit({
                   qty: l.qty,
                   days: l.days,
                   rate: toRupees(l.ratePaisa),
+                  ...quoteFieldsForLine(l, pricingTerms, pickupDay, pickupTime, returnTime),
                   sortOrder: i,
                   ...(assigned && assigned.length > 0 ? { units: assigned } : {}),
                 }

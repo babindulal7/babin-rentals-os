@@ -794,6 +794,22 @@ export function overdue(nowAd: string): ListFilters {
 }
 
 /**
+ * Late pickup — should have gone out before now but is still Booked/Packed.
+ *
+ * ADOPTIONS item 7 (Booqable §12.2 L3): the fourth Attention-required facet.
+ * Takes an INSTANT like `overdue` (floored to the minute so `useList` keys stay
+ * stable); stage set mirrors `TODAYS_OUTGOING_STAGES`, not `overdue`.
+ */
+export function latePickups(nowAd: string): ListFilters {
+  return {
+    dateRange: { column: 'pickup_at', toAd: toMinute(nowAd) },
+    chips: { stage: [...TODAYS_OUTGOING_STAGES] },
+    presence: { cancelled_at: false },
+    sort: { column: 'pickup_at', ascending: true },
+  }
+}
+
+/**
  * Quotes expiring — still a Quote, and `quote_expires_at` has already passed.
  *
  * Like `overdue`, this takes an **INSTANT**, not a day: `quote_expires_at` is a

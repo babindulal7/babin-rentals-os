@@ -26,8 +26,7 @@ describe('rental view counts', () => {
     await listRentalViewCounts({ chips: { project_type: ['Documentary'] }, dateRange: { column: 'pickup_at', fromAd: '2026-10-07' } })
     expect(db.in).toHaveBeenCalledWith('data->>kind', ['Documentary'])
     expect(db.gte).toHaveBeenCalledWith('data->>pickup', '2026-10-07')
-  })
-  it('reports a count read failure rather than returning a false zero', async () => {
+  })  it('reports a count read failure rather than returning a false zero', async () => {
     db.error = { message: 'Session expired' }
     await expect(listRentalViewCounts({})).rejects.toThrow('Session expired')
   })
@@ -36,5 +35,25 @@ describe('rental view counts', () => {
     const { rows } = await listRentalViewCounts({})
     expect(rows.find(r => r.id === 'Draft')?.count).toBeNull()
     expect(rows.find(r => r.id === 'All')?.count).toBeNull()
+  })
+  it('counts the excluded Cancelled population with the presence flag flipped and no stage constraint', async () => {
+    // ADOPTIONS item 4 (Booqable §9.2): filter + census. The mock answers 5
+    // for a stageless count; what matters is the call shape, not the number.
+    const { rows } = await listRentalViewCounts({ chips: { stage: ['On Rent'] } })
+    expect(rows.find(r => r.id === 'Cancelled')?.count).toBe(5)
+    const cancelledCall = bookings.mock.calls.find(
+      ([f]) => (f as { presence?: { cancelled_at?: boolean } }).presence?.cancelled_at === true,
+    )
+    expect(cancelledCall).toBeDefined()
+    const [cancelledFilters] = cancelledCall as [{ chips?: { stage?: string[] }; presence?: { cancelled_at?: boolean }; headOnly?: boolean; excludeArchived?: boolean }]
+    expect(cancelledFilters.chips?.stage).toBeUndefined()
+    expect(cancelledFilters.headOnly).toBe(true)
+    expect(cancelledFilters.excludeArchived).toBe(true)
+    // Every other view keeps the live-only baseline.
+    for (const [f] of bookings.mock.calls) {
+      const filters = f as { presence?: { cancelled_at?: boolean } }
+      if (filters.presence?.cancelled_at === true) continue
+      expect(filters.presence ?? { cancelled_at: false }).toMatchObject({ cancelled_at: false })
+    }
   })
 })

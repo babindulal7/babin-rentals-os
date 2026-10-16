@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  latePickups,
   listBookings,
   operationalToday,
   operationQueue,
@@ -545,6 +546,16 @@ describe('named filter sets → ListFilters', () => {
     })
   })
 
+  it('latePickups bounds pickup_at above by now for Booked/Packed, cancelled excluded', () => {
+    const now = '2026-08-12T09:00:00.000Z'
+    expect(latePickups(now)).toEqual({
+      dateRange: { column: 'pickup_at', toAd: now },
+      chips: { stage: ['Booked', 'Packed'] },
+      presence: { cancelled_at: false },
+      sort: { column: 'pickup_at', ascending: true },
+    })
+  })
+
   it('operationQueue maps each floor verb to its stage and its date column', () => {
     expect(operationQueue('packing')).toEqual({
       chips: { stage: ['Booked'] },
@@ -580,6 +591,7 @@ describe('named filter sets → ListFilters', () => {
       todaysOutgoing('2026-08-12'),
       todaysIncoming('2026-08-12'),
       overdue('2026-08-12T09:00:00.000Z'),
+      latePickups('2026-08-12T09:00:00.000Z'),
       operationQueue('packing'),
       operationQueue('handover'),
       operationQueue('return'),
@@ -694,6 +706,13 @@ describe('overdue / quotesExpiring — stable across renders', () => {
   it('quantises quotesExpiring the same way', () => {
     const a = quotesExpiring('2026-08-12T09:31:02.500Z')
     const b = quotesExpiring('2026-08-12T09:31:44.100Z')
+    expect(filterKey(a)).toBe(filterKey(b))
+    expect(a.dateRange?.toAd).toBe('2026-08-12T09:31:00.000Z')
+  })
+
+  it('quantises latePickups to the minute like overdue', () => {
+    const a = latePickups('2026-08-12T09:31:02.500Z')
+    const b = latePickups('2026-08-12T09:31:44.100Z')
     expect(filterKey(a)).toBe(filterKey(b))
     expect(a.dateRange?.toAd).toBe('2026-08-12T09:31:00.000Z')
   })

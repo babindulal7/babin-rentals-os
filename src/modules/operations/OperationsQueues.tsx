@@ -11,7 +11,7 @@ import { BarcodeLookupModal } from '../rentals/modals/BarcodeLookupModal'
 import { CasesWorkspace } from './CasesWorkspace'
 import { STATUS } from '../../lib/status'
 import { statusToken, JOBS as JOBS_META, type JobName, type BookingStatus } from '../../lib/workflow'
-import { listBookings, overdue, quotesExpiring, type BookingListRow } from '../../lib/queries/bookings'
+import { latePickups, listBookings, overdue, quotesExpiring, type BookingListRow } from '../../lib/queries/bookings'
 import { useList, type ListResult } from '../../lib/queries/useList'
 import type { ListFilters } from '../../lib/queries/listQuery'
 import {
@@ -326,19 +326,12 @@ export function exceptionFilters(facet: ExceptionFacet, nowAd: string, todayAd: 
         sort: { column: 'return_at', ascending: true },
       }
     case 'overdue_start':
-      return {
-        dateRange: { column: 'pickup_at', toAd: nowAd },
-        chips: { stage: ['Booked', 'Packed'] },
-        presence: { cancelled_at: false },
-        sort: { column: 'pickup_at', ascending: true },
-      }
+      // L3 fourth-facet half: the named late-pickup set (minute-floored instant,
+      // Booked/Packed, cancelled excluded) — not a second inline answer.
+      return latePickups(nowAd)
     case 'overdue_end':
-      return {
-        dateRange: { column: 'return_at', toAd: nowAd },
-        chips: { stage: ['On Rent'] },
-        presence: { cancelled_at: false, actual_return_at: false },
-        sort: { column: 'return_at', ascending: true },
-      }
+      // L3 fourth-facet half: the named overdue set — same delegation.
+      return overdue(nowAd)
   }
 }
 
