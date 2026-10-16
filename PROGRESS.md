@@ -1,5 +1,74 @@
 # Progress Log
 
+## 2026-10-16 — Phase 6 Task 3.4: five states on the routed secondary views (inventory + fixes)
+
+**Did**
+- Inventoried every routed secondary view (Reports, Settings panes, Admin) against the five states by reading each screen's read and render path. The register's "42/72" figure was not reused: it counted files that *import* a state component, which says nothing about whether a state is drawn from a real read.
+- Shared primitive `src/lib/queries/useLoad.ts`: one-shot read → loading · bare error reason · offline-worded reason (`OFFLINE_REASON`) with automatic retry on the `online` event · `reload` · last good data kept on a failed refresh. Same contract as `useList` ↔ `PageBody`.
+- Fixed (each state now driven by the real read, not by props): **Pulse** (live + demo bodies in one `PageBody` ladder; Client refused without the read being sent; nothing-yet vs period no-results); **Settings** (search no-results with Clear search); **Staff Directory** (nothing-yet vs filtered, offline wording); **Device PIN** (a failed status check says "Could not check the PIN" + Retry instead of "Not set"; `PinStatus.unavailable`, `hasPin` still false); **Cases Report** (a failure used to leave "Loading" forever; toolbar date range now actually narrows); **Inventory Reports**, **Expense Reports** (read not sent for a money-blind role), **Shortages** (shared components), **Activity Log** (loading/failure/empty no longer all read "No activity matches this filter").
+- Queries that now throw instead of returning zeros/empties (`RULING 2026-10-15` at each site): `getPulseLiveSummary`, `getInventoryReportSummary`, `getExpenseReportsSummary`, `listActivityEvents`.
+- Bug surfaced by the throw: Pulse filtered `payments.status = 'Completed'`, which is not a `payment_status` value (Received/Refunded/Failed/Cancelled) — Postgres rejected it and the zero-fallback showed "Rs 0 collected". Now `'Received'`. `lib/queries/liquidity.ts:111` has the same wrong literal (its result is discarded by Cash Flow / Working Capital; left for the follow-up).
+
+**Inventory — routed secondary views × states** (L Loading · E Error+Retry · M Empty nothing-yet/no-results · R Restricted · O Offline; ✓ drawn from the real read, ✗ missing, n/a no read)
+
+| View | Before | After | Note |
+|---|---|---|---|
+| Pulse `/reports/pulse` | L✗ E✗ M½ R✓ O shell | all ✓ | demo ledger still seed (mock-only, disclosed) |
+| Settings page | L✓ E✓ M✗(search) R✓ | all ✓ | |
+| Settings ▸ Staff Directory | L✓ E✓ M½ R✓ O✗ | all ✓ | |
+| Settings ▸ Device PIN | E✗ (failure read "Not set") | E✓ O✓ | |
+| Settings ▸ Branches pane | n/a — renders `data/settings` BRANCHES seed | **blocked** | `getSettingsSummary` exists, unused; DB lacks manager/staff/revenue columns |
+| Settings ▸ Users matrix, Business, System, Financial | n/a (computed / settings store, covered by page load) | — | Financial absent for money-blind ✓ |
+| Cases Report | L½ E✗ (stuck loading) M½ | all ✓ | |
+| Inventory Reports | L✗ E½ (no retry) M✗ | all ✓ | |
+| Expense Reports | L✗ E✗ (error = "no expenses") M✓ R✓ | all ✓ | rows carry stub category/method/branch (`'Cash'`, `'Boudha (Head Office)'`) — Law 16 follow-up |
+| Shortages (in Inventory Reports) | hand-rolled | shared ✓ | |
+| Activity Log `/admin/activity-log` | L✗ E✗ M✗ | all ✓ | rows carry invented `user: 'Staff Member'`, `ip: '127.0.0.1'`, `location: 'Kathmandu, NP'` — follow-up |
+| Audit Log, Numbering, Backup & Restore | all ✓ already (useList + PageBody) | — | |
+| Audit Settings | n/a (read discarded, page is config copy) | — | |
+| Rental, Operations, Damage & Maintenance, Sales/VAT, Activity reports | query returns MOCK_* on error **and** on empty, plus `|| MOCK` per figure | **blocked (Law 16)** | an Error/Empty state over invented figures would be decoration |
+| Revenue Report | invented fallback figures ("42 invoices", fixed rupee buckets) | **blocked (Law 16)** | |
+| Asset ROI | revenue fabricated (purchase price × 1.6, ₹5,00,000 default price) | **blocked (Law 16)** | |
+| Client, Staff, Promotions, Equipment Performance, Cash Flow, Working Capital, Product reports | read fetched and **discarded**; page renders seed constants | **blocked (Law 16)** | R ✓ (shell + money-blind PageBody) |
+| Forecasting, Custom Report, Tools landing/tabs | n/a (no read) | — | |
+
+Restricted at route level: the Shell refuses `/reports/*` and `/admin/*` to money-blind roles (`isMoneySurface`) and staff surfaces to Client; Offline is the Shell's `OfflineBanner` plus, now, each converted read's own offline reason and auto-retry.
+
+**Ruled**
+- RULING 2026-10-15 (B-1/B-6, stricter + reversible): a failed secondary-view read throws and draws Error + Retry; it never resolves to zeros, empties or seed data. Revert = restore each query's `catch` (noted at every site).
+- No migration written or applied. Nothing landed on `main`: the slice-4 commit sits on `claude/phase6-five-states` (cut from current `main`); slices 1–3 were already ported to `main` as `7431e303` / `a50b31a3`.
+
+**Verified**
+- `npm run typecheck` exit 0 · `npm run lint` exit 0 · `npm run lint:ui-copy` exit 0 · `npm run build` exit 0 (PWA, 297 precache entries).
+- `npm test`: 365 files, 4,630/4,630 passed. New/changed state tests: `useLoad.test.tsx` (8), `Pulse.states.test.tsx` (8), `Settings.states.test.tsx` (12), `Reports.states.test.tsx` (8) — each drives a failing query → banner + Retry, an offline failure, and a restricted role (read not sent / no rupee figure).
+- `check:pglite` 163/163 and `check:lifecycle` 30/30, **same run** (no migration in this change).
+- `npm run lint:shell` **exit 1 — pre-existing, not this change**: `src/modules/inventory/Bundles.tsx:1494` minHeight 36 (landed on `main` in `067585b3`); no file in this diff is flagged.
+- Browser, mock build (`dev:mock`, Owner): Pulse ready state drawn after the read; Cases Report shows "No incident cases yet" on the empty store; Inventory Reports counts (192 units) and Activity Log render; Settings search "zzqx" shows "No settings match this search" with Clear search (screenshot taken). The Error/Offline paths cannot be provoked in the mock store and are verified by the tests above, not by the browser. Console: only 403s on font files served from the shared Desktop `node_modules` (worktree-preview artifact).
+- Note: `pulse.test.ts` reads the **live** project anonymously whenever `.env.local` is present (read-only; this is how the `'Completed'` enum bug surfaced).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-16T09:29:13.692Z). Suite: 4609/4609 passed (recorded 2026-10-15T20:16:18.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T09:29:59.456Z.
+Counted by `npm run completion`, not typed.
+
+The counter's "Real data · 0 seed" disagrees with the inventory above: at least 13 routed reports render seed constants or seed fallbacks. Its registry classifies a screen by whether it calls a query, not by whether it renders the result.
+
+### Remaining
+- **Law 16 first, then states** for the 13 blocked reports (Rental, Operations, Damage & Maintenance, Sales/VAT, Activity, Revenue, Asset ROI, Client, Staff, Promotions, Equipment Performance, Cash Flow, Working Capital, Product): remove MOCK_* / seed fallbacks, render "Not tracked yet" where no source exists, then wire `useLoad` + `PageBody`. Includes `liquidity.ts:111` `'Completed'` → `'Received'`.
+- Settings ▸ Branches pane renders seed BRANCHES; needs the branch read (`getSettingsSummary`) plus a decision on the columns the DB lacks.
+- Invented display fields: Activity Log (`'Staff Member'`, `'127.0.0.1'`, `'Kathmandu, NP'`), Expense rows (category/method/branch stubs).
+- Other secondary modules not covered here (Notes, Crew, Timesheet, Warranty, Productions, Sub-rental, Delivery, Tools tabs).
+- `lint:shell` red on `Bundles.tsx:1494` (pre-existing on `main`).
+- Branch `claude/phase6-five-states` (from `main`) holds the reports/admin slice; not merged — landing on `main` needs Babin's go-ahead.
+
 ## 2026-10-16 — Eliminate jumping buttons, rogue hover/active transforms, and border layout shifts across app
 
 **Did**
