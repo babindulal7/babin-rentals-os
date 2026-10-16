@@ -1,5 +1,42 @@
 # Progress Log
 
+## 2026-10-16 — Booking Detail phone header: a one-word stage action, Search in the More
+
+**Did**
+- Fixed the 375px overflow left open by the 15 Oct triage. At 375, booking 873's 182px "Receive Overdue Return" overflowed the header by 37px. The title got 0px, the avatar sat off-screen (x 368–412) and Operations covered the back button. The fixed controls (back, Operations, More, Search, avatar and gaps) leave the title 83px minus the stage action, so the fix has two parts. Phone only (< 768px).
+- The stage action on a phone is its icon over one word (`PHONE_STAGE_FACE` in `BookingDetail.tsx`): 11px `--t-th`, 44–60px wide, 44px tall, like the bottom bar's tabs. The full label stays the accessible name and tooltip, and a busy state shows the spinner. The word comes from the resolver: `getRentalPrimaryAction` returns a new `shortLabel` (Confirm, Pack, Handover, Return, Reset, Close, Complete, …), always a word of `label`.
+- Search: a page can register `searchInMore` (`workspaceContext.tsx`, `PageHeader.tsx`). On a phone the shell (`Header.tsx`) then drops its Search button. Booking Detail sets it and puts **Search** first in "More booking actions", where it opens the same command palette.
+- Tests (11 new): `BookingDetail.layout.test.tsx` checks one word and the full name at 375/390, Search in More opening the palette at 375/390, and the full label with no Search row at 768/1280. `headerOwnership.test.tsx` checks that the phone Search drops only for `searchInMore` and that tablet/desktop keep their search. `rentalActions.test.ts` checks every state's `shortLabel` is one word of its label, and that the overdue case maps to "Return". Run against the unfixed code, 5 of the new page/shell cases failed (one-word face ×2, Search row ×2, shell phone Search). The other 4 already passed, because they guard the unchanged widths and pages.
+
+**Ruled**
+- `RULINGS-2026-10-16.md` rows 1–2, each with a revert. Flippable calls: the phone stage action shows one word, not its full label (row 1); Search from Booking Detail on a phone costs one more tap (row 2). Operations stays in the header (15 Oct row 16). No migration written or applied. No role, capability, money gate or write path changed.
+
+**Verified**
+- Browser, mock Owner (`dev:mock`), measured with `getBoundingClientRect` in same-origin frames at the exact widths, plus the real page at 375 for 873. Header overflow · title shown/full · stage action, at 375 and 390: 873 0 · 87/256 · 46 and 0 · 102/257; 716 0 · 89/234 · 44 and 0 · 104/235; 893 0 · 89/284 · 44 and 0 · 104/286; 902 0 · 141/217 and 0 · 156/218 (was 91). The widest words: 715 "Handover" 60px → 73/88; 800 "Confirm" 52px → 81/96. In all 12, page overflow 0, header 64px, every control ≥44×44, no overlap, nothing off-screen.
+- 873's More at 375: 11 rows of 236×44, Search first. A real tap on Search opened the command palette with its input focused and closed the menu.
+- Tablet/desktop re-measured on 873 and 902 at 1024/1280/1440. They match the 15 Oct table exactly: 873 134/298 · 246 · 398, 144/314 · 188 · 398, 220/327 · 272 · 398; 902 134/253 · 320 · 208, 219/267 · 303 · 208, 234/278 · 348 · 208.
+- Gates, this worktree: `tsc --noEmit` exit 0; `npm run lint` exit 0; `lint:shell` 653 files pass; `lint:ui-copy` exit 0, 4/4; `npx vitest run` 347 files / 4,428 tests passed; `npm run build` exit 0 (PWA precache 296 entries); `check:lifecycle` 30/30 (PGlite). `check:pglite` not rerun (no migration). The Completion block's "Suite 4329/4329" is the value recorded on 13 Oct, not this run.
+- Not verified: dark/glass themes by eye, a real touch device, live data, a Cancelled-quote booking's disabled phone face (same `stageFace` path, unit-covered only).
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-13T13:31:48.507Z). Suite: 4329/4329 passed (recorded 2026-10-13T07:46:29.1524909Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T11:44:05.663Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Babin to confirm or flip `RULINGS-2026-10-16.md` rows 1–2 (one-word phone stage action; Search one tap deeper on Booking Detail's phone header).
+- The two smallest phone titles are Packed bookings ("Handover", 73px at 375) and Quotes ("Confirm", 81px). Seen on screen: 873 at 87px reads "873 · Mach…". 73px was measured, not looked at. More room needs a shell-wide change, such as the empty `workspace-page-actions` span's 6px gap.
+- Still open from 15 Oct: desktop worst case 144px title at 1280 (row 8 / sync slot); the registry's Duplicate/Audit/Cancel refusals use `title` only.
+- The work commit `6d6c0782` was made outside this session (app Commit) and included the temporary `.claude/launch.json` preview entry. This entry's commit removes it. The branch is on 4f3309dd (old line) and not merged into `main`.
+
 ## 2026-10-17 — Booqable ADOPTIONS 1–9 implementation (REFERENCE_SPEC v2.5)
 
 **Did**
