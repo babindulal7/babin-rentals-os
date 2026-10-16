@@ -1,5 +1,47 @@
 # Progress Log
 
+## 2026-10-17 — Booqable ADOPTIONS 1–9 implementation (REFERENCE_SPEC v2.5)
+
+**Did**
+- Implemented all eight build items from `docs/booqable/ADOPTIONS.md` as thin slices (plan: `tasks/plan.md`, checklist: `tasks/todo.md`):
+  1. `latePickups(nowAd)` (`src/lib/queries/bookings.ts`): pickup_at < now, stage Booked/Packed, cancelled excluded, minute-floored instant like `overdue()`. Operations `exceptionFilters` overdue_start/overdue_end now delegate to `latePickups()`/`overdue()` (one definition, stable keys).
+  2. Single next-verb locked: `getRentalPrimaryAction` confirmed sole owner (BookingDetail + LifecycleProgress); Unknown input falls through to non-operable View, never an invented transition. No parallel `workflow.nextVerb` — `jobForStage` (backward) vs `jobThatSets` (forward) verified distinct.
+  3. IntelCard money-blind audit extended to all four blind roles + floor-surface Owner: glance/detail payloads omit money (no behavior change — builders already omit).
+  4. Cancelled census (B5): `RENTAL_VIEWS` + presence-flipped HEAD count + FilterBar opt-in button (quick chip, not stage group). Exclusion now visible with count; never added to All.
+  5. Status counts in rail: `useFacetCounts` wired to drawer `stageCounts`, true-faceted, drawer-open only; stale §10 comment corrected. Date presets intentionally count-less (single range pickers; result count already in drawer footer).
+  6. Export pinned at rail bottom: drawer `onExport` prop → page's audited `handleBulkExport` (G5 columns, money gate, audit). New 2/2 suite.
+  7. Finance KPI definitions + conditional zero-explanations (unknown `—` never reads as zero).
+  8. `periodRange` takes optional `weekStarts` (0/1, default Monday = zero caller impact); header documents why `operationalDayStart` is not an input (day markers; bounds read the setting per call, D4) and marks `PERIODS` legacy.
+- Left the concurrent session's in-progress edits untouched (OperationsQueues card rewrite, NewRental, RentalPricingSection, Today, ShiftHandoverPanel, AddItemPanel).
+
+**Ruled**
+- No product decision invented. B5 answered by building the Cancelled census visibly (Babin flips by reply). B3 (Dashboard KPI strip), D1 backfill sizing, and full PERIODS retirement stay open — logged in `tasks/todo.md`; Dashboard counted View-late links deferred pending the /rentals activity-param route check.
+- `workflow.nextVerb` refused: `getRentalPrimaryAction` already owns the verb; a second resolver would recreate the duplication ADOPTIONS item 3 was written to remove.
+
+**Verified**
+- Focused suites all green: bookings 48/48 (+3 new), operationsQueues 39/39, rentalActions 11/11 (+1 new), rentalsList 91/91 (+1 new audit), rentalViews 5/5 (+1 new), todayQuery 68/68 (+1 new), drawer-export 2/2 (new), facetCounts/render suites (137 across 3 files), operationRoutes 38/38.
+- Full `npm test`: **369 files / 4664 tests passed, 0 failed** (01:50 run; an earlier 4660/4662 run caught 2 failures against the concurrent session's transient mid-edit tree — same file green on rerun with no changes from this pass).
+- `npm run typecheck` EXIT=0 · `npm run lint` 0 warnings · `npm run check:pglite` 166/166 · `npm run check:lifecycle` 31/31 (together = R-35 Verified; no migration written by this pass) · `npm run check:contrast` 82/82 · `npm run build` EXIT=0 (289 PWA entries).
+- Two transient mid-session states recorded honestly, not hidden: a `tsc` unused-var failure and a `vite build` NewRental failure, both from the concurrent session's uncommitted mid-edit tree and both resolved upstream without any edit from this pass.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 166 files · check:pglite 166/166 applied, 0 failed (recorded 2026-10-16T19:58:20.357Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T19:59:16.341Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply remains Babin's under N-5/`BACKUP_PROTOCOL.md`; no migration written or applied by this pass. Staging JWT/PostgREST + physical iPad/Safari acceptance still pending per prior entries.
+- Follow-ups logged in `tasks/todo.md`: money-tile definitions on ~20 remaining call sites, full PERIODS caller migration, Dashboard counted View-late links (route check first).
+- Fresh full-suite count this pass: 4664/4664 (369 files) — the Completion block above reads the repo's cached gate files per `npm run completion`.
+
 ## 2026-10-17 — New Rental (/rentals?action=new) layout, navigation & UX audit remediation
 
 **Did**

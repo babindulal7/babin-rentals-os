@@ -100,8 +100,8 @@
 **Estimated scope:** S
 
 ## Checkpoint: Phase 2
-- [ ] `npm run check:pglite` + `npm run check:lifecycle` green together
-- [ ] Focused suites green
+- [x] `npm run check:pglite` (166/166) + `npm run check:lifecycle` (31/31) green together
+- [x] Focused suites green (all 8 slices)
 
 ## Task 7: Items 1–2 — money-tile definitions + zero explanations
 **Status:** DONE (Finance slice — 3 tiles, code-derived copy; remaining ~20 call sites logged as follow-up, not invented)
@@ -133,5 +133,5 @@
 **Estimated scope:** L (sliced: input + docs + tests; no caller migration)
 
 ## Checkpoint: Complete
-- [ ] `npm test` full green; `npm run build` clean; `check:contrast` pass; `lint` clean
-- [ ] `npm run completion` + `lint:progress`; PROGRESS.md Completion/Remaining
+- [x] `npm test` full green (369 files / 4664 tests); `npm run build` EXIT=0; `check:contrast` 82/82; `lint` clean
+- [x] `npm run completion` + `lint:progress` EXIT=0; PROGRESS.md Completion/Remaining written
