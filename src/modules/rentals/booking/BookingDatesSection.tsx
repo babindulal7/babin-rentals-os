@@ -99,6 +99,8 @@ export function BookingDatesSection({
       <div className="new-rental-date-shortcuts">
         <DatePresets
           outDate={pickup}
+          returnDate={ret}
+          days={days}
           onPick={onPresetDatesPick}
           minReturnDate={pickup}
           {...(pricingHints ? { priceHints: pricingHints } : {})}

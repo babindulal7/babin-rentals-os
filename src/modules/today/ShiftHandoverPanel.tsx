@@ -4,7 +4,7 @@
  * Ported from the standalone's shifthandover screen. Shows a 5-item checklist,
  * a "Complete Handover" action, and an expandable log of past handovers with KPIs.
  */
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { Card, KpiStrip } from '../../components/ui/Page'
 import type { Kpi } from '../../components/ui/Page'
 import { Button } from '../../components/ui/Button'
@@ -12,7 +12,7 @@ import Icon from '../../components/ui/Icon'
 import { Badge } from '../../components/ui/Badge'
 import { useToast } from '../../components/ui/Toast'
 import { useViewport } from '../../lib/device'
-import { IS_MOCK } from '../../lib/supabase'
+import { useAuth } from '../../lib/auth'
 import {
   SHIFT_CHECKLIST,
   getHandoverRecords,
@@ -20,6 +20,12 @@ import {
   getHandoverStats,
   type HandoverRecord,
 } from '../../lib/queries/shiftHandover'
+import {
+  listInternalNotes,
+  addInternalNote,
+  toggleResolveNote,
+  type InternalNote,
+} from '../../lib/queries/internalNotes'
 
 // ── Styles ───────────────────────────────────────────────────────────
 
@@ -90,20 +96,50 @@ const noteBoxStyle: React.CSSProperties = {
 // ── Component ────────────────────────────────────────────────────────
 
 export default function ShiftHandoverPanel() {
-  if (!IS_MOCK) return <Card title="Shift Handover"><p style={{ margin: 0, color: 'var(--muted)' }}>Not tracked yet.</p></Card>
-  return <DemoShiftHandoverPanel />
-}
-
-function DemoShiftHandoverPanel() {
   const { showSuccessToast } = useToast()
   const viewport = useViewport()
   const isPhone = viewport === 'phone'
+  const { user } = useAuth()
 
   const [expanded, setExpanded] = useState(false)
   const [logExpanded, setLogExpanded] = useState(false)
   const [checks, setChecks] = useState<Record<string, boolean>>({})
   const [records, setRecords] = useState<HandoverRecord[]>(getHandoverRecords)
   const [openLogId, setOpenLogId] = useState<number | null>(null)
+
+  const [noteInput, setNoteInput] = useState('')
+  const [internalNotes, setInternalNotes] = useState<InternalNote[]>(() => listInternalNotes())
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setInternalNotes(listInternalNotes())
+    }
+    window.addEventListener('babin:notes-updated', handleUpdate)
+    return () => window.removeEventListener('babin:notes-updated', handleUpdate)
+  }, [])
+
+  const shiftNotes = useMemo(() => {
+    return internalNotes.filter((n) => n.category === 'Shift Handover' || n.category === 'Gear Alert')
+  }, [internalNotes])
+
+  const openShiftNotes = useMemo(() => {
+    return shiftNotes.filter((n) => n.status !== 'resolved')
+  }, [shiftNotes])
+
+  const handleAddNote = useCallback(() => {
+    const trimmed = noteInput.trim()
+    if (!trimmed) return
+    addInternalNote({
+      author: user?.fullName || 'Shift Crew',
+      authorRole: user?.role || 'Operations Staff',
+      text: trimmed,
+      category: 'Shift Handover',
+      priority: 'high',
+    })
+    setNoteInput('')
+    setInternalNotes(listInternalNotes())
+    showSuccessToast('Shift note logged')
+  }, [noteInput, user, showSuccessToast])
 
   const todayRecord = records.find((r) => r.status === 'Pending')
   const handoverDone = !todayRecord
@@ -147,7 +183,7 @@ function DemoShiftHandoverPanel() {
       {/* ── Section header ─────────────────────────────────────────── */}
       <div
         className="dashboard-shift-handover__toggle"
-        style={headerBarStyle}
+        style={{ ...headerBarStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}
         onClick={() => setExpanded((prev) => !prev)}
         role="button"
         tabIndex={0}
@@ -158,17 +194,127 @@ function DemoShiftHandoverPanel() {
         <div className="dashboard-shift-handover__label" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Icon name={expanded ? 'chevron_down' : 'chevron_right'} size={16} />
           <span style={{ fontWeight: 600, fontSize: 'var(--t-body)' }}>Shift Handover</span>
+          {openShiftNotes.length > 0 && (
+            <span
+              style={{
+                fontSize: '12px',
+                padding: '2px 8px',
+                borderRadius: '10px',
+                background: 'var(--select-bg)',
+                color: 'var(--select-fg)',
+                fontWeight: 600,
+              }}
+            >
+              {openShiftNotes.length} open {openShiftNotes.length === 1 ? 'note' : 'notes'}
+            </span>
+          )}
         </div>
-        <Badge
-          className="dashboard-shift-handover__status"
-          tone={handoverDone ? 'in' : 'warning'}
-          label={handoverDone ? 'Handover complete' : 'Overlap window open · 14:00–15:00'}
-        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Badge
+            className="dashboard-shift-handover__status"
+            tone={handoverDone ? 'in' : 'warning'}
+            label={handoverDone ? 'Handover complete' : 'Overlap window open · 14:00–15:00'}
+          />
+        </div>
       </div>
 
       {/* ── Expanded content ───────────────────────────────────────── */}
       {expanded && (
         <Card>
+          {/* Quick Handover Note Logger */}
+          <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text2)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Log Shift Handover Note
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                handleAddNote()
+              }}
+              style={{ display: 'flex', gap: 8, flexWrap: isPhone ? 'wrap' : 'nowrap' }}
+            >
+              <input
+                type="text"
+                value={noteInput}
+                onChange={(e) => setNoteInput(e.target.value)}
+                placeholder="Write a handover note for the next shift… (e.g. FX3 #2 battery charging, Komodo at 7 AM)"
+                style={{
+                  flex: 1,
+                  minWidth: isPhone ? '100%' : 260,
+                  minHeight: 38,
+                  padding: '0 12px',
+                  borderRadius: 'var(--r-btn, 8px)',
+                  border: '1px solid var(--border)',
+                  background: 'var(--card2)',
+                  color: 'var(--text)',
+                  fontSize: 'var(--t-meta, 13px)',
+                }}
+              />
+              <button
+                type="submit"
+                disabled={!noteInput.trim()}
+                className="ui-button ui-button--sm ui-button--primary press"
+                style={{ minHeight: 38, padding: '0 14px', whiteSpace: 'nowrap' }}
+              >
+                + Log Shift Note
+              </button>
+            </form>
+
+            {/* List open shift notes */}
+            {openShiftNotes.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 12 }}>
+                {openShiftNotes.map((note) => (
+                  <div
+                    key={note.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 12,
+                      padding: '8px 12px',
+                      borderRadius: 'var(--r-xs, 6px)',
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      fontSize: 'var(--t-meta, 13px)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, overflow: 'hidden' }}>
+                      <span
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          background: note.priority === 'urgent' ? 'var(--danger-text)' : 'var(--warn)',
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span style={{ color: 'var(--text)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {note.text}
+                      </span>
+                      <span style={{ color: 'var(--muted)', fontSize: '11px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                        — {note.author} · {note.at}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      className="ui-button ui-button--sm ui-button--ghost press"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleResolveNote(note.id, user?.fullName)
+                        setInternalNotes(listInternalNotes())
+                        showSuccessToast('Note marked resolved')
+                      }}
+                      title="Mark resolved"
+                      style={{ minHeight: 28, padding: '0 8px', fontSize: '12px', flexShrink: 0 }}
+                    >
+                      ✓ Resolve
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Checklist */}
           <div style={checklistStyle}>
             <div style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text2)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>

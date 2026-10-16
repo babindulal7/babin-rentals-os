@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import Icon from '../../../components/ui/Icon'
 import { Button, Input } from '../../../components/ui'
-import { Field, MoneyRow, Section, inputStyle } from './BookingFormWidgets'
+import { Field, Section, inputStyle } from './BookingFormWidgets'
 import { DiscountChips } from './DiscountChips'
 import { VatToggle } from './VatToggle'
 import { formatMoney, toRupees } from '../../../lib/money'
@@ -362,163 +362,99 @@ export function RentalPricingSection({
           </div>
         </div>
 
-        <div className="new-rental-pricing-totals">
-          <div className="new-rental-pricing-charges" style={moneyBlock}>
-            <h3 style={sub}>Rental Charges</h3>
-            {[
-              { l: 'Equipment Rental', v: formatMoney(pricing.equipmentSubtotalPaisa) },
-              { l: 'Bundles', v: pricing.bundleSubtotalPaisa > 0 ? formatMoney(pricing.bundleSubtotalPaisa) : '—' },
-              { l: 'Sub-Rental', v: pricing.subRentalSubtotalPaisa > 0 ? formatMoney(pricing.subRentalSubtotalPaisa) : '—' },
-              {
-                l: 'Services & custom lines',
-                v: pricing.servicesSubtotalPaisa > 0 ? formatMoney(pricing.servicesSubtotalPaisa) : '—',
-              },
-              ...(canCrewMoney
-                ? [{ l: 'Crew Charges', v: pricing.crewSubtotalPaisa > 0 ? formatMoney(pricing.crewSubtotalPaisa) : '—' }]
-                : []),
-              { l: 'Transport', v: pricing.deliverySubtotalPaisa > 0 ? formatMoney(pricing.deliverySubtotalPaisa) : '—' },
-            ].map((r) => (
-              <MoneyRow key={r.l} label={r.l} value={r.v} {...(r.v === '—' ? { tone: 'var(--muted)' } : {})} />
-            ))}
-            <div style={{ borderTop: '1px solid var(--border)', marginTop: 6, paddingTop: 6 }}>
-              <MoneyRow label="Subtotal" value={formatMoney(pricing.grossSubtotalPaisa)} />
-              <MoneyRow
-                label={
-                  pricing.discounts.appliedPercent > 0
-                    ? `Discount (${pricing.discounts.appliedPercent}%${pricing.discounts.capped ? ' - CAPPED' : ''})`
-                    : 'Discount'
+        {/* Security Deposit inputs */}
+        <div className="new-rental-pricing-deposit-card" style={moneyBlock}>
+          <h3 style={sub}>Security Deposit</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+            <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>Recommended Deposit</span>
+            <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600 }}>
+              {formatMoney(pricing.securityDeposit.recommendedPaisa)}
+            </span>
+          </div>
+
+          <label
+            htmlFor="manual-deposit-override"
+            className="new-rental-pricing-checkbox new-rental-pricing-override"
+          >
+            <input
+              id="manual-deposit-override"
+              type="checkbox"
+              aria-label="Manual security deposit override"
+              aria-controls="new-rental-deposit-fields"
+              aria-expanded={manualDepositOverride}
+              checked={manualDepositOverride}
+              onChange={(e) => {
+                setManualDepositOverride(e.target.checked)
+                if (!e.target.checked) {
+                  setManualDepositAmount('')
+                  setDepositOverrideReason('')
+                  setDepositAuthorizedBy('')
+                } else {
+                  setManualDepositAmount(String(toRupees(pricing.securityDeposit.recommendedPaisa)))
                 }
-                value={pricing.discounts.discountPaisa > 0 ? `− ${formatMoney(pricing.discounts.discountPaisa)}` : '—'}
-                {...(pricing.discounts.discountPaisa > 0 ? { tone: 'var(--danger-text)' } : {})}
-              />
-              <MoneyRow label="Taxable Amount" value={formatMoney(pricing.taxableSubtotalPaisa)} />
-              <MoneyRow
-                label={vatOn ? `VAT (${pricing.vatRatePercent}%)` : 'VAT — off for this booking'}
-                value={vatOn ? formatMoney(pricing.vatPaisa) : '—'}
-                {...(vatOn ? {} : { tone: 'var(--muted)' })}
-              />
+              }}
+            />
+            <span>Manual Deposit Override</span>
+            <span className="new-rental-pricing-option-state">{manualDepositOverride ? 'On' : 'Off'}</span>
+          </label>
+
+          {manualDepositOverride && (
+            <div id="new-rental-deposit-fields" className="new-rental-pricing-deposit-fields">
+              <Field label="Override Amount (Rs) *">
+                <Input
+                  type="number"
+                  min={0}
+                  value={manualDepositAmount}
+                  onChange={(e) => setManualDepositAmount(e.target.value)}
+                  placeholder="0"
+                  style={inputStyle}
+                />
+              </Field>
+              <Field label="Override Reason *">
+                <Input
+                  value={depositOverrideReason}
+                  onChange={(e) => setDepositOverrideReason(e.target.value)}
+                  placeholder="e.g. Low risk repeat client with corporate guarantee"
+                  style={inputStyle}
+                />
+              </Field>
+              <Field label="Authorized By *">
+                <Input
+                  value={depositAuthorizedBy}
+                  onChange={(e) => setDepositAuthorizedBy(e.target.value)}
+                  placeholder="e.g. Managing Director Babin"
+                  style={inputStyle}
+                />
+              </Field>
             </div>
-            <div className="new-rental-pricing-total">
-              <MoneyRow label="RENTAL TOTAL" value={formatMoney(pricing.rentalTotalPaisa)} big />
+          )}
+
+          {pricing.securityDeposit.validationErrors.length > 0 && (
+            <div style={{ marginTop: 9, padding: 10, borderRadius: 'var(--r-btn)', background: 'var(--st-danger-bg)' }}>
+              {pricing.securityDeposit.validationErrors.map((err, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: 'flex',
+                    gap: 6,
+                    alignItems: 'flex-start',
+                    fontSize: 'var(--t-meta)',
+                    fontWeight: 600,
+                    color: 'var(--st-danger-fg)',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  <Icon name="error" size={12} style={{ flexShrink: 0, marginTop: 2 }} />
+                  {err}
+                </div>
+              ))}
             </div>
-            <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
-              <MoneyRow
-                label="Security Deposit (Refundable)"
-                value={formatMoney(pricing.securityDeposit.requiredPaisa)}
-                tone="var(--text2)"
-              />
-              <p style={{ margin: '2px 0 8px', fontSize: '11px', color: 'var(--muted)' }}>
-                Held as a separate liability guarantee. Excluded from rental charges and VAT.
-              </p>
-              <MoneyRow
-                label={`Advance Required (${pricing.advanceRequiredPaisa === pricing.rentalTotalPaisa && pricing.rentalTotalPaisa <= 500000 ? '100%' : pricing.rentalTotalPaisa <= 1000000 ? 'Rs 5,000' : '50%'})`}
-                value={formatMoney(pricing.advanceRequiredPaisa)}
-                tone="var(--st-primary-fg)"
-                strong
-              />
-              <details className="new-rental-pricing-policy">
-                <summary>How the advance is calculated</summary>
-                <p className="new-rental-pricing-help">
-                  Rental total ≤ Rs 5,000: 100%. Up to Rs 10,000: Rs 5,000. Above Rs 10,000: 50%.
-                </p>
-              </details>
-            </div>
-          </div>
+          )}
 
-          {/* Security Deposit Block */}
-          <div style={moneyBlock}>
-            <h3 style={sub}>Security Deposit</h3>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-              <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>Recommended Deposit</span>
-              <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600 }}>
-                {formatMoney(pricing.securityDeposit.recommendedPaisa)}
-              </span>
-            </div>
-
-            <label
-              htmlFor="manual-deposit-override"
-              className="new-rental-pricing-checkbox new-rental-pricing-override"
-            >
-              <input
-                id="manual-deposit-override"
-                type="checkbox"
-                aria-label="Manual security deposit override"
-                aria-controls="new-rental-deposit-fields"
-                aria-expanded={manualDepositOverride}
-                checked={manualDepositOverride}
-                onChange={(e) => {
-                  setManualDepositOverride(e.target.checked)
-                  if (!e.target.checked) {
-                    setManualDepositAmount('')
-                    setDepositOverrideReason('')
-                    setDepositAuthorizedBy('')
-                  } else {
-                    setManualDepositAmount(String(toRupees(pricing.securityDeposit.recommendedPaisa)))
-                  }
-                }}
-              />
-              <span>Manual Deposit Override</span>
-              <span className="new-rental-pricing-option-state">{manualDepositOverride ? 'On' : 'Off'}</span>
-            </label>
-
-            {manualDepositOverride && (
-              <div id="new-rental-deposit-fields" className="new-rental-pricing-deposit-fields">
-                <Field label="Override Amount (Rs) *">
-                  <Input
-                    type="number"
-                    min={0}
-                    value={manualDepositAmount}
-                    onChange={(e) => setManualDepositAmount(e.target.value)}
-                    placeholder="0"
-                    style={inputStyle}
-                  />
-                </Field>
-                <Field label="Override Reason *">
-                  <Input
-                    value={depositOverrideReason}
-                    onChange={(e) => setDepositOverrideReason(e.target.value)}
-                    placeholder="e.g. Low risk repeat client with corporate guarantee"
-                    style={inputStyle}
-                  />
-                </Field>
-                <Field label="Authorized By *">
-                  <Input
-                    value={depositAuthorizedBy}
-                    onChange={(e) => setDepositAuthorizedBy(e.target.value)}
-                    placeholder="e.g. Managing Director Babin"
-                    style={inputStyle}
-                  />
-                </Field>
-              </div>
-            )}
-
-            {pricing.securityDeposit.validationErrors.length > 0 && (
-              <div style={{ marginTop: 9, padding: 10, borderRadius: 'var(--r-btn)', background: 'var(--st-danger-bg)' }}>
-                {pricing.securityDeposit.validationErrors.map((err, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      display: 'flex',
-                      gap: 6,
-                      alignItems: 'flex-start',
-                      fontSize: 'var(--t-meta)',
-                      fontWeight: 600,
-                      color: 'var(--st-danger-fg)',
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    <Icon name="error" size={12} style={{ flexShrink: 0, marginTop: 2 }} />
-                    {err}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <p className="new-rental-pricing-help" style={{ marginTop: 12 }}>
-              Refundable and separate from rent. It never reduces rental outstanding.
-            </p>
-          </div>
-          <p className="new-rental-pricing-payment-note">
+          <p className="new-rental-pricing-help" style={{ marginTop: 12 }}>
+            Refundable and separate from rent. It never reduces rental outstanding.
+          </p>
+          <p className="new-rental-pricing-payment-note" style={{ marginTop: 12 }}>
             <Icon name="info" size={16} />
             <span>Record advance payments and deposits in Booking Detail after the booking and invoice are created.</span>
           </p>

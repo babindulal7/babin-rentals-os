@@ -362,9 +362,12 @@ function chipStyle(on: boolean) {
 
 function formatOperationBookingId(bookingNo: string | null | undefined): string {
   if (!bookingNo) return '—'
-  const trimmed = bookingNo.trim().replace(/^#/, '')
-  const isDigits = /^\d+$/.test(trimmed)
-  return isDigits ? `#${trimmed.padStart(4, '0')}` : formatBookingNo(bookingNo)
+  const trimmed = bookingNo.trim()
+  if (/^#?\d+$/.test(trimmed)) {
+    const digits = trimmed.replace(/^#/, '')
+    return `#${digits.padStart(4, '0')}`
+  }
+  return trimmed
 }
 
 function getJobButtonProps(job: JobName): {
@@ -1020,7 +1023,7 @@ export default function OperationsQueues() {
             onChange={setSearchInput}
             onClear={() => setSearchInput('')}
             placeholder="Filter current queue… (press /)"
-            aria-label="Filter current queue"
+            aria-label="Search ID, client, project"
           />
         </div>
         {(isFiltered || search || clientFilter !== 'all' || projectFilter !== 'all') && <Button variant="ghost" onClick={clearOperationFilters}>Clear filters</Button>}

@@ -29,6 +29,7 @@ export interface DatePreset {
 /** Default presets — ordered by frequency in Babin Rentals operations */
 export const DEFAULT_PRESETS: DatePreset[] = [
   { label: '1 day', days: 1 },
+  { label: '2 days', days: 2 },
   { label: '3 days', days: 3 },
   { label: '1 week', days: 7 },
 ]
@@ -36,6 +37,10 @@ export const DEFAULT_PRESETS: DatePreset[] = [
 export interface DatePresetsProps {
   /** The currently selected "Out" date (YYYY-MM-DD) */
   outDate: string
+  /** The currently selected "Return" date (YYYY-MM-DD) */
+  returnDate?: string
+  /** Rental duration in days */
+  days?: number
   /** Called when a preset is picked — updates both Out and Return dates */
   onPick: (outDate: string, returnDate: string) => void
   /** Optional: show price hints if pricing engine is available */
@@ -55,6 +60,8 @@ export interface DatePresetsProps {
  * ```tsx
  * <DatePresets
  *   outDate={pickup}
+ *   returnDate={ret}
+ *   days={days}
  *   onPick={(out, ret) => { setPickup(out); setRet(ret); }}
  *   priceHints={pricingHints}
  * />
@@ -62,6 +69,8 @@ export interface DatePresetsProps {
  */
 export function DatePresets({
   outDate,
+  returnDate,
+  days,
   onPick,
   priceHints,
   minReturnDate,
@@ -78,23 +87,55 @@ export function DatePresets({
       const minRet = minReturnDate || out
       const isValid = ret >= minRet
       const price = priceHints?.[p.days]
+      const isActive = (days !== undefined && days === p.days) || (Boolean(returnDate) && ret === returnDate)
 
       return {
         ...p,
         out,
         ret,
         isValid,
+        isActive,
         price,
       }
     })
-  }, [effectiveOut, minReturnDate, priceHints, presets])
+  }, [effectiveOut, minReturnDate, priceHints, presets, days, returnDate])
 
   if (presetButtons.length === 0) return null
 
   return (<>
-    <div role="group" aria-label="Start day" style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-      <span style={{ alignSelf: 'center', color: 'var(--muted)' }}>Start</span>
-      {['Today', 'Tomorrow'].map((label, i) => <button key={label} type="button" disabled={disabled} className="press" style={{ minHeight: 44, padding: '0 14px', border: '1px solid var(--border)', borderRadius: 'var(--r-btn)', background: 'var(--card2)', color: 'var(--text)' }} onClick={() => { const day = addDays(today, i); onPick(day, addDays(day, 1)) }}>{label}</button>)}
+    <div role="group" aria-label="Start day" style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+      <span style={{ alignSelf: 'center', color: 'var(--muted)', fontSize: 'var(--t-meta)', fontWeight: 500 }}>Start</span>
+      {['Today', 'Tomorrow'].map((label, i) => {
+        const targetDay = addDays(today, i)
+        const isActive = outDate === targetDay
+        return (
+          <button
+            key={label}
+            type="button"
+            disabled={disabled}
+            className={`press${isActive ? ' is-active' : ''}`}
+            aria-pressed={isActive}
+            style={{
+              minHeight: 40,
+              padding: '0 14px',
+              border: isActive ? '1px solid var(--st-primary-fg, #2563eb)' : '1px solid var(--border)',
+              borderRadius: 'var(--r-btn)',
+              background: isActive ? 'var(--st-primary-bg, #eff6ff)' : 'var(--card2)',
+              color: isActive ? 'var(--st-primary-fg, #1d4ed8)' : 'var(--text)',
+              fontSize: 'var(--t-meta)',
+              fontWeight: isActive ? 700 : 500,
+              cursor: disabled ? 'not-allowed' : 'pointer',
+              transition: 'background 120ms, border-color 120ms, color 120ms',
+            }}
+            onClick={() => {
+              const currentDays = days && days > 0 ? days : 1
+              onPick(targetDay, addDays(targetDay, currentDays))
+            }}
+          >
+            {label}
+          </button>
+        )
+      })}
     </div>
     <div
       style={{
@@ -103,16 +144,17 @@ export function DatePresets({
         gap: 8,
         marginBottom: 10,
         padding: '4px 0',
+        alignItems: 'center',
       }}
       role="group"
       aria-label="Rental duration"
     >
-      <span style={{ alignSelf: 'center', color: 'var(--muted)' }}>Duration</span>
+      <span style={{ alignSelf: 'center', color: 'var(--muted)', fontSize: 'var(--t-meta)', fontWeight: 500 }}>Duration</span>
       {presetButtons.map((p) => (
         <button
           key={p.label}
           type="button"
-          className="press"
+          className={`press${p.isActive ? ' is-active' : ''}`}
           disabled={disabled || !p.isValid}
           onClick={() => onPick(p.out, p.ret)}
           style={{
@@ -120,11 +162,11 @@ export function DatePresets({
             minHeight: 40,
             padding: '0 14px',
             borderRadius: 'var(--r-badge)',
-            border: '1px solid var(--border)',
-            background: p.isValid ? 'var(--card2)' : 'var(--card)',
-            color: p.isValid ? 'var(--text)' : 'var(--muted)',
+            border: p.isActive ? '1px solid var(--st-primary-fg, #2563eb)' : '1px solid var(--border)',
+            background: p.isActive ? 'var(--st-primary-bg, #eff6ff)' : p.isValid ? 'var(--card2)' : 'var(--card)',
+            color: p.isActive ? 'var(--st-primary-fg, #1d4ed8)' : p.isValid ? 'var(--text)' : 'var(--muted)',
             fontSize: 'var(--t-meta)',
-            fontWeight: 600,
+            fontWeight: p.isActive ? 700 : 600,
             fontFamily: 'inherit',
             cursor: p.isValid ? 'pointer' : 'not-allowed',
             display: 'flex',
@@ -133,7 +175,7 @@ export function DatePresets({
             whiteSpace: 'nowrap',
             transition: 'background 120ms, border-color 120ms, color 120ms',
           }}
-          aria-pressed={false}
+          aria-pressed={p.isActive}
           aria-disabled={disabled || !p.isValid}
         >
           <TouchTarget axis="both" />

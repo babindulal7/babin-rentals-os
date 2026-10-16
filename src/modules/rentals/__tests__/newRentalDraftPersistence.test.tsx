@@ -241,7 +241,7 @@ describe('New Rental keeps an unsaved booking on this device', () => {
     window.localStorage.setItem(KEY, JSON.stringify({ data: kept(), savedAt: new Date().toISOString() }))
     await mount()
 
-    expect(container.textContent).toContain('An unsaved booking from')
+    expect(container.textContent).toContain('Unsaved draft from')
     expect(container.textContent).toContain('was kept on this device')
 
     await click('Restore it')

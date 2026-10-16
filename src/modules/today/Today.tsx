@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import Icon from '../../components/ui/Icon'
 import { CalendarPopover } from '../../components/ui/DateField'
@@ -17,6 +17,10 @@ import { listBookings, operationQueue, todaysOutgoing } from '../../lib/queries/
 import type { ListFilters } from '../../lib/queries/listQuery'
 import { useList, type ListQueryResult, type ListResult } from '../../lib/queries/useList'
 import { useViewport } from '../../lib/device'
+import { useAuth } from '../../lib/auth'
+import { canViewMoney } from '../../lib/rbac'
+import { formatMoney, type Paisa } from '../../lib/money'
+import { openCasesCount } from '../../data/cases'
 import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext'
 import type { BookingStatus } from '../../lib/workflow'
 import RawDashboardMovementPanel from './DashboardMovementPanel'
@@ -78,7 +82,20 @@ function rangeFor(filter: DateFilter, today: string): { from: string; to: string
 }
 
 function pickupFilter(filter: DateFilter, today: string) {
-  if (filter.kind === 'quick') return pickupsQuery(filter.period, [], today)
+  if (filter.kind === 'quick') {
+    if (filter.period === 'Today') {
+      const q = todaysOutgoing(today)
+      // When viewing 'Today', include past unfulfilled Booked / Packed pickups (carry-over), matching Operations queue
+      return {
+        filters: {
+          ...q,
+          dateRange: q.dateRange ? { column: q.dateRange.column, toAd: q.dateRange.toAd } : undefined,
+        },
+        impossible: false,
+      }
+    }
+    return pickupsQuery(filter.period, [], today)
+  }
   return { filters: overDays(todaysOutgoing, { from: filter.from, to: filter.to }, today), impossible: false }
 }
 
@@ -359,11 +376,14 @@ function MasterDispatchDateControl({
 }
 
 export default function Today() {
+  const lang = useCurrentLanguage()
   const viewport = useViewport()
   const isPhone = viewport === 'phone'
   const [mobileTab, setMobileTab] = useState<'pickups' | 'returns'>('pickups')
   const mobileTabChosenRef = useRef(false)
   const { openOperations } = useOperationsWorkspace()
+  const { user } = useAuth()
+  const canSeeMoney = user ? canViewMoney(user.role) : false
   const [globalSearch, setGlobalSearch] = useState('')
   const counterInputRef = useRef<HTMLInputElement>(null)
 
@@ -435,6 +455,43 @@ export default function Today() {
   const isReturnToday = returnDateFilter.kind === 'quick' && returnDateFilter.period === 'Today'
   const pickupCount = pickups.loading || pickups.error ? undefined : pickups.total ?? pickups.rows.length
   const returnCount = returns.loading || returns.error ? undefined : returns.total ?? returns.rows.length
+
+  const overduePickups = useMemo(() => {
+    return pickups.rows.filter((r) => r.flags.includes('Overdue'))
+  }, [pickups.rows])
+
+  const [activeRentalsCount, setActiveRentalsCount] = useState<number>(0)
+  const [activeRentalsItems, setActiveRentalsItems] = useState<number>(0)
+  const [activeRentalsPaisa, setActiveRentalsPaisa] = useState<number>(0)
+  const [prepBookedCount, setPrepBookedCount] = useState<number>(0)
+  const [prepPackedCount, setPrepPackedCount] = useState<number>(0)
+  const openCases = useMemo(() => openCasesCount(), [])
+
+  useEffect(() => {
+    let active = true
+    async function loadSituationalMetrics() {
+      try {
+        const onRentRes = await listBookings({ chips: { stage: ['On Rent'] }, presence: { cancelled_at: false } })
+        if (!active) return
+        setActiveRentalsCount(onRentRes.total ?? onRentRes.rows.length)
+        const totalItems = onRentRes.rows.reduce((sum, r) => sum + (r.itemCount || 0), 0)
+        setActiveRentalsItems(totalItems)
+        const totalPaisa = onRentRes.rows.reduce((sum, r) => sum + (r.totalAmount ? Number(r.totalAmount) : 0), 0)
+        setActiveRentalsPaisa(totalPaisa)
+
+        const prepRes = await listBookings({ chips: { stage: ['Booked', 'Packed'] }, presence: { cancelled_at: false } })
+        if (!active) return
+        const booked = prepRes.rows.filter((r) => r.stage === 'Booked').length
+        const packed = prepRes.rows.filter((r) => r.stage === 'Packed').length
+        setPrepBookedCount(booked)
+        setPrepPackedCount(packed)
+      } catch {
+        // Non-critical background telemetry
+      }
+    }
+    void loadSituationalMetrics()
+    return () => { active = false }
+  }, [pickups.lastFetchedAt, returns.lastFetchedAt])
 
   useEffect(() => {
     if (isPhone && !mobileTabChosenRef.current && pickupCount === 0 && (returnCount ?? 0) > 0) {
@@ -548,24 +605,113 @@ export default function Today() {
         />
       }
     >
-      <div className="dashboard-workbar">
-        {/* The day in one line (ruled 8 Oct 2026, RULINGS-2026-10-08.md) — the
-            same counts the Pickups/Returns badges show, said as a sentence. */}
-        <div className="dashboard-workbar__intro">
-          <p>
-            {pickupCount === undefined || returnCount === undefined
-              ? 'Movement board'
-              : `${pickupCount} going out · ${returnCount} coming back`}
-          </p>
-          <DataAgeBadge
-            loadedAt={pickups.lastFetchedAt && returns.lastFetchedAt
-              ? new Date(Math.min(pickups.lastFetchedAt.getTime(), returns.lastFetchedAt.getTime()))
-              : null}
-            loading={pickups.loading || returns.loading}
-            compact
+      <div className="dashboard-workbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          <div className="dashboard-workbar__intro" style={{ margin: 0 }}>
+            <p style={{ margin: 0 }}>
+              {pickupCount === undefined || returnCount === undefined
+                ? 'Movement board'
+                : `${pickupCount} going out · ${returnCount} coming back`}
+            </p>
+            <DataAgeBadge
+              loadedAt={pickups.lastFetchedAt && returns.lastFetchedAt
+                ? new Date(Math.min(pickups.lastFetchedAt.getTime(), returns.lastFetchedAt.getTime()))
+                : null}
+              loading={pickups.loading || returns.loading}
+              onRefresh={refetchMovement}
+              variant="muted"
+              compact
+            />
+          </div>
+        </div>
+
+        {/* Unified Page-Level Date Bar */}
+        <div
+          className="dashboard-page-date-bar"
+          role="group"
+          aria-label="Dispatch day for pickups and returns"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
+            background: 'var(--card2)',
+            padding: '3px 4px',
+            borderRadius: 'var(--r-btn, 8px)',
+            border: '1px solid var(--border)',
+          }}
+        >
+          {QUICK_PERIODS.map((period) => {
+            const isActive = pickupDateFilter.kind === 'quick' && pickupDateFilter.period === period && returnDateFilter.kind === 'quick' && returnDateFilter.period === period
+            return (
+              <button
+                key={period}
+                type="button"
+                className={`ui-button ui-button--sm press ${isActive ? 'ui-button--primary' : 'ui-button--ghost'}`}
+                style={{
+                  minHeight: 32,
+                  padding: '0 12px',
+                  borderRadius: 'calc(var(--r-btn, 8px) - 2px)',
+                  fontWeight: isActive ? 600 : 500,
+                  fontSize: 'var(--t-meta, 13px)',
+                }}
+                aria-pressed={isActive}
+                onClick={() => syncBothPanels({ kind: 'quick', period })}
+              >
+                {QUICK_PERIOD_LABELS[lang][period]}
+              </button>
+            )
+          })}
+          <MasterDispatchDateControl
+            filter={pickupDateFilter}
+            onChange={syncBothPanels}
+            today={dayAd}
+            groupLabel="Master date picker"
+            dialogLabel="Master dispatch date"
           />
         </div>
       </div>
+
+      {/* Unresolved / Overdue Pickups Alert Banner */}
+      {isDispatchToday && overduePickups.length > 0 && (
+        <div
+          className="dashboard-alert-banner"
+          role="alert"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            padding: '10px 16px',
+            marginBottom: 16,
+            borderRadius: 'var(--r-card, 8px)',
+            background: 'color-mix(in srgb, var(--warn, #ea580c) 12%, var(--card))',
+            border: '1px solid color-mix(in srgb, var(--warn, #ea580c) 35%, transparent)',
+            color: 'var(--warn-text, #c2410c)',
+            fontSize: 'var(--t-meta, 13px)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Icon name="alert_triangle" size={18} style={{ color: 'var(--warn, #ea580c)', flexShrink: 0 }} />
+            <span>
+              <strong>Unresolved / Overdue Pickups ({overduePickups.length})</strong>
+              {' — '}
+              {overduePickups.length === 1 ? '1 booking is' : `${overduePickups.length} bookings are`} past scheduled pickup time awaiting dispatch.
+            </span>
+          </div>
+          <button
+            type="button"
+            className="ui-button ui-button--sm ui-button--outline press"
+            style={{
+              borderColor: 'color-mix(in srgb, var(--warn, #ea580c) 40%, transparent)',
+              color: 'var(--warn-text, #c2410c)',
+              flexShrink: 0,
+            }}
+            onClick={() => navigate('/operations?queue=pack')}
+          >
+            Resolve in Operations <Icon name="arrow_right" size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Spec §31: Mobile Segmented Control */}
       {isPhone && (
@@ -608,6 +754,7 @@ export default function Today() {
             }
             periodLabel={filterLabel(pickupDateFilter).toLowerCase()}
             globalQuery={globalSearch}
+            onSelectPeriod={(p) => syncBothPanels({ kind: 'quick', period: p })}
             onClearFilters={() => setPickupFilter({ kind: 'quick', period: 'Today' })}
             onLoadMore={() => setPickupPage((page) => page + 1)}
             hasMore={pickups.total !== null && pickups.rows.length < pickups.total}
@@ -636,13 +783,165 @@ export default function Today() {
             periodLabel={filterLabel(returnDateFilter).toLowerCase()}
             isToday={isReturnToday}
             globalQuery={globalSearch}
+            onSelectPeriod={(p) => syncBothPanels({ kind: 'quick', period: p })}
             onClearFilters={() => setReturnFilter({ kind: 'quick', period: 'Today' })}
             onLoadMore={() => setReturnPage((page) => page + 1)}
             hasMore={returns.total !== null && returns.rows.length < returns.total}
           />
         )}
       </div>
+
       <ShiftHandoverPanel />
-    </PageShell>
-  )
-}
+
+      {/* Situational Awareness 3-Card Row */}
+      <div
+        className="dashboard-situational-grid"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: isPhone ? '1fr' : 'repeat(3, minmax(0, 1fr))',
+          gap: 'var(--sp-md, 16px)',
+          marginTop: 'var(--sp-lg, 24px)',
+        }}
+      >
+        {/* Card 1: Currently Out on Set */}
+        <div
+          className="dashboard-situational-card"
+          style={{
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--r-card, 14px)',
+            padding: '16px 20px',
+            boxShadow: 'var(--shadow-sm)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            gap: 12,
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <span style={{ fontSize: 'var(--t-meta, 13px)', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Currently Out on Set
+              </span>
+              <Icon name="truck" size={18} style={{ color: 'var(--primary)' }} />
+            </div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
+              {activeRentalsCount} Active {activeRentalsCount === 1 ? 'Rental' : 'Rentals'}
+            </div>
+            <p style={{ margin: '4px 0 0', fontSize: 'var(--t-meta, 13px)', color: 'var(--text2)' }}>
+              {canSeeMoney && activeRentalsPaisa > 0
+                ? `${formatMoney(activeRentalsPaisa as Paisa)} active value · ${activeRentalsItems} items on set`
+                : `${activeRentalsItems} equipment units currently with clients`}
+            </p>
+          </div>
+          <Link
+            to="/operations?queue=return"
+            className="press"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 'var(--t-meta, 13px)',
+              fontWeight: 600,
+              color: 'var(--primary)',
+              textDecoration: 'none',
+              marginTop: 4,
+            }}
+          >
+            Open Return Queue <Icon name="arrow_right" size={14} />
+          </Link>
+        </div>
+
+        {/* Card 2: Prep / Packing Queue */}
+        <div
+          className="dashboard-situational-card"
+          style={{
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--r-card, 14px)',
+            padding: '16px 20px',
+            boxShadow: 'var(--shadow-sm)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            gap: 12,
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <span style={{ fontSize: 'var(--t-meta, 13px)', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Prep & Packing Queue
+              </span>
+              <Icon name="package" size={18} style={{ color: 'var(--primary)' }} />
+            </div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
+              {prepBookedCount} Booked · {prepPackedCount} Packed
+            </div>
+            <p style={{ margin: '4px 0 0', fontSize: 'var(--t-meta, 13px)', color: 'var(--text2)' }}>
+              Orders staged or awaiting warehouse preparation
+            </p>
+          </div>
+          <Link
+            to="/operations?queue=pack"
+            className="press"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 'var(--t-meta, 13px)',
+              fontWeight: 600,
+              color: 'var(--primary)',
+              textDecoration: 'none',
+              marginTop: 4,
+            }}
+          >
+            Open Packing Queue <Icon name="arrow_right" size={14} />
+          </Link>
+        </div>
+
+        {/* Card 3: Maintenance / QC Hold */}
+        <div
+          className="dashboard-situational-card"
+          style={{
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+            borderRadius: 'var(--r-card, 14px)',
+            padding: '16px 20px',
+            boxShadow: 'var(--shadow-sm)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            gap: 12,
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <span style={{ fontSize: 'var(--t-meta, 13px)', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Maintenance & QC Hold
+              </span>
+              <Icon name="tool" size={18} style={{ color: 'var(--warn, #ea580c)' }} />
+            </div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
+              {openCases} Open {openCases === 1 ? 'Case' : 'Cases'} / Holds
+            </div>
+            <p style={{ margin: '4px 0 0', fontSize: 'var(--t-meta, 13px)', color: 'var(--text2)' }}>
+              Equipment flagged for repair, inspection, or missing
+            </p>
+          </div>
+          <Link
+            to="/inventory/cases"
+            className="press"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 'var(--t-meta, 13px)',
+              fontWeight: 600,
+              color: 'var(--warn-text, #c2410c)',
+              textDecoration: 'none',
+              marginTop: 4,
+            }}
+          >
+            View Cases & QC <Icon name="arrow_right" size={14} />
+          </Link>
+        </div>

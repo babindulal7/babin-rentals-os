@@ -19,6 +19,14 @@ export interface BookingSummaryCardProps {
     rentalTotalPaisa: Paisa
     securityDeposit: { requiredPaisa: Paisa }
     advanceRequiredPaisa: Paisa
+    grossSubtotalPaisa?: Paisa
+    taxableSubtotalPaisa?: Paisa
+    vatPaisa?: Paisa
+    vatRatePercent?: number
+    discounts?: {
+      appliedPercent: number
+      discountPaisa: Paisa
+    }
   }
   blockingNotices: BlockingNotice[]
   /** Shown without blocking Confirm — e.g. a missing client ID/PAN. */
@@ -97,6 +105,32 @@ export function BookingSummaryCard({
         </dl>
         {canBookingMoney ? (
           <div className="new-rental-review-money">
+            {/* Line-by-line tax/deposit math */}
+            <dl className="new-rental-review-breakdown">
+              <div>
+                <dt>Subtotal</dt>
+                <dd>{formatMoney(pricing.grossSubtotalPaisa ?? pricing.rentalTotalPaisa)}</dd>
+              </div>
+              {pricing.discounts && pricing.discounts.discountPaisa > 0 ? (
+                <div>
+                  <dt>Discount {pricing.discounts.appliedPercent > 0 ? `(${pricing.discounts.appliedPercent}%)` : ''}</dt>
+                  <dd style={{ color: 'var(--danger-text)' }}>− {formatMoney(pricing.discounts.discountPaisa)}</dd>
+                </div>
+              ) : null}
+              {pricing.taxableSubtotalPaisa !== undefined && (
+                <div>
+                  <dt>Taxable Amount</dt>
+                  <dd>{formatMoney(pricing.taxableSubtotalPaisa)}</dd>
+                </div>
+              )}
+              {pricing.vatPaisa !== undefined && (
+                <div>
+                  <dt>{pricing.vatPaisa > 0 ? `VAT (${pricing.vatRatePercent ?? 13}%)` : 'VAT (0%)'}</dt>
+                  <dd>{pricing.vatPaisa > 0 ? formatMoney(pricing.vatPaisa) : '—'}</dd>
+                </div>
+              )}
+            </dl>
+
             <div className="new-rental-review-total">
               <span>Estimated Rental Total</span>
               <strong>
