@@ -459,7 +459,8 @@ describe('Spec 03 §3.1 — queue chips filter ONE time-ordered list', () => {
 describe('OperationsShell is the unified modal host', () => {
   it('renders four stages and mounts the real workspace', async () => {
     await mount(<OperationsShell bookingNo="B-715" bookingStatus="Booked" isOpen onClose={() => {}} />)
-    const labels = buttons().map((b) => b.textContent ?? '')
+    const labels = [...container.querySelectorAll('nav[aria-label="Operation stage"] button')]
+      .map((b) => b.getAttribute('aria-label') ?? '')
     expect(labels.some((l) => l.includes('Packing'))).toBe(true)
     expect(labels.some((l) => l.includes('Handover'))).toBe(true)
     expect(labels.some((l) => l.includes('Return & Inspection'))).toBe(true)
@@ -544,7 +545,7 @@ describe('PK-12 — the entry step reports progress it was given, and nothing mo
     // (blocked). Neither is affected by the absence of a progress map.
     await mount(<OperationsShell bookingNo="B-715" bookingStatus="Packed" isOpen onClose={() => {}} />)
     expect(packRow()?.textContent).toContain('Done')
-    const ret = buttons().find((b) => (b.textContent ?? '').includes('Return & Inspection'))
+    const ret = container.querySelector<HTMLButtonElement>('nav[aria-label="Operation stage"] button[aria-label^="Return & Inspection"]')
     expect(ret?.disabled).toBe(true)
     expect(ret?.textContent).toContain('Not open yet')
   })

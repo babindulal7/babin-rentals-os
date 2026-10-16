@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { listRentalViewCounts } from '../rentalViews'
 
 const db = vi.hoisted(() => ({ select: vi.fn(), eq: vi.fn(), in: vi.fn(), gte: vi.fn(), count: 2 as number | null, error: null as { message: string } | null }))
-const bookings = vi.hoisted(() => vi.fn(async (f: { chips?: { stage?: string[] }; headOnly?: boolean }) => ({ rows: [], total: f.chips?.stage?.length === 1 ? 1 : 5 })))
+const bookings = vi.hoisted(() => vi.fn(async (f: { chips?: { stage?: string[] }; headOnly?: boolean; excludeArchived?: boolean }) => ({ rows: [], total: f.chips?.stage?.length === 1 ? 1 : 5 })))
 vi.mock('../bookings', () => ({ listBookings: bookings }))
 vi.mock('../../supabase', () => ({ supabase: { from: () => {
   const chain = { select: db.select, eq: db.eq, in: db.in, gte: db.gte, then: (resolve: (result: { count: number | null; error: typeof db.error }) => unknown) => Promise.resolve({ count: db.count, error: db.error }).then(resolve) }
@@ -18,6 +18,7 @@ describe('rental view counts', () => {
     expect(rows.find(r => r.id === 'Draft')?.count).toBe(2)
     expect(rows.find(r => r.id === 'Quote')?.count).toBe(1)
     expect(bookings.mock.calls.every(([f]) => f.headOnly === true)).toBe(true)
+    expect(bookings.mock.calls.every(([f]) => f.excludeArchived === true)).toBe(true)
     expect(db.select).toHaveBeenCalledWith('id', { count: 'exact', head: true })
     expect(db.eq).toHaveBeenCalledWith('status', 'Active')
   })

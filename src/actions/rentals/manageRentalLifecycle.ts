@@ -10,10 +10,9 @@ export interface RentalLifecycleInput {
 }
 export interface RentalLifecycleResult { booking_id: string; lifecycle_action: 'revert' | 'archive' }
 
-function config(action: 'revert' | 'archive'): ActionConfig<RentalLifecycleInput, RentalLifecycleResult> {
+function config(action: 'revert' | 'archive'): Omit<ActionConfig<RentalLifecycleInput, RentalLifecycleResult>, 'permissions'> {
   return {
     name: action === 'revert' ? 'REVERT_RENTAL' : 'ARCHIVE_RENTAL',
-    permissions: [`rental.${action}`],
     implemented: true,
     validate(input) {
       if (!input.bookingId || !input.clientUuid || input.reason.trim().length < 10) {
@@ -28,6 +27,9 @@ function config(action: 'revert' | 'archive'): ActionConfig<RentalLifecycleInput
         booking_id: input.bookingId, client_uuid: input.clientUuid,
         action, reason: input.reason.trim(), ...(action === 'revert' ? { target_stage: input.targetStage } : {}),
       } })
+      if (error?.code === 'PGRST202') {
+        throw new Error('Rental lifecycle changes are not available on this server yet. Ask the owner to finish the database update. No booking was changed.')
+      }
       if (error) throw new Error(error.message)
       const result = data as unknown as RentalLifecycleResult | null
       if (result?.booking_id !== input.bookingId || result.lifecycle_action !== action) {
@@ -37,5 +39,5 @@ function config(action: 'revert' | 'archive'): ActionConfig<RentalLifecycleInput
     },
   }
 }
-export const revertRental = createAction(config('revert'))
-export const archiveRental = createAction(config('archive'))
+export const revertRental = createAction({ ...config('revert'), permissions: ['rental.revert'] })
+export const archiveRental = createAction({ ...config('archive'), permissions: ['rental.archive'] })

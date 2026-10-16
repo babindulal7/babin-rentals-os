@@ -1,23 +1,69 @@
 # Progress Log
 
+## 2026-10-16 — Phone header acceptance and staging access preflight
+
+**Did**
+- Retained and verified the compact Finance/Operations headers. Finished Settings phone sections with one shared title and back action, removing the duplicate content bar and decorative icon that squeezed the section name.
+- Enlarged the shared contextual search input to the 44px target already provided by its frame. Corrected the Bundles serial disclosure from 36px to 44px after shell lint found it.
+- Added the Settings single-title/back regression and aligned two Operations route lookups with the full accessible stage labels while retaining their stage-count and locked-gate assertions.
+- Saved browser measurements, screenshots, test/build/gate logs and staging configuration requirements under artifacts/header-release-2026-10-16/. Preserved concurrent feature edits.
+
+**Ruled**
+- Enforced existing single-header, compact action, 44px and permission rules. No new product decision. This continuation wrote/applied no migration; the existing chain is locally VERIFIED, not APPLIED or PRODUCTION-VERIFIED by this pass.
+
+**Verified**
+- Final typecheck, full lint and final scoped test lint passed. Focused header checks 62/62. Full run 4640/4644 passed with four failures; follow-ups passed core actions 81/81, Tier 1 14/14, and Operations routes 38/38 after correcting stale visible-label lookups. No second clean full-suite run is claimed.
+- Edge Chromium mock-source acceptance: 63 screen/theme cases, 375/820/1440px, light/dark/high contrast, zero page errors. All measured header controls >=44px; one 64px header; phone section titles fit; Finance filters and Settings Edit/Discard/Back work. Screenshots reviewed.
+- Local PGlite 165/165 and lifecycle 31/31 passed together. Build passed (289 PWA entries), shell lint 672 files, UI-copy, contrast 82/82 and fixtures 661 files passed.
+- Staging verifier tests 2/2 passed. Real preflight is INCOMPLETE: connector exposes Rental os rather than Babin, CLI is logged out, role sessions/fixtures absent. User chose reconnecting Supabase; authenticated Babin access is not yet verified.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | — |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | — |
+| Lifecycle | steps green / total | 31 / 31 (100%) | — |
+| Overall | mean of five | ≈ 99% | — |
+Migrations 165 files · check:pglite 165/165 applied, 0 failed (recorded 2026-10-16T11:52:44.028Z). Suite: 4609/4609 passed (recorded 2026-10-15T20:16:18.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T11:52:51.082Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Reauthorize the Supabase connection to the account containing Babin, identify an active isolated staging project, and supply its real role sessions/known-record fixtures locally. Complete live JWT/PostgREST/storage/RPC acceptance before production sign-off under the existing backup/application process.
+- Native-device/Safari acceptance is outside the completed local Chromium checks. The generated completion block reads an older cached suite count; use this continuation's saved logs for fresh test evidence.
+
 ## 2026-10-16 — Unified rental Operations and audited lifecycle corrections
 
 **Did**
 - Unified Packing, Handover, Return and Cleaning around one checklist plus one visible right-side summary/filter column; narrow panes stack it below. Short stage labels retain full accessible status names and existing gates. The shared booking menu exposes cancellation inside Operations.
 - Added the Manager+ pre-handover Revert stage dialog and terminal Archive action, with mandatory reasons, offline refusal, immutable retry keys and server-confirmed results. Default Rentals queries exclude archives before paging/counting; searches include retained archived history. Older schemas retain read-only list compatibility.
-- WRITTEN migration 0167 binds actors to active authenticated users, locks booking/request keys, checks Manager branch scope and custody, records immutable audit receipts and uses the existing stage engine. Packed → Booked refreshes holds atomically to avoid duplicate reservations; Quote releases them. Archive cannot change stage, custody, invoices or payments.
+- WRITTEN migration 0167 binds actors to active authenticated users, locks booking/request keys, checks Manager branch scope and custody, records immutable audit receipts and uses the existing stage engine. Packed → Booked refreshes holds atomically to avoid duplicate reservations; Quote releases them. Partial quantity pickup evidence blocks reversal and cancellation, and outbound writes share the booking lock so stale handover screens cannot write pickup after correction. Archive refuses cancelled records with pickup history and cannot change stage, custody, invoices or payments.
 
 **Ruled**
 - O16-1/O16-2: one Operations side column and consistent four-step controls. O16-3: Babin explicitly selected reversals before handover only and Archive only for Closed/Cancelled bookings. Manager/Admin/Owner, online, reason ≥10 characters; Manager own branch. Permission catalogue, gates and dispatcher fixtures updated together.
 
 **Verified**
-- Local database gates passed together: PGlite 165/165 migrations and lifecycle 31/31, including the new L31 reversal, reservation, retry, archive and post-handover refusal checks. No migration APPLIED or PRODUCTION-VERIFIED. Final UI/typecheck/build checks are in progress; browser reconnection timed out, so fresh visual verification is pending.
+- Typecheck and production build passed. Full Vitest: 365 files / 4,646 tests passed. Scoped lint passed; shipped theme contrast 82/82 passed. Operations route assertions use the full accessible stage names while visible labels stay short.
+- Local database gates passed together: PGlite 165/165 migrations and lifecycle 31/31, including L31 reversal, reservation, retry, Closed/Cancelled archive, partial-quantity custody and stale outbound-write checks. Migration 0167 is locally VERIFIED, not APPLIED or PRODUCTION-VERIFIED. The private pickup-evidence helper has no authenticated/anon execute grant; all 74 definer search paths are pinned and no unauthorized anonymous RPC/view is exposed.
+- Browser reconnection timed out, so fresh visual verification remains pending. Logs and the repeatable final-check script are in artifacts/operations-unified-2026-10-16/.
 
 ## Completion
-Pending fresh generated completion output after final checks.
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 165 files · check:pglite 165/165 applied, 0 failed (recorded 2026-10-16T12:24:37.055Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T12:24:43.211Z.
+Counted by `npm run completion`, not typed.
 
 ## Remaining
-- Finish final typecheck/UI tests/build and generated completion report. Retry the browser review when the preview connection is available. Applying 0167 live belongs to Babin after BACKUP_PROTOCOL.md; no live migration was run.
+- Retry the visual browser review when the preview connection is available. Applying 0167 live belongs to Babin after BACKUP_PROTOCOL.md; no live migration was run. Broader release acceptance continues separately from these verified local changes.
 
 ## 2026-10-16 — Smart Intel visual organization and responsive review
 

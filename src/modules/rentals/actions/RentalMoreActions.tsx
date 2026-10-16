@@ -4,12 +4,14 @@
  * Universal Secondary Header Actions Menu Component (`RentalMoreActions`).
  *
  * Implements the specification:
- * - One universal More (⋯) dropdown menu containing the 5 secondary action groups:
+ * - One universal More (⋯) dropdown menu containing the secondary action groups:
  *   1. Quote (Drafting, preview, PDF, delivery, versioning)
  *   2. Invoice (Drafting, payment status, PDF, duplicate prevention) [Hidden from money-blind staff]
  *   3. Duplicate Rental (Independent draft creation with sanitized copy & availability check)
  *   4. Audit History (Read-only append-only audit trail with category filters & export)
  *   5. Cancel Rental (Pre-handover lifecycle cancellation with packing warnings & reservation release)
+ *   6. Revert stage (Manager+, before handover, audited correction)
+ *   7. Archive booking (Manager+, Closed/Cancelled only, retained searchable history)
  * - Dynamic context adaptation based on selected rental stage and authenticated capabilities.
  * - Submenus for Quote and Invoice.
  * - Dangerous actions visually separated at the bottom in destructive styling.

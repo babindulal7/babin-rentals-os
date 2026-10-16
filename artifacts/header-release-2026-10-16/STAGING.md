@@ -15,3 +15,7 @@ Required configuration, supplied through the local process environment:
 Keep credentials out of chat, committed files, reports, and command history. The script suppresses credentials and response bodies in its reports. Run its existing tests with `node --test scripts/verify-staging-readonly.test.mjs`, then run the verifier with the environment configured. A PASS must be reviewed for its stated coverage; read-only checks do not certify mutating RPCs, storage writes, or production cutover.
 
 No project was created, resumed, seeded, migrated, or changed by this continuation. The previous connector discovery exposed only two inactive projects and did not establish which project is staging. A confirmed staging identity and test sessions remain required. N-5 and the existing backup/application protocol still govern live migration work.
+
+## Babin organization access check
+
+The user identified the Babin organization as the intended location. Fresh connector discovery returned only an organization named "Rental os" and its two inactive projects. The local Supabase CLI is installed but logged out. Two browser dashboard-opening attempts timed out. The installed plugin is enabled; available management tools cannot perform account reauthorization. The user selected reconnecting the Supabase connection. Its last verified scope still exposed only "Rental os". Reconnect using the account containing Babin, then verify its project identity and whether it is staging before running any project checks. No projects or permissions were changed.

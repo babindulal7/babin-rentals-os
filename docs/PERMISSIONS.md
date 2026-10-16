@@ -207,8 +207,8 @@ Ladder shorthand: `M+` = Owner · Admin · Manager. `C+` = M+ · Coordinator. `F
 | `rental.cancel` (Packed or later) | M+ | reason ≥10 chars, audited | ✓ (same string; stage checked in engine) |
 | `rental.override_overbooking` | M+ | releases the **losing** reservation (`released_at` + `override_records` row + reason ≥10 chars) and re-runs the transition; the GiST constraint is never disabled and never `deferrable` (R-26, 8 Sep) | ○ |
 | `rental.reopen` (stage-only, invoice untouched) | M+ | `apply_booking_stage_transition` fix per SPEC-P0-2 | ○ |
-| `rental.revert` | M+ | Online; own branch for Manager; Booked/Packed to earlier Quote/Booked only; no handover; reason ≥10 chars; atomic audit + transition (O16-3) | ✓ WRITTEN migration 0167; local verification pending |
-| `rental.archive` | M+ | Online; own branch for Manager; Closed/Cancelled only; reason ≥10 chars; retained searchable history (O16-3) | ✓ WRITTEN migration 0167; local verification pending |
+| `rental.revert` | M+ | Online; own branch for Manager; Booked/Packed to earlier Quote/Booked only; no handover, including partial pickup; reason ≥10 chars; atomic audit + transition (O16-3) | ✓ locally VERIFIED (0167); not APPLIED live |
+| `rental.archive` | M+ | Online; own branch for Manager; Closed/Cancelled only; reason ≥10 chars; retained searchable history (O16-3) | ✓ locally VERIFIED (0167); not APPLIED live |
 | `rental.close` (auto-suggest, manual confirm) | C+ · Accounts | close gates: outstanding 0 + deposit resolved + no open case + no pending damage | ○ |
 | `subrental.create` | C+ | — | ✓ |
 | `supplier.manage` | C+ · Accounts | 22 Jul lock (c) | ○ |

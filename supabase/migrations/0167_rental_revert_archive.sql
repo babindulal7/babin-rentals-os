@@ -9,6 +9,32 @@ alter table public.bookings add constraint booking_archive_terminal check (
 );
 grant select (archived_at, archived_by) on public.bookings to authenticated;
 
+-- Private shared custody predicate: never expose other bookings' evidence as an RPC.
+create function public.rental_has_pickup_evidence(p_booking_id uuid) returns boolean
+language sql volatile security definer set search_path = public, pg_temp as $$
+  select exists(select 1 from public.booking_line_units u join public.booking_lines l on l.id=u.booking_line_id
+                where l.booking_id=p_booking_id and u.unit_state::text in ('Picked Up','Returned'))
+    or exists(select 1 from public.handover_lines h join public.booking_lines l on l.id=h.booking_line_id
+              where l.booking_id=p_booking_id and h.state='Picked Up')
+    or exists(select 1 from public.session_line_movements m join public.operation_sessions s on s.id=m.session_id
+              where s.booking_id=p_booking_id and s.operation='Handover' and m.resulting_item_state='Picked Up')
+    or exists(select 1 from public.operation_sessions where booking_id=p_booking_id and operation='Handover'
+              and (state='Completed' or completed_at is not null));
+$$;
+revoke all on function public.rental_has_pickup_evidence(uuid) from public, anon, authenticated;
+
+-- Cancellation has always been pre-custody; include unit-less partial pickups.
+create function public.guard_rental_cancel_custody() returns trigger
+language plpgsql security definer set search_path = public, pg_temp as $$
+begin
+  if OLD.cancelled_at is null and NEW.cancelled_at is not null and public.rental_has_pickup_evidence(OLD.id) then
+    raise exception 'Cancellation blocked: pickup has already occurred. Use the Return workflow to resolve custody.';
+  end if;
+  return NEW;
+end $$;
+create trigger trg_guard_rental_cancel_custody before update of cancelled_at on public.bookings
+for each row execute function public.guard_rental_cancel_custody();
+
 create function public.guard_booking_archive() returns trigger
 language plpgsql set search_path = public, pg_temp as $$
 begin
@@ -34,6 +60,37 @@ begin
 end $$;
 create trigger trg_guard_rental_reversal_writer before insert on public.booking_stage_transitions
 for each row execute function public.guard_rental_reversal_writer();
+
+-- Serialize physical pickup evidence with the correction's booking lock. A
+-- concurrent floor writer must see the new stage before recording custody.
+create function public.guard_rental_outbound_write() returns trigger
+language plpgsql security definer set search_path = public, pg_temp as $$
+declare v_booking public.bookings%rowtype;
+begin
+  if current_setting('role',true) in ('authenticated','anon') and
+     coalesce(public.auth_user_role()::text,'') not in ('Owner','Admin','Manager','Warehouse','Technician') then
+    raise exception 'Only floor staff can record pickup evidence.' using errcode='42501';
+  end if;
+  if TG_TABLE_NAME='session_line_movements' then
+    if NEW.resulting_item_state is distinct from 'Picked Up'::public.item_quantity_state then return NEW; end if;
+    select b.* into v_booking from public.bookings b join public.operation_sessions s on s.booking_id=b.id
+      where s.id=NEW.session_id for update of b;
+  else
+    if NEW.state::text<>'Picked Up' then return NEW; end if;
+    if TG_OP='UPDATE' and OLD.state=NEW.state then return NEW; end if;
+    select b.* into v_booking from public.bookings b join public.booking_lines l on l.booking_id=b.id
+      where l.id=NEW.booking_line_id for update of b;
+  end if;
+  -- Existing outbound receipts may finish after the On Rent stage commits.
+  if v_booking.id is null or v_booking.stage not in ('Packed','On Rent') or v_booking.cancelled_at is not null or v_booking.archived_at is not null then
+    raise exception 'Handover cannot continue: this rental is no longer ready for pickup. Refresh the booking.';
+  end if;
+  return NEW;
+end $$;
+create trigger trg_guard_rental_pickup_movement before insert on public.session_line_movements
+for each row execute function public.guard_rental_outbound_write();
+create trigger trg_guard_rental_pickup_line before insert or update of state on public.handover_lines
+for each row execute function public.guard_rental_outbound_write();
 
 create function public.manage_rental_lifecycle(p_payload jsonb) returns jsonb
 language plpgsql security definer set search_path = public, pg_temp as $$
@@ -79,6 +136,9 @@ begin
     if v_booking.stage<>'Closed' and v_booking.cancelled_at is null then
       raise exception 'Only Closed or Cancelled bookings can be archived.';
     end if;
+    if v_booking.stage<>'Closed' and public.rental_has_pickup_evidence(v_id) then
+      raise exception 'Archive blocked: this cancelled booking has pickup evidence. Resolve custody before archiving.';
+    end if;
     if v_booking.archived_at is not null then raise exception 'This booking is already archived.'; end if;
     update public.bookings set archived_at=clock_timestamp(), archived_by=v_actor where id=v_id;
   else
@@ -88,9 +148,7 @@ begin
        v_booking.cancelled_at is not null or v_booking.closed_at is not null or v_booking.archived_at is not null then
       raise exception 'Revert is only available to an earlier Quote/Booked stage before handover.';
     end if;
-    if exists(select 1 from public.booking_line_units u join public.booking_lines l on l.id=u.booking_line_id
-              where l.booking_id=v_id and u.unit_state::text in ('Picked Up','Returned')) or
-       exists(select 1 from public.operation_sessions where booking_id=v_id and operation='Handover' and (state='Completed' or completed_at is not null)) then
+    if public.rental_has_pickup_evidence(v_id) then
       raise exception 'Handover has already occurred; custody cannot be reverted.';
     end if;
   end if;

@@ -38,6 +38,8 @@ describe('O16-3 rental lifecycle permissions and boundaries', () => {
     await expect(archiveRental({ ...input, reason: 'short' }, manager)).rejects.toThrow(/ten characters/)
     rpc.mockResolvedValue({ data: null, error: null })
     await expect(archiveRental(input, manager)).rejects.toThrow(/did not confirm/)
+    rpc.mockResolvedValue({ data: null, error: { code: 'PGRST202', message: 'Missing RPC' } })
+    await expect(archiveRental(input, manager)).rejects.toThrow(/owner to finish the database update/)
   })
   it('passes the same request key and server-owned identity on retry', async () => {
     rpc.mockResolvedValueOnce({ data: null, error: { message: 'Disconnected' } })

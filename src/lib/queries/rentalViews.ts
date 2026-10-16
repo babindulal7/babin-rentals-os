@@ -21,7 +21,7 @@ export async function listRentalViewCounts(filters: ListFilters): Promise<{ rows
   const base = { ...filters, chips, page: undefined, range: undefined, sort: undefined }
   const booked = await Promise.all(RENTAL_VIEWS.map(async (view) => {
     if (view.id === 'Draft') return null
-    const result = await listBookings({ ...base, chips: { ...chips, ...(view.stages.length ? { stage: [...view.stages] } : {}) }, headOnly: true })
+    const result = await listBookings({ ...base, chips: { ...chips, ...(view.stages.length ? { stage: [...view.stages] } : {}) }, headOnly: true, excludeArchived: true })
     const total = result.total
     return typeof total === 'number' && !Number.isNaN(total) ? total : null
   }))
