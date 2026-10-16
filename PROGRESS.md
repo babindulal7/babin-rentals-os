@@ -33,8 +33,13 @@
   - 1280 with the sidebar open: 63 / 80 / 66 / 96 / 68px. Finance More → [Create Invoice, Export invoices]; Create Invoice opened its dialog, and Escape closed it with nothing saved.
   - 1536 with the sidebar open: the full desktop header on every page.
   - Header-only sweep of 53 static routes: no route gained an overlap, an off-screen control or header overflow.
-- **Browser on this main-based branch: NOT re-measured.** The Windows host was at 100% CPU (other sessions' vite/vitest/tsc), and the pane's renderer stopped responding. Main's own header rules (rows 8–9) differ from the old line, so the 911/1093 tablet titles need re-measuring here before this is called done in the browser.
-- This branch: typecheck 0; eslint on the touched files 0; contrast 82/82; **check:pglite 163/163 plus check:lifecycle 30/30 in the same run**; focused vitest 10 files / 209 tests passing. Full suite 4,636/4,636 passing; build exit 0. `lint:shell` fails on `src/modules/inventory/Bundles.tsx:1494` (a 36px control from main's `067585b3`), which this branch does not touch.
+- **Browser on this main-based branch, 16 Oct re-measure** (fresh server, served modules checked against disk; sidebar as rail at 911/1093 and set open at 1280/1536):
+  - **911:** titles 58 / 74 / 61 / 88 / 63px, all complete; header and document overflow 0; no off-screen or under-44px header control. Operations' table fits. Inventory scrolls 55px and Rentals 5px (the table's own content), both with Actions pinned.
+  - **1093:** titles 60 / 77 / 64 / 92 / 66px; every table fits with Actions visible.
+  - **1280 with the sidebar open:** 63 / 80 / 66 / 96 / 68px; every table fits; Inventory drops its pill, and ⋮ More sits clear of New Equipment.
+  - **1536 with the sidebar open:** 66 / 85 / 70 / 101 / 73px, the full desktop header on every page; every table fits.
+  - **Found and fixed on the re-measure:** at 911 Inventory's 185px New Equipment split button covered the ⋮ More (a 32px overlap; Refresh, Export and Warranty were unreachable). This was already on `main` (reproduced with main's own `Inventory.tsx` and `Header.tsx`): the header Add slot was a fixed 106/156px. It is now a `min-width` (`shell.css`), with a guard test (`headerAddSlot.test.ts`; `vitest.config.ts` includes `shell.css` so the test reads real CSS, the same pattern as `responsive.css`). After the fix: 0 overlaps at all four widths.
+- This branch: typecheck 0; eslint on the touched files 0; contrast 82/82; **check:pglite 163/163 plus check:lifecycle 30/30 in the same run**; focused vitest 10 files / 209 tests passing. Full suite 4,636/4,636 passing; build exit 0. After the Add-slot fix (16 Oct): typecheck 0, eslint (touched) 0, contrast 82/82, full suite **4,638/4,638** (368 files), build exit 0. `lint:shell` fails on `src/modules/inventory/Bundles.tsx:1494` (a 36px control from main's `067585b3`), which this branch does not touch.
 - Old line, same changes: full suite 4,496/4,496 after the `Finance.restricted` viewport fix (4 tests had failed on the layout change), and build exit 0.
 
 ### Completion

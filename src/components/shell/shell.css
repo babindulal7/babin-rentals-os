@@ -89,7 +89,10 @@
 .app-global-header__action-slot:not(:has(button, a)) { display: none; }
 .app-global-header__action-slot--secondary { gap: 8px; }
 .app-global-header__action-slot--filters { width: 44px; flex-basis: 44px; }
-.app-global-header__action-slot--add { width: 156px; flex-basis: 156px; }
+/* RULING 2026-10-16 (zoom audit): a floor, not a fixed width. Inventory's New Equipment
+   split button is 185px; in a fixed 106/156px slot it spilled across More and covered it.
+   Growing leftwards keeps More/Save right-anchored. Revert = `width`/`flex-basis` again. */
+.app-global-header__action-slot--add { width: auto; min-width: 156px; flex-basis: auto; }
 .app-global-header__action-slot--more { width: 44px; flex-basis: 44px; }
 .app-global-header__action-slot--primary { width: 184px; flex-basis: 184px; gap: 6px; justify-content: flex-end; }
 .app-global-header__action-slot--primary > button,
@@ -111,7 +114,7 @@
 .app-global-header__phone-search { width: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; }
 /* In tight tablet layouts, defer secondary verbs to the existing overflow. */
 @media (max-width: 1279px) {
-  .app-global-header__action-slot--add { width: 106px; flex-basis: 106px; }
+  .app-global-header__action-slot--add { min-width: 106px; }
   .app-global-header__action-slot--primary { width: auto; min-width: 44px; max-width: 160px; flex-basis: auto; }
 }
 @media (max-width: 767px) {
