@@ -1,5 +1,63 @@
 # Progress Log
 
+## 2026-10-16 — Task 4.2: headers and tables at Windows 125%/150% display scaling
+
+**Did**
+- Measured Rentals, Inventory, Finance, Operations and Settings in the mock build (Owner) at the CSS widths of a 1366px and a 1920px laptop at 125% and 150%: 1093×489, 911×387, 1536×739 and 1280×595. Each width got a fresh load with the sidebar in its default state: the 64px rail on tablets, the 256px expanded sidebar on desktops. For each, recorded header overflow, title width and truncation, header controls off-screen, under 44px or overlapping, table scroll and the last column's visibility, sticky elements, and document overflow.
+- **Before** (measured on the pre-15-Oct line, which carried the same 15 Oct header work):
+  - 911: Inventory and Finance titles **0px**; Inventory search box 58px. Inventory's forced 1060px table floor hid Replacement and Actions behind a 252px scroll. Operations' 900px floor hid Action and the row link (92px).
+  - 1093: Inventory (65px) and Finance (58px) titles truncated; Inventory scrolled 75px.
+  - **1280 with the sidebar open, a fresh desktop load's default**: the header is only 1024px wide, narrower than a 1093px tablet's. Titles measured Inventory **14px**, Finance **15px**, Operations 55px, Settings 55px. Finance's info button sat under the search box.
+  - 1536: Finance's info button under the search box. That is the palette spilling past the hidden 104px healthy-sync slot.
+  - Every width: each header search input was a 22px hit area inside a 44px box, and the Rentals table showed a 2px scrollbar (the column chooser's 44px touch inset overhung its scroller).
+- **Fixed** on this branch, keeping main's own 15 Oct rulings (rows 5, 8, 9):
+  - `lib/headerRoom.ts` `useCompactHeader`: compact on any tablet, and on a desktop whose header is under 1216px (the widest tablet header). Operations and Settings now use it.
+  - Finance: Create Invoice and Export join More on a compact header.
+  - Inventory: a compact header drops the "N models" pill, which the card heading already states.
+  - The healthy sync slot takes no width on desktops either.
+  - The header search box is a `<label>`, so the whole 44px box focuses the field.
+  - The Inventory 1060px and Operations 900px table floors are removed.
+  - Inventory's Actions column is pinned (Rentals §4.1).
+  - The Rentals Actions header gets 12px of right padding.
+- Not ported: the old-line "search yields first" center flex and the palette's 44px floor. Main already rules otherwise (row 8); see the ruling.
+- Tests: `headerRoom.test.tsx` (6), `Finance.header.test.tsx` (3), `Inventory.header.test.tsx` (4). Added cases in `headerOwnership` (label hit area; healthy sync slot hidden on tablet AND desktop), `shell.test`, `operationRoutes` and `Settings.header` (narrow-desktop compact), and `rentalsList.render` (chooser padding). `Finance.restricted` now pins a desktop viewport: it tests permissions, and jsdom's 1024px is a tablet.
+
+**Ruled**
+- `RULINGS-2026-10-15.md` § "Windows display scaling": the compact header follows the header's own width; Finance joins the compact pattern; the healthy sync slot takes no width on desktops; the search box is a label; tables have no forced floors and Inventory's Actions column is pinned. Each item carries its revert. No permission, capability, handler, workflow gate or money visibility changed.
+- No migration was written or applied. No live Supabase access.
+
+**Verified**
+- **Browser, old line (same 15 Oct header base), after the fixes.** All four widths: header overflow 0, document overflow 0, no off-screen, under-44px or overlapping header control.
+  - 911: titles Rentals 58 / Inventory 73 / Finance 61 / Operations 88 / Settings 63px, all complete. Operations' table fits. Inventory scrolls 71px with Actions pinned and visible.
+  - 1093: every title complete, every table fits.
+  - 1280 with the sidebar open: 63 / 80 / 66 / 96 / 68px. Finance More → [Create Invoice, Export invoices]; Create Invoice opened its dialog, and Escape closed it with nothing saved.
+  - 1536 with the sidebar open: the full desktop header on every page.
+  - Header-only sweep of 53 static routes: no route gained an overlap, an off-screen control or header overflow.
+- **Browser on this main-based branch: NOT re-measured.** The Windows host was at 100% CPU (other sessions' vite/vitest/tsc), and the pane's renderer stopped responding. Main's own header rules (rows 8–9) differ from the old line, so the 911/1093 tablet titles need re-measuring here before this is called done in the browser.
+- This branch: typecheck 0; eslint on the touched files 0; contrast 82/82; **check:pglite 163/163 plus check:lifecycle 30/30 in the same run**; focused vitest 10 files / 209 tests passing. Full suite 4,636/4,636 passing; build exit 0. `lint:shell` fails on `src/modules/inventory/Bundles.tsx:1494` (a 36px control from main's `067585b3`), which this branch does not touch.
+- Old line, same changes: full suite 4,496/4,496 after the `Finance.restricted` viewport fix (4 tests had failed on the layout change), and build exit 0.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-16T11:55:58.480Z). Suite: 4609/4609 passed (recorded 2026-10-15T20:16:18.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T11:56:41.962Z.
+Counted by `npm run completion`, not typed. (Its suite line is main's committed result, not this branch's run.)
+
+### Remaining
+- Re-measure 911/1093/1280/1536 on this branch once the host is idle. If tablet module titles still truncate under main's row 8, make that ruling.
+- Pre-existing on main: `lint:shell` fails at `Bundles.tsx:1494` (36px control).
+- Observed, not chased: a route in the sweep rewrote the user's sidebar preference (`br-collapsed:sidebar:main`). Reports titles truncate at their own zone caps. At 911×387 the first table row starts below the fold.
+- Physical-laptop confirmation belongs to Task 4.1. Landing this on `main` needs Babin's go-ahead.
+
+
+
 ## 2026-10-18 — Booqable audit adoptions (duplication hygiene BQ-207, shortage action BQ-408, dashboard deep links BQ-205)
 
 **Did**

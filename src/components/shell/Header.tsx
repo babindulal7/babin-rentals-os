@@ -511,13 +511,16 @@ export default function Header({ crumbs, actions }: HeaderProps) {
           >
             {/* If the active page provided a search configuration, render the unified search input */}
             {searchConfig ? (
-              <div
+              /* RULING 2026-10-15 (zoom audit): a label, so the whole 44px box focuses the
+                 field. The input alone measured 22px tall on every page (Law 15). */
+              <label
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,
                   width: '100%',
                   minWidth: 0,
+                  cursor: 'text',
                   height: 44,
                   minHeight: 44, /* TouchInset compliant (Law 15) */
                   padding: '0 12px',
@@ -544,6 +547,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                     fontSize: 'var(--t-ui)',
                     outline: 'none',
                     width: '100%',
+                    height: '100%',
                     minWidth: 0,
                     minHeight: 44,
                     padding: 0,
@@ -573,7 +577,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                     <Icon name="close" size={13} />
                   </button>
                 )}
-              </div>
+              </label>
             ) : !isDispatch && !ws?.hasPageSearch ? (
               <button
                 type="button"
@@ -658,7 +662,10 @@ export default function Header({ crumbs, actions }: HeaderProps) {
               aria-hidden={isAbnormalSync ? undefined : true}
               style={{
                 // RULING 2026-10-13: tablets reclaim the healthy sync placeholder for the page title/search.
-                display: isTablet && !isAbnormalSync ? 'none' : 'flex',
+                // RULING 2026-10-15 (zoom audit): desktops too. The hidden 104px slot plus its gap
+                // truncated Finance's title at 1280 and pushed the search over its info button.
+                // Revert = `isTablet && !isAbnormalSync ? 'none' : 'flex'`.
+                display: !isAbnormalSync ? 'none' : 'flex',
                 alignItems: 'center',
                 gap: 8,
                 flexShrink: 0,

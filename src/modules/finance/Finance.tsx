@@ -20,6 +20,7 @@ import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { canIssueInvoice as rbacCanIssueInvoice, canRecordPayment, canVoidInvoice } from '../../lib/rbac'
 import { gateContext } from '../../lib/fieldGating'
 import { useViewport, useTabularLayout } from '../../lib/device'
+import { useCompactHeader } from '../../lib/headerRoom'
 import { IntelCard } from '../../components/ui/IntelCard'
 import { DataTableShell } from '../../components/ui/DataTable'
 import {
@@ -633,6 +634,11 @@ export default function Finance() {
    */
   const viewport = useViewport()
   const phone = viewport === 'phone'
+  /* RULING 2026-10-15 (zoom audit): below desktop room — any tablet, or a desktop whose
+     header is narrower than the widest tablet header — Create Invoice and Export join
+     More, as they already did on a phone. The title measured 0px at 911px and 15px at
+     1280px with the sidebar open. Revert = `const compactHeader = phone`. */
+  const compactHeader = useCompactHeader()
   const tabular = useTabularLayout()
 
   // Modals state
@@ -1162,7 +1168,8 @@ export default function Finance() {
         ) : undefined
       }
       // RULING 2026-10-13: on a phone, Create Invoice and Export live in More so the title and Payment keep the header.
-      secondary={phone ? [] : [
+      // RULING 2026-10-15: and wherever the header is compact (see `compactHeader`).
+      secondary={compactHeader ? [] : [
         canTakePayment && canIssueInvoice ? (
           <Button
             key="create-invoice"
@@ -1179,7 +1186,7 @@ export default function Finance() {
         </Button>,
       ].filter(Boolean)}
       overflow={[
-        ...(phone ? [
+        ...(compactHeader ? [
           ...(canTakePayment && canIssueInvoice ? [{
             label: 'Create Invoice',
             icon: 'plus' as const,
@@ -1190,7 +1197,7 @@ export default function Finance() {
             icon: 'download' as const,
             onClick: exportCsv,
           },
-          ...(tab === 'Invoices' ? [{
+          ...(phone && tab === 'Invoices' ? [{
             label: invoiceFilterCount > 0 ? `Filters (${invoiceFilterCount})` : 'Filters',
             icon: 'filter' as const,
             onClick: () => setInvoiceFiltersOpen(true),

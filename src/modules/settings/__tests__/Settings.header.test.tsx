@@ -182,4 +182,21 @@ describe('Settings header — desktop', () => {
     expect(audit?.style.minHeight).toBe('44px')
     expect(container.querySelector('button[aria-label="More actions"]')).toBeNull()
   })
+
+  /* Zoom audit, 15 Oct 2026: at 1280px (a 1920px laptop at 150%) the open sidebar leaves a
+     1024px header and the title measured 55px. The compact header follows the header. */
+  it('uses the compact header when the open sidebar leaves a 1024px header', async () => {
+    const header = document.createElement('header')
+    header.className = 'app-global-header'
+    header.getBoundingClientRect = () => ({ width: 1024, height: 64, top: 0, left: 256, right: 1280, bottom: 64, x: 256, y: 0, toJSON: () => ({}) }) as DOMRect
+    document.body.appendChild(header)
+    try {
+      await mount('?tab=business')
+      expect(visible('Edit settings')).toHaveLength(1)
+      expect(visible('Export config')).toHaveLength(0)
+      expect(labels(await openMore())).toEqual(['Export config', 'View audit log'])
+    } finally {
+      header.remove()
+    }
+  })
 })

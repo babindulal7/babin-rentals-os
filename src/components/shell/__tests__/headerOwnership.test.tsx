@@ -64,10 +64,15 @@ describe('RULING 2026-10-15 — the title zone never shares the squeeze with the
 })
 
 describe('page ownership of the application header', () => {
-  it('reclaims healthy sync space on tablets but keeps every actionable sync state visible', async () => {
+  it('reclaims healthy sync space on tablets and desktops but keeps every actionable sync state visible', async () => {
+    for (const viewport of ['tablet', 'desktop'] as const) {
+      state.viewport = viewport
+      state.syncStatus = 'synced'
+      state.pendingCount = 0
+      await renderPage('plain')
+      expect(container.querySelector<HTMLElement>('.header-sync-context')?.style.display).toBe('none')
+    }
     state.viewport = 'tablet'
-    await renderPage('plain')
-    expect(container.querySelector<HTMLElement>('.header-sync-context')?.style.display).toBe('none')
     for (const status of ['offline', 'pending', 'syncing', 'error']) {
       state.syncStatus = status
       await renderPage('plain')
@@ -81,6 +86,26 @@ describe('page ownership of the application header', () => {
     await renderPage('plain')
     expect(container.querySelector<HTMLElement>('.header-sync-context')?.style.display).toBe('flex')
     expect(container.querySelector('.header-sync-context')?.textContent).toContain('2 Queued')
+  })
+
+  it('makes the whole 44px search box focus the field on tablet and desktop', async () => {
+    /* Zoom audit, 15 Oct: the input alone measured 22px tall inside its 44px box. */
+    function SearchPage() {
+      const [query, setQuery] = useState('')
+      return <PageHeader title="Inventory" search={{ value: query, onChange: setQuery, ariaLabel: 'Search inventory' }} />
+    }
+    for (const viewport of ['tablet', 'desktop'] as const) {
+      state.viewport = viewport
+      await act(async () => root.render(<MemoryRouter><WorkspaceProvider>
+        <Header crumbs={[{ label: 'Inventory' }]} /><SearchPage />
+      </WorkspaceProvider></MemoryRouter>))
+      const input = container.querySelector<HTMLInputElement>('[aria-label="Search inventory"]')!
+      const box = input.closest('label')
+      expect(box).not.toBeNull()
+      expect(box!.style.minHeight).toBe('44px')
+      expect(input.style.height).toBe('100%')
+      expect(box!.closest('.app-global-header__center')).not.toBeNull()
+    }
   })
 
   it('uses the contextual phone search, preserves its query on Escape and clears without closing', async () => {
