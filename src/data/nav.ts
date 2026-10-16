@@ -47,7 +47,7 @@ export const NAV_GROUPS: NavGroup[] = [
     sections: [
       { label: 'New Rental', icon: 'plus', to: '/rentals/new' },
       { label: 'Today', icon: 'home', to: '/today' },
-      { label: 'Operation', icon: 'queues', to: '/operations' },
+      { label: 'Operations', icon: 'queues', to: '/operations' },
       { label: 'Rentals', icon: 'checklist', to: '/rentals' },
       { label: 'Calendar', icon: 'calendar', to: '/calendar' },
       { label: 'Crew Assist', icon: 'crew', to: '/crew' },
@@ -268,7 +268,7 @@ export function isStaffSurface(path: string): boolean {
  * | `/rentals` | Rentals |
  * | `/rentals/B-715` | Rentals — `/rentals/new` does not match at all |
  * | `/rentals/B-715/packing` | Rentals |
- * | `/operations?queue=packing` | Operation — the query is stripped first |
+ * | `/operations?queue=packing` | Operations — the query is stripped first |
  *
  * The query string is stripped because Operation's queues are `?queue=` filter
  * chips on one page (`03_OPERATION.md` §3.1), not separate destinations.
@@ -354,7 +354,7 @@ export function bottomBarSlots(role: SystemRole | undefined): BottomBarSlot[] {
 /**
  * What the phone **More** sheet lists, in `NAV` order — the eight destinations
  * the five-slot bar (Today · Rentals · Scan · Inventory · More) cannot hold:
- * New Rental · Operation · Calendar · Crew Assist · Clients · Finance · Tools ·
+ * New Rental · Operations · Calendar · Crew Assist · Clients · Finance · Tools ·
  * Settings. The sheet itself adds a "Scan equipment" row above these.
  *
  * New Rental is still listed here even though the header's Create ▾ also

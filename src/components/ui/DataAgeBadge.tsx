@@ -18,6 +18,8 @@ export interface DataAgeBadgeProps {
    * RULING 2026-10-15: same doctrine as the 13 Oct tablet sync chip.
    */
   quietWhenFresh?: boolean
+  /** Visual variant: 'badge' (framed chip) or 'muted' (minimal unbordered metadata) */
+  variant?: 'badge' | 'muted'
   className?: string
   style?: CSSProperties
 }
@@ -49,6 +51,7 @@ export function DataAgeBadge({
   loading = false,
   compact = false,
   quietWhenFresh = false,
+  variant = 'badge',
   className,
   style,
 }: DataAgeBadgeProps) {
@@ -75,10 +78,10 @@ export function DataAgeBadge({
           gap: 6,
           padding: compact ? '2px 6px' : '3px 8px',
           borderRadius: 'var(--r-xs, 4px)',
-          background: 'var(--surface-2)',
-          border: '1px solid var(--border)',
+          background: variant === 'muted' ? 'transparent' : 'var(--surface-2)',
+          border: variant === 'muted' ? 'none' : '1px solid var(--border)',
           color: 'var(--muted)',
-          fontSize: '11px',
+          fontSize: variant === 'muted' ? '12px' : '11px',
           fontWeight: 600,
           fontFamily: 'var(--font-id, sans-serif)',
           fontVariantNumeric: 'tabular-nums',
@@ -123,21 +126,25 @@ export function DataAgeBadge({
           display: 'inline-flex',
           alignItems: 'center',
           gap: 5,
-          padding: compact ? '2px 6px' : '3px 8px',
+          padding: variant === 'muted' ? '0 2px' : compact ? '2px 6px' : '3px 8px',
           borderRadius: 'var(--r-xs, 4px)',
           background: isOffline
             ? 'var(--surface-2)'
             : isStale
             ? 'var(--warn-soft, rgba(232, 118, 45, 0.12))'
+            : variant === 'muted'
+            ? 'transparent'
             : 'var(--surface-2)',
-          border: `1px solid ${isStale && !isOffline ? 'var(--warn-border, var(--border))' : 'var(--border)'}`,
+          border: variant === 'muted' && !isStale && !isOffline
+            ? 'none'
+            : `1px solid ${isStale && !isOffline ? 'var(--warn-border, var(--border))' : 'var(--border)'}`,
           color: isOffline
             ? 'var(--muted)'
             : isStale
             ? 'var(--warn-text, #e8762d)'
-            : 'var(--text2)',
-          fontSize: '11px',
-          fontWeight: 600,
+            : 'var(--muted)',
+          fontSize: variant === 'muted' ? '12px' : '11px',
+          fontWeight: variant === 'muted' ? 500 : 600,
           fontFamily: 'var(--font-id, sans-serif)',
           fontVariantNumeric: 'tabular-nums',
         }}
@@ -185,8 +192,8 @@ export function DataAgeBadge({
               width: 24,
               height: 24,
               borderRadius: 'var(--r-xs, 4px)',
-              background: 'var(--surface-2)',
-              border: '1px solid var(--border)',
+              background: variant === 'muted' ? 'transparent' : 'var(--surface-2)',
+              border: variant === 'muted' ? 'none' : '1px solid var(--border)',
             }}
           >
             <Icon

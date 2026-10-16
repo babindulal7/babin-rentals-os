@@ -416,7 +416,7 @@ export default function App() {
         <Route
           path="/operations"
           element={
-            <Shell crumbs={[{ label: 'Operation' }]} search="Search job, booking, client, kit…">
+            <Shell crumbs={[{ label: 'Operations' }]} search="Search job, booking, client, kit…">
               <OperationsQueues />
             </Shell>
           }

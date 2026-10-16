@@ -1205,8 +1205,10 @@ function stampOf(instantAd: string): string {
  */
 export function toMovementRow(row: BookingListRow, side: 'outgoing' | 'incoming', nowAd: string): MovementRow {
   const atAd = side === 'outgoing' ? row.pickupAtAd : row.returnAtAd
-  const overdue = row.actualReturnAtAd === null && Date.parse(row.returnAtAd) < Date.parse(nowAd)
-  const lateDays = overdue ? civilDaysBetween(row.returnAtAd, nowAd) : 0
+  const isOverduePickup = side === 'outgoing' && Date.parse(row.pickupAtAd) < Date.parse(nowAd) && (row.stage === 'Booked' || row.stage === 'Packed')
+  const isOverdueReturn = side === 'incoming' && row.actualReturnAtAd === null && Date.parse(row.returnAtAd) < Date.parse(nowAd)
+  const overdue = isOverduePickup || isOverdueReturn
+  const lateDays = overdue ? civilDaysBetween(side === 'outgoing' ? row.pickupAtAd : row.returnAtAd, nowAd) : 0
 
   return {
     id: row.id,

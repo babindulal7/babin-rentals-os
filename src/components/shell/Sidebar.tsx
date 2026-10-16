@@ -214,39 +214,78 @@ export default function Sidebar({ active }: SidebarProps) {
             <Icon name={theme === 'dark' ? 'moon' : 'sun'} size={15} />
           </button>
         ) : (
-          <div role="group" aria-label="Theme" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 6 }}>
-            {(['dark', 'light', 'glass'] as const).map((m) => {
-              // RULING 2026-10-13: Glass is a finish on either base, so it can
-              // be pressed alongside Light or Dark.
-              const on = m === 'glass' ? glass : theme === m
-              return (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => choose(m)}
-                  aria-pressed={on}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 6,
-                    minHeight: 44,
-                    borderRadius: 'var(--r-btn)',
-                    border: `1px solid ${on ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-                    background: on ? 'var(--select-bg)' : 'transparent',
-                    color: on ? 'var(--select-fg)' : 'var(--text2)',
-                    fontSize: 'var(--t-meta)',
-                    fontWeight: on ? 600 : 500,
-                    cursor: 'pointer',
-                    fontFamily: 'inherit',
-                    textTransform: 'capitalize',
-                  }}
-                >
-                  <Icon name={m === 'glass' ? 'sparkles' : m === 'dark' ? 'moon' : 'sun'} size={14} />
-                  {m}
-                </button>
-              )
-            })}
+          <div role="group" aria-label="Theme" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                gap: 2,
+                flex: 1,
+                background: 'var(--inset, rgba(0, 0, 0, 0.04))',
+                padding: 2,
+                borderRadius: 'var(--r-btn)',
+                border: '1px solid var(--border)',
+              }}
+            >
+              {(['light', 'dark'] as const).map((m) => {
+                const on = theme === m
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => choose(m)}
+                    aria-pressed={on}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 5,
+                      minHeight: 40,
+                      borderRadius: 'calc(var(--r-btn) - 2px)',
+                      border: 'none',
+                      background: on ? 'var(--select-bg)' : 'transparent',
+                      color: on ? 'var(--select-fg, #ffffff)' : 'var(--text2)',
+                      fontSize: 'var(--t-meta)',
+                      fontWeight: on ? 600 : 500,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      textTransform: 'capitalize',
+                      boxShadow: on ? '0 1px 2px rgba(0, 0, 0, 0.08)' : 'none',
+                    }}
+                  >
+                    <Icon name={m === 'dark' ? 'moon' : 'sun'} size={14} />
+                    {m}
+                  </button>
+                )
+              })}
+            </div>
+            <button
+              type="button"
+              onClick={() => choose('glass')}
+              aria-pressed={glass}
+              aria-label="Toggle glass finish"
+              title={glass ? 'Glass finish enabled (click to toggle off)' : 'Enable glass finish'}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 5,
+                minHeight: 44,
+                padding: '0 12px',
+                borderRadius: 'var(--r-btn)',
+                border: `1.5px solid ${glass ? 'var(--primary, #386af7)' : 'var(--border)'}`,
+                background: glass ? 'color-mix(in srgb, var(--primary, #386af7) 14%, var(--card))' : 'transparent',
+                color: glass ? 'var(--primary-text, #2456d6)' : 'var(--text2)',
+                fontSize: 'var(--t-meta)',
+                fontWeight: glass ? 600 : 500,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                transition: 'all var(--dur-fast, 120ms) ease',
+              }}
+            >
+              <Icon name="sparkles" size={14} style={{ color: glass ? 'var(--primary-text, #2456d6)' : undefined }} />
+              Glass
+            </button>
           </div>
         )}
       </div>
@@ -474,7 +513,7 @@ function NavList({
                       textDecoration: 'none',
                       fontSize: 'var(--t-ui)',
                       fontWeight: isNewRental ? 700 : on ? 600 : 500,
-                      color: isNewRental ? undefined : on ? 'var(--text)' : 'var(--text2)',
+                      color: isNewRental ? undefined : on ? 'var(--select-fg, #ffffff)' : 'var(--text2)',
                       background: isNewRental ? undefined : on ? 'var(--select-bg)' : 'transparent',
                       boxShadow: isNewRental ? undefined : on ? 'var(--specular-rim), 0 1px 2px rgba(0, 0, 0, 0.04)' : undefined,
                       position: 'relative',
