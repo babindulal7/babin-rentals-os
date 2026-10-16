@@ -1,5 +1,24 @@
 # Progress Log
 
+## 2026-10-16 — Unified rental Operations and audited lifecycle corrections
+
+**Did**
+- Unified Packing, Handover, Return and Cleaning around one checklist plus one visible right-side summary/filter column; narrow panes stack it below. Short stage labels retain full accessible status names and existing gates. The shared booking menu exposes cancellation inside Operations.
+- Added the Manager+ pre-handover Revert stage dialog and terminal Archive action, with mandatory reasons, offline refusal, immutable retry keys and server-confirmed results. Default Rentals queries exclude archives before paging/counting; searches include retained archived history. Older schemas retain read-only list compatibility.
+- WRITTEN migration 0167 binds actors to active authenticated users, locks booking/request keys, checks Manager branch scope and custody, records immutable audit receipts and uses the existing stage engine. Packed → Booked refreshes holds atomically to avoid duplicate reservations; Quote releases them. Archive cannot change stage, custody, invoices or payments.
+
+**Ruled**
+- O16-1/O16-2: one Operations side column and consistent four-step controls. O16-3: Babin explicitly selected reversals before handover only and Archive only for Closed/Cancelled bookings. Manager/Admin/Owner, online, reason ≥10 characters; Manager own branch. Permission catalogue, gates and dispatcher fixtures updated together.
+
+**Verified**
+- Local database gates passed together: PGlite 165/165 migrations and lifecycle 31/31, including the new L31 reversal, reservation, retry, archive and post-handover refusal checks. No migration APPLIED or PRODUCTION-VERIFIED. Final UI/typecheck/build checks are in progress; browser reconnection timed out, so fresh visual verification is pending.
+
+## Completion
+Pending fresh generated completion output after final checks.
+
+## Remaining
+- Finish final typecheck/UI tests/build and generated completion report. Retry the browser review when the preview connection is available. Applying 0167 live belongs to Babin after BACKUP_PROTOCOL.md; no live migration was run.
+
 ## 2026-10-16 — Smart Intel visual organization and responsive review
 
 **Did**

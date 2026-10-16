@@ -419,6 +419,8 @@ Known hole to keep closed: **`security_deposits` was readable by money-blind ses
 | `gate.invoice.void_paid` | Void paid invoice without credit note | nobody | credit note required | yes | Stage 1 (0117) |
 | `gate.deposit.refund` | Deposit refund | Accounts confirms (M+ may) | — | yes | 21 Jul |
 | `gate.reopen.role` | Reopen a Closed booking (stage only) | M+ | yes | yes | 4 Sep rulings; Stage 1 (0115) |
+| `gate.revert.pre_handover` | Booked/Packed → earlier Quote/Booked only; no handover or terminal booking | M+; Manager own branch; online | ≥10 chars | atomic audit + reversal; reservations released at Quote or refreshed at Booked | O16-3; 0167 |
+| `gate.archive.terminal` | Archive a Closed or Cancelled booking; keep searchable history | M+; Manager own branch; online | ≥10 chars | atomic audit + terminal archive timestamp | O16-3; 0167 |
 | `gate.pack.session_missing` | Booked → Packed with no pack session | nobody | — | yes | Stage 1 (0115) |
 | `gate.pack.units_unassigned` | Serial line with unassigned units at pack | nobody | — | yes | Stage 1 (0115) |
 | `gate.pack.units_unpacked` | Unit unpacked in pack session | nobody | — | yes | Stage 1 (0115) |

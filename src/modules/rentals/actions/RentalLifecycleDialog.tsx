@@ -40,13 +40,15 @@ export function RentalLifecycleDialog({ booking, action, onClose, onSuccess }: {
         : 'Only available before handover. Packing history is kept. Returning to Quote releases equipment reservations.'}</p>
       {action === 'revert' && <label>Return to
         <select aria-label="Return to stage" value={target} disabled={busy || Boolean(request.current)}
-          onChange={e => setTarget(e.target.value as RevertTarget)} style={{ width: '100%', minHeight: 44 }}>
+          onChange={e => setTarget(e.target.value as RevertTarget)} style={{ width: '100%', minHeight: 44,
+            padding: 10, background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 8, font: 'inherit' }}>
           {targets.map(stage => <option key={stage} value={stage}>{stage}</option>)}
         </select>
       </label>}
       <label>Reason (at least 10 characters)
         <textarea aria-label="Lifecycle change reason" value={reason} disabled={busy || Boolean(request.current)}
-          onChange={e => setReason(e.target.value)} rows={3} style={{ width: '100%' }} />
+          onChange={e => setReason(e.target.value)} rows={3} style={{ width: '100%', padding: 10,
+            background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 8, font: 'inherit' }} />
       </label>
       {error && <p role="alert" style={{ color: 'var(--danger)' }}>{error}</p>}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>

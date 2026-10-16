@@ -11,6 +11,7 @@
         "viewport": 375,
         "documentWidth": 375,
         "titleWidth": 131,
+        "titleClipped": false,
         "controls": [
           {
             "name": "More actions",
@@ -57,6 +58,7 @@
         "viewport": 375,
         "documentWidth": 375,
         "titleWidth": 195,
+        "titleClipped": false,
         "controls": [
           {
             "name": "More actions",
@@ -96,6 +98,7 @@
         "viewport": 375,
         "documentWidth": 375,
         "titleWidth": 195,
+        "titleClipped": false,
         "controls": [
           {
             "name": "More actions",
@@ -135,6 +138,7 @@
         "viewport": 375,
         "documentWidth": 375,
         "titleWidth": 195,
+        "titleClipped": false,
         "controls": [
           {
             "name": "More actions",
@@ -175,6 +179,7 @@
         "viewport": 375,
         "documentWidth": 375,
         "titleWidth": 195,
+        "titleClipped": false,
         "controls": [
           {
             "name": "More actions",
@@ -214,6 +219,7 @@
         "viewport": 375,
         "documentWidth": 375,
         "titleWidth": 131,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Back to settings",
@@ -267,6 +273,7 @@
         "viewport": 375,
         "documentWidth": 375,
         "titleWidth": 131,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Back to settings",
@@ -319,6 +326,7 @@
         "viewport": 375,
         "documentWidth": 375,
         "titleWidth": 131,
+        "titleClipped": false,
         "controls": [
           {
             "name": "More actions",
@@ -365,6 +373,7 @@
         "viewport": 375,
         "documentWidth": 375,
         "titleWidth": 195,
+        "titleClipped": false,
         "controls": [
           {
             "name": "More actions",
@@ -404,6 +413,7 @@
         "viewport": 375,
         "documentWidth": 375,
         "titleWidth": 195,
+        "titleClipped": false,
         "controls": [
           {
             "name": "More actions",
@@ -443,6 +453,7 @@
         "viewport": 375,
         "documentWidth": 375,
         "titleWidth": 195,
+        "titleClipped": false,
         "controls": [
           {
             "name": "More actions",
@@ -483,6 +494,7 @@
         "viewport": 375,
         "documentWidth": 375,
         "titleWidth": 195,
+        "titleClipped": false,
         "controls": [
           {
             "name": "More actions",
@@ -522,6 +534,7 @@
         "viewport": 375,
         "documentWidth": 375,
         "titleWidth": 131,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Back to settings",
@@ -575,6 +588,7 @@
         "viewport": 375,
         "documentWidth": 375,
         "titleWidth": 131,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Back to settings",
@@ -627,6 +641,7 @@
         "viewport": 375,
         "documentWidth": 375,
         "titleWidth": 131,
+        "titleClipped": false,
         "controls": [
           {
             "name": "More actions",
@@ -673,6 +688,7 @@
         "viewport": 375,
         "documentWidth": 375,
         "titleWidth": 195,
+        "titleClipped": false,
         "controls": [
           {
             "name": "More actions",
@@ -712,6 +728,7 @@
         "viewport": 375,
         "documentWidth": 375,
         "titleWidth": 195,
+        "titleClipped": false,
         "controls": [
           {
             "name": "More actions",
@@ -751,6 +768,7 @@
         "viewport": 375,
         "documentWidth": 375,
         "titleWidth": 195,
+        "titleClipped": false,
         "controls": [
           {
             "name": "More actions",
@@ -791,6 +809,7 @@
         "viewport": 375,
         "documentWidth": 375,
         "titleWidth": 195,
+        "titleClipped": false,
         "controls": [
           {
             "name": "More actions",
@@ -830,6 +849,7 @@
         "viewport": 375,
         "documentWidth": 375,
         "titleWidth": 131,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Back to settings",
@@ -883,6 +903,7 @@
         "viewport": 375,
         "documentWidth": 375,
         "titleWidth": 131,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Back to settings",
@@ -935,6 +956,7 @@
         "viewport": 820,
         "documentWidth": 820,
         "titleWidth": 140,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Search bookings, clients, equipment and pages",
@@ -988,6 +1010,7 @@
         "viewport": 820,
         "documentWidth": 820,
         "titleWidth": 140,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Show filters panel",
@@ -1030,6 +1053,7 @@
         "viewport": 820,
         "documentWidth": 820,
         "titleWidth": 140,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Show filters panel",
@@ -1072,6 +1096,7 @@
         "viewport": 820,
         "documentWidth": 820,
         "titleWidth": 140,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Show filters panel",
@@ -1125,6 +1150,7 @@
         "viewport": 820,
         "documentWidth": 820,
         "titleWidth": 140.859375,
+        "titleClipped": true,
         "controls": [
           {
             "name": "Search settings",
@@ -1178,6 +1204,7 @@
         "viewport": 820,
         "documentWidth": 820,
         "titleWidth": 140.859375,
+        "titleClipped": true,
         "controls": [
           {
             "name": "Search settings",
@@ -1231,6 +1258,7 @@
         "viewport": 820,
         "documentWidth": 820,
         "titleWidth": 145.953125,
+        "titleClipped": true,
         "controls": [
           {
             "name": "Search settings",
@@ -1283,6 +1311,7 @@
         "viewport": 820,
         "documentWidth": 820,
         "titleWidth": 140,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Search bookings, clients, equipment and pages",
@@ -1336,6 +1365,7 @@
         "viewport": 820,
         "documentWidth": 820,
         "titleWidth": 140,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Show filters panel",
@@ -1378,6 +1408,7 @@
         "viewport": 820,
         "documentWidth": 820,
         "titleWidth": 140,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Show filters panel",
@@ -1420,6 +1451,7 @@
         "viewport": 820,
         "documentWidth": 820,
         "titleWidth": 140,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Show filters panel",
@@ -1473,6 +1505,7 @@
         "viewport": 820,
         "documentWidth": 820,
         "titleWidth": 140.859375,
+        "titleClipped": true,
         "controls": [
           {
             "name": "Search settings",
@@ -1526,6 +1559,7 @@
         "viewport": 820,
         "documentWidth": 820,
         "titleWidth": 140.859375,
+        "titleClipped": true,
         "controls": [
           {
             "name": "Search settings",
@@ -1579,6 +1613,7 @@
         "viewport": 820,
         "documentWidth": 820,
         "titleWidth": 145.953125,
+        "titleClipped": true,
         "controls": [
           {
             "name": "Search settings",
@@ -1631,6 +1666,7 @@
         "viewport": 820,
         "documentWidth": 820,
         "titleWidth": 140,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Search bookings, clients, equipment and pages",
@@ -1684,6 +1720,7 @@
         "viewport": 820,
         "documentWidth": 820,
         "titleWidth": 140,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Show filters panel",
@@ -1726,6 +1763,7 @@
         "viewport": 820,
         "documentWidth": 820,
         "titleWidth": 140,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Show filters panel",
@@ -1768,6 +1806,7 @@
         "viewport": 820,
         "documentWidth": 820,
         "titleWidth": 140,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Show filters panel",
@@ -1821,6 +1860,7 @@
         "viewport": 820,
         "documentWidth": 820,
         "titleWidth": 140.859375,
+        "titleClipped": true,
         "controls": [
           {
             "name": "Search settings",
@@ -1874,6 +1914,7 @@
         "viewport": 820,
         "documentWidth": 820,
         "titleWidth": 140.859375,
+        "titleClipped": true,
         "controls": [
           {
             "name": "Search settings",
@@ -1927,6 +1968,7 @@
         "viewport": 820,
         "documentWidth": 820,
         "titleWidth": 145.953125,
+        "titleClipped": true,
         "controls": [
           {
             "name": "Search settings",
@@ -1979,6 +2021,7 @@
         "viewport": 1440,
         "documentWidth": 1440,
         "titleWidth": 180,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Finance info",
@@ -2042,6 +2085,7 @@
         "viewport": 1440,
         "documentWidth": 1440,
         "titleWidth": 196.921875,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Show filters panel",
@@ -2091,6 +2135,7 @@
         "viewport": 1440,
         "documentWidth": 1440,
         "titleWidth": 196.921875,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Show filters panel",
@@ -2140,6 +2185,7 @@
         "viewport": 1440,
         "documentWidth": 1440,
         "titleWidth": 203.390625,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Show filters panel",
@@ -2203,6 +2249,7 @@
         "viewport": 1440,
         "documentWidth": 1440,
         "titleWidth": 213.6875,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Settings info",
@@ -2266,6 +2313,7 @@
         "viewport": 1440,
         "documentWidth": 1440,
         "titleWidth": 213.6875,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Settings info",
@@ -2329,6 +2377,7 @@
         "viewport": 1440,
         "documentWidth": 1440,
         "titleWidth": 216.84375,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Settings info",
@@ -2385,6 +2434,7 @@
         "viewport": 1440,
         "documentWidth": 1440,
         "titleWidth": 180,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Finance info",
@@ -2448,6 +2498,7 @@
         "viewport": 1440,
         "documentWidth": 1440,
         "titleWidth": 196.921875,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Show filters panel",
@@ -2497,6 +2548,7 @@
         "viewport": 1440,
         "documentWidth": 1440,
         "titleWidth": 196.921875,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Show filters panel",
@@ -2546,6 +2598,7 @@
         "viewport": 1440,
         "documentWidth": 1440,
         "titleWidth": 203.390625,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Show filters panel",
@@ -2609,6 +2662,7 @@
         "viewport": 1440,
         "documentWidth": 1440,
         "titleWidth": 213.6875,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Settings info",
@@ -2672,6 +2726,7 @@
         "viewport": 1440,
         "documentWidth": 1440,
         "titleWidth": 213.6875,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Settings info",
@@ -2735,6 +2790,7 @@
         "viewport": 1440,
         "documentWidth": 1440,
         "titleWidth": 216.84375,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Settings info",
@@ -2791,6 +2847,7 @@
         "viewport": 1440,
         "documentWidth": 1440,
         "titleWidth": 180,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Finance info",
@@ -2854,6 +2911,7 @@
         "viewport": 1440,
         "documentWidth": 1440,
         "titleWidth": 196.921875,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Show filters panel",
@@ -2903,6 +2961,7 @@
         "viewport": 1440,
         "documentWidth": 1440,
         "titleWidth": 196.921875,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Show filters panel",
@@ -2952,6 +3011,7 @@
         "viewport": 1440,
         "documentWidth": 1440,
         "titleWidth": 203.390625,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Show filters panel",
@@ -3015,6 +3075,7 @@
         "viewport": 1440,
         "documentWidth": 1440,
         "titleWidth": 213.6875,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Settings info",
@@ -3078,6 +3139,7 @@
         "viewport": 1440,
         "documentWidth": 1440,
         "titleWidth": 213.6875,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Settings info",
@@ -3141,6 +3203,7 @@
         "viewport": 1440,
         "documentWidth": 1440,
         "titleWidth": 216.84375,
+        "titleClipped": false,
         "controls": [
           {
             "name": "Settings info",

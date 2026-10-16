@@ -523,7 +523,7 @@ export default function Settings() {
           <PageShell width="settings">
             <div className="settings-v2">
               <PageHeader
-                icon="settings"
+                icon={phone && !onPhoneList ? undefined : 'settings'}
                 title={phone && !onPhoneList ? (activeTab?.label ?? 'Settings') : 'Settings'}
                 onBack={phone && !onPhoneList ? toList : undefined}
                 backLabel="Back to settings"

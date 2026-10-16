@@ -192,6 +192,17 @@ function occurrences(column: string): number {
 const NEW_COLUMNS = ['pickup_location', 'return_location', 'quote_expires_at', 'created_at'] as const
 
 describe('BASE_COLUMNS — the select string', () => {
+  it('hides archives before pagination in the default rental list', async () => {
+    await listBookings({ excludeArchived: true, page: { index: 0, size: 10 }, withCount: true })
+    const archive = db.state.calls.findIndex(call => call[0] === 'is' && call[1] === 'archived_at')
+    const page = db.state.calls.findIndex(call => call[0] === 'range')
+    expect(archive).toBeGreaterThanOrEqual(0)
+    expect(page).toBeGreaterThan(archive)
+  })
+  it('searches retained archived history', async () => {
+    await listBookings({ excludeArchived: true, search: '#715' })
+    expect(db.state.calls.some(call => call[1] === 'archived_at')).toBe(false)
+  })
   it('reads the bookings table', async () => {
     await listBookings()
     expect(db.state.table).toBe('bookings')

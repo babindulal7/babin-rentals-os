@@ -654,10 +654,11 @@ export function RentalMoreActions({
                   ? rentalRevertTargets(booking).length > 0 : rentalCanArchive(booking)).map(action => (
                   <button key={action} type="button" role="menuitem"
                     disabled={typeof navigator !== 'undefined' && !navigator.onLine}
+                    title={typeof navigator !== 'undefined' && !navigator.onLine ? 'Connect to the internet to change rental lifecycle.' : undefined}
                     onClick={() => { closeMenu(); setLifecycleAction(action) }}
                     style={{ minHeight: 44, padding: '0 10px', textAlign: 'left', border: 0,
                       background: 'transparent', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Icon name={action === 'archive' ? 'archive' : 'arrow_left'} size={15} />
+                    <Icon name={action === 'archive' ? 'archive' : 'chevron_left'} size={15} />
                     {action === 'archive' ? 'Archive booking' : 'Revert stage…'}
                   </button>
                 ))}

@@ -1491,7 +1491,7 @@ function PreviewCard({
                               type="button"
                               onClick={() => onToggleSerials(key)}
                               aria-expanded={showSerials}
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, minHeight: 36, padding: '6px 0', border: 'none', background: 'transparent', color: 'var(--link)', fontSize: 'var(--t-th)', fontFamily: 'inherit', cursor: 'pointer' }}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, minHeight: 44, padding: '6px 0', border: 'none', background: 'transparent', color: 'var(--link)', fontSize: 'var(--t-th)', fontFamily: 'inherit', cursor: 'pointer' }}
                             >
                               <Icon name={showSerials ? 'chevron_up' : 'chevron_down'} size={10} />
                               {showSerials ? 'Hide assigned serials' : 'Show assigned serials'}

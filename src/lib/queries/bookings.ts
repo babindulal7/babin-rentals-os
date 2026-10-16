@@ -550,12 +550,12 @@ export async function listBookings(opts: BookingListOptions = {}): Promise<ListQ
     }
 
     let { count, error } = await countBookings(false)
-    if (missingArchiveColumn(error)) {
-      useArchiveFilter = false // Old databases have no archived bookings; keep read-only lists available.
-      ;({ count, error } = await countBookings(false))
-    }
-    if (missingProjectTypeColumn(error) && canUsePre0144Columns(filters)) {
-      ;({ count, error } = await countBookings(true))
+    let legacy = false
+    for (let retry = 0; error && retry < 2; retry++) {
+      if (useArchiveFilter && missingArchiveColumn(error)) useArchiveFilter = false
+      else if (!legacy && missingProjectTypeColumn(error) && canUsePre0144Columns(filters)) legacy = true
+      else break
+      ;({ count, error } = await countBookings(legacy))
     }
     if (error) throw new Error(`listBookings count failed: ${error.message}`)
     return { rows: [], total: count }
@@ -628,12 +628,12 @@ export async function listBookings(opts: BookingListOptions = {}): Promise<ListQ
   }
 
   let { data, error, count } = await fetchBookings(false)
-  if (missingArchiveColumn(error)) {
-    useArchiveFilter = false
-    ;({ data, error, count } = await fetchBookings(false))
-  }
-  if (missingProjectTypeColumn(error) && canUsePre0144Columns(filters)) {
-    ;({ data, error, count } = await fetchBookings(true))
+  let legacy = false
+  for (let retry = 0; error && retry < 2; retry++) {
+    if (useArchiveFilter && missingArchiveColumn(error)) useArchiveFilter = false
+    else if (!legacy && missingProjectTypeColumn(error) && canUsePre0144Columns(filters)) legacy = true
+    else break
+    ;({ data, error, count } = await fetchBookings(legacy))
   }
   if (error) throw new Error(`listBookings failed: ${error.message}`)
 

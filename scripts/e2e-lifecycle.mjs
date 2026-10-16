@@ -2272,6 +2272,60 @@ const STEPS = [
   },
 ]
 
+// O16-3: exercise the real audited writer, not a mocked browser response.
+STEPS.push({
+  id: 'L31', title: 'Pre-handover reversal and terminal archive are audited, idempotent and Manager-only (0167)', expect: 'green',
+  async run() {
+    const manage = (role, payload) => asJwt(role, async () => {
+      await q('savepoint lifecycle_write')
+      try { return await one('select manage_rental_lifecycle($1::jsonb)', [JSON.stringify(payload)]) }
+      catch (error) { await q('rollback to savepoint lifecycle_write'); throw error }
+      finally { await q('release savepoint lifecycle_write') }
+    })
+    const reject = (role, what, text, params, matcher) => asJwt(role, async () => {
+      await q('savepoint lifecycle_guard')
+      try { await refuses(what, text, params, matcher) }
+      finally { await q('rollback to savepoint lifecycle_guard'); await q('release savepoint lifecycle_guard') }
+    })
+    await undone(async () => {
+      await as('Warehouse', () => actionPackRental({ key: 'c', actor: 'Warehouse', units: [{ id: UNITS[0], serial: 'SN-C1' }] }))
+      const request = { booking_id: bookingIds.c, client_uuid: crypto.randomUUID(), action: 'revert', target_stage: 'Booked', reason: 'Client needs revised equipment' }
+      await reject('Coordinator', 'Coordinator cannot revert', 'select manage_rental_lifecycle($1::jsonb)', [JSON.stringify(request)], /Manager/i)
+      const holds = await one('select count(*) from inventory_reservations where booking_id=$1 and released_at is null', [bookingIds.c])
+      await manage('Manager', request)
+      assertEq(await stageOf('c'), 'Booked', 'Packed reverted to Booked')
+      assertEq(await one('select count(*) from inventory_reservations where booking_id=$1 and released_at is null', [bookingIds.c]), holds, 'Booked retains reservations')
+      await manage('Manager', request)
+      assertEq(Number(await one('select count(*) from booking_stage_transitions where client_uuid=$1', [request.client_uuid])), 1, 'retry creates no duplicate transition')
+      await reject('Manager', 'changed retry payload', 'select manage_rental_lifecycle($1::jsonb)', [JSON.stringify({ ...request, reason: 'Different correction reason' })], /another action/i)
+      await manage('Manager', { ...request, client_uuid: crypto.randomUUID(), target_stage: 'Quote' })
+      assertEq(await stageOf('c'), 'Quote', 'Booked reverted to Quote')
+      assertEq(Number(await one('select count(*) from inventory_reservations where booking_id=$1 and released_at is null', [bookingIds.c])), 0, 'Quote releases reservations')
+      const archive = { booking_id: bookingIds.c, client_uuid: crypto.randomUUID(), action: 'archive', reason: 'No longer needed in active rentals' }
+      await reject('Manager', 'cannot archive active booking', 'select manage_rental_lifecycle($1::jsonb)', [JSON.stringify(archive)], /Closed or Cancelled/i)
+      await rpcAs('Manager', 'select cancel_booking($1::jsonb)', [JSON.stringify({ booking_id: bookingIds.c, client_uuid: crypto.randomUUID(), reason: 'Client cancelled the revised booking' })])
+      await manage('Manager', archive)
+      await manage('Manager', archive)
+      assertEq(Number(await one('select count(*) from bookings where id=$1 and archived_at is not null', [bookingIds.c])), 1, 'archived booking retained')
+      assertEq(Number(await one('select count(*) from audit_events where client_uuid=$1', [archive.client_uuid])), 1, 'archive has one audit receipt')
+      await reject('Manager', 'direct archive edit', 'update bookings set archived_at=null, archived_by=null where id=$1', [bookingIds.c], /audited rental lifecycle|permission denied/i)
+    })
+    await undone(async () => {
+      await as('Warehouse', async () => {
+        await actionPackRental({ key: 'c', actor: 'Warehouse', units: [{ id: UNITS[0], serial: 'SN-C1' }] })
+        await actionHandoverRental({ key: 'c', actor: 'Warehouse', signerName: 'Lifecycle Client Signer' })
+      })
+      const request = { booking_id: bookingIds.c, client_uuid: crypto.randomUUID(), action: 'revert', target_stage: 'Booked', reason: 'Attempt after equipment handed over' }
+      await reject('Manager', 'cannot reverse custody', 'select manage_rental_lifecycle($1::jsonb)', [JSON.stringify(request)], /before handover/i)
+    })
+    await undone(async () => {
+      assertEq(await stageOf('a'), 'Closed', 'closed archive fixture')
+      await manage('Owner', { booking_id: bookingIds.a, client_uuid: crypto.randomUUID(), action: 'archive', reason: 'Completed rental retained in archive' })
+      assertEq(Number(await one('select count(*) from bookings where id=$1 and archived_at is not null', [bookingIds.a])), 1, 'Closed booking can be archived without deleting it')
+    })
+  },
+})
+
 /* ── Run ──────────────────────────────────────────────────────────────────── */
 
 await seed()
