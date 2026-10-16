@@ -614,7 +614,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                     color: 'var(--muted)',
                   }}
                 >
-                  Search bookings, clients, equipment…
+                  Search or scan…
                 </span>
                 {!isTablet && (
                   <kbd
@@ -624,6 +624,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                       fontWeight: 600,
                       color: 'var(--muted)',
                       flexShrink: 0,
+                      marginLeft: 'auto',
                       padding: '2px 8px',
                       borderRadius: 999,
                       background: 'var(--card)',

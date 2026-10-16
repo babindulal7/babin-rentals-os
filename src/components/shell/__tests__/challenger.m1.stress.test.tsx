@@ -144,7 +144,7 @@ describe('Empirical Challenger — Sidebar R1 Verification', () => {
 
       expect(container.querySelectorAll('[data-nav-group]')).toHaveLength(1)
       const labels = [...container.querySelectorAll('nav[aria-label="Main"] a')].map((a) => a.textContent?.trim())
-      expect(labels).toEqual(['New Rental', 'Today', 'Operation', 'Rentals', 'Calendar', 'Crew Assist', 'Inventory', 'Clients', 'Finance', 'Tools', 'Settings'])
+      expect(labels).toEqual(['New Rental', 'Today', 'Operations', 'Rentals', 'Calendar', 'Crew Assist', 'Inventory', 'Clients', 'Finance', 'Tools', 'Settings'])
     })
 
     it('isolates money surfaces for Warehouse role (Law 6) while cleanly preserving non-money groups and items', async () => {

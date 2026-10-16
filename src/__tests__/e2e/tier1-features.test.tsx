@@ -259,7 +259,7 @@ describe('Tier 1: Feature Coverage (Happy Path & Isolations)', { timeout: 90000 
       // Command palette trigger button with Ctrl+K / ⌘K
       const searchBtn = container.querySelector('button[aria-label="Search bookings, clients, equipment and pages"]')
       expect(searchBtn).not.toBeNull()
-      expect(searchBtn?.textContent).toContain('Search bookings, clients, equipment…')
+      expect(searchBtn?.textContent).toContain('Search or scan…')
       expect(searchBtn?.textContent).toContain('Ctrl+K / ⌘K')
 
       // User profile trigger representation
@@ -283,7 +283,7 @@ describe('Tier 1: Feature Coverage (Happy Path & Isolations)', { timeout: 90000 
       // Core operational destinations
       expect(container.textContent).toContain('Today')
       expect(container.textContent).toContain('Rentals')
-      expect(container.textContent).toContain('Operation')
+      expect(container.textContent).toContain('Operations')
       expect(container.textContent).toContain('Inventory')
       expect(container.textContent).toContain('Clients')
       expect(container.textContent).toContain('Finance')
@@ -447,7 +447,7 @@ describe('Tier 1: Feature Coverage (Happy Path & Isolations)', { timeout: 90000 
       const { default: OperationsQueues } = await import('../../modules/operations/OperationsQueues')
       await mountComponent(<OperationsQueues />, ['/operations'])
 
-      expect(container.textContent).toContain('Operation')
+      expect(container.textContent).toContain('Operations')
       expect(container.textContent).toContain('Pack')
       expect(container.textContent).toMatch(/Handover|Pickup/)
       expect(container.textContent).toContain('Return')

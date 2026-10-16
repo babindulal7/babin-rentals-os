@@ -90,7 +90,7 @@ describe('Sidebar — Law 13, width decides', () => {
     expect(container.querySelectorAll('nav[aria-label="Main"] a')).toHaveLength(11)
     expect(container.textContent).toContain('Today')
     expect(container.textContent).toContain('Rentals')
-    expect(container.textContent).toContain('Operation')
+    expect(container.textContent).toContain('Operations')
     expect(container.textContent).toContain('Tools')
   })
 
@@ -110,7 +110,7 @@ describe('Sidebar — Law 13, width decides', () => {
     await mount(<Sidebar active="/dashboard" />)
     const labels = [...container.querySelectorAll('nav[aria-label="Main"] a')].map((a) => a.getAttribute('aria-label'))
     expect(labels).toContain('Rentals')
-    expect(labels).toContain('Operation')
+    expect(labels).toContain('Operations')
     expect(labels.every((l) => l !== null && l.length > 0)).toBe(true)
   })
 
@@ -162,7 +162,7 @@ describe('Sidebar — exactly one active row', () => {
 
   it('/operations?queue=packing lights Operations alone', async () => {
     await mount(<Sidebar active="/operations?queue=packing" />)
-    expect(current()).toEqual(['Operation'])
+    expect(current()).toEqual(['Operations'])
   })
 })
 

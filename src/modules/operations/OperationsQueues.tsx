@@ -1054,45 +1054,81 @@ export default function OperationsQueues() {
           >
             {!tabular && (
               <div style={{ padding: 'var(--sp-sm)', display: 'grid', gap: 'var(--sp-sm)' }}>
-                {pagedJobs.map((job) => (
-                  <article
-                    key={job.id}
-                    style={{
-                      ...cardStyle,
-                      padding: '12px 14px',
-                      display: 'grid',
-                      gap: 8,
-                      borderLeft: job.isPastDue ? '3px solid var(--danger)' : undefined,
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                      <Link to={`/rentals/${job.bookingNo}`} className="identifier" style={{ color: 'var(--link)', fontWeight: 700, textDecoration: 'none' }}>
-                        {job.bookingNo}
-                      </Link>
-                      <StageBadge stage={job.stage} />
-                    </div>
-                    <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text)' }}>
-                      <span style={{ fontWeight: 600 }}>{job.clientName}</span>
-                      {job.project && <span style={{ color: 'var(--text2)' }}> · {job.project}</span>}
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
-                      <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-                        <span className="figure" style={{ fontWeight: job.isPastDue ? 700 : 500, color: job.isPastDue ? 'var(--danger-text)' : 'inherit' }}>
-                          {formatDueAt(job.dueAtAd)}
+                {pagedJobs.map((job) => {
+                  const jobBtn = getJobButtonProps(job.job)
+                  return (
+                    <article
+                      key={job.id}
+                      style={{
+                        ...cardStyle,
+                        padding: '12px 14px',
+                        display: 'grid',
+                        gap: 8,
+                        borderLeft: job.isPastDue ? '4px solid var(--danger, #ef4444)' : undefined,
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <Link
+                          to={`/rentals/${job.bookingNo}`}
+                          className="identifier"
+                          style={{
+                            color: 'var(--link)',
+                            fontWeight: 700,
+                            textDecoration: 'none',
+                            fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+                          }}
+                        >
+                          {formatOperationBookingId(job.bookingNo)}
+                        </Link>
+                        <StageBadge stage={job.stage} />
+                      </div>
+                      <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text)' }}>
+                        <span style={{ fontWeight: 600 }}>{job.clientName}</span>
+                        {job.project ? (
+                          <span style={{ color: 'var(--text2)' }}> · {job.project}</span>
+                        ) : (
+                          <span style={{ color: 'var(--muted)', fontStyle: 'italic' }}> · Direct Rental</span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
+                        <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+                          <span className="figure" style={{ fontWeight: job.isPastDue ? 700 : 500, color: job.isPastDue ? 'var(--danger-text)' : 'inherit' }}>
+                            {formatDueAt(job.dueAtAd)}
+                          </span>
+                          {' · '}
+                          <span className="figure">{job.itemCount}</span> items
+                          <span
+                            style={{
+                              marginLeft: 6,
+                              fontSize: '11px',
+                              padding: '1px 6px',
+                              borderRadius: 4,
+                              background: 'var(--surface2, rgba(0,0,0,0.04))',
+                              color: 'var(--text2)',
+                              fontWeight: 500,
+                            }}
+                            title={`${job.itemCount} items in this ${job.job} queue`}
+                          >
+                            {job.itemCount >= 10 ? 'Heavy pull' : job.itemCount >= 4 ? 'Standard kit' : 'Quick pull'}
+                          </span>
                         </span>
-                        {' · '}
-                        <span className="figure">{job.itemCount}</span> items
-                      </span>
-                      <Button size="sm" variant="secondary" onClick={() => navigate(jobRoute(job.bookingNo, job.job))}>
-                        {job.job}
-                      </Button>
-                    </div>
-                  </article>
-                ))}
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          style={jobBtn.style}
+                          onClick={() => navigate(jobRoute(job.bookingNo, job.job))}
+                        >
+                          <Icon name={jobBtn.icon} size={15} />
+                          {job.job}
+                        </Button>
+                      </div>
+                    </article>
+                  )
+                })}
               </div>
             )}
             {tabular && (
-              <DataTableShell ariaLabel="Operations queues" data-table-scroll style={{ overflowX: 'auto' }}>
+              <DataTableShell ariaLabel="Operations queues" data-table-scroll style={{ overflowX: 'auto', overflow: 'hidden' }}>
                 <table className="operations-v2__table">
                   <thead>
                     <tr>
@@ -1110,79 +1146,118 @@ export default function OperationsQueues() {
                     </tr>
                   </thead>
                   <tbody>
-                    {pagedJobs.map((job) => (
-                      <tr
-                        key={job.id}
-                        className={`operations-v2__row${dockOpen && dock?.bookingNo === job.bookingNo ? ' operations-v2__row--active' : ''}${viewport === 'desktop' && cursorNo === job.bookingNo ? ' operations-v2__row--cursor' : ''}`}
-                        data-booking-no={job.bookingNo}
-                        aria-selected={dockOpen && dock?.bookingNo === job.bookingNo ? true : undefined}
-                        style={{ borderLeft: job.isPastDue ? '2px solid var(--danger)' : '2px solid transparent' }}
-                        /* A click anywhere on the row's blank space opens the booking (8 Oct 2026,
-                           RULINGS-2026-10-08.md). Links, buttons and the checkbox keep their own
-                           action, a text selection is left alone, and Ctrl/⌘-click opens a new tab.
-                           Keyboard users have the booking-number link, so the row adds no tab stop. */
-                        onClick={(event) => {
-                          const target = event.target as HTMLElement
-                          if (target.closest('a, button, input, label, select, textarea')) return
-                          if (window.getSelection()?.toString()) return
-                          const url = `/rentals/${job.bookingNo}`
-                          if (event.metaKey || event.ctrlKey) window.open(url, '_blank', 'noopener')
-                          else routeNavigate(url)
-                        }}
-                      >
-                        <td style={{ ...td, width: 44 }}>
-                          <input
-                            type="checkbox"
-                            checked={selectedBookingNos.has(job.bookingNo)}
-                            onChange={() => toggleBooking(job.bookingNo)}
-                            aria-label={`Select ${job.bookingNo}`}
-                          />
-                        </td>
-                        <td style={td}>
-                          <Link to={`/rentals/${job.bookingNo}`} className="identifier" style={{ color: 'var(--link)', fontWeight: 700, textDecoration: 'none' }}>
-                            {job.bookingNo}
-                          </Link>
-                        </td>
-                        <td style={td}>
-                          <Link to={`/clients/${job.clientId}`} style={{ color: 'inherit', textDecoration: 'none', fontWeight: 600 }}>
-                            {job.clientName}
-                          </Link>
-                          {job.project && (
-                            <div style={{ fontSize: '11px', color: 'var(--text2)', marginTop: 2 }}>
-                              {job.project}
+                    {pagedJobs.map((job) => {
+                      const jobBtn = getJobButtonProps(job.job)
+                      return (
+                        <tr
+                          key={job.id}
+                          className={`operations-v2__row${dockOpen && dock?.bookingNo === job.bookingNo ? ' operations-v2__row--active' : ''}${viewport === 'desktop' && cursorNo === job.bookingNo ? ' operations-v2__row--cursor' : ''}`}
+                          data-booking-no={job.bookingNo}
+                          aria-selected={dockOpen && dock?.bookingNo === job.bookingNo ? true : undefined}
+                          /* A click anywhere on the row's blank space opens the booking (8 Oct 2026,
+                             RULINGS-2026-10-08.md). Links, buttons and the checkbox keep their own
+                             action, a text selection is left alone, and Ctrl/⌘-click opens a new tab.
+                             Keyboard users have the booking-number link, so the row adds no tab stop. */
+                          onClick={(event) => {
+                            const target = event.target as HTMLElement
+                            if (target.closest('a, button, input, label, select, textarea')) return
+                            if (window.getSelection()?.toString()) return
+                            const url = `/rentals/${job.bookingNo}`
+                            if (event.metaKey || event.ctrlKey) window.open(url, '_blank', 'noopener')
+                            else routeNavigate(url)
+                          }}
+                        >
+                          <td style={{ ...td, width: 44, borderLeft: job.isPastDue ? '4px solid var(--danger, #ef4444)' : '4px solid transparent', paddingLeft: 8 }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedBookingNos.has(job.bookingNo)}
+                              onChange={() => toggleBooking(job.bookingNo)}
+                              aria-label={`Select ${job.bookingNo}`}
+                            />
+                          </td>
+                          <td style={td}>
+                            <Link
+                              to={`/rentals/${job.bookingNo}`}
+                              className="identifier"
+                              style={{
+                                color: 'var(--link)',
+                                fontWeight: 700,
+                                textDecoration: 'none',
+                                fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+                              }}
+                            >
+                              {formatOperationBookingId(job.bookingNo)}
+                            </Link>
+                          </td>
+                          <td style={td}>
+                            <Link to={`/clients/${job.clientId}`} style={{ color: 'inherit', textDecoration: 'none', fontWeight: 600 }}>
+                              {job.clientName}
+                            </Link>
+                            <div
+                              style={{
+                                fontSize: '11px',
+                                color: job.project ? 'var(--text2)' : 'var(--muted)',
+                                fontStyle: job.project ? 'normal' : 'italic',
+                                marginTop: 2,
+                              }}
+                            >
+                              {job.project || 'Direct Rental'}
                             </div>
-                          )}
-                        </td>
-                        <td className="figure" style={{ ...td, fontWeight: 600 }}>{job.itemCount}</td>
-                        <td style={td}>
-                          <StageBadge stage={job.stage} />
-                        </td>
-                        <td className="figure" style={{ ...td, fontWeight: job.isPastDue ? 700 : 500, color: job.isPastDue ? 'var(--danger-text)' : 'var(--text)' }}>
-                          {formatDueAt(job.dueAtAd)}
-                        </td>
-                        <td style={td}>
-                          <Button size="sm" variant="secondary" onClick={() => navigate(jobRoute(job.bookingNo, job.job))}>
-                            {job.job}
-                          </Button>
-                        </td>
-                        <td style={{ ...td, width: 44 }}>
-                          <Link
-                            to={`/rentals/${job.bookingNo}`}
-                            aria-label={`More for booking ${job.bookingNo}`}
-                            style={{
-                              color: 'var(--muted)',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              minWidth: 44,
-                              minHeight: 44,
-                            }}
-                          >
-                            <Icon name="chevron_right" size={18} />
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td style={td}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span className="figure" style={{ fontWeight: 600 }}>{job.itemCount} items</span>
+                              <span
+                                style={{
+                                  fontSize: '11px',
+                                  padding: '1px 6px',
+                                  borderRadius: 4,
+                                  background: 'var(--surface2, rgba(0,0,0,0.04))',
+                                  color: 'var(--text2)',
+                                  fontWeight: 500,
+                                }}
+                                title={`${job.itemCount} items in this ${job.job} queue`}
+                              >
+                                {job.itemCount >= 10 ? 'Heavy pull' : job.itemCount >= 4 ? 'Standard kit' : 'Quick pull'}
+                              </span>
+                            </div>
+                          </td>
+                          <td style={td}>
+                            <StageBadge stage={job.stage} />
+                          </td>
+                          <td className="figure" style={{ ...td, fontWeight: job.isPastDue ? 700 : 500, color: job.isPastDue ? 'var(--danger-text)' : 'var(--text)' }}>
+                            {formatDueAt(job.dueAtAd)}
+                          </td>
+                          <td style={td}>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              style={jobBtn.style}
+                              onClick={() => navigate(jobRoute(job.bookingNo, job.job))}
+                            >
+                              <Icon name={jobBtn.icon} size={15} />
+                              {job.job}
+                            </Button>
+                          </td>
+                          <td style={{ ...td, width: 44 }}>
+                            <Link
+                              to={`/rentals/${job.bookingNo}`}
+                              aria-label={`More for booking ${job.bookingNo}`}
+                              style={{
+                                color: 'var(--muted)',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: 44,
+                                minHeight: 44,
+                              }}
+                            >
+                              <Icon name="chevron_right" size={18} />
+                            </Link>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
                 {jobs.length > 0 && visibleJobs.length === 0 && (
