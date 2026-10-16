@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, useRef, useCallback, type CSSProperties }
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import Icon, { type IconName } from '../../components/ui/Icon'
 import { Card, PageHeader, PageActions, Button, FooterNote, cardStyle } from '../../components/ui/Page'
-import { formatBookingNo } from '../../lib/format'
 import { SearchInput } from '../../components/ui'
 import { PageShell } from '../../components/ui/PageShell'
 import { PageBody } from '../../components/ui/PageBody'

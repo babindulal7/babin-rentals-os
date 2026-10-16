@@ -21,6 +21,7 @@ import { fetchLastProjectType } from '../../lib/queries/bookings'
 import { formatMoney, rupees } from '../../lib/money'
 import type { Paisa } from '../../lib/money'
 import type { RentalDraftData } from '../../actions/rentals/saveDraft'
+import { calculateDraftTotal } from '../../lib/rentalDraftPricing'
 import type { InvStatus } from '../../lib/queries/inventory'
 import { equipmentConflicts, type ConflictCheckLine } from './booking/itemCatalogue'
 import type { CrewRole } from '../../lib/queries/crew'
@@ -129,8 +130,42 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
   // Essential sections stay open; optional logistics can collapse without remounting fields.
   // RULINGS-2026-10-07: essentials and pricing open, optional logistics collapsed.
   const [open, setOpen] = useState<boolean[]>([true, true, true, false, false, true])
-  const toggle = (i: number) =>
-    setOpen((p) => p.map((v, j) => (j === i ? !v : v)))
+  const toggle = useCallback((idx: number) => setOpen((prev) => prev.map((v, i) => (i === idx ? !v : v))), [])
+  const [activeSection, setActiveSection] = useState<'client-dates' | 'equipment' | 'crew-delivery' | 'pricing' | 'review'>('client-dates')
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') return
+    const sectionMap: Record<string, 'client-dates' | 'equipment' | 'crew-delivery' | 'pricing' | 'review'> = {
+      'section-0': 'client-dates',
+      'section-1': 'client-dates',
+      'section-2': 'equipment',
+      'section-3': 'crew-delivery',
+      'section-5': 'pricing',
+      'rail-booking-summary': 'review',
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting)
+        if (visible.length > 0) {
+          const topVisible = visible.reduce((prev, curr) => (curr.intersectionRatio > prev.intersectionRatio ? curr : prev))
+          const target = sectionMap[topVisible.target.id]
+          if (target) setActiveSection(target)
+        }
+      },
+      {
+        rootMargin: '-10% 0px -45% 0px',
+        threshold: [0.1, 0.25, 0.5],
+      }
+    )
+
+    Object.keys(sectionMap).forEach((id) => {
+      const el = document.getElementById(id)
+      if (el) observer.observe(el)
+    })
+
+    return () => observer.disconnect()
+  }, [])
 
   const workflowRef = useRef<HTMLDivElement>(null)
 
@@ -753,15 +788,42 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
   )
 
 
+  const triggerShake = (element: HTMLElement | null) => {
+    if (!element) return
+    element.classList.remove('validation-shake')
+    void element.offsetWidth
+    element.classList.add('validation-shake')
+    setTimeout(() => {
+      element.classList.remove('validation-shake')
+    }, 500)
+  }
+
   // Header and fallback action bars invoke the same existing save/confirm guards.
   // Moving controls does not change when a booking can be confirmed or saved.
   const handlePrimaryAction = () => {
     if (editBookingId) { void saveQuote(); return }
     setValidationAttempted(true)
     if (!confirmBlocked) { void confirmBooking(); return }
-    const firstAction = blockingNotices[0]?.action
-    if (firstAction) runNoticeAction(firstAction)
-    else jumpToSection('rail-booking-summary')
+    const firstNotice = blockingNotices[0]
+    if (firstNotice?.action) {
+      runNoticeAction(firstNotice.action)
+      setTimeout(() => {
+        let targetId = 'section-0'
+        if (firstNotice.action === 'Open Equipment') targetId = 'section-2'
+        else if (firstNotice.action === 'Open Dates') targetId = 'section-1'
+        else if (firstNotice.action === 'Open Crew') targetId = 'section-3'
+        else if (firstNotice.action === 'Open Pricing' || firstNotice.action === 'Fix Discount') targetId = 'section-5'
+        else if (firstNotice.action === 'Receive Payment' || firstNotice.action === 'Receive Deposit') targetId = 'rail-booking-summary'
+        const el = document.getElementById(targetId)
+        triggerShake(el)
+      }, 100)
+    } else {
+      jumpToSection('rail-booking-summary')
+      setTimeout(() => {
+        const el = document.getElementById('rail-booking-summary')
+        triggerShake(el)
+      }, 100)
+    }
   }
   const handleCancelAction = () => {
     if (editBookingId) {
@@ -834,10 +896,14 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
           <WorkspaceHeaderRightActions>
             <Button
               variant="primary"
-              className="new-rental-header-primary"
+              className={`new-rental-header-primary ${confirmBlocked && !editBookingId ? 'new-rental-header-primary--incomplete' : ''}`}
               disabled={actionBusy || Boolean(editBookingId && !quoteDirty)}
               aria-label={actionBusy ? 'Saving booking' : actionLabel}
-              title={actionLabel}
+              title={
+                confirmBlocked && !editBookingId
+                  ? `Cannot confirm yet:\n• ${blockingNotices.map((n) => n.text).join('\n• ')}`
+                  : actionLabel
+              }
               onClick={handlePrimaryAction}
             >
               <Icon name="check" size={17} />
@@ -848,35 +914,104 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
       )}
       {/* RULING 2026-10-08: direct section access on one continuous form. */}
       <nav className="new-rental-jumpbar" aria-label="Rental sections">
-        <button type="button" onClick={() => jumpToSection('section-0')}><Icon name="user" size={17} />Client &amp; dates</button>
-        <button type="button" onClick={() => jumpToSection('section-2')}><Icon name="box" size={17} />Equipment</button>
-        <button type="button" onClick={() => { setOpen((prev) => prev.map((v, i) => i === 3 || i === 4 || v)); jumpToSection('section-3') }}><Icon name="truck" size={17} />Crew &amp; delivery</button>
-        {canBookingMoney && <button type="button" onClick={() => jumpToSection('section-5')}><Icon name="receipt" size={17} />Pricing</button>}
-        <button type="button" onClick={() => jumpToSection('rail-booking-summary')} aria-label={`Review booking${blockingNotices.length ? `, ${blockingNotices.length} outstanding checks` : ''}`}><Icon name="check" size={17} />Review{blockingNotices.length > 0 && !editBookingId ? ` (${blockingNotices.length})` : ''}</button>
+        <button
+          type="button"
+          className={activeSection === 'client-dates' ? 'is-active' : ''}
+          data-active={activeSection === 'client-dates'}
+          onClick={() => jumpToSection('section-0')}
+        >
+          <Icon name="user" size={17} />Client &amp; dates
+        </button>
+        <button
+          type="button"
+          className={activeSection === 'equipment' ? 'is-active' : ''}
+          data-active={activeSection === 'equipment'}
+          onClick={() => jumpToSection('section-2')}
+        >
+          <Icon name="box" size={17} />Equipment
+        </button>
+        <button
+          type="button"
+          className={activeSection === 'crew-delivery' ? 'is-active' : ''}
+          data-active={activeSection === 'crew-delivery'}
+          onClick={() => { setOpen((prev) => prev.map((v, i) => i === 3 || i === 4 || v)); jumpToSection('section-3') }}
+        >
+          <Icon name="truck" size={17} />Crew &amp; delivery
+        </button>
+        {canBookingMoney && (
+          <button
+            type="button"
+            className={activeSection === 'pricing' ? 'is-active' : ''}
+            data-active={activeSection === 'pricing'}
+            onClick={() => jumpToSection('section-5')}
+          >
+            <Icon name="receipt" size={17} />Pricing
+          </button>
+        )}
+        <button
+          type="button"
+          className={activeSection === 'review' ? 'is-active' : ''}
+          data-active={activeSection === 'review'}
+          onClick={() => jumpToSection('rail-booking-summary')}
+          aria-label={`Review booking${blockingNotices.length ? `, ${blockingNotices.length} outstanding checks` : ''}`}
+        >
+          {blockingNotices.length > 0 && !editBookingId ? (
+            <>
+              <Icon name="alert_circle" size={17} />
+              <span>Review</span>
+              <span className="new-rental-jumpbar__pill new-rental-jumpbar__pill--warning">
+                {blockingNotices.length} remaining
+              </span>
+            </>
+          ) : (
+            <>
+              <Icon name="check" size={17} />
+              <span>Review</span>
+              <span className="new-rental-jumpbar__pill new-rental-jumpbar__pill--ready">
+                Ready
+              </span>
+            </>
+          )}
+        </button>
         <span className="new-rental-jumpbar__meta" role="status">
           {actionBusy ? 'Saving…' : saveState === 'error' ? 'Not saved' : draftBookingNo ? `Draft #${draftBookingNo}${draftHasUnsavedChanges ? ' · Unsaved changes' : ' · Saved'}` : '* Required to confirm'}
         </span>
       </nav>
-      {localDraftOffer && !editBookingId && (
-        <div
-          role="region"
-          aria-label="Unsaved booking found on this device"
-          className="new-rental-draft-notice"
-        >
-          <span>
-            An unsaved booking from {formatAd(new Date(localDraftOffer.savedAt))} was kept on this device
-            {localDraftOffer.data.clientName ? ` for ${localDraftOffer.data.clientName}` : ''}.
-          </span>
-          <div className="new-rental-draft-notice__actions">
-            <Button variant="primary" size="sm" onClick={restoreLocalDraft}>
-              Restore it
-            </Button>
-            <Button variant="secondary" size="sm" onClick={discardLocalDraft}>
-              Discard
-            </Button>
+      {localDraftOffer && !editBookingId && (() => {
+        const d = localDraftOffer.data
+        const clientName = d.clientName || clientPool.find((c) => c.id === d.selectedClientId)?.name || 'Unnamed client'
+        const itemCount = (d.lines ?? []).reduce((acc, l) => acc + (l.qty || 1), 0)
+        const totalPaisa = calculateDraftTotal(d)
+        const metaText = `${clientName} · ${itemCount} ${itemCount === 1 ? 'item' : 'items'} · ${formatMoney(totalPaisa)}`
+
+        return (
+          <div
+            role="region"
+            aria-label="Unsaved booking found on this device"
+            className="new-rental-draft-notice"
+          >
+            <div className="new-rental-draft-notice__content">
+              <Icon name="timer" size={16} style={{ flexShrink: 0 }} />
+              <span>
+                Unsaved draft from {formatAd(new Date(localDraftOffer.savedAt))} was kept on this device ({metaText}).
+              </span>
+            </div>
+            <div className="new-rental-draft-notice__actions">
+              <Button
+                variant="outline"
+                size="sm"
+                className="new-rental-draft-notice__restore-btn"
+                onClick={restoreLocalDraft}
+              >
+                Restore it
+              </Button>
+              <Button variant="ghost" size="sm" onClick={discardLocalDraft}>
+                Discard
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
       {productDepositError && canBookingMoney && (
         <p role="status" style={inlineErrorStyle}>
           <Icon name="error" size={14} style={{ flexShrink: 0, marginTop: 1 }} />
@@ -939,7 +1074,17 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
         </div>
       )}
 
-      <div className="new-rental-canvas new-rental-setup-canvas">
+      <div
+        className="new-rental-workspace"
+        ref={workflowRef}
+        style={{
+          display: 'grid',
+          gridTemplateColumns: isDesktop ? 'minmax(0, 68fr) minmax(320px, 32fr)' : 'minmax(0, 1fr)',
+          gap: 'var(--sp-md)',
+          alignItems: 'start',
+        }}
+      >
+        <div className="new-rental-canvas" style={{ minWidth: 0 }}>
           <div className="new-rental-stage new-rental-stage--setup">
             <BookingClientSection
               open={open[0] ?? true}
@@ -1006,19 +1151,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
 
 
         </div>
-      </div>
 
-      <div
-        className="new-rental-workspace"
-        ref={workflowRef}
-        style={{
-          display: 'grid',
-          gridTemplateColumns: isDesktop ? 'minmax(0,1fr) 320px' : 'minmax(0,1fr)',
-          gap: 'var(--sp-md)',
-          alignItems: 'start',
-        }}
-      >
-        <div className="new-rental-canvas" style={{ minWidth: 0 }}>
         <div className="new-rental-stage new-rental-stage--equipment">
           <BookingEquipmentSection
             open={open[2] ?? true}
@@ -1131,7 +1264,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
             reflows after pricing, with all notices still reachable. */}
         {isDesktop && (
           <div className="new-rental-summary-rail">
-            <Rail width={300}>
+            <Rail width={undefined}>
               {bookingSummaryCard}
             </Rail>
           </div>

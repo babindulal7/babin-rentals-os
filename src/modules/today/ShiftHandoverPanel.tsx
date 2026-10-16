@@ -130,7 +130,7 @@ export default function ShiftHandoverPanel() {
     const trimmed = noteInput.trim()
     if (!trimmed) return
     addInternalNote({
-      author: user?.fullName || 'Shift Crew',
+      author: user?.name || 'Shift Crew',
       authorRole: user?.role || 'Operations Staff',
       text: trimmed,
       category: 'Shift Handover',
@@ -300,7 +300,7 @@ export default function ShiftHandoverPanel() {
                       className="ui-button ui-button--sm ui-button--ghost press"
                       onClick={(e) => {
                         e.stopPropagation()
-                        toggleResolveNote(note.id, user?.fullName)
+                        toggleResolveNote(note.id, user?.name)
                         setInternalNotes(listInternalNotes())
                         showSuccessToast('Note marked resolved')
                       }}

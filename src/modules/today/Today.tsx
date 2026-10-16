@@ -945,3 +945,7 @@ export default function Today() {
             View Cases & QC <Icon name="arrow_right" size={14} />
           </Link>
         </div>
+      </div>
+    </PageShell>
+  )
+}

@@ -67,7 +67,7 @@ export function RentalPricingSection({
   open,
   onToggle,
   pricing,
-  canCrewMoney,
+  canCrewMoney: _canCrewMoney,
   vatOn,
   setVatOn,
   vatRatePercent,
