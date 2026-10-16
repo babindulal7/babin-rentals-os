@@ -1,5 +1,46 @@
 # Progress Log
 
+## 2026-10-17 — Operations View Light/Glass mode audit remediation & floor workflow refinement
+
+**Did**
+- Resolved Operations view Light/Glass mode audit findings:
+  1. Active Sidebar Item contrast: Forced `color: var(--select-fg, #ffffff)` on active navigation pill regardless of theme mode, ensuring clear contrast on the dark navy active pill.
+  2. Naming consistency: Standardized sidebar navigation label and route metadata from `Operation` to `Operations` across `src/data/nav.ts`, `src/App.tsx`, and all associated tests.
+  3. Theme Switcher clarity: Decoupled theme selection into a 2-way base segmented control (`Dark` / `Light`) plus an independent `Glass` modifier toggle with distinct active styling.
+  4. Stage Pill Icons: Fixed invisible white-on-white queue chip icons by dynamically assigning chip icon color to `active ? 'var(--select-fg)' : 'var(--text2)'`, and enriched queue chip vocabulary with distinct icons (`package`, `truck`, `return_arrow`, `tool`, `briefcase`).
+  5. Table Overdue Border Clipping: Replaced row-level `border-left` with an inset `borderLeft: 4px solid var(--danger)` on the first `<td>` and added container `overflow: hidden`, preventing corner clipping.
+  6. Search deduplication & state clarity: Removed duplicate page-header search to restore top bar Global Command Search (`⌘K`), relabeled in-page filter placeholder to `Filter current queue… (press /)`, added `All Active` queue chip, and surfaced an `Overdue (${count})` badge alongside dynamic `Today & Overdue` date filtering.
+  7. Floor scannability & row alignment: Formatted booking numbers in `font-mono` with `#0007` padding for raw digits, added muted italic fallback (`Direct Rental`) for bookings without project titles, standardized Action buttons with minimum 104px width and semantic tints, and added pull scale badges (`Heavy pull`, `Standard kit`, `Quick pull`) under items.
+
+**Ruled**
+- Booking references preserve existing alphanumeric formats (`B-715`) while normalizing bare integer references to zero-padded identifiers (`#0007`).
+- Operations search preserves `aria-label="Search ID, client, project"` for screen readers and tests while presenting `placeholder="Filter current queue… (press /)"` in the UI to distinguish it from global command search.
+
+**Verified**
+- TypeScript typecheck (`tsc --noEmit`): EXIT 0.
+- Targeted Vitest: 14 test files / 207 tests passed (including `operationRoutes.test.tsx` 38/38, `nav.test.ts` 37/37, `shell.test.tsx` 32/32, `tier1-features.test.tsx` 14/14, `challenger.m1.stress.test.tsx` 40/40).
+- Color Contrast (`npm run check:contrast`): 82/82 tests pass, 0 fail (WCAG AA compliant across Light, Dark, High-contrast, and Glass modes).
+- Production build (`npm run build`): Vite 5 production build succeeded with PWA SW generation (289 precached assets).
+- Progress lint (`npm run lint:progress`): Passed cleanly.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 166 files · check:pglite 166/166 applied, 0 failed (recorded 2026-10-16T19:51:57.064Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T19:53:26.795Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply of 0157–0168 by Babin after `BACKUP_PROTOCOL.md`; refresh `docs/live/schema_migrations_<today>.txt`, re-run `db:plan`. Staging JWT/PostgREST needs an isolated project + fixtures.
+- Suite cache still reads the older 4646 count; the fresh full run supersedes it on the next counter refresh. Full `lint` rerun on a faster machine.
+- Physical iPad/Safari + native zoom; app-wide status/role matrix; open product calls (§4.64/§4.65, D-2); border-merge decision.
+
 ## 2026-10-17 — G3 wiring + full verification (quote totals end-to-end)
 
 **Did**
