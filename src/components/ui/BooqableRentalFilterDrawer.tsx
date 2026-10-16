@@ -38,6 +38,14 @@ export interface BooqableRentalFilterDrawerProps {
   money?: boolean
   /** Live stage counts */
   stageCounts?: Record<string, number | null>
+  /**
+   * ADOPTIONS item 9 (RAIL §1): Export is rail furniture, pinned at the
+   * bottom — never in the header. The drawer owns "what slice am I looking
+   * at", so the export of that slice lives with it. The handler stays the
+   * page's own audited path (columns, money gate, export audit); this is
+   * placement, not a second CSV writer. Absent = no export affordance.
+   */
+  onExport?: () => void
   /** Portal to document.body (defaults to true except in test runs) */
   portal?: boolean | undefined
 }
@@ -79,6 +87,7 @@ export function BooqableRentalFilterDrawer({
   onToggleSub,
   money = false,
   stageCounts = {},
+  onExport,
   portal,
 }: BooqableRentalFilterDrawerProps) {
   const generatedDrawerId = useId()
@@ -375,6 +384,16 @@ export function BooqableRentalFilterDrawer({
             </div>
           </label>
         </FilterSection>
+
+        {/* Pinned export — rail furniture (RAIL §1). Rides the page's own
+            handler, so the money gate and audit travel with it. */}
+        {onExport && (
+          <div style={{ paddingTop: 'var(--sp-xs)' }}>
+            <Button icon="download" onClick={onExport}>
+              Export CSV
+            </Button>
+          </div>
+        )}
 
         {/* Save as new filter */}
         <div style={{ paddingTop: 'var(--sp-xs)' }}>

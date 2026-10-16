@@ -26,7 +26,8 @@ describe('rental view counts', () => {
     await listRentalViewCounts({ chips: { project_type: ['Documentary'] }, dateRange: { column: 'pickup_at', fromAd: '2026-10-07' } })
     expect(db.in).toHaveBeenCalledWith('data->>kind', ['Documentary'])
     expect(db.gte).toHaveBeenCalledWith('data->>pickup', '2026-10-07')
-  })  it('reports a count read failure rather than returning a false zero', async () => {
+  })
+  it('reports a count read failure rather than returning a false zero', async () => {
     db.error = { message: 'Session expired' }
     await expect(listRentalViewCounts({})).rejects.toThrow('Session expired')
   })

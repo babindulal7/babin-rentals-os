@@ -72,6 +72,7 @@ import {
   type RentalListRow,
 } from '../../lib/queries/bookings'
 import { useList, type ListQueryResult } from '../../lib/queries/useList'
+import { useFacetCounts } from '../../lib/queries/facetCounts'
 import { useFilters } from '../../lib/queries/useFilters'
 import type { ListFilters } from '../../lib/queries/listQuery'
 import { RENTAL_VIEWS, listRentalViewCounts } from '../../lib/queries/rentalViews'
@@ -740,26 +741,21 @@ function ColumnMenu({
 }
 
 /**
- * The one real facet in the Filters rail — an accordion over `STATUS_ORDER`
+ * The one real facet in the Filters rail — checkboxes over `STATUS_ORDER`
  * (Foundation's six stages, `lib/workflow.ts`), checkbox per stage. It is sent
  * to the server as one `chips: { stage: [...] }` group, INTERSECTED with the
  * quick-filter chip's own stage set (`rentalsQuery`), never replacing it.
  *
  * ## §10 — the count beside each stage
  *
- * `useFacetCounts` runs one count per option, but this group cannot use its
- * default base-stripping: `chips.stage` here is the chip's structural set
- * INTERSECTED with the Status picks, and stripping it would count `Quote`
- * under an `Active` chip as "all quotes" when ticking it actually renders the
- * empty state. So the hook is given the probe under a column name the server
- * never sees (`status`), and `countRows` — the page's injected counter, which
- * is the module's own extension point — rebuilds the real query through
- * `rentalsQuery` with the probe as the whole Status group. The chip's
- * structural stages stay in the base `filters`, untouched by the strip,
- * which is also what keys a re-count when the chip changes.
+ * `useFacetCounts` with the default base-stripping (true faceting): each stage
+ * is counted with the stage group removed but every OTHER narrowing kept
+ * (search, date range, project type, sub-rental, presence), so the number
+ * answers "if I add this stage, what do I get" within the current slice.
+ * `countRows` is a HEAD count — no money selected, Law 6 untouched.
  *
- * `enabled: open` — six `count=exact` HEAD queries are only worth running
- * while the accordion is showing them (the module header's own advice).
+ * `enabled: filtersOpen` — six `count=exact` HEAD queries are only worth
+ * running while the drawer is showing them.
  */
 
 /**
@@ -1272,6 +1268,19 @@ export default function RentalsList() {
     page: { index: page - 1, size: perPage },
   }
   const list = useList<RentalListRow>(fetchRentals, listFilters, { isFilteredOverride: isFiltered })
+
+  /*
+   * ADOPTIONS item 8 — Status counts in the rail. One HEAD count per stage,
+   * true-faceted (other narrowings kept), run only while the drawer is open.
+   * No money selected, so Law 6 is untouched. `excludeArchived` mirrors the
+   * list path; the Draft pseudo-stage never reaches a probe (STATUS_ORDER only).
+   */
+  const countStageRows = useCallback(async (filters: ListFilters): Promise<number | null> => {
+    if (query.impossible) return 0
+    const res = await listBookings({ ...filters, headOnly: true, excludeArchived: true })
+    return res.total ?? null
+  }, [query.impossible])
+  const stageFacet = useFacetCounts(countStageRows, listFilters, 'stage', STATUS_ORDER, filtersOpen)
 
   const total = list.total
   const pageCount = total === null ? 1 : Math.max(1, Math.ceil(total / perPage))
@@ -1799,6 +1808,8 @@ export default function RentalsList() {
         subOn={subOn}
         onToggleSub={() => f.setExtra('sub', subOn ? undefined : 'on')}
         money={money}
+        stageCounts={stageFacet.counts}
+        onExport={handleBulkExport}
       />
 
       {/* 5-view operational bar + Sub-Rental + active facet chip */}
