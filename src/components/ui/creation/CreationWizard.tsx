@@ -280,9 +280,9 @@ export function CreationWizard({
                   gap: 6,
                   padding: '6px 10px',
                   borderRadius: 'var(--r-btn, 8px)',
-                  background: step === s.num ? 'var(--accent-subtle, rgba(230,81,0,0.1))' : 'var(--card2)',
-                  border: `1px solid ${step === s.num ? 'var(--accent, #e65100)' : 'var(--border)'}`,
-                  color: step === s.num ? 'var(--accent, #e65100)' : 'var(--text2)',
+                  background: step === s.num ? 'var(--nav-active-bg)' : 'var(--card2)',
+                  border: `1px solid ${step === s.num ? 'var(--primary)' : 'var(--border)'}`,
+                  color: step === s.num ? 'var(--primary-text)' : 'var(--text2)',
                   fontWeight: step === s.num ? 700 : 500,
                   fontSize: 'var(--t-caption, 12px)',
                 }}
@@ -307,7 +307,7 @@ export function CreationWizard({
                     style={{
                       background: 'transparent',
                       border: 'none',
-                      color: 'var(--accent, #e65100)',
+                      color: 'var(--primary-text)',
                       cursor: 'pointer',
                       fontSize: 'var(--t-caption, 12px)',
                       fontWeight: 600,
@@ -334,14 +334,14 @@ export function CreationWizard({
                     minHeight: 44,
                     padding: '0 12px',
                     borderRadius: 'var(--r-btn, 8px)',
-                    border: `1px solid ${errors.client ? 'var(--danger, #dc2626)' : 'var(--border)'}`,
+                    border: `1px solid ${errors.client ? 'var(--danger)' : 'var(--border)'}`,
                     background: 'var(--card)',
                     color: 'var(--text)',
                     fontSize: 'var(--t-body, 14px)',
                   }}
                 />
                 {errors.client && (
-                  <div style={{ color: 'var(--danger, #dc2626)', fontSize: 'var(--t-caption, 12px)', marginTop: 4 }}>
+                  <div style={{ color: 'var(--danger-text)', fontSize: 'var(--t-caption, 12px)', marginTop: 4 }}>
                     {errors.client}
                   </div>
                 )}
@@ -563,7 +563,7 @@ export function CreationWizard({
                           style={{
                             background: 'transparent',
                             border: 'none',
-                            color: 'var(--danger, #dc2626)',
+                            color: 'var(--danger-text)',
                             cursor: 'pointer',
                             padding: 4,
                           }}
@@ -596,15 +596,16 @@ export function CreationWizard({
                         minHeight: 44,
                         padding: '0 12px',
                         borderRadius: 'var(--r-btn, 8px)',
-                        border: `1px solid ${deliveryType === mode ? 'var(--accent, #e65100)' : 'var(--border)'}`,
-                        background: deliveryType === mode ? 'var(--accent-subtle, rgba(230,81,0,0.08))' : 'var(--card)',
-                        color: deliveryType === mode ? 'var(--accent, #e65100)' : 'var(--text)',
+                        border: `1px solid ${deliveryType === mode ? 'var(--primary)' : 'var(--border)'}`,
+                        background: deliveryType === mode ? 'var(--nav-active-bg)' : 'var(--card)',
+                        color: deliveryType === mode ? 'var(--primary-text)' : 'var(--text)',
                         fontWeight: deliveryType === mode ? 700 : 500,
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: 6,
+                        transition: 'all var(--dur-fast, 120ms) ease',
                       }}
                     >
                       <Icon name={mode === 'Pickup' ? 'package' : 'truck'} size={16} />
@@ -677,10 +678,10 @@ export function CreationWizard({
                 style={{
                   padding: 12,
                   borderRadius: 'var(--r-btn, 8px)',
-                  background: 'var(--accent-subtle, rgba(230,81,0,0.06))',
-                  border: '1px solid var(--accent-subtle, rgba(230,81,0,0.2))',
+                  background: 'var(--chip-blue-bg)',
+                  border: '1px solid var(--primary)',
                   fontSize: 'var(--t-caption, 12px)',
-                  color: 'var(--text2)',
+                  color: 'var(--chip-blue-fg)',
                   lineHeight: 1.5,
                 }}
               >

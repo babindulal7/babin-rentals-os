@@ -237,8 +237,6 @@
 
 .finance-daily-bar:hover {
   filter: brightness(1.15);
-  transform: scaleY(1.04);
-  transform-origin: bottom;
 }
 
 /* ── Deposits Rail & Separation ─────────────────────────────────────────── */

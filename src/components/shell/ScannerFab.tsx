@@ -449,7 +449,7 @@ export default function ScannerFab() {
             borderRadius: 'var(--r-sm)',
             overflow: 'hidden',
             marginBottom: 10,
-            border: feedback ? `2px solid ${bannerBg}` : '1px solid transparent'
+            border: `2px solid ${feedback ? bannerBg : 'transparent'}`
           }}>
             <video ref={videoRef} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             

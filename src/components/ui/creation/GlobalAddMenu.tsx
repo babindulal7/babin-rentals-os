@@ -198,7 +198,8 @@ function GlobalAddMenuView({
     gap: 6,
     cursor: 'pointer',
     fontFamily: 'inherit',
-    transition: 'background var(--dur-fast, 120ms) ease, opacity var(--dur-fast, 120ms) ease',
+    boxShadow: 'var(--shadow-xs)',
+    transition: 'background var(--dur-fast, 120ms) ease, opacity var(--dur-fast, 120ms) ease, box-shadow var(--dur-fast, 120ms) ease',
   } as const
 
   return (
@@ -251,7 +252,7 @@ function GlobalAddMenuView({
             ...segment,
             width: 44,
             padding: 0,
-            borderLeft: '1px solid rgba(255, 255, 255, 0.35)',
+            borderLeft: '1px solid rgba(255, 255, 255, 0.25)',
             borderRadius: '0 var(--r-btn, 8px) var(--r-btn, 8px) 0',
           }}
         >
@@ -272,11 +273,11 @@ function GlobalAddMenuView({
               position: 'fixed',
               top: position?.top ?? 0,
               left: position?.left ?? 0,
-              width: position?.width ? Math.max(position.width, 240) : 250,
+              width: position?.width ? Math.max(position.width, 248) : 256,
               zIndex: floatingLayer(triggerRef.current),
               background: 'var(--card)',
               border: '1px solid var(--border)',
-              borderRadius: 'var(--r-card, 8px)',
+              borderRadius: 'var(--r-card, 10px)',
               boxShadow: 'var(--shadow-modal, 0 8px 24px rgba(0,0,0,0.18))',
               padding: 6,
               display: 'flex',
@@ -302,21 +303,36 @@ function GlobalAddMenuView({
                     width: '100%',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 9,
-                    padding: '0 12px',
+                    gap: 10,
+                    padding: '0 10px',
                     borderRadius: 'var(--r-sm, 6px)',
                     border: isFocused ? '1px solid var(--border)' : '1px solid transparent',
-                    background: isFocused ? 'var(--card2)' : 'transparent',
+                    background: isFocused ? 'var(--surface-2)' : 'transparent',
                     color: 'var(--text)',
                     fontSize: 'var(--t-meta, 13px)',
                     fontWeight: 500,
                     cursor: 'pointer',
                     textAlign: 'left',
-                    transition: 'background var(--dur-fast, 120ms) ease',
+                    transition: 'all var(--dur-fast, 120ms) ease',
                   }}
                 >
-                  <Icon name={item.action.icon} size={16} />
-                  <span>{item.action.label}</span>
+                  <span
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 'var(--r-xs, 4px)',
+                      background: isFocused ? 'var(--nav-active-bg)' : 'var(--card2)',
+                      color: isFocused ? 'var(--primary)' : 'var(--text2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      transition: 'all var(--dur-fast, 120ms) ease',
+                    }}
+                  >
+                    <Icon name={item.action.icon} size={15} />
+                  </span>
+                  <span style={{ fontWeight: 600 }}>{item.action.label}</span>
                 </button>
               )
             })}
@@ -346,20 +362,48 @@ function GlobalAddMenuView({
                   width: '100%',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 9,
-                  padding: '0 12px',
+                  gap: 10,
+                  padding: '0 10px',
                   borderRadius: 'var(--r-sm, 6px)',
                   border: focusedIndex === menuItems.length ? '1px solid var(--border)' : '1px solid transparent',
-                  background: focusedIndex === menuItems.length ? 'var(--card2)' : 'transparent',
-                  color: 'var(--text2)',
+                  background: focusedIndex === menuItems.length ? 'var(--surface-2)' : 'transparent',
+                  color: focusedIndex === menuItems.length ? 'var(--primary-text)' : 'var(--text2)',
                   fontSize: 'var(--t-meta, 13px)',
                   fontWeight: 600,
                   cursor: 'pointer',
                   textAlign: 'left',
+                  transition: 'all var(--dur-fast, 120ms) ease',
                 }}
               >
-                <Icon name="search" size={15} />
-                <span>All creation actions…</span>
+                <span
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 'var(--r-xs, 4px)',
+                    background: focusedIndex === menuItems.length ? 'var(--nav-active-bg)' : 'var(--card2)',
+                    color: 'var(--primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Icon name="search" size={15} />
+                </span>
+                <span style={{ flex: 1 }}>All creation actions…</span>
+                <span
+                  style={{
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    padding: '2px 6px',
+                    borderRadius: 'var(--r-xs, 4px)',
+                    background: 'var(--card2)',
+                    color: 'var(--muted)',
+                    border: '1px solid var(--border)',
+                  }}
+                >
+                  All
+                </span>
               </button>
             )}
           </div>,

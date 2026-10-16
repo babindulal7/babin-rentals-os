@@ -1,5 +1,207 @@
 # Progress Log
 
+## 2026-10-16 — Eliminate jumping buttons, rogue hover/active transforms, and border layout shifts across app
+
+**Did**
+- Enforced global button physics in `src/styles/theme.css` and `src/styles/ui-v2.css`:
+  - Locked `button:hover, button:active, a.btn:hover, a.btn:active, [role="button"]:hover, [role="button"]:active, .ui-button:hover, .ui-button:active { transform: none; }` across all media modes, aligning strictly with theme.css:1267-1269 tactile interactive principle (feedback is color/brightness or box-shadow only — never translate or scale).
+  - Explicitly locked `.ui-button:hover:not(:disabled)` and `.ui-button:active:not(:disabled)` to `transform: none` with tactile `filter: brightness(0.96)`.
+- Purged all rogue module-level jumping CSS transforms on `:hover` and `:active`:
+  - `auth.css`: removed `translateY(-1px)` and `scale(0.97)` on `.auth-mock-btn`.
+  - `calendar.css`: removed `translateY(-1px)` from `.calendar-kind-chip:hover`, `.calendar-day-cell:hover`, `.calendar-timeline-bar-btn:hover`, `button.calendar-agenda-item:hover`, and `.calendar-stepper-btn:hover`; removed `translateY(-0.5px)` from `.calendar-chip:hover`; removed `scale(1.25)` from `.calendar-dot:hover`.
+  - `clients.css`: removed `translateY(-1px)` from `.client-filter-chip:hover`, `.client-overlay-chip:hover`, and `.credit-policy-card:hover`; removed `translateY(-2px)` from `.client-bento-card:hover` and `.membership-plan-card:hover`.
+  - `documents.css`: removed `scale(1.05)` from `.doc-rail-cat-btn:hover .doc-rail-cat-icon` and `translateY(-2px)` from `.doc-card:hover`.
+  - `finance.css`: removed `translateY(-2px)` from `.finance-kpi-card:hover`, `translateY(-1px)` from `.finance-filter-chip:hover`, and `scaleY(1.04)` from `.finance-daily-bar:hover`.
+  - `inventory.css`: removed `translateY(-1px)` from `.inventory-filter-chip:hover` and `.bundle-quick-tile:hover`; removed `translateY(-2px)` from `.inventory-grid-item:hover` and `.bundle-grid-card:hover`.
+  - `delivery.css`: removed `translateY(-1px)` from `.delivery-kpi-card:hover` and `translateY(-2px)` from `.delivery-card-item:hover`.
+  - `dashboard.css`: removed `scale(0.96)` from `.dashboard-master-date-control__btn:active`; removed `translateY(-1px)` from `.movement-card__cta-btn.is-dominant:hover` and `.is-prep:hover`; removed `translateX(2px)` and `scale(0.98)` from `.movement-card__cta-btn`.
+- Fixed dynamic border-width layout shifts in components:
+  - `CreationActionSearch.tsx`: replaced `border: isFocused ? '1.5px solid ...' : '1px solid ...'` with constant `1px solid` border and `box-shadow: 0 0 0 1px var(--primary)` ring.
+  - `PrintLabelModal.tsx`: replaced `border: active ? '2px solid ...' : '1px solid ...'` with constant `1px solid` border and `box-shadow` ring.
+  - `BundleQuickBuilder.tsx`: replaced `border: isSelected ? '1.5px solid ...' : '1px solid ...'` with constant `1px solid` border and `box-shadow: 0 0 0 1px var(--info)` ring.
+  - `ScannerFab.tsx`: fixed viewfinder border to constant `2px solid` preventing layout jitter when feedback triggers.
+
+**Ruled**
+- Tactile feedback is color/brightness (`filter: brightness(0.96)`) and box-shadow only — never `transform: translate` or `scale` (`theme.css:1267-1269`).
+- Buttons must never push adjacent elements or shift during loading (label transparency + centered absolute spinner maintained per Button.tsx).
+- Focus and selection outlines use outer box-shadow rings instead of dynamic border-width changes to eliminate subpixel layout shifts.
+
+**Verified**
+- `npm run typecheck`: exit 0.
+- `npm test`: 364 files passed, 4,619 tests passed (exit 0).
+- `npm run check:contrast`: 82/82 pass (exit 0).
+- `npm run check:pglite`: 163/163 applied, 0 view leaks, 0 function leaks, 0 definer search_path issues (exit 0).
+- `npm run check:lifecycle`: 30/30 green through real Postgres + RLS (exit 0).
+- `npm run build`: successful production build, 297 assets precached (exit 0).
+- `npm run lint`: exit 0 (0 errors, 0 warnings).
+- `npm run lint:progress`: exit 0.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-16T00:19:09.983Z). Suite: 4609/4609 passed (recorded 2026-10-15T20:16:18.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T00:19:37.090Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Production deployment of migrations 0163 and 0164 following BACKUP_PROTOCOL.md by Babin.
+- Continue responsive verification of floor stage workspaces and tablet header layouts across remaining secondary modules.
+
+
+## 2026-10-16 — Enhance UI, color palette, and ergonomics across All Creation Actions subsystem
+
+**Did**
+- Completely elevated the "All Creation Actions" panel (`CreationActionSearch.tsx`):
+  - Upgraded modal to spacious `size="lg"` with informative subtitle and accessible structure.
+  - Implemented dynamic category filter pills (All, Rentals, Clients, Inventory, Operations, Crew, Billing, Admin) with live action count chips and active states (`var(--select-bg)` / `var(--select-fg)`).
+  - Modernized search input with 48px height, 1px stable border, `/` keyboard shortcut badge, search clear button, and focus ring.
+  - Replaced rogue `#e65100` and un-themed fallback colors with accessible, theme-aware category accent palettes (Blue for Rentals, Emerald for Clients, Warm Amber for Inventory, Indigo for Operations, Sky for Crew, Forest Green for Billing, Slate for Admin) that maintain full WCAG AA contrast in Light and Dark mode.
+  - Redesigned action cards (`.action-search-match`) with 56px minimum touch targets, 36x36px icon tiles with category-tinted backgrounds, opening mode badges (`↗ Workspace`, `⚡ Quick Dialog`, `◨ Side Drawer`, `✦ Multi-step`, `◻ Modal`), and an active `Open ↵` badge when focused.
+  - Added guarded `scrollIntoView` for smooth keyboard-driven scrolling across options without jsdom test environment issues.
+  - Added a shortcut footer with keycaps (`↑↓ Navigate`, `↵ Open`, `Esc Close`) and available action counter.
+- Modernized the Universal Add Dropdown (`GlobalAddMenu.tsx`):
+  - Refined split button and single button triggers with subtle elevation, hover brightness, and clean separator styling.
+  - Enhanced floating dropdown menu with 28x28px rounded icon tiles, semantic hover feedback (`var(--surface-2)`), and a distinct "All creation actions…" discovery action with search glyph and badge.
+- Replaced hardcoded `#e65100`, `#dc2626`, `#fffbeb`, and `#fde68a` across creation dialogs and wizards:
+  - `QuickCreateDialog.tsx`: updated Client Type buttons with `var(--primary)` and `var(--nav-active-bg)` active states, input error borders with `var(--danger)` / `var(--danger-text)`, duplicate client warning with `var(--chip-amber-bg)` / `var(--chip-amber-fg)` / `var(--warn)`, and details toggle button with `var(--primary-text)`.
+  - `CreationDrawer.tsx`: updated drawer backdrop to use `var(--scrim)`, header z-index to `var(--z-drawer)`, icon badge with `var(--nav-active-bg)` / `var(--primary)`, and equipment/expense error borders and text with semantic tokens (`var(--danger)` / `var(--danger-text)`).
+  - `CreationWizard.tsx`: updated 4-step wizard stepper with `var(--primary)` and `var(--nav-active-bg)` active indicators, delivery mode buttons with design tokens, remove item button with `var(--danger-text)`, and review rule notice with `var(--chip-blue-bg)` / `var(--chip-blue-fg)`.
+
+**Ruled**
+- Preserved all business laws (Law 6 Money Blindness, Law 13 Touch Target Floor, Law 15 Accessibility). All creation components utilize design system CSS custom properties from `theme.css` without rogue hardcoded colors.
+
+**Verified**
+- `npm run typecheck`: exit 0.
+- `npm test`: `globalAddMenu.test.tsx` (23/23 tests pass).
+- `npm run check:contrast`: 82/82 pass (0 fail).
+- `npm run check:pglite`: 163/163 applied, 0 view leaks, 0 function leaks, 0 definer search_path issues.
+- `npm run check:lifecycle`: 30/30 green through real Postgres + RLS.
+- `npm run build`: successful production build (297 assets precached).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-16T00:05:30.870Z). Suite: 4609/4609 passed (recorded 2026-10-15T20:16:18.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T00:05:52.072Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Production deployment of migrations 0163 and 0164 following BACKUP_PROTOCOL.md by Babin.
+- Continue responsive verification of floor stage workspaces and tablet header layouts across remaining secondary modules.
+
+
+## 2026-10-16 — Responsive UI/UX layout improvements: header clearance at 768px, 44px/56px touch ergonomics, and mobile overflow fixes
+
+**Did**
+- Resolved tablet portrait (768px) header crowding in `src/components/shell/Header.tsx` and `shell.css`:
+  - Enforced `min-width: 140px` for `.app-global-header__breadcrumbs` on tablet/desktop, preventing page titles ("Rentals", "New Rental") from being crushed to 0px width.
+  - Hidden page info tooltip on tablet (`isPhone || isTablet ? 'none' : 'inline-flex'`), eliminating the 44px coordinate overlap and interaction collision with the header search input.
+  - Eliminated 116px of phantom dead space in `.app-global-header__action-slot--primary` on tablet by adjusting slot sizing (`width: auto; min-width: 44px; max-width: 160px`).
+  - Compacted bulk selection action buttons on tablet to icon triggers (`44x44px`), keeping all bulk actions and the user avatar comfortably on-screen without off-screen push.
+  - Aligned mobile header right zone button gap to the canonical 8px touch target spacing.
+- Fixed floor workspace completion button heights:
+  - Updated primary completion actions in `PackingWorkspace.tsx` ("Complete Packing"), `HandoverWorkspace.tsx` ("Complete Handover" / "Complete Session"), `ReturnWorkspace.tsx` ("Complete Return" / "Complete Session"), and `ResetWorkspace.tsx` ("Complete Reset") from 44px to `minHeight: 56px`, fulfilling the primary floor verb rule in AGENTS.md.
+  - Standardized mobile stage indicator steps in `operationsShell.css` with clean ellipsis truncation, eliminating 4-line button text distortion on narrow mobile viewports.
+- Upgraded form and catalogue touch targets across views to >= 44px with >= 8px gaps:
+  - Shoot preset chips in `rentals.css` (`.new-rental-preset-chip`): upgraded from 28px to `min-height: 44px; padding: 6px 14px; gap: 6px;` and container `gap: 8px`.
+  - Catalogue tabs in `AddItemPanel.tsx`: upgraded from 28px to `minHeight: 44px, padding: 0 14px, gap: 8px` and select controls to 44px height.
+  - Rentals list stage filter pills (`stageChipStyle`, `FilterBar.tsx`): upgraded from 32px to `minHeight: 44px, height: 44px, padding: 0 14px, gap: 8px`.
+  - Mobile card operations button (`...`) in `RentalsList.tsx`: enlarged from 26px to `44x44px` touch hit area.
+  - Bundle category accordion headers in `Bundles.tsx`: upgraded from 26px to `minHeight: 44px, padding: 8px 4px, gap: 8px`.
+  - Removed phantom 120px horizontal overflow box on mobile New Rental cards by applying `display: none` to `.rental-line-table thead` in `rental-line-items.css`.
+
+**Ruled**
+- Preserved existing product decisions, financial invariants, and 64px single header constraint. Touch targets on cards and controls meet or exceed 44px, with floor completion actions at 56px and 8px minimum touch spacing.
+
+**Verified**
+- `npm run typecheck`: exit 0.
+- `npm run lint`: exit 0 (0 warnings).
+- `npm test`: shell test suite (11 files / 118 tests) and operations/rentals test suites (30 files / 437 tests) passed (0 failures).
+- `npm run check:contrast`: 82/82 WCAG AA pass (0 failures).
+- `npm run check:pglite`: 163/163 applied, 0 view leaks, 0 function leaks, 0 definer search_path issues.
+- `npm run check:lifecycle`: 30/30 green through real Postgres + RLS.
+- `npm run build`: successful production build (297 precached assets).
+- Live browser audit re-verification with `/browser` subagent: confirmed 0px title squeeze resolved (140px), search collision eliminated, avatar on screen during bulk selection, 0px horizontal document overflow, and all 44px/56px target heights verified.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-16T00:05:30.870Z). Suite: 4609/4609 passed (recorded 2026-10-15T20:16:18.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T00:05:52.072Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Production deployment of migrations 0163 and 0164 following BACKUP_PROTOCOL.md by Babin.
+- Continue responsive verification of floor stage workspaces and tablet header layouts across remaining secondary modules.
+
+
+## 2026-10-16 — Eliminate jumping buttons across the app: enforce tactile physics without transforms or border jumps
+
+**Did**
+- Enforced universal `transform: none` on hover and active states for `button`, `a.btn`, `[role="button"]`, and `.ui-button` in `src/styles/theme.css` and `src/styles/ui-v2.css`, adhering to the design principle that tactile feedback is colour/brightness only (`filter: brightness(0.96)`), never translate or scale.
+- Removed legacy and rogue `:hover` and `:active` jumping transforms across module styles:
+  - `auth.css`: removed `translateY(-1px)` and `scale(0.97)` on `.auth-mock-btn`.
+  - `calendar.css`: removed `translateY(-1px)` from `.calendar-kind-chip:hover`, `.calendar-day-cell:hover`, `.calendar-timeline-bar-btn:hover`, `button.calendar-agenda-item:hover`, and `.calendar-stepper-btn:hover`; removed `translateY(-0.5px)` from `.calendar-chip:hover`; removed `scale(1.25)` from `.calendar-dot:hover`.
+  - `clients.css`: removed `translateY(-1px)` from `.client-filter-chip:hover`, `.client-overlay-chip:hover`, and `.credit-policy-card:hover`; removed `translateY(-2px)` from `.client-bento-card:hover` and `.membership-plan-card:hover`.
+  - `documents.css`: removed `scale(1.05)` from `.doc-rail-cat-btn:hover .doc-rail-cat-icon` and `translateY(-2px)` from `.doc-card:hover`.
+  - `finance.css`: removed `translateY(-2px)` from `.finance-kpi-card:hover` and `translateY(-1px)` from `.finance-filter-chip:hover`.
+  - `inventory.css`: removed `translateY(-1px)` from `.inventory-filter-chip:hover` and `.bundle-quick-tile:hover`; removed `translateY(-2px)` from `.inventory-grid-item:hover` and `.bundle-grid-card:hover`.
+  - `delivery.css`: removed `translateY(-1px)` from `.delivery-kpi-card:hover` and `translateY(-2px)` from `.delivery-card-item:hover`.
+  - `dashboard.css`: removed `scale(0.96)` from `.dashboard-master-date-control__btn:active`; removed `translateY(-1px)` from `.movement-card__cta-btn:hover`; removed icon `translateX(2px)` and `scale(0.98)` on active/hover from `.movement-card__cta-btn`.
+- Fixed layout jitter caused by dynamic border width changes:
+  - `CreationActionSearch.tsx`: replaced `isFocused ? 1.5px : 1px` with a fixed `1px` border and `box-shadow` outline.
+  - `PrintLabelModal.tsx`: replaced `active ? 2px : 1px` preset border with fixed `1px` border and `box-shadow`.
+  - `BundleQuickBuilder.tsx`: replaced `isSelected ? 1.5px : 1px` border with fixed `1px` border and `box-shadow`.
+  - `ScannerFab.tsx`: preserved fixed 2px border on viewfinder to prevent layout shift when feedback changes.
+
+**Ruled**
+- Tactile feedback on interactive elements must remain color/brightness and box-shadow based; interactive elements must never translate, scale, or alter border-box geometry on hover, focus, or press.
+
+**Verified**
+- `npm run typecheck`: exit 0.
+- `npm test`: 364 test files passed, 4619 tests passed (0 failures).
+- `npm run check:contrast`: 82/82 WCAG AA pass.
+- `npm run check:pglite`: 163/163 applied, 0 view leaks, 0 function leaks, 0 definer search_path issues.
+- `npm run check:lifecycle`: 30/30 green through real Postgres + RLS.
+- `npm run build`: successful production build.
+- `npm run lint:progress`: verified valid.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-16T00:01:59.987Z). Suite: 4619/4619 passed (recorded 2026-10-15T23:49:55.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T00:02:26.015Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Production deployment of migrations 0163 and 0164 following BACKUP_PROTOCOL.md by Babin.
+- Continue responsive verification of floor stage workspaces (Pack, Handover, Return, Reset) and tablet header search/more menu layout.
+
+
 ## 2026-10-16 — Fix New Booking quote-save fallback: equipment line description preservation and robust availability product mode queries
 
 **Did**
