@@ -732,7 +732,7 @@ export function AddItemPanel({
               aria-haspopup="listbox"
               aria-describedby={hintId}
               {...(activeId ? { 'aria-activedescendant': activeId } : {})}
-              placeholder="Search equipment, bundles & services by name, SKU, serial, brand, category…"
+              placeholder="Search equipment, bundles, SKU, or serial…"
               value={query}
               onFocus={() => {
                 setFiltersExpanded(false)
@@ -929,7 +929,7 @@ export function AddItemPanel({
                   aria-haspopup="listbox"
                   aria-describedby={hintId}
                   {...(activeId ? { 'aria-activedescendant': activeId } : {})}
-                  placeholder="Search name, SKU, serial, brand, category, bundle code — or a model inside a bundle…"
+                  placeholder="Search equipment, bundles, SKU, or serial…"
                   value={query}
                   onFocus={() => setFiltersExpanded(false)}
                   onChange={(e) => {
