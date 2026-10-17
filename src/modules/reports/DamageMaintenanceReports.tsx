@@ -1,9 +1,13 @@
-import { formatAd } from '../../lib/bs'
-import { useEffect, useMemo, useState } from 'react'
+import { formatAd, formatAdDateTime } from '../../lib/bs'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageHeader, KpiStrip, cardStyle } from '../../components/ui/Page'
 import type { Kpi } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
+import { PageBody } from '../../components/ui/PageBody'
+import { useLoad } from '../../lib/queries/useLoad'
+import { NOT_TRACKED } from '../../lib/queries/reportSupport'
+import { reportFilterOptions, hasReportFilters, NoMatchRow } from './reportStates'
 import { ReportToolbar } from '../../components/ui/ReportToolbar'
 import type { ReportCsvRow, ReportFilters } from '../../components/ui/ReportToolbar'
 import { Donut, Legend, type Slice } from '../../components/ui/Charts'
@@ -11,11 +15,10 @@ import Icon from '../../components/ui/Icon'
 import { formatMoney, type Paisa } from '../../lib/money'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
-import {
-  getDamageMaintenanceReport,
-  type DamageMaintenanceReportData,
-  type ReportFilterOptions,
-} from '../../lib/queries/damageMaintenanceReports'
+import { getDamageMaintenanceReport } from '../../lib/queries/damageMaintenanceReports'
+
+/** A date the read did not return reads as a dash, never "Invalid Date". */
+const dateOrDash = (iso: string): string => (iso && !Number.isNaN(Date.parse(iso)) ? formatAd(new Date(iso)) : '—')
 
 type DmTab = 'damage' | 'repairs' | 'servicing' | 'availability'
 
@@ -42,26 +45,19 @@ export default function DamageMaintenanceReports() {
   const viewport = useViewport()
   const [activeTab, setActiveTab] = useState<DmTab>('damage')
   const [filters, setFilters] = useState<ReportFilters>({})
-  const [data, setData] = useState<DamageMaintenanceReportData | null>(null)
-
-  useEffect(() => {
-    let active = true
-
-    const branchId = filters.chips?.branch_id?.[0]
-    const queryOpts: ReportFilterOptions = {
-      from: filters.dateRange?.fromAd,
-      to: filters.dateRange?.toAd,
-      branchId,
-    }
-
-    void getDamageMaintenanceReport(queryOpts).then((res) => {
-      if (active) setData(res)
-    })
-
-    return () => {
-      active = false
-    }
-  }, [filters])
+  /* Phase 6 — the read used to return seed figures on failure, on an empty
+     database, and per figure (`|| MOCK_DM`); it now throws, and `PageBody`
+     draws loading · Error + Retry · nothing-yet vs "nothing in this period". */
+  const filtered = hasReportFilters(filters)
+  const load = useLoad(() => getDamageMaintenanceReport(reportFilterOptions(filters)), { key: JSON.stringify(filters) })
+  const data = load.data
+  const nothing =
+    data !== null &&
+    data.incidents.length === 0 &&
+    data.repairs.length === 0 &&
+    data.servicing.length === 0 &&
+    // The fleet tab has figures whenever any unit exists, findings or not.
+    data.metrics.fleetAvailabilityRate === null
 
   // Damage KPI Strip
   const damageKpis = useMemo<Kpi[]>(() => {
@@ -87,14 +83,14 @@ export default function DamageMaintenanceReports() {
         value: money ? formatMoney(m.totalChargedToClient) : '—',
         icon: 'check',
         accent: 'success',
-        note: money ? 'Billed via deposit or case charge' : /* Restricted (Law 6) */ "Restricted",
+        note: money ? 'Charged to the client on the linked case' : /* Restricted (Law 6) */ "Restricted",
       },
       {
-        label: 'Active Cases',
-        value: String(data.incidents.filter((i) => i.approvalState.includes('Awaiting')).length),
+        label: 'Pending Approval',
+        value: String(data.incidents.filter((i) => i.approvalState === 'Pending Approval').length),
         icon: 'timer',
         accent: 'warn',
-        note: 'Awaiting client settlement',
+        note: 'Findings awaiting approval',
       },
     ]
   }, [data, money])
@@ -113,10 +109,10 @@ export default function DamageMaintenanceReports() {
       },
       {
         label: 'Avg Turnaround',
-        value: `${m.averageTurnaroundDays} Days`,
+        value: m.averageTurnaroundDays === null ? '—' : `${m.averageTurnaroundDays} Days`,
         icon: 'timer',
         accent: 'neutral',
-        note: 'From intake to shelf-ready',
+        note: m.averageTurnaroundDays === null ? 'No repair has both a start and a finish yet' : 'Started to completed',
       },
       {
         label: 'Repair Expenditure',
@@ -127,10 +123,10 @@ export default function DamageMaintenanceReports() {
       },
       {
         label: 'In-House Ratio',
-        value: '72%',
+        value: NOT_TRACKED,
         icon: 'sparkles',
-        accent: 'success',
-        note: 'Repaired by Babin technicians',
+        accent: 'neutral',
+        note: 'Repairs do not record in-house vs outside shop',
       },
     ]
   }, [data, money])
@@ -145,28 +141,28 @@ export default function DamageMaintenanceReports() {
         value: String(m.routineServicesCompleted),
         icon: 'check',
         accent: 'success',
-        note: 'Preventive checks completed',
+        note: 'Non-repair maintenance completed',
       },
       {
         label: 'Upcoming Scheduled',
         value: String(data.servicing.filter((s) => s.status === 'Scheduled').length),
         icon: 'calendar',
         accent: 'primary',
-        note: 'Service due in next 14 days',
+        note: 'Non-repair maintenance with status Scheduled',
       },
       {
         label: 'Calibration Compliance',
-        value: '98.5%',
+        value: NOT_TRACKED,
         icon: 'sparkles',
-        accent: 'success',
-        note: 'Fluid heads & RF transmitters tested',
+        accent: 'neutral',
+        note: 'No calibration record exists yet',
       },
       {
         label: 'Firmware Up-to-date',
-        value: '100%',
+        value: NOT_TRACKED,
         icon: 'check',
-        accent: 'success',
-        note: 'Cinema bodies on gold firmware',
+        accent: 'neutral',
+        note: 'No firmware record exists yet',
       },
     ]
   }, [data])
@@ -178,31 +174,31 @@ export default function DamageMaintenanceReports() {
     return [
       {
         label: 'Fleet Availability',
-        value: `${m.fleetAvailabilityRate}%`,
+        value: m.fleetAvailabilityRate === null ? '—' : `${m.fleetAvailabilityRate}%`,
         icon: 'chart',
-        accent: 'success',
-        note: 'Active units in rental rotation',
+        accent: 'neutral',
+        note: 'Units In Stock of all units not retired, now',
       },
       {
         label: 'Sidelined Units',
         value: String(m.sidelinedUnitsCount),
         icon: 'alert_triangle',
         accent: m.sidelinedUnitsCount > 5 ? 'warn' : 'neutral',
-        note: 'In maintenance or cleaning queue',
+        note: 'In inspection, cleaning, maintenance or missing',
       },
       {
         label: 'Workshop Downtime',
-        value: '2.8%',
+        value: NOT_TRACKED,
         icon: 'timer',
         accent: 'neutral',
-        note: 'Of total monthly fleet capacity',
+        note: 'Needs unit state history over time',
       },
       {
         label: 'Rental Ready Fleet',
-        value: '118 Units',
+        value: `${m.rentalReadyUnits} Units`,
         icon: 'box',
         accent: 'primary',
-        note: 'Available on warehouse shelves',
+        note: 'Units In Stock right now',
       },
     ]
   }, [data])
@@ -244,7 +240,7 @@ export default function DamageMaintenanceReports() {
         ['Equipment Repairs & Workshop Turnaround Report'],
         ['Metric', 'Value'],
         ['Active Repairs in Shop', data?.metrics.activeRepairs ?? 0],
-        ['Average Turnaround Days', `${data?.metrics.averageTurnaroundDays ?? 0} Days`],
+        ['Average Turnaround Days', data?.metrics.averageTurnaroundDays == null ? '—' : `${data.metrics.averageTurnaroundDays} Days`],
         ['Total Repair Spend', money ? formatMoney(data?.metrics.totalRepairSpend ?? (0 as Paisa)) : 'Restricted'],
         [],
         ['Repairs Log'],
@@ -283,7 +279,7 @@ export default function DamageMaintenanceReports() {
       return [
         ['Fleet Downtime & Out-of-Service Rate Report'],
         ['Metric', 'Value'],
-        ['Fleet Availability Rate', `${data?.metrics.fleetAvailabilityRate ?? 0}%`],
+        ['Fleet Availability Rate', data?.metrics.fleetAvailabilityRate == null ? '—' : `${data.metrics.fleetAvailabilityRate}%`],
         ['Total Sidelined Units', data?.metrics.sidelinedUnitsCount ?? 0],
         [],
         ['Sidelined Fleet Units Register'],
@@ -368,6 +364,23 @@ export default function DamageMaintenanceReports() {
       </ReportToolbar>
 
       {/* TAB 1: DAMAGE FINDINGS */}
+      <PageBody
+        noun="damage and maintenance figures"
+        loading={load.loading}
+        error={load.error}
+        onRetry={load.reload}
+        hasRows={data !== null}
+        skeleton="kpi"
+        empty={nothing}
+        emptyIsFiltered={filtered}
+        onClearFilters={() => setFilters({})}
+        emptyTitle={filtered ? 'No damage or maintenance in this period' : 'No damage or maintenance recorded yet'}
+        emptyMessage={
+          filtered
+            ? 'Nothing was recorded in the selected period. Clear the filters to see everything.'
+            : 'Findings, repairs and servicing appear here once the first one is recorded.'
+        }
+      >
       {activeTab === 'damage' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
           <KpiStrip items={damageKpis} />
@@ -465,16 +478,21 @@ export default function DamageMaintenanceReports() {
                   </tr>
                 </thead>
                 <tbody>
+                  {data?.incidents.length === 0 && <NoMatchRow colSpan={money ? 8 : 7} noun="damage findings" />}
                   {data?.incidents.map((inc) => (
                     <tr key={inc.id}>
                       <td style={{ ...td, fontWeight: 600, color: 'var(--primary)' }}>{inc.id}</td>
                       <td style={td}>
-                        <Link
-                          to={`/rentals/${inc.bookingNo}`}
-                          style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}
-                        >
-                          {inc.bookingNo}
-                        </Link>
+                        {inc.bookingNo === '—' ? (
+                          '—'
+                        ) : (
+                          <Link
+                            to={`/rentals/${inc.bookingNo}`}
+                            style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}
+                          >
+                            {inc.bookingNo}
+                          </Link>
+                        )}
                       </td>
                       <td style={{ ...td, fontWeight: 600 }}>{inc.unitName}</td>
                       <td style={{ ...td, fontFamily: 'var(--font-id, sans-serif)', fontVariantNumeric: 'tabular-nums' }}>{inc.serial}</td>
@@ -548,6 +566,7 @@ export default function DamageMaintenanceReports() {
                   </tr>
                 </thead>
                 <tbody>
+                  {data?.repairs.length === 0 && <NoMatchRow colSpan={money ? 9 : 8} noun="repairs" />}
                   {data?.repairs.map((rep) => (
                     <tr key={rep.id}>
                       <td style={{ ...td, fontWeight: 600, color: 'var(--primary)' }}>{rep.recordNo}</td>
@@ -555,7 +574,7 @@ export default function DamageMaintenanceReports() {
                       <td style={{ ...td, fontFamily: 'var(--font-id, sans-serif)', fontVariantNumeric: 'tabular-nums' }}>{rep.serial}</td>
                       <td style={{ ...td, maxWidth: 250 }}>{rep.issue}</td>
                       <td style={td}>{rep.vendorOrShop}</td>
-                      <td style={td}>{rep.turnaroundDays} days</td>
+                      <td style={td}>{rep.turnaroundDays === null ? '—' : `${rep.turnaroundDays} days`}</td>
                       <td style={td}>
                         <span
                           style={{
@@ -627,13 +646,14 @@ export default function DamageMaintenanceReports() {
                   </tr>
                 </thead>
                 <tbody>
+                  {data?.servicing.length === 0 && <NoMatchRow colSpan={7} noun="servicing records" />}
                   {data?.servicing.map((srv) => (
                     <tr key={srv.id}>
                       <td style={{ ...td, fontWeight: 600, color: 'var(--primary)' }}>{srv.recordNo}</td>
                       <td style={{ ...td, fontWeight: 600 }}>{srv.unitName}</td>
                       <td style={{ ...td, fontFamily: 'var(--font-id, sans-serif)', fontVariantNumeric: 'tabular-nums' }}>{srv.serial}</td>
                       <td style={td}>{srv.serviceType}</td>
-                      <td style={td}>{formatAd(new Date(srv.scheduledDate))}</td>
+                      <td style={td}>{dateOrDash(srv.scheduledDate)}</td>
                       <td style={td}>{srv.performedBy}</td>
                       <td style={td}>
                         <span
@@ -694,11 +714,11 @@ export default function DamageMaintenanceReports() {
                     <th style={th}>Serial</th>
                     <th style={th}>Model Name</th>
                     <th style={th}>Current Bay / Status</th>
-                    <th style={th}>Sidelined Date</th>
-                    <th style={th}>Condition / Reason</th>
+                    <th style={th}>Last Updated</th>
                   </tr>
                 </thead>
                 <tbody>
+                  {data?.sidelinedUnits.length === 0 && <NoMatchRow colSpan={5} noun="sidelined units" />}
                   {data?.sidelinedUnits.map((unit) => (
                     <tr key={unit.id}>
                       <td style={td}>{unit.id}</td>
@@ -711,16 +731,15 @@ export default function DamageMaintenanceReports() {
                             padding: '2px 8px',
                             borderRadius: 'var(--r-sm)',
                             fontSize: 'var(--t-meta)',
-                            background: unit.status === 'In Maintenance' ? 'var(--status-danger-bg)' : 'var(--status-warn-bg)',
-                            color: unit.status === 'In Maintenance' ? 'var(--status-danger-text)' : 'var(--status-warn-text)',
+                            background: unit.status === 'Missing' ? 'var(--status-danger-bg)' : 'var(--status-warn-bg)',
+                            color: unit.status === 'Missing' ? 'var(--status-danger-text)' : 'var(--status-warn-text)',
                             fontWeight: 600,
                           }}
                         >
                           {unit.status}
                         </span>
                       </td>
-                      <td style={td}>{unit.sidelinedSince}</td>
-                      <td style={td}>{unit.reason}</td>
+                      <td style={td}>{unit.sidelinedSince ? formatAdDateTime(unit.sidelinedSince) : '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -729,6 +748,7 @@ export default function DamageMaintenanceReports() {
           </div>
         </div>
       )}
+      </PageBody>
     </div>
   )
 }

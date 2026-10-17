@@ -1,9 +1,11 @@
 import { formatAd } from '../../lib/bs'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageHeader, KpiStrip, cardStyle } from '../../components/ui/Page'
 import type { Kpi } from '../../components/ui/Page'
 import { PageBody } from '../../components/ui/PageBody'
+import { useLoad } from '../../lib/queries/useLoad'
+import { reportFilterOptions, hasReportFilters, NoMatchRow } from './reportStates'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { ReportToolbar } from '../../components/ui/ReportToolbar'
 import type { ReportCsvRow, ReportFilters } from '../../components/ui/ReportToolbar'
@@ -12,12 +14,10 @@ import Icon from '../../components/ui/Icon'
 import { formatMoney, type Paisa } from '../../lib/money'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
-import {
-  getSalesVatReport,
-  type SalesReportData,
-  type VatTaxReportData,
-  type ReportFilterOptions,
-} from '../../lib/queries/salesVatReports'
+import { getSalesVatReport } from '../../lib/queries/salesVatReports'
+
+/** A date the read did not return reads as a dash, never "Invalid Date". */
+const dateOrDash = (iso: string): string => (iso && !Number.isNaN(Date.parse(iso)) ? formatAd(new Date(iso)) : '—')
 
 type FinanceReportTab = 'sales' | 'vat'
 
@@ -44,27 +44,17 @@ export default function SalesVatReports() {
   const viewport = useViewport()
   const [activeTab, setActiveTab] = useState<FinanceReportTab>('sales')
   const [filters, setFilters] = useState<ReportFilters>({})
-  const [data, setData] = useState<{ sales: SalesReportData; vat: VatTaxReportData } | null>(null)
-
-  useEffect(() => {
-    let active = true
-
-    const branchId = filters.chips?.branch_id?.[0]
-    const queryOpts: ReportFilterOptions = {
-      from: filters.dateRange?.fromAd,
-      to: filters.dateRange?.toAd,
-      branchId,
-    }
-
-    void getSalesVatReport(queryOpts).then((res) => {
-      if (active) setData(res)
-    })
-
-    return () => {
-      active = false
-    }
-  }, [filters])
-
+  /* Phase 6 — the read used to return seed figures on failure and on an empty
+     period (and could only ever return them on live: it selected columns the
+     invoices table does not have). It now throws, and `PageBody` draws loading ·
+     Error + Retry · nothing-yet vs "nothing in this period". A money-blind role
+     never sends the read (Law 6). */
+  const filtered = hasReportFilters(filters)
+  const load = useLoad(() => getSalesVatReport(reportFilterOptions(filters)), {
+    key: JSON.stringify(filters),
+    enabled: money,
+  })
+  const data = load.data
 
   // Sales KPI Strip
   const salesKpis = useMemo<Kpi[]>(() => {
@@ -129,11 +119,11 @@ export default function SalesVatReports() {
         note: 'Statutory liability to IRD Nepal',
       },
       {
-        label: 'Effective Tax Rate',
+        label: 'Effective VAT Rate',
         value: `${m.effectiveVatRate}%`,
         icon: 'sparkles',
         accent: 'neutral',
-        note: 'Zero-rated exemptions: Rs 0',
+        note: `Exempt or zero-rated: ${formatMoney(m.exemptTurnover)}`,
       },
     ]
   }, [data])
@@ -167,8 +157,8 @@ export default function SalesVatReports() {
           inv.bookingNo,
           inv.clientName,
           inv.clientPan || 'N/A',
-          formatAd(new Date(inv.issueDate)),
-          inv.dueDate,
+          dateOrDash(inv.issueDate),
+          dateOrDash(inv.dueDate),
           formatMoney(inv.subtotal),
           formatMoney(inv.taxAmount),
           formatMoney(inv.grandTotal),
@@ -183,7 +173,7 @@ export default function SalesVatReports() {
         ['Gross Invoiced Turnover', formatMoney(data?.vat.metrics.totalGrossTurnover ?? (0 as Paisa))],
         ['Taxable Sales Turnover', formatMoney(data?.vat.metrics.taxableTurnover ?? (0 as Paisa))],
         ['Total Output VAT (13%)', formatMoney(data?.vat.metrics.totalOutputVat ?? (0 as Paisa))],
-        ['Statutory Tax Rate', `${data?.vat.metrics.effectiveVatRate ?? 0}%`],
+        ['Effective VAT Rate', `${data?.vat.metrics.effectiveVatRate ?? 0}%`],
         [],
         ['Monthly IRD Filing Schedule (Bikram Sambat Fiscal Periods)'],
         ['Month (AD)', 'BS Month', 'Taxable Sales', '13% Output VAT', 'Exempt Sales', 'Gross Sales'],
@@ -200,7 +190,7 @@ export default function SalesVatReports() {
         ['Invoice No', 'Date', 'Client', 'Client PAN', 'Taxable Amount', '13% VAT', 'Grand Total'],
         ...(data?.vat.taxRegister.map((tr): ReportCsvRow => [
           tr.invoiceNo,
-          formatAd(new Date(tr.issueDate)),
+          dateOrDash(tr.issueDate),
           tr.clientName,
           tr.clientPan || 'Unregistered',
           formatMoney(tr.subtotal),
@@ -287,6 +277,23 @@ export default function SalesVatReports() {
         </div>
       </ReportToolbar>
 
+      <PageBody
+        noun="sales and VAT figures"
+        loading={load.loading}
+        error={load.error}
+        onRetry={load.reload}
+        hasRows={data !== null}
+        skeleton="kpi"
+        empty={data !== null && data.sales.metrics.invoiceCount === 0}
+        emptyIsFiltered={filtered}
+        onClearFilters={() => setFilters({})}
+        emptyTitle={filtered ? 'No invoices in this period' : 'No invoices issued yet'}
+        emptyMessage={
+          filtered
+            ? 'No invoice was issued in the selected period or branch. Clear the filters to see every invoice.'
+            : 'Sales and the VAT register appear here once the first invoice is issued.'
+        }
+      >
       {/* TAB 1: INVOICED SALES */}
       {activeTab === 'sales' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
@@ -395,12 +402,13 @@ export default function SalesVatReports() {
                   </tr>
                 </thead>
                 <tbody>
+                  {data?.sales.invoices.length === 0 && <NoMatchRow colSpan={11} noun="invoices" />}
                   {data?.sales.invoices.map((inv) => (
                     <tr key={inv.id}>
                       <td style={{ ...td, fontWeight: 600, color: 'var(--primary)' }}>{inv.invoiceNo}</td>
                       <td style={{ ...td, fontWeight: 600 }}>{inv.clientName}</td>
                       <td style={{ ...td, fontFamily: 'var(--font-id, sans-serif)', fontVariantNumeric: 'tabular-nums' }}>{inv.clientPan || '—'}</td>
-                      <td style={td}>{formatAd(new Date(inv.issueDate))}</td>
+                      <td style={td}>{dateOrDash(inv.issueDate)}</td>
                       <td style={{ ...td, textAlign: 'right' }}>{formatMoney(inv.subtotal)}</td>
                       <td style={{ ...td, textAlign: 'right', color: 'var(--text2)' }}>{formatMoney(inv.taxAmount)}</td>
                       <td style={{ ...td, textAlign: 'right', fontWeight: 600 }}>{formatMoney(inv.grandTotal)}</td>
@@ -465,6 +473,7 @@ export default function SalesVatReports() {
                   </tr>
                 </thead>
                 <tbody>
+                  {data?.vat.monthlySchedule.length === 0 && <NoMatchRow colSpan={6} noun="tax periods" />}
                   {data?.vat.monthlySchedule.map((ms) => (
                     <tr key={ms.month}>
                       <td style={td}>{ms.month}</td>
@@ -505,10 +514,11 @@ export default function SalesVatReports() {
                   </tr>
                 </thead>
                 <tbody>
+                  {data?.vat.taxRegister.length === 0 && <NoMatchRow colSpan={7} noun="invoices" />}
                   {data?.vat.taxRegister.map((tr) => (
                     <tr key={tr.id}>
                       <td style={{ ...td, fontWeight: 600, color: 'var(--primary)' }}>{tr.invoiceNo}</td>
-                      <td style={td}>{formatAd(new Date(tr.issueDate))}</td>
+                      <td style={td}>{dateOrDash(tr.issueDate)}</td>
                       <td style={{ ...td, fontWeight: 600 }}>{tr.clientName}</td>
                       <td style={{ ...td, fontFamily: 'var(--font-id, sans-serif)', fontVariantNumeric: 'tabular-nums' }}>{tr.clientPan || 'Unregistered'}</td>
                       <td style={{ ...td, textAlign: 'right' }}>{formatMoney(tr.subtotal)}</td>
@@ -524,6 +534,7 @@ export default function SalesVatReports() {
           </div>
         </div>
       )}
+      </PageBody>
     </div>
   )
 }

@@ -1,5 +1,47 @@
 # Progress Log
 
+## 2026-10-17 — Phase 6 Task 3.4: the 13 Law 16 reports — real figures, then five states
+
+**Did**
+- Finished Task 3.4 for the reports the 16 Oct inventory left blocked on Law 16. Every one now reads the ledger, throws on failure, and draws loading · Error + Retry (offline-worded, retries on reconnect) · nothing-yet vs nothing-in-this-period through `useLoad` + `PageBody`, with the money-blind restriction kept (read not sent, or no rupee figure).
+- **Queries that returned `MOCK_*` on error, on empty and per figure** — Rental, Operations, Damage & Maintenance, Sales/VAT, Activity — now throw and return honest empties. Writing them against the schema showed most could never succeed on live, so they only ever showed seed: cancellation read `stage = 'Cancelled'` (it is `cancelled_at`, 0015); Operations filtered `operation = 'dispatch'`/`state = 'completed'` (enum is `Handover`/`Completed`) and selected `return_lines` columns that do not exist; Sales/VAT selected `tax_amount`/`grand_total`/`pan_number` (0006: `vat_amount`/`total_amount`, clients `pan_vat`); staff names read `users.name` (it is `full_name`); and every money figure embedded base `booking_lines(rate, …)`, which 0062 revokes — now read from `booking_lines_v` (`readLineValues`). Rental money was also divided by 100 twice (1/100 of real revenue).
+- **Revenue Report** (already honest on `main`) moved onto `useLoad` + `PageBody`. **Asset ROI** no longer estimates revenue as price × 1.6, defaults ₹5,00,000 or invents 5 % maintenance: capital and maintenance are real, revenue/margin/ROI/drag/utilization read "Not tracked yet", unpriced units are counted.
+- **Seven seed showcases rebuilt over real reads** (they fetched a summary and discarded it): Client (base, frequency, top clients, receivables ageing, 60+ days overdue), Staff (bookings created, value, rental collections, floor sessions per person — the invented "performance score" and response time removed), Promotions (coupon redemptions, discount sources, bundle usage), Equipment Performance and Product (per-product/category revenue from priced lines, units, not-booked, reorder level), Cash Flow (collections, refunds, paid expenses, deposits apart — Law 4) and Working Capital (receivables + ageing, deposits held, approved unpaid expenses, DSO). Bank balance, supplier payables, utilization, profit: "Not tracked yet".
+- `liquidity.ts` `'Completed'` → `'Received'` (payment_status enum), as part of its rewrite.
+- Removed invented narrative cards (duration "insights" with fixed percentages, an unruled 50 % cancellation-fee schedule, "95.7 % ID verified", "76 % restock").
+- Shared: `lib/queries/reportSupport.ts` (`rowsOf`, `lineValue`, `readLineValues`, `NOT_TRACKED`), `modules/reports/reportStates.tsx` (filters → options, filtered-vs-nothing-yet, `NoMatchRow`).
+- Mock corpus brought in line with live: `payment_type 'Rental'` → `'Advance Payment'` (Cash Flow read Rs 0 collected while Sales showed Rs 31.5 lakh paid), invoices gain `currency: 'NPR'` (Revenue refused every mock row).
+
+**Ruled**
+- R-P6-STATES (Law 16 pass) in `RULINGS-2026-10-16.md`, 11 rows with reverts; `// RULING 2026-10-16` at each query. Open decisions logged in `docs/OPEN_DECISIONS.md` §13 (per-unit revenue attribution, cancellation fee, bank balance, utilization). Tolerated refusal: `bookings.project_type` is granted by 0161/0162, not on live (0156) — a 42501 there degrades only the Production Types card.
+- No migration written or applied. Nothing landed on `main`: branch `claude/phase6-law16-reports` from `main` (`eac94cf0`); it does not contain `claude/phase6-five-states` (Cases/Inventory/Expense/Activity Log) — the two touch different files except `RULINGS-2026-10-16.md` and this file.
+
+**Verified**
+- Final run, same tree: `npm run typecheck` exit 0 · `npm run lint` exit 0 · `npm run lint:shell` exit 0 (674 files) · `npm run lint:ui-copy` exit 0 · `npm test` 361 files, **4,718/4,718 passed** · `check:pglite` 165/165 and `check:lifecycle` 31/31 in the same run (no migration in this change) · `npm run build` exit 0 (289 precache entries).
+- New tests: `reportQueries.law16.test.ts` (31 — every read throws on a failed table, honest empty, enum/column/view fixes held, money-blind Client sends no invoice read), `reportQueries.mockStore.test.ts` (15 — every read resolves over the mock corpus), `Reports.law16.states.test.tsx` (40 — per report: loading → failing query banner + Retry, no figure, Retry → nothing-yet; offline wording; 8 money-only reports refuse Warehouse without sending the read; Rental/Client show no rupee to Warehouse). A mutation (Sales/VAT read enabled for every role) turned the restricted test red. Seven seed-asserting query tests deleted; `ActivityReports.test` and `AssetRoiReport.test` updated (they asserted seed rows).
+- Browser, mock build (Owner, own Vite cache dir, port 3461): all 14 routes render real mock figures and agree with each other — Rental revenue = Product revenue = Equipment revenue Rs 43,78,870; Sales outstanding = Client receivables = Working Capital receivables Rs 46,92,466.60; Cash Flow collected = Sales collections Rs 31,54,425.40; Damage fleet 192 ready = Inventory 192 In Stock. Staff and Promotions show nothing-yet (the corpus records no `created_by`/`received_by`, coupons or bundle lines) where they used to show invented people and 842 redemptions. Error/offline/restricted paths verified by the tests above, not in the browser (the mock store cannot fail). Console: only `ERR_CONNECTION_REFUSED` lines from the two preview-server restarts; every request after the last restart returned 200.
+- Not verified: live Supabase (no session here); a Warehouse sign-in in the browser.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 165 files · check:pglite 165/165 applied, 0 failed (recorded 2026-10-17T06:42:09.688Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-17T06:43:07.225Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live acceptance: run the 14 reports against Supabase with an Owner and a Warehouse session; apply 0161/0162 so `bookings.project_type` is readable (Babin, after BACKUP_PROTOCOL.md).
+- Product calls in OPEN_DECISIONS §13: per-unit revenue attribution, cancellation fee, bank balance, utilization history.
+- Merge order with `claude/phase6-five-states` (both edit RULINGS-2026-10-16.md and PROGRESS.md); landing on `main` needs Babin's go-ahead.
+- Dead seed modules now unused by any page (`data/clientReports`, `staffReports`, `promotionsReports`, `equipmentPerformance`, `productReports`; `liquidityReports` is still read by `payables.test.ts`).
+- A Warehouse sign-in in the browser was not driven; restricted paths are covered by tests only.
+
 ## 2026-10-16 — Phone header acceptance and staging access preflight
 
 **Did**

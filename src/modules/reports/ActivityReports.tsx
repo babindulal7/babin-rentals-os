@@ -1,18 +1,17 @@
 import { formatAdDateTime } from '../../lib/bs'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { PageHeader, KpiStrip, cardStyle } from '../../components/ui/Page'
 import type { Kpi } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
+import { PageBody } from '../../components/ui/PageBody'
+import { useLoad } from '../../lib/queries/useLoad'
+import { hasReportFilters } from './reportStates'
 import { ReportToolbar } from '../../components/ui/ReportToolbar'
 import type { ReportCsvRow, ReportFilters } from '../../components/ui/ReportToolbar'
 import { Donut, Legend, type Slice } from '../../components/ui/Charts'
 import Icon from '../../components/ui/Icon'
 import { useViewport } from '../../lib/device'
-import {
-  getActivityReport,
-  type ActivityReportData,
-  type ActivityReportFilterOptions,
-} from '../../lib/queries/activityReports'
+import { getActivityReport, type ActivityReportFilterOptions } from '../../lib/queries/activityReports'
 
 type ActivityTab = 'overview' | 'operators' | 'stream'
 
@@ -38,32 +37,26 @@ export default function ActivityReports() {
   const viewport = useViewport()
   const [activeTab, setActiveTab] = useState<ActivityTab>('overview')
   const [filters, setFilters] = useState<ReportFilters>({})
-  const [data, setData] = useState<ActivityReportData | null>(null)
-
-  useEffect(() => {
-    let active = true
-
-    const queryOpts: ActivityReportFilterOptions = {
-      ...(filters.dateRange?.fromAd ? { from: filters.dateRange.fromAd } : {}),
-      ...(filters.dateRange?.toAd ? { to: filters.dateRange.toAd } : {}),
-    }
-
-    void getActivityReport(queryOpts).then((res) => {
-      if (active) setData(res)
-    })
-
-    return () => {
-      active = false
-    }
-  }, [filters])
+  /* Phase 6 — the read used to fall back to seed staff and a seed activity
+     log on failure and on an empty period; it now throws, and `PageBody` draws
+     loading · Error + Retry · nothing-yet vs "nothing in this period". */
+  const filtered = hasReportFilters(filters)
+  const load = useLoad(
+    () => {
+      const queryOpts: ActivityReportFilterOptions = {
+        ...(filters.dateRange?.fromAd ? { from: filters.dateRange.fromAd } : {}),
+        ...(filters.dateRange?.toAd ? { to: filters.dateRange.toAd } : {}),
+      }
+      return getActivityReport(queryOpts)
+    },
+    { key: JSON.stringify(filters) },
+  )
+  const data = load.data
 
   const kpis = useMemo<Kpi[]>(() => {
     if (!data) return []
     const m = data.metrics
-    const successRate =
-      m.totalEvents > 0
-        ? Math.round((m.successfulEvents / m.totalEvents) * 100)
-        : 100
+    const successRate = m.totalEvents > 0 ? Math.round((m.successfulEvents / m.totalEvents) * 100) : null
 
     return [
       {
@@ -82,9 +75,9 @@ export default function ActivityReports() {
       },
       {
         label: 'Operation Success',
-        value: `${successRate}%`,
+        value: successRate === null ? '—' : `${successRate}%`,
         icon: 'check',
-        accent: successRate >= 98 ? 'success' : 'warn',
+        accent: successRate === null ? 'neutral' : successRate >= 98 ? 'success' : 'warn',
         note: `${m.failedEvents} logged failures`,
       },
       {
@@ -206,6 +199,23 @@ export default function ActivityReports() {
 
       <KpiStrip items={kpis} />
 
+      <PageBody
+        noun="activity"
+        loading={load.loading}
+        error={load.error}
+        onRetry={load.reload}
+        hasRows={data !== null}
+        skeleton="kpi"
+        empty={data !== null && data.metrics.totalEvents === 0}
+        emptyIsFiltered={filtered}
+        onClearFilters={() => setFilters({})}
+        emptyTitle={filtered ? 'No activity in this period' : 'No activity recorded yet'}
+        emptyMessage={
+          filtered
+            ? 'Nothing was recorded in the selected period. Clear the filters to see all activity.'
+            : 'Audit events appear here as soon as anyone works in the app.'
+        }
+      >
       {activeTab === 'overview' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
           <div
@@ -584,6 +594,7 @@ export default function ActivityReports() {
           </DataTableShell>
         </div>
       )}
+      </PageBody>
     </div>
   )
 }

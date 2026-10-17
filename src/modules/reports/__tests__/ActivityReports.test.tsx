@@ -21,17 +21,18 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 })
 
-vi.mock('../../../lib/supabase', () => ({
-  supabase: {
-    from: () => ({
-      select: () => ({
-        order: () => ({
-          limit: () => Promise.resolve({ data: [] }),
-        }),
-      }),
-    }),
-  },
-}))
+// One real-shaped audit row: the report now draws its empty state for an
+// empty log (Law 16 — it used to fall back to seed activity), so the tabs need
+// data to show their content.
+vi.mock('../../../lib/supabase', async () => {
+  const { fakeSupabase } = await import('../../../lib/queries/__tests__/fakeSupabase')
+  return {
+    supabase: fakeSupabase({
+      users: [{ id: 'u1', full_name: 'Ram Thapa', primary_role: 'Warehouse', employee_code: 'S-1', is_active: true }],
+      audit_events: [{ id: 'e1', created_at: '2026-10-01T06:00:00Z', action: 'Packed booking', category: 'Operations', module: 'Operations', severity: 'Informational', status: 'success', actor_id: 'u1' }],
+    }).client,
+  }
+})
 
 describe('ActivityReports module', () => {
   let container: HTMLDivElement | null = null

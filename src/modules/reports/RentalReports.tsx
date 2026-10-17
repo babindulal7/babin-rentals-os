@@ -1,9 +1,13 @@
 import { formatAd } from '../../lib/bs'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageHeader, Button, KpiStrip, cardStyle } from '../../components/ui/Page'
 import type { Kpi } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
+import { PageBody } from '../../components/ui/PageBody'
+import { useLoad } from '../../lib/queries/useLoad'
+import { NOT_TRACKED } from '../../lib/queries/reportSupport'
+import { reportFilterOptions, hasReportFilters, NoMatchRow } from './reportStates'
 import { ReportToolbar } from '../../components/ui/ReportToolbar'
 import type { ReportCsvRow, ReportFilters } from '../../components/ui/ReportToolbar'
 import { Donut, Legend, HBars, type Slice } from '../../components/ui/Charts'
@@ -15,10 +19,6 @@ import {
   getRentalPerformanceReport,
   getRentalDurationReport,
   getCancellationsReport,
-  type RentalPerformanceReportData,
-  type RentalDurationReportData,
-  type CancellationsReportData,
-  type ReportFilterOptions,
 } from '../../lib/queries/rentalReports'
 
 type RentalTab = 'performance' | 'duration' | 'cancellations'
@@ -48,37 +48,19 @@ export default function RentalReports() {
   const [filters, setFilters] = useState<ReportFilters>({})
   const [searchQuery, setSearchQuery] = useState('')
 
-  const [perfData, setPerfData] = useState<RentalPerformanceReportData | null>(null)
-  const [durationData, setDurationData] = useState<RentalDurationReportData | null>(null)
-  const [cancelData, setCancelData] = useState<CancellationsReportData | null>(null)
-
-  useEffect(() => {
-    let active = true
-
-    const branchId = filters.chips?.branch_id?.[0]
-
-    const queryOpts: ReportFilterOptions = {
-      from: filters.dateRange?.fromAd,
-      to: filters.dateRange?.toAd,
-      branchId,
-    }
-
-    void Promise.all([
-      getRentalPerformanceReport(queryOpts),
-      getRentalDurationReport(queryOpts),
-      getCancellationsReport(queryOpts),
-    ]).then(([perf, dur, canc]) => {
-      if (active) {
-        setPerfData(perf)
-        setDurationData(dur)
-        setCancelData(canc)
-      }
-    })
-
-    return () => {
-      active = false
-    }
-  }, [filters])
+  /* Phase 6 — one read for the three tabs, one ladder. These queries used to
+     return seed figures on failure and on an empty period (Law 16); they now
+     throw, and `PageBody` draws loading · Error + Retry · nothing-yet vs
+     "nothing in this period". */
+  const filtered = hasReportFilters(filters)
+  const load = useLoad(
+    () => {
+      const opts = reportFilterOptions(filters)
+      return Promise.all([getRentalPerformanceReport(opts), getRentalDurationReport(opts), getCancellationsReport(opts)])
+    },
+    { key: JSON.stringify(filters) },
+  )
+  const [perfData, durationData, cancelData] = load.data ?? [null, null, null]
 
   // Performance KPI strip
   const performanceKpis = useMemo<Kpi[]>(() => {
@@ -132,14 +114,14 @@ export default function RentalReports() {
         value: `${durationData.shortestDuration} Day`,
         icon: 'calendar',
         accent: 'neutral',
-        note: 'Minimum single day hire',
+        note: 'Shortest non-cancelled booking',
       },
       {
         label: 'Longest Rental',
         value: `${durationData.longestDuration} Days`,
         icon: 'calendar',
         accent: 'progress',
-        note: 'Multi-week production span',
+        note: 'Longest non-cancelled booking',
       },
       {
         label: 'Total Analyzed',
@@ -178,10 +160,10 @@ export default function RentalReports() {
       },
       {
         label: 'Average Notice',
-        value: `${cancelData.averageNoticeDays} Days`,
+        value: cancelData.averageNoticeDays === null ? '—' : `${cancelData.averageNoticeDays} Days`,
         icon: 'timer',
         accent: 'neutral',
-        note: 'Lead time before pickup',
+        note: cancelData.averageNoticeDays === null ? 'No cancellation in this period' : 'Lead time before pickup',
       },
     ]
   }, [cancelData, money])
@@ -212,7 +194,8 @@ export default function RentalReports() {
         [],
         ['Project Types Breakdown'],
         ['Project Type', 'Count', 'Revenue', 'Share %'],
-        ...(perfData?.projectTypes.map((pt): ReportCsvRow => [
+        ...(perfData?.projectTypes === null ? [[NOT_TRACKED] as ReportCsvRow] : []),
+        ...(perfData?.projectTypes?.map((pt): ReportCsvRow => [
           pt.projectType,
           pt.count,
           money ? formatMoney(pt.revenue) : 'Restricted',
@@ -258,7 +241,7 @@ export default function RentalReports() {
         ['Total Cancellations', cancelData?.totalCancellations ?? 0],
         ['Cancellation Rate', `${cancelData?.cancellationRate ?? 0}%`],
         ['Total Lost Revenue', money ? formatMoney(cancelData?.totalLostRevenue ?? (0 as Paisa)) : 'Restricted'],
-        ['Avg Notice Days', `${cancelData?.averageNoticeDays ?? 0} Days`],
+        ['Avg Notice Days', cancelData?.averageNoticeDays == null ? '—' : `${cancelData.averageNoticeDays} Days`],
         [],
         ['Cancellation Reasons'],
         ['Reason', 'Count', 'Share %', 'Lost Revenue'],
@@ -417,6 +400,23 @@ export default function RentalReports() {
         </div>
       </ReportToolbar>
 
+      <PageBody
+        noun="rental figures"
+        loading={load.loading}
+        error={load.error}
+        onRetry={load.reload}
+        hasRows={perfData !== null}
+        skeleton="kpi"
+        empty={perfData !== null && perfData.metrics.totalBookings === 0}
+        emptyIsFiltered={filtered}
+        onClearFilters={() => setFilters({})}
+        emptyTitle={filtered ? 'No bookings in this period' : 'No bookings yet'}
+        emptyMessage={
+          filtered
+            ? 'Nothing was picked up in the selected period or branch. Clear the filters to see every booking.'
+            : 'Rental figures appear here once the first booking is created.'
+        }
+      >
       {/* TAB 1: PERFORMANCE */}
       {activeTab === 'performance' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
@@ -451,10 +451,15 @@ export default function RentalReports() {
                 Production Types Breakdown
               </h3>
               <p style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', marginBottom: 'var(--sp-md)' }}>
-                Rental equipment allocation across commercial, feature film, and event productions.
+                Bookings by the project type recorded on each rental.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
-                {perfData?.projectTypes.map((pt) => (
+                {perfData?.projectTypes === null && (
+                  <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+                    {NOT_TRACKED} — project type is not readable for this session.
+                  </div>
+                )}
+                {perfData?.projectTypes?.map((pt) => (
                   <div
                     key={pt.projectType}
                     style={{
@@ -520,6 +525,7 @@ export default function RentalReports() {
                   </tr>
                 </thead>
                 <tbody>
+                  {filteredTopBookings.length === 0 && <NoMatchRow colSpan={money ? 6 : 5} query={searchQuery} noun="bookings" />}
                   {filteredTopBookings.map((b) => (
                     <tr key={b.id}>
                       <td style={td}>
@@ -584,26 +590,6 @@ export default function RentalReports() {
               {durationBars.length > 0 && <HBars rows={durationBars} axisTicks={['0', '10', '20', '30', '40+']} />}
             </div>
 
-            {/* Quick operational insights */}
-            <div style={cardStyle}>
-              <h3 style={{ fontSize: 'var(--t-h3)', fontWeight: 600, marginBottom: 'var(--sp-sm)' }}>
-                Duration Insights & Turnover Velocity
-              </h3>
-              <p style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', marginBottom: 'var(--sp-md)' }}>
-                Fleet turnaround efficiency and warehouse prep cycles.
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)', fontSize: 'var(--t-body)' }}>
-                <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: 'var(--r-sm)' }}>
-                  <strong>Weekend & Short Commercials (2–3 Days)</strong> account for the highest volume of bookings (41%), requiring rapid return inspection and restocking turnaround.
-                </div>
-                <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: 'var(--r-sm)' }}>
-                  <strong>Single Day Shoots (1 Day)</strong> represent 29% of bookings with the highest average daily yield, yielding optimal equipment ROI.
-                </div>
-                <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: 'var(--r-sm)' }}>
-                  <strong>Feature & Long Term (8+ Days)</strong> deliver stable fleet utilization and lower prep overhead per billable day.
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Duration buckets table */}
@@ -677,26 +663,6 @@ export default function RentalReports() {
               )}
             </div>
 
-            {/* Policy & Mitigations */}
-            <div style={cardStyle}>
-              <h3 style={{ fontSize: 'var(--t-h3)', fontWeight: 600, marginBottom: 'var(--sp-sm)' }}>
-                Cancellation Policy & Fee Protection
-              </h3>
-              <p style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', marginBottom: 'var(--sp-md)' }}>
-                Standard operating procedure for late client cancellations.
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)', fontSize: 'var(--t-body)' }}>
-                <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: 'var(--r-sm)' }}>
-                  <strong>Advance Notice (&gt; 48 Hours):</strong> Full deposit release; equipment released back to active available pool without cancellation penalty.
-                </div>
-                <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: 'var(--r-sm)' }}>
-                  <strong>Late Notice (24–48 Hours):</strong> Standard 1-day prep & reservation charge applied to cover warehouse technician staging time.
-                </div>
-                <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: 'var(--r-sm)' }}>
-                  <strong>Same-Day Dropout (&lt; 24 Hours):</strong> 50% reservation cancellation fee applies per client rental contract terms.
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Cancelled bookings table */}
@@ -720,6 +686,7 @@ export default function RentalReports() {
                   </tr>
                 </thead>
                 <tbody>
+                  {filteredCancelledBookings.length === 0 && <NoMatchRow colSpan={money ? 6 : 5} query={searchQuery} noun="cancelled bookings" />}
                   {filteredCancelledBookings.map((cb) => (
                     <tr key={cb.id}>
                       <td style={td}>
@@ -747,6 +714,7 @@ export default function RentalReports() {
           </div>
         </div>
       )}
+      </PageBody>
     </div>
   )
 }
