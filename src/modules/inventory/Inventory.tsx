@@ -1601,6 +1601,11 @@ export default function Inventory() {
           { label: 'Refresh equipment', icon: 'refresh' as const, onClick: refreshAll },
           { label: 'Export this page', icon: 'download' as const, onClick: () => exportCsv(list.rows, money) },
           {
+            label: 'Shortages for period',
+            icon: 'alert_triangle' as const,
+            onClick: () => navigate('/reports/inventory'),
+          },
+          {
             label: 'Warranty Tracker',
             icon: 'check',
             onClick: () => navigate('/inventory/warranty'),

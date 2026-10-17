@@ -1,42 +1,42 @@
 # Progress Log
 
-## 2026-10-18 — Booqable audit adoptions (P0-B role auth, BQ-105 empty recovery, BQ-301/006 rental day guidance, BQ-VIEW-01/02 system views)
+## 2026-10-18 — Booqable audit adoptions (duplication hygiene BQ-207, shortage action BQ-408, dashboard deep links BQ-205)
 
 **Did**
 - Extracted high-impact structural, operational, and UX improvements from the Booqable reverse-engineering audit (`C:\Users\use\Desktop\scrape`) and systematically implemented them in Babin Rentals OS:
-  1. **P0-B Per-Operation Role Authorization:**
-     - Enforced `canPerformOp(user.role, stageJob)` on the primary action button in `BookingDetail.tsx`.
-     - In `rentalActions.ts`, populated explicit, informative denial reasons (`Your role does not have permission to ...`) across all lifecycle stages (`Booked`, `Packed`, `On Rent`, `Returned`) when `canOperate === false`.
-     - In `BookingOperationsMenu.tsx`, integrated `useAuth()` and `canPerformOp(user.role, opName)` to disable unauthorized actions (e.g. Technician role attempting client-facing Handover) with explicit user-facing explanations.
-  2. **Sequential Date Enforcement & Rental-Day Guidance (BQ-301, BQ-006):**
-     - Updated `BookingDatesSection.tsx` with an in-UI guidance banner: `Rental day runs 06:00 → 06:00 NPT. Multi-day rentals calculate continuous 24-hour spans from the 06:00 Kathmandu cut.`
-  3. **Empty-State Recovery & Filter Reset (BQ-105):**
-     - Enhanced `EmptyState` (`StateViews.tsx`) and `PageBody` (`PageBody.tsx`) to support `secondaryActionLabel`, `onSecondaryAction`, and `emptyExtra` children.
-     - Updated `RentalsList.tsx` empty state: when search or filters yield 0 records, it displays the specific search query in the title, tailored advice, dedicated dual actions (`Clear search` and `Clear all filters`), and active filter chips for instant one-click removal of individual narrowing criteria.
-  4. **Saved Views System & Fallback (BQ-VIEW-01/02):**
-     - Audited database migration 0159 (`saved_views`) and verified all 5 system views (`Pickups today`, `Returns today`, `Overdue`, `Awaiting inspection`, `Drafts`).
-     - Added `DEFAULT_RENTALS_SYSTEM_VIEWS` to `savedViews.ts` and wired `readDeviceViews(legacyStorageKey, userId, listKey)` and `SavedViewsMenu.tsx` so floor staff always have the 5 standard system views even in offline or local storage device fallback mode.
-- Added comprehensive unit and integration tests across all updated components.
+  1. **Rental Duplication Hygiene & Flow Navigation (BQ-207):**
+     - Enhanced `DuplicateRentalDialog.tsx`: looks up catalogue daily rates from `products_v` for `productId`s, calculates `days` from selected pickup/return dates via `rentalDaysBetween`, strips logistics/serials/crew/payment rows, and preserves client and equipment lines.
+     - Updated `RentalMoreActions.tsx`: instantiated `useNavigate` and wired `DuplicateRentalDialog`'s `onSuccess` callback to navigate directly to `/rentals?action=new&draft=${draftId}`, immediately opening the draft editor with pre-filled lines and client info.
+     - Updated `RentalMoreActions.test.tsx` with `MemoryRouter` integration (9/9 passed).
+  2. **Shortage Report as Buying Signal (BQ-408):**
+     - Added `Shortages for period` action in `Inventory.tsx` header overflow actions (`alert_triangle` icon), routing to `/reports/inventory` where `ShortageSection` evaluates period holds against total stock ceiling with direct links to conflicting rentals and the planning calendar.
+  3. **Dashboard Quick Deep-Links (BQ-205):**
+     - Enhanced `DashboardMovementPanel.tsx`: added header action `View in Rentals` for both Outgoing and Incoming queues, deep-linking directly into `/rentals?quick=Pickups+Today` and `/rentals?quick=Returns+Today`.
+     - Verified with all 119 tests passing in `src/modules/today/__tests__/`.
+  4. **P0-B Per-Operation Role Authorization:**
+     - Enforced `canPerformOp(user.role, stageJob)` on primary buttons and `BookingOperationsMenu.tsx` with explicit user-facing denial explanations.
+  5. **Empty-State Recovery & Filter Reset (BQ-105):**
+     - Enhanced empty states with dual recovery (`Clear search` and `Clear all filters`) plus active filter removal chips.
+  6. **Saved Views System & Fallback (BQ-VIEW-01/02):**
+     - Audited migration 0159 and added `DEFAULT_RENTALS_SYSTEM_VIEWS` device fallback in `savedViews.ts` for offline/mock resilience.
 
 **Ruled**
-- Technician role is permitted for warehouse and staging operations (`pack`, `return`, `reset`), but strictly denied from client-facing operations (`handover`), which are reserved for floor/desk roles (`Owner`, `Admin`, `Manager`, `Warehouse`).
-- Operations denied by role must present explicit, user-friendly explanations rather than failing silently or rendering disabled without reason.
-- Dual recovery actions in empty state (`Clear search` as primary secondary-variant button, `Clear all filters` as tertiary-variant button) ensure operators can discard mistyped queries without losing carefully selected date or stage filters.
-- System saved views in device fallback mode are immutable and never persisted into device-private view storage.
+- Rental duplication must always resolve real catalogue rates for referenced products and recompute duration via `rentalDaysBetween` rather than zeroing prices.
+- When an operator duplicates a rental, the system must navigate directly to the new draft editor rather than leaving them on the source booking.
+- Dashboard movement panels must provide direct deep links into canonical filtered rentals views (`?quick=Pickups+Today`, `?quick=Returns+Today`) to keep daily queues tightly synchronized.
+- Technician role remains authorized for staging/returns/resets but restricted from client-facing handovers.
 
 **Verified**
 - `npm run typecheck`: clean (exit code 0).
-- `npx vitest run src/lib/__tests__/rentalActions.test.ts`: 12/12 passed.
-- `npx vitest run src/modules/rentals/__tests__/BookingOperationsMenu.test.tsx`: 4/4 passed.
-- `npx vitest run src/modules/rentals/__tests__/BookingDetail.layout.test.tsx`: 28/28 passed.
-- `npx vitest run src/components/ui/__tests__/PageBody.test.tsx`: 18/18 passed.
-- `npx vitest run src/components/ui/__tests__/SavedViewsMenu.test.ts`: 3/3 passed.
-- `npm run test:saved-views`: 20/20 passed against PGlite.
+- `npx vitest run src/modules/rentals/actions/__tests__/RentalMoreActions.test.tsx`: 9/9 passed.
+- `npx vitest run src/modules/today/__tests__/`: 119/119 passed across 5 test suites.
+- `npx vitest run src/modules/inventory/__tests__/`: 79/79 passed across 5 test suites.
+- `npx vitest run src/modules/reports/__tests__/ShortageSection.test.tsx`: 4/4 passed.
 - `npm run check:pglite`: 167/167 applied, 0 failed.
 - `npm run check:lifecycle`: 31/31 green, 0 failed.
 - `npm run lint`: 0 errors, 0 warnings (`--max-warnings 0`).
 - `npm run check:contrast`: 82/82 pass, 0 fail.
-- `npm run build`: built in 34.16s, exit code 0.
+- `npm run build`: built in 28.67s, exit code 0.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -47,8 +47,8 @@
 | Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
 | Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
 | Overall | mean of five | ≈ 99% | +0 |
-Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-17T18:36:07.948Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
-Gates read from .lifecycle-result.json, written 2026-10-17T18:36:27.064Z.
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-17T19:05:49.049Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-17T19:06:13.122Z.
 Counted by `npm run completion`, not typed.
 
 ### Remaining

@@ -155,7 +155,34 @@ export default function DashboardMovementPanel({
           </h2>
           {panelSubtitle && <p title={panelSubtitle}>{panelSubtitle}</p>}
         </div>
-        {filterControl && <div className="movement-panel__filter">{filterControl}</div>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+          <button
+            type="button"
+            onClick={() => navigate(side === 'outgoing' ? '/rentals?quick=Pickups+Today' : '/rentals?quick=Returns+Today')}
+            className="press tap"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              fontSize: 'var(--t-meta, 13px)',
+              fontWeight: 600,
+              color: 'var(--link)',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '4px 8px',
+              borderRadius: 'var(--r-btn)',
+              minHeight: 36,
+              fontFamily: 'inherit',
+            }}
+            title={`View all ${side === 'outgoing' ? 'pickups' : 'returns'} in Rentals list`}
+            aria-label={`View all ${side === 'outgoing' ? 'pickups' : 'returns'} in Rentals list`}
+          >
+            <span>View in Rentals</span>
+            <Icon name="arrow_right" size={13} />
+          </button>
+          {filterControl && <div className="movement-panel__filter">{filterControl}</div>}
+        </div>
       </header>
 
       {!compactEmpty && <div className={`movement-panel__body movement-panel__body--${side}`}>
