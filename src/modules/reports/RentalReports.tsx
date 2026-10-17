@@ -98,6 +98,7 @@ export default function RentalReports() {
         icon: 'dollar',
         accent: 'success',
         note: money ? `Avg ${formatMoney(m.averageBookingValue)} / booking` : /* Restricted (Law 6) */ "Restricted",
+        definition: 'Rental revenue from confirmed bookings in the period, excluding deposits (liabilities).',
       },
       {
         label: 'Rental Days',
@@ -175,6 +176,7 @@ export default function RentalReports() {
         icon: 'dollar',
         accent: 'danger',
         note: money ? 'Unrealized quote & booking total' : /* Restricted (Law 6) */ "Restricted",
+        definition: 'Revenue lost from cancelled bookings; sum of their rental totals.',
       },
       {
         label: 'Average Notice',
