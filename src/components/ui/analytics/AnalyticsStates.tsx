@@ -28,7 +28,7 @@ export function AnalyticsErrorState({
   return (
     <div className="analytics-state-card analytics-state-card--error" role="alert">
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--danger-text)' }}>
-        <Icon name="alert" size={16} fill />
+        <Icon name="error" size={16} fill />
         <strong>Analytics unavailable</strong>
       </div>
       <p style={{ margin: '6px 0 10px', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>{error}</p>

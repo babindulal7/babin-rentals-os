@@ -5,6 +5,7 @@ import { comparePeriods } from '../../../lib/analytics/comparison'
 import { TrendSparkline } from './TrendSparkline'
 import { InfoTooltip } from '../InfoTooltip'
 import Icon from '../Icon'
+import { AnalyticsLoadingSkeleton } from './AnalyticsStates'
 
 interface AnalyticsKpiCardProps {
   model: KpiViewModel
@@ -14,6 +15,10 @@ interface AnalyticsKpiCardProps {
 
 export function AnalyticsKpiCard({ model, loading, className }: AnalyticsKpiCardProps) {
   const { label, value, previous, comparisonLabel, definition, context, href, trend, accent = 'primary' } = model
+
+  if (loading) {
+    return <AnalyticsLoadingSkeleton height={120} label={`Loading ${label}`} />
+  }
 
   const formatted = formatNumericValue(value)
   const isZeroOrEmpty = value === null || (value.kind === 'count' && value.value === 0) || (value.kind === 'money' && value.paisa === 0)
