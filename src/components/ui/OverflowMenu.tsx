@@ -93,15 +93,18 @@ export function OverflowMenu({ items, ariaLabel = 'More actions', style }: Overf
         aria-controls={menuId}
         onClick={() => open ? closeMenu(true) : setOpen(true)}
         style={{
-          width: 44,
-          height: 44,
-          borderRadius: 'var(--r-btn)',
-          border: '1px solid var(--btn-secondary-border)',
-          background: open ? 'var(--hover-card)' : 'var(--btn-secondary-bg)',
+          width: 36,
+          height: 36,
+          minWidth: 36,
+          minHeight: 36,
+          borderRadius: 'var(--r-btn, 8px)',
+          border: '1px solid var(--border)',
+          background: open ? 'var(--hover-card)' : 'transparent',
           color: 'var(--text2)',
           display: 'grid',
           placeItems: 'center',
           cursor: 'pointer',
+          boxSizing: 'border-box',
         }}
       >
         <Icon name="more_vert" size={16} />

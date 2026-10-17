@@ -1,5 +1,13 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 17 October 2026: legacy Storage object mapping — TODO(decision)
+
+- Live `documents`/`evidence` object SELECT/INSERT/UPDATE policies currently test authenticated bucket membership only. Existing PERMISSIONS.md §3/§5 requires client ownership, money omission and identity-document restrictions. Private buckets alone do not enforce that matrix.
+- Engineering work required: bind stored paths to authoritative document/evidence records and apply those records' role/ownership rules when creating signed URLs or reading/updating objects. Existing exports use several path formats, and some uploads are signed before metadata registration.
+- **TODO(decision):** determine the disposition of legacy/unregistered paths during the scoped-access migration (inventory and quarantine vs an approved remapping process). Do not silently expose orphan files or invent a cross-client fallback. No broader read or write permission is proposed.
+- Keep production release blocked on a tested policy/storage-client migration and real Client A/Client B plus staff-role Storage API acceptance. No live policies were changed by this audit. Root PLAN.md is absent from the current checkout; this record is the active decision reference.
+
+
 **Status:** Authoritative Active Decision Register  
 **Last Reconciled:** 3 October 2026
 

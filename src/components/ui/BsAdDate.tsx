@@ -99,28 +99,24 @@ export const BsAdDate: React.FC<BsAdDateProps> = ({
     )
   }
 
-  // Default stacked layout
+  // Default stacked layout: 2 lines (Line 1: BS date bold, Line 2: AD date + time)
   return (
     <div className={className || undefined} style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
-      <span style={{ fontSize: 'var(--t-ui)', fontWeight: 500, color: primaryColor }} title={primaryTitle}>
+      <span style={{ fontSize: 'var(--t-ui)', fontWeight: 700, color: primaryColor, whiteSpace: 'nowrap' }} title={primaryTitle}>
         {primary}
       </span>
       <span
         style={{
           fontSize: 'var(--t-meta)',
           color: secondaryColor,
-          /* RULING 2026-10-15: date and time are each one unbreakable unit. Where the
-             column is too narrow for both, the time takes the next line whole — the
-             flex column gap separates them on one line and leaves no stray mark at
-             the start of a wrapped one. */
-          ...(timeFormatted ? { display: 'flex', flexWrap: 'wrap' as const, columnGap: '0.5em' } : {}),
+          whiteSpace: 'nowrap',
         }}
       >
         {/* The second line carries the AD date only when the first carries BS.
             When BS is unavailable the first line already IS the AD date, so this
             line states WHY rather than repeating it. */}
-        <span style={{ whiteSpace: 'nowrap' }}>{bsFormatted ? adFormatted : 'BS unavailable'}</span>
-        {timeFormatted && <> <span style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{timeFormatted}</span></>}
+        <span>{bsFormatted ? adFormatted : 'BS unavailable'}</span>
+        {timeFormatted && <> <span style={{ fontVariantNumeric: 'tabular-nums' }}>{timeFormatted}</span></>}
       </span>
     </div>
   )

@@ -24,7 +24,6 @@ import { ContextDrawer } from '../../components/ui/ContextDrawer'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { ActiveFilterChips, FilterButton } from '../../components/ui/FilterDrawer'
 import { SavedViewsMenu, type SavedListView } from '../../components/ui/SavedViewsMenu'
-import { AppPageToolbar } from '../../components/ui/AppPageToolbar'
 import { FilterBar } from '../../components/ui/FilterBar'
 import { Pagination } from '../../components/ui/Pagination'
 import { BsAdDate } from '../../components/ui/BsAdDate'
@@ -181,6 +180,17 @@ function Tag({ text, status }: { text: string; status: StatusKey }) {
 const EXTERNAL_LABEL = 'Sub-rented — external gear'
 const EXTERNAL_ICON: IconName = 'external_link'
 
+const VIEW_TOOLTIPS: Record<string, string> = {
+  All: 'All rental bookings and drafts',
+  Draft: 'In-progress rental drafts',
+  Quote: 'Active price quotes',
+  Upcoming: 'Upcoming bookings (Filters BOOKED + PACKED)',
+  Out: 'Equipment currently on rent (ON RENT)',
+  Returns: 'Returned equipment (RETURNED)',
+  Closed: 'Archived and completed rentals (CLOSED)',
+  Cancelled: 'Cancelled bookings',
+}
+
 function draftToRentalListRow(d: RentalDraftRecord): RentalListRow {
   const data = d.data
   const bookingNoDisplay = data.bookingNo ? `Draft #${data.bookingNo}` : `Draft ${d.id.slice(0, 8)}`
@@ -223,6 +233,26 @@ function draftToRentalListRow(d: RentalDraftRecord): RentalListRow {
     totalAmount: calculateDraftTotal(data),
     isExternal: hasSubRental,
   }
+}
+
+/** Formats created date cleanly as "8 Oct 2026" rather than raw numeric AD "8/10/2026" */
+function formatCreatedDate(dateStr: string): string {
+  if (!dateStr || dateStr === '—') return '—'
+  const parts = dateStr.split('/')
+  if (parts.length === 3) {
+    const day = parseInt(parts[0] ?? '', 10)
+    const month = parseInt(parts[1] ?? '', 10)
+    const year = parseInt(parts[2] ?? '', 10)
+    if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+      const d = new Date(Date.UTC(year, month - 1, day))
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+    }
+  }
+  const parsed = new Date(dateStr)
+  if (!isNaN(parsed.getTime())) {
+    return parsed.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kathmandu' })
+  }
+  return dateStr
 }
 
 /**
@@ -1565,6 +1595,43 @@ export default function RentalsList() {
   const singleSelectedId = selectedIds.size === 1 ? Array.from(selectedIds)[0] : null
   const selectedHeaderRental = singleSelectedId ? list.rows.find((r) => r.id === singleSelectedId) ?? null : null
 
+  const getTabCount = (viewId: string, stages: readonly string[]): number | null => {
+    const fromApi = viewCounts.rows.find((row) => row.id === viewId)?.count
+    if (typeof fromApi === 'number' && !Number.isNaN(fromApi)) return fromApi
+
+    // Fallback when viewCounts is loading, errored or unpopulated
+    if (viewId === 'All') {
+      if (typeof total === 'number') return total
+      return list.rows.length
+    }
+    if (viewId === 'Draft') {
+      return list.rows.filter((r) => (r.status as string) === 'Draft').length
+    }
+    if (viewId === 'Cancelled') {
+      return list.rows.filter((r) => r.isCancelled).length
+    }
+    if (stages.length === 1 && stages[0]) {
+      const stageName = stages[0]
+      const facetCount = stageFacet.counts[stageName]
+      if (typeof facetCount === 'number') return facetCount
+      return list.rows.filter((r) => (r.status as string) === stageName).length
+    }
+    if (stages.length > 1) {
+      let sum = 0
+      let hasAny = false
+      for (const st of stages) {
+        const fc = stageFacet.counts[st]
+        if (typeof fc === 'number') {
+          sum += fc
+          hasAny = true
+        }
+      }
+      if (hasAny) return sum
+      return list.rows.filter((r) => stages.includes(r.status as string)).length
+    }
+    return null
+  }
+
   const countedTitle = total === null ? 'Rentals' : `${total} ${total === 1 ? 'Rental' : 'Rentals'} found`
 
   if (isNew) {
@@ -1598,16 +1665,18 @@ export default function RentalsList() {
       )}
       {/* Search portal into the shell's original fixed-height header */}
       <WorkspaceHeaderSearch>
-        <SearchInput
-          value={f.filters.search ?? ''}
-          onChange={(val) => f.setSearch(val)}
-          onClear={() => f.setSearch('')}
-          autoFocusShortcut={true}
-          shortcutHint="Ctrl+K"
-          aria-label="Search rentals"
-          placeholder="Search rentals (Ctrl+K or /)…"
-          wrapperStyle={{ width: '100%', minWidth: 0 }}
-        />
+        <div style={{ width: '100%', minWidth: 280, maxWidth: 360 }} className="min-w-[280px] lg:min-w-[340px]">
+          <SearchInput
+            value={f.filters.search ?? ''}
+            onChange={(val) => f.setSearch(val)}
+            onClear={() => f.setSearch('')}
+            autoFocusShortcut={true}
+            shortcutHint="Ctrl+K"
+            aria-label="Search rentals"
+            placeholder="Search rentals (Ctrl+K or /)…"
+            wrapperStyle={{ width: '100%', minWidth: 0 }}
+          />
+        </div>
       </WorkspaceHeaderSearch>
 
       {/* Action portal into the shell's original fixed-height header */}
@@ -1749,7 +1818,7 @@ export default function RentalsList() {
       <WorkspaceHeaderAddActions>
           {canWriteDesk && (
             <Button
-              variant="primary"
+              variant="secondary"
               size="sm"
               icon="plus"
               aria-label="New Rental"
@@ -1878,6 +1947,8 @@ export default function RentalsList() {
                 ? statusFilter.size === 3 && statusFilter.has('Quote') && statusFilter.has('Booked') && statusFilter.has('Packed')
                 : viewItem.stages.length === 1 && viewItem.stages[0] !== undefined && stageChips.length === 1 && stageChips.includes(viewItem.stages[0])
 
+          const tabCount = getTabCount(viewItem.id, viewItem.stages)
+
           return (
             <button
               key={viewItem.id}
@@ -1899,6 +1970,7 @@ export default function RentalsList() {
               }}
               aria-pressed={isActive}
               aria-label={viewItem.label}
+              title={VIEW_TOOLTIPS[viewItem.id] ?? viewItem.label}
               style={stageChipStyle(isActive)}
             >
               <TouchTarget axis="y" />
@@ -1908,111 +1980,128 @@ export default function RentalsList() {
                 style={{ color: isActive ? 'var(--nav-active-accent)' : 'var(--text2)' }}
               />
               <span data-view-label>{viewItem.label}</span>
-              <span className="figure" style={{ color: 'var(--muted)' }} aria-label={`${viewItem.label} count`}>
-                {(() => {
-                  if (viewCounts.loading || viewCounts.error) return '—'
-                  const c = viewCounts.rows.find((row) => row.id === viewItem.id)?.count
-                  return typeof c === 'number' && !Number.isNaN(c) ? c : '—'
-                })()}
+              <span
+                className="figure"
+                style={{
+                  marginLeft: 4,
+                  fontSize: 'var(--t-meta, 12px)',
+                  color: tabCount === 0 ? 'var(--muted)' : isActive ? 'var(--nav-active-accent)' : 'var(--text2)',
+                  opacity: tabCount === 0 ? 0.6 : 1,
+                  fontWeight: tabCount === 0 ? 400 : 600,
+                }}
+                aria-label={`${viewItem.label} count`}
+              >
+                {tabCount !== null ? tabCount : '—'}
               </span>
             </button>
           )
         })}
+      </FilterBar>
 
-        {chip !== 'All' && (
-          <button
-            type="button"
-            onClick={() => pickChip('All')}
-            aria-pressed={true}
-            style={stageChipStyle(true)}
-            title={`Quick filter: ${chip}`}
-          >
-            <TouchTarget axis="y" />
-            <Icon
-              name={chip === 'Overdue' ? 'alert_triangle' : 'queues'}
-              size={13}
-              style={{ color: 'var(--nav-active-accent)' }}
-            />
-            {chip}
-          </button>
-        )}
-        {subIds === null && !subPending ? (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+      {/* Row 2: Sub-Rental & Quick Chips on left, Results Count & Saved Views on right */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 'var(--sp-sm)',
+          minHeight: 38,
+          padding: '2px 0 4px 0',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', flexWrap: 'wrap' }}>
+          {chip !== 'All' && (
             <button
               type="button"
-              disabled
-              aria-label="Sub-Rental — unavailable"
-              title={SUB_RENTAL_UNANSWERED}
-              style={{ ...stageChipStyle(false), opacity: 0.5, cursor: 'not-allowed' }}
+              onClick={() => pickChip('All')}
+              aria-pressed={true}
+              style={stageChipStyle(true)}
+              title={`Quick filter: ${chip}`}
+            >
+              <TouchTarget axis="y" />
+              <Icon
+                name={chip === 'Overdue' ? 'alert_triangle' : 'queues'}
+                size={13}
+                style={{ color: 'var(--nav-active-accent)' }}
+              />
+              {chip}
+            </button>
+          )}
+          {subIds === null && !subPending ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <button
+                type="button"
+                disabled
+                aria-label="Sub-Rental — unavailable"
+                title={SUB_RENTAL_UNANSWERED}
+                style={{ ...stageChipStyle(false), opacity: 0.5, cursor: 'not-allowed' }}
+              >
+                <TouchTarget axis="y" />
+                <Icon
+                  name="external_link"
+                  size={13}
+                  style={{ color: 'var(--muted)' }}
+                />
+                Sub-Rental
+              </button>
+              <button
+                type="button"
+                aria-label="Retry loading sub-rentals"
+                title="Retry loading sub-rentals"
+                onClick={() => void refreshSubRentals()}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '4px 6px',
+                  borderRadius: 'var(--r-btn)',
+                  border: '1px solid var(--border)',
+                  background: 'var(--card2)',
+                  color: 'var(--text)',
+                  cursor: 'pointer',
+                  fontSize: 11,
+                }}
+              >
+                <Icon name="refresh" size={12} />
+              </button>
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => f.setExtra('sub', subOn ? undefined : 'on')}
+              aria-pressed={subOn}
+              title={SUB_RENTAL_NOTE}
+              style={stageChipStyle(subOn)}
             >
               <TouchTarget axis="y" />
               <Icon
                 name="external_link"
                 size={13}
-                style={{ color: 'var(--muted)' }}
+                style={{ color: subOn ? 'var(--nav-active-accent)' : STATUS.ext.fg }}
               />
               Sub-Rental
             </button>
-            <button
-              type="button"
-              aria-label="Retry loading sub-rentals"
-              title="Retry loading sub-rentals"
-              onClick={() => void refreshSubRentals()}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '4px 6px',
-                borderRadius: 'var(--r-btn)',
-                border: '1px solid var(--border)',
-                background: 'var(--card2)',
-                color: 'var(--text)',
-                cursor: 'pointer',
-                fontSize: 11,
-              }}
-            >
-              <Icon name="refresh" size={12} />
-            </button>
-          </span>
-        ) : (
-          <button
-            type="button"
-            onClick={() => f.setExtra('sub', subOn ? undefined : 'on')}
-            aria-pressed={subOn}
-            title={SUB_RENTAL_NOTE}
-            style={stageChipStyle(subOn)}
-          >
-            <TouchTarget axis="y" />
-            <Icon
-              name="external_link"
-              size={13}
-              style={{ color: subOn ? 'var(--nav-active-accent)' : STATUS.ext.fg }}
-            />
-            Sub-Rental
-          </button>
-        )}
-      </FilterBar>
+          )}
+        </div>
 
-      {total !== null && (
-        <AppPageToolbar
-          rightSlot={
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-              <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', fontWeight: 600 }}>
-                {countedTitle}
-              </span>
-              <SavedViewsMenu
-                listKey="rentals"
-                legacyStorageKey={savedViewStorageKey}
-                canPublish={canPublishTeamViews(user?.role ?? 'Client')}
-                userId={user?.id ?? null}
-                currentQuery={savedViewQuery}
-                currentHiddenColumns={[...hiddenCols]}
-                onApply={applySavedView}
-              />
-            </div>
-          }
-        />
-      )}
+        {total !== null && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginLeft: 'auto' }}>
+            <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', fontWeight: 600 }}>
+              {countedTitle}
+            </span>
+            <SavedViewsMenu
+              listKey="rentals"
+              legacyStorageKey={savedViewStorageKey}
+              canPublish={canPublishTeamViews(user?.role ?? 'Client')}
+              userId={user?.id ?? null}
+              currentQuery={savedViewQuery}
+              currentHiddenColumns={[...hiddenCols]}
+              onApply={applySavedView}
+            />
+          </div>
+        )}
+      </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0, flex: 1 }}>
         <div style={{ background: 'var(--card)', borderRadius: 'var(--r-card)', border: '1.5px solid var(--border)', overflow: 'hidden' }}>
@@ -2159,7 +2248,7 @@ export default function RentalsList() {
 
                       <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
                         <Icon name="file" size={12} style={{ color: 'var(--muted)' }} />
-                        Created <span className="figure">{r.createdOn}</span>
+                        Created <span className="figure">{formatCreatedDate(r.createdOn)}</span>
                       </span>
 
                       <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
@@ -2267,13 +2356,32 @@ export default function RentalsList() {
                               }}
                               onChange={toggleSelectAll}
                               aria-label="Select all bookings on this page"
+                              className="h-4 w-4 rounded border-white/20 bg-slate-900/80 checked:bg-blue-600 cursor-pointer"
                               style={{ width: 16, height: 16, accentColor: 'var(--primary)', cursor: 'pointer' }}
                             />
                           </label>
                         </th>
                         {headers.map((h) => (
-                          <th key={h} style={th}>
-                            {h}
+                          <th
+                            key={h}
+                            style={{
+                              ...th,
+                              whiteSpace: 'nowrap',
+                              ...(h === 'Project Type' ? { minWidth: 130 } : {}),
+                            }}
+                            className="whitespace-nowrap"
+                          >
+                            {h === 'Booking ID' ? (
+                              <span title="Booking ID">
+                                <span className="sr-only">Booking </span>ID
+                              </span>
+                            ) : h === 'Created Date' ? (
+                              <span title="Created Date">
+                                Created<span className="sr-only"> Date</span>
+                              </span>
+                            ) : (
+                              h
+                            )}
                           </th>
                         ))}
                         <th style={stickyTh}>
@@ -2313,6 +2421,7 @@ export default function RentalsList() {
                                 checked={selectedIds.has(r.id)}
                                 onChange={() => toggleSelectRow(r.id)}
                                 aria-label={`Select booking ${r.bookingNo}`}
+                                className="h-4 w-4 rounded border-white/20 bg-slate-900/80 checked:bg-blue-600 cursor-pointer"
                                 style={{ width: 16, height: 16, accentColor: 'var(--primary)', cursor: 'pointer' }}
                               />
                             </label>
@@ -2360,30 +2469,37 @@ export default function RentalsList() {
                           <td style={td}>
                             <span
                               className="figure"
+                              title={r.createdOn}
                               style={{
                                 fontSize: 'var(--t-meta)',
                                 color: 'var(--text)',
                                 whiteSpace: 'nowrap',
                               }}
                             >
-                              {r.createdOn}
+                              {formatCreatedDate(r.createdOn)}
                             </span>
                           </td>
 
                           <td style={td}>
                             {/* RULING 2026-10-15: the client name takes at most two lines and
                                 the project one, ellipsized with the full text on hover, instead
-                                of wrapping the row to six lines. The pickup location that also
-                                printed here is on the booking hover card. */}
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                                of wrapping the row to six lines. Tight vertical stack with gap-3. */}
+                            <div
+                              className="flex items-center gap-3"
+                              style={{ display: 'flex', alignItems: 'center', gap: 12 }}
+                            >
                               <Avatar row={r} />
-                              <span style={{ minWidth: 0 }}>
+                              <div
+                                className="flex flex-col leading-tight min-w-0"
+                                style={{ display: 'flex', flexDirection: 'column', minWidth: 0, lineHeight: 1.25, gap: 2 }}
+                              >
                                 <ClientIntelFromId clientId={r.clientId} name={r.client} context="rental-list" gateContext={gctx} actionContext={user ? { userId: user.id, role: user.role } : null}>
                                 <Link
                                   to={`/clients/${r.clientId}`}
                                   title={r.client}
                                   style={{
                                     ...twoLines,
+                                    lineHeight: 1.25,
                                     fontWeight: 700,
                                     color: 'var(--text)',
                                     textDecoration: 'none',
@@ -2396,35 +2512,39 @@ export default function RentalsList() {
                                     renders as an explicit non-value — never
                                     as a kit name, which is what this cell
                                     used to invent. */}
-                                {r.project && r.project !== '—' && <span
-                                  title={r.project}
-                                  style={{
-                                    ...oneLine,
-                                    color: 'var(--text2)',
-                                    marginTop: 1,
-                                  }}
-                                >
-                                  {r.project}
-                                </span>}
-                              </span>
-                            </span>
+                                {r.project && r.project !== '—' && (
+                                  <span
+                                    title={r.project}
+                                    style={{
+                                      ...oneLine,
+                                      lineHeight: 1.2,
+                                      color: 'var(--text2)',
+                                      fontSize: 'var(--t-meta)',
+                                    }}
+                                  >
+                                    {r.project}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </td>
 
-                          <td style={td}>
+                          <td style={{ ...td, minWidth: 130 }}>
                             {/* Project Type — neutral muted text (§11), never
                                 stronger than a status pill (§3). Constrained
                                 width with ellipsis + native tooltip (§12). */}
                             <span
                               title={r.projectTypeDisplay}
+                              className="whitespace-nowrap min-w-[130px]"
                               style={{
-                                display: 'block',
+                                display: 'inline-block',
                                 fontSize: 'var(--t-meta)',
                                 fontWeight: 500,
                                 color: 'var(--text2)',
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
-                                minWidth: 0,
+                                minWidth: 130,
                                 maxWidth: 220,
                               }}
                             >
@@ -2714,9 +2834,15 @@ export default function RentalsList() {
 // sidebar open (BS date ≈ 95px, money ≈ 85px), and the action column is the ⋮
 // it holds (ACTION_COL_W) rather than 146px of empty space.
 const RENTAL_COLUMN_SHARES: Record<string, number> = {
-  'Booking ID': 0.08, 'Created Date': 0.09, 'Client / Project': 0.17,
-  'Project Type': 0.09, Items: 0.065, Pickup: 0.13, Return: 0.13,
-  Status: 0.105, 'Total Amount': 0.11,
+  'Booking ID': 0.075, ID: 0.075,
+  'Created Date': 0.08, Created: 0.08,
+  'Client / Project': 0.17,
+  'Project Type': 0.12,
+  Items: 0.065,
+  Pickup: 0.125,
+  Return: 0.125,
+  Status: 0.11,
+  'Total Amount': 0.11,
 }
 
 // 60 − 16px padding = the 44px Law 15 target of the row ⋮.
@@ -2751,7 +2877,7 @@ const th = {
   fontSize: 'var(--t-meta)',
   fontWeight: 600,
   color: 'var(--text2)',
-  whiteSpace: 'normal' as const,
+  whiteSpace: 'nowrap' as const,
   borderBottom: '1.5px solid var(--border)',
 }
 

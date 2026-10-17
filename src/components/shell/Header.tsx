@@ -58,18 +58,21 @@ interface HeaderProps {
   actions?: ReactNode
 }
 
-// Law 15 — 44×44 at every width, desktop included.
+// Law 15: keep the shared icon target at least 44px at every width.
 const iconBtn = {
+  width: 44,
+  height: 44,
   minWidth: 44,
   minHeight: 44,
-  borderRadius: 9,
-  border: 'none',
+  borderRadius: 'var(--r-btn, 8px)',
+  border: '1px solid var(--border)',
   background: 'transparent',
   color: 'var(--text2)',
   cursor: 'pointer',
   display: 'grid',
   placeItems: 'center',
   flexShrink: 0,
+  boxSizing: 'border-box' as const,
 } as const
 
 /**
