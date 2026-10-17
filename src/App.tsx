@@ -1192,7 +1192,11 @@ function Shell({
       <ScannerFab />
 
       {/* Screen Lock Overlay */}
-      {isLocked && <ScreenLock onUnlock={() => setLocked(false)} />}
+      {isLocked && (
+        <Suspense fallback={null}>
+          <ScreenLock onUnlock={() => setLocked(false)} />
+        </Suspense>
+      )}
     </div>
   )
 }
