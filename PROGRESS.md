@@ -1,5 +1,60 @@
 # Progress Log
 
+## 2026-10-18 — Booqable audit adoptions (P0-B role auth, BQ-105 empty recovery, BQ-301/006 rental day guidance, BQ-VIEW-01/02 system views)
+
+**Did**
+- Extracted high-impact structural, operational, and UX improvements from the Booqable reverse-engineering audit (`C:\Users\use\Desktop\scrape`) and systematically implemented them in Babin Rentals OS:
+  1. **P0-B Per-Operation Role Authorization:**
+     - Enforced `canPerformOp(user.role, stageJob)` on the primary action button in `BookingDetail.tsx`.
+     - In `rentalActions.ts`, populated explicit, informative denial reasons (`Your role does not have permission to ...`) across all lifecycle stages (`Booked`, `Packed`, `On Rent`, `Returned`) when `canOperate === false`.
+     - In `BookingOperationsMenu.tsx`, integrated `useAuth()` and `canPerformOp(user.role, opName)` to disable unauthorized actions (e.g. Technician role attempting client-facing Handover) with explicit user-facing explanations.
+  2. **Sequential Date Enforcement & Rental-Day Guidance (BQ-301, BQ-006):**
+     - Updated `BookingDatesSection.tsx` with an in-UI guidance banner: `Rental day runs 06:00 → 06:00 NPT. Multi-day rentals calculate continuous 24-hour spans from the 06:00 Kathmandu cut.`
+  3. **Empty-State Recovery & Filter Reset (BQ-105):**
+     - Enhanced `EmptyState` (`StateViews.tsx`) and `PageBody` (`PageBody.tsx`) to support `secondaryActionLabel`, `onSecondaryAction`, and `emptyExtra` children.
+     - Updated `RentalsList.tsx` empty state: when search or filters yield 0 records, it displays the specific search query in the title, tailored advice, dedicated dual actions (`Clear search` and `Clear all filters`), and active filter chips for instant one-click removal of individual narrowing criteria.
+  4. **Saved Views System & Fallback (BQ-VIEW-01/02):**
+     - Audited database migration 0159 (`saved_views`) and verified all 5 system views (`Pickups today`, `Returns today`, `Overdue`, `Awaiting inspection`, `Drafts`).
+     - Added `DEFAULT_RENTALS_SYSTEM_VIEWS` to `savedViews.ts` and wired `readDeviceViews(legacyStorageKey, userId, listKey)` and `SavedViewsMenu.tsx` so floor staff always have the 5 standard system views even in offline or local storage device fallback mode.
+- Added comprehensive unit and integration tests across all updated components.
+
+**Ruled**
+- Technician role is permitted for warehouse and staging operations (`pack`, `return`, `reset`), but strictly denied from client-facing operations (`handover`), which are reserved for floor/desk roles (`Owner`, `Admin`, `Manager`, `Warehouse`).
+- Operations denied by role must present explicit, user-friendly explanations rather than failing silently or rendering disabled without reason.
+- Dual recovery actions in empty state (`Clear search` as primary secondary-variant button, `Clear all filters` as tertiary-variant button) ensure operators can discard mistyped queries without losing carefully selected date or stage filters.
+- System saved views in device fallback mode are immutable and never persisted into device-private view storage.
+
+**Verified**
+- `npm run typecheck`: clean (exit code 0).
+- `npx vitest run src/lib/__tests__/rentalActions.test.ts`: 12/12 passed.
+- `npx vitest run src/modules/rentals/__tests__/BookingOperationsMenu.test.tsx`: 4/4 passed.
+- `npx vitest run src/modules/rentals/__tests__/BookingDetail.layout.test.tsx`: 28/28 passed.
+- `npx vitest run src/components/ui/__tests__/PageBody.test.tsx`: 18/18 passed.
+- `npx vitest run src/components/ui/__tests__/SavedViewsMenu.test.ts`: 3/3 passed.
+- `npm run test:saved-views`: 20/20 passed against PGlite.
+- `npm run check:pglite`: 167/167 applied, 0 failed.
+- `npm run check:lifecycle`: 31/31 green, 0 failed.
+- `npm run lint`: 0 errors, 0 warnings (`--max-warnings 0`).
+- `npm run check:contrast`: 82/82 pass, 0 fail.
+- `npm run build`: built in 34.16s, exit code 0.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-17T18:36:07.948Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-17T18:36:27.064Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply of migrations 0157–0168 by Babin on production.
+- Physical iPad Safari verification of floor touch targets and 125% zoom acceptance.
+
 ## 2026-10-18 — Unified 5-Module Page Shell implementation
 
 **Did**
