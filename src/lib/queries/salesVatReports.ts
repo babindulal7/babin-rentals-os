@@ -1,4 +1,5 @@
-import { supabase } from '../supabase'
+import { IS_MOCK, supabase } from '../supabase'
+import { BS_MONTHS, toBs } from '../bs'
 import { rupees, type Paisa } from '../money'
 
 export interface SalesReportMetrics {
@@ -43,6 +44,7 @@ export interface SalesInvoiceItem {
   issueDate: string
   dueDate: string
   subtotal: Paisa
+  taxableAmount?: Paisa
   taxAmount: Paisa
   grandTotal: Paisa
   paidAmount: Paisa
@@ -85,7 +87,7 @@ export interface ReportFilterOptions {
   branchId?: string | undefined
 }
 
-/* ── Fallback Seed Data (Hermetic baseline for mock mode & empty DB) ──────── */
+/* ── Fallback Seed Data (Strictly for mock/demo mode; never used in live mode) ── */
 
 const MOCK_SALES: SalesReportData = {
   metrics: {
@@ -148,9 +150,50 @@ const MOCK_VAT: VatTaxReportData = {
   taxRegister: MOCK_SALES.invoices,
 }
 
+/** An empty live register is zero, not example invoices from a different company. */
+function emptyRegister(): { sales: SalesReportData; vat: VatTaxReportData } {
+  return {
+    sales: {
+      metrics: {
+        totalInvoiced: rupees(0),
+        netSales: rupees(0),
+        totalVat: rupees(0),
+        totalDiscounts: rupees(0),
+        totalCollected: rupees(0),
+        totalOutstanding: rupees(0),
+        invoiceCount: 0,
+        collectionRate: 0,
+      },
+      statusBreakdown: [],
+      monthlyTrend: [],
+      topClients: [],
+      invoices: [],
+    },
+    vat: {
+      metrics: {
+        totalGrossTurnover: rupees(0),
+        taxableTurnover: rupees(0),
+        totalOutputVat: rupees(0),
+        exemptTurnover: rupees(0),
+        effectiveVatRate: 0,
+        invoicesCount: 0,
+      },
+      monthlySchedule: [],
+      taxRegister: [],
+    },
+  }
+}
+
+/** The ledger works in integer paisa; never round completed invoices to whole rupees. */
+const asPaisa = (value: number): Paisa => value as Paisa
+
 /* ── Query Aggregations from PostgreSQL ─────────────────────────────────── */
 
 export async function getSalesVatReport(options?: ReportFilterOptions): Promise<{ sales: SalesReportData; vat: VatTaxReportData }> {
+  // Mock builds have their own global demo-data banner. Live builds must never
+  // quietly replace unavailable or empty financial records with fictional totals.
+  if (IS_MOCK) return { sales: MOCK_SALES, vat: MOCK_VAT }
+
   try {
     let query = supabase
       .from('invoices')
@@ -164,48 +207,130 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
         due_date,
         subtotal,
         discount_amount,
-        tax_amount,
-        grand_total,
+        taxable_amount,
+        vat_rate,
+        vat_amount,
+        total_amount,
+        outstanding_amount,
+        currency,
+        voided_at,
         paid_amount,
         status,
         created_at,
-        clients!client_id(name, pan_number),
+        clients!client_id(name, pan_vat),
         bookings!booking_id(booking_no)
       `)
+      // A stable unique tie-breaker is required for page boundaries.
       .order('issue_date', { ascending: false })
+      .order('id', { ascending: true })
 
     if (options?.from) query = query.gte('issue_date', options.from)
     if (options?.to) query = query.lte('issue_date', options.to)
     if (options?.branchId) query = query.eq('branch_id', options.branchId)
 
-    const { data: rows, error } = await query
+    // Read the full RLS-visible invoice ledger rather than silently reporting
+    // only PostgREST's first 1000 rows. Fixed-size pages also keep requests bounded.
+    const pageSize = 500
+    const first = await query.range(0, pageSize - 1)
+    if (first.error) throw new Error('Unable to read the Sales/VAT invoice ledger.', { cause: first.error })
+    if (!first.data) throw new Error('The Sales/VAT invoice ledger returned no result.')
+    const rows = [...first.data]
+    let page = first.data
+    for (let offset = pageSize; page.length === pageSize; offset += pageSize) {
+      const result = await query.range(offset, offset + pageSize - 1)
+      if (result.error) throw new Error('Unable to read the complete Sales/VAT invoice ledger.', { cause: result.error })
+      if (!result.data) throw new Error('A Sales/VAT invoice page was unavailable.')
+      page = result.data
+      rows.push(...page)
+    }
 
-    if (error || !rows || rows.length === 0) {
-      return { sales: MOCK_SALES, vat: MOCK_VAT }
+    if (rows.length === 0) return emptyRegister()
+
+    // Only issued, non-void tax invoices belong to the Sales/VAT register.
+    // Drafts have no invoice number or issue_date and are not statutory sales.
+    const issuedRows = rows.filter((r) => r.status !== 'Draft' && r.status !== 'Void' && !r.voided_at && r.issue_date)
+    if (issuedRows.length === 0) return emptyRegister()
+
+    if (issuedRows.some((r) => r.currency !== 'NPR')) {
+      throw new Error('The Sales/VAT report cannot combine currencies; only NPR invoices are supported.')
     }
 
     let totalInvoiced = 0
     let totalSubtotal = 0
+    let totalNetSales = 0
     let totalTax = 0
     let totalDiscounts = 0
     let totalPaid = 0
+    let totalOutstanding = 0
+    let totalTaxable = 0
+    let totalNonVat = 0
+    let positiveVatBase = 0
+    const ledgerPeriods: Array<{ date: string; taxable: number; nonVat: number; tax: number; gross: number; paid: number }> = []
 
     const statusCounts: Record<string, { count: number; amount: number }> = {}
-    const clientSalesMap: Record<string, { name: string; count: number; invoiced: number; paid: number }> = {}
+    const clientSalesMap: Record<string, { name: string; count: number; invoiced: number; paid: number; outstanding: number }> = {}
     const invoices: SalesInvoiceItem[] = []
 
-    for (const r of rows) {
-      const gTotal = r.grand_total ? Math.round(Number(r.grand_total) * 100) : 0
-      const sub = r.subtotal ? Math.round(Number(r.subtotal) * 100) : 0
-      const tax = r.tax_amount ? Math.round(Number(r.tax_amount) * 100) : 0
-      const disc = r.discount_amount ? Math.round(Number(r.discount_amount) * 100) : 0
-      const paid = r.paid_amount ? Math.round(Number(r.paid_amount) * 100) : 0
+    for (const r of issuedRows) {
+      // The live schema stores amounts in numeric rupees and VAT rate as 0.13,
+      // not as a percent. Reject missing/invalid accounting figures.
+      const amount = (value: number | string | null | undefined, field: string): number => {
+        if (value === null || value === undefined || value === '') {
+          throw new Error(`Invalid ${field} on invoice ${r.id}; no totals can be certified.`)
+        }
+        const n = Number(value)
+        if (!Number.isFinite(n)) {
+          throw new Error(`Invalid ${field} on invoice ${r.id}; no totals can be certified.`)
+        }
+        return Math.round(n * 100)
+      }
+
+      const gTotal = amount(r.total_amount, 'total_amount')
+      const sub = amount(r.subtotal, 'subtotal')
+      const tax = amount(r.vat_amount, 'vat_amount')
+      const taxable = amount(r.taxable_amount, 'taxable_amount')
+      const disc = amount(r.discount_amount, 'discount_amount')
+      const paid = amount(r.paid_amount, 'paid_amount')
+      const outstanding = amount(r.outstanding_amount, 'outstanding_amount')
+
+      const rate = Number(r.vat_rate)
+      if (!Number.isFinite(rate) || rate < 0) {
+        throw new Error(`Invalid vat_rate on invoice ${r.id}.`)
+      }
+
+      const isNonVat = rate === 0
+      if (isNonVat && tax !== 0) {
+        throw new Error(`Zero-rate invoice ${r.id} has nonzero VAT.`)
+      }
+
+      // Arithmetic integrity check: taxable + tax must equal grandTotal within 1 paisa tolerance
+      if (Math.abs((taxable + tax) - gTotal) > 1) {
+        throw new Error(`Invoice ${r.id} arithmetic mismatch: taxable (${taxable}) + VAT (${tax}) does not equal total (${gTotal}).`)
+      }
 
       totalInvoiced += gTotal
       totalSubtotal += sub
+      totalNetSales += taxable
       totalTax += tax
       totalDiscounts += disc
       totalPaid += paid
+      totalOutstanding += outstanding
+
+      if (isNonVat) {
+        totalNonVat += taxable
+      } else {
+        totalTaxable += taxable
+        positiveVatBase += taxable
+      }
+
+      ledgerPeriods.push({
+        date: r.issue_date,
+        taxable: isNonVat ? 0 : taxable,
+        nonVat: isNonVat ? taxable : 0,
+        tax,
+        gross: gTotal,
+        paid,
+      })
 
       const st = r.status || 'Issued'
       const curSt = statusCounts[st] || { count: 0, amount: 0 }
@@ -213,13 +338,14 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
       curSt.amount += gTotal
       statusCounts[st] = curSt
 
-      const clientObj = r.clients as { name?: string; pan_number?: string } | null
+      const clientObj = r.clients as { name?: string; pan_vat?: string } | null
       const cId = r.client_id || 'unknown'
       const cName = clientObj?.name || 'Client'
-      const curCl = clientSalesMap[cId] || { name: cName, count: 0, invoiced: 0, paid: 0 }
+      const curCl = clientSalesMap[cId] || { name: cName, count: 0, invoiced: 0, paid: 0, outstanding: 0 }
       curCl.count++
       curCl.invoiced += gTotal
       curCl.paid += paid
+      curCl.outstanding += outstanding
       clientSalesMap[cId] = curCl
 
       const bookingObj = r.bookings as { booking_no?: string } | null
@@ -228,24 +354,25 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
         invoiceNo: r.invoice_no,
         bookingNo: bookingObj?.booking_no || 'BK-STANDALONE',
         clientName: cName,
-        clientPan: clientObj?.pan_number || undefined,
+        clientPan: clientObj?.pan_vat || undefined,
         issueDate: r.issue_date,
         dueDate: r.due_date,
-        subtotal: rupees(Math.round(sub / 100)),
-        taxAmount: rupees(Math.round(tax / 100)),
-        grandTotal: rupees(Math.round(gTotal / 100)),
-        paidAmount: rupees(Math.round(paid / 100)),
+        subtotal: asPaisa(sub),
+        taxableAmount: asPaisa(taxable),
+        taxAmount: asPaisa(tax),
+        grandTotal: asPaisa(gTotal),
+        paidAmount: asPaisa(paid),
         status: st,
       })
     }
 
-    const totalCount = rows.length
+    const totalCount = issuedRows.length
     const collectionRate = totalInvoiced > 0 ? Number(((totalPaid / totalInvoiced) * 100).toFixed(1)) : 0
 
     const statusBreakdown: InvoiceStatusBreakdownItem[] = Object.entries(statusCounts).map(([st, val]) => ({
       status: st,
       count: val.count,
-      amount: rupees(Math.round(val.amount / 100)),
+      amount: asPaisa(val.amount),
       percent: Math.round((val.count / totalCount) * 100),
     }))
 
@@ -254,45 +381,91 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
         clientId: id,
         clientName: val.name,
         invoiceCount: val.count,
-        totalInvoiced: rupees(Math.round(val.invoiced / 100)),
-        totalPaid: rupees(Math.round(val.paid / 100)),
-        balance: rupees(Math.round(Math.max(0, val.invoiced - val.paid) / 100)),
+        totalInvoiced: asPaisa(val.invoiced),
+        totalPaid: asPaisa(val.paid),
+        balance: asPaisa(Math.max(0, val.outstanding)),
       }))
       .sort((a, b) => (b.totalInvoiced as number) - (a.totalInvoiced as number))
       .slice(0, 5)
 
+    // Derive period figures from these exact invoices, not the fixed mock trend.
+    // BS periods may cross AD month boundaries; all rows sharing a BS month
+    // belong to the same bucket. An out-of-range BS date is clearly labelled AD.
+    const periodBuckets = new Map<string, {
+      sortDate: string; endDate: string; label: string; bsMonth: string
+      taxable: number; nonVat: number; tax: number; gross: number; paid: number
+    }>()
+    for (const invoice of ledgerPeriods) {
+      const isoDay = String(invoice.date ?? '').slice(0, 10)
+      const date = new Date(isoDay + 'T12:00:00Z')
+      const bs = Number.isNaN(date.getTime()) ? null : toBs(date)
+      const key = bs
+        ? `BS-${bs.year}-${String(bs.month).padStart(2, '0')}`
+        : `AD-${isoDay.slice(0, 7)}`
+      const label = bs ? `${BS_MONTHS[bs.month - 1]} ${bs.year}` : `AD ${isoDay.slice(0, 7)}`
+      const bucket = periodBuckets.get(key) ?? {
+        sortDate: isoDay, endDate: isoDay, label, bsMonth: bs ? label : 'BS unavailable',
+        taxable: 0, nonVat: 0, tax: 0, gross: 0, paid: 0,
+      }
+      if (isoDay < bucket.sortDate) bucket.sortDate = isoDay
+      if (isoDay > bucket.endDate) bucket.endDate = isoDay
+      bucket.taxable += invoice.taxable
+      bucket.nonVat += invoice.nonVat
+      bucket.tax += invoice.tax
+      bucket.gross += invoice.gross
+      bucket.paid += invoice.paid
+      periodBuckets.set(key, bucket)
+    }
+
+    const periods = [...periodBuckets.values()].sort((a, b) => a.sortDate.localeCompare(b.sortDate))
+    const monthlyTrend: SalesTrendPoint[] = periods.map((p) => ({
+      period: p.label,
+      invoiced: asPaisa(p.gross),
+      collected: asPaisa(p.paid),
+    }))
+    const monthlySchedule: VatMonthlyRow[] = periods.map((p) => ({
+      month: `AD ${p.sortDate}${p.endDate !== p.sortDate ? ' – ' + p.endDate : ''}`,
+      bsMonth: p.bsMonth,
+      taxableSales: asPaisa(p.taxable),
+      vatAmount: asPaisa(p.tax),
+      exemptSales: asPaisa(p.nonVat),
+      grossSales: asPaisa(p.gross),
+    }))
+
     const sales: SalesReportData = {
       metrics: {
-        totalInvoiced: rupees(Math.round(totalInvoiced / 100)),
-        netSales: rupees(Math.round(totalSubtotal / 100)),
-        totalVat: rupees(Math.round(totalTax / 100)),
-        totalDiscounts: rupees(Math.round(totalDiscounts / 100)),
-        totalCollected: rupees(Math.round(totalPaid / 100)),
-        totalOutstanding: rupees(Math.round(Math.max(0, totalInvoiced - totalPaid) / 100)),
+        totalInvoiced: asPaisa(totalInvoiced),
+        netSales: asPaisa(totalNetSales),
+        totalVat: asPaisa(totalTax),
+        totalDiscounts: asPaisa(totalDiscounts),
+        totalCollected: asPaisa(totalPaid),
+        totalOutstanding: asPaisa(totalOutstanding),
         invoiceCount: totalCount,
         collectionRate,
       },
       statusBreakdown,
-      monthlyTrend: MOCK_SALES.monthlyTrend,
+      monthlyTrend,
       topClients,
-      invoices: invoices.slice(0, 10),
+      invoices,
     }
 
     const vat: VatTaxReportData = {
       metrics: {
-        totalGrossTurnover: rupees(Math.round(totalInvoiced / 100)),
-        taxableTurnover: rupees(Math.round(totalSubtotal / 100)),
-        totalOutputVat: rupees(Math.round(totalTax / 100)),
-        exemptTurnover: rupees(0),
-        effectiveVatRate: 13.0,
+        totalGrossTurnover: asPaisa(totalInvoiced),
+        taxableTurnover: asPaisa(totalTaxable),
+        totalOutputVat: asPaisa(totalTax),
+        exemptTurnover: asPaisa(totalNonVat),
+        effectiveVatRate: positiveVatBase > 0 ? Number(((totalTax / positiveVatBase) * 100).toFixed(2)) : 0,
         invoicesCount: totalCount,
       },
-      monthlySchedule: MOCK_VAT.monthlySchedule,
-      taxRegister: invoices.slice(0, 10),
+      monthlySchedule,
+      taxRegister: invoices,
     }
 
     return { sales, vat }
-  } catch {
-    return { sales: MOCK_SALES, vat: MOCK_VAT }
+  } catch (error) {
+    // Fail closed. The screen handles this explicit refusal and must not export
+    // imaginary financial values or confuse a query failure with zero revenue.
+    throw error instanceof Error ? error : new Error('Sales/VAT report unavailable.')
   }
 }
