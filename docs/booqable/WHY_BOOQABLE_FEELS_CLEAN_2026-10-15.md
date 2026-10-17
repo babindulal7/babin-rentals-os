@@ -59,9 +59,15 @@ line. It is not padding and should not be squeezed further.
 
 1. **Booking Detail header.** A 610px action cluster (status, More, Operations, Print) squeezes the
    record title to ~37px. This was already the behaviour before this pass, on the same code path.
+   **Done:** RULINGS-2026-10-15 rows 11–18 (desktop), then RULINGS-2026-10-16 rows 1–4 (phone). At
+   390 on `main` the title went 0 → 98px (873) and 0 → 162px (902).
 2. **Today return cards** say lateness four ways ("86d late", red edge, pink fill, "Overdue · 86
    days late"), and each card is ~200px. Booqable's dashboard row is one line. **Done the same
    day:** RULINGS-2026-10-15 rows 19–23. At 1280 cards went 204 → 104px (2 → 5 visible); at 390,
    240 → 131px (1 → 3). Lateness is now said once.
-3. **Inventory's double search** (header and in-page).
-4. **List toolbars that wrap** (Clients' Stats; Inventory's chips).
+3. **Inventory's double search** (header and in-page). **Done on `main`** by its own 15 Oct
+   header work. The `/` key that the search placeholder promised was still dead at desktop
+   width; it now works (row 24).
+4. **List toolbars that wrap** (Clients' Stats; Inventory's chips). Clients was already one line
+   on `main`. Inventory's chips now lead its toolbar row (row 25): at 1280 the table starts 81px
+   higher.

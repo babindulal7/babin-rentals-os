@@ -314,6 +314,14 @@ describe('Phase 9 — the age badge', () => {
     expect(text()).toContain('Updated Just now')
     expect(text()).not.toContain('No cache')
   })
+
+  // RULING 2026-10-16: on a phone fresh data keeps only the refresh button, so the words
+  // stop taking the record title's width; Stale and Offline still say so in words.
+  it('on a phone, keeps the refresh button but drops the fresh-data words', async () => {
+    await mount(420)
+    expect(text()).not.toContain('Updated Just now')
+    expect(container.querySelector('button[aria-label="Refresh data"]')).not.toBeNull()
+  })
 })
 
 describe('§4.2 — the phone segmented control', () => {

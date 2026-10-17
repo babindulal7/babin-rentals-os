@@ -2151,6 +2151,10 @@ function BookingDetailView() {
                 onRefresh={refreshBookingData}
                 loading={head.loading || floorLoading}
                 compact={onPhone}
+                /* RULING 2026-10-16: on a phone, fresh data shows only the refresh button (age in
+                   its tooltip); Stale and Offline keep their words. "Updated 1m ago" took 113px of
+                   a title that measured 0px at 390. Revert = drop this prop. */
+                quietWhenFresh={onPhone}
               />
             </div>
           }
