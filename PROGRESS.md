@@ -1,5 +1,56 @@
 # Progress Log
 
+## 2026-10-17 — 15 Oct follow-ups landed on the new `main`: Today rows, Booking Detail phone title, `/` key, Inventory chip row
+
+**Did**
+- Measured the new `main` (`eac94cf0`) before porting anything, with a mock production build served by `vite preview`. The dev server stalled on the shared `node_modules/.vite` cache. None of the three old-line follow-ups was on `main`, and `main` had already done parts of them itself.
+- **Booking Detail phone header:** cherry-picked `6d6c0782` and `5756e7f6`, resolving `Header.tsx` into `main`'s phone search slot. On `main` that alone left the title at 0px, so two more changes: the phone search slot is left out when a page sets `searchInMore` (its fixed 44px stayed reserved otherwise), and Booking Detail passes `quietWhenFresh` to its age badge on phones.
+- **Today rows:** cherry-picked `9fd36b53`, then rebased over `main`'s Today audit remediation (its new "Overdue pickup" status now uses the one lateness line). Its dead `movement-card__tag--due` rule was taken out over `main`'s recolour of it, since no Today code produces that tag after the change. Its ruling rows were renumbered 11–15 → 19–23 after `main`'s Booking Detail rows 11–18.
+- **Inventory/Clients:** ported by hand only what `main` lacked: `/` focuses the header search at tablet and desktop width (`Header.tsx`), and Inventory's chips lead its toolbar row. Not ported, because `main` already had them or chose otherwise: removing the in-page search boxes, Clients' toolbar rework, and moving Stats into More. The old line's `listPageToolbars.render.test.tsx` is ported without its Stats-in-More assertions.
+- Tests: `headerOwnership` asserts the phone search slot is absent with `searchInMore`. `BookingDetail.layout` asserts the phone header drops the fresh-data words but keeps Refresh. Plus the ported Today, phone-header and list-toolbar suites.
+- Moved this session's work into its own worktree after the worktree hook flagged edits in another one. Earlier edits in the scratch worktrees were made with shell tools, which skirted that rule; none of them are kept.
+
+**Ruled**
+- `RULINGS-2026-10-15.md` rows 19–23 (Today, renumbered), 24 (`/` key) and 25 (Inventory chip row). `RULINGS-2026-10-16.md` phone-header rows 1–2, plus 3 (search slot left out) and 4 (quiet fresh-data badge on phones). Each row has a revert.
+- No migration, role, capability, money gate or write path changed. Phase 9's Stale and Offline warnings still show in words on phones.
+
+**Verified**
+- Browser, mock Owner, `main` → port:
+
+| Check | Width | `main` (`eac94cf0`) | Port |
+|---|---|---|---|
+| Today return card | 1280 | 196px, 3 visible, 4 lateness signals | 104px, 6 visible, 1 ("87 days late") |
+| Today return card | 390 | 230px, 2 visible, 3 signals | 131px, 4 visible, 1 |
+| Booking Detail title, 873 / 902 | 390 | 0 / 0px | 98 / 162px |
+| Booking Detail title, 873 / 902 | 375 | — | 83 / 147px |
+| `/` on Inventory and Clients | 1280 | focuses nothing | focuses the header search |
+| Inventory table top | 1280 | 388px | 307px |
+| Inventory toolbar | 1024 | — | one 52px line, 3 chips, none clipped |
+
+- Header overflow and page overflow are 0 in every reading. Booking Detail's header stays 64px and every header control is ≥44px. A first `main` `/` reading was discarded: the first-run Welcome dialog was open (the shell correctly ignores `/` under a modal). A second was discarded because that tab kept its phone layout after a resize; it was reloaded before the reading above. The port's preview served a cached build after the rebuild until its service worker was cleared; the Booking Detail figures are from the rebuilt bundle.
+- Mutation check: keeping the phone search slot, dropping `quietWhenFresh`, and disabling the `/` key together turned the 4 new or adapted tests red (55 run). Files restored.
+- Gates before the rebase (base `eac94cf0`): `tsc --noEmit` 0; `npm run lint` 0; `lint:shell` 672 files pass; `lint:ui-copy` pass; `check:contrast` 82/82; `npx vitest run` 366 files / 4,668 tests passed; `npm run build` exit 0; `check:lifecycle` 31/31 (PGlite, no JWT or PostgREST).
+- Rebased onto `dacb0a84` (16 newer commits, including `main`'s Today audit remediation). There, `main` had added an "Overdue pickup" status to the old badge row. It is kept in the new single lateness line: a late pickup shows its note, or "Overdue pickup" without one. After the rebase: `tsc` 0, eslint 0, 37 affected test files / 526 tests passed (shell, Booking Detail layout, list toolbars, Rentals render, Today, Inventory, Clients). **The full suite was not re-run on the rebased tree before landing.** `main` auto-syncs about every 15 minutes and a full run takes about 30 minutes here, so it runs on `main` right after the fast-forward.
+- Not verified: dark/glass by eye (no new tokens), live data, native phone hardware.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +2 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +1 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 166 files · check:pglite 166/166 applied, 0 failed (recorded 2026-10-16T19:58:20.357Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T18:44:47.098Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Run the full suite on `main` after the fast-forward, and fix forward if it is red.
+- Babin to confirm or flip RULINGS-2026-10-15 rows 2, 19–25 and RULINGS-2026-10-16 rows 1–4.
+- Dark/glass by eye; live data; Booking Detail titles for other stages at 375 on `main` (873 and 902 measured).
+
 ## 2026-10-15 — Today rows: each fact once (Booqable follow-up #2)
 
 **Did**
