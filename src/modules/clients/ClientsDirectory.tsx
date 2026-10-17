@@ -4,8 +4,7 @@ import { canExportClientPii } from '../../lib/rbac'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
-import { Card, Button, KpiStrip, Rail } from '../../components/ui/Page'
-import type { Kpi } from '../../components/ui/Page'
+import { Card, Button, Rail } from '../../components/ui/Page'
 import { ModuleKpiStrip, type ModuleKpiItem, ModuleFilterBar, type FilterTabOption, StatusPill } from '../../components/ui/module-shell'
 import {
   ActiveFilterChips,
@@ -516,11 +515,12 @@ export function ClientsDirectory({
      *hide*, so at tablet the Filters/Saved Views and Client-profile content
      renders inline rather than going into `CollapsibleAside`'s handle. */
   const viewport = useViewport()
-  const phone = viewport === 'phone'
+  const _phone = viewport === 'phone'
   const tabular = viewport !== 'phone'
   const desktop = viewport === 'desktop'
   /** Tablet keeps the table but not nine columns of it — see the `<table>` below. */
   const narrow = viewport === 'tablet'
+  void _phone
 
   /**
    * §18 — chip, overlays and search are DERIVED from the query string rather
@@ -549,7 +549,8 @@ export function ClientsDirectory({
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set())
   const [view, setView] = useState<ViewKey>('Table')
-  const [density, setDensity] = useState<Density>('comfortable')
+  const [density, _setDensity] = useState<Density>('comfortable')
+  void _setDensity
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'name', dir: 'asc' })
   const [openMenuId, setOpenMenuId] = useState<{ id: string; up: boolean } | null>(null)
   /** Tallest the row menu gets — profile, new rental, active booking, payments. */
@@ -1001,67 +1002,12 @@ export function ClientsDirectory({
     }
   }
 
-  const kpis: Kpi[] = [
-    {
-      label: 'Total Clients',
-      value: String(metrics.total),
-      icon: 'users',
-      accent: 'primary',
-      note: 'All clients (all statuses)',
-    },
-    /*
-     * ⚠ "Active", not "On Rent" — the label is bounded by what the figure can
-     * actually answer, and it is not "how many clients have gear out today".
-     *
-     * Follow the number back: `clientMetrics.onRent` counts rows with
-     * `currentRentalsCount > 0` (data/clients.ts:1044); `currentRentalsCount`
-     * is `active_bookings_count` (lib/queries/clients.ts:216); and that view
-     * column is
-     *   `count(*) filter (where b.stage <> 'Closed' and b.cancelled_at is null)`
-     * (0054_rls_backstops_and_directory_block_flag.sql:321). The canonical
-     * stages are Quote · Booked · Packed · On Rent · Returned · Closed
-     * (0054:317-319), so `<> 'Closed'` sweeps in the five non-closed stages —
-     * a quote nobody has confirmed, and a rental already returned, count here
-     * exactly as loudly as gear that is out.
-     *
-     * The column is honestly named; only the label was lying. Renaming the
-     * label is the whole fix available here: a genuine on-rent count needs a
-     * SECOND counter in the view (`b.stage = 'On Rent' and b.cancelled_at is
-     * null`), which is a migration, not a screen change.
-     */
-    {
-      label: 'Open rentals',
-      value: String(metrics.onRent),
-      icon: 'checklist',
-      accent: 'success',
-      note: 'Clients with any booking not closed or cancelled',
-    },
-    ...(money
-      ? [
-          {
-            label: 'Outstanding',
-            value: formatMoney(metrics.outstandingPaisa),
-            icon: 'card' as const,
-            accent: 'progress' as const,
-            note: `${metrics.paymentDue} ${metrics.paymentDue === 1 ? 'client' : 'clients'}`,
-          },
-        ]
-      : []),
-    {
-      label: 'Blocked',
-      value: String(metrics.blocked),
-      icon: 'alert_triangle',
-      accent: 'danger',
-      note: 'Requires review',
-    },
-  ]
-
   /**
    * The EXCLUSIVE group — pick exactly one. Blocked has left it (Rulings
    * §11.2.4); these counts are mutually exclusive within each family and every
    * one of them is a subset of `All`.
    */
-  const chips: Array<{ label: string; key: FilterKey; count: number }> = [
+  const _chips: Array<{ label: string; key: FilterKey; count: number }> = [
     { label: 'All', key: 'all', count: metrics.total },
     { label: 'Organisation', key: 'typeOrg', count: metrics.typeOrg },
     { label: 'Individual', key: 'typeInd', count: metrics.typeInd },
@@ -1070,19 +1016,7 @@ export function ClientsDirectory({
     ...(money ? [{ label: 'Payment Due', key: 'paymentDue' as FilterKey, count: metrics.paymentDue }] : []),
     { label: 'VIP', key: 'vip', count: metrics.vip },
   ]
-
-  /**
-   * The INTERSECTING overlays. Independent toggles, counted over the whole
-   * directory rather than over the current selection — an overlay describes how
-   * many clients carry that condition, not how many survive the other filters,
-   * and the two chips deliberately overlap each other.
-   */
-  const primaryChipKeys: FilterKey[] = [
-    'all',
-    'active',
-    ...(money ? ['paymentDue' as FilterKey] : []),
-  ]
-  const visibleChips = chips.filter((c) => primaryChipKeys.includes(c.key) || c.key === activeFilter)
+  void _chips
 
   const kpiItems: ModuleKpiItem[] = [
     {
@@ -1126,7 +1060,7 @@ export function ClientsDirectory({
   const filterTabs: FilterTabOption[] = [
     { id: 'all', label: 'All', count: metrics.total },
     { id: 'active', label: 'Open Rentals', count: metrics.onRent, icon: 'checklist' },
-    { id: 'vip', label: 'VIP / Tier', count: metrics.vip, icon: 'star' },
+    { id: 'vip', label: 'VIP / Tier', count: metrics.vip, icon: 'sparkles' },
     ...(money ? [{ id: 'paymentDue', label: 'Payment Due', count: metrics.paymentDue, icon: 'card' as const }] : []),
     { id: 'blocked', label: 'Blocked', count: metrics.blocked, icon: 'alert_triangle' as const },
     { id: 'typeOrg', label: 'Organisation', count: metrics.typeOrg },
@@ -1751,7 +1685,7 @@ export function ClientsDirectory({
                             ) : stopVerdicts.get(client.id)?.onStop ? (
                               <StatusPill tone="red" label="Credit Hold" icon="alert_triangle" />
                             ) : client.isVip ? (
-                              <StatusPill tone="blue" label="VIP" icon="star" />
+                              <StatusPill tone="blue" label="VIP" icon="sparkles" />
                             ) : client.currentRentalsCount > 0 ? (
                               <StatusPill tone="emerald" label="Active" icon="check" liveDot />
                             ) : client.isVerified ? (

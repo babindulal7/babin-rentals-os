@@ -161,8 +161,8 @@ export const ModuleTable: React.FC<ModuleTableProps> = ({
                     <td>
                       <StatusPill
                         label={row.statusLabel}
-                        tone={row.statusTone}
-                        icon={row.statusIcon}
+                        {...(row.statusTone ? { tone: row.statusTone } : {})}
+                        {...(row.statusIcon ? { icon: row.statusIcon } : {})}
                       />
                     </td>
 

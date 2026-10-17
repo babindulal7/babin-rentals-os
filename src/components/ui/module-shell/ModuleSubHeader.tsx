@@ -50,7 +50,7 @@ export const ModuleSubHeader: React.FC<ModuleSubHeaderProps> = ({
           <DataAgeBadge
             loadedAt={loadedAt}
             loading={loading}
-            onRefresh={onRefresh}
+            {...(onRefresh ? { onRefresh } : {})}
             variant="muted"
             compact
           />

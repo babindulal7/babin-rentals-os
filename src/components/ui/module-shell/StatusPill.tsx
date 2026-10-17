@@ -15,7 +15,7 @@ export interface StatusPillProps {
 
 const DEFAULT_ICONS: Record<StatusTone, IconName> = {
   emerald: 'check',
-  amber: 'clock',
+  amber: 'timer',
   red: 'alert_triangle',
   slate: 'file',
   blue: 'arrow_right',
