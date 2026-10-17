@@ -1,5 +1,39 @@
 # Progress Log
 
+## 2026-10-18 — Schema mapping audit remediation (product_units alignment & 0170 line_kind extension)
+
+**Did**
+- Executed systematic remediation of schema mapping audit findings across PostgreSQL and TypeScript definitions:
+  1. **Table Identity Alignment (`product_units`):** Added canonical `product_units` table definition into `Database['public']['Tables']` in `src/types/database.ts` matching migration `0002_inventory_tracking.sql`, while retaining `inventory_units` for complete backwards compatibility.
+  2. **Invoice Line Kind Extension (`MONEY-08` / migration 0170):** Authored migration `supabase/migrations/0170_extend_line_kind_damage_missing.sql` adding `'Damage'` and `'Missing'` values to enum `line_kind`. Extended `LineKind` union in `src/types/database.ts` and `src/types/supabase.ts`, unblocking return-time damage and loss recovery lines on invoices.
+  3. **Item Quantity State Verification:** Confirmed that `assertItemCounts` in `src/lib/workflow.ts` accurately models the 4-bucket quantity invariant, while `src/lib/bookingQuery.ts` maps all 5 DB states (`Ready`, `Picked Up`, `Returned`, `Missing`, `Damaged`) safely without data corruption or drops.
+
+**Ruled**
+- Migration `0170_extend_line_kind_damage_missing.sql` is marked VERIFIED locally (168/168 applied in PGlite). Per Rule N-5, Babin will apply it to production alongside the pending migration batch.
+
+**Verified**
+- `npm run check:pglite`: 168/168 applied, 0 failed.
+- `npm run check:lifecycle`: 31/31 green.
+- `npm run typecheck`: clean (exit 0).
+- `npm run lint`: 0 errors, 0 warnings (`--max-warnings 0`).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-17T19:31:55.039Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-17T19:32:34.305Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply of migrations 0157–0170 by Babin on production.
+- Physical iPad Safari verification of floor touch targets and 125% zoom acceptance.
+
 ## 2026-10-18 — Booqable audit adoptions (duplication hygiene BQ-207, shortage action BQ-408, dashboard deep links BQ-205)
 
 **Did**

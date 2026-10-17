@@ -1,0 +1,257 @@
+/* ── Babin Rentals OS — Analytics & KPI Design System ───────────────────── */
+
+.analytics-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--analytics-grid-cols, 4), minmax(0, 1fr));
+  gap: var(--sp-md, 16px);
+  width: 100%;
+}
+
+@media (max-width: 1100px) {
+  .analytics-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .analytics-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── KPI Tile ────────────────────────────────────────────────────────────── */
+.analytics-kpi-card {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card, 10px);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 120px;
+  box-shadow: var(--shadow-card);
+  transition: border-color var(--dur-fast, 120ms) var(--ease),
+              box-shadow var(--dur-fast, 120ms) var(--ease),
+              transform var(--dur-fast, 120ms) var(--ease);
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+.analytics-kpi-card:hover {
+  border-color: var(--input-border);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.analytics-kpi-card:focus-visible {
+  outline: 2px solid var(--input-focus);
+  outline-offset: 2px;
+}
+
+.analytics-kpi-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.analytics-kpi-card__label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.analytics-kpi-card__middle {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  min-width: 0;
+}
+
+.analytics-kpi-card__value {
+  font-family: var(--font-display, inherit);
+  font-size: clamp(20px, 1.8vw, 28px);
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.analytics-kpi-card__bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: var(--t-meta, 12px);
+  min-width: 0;
+}
+
+.analytics-delta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 6px;
+  border-radius: var(--r-xs, 4px);
+  font-size: 11.5px;
+}
+
+.analytics-delta-badge--up {
+  color: var(--success-text);
+  background: var(--st-success-bg, rgba(34, 197, 94, 0.1));
+}
+
+.analytics-delta-badge--down {
+  color: var(--danger-text);
+  background: var(--st-danger-bg, rgba(239, 68, 68, 0.1));
+}
+
+.analytics-delta-badge--neutral {
+  color: var(--muted);
+  background: var(--hover-card);
+}
+
+/* ── Provenance Badges ───────────────────────────────────────────────────── */
+.analytics-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: var(--r-badge, 9999px);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.analytics-badge--actual {
+  background: var(--chip-blue-bg, #dbeafe);
+  color: var(--chip-blue-fg, #1e40af);
+}
+
+.analytics-badge--derived {
+  background: var(--chip-gray-bg, #f3f4f6);
+  color: var(--chip-gray-fg, #374151);
+}
+
+.analytics-badge--scenario {
+  background: var(--chip-amber-bg, #fef3c7);
+  color: var(--chip-amber-fg, #92400e);
+}
+
+/* ── Source Note Footer ──────────────────────────────────────────────────── */
+.analytics-source-note {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--t-meta, 12px);
+  color: var(--text2);
+}
+
+.analytics-source-note__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.analytics-source-note__source {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.analytics-source-note__details {
+  display: flex;
+  gap: 14px;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+
+.analytics-source-note__warning {
+  padding: 6px 10px;
+  border-radius: var(--r-sm, 6px);
+  background: var(--st-warning-bg, rgba(245, 158, 11, 0.1));
+  color: var(--warning, #b45309);
+  margin-top: 4px;
+}
+
+.analytics-source-note__extra {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+/* ── States & Skeleton ───────────────────────────────────────────────────── */
+.analytics-skeleton {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card, 10px);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.analytics-skeleton__line {
+  background: var(--hover-card);
+  border-radius: 4px;
+  animation: analytics-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes analytics-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.9; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .analytics-skeleton__line {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
+.analytics-state-card {
+  padding: 16px;
+  border-radius: var(--r-card, 10px);
+  border: 1px dashed var(--border);
+  background: var(--card);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.analytics-state-card--error {
+  border-color: var(--danger-text);
+  background: var(--st-danger-bg, rgba(239, 68, 68, 0.05));
+}
+
+.analytics-state-card--restricted {
+  border-style: solid;
+  border-color: var(--border);
+  background: var(--card2);
+}
+
+.analytics-stale-badge {
+  font-size: 11px;
+  color: var(--warning, #b45309);
+  background: var(--st-warning-bg, rgba(245, 158, 11, 0.12));
+  padding: 2px 6px;
+  border-radius: var(--r-xs, 4px);
+  font-weight: 600;
+}
