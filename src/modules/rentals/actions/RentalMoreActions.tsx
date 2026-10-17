@@ -21,6 +21,7 @@
 
 import { useEffect, useId, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
 import Icon, { type IconName } from '../../../components/ui/Icon'
 import { useFloatingMenu } from '../../../components/ui/useFloatingMenu'
 import { floatingLayer } from '../../../components/ui/floatingLayer'
@@ -87,6 +88,7 @@ export function RentalMoreActions({
 }: RentalMoreActionsProps) {
   const { user } = useAuth()
   const canViewMoney = useCanViewMoney()
+  const navigate = useNavigate()
 
   const [open, setOpen] = useState(false)
   /** 'quote', 'invoice', or `extra:<label>` for an extra item's nested group. */
@@ -726,7 +728,10 @@ export function RentalMoreActions({
             isOpen={duplicateDialogOpen}
             onClose={() => setDuplicateDialogOpen(false)}
             booking={booking}
-            onSuccess={() => onActionCompleted?.()}
+            onSuccess={(draftId) => {
+              onActionCompleted?.()
+              navigate(`/rentals?action=new&draft=${draftId}`)
+            }}
           />
 
           <RentalAuditDrawer
