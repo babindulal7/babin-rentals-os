@@ -244,7 +244,7 @@ export default function DashboardMovementPanel({
                   : row.due.replace(/^Due\s+/i, '')
 
                 /*
-                 * RULING 2026-10-15: one row, each fact once (RULINGS-2026-10-15.md #11–#15).
+                 * RULING 2026-10-15: one row, each fact once (RULINGS-2026-10-15.md #19–#23).
                  * The card was ~204px and said a late return four ways ("86d
                  * late" rail, red edge, pink fill, "Overdue · 86 days late").
                  * Now: who + which booking | when this movement happens (BS

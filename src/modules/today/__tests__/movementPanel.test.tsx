@@ -103,7 +103,7 @@ describe('meaningful rows (ruled 8 Oct 2026)', () => {
 })
 
 /*
- * RULING 2026-10-15 (RULINGS-2026-10-15.md #11–#15). The old card was ~204px
+ * RULING 2026-10-15 (RULINGS-2026-10-15.md #19–#23). The old card was ~204px
  * at 1280 and said a late return four ways: an "86d late" rail, a red inset
  * edge, a pink fill and "Overdue · 86 days late". Each test below fails on
  * that card.
@@ -126,6 +126,20 @@ describe('one row, each fact once (ruled 15 Oct 2026)', () => {
     expect(status.map((s) => s.textContent)).toEqual(['86 days late'])
     expect(status[0]!.closest('.movement-card__schedule--return')).not.toBeNull()
     expect(status[0]!.querySelector('svg')).toBeNull()
+  })
+
+  // main (16 Oct) flags late pickups too. Ported onto the one-statement card, a late pickup
+  // is said the same single way: its note, or "Overdue pickup" when it has none.
+  it('says a late pickup once, beside its date — the note, or "Overdue pickup" without one', async () => {
+    await mount({ kind: 'Pickup', status: 'Booked', flags: ['Overdue'], statusNote: '2 days late', atDayAd: '2026-07-21', at: 360 }, 'outgoing')
+    const status = [...card().querySelectorAll('.movement-card__status')]
+    expect(status.map((s) => s.textContent?.trim())).toEqual(['2 days late'])
+    expect(status[0]!.closest('.movement-card__schedule--pickup')).not.toBeNull()
+    expect(visibleText(card()).match(/late|overdue/gi)).toEqual(['late'])
+
+    await act(async () => root.unmount()); host.remove()
+    await mount({ kind: 'Pickup', status: 'Booked', flags: ['Overdue'], atDayAd: '2026-07-21', at: 360 }, 'outgoing')
+    expect([...card().querySelectorAll('.movement-card__status')].map((s) => s.textContent?.trim())).toEqual(['Overdue pickup'])
   })
 
   it('gives the late row no red edge and no tinted fill — at most one colour cue, on the words', () => {
