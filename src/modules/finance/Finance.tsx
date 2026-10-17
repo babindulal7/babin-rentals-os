@@ -1,16 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { recordExport } from '../../lib/exportAudit'
 import { Link, useSearchParams } from 'react-router-dom'
-import Icon from '../../components/ui/Icon'
-import { Badge } from '../../components/ui/Badge'
-import { Card, PageHeader, PageActions, Button, KpiStrip, Rail } from '../../components/ui/Page'
+import Icon, { type IconName } from '../../components/ui/Icon'
+import { Card, PageHeader, PageActions, Button, Rail } from '../../components/ui/Page'
 import { ModuleSubHeader, ModuleKpiStrip, ModuleFilterBar, StatusPill } from '../../components/ui/module-shell'
-import { SearchInput } from '../../components/ui/SearchInput'
-import { ListControlRow } from '../../components/ui/ListWorkspace'
 import { PageShell } from '../../components/ui/PageShell'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { FilterButton, FilterDrawer } from '../../components/ui/FilterDrawer'
-import type { Kpi } from '../../components/ui/Page'
 import { PageBody } from '../../components/ui/PageBody'
 import { ErrorBanner } from '../../components/ui/StateViews'
 import { Donut, Legend } from '../../components/ui/Charts'
@@ -38,7 +34,6 @@ import {
   STORED_INVOICE_STATUSES,
   invoiceGlance,
   invoiceDetailGroups,
-  INVOICE_TOKEN,
   businessDayAd,
   businessNowAd,
   SPEC_TABS,
@@ -816,40 +811,7 @@ export default function Finance() {
    *
    * Nothing here is money-gated per-tile any more: for a money-blind session
    * the whole strip is inside the restricted `PageBody` and is not constructed
-   * at all. That is a stronger guarantee than omitting a note.
    */
-  const kpis: Kpi[] = [
-    {
-      label: 'Outstanding Invoices',
-      value: countOf(outstanding),
-      icon: 'invoice',
-      accent: 'progress',
-      detail: `${moneyOf(receivableTotal)} receivable`,
-      // L1: what this tile counts and what its figure sums. L2: a zero is a
-      // stated empty set (count query answered 0), never an unknown — the
-      // explanation rides only when the total is known.
-      definition: 'Live unpaid and partially-paid invoices; figure is Σ outstanding.',
-      ...(outstanding.total !== null ? { zeroExplanation: 'Nothing receivable — no unpaid invoices.' } : {}),
-    },
-    {
-      label: 'Overdue',
-      value: countOf(overdue),
-      icon: 'alert_triangle',
-      accent: 'danger',
-      detail: `${moneyOf(overdueTotal)} past due`,
-      definition: 'Past due date and still unpaid; figure is Σ outstanding past due.',
-      ...(overdue.total !== null ? { zeroExplanation: 'Nothing past due — every invoice is within terms.' } : {}),
-    },
-    {
-      label: 'Received',
-      value: moneyOf(receivedTotal),
-      icon: 'card',
-      accent: 'success',
-      note: period.label,
-      definition: `Sum of payment rows dated within ${period.label}.`,
-      ...(receivedTotal !== null ? { zeroExplanation: `No payments recorded ${period.label}.` } : {}),
-    },
-  ]
 
   /**
    * §5.4 — the payment-method breakdown, from `bank_accounts.channel_group`
@@ -1502,9 +1464,9 @@ export default function Finance() {
               {
                 id: 'Outstanding',
                 label: 'Outstanding Invoices',
-                value: countOf(outstanding),
+                count: countOf(outstanding),
                 subtitle: `${moneyOf(receivableTotal)} receivable`,
-                icon: 'invoice',
+                icon: 'receipt',
                 tone: 'amber',
                 active: chip === 'Partially Paid',
                 onClick: () => {
@@ -1515,7 +1477,7 @@ export default function Finance() {
               {
                 id: 'Overdue',
                 label: 'Overdue Invoices',
-                value: countOf(overdue),
+                count: countOf(overdue),
                 subtitle: `${moneyOf(overdueTotal)} past due`,
                 icon: 'alert_triangle',
                 tone: (overdue.total ?? 0) > 0 ? 'red' : 'neutral',
@@ -1530,7 +1492,7 @@ export default function Finance() {
               {
                 id: 'Received',
                 label: 'Received',
-                value: moneyOf(receivedTotal),
+                count: moneyOf(receivedTotal),
                 subtitle: `Collected ${period.label}`,
                 icon: 'card',
                 tone: 'emerald',
@@ -1561,16 +1523,17 @@ export default function Finance() {
               searchValue={railSearch}
               onSearchChange={setRailSearch}
               searchPlaceholder="Search invoice or credit-note no…"
-            >
-              <Button
-                variant="secondary"
-                icon="filter"
-                onClick={() => setInvoiceFiltersOpen(true)}
-                aria-label={invoiceFilterCount > 0 ? `Filters (${invoiceFilterCount})` : 'Filters'}
-              >
-                {invoiceFilterCount > 0 ? `Filters (${invoiceFilterCount})` : 'Filters'}
-              </Button>
-            </ModuleFilterBar>
+              dropdownFilters={
+                <Button
+                  variant="secondary"
+                  icon="filter"
+                  onClick={() => setInvoiceFiltersOpen(true)}
+                  aria-label={invoiceFilterCount > 0 ? `Filters (${invoiceFilterCount})` : 'Filters'}
+                >
+                  {invoiceFilterCount > 0 ? `Filters (${invoiceFilterCount})` : 'Filters'}
+                </Button>
+              }
+            />
           )}
 
           {/* No `onRetry`: `ErrorBanner`'s only button says "Retry", and retrying
@@ -2016,8 +1979,8 @@ export default function Finance() {
  */
 function StatusBadge({ row }: { row: InvoiceListRow }) {
   const label = row.isVoid ? 'Void' : row.status
-  const tone = row.isVoid ? 'red' : label === 'Paid' ? 'emerald' : label === 'Partially Paid' ? 'amber' : label === 'Sent' ? 'blue' : 'slate'
-  const icon = row.isVoid ? 'alert_triangle' : label === 'Paid' ? 'check' : label === 'Partially Paid' ? 'clock' : label === 'Sent' ? 'sparkles' : 'queues'
+  const tone = row.isVoid ? 'red' : label === 'Paid' ? 'emerald' : label === 'Partially Paid' ? 'amber' : label === 'Sent' ? 'blue' : 'neutral'
+  const icon: IconName = row.isVoid ? 'alert_triangle' : label === 'Paid' ? 'check' : label === 'Partially Paid' ? 'timer' : label === 'Sent' ? 'sparkles' : 'queues'
   return <StatusPill tone={tone} label={label} icon={icon} />
 }
 

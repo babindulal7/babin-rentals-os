@@ -31,7 +31,6 @@ import {
   CREW_DATA,
   CREW_ROSTER,
   OPEN_ROLE_REQUESTS,
-  ROSTER_CHIPS,
   detectConflicts,
   conflictedAssignmentIds,
   detectTravelWarnings,
@@ -619,8 +618,6 @@ export function CrewBooking() {
                       <tbody>
                         {rowsWithIntel.map(({ row: c, crewGroup, glance, detail }) => {
                           const inConflict = conflictIds.has(c.id)
-                          const tone = STATUS[assignmentTone(c, onShootToday(c))]
-                          const payoutTone = STATUS[PAYOUT_TONE[c.payoutStatus]]
                           return (
                             <tr
                               key={c.id}

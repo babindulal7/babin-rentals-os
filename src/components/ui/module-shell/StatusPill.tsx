@@ -2,15 +2,15 @@ import React from 'react'
 import Icon, { type IconName } from '../Icon'
 import './module-shell.css'
 
-export type StatusTone = 'emerald' | 'amber' | 'red' | 'slate' | 'blue'
+export type StatusTone = 'emerald' | 'amber' | 'red' | 'slate' | 'blue' | 'neutral'
 
 export interface StatusPillProps {
   label: string
-  tone?: StatusTone
-  icon?: IconName
-  liveDot?: boolean
-  className?: string
-  style?: React.CSSProperties
+  tone?: StatusTone | undefined
+  icon?: IconName | undefined
+  liveDot?: boolean | undefined
+  className?: string | undefined
+  style?: React.CSSProperties | undefined
 }
 
 const DEFAULT_ICONS: Record<StatusTone, IconName> = {
@@ -19,6 +19,7 @@ const DEFAULT_ICONS: Record<StatusTone, IconName> = {
   red: 'alert_triangle',
   slate: 'file',
   blue: 'arrow_right',
+  neutral: 'file',
 }
 
 /**

@@ -1,0 +1,4 @@
+src/modules/finance/Finance.tsx(10,1): error TS6133: 'Kpi' is declared but its value is never read.
+src/modules/finance/Finance.tsx(1983,15): error TS2304: Cannot find name 'IconName'.
+src/modules/finance/Finance.tsx(1984,22): error TS2322: Type '"blue" | "red" | "neutral" | "amber" | "emerald"' is not assignable to type 'StatusTone'.
+  Type '"neutral"' is not assignable to type 'StatusTone'.

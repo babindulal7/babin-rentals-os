@@ -6,31 +6,31 @@ import './module-shell.css'
 export interface ModulePrimaryAction {
   label: string
   onClick: () => void
-  icon?: IconName
-  disabled?: boolean
-  ariaLabel?: string
-  title?: string
+  icon?: IconName | undefined
+  disabled?: boolean | undefined
+  ariaLabel?: string | undefined
+  title?: string | undefined
 }
 
 export interface ModuleSecondaryAction {
   label: string
   onClick: () => void
-  icon?: IconName
-  disabled?: boolean
-  ariaLabel?: string
-  title?: string
+  icon?: IconName | undefined
+  disabled?: boolean | undefined
+  ariaLabel?: string | undefined
+  title?: string | undefined
 }
 
 export interface ModuleSubHeaderProps {
   counter: React.ReactNode
-  loadedAt?: Date | number | string | null
-  loading?: boolean
-  onRefresh?: () => void
-  secondaryActions?: React.ReactNode | ModuleSecondaryAction[]
-  primaryAction?: ModulePrimaryAction
-  children?: React.ReactNode
-  className?: string
-  style?: React.CSSProperties
+  loadedAt?: Date | number | string | null | undefined
+  loading?: boolean | undefined
+  onRefresh?: (() => void) | undefined
+  secondaryActions?: React.ReactNode | ModuleSecondaryAction[] | undefined
+  primaryAction?: ModulePrimaryAction | undefined
+  children?: React.ReactNode | undefined
+  className?: string | undefined
+  style?: React.CSSProperties | undefined
 }
 
 /**

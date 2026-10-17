@@ -6,21 +6,22 @@ import './module-shell.css'
 export interface FilterTabOption {
   id: string
   label: string
-  count?: number | string | null
-  icon?: IconName
+  count?: number | string | null | undefined
+  icon?: IconName | undefined
 }
 
 export interface ModuleFilterBarProps {
   tabs: readonly FilterTabOption[]
   activeTab: string
   onTabChange: (id: string) => void
-  searchValue?: string
-  onSearchChange?: (val: string) => void
-  searchPlaceholder?: string
-  dropdownFilters?: React.ReactNode
-  rightActions?: React.ReactNode
-  className?: string
-  style?: React.CSSProperties
+  searchValue?: string | undefined
+  onSearchChange?: ((val: string) => void) | undefined
+  searchPlaceholder?: string | undefined
+  dropdownFilters?: React.ReactNode | undefined
+  rightActions?: React.ReactNode | undefined
+  children?: React.ReactNode | undefined
+  className?: string | undefined
+  style?: React.CSSProperties | undefined
 }
 
 /**
@@ -37,6 +38,7 @@ export const ModuleFilterBar: React.FC<ModuleFilterBarProps> = ({
   searchPlaceholder = 'Filter records…',
   dropdownFilters,
   rightActions,
+  children,
   className = '',
   style,
 }) => {
@@ -68,6 +70,7 @@ export const ModuleFilterBar: React.FC<ModuleFilterBarProps> = ({
 
       <div className="module-filter-bar__right">
         {dropdownFilters}
+        {children}
         {onSearchChange && (
           <div className="module-filter-bar__search">
             <SearchInput

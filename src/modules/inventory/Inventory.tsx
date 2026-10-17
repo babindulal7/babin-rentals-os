@@ -7,7 +7,7 @@ import type { IconName } from '../../components/ui/Icon'
 import { Card, Button, PageHeader, PageActions, KpiStrip } from '../../components/ui/Page'
 import { GlobalAddMenu } from '../../components/ui/creation/GlobalAddMenu'
 import { PageShell } from '../../components/ui/PageShell'
-import { ModuleSubHeader, ModuleKpiStrip, type ModuleKpiItem, ModuleFilterBar, type FilterTabOption, StatusPill } from '../../components/ui/module-shell'
+import { StatusPill } from '../../components/ui/module-shell'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { FilterButton, FilterDrawer } from '../../components/ui/FilterDrawer'
 import { Pagination } from '../../components/ui/Pagination'
@@ -61,7 +61,6 @@ import {
   INV_STYLE,
   INV_DOT,
   INV_LABEL,
-  INV_TONE,
   CONDITION_TONE,
   CONDITION_INK,
   CATEGORY_ICON,
@@ -294,8 +293,8 @@ function countOf(list: { loading: boolean; error: string | null }, value: number
  * or tracking that ARE the identity of a status block.
  */
 function StatusBadge({ status }: { status: InvStatus }) {
-  const tone = status === 'Available' ? 'emerald' : status === 'On Rent' ? 'blue' : status === 'Maintenance' ? 'red' : 'amber'
-  const icon = status === 'Available' ? 'check' : status === 'On Rent' ? 'truck' : status === 'Maintenance' ? 'tool' : 'calendar'
+  const tone = status === 'In Stock' ? 'emerald' : status === 'On Rent' ? 'blue' : status === 'Maintenance' ? 'red' : 'amber'
+  const icon = status === 'In Stock' ? 'check' : status === 'On Rent' ? 'truck' : status === 'Maintenance' ? 'tool' : 'calendar'
   return (
     <StatusPill
       tone={tone}

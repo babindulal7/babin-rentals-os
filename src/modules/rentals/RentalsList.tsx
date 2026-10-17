@@ -1965,8 +1965,8 @@ export default function RentalsList() {
         loading={list.loading}
         onRefresh={refreshAll}
         secondaryActions={[
-          { label: 'Scan', icon: 'barcode', onClick: () => setBarcodeModalOpen(true) },
-          { label: 'Export', icon: 'download', onClick: handleBulkExport },
+          { label: 'Scan', icon: 'barcode' as const, onClick: () => setBarcodeModalOpen(true) },
+          { label: 'Export', icon: 'download' as const, onClick: handleBulkExport },
           ...(canOperate ? [{ label: 'Fast Return', icon: 'refresh' as const, onClick: () => setFastReturnOpen(true) }] : []),
         ]}
         primaryAction={
