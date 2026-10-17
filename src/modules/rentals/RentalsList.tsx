@@ -19,6 +19,7 @@ import { PageShell } from '../../components/ui/PageShell'
 import { PageHeader } from '../../components/ui/header/PageHeader'
 import type { PageHeaderBulkSelection } from '../../lib/workspaceContext'
 import { useOptionalWorkspace } from '../../lib/workspaceContext'
+import { ModuleSubHeader, ModuleKpiStrip, ModuleFilterBar, StatusPill } from '../../components/ui/module-shell'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { ContextDrawer } from '../../components/ui/ContextDrawer'
 import { DataTableShell } from '../../components/ui/DataTable'
@@ -146,7 +147,9 @@ import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext
  * and those call sites do not change. It loses the paint, not its place.
  */
 function Tag({ text, status }: { text: string; status: StatusKey }) {
-  return <Badge tone={status} label={text} size="sm" />
+  const tone = status === 'success' ? 'emerald' : status === 'danger' ? 'red' : status === 'progress' || status === 'primary' ? 'blue' : 'amber'
+  const icon: IconName = status === 'success' ? 'check' : status === 'danger' ? 'alert_triangle' : status === 'progress' ? 'truck' : 'clock'
+  return <StatusPill tone={tone} label={text} icon={icon} />
 }
 
 /**
@@ -513,10 +516,31 @@ function RowOperations({
   onInspect?: ((row: RentalListRow) => void) | undefined
 }) {
   const { openOperations } = useOperationsWorkspace()
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [up, setUp] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const ref = useDismiss(open, () => setOpen(false), menuRef)
+
+  const primaryOp = useMemo(() => {
+    if (row.isCancelled || row.isClosed) return null
+    if ((row.status as string) === 'Draft') {
+      return { label: 'Edit Draft', icon: 'edit' as const, isDraft: true, job: null }
+    }
+    if (row.status === 'Booked') {
+      return { label: 'Pack', icon: 'package' as const, isDraft: false, job: 'Pack' as const }
+    }
+    if (row.status === 'Packed') {
+      return { label: 'Handover', icon: 'truck' as const, isDraft: false, job: 'Handover' as const }
+    }
+    if (row.status === 'On Rent') {
+      return { label: 'Return', icon: 'return_arrow' as const, isDraft: false, job: 'Return' as const }
+    }
+    if (row.status === 'Returned') {
+      return { label: 'Reset', icon: 'refresh' as const, isDraft: false, job: 'Reset' as const }
+    }
+    return null
+  }, [row.isCancelled, row.isClosed, row.status, row.id, row.bookingNo])
 
   /**
    * The table scrolls horizontally, and CSS resolves the *other* axis to `auto`
@@ -536,6 +560,23 @@ function RowOperations({
 
   return (
     <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+      {primaryOp && (
+        <button
+          type="button"
+          className="module-table__row-cta tap"
+          onClick={() => {
+            if (primaryOp.isDraft) {
+              navigate(`/rentals?action=new&draft=${row.id}`)
+            } else if (primaryOp.job) {
+              openOperations(row.bookingNo, row.status, primaryOp.job)
+            }
+          }}
+          aria-label={`${primaryOp.label} ${row.bookingNo}`}
+        >
+          <Icon name={primaryOp.icon} size={13} />
+          <span>{primaryOp.label}</span>
+        </button>
+      )}
       <span ref={ref} style={{ position: 'relative', display: 'inline-flex' }}>
         <button
           type="button"

@@ -12,12 +12,21 @@ export interface ModulePrimaryAction {
   title?: string
 }
 
+export interface ModuleSecondaryAction {
+  label: string
+  onClick: () => void
+  icon?: IconName
+  disabled?: boolean
+  ariaLabel?: string
+  title?: string
+}
+
 export interface ModuleSubHeaderProps {
   counter: React.ReactNode
   loadedAt?: Date | number | string | null
   loading?: boolean
   onRefresh?: () => void
-  secondaryActions?: React.ReactNode
+  secondaryActions?: React.ReactNode | ModuleSecondaryAction[]
   primaryAction?: ModulePrimaryAction
   children?: React.ReactNode
   className?: string
@@ -58,7 +67,30 @@ export const ModuleSubHeader: React.FC<ModuleSubHeaderProps> = ({
       </div>
 
       <div className="module-sub-header__right">
-        {secondaryActions}
+        {Array.isArray(secondaryActions)
+          ? secondaryActions.map((act, idx) => {
+              if (React.isValidElement(act)) return <React.Fragment key={idx}>{act}</React.Fragment>
+              if (act && typeof act === 'object' && 'label' in act && 'onClick' in act) {
+                const action = act as ModuleSecondaryAction
+                return (
+                  <button
+                    key={action.label || idx}
+                    type="button"
+                    className="module-sub-header__secondary-btn tap"
+                    onClick={action.onClick}
+                    disabled={action.disabled}
+                    aria-label={action.ariaLabel || action.label}
+                    title={action.title || action.label}
+                    style={{ minHeight: 44 }}
+                  >
+                    {action.icon && <Icon name={action.icon} size={15} />}
+                    <span>{action.label}</span>
+                  </button>
+                )
+              }
+              return null
+            })
+          : secondaryActions}
         {children}
         {primaryAction && (
           <button

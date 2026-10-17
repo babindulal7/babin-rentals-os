@@ -348,7 +348,7 @@ function MasterDispatchDateControl({
       <button
         ref={trigger}
         type="button"
-        className="dashboard-master-date-control__date-btn ui-button ui-button--outline ui-button--sm press"
+        className="dashboard-master-date-control__date-btn ui-button ui-button--outline ui-button--sm press tap"
         aria-label={`${compactLabel} — choose ${dialogLabel.toLowerCase()}`}
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -609,9 +609,14 @@ export default function Today() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <div className="dashboard-workbar__intro" style={{ margin: 0 }}>
             <p style={{ margin: 0 }}>
-              {pickupCount === undefined || returnCount === undefined
-                ? 'Movement board'
-                : `${pickupCount} going out · ${returnCount} coming back`}
+              {pickupCount === undefined || returnCount === undefined ? (
+                'Movement board'
+              ) : (
+                <>
+                  <span className="font-mono tabular-nums">{pickupCount}</span> going out ·{' '}
+                  <span className="font-mono tabular-nums">{returnCount}</span> coming back
+                </>
+              )}
             </p>
             <DataAgeBadge
               loadedAt={pickups.lastFetchedAt && returns.lastFetchedAt
@@ -633,10 +638,10 @@ export default function Today() {
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: 4,
-            background: 'var(--card2)',
-            padding: '3px 4px',
-            borderRadius: 'var(--r-btn, 8px)',
+            gap: 3,
+            background: 'var(--surface-2)',
+            padding: 3,
+            borderRadius: 'calc(var(--r-btn) + 2px)',
             border: '1px solid var(--border)',
           }}
         >
@@ -646,13 +651,20 @@ export default function Today() {
               <button
                 key={period}
                 type="button"
-                className={`ui-button ui-button--sm press ${isActive ? 'ui-button--primary' : 'ui-button--ghost'}`}
+                className="press tap"
                 style={{
                   minHeight: 32,
                   padding: '0 12px',
-                  borderRadius: 'calc(var(--r-btn, 8px) - 2px)',
+                  borderRadius: 'var(--r-btn)',
+                  border: 'none',
+                  background: isActive ? 'var(--card)' : 'transparent',
+                  color: isActive ? 'var(--text)' : 'var(--text2)',
                   fontWeight: isActive ? 600 : 500,
                   fontSize: 'var(--t-meta, 13px)',
+                  fontFamily: 'inherit',
+                  boxShadow: isActive ? 'var(--shadow-sm), var(--specular-rim)' : 'none',
+                  cursor: 'pointer',
+                  transition: 'background var(--dur-fast, 120ms) var(--ease), color var(--dur-fast, 120ms) var(--ease), box-shadow var(--dur-fast, 120ms) var(--ease)',
                 }}
                 aria-pressed={isActive}
                 onClick={() => syncBothPanels({ kind: 'quick', period })}
@@ -682,29 +694,40 @@ export default function Today() {
             justifyContent: 'space-between',
             gap: 12,
             padding: '10px 16px',
-            marginBottom: 16,
-            borderRadius: 'var(--r-card, 8px)',
-            background: 'color-mix(in srgb, var(--warn, #ea580c) 12%, var(--card))',
-            border: '1px solid color-mix(in srgb, var(--warn, #ea580c) 35%, transparent)',
-            color: 'var(--warn-text, #c2410c)',
+            marginBottom: 'var(--sp-md, 12px)',
+            borderRadius: 'var(--r-card)',
+            background: 'color-mix(in srgb, var(--warn) 12%, var(--card))',
+            border: '1px solid color-mix(in srgb, var(--warn) 35%, transparent)',
+            color: 'var(--warn-text)',
             fontSize: 'var(--t-meta, 13px)',
+            boxShadow: 'var(--shadow-xs)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Icon name="alert_triangle" size={18} style={{ color: 'var(--warn, #ea580c)', flexShrink: 0 }} />
+            <Icon name="alert_triangle" size={18} style={{ color: 'var(--warn)', flexShrink: 0 }} />
             <span>
-              <strong>Unresolved / Overdue Pickups ({overduePickups.length})</strong>
+              <strong>Unresolved / Overdue Pickups <span className="font-mono tabular-nums">({overduePickups.length})</span></strong>
               {' — '}
-              {overduePickups.length === 1 ? '1 booking is' : `${overduePickups.length} bookings are`} past scheduled pickup time awaiting dispatch.
+              {overduePickups.length === 1 ? (
+                <>
+                  <span className="font-mono tabular-nums">1</span> booking is
+                </>
+              ) : (
+                <>
+                  <span className="font-mono tabular-nums">{overduePickups.length}</span> bookings are
+                </>
+              )}{' '}
+              past scheduled pickup time awaiting dispatch.
             </span>
           </div>
           <button
             type="button"
-            className="ui-button ui-button--sm ui-button--outline press"
+            className="ui-button ui-button--sm ui-button--outline press tap"
             style={{
-              borderColor: 'color-mix(in srgb, var(--warn, #ea580c) 40%, transparent)',
-              color: 'var(--warn-text, #c2410c)',
+              borderColor: 'color-mix(in srgb, var(--warn) 40%, transparent)',
+              color: 'var(--warn-text)',
               flexShrink: 0,
+              gap: 6,
             }}
             onClick={() => navigate('/operations?queue=pack')}
           >
@@ -799,51 +822,67 @@ export default function Today() {
         style={{
           display: 'grid',
           gridTemplateColumns: isPhone ? '1fr' : 'repeat(3, minmax(0, 1fr))',
-          gap: 'var(--sp-md, 16px)',
-          marginTop: 'var(--sp-lg, 24px)',
+          gap: 'var(--sp-md, 12px)',
+          marginTop: 'var(--sp-xl, 24px)',
         }}
       >
         {/* Card 1: Currently Out on Set */}
         <div
-          className="dashboard-situational-card"
+          className="dashboard-situational-card lift"
           style={{
-            background: 'var(--card)',
+            background: 'var(--surface-card, var(--card))',
             border: '1px solid var(--border)',
-            borderRadius: 'var(--r-card, 14px)',
+            borderRadius: 'var(--r-card)',
             padding: '16px 20px',
-            boxShadow: 'var(--shadow-sm)',
+            boxShadow: 'var(--shadow-card), var(--specular-rim)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
             gap: 12,
+            minHeight: 140,
           }}
         >
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ fontSize: 'var(--t-meta, 13px)', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Currently Out on Set
               </span>
               <Icon name="truck" size={18} style={{ color: 'var(--primary)' }} />
             </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
-              {activeRentalsCount} Active {activeRentalsCount === 1 ? 'Rental' : 'Rentals'}
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, margin: '2px 0 4px' }}>
+              <span className="font-mono tabular-nums" style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-id, sans-serif)' }}>
+                {activeRentalsCount}
+              </span>
+              <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text2)' }}>
+                Active {activeRentalsCount === 1 ? 'Rental' : 'Rentals'}
+              </span>
             </div>
-            <p style={{ margin: '4px 0 0', fontSize: 'var(--t-meta, 13px)', color: 'var(--text2)' }}>
-              {canSeeMoney && activeRentalsPaisa > 0
-                ? `${formatMoney(activeRentalsPaisa as Paisa)} active value · ${activeRentalsItems} items on set`
-                : `${activeRentalsItems} equipment units currently with clients`}
+            <p style={{ margin: 0, fontSize: 'var(--t-meta, 13px)', color: 'var(--muted)', lineHeight: 1.4 }}>
+              {canSeeMoney && activeRentalsPaisa > 0 ? (
+                <>
+                  <span className="money font-mono tabular-nums" style={{ fontWeight: 600, color: 'var(--text)' }}>
+                    {formatMoney(activeRentalsPaisa as Paisa)}
+                  </span>{' '}
+                  active value · <span className="font-mono tabular-nums">{activeRentalsItems}</span> items on set
+                </>
+              ) : (
+                <>
+                  <span className="font-mono tabular-nums" style={{ fontWeight: 600, color: 'var(--text)' }}>{activeRentalsItems}</span> equipment units currently with clients
+                </>
+              )}
             </p>
           </div>
           <Link
             to="/operations?queue=return"
-            className="press"
+            className="press tap"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
+              minHeight: 'var(--tap, 44px)',
               fontSize: 'var(--t-meta, 13px)',
               fontWeight: 600,
-              color: 'var(--primary)',
+              color: 'var(--primary-text)',
               textDecoration: 'none',
               marginTop: 4,
             }}
@@ -854,43 +893,57 @@ export default function Today() {
 
         {/* Card 2: Prep / Packing Queue */}
         <div
-          className="dashboard-situational-card"
+          className="dashboard-situational-card lift"
           style={{
-            background: 'var(--card)',
+            background: 'var(--surface-card, var(--card))',
             border: '1px solid var(--border)',
-            borderRadius: 'var(--r-card, 14px)',
+            borderRadius: 'var(--r-card)',
             padding: '16px 20px',
-            boxShadow: 'var(--shadow-sm)',
+            boxShadow: 'var(--shadow-card), var(--specular-rim)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
             gap: 12,
+            minHeight: 140,
           }}
         >
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ fontSize: 'var(--t-meta, 13px)', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Prep & Packing Queue
               </span>
               <Icon name="package" size={18} style={{ color: 'var(--primary)' }} />
             </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
-              {prepBookedCount} Booked · {prepPackedCount} Packed
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, margin: '2px 0 4px', flexWrap: 'wrap' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4 }}>
+                <span className="font-mono tabular-nums" style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-id, sans-serif)' }}>
+                  {prepBookedCount}
+                </span>
+                <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text2)' }}>Booked</span>
+              </span>
+              <span style={{ color: 'var(--border2)' }}>·</span>
+              <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4 }}>
+                <span className="font-mono tabular-nums" style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-id, sans-serif)' }}>
+                  {prepPackedCount}
+                </span>
+                <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text2)' }}>Packed</span>
+              </span>
             </div>
-            <p style={{ margin: '4px 0 0', fontSize: 'var(--t-meta, 13px)', color: 'var(--text2)' }}>
+            <p style={{ margin: 0, fontSize: 'var(--t-meta, 13px)', color: 'var(--muted)', lineHeight: 1.4 }}>
               Orders staged or awaiting warehouse preparation
             </p>
           </div>
           <Link
             to="/operations?queue=pack"
-            className="press"
+            className="press tap"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
+              minHeight: 'var(--tap, 44px)',
               fontSize: 'var(--t-meta, 13px)',
               fontWeight: 600,
-              color: 'var(--primary)',
+              color: 'var(--primary-text)',
               textDecoration: 'none',
               marginTop: 4,
             }}
@@ -901,43 +954,50 @@ export default function Today() {
 
         {/* Card 3: Maintenance / QC Hold */}
         <div
-          className="dashboard-situational-card"
+          className="dashboard-situational-card lift"
           style={{
-            background: 'var(--card)',
+            background: 'var(--surface-card, var(--card))',
             border: '1px solid var(--border)',
-            borderRadius: 'var(--r-card, 14px)',
+            borderRadius: 'var(--r-card)',
             padding: '16px 20px',
-            boxShadow: 'var(--shadow-sm)',
+            boxShadow: 'var(--shadow-card), var(--specular-rim)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
             gap: 12,
+            minHeight: 140,
           }}
         >
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ fontSize: 'var(--t-meta, 13px)', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Maintenance & QC Hold
               </span>
-              <Icon name="tool" size={18} style={{ color: 'var(--warn, #ea580c)' }} />
+              <Icon name="tool" size={18} style={{ color: 'var(--warn)' }} />
             </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
-              {openCases} Open {openCases === 1 ? 'Case' : 'Cases'} / Holds
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, margin: '2px 0 4px' }}>
+              <span className="font-mono tabular-nums" style={{ fontSize: '1.75rem', fontWeight: 700, color: openCases > 0 ? 'var(--warn-text)' : 'var(--text)', fontFamily: 'var(--font-id, sans-serif)' }}>
+                {openCases}
+              </span>
+              <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text2)' }}>
+                Open {openCases === 1 ? 'Case' : 'Cases'} / Holds
+              </span>
             </div>
-            <p style={{ margin: '4px 0 0', fontSize: 'var(--t-meta, 13px)', color: 'var(--text2)' }}>
+            <p style={{ margin: 0, fontSize: 'var(--t-meta, 13px)', color: 'var(--muted)', lineHeight: 1.4 }}>
               Equipment flagged for repair, inspection, or missing
             </p>
           </div>
           <Link
             to="/inventory/cases"
-            className="press"
+            className="press tap"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
+              minHeight: 'var(--tap, 44px)',
               fontSize: 'var(--t-meta, 13px)',
               fontWeight: 600,
-              color: 'var(--warn-text, #c2410c)',
+              color: 'var(--warn-text)',
               textDecoration: 'none',
               marginTop: 4,
             }}

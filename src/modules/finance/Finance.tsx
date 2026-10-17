@@ -1501,7 +1501,7 @@ export default function Finance() {
             items={[
               {
                 id: 'Outstanding',
-                label: 'OUTSTANDING INVOICES',
+                label: 'Outstanding Invoices',
                 value: countOf(outstanding),
                 subtitle: `${moneyOf(receivableTotal)} receivable`,
                 icon: 'invoice',
@@ -1514,7 +1514,7 @@ export default function Finance() {
               },
               {
                 id: 'Overdue',
-                label: 'OVERDUE INVOICES',
+                label: 'Overdue Invoices',
                 value: countOf(overdue),
                 subtitle: `${moneyOf(overdueTotal)} past due`,
                 icon: 'alert_triangle',
@@ -1529,7 +1529,7 @@ export default function Finance() {
               },
               {
                 id: 'Received',
-                label: 'RECEIVED IN PERIOD',
+                label: 'Received',
                 value: moneyOf(receivedTotal),
                 subtitle: `Collected ${period.label}`,
                 icon: 'card',
@@ -1773,7 +1773,7 @@ export default function Finance() {
                           <tbody>
                             {invoiceRows.map(({ row: i, glance, detail }) => (
                               <tr key={i.id} className="finance-row" style={{ borderBottom: '1px solid var(--border)' }}>
-                                <td className="identifier finance-mono" style={{ ...td, color: 'var(--link)', fontWeight: 600 }}>
+                                <td className="identifier finance-mono module-table__code" style={{ ...td, color: 'var(--link)', fontWeight: 600 }}>
                                   <IntelCard
                                     glance={glance}
                                     detail={detail}

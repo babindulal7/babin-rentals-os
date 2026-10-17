@@ -1131,6 +1131,10 @@ export interface MovementRow {
    * SELECTED by cannot disagree.
    */
   atDayAd: string
+  /** `bookings.pickup_at` ISO string. */
+  pickupAtAd?: string
+  /** `bookings.return_at` ISO string. */
+  returnAtAd?: string
   /** `bookings.stage` — one of the canonical six, verified 1:1 against `BookingStatus`. */
   status: BookingStatus
   /** Only ever `['Overdue']` or `[]`. `VIP` and `Due Soon` have no source — see below. */
@@ -1237,6 +1241,8 @@ export function toMovementRow(row: BookingListRow, side: 'outgoing' | 'incoming'
     kind: side === 'incoming' ? 'Return' : row.deliveryType === 'Client Pickup' ? 'Pickup' : 'Delivery',
     at: kathmanduMinutes(atAd),
     atDayAd: new Date(kathmanduCivil(new Date(atAd))).toISOString().slice(0, 10),
+    pickupAtAd: row.pickupAtAd,
+    returnAtAd: row.returnAtAd,
     status: row.stage,
     flags: overdue ? ['Overdue'] : [],
     ...(overdue ? { statusNote: lateDays > 0 ? `${lateDays} day${lateDays === 1 ? '' : 's'} late` : 'Late today' } : {}),

@@ -1,5 +1,37 @@
 # Progress Log
 
+## 2026-10-17 — Status/role matrix (Chromium mock emulation)
+
+**Did**
+- Ran the app-wide status/role matrix pass in mock mode (`npm run dev:mock`, seeded corpus, Chromium via the desktop browser tools). Emulation only — not physical iPad Safari, recorded as such per `docs/UI_UX_IMPROVEMENT_PLAN.md`.
+- Status badges across the rentals filter views: Quote, Booked, Packed, On Rent, Returned, Closed each render an icon **and** a text label (never colour alone).
+- Money-blind check as Warehouse (Ram Thapa): `/today`, `/operations`, `/rentals`, `/rentals/902` (detail), `/calendar`, `/crew`, `/inventory`, `/clients`, `/tools`, `/settings` — zero `Rs`/`रू` figures; the Rentals table drops the Total Amount column; booking detail's "Total Items" is a count, not money. Direct URL to `/finance` shows "Access restricted — Your role (Warehouse) does not have access to this module" with no data.
+- Positive control as Accounts (Sita Sharma): `/rentals`, `/finance`, `/clients` all show amounts plus Total Amount / Outstanding columns — the gate is role-based, not a data outage.
+
+**Ruled**
+- No fix made for the one observation: `/settings` help text contains a static `Rs 1,85,000` example (number-format documentation), visible to Warehouse. It is copy, not client money — flagged for a product review call, not silently changed. `TODO(decision)` stands if Babin wants it hidden from money-blind roles.
+
+**Verified**
+- All findings above are live DOM evidence from this session's browser tab (console clean, zero errors). `browser.screenshot` requires a visible desktop window, so no PNGs were captured; the evidence is the recorded DOM/text extracts.
+- No source files changed by this pass; no gates needed. Concurrent session's in-progress edits left untouched.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-17T07:27:04.216Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-17T07:27:53.582Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Physical iPad/Safari + native 125% zoom acceptance (no Apple hardware here); this pass was Chromium width/DOM emulation only.
+- Open product calls: §4.64/§4.65 items, D-2 (Booqable seasonal rulesets), the `/settings` `Rs 1,85,000` help-text visibility question, border-merge decision, live apply of 0157–0168 by Babin.
+
 ## 2026-10-17 — Booqable ADOPTIONS 1–9 implementation (REFERENCE_SPEC v2.5)
 
 **Did**

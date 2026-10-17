@@ -60,6 +60,7 @@ const checkItemStyle: React.CSSProperties = {
   borderRadius: '10px',
   border: '1px solid var(--border)',
   transition: 'background 0.15s',
+  minHeight: 'var(--tap, 44px)',
 }
 
 const logRowStyle: React.CSSProperties = {
@@ -205,7 +206,7 @@ export default function ShiftHandoverPanel() {
                 fontWeight: 600,
               }}
             >
-              {openShiftNotes.length} open {openShiftNotes.length === 1 ? 'note' : 'notes'}
+              <span className="font-mono tabular-nums">{openShiftNotes.length}</span> open {openShiftNotes.length === 1 ? 'note' : 'notes'}
             </span>
           )}
         </div>
@@ -241,7 +242,7 @@ export default function ShiftHandoverPanel() {
                 style={{
                   flex: 1,
                   minWidth: isPhone ? '100%' : 260,
-                  minHeight: 38,
+                  minHeight: 'var(--tap, 44px)',
                   padding: '0 12px',
                   borderRadius: 'var(--r-btn, 8px)',
                   border: '1px solid var(--border)',
@@ -253,10 +254,17 @@ export default function ShiftHandoverPanel() {
               <button
                 type="submit"
                 disabled={!noteInput.trim()}
-                className="ui-button ui-button--sm ui-button--primary press"
-                style={{ minHeight: 38, padding: '0 14px', whiteSpace: 'nowrap' }}
+                className="ui-button ui-button--sm ui-button--primary press tap"
+                style={{
+                  minHeight: 'var(--tap, 44px)',
+                  padding: '0 14px',
+                  whiteSpace: 'nowrap',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
               >
-                + Log Shift Note
+                <Icon name="plus" size={14} /> Log Shift Note
               </button>
             </form>
 
@@ -297,7 +305,7 @@ export default function ShiftHandoverPanel() {
                     </div>
                     <button
                       type="button"
-                      className="ui-button ui-button--sm ui-button--ghost press"
+                      className="ui-button ui-button--sm ui-button--ghost press tap"
                       onClick={(e) => {
                         e.stopPropagation()
                         toggleResolveNote(note.id, user?.name)
@@ -305,9 +313,17 @@ export default function ShiftHandoverPanel() {
                         showSuccessToast('Note marked resolved')
                       }}
                       title="Mark resolved"
-                      style={{ minHeight: 28, padding: '0 8px', fontSize: '12px', flexShrink: 0 }}
+                      style={{
+                        minHeight: 32,
+                        padding: '0 10px',
+                        fontSize: '12px',
+                        flexShrink: 0,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
                     >
-                      ✓ Resolve
+                      <Icon name="check" size={13} style={{ color: 'var(--success-text)' }} /> Resolve
                     </button>
                   </div>
                 ))}
@@ -328,7 +344,7 @@ export default function ShiftHandoverPanel() {
                   key={item.key}
                   style={{
                     ...checkItemStyle,
-                    background: isChecked ? 'rgba(46, 204, 143, 0.06)' : 'transparent',
+                    background: isChecked ? 'color-mix(in srgb, var(--success) 8%, transparent)' : 'transparent',
                   }}
                   onClick={() => toggleCheck(item.key)}
                   role="checkbox"
@@ -339,22 +355,21 @@ export default function ShiftHandoverPanel() {
                   {/* Checkbox */}
                   <div
                     style={{
-                      width: 20,
-                      height: 20,
-                      borderRadius: 6,
+                      width: 22,
+                      height: 22,
+                      borderRadius: 'var(--r-xs, 6px)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontSize: 13,
-                      fontWeight: 700,
                       flexShrink: 0,
-                      background: isChecked ? 'rgba(46, 204, 143, 0.16)' : 'var(--surface)',
-                      border: isChecked ? '1.5px solid rgba(46, 204, 143, 0.5)' : '1.5px solid var(--border)',
-                      color: 'var(--green)',
-                      transition: 'all 0.15s',
+                      background: isChecked ? 'color-mix(in srgb, var(--success) 16%, var(--surface))' : 'var(--surface)',
+                      border: isChecked ? '1.5px solid color-mix(in srgb, var(--success) 60%, transparent)' : '1.5px solid var(--border)',
+                      color: 'var(--success-text)',
+                      transition: 'all 0.15s ease',
                     }}
                   >
-                    {isChecked ? '✓' : ''}
+                    {isChecked ? <Icon name="check" size={14} style={{ color: 'var(--success-text)' }} /> : null}
                   </div>
 
                   {/* Label + hint */}
@@ -362,7 +377,7 @@ export default function ShiftHandoverPanel() {
                     <div style={{ fontWeight: 500, fontSize: 'var(--t-body)', color: 'var(--text)' }}>
                       {item.label}
                     </div>
-                    <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text3)', marginTop: '2px' }}>
+                    <div style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)', marginTop: '2px' }}>
                       {item.hint}
                     </div>
                   </div>
@@ -376,28 +391,44 @@ export default function ShiftHandoverPanel() {
                 variant={handoverDone ? undefined : allChecked ? 'primary' : undefined}
                 disabled={handoverDone || !allChecked}
                 onClick={handleCompleteHandover}
+                className="tap"
                 style={{
                   flex: 1,
+                  minHeight: 'var(--tap, 44px)',
                   background: handoverDone
                     ? 'var(--surface)'
                     : allChecked
-                      ? 'var(--green)'
+                      ? 'var(--success)'
                       : 'var(--surface)',
                   border: handoverDone || !allChecked ? '1px solid var(--border)' : 'none',
                   color: handoverDone
-                    ? 'var(--green)'
+                    ? 'var(--success-text)'
                     : allChecked
-                      ? '#04120B'
-                      : 'var(--text3)',
+                      ? 'var(--on-success)'
+                      : 'var(--muted)',
                   fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
                 }}
               >
-                {handoverDone
-                  ? '✓ Handover Complete'
-                  : `Complete Handover (${checkedCount} / ${SHIFT_CHECKLIST.length})`}
+                {handoverDone ? (
+                  <>
+                    <Icon name="check" size={16} /> Handover Complete
+                  </>
+                ) : (
+                  <>
+                    Complete Handover (<span className="font-mono tabular-nums">{checkedCount}</span> / <span className="font-mono tabular-nums">{SHIFT_CHECKLIST.length}</span>)
+                  </>
+                )}
               </Button>
 
-              <Button onClick={handleRecountCash}>
+              <Button
+                onClick={handleRecountCash}
+                className="tap"
+                style={{ minHeight: 'var(--tap, 44px)' }}
+              >
                 Recount Cash
               </Button>
             </div>
@@ -425,7 +456,7 @@ export default function ShiftHandoverPanel() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Icon name={logExpanded ? 'chevron_down' : 'chevron_right'} size={14} />
               <span style={{ fontWeight: 600, fontSize: 'var(--t-body)' }}>
-                Handover Log · {records.length} records
+                Handover Log · <span className="font-mono tabular-nums">{records.length}</span> records
               </span>
             </div>
           </div>
@@ -463,8 +494,8 @@ export default function ShiftHandoverPanel() {
 
                     <div style={{ ...logRowMetaStyle, marginTop: '6px' }}>
                       <span>{record.from} → {record.to}</span>
-                      <span>{record.cashDisplay}</span>
-                      <span>Checks: {record.checksCompleted}</span>
+                      <span className="font-mono tabular-nums">{record.cashDisplay}</span>
+                      <span>Checks: <span className="font-mono tabular-nums">{record.checksCompleted}</span></span>
                     </div>
 
                     {isOpen && (

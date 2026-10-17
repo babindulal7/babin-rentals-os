@@ -131,17 +131,17 @@ export function DataAgeBadge({
           background: isOffline
             ? 'var(--surface-2)'
             : isStale
-            ? 'var(--warn-soft, rgba(232, 118, 45, 0.12))'
+            ? 'color-mix(in srgb, var(--warn) 12%, transparent)'
             : variant === 'muted'
             ? 'transparent'
             : 'var(--surface-2)',
           border: variant === 'muted' && !isStale && !isOffline
             ? 'none'
-            : `1px solid ${isStale && !isOffline ? 'var(--warn-border, var(--border))' : 'var(--border)'}`,
+            : `1px solid ${isStale && !isOffline ? 'color-mix(in srgb, var(--warn) 35%, transparent)' : 'var(--border)'}`,
           color: isOffline
             ? 'var(--muted)'
             : isStale
-            ? 'var(--warn-text, #e8762d)'
+            ? 'var(--warn-text)'
             : 'var(--muted)',
           fontSize: variant === 'muted' ? '12px' : '11px',
           fontWeight: variant === 'muted' ? 500 : 600,
@@ -154,7 +154,7 @@ export function DataAgeBadge({
           name={isOffline || isStale ? 'alert_triangle' : 'timer'}
           size={13}
           style={{
-            color: isOffline ? 'var(--muted)' : isStale ? 'var(--warn-text, #e8762d)' : 'var(--muted)',
+            color: isOffline ? 'var(--muted)' : isStale ? 'var(--warn-text)' : 'var(--muted)',
             flexShrink: 0,
           }}
         />
