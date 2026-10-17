@@ -6,6 +6,7 @@ import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
 import { Card, Button, KpiStrip, Rail } from '../../components/ui/Page'
 import type { Kpi } from '../../components/ui/Page'
+import { ModuleKpiStrip, type ModuleKpiItem, ModuleFilterBar, type FilterTabOption, StatusPill } from '../../components/ui/module-shell'
 import {
   ActiveFilterChips,
   FilterDrawer,
@@ -1083,226 +1084,115 @@ export function ClientsDirectory({
   ]
   const visibleChips = chips.filter((c) => primaryChipKeys.includes(c.key) || c.key === activeFilter)
 
+  const kpiItems: ModuleKpiItem[] = [
+    {
+      id: 'active',
+      label: 'Active Clients',
+      count: metrics.total,
+      subtitle: `${metrics.onRent} with open rentals`,
+      icon: 'users',
+      tone: 'primary',
+      active: activeFilter === 'all' && !overlays.blocked && !overlays.onStop,
+      onClick: () => {
+        applyFilter('all')
+        patchParams({ blocked: null, stop: null })
+      },
+    },
+    {
+      id: 'onRent',
+      label: 'Open Rentals',
+      count: metrics.onRent,
+      subtitle: 'Currently active on rental',
+      icon: 'checklist',
+      tone: 'success',
+      active: activeFilter === 'active',
+      onClick: () => applyFilter('active'),
+    },
+    {
+      id: 'hold',
+      label: 'Credit / Payment Hold',
+      count: money && metrics.outstandingPaisa > 0 ? formatMoney(metrics.outstandingPaisa) : String(metrics.blocked + onStopCount),
+      subtitle: `${metrics.paymentDue} payment due · ${metrics.blocked} blocked`,
+      icon: 'alert_triangle',
+      tone: metrics.paymentDue > 0 || metrics.blocked > 0 ? 'warn' : 'primary',
+      active: activeFilter === 'paymentDue' || overlays.blocked || overlays.onStop,
+      onClick: () => {
+        if (money && metrics.paymentDue > 0) applyFilter('paymentDue')
+        else toggleOverlay('blocked')
+      },
+    },
+  ]
+
+  const filterTabs: FilterTabOption[] = [
+    { id: 'all', label: 'All', count: metrics.total },
+    { id: 'active', label: 'Open Rentals', count: metrics.onRent, icon: 'checklist' },
+    { id: 'vip', label: 'VIP / Tier', count: metrics.vip, icon: 'star' },
+    ...(money ? [{ id: 'paymentDue', label: 'Payment Due', count: metrics.paymentDue, icon: 'card' as const }] : []),
+    { id: 'blocked', label: 'Blocked', count: metrics.blocked, icon: 'alert_triangle' as const },
+    { id: 'typeOrg', label: 'Organisation', count: metrics.typeOrg },
+    { id: 'typeInd', label: 'Individual', count: metrics.typeInd },
+  ]
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-      {showKpis && <KpiStrip items={kpis} columns={kpis.length} />}
+      {showKpis && <ModuleKpiStrip items={kpiItems} />}
 
-      {/* ── quick filters + view switch ───────────────────────────────── */}
-      <div
-        className="client-chip-track"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'var(--sp-sm)',
-          flexWrap: 'nowrap',
-          overflowX: 'auto',
-          maxWidth: '100%',
-          paddingBottom: 2,
+      <ModuleFilterBar
+        tabs={filterTabs}
+        activeTab={overlays.blocked ? 'blocked' : activeFilter}
+        onTabChange={(id) => {
+          if (id === 'blocked') {
+            applyFilter('all')
+            patchParams({ blocked: '1', stop: null })
+          } else {
+            if (overlays.blocked) patchParams({ blocked: null })
+            applyFilter(id as FilterKey)
+          }
         }}
-      >
-        {visibleChips.map((c) => {
-          const on = activeFilter === c.key
-          return (
+        searchValue={searchQuery}
+        onSearchChange={(val) => patchParams({ q: val ? val : null })}
+        searchPlaceholder="Search client, company, PAN, phone… (press /)"
+        rightActions={
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--sp-sm)', flexShrink: 0 }}>
+            {tabular &&
+              (['Table', 'Cards'] as ViewKey[]).map((v) => (
+                <Button
+                  key={v}
+                  icon={v === 'Table' ? 'queues' : 'box'}
+                  variant="secondary"
+                  aria-pressed={view === v}
+                  onClick={() => setView(v)}
+                >
+                  {v}
+                </Button>
+              ))}
             <button
-              key={c.key}
               type="button"
-              onClick={() => applyFilter(c.key)}
-              aria-pressed={on}
-              className={`client-filter-chip ${on ? 'is-active' : ''}`}
+              onClick={() => setShowKpis((s) => !s)}
+              aria-expanded={showKpis}
+              aria-label={showKpis ? 'Hide client statistics' : 'Show client statistics'}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 7,
+                gap: 6,
                 minHeight: 44,
-                padding: '0 11px',
+                padding: '0 12px',
                 borderRadius: 'var(--r-sm)',
-                border: `1px solid ${on ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-                background: on ? 'var(--select-bg)' : 'var(--card)',
-                color: on ? 'var(--select-fg)' : 'var(--text2)',
+                border: `1px solid ${showKpis ? 'var(--nav-active-accent)' : 'var(--border)'}`,
+                background: showKpis ? 'var(--select-bg)' : 'var(--card)',
+                color: showKpis ? 'var(--select-fg)' : 'var(--text2)',
                 fontSize: 'var(--t-meta)',
-                fontWeight: on ? 600 : 500,
+                fontWeight: 600,
                 cursor: 'pointer',
                 fontFamily: 'inherit',
-                whiteSpace: 'nowrap',
-                flexShrink: 0,
               }}
             >
-              {c.label}
-              <span
-                className="client-chip-badge figure client-mono"
-                style={{
-                  minWidth: 18,
-                  height: 18,
-                  borderRadius: 5,
-                  display: 'inline-grid',
-                  placeItems: 'center',
-                  background: 'var(--card2)',
-                  color: 'var(--text)',
-                  fontSize: 'var(--t-meta)',
-                  fontWeight: 700,
-                  padding: '0 4px',
-                }}
-              >
-                {c.count}
-              </span>
+              <Icon name="chart" size={14} />
+              <span>{showKpis ? 'Hide Stats' : 'Stats'}</span>
             </button>
-          )
-        })}
-
-        <button
-          key="blocked"
-          type="button"
-          onClick={() => toggleOverlay('blocked')}
-          aria-pressed={overlays.blocked}
-          className={`client-filter-chip ${overlays.blocked ? 'is-active' : ''}`}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 7,
-            minHeight: 44,
-            padding: '0 11px',
-            borderRadius: 'var(--r-sm)',
-            border: `1px solid ${overlays.blocked ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-            background: overlays.blocked ? 'var(--select-bg)' : 'var(--card)',
-            color: overlays.blocked ? 'var(--select-fg)' : 'var(--text2)',
-            fontSize: 'var(--t-meta)',
-            fontWeight: overlays.blocked ? 600 : 500,
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-            whiteSpace: 'nowrap',
-            flexShrink: 0,
-          }}
-        >
-          <Icon name="alert_triangle" size={13} fill={overlays.blocked} />
-          Blocked
-          <span
-            className="client-chip-badge figure client-mono"
-            style={{
-              minWidth: 18,
-              height: 18,
-              borderRadius: 5,
-              display: 'inline-grid',
-              placeItems: 'center',
-              background: 'var(--card2)',
-              color: 'var(--text)',
-              fontSize: 'var(--t-meta)',
-              fontWeight: 700,
-              padding: '0 4px',
-            }}
-          >
-            {metrics.blocked}
-          </span>
-        </button>
-
-        {overlays.onStop && (
-          <button
-            key="onStop"
-            type="button"
-            onClick={() => toggleOverlay('onStop')}
-            aria-pressed={overlays.onStop}
-            className={`client-filter-chip is-active`}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 7,
-              minHeight: 44,
-              padding: '0 11px',
-              borderRadius: 'var(--r-sm)',
-              border: '1px solid var(--nav-active-accent)',
-              background: 'var(--select-bg)',
-              color: 'var(--select-fg)',
-              fontSize: 'var(--t-meta)',
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
-            }}
-          >
-            <Icon name="lock" size={13} fill={true} />
-            On Stop
-            <span
-              className="client-chip-badge figure client-mono"
-              style={{
-                minWidth: 18,
-                height: 18,
-                borderRadius: 5,
-                display: 'inline-grid',
-                placeItems: 'center',
-                background: 'var(--card2)',
-                color: 'var(--text)',
-                fontSize: 'var(--t-meta)',
-                fontWeight: 700,
-                padding: '0 4px',
-              }}
-            >
-              {onStopCount}
-            </span>
-          </button>
-        )}
-
-        <div style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 'var(--sp-sm)', flexShrink: 0 }}>
-          {tabular &&
-            (['Table', 'Cards'] as ViewKey[]).map((v) => (
-              <Button
-                key={v}
-                icon={v === 'Table' ? 'queues' : 'box'}
-                variant="secondary"
-                aria-pressed={view === v}
-                onClick={() => setView(v)}
-              >
-                {v}
-              </Button>
-            ))}
-          {!phone && (
-            <button
-              type="button"
-              onClick={() => setDensity((d) => (d === 'compact' ? 'comfortable' : 'compact'))}
-              aria-pressed={density === 'compact'}
-              aria-label={density === 'compact' ? 'Compact rows — click for comfortable' : 'Comfortable rows — click for compact'}
-              title={density === 'compact' ? 'Compact rows — click for comfortable' : 'Comfortable rows — click for compact'}
-              style={{
-                minWidth: 44,
-                minHeight: 44,
-                borderRadius: 'var(--r-input)',
-                border: '1px solid var(--input-border)',
-                background: density === 'compact' ? 'var(--select-bg)' : 'var(--input-bg)',
-                color: density === 'compact' ? 'var(--select-fg)' : 'var(--text2)',
-                cursor: 'pointer',
-                display: 'grid',
-                placeItems: 'center',
-              }}
-            >
-              <Icon name={density === 'compact' ? 'chevron_up' : 'chevron_down'} size={15} />
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => setShowKpis((s) => !s)}
-            aria-expanded={showKpis}
-            aria-label={showKpis ? 'Hide client statistics' : 'Show client statistics'}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              minHeight: 44,
-              padding: '0 12px',
-              borderRadius: 'var(--r-sm)',
-              border: `1px solid ${showKpis ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-              background: showKpis ? 'var(--select-bg)' : 'var(--card)',
-              color: showKpis ? 'var(--select-fg)' : 'var(--text2)',
-              fontSize: 'var(--t-meta)',
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}
-          >
-            <Icon name="chart" size={14} />
-            <span>{showKpis ? 'Hide Stats' : 'Stats'}</span>
-          </button>
-        </div>
-      </div>
+          </div>
+        }
+      />
 
       {/*
         The selection, visible while the drawer is shut.
@@ -1806,7 +1696,8 @@ export function ClientsDirectory({
                                   {client.name.slice(0, 2).toUpperCase()}
                                 </span>
                                 <span style={{ minWidth: 0 }}>
-                                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                    <span className="module-table__code-badge">#{client.id}</span>
                                     <span data-intel-identifier style={{ fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--text)' }}>
                                       {client.name}
                                     </span>
@@ -1830,7 +1721,7 @@ export function ClientsDirectory({
                                         reason={stopVerdicts.get(client.id)?.reasons.join(' ') ?? ''}
                                       />
                                     )}
-                                  </span>
+                                  </div>
                                   {client.company && (
                                     <span style={{ display: 'block', fontSize: 'var(--t-meta)', color: 'var(--text2)', marginTop: 1 }}>
                                       {client.company}
@@ -1855,7 +1746,19 @@ export function ClientsDirectory({
                           {!narrow && <td style={{ ...td, color: 'var(--text2)' }}>{client.clientType}</td>}
 
                           <td style={td}>
-                            <Tone text={client.membership} tone={TIER_TONE[client.membership]} />
+                            {client.isBlocked ? (
+                              <StatusPill tone="red" label="Blocked" icon="alert_triangle" />
+                            ) : stopVerdicts.get(client.id)?.onStop ? (
+                              <StatusPill tone="red" label="Credit Hold" icon="alert_triangle" />
+                            ) : client.isVip ? (
+                              <StatusPill tone="blue" label="VIP" icon="star" />
+                            ) : client.currentRentalsCount > 0 ? (
+                              <StatusPill tone="emerald" label="Active" icon="check" liveDot />
+                            ) : client.isVerified ? (
+                              <StatusPill tone="emerald" label="Verified" icon="check" />
+                            ) : (
+                              <StatusPill tone="slate" label={client.membership || 'Standard'} icon="user" />
+                            )}
                           </td>
 
                           {!narrow && (

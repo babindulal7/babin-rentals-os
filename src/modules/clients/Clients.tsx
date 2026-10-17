@@ -8,6 +8,7 @@ import { Card, PageHeader, PageActions, Button, KpiStrip, FooterNote } from '../
 import { GlobalAddMenu } from '../../components/ui/creation/GlobalAddMenu'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { PageShell } from '../../components/ui/PageShell'
+import { ModuleSubHeader } from '../../components/ui/module-shell'
 import type { Kpi } from '../../components/ui/Page'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { ClientsDirectory } from './ClientsDirectory'
@@ -243,6 +244,29 @@ export default function Clients() {
 
       {activeTab === 'clients' && (
         <>
+          <ModuleSubHeader
+            counter={`${clients.length} registered ${clients.length === 1 ? 'client' : 'clients'}`}
+            loadedAt={clients.length > 0 ? new Date() : null}
+            loading={clientsLoading}
+            onRefresh={refresh}
+            secondaryActions={
+              !clientsLoading && !clientsError ? (
+                <button
+                  type="button"
+                  className="module-sub-header__secondary-btn press"
+                  onClick={exportCsv}
+                  aria-label="Export loaded directory"
+                >
+                  <Icon name="download" size={14} />
+                  <span>Export CSV</span>
+                </button>
+              ) : null
+            }
+            primaryAction={{
+              label: '+ New Client',
+              onClick: () => setTab('new'),
+            }}
+          />
           <PageBody
             loading={clientsLoading}
             error={clientsError}
