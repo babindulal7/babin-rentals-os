@@ -79,16 +79,22 @@ describe('RULING 2026-10-16 — a page whose More carries Search frees the phone
   const phoneSearch = () => container.querySelector('header [aria-label="Search"]')
   const desktopSearch = () => container.querySelector('header [aria-label="Search bookings, clients, equipment and pages"]')
 
+  const phoneSearchSlot = () => container.querySelector('header .app-global-header__phone-search')
+
   it('drops the phone Search button when the page carries Search in its More', async () => {
     state.viewport = 'phone'
     await renderRecord(true)
     expect(phoneSearch()).toBeNull()
+    // The slot itself goes too: shell.css gives it a fixed 44px, so an empty slot still
+    // took that width from the title.
+    expect(phoneSearchSlot()).toBeNull()
   })
 
   it('keeps the phone Search button for every other page', async () => {
     state.viewport = 'phone'
     await renderRecord(false)
     expect(phoneSearch()).not.toBeNull()
+    expect(phoneSearchSlot()).not.toBeNull()
   })
 
   it('leaves the tablet and desktop search where it was', async () => {

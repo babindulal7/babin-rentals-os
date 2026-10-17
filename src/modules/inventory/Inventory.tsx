@@ -1788,7 +1788,35 @@ export default function Inventory() {
             </div>
           )}
 
+          {/*
+            RULING 2026-10-15 (row 25): the status chips lead this toolbar row instead of taking a
+            row of their own under it. The chip group shrinks only on a phone, where it scrolls;
+            at 1024–1280 the sort/view cluster wraps before any chip is clipped. Revert = move the
+            chip track back above the table card with its own padding and bottom border.
+          */}
           <div className="inventory-list-toolbar" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="inventory-chip-track" role="group" aria-label="Equipment status" style={{ flex: '0 1 auto' }}>
+              {PRIMARY_EQUIPMENT_CHIPS.map((c) => {
+                const key = chipKey(c)
+                const on = chipKey(chip) === key
+                const tone = c.kind === 'all' ? 'var(--text2)' : c.kind === 'status' ? INV_DOT[c.status] : CONDITION_INK[c.condition]
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => { setChip(c); setPage(1) }}
+                    aria-pressed={on}
+                    className={`inventory-filter-chip ${on ? 'is-active' : ''}`}
+                    style={!on && tone ? { color: tone } : undefined}
+                  >
+                    {c.kind === 'status' && <Icon name={INV_STYLE[c.status].icon} size={12} />}
+                    {c.kind === 'condition' && <Icon name="eye" size={12} />}
+                    {c.label}
+                    <span className="figure" style={{ color: 'var(--muted)' }}>{chipCounts.loading || chipCounts.error ? '—' : chipCounts.rows.find(row => row.id === chipSlug(c))?.count ?? '—'}</span>
+                  </button>
+                )
+              })}
+            </div>
             <button
               type="button"
               onClick={() => setShowStats((s) => !s)}
@@ -1904,28 +1932,6 @@ export default function Inventory() {
               `FilterDrawer` is `position: fixed`, so the grid is one column and
               the table keeps the width the rail was taking.
             */}
-            <div className="inventory-chip-track" style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>
-              {PRIMARY_EQUIPMENT_CHIPS.map((c) => {
-                const key = chipKey(c)
-                const on = chipKey(chip) === key
-                const tone = c.kind === 'all' ? 'var(--text2)' : c.kind === 'status' ? INV_DOT[c.status] : CONDITION_INK[c.condition]
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => { setChip(c); setPage(1) }}
-                    aria-pressed={on}
-                    className={`inventory-filter-chip ${on ? 'is-active' : ''}`}
-                    style={!on && tone ? { color: tone } : undefined}
-                  >
-                    {c.kind === 'status' && <Icon name={INV_STYLE[c.status].icon} size={12} />}
-                    {c.kind === 'condition' && <Icon name="eye" size={12} />}
-                    {c.label}
-                    <span className="figure" style={{ color: 'var(--muted)' }}>{chipCounts.loading || chipCounts.error ? '—' : chipCounts.rows.find(row => row.id === chipSlug(c))?.count ?? '—'}</span>
-                  </button>
-                )
-              })}
-            </div>
             <Card title={countedTitle} bodyStyle={{ padding: 0 }}>
               {selected.size > 0 && (
                 <div
