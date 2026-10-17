@@ -52,12 +52,14 @@ export const ModuleFilterBar: React.FC<ModuleFilterBarProps> = ({
               key={tab.id}
               type="button"
               role="tab"
+              aria-label={tab.label}
               aria-selected={isActive}
+              aria-pressed={isActive}
               className={`module-filter-bar__tab press ${isActive ? 'is-active' : ''}`.trim()}
               onClick={() => onTabChange(tab.id)}
             >
               {tab.icon && <Icon name={tab.icon} size={14} />}
-              <span>{tab.label}</span>
+              <span data-view-label>{tab.label}</span>
               {tab.count !== undefined && tab.count !== null && (
                 <span className="module-filter-bar__tab-count">
                   {tab.count}

@@ -1,5 +1,58 @@
 # Progress Log
 
+## 2026-10-18 — Unified 5-Module Page Shell implementation
+
+**Did**
+- Unified all 5 core operational pages (**Rentals**, **Crew Assist**, **Inventory**, **Clients**, and **Finance**) to share a single cohesive **Module Page Shell** matching the visual styling, card surfaces, and button hierarchy of the **Today** dispatch screen.
+- Built reusable modular primitives in `src/components/ui/module-shell/`:
+  - `ModulePageShell`: Standardized vertical container with 4-zone layout.
+  - `ModuleSubHeader`: Live counter + sync timestamp (`DataAgeBadge`) on left; secondary actions (`Scan`, `Export`, `Filters`) + pinned primary CTA (`+ New ...`) on right.
+  - `ModuleKpiStrip`: 3-card situational strip (uppercase title, subtle icon, bold count, muted subtitle; active ring filter states).
+  - `ModuleFilterBar`: Segmented status pills with counts on left; search input + dropdown filters on right.
+  - `ModuleTable`: Standardized 6-column operational table structure with monospace ID badges (`#BK-...`, `#CL-...`, `#INV-...`), entity hierarchy, and row CTAs.
+  - `StatusPill`: Semantic status pills (emerald, amber, red, slate, blue) with Tabler outline icons and optional live pulse indicator.
+- Standardized primary row action verbs in `getRentalPrimaryAction` and `BookingOperationsMenu` (`[Pack]`, `[Handover]`, `[Return]`, `[Reset]`, `[Edit Draft]`).
+- Added unit tests in `src/modules/rentals/__tests__/BookingOperationsMenu.test.tsx` verifying row verbs and money-blind gates.
+- Compacted Today Pickup Card: Added `isWindowExpired` check (`row.returnAtAd < now`) rendering `⚠️ Window passed · Reschedule or Cancel` with `.movement-card__status--expired`. Streamlined overdue pickup badge to `⚠️ Awaiting dispatch`, removing redundant day-late text that duplicated the left gutter and eliminating badge wrapping on "Client pickup". Added quick exception `OverflowMenu` (View Booking, Reschedule Dates, Cancel No-Show).
+- Filled empty Returns column: Extended `DashboardMovementPanel` with `emptyFooter` prop rendered inside `.movement-panel` boundary. Auto-expands "Returning Tomorrow" preview and "Floor Attention: QC & Maintenance Holds" card with direct `Resolve →` link to `/inventory/cases`.
+- PWA & font size cleanup: Constrained Workbox precache to `.woff2` and excluded `.woff` plus unused language subsets (cyrillic, greek, vietnamese, latin-ext). In `main.tsx` and `marketing/main.tsx`, imported explicit latin `.woff2` bundles.
+- Normalized non-stock booking line types: Supported `service`, `sub_rental`, `manual_item` across cases and added unit tests in `src/lib/__tests__/bookingLineTypes.test.ts`.
+
+**Ruled**
+- KPI cards placed in Zone 2 (top) above the filter bar and table, as confirmed by user.
+- All 5 modules standardized using Today design language while preserving 100% of underlying business logic, RLS policies, offline queueing rules, and money-blind enforcement.
+- Strict touch targets (>= 44px) and single primary action CTA per view strictly enforced.
+- Empty returns accessories strictly nested inside existing `DashboardMovementPanel` boundary to preserve dashboard layout contract invariants.
+
+**Verified**
+- `npm run lint:shell`: 679/679 files pass (0 violations).
+- `npm run typecheck`: clean (exit 0).
+- `npm run lint`: 0 errors, 0 warnings (`--max-warnings 0`).
+- `npm run check:contrast`: 82/82 pass (0 fail).
+- `npx vitest run src/__tests__/e2e/tier1-features.test.tsx src/modules/rentals/__tests__/BookingOperationsMenu.test.tsx`: 18/18 passed (100%).
+- `npx vitest run src/modules/today/ src/lib/__tests__/bookingLineTypes.test.ts`: 6 test files, 122/122 passed (100%).
+- `npm run check:pglite`: 167/167 applied, 0 failed.
+- `npm run check:lifecycle`: 31/31 green, 0 failed.
+- `npm run build`: production bundle built cleanly (exit 0).
+- Localhost dev server running on `http://localhost:3000`.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-17T18:27:39.641Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-17T18:28:20.338Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply of migrations 0157–0168 by Babin on production.
+- Physical iPad Safari verification of floor touch targets and 125% zoom acceptance.
+
 ## 2026-10-17 — Status/role matrix (Chromium mock emulation)
 
 **Did**

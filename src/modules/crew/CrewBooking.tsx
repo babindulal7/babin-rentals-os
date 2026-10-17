@@ -488,7 +488,7 @@ export function CrewBooking() {
             { id: 'Unavailable', label: 'Unavailable / Conflict', count: chipCounts['Unavailable'], icon: 'alert_triangle' },
           ]}
           activeTab={rosterChip}
-          onTabChange={(id) => setRosterChip(id as any)}
+          onTabChange={(id) => setRosterChip(id as RosterChip)}
           searchValue={searchQuery}
           onSearchChange={setSearchQuery}
           searchPlaceholder="Search crew, role, production… (press /)"

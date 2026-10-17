@@ -77,6 +77,26 @@ export function BookingDatesSection({
           : `${pickupBs ? formatBs(pickupBs) : formatAd(new Date(pickup))} → ${days} ${dayWord}`
       }
     >
+      <div
+        className="rental-day-guidance-banner"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          marginBottom: 12,
+          padding: '6px 10px',
+          borderRadius: 'var(--r-xs)',
+          background: 'var(--surface-2)',
+          border: '1px solid var(--border)',
+          fontSize: 'var(--t-meta)',
+          color: 'var(--text2)',
+        }}
+      >
+        <Icon name="info" size={13} style={{ flexShrink: 0, color: 'var(--primary)' }} />
+        <span>
+          <strong>Rental day runs 06:00 → 06:00 NPT.</strong> Multi-day rentals calculate continuous 24-hour spans from the 06:00 Kathmandu cut.
+        </span>
+      </div>
       <div className="new-rental-period-fields">
         <DateTimeField
           label="Out"

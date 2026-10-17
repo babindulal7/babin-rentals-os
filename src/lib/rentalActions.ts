@@ -206,7 +206,10 @@ export function getRentalPrimaryAction(
           icon: 'check',
           actionType: 'fulfill',
           disabled,
-          reason: cancelledReason || operationsUnavailable,
+          reason:
+            cancelledReason ||
+            operationsUnavailable ||
+            (!canOperate ? 'Your role does not have permission to fulfill this service' : undefined),
           isOperable: true,
         }
       }
@@ -219,7 +222,10 @@ export function getRentalPrimaryAction(
         route,
         actionType: 'pack',
         disabled,
-        reason: cancelledReason || operationsUnavailable,
+        reason:
+          cancelledReason ||
+          operationsUnavailable ||
+          (!canOperate ? 'Your role does not have permission to pack this booking' : undefined),
         isOperable: true,
       }
     }
@@ -233,7 +239,10 @@ export function getRentalPrimaryAction(
           icon: 'check',
           actionType: 'fulfill',
           disabled,
-          reason: cancelledReason || operationsUnavailable,
+          reason:
+            cancelledReason ||
+            operationsUnavailable ||
+            (!canOperate ? 'Your role does not have permission to fulfill this service' : undefined),
           isOperable: true,
         }
       }
@@ -246,7 +255,10 @@ export function getRentalPrimaryAction(
         route,
         actionType: 'handover',
         disabled,
-        reason: cancelledReason || operationsUnavailable,
+        reason:
+          cancelledReason ||
+          operationsUnavailable ||
+          (!canOperate ? 'Your role does not have permission to handover equipment' : undefined),
         isOperable: true,
       }
     }
@@ -260,7 +272,10 @@ export function getRentalPrimaryAction(
           icon: 'check',
           actionType: 'fulfill',
           disabled,
-          reason: cancelledReason || operationsUnavailable,
+          reason:
+            cancelledReason ||
+            operationsUnavailable ||
+            (!canOperate ? 'Your role does not have permission to fulfill this service' : undefined),
           isOperable: true,
         }
       }
@@ -274,7 +289,10 @@ export function getRentalPrimaryAction(
           route,
           actionType: 'return',
           disabled,
-          reason: cancelledReason || operationsUnavailable,
+          reason:
+            cancelledReason ||
+            operationsUnavailable ||
+            (!canOperate ? 'Your role does not have permission to receive returns' : undefined),
           isOperable: true,
         }
       }
@@ -286,7 +304,10 @@ export function getRentalPrimaryAction(
         route,
         actionType: 'return',
         disabled,
-        reason: cancelledReason || operationsUnavailable,
+        reason:
+          cancelledReason ||
+          operationsUnavailable ||
+          (!canOperate ? 'Your role does not have permission to receive returns' : undefined),
         isOperable: true,
       }
     }
@@ -328,7 +349,10 @@ export function getRentalPrimaryAction(
         route,
         actionType: 'reset',
         disabled,
-        reason: cancelledReason || operationsUnavailable,
+        reason:
+          cancelledReason ||
+          operationsUnavailable ||
+          (!canOperate ? 'Your role does not have permission to clean or reset equipment' : undefined),
         isOperable: true,
       }
     }

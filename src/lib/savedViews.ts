@@ -147,9 +147,17 @@ interface DeviceView extends LegacyView {
   createdAt?: string
 }
 
-export function readDeviceViews(legacyStorageKey: string, userId: string | null): SharedListView[] {
+export const DEFAULT_RENTALS_SYSTEM_VIEWS: readonly SharedListView[] = [
+  { id: 'system-rentals-pickups-today', name: 'Pickups today', query: 'quick=Pickups+Today', hiddenColumns: [], visibility: 'team', isSystem: true, ownerId: null, createdAt: new Date(0).toISOString() },
+  { id: 'system-rentals-returns-today', name: 'Returns today', query: 'quick=Returns+Today', hiddenColumns: [], visibility: 'team', isSystem: true, ownerId: null, createdAt: new Date(0).toISOString() },
+  { id: 'system-rentals-overdue', name: 'Overdue', query: 'quick=Overdue', hiddenColumns: [], visibility: 'team', isSystem: true, ownerId: null, createdAt: new Date(0).toISOString() },
+  { id: 'system-rentals-awaiting-inspection', name: 'Awaiting inspection', query: 'quick=Inspection', hiddenColumns: [], visibility: 'team', isSystem: true, ownerId: null, createdAt: new Date(0).toISOString() },
+  { id: 'system-rentals-drafts', name: 'Drafts', query: 'stage=Draft', hiddenColumns: [], visibility: 'team', isSystem: true, ownerId: null, createdAt: new Date(0).toISOString() },
+]
+
+export function readDeviceViews(legacyStorageKey: string, userId: string | null, listKey?: string): SharedListView[] {
   const raw = parseLegacy(readLocal(legacyStorageKey)) as DeviceView[]
-  return raw.map((v, i) => ({
+  const deviceViews: SharedListView[] = raw.map((v, i) => ({
     id: v.id ?? `device-${i}-${v.name}`,
     name: v.name,
     query: v.query,
@@ -159,11 +167,16 @@ export function readDeviceViews(legacyStorageKey: string, userId: string | null)
     ownerId: userId,
     createdAt: v.createdAt ?? new Date(0).toISOString(),
   }))
+  if (listKey === 'rentals' || legacyStorageKey.includes('rentals')) {
+    return [...DEFAULT_RENTALS_SYSTEM_VIEWS, ...deviceViews]
+  }
+  return deviceViews
 }
 
 export function writeDeviceViews(legacyStorageKey: string, views: readonly SharedListView[]): void {
+  const toSave = views.filter((v) => !v.isSystem)
   writeLocal(
     legacyStorageKey,
-    JSON.stringify(views.map((v) => ({ id: v.id, name: v.name, query: v.query, hiddenColumns: v.hiddenColumns, createdAt: v.createdAt }))),
+    JSON.stringify(toSave.map((v) => ({ id: v.id, name: v.name, query: v.query, hiddenColumns: v.hiddenColumns, createdAt: v.createdAt }))),
   )
 }

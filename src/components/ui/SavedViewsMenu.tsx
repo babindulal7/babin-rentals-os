@@ -84,7 +84,7 @@ export function SavedViewsMenu({
         const message = e instanceof Error ? e.message : ''
         if (legacyStorageKey && sharedViewsUnavailable(message)) {
           setDeviceMode(true)
-          setViews(readDeviceViews(legacyStorageKey, userId))
+          setViews(readDeviceViews(legacyStorageKey, userId, listKey))
           setLoadError('')
           return
         }

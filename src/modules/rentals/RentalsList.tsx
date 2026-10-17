@@ -528,7 +528,7 @@ function RowOperations({
       return { label: 'Reset', icon: 'refresh' as const, isDraft: false, job: 'Reset' as const }
     }
     return null
-  }, [row.isCancelled, row.isClosed, row.status, row.id, row.bookingNo])
+  }, [row.isCancelled, row.isClosed, row.status])
 
   /**
    * The table scrolls horizontally, and CSS resolves the *other* axis to `auto`
@@ -1458,9 +1458,9 @@ export default function RentalsList() {
   /* `All` is the absence of a quick filter, not a value of one — it drops the
      param rather than writing `?quick=All`, so an unfiltered list has a clean
      URL and the badge does not count a filter that filters nothing. */
-  function pickChip(c: ChipKey) {
+  const pickChip = useCallback((c: ChipKey) => {
     f.setExtra('quick', c === 'All' ? undefined : c)
-  }
+  }, [f])
 
   /* Both `useFilters` setters reset to page 1 themselves — see the hook's
      `put`. That is why neither of these calls `setPage`. */
@@ -1964,20 +1964,6 @@ export default function RentalsList() {
         loadedAt={list.lastFetchedAt ?? new Date()}
         loading={list.loading}
         onRefresh={refreshAll}
-        secondaryActions={[
-          { label: 'Scan', icon: 'barcode' as const, onClick: () => setBarcodeModalOpen(true) },
-          { label: 'Export', icon: 'download' as const, onClick: handleBulkExport },
-          ...(canOperate ? [{ label: 'Fast Return', icon: 'refresh' as const, onClick: () => setFastReturnOpen(true) }] : []),
-        ]}
-        primaryAction={
-          canWriteDesk
-            ? {
-                label: '+ New Rental',
-                onClick: () => navigate('/rentals/new'),
-                icon: 'plus',
-              }
-            : undefined
-        }
       />
 
       {/* Zone 2: 3-Card KPI Strip */}
@@ -2201,22 +2187,54 @@ export default function RentalsList() {
               hasRows={list.rows.length > 0}
               empty={list.isEmpty || query.impossible}
               emptyIsFiltered={list.isFiltered}
-              onClearFilters={clearFilters}
               noun="rentals"
               skeleton="table"
               skeletonRows={6}
-              emptyTitle={isFiltered ? 'No rentals match these filters' : 'No rentals yet'}
+              emptyTitle={
+                f.filters.search
+                  ? f.activeCount > 1
+                    ? `No rentals matching "${f.filters.search}" with active filters`
+                    : `No rentals matching "${f.filters.search}"`
+                  : isFiltered
+                    ? 'No rentals match these filters'
+                    : 'No rentals yet'
+              }
+              emptyMessage={
+                f.filters.search && f.activeCount > 1
+                  ? 'Try clearing the search query to keep your active filters, or clear all filters.'
+                  : f.filters.search
+                    ? 'Try searching for a different booking number, client, or project.'
+                    : isFiltered
+                      ? 'Try adjusting or clearing your active filters.'
+                      : 'Get started by creating your first rental.'
+              }
+              clearLabel={
+                f.filters.search ? 'Clear search' : 'Clear filters'
+              }
+              onClearFilters={
+                f.filters.search ? () => f.setSearch('') : clearFilters
+              }
+              {...(f.filters.search && f.activeCount > 1
+                ? {
+                    secondaryClearLabel: 'Clear all filters',
+                    onSecondaryClearFilters: clearFilters,
+                  }
+                : {})}
+              {...(isFiltered && f.chips.length > 0
+                ? {
+                    emptyExtra: (
+                      <div style={{ marginTop: 14, display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
+                        <ActiveFilterChips filters={f.chips} onClearAll={clearFilters} />
+                      </div>
+                    ),
+                  }
+                : {})}
               /* From main's 32c4d29: the unfiltered empty list offers its one
                  next step. Gated like `rental.create` so a role that cannot
                  create is not offered a page that refuses it. */
               {...(!isFiltered && canWriteDesk
                 ? { emptyActionLabel: 'New Rental', onEmptyAction: () => navigate('/rentals/new') }
                 : {})}
-              emptyMessage={
-                isFiltered
-                  ? 'Try adjusting your search or active filters.'
-                  : 'Get started by creating your first rental.'
-              }
             >
               {view === 'Timeline' && (
                 <RentalTimeline rows={rowsWithIntel.map(({ row }) => row)} />

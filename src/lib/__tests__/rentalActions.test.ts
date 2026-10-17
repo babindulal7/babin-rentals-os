@@ -124,5 +124,23 @@ describe('getRentalPrimaryAction', () => {
       expect(view.route).toBeUndefined()
     }
   })
+
+  it('disables operational actions with an explicit role permission reason when canOperate is false (P0-B)', () => {
+    const pack = getRentalPrimaryAction('Booked', { bookingNo: NO, canOperate: false })
+    expect(pack.disabled).toBe(true)
+    expect(pack.reason).toContain('permission')
+
+    const handover = getRentalPrimaryAction('Packed', { bookingNo: NO, canOperate: false })
+    expect(handover.disabled).toBe(true)
+    expect(handover.reason).toContain('permission')
+
+    const ret = getRentalPrimaryAction('On Rent', { bookingNo: NO, canOperate: false })
+    expect(ret.disabled).toBe(true)
+    expect(ret.reason).toContain('permission')
+
+    const reset = getRentalPrimaryAction('Returned', { bookingNo: NO, canCloseRental: false, canOperate: false })
+    expect(reset.disabled).toBe(true)
+    expect(reset.reason).toContain('permission')
+  })
 })
 

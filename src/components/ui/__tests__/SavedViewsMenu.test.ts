@@ -14,3 +14,16 @@ describe('normaliseSavedViewQuery', () => {
     )
   })
 })
+
+describe('readDeviceViews fallback', () => {
+  it('returns default system views for rentals list in device fallback mode', async () => {
+    const { readDeviceViews } = await import('../../../lib/savedViews')
+    const views = readDeviceViews('babin-rentals:saved-views:anon', 'u-1', 'rentals')
+    const systemNames = views.filter((v) => v.isSystem).map((v) => v.name)
+    expect(systemNames).toContain('Pickups today')
+    expect(systemNames).toContain('Returns today')
+    expect(systemNames).toContain('Overdue')
+    expect(systemNames).toContain('Awaiting inspection')
+    expect(systemNames).toContain('Drafts')
+  })
+})
