@@ -675,16 +675,16 @@ export function CrewBooking() {
                                 <StatusPill
                                   tone={c.cancelled ? 'red' : c.status === 'Confirmed' ? 'emerald' : 'amber'}
                                   label={`${c.status}${c.cancelled ? ' · Cancelled' : ''}`}
-                                  icon={c.cancelled ? 'alert_triangle' : c.status === 'Confirmed' ? 'check' : 'clock'}
+                                  icon={c.cancelled ? 'alert_triangle' : c.status === 'Confirmed' ? 'check' : 'timer'}
                                   liveDot={onShootToday(c)}
                                 />
                               </td>
                               {desktop && (
                                 <td style={{ padding: '12px 14px' }}>
                                   <StatusPill
-                                    tone={c.payoutStatus === 'Paid' ? 'emerald' : c.payoutStatus === 'Ready' ? 'blue' : 'amber'}
+                                    tone={c.payoutStatus === 'Paid' ? 'emerald' : c.payoutStatus === 'Due' ? 'blue' : 'amber'}
                                     label={c.payoutStatus}
-                                    icon={c.payoutStatus === 'Paid' ? 'check' : c.payoutStatus === 'Ready' ? 'sparkles' : 'clock'}
+                                    icon={c.payoutStatus === 'Paid' ? 'check' : c.payoutStatus === 'Due' ? 'sparkles' : 'timer'}
                                   />
                                 </td>
                               )}
@@ -728,8 +728,8 @@ export function CrewBooking() {
 
 /** Law 11 — colour + icon + label, never colour alone. */
 function StateChip({ label, tone }: { label: string; tone: StatusKey }) {
-  const pillTone = tone === 'success' ? 'emerald' : tone === 'danger' ? 'red' : tone === 'progress' || tone === 'primary' ? 'blue' : 'amber'
-  const icon = STATUS_ICON[tone]
+  const pillTone = tone === 'in' ? 'emerald' : tone === 'danger' ? 'red' : tone === 'progress' || tone === 'primary' ? 'blue' : 'amber'
+  const icon: IconName = tone === 'in' ? 'check' : tone === 'danger' ? 'alert_triangle' : tone === 'progress' ? 'truck' : 'timer'
   return <StatusPill tone={pillTone} label={label} icon={icon} />
 }
 

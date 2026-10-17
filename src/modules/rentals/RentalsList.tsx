@@ -25,7 +25,6 @@ import { ContextDrawer } from '../../components/ui/ContextDrawer'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { ActiveFilterChips, FilterButton } from '../../components/ui/FilterDrawer'
 import { SavedViewsMenu, type SavedListView } from '../../components/ui/SavedViewsMenu'
-import { FilterBar } from '../../components/ui/FilterBar'
 import { Pagination } from '../../components/ui/Pagination'
 import { BsAdDate } from '../../components/ui/BsAdDate'
 import { Badge } from '../../components/ui/Badge'
@@ -147,8 +146,8 @@ import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext
  * and those call sites do not change. It loses the paint, not its place.
  */
 function Tag({ text, status }: { text: string; status: StatusKey }) {
-  const tone = status === 'success' ? 'emerald' : status === 'danger' ? 'red' : status === 'progress' || status === 'primary' ? 'blue' : 'amber'
-  const icon: IconName = status === 'success' ? 'check' : status === 'danger' ? 'alert_triangle' : status === 'progress' ? 'truck' : 'clock'
+  const tone = status === 'in' ? 'emerald' : status === 'danger' ? 'red' : status === 'progress' || status === 'primary' ? 'blue' : 'amber'
+  const icon: IconName = status === 'in' ? 'check' : status === 'danger' ? 'alert_triangle' : status === 'progress' ? 'truck' : 'timer'
   return <StatusPill tone={tone} label={text} icon={icon} />
 }
 
@@ -182,17 +181,6 @@ function Tag({ text, status }: { text: string; status: StatusKey }) {
  */
 const EXTERNAL_LABEL = 'Sub-rented — external gear'
 const EXTERNAL_ICON: IconName = 'external_link'
-
-const VIEW_TOOLTIPS: Record<string, string> = {
-  All: 'All rental bookings and drafts',
-  Draft: 'In-progress rental drafts',
-  Quote: 'Active price quotes',
-  Upcoming: 'Upcoming bookings (Filters BOOKED + PACKED)',
-  Out: 'Equipment currently on rent (ON RENT)',
-  Returns: 'Returned equipment (RETURNED)',
-  Closed: 'Archived and completed rentals (CLOSED)',
-  Cancelled: 'Cancelled bookings',
-}
 
 function draftToRentalListRow(d: RentalDraftRecord): RentalListRow {
   const data = d.data
@@ -1979,7 +1967,7 @@ export default function RentalsList() {
         secondaryActions={[
           { label: 'Scan', icon: 'barcode', onClick: () => setBarcodeModalOpen(true) },
           { label: 'Export', icon: 'download', onClick: handleBulkExport },
-          ...(canOperate ? [{ label: 'Fast Return', icon: 'refresh', onClick: () => setFastReturnOpen(true) }] : []),
+          ...(canOperate ? [{ label: 'Fast Return', icon: 'refresh' as const, onClick: () => setFastReturnOpen(true) }] : []),
         ]}
         primaryAction={
           canWriteDesk
