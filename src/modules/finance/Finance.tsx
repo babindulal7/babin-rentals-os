@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import { Badge } from '../../components/ui/Badge'
 import { Card, PageHeader, PageActions, Button, KpiStrip, Rail } from '../../components/ui/Page'
+import { ModuleSubHeader, ModuleKpiStrip, ModuleFilterBar, StatusPill } from '../../components/ui/module-shell'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { ListControlRow } from '../../components/ui/ListWorkspace'
 import { PageShell } from '../../components/ui/PageShell'
@@ -1468,20 +1469,108 @@ export default function Finance() {
       {(tab === 'Dashboard' || tab === 'Invoices') && (
       <PageBody noun="finance records" {...restriction}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-          {tab === 'Dashboard' && <KpiStrip items={kpis} columns={kpis.length} />}
+          <ModuleSubHeader
+            counter={`${list.total ?? 0} invoices · ${outstanding.total ?? 0} outstanding · ${overdue.total ?? 0} overdue`}
+            loadedAt={new Date()}
+            loading={list.loading || outstanding.loading}
+            secondaryActions={[
+              { label: 'Export', icon: 'download', onClick: exportCsv },
+              ...(canTakePayment && canIssueInvoice
+                ? [{ label: 'Create Invoice', icon: 'plus' as const, onClick: () => setShowCreateInvoice(true) }]
+                : []),
+            ]}
+            primaryAction={
+              canTakePayment
+                ? {
+                    label: '+ Record Payment',
+                    onClick: () => {
+                      setSelectedInvoiceForRecord('')
+                      setShowRecordPayment(true)
+                    },
+                  }
+                : canIssueInvoice
+                  ? {
+                      label: '+ Create Invoice',
+                      onClick: () => setShowCreateInvoice(true),
+                    }
+                  : undefined
+            }
+          />
+
+          <ModuleKpiStrip
+            items={[
+              {
+                id: 'Outstanding',
+                label: 'OUTSTANDING INVOICES',
+                value: countOf(outstanding),
+                subtitle: `${moneyOf(receivableTotal)} receivable`,
+                icon: 'invoice',
+                tone: 'amber',
+                active: chip === 'Partially Paid',
+                onClick: () => {
+                  setTab('Invoices')
+                  setChip(chip === 'Partially Paid' ? 'All' : 'Partially Paid')
+                },
+              },
+              {
+                id: 'Overdue',
+                label: 'OVERDUE INVOICES',
+                value: countOf(overdue),
+                subtitle: `${moneyOf(overdueTotal)} past due`,
+                icon: 'alert_triangle',
+                tone: (overdue.total ?? 0) > 0 ? 'red' : 'neutral',
+                active: chip === 'Overdue',
+                onClick: () => {
+                  setTab('Invoices')
+                  setDateFrom('')
+                  setDateTo('')
+                  setChip(chip === 'Overdue' ? 'All' : 'Overdue')
+                },
+              },
+              {
+                id: 'Received',
+                label: 'RECEIVED IN PERIOD',
+                value: moneyOf(receivedTotal),
+                subtitle: `Collected ${period.label}`,
+                icon: 'card',
+                tone: 'emerald',
+                active: chip === 'Paid',
+                onClick: () => {
+                  setTab('Invoices')
+                  setChip(chip === 'Paid' ? 'All' : 'Paid')
+                },
+              },
+            ]}
+          />
 
           {tab === 'Invoices' && (
-            <ListControlRow
-              search={
-                <SearchInput
-                  value={railSearch}
-                  onChange={setRailSearch}
-                  onClear={() => setRailSearch('')}
-                  placeholder="Search invoice or credit-note no…"
-                  aria-label="Search invoices by invoice or credit-note number"
-                />
-              }
-            />
+            <ModuleFilterBar
+              tabs={INVOICE_CHIPS.map((c) => ({
+                id: c,
+                label: c === 'Partially Paid' ? 'Partial' : c,
+                icon: c === 'Paid' ? 'check' : c === 'Overdue' ? 'alert_triangle' : c === 'Void' ? 'close' : undefined,
+              }))}
+              activeTab={chip}
+              onTabChange={(c) => {
+                if (c === 'Overdue') {
+                  setDateFrom('')
+                  setDateTo('')
+                }
+                setChip(c as InvoiceChip)
+              }}
+              searchValue={railSearch}
+              onSearchChange={setRailSearch}
+              searchPlaceholder="Search invoice or credit-note no…"
+            >
+              <Button
+                variant="secondary"
+                icon="filter"
+                onClick={() => setInvoiceFiltersOpen(true)}
+                aria-label={invoiceFilterCount > 0 ? `Filters (${invoiceFilterCount})` : 'Filters'}
+              >
+                {invoiceFilterCount > 0 ? `Filters (${invoiceFilterCount})` : 'Filters'}
+              </Button>
+            </ModuleFilterBar>
           )}
 
           {/* No `onRetry`: `ErrorBanner`'s only button says "Retry", and retrying
@@ -1629,39 +1718,6 @@ export default function Finance() {
                 </>
               ) : (
                 <>
-                  <div className="finance-chip-track" role="group" aria-label="Filter invoices by status">
-                        {INVOICE_CHIPS.map((c) => {
-                        const on = chip === c
-                        return (
-                          <button
-                            key={c}
-                            type="button"
-                            /* Overdue and the rail's date range are MUTUALLY
-                               EXCLUSIVE — `overdueInvoices()` IS a dateRange
-                               (due_date ≤ yesterday) and `ListFilters` carries
-                               one, so holding both would silently replace the
-                               chip's meaning. Same call as Operations' ?queue
-                               vs ?quick: setting either clears the other. */
-                            onClick={() => {
-                              if (c === 'Overdue') {
-                                setDateFrom('')
-                                setDateTo('')
-                              }
-                              setChip(c)
-                            }}
-                            aria-pressed={on}
-                            {...(c === 'Overdue' ? { title: 'Past due and unpaid invoices' } : {})}
-                            className={`finance-filter-chip ${on ? 'is-active' : ''}`}
-                            style={{
-                              minHeight: 44,
-                              padding: '0 14px',
-                            }}
-                          >
-                            {c}
-                          </button>
-                        )
-                        })}
-                  </div>
                 <Card title={invoiceCardTitle} bodyStyle={{ padding: 0 }}>
                   {/*
                     Fixed ladder: restricted → error → loading → empty → children.
@@ -1960,27 +2016,9 @@ export default function Finance() {
  */
 function StatusBadge({ row }: { row: InvoiceListRow }) {
   const label = row.isVoid ? 'Void' : row.status
-  /*
-   * Delegates to <Badge> — DESIGN_DIRECTION_SPEC_v4.1 §8 step 2: "one
-   * component rendering the §4 map from lib/status; every screen inherits. No
-   * screen colours a status itself."
-   *
-   * This used to assemble the chip here: `--r-badge` (a 999 pill, which §3.3
-   * reserves for numeric COUNT badges), weight 600, sentence case, reading
-   * `STATUS[token]` straight. That is three deviations from §4's block
-   * anatomy, and it was one of fifteen local components doing the same thing —
-   * which is how the product ended up with no status block that actually had
-   * the ruled anatomy.
-   *
-   * The wrapper is KEPT rather than inlined at the call sites: it owns the
-   * isVoid-beats-status rule documented above, which is a Finance decision and
-   * not something <Badge> should know. What it no longer owns is the paint.
-   *
-   * `size="sm"` because these sit in dense invoice rows — it lands at roughly
-   * the 20px the hand-rolled version had, without giving up the weight,
-   * casing or tracking that ARE the identity of a status block.
-   */
-  return <Badge tone={INVOICE_TOKEN[label]} label={label} size="sm" />
+  const tone = row.isVoid ? 'red' : label === 'Paid' ? 'emerald' : label === 'Partially Paid' ? 'amber' : label === 'Sent' ? 'blue' : 'slate'
+  const icon = row.isVoid ? 'alert_triangle' : label === 'Paid' ? 'check' : label === 'Partially Paid' ? 'clock' : label === 'Sent' ? 'sparkles' : 'queues'
+  return <StatusPill tone={tone} label={label} icon={icon} />
 }
 
 /**
