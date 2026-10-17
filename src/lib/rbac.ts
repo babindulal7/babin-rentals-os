@@ -436,9 +436,81 @@ export function canManageRentalLifecycle(role: SystemRole, isOnline = true): boo
   return isOnline && (role === 'Owner' || role === 'Admin' || role === 'Manager')
 }
 
+export type OperationName = 'pack' | 'handover' | 'return' | 'reset'
+
+/**
+ * **Per-operation grants (Booqable adoption spec P0-B, 17 Oct 2026).**
+ *
+ * Booqable ships a single coarse `canPerformOperations`-shaped permission: one
+ * grant covers *every* operational action, so its model cannot express "may
+ * pack and reset but not hand over". Babin's four global operations
+ * (Packing, Handover, Return & Inspection, Cleaning & Reset) are the natural
+ * authorisation boundary, so each is its own grant, checked server-side per
+ * request — not a page-level check.
+ *
+ * These four are the **frontend half** of that boundary: a UI control for an
+ * operation the caller's role may not perform is absent, not disabled (Law 6's
+ * absent-not-disabled rule). They are deliberately finer than
+ * `canPerformOperations`, which stays as the coarse "may touch operations at
+ * all" gate; a role that passes `canPerformOperations` may still fail one of
+ * these, and a role that fails `canPerformOperations` fails all four.
+ *
+ * Role matrix (ruled 17 Oct 2026 by mirroring the existing floor / technician
+ * split already in this file):
+ *   - **Pack** (preparation, `canWriteFloor` + Technician) — gear prep is floor
+ *     work and technicians do it.
+ *   - **Handover** (client-facing handoff) — floor only. Giving gear to a
+ *     client is not prep work, so Technician is excluded even though
+ *     `canPerformOperations` admits them.
+ *   - **Return** (receiving + triage) — floor + Technician. Technicians share
+ *     return triage per the `canPerformOperations` comment.
+ *   - **Reset** (QC / cleaning) — floor + Technician. Reset absorbs Cleaning,
+ *     which is floor work technicians perform.
+ *
+ * ⚠ **Location scoping is not expressed here.** A grant is meaningless
+ * without a site (P0-B rule 3); the session carries `branchId`/`warehouseId`
+ * (see `UserSession`), but per-grant site binding needs a DB-level grant
+ * table + RLS and is tracked as the remaining half of P0-B. These functions
+ * answer "may this role" only; "may this role at this site" is the DB's job.
+ *
+ * Offline: all four are pure role checks and do not depend on connectivity,
+ * matching `canPerformOperations` (the floor works offline). Money gates are
+ * separate and stay online.
+ */
 /** Check if role can manage operations sessions (pack, handover, return, reset) */
 export function canPerformOperations(role: SystemRole): boolean {
   return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Warehouse' || role === 'Technician'
+}
+
+const FLOOR_ROLES: readonly SystemRole[] = ['Owner', 'Admin', 'Manager', 'Warehouse']
+
+export function canPack(role: SystemRole): boolean {
+  return canPerformOperations(role) // prep is floor + technician work
+}
+
+export function canHandover(role: SystemRole): boolean {
+  return FLOOR_ROLES.includes(role)
+}
+
+export function canReturn(role: SystemRole): boolean {
+  return canPerformOperations(role) // receiving + triage is floor + technician work
+}
+
+export function canReset(role: SystemRole): boolean {
+  return canPerformOperations(role) // QC / cleaning is floor + technician work
+}
+
+export function canPerformOp(role: SystemRole, op: OperationName): boolean {
+  switch (op) {
+    case 'pack':
+      return canPack(role)
+    case 'handover':
+      return canHandover(role)
+    case 'return':
+      return canReturn(role)
+    case 'reset':
+      return canReset(role)
+  }
 }
 
 /** Check if role can record payments or security deposits */

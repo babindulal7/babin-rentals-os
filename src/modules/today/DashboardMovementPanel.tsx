@@ -1,9 +1,10 @@
 import { formatAd } from '../../lib/bs'
 import { useMemo, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import Icon, { type IconName } from '../../components/ui/Icon'
 import { ReturnCountdown } from '../../components/ui/ReturnCountdown'
 import { PageBody } from '../../components/ui/PageBody'
+import { OverflowMenu } from '../../components/ui/OverflowMenu'
 import { businessDayAd, has, timeOf, type MovementRow } from '../../lib/queries/today'
 import type { ListResult } from '../../lib/queries/useList'
 import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext'
@@ -29,6 +30,7 @@ interface DashboardMovementPanelProps {
   globalQuery?: string
   compactEmpty?: boolean
   onSelectPeriod?: (period: 'Tomorrow' | 'Today') => void
+  emptyFooter?: ReactNode
 }
 
 export function dashboardAction(row: MovementRow, side: 'outgoing' | 'incoming'): {
@@ -106,7 +108,9 @@ export default function DashboardMovementPanel({
   globalQuery = '',
   compactEmpty = false,
   onSelectPeriod,
+  emptyFooter,
 }: DashboardMovementPanelProps) {
+  const navigate = useNavigate()
   const { openOperations } = useOperationsWorkspace()
   const { user } = useAuth()
   const intelGate = useMemo(() => gateContext(user?.role ?? 'Client'), [user?.role])
@@ -165,51 +169,54 @@ export default function DashboardMovementPanel({
           skeletonRows={3}
         >
           {list.isEmpty ? (
-            <div className="movement-panel__empty" role="status">
-              <span className="movement-panel__empty-mark" aria-hidden="true">
-                <Icon name={icon} size={22} />
-              </span>
-              <div className="movement-panel__empty-copy">
-                <p className="movement-panel__empty-title">No {noun} {periodLabel}.</p>
-                <p className="movement-panel__empty-desc">
-                  {side === 'outgoing'
-                    ? 'Nothing is scheduled to leave in this period.'
-                    : 'Nothing is expected back in this period.'}
-                </p>
-                <div className="movement-panel__empty-actions" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-                  {onSelectPeriod && (
-                    <button
-                      type="button"
-                      className="ui-button ui-button--sm ui-button--outline press"
-                      onClick={() => onSelectPeriod('Tomorrow')}
-                    >
-                      View Tomorrow's {side === 'outgoing' ? 'Pickups' : 'Returns'} <Icon name="arrow_right" size={14} />
-                    </button>
-                  )}
-                  {side === 'outgoing' ? (
-                    <Link
-                      to="/rentals?action=new"
-                      className="ui-button ui-button--sm ui-button--primary press"
-                      style={{ textDecoration: 'none' }}
-                    >
-                      + Create Booking
-                    </Link>
-                  ) : (
-                    <Link
-                      to="/operations?queue=return"
-                      className="ui-button ui-button--sm ui-button--primary press"
-                      style={{ textDecoration: 'none' }}
-                    >
-                      Open Return Queue <Icon name="arrow_right" size={14} />
-                    </Link>
-                  )}
-                  {list.isFiltered && (
-                    <button type="button" className="movement-panel__empty-reset" onClick={onClearFilters}>
-                      Back to Today <Icon name="arrow_right" size={15} />
-                    </button>
-                  )}
+            <div className="movement-panel__empty-wrap">
+              <div className="movement-panel__empty" role="status">
+                <span className="movement-panel__empty-mark" aria-hidden="true">
+                  <Icon name={icon} size={22} />
+                </span>
+                <div className="movement-panel__empty-copy">
+                  <p className="movement-panel__empty-title">No {noun} {periodLabel}.</p>
+                  <p className="movement-panel__empty-desc">
+                    {side === 'outgoing'
+                      ? 'Nothing is scheduled to leave in this period.'
+                      : 'Nothing is expected back in this period.'}
+                  </p>
+                  <div className="movement-panel__empty-actions" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                    {onSelectPeriod && (
+                      <button
+                        type="button"
+                        className="ui-button ui-button--sm ui-button--outline press"
+                        onClick={() => onSelectPeriod('Tomorrow')}
+                      >
+                        View Tomorrow's {side === 'outgoing' ? 'Pickups' : 'Returns'} <Icon name="arrow_right" size={14} />
+                      </button>
+                    )}
+                    {side === 'outgoing' ? (
+                      <Link
+                        to="/rentals?action=new"
+                        className="ui-button ui-button--sm ui-button--primary press"
+                        style={{ textDecoration: 'none' }}
+                      >
+                        + Create Booking
+                      </Link>
+                    ) : (
+                      <Link
+                        to="/operations?queue=return"
+                        className="ui-button ui-button--sm ui-button--primary press"
+                        style={{ textDecoration: 'none' }}
+                      >
+                        Open Return Queue <Icon name="arrow_right" size={14} />
+                      </Link>
+                    )}
+                    {list.isFiltered && (
+                      <button type="button" className="movement-panel__empty-reset" onClick={onClearFilters}>
+                        Back to Today <Icon name="arrow_right" size={15} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
+              {emptyFooter}
             </div>
           ) : rows.length === 0 ? (
             <div className="movement-panel__empty-search" role="status">
@@ -268,112 +275,150 @@ export default function DashboardMovementPanel({
                   ? displayTime
                   : row.due.replace(/^Due\s+/i, '')
 
-                return (
-                  <article
-                    key={row.id}
-                    className={`movement-card movement-card--${side} ${
-                      isOverdue ? 'movement-card--overdue' : ''
-                    }`}
-                    aria-label={`${row.bookingNo}, ${row.client}, ${displayTime}`}
-                    style={{ '--row-i': Math.min(rowIndex, 12) } as React.CSSProperties}
-                  >
-                    {/* Visual anchor only — the article's label and the dates below carry the same facts for assistive tech. */}
-                    <div className={`movement-card__when${isOverdue ? ' movement-card__when--late' : ''}`} aria-hidden="true">
-                      {isOverdue
-                        ? <><strong>{lateDays ? `${lateDays}d` : 'Late'}</strong><span>{lateDays ? 'late' : 'overdue'}</span></>
-                        : <><strong>{clock}</strong><span>{meridiem}{isTodayRow ? '' : ` · ${shortDay(row.atDayAd)}`}</span></>}
-                    </div>
-                    <ClientIntelFromId clientId={row.clientId} name={row.client} context="dashboard" gateContext={intelGate} actionContext={user ? { userId: user.id, role: user.role } : null}>
-                    <Link className="movement-card__client-link" to={`/clients/${row.clientId}`}>
-                      <span className="movement-card__avatar" aria-hidden="true">
-                        {row.monogram || (row.client ? row.client.slice(0, 2).toUpperCase() : 'BK')}
-                      </span>
-                      <span className="movement-card__client-copy">
-                        <strong className="movement-card__client">{row.client}</strong>
-                        <span className="movement-card__project" title={row.project || 'No project specified'}>{row.project || 'No project specified'}</span>
-                        <span className="movement-card__items-count">
-                          {row.itemCount} {row.itemCount === 1 ? 'item' : 'items'}{side === 'incoming' ? ' booked' : ''}
-                        </span>
-                      </span>
-                    </Link>
-                    </ClientIntelFromId>
+                    const isWindowExpired = Boolean(
+                      side === 'outgoing' &&
+                      row.returnAtAd &&
+                      new Date(row.returnAtAd).getTime() < Date.now()
+                    )
 
-                    <div className="movement-card__booking-link">
-                      <span className="movement-card__record-label">Booking</span>
-                      <IntelCard
-                        glance={movementGlance(row, side)}
-                        detail={movementDetail(row)}
-                        detailTitle={row.bookingNo}
-                        detailSubtitle={`${row.client} · ${row.status}`}
-                        entityType="rental"
-                        entityId={row.id}
-                        context="dashboard"
-                        gateContext={intelGate}
-                        actionContext={user ? { userId: user.id, role: user.role } : null}
+                    return (
+                      <article
+                        key={row.id}
+                        className={`movement-card movement-card--${side} ${
+                          isOverdue ? 'movement-card--overdue' : ''
+                        }`}
+                        aria-label={`${row.bookingNo}, ${row.client}, ${displayTime}`}
+                        style={{ '--row-i': Math.min(rowIndex, 12) } as React.CSSProperties}
                       >
-                        <Link to={`/rentals/${row.bookingNo}`}><strong className="movement-card__number identifier">{row.bookingNo}</strong></Link>
-                      </IntelCard>
-                    </div>
+                        {/* Visual anchor only — the article's label and the dates below carry the same facts for assistive tech. */}
+                        <div className={`movement-card__when${isOverdue ? ' movement-card__when--late' : ''}`} aria-hidden="true">
+                          {isOverdue
+                            ? <><strong>{lateDays ? `${lateDays}d` : 'Late'}</strong><span>{lateDays ? 'late' : 'overdue'}</span></>
+                            : <><strong>{clock}</strong><span>{meridiem}{isTodayRow ? '' : ` · ${shortDay(row.atDayAd)}`}</span></>}
+                        </div>
+                        <ClientIntelFromId clientId={row.clientId} name={row.client} context="dashboard" gateContext={intelGate} actionContext={user ? { userId: user.id, role: user.role } : null}>
+                        <Link className="movement-card__client-link" to={`/clients/${row.clientId}`}>
+                          <span className="movement-card__avatar" aria-hidden="true">
+                            {row.monogram || (row.client ? row.client.slice(0, 2).toUpperCase() : 'BK')}
+                          </span>
+                          <span className="movement-card__client-copy">
+                            <strong className="movement-card__client">{row.client}</strong>
+                            <span className="movement-card__project" title={row.project || 'No project specified'}>{row.project || 'No project specified'}</span>
+                            <span className="movement-card__items-count">
+                              {row.itemCount} {row.itemCount === 1 ? 'item' : 'items'}{side === 'incoming' ? ' booked' : ''}
+                            </span>
+                          </span>
+                        </Link>
+                        </ClientIntelFromId>
 
-                    <div className="movement-card__schedule movement-card__schedule--pickup">
-                      <span>Pickup</span>
-                      <strong className="movement-card__time figure" style={{ color: 'var(--booking-date-text)' }}>{pickupMoment}</strong>
-                    </div>
-                    <div className="movement-card__schedule movement-card__schedule--return">
-                      <span>Return</span>
-                      <strong className="figure" style={{ color: 'var(--booking-date-text)' }}>{returnMoment}</strong>
-                      {/* The live distance to `return_at` for gear still out
-                          (md brief 11). An overdue row already says how late in
-                          its time column and badge, so it is not said twice; a
-                          row that crosses its due time while the screen is open
-                          turns red here until the next refetch flags it. */}
-                      {side === 'incoming' && !isOverdue && !isPartial && row.returnDueAtAd && (
-                        <ReturnCountdown returnAtAd={row.returnDueAtAd} short />
-                      )}
-                    </div>
+                        <div className="movement-card__booking-link">
+                          <span className="movement-card__record-label">Booking</span>
+                          <IntelCard
+                            glance={movementGlance(row, side)}
+                            detail={movementDetail(row)}
+                            detailTitle={row.bookingNo}
+                            detailSubtitle={`${row.client} · ${row.status}`}
+                            entityType="rental"
+                            entityId={row.id}
+                            context="dashboard"
+                            gateContext={intelGate}
+                            actionContext={user ? { userId: user.id, role: user.role } : null}
+                          >
+                            <Link to={`/rentals/${row.bookingNo}`}><strong className="movement-card__number identifier">{row.bookingNo}</strong></Link>
+                          </IntelCard>
+                        </div>
 
-                    <div className="movement-card__status-action">
-                      <div className="movement-card__badge-wrap">
-                        {side === 'incoming' && isOverdue && (
-                          <span className="movement-card__status movement-card__status--overdue">
-                            <Icon name="alert_triangle" size={14} />
-                            {row.statusNote ? `Overdue · ${row.statusNote}` : 'Overdue'}
-                          </span>
-                        )}
-                        {side === 'outgoing' && isOverdue && (
-                          <span className="movement-card__status movement-card__status--overdue">
-                            <Icon name="alert_triangle" size={14} />
-                            {row.statusNote ? `Overdue pickup · ${row.statusNote}` : 'Overdue pickup'}
-                          </span>
-                        )}
-                        {side === 'incoming' && !isOverdue && isPartial && (
-                          <span className="movement-card__status movement-card__status--partial">
-                            <Icon name="alert_triangle" size={14} />
-                            Partial return
-                          </span>
-                        )}
-                        {tags.map((tag) => (
-                          <span key={tag.label} className={`movement-card__tag movement-card__tag--${tag.tone}`}>
-                            <Icon name={tag.icon} size={14} />
-                            {tag.label}
-                          </span>
-                        ))}
-                      </div>
-                      <button
-                        type="button"
-                        className={`movement-card__cta-btn ${(side === 'incoming' || isReady) ? 'is-dominant' : 'is-prep'}`}
-                        onClick={() => {
-                          const bookingStatus: BookingStatus = (row.status as BookingStatus) || (side === 'incoming' ? 'On Rent' : 'Booked')
-                          openOperations(row.bookingNo, bookingStatus, action.job)
-                        }}
-                        aria-label={`${actionLabel} for ${row.client}, booking ${row.bookingNo}`}
-                      >
-                        <span>{actionLabel}</span><Icon name="arrow_right" size={15} />
-                      </button>
-                    </div>
+                        <div className="movement-card__schedule movement-card__schedule--pickup">
+                          <span>Pickup</span>
+                          <strong className="movement-card__time figure" style={{ color: 'var(--booking-date-text)' }}>{pickupMoment}</strong>
+                        </div>
+                        <div className="movement-card__schedule movement-card__schedule--return">
+                          <span>Return</span>
+                          <strong className="figure" style={{ color: 'var(--booking-date-text)' }}>{returnMoment}</strong>
+                          {/* The live distance to `return_at` for gear still out
+                              (md brief 11). An overdue row already says how late in
+                              its time column and badge, so it is not said twice; a
+                              row that crosses its due time while the screen is open
+                              turns red here until the next refetch flags it. */}
+                          {side === 'incoming' && !isOverdue && !isPartial && row.returnDueAtAd && (
+                            <ReturnCountdown returnAtAd={row.returnDueAtAd} short />
+                          )}
+                        </div>
 
-                </article>
-              )
+                        <div className="movement-card__status-action">
+                          <div className="movement-card__badge-wrap">
+                            {isWindowExpired ? (
+                              <span
+                                className="movement-card__status movement-card__status--expired"
+                                title="Scheduled return window has passed without dispatch"
+                              >
+                                <Icon name="alert_triangle" size={14} />
+                                Window passed · Reschedule or Cancel
+                              </span>
+                            ) : side === 'incoming' && isOverdue ? (
+                              <span className="movement-card__status movement-card__status--overdue">
+                                <Icon name="alert_triangle" size={14} />
+                                {row.statusNote ? `Overdue · ${row.statusNote}` : 'Overdue'}
+                              </span>
+                            ) : side === 'outgoing' && isOverdue ? (
+                              <span className="movement-card__status movement-card__status--overdue">
+                                <Icon name="alert_triangle" size={14} />
+                                Awaiting dispatch
+                              </span>
+                            ) : null}
+                            {side === 'incoming' && !isOverdue && isPartial && (
+                              <span className="movement-card__status movement-card__status--partial">
+                                <Icon name="alert_triangle" size={14} />
+                                Partial return
+                              </span>
+                            )}
+                            {tags.map((tag) => (
+                              <span key={tag.label} className={`movement-card__tag movement-card__tag--${tag.tone}`}>
+                                <Icon name={tag.icon} size={14} />
+                                {tag.label}
+                              </span>
+                            ))}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <button
+                              type="button"
+                              className={`movement-card__cta-btn ${(side === 'incoming' || isReady) ? 'is-dominant' : 'is-prep'}`}
+                              onClick={() => {
+                                const bookingStatus: BookingStatus = (row.status as BookingStatus) || (side === 'incoming' ? 'On Rent' : 'Booked')
+                                openOperations(row.bookingNo, bookingStatus, action.job)
+                              }}
+                              aria-label={`${actionLabel} for ${row.client}, booking ${row.bookingNo}`}
+                            >
+                              <span>{actionLabel}</span><Icon name="arrow_right" size={15} />
+                            </button>
+                            <OverflowMenu
+                              ariaLabel={`More actions for booking ${row.bookingNo}`}
+                              items={[
+                                {
+                                  label: 'View Booking',
+                                  icon: 'file',
+                                  onClick: () => navigate(`/rentals/${row.bookingNo}`),
+                                },
+                                {
+                                  label: 'Reschedule Dates',
+                                  icon: 'calendar',
+                                  onClick: () => navigate(`/rentals/${row.bookingNo}`),
+                                },
+                                {
+                                  label: 'Cancel No-Show',
+                                  icon: 'close',
+                                  onClick: () => {
+                                    const bookingStatus: BookingStatus = (row.status as BookingStatus) || (side === 'incoming' ? 'On Rent' : 'Booked')
+                                    openOperations(row.bookingNo, bookingStatus, action.job)
+                                  },
+                                },
+                              ]}
+                            />
+                          </div>
+                        </div>
+
+                      </article>
+                    )
             })}
           </div>
           )}

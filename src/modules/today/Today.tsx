@@ -20,7 +20,7 @@ import { useViewport } from '../../lib/device'
 import { useAuth } from '../../lib/auth'
 import { canViewMoney } from '../../lib/rbac'
 import { formatMoney, type Paisa } from '../../lib/money'
-import { openCasesCount } from '../../data/cases'
+import { CASES, isOpenStatus, openCasesCount } from '../../data/cases'
 import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext'
 import type { BookingStatus } from '../../lib/workflow'
 import RawDashboardMovementPanel from './DashboardMovementPanel'
@@ -465,7 +465,11 @@ export default function Today() {
   const [activeRentalsPaisa, setActiveRentalsPaisa] = useState<number>(0)
   const [prepBookedCount, setPrepBookedCount] = useState<number>(0)
   const [prepPackedCount, setPrepPackedCount] = useState<number>(0)
+  const [tomorrowReturns, setTomorrowReturns] = useState<MovementRow[]>([])
   const openCases = useMemo(() => openCasesCount(), [])
+  const topOpenCases = useMemo(() => {
+    return CASES.filter((c) => isOpenStatus(c.status)).slice(0, 4)
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -485,13 +489,20 @@ export default function Today() {
         const packed = prepRes.rows.filter((r) => r.stage === 'Packed').length
         setPrepBookedCount(booked)
         setPrepPackedCount(packed)
+
+        const tomorrow = shiftDay(dayAd, 1)
+        const tomorrowFilters = operationQueue('return', tomorrow, tomorrow)
+        const tomorrowRes = await listBookings(tomorrowFilters)
+        if (!active) return
+        const now = businessNowAd()
+        setTomorrowReturns(tomorrowRes.rows.map((row) => toMovementRow(row, 'incoming', now)))
       } catch {
         // Non-critical background telemetry
       }
     }
     void loadSituationalMetrics()
     return () => { active = false }
-  }, [pickups.lastFetchedAt, returns.lastFetchedAt])
+  }, [dayAd, pickups.lastFetchedAt, returns.lastFetchedAt])
 
   useEffect(() => {
     if (isPhone && !mobileTabChosenRef.current && pickupCount === 0 && (returnCount ?? 0) > 0) {
@@ -575,6 +586,173 @@ export default function Today() {
   }, [goToToday, stepDay, isPhone])
 
   const navigate = useNavigate()
+
+  const returnsEmptyFooter = useMemo(() => {
+    if (!isReturnToday) return null
+    if (tomorrowReturns.length === 0 && openCases === 0) return null
+
+    return (
+      <div className="returns-empty-footer" style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
+        {tomorrowReturns.length > 0 && (
+          <div
+            className="dashboard-situational-card"
+            style={{
+              background: 'var(--surface-card, var(--card))',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--r-card, 12px)',
+              padding: '14px 16px',
+              boxShadow: 'var(--shadow-card)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '12px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <Icon name="calendar" size={15} style={{ color: 'var(--primary)' }} />
+                Returning Tomorrow ({tomorrowReturns.length})
+              </span>
+              <button
+                type="button"
+                className="press tap"
+                onClick={() => setReturnFilter({ kind: 'quick', period: 'Tomorrow' })}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--primary-text)',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  padding: '4px 0',
+                  minHeight: 'var(--tap, 44px)',
+                }}
+              >
+                View All ({tomorrowReturns.length}) <Icon name="arrow_right" size={13} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {tomorrowReturns.slice(0, 3).map((ret) => (
+                <div
+                  key={ret.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 10px',
+                    borderRadius: 'var(--r-card-inner, 8px)',
+                    background: 'var(--surface-muted, color-mix(in srgb, var(--border) 25%, transparent))',
+                    fontSize: '13px',
+                  }}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Link to={`/rentals/${ret.bookingNo}`} style={{ fontWeight: 600, color: 'var(--text)', textDecoration: 'none' }} className="font-mono">
+                        {ret.bookingNo}
+                      </Link>
+                      <span style={{ color: 'var(--border2)' }}>·</span>
+                      <span style={{ fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {ret.client}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '11px', color: 'var(--muted)' }}>
+                      {ret.itemCount} {ret.itemCount === 1 ? 'item' : 'items'}
+                    </span>
+                  </div>
+                  <span className="font-mono tabular-nums" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)', whiteSpace: 'nowrap' }}>
+                    {ret.due ? ret.due.replace(/^Due\s+/i, '') : timeOf(ret)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {openCases > 0 && (
+          <div
+            className="dashboard-situational-card"
+            style={{
+              background: 'var(--surface-card, var(--card))',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--r-card, 12px)',
+              padding: '14px 16px',
+              boxShadow: 'var(--shadow-card)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '12px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <Icon name="tool" size={15} style={{ color: 'var(--warn)' }} />
+                Floor Attention: QC & Maintenance Holds ({openCases})
+              </span>
+              <Link
+                to="/inventory/cases"
+                className="press tap"
+                style={{
+                  color: 'var(--primary-text)',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  padding: '4px 0',
+                  minHeight: 'var(--tap, 44px)',
+                }}
+              >
+                Resolve →
+              </Link>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {topOpenCases.map((c) => {
+                const eqName = Array.isArray(c.equipment) ? c.equipment.map((e) => e.name).join(', ') : c.equipment
+                return (
+                  <div
+                    key={c.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '8px 10px',
+                      borderRadius: 'var(--r-card-inner, 8px)',
+                      background: 'var(--surface-muted, color-mix(in srgb, var(--border) 25%, transparent))',
+                      fontSize: '13px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, paddingRight: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span className="font-mono tabular-nums" style={{ fontWeight: 600, fontSize: '12px', color: 'var(--muted)' }}>
+                          {c.id}
+                        </span>
+                        <span style={{ fontWeight: 600, color: 'var(--text)' }}>
+                          {c.title}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '11px', color: 'var(--text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {eqName} · {c.counterpartyName}
+                      </span>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        padding: '2px 6px',
+                        borderRadius: 'var(--r-btn, 4px)',
+                        whiteSpace: 'nowrap',
+                        background: c.priority === 'Critical' || c.priority === 'High' ? 'color-mix(in srgb, var(--danger) 12%, var(--card))' : 'color-mix(in srgb, var(--warn) 15%, var(--card))',
+                        color: c.priority === 'Critical' || c.priority === 'High' ? 'var(--danger-text)' : 'var(--warn-text)',
+                        border: `1px solid color-mix(in srgb, ${c.priority === 'Critical' || c.priority === 'High' ? 'var(--danger)' : 'var(--warn)'} 30%, transparent)`,
+                      }}
+                    >
+                      {c.priority} · {c.status}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }, [isReturnToday, tomorrowReturns, openCases, topOpenCases, setReturnFilter])
 
   return (
     <PageShell
@@ -810,6 +988,7 @@ export default function Today() {
             onClearFilters={() => setReturnFilter({ kind: 'quick', period: 'Today' })}
             onLoadMore={() => setReturnPage((page) => page + 1)}
             hasMore={returns.total !== null && returns.rows.length < returns.total}
+            emptyFooter={returnsEmptyFooter}
           />
         )}
       </div>

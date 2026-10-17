@@ -8,7 +8,7 @@ export const KPIS: Kpi[] = [
   { label: 'Total Clients', value: '1,248', icon: 'users', accent: 'primary', delta: { direction: 'up', text: '12.6% vs last month' }, spark: [40, 48, 44, 55, 50, 62, 57, 68, 63, 74, 70, 80] },
   { label: 'Active Clients', value: '436', icon: 'checklist', accent: 'primary', delta: { direction: 'up', text: '18.4% vs last month' }, spark: [30, 38, 34, 46, 42, 54, 50, 60, 56, 66, 62, 72] },
   { label: 'Returning Clients', value: '81%', icon: 'refresh', accent: 'progress', delta: { direction: 'up', text: '6.3% vs last month' }, spark: [55, 58, 56, 62, 60, 66, 64, 70, 68, 74, 72, 78] },
-  { label: 'Outstanding Receivables', value: formatMoney(rupees(542000)), icon: 'receipt', accent: 'danger', delta: { direction: 'down', text: '4.2% vs last month', good: true }, spark: [70, 66, 68, 62, 64, 58, 60, 54, 56, 50, 52, 47] },
+  { label: 'Outstanding Receivables', value: formatMoney(rupees(542000)), icon: 'receipt', accent: 'danger', delta: { direction: 'down', text: '4.2% vs last month', good: true }, spark: [70, 66, 68, 62, 64, 58, 60, 54, 56, 50, 52, 47], definition: 'Sum of unpaid invoice balances across all clients.' },
 ]
 
 export const FILTERS = ['All Client Types', 'All Memberships', 'All Companies', 'All Branches', 'All Staff', 'All Status', 'All Cities', 'All Tags']

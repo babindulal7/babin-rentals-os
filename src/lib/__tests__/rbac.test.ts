@@ -6,6 +6,11 @@ import {
   canApproveDiscount,
   canVoidInvoice,
   canPerformOperations,
+  canPack,
+  canHandover,
+  canReturn,
+  canReset,
+  canPerformOp,
   canApproveDamage,
   canApproveLateFeeWaiver,
   canRecordPayment,
@@ -208,6 +213,45 @@ describe('canPerformOperations', () => {
 
   it('does not depend on connectivity — the floor works offline', () => {
     expect(canPerformOperations.length).toBe(1)
+  })
+})
+
+/* ── per-operation grants (Booqable adoption spec P0-B, 17 Oct 2026) ──────── */
+
+describe('per-operation grants (P0-B)', () => {
+  it('canPack admits the floor plus Technician', () => {
+    expect(ALL_ROLES.filter((r) => canPack(r))).toEqual(['Owner', 'Admin', 'Manager', 'Warehouse', 'Technician'])
+  })
+  it('canHandover admits the floor only (client-facing handoff)', () => {
+    expect(ALL_ROLES.filter((r) => canHandover(r))).toEqual(['Owner', 'Admin', 'Manager', 'Warehouse'])
+  })
+  it('canReturn admits the floor plus Technician (triage)', () => {
+    expect(ALL_ROLES.filter((r) => canReturn(r))).toEqual(['Owner', 'Admin', 'Manager', 'Warehouse', 'Technician'])
+  })
+  it('canReset admits the floor plus Technician (QC / cleaning)', () => {
+    expect(ALL_ROLES.filter((r) => canReset(r))).toEqual(['Owner', 'Admin', 'Manager', 'Warehouse', 'Technician'])
+  })
+  it('every per-op grant is a subset of canPerformOperations', () => {
+    for (const role of ALL_ROLES) {
+      if (canPack(role)) expect(canPerformOperations(role)).toBe(true)
+      if (canHandover(role)) expect(canPerformOperations(role)).toBe(true)
+      if (canReturn(role)) expect(canPerformOperations(role)).toBe(true)
+      if (canReset(role)) expect(canPerformOperations(role)).toBe(true)
+    }
+  })
+  it('canPerformOp dispatches to the matching grant', () => {
+    expect(canPerformOp('Warehouse', 'pack')).toBe(canPack('Warehouse'))
+    expect(canPerformOp('Technician', 'handover')).toBe(canHandover('Technician'))
+    expect(canPerformOp('Technician', 'return')).toBe(canReturn('Technician'))
+    expect(canPerformOp('Technician', 'reset')).toBe(canReset('Technician'))
+  })
+  it('none of the per-op grants admits Driver, Coordinator, Accounts or Client', () => {
+    for (const role of ['Driver', 'Coordinator', 'Accounts', 'Client'] as const) {
+      expect(canPack(role)).toBe(false)
+      expect(canHandover(role)).toBe(false)
+      expect(canReturn(role)).toBe(false)
+      expect(canReset(role)).toBe(false)
+    }
   })
 })
 

@@ -1675,6 +1675,46 @@ export default function RentalsList() {
 
   const countedTitle = total === null ? 'Rentals' : `${total} ${total === 1 ? 'Rental' : 'Rentals'} found`
 
+  const activeRentalTab = useMemo(() => {
+    if (chip === 'Cancelled') return 'Cancelled'
+    if (stageChips.length === 0 && chip === 'All') return 'All'
+    if (statusFilter.size === 3 && statusFilter.has('Quote') && statusFilter.has('Booked') && statusFilter.has('Packed')) {
+      return 'Upcoming'
+    }
+    const match = RENTAL_VIEWS.find((v) => v.stages.length === 1 && v.stages[0] && stageChips.includes(v.stages[0]))
+    return match?.id ?? 'All'
+  }, [chip, stageChips, statusFilter])
+
+  const handleTabChange = useCallback(
+    (viewId: string) => {
+      const viewItem = RENTAL_VIEWS.find((v) => v.id === viewId)
+      if (!viewItem) return
+      const isAll = viewItem.id === 'All'
+      const isCancelledView = viewItem.id === 'Cancelled'
+      const isActive =
+        isCancelledView
+          ? chip === 'Cancelled'
+          : isAll
+            ? stageChips.length === 0 && chip === 'All'
+            : viewItem.id === 'Upcoming'
+              ? statusFilter.size === 3 && statusFilter.has('Quote') && statusFilter.has('Booked') && statusFilter.has('Packed')
+              : viewItem.stages.length === 1 && viewItem.stages[0] !== undefined && stageChips.length === 1 && stageChips.includes(viewItem.stages[0])
+
+      if (isCancelledView) {
+        pickChip(isActive ? 'All' : 'Cancelled')
+      } else if (isAll) {
+        f.setChipGroup('stage', [])
+        if (chip !== 'All') pickChip('All')
+      } else if (isActive) {
+        f.setChipGroup('stage', [])
+      } else {
+        f.setChipGroup('stage', [...viewItem.stages])
+        if (chip !== 'All') pickChip('All')
+      }
+    },
+    [chip, stageChips, statusFilter, pickChip, f],
+  )
+
   if (isNew) {
     return (
       <Suspense fallback={<LoadingSkeleton type="card" label="Loading new rental…" />}>
@@ -1922,16 +1962,96 @@ export default function RentalsList() {
         onExport={handleBulkExport}
       />
 
-      {/* 5-view operational bar + Sub-Rental + active facet chip */}
-      <FilterBar
-        activeCount={f.activeCount}
-        onClearAll={clearFilters}
-        filterChips={<ActiveFilterChips filters={f.chips} {...(isFiltered ? { onClearAll: clearFilters } : {})} />}
-        groupAriaLabel="Filter by operational view"
-        rightSlot={
+      {/* Zone 1: Sub-Header & Primary Action Bar */}
+      <ModuleSubHeader
+        counter={
+          <span>
+            <strong style={{ color: 'var(--text)' }}>{total ?? list.rows.length}</strong> active bookings ·{' '}
+            <strong style={{ color: 'var(--text)' }}>{getTabCount('Out', ['On Rent']) ?? 0}</strong> on set ·{' '}
+            <strong style={{ color: chip === 'Overdue' ? 'var(--danger-text)' : 'var(--text)' }}>
+              {chip === 'Overdue' ? total ?? 0 : getTabCount('Overdue', []) ?? 0}
+            </strong> overdue
+          </span>
+        }
+        loadedAt={list.lastFetchedAt ?? new Date()}
+        loading={list.loading}
+        onRefresh={refreshAll}
+        secondaryActions={[
+          { label: 'Scan', icon: 'barcode', onClick: () => setBarcodeModalOpen(true) },
+          { label: 'Export', icon: 'download', onClick: handleBulkExport },
+          ...(canOperate ? [{ label: 'Fast Return', icon: 'refresh', onClick: () => setFastReturnOpen(true) }] : []),
+        ]}
+        primaryAction={
+          canWriteDesk
+            ? {
+                label: '+ New Rental',
+                onClick: () => navigate('/rentals/new'),
+                icon: 'plus',
+              }
+            : undefined
+        }
+      />
+
+      {/* Zone 2: 3-Card KPI Strip */}
+      <ModuleKpiStrip
+        items={[
+          {
+            id: 'out-on-set',
+            label: 'Out on Set',
+            count: getTabCount('Out', ['On Rent']) ?? 0,
+            subtitle: 'Active on production sets',
+            icon: 'truck',
+            tone: 'success',
+            active: stageChips.length === 1 && stageChips.includes('On Rent'),
+            onClick: () => {
+              f.setChipGroup('stage', ['On Rent'])
+              if (chip !== 'All') pickChip('All')
+            },
+          },
+          {
+            id: 'prep-packing',
+            label: 'Prep & Packing',
+            count: getTabCount('Upcoming', ['Quote', 'Booked', 'Packed']) ?? 0,
+            subtitle: 'Upcoming & booked kits',
+            icon: 'package',
+            tone: 'warn',
+            active: statusFilter.size === 3 && statusFilter.has('Quote') && statusFilter.has('Booked') && statusFilter.has('Packed'),
+            onClick: () => {
+              f.setChipGroup('stage', ['Quote', 'Booked', 'Packed'])
+              if (chip !== 'All') pickChip('All')
+            },
+          },
+          {
+            id: 'overdue-returns',
+            label: 'Overdue Returns',
+            count: chip === 'Overdue' ? total ?? 0 : getTabCount('Overdue', []) ?? 0,
+            subtitle: 'Requires immediate return',
+            icon: 'alert_triangle',
+            tone: 'danger',
+            active: chip === 'Overdue',
+            onClick: () => pickChip(chip === 'Overdue' ? 'All' : 'Overdue'),
+          },
+        ]}
+      />
+
+      {/* Zone 3: Unified Filter & Tab Bar */}
+      <ModuleFilterBar
+        tabs={RENTAL_VIEWS.map((viewItem) => ({
+          id: viewItem.id,
+          label: viewItem.label,
+          icon: viewItem.icon as IconName,
+          count: getTabCount(viewItem.id, viewItem.stages),
+        }))}
+        activeTab={activeRentalTab}
+        onTabChange={handleTabChange}
+        dropdownFilters={
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            {/* Spec §19 — the list's only sort control. Pickup is the default;
-                the type sorts are opt-in and round-trip in the URL (§34). */}
+            <FilterButton
+              onClick={() => setFiltersOpen((o) => !o)}
+              activeCount={f.activeCount}
+              controls="rentals-filters"
+              expanded={filtersOpen}
+            />
             {tabular && (
               <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--t-meta)', color: 'var(--text2)', fontWeight: 600 }}>
                 Sort
@@ -1943,7 +2063,7 @@ export default function RentalsList() {
                     if (column) f.setSort(column, dir !== 'desc')
                   }}
                   style={{
-                    minHeight: 36,
+                    minHeight: 44,
                     padding: '0 8px',
                     borderRadius: 'var(--r-btn)',
                     border: '1px solid var(--border)',
@@ -1955,7 +2075,9 @@ export default function RentalsList() {
                     cursor: 'pointer',
                   }}
                 >
-                  <option value="pickup_at:asc">Pickup date</option><option value="clients(name):asc">Client</option><option value="stage:asc">Status</option>
+                  <option value="pickup_at:asc">Pickup date</option>
+                  <option value="clients(name):asc">Client</option>
+                  <option value="stage:asc">Status</option>
                   <option value="project_type:asc">Project Type A → Z</option>
                   <option value="project_type:desc">Project Type Z → A</option>
                 </select>
@@ -1974,70 +2096,7 @@ export default function RentalsList() {
             />
           </span>
         }
-      >
-        {RENTAL_VIEWS.map((viewItem) => {
-          const isAll = viewItem.id === 'All'
-          const isCancelledView = viewItem.id === 'Cancelled'
-          const isActive = isCancelledView
-            // Cancelled is a presence flag, not a stage (Law 3 / 0015) — its
-            // active state is the quick chip, never the stage group.
-            ? chip === 'Cancelled'
-            : isAll
-              ? stageChips.length === 0 && chip === 'All'
-              : viewItem.id === 'Upcoming'
-                ? statusFilter.size === 3 && statusFilter.has('Quote') && statusFilter.has('Booked') && statusFilter.has('Packed')
-                : viewItem.stages.length === 1 && viewItem.stages[0] !== undefined && stageChips.length === 1 && stageChips.includes(viewItem.stages[0])
-
-          const tabCount = getTabCount(viewItem.id, viewItem.stages)
-
-          return (
-            <button
-              key={viewItem.id}
-              type="button"
-              onClick={() => {
-                if (isCancelledView) {
-                  // Opt into / out of the excluded population. The stage group
-                  // is left alone — rentalsQuery intersects it either way.
-                  pickChip(isActive ? 'All' : 'Cancelled')
-                } else if (isAll) {
-                  f.setChipGroup('stage', [])
-                  if (chip !== 'All') pickChip('All')
-                } else if (isActive) {
-                  f.setChipGroup('stage', [])
-                } else {
-                  f.setChipGroup('stage', [...viewItem.stages])
-                  if (chip !== 'All') pickChip('All')
-                }
-              }}
-              aria-pressed={isActive}
-              aria-label={viewItem.label}
-              title={VIEW_TOOLTIPS[viewItem.id] ?? viewItem.label}
-              style={stageChipStyle(isActive)}
-            >
-              <TouchTarget axis="y" />
-              <Icon
-                name={viewItem.icon}
-                size={13}
-                style={{ color: isActive ? 'var(--nav-active-accent)' : 'var(--text2)' }}
-              />
-              <span data-view-label>{viewItem.label}</span>
-              <span
-                className="figure"
-                style={{
-                  marginLeft: 4,
-                  fontSize: 'var(--t-meta, 12px)',
-                  color: tabCount === 0 ? 'var(--muted)' : isActive ? 'var(--nav-active-accent)' : 'var(--text2)',
-                  opacity: tabCount === 0 ? 0.6 : 1,
-                  fontWeight: tabCount === 0 ? 400 : 600,
-                }}
-                aria-label={`${viewItem.label} count`}
-              >
-                {tabCount !== null ? tabCount : '—'}
-              </span>
-            </button>
-          )
-        })}
-      </FilterBar>
+      />
 
       {/* Row 2: Sub-Rental & Quick Chips on left, Results Count & Saved Views on right */}
       <div
@@ -2052,6 +2111,7 @@ export default function RentalsList() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', flexWrap: 'wrap' }}>
+          {isFiltered && <ActiveFilterChips filters={f.chips} onClearAll={clearFilters} />}
           {chip !== 'All' && (
             <button
               type="button"
@@ -2266,8 +2326,8 @@ export default function RentalsList() {
                           <Link
                             data-intel-identifier
                             to={(r.status as string) === 'Draft' ? `/rentals?action=new&draft=${r.id}` : `/rentals/${r.bookingNo}`}
-                            className="identifier"
-                            style={{ fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--link)', textDecoration: 'none' }}
+                            className="identifier module-table__code-badge"
+                            style={{ fontSize: 'var(--t-meta)', fontWeight: 700, textDecoration: 'none' }}
                           >
                             {(r.status as string) === 'Draft' ? r.bookingNo : formatBookingNo(r.bookingNo)}
                           </Link>
@@ -2483,11 +2543,10 @@ export default function RentalsList() {
                               <Link
                                 data-intel-identifier
                                 to={(r.status as string) === 'Draft' ? `/rentals?action=new&draft=${r.id}` : `/rentals/${r.bookingNo}`}
-                                className="identifier"
+                                className="identifier module-table__code-badge"
                                 style={{
                                   fontSize: 'var(--t-meta)',
                                   fontWeight: 700,
-                                  color: 'var(--link)',
                                   textDecoration: 'none',
                                 }}
                               >
