@@ -1,19 +1,22 @@
 import { formatAd, formatAdDateTime } from '../../lib/bs'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageHeader, KpiStrip, cardStyle } from '../../components/ui/Page'
 import type { Kpi } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
+import { PageBody } from '../../components/ui/PageBody'
+import { useLoad } from '../../lib/queries/useLoad'
+import { NOT_TRACKED } from '../../lib/queries/reportSupport'
+import { reportFilterOptions, hasReportFilters, NoMatchRow } from './reportStates'
 import { ReportToolbar } from '../../components/ui/ReportToolbar'
 import type { ReportCsvRow, ReportFilters } from '../../components/ui/ReportToolbar'
 import { Donut, Legend, type Slice } from '../../components/ui/Charts'
 import Icon from '../../components/ui/Icon'
 import { useViewport } from '../../lib/device'
-import {
-  getOperationsReport,
-  type OperationsReportData,
-  type ReportFilterOptions,
-} from '../../lib/queries/operationReports'
+import { getOperationsReport } from '../../lib/queries/operationReports'
+
+/** A rate the read could not measure reads "Not tracked yet", never a plausible percentage (Law 16). */
+const rate = (n: number | null): string => (n === null ? NOT_TRACKED : `${n}%`)
 
 type OpTab = 'pickups' | 'returns' | 'overdue' | 'packing'
 
@@ -39,26 +42,14 @@ export default function OperationsReports() {
   const viewport = useViewport()
   const [activeTab, setActiveTab] = useState<OpTab>('pickups')
   const [filters, setFilters] = useState<ReportFilters>({})
-  const [data, setData] = useState<OperationsReportData | null>(null)
-
-  useEffect(() => {
-    let active = true
-
-    const branchId = filters.chips?.branch_id?.[0]
-    const queryOpts: ReportFilterOptions = {
-      from: filters.dateRange?.fromAd,
-      to: filters.dateRange?.toAd,
-      branchId,
-    }
-
-    void getOperationsReport(queryOpts).then((res) => {
-      if (active) setData(res)
-    })
-
-    return () => {
-      active = false
-    }
-  }, [filters])
+  /* Phase 6 — the read used to return seed figures on failure, on an empty
+     database, and per figure (`|| MOCK`); it now throws, and `PageBody` draws
+     loading · Error + Retry · nothing-yet vs "nothing in this period". */
+  const filtered = hasReportFilters(filters)
+  const load = useLoad(() => getOperationsReport(reportFilterOptions(filters)), { key: JSON.stringify(filters) })
+  const data = load.data
+  const nothing =
+    data !== null && data.deliveryMethods.length === 0 && data.pickups.length === 0 && data.returns.length === 0
 
   // Pickups KPI Strip
   const pickupKpis = useMemo<Kpi[]>(() => {
@@ -74,17 +65,17 @@ export default function OperationsReports() {
       },
       {
         label: 'On-Time Handover',
-        value: `${m.onTimePickupRate}%`,
+        value: rate(m.onTimePickupRate),
         icon: 'timer',
-        accent: 'success',
-        note: 'Fulfillment within schedule',
+        accent: 'neutral',
+        note: 'No scheduled handover time is recorded to measure against',
       },
       {
         label: 'ID Verified',
-        value: `${m.idVerificationRate}%`,
+        value: m.idVerificationRate === null ? '—' : `${m.idVerificationRate}%`,
         icon: 'check',
-        accent: m.idVerificationRate >= 95 ? 'success' : 'warn',
-        note: 'Government ID documentary proof',
+        accent: m.idVerificationRate === null ? 'neutral' : m.idVerificationRate >= 95 ? 'success' : 'warn',
+        note: m.idVerificationRate === null ? 'No completed handover in this period' : 'Completed handovers with government ID verified',
       },
       {
         label: 'Pending Dispatches',
@@ -100,36 +91,38 @@ export default function OperationsReports() {
   const returnKpis = useMemo<Kpi[]>(() => {
     if (!data) return []
     const m = data.metrics
-    const cleanReturns = data.returnConditions.find((c) => c.condition.includes('Clean'))?.count || 0
-    const damageReturns = data.returnConditions.find((c) => c.condition.includes('Damage'))?.count || 0
+    const countOf = (...conds: string[]) =>
+      data.returnConditions.filter((c) => conds.includes(c.condition)).reduce((acc, c) => acc + c.count, 0)
+    const cleanReturns = countOf('Excellent', 'Good')
+    const damageReturns = countOf('Damaged', 'Lost')
     return [
       {
         label: 'Total Returns',
         value: String(m.totalReturns),
         icon: 'return_arrow',
         accent: 'primary',
-        note: 'Checked-in return sessions',
+        note: 'Return sessions in this period',
       },
       {
         label: 'On-Time Returns',
-        value: `${m.onTimeReturnRate}%`,
+        value: m.onTimeReturnRate === null ? '—' : `${m.onTimeReturnRate}%`,
         icon: 'timer',
-        accent: 'success',
-        note: 'Returned on scheduled day',
+        accent: 'neutral',
+        note: m.onTimeReturnRate === null ? 'No booking returned in this period' : 'Returned by the scheduled return time',
       },
       {
-        label: 'Clean & Ready',
-        value: `${cleanReturns} (${Math.round((cleanReturns / (m.totalReturns || 1)) * 100)}%)`,
+        label: 'Good or Better',
+        value: m.totalReturns > 0 ? `${cleanReturns} (${Math.round((cleanReturns / m.totalReturns) * 100)}%)` : '0',
         icon: 'sparkles',
         accent: 'success',
-        note: 'Passed immediate QC check',
+        note: 'Worst inspected item Excellent or Good',
       },
       {
-        label: 'Exceptions / Damage',
+        label: 'Damaged or Lost',
         value: String(damageReturns),
         icon: 'alert_triangle',
         accent: damageReturns > 0 ? 'danger' : 'neutral',
-        note: 'Flagged for technician assessment',
+        note: 'Sessions with a damaged or lost item',
       },
     ]
   }, [data])
@@ -183,14 +176,14 @@ export default function OperationsReports() {
         value: String(m.totalPackingJobs),
         icon: 'box',
         accent: 'primary',
-        note: 'Pre-dispatch staging jobs',
+        note: 'Booked or Packed, not yet handed over',
       },
       {
         label: 'Fulfillment Rate',
-        value: `${m.packingFulfillmentRate}%`,
+        value: rate(m.packingFulfillmentRate),
         icon: 'chart',
-        accent: 'success',
-        note: 'Line items accurately verified',
+        accent: 'neutral',
+        note: 'Packing does not record verified-vs-expected lines yet',
       },
       {
         label: 'Staged & Ready',
@@ -216,8 +209,8 @@ export default function OperationsReports() {
         ['Operations - Pickups & Handover Report'],
         ['Metric', 'Value'],
         ['Total Dispatches', data?.metrics.totalPickups ?? 0],
-        ['On-Time Handover Rate', `${data?.metrics.onTimePickupRate ?? 0}%`],
-        ['Government ID Verification Rate', `${data?.metrics.idVerificationRate ?? 0}%`],
+        ['On-Time Handover Rate', rate(data?.metrics.onTimePickupRate ?? null)],
+        ['Government ID Verification Rate', data?.metrics.idVerificationRate == null ? '—' : `${data.metrics.idVerificationRate}%`],
         [],
         ['Delivery Methods Breakdown'],
         ['Method', 'Count', 'Share %'],
@@ -240,21 +233,20 @@ export default function OperationsReports() {
         ['Operations - Returns & Check-in Inspections Report'],
         ['Metric', 'Value'],
         ['Total Returns', data?.metrics.totalReturns ?? 0],
-        ['On-Time Return Rate', `${data?.metrics.onTimeReturnRate ?? 0}%`],
+        ['On-Time Return Rate', data?.metrics.onTimeReturnRate == null ? '—' : `${data.metrics.onTimeReturnRate}%`],
         [],
         ['Return Condition Breakdown'],
         ['Condition', 'Count', 'Share %'],
         ...(data?.returnConditions.map((rc): ReportCsvRow => [rc.condition, rc.count, `${rc.percent}%`]) ?? []),
         [],
         ['Return Sessions Log'],
-        ['Booking No', 'Client', 'Return Time', 'Returning Person', 'Condition', 'Cleaning Required', 'Damage Suspected'],
+        ['Booking No', 'Client', 'Return Time', 'Returning Person', 'Condition', 'Damaged or Lost'],
         ...(data?.returns.map((r): ReportCsvRow => [
           r.bookingNo,
           r.clientName,
           r.returnAt,
           r.returningPerson,
           r.condition,
-          r.cleaningRequired ? 'Yes' : 'No',
           r.damageSuspected ? 'Yes' : 'No',
         ]) ?? []),
       ]
@@ -281,7 +273,7 @@ export default function OperationsReports() {
         ['Operations - Packing & Prep Fulfillment Report'],
         ['Metric', 'Value'],
         ['Total Packing Jobs', data?.metrics.totalPackingJobs ?? 0],
-        ['Packing Fulfillment Rate', `${data?.metrics.packingFulfillmentRate ?? 0}%`],
+        ['Packing Fulfillment Rate', rate(data?.metrics.packingFulfillmentRate ?? null)],
         [],
         ['Packing Jobs List'],
         ['Booking No', 'Client', 'Project', 'Pickup Scheduled', 'Item Count', 'State'],
@@ -366,6 +358,23 @@ export default function OperationsReports() {
         </div>
       </ReportToolbar>
 
+      <PageBody
+        noun="operations figures"
+        loading={load.loading}
+        error={load.error}
+        onRetry={load.reload}
+        hasRows={data !== null}
+        skeleton="kpi"
+        empty={nothing}
+        emptyIsFiltered={filtered}
+        onClearFilters={() => setFilters({})}
+        emptyTitle={filtered ? 'No operations in this period' : 'No operations yet'}
+        emptyMessage={
+          filtered
+            ? 'Nothing was picked up in the selected period or branch. Clear the filters to see everything.'
+            : 'Handovers, returns and packing appear here once the first booking is created.'
+        }
+      >
       {/* TAB 1: PICKUPS & HANDOVER */}
       {activeTab === 'pickups' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
@@ -394,26 +403,6 @@ export default function OperationsReports() {
               )}
             </div>
 
-            {/* Verification & Compliance */}
-            <div style={cardStyle}>
-              <h3 style={{ fontSize: 'var(--t-h3)', fontWeight: 600, marginBottom: 'var(--sp-sm)' }}>
-                Custody Transfer Verification
-              </h3>
-              <p style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', marginBottom: 'var(--sp-md)' }}>
-                Compliance protocol enforcement for equipment custody release.
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)', fontSize: 'var(--t-body)' }}>
-                <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: 'var(--r-sm)' }}>
-                  <strong>Government ID Verification:</strong> 95.7% of handovers recorded scanned citizenship or passport proof before equipment release.
-                </div>
-                <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: 'var(--r-sm)' }}>
-                  <strong>Booking Authorization:</strong> Operator verified authorized collector against client organizational roster.
-                </div>
-                <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: 'var(--r-sm)' }}>
-                  <strong>Digital Signature:</strong> Mandatory signed receipt stored under Evidence Workspace for every handover.
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Pickups Table */}
@@ -454,6 +443,7 @@ export default function OperationsReports() {
                   </tr>
                 </thead>
                 <tbody>
+                  {data?.pickups.length === 0 && <NoMatchRow colSpan={7} noun="handover sessions" />}
                   {data?.pickups.map((p) => (
                     <tr key={p.id}>
                       <td style={td}>
@@ -533,26 +523,6 @@ export default function OperationsReports() {
               )}
             </div>
 
-            {/* Warehouse QC Routing */}
-            <div style={cardStyle}>
-              <h3 style={{ fontSize: 'var(--t-h3)', fontWeight: 600, marginBottom: 'var(--sp-sm)' }}>
-                Return Check-in Workflow
-              </h3>
-              <p style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', marginBottom: 'var(--sp-md)' }}>
-                Automated triage and workspace routing upon check-in.
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)', fontSize: 'var(--t-body)' }}>
-                <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: 'var(--r-sm)' }}>
-                  <strong>Immediate Restock (76%):</strong> Clean and verified units routed directly to Reset Workspace for barcode scan and shelf assignment.
-                </div>
-                <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: 'var(--r-sm)' }}>
-                  <strong>Cleaning Queue (17%):</strong> Lens dust, sensor inspection, or outdoor cable cleaning routed to Cleaning bay.
-                </div>
-                <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: 'var(--r-sm)' }}>
-                  <strong>Damage Finding (7%):</strong> Scratch, dent, or electrical fault automatically creates damage finding and holds security deposit.
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Returns Table */}
@@ -569,11 +539,11 @@ export default function OperationsReports() {
                     <th style={th}>Return Time</th>
                     <th style={th}>Returning Person</th>
                     <th style={th}>Condition Status</th>
-                    <th style={th}>Cleaning Required</th>
                     <th style={th}>Damage Flag</th>
                   </tr>
                 </thead>
                 <tbody>
+                  {data?.returns.length === 0 && <NoMatchRow colSpan={6} noun="return sessions" />}
                   {data?.returns.map((r) => (
                     <tr key={r.id}>
                       <td style={td}>
@@ -594,22 +564,21 @@ export default function OperationsReports() {
                             padding: '2px 8px',
                             borderRadius: 'var(--r-sm)',
                             fontSize: 'var(--t-meta)',
-                            background: r.condition.includes('Damage')
+                            background: r.damageSuspected
                               ? 'var(--status-danger-bg)'
-                              : r.condition.includes('Cleaning')
-                                ? 'var(--status-warn-bg)'
-                                : 'var(--status-success-bg)',
-                            color: r.condition.includes('Damage')
+                              : r.condition === 'Excellent' || r.condition === 'Good'
+                                ? 'var(--status-success-bg)'
+                                : 'var(--status-warn-bg)',
+                            color: r.damageSuspected
                               ? 'var(--status-danger-text)'
-                              : r.condition.includes('Cleaning')
-                                ? 'var(--status-warn-text)'
-                                : 'var(--status-success-text)',
+                              : r.condition === 'Excellent' || r.condition === 'Good'
+                                ? 'var(--status-success-text)'
+                                : 'var(--status-warn-text)',
                           }}
                         >
                           {r.condition}
                         </span>
                       </td>
-                      <td style={td}>{r.cleaningRequired ? 'Yes (Cleaning Bay)' : 'No'}</td>
                       <td style={td}>
                         {r.damageSuspected ? (
                           <span style={{ color: 'var(--status-danger-text)', fontWeight: 600 }}>Flagged</span>
@@ -636,7 +605,7 @@ export default function OperationsReports() {
               <div>
                 <h3 style={{ fontSize: 'var(--t-h3)', fontWeight: 600 }}>Active Overdue Rentals Register</h3>
                 <p style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-                  Rentals currently on rent past scheduled return deadline. Automatic late fees accrue per operational day.
+                  Rentals still on rent past their scheduled return.
                 </p>
               </div>
             </div>
@@ -656,6 +625,7 @@ export default function OperationsReports() {
                   </tr>
                 </thead>
                 <tbody>
+                  {data?.overdueList.length === 0 && <NoMatchRow colSpan={8} noun="overdue rentals" />}
                   {data?.overdueList.map((o) => (
                     <tr key={o.id}>
                       <td style={td}>
@@ -759,6 +729,7 @@ export default function OperationsReports() {
                   </tr>
                 </thead>
                 <tbody>
+                  {data?.packingJobs.length === 0 && <NoMatchRow colSpan={7} noun="packing jobs" />}
                   {data?.packingJobs.map((pj) => (
                     <tr key={pj.id}>
                       <td style={td}>
@@ -816,6 +787,7 @@ export default function OperationsReports() {
           </div>
         </div>
       )}
+      </PageBody>
     </div>
   )
 }

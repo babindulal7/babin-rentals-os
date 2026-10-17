@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageHeader, cardStyle } from '../../components/ui/Page'
 import { ReportFamiliesNav } from '../../components/ui/ReportFamiliesNav'
 import { ReportToolbar } from '../../components/ui/ReportToolbar'
 import type { ReportCsvRow, ReportFilters } from '../../components/ui/ReportToolbar'
 import { InteractiveRevenueTrend } from '../../components/ui/charts/InteractiveRevenueTrend'
+import { PageBody } from '../../components/ui/PageBody'
+import { useLoad } from '../../lib/queries/useLoad'
 import { formatMoney } from '../../lib/money'
 import { businessDayAd } from '../../lib/bs'
 import { useAuth } from '../../lib/auth'
@@ -36,10 +38,6 @@ export default function RevenueReport() {
   const permitted = Boolean(user && EXECUTIVE_ROLES.has(user.role))
   const today = businessDayAd()
   const [filters, setFilters] = useState<ReportFilters>({})
-  const [report, setReport] = useState<IssuedRevenueReport | null>(null)
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [revision, setRevision] = useState(0)
 
   const from = readReportDate(filters.dateRange?.fromAd, daysAgo(today, 89))
   const to = readReportDate(filters.dateRange?.toAd, today)
@@ -48,21 +46,16 @@ export default function RevenueReport() {
     new Date(to + 'T00:00:00Z').getUTCMonth() - new Date(from + 'T00:00:00Z').getUTCMonth() < 24
   )
 
-  useEffect(() => {
-    if (!permitted || !windowIsValid) return
-    let active = true
-    setPending(true)
-    setError(null)
-    setReport(null)
-    void getIssuedRevenueTrend(from, to).then(data => {
-      if (active) setReport(data)
-    }).catch((cause: unknown) => {
-      if (active) setError(cause instanceof Error ? cause.message : 'Revenue report unavailable')
-    }).finally(() => {
-      if (active) setPending(false)
-    })
-    return () => { active = false }
-  }, [permitted, from, to, windowIsValid, revision])
+  /* Phase 6 — the hand-rolled load state becomes `useLoad`, so a failure
+     offline is worded as such and retries on reconnect, and `PageBody` draws
+     loading · Error + Retry · nothing-yet vs "nothing in this period". A role
+     outside the executive set never sends the read (Law 6). */
+  const filtered = Boolean(filters.dateRange?.fromAd || filters.dateRange?.toAd)
+  const load = useLoad<IssuedRevenueReport>(() => getIssuedRevenueTrend(from, to), {
+    key: `${from}|${to}`,
+    enabled: permitted && windowIsValid,
+  })
+  const report = load.data
 
   const rows = useMemo<ReportCsvRow[]>(() => {
     if (!report) return []
@@ -86,13 +79,17 @@ export default function RevenueReport() {
       <PageHeader icon="dollar" title="Revenue Reports" description="Issued invoice taxable revenue, excluding VAT and unissued or void invoices." />
       <ReportFamiliesNav current="Revenue" />
       {!permitted ? (
-        <section style={cardStyle} aria-label="Restricted revenue report">
-          <p>Revenue intelligence is restricted to Owner, Admin, Manager and Accounts.</p>
-        </section>
+        <PageBody
+          restricted
+          restrictedReason="Revenue figures are restricted to Owner, Admin, Manager and Accounts."
+          restrictedRequiredRole="Owner, Admin, Manager or Accounts"
+        >
+          {null}
+        </PageBody>
       ) : (
         <>
           <ReportToolbar title="Revenue Reports" value={filters} onChange={setFilters} dateColumn="issue_date"
-            {...(!pending && !error && report ? { csv: { filename:'revenue-issued-monthly', build: () => rows } } : {})}
+            {...(!load.loading && !load.error && report ? { csv: { filename:'revenue-issued-monthly', build: () => rows } } : {})}
           />
           <section style={{...cardStyle,padding:'var(--sp-md)'}} aria-label="Issued invoice revenue trend">
             <h3 style={{margin:'0 0 8px',color:'var(--text)'}}>Monthly issued invoice revenue</h3>
@@ -104,12 +101,26 @@ export default function RevenueReport() {
             </p>
             {!windowIsValid ? (
               <p role="alert">Choose a valid report window of no more than 24 calendar months.</p>
-            ) : pending ? (
-              <p role="status">Loading verified invoice records…</p>
-            ) : error ? (
-              <div role="alert"><p>{error}</p><button type="button" onClick={() => setRevision(r=>r+1)}
-                style={{minHeight:44,padding:'0 14px'}}>Retry</button></div>
-            ) : report ? (
+            ) : (
+              <PageBody
+                noun="revenue"
+                loading={load.loading}
+                error={load.error}
+                onRetry={load.reload}
+                hasRows={report !== null}
+                skeleton="card"
+                empty={report !== null && report.issuedCount === 0 && report.creditReconciliation.voidedInvoiceCount === 0}
+                emptyIsFiltered={filtered}
+                onClearFilters={() => setFilters({})}
+                clearLabel="Back to the last 90 days"
+                emptyTitle={filtered ? 'No invoices issued in this period' : 'No invoices issued in the last 90 days'}
+                emptyMessage={
+                  filtered
+                    ? 'Revenue appears here for invoices issued in the selected window.'
+                    : 'Revenue appears here once an invoice is issued. Choose a wider period to look further back.'
+                }
+              >
+              {report && (
               <>
                 <div style={{display:'flex',flexWrap:'wrap',gap:26,marginBottom:20}}>
                   <div><small>Taxable amount (before VAT)</small><strong style={{display:'block',fontSize:23}}>{formatMoney(report.totalPaisa)}</strong></div>
@@ -139,7 +150,9 @@ export default function RevenueReport() {
                 </section>
                 {report.issuedCount===0 && <p>No issued invoices recorded for the selected period.</p>}
               </>
-            ) : <p role="status">Loading…</p>}
+              )}
+              </PageBody>
+            )}
           </section>
           <p style={{fontSize:'var(--t-meta)',color:'var(--text2)'}}>
             Detailed invoice records and settlement corrections remain available in <Link to="/finance?tab=invoices">Finance invoices</Link>.

@@ -1,5 +1,9 @@
 import { supabase } from '../supabase'
 import { rupees, type Paisa } from '../money'
+import { BS_MONTHS, formatAdMonth, toBs } from '../bs'
+import { embeddedName, percentOf, rowsOf, type ReportFilterOptions } from './reportSupport'
+
+export type { ReportFilterOptions } from './reportSupport'
 
 export interface SalesReportMetrics {
   totalInvoiced: Paisa
@@ -79,220 +83,188 @@ export interface VatTaxReportData {
   taxRegister: SalesInvoiceItem[]
 }
 
-export interface ReportFilterOptions {
-  from?: string | undefined
-  to?: string | undefined
-  branchId?: string | undefined
+/*
+ * RULING 2026-10-16 (R-P6-STATES, Law 16): this read returned MOCK_SALES /
+ * MOCK_VAT on a failure and on an empty period, the monthly trend and VAT
+ * schedule were always the mock blocks, and the effective rate was the literal
+ * 13.0. It selected `tax_amount`, `grand_total` and `clients.pan_number`, none
+ * of which exist (0006: `vat_amount`, `total_amount`; clients: `pan_vat`), so
+ * on live it could ONLY ever show the mock figures. It now reads the real
+ * columns, throws on failure, returns honest zeros, and builds the VAT
+ * schedule per Bikram Sambat month from `issue_date` (BS rendered, never
+ * stored). Draft and Void invoices are not sales and are left out.
+ * Revert = restore MOCK_SALES/MOCK_VAT and the `catch`.
+ */
+
+type InvoiceRow = {
+  id: string
+  invoice_no: string
+  client_id: string | null
+  status: string
+  issue_date: string | null
+  due_date: string | null
+  subtotal: number | string | null
+  discount_amount: number | string | null
+  taxable_amount: number | string | null
+  vat_rate: number | string | null
+  vat_amount: number | string | null
+  total_amount: number | string | null
+  paid_amount: number | string | null
+  outstanding_amount: number | string | null
+  voided_at: string | null
+  clients?: unknown
+  bookings?: unknown
 }
 
-/* ── Fallback Seed Data (Hermetic baseline for mock mode & empty DB) ──────── */
+const money = (v: number | string | null | undefined): Paisa => rupees(Number(v ?? 0) || 0)
 
-const MOCK_SALES: SalesReportData = {
-  metrics: {
-    totalInvoiced: rupees(5452250),
-    netSales: rupees(4825000),
-    totalVat: rupees(627250),
-    totalDiscounts: rupees(337750),
-    totalCollected: rupees(4210000),
-    totalOutstanding: rupees(1242250),
-    invoiceCount: 42,
-    collectionRate: 77.2,
-  },
-  statusBreakdown: [
-    { status: 'Paid', count: 28, amount: rupees(3650000), percent: 67 },
-    { status: 'Partially Paid', count: 6, amount: rupees(925000), percent: 17 },
-    { status: 'Issued / Unpaid', count: 6, amount: rupees(685000), percent: 12 },
-    { status: 'Overdue', count: 2, amount: rupees(192250), percent: 4 },
-  ],
-  monthlyTrend: [
-    { period: 'Baisakh', invoiced: rupees(780000), collected: rupees(750000) },
-    { period: 'Jestha', invoiced: rupees(920000), collected: rupees(860000) },
-    { period: 'Ashadh', invoiced: rupees(895000), collected: rupees(820000) },
-    { period: 'Shrawan', invoiced: rupees(1150000), collected: rupees(980000) },
-    { period: 'Bhadra', invoiced: rupees(1050000), collected: rupees(800000) },
-    { period: 'Ashwin', invoiced: rupees(657250), collected: rupees(0) },
-  ],
-  topClients: [
-    { clientId: 'cl-01', clientName: 'Highland Pictures', invoiceCount: 6, totalInvoiced: rupees(1250000), totalPaid: rupees(1150000), balance: rupees(100000) },
-    { clientId: 'cl-02', clientName: 'KTM Motion Arts', invoiceCount: 5, totalInvoiced: rupees(980000), totalPaid: rupees(850000), balance: rupees(130000) },
-    { clientId: 'cl-03', clientName: 'Aura Media Studio', invoiceCount: 7, totalInvoiced: rupees(850000), totalPaid: rupees(720000), balance: rupees(130000) },
-    { clientId: 'cl-04', clientName: 'Red Panda Creative', invoiceCount: 4, totalInvoiced: rupees(680000), totalPaid: rupees(680000), balance: rupees(0) },
-    { clientId: 'cl-05', clientName: 'Mountain Trail Films', invoiceCount: 5, totalInvoiced: rupees(590000), totalPaid: rupees(450000), balance: rupees(140000) },
-  ],
-  invoices: [
-    { id: 'inv-01', invoiceNo: 'INV-2026-0041', bookingNo: 'BK-2026-0071', clientName: 'Highland Pictures', clientPan: '302488192', issueDate: '2026-09-15', dueDate: '2026-09-30', subtotal: rupees(245000), taxAmount: rupees(31850), grandTotal: rupees(276850), paidAmount: rupees(276850), status: 'Paid' },
-    { id: 'inv-02', invoiceNo: 'INV-2026-0042', bookingNo: 'BK-2026-0072', clientName: 'KTM Motion Arts', clientPan: '601299441', issueDate: '2026-09-18', dueDate: '2026-10-03', subtotal: rupees(195000), taxAmount: rupees(25350), grandTotal: rupees(220350), paidAmount: rupees(150000), status: 'Partially Paid' },
-    { id: 'inv-03', invoiceNo: 'INV-2026-0043', bookingNo: 'BK-2026-0073', clientName: 'Aura Media Studio', clientPan: '604811209', issueDate: '2026-09-20', dueDate: '2026-10-05', subtotal: rupees(165000), taxAmount: rupees(21450), grandTotal: rupees(186450), paidAmount: rupees(186450), status: 'Paid' },
-    { id: 'inv-04', invoiceNo: 'INV-2026-0044', bookingNo: 'BK-2026-0074', clientName: 'Red Panda Creative', clientPan: '301129883', issueDate: '2026-09-22', dueDate: '2026-10-07', subtotal: rupees(140000), taxAmount: rupees(18200), grandTotal: rupees(158200), paidAmount: rupees(0), status: 'Issued' },
-    { id: 'inv-05', invoiceNo: 'INV-2026-0045', bookingNo: 'BK-2026-0075', clientName: 'Mountain Trail Films', clientPan: '605991024', issueDate: '2026-09-24', dueDate: '2026-10-09', subtotal: rupees(185000), taxAmount: rupees(24050), grandTotal: rupees(209050), paidAmount: rupees(100000), status: 'Partially Paid' },
-  ],
+function bsMonthOf(isoDate: string): { key: string; label: string } | null {
+  const bs = toBs(new Date(`${isoDate.slice(0, 10)}T12:00:00Z`))
+  if (!bs) return null
+  return { key: `${bs.year}-${String(bs.month).padStart(2, '0')}`, label: `${BS_MONTHS[bs.month - 1] ?? ''} ${bs.year}` }
 }
-
-const MOCK_VAT: VatTaxReportData = {
-  metrics: {
-    totalGrossTurnover: rupees(5452250),
-    taxableTurnover: rupees(4825000),
-    totalOutputVat: rupees(627250),
-    exemptTurnover: rupees(0),
-    effectiveVatRate: 13.0,
-    invoicesCount: 42,
-  },
-  monthlySchedule: [
-    { month: '2026-04 (April/May)', bsMonth: 'Baisakh 2083', taxableSales: rupees(690265), vatAmount: rupees(89735), exemptSales: rupees(0), grossSales: rupees(780000) },
-    { month: '2026-05 (May/June)', bsMonth: 'Jestha 2083', taxableSales: rupees(814160), vatAmount: rupees(105840), exemptSales: rupees(0), grossSales: rupees(920000) },
-    { month: '2026-06 (June/July)', bsMonth: 'Ashadh 2083', taxableSales: rupees(792035), vatAmount: rupees(102965), exemptSales: rupees(0), grossSales: rupees(895000) },
-    { month: '2026-07 (July/Aug)', bsMonth: 'Shrawan 2083', taxableSales: rupees(1017699), vatAmount: rupees(132301), exemptSales: rupees(0), grossSales: rupees(1150000) },
-    { month: '2026-08 (Aug/Sept)', bsMonth: 'Bhadra 2083', taxableSales: rupees(929204), vatAmount: rupees(120796), exemptSales: rupees(0), grossSales: rupees(1050000) },
-    { month: '2026-09 (Sept/Oct)', bsMonth: 'Ashwin 2083', taxableSales: rupees(581637), vatAmount: rupees(75613), exemptSales: rupees(0), grossSales: rupees(657250) },
-  ],
-  taxRegister: MOCK_SALES.invoices,
-}
-
-/* ── Query Aggregations from PostgreSQL ─────────────────────────────────── */
 
 export async function getSalesVatReport(options?: ReportFilterOptions): Promise<{ sales: SalesReportData; vat: VatTaxReportData }> {
-  try {
-    let query = supabase
-      .from('invoices')
-      .select(`
-        id,
-        invoice_no,
-        booking_id,
-        client_id,
-        branch_id,
-        issue_date,
-        due_date,
-        subtotal,
-        discount_amount,
-        tax_amount,
-        grand_total,
-        paid_amount,
-        status,
-        created_at,
-        clients!client_id(name, pan_number),
-        bookings!booking_id(booking_no)
-      `)
-      .order('issue_date', { ascending: false })
+  let query = supabase
+    .from('invoices')
+    .select(
+      'id, invoice_no, client_id, status, issue_date, due_date, subtotal, discount_amount, taxable_amount, vat_rate, vat_amount, total_amount, paid_amount, outstanding_amount, voided_at, clients!client_id(name, pan_vat), bookings!booking_id(booking_no)',
+    )
+    .neq('status', 'Draft')
+    .neq('status', 'Void')
+    .is('voided_at', null)
+    .order('issue_date', { ascending: false })
+  if (options?.from) query = query.gte('issue_date', options.from)
+  if (options?.to) query = query.lte('issue_date', options.to)
+  if (options?.branchId) query = query.eq('branch_id', options.branchId)
 
-    if (options?.from) query = query.gte('issue_date', options.from)
-    if (options?.to) query = query.lte('issue_date', options.to)
-    if (options?.branchId) query = query.eq('branch_id', options.branchId)
+  const rows = rowsOf<InvoiceRow>(await query, 'Invoices read failed')
 
-    const { data: rows, error } = await query
+  let invoiced = 0
+  let net = 0
+  let vatTotal = 0
+  let discounts = 0
+  let paidTotal = 0
+  let outstanding = 0
+  let taxable = 0
+  let exempt = 0
+  const statusMap = new Map<string, { count: number; amount: number }>()
+  const clientMap = new Map<string, { name: string; count: number; invoiced: number; paid: number }>()
+  const monthMap = new Map<string, VatMonthlyRow & { invoicedTotal: number; collectedTotal: number }>()
+  const invoices: SalesInvoiceItem[] = []
 
-    if (error || !rows || rows.length === 0) {
-      return { sales: MOCK_SALES, vat: MOCK_VAT }
+  for (const r of rows) {
+    const total = money(r.total_amount)
+    const sub = money(r.subtotal)
+    const vat = money(r.vat_amount)
+    const taxableAmt = money(r.taxable_amount)
+    const paid = money(r.paid_amount)
+    invoiced += total
+    net += sub
+    vatTotal += vat
+    discounts += money(r.discount_amount)
+    paidTotal += paid
+    outstanding += money(r.outstanding_amount)
+    // An invoice with no VAT charged is exempt (or zero-rated) turnover.
+    const isExempt = vat === 0
+    if (isExempt) exempt += taxableAmt
+    else taxable += taxableAmt
+
+    const st = statusMap.get(r.status) ?? { count: 0, amount: 0 }
+    st.count++
+    st.amount += total
+    statusMap.set(r.status, st)
+
+    const client = (Array.isArray(r.clients) ? r.clients[0] : r.clients) as { name?: string; pan_vat?: string | null } | null | undefined
+    const clientName = embeddedName(r.clients)
+    const cKey = r.client_id ?? clientName
+    const cl = clientMap.get(cKey) ?? { name: clientName, count: 0, invoiced: 0, paid: 0 }
+    cl.count++
+    cl.invoiced += total
+    cl.paid += paid
+    clientMap.set(cKey, cl)
+
+    if (r.issue_date) {
+      const bm = bsMonthOf(r.issue_date)
+      if (bm) {
+        const row =
+          monthMap.get(bm.key) ??
+          ({ month: formatAdMonth(new Date(`${r.issue_date.slice(0, 10)}T12:00:00Z`)), bsMonth: bm.label, taxableSales: 0 as Paisa, vatAmount: 0 as Paisa, exemptSales: 0 as Paisa, grossSales: 0 as Paisa, invoicedTotal: 0, collectedTotal: 0 } as VatMonthlyRow & {
+            invoicedTotal: number
+            collectedTotal: number
+          })
+        row.taxableSales = (row.taxableSales + (isExempt ? 0 : taxableAmt)) as Paisa
+        row.exemptSales = (row.exemptSales + (isExempt ? taxableAmt : 0)) as Paisa
+        row.vatAmount = (row.vatAmount + vat) as Paisa
+        row.grossSales = (row.grossSales + total) as Paisa
+        row.invoicedTotal += total
+        row.collectedTotal += paid
+        monthMap.set(bm.key, row)
+      }
     }
 
-    let totalInvoiced = 0
-    let totalSubtotal = 0
-    let totalTax = 0
-    let totalDiscounts = 0
-    let totalPaid = 0
-
-    const statusCounts: Record<string, { count: number; amount: number }> = {}
-    const clientSalesMap: Record<string, { name: string; count: number; invoiced: number; paid: number }> = {}
-    const invoices: SalesInvoiceItem[] = []
-
-    for (const r of rows) {
-      const gTotal = r.grand_total ? Math.round(Number(r.grand_total) * 100) : 0
-      const sub = r.subtotal ? Math.round(Number(r.subtotal) * 100) : 0
-      const tax = r.tax_amount ? Math.round(Number(r.tax_amount) * 100) : 0
-      const disc = r.discount_amount ? Math.round(Number(r.discount_amount) * 100) : 0
-      const paid = r.paid_amount ? Math.round(Number(r.paid_amount) * 100) : 0
-
-      totalInvoiced += gTotal
-      totalSubtotal += sub
-      totalTax += tax
-      totalDiscounts += disc
-      totalPaid += paid
-
-      const st = r.status || 'Issued'
-      const curSt = statusCounts[st] || { count: 0, amount: 0 }
-      curSt.count++
-      curSt.amount += gTotal
-      statusCounts[st] = curSt
-
-      const clientObj = r.clients as { name?: string; pan_number?: string } | null
-      const cId = r.client_id || 'unknown'
-      const cName = clientObj?.name || 'Client'
-      const curCl = clientSalesMap[cId] || { name: cName, count: 0, invoiced: 0, paid: 0 }
-      curCl.count++
-      curCl.invoiced += gTotal
-      curCl.paid += paid
-      clientSalesMap[cId] = curCl
-
-      const bookingObj = r.bookings as { booking_no?: string } | null
-      invoices.push({
-        id: r.id,
-        invoiceNo: r.invoice_no,
-        bookingNo: bookingObj?.booking_no || 'BK-STANDALONE',
-        clientName: cName,
-        clientPan: clientObj?.pan_number || undefined,
-        issueDate: r.issue_date,
-        dueDate: r.due_date,
-        subtotal: rupees(Math.round(sub / 100)),
-        taxAmount: rupees(Math.round(tax / 100)),
-        grandTotal: rupees(Math.round(gTotal / 100)),
-        paidAmount: rupees(Math.round(paid / 100)),
-        status: st,
-      })
-    }
-
-    const totalCount = rows.length
-    const collectionRate = totalInvoiced > 0 ? Number(((totalPaid / totalInvoiced) * 100).toFixed(1)) : 0
-
-    const statusBreakdown: InvoiceStatusBreakdownItem[] = Object.entries(statusCounts).map(([st, val]) => ({
-      status: st,
-      count: val.count,
-      amount: rupees(Math.round(val.amount / 100)),
-      percent: Math.round((val.count / totalCount) * 100),
-    }))
-
-    const topClients: TopClientSalesItem[] = Object.entries(clientSalesMap)
-      .map(([id, val]) => ({
-        clientId: id,
-        clientName: val.name,
-        invoiceCount: val.count,
-        totalInvoiced: rupees(Math.round(val.invoiced / 100)),
-        totalPaid: rupees(Math.round(val.paid / 100)),
-        balance: rupees(Math.round(Math.max(0, val.invoiced - val.paid) / 100)),
-      }))
-      .sort((a, b) => (b.totalInvoiced as number) - (a.totalInvoiced as number))
-      .slice(0, 5)
-
-    const sales: SalesReportData = {
-      metrics: {
-        totalInvoiced: rupees(Math.round(totalInvoiced / 100)),
-        netSales: rupees(Math.round(totalSubtotal / 100)),
-        totalVat: rupees(Math.round(totalTax / 100)),
-        totalDiscounts: rupees(Math.round(totalDiscounts / 100)),
-        totalCollected: rupees(Math.round(totalPaid / 100)),
-        totalOutstanding: rupees(Math.round(Math.max(0, totalInvoiced - totalPaid) / 100)),
-        invoiceCount: totalCount,
-        collectionRate,
-      },
-      statusBreakdown,
-      monthlyTrend: MOCK_SALES.monthlyTrend,
-      topClients,
-      invoices: invoices.slice(0, 10),
-    }
-
-    const vat: VatTaxReportData = {
-      metrics: {
-        totalGrossTurnover: rupees(Math.round(totalInvoiced / 100)),
-        taxableTurnover: rupees(Math.round(totalSubtotal / 100)),
-        totalOutputVat: rupees(Math.round(totalTax / 100)),
-        exemptTurnover: rupees(0),
-        effectiveVatRate: 13.0,
-        invoicesCount: totalCount,
-      },
-      monthlySchedule: MOCK_VAT.monthlySchedule,
-      taxRegister: invoices.slice(0, 10),
-    }
-
-    return { sales, vat }
-  } catch {
-    return { sales: MOCK_SALES, vat: MOCK_VAT }
+    const booking = (Array.isArray(r.bookings) ? r.bookings[0] : r.bookings) as { booking_no?: string } | null | undefined
+    invoices.push({
+      id: r.id,
+      invoiceNo: r.invoice_no,
+      bookingNo: booking?.booking_no ?? '—',
+      clientName,
+      clientPan: client?.pan_vat?.trim() || undefined,
+      issueDate: r.issue_date ?? '',
+      dueDate: r.due_date ?? '',
+      subtotal: sub,
+      taxAmount: vat,
+      grandTotal: total,
+      paidAmount: paid,
+      status: r.status,
+    })
   }
+
+  const count = rows.length
+  const months = [...monthMap.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([, v]) => v)
+  const vatBase = taxable + exempt
+
+  const sales: SalesReportData = {
+    metrics: {
+      totalInvoiced: invoiced as Paisa,
+      netSales: net as Paisa,
+      totalVat: vatTotal as Paisa,
+      totalDiscounts: discounts as Paisa,
+      totalCollected: paidTotal as Paisa,
+      totalOutstanding: outstanding as Paisa,
+      invoiceCount: count,
+      collectionRate: invoiced > 0 ? Number(((paidTotal / invoiced) * 100).toFixed(1)) : 0,
+    },
+    statusBreakdown: [...statusMap.entries()]
+      .sort((a, b) => b[1].count - a[1].count)
+      .map(([status, v]) => ({ status, count: v.count, amount: v.amount as Paisa, percent: percentOf(v.count, count) })),
+    monthlyTrend: months.map((m) => ({ period: m.bsMonth, invoiced: m.invoicedTotal as Paisa, collected: m.collectedTotal as Paisa })),
+    topClients: [...clientMap.entries()]
+      .map(([clientId, v]) => ({
+        clientId,
+        clientName: v.name,
+        invoiceCount: v.count,
+        totalInvoiced: v.invoiced as Paisa,
+        totalPaid: v.paid as Paisa,
+        balance: Math.max(0, v.invoiced - v.paid) as Paisa,
+      }))
+      .sort((a, b) => b.totalInvoiced - a.totalInvoiced)
+      .slice(0, 5),
+    invoices: invoices.slice(0, 10),
+  }
+
+  const vat: VatTaxReportData = {
+    metrics: {
+      totalGrossTurnover: invoiced as Paisa,
+      taxableTurnover: taxable as Paisa,
+      totalOutputVat: vatTotal as Paisa,
+      exemptTurnover: exempt as Paisa,
+      effectiveVatRate: vatBase > 0 ? Number(((vatTotal / vatBase) * 100).toFixed(1)) : 0,
+      invoicesCount: count,
+    },
+    monthlySchedule: months.map(({ invoicedTotal: _i, collectedTotal: _c, ...row }) => row),
+    taxRegister: invoices.slice(0, 10),
+  }
+
+  return { sales, vat }
 }

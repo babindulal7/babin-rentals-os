@@ -1,87 +1,101 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { PageHeader, KpiStrip, cardStyle } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { PageBody } from '../../components/ui/PageBody'
 import { ReportToolbar } from '../../components/ui/ReportToolbar'
-import type { ReportCsvRow } from '../../components/ui/ReportToolbar'
+import type { ReportCsvRow, ReportFilters } from '../../components/ui/ReportToolbar'
 import {
-  EQUIPMENT_METRICS,
-  TOP_PERFORMERS,
-  WORST_PERFORMERS,
   getEquipmentPerformanceSummary,
+  type EquipmentPerformanceRow,
   type EquipmentPerformanceSummary,
 } from '../../lib/queries/equipmentPerformance'
 import { formatMoney } from '../../lib/money'
-import type { Paisa } from '../../lib/money'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
+import { useLoad } from '../../lib/queries/useLoad'
+import { NOT_TRACKED } from '../../lib/queries/reportSupport'
+import { reportFilterOptions, hasReportFilters, NoMatchRow } from './reportStates'
 
-/**
- * The export body — the same four headline figures and the same two tables the
- * page draws, in the order it draws them.
- *
- * Only ever reached from a session that passed the money gate: the toolbar is
- * not rendered at all on the restricted branch above, so there is no path from
- * a money-blind role to this function.
- */
-function equipmentCsv(): ReportCsvRow[] {
-  const performer = (p: (typeof TOP_PERFORMERS)[number]): ReportCsvRow => [
-    p.id,
-    p.name,
-    p.category,
-    formatMoney(p.revenue as Paisa),
-    `${p.utilization}%`,
-  ]
-  const columns: ReportCsvRow = ['ID', 'Name', 'Category', 'Revenue', 'Utilization']
+const cell = { padding: 'var(--sp-sm) var(--sp-md)' } as const
+const perUnit = (r: EquipmentPerformanceRow) => (r.revenuePerUnit === null ? '—' : formatMoney(r.revenuePerUnit))
 
+/** The export body — the same headline figures and tables the page draws. */
+function equipmentCsv(summary: EquipmentPerformanceSummary | null): ReportCsvRow[] {
+  if (!summary) return []
+  const row = (p: EquipmentPerformanceRow): ReportCsvRow => [p.name, p.category, p.bookings, p.units, formatMoney(p.revenue), perUnit(p)]
   return [
     ['Figure', 'Value'],
-    ['Equipment revenue', formatMoney(EQUIPMENT_METRICS.revenue as Paisa)],
-    // ROI and payback are NOT exported: nothing records what a unit cost, so
-    // they had no source. A fabricated figure that leaves the app in a file is
-    // the worst version of the defect.
-    ['Idle cost', formatMoney(EQUIPMENT_METRICS.idleCost as Paisa)],
+    ['Equipment revenue', formatMoney(summary.revenue)],
+    ['Products rented', summary.productsRented],
+    ['Utilization', NOT_TRACKED],
+    ['Idle cost', NOT_TRACKED],
     [],
-    ['Top performing equipment'],
-    columns,
-    ...TOP_PERFORMERS.map(performer),
-    [],
-    ['Equipment needing attention'],
-    columns,
-    ...WORST_PERFORMERS.map(performer),
+    ['Product', 'Category', 'Bookings', 'Units', 'Revenue', 'Revenue per Unit'],
+    ...summary.rows.map(row),
   ]
 }
 
+function PerformerTable({ label, rows }: { label: string; rows: EquipmentPerformanceRow[] }) {
+  return (
+    <section aria-label={label} style={cardStyle}>
+      <div style={{ fontSize: 'var(--t-body)', fontWeight: 600, padding: 'var(--sp-md)', borderBottom: '1px solid var(--border)' }}>{label}</div>
+      <DataTableShell ariaLabel={label}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 'var(--t-meta)', minWidth: 560 }}>
+          <thead>
+            <tr style={{ color: 'var(--text2)' }}>
+              <th style={cell}>Product</th>
+              <th style={cell}>Category</th>
+              <th style={{ ...cell, textAlign: 'right' }}>Bookings</th>
+              <th style={{ ...cell, textAlign: 'right' }}>Units</th>
+              <th style={{ ...cell, textAlign: 'right' }}>Revenue</th>
+              <th style={{ ...cell, textAlign: 'right' }}>Per Unit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 && <NoMatchRow colSpan={6} noun="products" />}
+            {rows.map((p) => (
+              <tr key={p.productId} style={{ borderTop: '1px solid var(--border)' }}>
+                <td style={{ ...cell, fontWeight: 600 }}>{p.name}</td>
+                <td style={cell}>{p.category}</td>
+                <td style={{ ...cell, textAlign: 'right' }}>{p.bookings}</td>
+                <td style={{ ...cell, textAlign: 'right' }}>{p.units}</td>
+                <td style={{ ...cell, textAlign: 'right' }}>{formatMoney(p.revenue)}</td>
+                <td style={{ ...cell, textAlign: 'right' }}>{perUnit(p)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </DataTableShell>
+    </section>
+  )
+}
+
+/**
+ * Equipment Performance.
+ *
+ * Phase 6 + Law 16: the page rendered seed performers whatever the read
+ * returned. It now draws per-product revenue from priced booking lines, through
+ * `useLoad` + `PageBody`. Utilization and idle cost say "Not tracked yet".
+ */
 export default function EquipmentPerformance() {
   const money = useCanViewMoney()
   const viewport = useViewport()
-  const [, setSummary] = useState<EquipmentPerformanceSummary | null>(null)
+  const [filters, setFilters] = useState<ReportFilters>({})
+  const filtered = hasReportFilters(filters)
+  // Law 6 — a money-blind role never sends the read.
+  const load = useLoad(() => getEquipmentPerformanceSummary(reportFilterOptions(filters)), {
+    key: JSON.stringify(filters),
+    enabled: money,
+  })
+  const summary = load.data
 
-  useEffect(() => {
-    let active = true
-    void getEquipmentPerformanceSummary().then((res) => {
-      if (active) setSummary(res)
-    })
-    return () => {
-      active = false
-    }
-  }, [])
-
-  /*
-   * Law 6. Every figure on this page is money or a ratio derived from it, so
-   * there is no money-free version to show. The page used to say so in a plain
-   * `<Card>`; it now renders the shared RESTRICTED state, which names the roles
-   * to ask instead of leaving the reader to guess — and no toolbar is drawn
-   * above it, because an Export button over data the role may not read would be
-   * a route around the gate.
-   */
   if (!money) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-        <PageHeader icon="activity" title="Equipment Performance" description="Revenue, utilization and idle cost across the fleet. ROI and payback need a purchase-cost column no table provides." />
+        <PageHeader icon="activity" title="Equipment Performance" description="Revenue per product and per unit in service." />
         <PageBody
           restricted
-          restrictedReason="Equipment performance is reported entirely in money — revenue, ROI, payback and idle cost — so there is no version of this page your role can see."
+          restrictedReason="Equipment performance is reported entirely in money, so there is no version of this page your role can see."
           restrictedRequiredRole="Owner, Admin, Coordinator or Accounts"
         >
           {null}
@@ -92,124 +106,49 @@ export default function EquipmentPerformance() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-      <PageHeader
-        icon="activity"
+      <PageHeader icon="activity" title="Equipment Performance" description="Revenue per product and per unit in service." />
+
+      <ReportToolbar
         title="Equipment Performance"
-        description="Revenue, utilization and idle cost across the fleet. ROI and payback need a purchase-cost column no table provides."
+        value={filters}
+        onChange={setFilters}
+        dateColumn="pickup_at"
+        csv={{ filename: 'equipment-performance', build: () => equipmentCsv(summary) }}
       />
 
-      {/*
-        No date range and no branch: `data/equipmentPerformance` is three
-        pre-aggregated constants with neither a date nor a branch column on any
-        row, so either control would move the label and not one figure. They
-        arrive by passing two more props the day this report reads Postgres.
-      */}
-      <ReportToolbar title="Equipment Performance" csv={{ filename: 'equipment-performance', build: equipmentCsv }} />
-
-      {/* The shared strip — typed items, icon tile drawn, viewport clamp built
-          in. The old hand-rolled `PerfKpiCard` was `any`-typed and silently
-          dropped its `icon` prop ("clock" was not even a registry name — never
-          caught, because nothing rendered it).
-
-          Rulings §8 — "a report with no data source shows 'not tracked yet',
-          never zeros… Never seed a plausible default." Return on investment
-          and payback both need what each unit cost; no migration provides a
-          purchase-cost column, so both state the gap instead of printing
-          1.45x and 8.2 months. */}
-      <KpiStrip
-        columns={viewport === 'phone' ? 1 : viewport === 'tablet' ? 2 : 4}
-        items={[
-          {
-            label: 'Equipment Revenue',
-            value: formatMoney(EQUIPMENT_METRICS.revenue as Paisa),
-            icon: 'dollar',
-            accent: 'primary',
-            note: 'Generated by fleet',
-          },
-          {
-            label: 'Average ROI',
-            value: 'Not tracked yet',
-            icon: 'chart',
-            accent: 'neutral',
-            note: 'Needs a purchase-cost column, which no table provides',
-          },
-          {
-            label: 'Avg Payback Period',
-            value: 'Not tracked yet',
-            icon: 'timer',
-            accent: 'neutral',
-            note: 'Cannot be derived without unit cost',
-          },
-          {
-            label: 'Idle Cost',
-            value: formatMoney(EQUIPMENT_METRICS.idleCost as Paisa),
-            icon: 'alert_triangle',
-            accent: 'progress',
-            note: 'Opportunity cost of unrented gear',
-          },
-        ]}
-      />
-
-      {/* Rulings §7 — these tables are the report's CONTENT, not a rail. They
-          used to be passed into `ReflowRail`, which at desktop is a 288px
-          sticky collapsible box, so the whole report rendered inside one
-          self-scrolling rail. There is no aside content on this page, so there
-          is no rail at all. */}
-      <section aria-label="Top Performing Equipment" style={cardStyle}>
-        <div style={{ fontSize: 'var(--t-body)', fontWeight: 600, padding: 'var(--sp-md)', borderBottom: '1px solid var(--border)' }}>Top Performing Equipment</div>
-        <DataTableShell ariaLabel="Top Performing Equipment">
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 'var(--t-meta)', minWidth: 520 }}>
-            <thead>
-              <tr style={{ color: 'var(--text2)' }}>
-                <th style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>ID</th>
-                <th style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>Name</th>
-                <th style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>Category</th>
-                <th style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>Revenue</th>
-                <th style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>Utilization</th>
-              </tr>
-            </thead>
-            <tbody>
-              {TOP_PERFORMERS.map((p) => (
-                <tr key={p.id} style={{ borderTop: '1px solid var(--border)' }}>
-                  <td style={{ padding: 'var(--sp-sm) var(--sp-md)', fontWeight: 600 }}>{p.id}</td>
-                  <td style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>{p.name}</td>
-                  <td style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>{p.category}</td>
-                  <td style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>{formatMoney(p.revenue as Paisa)}</td>
-                  <td style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>{p.utilization}%</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </DataTableShell>
-      </section>
-
-      <section aria-label="Worst Performing Equipment" style={cardStyle}>
-        <div style={{ fontSize: 'var(--t-body)', fontWeight: 600, padding: 'var(--sp-md)', borderBottom: '1px solid var(--border)' }}>Equipment Needing Attention</div>
-        <DataTableShell ariaLabel="Equipment Needing Attention">
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 'var(--t-meta)', minWidth: 520 }}>
-            <thead>
-              <tr style={{ color: 'var(--text2)' }}>
-                <th style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>ID</th>
-                <th style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>Name</th>
-                <th style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>Category</th>
-                <th style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>Revenue</th>
-                <th style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>Utilization</th>
-              </tr>
-            </thead>
-            <tbody>
-              {WORST_PERFORMERS.map((p) => (
-                <tr key={p.id} style={{ borderTop: '1px solid var(--border)' }}>
-                  <td style={{ padding: 'var(--sp-sm) var(--sp-md)', fontWeight: 600 }}>{p.id}</td>
-                  <td style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>{p.name}</td>
-                  <td style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>{p.category}</td>
-                  <td style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>{formatMoney(p.revenue as Paisa)}</td>
-                  <td style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>{p.utilization}%</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </DataTableShell>
-      </section>
+      <PageBody
+        noun="equipment figures"
+        loading={load.loading}
+        error={load.error}
+        onRetry={load.reload}
+        hasRows={summary !== null}
+        skeleton="kpi"
+        empty={summary !== null && summary.rows.length === 0}
+        emptyIsFiltered={filtered}
+        onClearFilters={() => setFilters({})}
+        emptyTitle={filtered ? 'No equipment rented in this period' : 'No equipment yet'}
+        emptyMessage={
+          filtered
+            ? 'Nothing was picked up in the selected period or branch. Clear the filters to see every product.'
+            : 'Figures appear here once products are added to Inventory and rented.'
+        }
+      >
+        {summary && (
+          <>
+            <KpiStrip
+              columns={viewport === 'phone' ? 1 : viewport === 'tablet' ? 2 : 4}
+              items={[
+                { label: 'Equipment Revenue', value: formatMoney(summary.revenue), icon: 'dollar', accent: 'primary', note: 'Priced lines on bookings, not cancelled' },
+                { label: 'Products Rented', value: String(summary.productsRented), icon: 'box', accent: 'neutral', note: `of ${summary.rows.length} with units or revenue` },
+                { label: 'Utilization', value: NOT_TRACKED, icon: 'chart', accent: 'neutral', note: 'Needs unit state history over time' },
+                { label: 'Idle Cost', value: NOT_TRACKED, icon: 'alert_triangle', accent: 'neutral', note: 'Needs unit state history over time' },
+              ]}
+            />
+            <PerformerTable label="Top Performing Equipment" rows={summary.topPerformers} />
+            <PerformerTable label="Lowest Revenue per Unit" rows={summary.worstPerformers} />
+          </>
+        )}
+      </PageBody>
     </div>
   )
 }

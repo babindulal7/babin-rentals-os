@@ -1,185 +1,211 @@
 import { supabase } from '../supabase'
 import { rupees, type Paisa } from '../money'
-import {
-  PERIOD_START,
-  PERIOD_END,
-  CASH_LINES,
-  OPENING_CASH,
-  INVOICED,
-  PAPER_PROFIT,
-  DEPOSITS_HELD,
-  OPERATING_BURN,
-  cashIn,
-  operatingOut,
-  capexOut,
-  netOperatingCash,
-  netCash,
-  closingCash,
-  collectionRate,
-  uncollected,
-  runwayMonths,
-  profitToCashGap,
-  collectionUpside,
-  POSITION,
-  untrackedLines,
-  LIABILITIES_ARE_COMPLETE,
-  ASSETS_ARE_COMPLETE,
-  CASH_CONVERSION_DAYS,
-  CASH_CONVERSION_DAYS_PRIOR,
-  currentAssets,
-  currentLiabilities,
-  receivables,
-  workingCapital,
-  workingCapitalCeiling,
-  currentRatio,
-  freeCash,
-  freeCashMonths,
-  receivableShare,
-  cashPerDayOfCycle,
-  cycleUpside,
-  OVERDUE,
-  type CashLine,
-  type CashKind,
-  type PositionLine,
-} from '../../data/liquidityReports'
-
-export {
-  PERIOD_START,
-  PERIOD_END,
-  CASH_LINES,
-  OPENING_CASH,
-  INVOICED,
-  PAPER_PROFIT,
-  DEPOSITS_HELD,
-  OPERATING_BURN,
-  cashIn,
-  operatingOut,
-  capexOut,
-  netOperatingCash,
-  netCash,
-  closingCash,
-  collectionRate,
-  uncollected,
-  runwayMonths,
-  profitToCashGap,
-  collectionUpside,
-  POSITION,
-  untrackedLines,
-  LIABILITIES_ARE_COMPLETE,
-  ASSETS_ARE_COMPLETE,
-  CASH_CONVERSION_DAYS,
-  CASH_CONVERSION_DAYS_PRIOR,
-  currentAssets,
-  currentLiabilities,
-  receivables,
-  workingCapital,
-  workingCapitalCeiling,
-  currentRatio,
-  freeCash,
-  freeCashMonths,
-  receivableShare,
-  cashPerDayOfCycle,
-  cycleUpside,
-  OVERDUE,
-}
-
-export type { CashLine, CashKind, PositionLine }
-
-export interface LiquiditySummary {
-  invoiced: Paisa
-  collected: Paisa
-  expenses: Paisa
-  depositsHeld: Paisa
-  collectionRatePct: number
-  lines: CashLine[]
-  position: PositionLine[]
-}
+import { rowsOf, type ReportFilterOptions } from './reportSupport'
 
 /**
- * Reads the live liquidity metrics from PostgreSQL ledgers:
- * - `payments`: client collections
- * - `invoices`: total invoiced & receivables
- * - `expenses`: operating disbursements
- * - `security_deposits`: deposits held in trust
+ * Cash Flow and Working Capital — read from the ledgers, never from a seed.
  *
- * If the database tables return empty (or during unseeded mock/test mode),
- * gracefully falls back to the canonical calibrated ledger from `data/liquidityReports`.
+ * RULING 2026-10-16 (R-P6-STATES, Law 16): `getLiquiditySummary` read the
+ * ledgers, then both pages discarded the result and rendered
+ * `data/liquidityReports` — one invented closed month, an invented opening
+ * balance, an invented Rs 56,000 equipment purchase — on every path. The read
+ * itself was wrong three ways:
+ *   - it filtered `payments.status = 'Completed'`, which is not a
+ *     `payment_status` value (Received · Refunded · Failed · Cancelled, 0001):
+ *     Postgres rejects the literal, so "collected" could never be read. It is
+ *     `'Received'` (the same bug Pulse had — RULINGS-2026-10-16);
+ *   - it selected `invoices.total` / `balance`, which do not exist (0006:
+ *     `total_amount`, `outstanding_amount`);
+ *   - it summed every payment, deposits included — but a deposit is a
+ *     liability, never revenue or own cash (Law 4).
+ *
+ * Both reads now throw on failure (Error + Retry) and return honest zeros on
+ * an empty period. What no table records — the bank balance, so opening and
+ * closing cash, runway, capital spend, and therefore working capital itself —
+ * is `null`, which the pages print as "Not tracked yet".
+ * Revert = restore `getLiquiditySummary` and its `catch`.
  */
-export async function getLiquiditySummary(): Promise<LiquiditySummary> {
-  try {
-    const [paymentsRes, invoicesRes, expensesRes, depositsRes] = await Promise.all([
-      supabase.from('payments').select('id, amount, status').eq('status', 'Completed'),
-      supabase.from('invoices').select('id, total, balance, status'),
-      supabase.from('expenses').select('id, amount, status'),
-      supabase.from('security_deposits').select('id, amount, status'),
-    ])
 
-    const payments = paymentsRes.data ?? []
-    const invoices = invoicesRes.data ?? []
-    const expenses = expensesRes.data ?? []
-    const deposits = depositsRes.data ?? []
+const money = (v: number | string | null | undefined): Paisa => rupees(Number(v ?? 0) || 0)
+const sum = <T,>(rows: T[], f: (r: T) => number): Paisa => rows.reduce((a, r) => a + f(r), 0) as Paisa
+const DAY = 86_400_000
 
-    if (payments.length === 0 && invoices.length === 0 && expenses.length === 0) {
-      return {
-        invoiced: INVOICED,
-        collected: cashIn(),
-        expenses: operatingOut(),
-        depositsHeld: DEPOSITS_HELD,
-        collectionRatePct: collectionRate(),
-        lines: CASH_LINES,
-        position: POSITION,
-      }
+export interface ExpenseCategoryLine {
+  category: string
+  amount: Paisa
+}
+
+export interface CashFlowSummary {
+  /** Rental payments received in the period (Advance Payment, status Received). */
+  collected: Paisa
+  /** Refund payments made in the period. */
+  refunds: Paisa
+  /** Expenses with status Paid, by expense date. */
+  expensesPaid: Paisa
+  expensesByCategory: ExpenseCategoryLine[]
+  /** collected − refunds − expensesPaid. */
+  netOperatingCash: Paisa
+  /** Deposits taken and given back in the period — held in trust, not own cash (Law 4). */
+  depositsReceived: Paisa
+  depositsReleased: Paisa
+  /** Invoices issued in the period (not Draft/Void). */
+  invoiced: Paisa
+  /** collected ÷ invoiced; null when nothing was invoiced. */
+  collectionRatePct: number | null
+  /** No bank balance is recorded anywhere, so these have no source. */
+  openingCash: null
+  closingCash: null
+  capitalSpend: null
+  runwayMonths: null
+}
+
+export async function getCashFlowSummary(options: ReportFilterOptions = {}): Promise<CashFlowSummary> {
+  let paymentsQ = supabase.from('payments').select('amount, payment_type').eq('status', 'Received')
+  let expensesQ = supabase.from('expenses').select('amount, category_id').eq('status', 'Paid')
+  let movementsQ = supabase.from('deposit_movements').select('movement_type, amount')
+  let invoicesQ = supabase.from('invoices').select('total_amount').neq('status', 'Draft').neq('status', 'Void').is('voided_at', null)
+  if (options.from) {
+    paymentsQ = paymentsQ.gte('payment_date', options.from)
+    expensesQ = expensesQ.gte('expense_date', options.from)
+    movementsQ = movementsQ.gte('created_at', options.from)
+    invoicesQ = invoicesQ.gte('issue_date', options.from)
+  }
+  if (options.to) {
+    paymentsQ = paymentsQ.lte('payment_date', options.to)
+    expensesQ = expensesQ.lte('expense_date', options.to)
+    movementsQ = movementsQ.lte('created_at', options.to)
+    invoicesQ = invoicesQ.lte('issue_date', options.to)
+  }
+  if (options.branchId) {
+    paymentsQ = paymentsQ.eq('branch_id', options.branchId)
+    expensesQ = expensesQ.eq('branch_id', options.branchId)
+    invoicesQ = invoicesQ.eq('branch_id', options.branchId)
+  }
+
+  const [paymentsRes, expensesRes, categoriesRes, movementsRes, invoicesRes] = await Promise.all([
+    paymentsQ,
+    expensesQ,
+    supabase.from('expense_categories').select('id, name'),
+    movementsQ,
+    invoicesQ,
+  ])
+  const payments = rowsOf<{ amount: number | string | null; payment_type: string }>(paymentsRes, 'Payments read failed')
+  const expenses = rowsOf<{ amount: number | string | null; category_id: string | null }>(expensesRes, 'Expenses read failed')
+  const categories = rowsOf<{ id: string; name: string | null }>(categoriesRes, 'Expense categories read failed')
+  const movements = rowsOf<{ movement_type: string; amount: number | string | null }>(movementsRes, 'Deposit movements read failed')
+  const invoices = rowsOf<{ total_amount: number | string | null }>(invoicesRes, 'Invoices read failed')
+
+  const collected = sum(payments.filter((p) => p.payment_type === 'Advance Payment'), (p) => money(p.amount))
+  const refunds = sum(payments.filter((p) => p.payment_type === 'Refund'), (p) => money(p.amount))
+  const expensesPaid = sum(expenses, (e) => money(e.amount))
+  const invoiced = sum(invoices, (i) => money(i.total_amount))
+
+  const categoryName = new Map(categories.map((c) => [c.id, c.name?.trim() || '—']))
+  const byCat = new Map<string, number>()
+  for (const e of expenses) {
+    const name = (e.category_id && categoryName.get(e.category_id)) || 'Uncategorised'
+    byCat.set(name, (byCat.get(name) ?? 0) + money(e.amount))
+  }
+
+  return {
+    collected,
+    refunds,
+    expensesPaid,
+    expensesByCategory: [...byCat.entries()].map(([category, amount]) => ({ category, amount: amount as Paisa })).sort((a, b) => b.amount - a.amount),
+    netOperatingCash: (collected - refunds - expensesPaid) as Paisa,
+    depositsReceived: sum(movements.filter((m) => m.movement_type === 'Received'), (m) => money(m.amount)),
+    depositsReleased: sum(movements.filter((m) => m.movement_type === 'Released'), (m) => money(m.amount)),
+    invoiced,
+    collectionRatePct: invoiced > 0 ? Math.round((collected / invoiced) * 100) : null,
+    openingCash: null,
+    closingCash: null,
+    capitalSpend: null,
+    runwayMonths: null,
+  }
+}
+
+export interface ReceivableAgeing {
+  label: string
+  amount: Paisa
+  invoices: number
+}
+
+export interface WorkingCapitalSummary {
+  /** Outstanding on open invoices (Sent · Partially Paid · Overdue), now. */
+  receivables: Paisa
+  overdueReceivables: Paisa
+  ageing: ReceivableAgeing[]
+  /** Deposits held in trust now: received − refunded − applied (Law 4 — a liability). */
+  depositsHeld: Paisa
+  /** Expenses approved but not yet paid — the only payable the schema records. */
+  approvedUnpaidExpenses: Paisa
+  /** Days sales outstanding: receivables ÷ (invoiced over the last 90 days ÷ 90); null with no recent invoicing. */
+  daysSalesOutstanding: number | null
+  /** No bank balance and no supplier-invoice table: these have no source. */
+  cash: null
+  workingCapital: null
+  currentRatio: null
+}
+
+const OPEN_STATUSES = ['Sent', 'Partially Paid', 'Overdue']
+
+export async function getWorkingCapitalSummary(
+  options: Pick<ReportFilterOptions, 'branchId'> = {},
+  now: Date = new Date(),
+): Promise<WorkingCapitalSummary> {
+  const since = new Date(now.getTime() - 90 * DAY).toISOString().slice(0, 10)
+  let openQ = supabase.from('invoices').select('outstanding_amount, due_date').in('status', OPEN_STATUSES).is('voided_at', null)
+  let recentQ = supabase.from('invoices').select('total_amount').neq('status', 'Draft').neq('status', 'Void').is('voided_at', null).gte('issue_date', since)
+  let depositsQ = supabase.from('security_deposits').select('received_amount, refunded_amount, applied_amount')
+  let expensesQ = supabase.from('expenses').select('amount').eq('status', 'Approved')
+  if (options.branchId) {
+    openQ = openQ.eq('branch_id', options.branchId)
+    recentQ = recentQ.eq('branch_id', options.branchId)
+    depositsQ = depositsQ.eq('branch_id', options.branchId)
+    expensesQ = expensesQ.eq('branch_id', options.branchId)
+  }
+  const [openRes, recentRes, depositsRes, expensesRes] = await Promise.all([openQ, recentQ, depositsQ, expensesQ])
+  const open = rowsOf<{ outstanding_amount: number | string | null; due_date: string | null }>(openRes, 'Open invoices read failed')
+  const recent = rowsOf<{ total_amount: number | string | null }>(recentRes, 'Recent invoices read failed')
+  const deposits = rowsOf<{ received_amount: number | string | null; refunded_amount: number | string | null; applied_amount: number | string | null }>(
+    depositsRes,
+    'Security deposits read failed',
+  )
+  const expenses = rowsOf<{ amount: number | string | null }>(expensesRes, 'Expenses read failed')
+
+  const buckets = [
+    { label: 'Not yet due', min: -Infinity, max: 0 },
+    { label: '1–30 days', min: 1, max: 30 },
+    { label: '31–60 days', min: 31, max: 60 },
+    { label: '61–90 days', min: 61, max: 90 },
+    { label: '90+ days', min: 91, max: Infinity },
+  ].map((b) => ({ ...b, amount: 0, invoices: 0 }))
+  let receivables = 0
+  let overdue = 0
+  for (const o of open) {
+    const amt = money(o.outstanding_amount)
+    if (amt <= 0) continue
+    receivables += amt
+    const due = Date.parse(o.due_date ?? '')
+    const days = Number.isNaN(due) ? 0 : Math.floor((now.getTime() - due) / DAY)
+    if (days > 0) overdue += amt
+    const bucket = buckets.find((b) => days >= b.min && days <= b.max)
+    if (bucket) {
+      bucket.amount += amt
+      bucket.invoices++
     }
+  }
+  const recentInvoiced = sum(recent, (i) => money(i.total_amount))
 
-    const collectedPaisa = rupees(payments.reduce((acc, p) => acc + (Number(p.amount) || 0), 0))
-    const invoicedPaisa = rupees(invoices.reduce((acc, i) => acc + (Number(i.total) || 0), 0))
-    const expensesPaisa = rupees(expenses.reduce((acc, e) => acc + (Number(e.amount) || 0), 0))
-    const depositsPaisa = rupees(deposits.reduce((acc, d) => acc + (Number(d.amount) || 0), 0))
-
-    const computedCollectionRate =
-      (invoicedPaisa as number) > 0
-        ? Math.round(((collectedPaisa as number) / (invoicedPaisa as number)) * 100)
-        : collectionRate()
-
-    const liveLines: CashLine[] = [
-      {
-        label: 'Cash in — client collections',
-        detail: 'invoices settled this period',
-        kind: 'in',
-        amount: collectedPaisa,
-      },
-      {
-        label: 'Cash out — operating',
-        detail: 'rent, salary, maintenance, transport',
-        kind: 'operating',
-        amount: -Math.abs(expensesPaisa as number) as Paisa,
-      },
-      {
-        label: 'Cash out — equipment purchase',
-        detail: 'capex, one-off',
-        kind: 'capex',
-        amount: rupees(-56_000),
-      },
-    ]
-
-    return {
-      invoiced: invoicedPaisa,
-      collected: collectedPaisa,
-      expenses: expensesPaisa,
-      depositsHeld: depositsPaisa,
-      collectionRatePct: computedCollectionRate,
-      lines: liveLines,
-      position: POSITION,
-    }
-  } catch {
-    return {
-      invoiced: INVOICED,
-      collected: cashIn(),
-      expenses: operatingOut(),
-      depositsHeld: DEPOSITS_HELD,
-      collectionRatePct: collectionRate(),
-      lines: CASH_LINES,
-      position: POSITION,
-    }
+  return {
+    receivables: receivables as Paisa,
+    overdueReceivables: overdue as Paisa,
+    ageing: buckets.map((b) => ({ label: b.label, amount: b.amount as Paisa, invoices: b.invoices })),
+    depositsHeld: sum(deposits, (d) => Math.max(0, money(d.received_amount) - money(d.refunded_amount) - money(d.applied_amount))),
+    approvedUnpaidExpenses: sum(expenses, (e) => money(e.amount)),
+    daysSalesOutstanding: recentInvoiced > 0 ? Math.round(receivables / (recentInvoiced / 90)) : null,
+    cash: null,
+    workingCapital: null,
+    currentRatio: null,
   }
 }
