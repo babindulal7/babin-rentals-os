@@ -13071,6 +13071,8 @@ export type Database = {
         | "Crew Charges"
         | "Transport"
         | "Late Fee"
+        | "Damage"
+        | "Missing"
       location_kind:
         | "Warehouse"
         | "Case"
@@ -14542,6 +14544,8 @@ export const Constants = {
         "Crew Charges",
         "Transport",
         "Late Fee",
+        "Damage",
+        "Missing",
       ],
       location_kind: [
         "Warehouse",

@@ -168,6 +168,8 @@ export type LineKind =
   | 'Crew Charges'
   | 'Transport'
   | 'Late Fee'
+  | 'Damage'
+  | 'Missing'
 export type ChannelCode = 'WhatsApp' | 'Email' | 'SMS' | 'In-App'
 export type VehicleType = 'Pickup Van' | 'Mini Truck' | 'SUV' | 'Generator Vehicle'
 export type DocumentLifecycleStatus = 'Draft' | 'Pending Approval' | 'Pending Signature' | 'Signed' | 'Issued' | 'Void' | 'Expired'
@@ -593,6 +595,79 @@ export interface Database {
           created_by: string
         }
         Update: Partial<Database['public']['Tables']['inventory_reservations']['Insert']>
+      }
+
+      /**
+       * `0002_inventory_tracking.sql:210` — The canonical physical serialized asset units table.
+       */
+      product_units: {
+        Row: {
+          id: string
+          client_uuid: string
+          product_id: string
+          branch_id: string
+          warehouse_id: string
+          storage_zone_id: string | null
+          asset_tag: string
+          serial_no: string | null
+          barcode: string | null
+          qr_code: string | null
+          status: InventoryState
+          condition: PhysicalCondition
+          rack: string | null
+          shelf: string | null
+          bin: string | null
+          purchase_date: string | null
+          purchase_price: number | null
+          replacement_value: number | null
+          container_id: string | null
+          running_hours: number
+          last_maintenance_at: string | null
+          next_maintenance_at: string | null
+          warranty_expires_at: string | null
+          insurance_expires_at: string | null
+          retired_at: string | null
+          retired_by: string | null
+          retirement_reason: string | null
+          created_at: string
+          created_by: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          client_uuid: string
+          product_id: string
+          branch_id: string
+          warehouse_id: string
+          storage_zone_id?: string | null
+          asset_tag: string
+          serial_no?: string | null
+          barcode?: string | null
+          qr_code?: string | null
+          status?: InventoryState
+          condition?: PhysicalCondition
+          rack?: string | null
+          shelf?: string | null
+          bin?: string | null
+          purchase_date?: string | null
+          purchase_price?: number | null
+          replacement_value?: number | null
+          container_id?: string | null
+          running_hours?: number
+          last_maintenance_at?: string | null
+          next_maintenance_at?: string | null
+          warranty_expires_at?: string | null
+          insurance_expires_at?: string | null
+          retired_at?: string | null
+          retired_by?: string | null
+          retirement_reason?: string | null
+          created_at?: string
+          created_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['product_units']['Insert']>
       }
 
       inventory_units: {
