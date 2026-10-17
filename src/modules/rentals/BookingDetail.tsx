@@ -28,6 +28,7 @@ import type { BookingStatus } from '../../lib/workflow'
 import { NON_PACKABLE_LINE_TYPES } from '../../lib/bookingLineTypes'
 import BookingOperationsMenu from './BookingOperationsMenu'
 import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext'
+import { jobForStage } from '../../data/operations'
 import { useDomainEvent } from '../../events/useDomainEvent'
 import { EVENT_TYPES } from '../../events/eventBus'
 import { Unavailable } from '../../components/ui/Unavailable'
@@ -38,6 +39,7 @@ import {
   canRecordPayment,
   canIssueInvoice,
   canPerformOperations,
+  canPerformOp,
   canWriteBookingDesk,
   canCloseRental,
 } from '../../lib/rbac'
@@ -1817,6 +1819,20 @@ function BookingDetailView() {
   const awaitingReturn =
     booking.stage === 'On Rent' && !booking.isClosed && !booking.isCancelled && booking.actualReturnAtAd === null
 
+  // Per-operation grant (P0-B): the primary action button is gated by the
+  // specific operation this stage advances (Pack/Handover/Return/Reset), not by
+  // the coarse "may touch operations at all" flag, so a Technician no longer
+  // sees a Handover button even though they may pack and reset.
+  const stageJob = stage ? jobForStage(stage as never) : null
+  const canOperatePrimary =
+    isServiceOnly
+      ? canOperate
+      : stageJob
+        ? user
+          ? canPerformOp(user.role, stageJob.toLowerCase() as 'pack' | 'handover' | 'return' | 'reset')
+          : false
+        : canOperate
+
   const primaryAction = getRentalPrimaryAction(stage, {
     isCancelled: booking.isCancelled,
     isClosed: booking.isClosed,
@@ -1828,7 +1844,7 @@ function BookingDetailView() {
       Boolean(booking.returnAtAd && new Date(booking.returnAtAd) < new Date()),
     isServiceOnly,
     canCloseRental: canCloseRental(gctx.role),
-    canOperate,
+    canOperate: canOperatePrimary,
     cancelledReason,
     operationsUnavailable,
     bookingNo: booking.bookingNo,

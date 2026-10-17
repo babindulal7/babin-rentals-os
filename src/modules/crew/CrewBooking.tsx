@@ -450,7 +450,7 @@ export function CrewBooking() {
             {
               id: 'Booked',
               label: 'ON SET TODAY',
-              value: String(crewBookedToday),
+              count: String(crewBookedToday),
               subtitle: 'Confirmed shoot day is today',
               icon: 'crew',
               tone: 'emerald',
@@ -460,7 +460,7 @@ export function CrewBooking() {
             {
               id: 'Available',
               label: 'ROSTER AVAILABLE',
-              value: String(roster.available),
+              count: String(roster.available),
               subtitle: `${roster.total} crew members on roster`,
               icon: 'check',
               tone: 'emerald',
@@ -470,7 +470,7 @@ export function CrewBooking() {
             {
               id: 'Conflicts',
               label: 'CONFLICTS & ALERTS',
-              value: String(conflicts.length + travelWarnings.length),
+              count: String(conflicts.length + travelWarnings.length),
               subtitle: `${crewDays} shoot days · ${fill.pct}% role fill rate`,
               icon: 'alert_triangle',
               tone: conflicts.length > 0 ? 'red' : 'neutral',
@@ -492,23 +492,24 @@ export function CrewBooking() {
           searchValue={searchQuery}
           onSearchChange={setSearchQuery}
           searchPlaceholder="Search crew, role, production… (press /)"
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-xs)' }}>
-            <Select
-              aria-label="Filter crew by role"
-              value={selectedRole}
-              onChange={(event) => setSelectedRole(event.target.value)}
-              style={{ minHeight: 44, fontSize: 'var(--t-meta)' }}
-            >
-              <option value="">All roles</option>
-              {roles.map((role) => (
-                <option key={role} value={role}>
-                  {role}
-                </option>
-              ))}
-            </Select>
-          </div>
-        </ModuleFilterBar>
+          dropdownFilters={
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-xs)' }}>
+              <Select
+                aria-label="Filter crew by role"
+                value={selectedRole}
+                onChange={(event) => setSelectedRole(event.target.value)}
+                style={{ minHeight: 44, fontSize: 'var(--t-meta)' }}
+              >
+                <option value="">All roles</option>
+                {roles.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          }
+        />
 
           {/* Calendar + tables (left) · rail (right).
               One column below 1280 so the rail's sections reflow beneath the

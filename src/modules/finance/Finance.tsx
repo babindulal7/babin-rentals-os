@@ -1979,7 +1979,7 @@ export default function Finance() {
  */
 function StatusBadge({ row }: { row: InvoiceListRow }) {
   const label = row.isVoid ? 'Void' : row.status
-  const tone = row.isVoid ? 'red' : label === 'Paid' ? 'emerald' : label === 'Partially Paid' ? 'amber' : label === 'Sent' ? 'blue' : 'neutral'
+  const tone = row.isVoid ? 'red' : label === 'Paid' ? 'emerald' : label === 'Partially Paid' ? 'amber' : label === 'Sent' ? 'blue' : 'slate'
   const icon: IconName = row.isVoid ? 'alert_triangle' : label === 'Paid' ? 'check' : label === 'Partially Paid' ? 'timer' : label === 'Sent' ? 'sparkles' : 'queues'
   return <StatusPill tone={tone} label={label} icon={icon} />
 }
