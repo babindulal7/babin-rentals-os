@@ -1116,6 +1116,8 @@ export function toRentalListRow(
     flags,
     ...(isOverdue
       ? { statusNote: lateDays > 0 ? `${lateDays} day${lateDays === 1 ? '' : 's'} late` : 'Late today' }
+      : (row.stage === 'Booked' || row.stage === 'Packed') && !row.isCancelled && row.pickupAtAd && row.pickupAtAd < nowAd
+        ? { statusNote: 'Overdue pickup' }
       : row.stage === 'Quote' && !row.isCancelled && row.quoteExpiresAtAd && row.quoteExpiresAtAd < nowAd
         ? { statusNote: 'Quote expired' }
       : row.stage === 'Quote' && !row.isCancelled && row.pickupAtAd < nowAd

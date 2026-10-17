@@ -1,10 +1,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { readFileSync, readdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { PGlite } from '@electric-sql/pglite'
+import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto'
+import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { FILES, PROJECT, prepareMigration, pendingMigrations, cutoverConnection, applyPending, verifyBackup } from './cutover-user-run.mjs'
@@ -99,5 +101,27 @@ test('PGlite: a ledger failure also rolls back the migration body', async () => 
     const migration = prepareMigration(FILES[0], 'begin; create table must_rollback(id integer); commit;')
     await assert.rejects(() => applyPending({ query: (sql, params) => params ? db.query(sql, params) : db.exec(sql) }, [migration], baseline), /Stopped/)
     assert.equal((await db.query("select to_regclass('must_rollback') as name")).rows[0].name, null)
+  } finally { await db.close() }
+})
+
+test('local rehearsal executes the actual curated batch and skips already-applied 0164', async () => {
+  const db = await PGlite.create({ extensions: { pgcrypto, btree_gist } })
+  const directory = new URL('../supabase/migrations/', import.meta.url)
+  try {
+    await db.exec(readFileSync(new URL('../supabase/pglite-prelude.sql', import.meta.url), 'utf8'))
+    // Local fixture construction only: historical seeds never enter the runner manifest.
+    for (const file of readdirSync(directory).filter(file => file.endsWith('.sql') && Number(file.slice(0, 4)) <= 156).sort()) {
+      await db.exec(readFileSync(new URL(file, directory), 'utf8'))
+    }
+    await db.exec(readFileSync(new URL('0164_booking_discount_vat_payment_integrity.sql', directory), 'utf8'))
+    await db.exec('create schema if not exists supabase_migrations; create table if not exists supabase_migrations.schema_migrations(version text primary key, name text);')
+    const ledger = [...baseline, { version: 'V164', name: '0164_booking_discount_vat_payment_integrity' }]
+    for (const row of ledger) await db.query('insert into supabase_migrations.schema_migrations values($1,$2)', [row.version, row.name])
+    const receipts = await applyPending({ query: (sql, params) => params ? db.query(sql, params) : db.exec(sql) }, prepared, ledger)
+    assert.equal(receipts.length, 12)
+    assert.ok(!receipts.some(row => row.file.startsWith('0164')))
+    const final = (await db.query('select version,name from supabase_migrations.schema_migrations')).rows
+    assert.equal(pendingMigrations(prepared, final).length, 0)
+    assert.equal((await db.query("select count(*)::int as n from information_schema.columns where table_schema='public' and table_name='booking_lines' and column_name in ('line_total','price_breakdown')")).rows[0].n, 2)
   } finally { await db.close() }
 })

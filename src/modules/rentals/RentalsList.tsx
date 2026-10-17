@@ -219,7 +219,7 @@ function draftToRentalListRow(d: RentalDraftRecord): RentalListRow {
     status: 'Draft' as unknown as BookingStatus,
     statusKey: 'neutral',
     flags: [],
-    ...(data.pickup && data.pickup < getBusinessToday().toISOString().slice(0, 10) ? { statusNote: 'Pickup date passed' } : {}),
+    ...(data.pickup && data.pickup < getBusinessToday().toISOString().slice(0, 10) ? { statusNote: 'Expired dates' } : {}),
     isCancelled: false,
     isClosed: false,
     isOverdue: false,
@@ -2619,12 +2619,23 @@ export default function RentalsList() {
                                 "Awaiting inspection" restated the pill. */}
                             {r.statusNote && (
                               <span
+                                className="whitespace-nowrap text-[11px]"
+                                title={r.statusNote}
                                 style={{
-                                  display: 'block',
+                                  display: 'inline-block',
                                   marginTop: 4,
-                                  fontSize: 'var(--t-meta)',
+                                  fontSize: 11,
                                   fontWeight: 600,
-                                  color: 'var(--danger-text)',
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  maxWidth: 130,
+                                  color:
+                                    (r.status as string) === 'Draft' || r.status === 'Quote' || r.statusNote.toLowerCase().includes('expired')
+                                      ? 'var(--chip-amber-fg, #d97706)'
+                                      : (r.status as string) === 'On Rent' || r.isOverdue
+                                        ? 'var(--danger-text)'
+                                        : 'var(--chip-amber-fg, #d97706)',
                                 }}
                               >
                                 {r.statusNote}
@@ -2637,17 +2648,35 @@ export default function RentalsList() {
                           {/* §8.3 — the cell is omitted, not emptied. */}
                           {show('Total Amount') && (
                             <td style={td}>
-                              <span
-                                className="figure money"
-                                style={{
-                                  display: 'block',
-                                  fontSize: 'var(--t-meta)',
-                                  fontWeight: 700,
-                                  color: 'var(--text)',
-                                }}
-                              >
-                                {typeof r.totalAmount === 'number' ? formatMoney(r.totalAmount) : '—'}
-                              </span>
+                              {typeof r.totalAmount === 'number' ? (
+                                <span
+                                  className="figure money"
+                                  style={{
+                                    display: 'block',
+                                    fontSize: 'var(--t-meta)',
+                                    fontWeight: 700,
+                                    color: 'var(--text)',
+                                  }}
+                                >
+                                  {formatMoney(r.totalAmount)}
+                                </span>
+                              ) : (
+                                <span
+                                  style={{
+                                    display: 'inline-block',
+                                    padding: '1px 6px',
+                                    borderRadius: 'var(--r-xs, 4px)',
+                                    background: 'var(--card2)',
+                                    border: '1px solid var(--border)',
+                                    fontSize: 11,
+                                    fontWeight: 600,
+                                    color: 'var(--muted)',
+                                  }}
+                                  title={r.status === 'Quote' ? 'Quote estimate pending / TBD' : 'Amount unbilled / TBD'}
+                                >
+                                  TBD
+                                </span>
+                              )}
                             </td>
                           )}
 

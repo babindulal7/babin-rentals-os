@@ -82,16 +82,21 @@ async function main() {
   const migrations = FILES.map(file => prepareMigration(file, readFileSync(resolve(root, 'supabase/migrations', file), 'utf8')))
   const { Client } = await import('pg')
   const client = new Client(configuration)
+  let locked = false
   try {
     await client.connect()
     const lock = await client.query("select pg_try_advisory_lock(hashtext('babin-user-cutover')) as acquired")
     if (lock.rows[0]?.acquired !== true) throw new Error('Another cutover holds the migration lock.')
+    locked = true
     const ledger = await client.query('select version, name from supabase_migrations.schema_migrations order by version')
     const pending = pendingMigrations(migrations, ledger.rows)
     console.log(JSON.stringify({ project: PROJECT, pending: pending.map(m => ({ file: m.file, sha256: m.sha256 })), skipped: migrations.length - pending.length }))
     const applied = await applyPending(client, migrations, ledger.rows, row => console.log(JSON.stringify({ committed: row })))
     console.log(`Committed ${applied.length} migration(s). Refresh the ledger and run post-cutover checks; application role acceptance is still required.`)
-  } finally { await client.end().catch(() => {}) }
+  } finally {
+    if (locked) await client.query("select pg_advisory_unlock(hashtext('babin-user-cutover'))").catch(() => {})
+    await client.end().catch(() => {})
+  }
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   main().catch(() => {

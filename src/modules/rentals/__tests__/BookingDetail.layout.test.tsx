@@ -36,6 +36,12 @@ vi.mock('../../../lib/auth', () => ({
   }),
 }))
 
+// Layout tests must not leave a real contact request running past jsdom teardown.
+vi.mock('../../../lib/queries/clients', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../lib/queries/clients')>()
+  return { ...actual, getClient: async () => null }
+})
+
 /* BookingOperationsMenu (rendered inside BookingDetail) calls useOperationsWorkspace.
    Mock the context so tests don't need a real provider (which renders OperationsShell). */
 vi.mock('../../operations/OperationsWorkspaceContext', () => ({
