@@ -259,7 +259,7 @@ describe('Tier 1: Feature Coverage (Happy Path & Isolations)', { timeout: 90000 
       // Command palette trigger button with Ctrl+K / ⌘K
       const searchBtn = container.querySelector('button[aria-label="Search bookings, clients, equipment and pages"]')
       expect(searchBtn).not.toBeNull()
-      expect(searchBtn?.textContent).toContain('Search bookings, clients, equipment…')
+      expect(searchBtn?.textContent).toContain('Search or scan…')
       expect(searchBtn?.textContent).toContain('Ctrl+K / ⌘K')
 
       // User profile trigger representation
@@ -283,7 +283,7 @@ describe('Tier 1: Feature Coverage (Happy Path & Isolations)', { timeout: 90000 
       // Core operational destinations
       expect(container.textContent).toContain('Today')
       expect(container.textContent).toContain('Rentals')
-      expect(container.textContent).toContain('Operation')
+      expect(container.textContent).toContain('Operations')
       expect(container.textContent).toContain('Inventory')
       expect(container.textContent).toContain('Clients')
       expect(container.textContent).toContain('Finance')
@@ -334,14 +334,13 @@ describe('Tier 1: Feature Coverage (Happy Path & Isolations)', { timeout: 90000 
       // Primary header
       expect(container.textContent).toContain('Today')
 
-      // Dispatch date control (8 Oct 2026): no label, and "Today" is only
-      // offered once you have stepped away from today.
+      // Dispatch date controls (RULING 2026-10-15): Pickups and Returns each carry
+      // their own accessible date filter in their panel header.
       expect(container.textContent).not.toContain('Sync dispatch day:')
-      expect(container.querySelector('button[aria-label="Today"]')).toBeNull()
-      const prevDayBtn = container.querySelector('button[aria-label="Previous day"]')
-      expect(prevDayBtn).not.toBeNull()
-      const nextDayBtn = container.querySelector('button[aria-label="Next day"]')
-      expect(nextDayBtn).not.toBeNull()
+      const pickupDateFilter = container.querySelector('[aria-label="Date filter for pickups"]')
+      const returnDateFilter = container.querySelector('[aria-label="Date filter for returns"]')
+      expect(pickupDateFilter).not.toBeNull()
+      expect(returnDateFilter).not.toBeNull()
 
       // Express counter search bar
       const counterInput = container.querySelector('input[type="search"]')
@@ -448,7 +447,7 @@ describe('Tier 1: Feature Coverage (Happy Path & Isolations)', { timeout: 90000 
       const { default: OperationsQueues } = await import('../../modules/operations/OperationsQueues')
       await mountComponent(<OperationsQueues />, ['/operations'])
 
-      expect(container.textContent).toContain('Operation')
+      expect(container.textContent).toContain('Operations')
       expect(container.textContent).toContain('Pack')
       expect(container.textContent).toMatch(/Handover|Pickup/)
       expect(container.textContent).toContain('Return')
@@ -462,6 +461,12 @@ describe('Tier 1: Feature Coverage (Happy Path & Isolations)', { timeout: 90000 
       expect(container.textContent).toContain('Inventory')
       expect(container.textContent).toContain('Equipment')
       expect(container.textContent).toContain('Bundles')
+      // RULING 2026-10-15: the header holds title, search and one primary — Refresh and
+      // Export are in More at every width, not buttons beside Add.
+      const visible = [...container.querySelectorAll('button')].map((b) => b.textContent?.trim())
+      expect(visible).not.toContain('Refresh')
+      expect(visible).not.toContain('Export')
+      expect(container.querySelector('button[aria-haspopup="menu"]')).not.toBeNull()
     }, 60_000)
 
     it('Clients Directory renders client table and section navigation', async () => {
@@ -471,6 +476,11 @@ describe('Tier 1: Feature Coverage (Happy Path & Isolations)', { timeout: 90000 
       expect(container.textContent).toContain('Clients')
       expect(container.textContent).toContain('Directory')
       expect(container.textContent).toContain('Membership')
+      // RULING 2026-10-15: the header holds title, search and one primary — Refresh and
+      // Export are in More at every width, not buttons beside Add.
+      const visible = [...container.querySelectorAll('button')].map((b) => b.textContent?.trim())
+      expect(visible).not.toContain('Export directory')
+      expect(container.querySelector('button[aria-haspopup="menu"]')).not.toBeNull()
     }, 60_000)
 
     it('Finance dashboard renders financial KPIs and invoices table', async () => {

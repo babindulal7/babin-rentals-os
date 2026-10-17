@@ -65,12 +65,15 @@
 .operations-shell__stage-name { font-weight: 600; }
 @media (max-width: 767px) {
   .operations-shell__stages { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
-  .operations-shell__stages .ui-button { flex-direction: column; justify-content: flex-start; gap: 2px; padding: 6px 2px !important; }
-  .operations-shell__stages .ui-button__label { text-align: center; line-height: 1.15; }
-  .operations-shell__stage-name { display: block; font-size: 12px; }
+  .operations-shell__stages .ui-button { flex-direction: column; justify-content: flex-start; gap: 2px; padding: 6px 2px !important; min-height: 44px; }
+  .operations-shell__stages .ui-button__label { text-align: center; line-height: 1.15; max-width: 100%; overflow: hidden; }
+  .operations-shell__stage-name { display: block; font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
   .operations-shell__stage-sep { display: none; }
-  .operations-shell__stage-state { display: block; font-size: 11px; font-weight: 500; }
+  .operations-shell__stage-state { display: block; font-size: 10.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
   .operations-shell__strip-dup { display: none; }
+}
+@media (max-width: 359px) {
+  .operations-shell__stages { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* RULING 2026-10-14 (R14-11). Tablet and up, full-screen sheet: the "still needed" hint sits BETWEEN the two buttons on one
@@ -88,4 +91,36 @@
    padding that keeps them comfortable when their labels wrap. They stay ≥ 44px. */
 @media (min-width: 768px) and (max-height: 860px) {
   .operations-shell__stages .ui-button { padding-top: 4px !important; padding-bottom: 4px !important; }
+}
+
+
+/* RULING 2026-10-16: one consistent four-step navigator for every rental operation. */
+.operations-shell__stages {
+  padding: 8px;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background: var(--surface);
+}
+
+.operations-shell__stages .operations-shell__stage {
+  min-height: 64px;
+  border-radius: var(--r-input);
+}
+
+.operations-shell__stage .ui-button__label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.operations-shell__stage-sep { display: none; }
+.operations-shell__stage-name { font-size: var(--t-ui); }
+.operations-shell__stage-state { font-size: var(--t-th); font-weight: 500; }
+
+@media (max-width: 767px) {
+  .operations-shell__stages { padding: 6px; gap: 4px; }
+  .operations-shell__stage .ui-button__label { align-items: center; }
+  .operations-shell__stage-name { font-size: var(--t-th); }
 }

@@ -1,27 +1,25 @@
 param (
     [string]$DbUrl = $env:SUPABASE_DB_URL,
-    [string]$BackupFile = "production_backup_$(Get-Date -Format 'yyyyMMdd_HHmmss').sql"
+    [string]$BackupFile
 )
-
+$ErrorActionPreference = 'Stop'
 if (-not $DbUrl) {
-    Write-Host "Error: SUPABASE_DB_URL is not set." -ForegroundColor Red
-    Write-Host "Please set it or pass it as an argument:" -ForegroundColor Yellow
-    Write-Host ".\backup-db.ps1 -DbUrl 'postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres'" -ForegroundColor Yellow
-    exit 1
+    $secure = Read-Host -AsSecureString 'Database connection string (hidden)'
+    $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+    try { $DbUrl = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer) }
+    finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer) }
 }
-
-Write-Host "Starting native pg_dump for $DbUrl..." -ForegroundColor Cyan
-
-# We use --clean to include DROP statements so the restore is idempotent.
-# We exclude the auth schema if we don't want to mess with Supabase auth users,
-# but for a full backup, leaving it default or dumping the whole db is safer.
-pg_dump --clean --if-exists --quote-all-identifiers -d $DbUrl -f $BackupFile
-
-if ($LASTEXITCODE -eq 0) {
-    Write-Host "✅ Backup successfully saved to $BackupFile" -ForegroundColor Green
-    Write-Host "Verifying backup file..." -ForegroundColor Cyan
-    $Size = (Get-Item $BackupFile).Length / 1MB
-    Write-Host "Backup size: $([math]::Round($Size, 2)) MB" -ForegroundColor Green
-} else {
-    Write-Host "❌ pg_dump failed with exit code $LASTEXITCODE" -ForegroundColor Red
+$previousUrl = $env:SUPABASE_DB_URL
+$previousFile = $env:BABIN_BACKUP_FILE
+try {
+    $env:SUPABASE_DB_URL = $DbUrl
+    $env:BABIN_BACKUP_FILE = $BackupFile
+    & node (Join-Path $PSScriptRoot 'backup-db.mjs')
+    $result = $LASTEXITCODE
 }
+finally {
+    $env:SUPABASE_DB_URL = $previousUrl
+    $env:BABIN_BACKUP_FILE = $previousFile
+    $DbUrl = $null
+}
+exit $result

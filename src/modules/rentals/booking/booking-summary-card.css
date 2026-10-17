@@ -71,6 +71,33 @@
   font-variant-numeric: tabular-nums;
 }
 
+.new-rental-review-breakdown {
+  display: grid;
+  gap: 7px;
+  padding-block: 10px;
+  border-block: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.new-rental-review-breakdown > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.new-rental-review-breakdown dt {
+  color: var(--text2);
+}
+
+.new-rental-review-breakdown dd {
+  flex-shrink: 0;
+  color: var(--text);
+  font-family: var(--font-id);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 .new-rental-review-total {
   display: flex;
   flex-direction: column;

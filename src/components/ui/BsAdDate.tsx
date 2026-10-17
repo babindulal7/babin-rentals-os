@@ -99,18 +99,24 @@ export const BsAdDate: React.FC<BsAdDateProps> = ({
     )
   }
 
-  // Default stacked layout
+  // Default stacked layout: 2 lines (Line 1: BS date bold, Line 2: AD date + time)
   return (
     <div className={className || undefined} style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
-      <span style={{ fontSize: 'var(--t-ui)', fontWeight: 500, color: primaryColor }} title={primaryTitle}>
+      <span style={{ fontSize: 'var(--t-ui)', fontWeight: 700, color: primaryColor, whiteSpace: 'nowrap' }} title={primaryTitle}>
         {primary}
       </span>
-      <span style={{ fontSize: 'var(--t-meta)', color: secondaryColor }}>
+      <span
+        style={{
+          fontSize: 'var(--t-meta)',
+          color: secondaryColor,
+          whiteSpace: 'nowrap',
+        }}
+      >
         {/* The second line carries the AD date only when the first carries BS.
             When BS is unavailable the first line already IS the AD date, so this
             line states WHY rather than repeating it. */}
-        {bsFormatted ? adFormatted : 'BS unavailable'}
-        {timeFormatted ? ` · ${timeFormatted}` : ''}
+        <span>{bsFormatted ? adFormatted : 'BS unavailable'}</span>
+        {timeFormatted && <> <span style={{ fontVariantNumeric: 'tabular-nums' }}>{timeFormatted}</span></>}
       </span>
     </div>
   )

@@ -46,13 +46,12 @@
   background: var(--card2, var(--hover-card));
   border-color: var(--border2, var(--border));
   color: var(--text);
-  transform: translateY(-1px);
 }
 
 .inventory-filter-chip.is-active {
-  background: var(--nav-active-bg);
-  border-color: var(--nav-active-accent);
-  color: var(--nav-active-accent);
+  background: var(--select-bg);
+  border-color: var(--select-fg);
+  color: var(--select-fg);
   font-weight: 600;
   box-shadow: 0 0 0 1px var(--nav-active-accent), 0 2px 6px rgba(0, 0, 0, 0.04);
 }
@@ -103,7 +102,7 @@
 }
 
 .inventory-parent-row.is-inspected {
-  background: var(--nav-active-bg);
+  background: var(--select-bg);
   box-shadow: inset 3px 0 0 var(--nav-active-accent);
 }
 
@@ -214,7 +213,6 @@
 
 .inventory-grid-item:hover {
   border-color: var(--nav-active-accent);
-  transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
 }
 
@@ -246,14 +244,14 @@
   letter-spacing: 0.04em;
   padding: 1px 6px;
   border-radius: 4px;
-  background: color-mix(in srgb, var(--link) 10%, transparent);
-  color: var(--link);
+  background: var(--select-bg);
+  color: var(--select-fg);
   text-decoration: none;
 }
 
 .inventory-asset-code:hover {
   text-decoration: underline;
-  background: color-mix(in srgb, var(--link) 18%, transparent);
+  background: var(--select-bg);
 }
 
 /* ── Asset Detail Workspace ─────────────────────────────────────────────── */
@@ -328,9 +326,9 @@
 }
 
 .asset-tab-btn.is-active {
-  background: var(--nav-active-bg);
-  border-color: var(--nav-active-accent);
-  color: var(--nav-active-accent);
+  background: var(--select-bg);
+  border-color: var(--select-fg);
+  color: var(--select-fg);
   font-weight: 700;
   box-shadow: 0 0 0 1px var(--nav-active-accent), 0 2px 6px rgba(0, 0, 0, 0.04);
 }
@@ -395,7 +393,6 @@
 
 .bundle-grid-card:hover {
   border-color: var(--border2, var(--border));
-  transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
 }
 
@@ -429,7 +426,6 @@
   background: color-mix(in srgb, var(--nav-active-bg) 50%, var(--card2));
   border-color: var(--nav-active-accent);
   color: var(--nav-active-accent);
-  transform: translateY(-1px);
 }
 
 .bundle-savings-badge {

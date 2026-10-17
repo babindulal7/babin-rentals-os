@@ -77,6 +77,7 @@ export default function ImportCenter(props: ImportCenterProps = {}) {
 function ClientImportForm({ embedded = false }: ImportCenterProps = {}) {
   const viewport = useViewport()
   const { user } = useAuth()
+  const actorId = user?.id
   const online = useNetwork()
   const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -108,12 +109,12 @@ function ClientImportForm({ embedded = false }: ImportCenterProps = {}) {
   const resumedBatch = useRef(false)
 
   const persistDraft = useCallback((nextBatch = batch, nextOutcomes = outcomes) => {
-    if (!user || !fileName || rawRows.length === 0) return false
+    if (!actorId || !fileName || rawRows.length === 0) return false
     const draft: ClientImportRecoveryDraft = { fileName, rawRows, hasHeaderRow, mapping, skippedRows: [...skippedRows], batch: nextBatch, outcomes: nextOutcomes }
-    const result = saveClientImportRecovery(user.id, draft)
+    const result = saveClientImportRecovery(actorId, draft)
     setRecoveryError(result.error)
     return result.ok
-  }, [user, fileName, rawRows, hasHeaderRow, mapping, skippedRows, batch, outcomes])
+  }, [actorId, fileName, rawRows, hasHeaderRow, mapping, skippedRows, batch, outcomes])
 
   useEffect(() => {
     if (!resumeDraft && fileName && rawRows.length > 0) persistDraft()
@@ -127,7 +128,8 @@ function ClientImportForm({ embedded = false }: ImportCenterProps = {}) {
     setMapping(resumeDraft.mapping)
     setSkippedRows(new Set(resumeDraft.skippedRows))
     setBatch(resumeDraft.batch)
-    setOutcomes(resumeDraft.outcomes)
+    // Device progress is a hint; only the receipt replay can confirm saved rows.
+    setOutcomes(resumeDraft.batch?.map(row => ({ rowIndex: row.rowIndex, status: 'pending' })) ?? [])
     resumedBatch.current = resumeDraft.batch !== null
     setResumeDraft(null)
   }
@@ -245,7 +247,7 @@ function ClientImportForm({ embedded = false }: ImportCenterProps = {}) {
         const byIndex = new Map(latestOutcomes.map(row => [row.rowIndex, row]))
         next.forEach(row => byIndex.set(row.rowIndex, row))
         latestOutcomes = prepared.map(row => byIndex.get(row.rowIndex) ?? { rowIndex: row.rowIndex, status: 'pending' })
-        persistDraft(prepared, latestOutcomes)
+        if (!persistDraft(prepared, latestOutcomes)) stopRequested.current = true
         setOutcomes(latestOutcomes)
     }
     try {
@@ -367,7 +369,7 @@ function ClientImportForm({ embedded = false }: ImportCenterProps = {}) {
       {resumeDraft && <section className="client-import-recovery" aria-label="Saved import draft">
         <h2>Resume client import</h2>
         <p><strong>{resumeDraft.fileName}</strong> · {resumeDraft.rawRows.length - (resumeDraft.hasHeaderRow ? 1 : 0)} data rows</p>
-        <p>{resumeDraft.outcomes.filter(row => row.status === 'saved').length} confirmed saved. File columns, selected rows and retry keys are preserved on this device.</p>
+        <p>{resumeDraft.outcomes.filter(row => row.status === 'saved').length} previously confirmed saved. Resume checks saved rows with the server. File columns, selected rows and retry keys are preserved on this device.</p>
         <div className="client-import-actions"><Button variant="primary" onClick={resumeImport}>Resume import</Button><Button onClick={() => setDiscardOpen(true)}>Discard local draft</Button></div>
       </section>}
       {rawRows.length === 0 && !resumeDraft && (
@@ -396,7 +398,7 @@ function ClientImportForm({ embedded = false }: ImportCenterProps = {}) {
               padding: '36px 16px',
               textAlign: 'center',
               cursor: 'pointer',
-              background: dragOver ? 'var(--nav-active-bg)' : 'var(--card2)',
+              background: dragOver ? 'var(--select-bg)' : 'var(--card2)',
             }}
           >
             <Icon name="upload" size={28} style={{ color: 'var(--muted)' }} />
@@ -454,7 +456,7 @@ function ClientImportForm({ embedded = false }: ImportCenterProps = {}) {
         <>
           <section style={{ ...cardStyle, padding: 'var(--sp-lg)', display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)' }}>
+              <div className="client-import-file-summary" style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)' }}>
                 <Icon name="file" size={16} style={{ color: 'var(--text2)' }} />
                 <strong style={{ color: 'var(--text)', fontSize: 'var(--t-meta)' }}>{fileName}</strong>
                 <span style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>· {dataRows.length} data row{dataRows.length === 1 ? '' : 's'}</span>

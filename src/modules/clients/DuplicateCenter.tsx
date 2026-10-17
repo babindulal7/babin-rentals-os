@@ -150,7 +150,7 @@ function GroupCard({
                 borderRadius: 'var(--r-card)',
                 padding: 'var(--sp-md)',
                 cursor: 'pointer',
-                background: selected ? 'var(--nav-active-bg)' : 'var(--card2)',
+                background: selected ? 'var(--select-bg)' : 'var(--card2)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', marginBottom: 10 }}>

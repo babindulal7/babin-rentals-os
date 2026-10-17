@@ -21,7 +21,7 @@ import { Card as SharedCard } from './Card'
 
 export const cardStyle = {
   background: 'var(--surface-card, var(--card))',
-  border: '1px solid var(--border)',
+  border: '1.5px solid var(--border)',
   borderRadius: 'var(--r-card)',
   boxShadow: 'var(--shadow-card), var(--specular-rim)',
   transition: 'transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background-color var(--dur-theme) var(--ease), border-color var(--dur-theme) var(--ease)',

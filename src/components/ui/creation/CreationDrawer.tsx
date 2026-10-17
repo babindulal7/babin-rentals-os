@@ -218,7 +218,7 @@ export function CreationDrawer({
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 50,
+        zIndex: 'var(--z-drawer)',
         display: 'flex',
         justifyContent: 'flex-end',
       }}
@@ -229,7 +229,7 @@ export function CreationDrawer({
         style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0, 0, 0, 0.4)',
+          background: 'var(--scrim)',
           backdropFilter: 'blur(2px)',
           animation: 'fadeIn 150ms ease-out',
         }}
@@ -250,7 +250,7 @@ export function CreationDrawer({
           boxShadow: 'var(--shadow-modal, -4px 0 24px rgba(0,0,0,0.2))',
           display: 'flex',
           flexDirection: 'column',
-          zIndex: 51,
+          zIndex: 'calc(var(--z-drawer) + 1)',
           animation: 'slideInRight 200ms cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
@@ -271,8 +271,8 @@ export function CreationDrawer({
                 width: 32,
                 height: 32,
                 borderRadius: 'var(--r-btn, 8px)',
-                background: 'var(--accent-subtle, rgba(230,81,0,0.1))',
-                color: 'var(--accent, #e65100)',
+                background: 'var(--nav-active-bg)',
+                color: 'var(--primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -328,14 +328,14 @@ export function CreationDrawer({
                     minHeight: 44,
                     padding: '0 12px',
                     borderRadius: 'var(--r-btn, 8px)',
-                    border: `1px solid ${errors.eqName ? 'var(--danger, #dc2626)' : 'var(--border)'}`,
+                    border: `1px solid ${errors.eqName ? 'var(--danger)' : 'var(--border)'}`,
                     background: 'var(--card)',
                     color: 'var(--text)',
                     fontSize: 'var(--t-body, 14px)',
                   }}
                 />
                 {errors.eqName && (
-                  <div style={{ color: 'var(--danger, #dc2626)', fontSize: 'var(--t-caption, 12px)', marginTop: 4 }}>
+                  <div style={{ color: 'var(--danger-text)', fontSize: 'var(--t-caption, 12px)', marginTop: 4 }}>
                     {errors.eqName}
                   </div>
                 )}
@@ -457,13 +457,13 @@ export function CreationDrawer({
                       minHeight: 44,
                       padding: '0 10px',
                       borderRadius: 'var(--r-btn, 8px)',
-                      border: `1px solid ${errors.eqSerial ? 'var(--danger, #dc2626)' : 'var(--border)'}`,
+                      border: `1px solid ${errors.eqSerial ? 'var(--danger)' : 'var(--border)'}`,
                       background: 'var(--card)',
                       color: 'var(--text)',
                     }}
                   />
                   {errors.eqSerial && (
-                    <div style={{ color: 'var(--danger, #dc2626)', fontSize: 'var(--t-caption, 12px)', marginTop: 4 }}>
+                    <div style={{ color: 'var(--danger-text)', fontSize: 'var(--t-caption, 12px)', marginTop: 4 }}>
                       {errors.eqSerial}
                     </div>
                   )}
@@ -642,13 +642,13 @@ export function CreationDrawer({
                     minHeight: 44,
                     padding: '0 12px',
                     borderRadius: 'var(--r-btn, 8px)',
-                    border: `1px solid ${errors.expTitle ? 'var(--danger, #dc2626)' : 'var(--border)'}`,
+                    border: `1px solid ${errors.expTitle ? 'var(--danger)' : 'var(--border)'}`,
                     background: 'var(--card)',
                     color: 'var(--text)',
                   }}
                 />
                 {errors.expTitle && (
-                  <div style={{ color: 'var(--danger, #dc2626)', fontSize: 'var(--t-caption, 12px)', marginTop: 4 }}>
+                  <div style={{ color: 'var(--danger-text)', fontSize: 'var(--t-caption, 12px)', marginTop: 4 }}>
                     {errors.expTitle}
                   </div>
                 )}
@@ -674,13 +674,13 @@ export function CreationDrawer({
                       minHeight: 44,
                       padding: '0 10px',
                       borderRadius: 'var(--r-btn, 8px)',
-                      border: `1px solid ${errors.expAmount ? 'var(--danger, #dc2626)' : 'var(--border)'}`,
+                      border: `1px solid ${errors.expAmount ? 'var(--danger)' : 'var(--border)'}`,
                       background: 'var(--card)',
                       color: 'var(--text)',
                     }}
                   />
                   {errors.expAmount && (
-                    <div style={{ color: 'var(--danger, #dc2626)', fontSize: 'var(--t-caption, 12px)', marginTop: 4 }}>
+                    <div style={{ color: 'var(--danger-text)', fontSize: 'var(--t-caption, 12px)', marginTop: 4 }}>
                       {errors.expAmount}
                     </div>
                   )}

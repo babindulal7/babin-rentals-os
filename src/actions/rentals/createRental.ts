@@ -123,6 +123,15 @@ export interface CreateRentalLine {
   /** Rupees, as the column stores them. Pricing is not computed here. */
   rate?: number
   discountAmount?: number
+  /**
+   * 0168 (G3) — optional stated line total (rupees, whole paisa) with its
+   * quote snapshot. For structure/fixed-price quotes; absent = the server
+   * computes qty × days × rate − discount (flat-rate path). Money-blind
+   * callers never state money — the server ignores it (Law 6).
+   */
+  lineTotal?: number
+  /** 0168 (G3) — quote snapshot object; only with `lineTotal`. */
+  priceBreakdown?: Record<string, unknown> | null
   isIncluded?: boolean
   parentLineId?: string | null
   parentClientUuid?: string | null
@@ -246,6 +255,8 @@ export type CreateRentalInput = {
   quoteExpiresAt?: string | null
   /** Deposits are liabilities (Law 5) — this never touches Rental Total. */
   depositRequired?: number
+  /** VAT rate as a decimal fraction (0 for no VAT, 0.13 for 13%). Pinned at booking creation. */
+  vatRate?: number
   lines: CreateRentalLine[]
   discounts?: CreateRentalDiscount[]
   /**
@@ -340,6 +351,9 @@ export const createRentalConfig: ActionConfig<CreateRentalInput, CreateRentalRes
       )
     }
     if (input.quoteExpiresAt != null) assertInstant(input.quoteExpiresAt, 'quoteExpiresAt')
+    if (input.vatRate !== undefined && (!Number.isFinite(input.vatRate) || input.vatRate < 0 || input.vatRate > 1)) {
+      throw new Error('Booking VAT must be a fraction between 0 and 1 (0 for no VAT, 0.13 for 13%). Nothing was sent.')
+    }
 
     if (input.clientUuid !== undefined && input.clientUuid.trim() === '') {
       throw new Error(
@@ -403,6 +417,18 @@ export const createRentalConfig: ActionConfig<CreateRentalInput, CreateRentalRes
               'Nothing was sent.',
           )
         }
+      }
+      /* 0168 (G3) — a stated total is validated here by name; the RPC
+         re-checks it (a second caller may not come through this file). */
+      if (line.lineTotal !== undefined && (!Number.isFinite(line.lineTotal) || line.lineTotal < 0)) {
+        throw new Error(
+          `${label} carries a line total of ${JSON.stringify(line.lineTotal)}; it must be a non-negative rupee amount. Nothing was sent.`,
+        )
+      }
+      if (line.priceBreakdown != null && line.lineTotal == null) {
+        throw new Error(
+          `${label} carries a price breakdown with no line total — a snapshot never travels without its figure (0168). Nothing was sent.`,
+        )
       }
     }
 
@@ -494,6 +520,7 @@ export const createRentalConfig: ActionConfig<CreateRentalInput, CreateRentalRes
       return_location: input.returnLocation ?? null,
       quote_expires_at: input.quoteExpiresAt ?? null,
       deposit_required: input.depositRequired ?? 0,
+      ...(input.vatRate !== undefined ? { vat_rate: input.vatRate } : {}),
       lines: input.lines.map((line, i) => {
         const isManual = line.lineType === 'Manual item'
         const desc = line.description?.trim() || (isManual ? 'Manual item' : null)
@@ -514,6 +541,10 @@ export const createRentalConfig: ActionConfig<CreateRentalInput, CreateRentalRes
           days: line.days,
           rate: line.rate ?? 0,
           discount_amount: line.discountAmount ?? 0,
+          /* 0168 (G3) — stated total + snapshot ride only when the caller
+             priced by quote; absent = server computes (flat-rate path). */
+          ...(line.lineTotal != null ? { line_total: line.lineTotal } : {}),
+          ...(line.priceBreakdown ? { price_breakdown: line.priceBreakdown } : {}),
           is_included: line.isIncluded ?? false,
           service_basis: serviceBasis,
           supplier_id: line.supplierId ?? null,

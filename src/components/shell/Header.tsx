@@ -18,6 +18,7 @@ import {
   type PageActionContext,
   resolvePageActions,
   isActionEnabled,
+  isActionVisible,
 } from '../ui/header/pageActionRegistry'
 import { AddDropdownButton } from '../ui/header/PageHeader'
 import { GlobalAddMenu } from '../ui/creation/GlobalAddMenu'
@@ -57,18 +58,21 @@ interface HeaderProps {
   actions?: ReactNode
 }
 
-// Law 15 — 44×44 at every width, desktop included.
+// Law 15: keep the shared icon target at least 44px at every width.
 const iconBtn = {
+  width: 44,
+  height: 44,
   minWidth: 44,
   minHeight: 44,
-  borderRadius: 9,
-  border: 'none',
+  borderRadius: 'var(--r-btn, 8px)',
+  border: '1px solid var(--border)',
   background: 'transparent',
   color: 'var(--text2)',
   cursor: 'pointer',
   display: 'grid',
   placeItems: 'center',
   flexShrink: 0,
+  boxSizing: 'border-box' as const,
 } as const
 
 /**
@@ -184,6 +188,9 @@ export default function Header({ crumbs, actions }: HeaderProps) {
   const resolved = hData?.actionsConfig
     ? resolvePageActions(hData.actionsConfig, actionContext)
     : null
+  const primaryActionStatus = resolved?.primary ? isActionEnabled(resolved.primary, actionContext) : null
+  // Bulk actions use the same permissions, predicates and loading gates as ordinary actions.
+  const visibleBulkActions = hData?.bulkSelection?.actions.filter((action) => isActionVisible(action, actionContext)) ?? []
 
   const handleActionClick = (action: PageActionItem, e?: React.MouseEvent) => {
     if (action.confirm) {
@@ -318,13 +325,24 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             display: 'flex',
             alignItems: 'center',
             gap: 6,
-            minWidth: isPhone ? 0 : '180px',
+            minWidth: isPhone ? 0 : isTablet ? '140px' : '180px',
             // RULING 2026-10-13: on a phone the title takes whatever the controls leave, and ends in "…".
-            flex: isPhone ? '1 1 auto' : '0 1 auto',
+            // RULING 2026-10-15: on desktop a module title (one crumb — "Inventory") does not shrink;
+            // the search beside it yields first. Sharing the squeeze crushed it to "I." at 1280px.
+            // A record title (a crumb trail ending in "902 · Client name") is any length, so it
+            // still ellipsizes rather than taking the search's space.
+            flex: isPhone ? '1 1 auto' : isTablet || displayCrumbs.length > 1 ? '0 1 auto' : '0 0 auto',
             maxWidth: isPhone ? undefined : 'min(520px, 45vw)',
             overflow: 'hidden',
           }}
         >
+          {/* RULING 2026-10-15: the page's filter toggle is always the first control at the very left of the header, and its drawer opens from the left. */}
+          <span
+            className="workspace-page-actions app-global-header__action-slot app-global-header__action-slot--filters"
+            data-header-slot="filters"
+            ref={ws?.setHeaderActionsElement}
+          />
+
           {/* Back navigation button if registered */}
           {hData?.backHref && (
             <Link
@@ -423,7 +441,9 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                   <li key={`${i}-${c.label}`} style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, flexShrink: last ? 1 : 0 }}>
                     {i > 0 && <Icon name="chevron_right" size={13} style={{ color: 'var(--muted)', flexShrink: 0 }} />}
                     {c.to && !last ? (
-                      <Link to={c.to} style={{ textDecoration: 'none', color: 'inherit', display: 'inline-flex', minWidth: 0 }}>
+                      // RULING 2026-10-15: a parent crumb is a link, so it gets the 44px hit height (Law 15);
+                      // it measured 45×17 on Booking Detail. Width and the flex rule above are unchanged.
+                      <Link to={c.to} style={{ textDecoration: 'none', color: 'inherit', display: 'inline-flex', alignItems: 'center', minHeight: 44, minWidth: 0 }}>
                         {labelEl}
                       </Link>
                     ) : (
@@ -457,7 +477,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
           {/* Page Info Tooltip */}
           <span
             style={{
-              display: isPhone ? 'none' : 'inline-flex',
+              display: isPhone || isTablet ? 'none' : 'inline-flex',
               flexShrink: 0,
               visibility: effectiveInfo ? 'visible' : 'hidden',
             }}
@@ -525,6 +545,8 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                     outline: 'none',
                     width: '100%',
                     minWidth: 0,
+                    minHeight: 44,
+                    padding: 0,
                     fontFamily: 'inherit',
                   }}
                 />
@@ -595,7 +617,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                     color: 'var(--muted)',
                   }}
                 >
-                  Search bookings, clients, equipment…
+                  Search or scan…
                 </span>
                 {!isTablet && (
                   <kbd
@@ -605,6 +627,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                       fontWeight: 600,
                       color: 'var(--muted)',
                       flexShrink: 0,
+                      marginLeft: 'auto',
                       padding: '2px 8px',
                       borderRadius: 999,
                       background: 'var(--card)',
@@ -748,7 +771,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: isPhone ? 6 : 8,
+            gap: 8,
             flexShrink: 0,
             marginLeft: 'auto',
             minWidth: 0,
@@ -777,18 +800,23 @@ export default function Header({ crumbs, actions }: HeaderProps) {
               >
                 Clear
               </button>
-              {hData.bulkSelection.actions.map((act) => (
-                <Button
-                  key={act.id}
-                  variant={act.variant ?? 'secondary'}
-                  icon={act.icon}
-                  onClick={() => handleActionClick(act)}
-                  disabled={act.enabled === false}
-                  style={{ height: 38, minHeight: 44, padding: '0 12px' }}
-                >
-                  {act.label}
-                </Button>
-              ))}
+              {visibleBulkActions.map((act) => {
+                const status = isActionEnabled(act, actionContext)
+                return (
+                  <Button
+                    key={act.id}
+                    variant={act.variant ?? 'secondary'}
+                    icon={act.icon}
+                    onClick={() => handleActionClick(act)}
+                    disabled={!status.enabled}
+                    style={{ height: 38, minHeight: 44, padding: isTablet && act.icon ? '0 8px' : '0 12px' }}
+                    title={status.reason ?? act.label}
+                    aria-label={act.label}
+                  >
+                    {isTablet && act.icon ? null : (act.loading ? act.loadingLabel ?? `${act.label}…` : act.label)}
+                  </Button>
+                )
+              })}
             </div>
           ) : (
             <>
@@ -817,14 +845,8 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                 })}
               </span>
 
-              {/* CANONICAL BUTTON POSITIONS — same slots in every workspace:
-                  [Secondary] [Filters] [Add] [More] [Page CTA / Save / Confirm].
-                  Keep the page-owned portal after More, not before the title. */}
-              <span
-                className="workspace-page-actions app-global-header__action-slot app-global-header__action-slot--filters"
-                data-header-slot="filters"
-                ref={ws?.setHeaderActionsElement}
-              />
+              {/* CANONICAL BUTTON POSITIONS — [Secondary] [Add] [More] [Page CTA / Save / Confirm].
+                  The Filters toggle is NOT here: it is the first control at the far left (RULING 2026-10-15). */}
 
               {/* All Add actions share one location; page-specific creation still
                   honours its permissions and showAddMenu setting. */}
@@ -863,9 +885,9 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                     variant={resolved.primary.variant ?? 'primary'}
                     icon={resolved.primary.icon}
                     onClick={(e) => handleActionClick(resolved.primary!, e)}
-                    disabled={resolved.primary.loading || resolved.primary.enabled === false}
+                    disabled={!primaryActionStatus?.enabled}
                     style={{ minHeight: 44, padding: '0 14px', fontWeight: 600 }}
-                    {...(resolved.primary.disabledReason ? { title: resolved.primary.disabledReason } : {})}
+                    {...(primaryActionStatus?.reason ? { title: primaryActionStatus.reason } : {})}
                   >
                     {resolved.primary.loading
                       ? resolved.primary.loadingLabel ?? `${resolved.primary.label}…`

@@ -6,7 +6,7 @@ import { DataTableShell } from '../../../components/ui/DataTable'
 import { EmptyState } from '../../../components/ui/StateViews'
 import { Field, Section, TouchInset, inputStyle } from './BookingFormWidgets'
 import { formatMoney, rupees, type Paisa } from '../../../lib/money'
-import { CREW_ROSTER, type CrewMember, type CrewRole } from '../../../lib/queries/crew'
+import { crewPool, type CrewMember, type CrewRole } from '../../../lib/queries/crew'
 import { CrewSearch } from './CrewSearch'
 
 export interface CrewLine {
@@ -132,7 +132,7 @@ export function CrewSection({
           onBooking={crew}
           onAdd={onAddCrew}
           showRates={canCrewMoney}
-          roster={liveCrew && liveCrew.length > 0 ? liveCrew : CREW_ROSTER}
+          roster={crewPool(liveCrew)}
         />
         <div style={{ minWidth: 0 }}>
           <DataTableShell ariaLabel="Assigned crew">

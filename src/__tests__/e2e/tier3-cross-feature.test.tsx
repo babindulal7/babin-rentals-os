@@ -227,23 +227,20 @@ describe('Tier 3: Cross-Feature Combinations & Invariants', () => {
     it('synchronizes date navigation across both Pickups and Returns movement panels', async () => {
       await mountComponent(<Today />, ['/today'])
 
-      // Master dispatch synchronization control bar is rendered
+      // Dispatch date controls for Pickups and Returns are rendered (RULING 2026-10-15)
       expect(container.textContent).toContain('Today')
-      const prevDayBtn = container.querySelector('button[aria-label="Previous day"]') as HTMLButtonElement
-      const nextDayBtn = container.querySelector('button[aria-label="Next day"]') as HTMLButtonElement
-
-      expect(prevDayBtn).not.toBeNull()
-      expect(nextDayBtn).not.toBeNull()
-      // "Today" is only offered once there is somewhere to come back from.
-      expect(container.querySelector('button[aria-label="Today"]')).toBeNull()
+      const pickupFilter = container.querySelector('[aria-label="Date filter for pickups"]')
+      const returnFilter = container.querySelector('[aria-label="Date filter for returns"]')
+      expect(pickupFilter).not.toBeNull()
+      expect(returnFilter).not.toBeNull()
 
       // Both Movement Panels are present in the layout
       expect(container.textContent).toContain('Pickups')
       expect(container.textContent).toContain('Returns')
 
-      // Step forward by 1 day using master next button
+      // Step forward by 1 day using master keyboard navigation (RULINGS-2026-10-15: [ ] t)
       await act(async () => {
-        nextDayBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: ']' }))
       })
       for (let i = 0; i < 3; i++) {
         await act(async () => {
@@ -255,11 +252,9 @@ describe('Tier 3: Cross-Feature Combinations & Invariants', () => {
       expect(container.textContent).toContain('Pickups')
       expect(container.textContent).toContain('Returns')
 
-      // Return to Today using the master Today button, which now exists
-      const todayBtn = container.querySelector('button[aria-label="Today"]') as HTMLButtonElement
-      expect(todayBtn).not.toBeNull()
+      // Return to Today using the master Today keyboard shortcut 't'
       await act(async () => {
-        todayBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 't' }))
       })
       for (let i = 0; i < 3; i++) {
         await act(async () => {
@@ -267,9 +262,8 @@ describe('Tier 3: Cross-Feature Combinations & Invariants', () => {
         })
       }
 
-      // Panels remain synchronized back to today, and the button goes away again
+      // Panels remain synchronized back to today
       expect(container.textContent).toContain('Today')
-      expect(container.querySelector('button[aria-label="Today"]')).toBeNull()
     })
   })
 

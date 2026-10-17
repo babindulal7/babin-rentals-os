@@ -163,8 +163,8 @@
 .new-rental-pricing-notice--info {
   padding: 10px;
   border-radius: var(--r-btn);
-  color: var(--primary-text);
-  background: color-mix(in srgb, var(--primary) 8%, var(--card2));
+  color: var(--select-fg);
+  background: var(--select-bg);
 }
 
 .new-rental-pricing-totals {

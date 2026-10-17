@@ -240,7 +240,11 @@ describe('Settings — saving actually persists', () => {
     await click(buttons('Save')[0])
     expect(readSettings().vatRatePercent).toBe(15)
 
-    await click(buttons('Reset to defaults')[0])
+    /* jsdom is 1024px wide, the tablet band, where Reset lives in More (15 Oct 2026). */
+    await click(container.querySelector('button[aria-label="More actions"]') ?? undefined)
+    const reset = [...document.body.querySelectorAll('[role="menuitem"]')].find((m) => m.textContent?.trim() === 'Reset to defaults')
+    expect(reset).toBeDefined()
+    await click(reset)
     expect(readSettings().vatRatePercent).toBe(13)
   })
 

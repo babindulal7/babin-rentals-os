@@ -21,13 +21,13 @@
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Backend | actions implemented / total | 54 / 54 (100%) | +1 |
 | Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
 | DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +2 |
 | Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
 | Overall | mean of five | ≈ 99% | +0 |
-Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-15T07:57:19.221Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-17T07:27:04.216Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
 Gates read from .lifecycle-result.json, written 2026-10-14T20:37:10.038Z.
 Counted by `npm run completion`, not typed.
 
@@ -38,6 +38,1036 @@ Counted by `npm run completion`, not typed.
 - Correct the 19 Sep table: Cancel a booking 3 → 4 gestures (+1 typed); New Rental, Dashboard → Booked, 6–8 estimate → 10 gestures measured.
 - The 2026-10-15 "Clean UI improvements" entry exists only in `a995169`, not on main. Restore it, or leave it, at the owner's call.
 
+## 2026-10-17 — Booqable ADOPTIONS 1–9 implementation (REFERENCE_SPEC v2.5)
+
+**Did**
+- Implemented all eight build items from `docs/booqable/ADOPTIONS.md` as thin slices (plan: `tasks/plan.md`, checklist: `tasks/todo.md`):
+  1. `latePickups(nowAd)` (`src/lib/queries/bookings.ts`): pickup_at < now, stage Booked/Packed, cancelled excluded, minute-floored instant like `overdue()`. Operations `exceptionFilters` overdue_start/overdue_end now delegate to `latePickups()`/`overdue()` (one definition, stable keys).
+  2. Single next-verb locked: `getRentalPrimaryAction` confirmed sole owner (BookingDetail + LifecycleProgress); Unknown input falls through to non-operable View, never an invented transition. No parallel `workflow.nextVerb` — `jobForStage` (backward) vs `jobThatSets` (forward) verified distinct.
+  3. IntelCard money-blind audit extended to all four blind roles + floor-surface Owner: glance/detail payloads omit money (no behavior change — builders already omit).
+  4. Cancelled census (B5): `RENTAL_VIEWS` + presence-flipped HEAD count + FilterBar opt-in button (quick chip, not stage group). Exclusion now visible with count; never added to All.
+  5. Status counts in rail: `useFacetCounts` wired to drawer `stageCounts`, true-faceted, drawer-open only; stale §10 comment corrected. Date presets intentionally count-less (single range pickers; result count already in drawer footer).
+  6. Export pinned at rail bottom: drawer `onExport` prop → page's audited `handleBulkExport` (G5 columns, money gate, audit). New 2/2 suite.
+  7. Finance KPI definitions + conditional zero-explanations (unknown `—` never reads as zero).
+  8. `periodRange` takes optional `weekStarts` (0/1, default Monday = zero caller impact); header documents why `operationalDayStart` is not an input (day markers; bounds read the setting per call, D4) and marks `PERIODS` legacy.
+- Left the concurrent session's in-progress edits untouched (OperationsQueues card rewrite, NewRental, RentalPricingSection, Today, ShiftHandoverPanel, AddItemPanel).
+
+**Ruled**
+- No product decision invented. B5 answered by building the Cancelled census visibly (Babin flips by reply). B3 (Dashboard KPI strip), D1 backfill sizing, and full PERIODS retirement stay open — logged in `tasks/todo.md`; Dashboard counted View-late links deferred pending the /rentals activity-param route check.
+- `workflow.nextVerb` refused: `getRentalPrimaryAction` already owns the verb; a second resolver would recreate the duplication ADOPTIONS item 3 was written to remove.
+
+**Verified**
+- Focused suites all green: bookings 48/48 (+3 new), operationsQueues 39/39, rentalActions 11/11 (+1 new), rentalsList 91/91 (+1 new audit), rentalViews 5/5 (+1 new), todayQuery 68/68 (+1 new), drawer-export 2/2 (new), facetCounts/render suites (137 across 3 files), operationRoutes 38/38.
+- Full `npm test`: **369 files / 4664 tests passed, 0 failed** (01:50 run; an earlier 4660/4662 run caught 2 failures against the concurrent session's transient mid-edit tree — same file green on rerun with no changes from this pass).
+- `npm run typecheck` EXIT=0 · `npm run lint` 0 warnings · `npm run check:pglite` 166/166 · `npm run check:lifecycle` 31/31 (together = R-35 Verified; no migration written by this pass) · `npm run check:contrast` 82/82 · `npm run build` EXIT=0 (289 PWA entries).
+- Two transient mid-session states recorded honestly, not hidden: a `tsc` unused-var failure and a `vite build` NewRental failure, both from the concurrent session's uncommitted mid-edit tree and both resolved upstream without any edit from this pass.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 166 files · check:pglite 166/166 applied, 0 failed (recorded 2026-10-16T19:58:20.357Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T19:59:16.341Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply remains Babin's under N-5/`BACKUP_PROTOCOL.md`; no migration written or applied by this pass. Staging JWT/PostgREST + physical iPad/Safari acceptance still pending per prior entries.
+- Follow-ups logged in `tasks/todo.md`: money-tile definitions on ~20 remaining call sites, full PERIODS caller migration, Dashboard counted View-late links (route check first).
+- Fresh full-suite count this pass: 4664/4664 (369 files) — the Completion block above reads the repo's cached gate files per `npm run completion`.
+
+## 2026-10-17 — New Rental (/rentals?action=new) layout, navigation & UX audit remediation
+
+**Did**
+- Resolved New Rental view UX audit findings across layout, state clarity, and input polish:
+  1. Unified 2-Column Grid Architecture: Eliminated the broken outer setup canvas that caused mid-page vertical gutter shifts (45%/55% vs 68%/32%). Rebuilt layout into a single unified 2-column workspace (minmax(0, 68fr) minmax(320px, 32fr)), stacking Client & Dates, Equipment, Logistics, and Pricing in the left column, while the Booking Summary rail sticks from the top of the viewport in the right column.
+  2. Financial Math Consolidation: Removed duplicate financial charges breakdown from the main RentalPricingSection column, reserving it solely for inputs (discounts, VAT toggle, manual deposit override), and consolidated full line-by-line financial math (subtotal, taxable amount, VAT, total, deposit, advance) into the sticky BookingSummaryCard.
+  3. Deconflicted Primary CTAs: Styled draft Restore it button as an outline secondary button within an amber alert banner, leaving Confirm Booking as the undisputed solitary primary CTA.
+  4. Contradictory Review Checkmark & Sub-Nav State: Replaced premature review checkmark with warning icon and amber pill badge (${count} remaining) when required checks are missing, transitioning to a green ready pill once complete. Added scroll-synced IntersectionObserver to highlight active section in the subnav bar with an active bottom border.
+  5. Incomplete Confirm Button Treatment: Added muted visual state (opacity-60 via new-rental-header-primary--incomplete), comprehensive tooltip listing all missing blocking notices, and smooth-scrolling with an inline CSS shake animation targeting the first invalid section or review card when clicked while incomplete.
+  6. Standardized Global Search Placeholder: Standardized top header search placeholder to Search or scan… with right-aligned Ctrl+K / ⌘K badge across all pages.
+  7. Form Inputs & Draft Banner Polish: Enriched local draft restoration banner with informative metadata (Unsaved draft from {date} ({client} · {items} · {amount})). Shortened search combobox placeholders (Search client by name, phone, PAN, or ID… and Search equipment, bundles, SKU, or serial…). Added active preset styling to date quick-pills and introduced a 2 days duration pill.
+
+**Ruled**
+- Sub-nav jumpbar Review state strictly reflects completion status: amber warning badge and counter pill while blocking notices remain; checkmark and ready pill only when confirmation is unblocked.
+- Local draft restore button remains secondary/outline inside alert banner; page header action cluster maintains exactly one primary button at any time.
+
+**Verified**
+- TypeScript typecheck (tsc --noEmit): Clean (0 errors across entire repo).
+- Vitest targeted suite: 48/48 test files in src/modules/rentals/ passed (471/471 tests green, including newRentalSimplification.test.tsx, RentalPricingSection.test.tsx, BookingSummaryCard.test.tsx, DatePresets.test.tsx, newRentalDraftPersistence.test.tsx, and tier1-features.test.tsx).
+- Migration & PGlite gates (npm run check:pglite): 166/166 applied, 0 failed, 0 leaks.
+- Real Postgres lifecycle (npm run check:lifecycle): 31/31 steps green.
+- Color Contrast (npm run check:contrast): 82/82 passed (WCAG AA across light/dark/high-contrast/glass).
+- ESLint (npx eslint src/modules/rentals/NewRental.tsx): 0 errors, 0 warnings.
+- Progress lint (npm run lint:progress): Passed cleanly.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 166 files · check:pglite 166/166 applied, 0 failed (recorded 2026-10-16T19:58:20.357Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T19:59:16.341Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply of 0157–0168 by Babin after BACKUP_PROTOCOL.md; refresh docs/live/schema_migrations_<today>.txt, re-run db:plan. Staging JWT/PostgREST needs an isolated project + fixtures.
+- Suite cache still reads the older 4646 count; the fresh full run supersedes it on the next counter refresh. Full lint rerun on a faster machine.
+- Physical iPad/Safari + native zoom; app-wide status/role matrix; open product calls (§4.64/§4.65, D-2); border-merge decision.
+
+## 2026-10-17 — Today view (/today) audit remediation & situational awareness enhancements
+
+**Did**
+- Resolved all Today view audit items:
+  1. Data & Logic Discrepancies (Overdue Unfulfilled Pickups): Updated `src/data/today.ts` to flag outgoing `Booked`/`Packed` orders with `pickupAtAd < nowAd` as `Overdue` with `lateDays` and status notes (`N days late` / `Late today`). Updated `src/modules/today/Today.tsx` to include carry-over unfulfilled bookings when filtering Today dispatch and surfaced an **`Unresolved / Overdue Pickups (N)`** alert banner with direct routing to the packing queue.
+  2. Single Page-Level Date Dispatch Bar: Integrated a unified date dispatch bar (`Today` · `Tomorrow` · `Next 7 Days`) in `.dashboard-workbar` next to the top summary headline, seamlessly synchronizing Pickups and Returns while preserving independent card filter controls.
+  3. `Updated Just now` (`DataAgeBadge`): Restyled with `variant="muted"` into clean, transparent metadata with a subtle interactive refresh trigger.
+  4. Component UX & Actionable Empty States: Replaced dead-end empty states with direct secondary CTAs (`View Tomorrow's Pickups/Returns →`, `+ Create Booking`, `Open Return Queue`).
+  5. Shift Handover Card: Converted static placeholder into a live, interactive shift handover workstation supporting inline note logging, checklist items, and live sync via `'babin:notes-updated'`.
+  6. Global Navbar Search Alignment: Standardized `/operations` search placeholder to `Search or scan… (press /)` to match `/today`.
+  7. High-Value Situational Awareness Row: Added a bottom 3-card operational grid below Shift Handover:
+     - **Currently Out on Set**: Live active rental count, units on field, and total field value strictly gated by `canViewMoney(user.role)` per Law 6.
+     - **Prep & Packing Queue**: Quick breakdown of Booked and Packed orders with direct link to `/operations?queue=pack`.
+     - **Maintenance & QC Hold**: Direct count of open issues with link to `/inventory/cases`.
+
+**Ruled**
+- Zero-Money Visibility (Law 6): Financial figures in the situational awareness card ("Currently Out on Set") are strictly hidden from money-blind roles (`Warehouse`, `Technician`, `Driver`, `Client`), displaying equipment unit counts instead.
+- Overdue outgoing pickups are rendered with distinct warning styles and linked to the warehouse packing queue without altering underlying booking states.
+
+**Verified**
+- TypeScript typecheck (`tsc --noEmit`): Clean (0 errors).
+- ESLint (`eslint src --max-warnings 0`): Clean (0 warnings, 0 errors).
+- UI Copy Lint (`node scripts/check-ui-copy.mjs`): 0 developer-text violations.
+- Targeted Vitest: 5/5 test files / 119/119 tests passed in `src/modules/today/__tests__/`.
+- Opaque-box E2E suites: 2/2 test files / 20/20 tests passed (`tier1-features.test.tsx` 14/14, `tier3-cross-feature.test.tsx` 6/6).
+- Production build (`vite build`): Clean build, 289 precached PWA assets.
+- Completion (`npm run completion`): 99% overall mean.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 166 files · check:pglite 166/166 applied, 0 failed (recorded 2026-10-16T19:21:11.329Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T19:22:49.906Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply of 0157–0168 by Babin after `BACKUP_PROTOCOL.md`; refresh `docs/live/schema_migrations_<today>.txt`, re-run `db:plan`. Staging JWT/PostgREST needs an isolated project + fixtures.
+- Suite cache still reads the older 4646 count; the fresh full run supersedes it on the next counter refresh. Full `lint` rerun on a faster machine.
+- Physical iPad/Safari + native zoom; app-wide status/role matrix; open product calls (§4.64/§4.65, D-2); border-merge decision.
+
+
+
+## 2026-10-17 — Operations View Light/Glass mode audit remediation & floor workflow refinement
+
+**Did**
+- Resolved Operations view Light/Glass mode audit findings:
+  1. Active Sidebar Item contrast: Forced `color: var(--select-fg, #ffffff)` on active navigation pill regardless of theme mode, ensuring clear contrast on the dark navy active pill.
+  2. Naming consistency: Standardized sidebar navigation label and route metadata from `Operation` to `Operations` across `src/data/nav.ts`, `src/App.tsx`, and all associated tests.
+  3. Theme Switcher clarity: Decoupled theme selection into a 2-way base segmented control (`Dark` / `Light`) plus an independent `Glass` modifier toggle with distinct active styling.
+  4. Stage Pill Icons: Fixed invisible white-on-white queue chip icons by dynamically assigning chip icon color to `active ? 'var(--select-fg)' : 'var(--text2)'`, and enriched queue chip vocabulary with distinct icons (`package`, `truck`, `return_arrow`, `tool`, `briefcase`).
+  5. Table Overdue Border Clipping: Replaced row-level `border-left` with an inset `borderLeft: 4px solid var(--danger)` on the first `<td>` and added container `overflow: hidden`, preventing corner clipping.
+  6. Search deduplication & state clarity: Removed duplicate page-header search to restore top bar Global Command Search (`⌘K`), relabeled in-page filter placeholder to `Filter current queue… (press /)`, added `All Active` queue chip, and surfaced an `Overdue (${count})` badge alongside dynamic `Today & Overdue` date filtering.
+  7. Floor scannability & row alignment: Formatted booking numbers in `font-mono` with `#0007` padding for raw digits, added muted italic fallback (`Direct Rental`) for bookings without project titles, standardized Action buttons with minimum 104px width and semantic tints, and added pull scale badges (`Heavy pull`, `Standard kit`, `Quick pull`) under items.
+
+**Ruled**
+- Booking references preserve existing alphanumeric formats (`B-715`) while normalizing bare integer references to zero-padded identifiers (`#0007`).
+- Operations search preserves `aria-label="Search ID, client, project"` for screen readers and tests while presenting `placeholder="Filter current queue… (press /)"` in the UI to distinguish it from global command search.
+
+**Verified**
+- TypeScript typecheck (`tsc --noEmit`): EXIT 0.
+- Targeted Vitest: 14 test files / 207 tests passed (including `operationRoutes.test.tsx` 38/38, `nav.test.ts` 37/37, `shell.test.tsx` 32/32, `tier1-features.test.tsx` 14/14, `challenger.m1.stress.test.tsx` 40/40).
+- Color Contrast (`npm run check:contrast`): 82/82 tests pass, 0 fail (WCAG AA compliant across Light, Dark, High-contrast, and Glass modes).
+- Production build (`npm run build`): Vite 5 production build succeeded with PWA SW generation (289 precached assets).
+- Progress lint (`npm run lint:progress`): Passed cleanly.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 166 files · check:pglite 166/166 applied, 0 failed (recorded 2026-10-16T19:51:57.064Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T19:53:26.795Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply of 0157–0168 by Babin after `BACKUP_PROTOCOL.md`; refresh `docs/live/schema_migrations_<today>.txt`, re-run `db:plan`. Staging JWT/PostgREST needs an isolated project + fixtures.
+- Suite cache still reads the older 4646 count; the fresh full run supersedes it on the next counter refresh. Full `lint` rerun on a faster machine.
+- Physical iPad/Safari + native zoom; app-wide status/role matrix; open product calls (§4.64/§4.65, D-2); border-merge decision.
+
+## 2026-10-17 — G3 wiring + full verification (quote totals end-to-end)
+
+**Did**
+- Closed the G3 client half: `useNewRentalSubmit.ts` fetches per-product terms (`fetchProductPricingTerms`), quotes via `quoteUnitPrice` on the Kathmandu civil pickup day with NPT wall-clock times (single `NPT_OFFSET_MIN`, no second copy), and sends `lineTotal` + `priceBreakdown` snapshot on structure/rules-priced lines only. Flat lines, bundles, money-blind roles (`canViewMoney` gate + RLS), and any fetch/quote failure stay on the server-computed path — quoting never blocks booking.
+- Fixed my own test fragility: `await import()` of the mocked terms module returned the unmocked module in full-suite runs (green standalone, 2 red in full). Static import — mocked by construction — 11/11 in-file and full-suite clean.
+- A concurrent session joined two lines in `rentalViews.test.ts` mid-run (transform failure, 0 tests lost); it was repaired before my check and the file is 5/5 standalone. No action taken beyond verifying.
+
+**Ruled**
+- No product call taken. Snapshot shape (`pricing-quote-v1`: product, method, days, charged days, unit total, adjustments, notes) is persistence engineering, not a pricing promise — the invoice reproduces the AMOUNT; re-derivation inputs ride along honestly. `src/types/database.ts` stays stale by choice (regen needs local stack).
+
+**Verified**
+- Full `npm test`: 4652/4652 tests passed, 365/366 files (the 1 file = the transient concurrent-edit transform failure above, green on re-run). Typecheck EXIT:0. `check:pglite` 166/166 + `check:lifecycle` 31/31. `check:contrast` 82/82. `npm run build` EXIT:0 (289 PWA entries). Full `lint` still times out on this machine — scoped work only. Logs: `artifacts/fulltest-20261017b.log`, `artifacts/typecheck-0168b.log`, `artifacts/build-20261017.log`.
+- 0168 + wiring are VERIFIED locally, NOT APPLIED live, NOT PRODUCTION-VERIFIED. Cutover script now covers 0157–0168 (12 files) for Babin's USER-RUN.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 166 files · check:pglite 166/166 applied, 0 failed (recorded 2026-10-16T18:41:39.939Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T18:42:43.728Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply of 0157–0168 by Babin after `BACKUP_PROTOCOL.md`; refresh `docs/live/schema_migrations_<today>.txt`, re-run `db:plan`. Staging JWT/PostgREST needs an isolated project + fixtures.
+- Suite cache still reads the older 4646 count; the fresh full run above (4652/4652) supersedes it on the next counter refresh. Full `lint` rerun on a faster machine.
+- Physical iPad/Safari + native zoom; app-wide status/role matrix; open product calls (§4.64/§4.65, D-2); border-merge decision.
+
+## 2026-10-16 — G3 line-total persistence (0168) plus user-run cutover script
+
+**Did**
+- WRITTEN then locally VERIFIED migration `0168_booking_line_totals_and_breakdown.sql`: `booking_lines.line_total` + `price_breakdown` (jsonb), `invoice_lines.price_breakdown`, backfill from the exact invoice formula, coherence/check constraints, Law 6 guard extension (no base-table grant, mirroring rate), masked `booking_lines_v` columns appended at end (OR REPLACE rejects mid-list inserts), `create_booking` accepts optional per-line `line_total` + `price_breakdown` with fail-closed validation (non-negative, whole paisa, object, never one without the other; money-blind callers get server figures), `create_invoice` prefers the stored total and copies the breakdown.
+- Fixed one PGlite failure (`cannot change name of view column`) by appending view columns at end; second run clean.
+- Client slice in `src/actions/rentals/createRental.ts`: optional `lineTotal`/`priceBreakdown` on `CreateRentalLine`, validated by name (negative total / orphan breakdown refused), passed as `line_total`/`price_breakdown` only when stated. New suite `src/actions/rentals/__tests__/createRentalLineTotal.test.ts` 4/4.
+- Wrote `scripts/cutover-0157-0167-USER-RUN.ps1` (extended to 0157–0168, 12 files): hidden-prompt DB URL (N-8), backup proof required, one file per transaction, stop at first failure, records `schema_migrations`, skips 0047 seed + 7 renames. USER-RUN ONLY under N-5; no remote apply by agent.
+- Four uncommitted `1px→1.5px` border edits (`FilterBar.tsx`, `Page.tsx`, `Table.tsx`, `RentalsList.tsx`) re-appeared after a revert — identical blob hashes, so a concurrent session owns them. Left untouched to avoid a revert war; they conflict with the fixed-border + box-shadow ring rule (layout shift) and need a merge decision, not a silent overwrite.
+- Delivery audit (read-only): live route is 100% Supabase `booking_transport_v`; `localStorage` seed lives only behind `IS_MOCK` (`lib/queries/delivery.ts`, `MockDeliveryWorkspace`). Rescheduling semantics stay an open product call (§4.64).
+
+**Ruled**
+- G3 engineering close-out of the persistence half only; no product call taken. Quote-to-booking wiring (`fetchProductPricingTerms` still has no UI caller) and all §4.64/§4.65/D-2 decisions stay `TODO(decision)`. `src/types/database.ts` `booking_lines` block is stale (predates real columns) — left untouched; regen needs the local stack.
+
+**Verified**
+- `check:pglite` 166/166 + `check:lifecycle` 31/31 green together = 0168 VERIFIED locally, NOT APPLIED live, NOT PRODUCTION-VERIFIED. Leak gates: 0 anon views, 0 unauthorized RPCs, 74/74 definer paths pinned.
+- Targeted vitest: 36 files / 423 tests passed (`src/actions/rentals`, `src/modules/rentals/booking`), including the new 4. Typecheck green (background log, EXIT:0).
+- NOT rerun: full suite (completion block below reads the cached 4646 count), production build, contrast, lint (machine timeouts on full runs — scoped work only). Logs: `artifacts/check-pglite-0168b.log`, `artifacts/check-lifecycle-0168.log`, `artifacts/baseline-typecheck.log`.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 166 files · check:pglite 166/166 applied, 0 failed (recorded 2026-10-16T18:07:18.498Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T18:06:37.103Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply of 0157–0168 by Babin after `BACKUP_PROTOCOL.md` using the USER-RUN script; then refresh `docs/live/schema_migrations_<today>.txt` and re-run `db:plan` (expect 0047-only pending). Staging JWT/PostgREST verification still needs an isolated project + fixtures.
+- Quote-to-booking wiring: compute `lineTotal`/`priceBreakdown` from `pricingStructures.ts` + `fetchProductPricingTerms` in New Rental; invoice already prefers stored totals.
+- Full `npm test`, `npm run build`, `check:contrast`, `lint` rerun on a faster machine; physical iPad/Safari + native zoom acceptance; app-wide status/role matrix in `docs/UI_UX_IMPROVEMENT_PLAN.md`.
+
+## 2026-10-16 — Reconnected Babin and inspected live Intel protections read-only
+
+**Did**
+- Verified the reconnected Supabase connector can access sxguwvgoserhdolewibb; project reports ACTIVE_HEALTHY. This supersedes the earlier connector-access blocker, not the separate staging/session requirements.
+- Inspected public database catalogs, Intel policies, role helpers, masked-view definitions, unique write keys and audit triggers using explicit read-only transactions. Saved schema evidence and a scoped report in artifacts/intel-live-readonly-2026-10-16/.
+
+**Ruled**
+- Database connector access is not an authenticated application role session or isolated staging environment. No migration, DDL, persistent role change or business-data write was performed.
+
+**Verified**
+- Live RLS enabled on booking_notes, intel_entity_notes, intel_field_definitions and intel_field_values. Management and operations note predicates, custom-field classification rules, client_uuid unique indexes and enabled audit triggers are present.
+- Live booking_lines_v/products_v mask financial columns via auth_can_view_money(), whose role set excludes Warehouse/Technician/Driver/Client. Finance-table read predicates use money/finance helpers; finance helper is Owner/Admin/Manager/Accounts. The masked views lack anon SELECT grants; protected base-table grants rely on RLS.
+- Migration ledger includes 0143_smart_intel_notes_fields. No inference of complete migration parity or runtime role acceptance is made from the ledger.
+- Ran npm run completion. Only documentation/evidence changed in this pass; no fresh full suite or production build is claimed. The generated counts below read repository cached results.
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 166 files · check:pglite 166/166 applied, 0 failed (recorded 2026-10-16T18:07:18.498Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T18:06:37.103Z.
+Counted by `npm run completion`, not typed.
+### Remaining
+- Authenticated Warehouse/Accounts/Manager PostgREST, payload and card DOM checks require real application sessions. No note contents, custom-field values or financial rows were read through the administrative connector.
+- Isolated staging acceptance, physical iPad/Safari, and production release sign-off remain pending the existing backup/application process.
+## 2026-10-16 — Smart Intel role acceptance preflight
+
+**Did**
+- Checked the current Supabase connector project inventory and local staging configuration by variable names/presence only. The connector exposes two inactive projects. No staging variables are present in the process environment or local env files. Kept all credentials out of output.
+- Ran the existing read-only staging verifier; it recorded INCOMPLETE under artifacts/staging-verification/2026-10-16T17-48-14-308Z/. The user supplied the production API origin, sxguwvgoserhdolewibb.supabase.co; the existing production refusal was retained. Requested the actual app URL and an authenticated Warehouse session for read-only inspection.
+- Browser inventory exposes only the in-app browser and MCP Apps, both without open tabs. No connected real-role browser or physical iPad/Safari session was available.
+
+**Ruled**
+- Production API access is not staging certification. No project activation, provisioning, schema changes, migration application, role changes or financial writes were performed.
+
+**Verified**
+- Four focused Smart Intel suites passed 27/27 checks: role-filtered loaders, Accounts note visibility, complete lists, money omission from Warehouse payloads/DOM, named readiness blockers, Escape focus return and touch sheet behavior. These are local automated checks with test doubles, not authenticated Supabase acceptance.
+- The staging verifier's own tests passed 2/2, including production rejection and refusing to certify missing identities/fixtures. No application source changed in this pass, so no fresh full build or full-suite run is claimed.
+- Ran npm run completion; its block below reflects repository cached gate results. Focused-test log: artifacts/intel-role-acceptance-2026-10-16.log.
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 165 files · check:pglite 165/165 applied, 0 failed (recorded 2026-10-16T12:24:37.055Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T12:24:43.211Z.
+Counted by `npm run completion`, not typed.
+### Remaining
+- Real Warehouse/Accounts/Manager card acceptance requires the app URL and authenticated sessions. Staging sign-off additionally requires an active isolated project and known-record fixtures; the provided origin is production.
+- Physical iPad/Safari verification remains pending an available device/session. Deployment and production verification remain pending the established backup/application process.
+## 2026-10-16 — Phone header acceptance and staging access preflight
+
+**Did**
+- Retained and verified the compact Finance/Operations headers. Finished Settings phone sections with one shared title and back action, removing the duplicate content bar and decorative icon that squeezed the section name.
+- Enlarged the shared contextual search input to the 44px target already provided by its frame. Corrected the Bundles serial disclosure from 36px to 44px after shell lint found it.
+- Added the Settings single-title/back regression and aligned two Operations route lookups with the full accessible stage labels while retaining their stage-count and locked-gate assertions.
+- Saved browser measurements, screenshots, test/build/gate logs and staging configuration requirements under artifacts/header-release-2026-10-16/. Preserved concurrent feature edits.
+
+**Ruled**
+- Enforced existing single-header, compact action, 44px and permission rules. No new product decision. This continuation wrote/applied no migration; the existing chain is locally VERIFIED, not APPLIED or PRODUCTION-VERIFIED by this pass.
+
+**Verified**
+- Final typecheck, full lint and final scoped test lint passed. Focused header checks 62/62. Full run 4640/4644 passed with four failures; follow-ups passed core actions 81/81, Tier 1 14/14, and Operations routes 38/38 after correcting stale visible-label lookups. No second clean full-suite run is claimed.
+- Edge Chromium mock-source acceptance: 63 screen/theme cases, 375/820/1440px, light/dark/high contrast, zero page errors. All measured header controls >=44px; one 64px header; phone section titles fit; Finance filters and Settings Edit/Discard/Back work. Screenshots reviewed.
+- Local PGlite 165/165 and lifecycle 31/31 passed together. Build passed (289 PWA entries), shell lint 672 files, UI-copy, contrast 82/82 and fixtures 661 files passed.
+- Staging verifier tests 2/2 passed. Real preflight is INCOMPLETE: connector exposes Rental os rather than Babin, CLI is logged out, role sessions/fixtures absent. User chose reconnecting Supabase; authenticated Babin access is not yet verified.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | — |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | — |
+| Lifecycle | steps green / total | 31 / 31 (100%) | — |
+| Overall | mean of five | ≈ 99% | — |
+Migrations 165 files · check:pglite 165/165 applied, 0 failed (recorded 2026-10-16T11:52:44.028Z). Suite: 4609/4609 passed (recorded 2026-10-15T20:16:18.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T11:52:51.082Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Reauthorize the Supabase connection to the account containing Babin, identify an active isolated staging project, and supply its real role sessions/known-record fixtures locally. Complete live JWT/PostgREST/storage/RPC acceptance before production sign-off under the existing backup/application process.
+- Native-device/Safari acceptance is outside the completed local Chromium checks. The generated completion block reads an older cached suite count; use this continuation's saved logs for fresh test evidence.
+
+## 2026-10-16 — Unified rental Operations and audited lifecycle corrections
+
+**Did**
+- Unified Packing, Handover, Return and Cleaning around one checklist plus one visible right-side summary/filter column; narrow panes stack it below. Short stage labels retain full accessible status names and existing gates. The shared booking menu exposes cancellation inside Operations.
+- Added the Manager+ pre-handover Revert stage dialog and terminal Archive action, with mandatory reasons, offline refusal, immutable retry keys and server-confirmed results. Default Rentals queries exclude archives before paging/counting; searches include retained archived history. Older schemas retain read-only list compatibility.
+- WRITTEN migration 0167 binds actors to active authenticated users, locks booking/request keys, checks Manager branch scope and custody, records immutable audit receipts and uses the existing stage engine. Packed → Booked refreshes holds atomically to avoid duplicate reservations; Quote releases them. Partial quantity pickup evidence blocks reversal and cancellation, and outbound writes share the booking lock so stale handover screens cannot write pickup after correction. Archive refuses cancelled records with pickup history and cannot change stage, custody, invoices or payments.
+
+**Ruled**
+- O16-1/O16-2: one Operations side column and consistent four-step controls. O16-3: Babin explicitly selected reversals before handover only and Archive only for Closed/Cancelled bookings. Manager/Admin/Owner, online, reason ≥10 characters; Manager own branch. Permission catalogue, gates and dispatcher fixtures updated together.
+
+**Verified**
+- Typecheck and production build passed. Full Vitest: 365 files / 4,646 tests passed. Scoped lint passed; shipped theme contrast 82/82 passed. Operations route assertions use the full accessible stage names while visible labels stay short.
+- Local database gates passed together: PGlite 165/165 migrations and lifecycle 31/31, including L31 reversal, reservation, retry, Closed/Cancelled archive, partial-quantity custody and stale outbound-write checks. Migration 0167 is locally VERIFIED, not APPLIED or PRODUCTION-VERIFIED. The private pickup-evidence helper has no authenticated/anon execute grant; all 74 definer search paths are pinned and no unauthorized anonymous RPC/view is exposed.
+- Browser reconnection timed out, so fresh visual verification remains pending. Logs and the repeatable final-check script are in artifacts/operations-unified-2026-10-16/.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 165 files · check:pglite 165/165 applied, 0 failed (recorded 2026-10-16T12:24:37.055Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T12:24:43.211Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Retry the visual browser review when the preview connection is available. Applying 0167 live belongs to Babin after BACKUP_PROTOCOL.md; no live migration was run. Broader release acceptance continues separately from these verified local changes.
+
+## 2026-10-16 — Smart Intel visual organization and responsive review
+
+**Did**
+- Organized the shared card layout with consistent identity spacing, a single scrollable tab strip, count badges, clear selected states, labeled pickup/return columns, a prominent authorized rental total, quantity markers and contained Notes inputs. Completed the rental root styling and removed duplicated client header padding in this continuation.
+- Preserved complete lists, Notes-only note content, 300 ms hover timing, role-filtered data and existing action gates. No entity data, pricing or transition logic changed.
+- Removed four unused desktop declarations from concurrently edited floor workspaces after the production build reported TS6133; retained their surrounding changes.
+
+**Ruled**
+- Existing Babin tokens and typography govern these operational cards. No new product or permission ruling; no migration WRITTEN, APPLIED or PRODUCTION-VERIFIED in this pass.
+
+**Verified**
+- Typecheck passed. Full Vitest suite passed: 364 files / 4,620 tests. Local PGlite 163/163 and lifecycle 30/30 passed together; lint and contrast 82/82 passed. Final production build passed after removing the unused declarations (289 PWA precache entries); Vite reported its existing large-chunk advisory.
+- Chromium local mock review at desktop 1440x960, tablet 1024x900 and phone 390x844: rental list contained all five record lines, equipment contained all seven relationship rows, no horizontal card overflow; tabs measured 44 px. Notes textarea stayed inside the phone card. A touch long press opened the full-width bottom sheet and Close dismissed it. Light and dark views reviewed; touch emulation, temporary viewport and light theme restored afterward.
+- Screenshots and verification logs: artifacts/smart-intel-layout-2026-10-16/. Mock preview: http://127.0.0.1:3019/. No production data was changed. Generated completion below reads an older cached suite count; the fresh command log records the 4,620 passing tests above.
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-16T01:51:19.833Z). Suite: 4609/4609 passed (recorded 2026-10-15T20:16:18.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T01:51:23.158Z.
+Counted by `npm run completion`, not typed.
+### Remaining
+- Live Supabase role/JWT acceptance and production verification remain pending the established application process; this pass used an isolated local mock origin.
+- Physical iPad/Safari acceptance remains pending. Other sessions' in-progress changes are preserved.
+## 2026-10-16 — New Rental validation, draft restore and confirmation acceptance
+
+**Did**
+- Added an immediate confirmation-in-flight lock, covering rapid repeated calls before React updates the button. Expanded submit tests for success, rapid repeat, failed creation retry with the same idempotency key, failed confirmation retry of the same Quote, draft-link retry after confirmation, blocked forms, missing sessions and missing clients. The lock and submit tests were incorporated by the concurrent main integration before the final checks.
+- Fixed restored drafts losing their client database reference when the live client directory is unavailable. Both device-copy and saved-draft restoration now retain that reference; clearing the client selection writes a null reference rather than the previous client. Strengthened resave assertions for the client reference, dates, discount and VAT.
+- Corrected ambiguous confirmation failure copy: entries are retained and retries reuse the same booking reference, without promising that an uncertain network response means nothing was written.
+
+**Ruled**
+- No new product, permission, schema or migration ruling. Existing required-field, warning, pricing and server-authoritative confirmation rules are retained.
+
+**Verified**
+- Final sequence: typecheck passed; 61 tests across six focused suites passed; local PGlite 163/163 migrations and lifecycle 30/30 passed together; production build passed (297 PWA precache entries). Scoped ESLint passed. Logs: artifacts/new-rental-acceptance-2026-10-16/.
+- Chromium against isolated local mock origin 127.0.0.1:3018: incomplete Confirm exposed required-field guidance; Save draft created #918; reload restored the project and dates. Added a demo client, Personal / Test Shoot type and one Aputure Amaran 200x line; Confirm showed Rental 918 Confirmed. Open Rental Detail and reload retained Booked status and the test project. This exercised local mock persistence, not production Supabase. No payment, invoice or live migration was submitted.
+- Screenshots: restored-draft.png, confirmed.png, booked-after-reload.png. Existing browser size/theme retained. Other sessions' unrelated working changes were preserved.
+- Generated completion below reads cached repository suite data; this invocation ran the 61 focused tests above, not the cached full-suite count.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-16T01:35:28.599Z). Suite: 4609/4609 passed (recorded 2026-10-15T20:16:18.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T01:35:39.358Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Live JWT/PostgREST acceptance, physical iPad/Safari, all roles and the broader cross-app status/error matrix remain in docs/UI_UX_IMPROVEMENT_PLAN.md.
+- The local demo contains the explicitly named test rental #918 on port 3018. No production booking was created by this check.
+
+## 2026-10-16 — Mobile Header De-Crowding, Delivery Workspace Persistence, and Dexie Offline Floor Scans (/goal)
+
+**Did**
+- **Track 1: Mobile Header De-Crowding & Responsive Polish**:
+  - `src/modules/operations/OperationsQueues.tsx`: Guarded header status pill with `selected && !phone` so narrow mobile viewports (≤ 360px) do not crowd or crush the title.
+  - `src/modules/settings/Settings.tsx`: Dynamically set subpage title (`activeTab?.label ?? 'Settings'`) and added `onBack={toList}` on phone viewports to provide native header back navigation without duplicate back-button bars.
+  - Ensured single-row 64px header invariant with zero horizontal overflow across 320px, 360px, 375px, and 390px viewports.
+- **Track 2: Delivery Workspace Supabase Persistence**:
+  - `src/modules/operations/LiveTransportPlans.tsx`: Transformed from static read-only table into a reactive live workspace connected to Supabase view `booking_transport_v` joined with `bookings`.
+  - Added live text search (booking number, client, vehicle, destination), delivery method filter chips (`All`, `Babin Delivery`, `Courier`, `Third Party`), and real-time domain event subscriptions (`RENTAL_HANDED_OVER`, `RENTAL_CONFIRMED`, `RENTAL_PICKED_UP`).
+  - Integrated "Deliver & Sign" action column launching `DriverHandoverModal` with touch signature capture and geolocation coordinates.
+  - Enforced Law 6 (money-blindness) so monetary transport columns (`delivery_charge`, `fuel_charge`) are requested only when `canViewMoney(role)` is true.
+- **Track 3: Dexie Offline Outbox UI Wire-Up for Floor Operations**:
+  - `src/lib/floorScanStorage.ts`: Added `recordFloorScanEvent` to asynchronously queue non-custodial barcode scan events (`context: 'packing' | 'handover' | 'return' | 'lookup' | 'stock_check'`) into Dexie IndexedDB (`scan_events` table) with idempotency `client_uuid` and `scanned_at` timestamp, auto-replaying via `drainQueue()`.
+  - `src/modules/rentals/PackingWorkspace.tsx`: Integrated `recordFloorScanEvent` in `pack(key, via)` for accepted, rejected, and warning scans.
+  - `src/modules/rentals/HandoverWorkspace.tsx`: Integrated `recordFloorScanEvent` in `pick(key, via)` for accepted, rejected, and duplicate scans.
+  - `src/modules/rentals/ReturnWorkspace.tsx`: Integrated `recordFloorScanEvent` in `receive(key, via)` and ambient barcode/flight-case scan handler for accepted, rejected, and warning scans.
+  - Maintained custodial stage transitions as online fail-closed RPCs (`apply_booking_stage_transition`) per Rule R-40.
+  - Added unit test coverage for `recordFloorScanEvent` in `src/lib/__tests__/floorScanStorage.test.ts`.
+- **Track 4: Full Multi-Step Verification & Acceptance Gates**:
+  - Verified `npm run typecheck`: exit 0.
+  - Verified `npm run lint`: exit 0 (0 warnings, 0 errors).
+  - Verified `npm run check:contrast`: 82/82 pass (exit 0).
+  - Verified `npm run check:pglite`: 163/163 applied, 0 view leaks, 0 function leaks, 0 definer search_path issues (exit 0).
+  - Verified `npm run check:lifecycle`: 30/30 green through real Postgres + RLS (exit 0).
+  - Verified `npm test`: 364 files passed, 4,620 tests passed (exit 0).
+  - Verified `npm run build`: successful production build, 297 assets precached (exit 0).
+
+**Ruled**
+- Non-custodial operations events (barcode reads, item ticks, triage notes) are queued locally into Dexie IndexedDB outbox with client-minted UUIDs so warehouse staff can scan uninterrupted in warehouse dead zones (Law 8).
+- Custody stage transitions (`apply_booking_stage_transition`) strictly remain online, fail-closed database RPCs and are never queued offline (Rule R-40, Law 1).
+- Money-blind roles (Warehouse, Driver, Technician, Client) cannot view or request delivery charges, fuel fees, or rental amounts (Law 6).
+- All floor primary verb actions maintain ≥ 56px touch targets; secondary buttons ≥ 44px touch targets (Law 14).
+
+**Verified**
+- `npm run typecheck`: exit 0.
+- `npm run lint`: exit 0 (0 errors, 0 warnings).
+- `npm run check:contrast`: 82/82 pass (exit 0).
+- `npm run check:pglite`: 163/163 applied (exit 0).
+- `npm run check:lifecycle`: 30/30 green (exit 0).
+- `npm test`: 364 test files passed, 4620 tests passed (exit 0).
+- `npm run build`: exit 0.
+- `npm run lint:progress`: exit 0.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-16T00:58:48.121Z). Suite: 4609/4609 passed (recorded 2026-10-15T20:16:18.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T00:58:59.853Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Production deployment of migrations 0163 and 0164 following BACKUP_PROTOCOL.md by Babin.
+- Continue responsive verification of floor stage workspaces and tablet header layouts across remaining secondary modules.
+
+
+## 2026-10-16 — Eliminate jumping buttons, rogue hover/active transforms, and border layout shifts across app
+
+**Did**
+- Enforced global button physics in `src/styles/theme.css` and `src/styles/ui-v2.css`:
+  - Locked `button:hover, button:active, a.btn:hover, a.btn:active, [role="button"]:hover, [role="button"]:active, .ui-button:hover, .ui-button:active { transform: none; }` across all media modes, aligning strictly with theme.css:1267-1269 tactile interactive principle (feedback is color/brightness or box-shadow only — never translate or scale).
+  - Explicitly locked `.ui-button:hover:not(:disabled)` and `.ui-button:active:not(:disabled)` to `transform: none` with tactile `filter: brightness(0.96)`.
+- Purged all rogue module-level jumping CSS transforms on `:hover` and `:active`:
+  - `auth.css`: removed `translateY(-1px)` and `scale(0.97)` on `.auth-mock-btn`.
+  - `calendar.css`: removed `translateY(-1px)` from `.calendar-kind-chip:hover`, `.calendar-day-cell:hover`, `.calendar-timeline-bar-btn:hover`, `button.calendar-agenda-item:hover`, and `.calendar-stepper-btn:hover`; removed `translateY(-0.5px)` from `.calendar-chip:hover`; removed `scale(1.25)` from `.calendar-dot:hover`.
+  - `clients.css`: removed `translateY(-1px)` from `.client-filter-chip:hover`, `.client-overlay-chip:hover`, and `.credit-policy-card:hover`; removed `translateY(-2px)` from `.client-bento-card:hover` and `.membership-plan-card:hover`.
+  - `documents.css`: removed `scale(1.05)` from `.doc-rail-cat-btn:hover .doc-rail-cat-icon` and `translateY(-2px)` from `.doc-card:hover`.
+  - `finance.css`: removed `translateY(-2px)` from `.finance-kpi-card:hover`, `translateY(-1px)` from `.finance-filter-chip:hover`, and `scaleY(1.04)` from `.finance-daily-bar:hover`.
+  - `inventory.css`: removed `translateY(-1px)` from `.inventory-filter-chip:hover` and `.bundle-quick-tile:hover`; removed `translateY(-2px)` from `.inventory-grid-item:hover` and `.bundle-grid-card:hover`.
+  - `delivery.css`: removed `translateY(-1px)` from `.delivery-kpi-card:hover` and `translateY(-2px)` from `.delivery-card-item:hover`.
+  - `dashboard.css`: removed `scale(0.96)` from `.dashboard-master-date-control__btn:active`; removed `translateY(-1px)` from `.movement-card__cta-btn.is-dominant:hover` and `.is-prep:hover`; removed `translateX(2px)` and `scale(0.98)` from `.movement-card__cta-btn`.
+- Fixed dynamic border-width layout shifts in components:
+  - `CreationActionSearch.tsx`: replaced `border: isFocused ? '1.5px solid ...' : '1px solid ...'` with constant `1px solid` border and `box-shadow: 0 0 0 1px var(--primary)` ring.
+  - `PrintLabelModal.tsx`: replaced `border: active ? '2px solid ...' : '1px solid ...'` with constant `1px solid` border and `box-shadow` ring.
+  - `BundleQuickBuilder.tsx`: replaced `border: isSelected ? '1.5px solid ...' : '1px solid ...'` with constant `1px solid` border and `box-shadow: 0 0 0 1px var(--info)` ring.
+  - `ScannerFab.tsx`: fixed viewfinder border to constant `2px solid` preventing layout jitter when feedback triggers.
+
+**Ruled**
+- Tactile feedback is color/brightness (`filter: brightness(0.96)`) and box-shadow only — never `transform: translate` or `scale` (`theme.css:1267-1269`).
+- Buttons must never push adjacent elements or shift during loading (label transparency + centered absolute spinner maintained per Button.tsx).
+- Focus and selection outlines use outer box-shadow rings instead of dynamic border-width changes to eliminate subpixel layout shifts.
+
+**Verified**
+- `npm run typecheck`: exit 0.
+- `npm test`: 364 files passed, 4,619 tests passed (exit 0).
+- `npm run check:contrast`: 82/82 pass (exit 0).
+- `npm run check:pglite`: 163/163 applied, 0 view leaks, 0 function leaks, 0 definer search_path issues (exit 0).
+- `npm run check:lifecycle`: 30/30 green through real Postgres + RLS (exit 0).
+- `npm run build`: successful production build, 297 assets precached (exit 0).
+- `npm run lint`: exit 0 (0 errors, 0 warnings).
+- `npm run lint:progress`: exit 0.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-16T00:19:09.983Z). Suite: 4609/4609 passed (recorded 2026-10-15T20:16:18.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T00:19:37.090Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Production deployment of migrations 0163 and 0164 following BACKUP_PROTOCOL.md by Babin.
+- Continue responsive verification of floor stage workspaces and tablet header layouts across remaining secondary modules.
+
+
+## 2026-10-16 — Enhance UI, color palette, and ergonomics across All Creation Actions subsystem
+
+**Did**
+- Completely elevated the "All Creation Actions" panel (`CreationActionSearch.tsx`):
+  - Upgraded modal to spacious `size="lg"` with informative subtitle and accessible structure.
+  - Implemented dynamic category filter pills (All, Rentals, Clients, Inventory, Operations, Crew, Billing, Admin) with live action count chips and active states (`var(--select-bg)` / `var(--select-fg)`).
+  - Modernized search input with 48px height, 1px stable border, `/` keyboard shortcut badge, search clear button, and focus ring.
+  - Replaced rogue `#e65100` and un-themed fallback colors with accessible, theme-aware category accent palettes (Blue for Rentals, Emerald for Clients, Warm Amber for Inventory, Indigo for Operations, Sky for Crew, Forest Green for Billing, Slate for Admin) that maintain full WCAG AA contrast in Light and Dark mode.
+  - Redesigned action cards (`.action-search-match`) with 56px minimum touch targets, 36x36px icon tiles with category-tinted backgrounds, opening mode badges (`↗ Workspace`, `⚡ Quick Dialog`, `◨ Side Drawer`, `✦ Multi-step`, `◻ Modal`), and an active `Open ↵` badge when focused.
+  - Added guarded `scrollIntoView` for smooth keyboard-driven scrolling across options without jsdom test environment issues.
+  - Added a shortcut footer with keycaps (`↑↓ Navigate`, `↵ Open`, `Esc Close`) and available action counter.
+- Modernized the Universal Add Dropdown (`GlobalAddMenu.tsx`):
+  - Refined split button and single button triggers with subtle elevation, hover brightness, and clean separator styling.
+  - Enhanced floating dropdown menu with 28x28px rounded icon tiles, semantic hover feedback (`var(--surface-2)`), and a distinct "All creation actions…" discovery action with search glyph and badge.
+- Replaced hardcoded `#e65100`, `#dc2626`, `#fffbeb`, and `#fde68a` across creation dialogs and wizards:
+  - `QuickCreateDialog.tsx`: updated Client Type buttons with `var(--primary)` and `var(--nav-active-bg)` active states, input error borders with `var(--danger)` / `var(--danger-text)`, duplicate client warning with `var(--chip-amber-bg)` / `var(--chip-amber-fg)` / `var(--warn)`, and details toggle button with `var(--primary-text)`.
+  - `CreationDrawer.tsx`: updated drawer backdrop to use `var(--scrim)`, header z-index to `var(--z-drawer)`, icon badge with `var(--nav-active-bg)` / `var(--primary)`, and equipment/expense error borders and text with semantic tokens (`var(--danger)` / `var(--danger-text)`).
+  - `CreationWizard.tsx`: updated 4-step wizard stepper with `var(--primary)` and `var(--nav-active-bg)` active indicators, delivery mode buttons with design tokens, remove item button with `var(--danger-text)`, and review rule notice with `var(--chip-blue-bg)` / `var(--chip-blue-fg)`.
+
+**Ruled**
+- Preserved all business laws (Law 6 Money Blindness, Law 13 Touch Target Floor, Law 15 Accessibility). All creation components utilize design system CSS custom properties from `theme.css` without rogue hardcoded colors.
+
+**Verified**
+- `npm run typecheck`: exit 0.
+- `npm test`: `globalAddMenu.test.tsx` (23/23 tests pass).
+- `npm run check:contrast`: 82/82 pass (0 fail).
+- `npm run check:pglite`: 163/163 applied, 0 view leaks, 0 function leaks, 0 definer search_path issues.
+- `npm run check:lifecycle`: 30/30 green through real Postgres + RLS.
+- `npm run build`: successful production build (297 assets precached).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-16T00:05:30.870Z). Suite: 4609/4609 passed (recorded 2026-10-15T20:16:18.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T00:05:52.072Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Production deployment of migrations 0163 and 0164 following BACKUP_PROTOCOL.md by Babin.
+- Continue responsive verification of floor stage workspaces and tablet header layouts across remaining secondary modules.
+
+
+## 2026-10-16 — Responsive UI/UX layout improvements: header clearance at 768px, 44px/56px touch ergonomics, and mobile overflow fixes
+
+**Did**
+- Resolved tablet portrait (768px) header crowding in `src/components/shell/Header.tsx` and `shell.css`:
+  - Enforced `min-width: 140px` for `.app-global-header__breadcrumbs` on tablet/desktop, preventing page titles ("Rentals", "New Rental") from being crushed to 0px width.
+  - Hidden page info tooltip on tablet (`isPhone || isTablet ? 'none' : 'inline-flex'`), eliminating the 44px coordinate overlap and interaction collision with the header search input.
+  - Eliminated 116px of phantom dead space in `.app-global-header__action-slot--primary` on tablet by adjusting slot sizing (`width: auto; min-width: 44px; max-width: 160px`).
+  - Compacted bulk selection action buttons on tablet to icon triggers (`44x44px`), keeping all bulk actions and the user avatar comfortably on-screen without off-screen push.
+  - Aligned mobile header right zone button gap to the canonical 8px touch target spacing.
+- Fixed floor workspace completion button heights:
+  - Updated primary completion actions in `PackingWorkspace.tsx` ("Complete Packing"), `HandoverWorkspace.tsx` ("Complete Handover" / "Complete Session"), `ReturnWorkspace.tsx` ("Complete Return" / "Complete Session"), and `ResetWorkspace.tsx` ("Complete Reset") from 44px to `minHeight: 56px`, fulfilling the primary floor verb rule in AGENTS.md.
+  - Standardized mobile stage indicator steps in `operationsShell.css` with clean ellipsis truncation, eliminating 4-line button text distortion on narrow mobile viewports.
+- Upgraded form and catalogue touch targets across views to >= 44px with >= 8px gaps:
+  - Shoot preset chips in `rentals.css` (`.new-rental-preset-chip`): upgraded from 28px to `min-height: 44px; padding: 6px 14px; gap: 6px;` and container `gap: 8px`.
+  - Catalogue tabs in `AddItemPanel.tsx`: upgraded from 28px to `minHeight: 44px, padding: 0 14px, gap: 8px` and select controls to 44px height.
+  - Rentals list stage filter pills (`stageChipStyle`, `FilterBar.tsx`): upgraded from 32px to `minHeight: 44px, height: 44px, padding: 0 14px, gap: 8px`.
+  - Mobile card operations button (`...`) in `RentalsList.tsx`: enlarged from 26px to `44x44px` touch hit area.
+  - Bundle category accordion headers in `Bundles.tsx`: upgraded from 26px to `minHeight: 44px, padding: 8px 4px, gap: 8px`.
+  - Removed phantom 120px horizontal overflow box on mobile New Rental cards by applying `display: none` to `.rental-line-table thead` in `rental-line-items.css`.
+
+**Ruled**
+- Preserved existing product decisions, financial invariants, and 64px single header constraint. Touch targets on cards and controls meet or exceed 44px, with floor completion actions at 56px and 8px minimum touch spacing.
+
+**Verified**
+- `npm run typecheck`: exit 0.
+- `npm run lint`: exit 0 (0 warnings).
+- `npm test`: shell test suite (11 files / 118 tests) and operations/rentals test suites (30 files / 437 tests) passed (0 failures).
+- `npm run check:contrast`: 82/82 WCAG AA pass (0 failures).
+- `npm run check:pglite`: 163/163 applied, 0 view leaks, 0 function leaks, 0 definer search_path issues.
+- `npm run check:lifecycle`: 30/30 green through real Postgres + RLS.
+- `npm run build`: successful production build (297 precached assets).
+- Live browser audit re-verification with `/browser` subagent: confirmed 0px title squeeze resolved (140px), search collision eliminated, avatar on screen during bulk selection, 0px horizontal document overflow, and all 44px/56px target heights verified.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-16T00:05:30.870Z). Suite: 4609/4609 passed (recorded 2026-10-15T20:16:18.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T00:05:52.072Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Production deployment of migrations 0163 and 0164 following BACKUP_PROTOCOL.md by Babin.
+- Continue responsive verification of floor stage workspaces and tablet header layouts across remaining secondary modules.
+
+
+## 2026-10-16 — Eliminate jumping buttons across the app: enforce tactile physics without transforms or border jumps
+
+**Did**
+- Enforced universal `transform: none` on hover and active states for `button`, `a.btn`, `[role="button"]`, and `.ui-button` in `src/styles/theme.css` and `src/styles/ui-v2.css`, adhering to the design principle that tactile feedback is colour/brightness only (`filter: brightness(0.96)`), never translate or scale.
+- Removed legacy and rogue `:hover` and `:active` jumping transforms across module styles:
+  - `auth.css`: removed `translateY(-1px)` and `scale(0.97)` on `.auth-mock-btn`.
+  - `calendar.css`: removed `translateY(-1px)` from `.calendar-kind-chip:hover`, `.calendar-day-cell:hover`, `.calendar-timeline-bar-btn:hover`, `button.calendar-agenda-item:hover`, and `.calendar-stepper-btn:hover`; removed `translateY(-0.5px)` from `.calendar-chip:hover`; removed `scale(1.25)` from `.calendar-dot:hover`.
+  - `clients.css`: removed `translateY(-1px)` from `.client-filter-chip:hover`, `.client-overlay-chip:hover`, and `.credit-policy-card:hover`; removed `translateY(-2px)` from `.client-bento-card:hover` and `.membership-plan-card:hover`.
+  - `documents.css`: removed `scale(1.05)` from `.doc-rail-cat-btn:hover .doc-rail-cat-icon` and `translateY(-2px)` from `.doc-card:hover`.
+  - `finance.css`: removed `translateY(-2px)` from `.finance-kpi-card:hover` and `translateY(-1px)` from `.finance-filter-chip:hover`.
+  - `inventory.css`: removed `translateY(-1px)` from `.inventory-filter-chip:hover` and `.bundle-quick-tile:hover`; removed `translateY(-2px)` from `.inventory-grid-item:hover` and `.bundle-grid-card:hover`.
+  - `delivery.css`: removed `translateY(-1px)` from `.delivery-kpi-card:hover` and `translateY(-2px)` from `.delivery-card-item:hover`.
+  - `dashboard.css`: removed `scale(0.96)` from `.dashboard-master-date-control__btn:active`; removed `translateY(-1px)` from `.movement-card__cta-btn:hover`; removed icon `translateX(2px)` and `scale(0.98)` on active/hover from `.movement-card__cta-btn`.
+- Fixed layout jitter caused by dynamic border width changes:
+  - `CreationActionSearch.tsx`: replaced `isFocused ? 1.5px : 1px` with a fixed `1px` border and `box-shadow` outline.
+  - `PrintLabelModal.tsx`: replaced `active ? 2px : 1px` preset border with fixed `1px` border and `box-shadow`.
+  - `BundleQuickBuilder.tsx`: replaced `isSelected ? 1.5px : 1px` border with fixed `1px` border and `box-shadow`.
+  - `ScannerFab.tsx`: preserved fixed 2px border on viewfinder to prevent layout shift when feedback changes.
+
+**Ruled**
+- Tactile feedback on interactive elements must remain color/brightness and box-shadow based; interactive elements must never translate, scale, or alter border-box geometry on hover, focus, or press.
+
+**Verified**
+- `npm run typecheck`: exit 0.
+- `npm test`: 364 test files passed, 4619 tests passed (0 failures).
+- `npm run check:contrast`: 82/82 WCAG AA pass.
+- `npm run check:pglite`: 163/163 applied, 0 view leaks, 0 function leaks, 0 definer search_path issues.
+- `npm run check:lifecycle`: 30/30 green through real Postgres + RLS.
+- `npm run build`: successful production build.
+- `npm run lint:progress`: verified valid.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-16T00:01:59.987Z). Suite: 4619/4619 passed (recorded 2026-10-15T23:49:55.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T00:02:26.015Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Production deployment of migrations 0163 and 0164 following BACKUP_PROTOCOL.md by Babin.
+- Continue responsive verification of floor stage workspaces (Pack, Handover, Return, Reset) and tablet header search/more menu layout.
+
+
+## 2026-10-16 — Fix New Booking quote-save fallback: equipment line description preservation and robust availability product mode queries
+
+**Did**
+- Fixed line serialization in `src/modules/rentals/booking/useNewRentalSubmit.ts` so equipment and inventory lines always carry `description: l.name` (previously description was placed in the ternary `else` branch, omitting descriptions from all equipment lines and storing `description = NULL` in `booking_lines`).
+- Enforced UUID sanitization for inventory line `productId` in `useNewRentalSubmit.ts` and explicit `lineType` ('Accessory' vs 'Equipment') and `productId` resolution in `src/modules/rentals/booking/itemCatalogue.ts` (`equipmentLineDraft`).
+- Hardened `readProductModes` in `src/lib/queries/availability.ts` to fall back to the base `products` table (`id, tracking_mode, total_quantity`) when `products_v` omits product rows, ensuring holds and assignments are never blocked by view projection/filtering differences.
+- Improved label resolution in `readLines` (`availability.ts`) to fall back to `${row.line_type} (${row.product_id.slice(0, 8)})` rather than a bare generic type string, preventing opaque `"Equipment"` error messages.
+- Added comprehensive unit tests in `src/modules/rentals/booking/__tests__/useNewRentalSubmit.test.tsx` and `itemCatalogue.window.test.ts`.
+
+**Ruled**
+- Preserved existing product and financial rules (Law 1, Law 5, integer paisa). No new schema migrations or product rule changes.
+
+**Verified**
+- `npm run typecheck`: exit 0.
+- `npm run lint`: exit 0 (0 warnings).
+- `npm test`: all targeted and suite tests passed (including `confirmRental.test.ts`, `availability.test.ts`, `itemCatalogue.window.test.ts`, and `useNewRentalSubmit.test.tsx`).
+- `npm run check:pglite`: 163/163 applied, 0 view leaks, 0 function leaks, 0 definer search_path issues.
+- `npm run check:lifecycle`: 30/30 green through real Postgres + RLS.
+- `npm run check:contrast`: 82/82 WCAG AA pass.
+- `npm run build`: successful production build (297 precached assets).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-15T22:48:32.247Z). Suite: 4609/4609 passed (recorded 2026-10-15T20:16:18.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-15T22:49:00.000Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Production deployment of migrations 0163 and 0164 following BACKUP_PROTOCOL.md by Babin.
+- Continue responsive verification of floor stage workspaces (Pack, Handover, Return, Reset) and tablet header search/more menu layout.
+
+
+## 2026-10-16 — Per-panel date filters on Today, filter slot alignment, and full test suite verification
+
+**Did**
+- Integrated per-panel date controls in Today (`Today.tsx`): Pickups and Returns each carry independent date controls in their respective headers (`RULINGS-2026-10-15.md`), with keyboard shortcuts `[` (previous), `]` (next), and `t` (today) synchronizing both.
+- Restored `data-header-slot="filters"` on the header filter actions container in `src/components/shell/Header.tsx` to align with the canonical left-aligned filter toggle ruling.
+- Updated end-to-end tests (`tier1-features.test.tsx`, `tier3-cross-feature.test.tsx`, `headerButtonPositions.test.tsx`) to match the per-panel date filters and left-aligned filter slot layout.
+
+**Ruled**
+- No new product decisions or schema migrations. RULINGS-2026-10-15 per-panel date controls and header filter slot placement verified.
+
+**Verified**
+- `npm run typecheck`: exit 0.
+- `npm run lint`: exit 0 (0 warnings).
+- `npm test`: all 364 test files passed (4,616 tests passed, 0 failures).
+- `npm run check:pglite`: 163/163 applied, 0 view leaks, 0 function leaks, 0 definer search_path issues.
+- `npm run check:lifecycle`: 30/30 green through real Postgres + RLS.
+- `npm run check:contrast`: 82/82 WCAG AA pass.
+- `npm run build`: successful production build (297 precached assets).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-15T21:55:38.255Z). Suite: 4616/4616 passed.
+Gates read from .lifecycle-result.json, written 2026-10-15T21:56:26.801Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Production deployment of migrations 0163 and 0164 following BACKUP_PROTOCOL.md by Babin.
+- Continue responsive verification of floor stage workspaces (Pack, Handover, Return, Reset) and tablet header search/more menu layout.
+
+
+## 2026-10-16 — Selected rental items: responsive cards and interaction verification
+
+**Did**
+- Completed the selected-item follow-up begun 15 October: cards below a 900px pane width, labelled quantity/days/prices/availability, and visible 44px steppers, bundle toggles and action triggers. The table remains at wider pane widths. Existing cells, callbacks and money/read-only gates are reused. These changes were incorporated into main by the concurrent integration.
+- Corrected bundle feedback to count components actually added and describe their included charge; removed the instruction to apply a second bundle discount.
+- Removed an unused `womenDopEligible` destructured binding from useNewRentalSubmit after the resumed production build reported TS6133. The option contract and pricing behavior are unchanged.
+- Updated the app-wide plan and retained the separate 768px shared-header crowding finding.
+
+**Ruled**
+- No new product or permission ruling. Implements the existing touch-target and responsive requirements. No live migrations or booking submission.
+
+**Verified**
+- Original implementation run: typecheck, scoped ESLint, 356 test files / 4,508 tests passed, including the quantity/day/read-only regression and bundle pricing feedback assertion. Other sessions subsequently integrated additional changes; this count does not certify those later edits.
+- Resumed main at 9b74008c plus the unused-binding fix: typecheck; 21 targeted tests across RentalLineItemsTree, newRentalBusinessLogic and useNewRentalSubmit; scoped ESLint; local PGlite 163/163 migrations and lifecycle 30/30 passed. Contrast 82/82 passed. Production build passed (297 PWA precache entries).
+- Current-main Chromium checks: actual CSS viewport widths 320/390/768/1024/1280/1440 had document width equal to viewport width; cards at narrow pane widths and tables at wider widths. Controls compute to 44px. Quantity 1→2 and days 2→3 gave Rs 2,700 for a Rs 450/day line; tablet menu opened visibly and removal restored the empty state. No booking was confirmed. Existing native zoom retained; viewport overrides reset.
+- Screenshots and measurement JSON: artifacts/selected-items-2026-10-15/. The generated completion block below reads repository cached suite data (4,609); that is distinct from this session's full and targeted invocations above.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-15T20:30:13.256Z). Suite: 4609/4609 passed (recorded 2026-10-15T20:16:18.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-15T20:30:24.487Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Physical iPad/Safari, screen-reader acceptance, all booking statuses/roles, offline/error paths and persisted writes remain in the app-wide acceptance plan.
+- Shared header Search/More crowding at 768px remains a separate follow-up. No full-app completion claim.
+
+## 2026-10-16 — Integration: Claude UX improvements, Delivery dispatch persistence, and Revenue credit reconciliation
+
+**Did**
+- Fully integrated Claude's UI compaction & state hardening across the app:
+  - **Booking Detail Compact Header** (`src/modules/rentals/BookingDetail.tsx`): Eliminated the 610px button cluster squeezing desktop record titles down to 37px. Unified header across all widths to stage action, 44px Operations menu, and single `RentalMoreActions` overflow. Relocated badges into Zone 1 `PageHeader status={...}`.
+  - **Pulse 5-State Ladder** (`src/modules/reports/Pulse.tsx`, `src/lib/queries/pulse.ts`): Replaced silent zero-swallowing with throwing on query failures (Law 16). Fixed `payment_status` filter from non-existent `'Completed'` to `'Received'`. Wrapped dashboard in `PageBody` five-state ladder with retry and "nothing recorded yet" first-run detection.
+  - **Settings State Hardening** (`src/modules/settings/`): Added skeleton loading, empty state distinction (directory with no staff vs filtered empty), offline failure messaging, and Device PIN check retry.
+  - **Standardized `useLoad` Hook** (`src/lib/queries/useLoad.ts`): One-shot query lifecycle with error recovery and reconnect auto-retry.
+- Integrated branch `fix/revenue-credit-reconciliation-20261016`:
+  - Reconciled issued-window invoice credits without false net sales (`src/modules/reports/RevenueReport.tsx`, `src/lib/queries/reportRevenueTrend.ts`, `src/lib/intel/revenueTrend.ts`).
+  - Added full test coverage in `src/lib/intel/__tests__/revenueCredits.test.ts` and `src/lib/queries/__tests__/reportRevenueTrend.test.ts`.
+- Integrated branch `feat/2026-10-16-delivery-dispatch-persistence`:
+  - Added UI-validation workflow model for safe delivery dispatch transitions (`src/lib/deliveryDispatchWorkflow.ts`, `src/lib/__tests__/deliveryDispatchWorkflow.test.ts`).
+  - Sequenced delivery jobs and event RPC migration as `supabase/migrations/0165_delivery_jobs_and_event_rpc.sql`.
+- Verified live app running on port 3000 (`npm run dev:mock`).
+
+**Ruled**
+- Credit note amounts reflect paid settlements, not taxable sales deductions; revenue reporting never subtracts them from taxable sales.
+- Delivery events and stage transitions remain server-authoritative RPCs; client UI enforces no client-side authority.
+- N-5 preserved: migrations written and locally validated in PGlite (0163, 0164, 0165); zero remote migrations applied.
+
+**Verified**
+- `npm run typecheck`: clean pass (exit 0).
+- Full Vitest suite: 364 files, 4,609/4,609 passed (0 failures).
+- `npm run check:pglite`: 163/163 migrations applied from scratch in PGlite, 0 failed, 0 view leaks, 0 definer hygiene issues.
+- `npm run check:lifecycle`: 30/30 green through real Postgres + RLS.
+- `npm run check:contrast`: 82/82 WCAG AA pass (0 FAIL).
+- `npm run build`: tsc clean, 297 precached assets generated.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-15T20:13:51.106Z). Suite: 4609/4609 passed (recorded 2026-10-15T20:16:18.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-15T20:14:33.408Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Manual cross-browser visual verification of the compact headers and state ladders at 375px, 820px, and 1440px.
+- Live staging testing for Phase 2 delivery persistence prior to production authorization under N-5.
+
+## 2026-10-16 — Consolidation: phone header de-crowding, single shared header selection & clean UI
+
+**Did**
+- Resolved phone and tablet header action crowding (BLOCKER-02):
+  - `src/modules/operations/OperationsQueues.tsx`: Portaled `FilterButton` now renders only on desktop/tablet (`!phone`); on phone it moves to `PageActions overflow=[...]`. Secondary buttons (`Delivery & Logistics`, `Sub-Rentals`) and `DataAgeBadge` collapse into More actions on phone, ensuring the 64px header zone keeps the title unclipped and uncompressed.
+  - `src/modules/settings/Settings.tsx`: Refactored raw button JSX into standard `PageActions` with `primary` ("Edit" / "Done" / "Add Branch"), `secondary` for desktop, and `overflow` More menu for phone/tablet (`Export config`, `View audit log`, `Discard`, `Reset`).
+- Merged single shared header selection (`feat/2026-10-16-rentals-selection-header` / `RentalsList.tsx`): route selected-row actions through unified `PageHeaderBulkSelection` with full permission gating, single shared selection state, and dynamic primary disabled state.
+- Dropped dead "Productions Hub" item from Rentals More menu per RULING 2026-10-13 step 2 (`src/modules/rentals/RentalsList.tsx`).
+- Live roster safety in New Rental: `crewPool()` returns live roster, or seed roster in mock mode only; no invented delivery rates without a set form charge (`src/lib/queries/crew.ts`, `src/modules/rentals/booking/itemCatalogue.ts`).
+- Excluded `.claude/**` worktrees from test discovery in `vitest.config.ts`.
+- Verified and retained `RULINGS-2026-10-13.md` and `RULINGS-2026-10-15.md`.
+
+**Ruled**
+- Follows phone header de-crowding pattern established in Calendar, Inventory, and Finance.
+- Zero database migrations written or applied (N-5 hold); strictly zero schema alterations.
+- Touch target floors (Law 15, >=44px) and money-blindness gates (Law 6) strictly maintained.
+
+**Verified**
+- `npm run typecheck`: exit 0 (clean TypeScript compiler pass).
+- Focused vitest suites: `src/modules/operations/` & `src/modules/settings/` (12 files, 180/180 passed), `src/modules/rentals/` (46 files, 446/446 passed). Full test suite: 358 files, 4,546/4,546 passed.
+- Database & lifecycle gates: `npm run check:pglite` (160/160 migrations applied, 0 view leaks, 0 function leaks, 0 definer hygiene issues), `npm run check:lifecycle` (30/30 green through real Postgres + RLS).
+- Contrast: `npm run check:contrast` (82/82 WCAG AA pass, 0 FAIL).
+- Production build: `npm run build` (`tsc --noEmit && vite build`, exit 0, 296 precache entries).
+- ESLint: `npm run lint` (`eslint src --max-warnings 0`, exit 0).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-15T19:13:38.995Z). Suite: 4546/4546 passed (recorded 2026-10-15T19:21:55.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-15T19:13:58.009Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Manual cross-browser visual spot-check at 375px, 820px, and 1440px in light, dark, and high-contrast modes.
+- Production deployment and production verification remain pending under N-5.
+
+## 2026-10-15 — New Rental catalogue targets and responsive evidence
+
+**Did**
+- Increased shared catalogue View/Add Bundle, crew and transport actions from 26px painted controls to visible 44px minimum targets, with 16px icons, UI-sized labels, 8px action spacing and wrapping rows. The existing keyboard paths, callbacks and permission gates are retained.
+- Verified that the patch survived concurrent main merges (AddItemPanel last changed in 7256b99d). Updated the app-wide improvement plan; no migration, role or pricing change.
+
+**Ruled**
+- No new product ruling. Implements the existing 44px control minimum. This scoped pass does not close the app-wide acceptance plan.
+
+**Verified**
+- The sequential run started from f1bce01f plus this patch: typecheck passed; 353 test files / 4,481 tests passed; local PGlite 160/160 migrations and lifecycle 30/30 passed; production build completed. Scoped ESLint and contrast 82/82 passed. Logs: artifacts/catalogue-touch-2026-10-15/.
+- Fresh mock build completed. Saved Chromium viewport screenshots at 320, 390 and 768px; measured View and Add Bundle at 44px high, within each viewport, with document width equal to viewport width. Files: catalogue-320.jpg, catalogue-390.jpg, catalogue-768.jpg and measurements-final.json in that evidence folder. Temporary viewport override reset.
+- Earlier mock interaction pass opened bundle preview, cancelled without adding, and added the bundle. An attempted off-screen remove click had no effect; keyboard activation removed that line and the visible Remove all menu cleared the remaining bundle lines to zero items. No booking was submitted.
+- Other main merges landed after the test run. These logs certify the scoped patch at the tested checkout, not every later merged feature. The generated completion block below reads the current checkout and cached gate records; its suite-not-run sentence describes the counter invocation, not the separate full test run above.
+
+## 2026-10-15 — Booking Detail header: title, search, one primary
+
+**Did**
+- Triaged every control in Booking Detail's header (`BookingDetail.tsx`). The layout is now the same at every width: the stage action, the 44px Operations icon, and ONE More ("More booking actions"). The More holds Print booking, Message client (with its choices nested), Extend rental, Assign crew, Create sub-rental, then Quote, Invoice, Duplicate, Audit History and Cancel Rental.
+- Removed from the header: the stage badge (the stepper names the stage), the WhatsApp ▾ button (a duplicate of Message client that used a placeholder business phone), the second ⋮ menu and its duplicate "Cancel booking" (with the page's now-unreachable `CancelRentalModal` mount), Print booking, and the Returned-stage Cleaning & Reset button (it is Operations' fourth row).
+- `RentalMoreActions`: extra rows wrap refusals in `Unavailable` and render `submenu` as a nested group, and the menu scrolls at the viewport height. The merge keeps the old ⋮ menu's honesty, and the phone More regains it.
+- Shell `Header.tsx`: the parent-crumb link gets a 44px hit height (it measured 45×17). Row 8's module-vs-record flex rule is unchanged.
+- Tests: a new 6-case suite in `BookingDetail.layout.test.tsx` (header controls at 420/1024/1280/1440, no stage badge, one More with one Cancel). Run against the old cluster first, it failed 6 of 6. Four older tests that pinned the old cluster or found Operations by visible text were updated to the merged More and the accessible name.
+
+**Ruled**
+- `RULINGS-2026-10-15.md` rows 11–18, each with a revert. A flippable call: Operations stays visible as an icon instead of moving into More (row 16). Row 8 was left alone, with the reason logged.
+- No migration written or applied. No role, capability, money gate or write path changed. The kept Cancel is the stricter of the two gates (B-1).
+
+**Verified**
+- Browser, mock Owner, measured with `getBoundingClientRect`. At 1280×860 with the sidebar open, before: right cluster 610px, record title 37px, header search button 84px. After, title shown/full · search · right cluster: 902 Closed 219/267 · 303 · 208; 873 On Rent "Receive Overdue Return" 144/314 · 188 · 398; 716 Booked 168/288 · 224 · 338; 893 Returned 175/350 · 222 · 333.
+- At 1440: titles 220–234px, search 272–348px. At 1024 (tablet band, sidebar rail): titles 134px (the 13 Oct tablet cap), search 246–320px.
+- Header overflow 0 and page overflow 0 in all 12 desktop/tablet measurements. Every header control is ≥44×44 and the header is 64px tall.
+- An intermediate run with the labelled 107px Operations gave 114px/154px (title/search) on 873 at 1280. That is why Operations became the icon.
+- More at 1280 on 716: 10 rows at 44px. Message client expands to 3 choices, with the refusal reasons kept. One Cancel. The menu fits on screen (ends at y=724 of 860).
+- Gates, this worktree after the changes: `tsc --noEmit` exit 0; `npm run lint` exit 0; `lint:shell` 653 files pass; `lint:ui-copy` 0 violations, 4/4; `npx vitest run` 347 files / 4,417 tests passed; `npm run build` exit 0 (PWA precache 296 entries); `check:lifecycle` 30/30 (PGlite). `check:pglite` not rerun (no migration). A comment-only reflow in `BookingDetail.tsx` landed after the suite run; eslint on the edited files ran after it, exit 0. The Completion block's "Suite 4329/4329" is the value recorded on 13 Oct, not this run.
+- Not verified: dark/glass themes by eye, live data, a real touch long-press. Phone 375px: 902 shows a 91px title with overflow 0. **873 at 375 still overflows 37px with a 0px title.** That predates this change (the old phone header had the same controls plus WhatsApp) and comes from the 182px primary.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-15T07:57:19.221Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Gates read from .lifecycle-result.json, written 2026-10-15T07:57:34.294Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Phone 375px: a long primary ("Receive Overdue Return", 182px) still overflows the Booking Detail header by 37px and leaves the title 0px. Predates this change.
+- Desktop worst case is a 144px record title at 1280. More room needs row 8's shrink rule or the 13 Oct reserved 104px sync slot; both are shell-wide.
+- The rental registry's own rows (Duplicate, Audit, Cancel) still give refusals by `title` only, not `Unavailable`.
+- Babin to confirm or flip rows 11–18, especially row 16 (Operations stays visible as an icon instead of moving into More).
+
+## 2026-10-15 — Remaining work register evidence review
+
+**Did**
+- Reviewed `docs/REMAINING_WORK.md` against governance, current source, PROGRESS, open decisions, local result artifacts and the read-only migration planner. The supplied register remains unchanged for review.
+- Found an unsupported live baseline/range, occupied proposed migration number 0161, missing staging report/harness, unsupported suite/screen counts, stale BS coverage, and incomplete delivery/offline dependencies.
+- Confirmed Delivery still uses localStorage and G3 historical pricing persistence remains open. Operations already uses PageActions; header crowding requires fresh viewport evidence. Backup script prints its database URL, so READY TO RUN is not justified under N-8.
+- Recorded that the register omits the planner's rename, seed/collision and unexplained-live-row blockers. Physical offline acceptance depends on implementation as well as hardware.
+
+**Ruled**
+- No new product ruling. No application or migration changes; no backup, live access, deployment or production migration performed.
+- This is a source/evidence review, not fresh certification of runtime gates. Historical result timestamps and the September live export remain explicit limitations.
+
+**Verified**
+- All local Markdown path targets in REMAINING_WORK checked: two missing files, both staging-verification artifacts.
+- `npm run db:plan` refused to issue a plan (nonzero exit): 160 local files through prefix 0162; September export yields 80 pending, 7 rename candidates, two hazard classifications for the same seed file, and 2 unexplained live rows. These are snapshot results, not current production measurements.
+- `npm run completion` passed and generated the block below from existing evidence; runtime tests, PGlite, lifecycle and build were not rerun for this review.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-13T13:31:48.507Z). Suite: 4329/4329 passed (recorded 2026-10-13T07:46:29.1524909Z).
+Gates read from .lifecycle-result.json, written 2026-10-14T16:14:23.983Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Reconcile REMAINING_WORK's claims and dependencies against dated evidence before using it as an execution checklist.
+- Repair/redact backup URL logging before running that script; refresh the live migration export and resolve planner blockers before Babin's N-5 apply step.
+- Locate or implement the missing staging harness and record the exact commit/environment for future gate and browser acceptance results.
+
+## 2026-10-15 — Booqable clean-list pass: one-line facts, uncrushed titles, unbroken money
+
+**Did**
+- Compared the Booqable scrape (`Desktop/scrape/BOOQABLE-AUDIT`, trial Orders screenshot) with our mock build measured at 1280×860, sidebar open. The ranked reasons are in `docs/booqable/WHY_BOOQABLE_FEELS_CLEAN_2026-10-15.md`: one row ≈ one line, a header of title + search + one primary, each fact said once, no icons in data, sentence-case headers, no reserved empty space, money as one token.
+- Rentals table (`RentalsList.tsx`): client name ≤ 2 lines and project 1 line, ellipsized with `title`. Removed the duplicated location, the per-line icons, the "Overdue" tag duplicating the status note, and the aria-hidden progress track (the now-dead `Track` helper is deleted). Time rides with the AD date. The action column is 60px with an `sr-only` label, column shares are normalized to fill, and the cell leading is 1.35. `rentals.css` drops its uppercase override so `theme.css`'s sentence-case header rule applies.
+- `BsAdDate` stacked layout: with `showTime`, date and time are each unbreakable and the time wraps whole. Layouts without a time are unchanged.
+- Shell `Header.tsx`: desktop module titles (one crumb) no longer shrink; the search yields first. Record titles and tablet/phone are unchanged.
+- Inventory and Clients: Refresh/Export move into More at every width, extending the 13 Oct phone ruling.
+- New opt-in `.money { white-space: nowrap }` on the Clients directory money cells and the Rentals total.
+- Tests: 4 new Rentals render tests, 2 header tests, and header-action assertions in the tier-1 Inventory/Clients tests.
+
+**Ruled**
+- `RULINGS-2026-10-15.md` rows 1–10, each with a revert. A flippable product call: the list row no longer prints pickup/return location (it stays on the hover card and Booking Detail).
+- Unchanged by design: BS-over-AD stacking (7 Oct), Project Type and Created Date columns, the desktop sync slot (13 Oct), 56px row and 44px target floors. No migration written or applied. No role, capability, money gate or write path changed.
+
+**Verified**
+- Browser, mock Owner, 1280×860: Rentals rows 166–200px → 85px; rows fully visible 2 → 5; action column 190 → 60px. Inventory title 14px ("I.") → 80px, header search 67 → 192px, right cluster 539 → 349px. Clients title full; 0 of 43 money cells wrap. Header overflow 0px and titles untruncated on Today, Rentals, New Rental, Calendar, Inventory, Clients, Finance and Settings. Inventory More holds Refresh equipment / Export this page / Warranty Tracker at 44px, and Refresh ran (menu closed, 25 rows). At 1024px the Rentals table uses auto layout with the narrow-width columns dropped, 85px rows and no horizontal scroll.
+- Booking Detail (`/rentals/902`) keeps its previous header behaviour: the record title is squeezed to ~37px by a 610px action cluster. **Pre-existing, not fixed.** A first attempt that froze all titles made its search 0px; the module/record split fixed that.
+- Mutation checks: restoring the Overdue tag, the location line, the desktop `0 1 auto` title flex, or a visible Clients Export each turned its new test red. Files restored and green.
+- Gates, this worktree after the changes: `tsc --noEmit` exit 0; `npm run lint` exit 0; `lint:shell` 653 files pass; `lint:ui-copy` pass; `check:contrast` 82/82; `npx vitest run` 347 files / 4,411 tests passed; `npm run build` exit 0 (PWA precache 296 entries); `check:lifecycle` 30/30 (PGlite, no JWT/PostgREST). `check:pglite` not rerun (no migration). A comment-only edit to `RentalsList.tsx` landed after the suite run.
+- Not verified: dark/glass themes by eye (token-only edits; contrast gate covers the tokens), phone widths (cards view untouched), native browser zoom, live data.
+
+**Did**
+- Increased shared catalogue View/Add Bundle, crew and transport actions from 26px painted controls to visible 44px minimum targets, with 16px icons, UI-sized labels, 8px action spacing and wrapping rows. The existing keyboard paths, callbacks and permission gates are retained.
+- Verified that the patch survived concurrent main merges (AddItemPanel last changed in 7256b99d). Updated the app-wide improvement plan; no migration, role or pricing change.
+
+**Ruled**
+- No new product ruling. Implements the existing 44px control minimum. This scoped pass does not close the app-wide acceptance plan.
+
+**Verified**
+- The sequential run started from f1bce01f plus this patch: typecheck passed; 353 test files / 4,481 tests passed; local PGlite 160/160 migrations and lifecycle 30/30 passed; production build completed. Scoped ESLint and contrast 82/82 passed. Logs: artifacts/catalogue-touch-2026-10-15/.
+- Fresh mock build completed. Saved Chromium viewport screenshots at 320, 390 and 768px; measured View and Add Bundle at 44px high, within each viewport, with document width equal to viewport width. Files: catalogue-320.jpg, catalogue-390.jpg, catalogue-768.jpg and measurements-final.json in that evidence folder. Temporary viewport override reset.
+- Earlier mock interaction pass opened bundle preview, cancelled without adding, and added the bundle. An attempted off-screen remove click had no effect; keyboard activation removed that line and the visible Remove all menu cleared the remaining bundle lines to zero items. No booking was submitted.
+- Other main merges landed after the test run. These logs certify the scoped patch at the tested checkout, not every later merged feature. The generated completion block below reads the current checkout and cached gate records; its suite-not-run sentence describes the counter invocation, not the separate full test run above.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-15T07:57:19.221Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Gates read from .lifecycle-result.json, written 2026-10-15T07:57:34.294Z.
+Counted by `npm run completion`, not typed.
+## Remaining
+- Complete the broader status/role/persisted-save matrix in docs/UI_UX_IMPROVEMENT_PLAN.md. Physical phone/iPad Safari, keyboard and native zoom acceptance remain unverified.
+- Reconcile the bundle add message: the mock notice currently states both bundle billing with zero-priced components and components billed at their own rates. This pre-existing contradictory copy needs a focused follow-up against the authoritative bundle pricing behavior.
 ## 2026-10-15 — Merged payment preselection safety, interactive revenue charts & clean UI verified
 
 **Did**
@@ -620,7 +1650,38 @@ Counted by `npm run completion`, not typed.
 ### Remaining
 - Continue App reorganization and responsive polish.
 
+## 2026-10-13 — App reorganization step 2 (one dead link removed; three items withdrawn)
 
+**Did**
+- Rentals ▸ More no longer offers "Productions Hub": it pointed at `/crew/productions`, which has no route and opened "Page not found", and rulings §1 (12 Aug) keep Productions deleted. `/rentals/productions` still resolves (Law 3). `rentalsList.render.test.tsx` +1: opens More and asserts no Productions door (the existing test never opened the menu).
+- Investigated and withdrew three planned items (reasons in `RULINGS-2026-10-13.md` § step 2): the Crew Timesheet page runs on hard-coded fabricated rows, so it stays unlinked until it is rebuilt on the real crew-day table from migration 0003; the Rentals Refresh/Scan "duplicates" are responsive fallbacks; sub-rentals have two different lenses (bookings vs supplier lines + directory), not two homes.
+
+**Ruled**
+- `RULINGS-2026-10-13.md` § "App reorganization — step 2", row R5, plus the withdrawn list. `RULING 2026-10-13` comment at the removed item.
+
+**Verified**
+- Test-first: the new test failed with the item present and passes without it. `tsc --noEmit` exit 0; Rentals 45 files, 430/430. Full suite: the first run had **2 failing files out of 346** under a machine pinned at 100% CPU (failures not captured); the re-run passed 346 files, 4403/4403. `vite build` exit 0; `lint:shell` clean; `check:contrast` 82/82.
+- Browser (mock Owner, `localhost:3500`, this branch): Rentals ▸ More = Fast Return · Record Payment · Scan Barcode · Refresh; `/rentals/productions` renders (not the 404); `/crew/productions` shows "Page not found" (the bug that was linked).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-13T09:55:17.733Z). Suite: 4329/4329 passed (recorded 2026-10-13T07:46:29.1524909Z).
+Gates read from .lifecycle-result.json, written 2026-10-12T20:38:59.536Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Identify the two intermittent test failures if they recur (rerun green; suspected CPU-starved timeouts — a Desktop `vite` dev server from 01:23 holds ~1.5 cores).
+- Crew Timesheet: rebuild on the migration-0003 crew-day table before giving it an entry point (feature work).
+- Reorg step 4 waits on Babin: Promotions home, business policies → Settings, Tools tabs. Booking-date colour (glass row 9) still open.
+
+## 2026-10-13 — App reorganization step 1 (cleanups + two Law 6 fixes)
 
 **Did**
 - `/admin/audit-settings` → `/admin/audit`, `/finance/closing` → `/finance?tab=closing` (duplicate mounts became redirects). Late Fee and Coupons & Promos added to `MONEY_ROUTES` and guarded in `ToolsLanding`. Out-of-date notes in `nav.ts`/`App.tsx` corrected; unused `TABS` export removed from `data/membership.ts`. Branch `claude/reorg-step1` from `main` (independent of the glass branch).

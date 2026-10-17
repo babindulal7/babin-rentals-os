@@ -156,7 +156,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(functi
           // Re-assert structural invariants so spread styles cannot break touch target or clearance
           minHeight: 44,
           paddingLeft: 38,
-          paddingRight: showClear ? 44 : showHint ? 44 : 14,
+          paddingRight: showClear ? 44 : showHint ? 64 : 14,
         }}
         {...props}
       />

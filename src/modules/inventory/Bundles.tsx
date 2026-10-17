@@ -947,8 +947,8 @@ export function Bundles({
                       display: 'grid',
                       placeItems: 'center',
                       border: 'none',
-                      background: effectiveView === v ? 'var(--nav-active-bg)' : 'var(--card)',
-                      color: effectiveView === v ? 'var(--nav-active-accent)' : 'var(--text2)',
+                      background: effectiveView === v ? 'var(--select-bg)' : 'var(--card)',
+                      color: effectiveView === v ? 'var(--select-fg)' : 'var(--text2)',
                       cursor: 'pointer',
                     }}
                   >
@@ -1439,9 +1439,10 @@ function PreviewCard({
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 6,
+                  gap: 8,
                   width: '100%',
-                  padding: '4px 2px',
+                  minHeight: 44,
+                  padding: '8px 4px',
                   border: 'none',
                   background: 'transparent',
                   color: 'var(--text)',
@@ -1490,7 +1491,7 @@ function PreviewCard({
                               type="button"
                               onClick={() => onToggleSerials(key)}
                               aria-expanded={showSerials}
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 0', border: 'none', background: 'transparent', color: 'var(--link)', fontSize: 'var(--t-th)', fontFamily: 'inherit', cursor: 'pointer' }}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, minHeight: 44, padding: '6px 0', border: 'none', background: 'transparent', color: 'var(--link)', fontSize: 'var(--t-th)', fontFamily: 'inherit', cursor: 'pointer' }}
                             >
                               <Icon name={showSerials ? 'chevron_up' : 'chevron_down'} size={10} />
                               {showSerials ? 'Hide assigned serials' : 'Show assigned serials'}

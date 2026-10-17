@@ -288,6 +288,9 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
      */
     case 'rental.close':
       return rbac.canCloseRental(ctx.role, online);
+    case 'rental.revert':
+    case 'rental.archive':
+      return rbac.canManageRentalLifecycle(ctx.role, online);
 
     case 'rental.pickup':
     case 'rental.return':

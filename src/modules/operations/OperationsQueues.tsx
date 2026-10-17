@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback, type CSSProperties } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
-import Icon from '../../components/ui/Icon'
+import Icon, { type IconName } from '../../components/ui/Icon'
 import { Card, PageHeader, PageActions, Button, FooterNote, cardStyle } from '../../components/ui/Page'
 import { SearchInput } from '../../components/ui'
 import { PageShell } from '../../components/ui/PageShell'
@@ -11,7 +11,7 @@ import { BarcodeLookupModal } from '../rentals/modals/BarcodeLookupModal'
 import { CasesWorkspace } from './CasesWorkspace'
 import { STATUS } from '../../lib/status'
 import { statusToken, JOBS as JOBS_META, type JobName, type BookingStatus } from '../../lib/workflow'
-import { listBookings, overdue, quotesExpiring, type BookingListRow } from '../../lib/queries/bookings'
+import { latePickups, listBookings, overdue, quotesExpiring, type BookingListRow } from '../../lib/queries/bookings'
 import { useList, type ListResult } from '../../lib/queries/useList'
 import type { ListFilters } from '../../lib/queries/listQuery'
 import {
@@ -40,6 +40,7 @@ import OperationsShell from './OperationsShell'
 import { kathmanduCivil, NPT_OFFSET_MIN, getBusinessToday } from '../../lib/bs'
 import { CalendarPopover, DateField } from '../../components/ui/DateField'
 import { FilterButton, FilterDrawer, FilterSection } from '../../components/ui/FilterDrawer'
+import { FilterDatePicker } from '../../components/ui/FilterDatePicker'
 import { AppPageToolbar } from '../../components/ui/AppPageToolbar'
 import { Pagination } from '../../components/ui/Pagination'
 import { DataTableShell } from '../../components/ui/DataTable'
@@ -48,7 +49,6 @@ import { useOperationsWorkspace } from './OperationsWorkspaceContext'
 import { useDomainEvent } from '../../events/useDomainEvent'
 import { EVENT_TYPES } from '../../events/eventBus'
 import { listCases, type Case } from '../../lib/queries/cases'
-import { BsAdDate } from '../../components/ui/BsAdDate'
 
 
 const th = {
@@ -326,19 +326,12 @@ export function exceptionFilters(facet: ExceptionFacet, nowAd: string, todayAd: 
         sort: { column: 'return_at', ascending: true },
       }
     case 'overdue_start':
-      return {
-        dateRange: { column: 'pickup_at', toAd: nowAd },
-        chips: { stage: ['Booked', 'Packed'] },
-        presence: { cancelled_at: false },
-        sort: { column: 'pickup_at', ascending: true },
-      }
+      // L3 fourth-facet half: the named late-pickup set (minute-floored instant,
+      // Booked/Packed, cancelled excluded) — not a second inline answer.
+      return latePickups(nowAd)
     case 'overdue_end':
-      return {
-        dateRange: { column: 'return_at', toAd: nowAd },
-        chips: { stage: ['On Rent'] },
-        presence: { cancelled_at: false, actual_return_at: false },
-        sort: { column: 'return_at', ascending: true },
-      }
+      // L3 fourth-facet half: the named overdue set — same delegation.
+      return overdue(nowAd)
   }
 }
 
@@ -352,15 +345,99 @@ function chipStyle(on: boolean) {
     minHeight: 44,
     padding: '0 14px',
     borderRadius: 'var(--r-btn)',
-    border: `1px solid ${on ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-    background: on ? 'var(--nav-active-bg)' : 'var(--card)',
-    color: on ? 'var(--nav-active-accent)' : 'var(--text2)',
+    border: `1.5px solid ${on ? 'var(--primary, #2456d6)' : 'var(--border)'}`,
+    background: on ? 'var(--select-bg)' : 'var(--card)',
+    color: on ? 'var(--select-fg)' : 'var(--text)',
     fontSize: 'var(--t-meta)',
     fontWeight: 600,
     fontFamily: 'inherit',
     cursor: 'pointer',
     whiteSpace: 'nowrap' as const,
     flexShrink: 0,
+    boxShadow: on ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
+    transition: 'all 120ms ease',
+  }
+}
+
+function formatOperationBookingId(bookingNo: string | null | undefined): string {
+  if (!bookingNo) return '—'
+  const trimmed = bookingNo.trim()
+  if (/^#?\d+$/.test(trimmed)) {
+    const digits = trimmed.replace(/^#/, '')
+    return `#${digits.padStart(4, '0')}`
+  }
+  return trimmed
+}
+
+function getJobButtonProps(job: JobName): {
+  icon: IconName
+  style: CSSProperties
+} {
+  switch (job) {
+    case 'Pack':
+      return {
+        icon: 'package',
+        style: {
+          minWidth: 104,
+          minHeight: 38,
+          justifyContent: 'center',
+          gap: 6,
+          background: 'color-mix(in srgb, var(--primary, #2563eb) 12%, var(--card))',
+          border: '1px solid color-mix(in srgb, var(--primary, #2563eb) 45%, transparent)',
+          color: 'var(--primary-text, #1d4ed8)',
+          fontWeight: 600,
+          borderRadius: 'var(--r-btn, 8px)',
+          boxShadow: '0 1px 2px rgba(37, 99, 235, 0.08)',
+        },
+      }
+    case 'Handover':
+      return {
+        icon: 'truck',
+        style: {
+          minWidth: 104,
+          minHeight: 38,
+          justifyContent: 'center',
+          gap: 6,
+          background: 'color-mix(in srgb, var(--success, #16a34a) 12%, var(--card))',
+          border: '1px solid color-mix(in srgb, var(--success, #16a34a) 45%, transparent)',
+          color: 'var(--success-text, #15803d)',
+          fontWeight: 600,
+          borderRadius: 'var(--r-btn, 8px)',
+          boxShadow: '0 1px 2px rgba(22, 163, 74, 0.08)',
+        },
+      }
+    case 'Return':
+      return {
+        icon: 'return_arrow',
+        style: {
+          minWidth: 104,
+          minHeight: 38,
+          justifyContent: 'center',
+          gap: 6,
+          background: 'color-mix(in srgb, var(--warn, #ea580c) 12%, var(--card))',
+          border: '1px solid color-mix(in srgb, var(--warn, #ea580c) 45%, transparent)',
+          color: 'var(--warn-text, #c2410c)',
+          fontWeight: 600,
+          borderRadius: 'var(--r-btn, 8px)',
+          boxShadow: '0 1px 2px rgba(234, 88, 12, 0.08)',
+        },
+      }
+    case 'Reset':
+      return {
+        icon: 'tool',
+        style: {
+          minWidth: 104,
+          minHeight: 38,
+          justifyContent: 'center',
+          gap: 6,
+          background: 'color-mix(in srgb, var(--ready, #ca8a04) 14%, var(--card))',
+          border: '1px solid color-mix(in srgb, var(--ready, #ca8a04) 45%, transparent)',
+          color: 'var(--ready-text, #a16207)',
+          fontWeight: 600,
+          borderRadius: 'var(--r-btn, 8px)',
+          boxShadow: '0 1px 2px rgba(202, 138, 4, 0.08)',
+        },
+      }
   }
 }
 
@@ -389,7 +466,7 @@ function QueueChip({ queue, active, total, loading, error, onToggle }: QueueChip
   return (
     <button type="button" onClick={onToggle} aria-pressed={active} style={chipStyle(active)} {...(error ? { title: error } : {})}>
       {/* Law 11 — the queue's stage tone never carries the meaning alone; the icon and the word are both present. */}
-      <Icon name={queue.icon} size={15} style={{ color: tok.fg, flexShrink: 0 }} />
+      <Icon name={queue.icon} size={15} style={{ color: active ? 'var(--select-fg)' : 'var(--text2)', flexShrink: 0 }} />
       {queue.title}
       <span
         className="figure"
@@ -402,8 +479,8 @@ function QueueChip({ queue, active, total, loading, error, onToggle }: QueueChip
           height: 20,
           padding: '0 6px',
           borderRadius: 'var(--r-badge)',
-          background: tok.bg,
-          color: tok.fg,
+          background: active ? 'var(--select-fg)' : tok.bg,
+          color: active ? 'var(--select-bg)' : tok.fg,
           fontSize: 'var(--t-meta)',
           fontWeight: 700,
         }}
@@ -479,8 +556,14 @@ export default function OperationsQueues() {
   const dateMenuRef = useRef<HTMLDivElement | null>(null)
   /* Law 13/14 — width decides, at v4.1 §7.7's 768 / 1280. */
   const viewport = useViewport()
-  const tabular = viewport !== 'phone'
+  const phone = viewport === 'phone'
+  const tabular = !phone
   const dockOpen = dock !== null && viewport === 'desktop'
+  /* RULING 2026-10-15: below desktop the two workspace links live in More and a fresh
+     data badge takes no width, so the page title keeps the header (BLOCKER-02: at 375px
+     the header overflowed by 207px; at 768px the title measured 0px). Revert = set this
+     to `false`. */
+  const compactHeader = viewport !== 'desktop'
 
   /* The URL is the state (§5.1). `?queue=packing` and `?quick=pickup` are
      mutually exclusive — setting either clears the other — so a queue is
@@ -706,6 +789,8 @@ export default function OperationsQueues() {
     })
   }
 
+  const overdueCount = useMemo(() => jobs.filter((j) => j.isPastDue).length, [jobs])
+
   const listLabel = exception
     ? (EXCEPTION_FACETS.find((ef) => ef.key === exception)?.label ?? exception)
     : activeJob
@@ -713,6 +798,15 @@ export default function OperationsQueues() {
       : group
         ? GROUP_LABEL[group]
         : 'All jobs'
+  // One line on the date button: "Today", else the English date (a range shows both ends).
+  const adLabel = (day: string) => new Date(`${day}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+  const dateButtonLabel =
+    scope === 'today'
+      ? (overdueCount > 0 ? `Today & Overdue (${overdueCount})` : 'Today')
+      : scope === 'tomorrow' ? adLabel(dayOffsetFromToday(1))
+      : scope === 'custom'
+        ? (!range ? 'All days' : customFrom && customTo && customFrom !== customTo ? `${adLabel(customFrom)} – ${adLabel(customTo)}` : customFrom ? adLabel(customFrom) : 'Custom range')
+        : SCOPE_LABEL[scope]
   const scopeLabel = scope === 'custom' && !range ? 'all days' : SCOPE_LABEL[scope].toLowerCase()
   const emptyTitle = isFiltered ? `Nothing in ${listLabel} for ${scopeLabel}` : 'No jobs right now'
   const emptyMessage = activeJob
@@ -732,8 +826,9 @@ export default function OperationsQueues() {
           alignItems: 'start',
         }}
       >
-      {/* Renders in the global header beside the page name (FilterButton's default). */}
-      {selected !== 'Cases' && (
+      {/* Renders in the global header beside the page name (FilterButton's default).
+          On a phone it moves into More with the two links (see `compactHeader`). */}
+      {selected !== 'Cases' && !phone && (
         <FilterButton
           onClick={() => setShowMoreFilters((open) => !open)}
           activeCount={operationFilterCount}
@@ -746,7 +841,7 @@ export default function OperationsQueues() {
           title="Operations"
           module="operations"
           status={
-            selected ? (
+            selected && !phone ? (
               <span
                 className="eyebrow-pill"
                 style={{
@@ -760,26 +855,9 @@ export default function OperationsQueues() {
               </span>
             ) : null
           }
-          search={
-            selected === 'Cases'
-              ? {
-                  value: params.get('q') ?? '',
-                  onChange: (val) => patch({ q: val || null }),
-                  onClear: () => patch({ q: null }),
-                  placeholder: 'Search case ID, title, client… (press /)',
-                  ariaLabel: 'Search cases by ID, title, or client',
-                }
-              : {
-                  value: searchInput,
-                  onChange: setSearchInput,
-                  onClear: () => setSearchInput(''),
-                  placeholder: 'Search ID, client, project… (press /)',
-                  ariaLabel: 'Search operations',
-                }
-          }
           actions={
             <PageActions
-              secondary={[
+              secondary={compactHeader ? [] : [
                 <Button
                   key="delivery"
                   variant="outline"
@@ -797,7 +875,16 @@ export default function OperationsQueues() {
                   Sub-Rentals
                 </Button>,
               ]}
-              extra={<DataAgeBadge loadedAt={list.lastFetchedAt} onRefresh={refreshAll} loading={list.loading} />}
+              overflow={compactHeader ? [
+                { label: 'Delivery & Logistics', icon: 'truck', onClick: () => routeNavigate('/operations/delivery') },
+                { label: 'Sub-Rentals', icon: 'box', onClick: () => routeNavigate('/operations/sub-rental') },
+                ...(phone && selected !== 'Cases' ? [{
+                  label: operationFilterCount > 0 ? `Filters (${operationFilterCount})` : 'Filters',
+                  icon: 'filter' as const,
+                  onClick: () => setShowMoreFilters(true),
+                }] : []),
+              ] : undefined}
+              extra={<DataAgeBadge loadedAt={list.lastFetchedAt} onRefresh={refreshAll} loading={list.loading} quietWhenFresh={compactHeader} />}
             />
           }
         />
@@ -815,23 +902,85 @@ export default function OperationsQueues() {
       >
 
       <div className="operations-v2__queues" role="group" aria-label="Operational queues">
+        <button
+          type="button"
+          onClick={() => setActive(null)}
+          aria-pressed={selected === null && group === null && exception === null}
+          style={chipStyle(selected === null && group === null && exception === null)}
+        >
+          <Icon name="checklist" size={15} style={{ color: (selected === null && group === null && exception === null) ? 'var(--select-fg)' : 'var(--text2)', flexShrink: 0 }} />
+          All Active
+          <span
+            className="figure"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minWidth: 22,
+              height: 20,
+              padding: '0 6px',
+              borderRadius: 'var(--r-badge)',
+              background: (selected === null && group === null && exception === null) ? 'var(--select-fg)' : 'var(--border)',
+              color: (selected === null && group === null && exception === null) ? 'var(--select-bg)' : 'var(--text2)',
+              fontSize: 'var(--t-meta)',
+              fontWeight: 700,
+            }}
+          >
+            {list.total ?? jobs.length}
+          </span>
+        </button>
         {CHIPS.map((q) => <QueueChip key={q.job} queue={q} active={selected === q.job} total={counts[q.job].total} loading={counts[q.job].loading} error={counts[q.job].error} onToggle={() => setActive(selected === q.job ? null : q.job)} />)}
-        <Link to="/inventory/cases" onClick={(event) => { event.preventDefault(); patch({ queue: selected === 'Cases' ? null : 'cases', quick: null }) }} aria-pressed={selected === 'Cases'} className="operations-v2__queue" style={{ ...chipStyle(selected === 'Cases'), textDecoration: 'none' }}>
-          <Icon name="eye" size={15} style={{ color: openCases ? STATUS.danger.fg : STATUS.neutral.fg }} /> Cases
-          <span className="figure" title={casesList.error ?? undefined} style={{ minWidth: 22, padding: '1px 6px', borderRadius: 'var(--r-badge)', background: openCases ? STATUS.danger.bg : STATUS.neutral.bg, color: openCases ? STATUS.danger.fg : STATUS.neutral.fg, textAlign: 'center' }}>{openCases ?? '—'}</span>
+        <Link
+          to="/inventory/cases"
+          onClick={(event) => { event.preventDefault(); patch({ queue: selected === 'Cases' ? null : 'cases', quick: null }) }}
+          aria-pressed={selected === 'Cases'}
+          className="operations-v2__queue"
+          style={{ ...chipStyle(selected === 'Cases'), textDecoration: 'none' }}
+        >
+          <Icon name="briefcase" size={15} style={{ color: selected === 'Cases' ? 'var(--select-fg)' : 'var(--text2)', flexShrink: 0 }} />
+          Cases
+          <span
+            className="figure"
+            title={casesList.error ?? undefined}
+            style={{
+              minWidth: 22,
+              height: 20,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 6px',
+              borderRadius: 'var(--r-badge)',
+              background: selected === 'Cases' ? 'var(--select-fg)' : openCases ? STATUS.danger.bg : STATUS.neutral.bg,
+              color: selected === 'Cases' ? 'var(--select-bg)' : openCases ? STATUS.danger.fg : STATUS.neutral.fg,
+              textAlign: 'center',
+              fontSize: 'var(--t-meta)',
+              fontWeight: 700,
+            }}
+          >
+            {openCases ?? '—'}
+          </span>
         </Link>
       </div>
 
       {selected !== 'Cases' && <><div className="operations-v2__filters" aria-label="Operations filters">
         <div ref={dateMenuRef} className="operations-v2__date-wrap">
           <Button variant="outline" icon="calendar" iconRight={<Icon name={showDateMenu ? 'chevron_up' : 'chevron_down'} size={14} />} onClick={() => setShowDateMenu((open) => !open)} aria-expanded={showDateMenu} aria-controls="operations-date-menu">
-            {scope === 'custom' ? (range ? 'Custom range' : 'All days') : SCOPE_LABEL[scope]}
-            <BsAdDate date={todayNepal} />
+            {dateButtonLabel}
           </Button>
           {showDateMenu && (
             <div id="operations-date-menu" className="operations-v2__popover operations-v2__date-popover">
               <div className="operations-v2__date-options" role="group" aria-label="Date range">
-                {DISPLAY_SCOPE_ORDER.map((item) => <Button key={item} variant={scope === item ? 'secondary' : 'ghost'} size="sm" className="operations-v2__date-option" onClick={() => { setScope(item); setShowDateMenu(item === 'custom') }}>{SCOPE_LABEL[item]}</Button>)}
+                {DISPLAY_SCOPE_ORDER.map((item) => (
+                  <Button
+                    key={item}
+                    variant={scope === item ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="operations-v2__date-option"
+                    onClick={() => { setScope(item); setShowDateMenu(item === 'custom') }}
+                  >
+                    {item === 'today' && overdueCount > 0 ? `Today & Overdue (${overdueCount})` : SCOPE_LABEL[item]}
+                  </Button>
+                ))}
               </div>
               <div className="operations-v2__calendar-range">
                 {scope === 'custom' ? <>
@@ -845,13 +994,34 @@ export default function OperationsQueues() {
             </div>
           )}
         </div>
+        {scope === 'today' && overdueCount > 0 && (
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '4px 10px',
+              borderRadius: 'var(--r-badge, 9999px)',
+              background: 'var(--st-danger-bg, #fee2e2)',
+              color: 'var(--st-danger-fg, #b91c1c)',
+              fontSize: 'var(--t-meta, 12px)',
+              fontWeight: 600,
+              border: '1px solid var(--st-danger-border, #fca5a5)',
+              flexShrink: 0,
+            }}
+            title={`${overdueCount} orders are past due and displayed in today's queue`}
+          >
+            <Icon name="alert_circle" size={13} />
+            {overdueCount} Overdue
+          </span>
+        )}
         <div style={{ flex: '1 1 240px', minWidth: 180 }}>
           <SearchInput
             ref={queueSearchRef}
             value={searchInput}
             onChange={setSearchInput}
             onClear={() => setSearchInput('')}
-            placeholder="Search ID, client, project…"
+            placeholder="Filter current queue… (press /)"
             aria-label="Search ID, client, project"
           />
         </div>
@@ -886,45 +1056,81 @@ export default function OperationsQueues() {
           >
             {!tabular && (
               <div style={{ padding: 'var(--sp-sm)', display: 'grid', gap: 'var(--sp-sm)' }}>
-                {pagedJobs.map((job) => (
-                  <article
-                    key={job.id}
-                    style={{
-                      ...cardStyle,
-                      padding: '12px 14px',
-                      display: 'grid',
-                      gap: 8,
-                      borderLeft: job.isPastDue ? '3px solid var(--danger)' : undefined,
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                      <Link to={`/rentals/${job.bookingNo}`} className="identifier" style={{ color: 'var(--link)', fontWeight: 700, textDecoration: 'none' }}>
-                        {job.bookingNo}
-                      </Link>
-                      <StageBadge stage={job.stage} />
-                    </div>
-                    <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text)' }}>
-                      <span style={{ fontWeight: 600 }}>{job.clientName}</span>
-                      {job.project && <span style={{ color: 'var(--text2)' }}> · {job.project}</span>}
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
-                      <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-                        <span className="figure" style={{ fontWeight: job.isPastDue ? 700 : 500, color: job.isPastDue ? 'var(--danger-text)' : 'inherit' }}>
-                          {formatDueAt(job.dueAtAd)}
+                {pagedJobs.map((job) => {
+                  const jobBtn = getJobButtonProps(job.job)
+                  return (
+                    <article
+                      key={job.id}
+                      style={{
+                        ...cardStyle,
+                        padding: '12px 14px',
+                        display: 'grid',
+                        gap: 8,
+                        borderLeft: job.isPastDue ? '4px solid var(--danger, #ef4444)' : undefined,
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <Link
+                          to={`/rentals/${job.bookingNo}`}
+                          className="identifier"
+                          style={{
+                            color: 'var(--link)',
+                            fontWeight: 700,
+                            textDecoration: 'none',
+                            fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+                          }}
+                        >
+                          {formatOperationBookingId(job.bookingNo)}
+                        </Link>
+                        <StageBadge stage={job.stage} />
+                      </div>
+                      <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text)' }}>
+                        <span style={{ fontWeight: 600 }}>{job.clientName}</span>
+                        {job.project ? (
+                          <span style={{ color: 'var(--text2)' }}> · {job.project}</span>
+                        ) : (
+                          <span style={{ color: 'var(--muted)', fontStyle: 'italic' }}> · Direct Rental</span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
+                        <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+                          <span className="figure" style={{ fontWeight: job.isPastDue ? 700 : 500, color: job.isPastDue ? 'var(--danger-text)' : 'inherit' }}>
+                            {formatDueAt(job.dueAtAd)}
+                          </span>
+                          {' · '}
+                          <span className="figure">{job.itemCount}</span> items
+                          <span
+                            style={{
+                              marginLeft: 6,
+                              fontSize: '11px',
+                              padding: '1px 6px',
+                              borderRadius: 4,
+                              background: 'var(--surface2, rgba(0,0,0,0.04))',
+                              color: 'var(--text2)',
+                              fontWeight: 500,
+                            }}
+                            title={`${job.itemCount} items in this ${job.job} queue`}
+                          >
+                            {job.itemCount >= 10 ? 'Heavy pull' : job.itemCount >= 4 ? 'Standard kit' : 'Quick pull'}
+                          </span>
                         </span>
-                        {' · '}
-                        <span className="figure">{job.itemCount}</span> items
-                      </span>
-                      <Button size="sm" variant="secondary" onClick={() => navigate(jobRoute(job.bookingNo, job.job))}>
-                        {job.job}
-                      </Button>
-                    </div>
-                  </article>
-                ))}
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          style={jobBtn.style}
+                          onClick={() => navigate(jobRoute(job.bookingNo, job.job))}
+                        >
+                          <Icon name={jobBtn.icon} size={15} />
+                          {job.job}
+                        </Button>
+                      </div>
+                    </article>
+                  )
+                })}
               </div>
             )}
             {tabular && (
-              <DataTableShell ariaLabel="Operations queues" data-table-scroll style={{ overflowX: 'auto' }}>
+              <DataTableShell ariaLabel="Operations queues" data-table-scroll style={{ overflowX: 'auto', overflow: 'hidden' }}>
                 <table className="operations-v2__table">
                   <thead>
                     <tr>
@@ -942,79 +1148,118 @@ export default function OperationsQueues() {
                     </tr>
                   </thead>
                   <tbody>
-                    {pagedJobs.map((job) => (
-                      <tr
-                        key={job.id}
-                        className={`operations-v2__row${dockOpen && dock?.bookingNo === job.bookingNo ? ' operations-v2__row--active' : ''}${viewport === 'desktop' && cursorNo === job.bookingNo ? ' operations-v2__row--cursor' : ''}`}
-                        data-booking-no={job.bookingNo}
-                        aria-selected={dockOpen && dock?.bookingNo === job.bookingNo ? true : undefined}
-                        style={{ borderLeft: job.isPastDue ? '2px solid var(--danger)' : '2px solid transparent' }}
-                        /* A click anywhere on the row's blank space opens the booking (8 Oct 2026,
-                           RULINGS-2026-10-08.md). Links, buttons and the checkbox keep their own
-                           action, a text selection is left alone, and Ctrl/⌘-click opens a new tab.
-                           Keyboard users have the booking-number link, so the row adds no tab stop. */
-                        onClick={(event) => {
-                          const target = event.target as HTMLElement
-                          if (target.closest('a, button, input, label, select, textarea')) return
-                          if (window.getSelection()?.toString()) return
-                          const url = `/rentals/${job.bookingNo}`
-                          if (event.metaKey || event.ctrlKey) window.open(url, '_blank', 'noopener')
-                          else routeNavigate(url)
-                        }}
-                      >
-                        <td style={{ ...td, width: 44 }}>
-                          <input
-                            type="checkbox"
-                            checked={selectedBookingNos.has(job.bookingNo)}
-                            onChange={() => toggleBooking(job.bookingNo)}
-                            aria-label={`Select ${job.bookingNo}`}
-                          />
-                        </td>
-                        <td style={td}>
-                          <Link to={`/rentals/${job.bookingNo}`} className="identifier" style={{ color: 'var(--link)', fontWeight: 700, textDecoration: 'none' }}>
-                            {job.bookingNo}
-                          </Link>
-                        </td>
-                        <td style={td}>
-                          <Link to={`/clients/${job.clientId}`} style={{ color: 'inherit', textDecoration: 'none', fontWeight: 600 }}>
-                            {job.clientName}
-                          </Link>
-                          {job.project && (
-                            <div style={{ fontSize: '11px', color: 'var(--text2)', marginTop: 2 }}>
-                              {job.project}
+                    {pagedJobs.map((job) => {
+                      const jobBtn = getJobButtonProps(job.job)
+                      return (
+                        <tr
+                          key={job.id}
+                          className={`operations-v2__row${dockOpen && dock?.bookingNo === job.bookingNo ? ' operations-v2__row--active' : ''}${viewport === 'desktop' && cursorNo === job.bookingNo ? ' operations-v2__row--cursor' : ''}`}
+                          data-booking-no={job.bookingNo}
+                          aria-selected={dockOpen && dock?.bookingNo === job.bookingNo ? true : undefined}
+                          /* A click anywhere on the row's blank space opens the booking (8 Oct 2026,
+                             RULINGS-2026-10-08.md). Links, buttons and the checkbox keep their own
+                             action, a text selection is left alone, and Ctrl/⌘-click opens a new tab.
+                             Keyboard users have the booking-number link, so the row adds no tab stop. */
+                          onClick={(event) => {
+                            const target = event.target as HTMLElement
+                            if (target.closest('a, button, input, label, select, textarea')) return
+                            if (window.getSelection()?.toString()) return
+                            const url = `/rentals/${job.bookingNo}`
+                            if (event.metaKey || event.ctrlKey) window.open(url, '_blank', 'noopener')
+                            else routeNavigate(url)
+                          }}
+                        >
+                          <td style={{ ...td, width: 44, borderLeft: job.isPastDue ? '4px solid var(--danger, #ef4444)' : '4px solid transparent', paddingLeft: 8 }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedBookingNos.has(job.bookingNo)}
+                              onChange={() => toggleBooking(job.bookingNo)}
+                              aria-label={`Select ${job.bookingNo}`}
+                            />
+                          </td>
+                          <td style={td}>
+                            <Link
+                              to={`/rentals/${job.bookingNo}`}
+                              className="identifier"
+                              style={{
+                                color: 'var(--link)',
+                                fontWeight: 700,
+                                textDecoration: 'none',
+                                fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+                              }}
+                            >
+                              {formatOperationBookingId(job.bookingNo)}
+                            </Link>
+                          </td>
+                          <td style={td}>
+                            <Link to={`/clients/${job.clientId}`} style={{ color: 'inherit', textDecoration: 'none', fontWeight: 600 }}>
+                              {job.clientName}
+                            </Link>
+                            <div
+                              style={{
+                                fontSize: '11px',
+                                color: job.project ? 'var(--text2)' : 'var(--muted)',
+                                fontStyle: job.project ? 'normal' : 'italic',
+                                marginTop: 2,
+                              }}
+                            >
+                              {job.project || 'Direct Rental'}
                             </div>
-                          )}
-                        </td>
-                        <td className="figure" style={{ ...td, fontWeight: 600 }}>{job.itemCount}</td>
-                        <td style={td}>
-                          <StageBadge stage={job.stage} />
-                        </td>
-                        <td className="figure" style={{ ...td, fontWeight: job.isPastDue ? 700 : 500, color: job.isPastDue ? 'var(--danger-text)' : 'var(--text)' }}>
-                          {formatDueAt(job.dueAtAd)}
-                        </td>
-                        <td style={td}>
-                          <Button size="sm" variant="secondary" onClick={() => navigate(jobRoute(job.bookingNo, job.job))}>
-                            {job.job}
-                          </Button>
-                        </td>
-                        <td style={{ ...td, width: 44 }}>
-                          <Link
-                            to={`/rentals/${job.bookingNo}`}
-                            aria-label={`More for booking ${job.bookingNo}`}
-                            style={{
-                              color: 'var(--muted)',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              minWidth: 44,
-                              minHeight: 44,
-                            }}
-                          >
-                            <Icon name="chevron_right" size={18} />
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td style={td}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span className="figure" style={{ fontWeight: 600 }}>{job.itemCount} items</span>
+                              <span
+                                style={{
+                                  fontSize: '11px',
+                                  padding: '1px 6px',
+                                  borderRadius: 4,
+                                  background: 'var(--surface2, rgba(0,0,0,0.04))',
+                                  color: 'var(--text2)',
+                                  fontWeight: 500,
+                                }}
+                                title={`${job.itemCount} items in this ${job.job} queue`}
+                              >
+                                {job.itemCount >= 10 ? 'Heavy pull' : job.itemCount >= 4 ? 'Standard kit' : 'Quick pull'}
+                              </span>
+                            </div>
+                          </td>
+                          <td style={td}>
+                            <StageBadge stage={job.stage} />
+                          </td>
+                          <td className="figure" style={{ ...td, fontWeight: job.isPastDue ? 700 : 500, color: job.isPastDue ? 'var(--danger-text)' : 'var(--text)' }}>
+                            {formatDueAt(job.dueAtAd)}
+                          </td>
+                          <td style={td}>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              style={jobBtn.style}
+                              onClick={() => navigate(jobRoute(job.bookingNo, job.job))}
+                            >
+                              <Icon name={jobBtn.icon} size={15} />
+                              {job.job}
+                            </Button>
+                          </td>
+                          <td style={{ ...td, width: 44 }}>
+                            <Link
+                              to={`/rentals/${job.bookingNo}`}
+                              aria-label={`More for booking ${job.bookingNo}`}
+                              style={{
+                                color: 'var(--muted)',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: 44,
+                                minHeight: 44,
+                              }}
+                            >
+                              <Icon name="chevron_right" size={18} />
+                            </Link>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
                 {jobs.length > 0 && visibleJobs.length === 0 && (
@@ -1076,27 +1321,14 @@ export default function OperationsQueues() {
         standardFooter
         onApply={() => setShowMoreFilters(false)}
       >
-        <div style={{ display: 'grid', gap: 'var(--sp-xs)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 'var(--sp-xs)' }}>
           <FilterSection title="Date range">
-            <div className="operations-v2__facet-grid">
-              {DISPLAY_SCOPE_ORDER.map((item) => (
-                <Button
-                  key={item}
-                  variant={scope === item ? 'secondary' : 'ghost'}
-                  size="sm"
-                  className="operations-v2__facet"
-                  onClick={() => setScope(item)}
-                >
-                  {SCOPE_LABEL[item]}
-                </Button>
-              ))}
-            </div>
-            {scope === 'custom' && (
-              <div className="operations-v2__custom-range" style={{ marginTop: 'var(--sp-sm)' }}>
-                <label>From<DateField ariaLabel="Queue from this day" value={customFrom} onChange={(value) => patch({ from: value || null })} showBs={false} clearable /></label>
-                <label>To<DateField ariaLabel="Queue up to this day" value={customTo} onChange={(value) => patch({ to: value || null })} showBs={false} clearable align="right" /></label>
-              </div>
-            )}
+            <FilterDatePicker
+              from={scope === 'custom' ? customFrom : ''}
+              to={scope === 'custom' ? customTo : ''}
+              presets={(['today', 'tomorrow', 'week'] as const).map((item) => ({ key: item, label: SCOPE_LABEL[item], active: scope === item, onSelect: () => setScope(item) }))}
+              onRange={({ from, to }) => patch({ day: 'custom', from, to })}
+            />
           </FilterSection>
 
           <FilterSection title="Queue side">

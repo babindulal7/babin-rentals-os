@@ -4,12 +4,14 @@
  * Universal Secondary Header Actions Menu Component (`RentalMoreActions`).
  *
  * Implements the specification:
- * - One universal More (⋯) dropdown menu containing the 5 secondary action groups:
+ * - One universal More (⋯) dropdown menu containing the secondary action groups:
  *   1. Quote (Drafting, preview, PDF, delivery, versioning)
  *   2. Invoice (Drafting, payment status, PDF, duplicate prevention) [Hidden from money-blind staff]
  *   3. Duplicate Rental (Independent draft creation with sanitized copy & availability check)
  *   4. Audit History (Read-only append-only audit trail with category filters & export)
  *   5. Cancel Rental (Pre-handover lifecycle cancellation with packing warnings & reservation release)
+ *   6. Revert stage (Manager+, before handover, audited correction)
+ *   7. Archive booking (Manager+, Closed/Cancelled only, retained searchable history)
  * - Dynamic context adaptation based on selected rental stage and authenticated capabilities.
  * - Submenus for Quote and Invoice.
  * - Dangerous actions visually separated at the bottom in destructive styling.
@@ -22,6 +24,7 @@ import { createPortal } from 'react-dom'
 import Icon, { type IconName } from '../../../components/ui/Icon'
 import { useFloatingMenu } from '../../../components/ui/useFloatingMenu'
 import { floatingLayer } from '../../../components/ui/floatingLayer'
+import { Unavailable } from '../../../components/ui/Unavailable'
 import { useAuth } from '../../../lib/auth'
 import { useCanViewMoney } from '../../../lib/moneyVisibility'
 import {
@@ -35,6 +38,9 @@ import { RentalAuditDrawer, type AuditCategoryFilter } from './RentalAuditDrawer
 import { QuotePreviewModal } from './QuoteActionsMenu'
 import { InvoicePaymentStatusModal } from './InvoiceActionsMenu'
 import { CreateInvoiceModal } from '../../finance/modals/CreateInvoiceModal'
+import { canManageRentalLifecycle } from '../../../lib/rbac'
+import { rentalCanArchive, rentalRevertTargets } from '../../../lib/rentalLifecycle'
+import { RentalLifecycleDialog } from './RentalLifecycleDialog'
 
 export interface ExtraOverflowAction {
   label: string
@@ -83,10 +89,12 @@ export function RentalMoreActions({
   const canViewMoney = useCanViewMoney()
 
   const [open, setOpen] = useState(false)
-  const [activeSubmenu, setActiveSubmenu] = useState<'quote' | 'invoice' | null>(null)
+  /** 'quote', 'invoice', or `extra:<label>` for an extra item's nested group. */
+  const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null)
 
   // Dialog & Drawer states
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const [lifecycleAction, setLifecycleAction] = useState<'revert' | 'archive' | null>(null)
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false)
   const [auditDrawerOpen, setAuditDrawerOpen] = useState(false)
   const [auditInitialCategory, setAuditInitialCategory] = useState<AuditCategoryFilter>('all')
@@ -97,7 +105,7 @@ export function RentalMoreActions({
   const triggerRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const menuId = useId()
-  const position = useFloatingMenu(open, triggerRef, menuRef)
+  const position = useFloatingMenu(open, triggerRef, menuRef, activeSubmenu)
 
   const closeMenu = (returnFocus = false) => {
     setOpen(false)
@@ -257,6 +265,11 @@ export function RentalMoreActions({
                 top: position?.top ?? 0,
                 left: position?.left ?? 0,
                 width: 250,
+                /* Booking Detail folds its booking items in here, so the list can
+                   outgrow a short viewport; it scrolls instead of running off-screen. */
+                maxHeight: position?.maxHeight,
+                overflowY: 'auto',
+                overscrollBehavior: 'contain',
                 zIndex: floatingLayer(triggerRef.current),
                 background: 'var(--card)',
                 border: '1px solid var(--border)',
@@ -269,19 +282,30 @@ export function RentalMoreActions({
               }}
             >
               {/* Optional Extra Utility items (e.g. Scan Barcode, Refresh, Message client) */}
+              {/* RULING 2026-10-15: Booking Detail's second ⋮ folded in here, so an extra
+                  row keeps that menu's honesty — a refused row says why (long-press on
+                  touch), and "Message client" stays one row with its choices nested. */}
               {extraItems && extraItems.length > 0 && (
                 <>
                   {extraItems.map((extra, idx) => {
+                    const reason = extra.unavailable || (extra.disabled ? extra.disabledReason : undefined)
                     const isDis = extra.disabled || Boolean(extra.unavailable)
-                    return (
+                    const subKey = `extra:${extra.label}`
+                    const hasSub = !isDis && Boolean(extra.submenu?.length)
+                    const subOpen = hasSub && activeSubmenu === subKey
+                    const row = (
                       <button
-                        key={`extra-${idx}`}
                         type="button"
                         role="menuitem"
                         disabled={isDis}
-                        title={extra.disabledReason || extra.unavailable || undefined}
+                        title={reason || undefined}
+                        {...(hasSub ? { 'aria-haspopup': 'menu' as const, 'aria-expanded': subOpen } : {})}
                         onClick={() => {
                           if (isDis) return
+                          if (hasSub) {
+                            setActiveSubmenu((cur) => (cur === subKey ? null : subKey))
+                            return
+                          }
                           closeMenu()
                           extra.onClick()
                         }}
@@ -290,11 +314,12 @@ export function RentalMoreActions({
                           width: '100%',
                           display: 'flex',
                           alignItems: 'center',
+                          justifyContent: hasSub ? 'space-between' : undefined,
                           gap: 8,
                           padding: '0 10px',
                           borderRadius: 'var(--r-sm, 6px)',
                           border: 'none',
-                          background: 'transparent',
+                          background: subOpen ? 'var(--hover-card)' : 'transparent',
                           color: isDis ? 'var(--muted)' : 'var(--text)',
                           fontSize: 'var(--t-meta, 13px)',
                           fontWeight: 500,
@@ -303,9 +328,79 @@ export function RentalMoreActions({
                           opacity: isDis ? 0.6 : 1,
                         }}
                       >
-                        {extra.icon && <Icon name={extra.icon} size={15} style={{ color: 'var(--text2)' }} />}
-                        <span>{extra.label}</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          {extra.icon && <Icon name={extra.icon} size={15} style={{ color: 'var(--text2)' }} />}
+                          <span>{extra.label}</span>
+                        </span>
+                        {hasSub && (
+                          <Icon name={subOpen ? 'chevron_down' : 'chevron_right'} size={14} style={{ color: 'var(--muted)' }} />
+                        )}
                       </button>
+                    )
+                    return (
+                      <div key={`extra-${idx}`}>
+                        {reason ? (
+                          <Unavailable reason={reason} style={{ width: '100%' }}>
+                            {row}
+                          </Unavailable>
+                        ) : (
+                          row
+                        )}
+                        {subOpen && (
+                          <div
+                            style={{
+                              paddingLeft: 14,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: 2,
+                              marginTop: 2,
+                              borderLeft: '2px solid var(--border)',
+                              marginLeft: 10,
+                            }}
+                          >
+                            {extra.submenu!.map((sub) => {
+                              const subRow = (
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  disabled={Boolean(sub.unavailable)}
+                                  title={sub.unavailable}
+                                  onClick={() => {
+                                    if (sub.unavailable) return
+                                    closeMenu()
+                                    sub.onClick()
+                                  }}
+                                  style={{
+                                    minHeight: 44,
+                                    width: '100%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    padding: '0 8px',
+                                    borderRadius: 'var(--r-sm, 6px)',
+                                    border: 'none',
+                                    background: 'transparent',
+                                    color: sub.unavailable ? 'var(--muted)' : 'var(--text)',
+                                    fontSize: 'var(--t-caption, 12px)',
+                                    fontWeight: 500,
+                                    cursor: sub.unavailable ? 'not-allowed' : 'pointer',
+                                    textAlign: 'left',
+                                    opacity: sub.unavailable ? 0.6 : 1,
+                                  }}
+                                >
+                                  {sub.label}
+                                </button>
+                              )
+                              return sub.unavailable ? (
+                                <Unavailable key={sub.label} reason={sub.unavailable} style={{ width: '100%' }}>
+                                  {subRow}
+                                </Unavailable>
+                              ) : (
+                                <div key={sub.label}>{subRow}</div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
                     )
                   })}
                   <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
@@ -555,6 +650,20 @@ export function RentalMoreActions({
                 </button>
               )}
 
+              {/* RULING 2026-10-16: shared correction and terminal archive actions. */}
+              {booking && selectedCount === 1 && user && canManageRentalLifecycle(user.role) &&
+                (['revert', 'archive'] as const).filter(action => action === 'revert'
+                  ? rentalRevertTargets(booking).length > 0 : rentalCanArchive(booking)).map(action => (
+                  <button key={action} type="button" role="menuitem"
+                    disabled={typeof navigator !== 'undefined' && !navigator.onLine}
+                    title={typeof navigator !== 'undefined' && !navigator.onLine ? 'Connect to the internet to change rental lifecycle.' : undefined}
+                    onClick={() => { closeMenu(); setLifecycleAction(action) }}
+                    style={{ minHeight: 44, padding: '0 10px', textAlign: 'left', border: 0,
+                      background: 'transparent', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Icon name={action === 'archive' ? 'archive' : 'chevron_left'} size={15} />
+                    {action === 'archive' ? 'Archive booking' : 'Revert stage…'}
+                  </button>
+                ))}
               {/* 5. CANCEL RENTAL (Destructive, visually separated at bottom) */}
               {cancelGroup && (
                 <>
@@ -602,6 +711,8 @@ export function RentalMoreActions({
       </div>
 
       {/* MODALS & DRAWERS */}
+      {booking && lifecycleAction && <RentalLifecycleDialog booking={booking} action={lifecycleAction}
+        onClose={() => setLifecycleAction(null)} onSuccess={() => onActionCompleted?.()} />}
       {booking && (
         <>
           <CancelRentalDialog

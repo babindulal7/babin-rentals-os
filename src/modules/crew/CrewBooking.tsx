@@ -467,8 +467,8 @@ export function CrewBooking() {
                     whiteSpace: 'nowrap',
                     flexShrink: 0,
                     border: rosterChip === label ? '1px solid var(--nav-active-accent)' : '1px solid var(--border)',
-                    background: rosterChip === label ? 'var(--nav-active-bg)' : 'var(--card)',
-                    color: rosterChip === label ? 'var(--nav-active-accent)' : 'var(--text)',
+                    background: rosterChip === label ? 'var(--select-bg)' : 'var(--card)',
+                    color: rosterChip === label ? 'var(--select-fg)' : 'var(--text)',
                   }}
                 >
                   {label} <span className="crew-chip-badge">{chipCounts[label]}</span>

@@ -32,7 +32,7 @@ describe('canonical primary and secondary nav', () => {
     expect(NAV.map((s) => s.label)).toEqual([
       'New Rental',
       'Today',
-      'Operation',
+      'Operations',
       'Rentals',
       'Calendar',
       'Crew Assist',
@@ -173,7 +173,7 @@ describe('active row — most specific wins, exactly one owner', () => {
   })
 
   it('strips the query — /operations?queue=packing is Operations', () => {
-    expect(label('/operations?queue=packing')).toBe('Operation')
+    expect(label('/operations?queue=packing')).toBe('Operations')
   })
 
   it('keeps Finance active across its report routes', () => {
@@ -235,7 +235,7 @@ describe('More sheet', () => {
   it('carries every nav item the bar cannot hold — including the New Rental entry', () => {
     expect(moreNav('Owner').map((s) => s.label)).toEqual([
       'New Rental',
-      'Operation',
+      'Operations',
       'Calendar',
       'Crew Assist',
       'Clients',

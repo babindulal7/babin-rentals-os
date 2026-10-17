@@ -1,0 +1,145 @@
+.rental-line-items {
+  container: rental-lines / inline-size;
+  min-width: 0;
+}
+
+.rental-line-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+}
+
+.rental-line-items .new-rental-stepper-pill {
+  height: 44px;
+}
+
+.rental-line-items .new-rental-stepper-btn,
+.rental-line-items .new-rental-bundle-toggle,
+.rental-line-items [data-label="Actions"] button[aria-haspopup="menu"],
+.rental-line-items [data-label="Actions"] button[aria-label^="Remove "] {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px;
+  flex-shrink: 0;
+}
+
+.rental-line-items .new-rental-stepper-btn svg,
+.rental-line-items .new-rental-bundle-toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* The same cells and callbacks become cards when the equipment pane is narrow.
+   Explicit table roles preserve the row/column relationships across CSS layouts. */
+@container rental-lines (max-width: 900px) {
+  .rental-line-items .rental-line-items-shell {
+    overflow: visible;
+    border: 0;
+    background: transparent !important;
+    box-shadow: none;
+  }
+
+  .rental-line-table {
+    display: block;
+    min-width: 0;
+  }
+
+  .rental-line-table thead {
+    display: none;
+  }
+
+  .rental-line-table tbody {
+    display: grid;
+    gap: 12px;
+  }
+
+  .rental-line-table .rental-line-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-input);
+    background: var(--card);
+  }
+
+  .rental-line-table .rental-line-child {
+    border-inline-start: 3px solid var(--border-strong, var(--border));
+  }
+
+  .rental-line-table td {
+    display: block;
+    grid-column: span 2;
+    min-width: 0;
+    max-width: none !important;
+    height: auto !important;
+    padding: 0 !important;
+    text-align: left !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+  }
+
+  .rental-line-table td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 6px;
+    color: var(--text2);
+    font: 600 var(--t-th) var(--font-body);
+  }
+
+  .rental-line-table [data-label="Item"],
+  .rental-line-table [data-label="Category"],
+  .rental-line-table [data-label="Availability"] {
+    grid-column: 1 / -1;
+  }
+
+  .rental-line-table [data-label="Item"] {
+    padding-right: 48px !important;
+  }
+
+  .rental-line-table [data-label="Item"]::before,
+  .rental-line-table [data-label="Category"]::before,
+  .rental-line-table [data-label="Actions"]::before {
+    content: none;
+  }
+
+  .rental-line-table [data-label="Quantity"],
+  .rental-line-table [data-label="Days"] {
+    grid-column: span 3;
+  }
+
+  .rental-line-table [data-label="Availability"] > span {
+    height: auto !important;
+    min-height: 24px;
+    padding-block: 4px !important;
+  }
+
+  .rental-line-table [data-label="Actions"] {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 44px !important;
+    z-index: 2;
+  }
+
+  .rental-line-row:has([aria-expanded="true"][aria-haspopup="menu"]) {
+    z-index: 3;
+  }
+}
+
+@container rental-lines (max-width: 360px) {
+  .rental-line-table [data-label="Quantity"],
+  .rental-line-table [data-label="Days"] {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .rental-line-table [data-label="Quantity"]::before,
+  .rental-line-table [data-label="Days"]::before {
+    margin-bottom: 0;
+  }
+}

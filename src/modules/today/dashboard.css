@@ -57,8 +57,8 @@
   height: 2.75rem;
   place-items: center;
   border-radius: var(--r-btn);
-  background: var(--dashboard-accent-soft);
-  color: var(--dashboard-accent-strong);
+  background: var(--select-bg);
+  color: var(--select-fg);
 }
 
 .movement-panel__heading {
@@ -124,7 +124,7 @@
 }
 
 .dashboard-master-date-control__btn:active {
-  transform: scale(0.96);
+  filter: brightness(0.96);
 }
 
 .dashboard-master-date-control__date-btn {
@@ -1290,7 +1290,7 @@
   font-size: var(--t-th);
   font-weight: 700;
   cursor: pointer;
-  transition: background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+  transition: background var(--dur-fast) var(--ease), filter var(--dur-fast) var(--ease);
 }
 
 .dashboard-alert__action:hover {
@@ -1299,7 +1299,7 @@
 }
 
 .dashboard-alert__action:active {
-  transform: translateY(0);
+  filter: brightness(0.96);
 }
 
 /* ─── Mobile Segmented Nav Container ─── */
@@ -1481,8 +1481,8 @@
 }
 
 .dashboard-kpi-card__icon--pickup {
-  background: var(--dashboard-accent-soft);
-  color: var(--primary-text);
+  background: var(--select-bg);
+  color: var(--select-fg);
 }
 
 .dashboard-kpi-card__icon--ready {
@@ -1491,8 +1491,8 @@
 }
 
 .dashboard-kpi-card__icon--return {
-  background: var(--dashboard-accent-soft);
-  color: var(--primary-text);
+  background: var(--select-bg);
+  color: var(--select-fg);
 }
 
 .dashboard-kpi-card__icon--danger {
@@ -1520,8 +1520,8 @@
 
 /* ─── Movement Panel Header Colorized Icons ─── */
 .movement-panel__icon--outgoing {
-  background: var(--dashboard-accent-soft);
-  color: var(--primary-text);
+  background: var(--select-bg);
+  color: var(--select-fg);
 }
 
 .movement-panel__icon--incoming {
@@ -1803,9 +1803,9 @@
 }
 
 .movement-panel__icon--outgoing {
-  background: var(--ext-bg);
-  color: var(--primary-text);
-  border: 1px solid color-mix(in srgb, var(--primary) 28%, transparent);
+  background: var(--select-bg);
+  color: var(--select-fg);
+  border: 1px solid var(--select-bg);
   box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
@@ -1994,9 +1994,9 @@
 }
 
 .movement-card--outgoing .movement-card__avatar {
-  background: color-mix(in srgb, var(--primary) 12%, var(--card));
-  color: var(--primary-text);
-  border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
+  background: var(--select-bg);
+  color: var(--select-fg);
+  border: 1px solid var(--select-bg);
 }
 
 .movement-card--incoming .movement-card__avatar {
@@ -2159,7 +2159,6 @@
 .movement-card__cta-btn.is-dominant:hover {
   background: var(--hover-button);
   filter: brightness(1.08);
-  transform: translateY(-1px);
 }
 
 .movement-card__cta-btn.is-prep {
@@ -2172,26 +2171,17 @@
   background: var(--surface-2);
   border-color: var(--border-strong, var(--border));
   color: var(--dashboard-accent-strong);
-  transform: translateY(-1px);
 }
 
 .movement-card__cta-btn:active {
   filter: brightness(0.98);
 }
 
-.movement-card__cta-btn .ui-icon {
-  transition: transform var(--dur-fast) var(--ease);
-}
-
-.movement-card__cta-btn:hover .ui-icon {
-  transform: translateX(2px);
-}
-
 /* Empty state icon colorized */
 .movement-panel--outgoing .movement-panel__empty-icon {
-  color: var(--primary-text);
-  background: var(--ext-bg);
-  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+  color: var(--select-fg);
+  background: var(--select-bg);
+  border: 1px solid var(--select-bg);
 }
 
 .movement-panel--incoming .movement-panel__empty-icon {
@@ -2363,12 +2353,12 @@
 }
 
 .rental-dashboard .dashboard-master-date-control {
-  border-color: color-mix(in srgb, var(--primary) 28%, var(--border));
+  border-color: var(--select-bg);
 }
 
 .rental-dashboard .dashboard-master-date-control__date-btn.is-today {
-  background: color-mix(in srgb, var(--primary) 11%, var(--card));
-  color: var(--primary-text);
+  background: var(--select-bg);
+  color: #fff;
 }
 
 .dashboard-workbar .dashboard-alert {
@@ -2697,8 +2687,8 @@
 .rental-dashboard__panels .movement-card__cta-btn:hover,
 .rental-dashboard__panels .movement-card__cta-btn.is-dominant:hover,
 .rental-dashboard__panels .movement-card__cta-btn.is-prep:hover {
-  background: var(--ext-bg);
-  color: var(--primary-text);
+  background: var(--select-bg);
+  color: var(--select-fg);
   box-shadow: none;
   filter: none;
   transform: none;
@@ -3031,10 +3021,10 @@
 .rental-dashboard .rental-dashboard__panels .movement-card__cta-btn {
   min-height: 56px;
   padding: 0 0.95rem;
-  border: 1px solid color-mix(in srgb, var(--primary) 40%, transparent);
+  border: 1px solid var(--select-bg);
   border-radius: var(--r-btn, 8px);
-  background: color-mix(in srgb, var(--primary) 10%, var(--card));
-  color: var(--primary-text);
+  background: var(--select-bg);
+  color: var(--select-fg);
   font-size: var(--t-meta);
   font-weight: 650;
   text-decoration: none;
@@ -3052,16 +3042,8 @@
   outline-offset: 2px;
 }
 
-.rental-dashboard .movement-card__cta-btn svg {
-  transition: transform var(--dur-fast) var(--ease);
-}
-
-.rental-dashboard .movement-card__cta-btn:hover svg {
-  transform: translateX(2px);
-}
-
 .rental-dashboard .movement-card__cta-btn:active {
-  transform: scale(0.98);
+  filter: brightness(0.96);
 }
 
 /* Meaningful rows (8 Oct 2026): the time column replaces the initials as the
@@ -3145,9 +3127,9 @@
 }
 
 .rental-dashboard .movement-card__tag--due {
-  --tag-bg: color-mix(in srgb, var(--primary) 10%, var(--card));
-  --tag-edge: color-mix(in srgb, var(--primary) 30%, transparent);
-  --tag-ink: var(--primary-text);
+  --tag-bg: var(--select-bg);
+  --tag-edge: var(--select-bg);
+  --tag-ink: var(--select-fg);
 }
 
 /* Dispatch date control, smaller (8 Oct 2026): no "Sync dispatch day:" label,
@@ -3249,4 +3231,37 @@
   .rental-dashboard .movement-card { animation: none; }
   .rental-dashboard .movement-card__cta-btn:hover svg,
   .rental-dashboard .movement-card__cta-btn:active { transform: none; }
+}
+
+/* RULING 2026-10-15: the dashboard date picker is one compact neutral outline button (same as Operations). */
+.rental-dashboard .dashboard-master-date-control {
+  display: inline-flex;
+  padding: 0;
+  gap: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.rental-dashboard .dashboard-master-date-control__date-btn {
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 12px;
+  gap: 6px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--r-btn, 8px);
+  background: transparent;
+  color: var(--text2);
+  font-size: var(--t-meta);
+  font-weight: 600;
+}
+.rental-dashboard .dashboard-master-date-control__date-btn:hover,
+.rental-dashboard .dashboard-master-date-control__date-btn[aria-expanded='true'] {
+  background: var(--hover-card);
+  color: var(--text);
+}
+.rental-dashboard .dashboard-master-date-control__date-btn .dashboard-master-date-control__primary,
+.rental-dashboard .dashboard-master-date-control__date-btn .dashboard-master-date-control__cal {
+  color: inherit;
+  font-size: var(--t-meta);
+  font-weight: 600;
 }

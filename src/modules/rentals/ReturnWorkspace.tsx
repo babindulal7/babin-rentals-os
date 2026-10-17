@@ -4,7 +4,7 @@ import Icon from '../../components/ui/Icon'
 import { Card, Button, cardStyle } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
-import { FloorAside } from '../operations/FloorAside'
+import { OperationAside } from '../operations/FloorAside'
 import { StickyFloorBar } from '../operations/StickyFloorBar'
 import { EmptyState, ErrorBanner } from '../../components/ui/StateViews'
 import { PageBody } from '../../components/ui/PageBody'
@@ -36,7 +36,7 @@ import type { ItemCondition, NotReturnedDecision } from '../../types/database'
 import { CompactButton } from '../../components/ui/TouchTarget'
 import { deliveryTypeLabel } from '../../lib/format'
 import { formatGateError } from '../../lib/gates'
-import { clearFloorScan, loadFloorScan, saveFloorScan } from '../../lib/floorScanStorage'
+import { clearFloorScan, loadFloorScan, saveFloorScan, recordFloorScanEvent } from '../../lib/floorScanStorage'
 import { rentalDaysBetween } from '../../lib/rentalDays'
 import { NON_PACKABLE_LINE_TYPES } from '../../lib/bookingLineTypes'
 import {
@@ -528,7 +528,6 @@ export default function ReturnWorkspace({
   const { showSuccessToast } = useToast()
   /* Law 13/14 — width decides, at v4.1 §7.7's 768 / 1280. */
   const viewport = useFloorViewport()
-  const desktop = viewport === 'desktop'
   const phone = viewport === 'phone'
 
   /* ── the read — fetchFloorBooking, same cancellation rule as BookingDetail ── */
@@ -949,10 +948,28 @@ export default function ReturnWorkspace({
         if (pendingInCase.length === 0) {
           triggerScanPulse('error')
           playScanError()
+          if (floor?.id) {
+            void recordFloorScanEvent({
+              bookingId: floor.id,
+              context: 'return',
+              code,
+              result: 'warning',
+              resultReason: `Flight Case "${caseRows[0]?.group}" is already fully returned`,
+            })
+          }
           setScanLog((p) => [`• Flight Case "${caseRows[0]?.group}" is already fully returned`, ...p].slice(0, 5))
         } else {
           triggerScanPulse('success')
           playScanSuccess()
+          if (floor?.id) {
+            void recordFloorScanEvent({
+              bookingId: floor.id,
+              context: 'return',
+              code,
+              result: 'accepted',
+              resultReason: `Flight Case "${caseRows[0]?.group}" identified`,
+            })
+          }
           setScanLog((p) => [
             `📦 Flight Case "${caseRows[0]?.group}" identified (${pendingInCase.length}/${caseRows.length} items to receive). Scan items to inspect.`,
             ...p,
@@ -965,6 +982,15 @@ export default function ReturnWorkspace({
 
     triggerScanPulse('error')
     playScanError()
+    if (floor?.id) {
+      void recordFloorScanEvent({
+        bookingId: floor.id,
+        context: 'return',
+        code: ambientBarcode.trim(),
+        result: 'rejected',
+        resultReason: `No equipment matching "${ambientBarcode.trim()}" in this booking`,
+      })
+    }
     setScanLog((p) => [`✕ No equipment matching "${ambientBarcode.trim()}" in this booking`, ...p].slice(0, 5))
     setAmbientBarcode('')
   }
@@ -976,6 +1002,15 @@ export default function ReturnWorkspace({
       if (via === 'scan') {
         triggerScanPulse('error')
         playScanError()
+        if (floor?.id) {
+          void recordFloorScanEvent({
+            bookingId: floor.id,
+            context: 'return',
+            code: key,
+            result: 'rejected',
+            resultReason: 'is not on this booking',
+          })
+        }
       }
       return
     }
@@ -983,6 +1018,16 @@ export default function ReturnWorkspace({
       if (via === 'scan') {
         triggerScanPulse('error')
         playScanError()
+        if (floor?.id) {
+          void recordFloorScanEvent({
+            bookingId: floor.id,
+            context: 'return',
+            code: row.serial ?? row.name,
+            result: 'warning',
+            resultReason: 'was returned in an earlier session',
+            resolvedUnitId: row.assetId,
+          })
+        }
       }
       setScanLog((p) => [`• ${row.name} was returned in an earlier session — nothing to record`, ...p].slice(0, 5))
       return
@@ -991,6 +1036,16 @@ export default function ReturnWorkspace({
       if (via === 'scan') {
         triggerScanPulse('error')
         playScanError()
+        if (floor?.id) {
+          void recordFloorScanEvent({
+            bookingId: floor.id,
+            context: 'return',
+            code: row.serial ?? row.name,
+            result: 'warning',
+            resultReason: 'already received in this session',
+            resolvedUnitId: row.assetId,
+          })
+        }
       }
       setScanLog((p) => [`• ${row.name} already received in this session`, ...p].slice(0, 5))
       return
@@ -1003,6 +1058,15 @@ export default function ReturnWorkspace({
         playCaseComplete()
       } else {
         playScanSuccess()
+      }
+      if (floor?.id) {
+        void recordFloorScanEvent({
+          bookingId: floor.id,
+          context: 'return',
+          code: row.serial ?? row.name,
+          result: 'accepted',
+          resolvedUnitId: row.assetId,
+        })
       }
     }
     setScanLog((p) =>
@@ -1246,10 +1310,10 @@ export default function ReturnWorkspace({
                   gap: 12,
                   padding: '10px 14px',
                   borderRadius: 'var(--r-card)',
-                  background: 'color-mix(in srgb, var(--primary) 10%, var(--surface))',
+                  background: 'var(--select-bg)',
                   border: '1px solid color-mix(in srgb, var(--primary) 30%, transparent)',
                   fontSize: 'var(--t-meta)',
-                  color: 'var(--text)',
+                  color: 'var(--select-fg)',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1484,10 +1548,10 @@ export default function ReturnWorkspace({
               </p>
             </Card>
 
-            <div
+            <div className="operation-workspace-grid"
               style={{
                 display: 'grid',
-                gridTemplateColumns: desktop ? 'minmax(0,1fr) auto' : '1fr',
+                gridTemplateColumns: phone ? 'minmax(0,1fr)' : 'minmax(0,1fr) 300px',
                 gap: 'var(--sp-md)',
                 alignItems: 'start',
               }}
@@ -1908,7 +1972,7 @@ export default function ReturnWorkspace({
               </div>
 
               {/* ── right rail — progress, the gate checklist, the completion gate ── */}
-              <FloorAside collapsible={desktop} side="right" width={300} label="Return summary">
+              <OperationAside label="Return summary">
                 <Card title="Progress">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-md)' }}>
                     <Ring pct={pct} />
@@ -1973,7 +2037,7 @@ export default function ReturnWorkspace({
                       justifyContent: 'center',
                       gap: 7,
                       width: '100%',
-                      minHeight: 44,
+                      minHeight: 56,
                       padding: '0 16px',
                       borderRadius: 'var(--r-btn)',
                       fontSize: 'var(--t-ui)',
@@ -2124,7 +2188,7 @@ export default function ReturnWorkspace({
                     </div>
                   </div>
                 )}
-              </FloorAside>
+              </OperationAside>
             </div>
 
             {/* §11 — footer. The single EXIT, and nothing else: the completion

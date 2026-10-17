@@ -61,8 +61,9 @@ export function PrintLabelModal({ isOpen, onClose, labelData }: PrintLabelModalP
                   style={{
                     padding: '8px 10px',
                     borderRadius: 'var(--r-sm)',
-                    border: active ? '2px solid var(--primary)' : '1px solid var(--border)',
-                    background: active ? 'var(--nav-active-bg)' : 'var(--card2)',
+                    border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
+                    boxShadow: active ? '0 0 0 1px var(--primary)' : 'none',
+                    background: active ? 'var(--select-bg)' : 'var(--card2)',
                     color: active ? 'var(--primary)' : 'var(--text)',
                     fontSize: 'var(--t-meta)',
                     fontWeight: active ? 700 : 500,

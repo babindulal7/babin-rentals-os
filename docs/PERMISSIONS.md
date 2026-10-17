@@ -207,6 +207,8 @@ Ladder shorthand: `M+` = Owner · Admin · Manager. `C+` = M+ · Coordinator. `F
 | `rental.cancel` (Packed or later) | M+ | reason ≥10 chars, audited | ✓ (same string; stage checked in engine) |
 | `rental.override_overbooking` | M+ | releases the **losing** reservation (`released_at` + `override_records` row + reason ≥10 chars) and re-runs the transition; the GiST constraint is never disabled and never `deferrable` (R-26, 8 Sep) | ○ |
 | `rental.reopen` (stage-only, invoice untouched) | M+ | `apply_booking_stage_transition` fix per SPEC-P0-2 | ○ |
+| `rental.revert` | M+ | Online; own branch for Manager; Booked/Packed to earlier Quote/Booked only; no handover, including partial pickup; reason ≥10 chars; atomic audit + transition (O16-3) | ✓ locally VERIFIED (0167); not APPLIED live |
+| `rental.archive` | M+ | Online; own branch for Manager; Closed/Cancelled only; reason ≥10 chars; retained searchable history (O16-3) | ✓ locally VERIFIED (0167); not APPLIED live |
 | `rental.close` (auto-suggest, manual confirm) | C+ · Accounts | close gates: outstanding 0 + deposit resolved + no open case + no pending damage | ○ |
 | `subrental.create` | C+ | — | ✓ |
 | `supplier.manage` | C+ · Accounts | 22 Jul lock (c) | ○ |
@@ -417,6 +419,8 @@ Known hole to keep closed: **`security_deposits` was readable by money-blind ses
 | `gate.invoice.void_paid` | Void paid invoice without credit note | nobody | credit note required | yes | Stage 1 (0117) |
 | `gate.deposit.refund` | Deposit refund | Accounts confirms (M+ may) | — | yes | 21 Jul |
 | `gate.reopen.role` | Reopen a Closed booking (stage only) | M+ | yes | yes | 4 Sep rulings; Stage 1 (0115) |
+| `gate.revert.pre_handover` | Booked/Packed → earlier Quote/Booked only; no handover or terminal booking | M+; Manager own branch; online | ≥10 chars | atomic audit + reversal; reservations released at Quote or refreshed at Booked | O16-3; 0167 |
+| `gate.archive.terminal` | Archive a Closed or Cancelled booking; keep searchable history | M+; Manager own branch; online | ≥10 chars | atomic audit + terminal archive timestamp | O16-3; 0167 |
 | `gate.pack.session_missing` | Booked → Packed with no pack session | nobody | — | yes | Stage 1 (0115) |
 | `gate.pack.units_unassigned` | Serial line with unassigned units at pack | nobody | — | yes | Stage 1 (0115) |
 | `gate.pack.units_unpacked` | Unit unpacked in pack session | nobody | — | yes | Stage 1 (0115) |

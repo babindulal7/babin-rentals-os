@@ -96,4 +96,29 @@ describe('client import write outcomes', () => {
     expect(() => importClientsConfig.validate({ rows: [first, { ...second, clientUuid: first.clientUuid }] })).toThrow('save key')
     expect(() => importClientsConfig.validate({ rows: [first, { ...second, values: first.values }] })).toThrow('Repeated')
   })
+  it('refuses case variants of the same Postgres receipt UUID before reading or saving', async () => {
+    const request = input()
+    request.rows[0]!.clientUuid = 'abcdefab-0000-4000-8000-000000000000'
+    request.rows[1]!.clientUuid = request.rows[0]!.clientUuid.toUpperCase()
+    await expect(importClients(request, ctx())).rejects.toThrow('save key')
+    expect(mocks.previous).not.toHaveBeenCalled()
+    expect(mocks.save).not.toHaveBeenCalled()
+  })
+  it('keeps each request unchanged while directory checks and progress callbacks run', async () => {
+    const request = input()
+    const originalKey = request.rows[1]!.clientUuid
+    let release!: (value: { data: never[]; error: null }) => void
+    mocks.previous.mockImplementationOnce(() => new Promise(resolve => { release = resolve }))
+    const progress = () => {
+      request.rows[1]!.values.name = 'Changed in progress callback'
+      request.rows[1]!.clientUuid = 'ffffffff-0000-4000-8000-000000000000'
+    }
+    // Call execute to pause precisely at its first network await.
+    const work = importClientsConfig.execute({ ...request, onProgress: progress }, ctx())
+    request.rows[1]!.values.phone = '+9779800000000'
+    release({ data: [], error: null })
+    await work
+    expect(mocks.matches).toHaveBeenCalledWith(expect.objectContaining({ phones: ['+9779801234560', '+9779801234561', '+9779801234562'] }))
+    expect(mocks.save.mock.calls[1]?.[0]).toEqual(expect.objectContaining({ clientUuid: originalKey, values: expect.objectContaining({ name: 'Client 1', phone: '+9779801234561' }) }))
+  })
 })

@@ -4,7 +4,7 @@ import Icon from '../../components/ui/Icon'
 import { Card, Button, cardStyle } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
-import { FloorAside } from '../operations/FloorAside'
+import { OperationAside } from '../operations/FloorAside'
 import { StickyFloorBar } from '../operations/StickyFloorBar'
 import { EmptyState, ErrorBanner } from '../../components/ui/StateViews'
 import { PageBody } from '../../components/ui/PageBody'
@@ -33,6 +33,7 @@ import { CompactButton, TapCheckbox } from '../../components/ui/TouchTarget'
 import { deliveryTypeLabel } from '../../lib/format'
 import { formatGateError } from '../../lib/gates'
 import { DriverHandoverModal } from '../operations/DriverHandoverModal'
+import { recordFloorScanEvent } from '../../lib/floorScanStorage'
 import { useFloorPresence } from '../../lib/floorPresence'
 import { SignOnGlassModal, type DigitalSignature } from './modals/SignOnGlassModal'
 import {
@@ -489,7 +490,6 @@ export default function HandoverWorkspace({
   const { showSuccessToast } = useToast()
   /* Law 13/14 — width decides, at v4.1 §7.7's 768 / 1280. */
   const viewport = useFloorViewport()
-  const desktop = viewport === 'desktop'
   const phone = viewport === 'phone'
 
   /* ── the read — fetchFloorBooking, same cancellation rule as BookingDetail ── */
@@ -897,6 +897,15 @@ export default function HandoverWorkspace({
       if (via === 'scan') {
         triggerScanPulse('error')
         playScanError()
+        if (floor?.id) {
+          void recordFloorScanEvent({
+            bookingId: floor.id,
+            context: 'handover',
+            code: key,
+            result: 'rejected',
+            resultReason: 'is not on this booking',
+          })
+        }
       }
       return { ok: false, message: 'is not on this booking' }
     }
@@ -910,6 +919,16 @@ export default function HandoverWorkspace({
       if (via === 'scan') {
         triggerScanPulse('error')
         playScanError()
+        if (floor?.id) {
+          void recordFloorScanEvent({
+            bookingId: floor.id,
+            context: 'handover',
+            code: row.serial ?? row.name,
+            result: 'warning',
+            resultReason: `was recorded ${row.prior} in an earlier session`,
+            resolvedUnitId: row.assetId,
+          })
+        }
       }
       const message = `was recorded ${row.prior} in an earlier session — nothing changed`
       setScanLog((p) => [`• ${row.name} ${message}`, ...p].slice(0, 5))
@@ -919,6 +938,16 @@ export default function HandoverWorkspace({
       if (via === 'scan') {
         triggerScanPulse('error')
         playScanError()
+        if (floor?.id) {
+          void recordFloorScanEvent({
+            bookingId: floor.id,
+            context: 'handover',
+            code: row.serial ?? row.name,
+            result: 'warning',
+            resultReason: 'was already marked Picked Up',
+            resolvedUnitId: row.assetId,
+          })
+        }
       }
       const message = 'was already marked Picked Up — nothing changed'
       setScanLog((p) => [`• ${row.name} ${message}`, ...p].slice(0, 5))
@@ -926,6 +955,15 @@ export default function HandoverWorkspace({
     }
     markPicked(key, via)
     if (via === 'scan') {
+      if (floor?.id) {
+        void recordFloorScanEvent({
+          bookingId: floor.id,
+          context: 'handover',
+          code: row.serial ?? row.name,
+          result: 'accepted',
+          resolvedUnitId: row.assetId,
+        })
+      }
       triggerScanPulse('success')
       const remaining = rows.filter((r) => r.key !== key && r.prior === null && marks[r.key]?.state !== 'Picked Up')
       if (remaining.length === 0) {
@@ -1462,10 +1500,10 @@ export default function HandoverWorkspace({
 
             {/* §3.3 — checklist and gates left, summary rail right at desktop;
                 below 1280 the rail REFLOWS beneath (Rulings §7). */}
-            <div
+            <div className="operation-workspace-grid"
               style={{
                 display: 'grid',
-                gridTemplateColumns: desktop ? 'minmax(0,1fr) auto' : '1fr',
+                gridTemplateColumns: phone ? 'minmax(0,1fr)' : 'minmax(0,1fr) 300px',
                 gap: 'var(--sp-md)',
                 alignItems: 'start',
               }}
@@ -2045,7 +2083,7 @@ export default function HandoverWorkspace({
               </div>
 
               {/* ── right rail ─────────────────────────────────────────── */}
-              <FloorAside collapsible={desktop} side="right" width={300} label="Handover summary">
+              <OperationAside label="Handover summary">
                 {/* §10 — no Outstanding, no Deposit Pending here (§13.1). Warehouse sees no money. */}
                 <Card title="Handover Summary" action={<span className="figure" style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>{pct}%</span>}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-md)' }}>
@@ -2172,7 +2210,7 @@ export default function HandoverWorkspace({
                     </div>
                   </div>
                 )}
-              </FloorAside>
+              </OperationAside>
             </div>
 
             {/* RULING 2026-10-14 (R14-14): this standalone footer stays in-page; the shell and dock pin Confirm. */}
@@ -2207,7 +2245,7 @@ export default function HandoverWorkspace({
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 7,
-                      minHeight: 44,
+                      minHeight: 56,
                       padding: '0 16px',
                       borderRadius: 'var(--r-btn)',
                       fontSize: 'var(--t-ui)',

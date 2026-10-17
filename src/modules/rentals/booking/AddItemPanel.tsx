@@ -732,7 +732,7 @@ export function AddItemPanel({
               aria-haspopup="listbox"
               aria-describedby={hintId}
               {...(activeId ? { 'aria-activedescendant': activeId } : {})}
-              placeholder="Search equipment, bundles & services by name, SKU, serial, brand, category…"
+              placeholder="Search equipment, bundles, SKU, or serial…"
               value={query}
               onFocus={() => {
                 setFiltersExpanded(false)
@@ -929,7 +929,7 @@ export function AddItemPanel({
                   aria-haspopup="listbox"
                   aria-describedby={hintId}
                   {...(activeId ? { 'aria-activedescendant': activeId } : {})}
-                  placeholder="Search name, SKU, serial, brand, category, bundle code — or a model inside a bundle…"
+                  placeholder="Search equipment, bundles, SKU, or serial…"
                   value={query}
                   onFocus={() => setFiltersExpanded(false)}
                   onChange={(e) => {
@@ -968,7 +968,7 @@ export function AddItemPanel({
           <div className="new-rental-equipment-catalogue-controls" style={{ padding: 10, borderBottom: '1px solid var(--border)', display: 'grid', gap: 9, flexShrink: 0 }}>
             {/* ── Tabs (§27) ─────────────────────────────────────────── */}
             <div className="new-rental-equipment-catalogue-toolbar">
-            <div className="new-rental-equipment-catalogue-tabs" role="tablist" aria-label="Catalogue type">
+            <div className="new-rental-equipment-catalogue-tabs" role="tablist" aria-label="Catalogue type" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               {TABS.map((t) => {
                 const on = tab === t.key
                 return (
@@ -984,8 +984,8 @@ export function AddItemPanel({
                     }}
                     style={{
                       position: 'relative',
-                      height: 28,
-                      padding: '0 11px',
+                      minHeight: 44,
+                      padding: '0 14px',
                       borderRadius: 'var(--r-badge)',
                       border: `1px solid ${on ? 'transparent' : 'var(--border)'}`,
                       background: on ? 'var(--st-primary-bg)' : 'transparent',
@@ -994,10 +994,11 @@ export function AddItemPanel({
                       fontSize: 'var(--t-meta)',
                       fontWeight: 600,
                       cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                     }}
                   >
-                    {/* 44×44 hit area without a 44px-tall chip. */}
-                    <TouchInset />
                     {t.label}
                   </button>
                 )
@@ -1029,7 +1030,7 @@ export function AddItemPanel({
                     setCategory(e.target.value === '' ? null : e.target.value)
                     setActiveIndex(0)
                   }}
-                  style={{ ...inputStyle, width: 'auto', height: 28, fontSize: 'var(--t-meta)' }}
+                  style={{ ...inputStyle, width: 'auto', minHeight: 44, height: 44, fontSize: 'var(--t-meta)' }}
                 >
                   <option value="">All categories</option>
                   {DERIVED_CATEGORIES.map((c) => (
@@ -1047,7 +1048,7 @@ export function AddItemPanel({
                     setAvailability(e.target.value as AvailabilityLevel | 'any')
                     setActiveIndex(0)
                   }}
-                  style={{ ...inputStyle, width: 'auto', height: 28, fontSize: 'var(--t-meta)' }}
+                  style={{ ...inputStyle, width: 'auto', minHeight: 44, height: 44, fontSize: 'var(--t-meta)' }}
                 >
                   {AVAILABILITY_FILTERS.map((f) => (
                     <option key={f.value} value={f.value}>
@@ -1062,7 +1063,7 @@ export function AddItemPanel({
                   value={sort}
                   onChange={(e) => setSort(e.target.value as SortKey)}
                   title={`Not offered: ${OMITTED_SORTS.map((s) => `${s.label} — ${s.reason}`).join('; ')}`}
-                  style={{ ...inputStyle, width: 'auto', height: 28, fontSize: 'var(--t-meta)' }}
+                  style={{ ...inputStyle, width: 'auto', minHeight: 44, height: 44, fontSize: 'var(--t-meta)' }}
                 >
                   {SORT_OPTIONS.map((s) => (
                     <option key={s.key} value={s.key}>
@@ -2286,7 +2287,11 @@ function TransportRow({
       role="option"
       aria-selected={active}
       aria-label={`${result.name}. Transport mode: ${result.type}. ${
-        showPrices ? `${formatMoney(result.ratePaisa)}. ` : ''
+        showPrices
+          ? result.ratePaisa === null
+            ? 'No delivery charge set on this booking yet. '
+            : `${formatMoney(result.ratePaisa)}. `
+          : ''
       }${selected ? 'Currently selected.' : 'Press Enter to select transport mode.'}`}
       onMouseMove={onHover}
       onClick={onSelect}
@@ -2357,7 +2362,13 @@ function TransportRow({
             className="figure"
             style={{ marginLeft: 'auto', flexShrink: 0, fontSize: 'var(--t-ui)', fontWeight: 700, color: 'var(--text)' }}
           >
-            {result.ratePaisa === 0 ? 'Free (Rs 0)' : formatMoney(result.ratePaisa)}
+            {/* `null` = no delivery charge on the form yet. It is typed in the
+                Delivery section; this row never supplies a figure of its own. */}
+            {result.ratePaisa === null
+              ? 'No charge set yet'
+              : result.ratePaisa === 0
+                ? 'Free (Rs 0)'
+                : formatMoney(result.ratePaisa)}
           </span>
         )}
       </div>

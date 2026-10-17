@@ -41,7 +41,7 @@ const mockPricing: PricingPipelineResult = {
 }
 
 describe('RentalPricingSection', () => {
-  it('renders complete pricing pipeline breakdown and Law 5 deposit isolation', async () => {
+  it('renders pricing controls, discounts, and Law 5 deposit isolation', async () => {
     const host = document.createElement('div')
     document.body.appendChild(host)
     const root = createRoot(host)
@@ -86,11 +86,11 @@ describe('RentalPricingSection', () => {
         )
       })
 
-      expect(host.textContent).toContain('Rental Charges')
-      expect(host.textContent).toContain('RENTAL TOTAL')
-      expect(host.textContent).toContain('Security Deposit (Refundable)')
-      expect(host.textContent).toContain('Advance Required')
-      expect(host.textContent).toContain('Held as a separate liability guarantee')
+      expect(host.textContent).toContain('Discounts & Taxes')
+      expect(host.textContent).toContain('Security Deposit')
+      expect(host.textContent).toContain('Recommended Deposit')
+      expect(host.textContent).toContain('Manual Deposit Override')
+      expect(host.textContent).toContain('Refundable and separate from rent')
     } finally {
       await act(async () => root.unmount())
       host.remove()

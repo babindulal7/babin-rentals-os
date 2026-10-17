@@ -447,6 +447,8 @@ function canUsePre0144Columns(filters: ListFilters): boolean {
 }
 
 export interface BookingListOptions extends ListFilters {
+  /** Default rental list only; searching includes archived history. */
+  excludeArchived?: boolean
   /** Ask for the total matching count. Costs an extra planner pass, so it is opt-in. */
   withCount?: boolean
   /**
@@ -530,11 +532,15 @@ async function readDeposits(ids: string[]): Promise<Map<string, number | null>> 
 }
 
 export async function listBookings(opts: BookingListOptions = {}): Promise<ListQueryResult<BookingListRow>> {
-  const { withCount, withDeposit, withTotalAmount, headOnly, ...filters } = opts
+  const { withCount, withDeposit, withTotalAmount, headOnly, excludeArchived, ...filters } = opts
+  let useArchiveFilter = Boolean(excludeArchived && !filters.search?.trim())
+  const missingArchiveColumn = (error: BookingQueryError | null) =>
+    Boolean(error && (error.code === '42703' || error.code === 'PGRST204') && error.message.includes('archived_at'))
 
   if (headOnly) {
     const countBookings = async (legacy: boolean): Promise<{ count: number | null; error: BookingQueryError | null }> => {
       const base = supabase.from('bookings').select('id', { count: 'exact', head: true })
+      if (useArchiveFilter) base.is('archived_at', null)
       const query = applyListFilters(base, {
         ...filters,
         search: filters.search === undefined ? undefined : parseBookingNoSearch(filters.search),
@@ -544,8 +550,12 @@ export async function listBookings(opts: BookingListOptions = {}): Promise<ListQ
     }
 
     let { count, error } = await countBookings(false)
-    if (missingProjectTypeColumn(error) && canUsePre0144Columns(filters)) {
-      ;({ count, error } = await countBookings(true))
+    let legacy = false
+    for (let retry = 0; error && retry < 2; retry++) {
+      if (useArchiveFilter && missingArchiveColumn(error)) useArchiveFilter = false
+      else if (!legacy && missingProjectTypeColumn(error) && canUsePre0144Columns(filters)) legacy = true
+      else break
+      ;({ count, error } = await countBookings(legacy))
     }
     if (error) throw new Error(`listBookings count failed: ${error.message}`)
     return { rows: [], total: count }
@@ -588,6 +598,7 @@ export async function listBookings(opts: BookingListOptions = {}): Promise<ListQ
       .select(legacy ? PRE_0144_COLUMNS : BASE_COLUMNS, withCount ? { count: 'exact' } : undefined)
       // Law 3: a removed line is voided, never deleted, so it must not be counted.
       .is('booking_lines.voided_at', null)
+    if (useArchiveFilter) base.is('archived_at', null)
 
     const query = applyListFilters(base, {
       ...filters,
@@ -617,8 +628,12 @@ export async function listBookings(opts: BookingListOptions = {}): Promise<ListQ
   }
 
   let { data, error, count } = await fetchBookings(false)
-  if (missingProjectTypeColumn(error) && canUsePre0144Columns(filters)) {
-    ;({ data, error, count } = await fetchBookings(true))
+  let legacy = false
+  for (let retry = 0; error && retry < 2; retry++) {
+    if (useArchiveFilter && missingArchiveColumn(error)) useArchiveFilter = false
+    else if (!legacy && missingProjectTypeColumn(error) && canUsePre0144Columns(filters)) legacy = true
+    else break
+    ;({ data, error, count } = await fetchBookings(legacy))
   }
   if (error) throw new Error(`listBookings failed: ${error.message}`)
 
@@ -775,6 +790,22 @@ export function overdue(nowAd: string): ListFilters {
     chips: { stage: ['On Rent'] satisfies BookingStageDb[] },
     presence: { cancelled_at: false, actual_return_at: false },
     sort: { column: 'return_at', ascending: true },
+  }
+}
+
+/**
+ * Late pickup — should have gone out before now but is still Booked/Packed.
+ *
+ * ADOPTIONS item 7 (Booqable §12.2 L3): the fourth Attention-required facet.
+ * Takes an INSTANT like `overdue` (floored to the minute so `useList` keys stay
+ * stable); stage set mirrors `TODAYS_OUTGOING_STAGES`, not `overdue`.
+ */
+export function latePickups(nowAd: string): ListFilters {
+  return {
+    dateRange: { column: 'pickup_at', toAd: toMinute(nowAd) },
+    chips: { stage: [...TODAYS_OUTGOING_STAGES] },
+    presence: { cancelled_at: false },
+    sort: { column: 'pickup_at', ascending: true },
   }
 }
 

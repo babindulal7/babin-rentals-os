@@ -425,7 +425,7 @@ export function ClientCombobox({
           {...(activeId ? { 'aria-activedescendant': activeId } : {})}
           {...(error ? { 'aria-invalid': true, 'aria-describedby': errorId } : {})}
           disabled={disabled}
-          placeholder="Search name, contact, phone, email, PAN or client ID…"
+          placeholder="Search client by name, phone, PAN, or ID…"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value)

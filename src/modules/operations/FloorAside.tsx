@@ -1,5 +1,11 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { Rail, SideRail } from '../../components/ui/Page'
+import './operation-workspace.css'
+
+/** RULING 2026-10-16: the four rental operations share one visible summary/filter column. */
+export function OperationAside({ label, children }: { label: string; children: ReactNode }) {
+  return <aside className="operation-workspace-aside" aria-label={label}>{children}</aside>
+}
 
 /**
  * **Rulings §7 — "right rails collapse below 1280" means REFLOW, not hide.**

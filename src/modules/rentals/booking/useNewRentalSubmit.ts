@@ -3,10 +3,15 @@ import type { ActionContext } from '../../../actions/core'
 import { createRental, deliveryTypeFromLabel, type BookingLineType } from '../../../actions/rentals/createRental'
 import { convertDraft, saveDraft as persistRentalDraft, type RentalDraftData } from '../../../actions/rentals/saveDraft'
 import { transportInstructions } from '../../../lib/bookingTransportForm'
+import { bookingDiscountRows } from '../../../lib/bookingDiscountRows'
 import { toRupees, type Paisa } from '../../../lib/money'
 import type { PricingPipelineResult } from '../../../lib/pricingPipeline'
 import { planCreationUnits, type CreationUnitPlan } from '../../../lib/queries/availability'
 import type { ClientRecord } from '../../../lib/queries/clients'
+import { fetchProductPricingTerms, type ProductPricingTerms } from '../../../lib/queries/productPricingTerms'
+import { canViewMoney } from '../../../lib/rbac'
+import { quoteUnitPrice } from '../../../lib/pricingStructures'
+import { kathmanduCivil, NPT_OFFSET_MIN } from '../../../lib/bs'
 import { newClientUuid, supabase } from '../../../lib/supabase'
 import type { CrewRoleDb } from '../../../types/database'
 import type { CrewLine } from './CrewSection'
@@ -62,6 +67,51 @@ export interface UseNewRentalSubmitOptions {
   draftBookingKey: React.MutableRefObject<string | null>
 }
 
+const PRODUCT_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * 0168 (G3) — quote totals for one booking line.
+ *
+ * A structure/fixed quote does not divide into a per-day rate without a paisa
+ * discrepancy, so the quoted total plus its snapshot ride the line and the
+ * invoice reproduces the quote. Returns `{}` (flat-rate path) when the product
+ * carries no terms or the quote fails — quoting must never block booking.
+ */
+function quoteFieldsForLine(
+  line: Line,
+  terms: ReadonlyMap<string, ProductPricingTerms>,
+  pickupDay: string,
+  pickupTime: string,
+  returnTime: string,
+): { lineTotal?: number; priceBreakdown?: Record<string, unknown> } {
+  const productId = line.productId && PRODUCT_UUID_RE.test(line.productId) ? line.productId : null
+  const lineTerms = productId ? terms.get(productId) : undefined
+  if (!lineTerms || (!lineTerms.structure && lineTerms.rules.length === 0)) return {}
+  try {
+    const base = lineTerms.structure
+      ? { method: 'structure' as const, structure: lineTerms.structure }
+      : { method: 'flat' as const, perDayPaisa: line.ratePaisa }
+    const quote = quoteUnitPrice({ base, rules: lineTerms.rules, pickupDay, days: line.days, pickupTime, returnTime })
+    return {
+      lineTotal: toRupees((quote.unitTotalPaisa * line.qty) as Paisa),
+      priceBreakdown: {
+        source: 'pricing-quote-v1',
+        productId,
+        method: base.method,
+        pickupDay,
+        days: line.days,
+        qty: line.qty,
+        chargedDays: quote.chargedDays,
+        unitTotalPaisa: quote.unitTotalPaisa,
+        adjustments: quote.adjustments.map((a) => ({ rule: a.rule, deltaPaisa: a.deltaPaisa })),
+        notes: quote.notes,
+      },
+    }
+  } catch {
+    return {}
+  }
+}
+
 export function useNewRentalSubmit({
   editBookingId,
   confirmBlocked,
@@ -81,7 +131,6 @@ export function useNewRentalSubmit({
   pricing,
   manualDiscountReason,
   manualDiscountAuthorizedBy,
-  womenDopEligible,
   crew,
   clientPickup,
   deliveryChargePaisa,
@@ -109,12 +158,13 @@ export function useNewRentalSubmit({
   draftBookingKey,
 }: UseNewRentalSubmitOptions) {
   const createdQuote = useRef<{ id: string; no: string; stage?: string } | null>(null)
-  const discountKey = useRef<string | null>(null)
+  const discountKeys = useRef<string[]>([])
   const crewKeys = useRef<string[]>([])
   const transportKey = useRef<string | null>(null)
+  const confirming = useRef(false)
 
   const confirmBooking = useCallback(() => {
-    if (editBookingId || confirmBlocked || saveState === 'saving') return
+    if (editBookingId || confirmBlocked || saveState === 'saving' || confirming.current) return
     const ctx = dispatchContext()
     if (!ctx) {
       setActionError('Not confirmed — you are not signed in, so this booking cannot be attributed to anyone. Sign in and confirm again.')
@@ -127,6 +177,7 @@ export function useNewRentalSubmit({
       return
     }
 
+    confirming.current = true
     setActionError(null)
     setSaveState('saving')
     if (!confirmKey.current) confirmKey.current = draftBookingKey.current ?? newClientUuid()
@@ -171,6 +222,32 @@ export function useNewRentalSubmit({
             creationUnitPlan = null
           }
 
+          /* 0168 (G3) — structure/fixed quote totals ride the lines so the
+             invoice reproduces the quote. Terms are a database read (RLS
+             returns nothing money-blind, and the gate below keeps them off
+             the payload for those roles); any failure falls back to the
+             flat-rate path rather than blocking the press. */
+          let pricingTerms: ReadonlyMap<string, ProductPricingTerms> = new Map()
+          if (canViewMoney(ctx.role)) {
+            const termIds = [
+              ...new Set(
+                lines.map((l) => l.productId).filter((id): id is string => !!id && PRODUCT_UUID_RE.test(id)),
+              ),
+            ]
+            if (termIds.length > 0) {
+              try {
+                pricingTerms = await fetchProductPricingTerms(termIds)
+              } catch {
+                pricingTerms = new Map()
+              }
+            }
+          }
+          const pickupDay = new Date(kathmanduCivil(pickupAt)).toISOString().slice(0, 10)
+          const nptClock = (d: Date): string =>
+            new Date(d.getTime() + NPT_OFFSET_MIN * 60_000).toISOString().slice(11, 16)
+          const pickupTime = nptClock(pickupAt)
+          const returnTime = nptClock(returnAt)
+
           const created = await createRental(
             {
               clientUuid: pressKey,
@@ -184,17 +261,18 @@ export function useNewRentalSubmit({
               returnAt: returnAt.toISOString(),
               deliveryType: deliveryTypeFromLabel(deliveryType),
               depositRequired: toRupees(pricing.securityDeposit.requiredPaisa),
+              vatRate: pricing.vatRatePercent / 100,
               ...(pricing.discounts.discountPaisa > 0
                 ? {
-                    discounts: [
-                      {
-                        clientUuid: discountKey.current ?? (discountKey.current = newClientUuid()),
-                        discountSource: 'Manual',
-                        percent: pricing.discounts.appliedPercent,
-                        reason: manualDiscountReason.trim() || (womenDopEligible ? 'Women DoP/Director Discount' : 'Quotation Discount'),
-                        approverId: manualDiscountAuthorizedBy.trim() || null,
-                      },
-                    ],
+                    discounts: bookingDiscountRows(
+                      pricing.discounts,
+                      manualDiscountReason,
+                      manualDiscountAuthorizedBy,
+                    ).map((discount, index) => ({
+                      ...discount,
+                      clientUuid: discountKeys.current[index] ??
+                        (discountKeys.current[index] = newClientUuid()),
+                    })),
                   }
                 : {}),
               ...(crew.length > 0
@@ -247,11 +325,20 @@ export function useNewRentalSubmit({
                   ...(isBundle
                     ? { bundleId: l.bundleId ?? null, description: l.name }
                     : inventoryLine
-                      ? { productId: l.productId ?? l.id }
+                      ? {
+                          productId:
+                            l.productId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(l.productId)
+                              ? l.productId
+                              : l.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(l.id)
+                                ? l.id
+                                : null,
+                          description: l.name,
+                        }
                       : { description: l.name }),
                   qty: l.qty,
                   days: l.days,
                   rate: toRupees(l.ratePaisa),
+                  ...quoteFieldsForLine(l, pricingTerms, pickupDay, pickupTime, returnTime),
                   sortOrder: i,
                   ...(assigned && assigned.length > 0 ? { units: assigned } : {}),
                 }
@@ -279,7 +366,7 @@ export function useNewRentalSubmit({
 
         confirmKey.current = null
         createdQuote.current = null
-        discountKey.current = null
+        discountKeys.current = []
         crewKeys.current = []
         transportKey.current = null
         setSaveState('saved')
@@ -300,9 +387,11 @@ export function useNewRentalSubmit({
           )
         } else {
           setActionError(
-            `Not confirmed — ${reason}. Nothing was written, and nothing entered here has been lost.`,
+            `Not confirmed — ${reason}. Your entries have been kept. Retry uses the same booking reference.`,
           )
         }
+      } finally {
+        confirming.current = false
       }
     })()
   }, [
@@ -319,7 +408,6 @@ export function useNewRentalSubmit({
     pricing,
     manualDiscountReason,
     manualDiscountAuthorizedBy,
-    womenDopEligible,
     crew,
     clientPickup,
     deliveryChargePaisa,

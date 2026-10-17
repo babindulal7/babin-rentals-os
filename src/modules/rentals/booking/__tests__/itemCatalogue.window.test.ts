@@ -299,3 +299,50 @@ describe('equipmentConflicts', () => {
     expect([...summary.verdictByLineId.keys()].sort()).toEqual([FX3, CABLE].sort())
   })
 })
+
+describe('equipmentLineDraft', () => {
+  it('stamps lineType and resolves productId from live equipment result', async () => {
+    const { equipmentLineDraft } = await import('../itemCatalogue')
+    const eqResult: EquipmentResult = {
+      kind: 'equipment',
+      id: FX3,
+      productKey: FX3,
+      name: 'Sony FX3 Cinema Camera',
+      serial: '—',
+      category: 'Camera',
+      location: 'A1',
+      committedTo: '—',
+      ratePaisa: 500000 as any,
+      inBundles: [],
+      availability: { level: 'available', label: 'Available', detail: 'Free', tone: 'in', icon: 'check', shortLines: [], freedLines: [] },
+      haystack: ['sony', 'fx3'],
+    }
+    const draft = equipmentLineDraft(eqResult, 2)
+    expect(draft.lineType).toBe('Equipment')
+    expect(draft.productId).toBe(FX3)
+    expect(draft.name).toBe('Sony FX3 Cinema Camera')
+    expect(draft.days).toBe(2)
+  })
+
+  it('stamps lineType as Accessory for accessory equipment result', async () => {
+    const { equipmentLineDraft } = await import('../itemCatalogue')
+    const accResult: EquipmentResult = {
+      kind: 'accessory',
+      id: CABLE,
+      productKey: CABLE,
+      name: 'HDMI High Speed Cable',
+      serial: '—',
+      category: 'Accessory',
+      location: 'B2',
+      committedTo: '—',
+      ratePaisa: 50000 as any,
+      inBundles: [],
+      availability: { level: 'available', label: 'Available', detail: 'Free', tone: 'in', icon: 'check', shortLines: [], freedLines: [] },
+      haystack: ['cable'],
+    }
+    const draft = equipmentLineDraft(accResult, 1)
+    expect(draft.lineType).toBe('Accessory')
+    expect(draft.productId).toBe(CABLE)
+  })
+})
+

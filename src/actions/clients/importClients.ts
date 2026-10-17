@@ -40,8 +40,8 @@ export const importClientsConfig: ActionConfig<ImportClientsInput, ImportClients
     const fields = new Set(recordFields.client.map(f => f.key))
     for (const row of input.rows) {
       if (!Number.isInteger(row.rowIndex) || row.rowIndex < 0 || indices.has(row.rowIndex)) throw new Error('Every import row must have a unique row number.')
-      if (!UUID.test(row.clientUuid) || keys.has(row.clientUuid)) throw new Error('Every import row must have its own save key.')
-      indices.add(row.rowIndex); keys.add(row.clientUuid)
+      if (!UUID.test(row.clientUuid) || keys.has(row.clientUuid.toLowerCase())) throw new Error('Every import row must have its own save key.')
+      indices.add(row.rowIndex); keys.add(row.clientUuid.toLowerCase())
       if (Object.keys(row.values).some(key => !fields.has(key))) throw new Error('An import row contains an unsupported field.')
       const errors = validateRecord('client', row.values)
       if (!PHONE_STORED_RE.test(String(row.values.phone))) errors.phone = 'Use the confirmed +977 phone number from the preview.'
@@ -59,23 +59,27 @@ export const importClientsConfig: ActionConfig<ImportClientsInput, ImportClients
     if (!canImportClients(ctx.role)) throw new Error('Your role cannot import client contact records.')
     if (ctx.isOnline === false || (typeof navigator !== 'undefined' && navigator.onLine === false)) throw new Error('Connect to import clients. Your file and mappings are still here.')
 
+    // RecordValues are scalar: copying before the first await keeps each receipt's request immutable.
+    const rows = input.rows.map(row => ({ ...row, values: { ...row.values } }))
+    importClientsConfig.validate({ rows })
+
     // Reconcile previous attempts before duplicate checking. No money is selected.
     const owned = new Set<string>()
-    for (let offset = 0; offset < input.rows.length; offset += 100) {
-      const { data, error } = await confirmedWithin(Promise.resolve(supabase.from('clients').select('id, client_uuid').in('client_uuid', input.rows.slice(offset, offset + 100).map(row => row.clientUuid))))
+    for (let offset = 0; offset < rows.length; offset += 100) {
+      const { data, error } = await confirmedWithin(Promise.resolve(supabase.from('clients').select('id, client_uuid').in('client_uuid', rows.slice(offset, offset + 100).map(row => row.clientUuid))))
       if (error) throw new Error(`Previous saves could not be checked: ${error.message}`)
       for (const row of (data ?? []) as unknown as Array<{ id: string }>) owned.add(row.id)
     }
     const matches = await confirmedWithin(findClientMatches({
-      phones: input.rows.map(row => String(row.values.phone)), emails: input.rows.map(row => String(row.values.email ?? '')),
+      phones: rows.map(row => String(row.values.phone)), emails: rows.map(row => String(row.values.email ?? '')),
     }))
     if (matches.some(match => !owned.has(match.dbId ?? match.id))) throw new Error('One or more rows match an existing client. Nothing new was saved. Review the duplicate and skip that row.')
 
-    const outcomes: ClientImportOutcome[] = input.rows.map(row => ({ rowIndex: row.rowIndex, status: 'pending' }))
+    const outcomes: ClientImportOutcome[] = rows.map(row => ({ rowIndex: row.rowIndex, status: 'pending' }))
     const events: Array<{ type: string; payload: unknown }> = []
-    for (let index = 0; index < input.rows.length; index++) {
+    for (let index = 0; index < rows.length; index++) {
       if (input.shouldStop?.()) break
-      const row = input.rows[index]!
+      const row = rows[index]!
       try {
         const saved = await confirmedWithin(saveRecord({ kind: 'client', id: null, expectedRevision: null, clientUuid: row.clientUuid, values: row.values, rows: [] }, ctx))
         if (!saved.id || !saved.code || !saved.revision) throw new Error('Save confirmation was incomplete. Retry with the same save key.')

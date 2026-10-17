@@ -28,6 +28,7 @@ interface DashboardMovementPanelProps {
   hasMore?: boolean
   globalQuery?: string
   compactEmpty?: boolean
+  onSelectPeriod?: (period: 'Tomorrow' | 'Today') => void
 }
 
 export function dashboardAction(row: MovementRow, side: 'outgoing' | 'incoming'): {
@@ -104,6 +105,7 @@ export default function DashboardMovementPanel({
   hasMore = false,
   globalQuery = '',
   compactEmpty = false,
+  onSelectPeriod,
 }: DashboardMovementPanelProps) {
   const { openOperations } = useOperationsWorkspace()
   const { user } = useAuth()
@@ -174,11 +176,39 @@ export default function DashboardMovementPanel({
                     ? 'Nothing is scheduled to leave in this period.'
                     : 'Nothing is expected back in this period.'}
                 </p>
-                {list.isFiltered && (
-                  <button type="button" className="movement-panel__empty-reset" onClick={onClearFilters}>
-                    Back to Today <Icon name="arrow_right" size={15} />
-                  </button>
-                )}
+                <div className="movement-panel__empty-actions" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                  {onSelectPeriod && (
+                    <button
+                      type="button"
+                      className="ui-button ui-button--sm ui-button--outline press"
+                      onClick={() => onSelectPeriod('Tomorrow')}
+                    >
+                      View Tomorrow's {side === 'outgoing' ? 'Pickups' : 'Returns'} <Icon name="arrow_right" size={14} />
+                    </button>
+                  )}
+                  {side === 'outgoing' ? (
+                    <Link
+                      to="/rentals?action=new"
+                      className="ui-button ui-button--sm ui-button--primary press"
+                      style={{ textDecoration: 'none' }}
+                    >
+                      + Create Booking
+                    </Link>
+                  ) : (
+                    <Link
+                      to="/operations?queue=return"
+                      className="ui-button ui-button--sm ui-button--primary press"
+                      style={{ textDecoration: 'none' }}
+                    >
+                      Open Return Queue <Icon name="arrow_right" size={14} />
+                    </Link>
+                  )}
+                  {list.isFiltered && (
+                    <button type="button" className="movement-panel__empty-reset" onClick={onClearFilters}>
+                      Back to Today <Icon name="arrow_right" size={15} />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ) : rows.length === 0 ? (
@@ -308,6 +338,12 @@ export default function DashboardMovementPanel({
                           <span className="movement-card__status movement-card__status--overdue">
                             <Icon name="alert_triangle" size={14} />
                             {row.statusNote ? `Overdue · ${row.statusNote}` : 'Overdue'}
+                          </span>
+                        )}
+                        {side === 'outgoing' && isOverdue && (
+                          <span className="movement-card__status movement-card__status--overdue">
+                            <Icon name="alert_triangle" size={14} />
+                            {row.statusNote ? `Overdue pickup · ${row.statusNote}` : 'Overdue pickup'}
                           </span>
                         )}
                         {side === 'incoming' && !isOverdue && isPartial && (

@@ -412,7 +412,7 @@ export function SavedViewsMenu({
             Share with the whole team
           </label>
         )}
-        <div style={{ marginTop: 16, padding: 13, borderRadius: 'var(--r-sm)', background: 'var(--nav-active-bg)', color: 'var(--text2)', fontSize: 'var(--t-caption)', lineHeight: 1.5 }}>
+        <div style={{ marginTop: 16, padding: 13, borderRadius: 'var(--r-sm)', background: 'var(--select-bg)', color: 'var(--select-fg)', fontSize: 'var(--t-caption)', lineHeight: 1.5 }}>
           This saves the active filters, search, sorting and visible columns. Page number and rows per page stay unchanged.
           {deviceMode
             ? ' Saved on this device only for now — shared views arrive with the next database update.'

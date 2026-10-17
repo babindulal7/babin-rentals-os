@@ -122,11 +122,6 @@
   background: var(--card2);
   border: 1px solid var(--border2);
   flex-shrink: 0;
-  transition: transform 0.12s ease;
-}
-
-.doc-rail-cat-btn:hover .doc-rail-cat-icon {
-  transform: scale(1.05);
 }
 
 .doc-rail-cat-count {
@@ -244,12 +239,11 @@
   border: 1px solid var(--border);
   background: var(--card);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.04));
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
   position: relative;
 }
 
 .doc-card:hover {
-  transform: translateY(-2px);
   border-color: color-mix(in srgb, var(--link) 35%, var(--border));
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
 }

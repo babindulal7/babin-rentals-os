@@ -26,13 +26,13 @@ export function EquipmentHoverCard({
 }) {
   const [tab, setTab] = useState(defaultTab)
   return (
-    <div>
-      <div id="smart-hover-title" style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '14px 14px 8px' }}>
-        <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--w08)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div className="smart-intel">
+      <div className="smart-intel-identity" id="smart-hover-title" style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '16px 4px 14px' }}>
+        <span className="smart-intel-avatar" aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--w08)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
           <Icon name="box" size={18} />
         </span>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15 }}>{preview.name}</div>
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17 }}>{preview.name}</div>
           <div className="identifier" style={{ fontSize: 12, color: 'var(--muted)' }}>{preview.assetCode}{preview.serial ? ` · ${preview.serial}` : ''} · {preview.statusLabel}</div>
           {preview.external === true ? (
             <span style={{ fontSize: 11, color: 'var(--ext-fg)', border: '1px solid var(--ext-line)', borderRadius: 'var(--r-chip)', padding: '2px 6px' }}>Sub-rented</span>
@@ -50,7 +50,7 @@ export function EquipmentHoverCard({
         active={tab}
         onChange={setTab}
       />
-      <div role="tabpanel">
+      <div role="tabpanel" className="smart-intel-panel">
         {tab === 'current' ? (
           <ul style={{ margin: 0, padding: 0 }}>
             {preview.current.map((b) => (

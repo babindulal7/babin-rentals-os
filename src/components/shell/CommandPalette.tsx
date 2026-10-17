@@ -456,8 +456,8 @@ export const CommandPalette: React.FC = () => {
                     padding: '6px var(--sp-md)',
                     borderRadius: 'var(--r-sm)',
                     cursor: 'pointer',
-                    background: isSelected ? 'var(--nav-active-bg)' : 'transparent',
-                    color: isSelected ? 'var(--nav-active-accent)' : 'var(--text)',
+                    background: isSelected ? 'var(--select-bg)' : 'transparent',
+                    color: isSelected ? 'var(--select-fg)' : 'var(--text)',
                   }}
                 >
                   <div
@@ -519,10 +519,10 @@ export const CommandPalette: React.FC = () => {
                         style={{
                           fontSize: '11px',
                           fontWeight: 600,
-                          color: isSelected ? 'var(--nav-active-accent)' : 'var(--muted)',
+                          color: isSelected ? 'var(--select-fg)' : 'var(--muted)',
                           padding: '2px 7px',
                           borderRadius: 4,
-                          background: isSelected ? 'var(--nav-active-bg)' : 'var(--card)',
+                          background: isSelected ? 'var(--select-bg)' : 'var(--card)',
                           border: '1px solid var(--border)',
                           fontFamily: 'var(--font-id)',
                         }}

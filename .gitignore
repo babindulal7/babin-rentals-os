@@ -90,6 +90,8 @@ files.zip
 
 # local data backups (contain client PII)
 backups/
+production_backup_*.sql
+production_backup_*.sql.incomplete
 
 # Scratch pages/configs and mock build bundles saved alongside artifacts — regenerable, not history.
 /tmp/

@@ -64,14 +64,14 @@ export interface StatusTokens {
 }
 
 export const STATUS: Record<StatusKey, StatusTokens> = {
-  neutral: { bg: 'var(--st-neutral-bg)', fg: 'var(--st-neutral-fg)' },
-  primary: { bg: 'var(--st-primary-bg)', fg: 'var(--st-primary-fg)' },
-  progress: { bg: 'var(--st-progress-bg)', fg: 'var(--st-progress-fg)' },
-  out: { bg: 'var(--st-out-bg)', fg: 'var(--st-out-fg)' },
-  in: { bg: 'var(--st-in-bg)', fg: 'var(--st-in-fg)' },
-  danger: { bg: 'var(--st-danger-bg)', fg: 'var(--st-danger-fg)' },
-  dim: { bg: 'var(--st-dim-bg)', fg: 'var(--st-dim-fg)' },
-  ext: { bg: 'var(--ext-bg)', fg: 'var(--ext-fg)', border: 'var(--ext-line)' },
+  neutral: { bg: 'var(--st-neutral-bg)', fg: 'var(--st-neutral-fg)', border: 'var(--st-neutral-border)' },
+  primary: { bg: 'var(--st-primary-bg)', fg: 'var(--st-primary-fg)', border: 'var(--st-primary-border)' },
+  progress: { bg: 'var(--st-progress-bg)', fg: 'var(--st-progress-fg)', border: 'var(--st-progress-border)' },
+  out: { bg: 'var(--st-out-bg)', fg: 'var(--st-out-fg)', border: 'var(--st-out-border)' },
+  in: { bg: 'var(--st-in-bg)', fg: 'var(--st-in-fg)', border: 'var(--st-in-border)' },
+  danger: { bg: 'var(--st-danger-bg)', fg: 'var(--st-danger-fg)', border: 'var(--st-danger-border)' },
+  dim: { bg: 'var(--st-dim-bg)', fg: 'var(--st-dim-fg)', border: 'var(--st-dim-border)' },
+  ext: { bg: 'var(--select-bg)', fg: 'var(--select-fg)', border: 'var(--ext-line)' },
 }
 
 /**
@@ -136,7 +136,8 @@ export const STATUS_BLOCK = {
   textTransform: 'uppercase' as const,
   letterSpacing: '0.04em',
   borderRadius: 'var(--r-chip)',
-  padding: '7px 12px',
+  padding: '6px 11px',
+  border: '1.5px solid var(--border)',
 } as const
 
 /**
@@ -149,7 +150,7 @@ export const EXT_MARK = {
   letterSpacing: '0.01em',
   borderRadius: 'var(--r-chip)',
   padding: '6px 11px',
-  border: '1px solid var(--ext-line)',
+  border: '1.5px solid var(--ext-line)',
 } as const
 
 /**

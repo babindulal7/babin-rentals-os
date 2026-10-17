@@ -2272,6 +2272,94 @@ const STEPS = [
   },
 ]
 
+// O16-3: exercise the real audited writer, not a mocked browser response.
+STEPS.push({
+  id: 'L31', title: 'Pre-handover reversal and terminal archive are audited, idempotent and Manager-only (0167)', expect: 'green',
+  async run() {
+    const manage = (role, payload) => asJwt(role, async () => {
+      await q('savepoint lifecycle_write')
+      try { return await one('select manage_rental_lifecycle($1::jsonb)', [JSON.stringify(payload)]) }
+      catch (error) { await q('rollback to savepoint lifecycle_write'); throw error }
+      finally { await q('release savepoint lifecycle_write') }
+    })
+    const reject = (role, what, text, params, matcher) => asJwt(role, async () => {
+      await q('savepoint lifecycle_guard')
+      try { await refuses(what, text, params, matcher) }
+      finally { await q('rollback to savepoint lifecycle_guard'); await q('release savepoint lifecycle_guard') }
+    })
+    await undone(async () => {
+      await as('Warehouse', () => actionPackRental({ key: 'c', actor: 'Warehouse', units: [{ id: UNITS[0], serial: 'SN-C1' }] }))
+      const staleHandover = crypto.randomUUID()
+      await as('Warehouse', () => q(`insert into operation_sessions(id,client_uuid,booking_id,operation,state,delivery_method,warehouse_staff_id,created_by)
+        values($1,gen_random_uuid(),$2,'Handover','In Progress','Client Pickup',$3,$3)`, [staleHandover,bookingIds.c,U.Warehouse]))
+      const request = { booking_id: bookingIds.c, client_uuid: crypto.randomUUID(), action: 'revert', target_stage: 'Booked', reason: 'Client needs revised equipment' }
+      await reject('Coordinator', 'Coordinator cannot revert', 'select manage_rental_lifecycle($1::jsonb)', [JSON.stringify(request)], /Manager/i)
+      const holds = await one('select count(*) from inventory_reservations where booking_id=$1 and released_at is null', [bookingIds.c])
+      await manage('Manager', request)
+      assertEq(await stageOf('c'), 'Booked', 'Packed reverted to Booked')
+      assertEq(await one('select count(*) from inventory_reservations where booking_id=$1 and released_at is null', [bookingIds.c]), holds, 'Booked retains reservations')
+      await manage('Manager', request)
+      assertEq(Number(await one('select count(*) from booking_stage_transitions where client_uuid=$1', [request.client_uuid])), 1, 'retry creates no duplicate transition')
+      await reject('Manager', 'changed retry payload', 'select manage_rental_lifecycle($1::jsonb)', [JSON.stringify({ ...request, reason: 'Different correction reason' })], /another action/i)
+      await manage('Manager', { ...request, client_uuid: crypto.randomUUID(), target_stage: 'Quote' })
+      assertEq(await stageOf('c'), 'Quote', 'Booked reverted to Quote')
+      assertEq(Number(await one('select count(*) from inventory_reservations where booking_id=$1 and released_at is null', [bookingIds.c])), 0, 'Quote releases reservations')
+      await reject('Warehouse','stale pickup movement after correction',
+        `insert into session_line_movements(client_uuid,session_id,booking_line_id,unit_id,qty,resulting_item_state,moved_at,created_by)
+         select gen_random_uuid(),$1,id,$2,1,'Picked Up',now(),$3 from booking_lines where booking_id=$4 limit 1`,
+        [staleHandover,UNITS[0],U.Warehouse,bookingIds.c],/no longer ready for pickup/i)
+      await reject('Warehouse','stale picked-up line after correction',
+        `insert into handover_lines(client_uuid,booking_line_id,state,qty_required,first_session_id,created_by)
+         select gen_random_uuid(),id,'Picked Up',qty,$1,$2 from booking_lines where booking_id=$3 limit 1`,
+        [staleHandover,U.Warehouse,bookingIds.c],/no longer ready for pickup/i)
+      const archive = { booking_id: bookingIds.c, client_uuid: crypto.randomUUID(), action: 'archive', reason: 'No longer needed in active rentals' }
+      await reject('Manager', 'cannot archive active booking', 'select manage_rental_lifecycle($1::jsonb)', [JSON.stringify(archive)], /Closed or Cancelled/i)
+      await rpcAs('Manager', 'select cancel_booking($1::jsonb)', [JSON.stringify({ booking_id: bookingIds.c, client_uuid: crypto.randomUUID(), reason: 'Client cancelled the revised booking' })])
+      await manage('Manager', archive)
+      await manage('Manager', archive)
+      assertEq(Number(await one('select count(*) from bookings where id=$1 and archived_at is not null', [bookingIds.c])), 1, 'archived booking retained')
+      assertEq(Number(await one('select count(*) from audit_events where client_uuid=$1', [archive.client_uuid])), 1, 'archive has one audit receipt')
+      await reject('Manager', 'direct archive edit', 'update bookings set archived_at=null, archived_by=null where id=$1', [bookingIds.c], /audited rental lifecycle|permission denied/i)
+    })
+    await undone(async () => {
+      await as('Warehouse', async () => {
+        await actionPackRental({ key: 'c', actor: 'Warehouse', units: [{ id: UNITS[0], serial: 'SN-C1' }] })
+        await actionHandoverRental({ key: 'c', actor: 'Warehouse', signerName: 'Lifecycle Client Signer' })
+      })
+      const request = { booking_id: bookingIds.c, client_uuid: crypto.randomUUID(), action: 'revert', target_stage: 'Booked', reason: 'Attempt after equipment handed over' }
+      await reject('Manager', 'cannot reverse custody', 'select manage_rental_lifecycle($1::jsonb)', [JSON.stringify(request)], /before handover/i)
+    })
+    await undone(async () => {
+      const id = bookingIds['qty-ok']
+      const line = (await q('select id, qty from booking_lines where booking_id=$1 limit 1', [id])).rows[0]
+      const pack = crypto.randomUUID()
+      const handover = crypto.randomUUID()
+      await as('Warehouse', async () => {
+        await q(`insert into operation_sessions(id,client_uuid,booking_id,operation,state,warehouse_staff_id,created_by)
+          values($1,gen_random_uuid(),$2,'Packing','In Progress',$3,$3)`, [pack,id,U.Warehouse])
+        await q(`insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,moved_at,created_by)
+          values(gen_random_uuid(),$1,$2,$3,now(),$4)`, [pack,line.id,line.qty,U.Warehouse])
+        await transition('qty-ok','Booked','Packed','Warehouse')
+        await q(`update operation_sessions set state='Completed' where id=$1`, [pack])
+        await q(`insert into operation_sessions(id,client_uuid,booking_id,operation,state,delivery_method,warehouse_staff_id,created_by)
+          values($1,gen_random_uuid(),$2,'Handover','In Progress','Client Pickup',$3,$3)`, [handover,id,U.Warehouse])
+        await q(`insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,moved_at,created_by)
+          values(gen_random_uuid(),$1,$2,1,'Picked Up',now(),$3)`, [handover,line.id,U.Warehouse])
+      })
+      assertEq(await stageOf('qty-ok'), 'Packed', 'partial quantity handover has not advanced the stage')
+      const request = { booking_id:id, client_uuid:crypto.randomUUID(), action:'revert', target_stage:'Booked', reason:'Attempt after partial quantity pickup' }
+      await reject('Manager','partial quantity custody cannot be reverted','select manage_rental_lifecycle($1::jsonb)',[JSON.stringify(request)],/custody cannot be reverted/i)
+      await reject('Manager','partial quantity custody cannot be cancelled','select cancel_booking($1::jsonb)',
+        [JSON.stringify({ booking_id:id, client_uuid:crypto.randomUUID(), reason:'Attempt cancellation after partial pickup' })],/pickup has already occurred/i)
+    })
+    await undone(async () => {
+      assertEq(await stageOf('a'), 'Closed', 'closed archive fixture')
+      await manage('Owner', { booking_id: bookingIds.a, client_uuid: crypto.randomUUID(), action: 'archive', reason: 'Completed rental retained in archive' })
+      assertEq(Number(await one('select count(*) from bookings where id=$1 and archived_at is not null', [bookingIds.a])), 1, 'Closed booking can be archived without deleting it')
+    })
+  },
+})
+
 /* ── Run ──────────────────────────────────────────────────────────────────── */
 
 await seed()

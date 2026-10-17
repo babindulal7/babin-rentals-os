@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { createAction, ActionNotImplementedError, ActionPermissionError } from '../core'
+import { createAction, ActionNotImplementedError, ActionPermissionError, ActionOfflineError } from '../core'
 
 /**
  * The dispatcher's whole job now is to refuse. These assert the refusals,
@@ -193,6 +193,17 @@ describe('createAction — fails closed', () => {
       'evidence.review',
     ]
     const TRIAGE = ['case.resolve', 'crew.assign', 'purchase.approve']
+
+    // T-1 / O16-3: lifecycle correction and archive are Manager+, online only.
+    it.each(['rental.revert', 'rental.archive'])('%s is Manager+ online only', async capability => {
+      for (const role of ['Owner', 'Admin', 'Manager'] as const) {
+        await expect(probe(capability, role, true).run()).resolves.toEqual({ ok: true })
+        await expect(probe(capability, role, false).run()).rejects.toBeInstanceOf(ActionOfflineError)
+      }
+      for (const role of ['Coordinator','Accounts','Warehouse','Technician','Driver','Client'] as const) {
+        await expect(probe(capability, role, true).run()).rejects.toBeInstanceOf(ActionPermissionError)
+      }
+    })
 
     it.each(['Owner', 'Admin', 'Manager'] as const)('allows %s to adjust bulk stock', async (role) => {
       await expect(probe('inventory.stock_adjust', role, true).run()).resolves.toEqual({ ok: true })

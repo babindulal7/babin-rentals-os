@@ -40,6 +40,9 @@ vi.mock('../../rentals/PackingWorkspace', () => ({ default: MockWorkspace }))
 vi.mock('../../rentals/HandoverWorkspace', () => ({ default: MockWorkspace }))
 vi.mock('../../rentals/ReturnWorkspace', () => ({ default: MockWorkspace }))
 vi.mock('../../rentals/ResetWorkspace', () => ({ default: MockWorkspace }))
+vi.mock('../../rentals/actions/RentalMoreActions', () => ({
+  RentalMoreActions: () => <button aria-label="Booking actions">Booking actions</button>,
+}))
 
 vi.mock('../../../lib/queries/bookings', () => ({
   fetchFloorBooking: vi.fn().mockImplementation(async () => ({
@@ -331,7 +334,7 @@ describe('Task 5 — Operations popup navigation and state', () => {
     await mount(vi.fn(), 'Booked', 'Pack')
     const stageTabs = [...container.querySelectorAll('nav[aria-label="Operation stage"] button')]
     const returnTab = stageTabs.find((b) => b.textContent?.includes('Return'))
-    const resetTab = stageTabs.find((b) => b.textContent?.includes('Reset'))
+    const resetTab = stageTabs.find((b) => b.getAttribute('aria-label')?.includes('Reset'))
 
     expect(returnTab?.hasAttribute('disabled')).toBe(true)
     expect(resetTab?.hasAttribute('disabled')).toBe(true)

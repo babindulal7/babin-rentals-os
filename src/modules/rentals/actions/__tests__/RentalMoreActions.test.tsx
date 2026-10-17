@@ -70,6 +70,29 @@ describe('RentalMoreActions', () => {
     expect(button?.textContent).toContain('More')
   })
 
+  it('puts pre-handover reversal in the shared Manager booking menu', async () => {
+    await mount({ ...booking, stage: 'Booked' }, 'Manager')
+    await act(async () => { container.querySelector('button')?.click() })
+    const revert = [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find(button => button.textContent?.includes('Revert stage'))
+    expect(revert).toBeDefined()
+    await act(async () => { revert?.click() })
+    expect(document.body.textContent).toContain('Revert booking stage')
+    expect(document.querySelector('select[aria-label="Return to stage"]')?.textContent).toBe('Quote')
+  })
+
+  it('offers archive only for terminal bookings and omits lifecycle writes for floor roles', async () => {
+    await mount({ ...booking, stage: 'Closed', isClosed: true }, 'Manager')
+    await act(async () => { container.querySelector('button')?.click() })
+    expect(document.querySelector('[role="menu"]')?.textContent).toContain('Archive booking')
+    expect(document.querySelector('[role="menu"]')?.textContent).not.toContain('Revert stage')
+    await act(async () => { root.unmount() })
+    container.remove()
+    await mount({ ...booking, stage: 'Booked' }, 'Warehouse')
+    await act(async () => { container.querySelector('button')?.click() })
+    expect(document.querySelector('[role="menu"]')?.textContent).not.toContain('Revert stage')
+    expect(document.querySelector('[role="menu"]')?.textContent).not.toContain('Archive booking')
+  })
+
   it('opens menu with 5 action groups when clicked by Owner', async () => {
     await mount(booking, 'Owner')
     const trigger = container.querySelector('button[aria-haspopup="menu"]') as HTMLButtonElement

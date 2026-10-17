@@ -5,6 +5,8 @@
 .client-import-recovery p, .client-import-recovery-error { overflow-wrap: anywhere; }
 .client-import-recovery-error { color: var(--danger-text); }
 .client-import td { overflow-wrap: anywhere; }
+.client-import-file-summary { min-width: 0; flex-wrap: wrap; }
+.client-import-file-summary strong { min-width: 0; overflow-wrap: anywhere; }
 @media (max-width: 767px) {
   .client-import strong { overflow-wrap: anywhere; }
   .client-import [aria-label="CSV column mapping"],

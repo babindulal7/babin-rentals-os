@@ -279,7 +279,7 @@ export function SignOnGlassModal({
           style={{
             padding: '12px 14px',
             borderRadius: 'var(--r-btn, 8px)',
-            background: 'color-mix(in srgb, var(--primary, #2563eb) 8%, var(--card))',
+            background: 'var(--select-bg)',
             border: '1px solid color-mix(in srgb, var(--primary, #2563eb) 25%, transparent)',
             display: 'flex',
             alignItems: 'flex-start',

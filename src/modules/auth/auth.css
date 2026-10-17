@@ -195,11 +195,10 @@
 .auth-mock-btn:hover {
   background: var(--card, #1e293b);
   border-color: var(--nav-active-accent, #6366f1);
-  transform: translateY(-1px);
 }
 
 .auth-mock-btn:active {
-  transform: scale(0.97);
+  filter: brightness(0.96);
 }
 
 .auth-mock-btn:focus-visible {

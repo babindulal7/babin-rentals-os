@@ -38,7 +38,6 @@
 .finance-kpi-card:hover {
   border-color: var(--border2, var(--border));
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
-  transform: translateY(-2px);
 }
 
 .finance-kpi-header {
@@ -130,13 +129,12 @@
   background: var(--hover-card, var(--card2));
   border-color: var(--border2, var(--border));
   color: var(--text);
-  transform: translateY(-1px);
 }
 
 .finance-filter-chip.is-active {
-  background: var(--nav-active-bg);
-  border-color: var(--nav-active-accent);
-  color: var(--nav-active-accent);
+  background: var(--select-bg);
+  border-color: var(--select-fg);
+  color: var(--select-fg);
   font-weight: 600;
   box-shadow: 0 0 0 1px var(--nav-active-accent), 0 2px 6px rgba(0, 0, 0, 0.05);
 }
@@ -239,8 +237,6 @@
 
 .finance-daily-bar:hover {
   filter: brightness(1.15);
-  transform: scaleY(1.04);
-  transform-origin: bottom;
 }
 
 /* ── Deposits Rail & Separation ─────────────────────────────────────────── */

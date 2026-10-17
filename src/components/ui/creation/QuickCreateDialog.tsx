@@ -271,15 +271,16 @@ export function QuickCreateDialog({
                       minHeight: 44,
                       padding: '0 12px',
                       borderRadius: 'var(--r-btn, 8px)',
-                      border: `1px solid ${clientType === t ? 'var(--accent, #e65100)' : 'var(--border)'}`,
-                      background: clientType === t ? 'var(--accent-subtle, rgba(230,81,0,0.08))' : 'var(--card)',
-                      color: clientType === t ? 'var(--accent, #e65100)' : 'var(--text)',
+                      border: `1px solid ${clientType === t ? 'var(--primary)' : 'var(--border)'}`,
+                      background: clientType === t ? 'var(--nav-active-bg)' : 'var(--card)',
+                      color: clientType === t ? 'var(--primary-text)' : 'var(--text)',
                       fontWeight: clientType === t ? 700 : 500,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: 6,
+                      transition: 'all var(--dur-fast, 120ms) ease',
                     }}
                   >
                     <Icon name={t === 'Individual' ? 'user' : 'company'} size={16} />
@@ -312,14 +313,14 @@ export function QuickCreateDialog({
                   minHeight: 44,
                   padding: '0 12px',
                   borderRadius: 'var(--r-btn, 8px)',
-                  border: `1px solid ${nameError ? 'var(--danger, #dc2626)' : 'var(--border)'}`,
+                  border: `1px solid ${nameError ? 'var(--danger)' : 'var(--border)'}`,
                   background: 'var(--card)',
                   color: 'var(--text)',
                   fontSize: 'var(--t-body, 14px)',
                 }}
               />
               {nameError && (
-                <div style={{ color: 'var(--danger, #dc2626)', fontSize: 'var(--t-caption, 12px)', marginTop: 4 }}>
+                <div style={{ color: 'var(--danger-text)', fontSize: 'var(--t-caption, 12px)', marginTop: 4 }}>
                   {nameError}
                 </div>
               )}
@@ -365,7 +366,7 @@ export function QuickCreateDialog({
                     minHeight: 44,
                     padding: '0 12px',
                     borderRadius: 'var(--r-btn, 8px)',
-                    border: `1px solid ${phoneError ? 'var(--danger, #dc2626)' : 'var(--border)'}`,
+                    border: `1px solid ${phoneError ? 'var(--danger)' : 'var(--border)'}`,
                     background: 'var(--card)',
                     color: 'var(--text)',
                     fontSize: 'var(--t-body, 14px)',
@@ -373,26 +374,27 @@ export function QuickCreateDialog({
                 />
               </div>
               {phoneError && (
-                <div style={{ color: 'var(--danger, #dc2626)', fontSize: 'var(--t-caption, 12px)', marginTop: 4 }}>
+                <div style={{ color: 'var(--danger-text)', fontSize: 'var(--t-caption, 12px)', marginTop: 4 }}>
                   {phoneError}
                 </div>
               )}
               {duplicateWarning && (
                 <div
                   style={{
-                    marginTop: 6,
-                    padding: '8px 10px',
+                    marginTop: 8,
+                    padding: '8px 12px',
                     borderRadius: 'var(--r-sm, 6px)',
-                    background: '#fffbeb',
-                    border: '1px solid #fde68a',
-                    color: '#92400e',
+                    background: 'var(--chip-amber-bg)',
+                    border: '1px solid var(--warn)',
+                    color: 'var(--chip-amber-fg)',
                     fontSize: 'var(--t-caption, 12px)',
                     display: 'flex',
-                    gap: 6,
+                    gap: 8,
                     alignItems: 'center',
+                    fontWeight: 500,
                   }}
                 >
-                  <Icon name="alert_triangle" size={15} />
+                  <Icon name="alert_triangle" size={16} />
                   <span>{duplicateWarning}</span>
                 </div>
               )}
@@ -406,7 +408,7 @@ export function QuickCreateDialog({
                 style={{
                   background: 'transparent',
                   border: 'none',
-                  color: 'var(--accent, #e65100)',
+                  color: 'var(--primary-text)',
                   cursor: 'pointer',
                   fontSize: 'var(--t-meta, 13px)',
                   fontWeight: 600,
@@ -636,7 +638,7 @@ export function QuickCreateDialog({
             </div>
 
             {genericError && (
-              <div style={{ color: 'var(--danger, #dc2626)', fontSize: 'var(--t-caption, 12px)' }}>
+              <div style={{ color: 'var(--danger-text)', fontSize: 'var(--t-caption, 12px)' }}>
                 {genericError}
               </div>
             )}

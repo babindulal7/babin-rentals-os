@@ -39,26 +39,26 @@ function variantStyle(variant: NonNullable<ButtonProps['variant']>): CSSProperti
       return {
         background: 'var(--btn-primary-bg)',
         color: 'var(--btn-primary-fg)',
-        border: '1px solid transparent',
+        border: '1.5px solid transparent',
         boxShadow: 'var(--shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.25)',
       }
     case 'secondary':
       return {
         background: 'var(--btn-secondary-bg)',
         color: 'var(--text)',
-        border: '1px solid var(--btn-secondary-border)',
+        border: '1.5px solid var(--btn-secondary-border)',
       }
     case 'outline':
       return {
         background: 'transparent',
         color: 'var(--text2)',
-        border: '1px solid var(--input-border)',
+        border: '1.5px solid var(--input-border)',
       }
     case 'ghost':
       return {
         background: 'transparent',
         color: 'var(--text2)',
-        border: '1px solid transparent',
+        border: '1.5px solid transparent',
       }
     case 'link':
       return {
@@ -72,13 +72,13 @@ function variantStyle(variant: NonNullable<ButtonProps['variant']>): CSSProperti
       return {
         background: 'var(--card2)',
         color: 'var(--text)',
-        border: '1px solid var(--input-border)',
+        border: '1.5px solid var(--input-border)',
       }
     case 'danger':
       return {
         background: 'var(--btn-danger-bg)',
         color: 'var(--btn-danger-fg)',
-        border: '1px solid transparent',
+        border: '1.5px solid transparent',
         boxShadow: 'var(--shadow-card)',
       }
   }

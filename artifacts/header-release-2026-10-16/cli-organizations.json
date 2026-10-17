@@ -1,0 +1,5 @@
+{
+  "status": "UNAUTHENTICATED",
+  "operation": "Supabase CLI organizations list",
+  "detail": "No local access token; no project or organization payload was retrieved."
+}

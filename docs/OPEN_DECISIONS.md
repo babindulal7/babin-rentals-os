@@ -1,5 +1,13 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 17 October 2026: legacy Storage object mapping — TODO(decision)
+
+- Live `documents`/`evidence` object SELECT/INSERT/UPDATE policies currently test authenticated bucket membership only. Existing PERMISSIONS.md §3/§5 requires client ownership, money omission and identity-document restrictions. Private buckets alone do not enforce that matrix.
+- Engineering work required: bind stored paths to authoritative document/evidence records and apply those records' role/ownership rules when creating signed URLs or reading/updating objects. Existing exports use several path formats, and some uploads are signed before metadata registration.
+- **TODO(decision):** determine the disposition of legacy/unregistered paths during the scoped-access migration (inventory and quarantine vs an approved remapping process). Do not silently expose orphan files or invent a cross-client fallback. No broader read or write permission is proposed.
+- Keep production release blocked on a tested policy/storage-client migration and real Client A/Client B plus staff-role Storage API acceptance. No live policies were changed by this audit. Root PLAN.md is absent from the current checkout; this record is the active decision reference.
+
+
 **Status:** Authoritative Active Decision Register  
 **Last Reconciled:** 3 October 2026
 
@@ -97,3 +105,9 @@ From checking `D:\proects\md` against `step1-foundation`. Fonepay, the live retu
 - **§4.65 (a)** (filed as §4.62) — show which units Reset needs next, worked out from the next booking's pickup time (`data/reset.ts:163`). Is it wanted, as a label or a sort, and inside what window?
 - **§4.65 (b)** — a manager override for Handover gate 1 (receiver ID not verified): allowed at all, by whom, and where it is recorded (`HandoverWorkspace.tsx:89`, `OVERRIDE_UNAVAILABLE`).
 - **§4.65 (c)** — holding a citizenship card, passport or licence as the deposit: whether to record it, as a non-money record kept apart from deposits (Law 5); whether it satisfies gate 4; its "returned to client" terminal action; and who may see the ID photo (PII).
+
+
+## 16 October 2026 — Rental revert and archive scope (resolved)
+
+- **Explicit answers:** Manager reversals before handover only; Archive only Closed/Cancelled bookings, retaining searchable history. Post-handover custody undo is excluded.
+- **Implementation:** O16-3 in RULINGS-2026-10-16-operations-ui.md; migration 0167 adds the audited, idempotent writer. See PROGRESS.md for verification and application status.

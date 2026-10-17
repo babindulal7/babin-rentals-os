@@ -10,6 +10,11 @@ export const RENTAL_VIEWS = [
   { id: 'Out', label: 'Out', icon: 'truck', stages: ['On Rent'] },
   { id: 'Returns', label: 'Returns', icon: 'return_arrow', stages: ['Returned'] },
   { id: 'Closed', label: 'Closed', icon: 'lock', stages: ['Closed'] },
+  // ADOPTIONS item 4 (Booqable §9.2): the excluded population's census.
+  // Cancelled is a presence flag, not a stage (Law 3 / 0015) — every other
+  // view excludes it, so without this row a cancelled booking disappears with
+  // no visible opt-in. Counted with the flag flipped; never added to All.
+  { id: 'Cancelled', label: 'Cancelled', icon: 'close', stages: [] },
 ] as const
 
 export interface RentalViewCount { id: string; count: number | null }
@@ -21,7 +26,14 @@ export async function listRentalViewCounts(filters: ListFilters): Promise<{ rows
   const base = { ...filters, chips, page: undefined, range: undefined, sort: undefined }
   const booked = await Promise.all(RENTAL_VIEWS.map(async (view) => {
     if (view.id === 'Draft') return null
-    const result = await listBookings({ ...base, chips: { ...chips, ...(view.stages.length ? { stage: [...view.stages] } : {}) }, headOnly: true })
+    if (view.id === 'Cancelled') {
+      // The census half of the exclusion: same base narrowings, flag flipped.
+      // No stage constraint — Cancelled preserves where the booking died.
+      const result = await listBookings({ ...base, presence: { cancelled_at: true }, chips, headOnly: true, excludeArchived: true })
+      const total = result.total
+      return typeof total === 'number' && !Number.isNaN(total) ? total : null
+    }
+    const result = await listBookings({ ...base, chips: { ...chips, ...(view.stages.length ? { stage: [...view.stages] } : {}) }, headOnly: true, excludeArchived: true })
     const total = result.total
     return typeof total === 'number' && !Number.isNaN(total) ? total : null
   }))

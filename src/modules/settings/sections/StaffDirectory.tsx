@@ -6,6 +6,7 @@ import { SearchInput } from '../../../components/ui/SearchInput'
 import { DataTableShell } from '../../../components/ui/DataTable'
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog'
 import { ErrorBanner, EmptyState, LoadingSkeleton, RestrictedState } from '../../../components/ui/StateViews'
+import { loadFailureReason } from '../../../lib/queries/useLoad'
 import { Unavailable } from '../../../components/ui/Unavailable'
 import { useToast } from '../../../components/ui/Toast'
 import { thStyle as th } from '../../../components/ui/TableHeaderCell'
@@ -277,7 +278,9 @@ export function StaffDirectoryCard() {
       setMessage(null)
       return
     }
-    setMessage(result.message)
+    // An offline failure is worded as offline (Phase 6's fifth state), the same
+    // sentence every `useLoad` screen uses; 'unavailable' keeps its own reason.
+    setMessage(result.kind === 'error' ? loadFailureReason(result.message) : result.message)
     setState(result.kind === 'unavailable' ? 'unavailable' : 'error')
   }, [mayRead])
 
@@ -591,8 +594,20 @@ export function StaffDirectoryCard() {
             <ErrorBanner title="Could not load the staff directory" message={message} onRetry={() => void load()} />
           )}
 
-          {state === 'ok' && filtered.length === 0 && (
+          {/* Nothing YET — the view returned no staff at all. A different
+              sentence from the filtered empty below, and no Clear action:
+              there is nothing to clear. */}
+          {state === 'ok' && rows.length === 0 && (
             <EmptyState
+              kind="nothing-yet"
+              title="No staff accounts yet"
+              description="Staff appear here once their sign-in account exists. Creating an account is not available in the app yet."
+            />
+          )}
+
+          {state === 'ok' && rows.length > 0 && filtered.length === 0 && (
+            <EmptyState
+              kind="no-results"
               title="No staff match this search"
               description="Clear the filters to see every staff row the directory returns."
               actionLabel="Clear filters"

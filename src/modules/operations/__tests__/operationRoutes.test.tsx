@@ -282,7 +282,9 @@ describe('Spec 03 §3.1 — queue chips filter ONE time-ordered list', () => {
     const labels = buttons().map((b) => b.textContent ?? '')
     expect(labels.some((l) => l.startsWith('Today'))).toBe(true)
     expect(labels.some((l) => l.startsWith('Tomorrow'))).toBe(true)
-    expect(labels.some((l) => l.startsWith('Custom'))).toBe(true)
+    // The custom range is picked on the app's own calendar now, not behind a "Custom" button.
+    expect(labels.some((l) => l.startsWith('This Week'))).toBe(true)
+    expect(document.querySelectorAll('#operations-filters [role="gridcell"]').length).toBeGreaterThan(27)
   })
 
   it('docks the job beside the queue at desktop width, keeping the table', async () => {
@@ -361,6 +363,52 @@ describe('Spec 03 §3.1 — queue chips filter ONE time-ordered list', () => {
     expect(text()).toContain('Return Overdue')
   })
 
+  /* BLOCKER-02, 15 Oct 2026: at 375px the header overflowed by 207px and the title
+     measured 0px; at 768px the title was 0px too. Below desktop the two workspace
+     links live in More; on a phone Filters joins them. */
+  const moreItems = async () => {
+    const more = buttons().find((b) => b.getAttribute('aria-label') === 'More actions')
+    expect(more).toBeDefined()
+    await act(async () => more?.click())
+    return [...document.body.querySelectorAll<HTMLElement>('[role="menu"] [role="menuitem"]')]
+  }
+  const visibleButtonText = (label: string) => buttons().some((b) => b.textContent?.trim() === label && !b.closest('[role="menu"]'))
+
+  it('puts the workspace links and Filters in More on a phone, and Filters still opens the drawer', async () => {
+    viewport = 'phone'
+    await mount(<OperationsQueues />, '/operations')
+    expect(visibleButtonText('Delivery & Logistics')).toBe(false)
+    expect(visibleButtonText('Sub-Rentals')).toBe(false)
+    expect(buttons().some((b) => b.getAttribute('aria-controls') === 'operations-filters')).toBe(false)
+
+    const items = await moreItems()
+    expect(items.map((i) => i.textContent?.trim())).toEqual(['Delivery & Logistics', 'Sub-Rentals', 'Filters'])
+    await act(async () => items[2]?.click())
+    expect(document.querySelector('#operations-filters')).not.toBeNull()
+  })
+
+  it('opens Delivery & Logistics from More on a phone', async () => {
+    viewport = 'phone'
+    await mount(<OperationsQueues />, '/operations')
+    const items = await moreItems()
+    await act(async () => items.find((i) => i.textContent?.trim() === 'Delivery & Logistics')?.click())
+    expect(path).toBe('/operations/delivery')
+  })
+
+  it('keeps Filters in the header at tablet width, with only the two links in More', async () => {
+    viewport = 'tablet'
+    await mount(<OperationsQueues />, '/operations')
+    expect(buttons().some((b) => b.getAttribute('aria-controls') === 'operations-filters')).toBe(true)
+    expect(visibleButtonText('Delivery & Logistics')).toBe(false)
+    expect((await moreItems()).map((i) => i.textContent?.trim())).toEqual(['Delivery & Logistics', 'Sub-Rentals'])
+  })
+
+  it('shows both workspace links as buttons on desktop', async () => {
+    await mount(<OperationsQueues />, '/operations')
+    expect(visibleButtonText('Delivery & Logistics')).toBe(true)
+    expect(visibleButtonText('Sub-Rentals')).toBe(true)
+  })
+
   /* From main's d7ca3bc, ported 8 Oct 2026: a search that hides every row is
      an empty state with Clear filters, not a bare table. */
   it('says nothing matches, with Clear filters, when the search hides every row', async () => {
@@ -378,12 +426,41 @@ describe('Spec 03 §3.1 — queue chips filter ONE time-ordered list', () => {
     await act(async () => clear?.click())
     expect(text()).toContain('B-715')
   })
+
+  it('phone viewport: consolidates secondary buttons and filters into More menu (BLOCKER-02)', async () => {
+    viewport = 'phone'
+    await mount(<OperationsQueues />, '/operations')
+    const directButtons = buttons().map((b) => b.textContent?.trim() ?? '')
+    // Secondary buttons Delivery & Logistics and Sub-Rentals must NOT crowd the phone header
+    expect(directButtons).not.toContain('Delivery & Logistics')
+    expect(directButtons).not.toContain('Sub-Rentals')
+
+    // More actions button exists on phone
+    const moreBtn = buttons().find((b) => b.getAttribute('aria-label') === 'More actions')
+    expect(moreBtn).toBeDefined()
+
+    // Clicking More reveals the consolidated actions
+    await act(async () => moreBtn?.click())
+    const menuItems = [...document.querySelectorAll('[role="menuitem"]')].map((el) => el.textContent?.trim())
+    expect(menuItems).toContain('Delivery & Logistics')
+    expect(menuItems).toContain('Sub-Rentals')
+    expect(menuItems).toContain('Filters')
+  })
+
+  it('desktop viewport: renders secondary action buttons directly in header', async () => {
+    viewport = 'desktop'
+    await mount(<OperationsQueues />, '/operations')
+    const directButtons = buttons().map((b) => b.textContent?.trim() ?? '')
+    expect(directButtons).toContain('Delivery & Logistics')
+    expect(directButtons).toContain('Sub-Rentals')
+  })
 })
 
 describe('OperationsShell is the unified modal host', () => {
   it('renders four stages and mounts the real workspace', async () => {
     await mount(<OperationsShell bookingNo="B-715" bookingStatus="Booked" isOpen onClose={() => {}} />)
-    const labels = buttons().map((b) => b.textContent ?? '')
+    const labels = [...container.querySelectorAll('nav[aria-label="Operation stage"] button')]
+      .map((b) => b.getAttribute('aria-label') ?? '')
     expect(labels.some((l) => l.includes('Packing'))).toBe(true)
     expect(labels.some((l) => l.includes('Handover'))).toBe(true)
     expect(labels.some((l) => l.includes('Return & Inspection'))).toBe(true)
@@ -468,7 +545,7 @@ describe('PK-12 — the entry step reports progress it was given, and nothing mo
     // (blocked). Neither is affected by the absence of a progress map.
     await mount(<OperationsShell bookingNo="B-715" bookingStatus="Packed" isOpen onClose={() => {}} />)
     expect(packRow()?.textContent).toContain('Done')
-    const ret = buttons().find((b) => (b.textContent ?? '').includes('Return & Inspection'))
+    const ret = container.querySelector<HTMLButtonElement>('nav[aria-label="Operation stage"] button[aria-label^="Return & Inspection"]')
     expect(ret?.disabled).toBe(true)
     expect(ret?.textContent).toContain('Not open yet')
   })

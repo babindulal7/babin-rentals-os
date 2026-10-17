@@ -55,7 +55,7 @@ import { BOX_CATEGORIES, INVENTORY_MODELS, type InventoryModel } from '../../../
 import { ACTIVE_BUNDLES, ALL_CATEGORIES, factsOf, isPriced, type BundleFacts, type BundleLine, type BundleRecord } from '../../../lib/queries/bundles'
 import { bundlesUsing } from '../../../lib/queries/addEquipment'
 import { CATEGORY_OPTIONS, PARENTS, type InvStatus, type ParentRow } from '../../../lib/queries/inventory'
-import { CREW_ROSTER, type CrewMember } from '../../../lib/queries/crew'
+import { crewPool, type CrewMember } from '../../../lib/queries/crew'
 import type { Paisa } from '../../../lib/money'
 /* Type-only, so this module keeps importing nothing that touches IO. */
 import type { ProductWindowAvailability } from '../../../lib/queries/productAvailability'
@@ -981,7 +981,8 @@ export interface QueryOptions {
   /**
    * The crew pool to search.
    *
-   * Omitted, it falls back to the CREW_ROSTER from data/crew.ts.
+   * Omitted or empty, it is `crewPool()`'s answer: the seed roster in mock mode
+   * only, nobody on the live project.
    */
   crew?: readonly CrewMember[]
   /**
@@ -1026,7 +1027,12 @@ export interface TransportOption {
   vehicle?: string
   numberPlate?: string
   driverName?: string
-  ratePaisa: Paisa
+  /**
+   * The charge this mode puts on THIS booking: 0 for Client Pickup, the delivery
+   * charge already on the form for Babin Delivery, or `null` when none is set
+   * yet. Never a default figure. See `defaultTransportOptions`.
+   */
+  ratePaisa: Paisa | null
 }
 
 /**
@@ -1055,19 +1061,31 @@ export interface TransportResult {
   vehicle?: string
   numberPlate?: string
   driverName?: string
-  ratePaisa: Paisa
+  /** See `TransportOption.ratePaisa` — `null` is "no delivery charge set yet". */
+  ratePaisa: Paisa | null
   availability: AvailabilityVerdict
   haystack: readonly string[]
 }
 
 /**
- * Default transport options for a booking window.
- * In a live build this would query vehicle/driver availability.
+ * The two delivery modes, each carrying the charge it puts on THIS booking.
+ *
+ * Babin Delivery used to carry a fixed `500000` paisa ("Rs 5,000 base"), shown
+ * as its price in New Rental's search. No rate table stands behind that figure.
+ * Picking the row only sets the mode; the charge itself is typed in the
+ * Delivery section. So the row now shows the charge already on the form, or
+ * says none is set (Law 16, no fabricated figure). From OpenCode's `33de1a0`,
+ * ported 13 Oct 2026.
  */
-export function defaultTransportOptions(_w: BookingWindow): TransportOption[] {
+export function defaultTransportOptions(_w: BookingWindow, deliveryChargePaisa: Paisa | null = null): TransportOption[] {
   return [
     { id: 'pickup', name: 'Client Pickup', type: 'Client Pickup', ratePaisa: 0 as Paisa },
-    { id: 'delivery', name: 'Babin Delivery', type: 'Babin Delivery', ratePaisa: 500000 as Paisa }, // Rs 5,000 base
+    {
+      id: 'delivery',
+      name: 'Babin Delivery',
+      type: 'Babin Delivery',
+      ratePaisa: deliveryChargePaisa !== null && deliveryChargePaisa > 0 ? deliveryChargePaisa : null,
+    },
   ]
 }
 
@@ -1134,7 +1152,7 @@ export function runQuery(w: BookingWindow, o: QueryOptions): QueryOutcome {
   const pool: CatalogueResult[] = [
     ...(o.kinds.has('bundle') ? (o.bundles ?? bundleResults(w)) : []),
     ...(o.equipment ?? EQUIPMENT_RESULTS).filter((e) => o.kinds.has(e.kind)),
-    ...(o.kinds.has('crew') ? (o.crew ?? CREW_ROSTER).map(crewToResult) : []),
+    ...(o.kinds.has('crew') ? crewPool(o.crew).map(crewToResult) : []),
     ...(o.kinds.has('transport') ? (o.transport ?? defaultTransportOptions(w)).map(transportToResult) : []),
   ]
 
@@ -1151,13 +1169,13 @@ export function runQuery(w: BookingWindow, o: QueryOptions): QueryOutcome {
       case 'name':
         return a.name.localeCompare(b.name) || a.id.localeCompare(b.id)
       case 'price-asc': {
-        const rateA = 'ratePaisa' in a ? a.ratePaisa : a.dayRatePaisa
-        const rateB = 'ratePaisa' in b ? b.ratePaisa : b.dayRatePaisa
+        const rateA = ('ratePaisa' in a ? a.ratePaisa : a.dayRatePaisa) ?? 0
+        const rateB = ('ratePaisa' in b ? b.ratePaisa : b.dayRatePaisa) ?? 0
         return rateA - rateB || a.name.localeCompare(b.name)
       }
       case 'price-desc': {
-        const rateA = 'ratePaisa' in a ? a.ratePaisa : a.dayRatePaisa
-        const rateB = 'ratePaisa' in b ? b.ratePaisa : b.dayRatePaisa
+        const rateA = ('ratePaisa' in a ? a.ratePaisa : a.dayRatePaisa) ?? 0
+        const rateB = ('ratePaisa' in b ? b.ratePaisa : b.dayRatePaisa) ?? 0
         return rateB - rateA || a.name.localeCompare(b.name)
       }
       default: {
@@ -1270,7 +1288,6 @@ export function addBundleToBooking(
   const availability = bundleAvailability(b, facts, w)
   const existing = o.existingLineIds ?? new Set<string>()
   const days = Math.max(1, Math.round(o.days) || 1)
-  const discountPct = 0
   const lines: BookingLineDraft[] = []
   const skipped: Array<{ model: string; reason: string }> = []
 
@@ -1315,7 +1332,7 @@ export function addBundleToBooking(
     if (!priced && !o.includeCrewAndVehicle) {
       skipped.push({
         model: l.model,
-        reason: l.kind === 'crew' ? 'Crew is added in Section 3' : 'Transport is charged in Section 3',
+        reason: l.kind === 'crew' ? 'Add crew separately in Crew' : 'Add transport separately in Delivery & Transport',
       })
       continue
     }
@@ -1357,23 +1374,20 @@ export function addBundleToBooking(
   }
 
   const notes: string[] = []
+  const includedCount = lines.filter((line) => line.isIncluded).length
   notes.push(
-    `Bundle ${b.name} (${b.id}) added: bundle billed at daily rate; ${b.lines.length} component line${
-      b.lines.length === 1 ? '' : 's'
-    } included at Rs 0 to reserve inventory without double charging (${days} day${days === 1 ? '' : 's'}).`,
+    `${b.name}: bundle rate applied for ${days} day${days === 1 ? '' : 's'}; ${includedCount} component line${
+      includedCount === 1 ? '' : 's'
+    } added with no extra rental charge.`,
   )
   if (!o.includeCrewAndVehicle && (facts.crew > 0 || facts.vehicle > 0)) {
     notes.push(
-      `Crew (${facts.crew}) and vehicle (${facts.vehicle}) are not added — both are priced in Section 3, Crew & Transport.`,
+      `Crew (${facts.crew}) and vehicle (${facts.vehicle}) are not added. Add them separately in Crew and Delivery & Transport.`,
     )
   }
-  if (discountPct > 0) {
+  if (facts.savingPct > 0) {
     notes.push(
-      `Each line carries the bundle's ${discountPct}% saving. The rounded percentage lands near the advertised bundle rate, not exactly on it.`,
-    )
-  } else if (facts.savingPct > 0) {
-    notes.push(
-      `Components are added at their own daily rates. The bundle rate is ${facts.savingPct}% lower than the sum of parts — apply that in Pricing if it is being honoured.`,
+      'The bundle price already includes its saving; no additional bundle discount is needed.',
     )
   }
   if (availability.level !== 'available') {
@@ -1495,8 +1509,13 @@ export function groupEquipmentResults(results: readonly EquipmentResult[]): Equi
 
 /** The single-row equivalent — one equipment result becomes one draft. */
 export function equipmentLineDraft(e: EquipmentResult, days: number): BookingLineDraft {
+  const isAccessory = e.kind === 'accessory'
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  const resolvedProductId = isUuid.test(e.productKey) ? e.productKey : isUuid.test(e.id) ? e.id : null
   return {
     id: e.id,
+    lineType: isAccessory ? 'Accessory' : 'Equipment',
+    ...(resolvedProductId ? { productId: resolvedProductId } : {}),
     name: e.name,
     serial: e.serial,
     category: e.category,

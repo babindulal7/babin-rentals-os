@@ -83,9 +83,9 @@
   --card2: #faf8f4;
   --inset: #f1f5f9;
   --inset2: #e2e8f0;
-  --border: #b8c3d2;
-  --border2: #cbd5e1;
-  --divider: #c3cddb;
+  --border: #8b9bb2;
+  --border2: #a2b0c4;
+  --divider: #9aa9bc;
 
   /* Universal 9-tier translucent alpha border scale (Light mode: slate-based) */
   --w02: rgba(15, 23, 42, 0.02);
@@ -139,6 +139,9 @@
 
   --primary: #2456d6;
   --on-primary: #ffffff;
+  /* RULING 2026-10-15: selected/active state is a solid NEUTRAL, not blue — blue is for primary actions. */
+  --select-bg: #1e293b;
+  --select-fg: #ffffff;
   --primary-text: #1e49b8;
 
   --success: #1e864a;
@@ -192,7 +195,7 @@
   --btn-primary-bg: #2456d6;
   --btn-primary-fg: #ffffff;
   --btn-secondary-bg: transparent;
-  --btn-secondary-border: var(--input-border);
+  --btn-secondary-border: #64748b;
   --btn-danger-bg: #c73a3a;
   --btn-danger-fg: #ffffff;
 
@@ -271,9 +274,9 @@
   --w30: rgba(255, 255, 255, 0.30);
   --w40: rgba(255, 255, 255, 0.40);
 
-  --border: rgba(255, 255, 255, 0.14);
-  --border2: rgba(255, 255, 255, 0.18);
-  --divider: rgba(255, 255, 255, 0.14);
+  --border: rgba(255, 255, 255, 0.22);
+  --border2: rgba(255, 255, 255, 0.30);
+  --divider: rgba(255, 255, 255, 0.20);
 
   /* Obsidian Spatial Gradients & Glows */
   --bg-gradient-1: #04080d;
@@ -293,6 +296,8 @@
 
   --primary: #386af7;      /* WCAG AA 4.59:1 with white on-primary */
   --on-primary: #ffffff;
+  --select-bg: #3b475c;
+  --select-fg: #ffffff;
   --primary-text: #7ea2ff; /* text-safe blue on --surface */
 
   /* ---- §3.2 status hues + their on-colours ---- */
@@ -340,7 +345,7 @@
   --btn-primary-bg: #386af7;
   --btn-primary-fg: #ffffff;
   --btn-secondary-bg: transparent;
-  --btn-secondary-border: var(--input-border);
+  --btn-secondary-border: rgba(255, 255, 255, 0.44);
   --btn-danger-bg: #c73a3a;
   --btn-danger-fg: #ffffff;
 
@@ -356,7 +361,7 @@
   --nav-icon: #94a3b8;
 
   --input-bg: #081522;
-  --input-border: rgba(255, 255, 255, 0.34);
+  --input-border: rgba(255, 255, 255, 0.44);
   --input-placeholder: #64748b;
   --input-focus: #386af7;
 
@@ -424,6 +429,8 @@
 
   --primary: #facc15;
   --on-primary: #000000;
+  --select-bg: var(--primary);
+  --select-fg: var(--on-primary);
   --primary-text: #fde047;
 
   --success: #22c55e;
@@ -532,13 +539,13 @@
                    because On Rent is orange: the gear is with the client.
        --st-in-*   was a soft green wash -> now SOLID green: home & settled.
      ══════════════════════════════════════════════════════════════════════ */
-  --st-neutral-bg: var(--neutral);  --st-neutral-fg: var(--on-neutral);  /* Quote, Draft */
-  --st-primary-bg: var(--primary);  --st-primary-fg: var(--on-primary);  /* Booked, Reserved, Issued */
-  --st-progress-bg: var(--ready);   --st-progress-fg: var(--on-ready);   /* Packed, Due Soon, Partial, Cleaning, Maintenance */
-  --st-out-bg: var(--warn);         --st-out-fg: var(--on-warn);         /* On Rent, Picked Up — out with the client */
-  --st-in-bg: var(--success);       --st-in-fg: var(--on-success);       /* Returned, Available, Paid — home */
-  --st-danger-bg: var(--danger);    --st-danger-fg: var(--on-danger);    /* Overdue, Damaged, Unpaid, Blocked */
-  --st-dim-bg: var(--dim);          --st-dim-fg: var(--on-dim);          /* Closed, Void, Retired, Deactivated */
+  --st-neutral-bg: var(--neutral);  --st-neutral-fg: var(--on-neutral); --st-neutral-border: color-mix(in srgb, var(--st-neutral-fg) 40%, transparent);  /* Quote, Draft */
+  --st-primary-bg: var(--primary);  --st-primary-fg: var(--on-primary); --st-primary-border: color-mix(in srgb, var(--st-primary-fg) 42%, transparent);  /* Booked, Reserved, Issued */
+  --st-progress-bg: var(--ready);   --st-progress-fg: var(--on-ready);   --st-progress-border: color-mix(in srgb, var(--st-progress-fg) 45%, transparent); /* Packed, Due Soon, Partial, Cleaning, Maintenance */
+  --st-out-bg: var(--warn);         --st-out-fg: var(--on-warn);         --st-out-border: color-mix(in srgb, var(--st-out-fg) 45%, transparent);         /* On Rent, Picked Up — out with the client */
+  --st-in-bg: var(--success);       --st-in-fg: var(--on-success);       --st-in-border: color-mix(in srgb, var(--st-in-fg) 42%, transparent);       /* Returned, Available, Paid — home */
+  --st-danger-bg: var(--danger);    --st-danger-fg: var(--on-danger);    --st-danger-border: color-mix(in srgb, var(--st-danger-fg) 42%, transparent);    /* Overdue, Damaged, Unpaid, Blocked */
+  --st-dim-bg: var(--dim);          --st-dim-fg: var(--on-dim);          --st-dim-border: color-mix(in srgb, var(--st-dim-fg) 38%, transparent);          /* Closed, Void, Retired, Deactivated */
 
   /* Canonical v4.1 spellings, for code written against the spec directly. */
   --st-ready-bg: var(--ready);      --st-ready-fg: var(--on-ready);
@@ -978,7 +985,7 @@ body {
 
 /* Bordered card variant for dense lists / tables where separation is needed */
 .card--bordered {
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
 }
 
 /* DESIGN_DIRECTION_SPEC v4.2 §4 & §6 Card Glass & Layered Elevation */
@@ -1137,6 +1144,13 @@ td,
   font-variant-numeric: tabular-nums;
 }
 
+/* RULING 2026-10-15: an amount is one token — "Rs 74,940.75" never breaks
+   after "Rs" in a narrow column. Opt-in class, not `.figure`, which also
+   wraps names and badges in some tables. */
+.money {
+  white-space: nowrap;
+}
+
 /* §4.3.6 — KPI values and prominent figures */
 .kpi-value,
 .figure-lg {
@@ -1270,6 +1284,17 @@ a.btn:active,
   filter: brightness(0.96);
 }
 
+button:hover,
+button:active,
+a.btn:hover,
+a.btn:active,
+[role="button"]:hover,
+[role="button"]:active,
+.ui-button:hover,
+.ui-button:active {
+  transform: none;
+}
+
 /* ── Smooth Form Inputs with Glow Focus Rings ── */
 input:not([type="checkbox"]):not([type="radio"]),
 select,
@@ -1289,7 +1314,7 @@ textarea:focus {
   background: var(--surface) !important;
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
 }
 
 /* ── Card Levitation & Micro-Elevation ──
@@ -1467,6 +1492,7 @@ p {
 
 .ui-button {
   -webkit-tap-highlight-color: transparent;
+  border-width: 1.5px;
 }
 
 /* Persistent creation action in desktop and tablet sidebar (light/dark blue,
@@ -1474,7 +1500,7 @@ p {
 .app-navigation .app-nav__new-rental {
   background: var(--btn-primary-bg);
   color: var(--btn-primary-fg);
-  border: 1px solid transparent;
+  border: 1.5px solid transparent;
   box-shadow: var(--shadow-xs);
 }
 
@@ -1522,6 +1548,8 @@ p {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-inline: contain;
   background: var(--surface) !important;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-card);
 }
 
 .data-table {
@@ -1733,7 +1761,7 @@ p {
 /* Cards pick up the hairline rim the glass needs to read as an edge. --w08 is
    white on dark and slate on light, so the one rule fits both. */
 :root[data-style='glass'] .card {
-  border: 1px solid var(--w08);
+  border: 1.5px solid var(--w12);
   backdrop-filter: blur(20px) saturate(140%);
   -webkit-backdrop-filter: blur(20px) saturate(140%);
 }

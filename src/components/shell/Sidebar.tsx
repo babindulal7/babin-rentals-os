@@ -214,39 +214,78 @@ export default function Sidebar({ active }: SidebarProps) {
             <Icon name={theme === 'dark' ? 'moon' : 'sun'} size={15} />
           </button>
         ) : (
-          <div role="group" aria-label="Theme" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 6 }}>
-            {(['dark', 'light', 'glass'] as const).map((m) => {
-              // RULING 2026-10-13: Glass is a finish on either base, so it can
-              // be pressed alongside Light or Dark.
-              const on = m === 'glass' ? glass : theme === m
-              return (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => choose(m)}
-                  aria-pressed={on}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 6,
-                    minHeight: 44,
-                    borderRadius: 'var(--r-btn)',
-                    border: `1px solid ${on ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-                    background: on ? 'var(--nav-active-bg)' : 'transparent',
-                    color: on ? 'var(--text)' : 'var(--text2)',
-                    fontSize: 'var(--t-meta)',
-                    fontWeight: on ? 600 : 500,
-                    cursor: 'pointer',
-                    fontFamily: 'inherit',
-                    textTransform: 'capitalize',
-                  }}
-                >
-                  <Icon name={m === 'glass' ? 'sparkles' : m === 'dark' ? 'moon' : 'sun'} size={14} />
-                  {m}
-                </button>
-              )
-            })}
+          <div role="group" aria-label="Theme" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                gap: 2,
+                flex: 1,
+                background: 'var(--inset, rgba(0, 0, 0, 0.04))',
+                padding: 2,
+                borderRadius: 'var(--r-btn)',
+                border: '1px solid var(--border)',
+              }}
+            >
+              {(['light', 'dark'] as const).map((m) => {
+                const on = theme === m
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => choose(m)}
+                    aria-pressed={on}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 5,
+                      minHeight: 40,
+                      borderRadius: 'calc(var(--r-btn) - 2px)',
+                      border: 'none',
+                      background: on ? 'var(--select-bg)' : 'transparent',
+                      color: on ? 'var(--select-fg, #ffffff)' : 'var(--text2)',
+                      fontSize: 'var(--t-meta)',
+                      fontWeight: on ? 600 : 500,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      textTransform: 'capitalize',
+                      boxShadow: on ? '0 1px 2px rgba(0, 0, 0, 0.08)' : 'none',
+                    }}
+                  >
+                    <Icon name={m === 'dark' ? 'moon' : 'sun'} size={14} />
+                    {m}
+                  </button>
+                )
+              })}
+            </div>
+            <button
+              type="button"
+              onClick={() => choose('glass')}
+              aria-pressed={glass}
+              aria-label="Toggle glass finish"
+              title={glass ? 'Glass finish enabled (click to toggle off)' : 'Enable glass finish'}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 5,
+                minHeight: 44,
+                padding: '0 12px',
+                borderRadius: 'var(--r-btn)',
+                border: `1.5px solid ${glass ? 'var(--primary, #386af7)' : 'var(--border)'}`,
+                background: glass ? 'color-mix(in srgb, var(--primary, #386af7) 14%, var(--card))' : 'transparent',
+                color: glass ? 'var(--primary-text, #2456d6)' : 'var(--text2)',
+                fontSize: 'var(--t-meta)',
+                fontWeight: glass ? 600 : 500,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                transition: 'all var(--dur-fast, 120ms) ease',
+              }}
+            >
+              <Icon name="sparkles" size={14} style={{ color: glass ? 'var(--primary-text, #2456d6)' : undefined }} />
+              Glass
+            </button>
           </div>
         )}
       </div>
@@ -474,8 +513,8 @@ function NavList({
                       textDecoration: 'none',
                       fontSize: 'var(--t-ui)',
                       fontWeight: isNewRental ? 700 : on ? 600 : 500,
-                      color: isNewRental ? undefined : on ? 'var(--text)' : 'var(--text2)',
-                      background: isNewRental ? undefined : on ? 'var(--nav-active-bg)' : 'transparent',
+                      color: isNewRental ? undefined : on ? 'var(--select-fg, #ffffff)' : 'var(--text2)',
+                      background: isNewRental ? undefined : on ? 'var(--select-bg)' : 'transparent',
                       boxShadow: isNewRental ? undefined : on ? 'var(--specular-rim), 0 1px 2px rgba(0, 0, 0, 0.04)' : undefined,
                       position: 'relative',
                       cursor: 'pointer',
@@ -493,15 +532,15 @@ function NavList({
                           bottom: 10,
                           width: 3,
                           borderRadius: 999,
-                          background: 'var(--nav-active-accent)',
-                          boxShadow: '0 0 6px var(--nav-active-accent)',
+                          background: 'var(--select-fg)',
+                          boxShadow: '0 0 6px var(--select-fg)',
                         }}
                       />
                     )}
                     <Icon
                       name={s.icon}
                       size={rail ? 20 : 16}
-                      style={{ color: isNewRental ? 'inherit' : on ? 'var(--nav-active-accent)' : 'var(--nav-icon)', flexShrink: 0 }}
+                      style={{ color: isNewRental ? 'inherit' : on ? 'var(--select-fg)' : 'var(--nav-icon)', flexShrink: 0 }}
                     />
                     {!rail && (
                       <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -526,7 +565,7 @@ function NavList({
                         justifyContent: 'center',
                         padding: '2px 8px',
                         borderRadius: 'var(--r-btn)',
-                        background: on ? 'var(--nav-active-accent)' : 'var(--card2)',
+                        background: on ? 'var(--select-bg)' : 'var(--card2)',
                         color: on ? '#fff' : 'var(--text2)',
                         fontSize: 11,
                         fontWeight: 600,
@@ -587,8 +626,8 @@ function NavList({
                   minWidth: ROW_H,
                   borderRadius: 9,
                   border: 'none',
-                  background: isMoreActive ? 'var(--nav-active-bg)' : 'transparent',
-                  color: isMoreActive ? 'var(--nav-active-accent)' : 'var(--text2)',
+                  background: isMoreActive ? 'var(--select-bg)' : 'transparent',
+                  color: isMoreActive ? 'var(--select-fg)' : 'var(--text2)',
                   position: 'relative',
                   cursor: 'pointer',
                   width: '100%',
@@ -604,14 +643,14 @@ function NavList({
                       bottom: 8,
                       width: 3,
                       borderRadius: '0 3px 3px 0',
-                      background: 'var(--nav-active-accent)',
+                      background: 'var(--select-fg)',
                     }}
                   />
                 )}
                 <Icon
                   name="more_vert"
                   size={20}
-                  style={{ color: isMoreActive ? 'var(--nav-active-accent)' : 'var(--nav-icon)' }}
+                  style={{ color: isMoreActive ? 'var(--select-fg)' : 'var(--nav-icon)' }}
                 />
               </button>
 
@@ -658,12 +697,12 @@ function NavList({
                           textDecoration: 'none',
                           fontSize: 'var(--t-ui)',
                           fontWeight: on ? 600 : 500,
-                          color: on ? 'var(--text)' : 'var(--text2)',
-                          background: on ? 'var(--nav-active-bg)' : 'transparent',
+                          color: on ? 'var(--select-fg)' : 'var(--text2)',
+                          background: on ? 'var(--select-bg)' : 'transparent',
                           cursor: 'pointer',
                         }}
                       >
-                        <Icon name={m.icon} size={16} style={{ color: on ? 'var(--nav-active-accent)' : 'var(--nav-icon)' }} />
+                        <Icon name={m.icon} size={16} style={{ color: on ? 'var(--select-fg)' : 'var(--nav-icon)' }} />
                         <span>{m.label}</span>
                       </Link>
                     )
@@ -696,8 +735,8 @@ function NavList({
                   border: 'none',
                   fontSize: 'var(--t-ui)',
                   fontWeight: isMoreActive ? 600 : 500,
-                  color: isMoreActive ? 'var(--text)' : 'var(--text2)',
-                  background: isMoreActive ? 'var(--nav-active-bg)' : 'transparent',
+                  color: isMoreActive ? 'var(--select-fg)' : 'var(--text2)',
+                  background: isMoreActive ? 'var(--select-bg)' : 'transparent',
                   position: 'relative',
                   cursor: 'pointer',
                   width: '100%',
@@ -716,14 +755,14 @@ function NavList({
                       bottom: 8,
                       width: 3,
                       borderRadius: '0 3px 3px 0',
-                      background: 'var(--nav-active-accent)',
+                      background: 'var(--select-fg)',
                     }}
                   />
                 )}
                 <Icon
                   name="more_vert"
                   size={16}
-                  style={{ color: isMoreActive ? 'var(--nav-active-accent)' : 'var(--nav-icon)', flexShrink: 0 }}
+                  style={{ color: isMoreActive ? 'var(--select-fg)' : 'var(--nav-icon)', flexShrink: 0 }}
                 />
                 <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   More
@@ -770,8 +809,8 @@ function NavList({
                           textDecoration: 'none',
                           fontSize: 'var(--t-meta)',
                           fontWeight: on ? 600 : 500,
-                          color: on ? 'var(--text)' : 'var(--text2)',
-                          background: on ? 'var(--nav-active-bg)' : 'transparent',
+                          color: on ? 'var(--select-fg)' : 'var(--text2)',
+                          background: on ? 'var(--select-bg)' : 'transparent',
                           position: 'relative',
                           cursor: 'pointer',
                           transition: 'background-color var(--dur) ease, color var(--dur) ease',
@@ -787,14 +826,14 @@ function NavList({
                               bottom: 8,
                               width: 3,
                               borderRadius: '0 3px 3px 0',
-                              background: 'var(--nav-active-accent)',
+                              background: 'var(--select-fg)',
                             }}
                           />
                         )}
                         <Icon
                           name={m.icon}
                           size={15}
-                          style={{ color: on ? 'var(--nav-active-accent)' : 'var(--nav-icon)' }}
+                          style={{ color: on ? 'var(--select-fg)' : 'var(--nav-icon)' }}
                         />
                         <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {m.label}

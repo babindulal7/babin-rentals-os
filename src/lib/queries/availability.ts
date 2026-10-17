@@ -248,10 +248,11 @@ export async function readProductModes(productIds: readonly string[]): Promise<M
   const byId = new Map<string, ProductMode>()
   if (productIds.length === 0) return byId
 
+  const uniqueIds = [...new Set(productIds)]
   const { data, error } = await supabase
     .from('products_v')
     .select('id, tracking_mode, total_quantity')
-    .in('id', [...new Set(productIds)])
+    .in('id', uniqueIds)
 
   if (error) {
     throw new Error(`Could not read how these products are tracked, so nothing was assigned: ${error.message}`)
@@ -272,6 +273,26 @@ export async function readProductModes(productIds: readonly string[]): Promise<M
       totalQuantity: typeof row.total_quantity === 'number' ? row.total_quantity : 0,
     })
   }
+
+  const missing = uniqueIds.filter((id) => !byId.has(id))
+  if (missing.length > 0) {
+    const { data: baseData } = await supabase
+      .from('products')
+      .select('id, tracking_mode, total_quantity')
+      .in('id', missing)
+
+    for (const row of (baseData ?? []) as unknown as Array<{
+      id: string
+      tracking_mode: string | null
+      total_quantity: number | null
+    }>) {
+      byId.set(row.id, {
+        trackingMode: row.tracking_mode ?? 'Serialised',
+        totalQuantity: typeof row.total_quantity === 'number' ? row.total_quantity : 0,
+      })
+    }
+  }
+
   return byId
 }
 
@@ -310,7 +331,7 @@ async function readLines(bookingId: string): Promise<{
   const skipped: Array<{ lineId: string; label: string; reason: string }> = []
 
   for (const row of rows) {
-    const label = row.description ?? row.line_type
+    const label = row.description?.trim() || (row.product_id ? `${row.line_type} (${row.product_id.slice(0, 8)})` : row.line_type)
     if (row.product_id === null) {
       /* `product_id` is nullable and a bundle line carries `bundle_id` instead.
          Expanding a bundle into its member products needs the packing tree

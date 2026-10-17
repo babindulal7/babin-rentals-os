@@ -4,7 +4,6 @@ import { canExportClientPii } from '../../lib/rbac'
 import { useAuth } from '../../lib/auth'
 import { Link, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
-import { useViewport } from '../../lib/device'
 import { Card, PageHeader, PageActions, Button, KpiStrip, FooterNote } from '../../components/ui/Page'
 import { GlobalAddMenu } from '../../components/ui/creation/GlobalAddMenu'
 import { DataTableShell } from '../../components/ui/DataTable'
@@ -57,8 +56,6 @@ const TAB_DEFS: TabDef[] = [
 ]
 
 export default function Clients() {
-  const viewport = useViewport()
-  const phone = viewport === 'phone'
   const money = useCanViewMoney()
   const { user } = useAuth()
   const { showSuccessToast } = useToast()
@@ -220,13 +217,10 @@ export default function Clients() {
           <PageActions
             primary={<GlobalAddMenu module="clients" />}
             // RULING 2026-10-13: on a phone, Export lives in More so the title and Add keep the header.
-            secondary={phone ? [] : [
-              <Button key="export" icon="download" aria-label="Export clients" title={`Export ${clients.length} loaded directory rows, including rows hidden by filters`} disabled={clientsLoading || Boolean(clientsError)} onClick={exportCsv}>
-                Export directory
-              </Button>,
-            ]}
+            // RULING 2026-10-15: at every width (title read "Cli…" at 1280px). Revert = restore
+            // the `phone ?` branches on secondary/overflow.
             overflow={[
-              ...(phone && !clientsLoading && !clientsError ? [{ label: 'Export loaded directory', icon: 'download' as const, onClick: exportCsv }] : []),
+              ...(!clientsLoading && !clientsError ? [{ label: 'Export loaded directory', icon: 'download' as const, onClick: exportCsv }] : []),
               ...(user && canImportClients(user.role) ? [{ label: 'Import Clients', icon: 'upload' as const, onClick: () => setTab('import') }] : []),
               { label: 'Duplicate Center', icon: 'users', onClick: () => setTab('duplicates') },
               ...(money ? [{ label: 'Credit Policies', icon: 'card' as const, onClick: () => setTab('credit') }] : []),

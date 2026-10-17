@@ -52,13 +52,12 @@
   background: var(--card2, var(--hover-card));
   border-color: var(--border2, var(--border));
   color: var(--text);
-  transform: translateY(-1px);
 }
 
 .client-filter-chip.is-active {
-  background: var(--nav-active-bg);
-  border-color: var(--nav-active-accent);
-  color: var(--nav-active-accent);
+  background: var(--select-bg);
+  border-color: var(--select-fg);
+  color: var(--select-fg);
   font-weight: 600;
   box-shadow: 0 0 0 1px var(--nav-active-accent), 0 2px 6px rgba(0, 0, 0, 0.04);
 }
@@ -86,13 +85,12 @@
   background: var(--card2, var(--hover-card));
   border-color: var(--nav-active-accent);
   color: var(--text);
-  transform: translateY(-1px);
 }
 
 .client-overlay-chip.is-active {
-  background: var(--nav-active-bg);
-  border-color: var(--nav-active-accent);
-  color: var(--nav-active-accent);
+  background: var(--select-bg);
+  border-color: var(--select-fg);
+  color: var(--select-fg);
   font-weight: 600;
   border-style: solid;
   box-shadow: 0 0 0 1px var(--nav-active-accent), 0 2px 6px rgba(0, 0, 0, 0.04);
@@ -148,7 +146,6 @@
 .client-bento-card:hover {
   border-color: var(--border2, var(--border));
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-  transform: translateY(-2px);
 }
 
 .client-card-header {
@@ -278,7 +275,7 @@
 }
 
 .client-row.is-selected {
-  background: var(--nav-active-bg);
+  background: var(--select-bg);
 }
 
 .client-row td {
@@ -341,7 +338,6 @@
 .membership-plan-card:hover {
   border-color: var(--border2, var(--border));
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
-  transform: translateY(-2px);
 }
 
 .membership-plan-header {
@@ -414,5 +410,4 @@
 
 .credit-policy-card:hover {
   border-color: var(--border2, var(--border));
-  transform: translateY(-1px);
 }

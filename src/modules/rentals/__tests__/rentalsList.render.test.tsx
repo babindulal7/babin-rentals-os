@@ -24,6 +24,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter, useLocation } from 'react-router-dom'
+import { WorkspaceProvider, useWorkspace } from '../../../lib/workspaceContext'
 import type { BookingListRow } from '../../../lib/queries/bookings'
 import type { SystemRole } from '../../../types/database'
 
@@ -57,7 +58,7 @@ const lines = vi.hoisted(() => ({
 vi.mock('../../../lib/supabase', () => {
   const build = () => {
     const chain: Record<string, unknown> = {}
-    for (const method of ['select', 'in', 'is', 'eq', 'order', 'range']) chain[method] = () => chain
+    for (const method of ['select', 'in', 'is', 'eq', 'order', 'range', 'limit']) chain[method] = () => chain
     chain['then'] = (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) => {
       if (lines.shouldFail) {
         if (reject) return reject(new Error('Subrental query failed'))
@@ -99,7 +100,7 @@ const ROW: BookingListRow = {
 /* The mocked count, so a test can have more rows than one page. `vi.hoisted`
    because a `vi.mock` factory is hoisted above ordinary consts and cannot close
    over one. Reset in `afterEach`. */
-const stub = vi.hoisted(() => ({ total: 1, empty: false }))
+const stub = vi.hoisted(() => ({ total: 1, empty: false, row: null as Partial<BookingListRow> | null }))
 vi.mock('../../../actions/rentals/saveDraft', () => ({ listActiveDrafts: async () => [] }))
 vi.mock('../../../lib/queries/rentalViews', async (importOriginal) => { const real = await importOriginal<typeof import('../../../lib/queries/rentalViews')>(); return { ...real, listRentalViewCounts: async () => ({ rows: real.RENTAL_VIEWS.map(v => ({ id: v.id, count: 0 })) }) } })
 const authStub = vi.hoisted(() => ({ role: 'Owner' as SystemRole }))
@@ -109,7 +110,7 @@ const authStub = vi.hoisted(() => ({ role: 'Owner' as SystemRole }))
    renders. */
 vi.mock('../../../lib/queries/bookings', async (importOriginal) => {
   const real = await importOriginal<typeof import('../../../lib/queries/bookings')>()
-  return { ...real, listBookings: async () => (stub.empty ? { rows: [], total: 0 } : { rows: [ROW], total: stub.total }) }
+  return { ...real, listBookings: async () => (stub.empty ? { rows: [], total: 0 } : { rows: [{ ...ROW, ...stub.row }], total: stub.total }) }
 })
 
 vi.mock('../../../lib/moneyVisibility', () => ({ useCanViewMoney: () => true }))
@@ -155,8 +156,24 @@ function LocationProbe() {
   return null
 }
 
+/** Observe the selection contract registered for the existing application header.
+ * The shell test suite independently tests actual button rendering and action gates. */
+function SelectionContextProbe() {
+  const { headerData } = useWorkspace()
+  const selection = headerData?.bulkSelection
+  return <section data-testid="rental-selection-header">
+    <output aria-label="Registered selected rental count">{selection?.count ?? 0}</output>
+    {selection?.actions.map(action => (
+      <button key={action.id} type="button" onClick={() => void action.onClick?.()}>
+        {action.label}
+      </button>
+    ))}
+    {selection && <button type="button" onClick={selection.onClear}>Clear selected rentals</button>}
+  </section>
+}
+
 /** v4.1 §7.7's breakpoints — 768 and 1280. Width only (Law 14). */
-async function mount(width: number, entry = '/rentals') {
+async function mount(width: number, entry = '/rentals', inWorkspace = false) {
   if (root) {
     await act(async () => root.unmount())
     container?.remove()
@@ -168,7 +185,12 @@ async function mount(width: number, entry = '/rentals') {
   await act(async () => {
     root.render(
       <MemoryRouter initialEntries={[entry]}>
-        <RentalsList />
+        {inWorkspace ? (
+          <WorkspaceProvider>
+            <SelectionContextProbe />
+            <RentalsList />
+          </WorkspaceProvider>
+        ) : <RentalsList />}
         <LocationProbe />
       </MemoryRouter>,
     )
@@ -185,6 +207,7 @@ afterEach(async () => {
   document.body.innerHTML = ''
   stub.total = 1
   stub.empty = false
+  stub.row = null
   lines.rows = []
   lines.shouldFail = false
   authStub.role = 'Owner'
@@ -215,6 +238,17 @@ describe('§4.1 — one list, no tabs', () => {
     // of the eight genuine deletions in rulings §1.
     expect(text()).not.toContain('Productions')
     expect(button('Bookings')).toBeUndefined()
+  })
+
+  it('offers no Productions door in the More menu either', async () => {
+    /* RULING 2026-10-13: "Productions Hub" came back in the More menu on 29 Sep
+       (e4feb86), pointing at /crew/productions — a path with no route, so it
+       opened the not-found page — while rulings §1 keep Productions deleted.
+       The assertion above reads the page without opening More, so it missed it. */
+    await mount(1280)
+    await openMore()
+    expect(menuItem('Productions Hub')).toBeUndefined()
+    expect(text()).not.toContain('Productions')
   })
 
   it('draws the 5 operational view chips in order', async () => {
@@ -313,6 +347,43 @@ describe('§4.1 — "action column stays visible; table scrolls horizontally"', 
     const lastCell = cells[cells.length - 1]
     expect(lastCell?.style.position).toBe('sticky')
     expect(lastCell?.style.background).not.toBe('')
+  })
+})
+
+describe('RULING 2026-10-15 — a row states each fact once (the Booqable density pass)', () => {
+  const firstRow = () => container.querySelector<HTMLTableRowElement>('tbody tr')!
+  const cellUnder = (header: string) => {
+    const index = [...container.querySelectorAll('thead th')].findIndex((th) => th.textContent?.trim() === header)
+    return firstRow().cells[index]!
+  }
+
+  it('prints no pickup or return location in the row — it is on the hover card', async () => {
+    stub.row = { pickupLocation: 'Kathmandu Main', returnLocation: 'Lalitpur Studio' }
+    await mount(1280)
+    expect(firstRow().textContent).not.toContain('Kathmandu Main')
+    expect(firstRow().textContent).not.toContain('Lalitpur Studio')
+  })
+
+  it('says a late return once, in the Status cell, and not again beside the booking number', async () => {
+    stub.row = { stage: 'On Rent', returnAtAd: '2026-08-18T10:30:00.000Z' }
+    await mount(1280)
+    expect(cellUnder('Status').textContent).toMatch(/days? late|Late today/)
+    expect(cellUnder('Booking ID').textContent).not.toContain('Overdue')
+  })
+
+  it('draws no icons inside the date cells; the time rides with the AD date', async () => {
+    await mount(1280)
+    const pickup = cellUnder('Pickup')
+    expect(pickup.querySelectorAll('svg')).toHaveLength(0)
+    expect(pickup.textContent).toMatch(/\d{1,2} \w{3,4} 2026 \d{2}:\d{2} [AP]M/)
+  })
+
+  it('sizes the action column to its ⋮ and names it only for assistive tech', async () => {
+    await mount(1280)
+    const cols = [...container.querySelectorAll('colgroup col')] as HTMLTableColElement[]
+    expect(cols.at(-1)?.style.width).toBe('60px')
+    const actions = [...container.querySelectorAll('thead th')].at(-1)!
+    expect(actions.querySelector('.sr-only')?.textContent).toBe('Actions')
   })
 })
 
@@ -609,5 +680,71 @@ describe('empty list — the New Rental step', () => {
     await mount(1280)
     expect(text()).toContain('No rentals yet')
     expect(button('New Rental')).toBeUndefined()
+  })
+})
+
+
+describe('selected rentals use the canonical header selection mode', () => {
+  it('moves Export CSV and Fast Return to the shared header, without a second dock', async () => {
+    await mount(1280, '/rentals', true)
+    const count = container.querySelector('output[aria-label="Registered selected rental count"]')
+    expect(count?.textContent).toBe('0')
+    expect(container.querySelector('[aria-label="Bulk actions for selected items"]')).toBeNull()
+
+    const checkbox = container.querySelector<HTMLInputElement>('tbody input[type="checkbox"]')!
+    await act(async () => checkbox.click())
+    expect(count?.textContent).toBe('1')
+    const selectionHeader = container.querySelector('[data-testid="rental-selection-header"]')!
+    expect(selectionHeader.textContent).toContain('Export CSV')
+    expect(selectionHeader.textContent).toContain('Fast Return')
+    expect(container.querySelector('[aria-label="Bulk actions for selected items"]')).toBeNull()
+
+    const createUrl = vi.fn().mockReturnValue('blob:rentals-test')
+    const revokeUrl = vi.fn()
+    window.URL.createObjectURL = createUrl
+    window.URL.revokeObjectURL = revokeUrl
+    const exportBtn = [...selectionHeader.querySelectorAll('button')].find(b => b.textContent === 'Export CSV')
+    await act(async () => exportBtn?.click())
+    expect(createUrl).toHaveBeenCalledTimes(1)
+    expect(revokeUrl).toHaveBeenCalledTimes(1)
+
+    const clear = [...selectionHeader.querySelectorAll('button')].find(b => b.textContent === 'Clear selected rentals')
+    await act(async () => clear?.click())
+    expect(count?.textContent).toBe('0')
+    expect(container.querySelector<HTMLInputElement>('tbody input[type="checkbox"]')?.checked).toBe(false)
+    expect(selectionHeader.textContent).not.toContain('Export CSV')
+  })
+
+  it('keeps the Fast Return callback and does not run a bulk custody transition', async () => {
+    await mount(1280, '/rentals', true)
+    const checkbox = container.querySelector<HTMLInputElement>('tbody input[type="checkbox"]')!
+    await act(async () => checkbox.click())
+    const selectionHeader = container.querySelector('[data-testid="rental-selection-header"]')!
+    const fastReturn = [...selectionHeader.querySelectorAll('button')].find(b => b.textContent === 'Fast Return')
+    expect(fastReturn).toBeDefined()
+    await act(async () => fastReturn?.click())
+    expect(document.body.textContent).toContain('Fast Return')
+    // No booking is passed directly to a transition; the normal lookup modal
+    // still requires the user to identify and reconcile the actual return.
+  })
+
+  it('omits Fast Return when the operator role cannot perform floor operations', async () => {
+    authStub.role = 'Client'
+    await mount(1280, '/rentals', true)
+    const checkbox = container.querySelector<HTMLInputElement>('tbody input[type="checkbox"]')!
+    await act(async () => checkbox.click())
+    const selectionHeader = container.querySelector('[data-testid="rental-selection-header"]')!
+    expect(selectionHeader.textContent).toContain('Export CSV')
+    expect(selectionHeader.textContent).not.toContain('Fast Return')
+  })
+
+  it('releases the selection mode when filters invalidate the selected rows', async () => {
+    await mount(1280, '/rentals', true)
+    const checkbox = container.querySelector<HTMLInputElement>('tbody input[type="checkbox"]')!
+    await act(async () => checkbox.click())
+    expect(container.querySelector('output[aria-label="Registered selected rental count"]')?.textContent).toBe('1')
+    const out = [...container.querySelectorAll('button')].find(b => b.getAttribute('aria-label') === 'Out')!
+    await act(async () => out.click())
+    expect(container.querySelector('output[aria-label="Registered selected rental count"]')?.textContent).toBe('0')
   })
 })

@@ -40,10 +40,10 @@ export function RentalHoverCard({
   const total = preview.rentalTotalPaisa ?? preview.payments?.summary.totalPaisa
 
   return (
-    <div>
-      <div id="smart-hover-title" style={{ padding: '14px 14px 8px' }}>
+    <div className="smart-intel">
+      <div className="smart-intel-identity" id="smart-hover-title">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-          <span className="identifier" style={{ fontWeight: 800, fontSize: 15 }}>{preview.isDraft ? '' : '#'}{preview.rentalNo}</span>
+          <span className="identifier" style={{ fontWeight: 800, fontSize: 16 }}>{preview.isDraft ? '' : '#'}{preview.rentalNo}</span>
           <span style={{ background: safeTone.bg, color: safeTone.fg, borderRadius: 'var(--r-chip)', padding: '4px 8px', fontSize: 11, fontWeight: 800, display: 'inline-flex', gap: 6, alignItems: 'center' }}>
             <Icon name={preview.packing.status === 'blocked' ? 'alert_triangle' : 'check'} size={13} />
             {preview.stage.toUpperCase()}
@@ -52,13 +52,14 @@ export function RentalHoverCard({
         {onOpenClient ? <button type="button" onClick={onOpenClient} style={{ background: 'none', border: 'none', padding: 0, color: 'var(--link)', fontSize: 13, cursor: 'pointer', textAlign: 'left', minHeight: 'var(--tap)' }}>
           {preview.clientName} ›
         </button> : <div>{preview.clientName}</div>}
-        <div style={{ fontSize: 12, color: 'var(--muted)' }}><span style={{ color: 'var(--booking-date-text)' }}>{preview.pickupAt} → {preview.returnAt}</span>{preview.rentalDays === null ? '' : ` · ${preview.rentalDays} rental day${preview.rentalDays === 1 ? '' : 's'}`}</div>
-      </div>
-      <div data-rental-intel-summary style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--surface-card, var(--card))', padding: '4px 0 0', borderBottom: '1px solid var(--border)' }}>
-      <div style={{ padding: '0 14px 8px' }}>
-        {canViewFinance ? <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginTop: 8 }}><span>{preview.isDraft ? 'Draft rental total' : 'Rental total'}</span><strong className={total !== undefined ? 'figure' : undefined}>{total !== undefined ? formatMoney(total as Paisa) : 'Not recorded'}</strong></div> : null}
+        <dl className="smart-intel-dates">
+          <div><dt>Pickup</dt><dd>{preview.pickupAt}</dd></div>
+          <div><dt>Return</dt><dd>{preview.returnAt}</dd></div>
+        </dl>
+        {preview.rentalDays !== null ? <div className="smart-intel-duration">{preview.rentalDays} rental day{preview.rentalDays === 1 ? '' : 's'}</div> : null}
+        {canViewFinance ? <div className="smart-intel-total"><span>{preview.isDraft ? 'Draft rental total' : 'Rental total'}</span><strong className={total !== undefined ? 'figure' : undefined}>{total !== undefined ? formatMoney(total as Paisa) : 'Not recorded'}</strong></div> : null}
         {beforeHandover && blocked ? (
-          <p role={blocked === 'Readiness verification unavailable' ? 'status' : 'alert'} style={{ margin: '6px 0 0', fontSize: 13, color: blocked === 'Readiness verification unavailable' ? 'var(--muted)' : 'var(--danger-text)' }}>{blocked === 'Readiness verification unavailable' ? 'Handover readiness not verified' : `🔴 Handover blocked — ${blocked}`}</p>
+          <p className="smart-intel-notice" role={blocked === 'Readiness verification unavailable' ? 'status' : 'alert'} style={{ color: blocked === 'Readiness verification unavailable' ? 'var(--muted)' : 'var(--danger-text)' }}><Icon name="alert_triangle" size={16} /><span>{blocked === 'Readiness verification unavailable' ? 'Handover readiness not verified' : `Handover blocked: ${blocked}`}</span></p>
         ) : (
           <p style={{ margin: '6px 0 0', fontSize: 13 }}>{preview.isDraft ? 'Saved draft — equipment is not reserved' : progress.total > 0 ? `Packing ${progress.packed} / ${progress.total}` : 'No assigned unit packing data'}</p>
         )}
@@ -74,8 +75,7 @@ export function RentalHoverCard({
         active={tab}
         onChange={setTab}
       />
-      </div>
-      <div role="tabpanel">
+      <div role="tabpanel" className="smart-intel-panel">
         {tab === 'overview' ? (
           <div style={{ fontSize: 13, display: 'grid', gap: 8 }}>
             {beforeHandover ? <section aria-label="Readiness">
@@ -140,10 +140,10 @@ export function RentalHoverCard({
 }
 
 function RentalItems({ equipment }: { equipment: RentalPreview['equipment'] }) {
-  return <section aria-label="Rental items">
+  return <section aria-label="Rental items" className="smart-intel-items">
     <h4 style={{ fontSize: 13, margin: '8px 0' }}>All items · {equipment.length} line{equipment.length === 1 ? '' : 's'}</h4>
     <ul style={{ margin: 0, padding: 0 }}>{equipment.map((item, index) => <li key={`${item.label}-${index}`} style={{ listStyle: 'none', padding: '8px 0', borderTop: '1px solid var(--border)', fontSize: 13, overflowWrap: 'anywhere' }}>
-      <span className="figure">{item.qty}× </span>{item.label}{item.packed !== undefined ? <span style={{ color: 'var(--muted)' }}> · {item.packed ? 'Packed' : 'Packing pending'}</span> : null}
+      <span className="figure smart-intel-quantity">{item.qty}×</span><span>{item.label}{item.packed !== undefined ? <span className="smart-intel-item-state">{item.packed ? 'Packed' : 'Packing pending'}</span> : null}</span>
     </li>)}</ul>
     {equipment.length === 0 ? <p style={{ color: 'var(--muted)' }}>No item lines recorded.</p> : null}
   </section>

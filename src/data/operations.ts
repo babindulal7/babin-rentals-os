@@ -63,15 +63,15 @@ export interface Queue {
   title: string
   /** What the operator actually does here. */
   action: string
-  icon: 'box' | 'checklist' | 'truck' | 'return_arrow' | 'eye' | 'sparkles'
+  icon: 'box' | 'checklist' | 'truck' | 'return_arrow' | 'eye' | 'sparkles' | 'package' | 'tool' | 'briefcase'
 }
 
 export const QUEUES: Queue[] = [
-  { job: 'Pack', title: 'Pack', action: 'Pack against the list', icon: 'box' },
+  { job: 'Pack', title: 'Pack', action: 'Pack against the list', icon: 'package' },
   { job: 'Handover', title: 'Handover', action: 'Complete pickup', icon: 'truck' },
   { job: 'Return', title: 'Return', action: 'Receive, count and inspect', icon: 'return_arrow' },
-  { job: 'Reset', title: 'Reset', action: 'Clean, reset, re-shelf', icon: 'sparkles' },
-  { job: 'Cases', title: 'Cases', action: 'Resolve missing and damage', icon: 'eye' },
+  { job: 'Reset', title: 'Reset', action: 'Clean, reset, re-shelf', icon: 'tool' },
+  { job: 'Cases', title: 'Cases', action: 'Resolve missing and damage', icon: 'briefcase' },
 ]
 
 /* ── CASES · the chip with no mapping ─────────────────────────────────────

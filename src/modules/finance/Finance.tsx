@@ -824,6 +824,11 @@ export default function Finance() {
       icon: 'invoice',
       accent: 'progress',
       detail: `${moneyOf(receivableTotal)} receivable`,
+      // L1: what this tile counts and what its figure sums. L2: a zero is a
+      // stated empty set (count query answered 0), never an unknown — the
+      // explanation rides only when the total is known.
+      definition: 'Live unpaid and partially-paid invoices; figure is Σ outstanding.',
+      ...(outstanding.total !== null ? { zeroExplanation: 'Nothing receivable — no unpaid invoices.' } : {}),
     },
     {
       label: 'Overdue',
@@ -831,6 +836,8 @@ export default function Finance() {
       icon: 'alert_triangle',
       accent: 'danger',
       detail: `${moneyOf(overdueTotal)} past due`,
+      definition: 'Past due date and still unpaid; figure is Σ outstanding past due.',
+      ...(overdue.total !== null ? { zeroExplanation: 'Nothing past due — every invoice is within terms.' } : {}),
     },
     {
       label: 'Received',
@@ -838,6 +845,8 @@ export default function Finance() {
       icon: 'card',
       accent: 'success',
       note: period.label,
+      definition: `Sum of payment rows dated within ${period.label}.`,
+      ...(receivedTotal !== null ? { zeroExplanation: `No payments recorded ${period.label}.` } : {}),
     },
   ]
 
