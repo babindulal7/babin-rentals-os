@@ -412,6 +412,16 @@ describe('Spec 03 §3.1 — queue chips filter ONE time-ordered list', () => {
   /* Zoom audit, 15 Oct 2026: a 1920px laptop at 150% is a 1280px desktop, and with the
      sidebar open its header is 1024px — the title measured 55px, truncated. The compact
      header follows the header's own width (`lib/headerRoom.ts`). */
+  /* Zoom audit, 17 Oct 2026: `overflow: 'hidden'` after `overflowX` won the cascade and clipped
+     the queue at 911px, leaving Action and the row link unreachable. */
+  it('lets the queue scroll sideways instead of clipping it', async () => {
+    viewport = 'tablet'
+    await mount(<OperationsQueues />, '/operations')
+    const scroller = document.querySelector<HTMLElement>('[aria-label="Operations queues"]')
+    expect(scroller?.style.overflowX).toBe('auto')
+    expect(scroller?.style.overflowY).toBe('hidden')
+  })
+
   it('uses the compact header on a desktop whose open sidebar leaves a 1024px header', async () => {
     const header = document.createElement('header')
     header.className = 'app-global-header'

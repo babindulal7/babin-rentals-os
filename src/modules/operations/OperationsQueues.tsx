@@ -1132,7 +1132,10 @@ export default function OperationsQueues() {
               </div>
             )}
             {tabular && (
-              <DataTableShell ariaLabel="Operations queues" data-table-scroll style={{ overflowX: 'auto', overflow: 'hidden' }}>
+              /* RULING 2026-10-17 (zoom audit): `overflow: 'hidden'` after `overflowX` won the cascade and
+                  clipped the queue at 911px — Action and the row link were unreachable. The corners
+                  still clip with overflowY hidden; the last two columns are pinned (operations.css). */
+              <DataTableShell ariaLabel="Operations queues" data-table-scroll style={{ overflowX: 'auto', overflowY: 'hidden' }}>
                 <table className="operations-v2__table">
                   <thead>
                     <tr>
