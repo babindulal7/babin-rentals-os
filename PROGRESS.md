@@ -1,5 +1,59 @@
 # Progress Log
 
+## 2026-10-18 — P0 Sales & VAT Report Integrity (truthful live ledgers, mock mode isolation, IRD review disclaimers)
+
+**Did**
+- Corrected live PostgreSQL schema alignment in `src/lib/queries/salesVatReports.ts`:
+  - Replaced obsolete column names with actual schema: `vat_amount` for VAT, `total_amount` for gross, `taxable_amount` for taxable base, `outstanding_amount`, `paid_amount`, `currency`, `voided_at`, and `clients.pan_vat` for client PAN.
+  - Excluded unissued drafts (`status === 'Draft'`), voided records (`status === 'Void'` or `voided_at != null`), and invoices lacking `issue_date`.
+  - Replaced fixed PostgREST 1000-row limit with deterministic pagination (`pageSize = 500`) ordered by `issue_date DESC, id ASC`, failing closed if any page fails.
+  - Eliminated fallback to `MOCK_SALES` and `MOCK_VAT` on live query failure or zero-row results. In live mode, zero invoices return `emptyRegister()`, and query rejections throw explicit errors.
+  - Added strict currency guard (NPR only), integer paisa validation (`asPaisa`), and arithmetic integrity check (`|taxable + tax - total| <= 1`).
+  - Separated 0% VAT rate invoices into `exemptTurnover` / `exemptSales`, and computed `positiveVatBase` for `effectiveVatRate`.
+  - Implemented dynamic Bikram Sambat fiscal grouping via `toBs()` and `BS_MONTHS` reflecting actual AD date spans per BS accounting month.
+- Overhauled `src/modules/reports/SalesVatReports.tsx` UI state management:
+  - Added explicit states: `loading` ("Loading verified invoice records…"), `loadError` (accessible `role="alert"` with "Retry" button), `empty` ("No invoices found for this period"), and verified data.
+  - Gated CSV export on verified real data: `!loading && !loadError && data && data.sales.metrics.invoiceCount > 0`. CSV download button is omitted during loading, errors, or empty states.
+  - Added statutory disclaimers in CSV export and UI: `"Nepal VAT Sales Register — Internal Review, Not a Filing Receipt (Reconcile with IRD Taxpayer Portal before filing)"`.
+  - Added dedicated `0% VAT Sales` KPI card and schedule column.
+  - Isolated mock demonstration: rendered persistent `role="note"` demo notice banner when `IS_MOCK` is active.
+- Added comprehensive unit test suites:
+  - `src/lib/queries/__tests__/salesVatReports.test.ts`: 11 query tests covering empty register, DB error rejection, null response handling, BS month grouping, 500+ pagination loop, draft/void exclusion, discounted taxable base, zero-VAT segregation, currency rejection, and arithmetic mismatch detection.
+  - `src/modules/reports/__tests__/SalesVatReports.states.test.tsx`: 5 component tests verifying loading state, error alert on DB error with CSV disabled, empty state with CSV disabled, demo mode notice on `IS_MOCK: true`, and verified data with CSV enabled.
+- Documented baseline bug reproduction and schema analysis in `docs/audits/2026-10-18-sales-vat-integrity.md`.
+
+**Ruled**
+- In live mode, financial registers must never invent numbers. Query rejections, RLS errors, network failures, or empty tables must never fall back to mock fixtures or fictional sample totals.
+- Financial figures must maintain integer paisa precision; amounts must not be prematurely rounded to whole rupees.
+- CSV export must only be enabled when real, verified, non-empty invoice data has been received.
+- Internal sales and VAT registers must visibly carry disclaimers stating they are for internal review and require reconciliation with the IRD Taxpayer Portal prior to statutory filing.
+
+**Verified**
+- `npx vitest run src/lib/queries/__tests__/salesVatReports.test.ts src/modules/reports/__tests__/SalesVatReports.states.test.tsx`: 16/16 passed.
+- `npm run typecheck`: clean (0 errors, exit code 0).
+- `npm run lint`: clean (0 errors, 0 warnings with `--max-warnings 0`).
+- `npm run check:contrast`: 82/82 pass, 0 fail.
+- `npm run check:pglite`: 167/167 applied, 0 failed.
+- `npm run check:lifecycle`: 31/31 green, 0 failed.
+- `npm run build`: built in 1m 15s, exit code 0.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-18T05:33:50.317Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-18T05:34:30.972Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply of migrations 0157–0168 by Babin on production.
+- Physical iPad Safari verification of floor touch targets and 125% zoom acceptance.
+
 ## 2026-10-18 — Booqable audit adoptions (duplication hygiene BQ-207, shortage action BQ-408, dashboard deep links BQ-205)
 
 **Did**

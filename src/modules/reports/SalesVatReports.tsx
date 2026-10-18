@@ -12,6 +12,7 @@ import Icon from '../../components/ui/Icon'
 import { formatMoney, type Paisa } from '../../lib/money'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
+import { IS_MOCK } from '../../lib/supabase'
 import {
   getSalesVatReport,
   type SalesReportData,
@@ -45,6 +46,9 @@ export default function SalesVatReports() {
   const [activeTab, setActiveTab] = useState<FinanceReportTab>('sales')
   const [filters, setFilters] = useState<ReportFilters>({})
   const [data, setData] = useState<{ sales: SalesReportData; vat: VatTaxReportData } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [revision, setRevision] = useState(0)
 
   useEffect(() => {
     let active = true
@@ -56,15 +60,27 @@ export default function SalesVatReports() {
       branchId,
     }
 
-    void getSalesVatReport(queryOpts).then((res) => {
-      if (active) setData(res)
-    })
+    setLoading(true)
+    setLoadError(null)
+    setData(null)
+
+    void getSalesVatReport(queryOpts)
+      .then((res) => {
+        if (active) setData(res)
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setLoadError(error instanceof Error ? error.message : 'Sales/VAT report unavailable.')
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
 
     return () => {
       active = false
     }
-  }, [filters])
-
+  }, [filters, revision])
 
   // Sales KPI Strip
   const salesKpis = useMemo<Kpi[]>(() => {
@@ -116,7 +132,7 @@ export default function SalesVatReports() {
         value: formatMoney(m.totalGrossTurnover),
         icon: 'dollar',
         accent: 'primary',
-        note: 'Total billing including 13% VAT',
+        note: 'Total issued-invoice billing including VAT',
         definition: 'Gross turnover = taxable sales + 13% VAT.',
       },
       {
@@ -132,7 +148,7 @@ export default function SalesVatReports() {
         value: formatMoney(m.totalOutputVat),
         icon: 'file',
         accent: 'success',
-        note: 'Statutory liability to IRD Nepal',
+        note: 'Output VAT on issued invoices; verify before filing',
         definition: 'Output VAT owed to IRD Nepal for the period.',
       },
       {
@@ -140,7 +156,15 @@ export default function SalesVatReports() {
         value: `${m.effectiveVatRate}%`,
         icon: 'sparkles',
         accent: 'neutral',
-        note: 'Zero-rated exemptions: Rs 0',
+        note: 'Output VAT divided by VAT-taxable sales',
+      },
+      {
+        label: '0% VAT Sales',
+        value: formatMoney(m.exemptTurnover),
+        icon: 'file',
+        accent: 'neutral',
+        note: 'Invoice VAT rate is 0%; legal tax category needs review',
+        definition: 'Invoices issued at 0% VAT. Requires separate accounting verification.',
       },
     ]
   }, [data])
@@ -149,7 +173,7 @@ export default function SalesVatReports() {
   const getCsvRows = (): ReportCsvRow[] => {
     if (activeTab === 'sales') {
       return [
-        ['Invoiced Sales Report'],
+        ['Invoiced Sales Report — Internal Review, Not a Filing Receipt'],
         ['Metric', 'Value'],
         ['Total Invoiced', formatMoney(data?.sales.metrics.totalInvoiced ?? (0 as Paisa))],
         ['Net Sales (Subtotal)', formatMoney(data?.sales.metrics.netSales ?? (0 as Paisa))],
@@ -185,15 +209,16 @@ export default function SalesVatReports() {
       ]
     } else {
       return [
-        ['Nepal Statutory 13% VAT Register (Inland Revenue Department)'],
+        ['Nepal VAT Sales Register — Internal Review, Not a Filing Receipt (Reconcile with IRD Taxpayer Portal before filing)'],
         ['Metric', 'Value'],
         ['Gross Invoiced Turnover', formatMoney(data?.vat.metrics.totalGrossTurnover ?? (0 as Paisa))],
         ['Taxable Sales Turnover', formatMoney(data?.vat.metrics.taxableTurnover ?? (0 as Paisa))],
         ['Total Output VAT (13%)', formatMoney(data?.vat.metrics.totalOutputVat ?? (0 as Paisa))],
+        ['0% VAT Sales Turnover', formatMoney(data?.vat.metrics.exemptTurnover ?? (0 as Paisa))],
         ['Statutory Tax Rate', `${data?.vat.metrics.effectiveVatRate ?? 0}%`],
         [],
         ['Monthly IRD Filing Schedule (Bikram Sambat Fiscal Periods)'],
-        ['Month (AD)', 'BS Month', 'Taxable Sales', '13% Output VAT', 'Exempt Sales', 'Gross Sales'],
+        ['AD invoice-date span', 'BS Month', 'VAT-taxable Sales', '13% Output VAT', '0%-VAT Sales (review)', 'Gross Sales'],
         ...(data?.vat.monthlySchedule.map((ms): ReportCsvRow => [
           ms.month,
           ms.bsMonth,
@@ -210,7 +235,7 @@ export default function SalesVatReports() {
           formatAd(new Date(tr.issueDate)),
           tr.clientName,
           tr.clientPan || 'Unregistered',
-          formatMoney(tr.subtotal),
+          formatMoney(tr.taxableAmount ?? tr.subtotal),
           formatMoney(tr.taxAmount),
           formatMoney(tr.grandTotal),
         ]) ?? []),
@@ -254,7 +279,7 @@ export default function SalesVatReports() {
       <PageHeader
         icon="file"
         title="Sales & VAT Register"
-        description="Statutory sales ledger, payment collection status, and Nepal 13% VAT register for IRD filing."
+        description="Internal review register for issued invoice sales and VAT liability. Reconcile with IRD Taxpayer Portal before filing."
       />
 
       {/* Shared Toolbar */}
@@ -263,10 +288,14 @@ export default function SalesVatReports() {
         value={filters}
         onChange={setFilters}
         dateColumn="issue_date"
-        csv={{
-          filename: `finance-${activeTab}`,
-          build: getCsvRows,
-        }}
+        csv={
+          !loading && !loadError && data && data.sales.metrics.invoiceCount > 0
+            ? {
+                filename: `finance-${activeTab}`,
+                build: getCsvRows,
+              }
+            : undefined
+        }
       >
         <div
           role="group"
@@ -294,8 +323,112 @@ export default function SalesVatReports() {
         </div>
       </ReportToolbar>
 
+      {/* Demo Mode Notice */}
+      {IS_MOCK && (
+        <aside
+          role="note"
+          aria-label="Demo mode warning"
+          style={{
+            ...cardStyle,
+            padding: '12px 16px',
+            background: 'var(--surface-hover)',
+            borderLeft: '4px solid var(--primary)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--sp-sm)',
+          }}
+        >
+          <Icon name="sparkles" size={16} />
+          <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
+            Demo Data Active: These figures are sample/demo data generated for offline demonstration. They do not represent real financial transactions or statutory tax returns.
+          </span>
+        </aside>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <section
+          role="status"
+          aria-label="Loading sales and VAT reports"
+          style={{
+            ...cardStyle,
+            padding: 'var(--sp-xl)',
+            textAlign: 'center',
+            color: 'var(--text2)',
+            fontSize: 'var(--t-body)',
+          }}
+        >
+          Loading verified invoice records…
+        </section>
+      )}
+
+      {/* Error State */}
+      {!loading && loadError && (
+        <section
+          role="alert"
+          aria-label="Sales and VAT report error"
+          style={{
+            ...cardStyle,
+            padding: 'var(--sp-lg)',
+            background: 'var(--status-danger-bg)',
+            borderColor: 'var(--status-danger-border, var(--border))',
+            color: 'var(--status-danger-text)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--sp-sm)',
+            alignItems: 'flex-start',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-xs)', fontWeight: 600 }}>
+            <Icon name="alert_triangle" size={18} />
+            <span>Sales/VAT report unavailable</span>
+          </div>
+          <p style={{ margin: 0, fontSize: 'var(--t-meta)' }}>
+            {loadError}. The invoice database could not be read; no sample totals or CSV can be displayed.
+          </p>
+          <button
+            type="button"
+            onClick={() => setRevision((r) => r + 1)}
+            style={{
+              minHeight: 44,
+              padding: '0 16px',
+              borderRadius: 'var(--r-sm)',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              color: 'var(--text)',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Retry
+          </button>
+        </section>
+      )}
+
+      {/* Empty State */}
+      {!loading && !loadError && data && data.sales.metrics.invoiceCount === 0 && (
+        <section
+          role="status"
+          aria-label="No invoices found"
+          style={{
+            ...cardStyle,
+            padding: 'var(--sp-xl)',
+            textAlign: 'center',
+            color: 'var(--text2)',
+            fontSize: 'var(--t-body)',
+          }}
+        >
+          <p style={{ margin: '0 0 var(--sp-xs)', fontWeight: 600, color: 'var(--text)' }}>
+            No invoices found for this period
+          </p>
+          <p style={{ margin: 0, fontSize: 'var(--t-meta)' }}>
+            There are no issued invoices recorded for the selected date range. No figures or CSV are available to export.
+          </p>
+        </section>
+      )}
+
       {/* TAB 1: INVOICED SALES */}
-      {activeTab === 'sales' && (
+      {!loading && !loadError && data && data.sales.metrics.invoiceCount > 0 && activeTab === 'sales' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
           <KpiStrip items={salesKpis} />
 
@@ -331,7 +464,7 @@ export default function SalesVatReports() {
                 Primary revenue contributors and open balance status.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
-                {data?.sales.topClients.map((c) => (
+                {data.sales.topClients.map((c) => (
                   <div
                     key={c.clientId}
                     style={{
@@ -402,7 +535,7 @@ export default function SalesVatReports() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data?.sales.invoices.map((inv) => (
+                  {data.sales.invoices.map((inv) => (
                     <tr key={inv.id}>
                       <td style={{ ...td, fontWeight: 600, color: 'var(--primary)' }}>{inv.invoiceNo}</td>
                       <td style={{ ...td, fontWeight: 600 }}>{inv.clientName}</td>
@@ -446,33 +579,33 @@ export default function SalesVatReports() {
       )}
 
       {/* TAB 2: NEPAL 13% VAT REGISTER */}
-      {activeTab === 'vat' && (
+      {!loading && !loadError && data && data.sales.metrics.invoiceCount > 0 && activeTab === 'vat' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
           <KpiStrip items={vatKpis} />
 
           {/* Monthly IRD Schedule */}
           <div style={cardStyle}>
             <h3 style={{ fontSize: 'var(--t-h3)', fontWeight: 600, marginBottom: 'var(--sp-sm)' }}>
-              Monthly VAT Filing Schedule (Inland Revenue Department Format)
+              Monthly BS VAT Sales Schedule (Review Before Filing)
             </h3>
             <p style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', marginBottom: 'var(--sp-md)' }}>
-              Summary of monthly taxable turnover and 13% VAT collected for monthly return submission on IRD Taxpayer Portal.
+              Summary of issued invoice VAT and zero-VAT amounts grouped by Nepal (BS) month. Validate rates, exemptions and totals with Accounts before statutory filing.
             </p>
 
             <DataTableShell ariaLabel="Monthly VAT Filing Schedule">
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
-                    <th style={th}>Tax Period (AD)</th>
+                    <th style={th}>AD invoice-date span</th>
                     <th style={th}>Bikram Sambat Month</th>
-                    <th style={{ ...th, textAlign: 'right' }}>Taxable Sales (Rs)</th>
+                    <th style={{ ...th, textAlign: 'right' }}>VAT-taxable Sales (Rs)</th>
                     <th style={{ ...th, textAlign: 'right' }}>13% Output VAT (Rs)</th>
-                    <th style={{ ...th, textAlign: 'right' }}>Exempt Sales</th>
+                    <th style={{ ...th, textAlign: 'right' }}>0%-VAT Sales (review)</th>
                     <th style={{ ...th, textAlign: 'right' }}>Gross Invoiced Total</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {data?.vat.monthlySchedule.map((ms) => (
+                  {data.vat.monthlySchedule.map((ms) => (
                     <tr key={ms.month}>
                       <td style={td}>{ms.month}</td>
                       <td style={{ ...td, fontWeight: 600 }}>{ms.bsMonth}</td>
@@ -512,13 +645,13 @@ export default function SalesVatReports() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data?.vat.taxRegister.map((tr) => (
+                  {data.vat.taxRegister.map((tr) => (
                     <tr key={tr.id}>
                       <td style={{ ...td, fontWeight: 600, color: 'var(--primary)' }}>{tr.invoiceNo}</td>
                       <td style={td}>{formatAd(new Date(tr.issueDate))}</td>
                       <td style={{ ...td, fontWeight: 600 }}>{tr.clientName}</td>
                       <td style={{ ...td, fontFamily: 'var(--font-id, sans-serif)', fontVariantNumeric: 'tabular-nums' }}>{tr.clientPan || 'Unregistered'}</td>
-                      <td style={{ ...td, textAlign: 'right' }}>{formatMoney(tr.subtotal)}</td>
+                      <td style={{ ...td, textAlign: 'right' }}>{formatMoney(tr.taxableAmount ?? tr.subtotal)}</td>
                       <td style={{ ...td, textAlign: 'right', fontWeight: 600, color: 'var(--status-success-text)' }}>
                         {formatMoney(tr.taxAmount)}
                       </td>
@@ -530,6 +663,17 @@ export default function SalesVatReports() {
             </DataTableShell>
           </div>
         </div>
+      )}
+
+      {/* Internal Review Legal Disclaimer */}
+      {!loading && !loadError && data && data.sales.metrics.invoiceCount > 0 && (
+        <p style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', margin: 0 }}>
+          Internal review figures only. Not a statutory filing receipt. Reconcile with Inland Revenue Department (IRD) Taxpayer Portal before return submission. Detailed invoices are managed under{' '}
+          <Link to="/finance?tab=invoices" style={{ color: 'var(--primary)' }}>
+            Finance invoices
+          </Link>
+          .
+        </p>
       )}
     </div>
   )
