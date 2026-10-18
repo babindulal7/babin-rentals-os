@@ -601,4 +601,144 @@ describe('useNewRentalSubmit', () => {
       host.remove()
     }
   })
+
+  it('safely serializes bundle and component lines with non-uuid IDs to null productId and bundleId', async () => {
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const root = createRoot(host)
+
+    const dummyClient = {
+      dbId: 'client-db-1',
+      id: 'CL-001',
+      name: 'Test Client',
+      phone: '9841000000',
+      email: 'test@example.com',
+      company: 'Test Co',
+      address: 'Kathmandu',
+      pan: '123456789',
+      creditLimitPaisa: 0 as Paisa,
+      active_rentals_count: 0,
+      risk_tier: 'Low',
+      health_score: 95,
+      flags: [],
+      notes: '',
+      has_signed_agreement: true,
+      requires_deposit: false,
+      is_flagged: false,
+    } as unknown as ClientRecord
+
+    const bundleLines = [
+      {
+        id: 'BND-23',
+        clientUuid: 'bnd-client-uuid-1',
+        lineType: 'Bundle',
+        bundleId: 'BND-23',
+        name: 'Cinema Camera Package',
+        qty: 1,
+        days: 2,
+        ratePaisa: 1500000 as Paisa,
+        isIncluded: false,
+      },
+      {
+        id: 'BND-23::Sony FX3 Camera Body',
+        clientUuid: 'comp-client-uuid-2',
+        parentClientUuid: 'bnd-client-uuid-1',
+        lineType: 'Equipment',
+        productId: 'non-uuid-model-fx3',
+        bundleId: 'BND-23',
+        name: 'Sony FX3 Camera Body',
+        qty: 1,
+        days: 2,
+        ratePaisa: 0 as Paisa,
+        isIncluded: true,
+      },
+    ]
+
+    const dummyPricing = {
+      securityDeposit: { requiredPaisa: 0 as Paisa },
+      discounts: { discountPaisa: 0 as Paisa, appliedPercent: 0 },
+      vatRatePercent: 13,
+    } as unknown as PricingPipelineResult
+    const confirmKey = { current: null }
+    const draftBookingKey = { current: null }
+
+    let submitHook!: ReturnType<typeof useNewRentalSubmit>
+    function TestBundleComponent() {
+      submitHook = useNewRentalSubmit({
+        confirmBlocked: false,
+        saveState: 'saved',
+        setSaveState: vi.fn(),
+        dispatchContext: () => ({ userId: 'user-1', role: 'Coordinator' }),
+        setActionError: vi.fn(),
+        setConfirmedSuccess: vi.fn(),
+        showSuccessToast: vi.fn(),
+        client: dummyClient,
+        lines: bundleLines as any,
+        equipmentLines: bundleLines as any,
+        project: 'Commercial',
+        pickupAt: new Date('2026-11-01T09:00:00Z'),
+        returnAt: new Date('2026-11-03T18:00:00Z'),
+        deliveryType: 'Client Pickup',
+        pricing: dummyPricing,
+        manualDiscountReason: '',
+        manualDiscountAuthorizedBy: '',
+        womenDopEligible: false,
+        crew: [],
+        clientPickup: true,
+        deliveryChargePaisa: 0 as any,
+        fuelChargePaisa: 0 as any,
+        returnPickupType: 'Client Return',
+        returnPickupAddress: '',
+        returnPickupTime: '18:00',
+        returnPickupChargePaisa: 0,
+        returnTransportPaisa: 0,
+        vehicle: '',
+        numberPlate: '',
+        driverContact: '',
+        pickupLocation: '',
+        returnLocation: '',
+        specialInstructions: '',
+        days: 2,
+        draftId: null,
+        draftBookingNo: null,
+        draftHasUnsavedChanges: false,
+        draftData: {} as any,
+        setSavedDraftFingerprint: vi.fn(),
+        kind: 'Commercial',
+        kindOther: '',
+        confirmKey,
+        draftBookingKey,
+      })
+      return null
+    }
+
+    try {
+      await act(async () => {
+        root.render(<TestBundleComponent />)
+      })
+
+      await act(async () => {
+        submitHook.confirmBooking()
+      })
+
+      expect(createRental).toHaveBeenCalledTimes(1)
+      const payload = vi.mocked(createRental).mock.calls[0]?.[0]
+      expect(payload?.lines).toHaveLength(2)
+
+      // Line 1: bundle line has bundleId null (since BND-23 is not a uuid)
+      expect(payload?.lines[0]?.bundleId).toBeNull()
+
+      // Line 2: component line has productId null and bundleId null (preventing uuid rejection)
+      expect(payload?.lines[1]?.productId).toBeNull()
+      expect(payload?.lines[1]?.bundleId).toBeNull()
+      expect(payload?.lines[1]?.isIncluded).toBe(true)
+      expect(payload?.lines[1]?.parentClientUuid).toBe('bnd-client-uuid-1')
+    } finally {
+      await act(async () => {
+        root.unmount()
+      })
+      host.remove()
+    }
+  })
 })
+

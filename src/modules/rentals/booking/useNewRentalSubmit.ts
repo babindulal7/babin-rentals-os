@@ -323,7 +323,13 @@ export function useNewRentalSubmit({
                   lineType: (l.lineType ?? 'Equipment') as BookingLineType,
                   isIncluded,
                   ...(isBundle
-                    ? { bundleId: l.bundleId ?? null, description: l.name }
+                    ? {
+                        bundleId:
+                          l.bundleId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(l.bundleId)
+                            ? l.bundleId
+                            : null,
+                        description: l.name,
+                      }
                     : inventoryLine
                       ? {
                           productId:
@@ -332,6 +338,10 @@ export function useNewRentalSubmit({
                               : l.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(l.id)
                                 ? l.id
                                 : null,
+                          bundleId:
+                            l.bundleId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(l.bundleId)
+                              ? l.bundleId
+                              : null,
                           description: l.name,
                         }
                       : { description: l.name }),
