@@ -679,4 +679,4 @@ export const createRentalConfig: ActionConfig<CreateRentalInput, CreateRentalRes
   },
 }
 
-export const createRental = createAction(createRentalConfig)
+export const createRental = createAction<CreateRentalInput, CreateRentalResult>(createRentalConfig)

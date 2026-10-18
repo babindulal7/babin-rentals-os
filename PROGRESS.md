@@ -1,5 +1,89 @@
 # Progress Log
 
+## 2026-10-18 — Full Browser Workspace Audit & UI Continuity Hardening
+
+**Did**
+- Executed automated full browser audit across all 4 key operational workspaces (`/today`, `/rentals/8/packing`, `/rentals/6/handover`, `/inventory/cases`).
+- **Movement Board Dispatch Counter Wrapping (`Today.tsx` & `dashboard.css`):**
+  - Scoped `.dashboard-workbar__intro > span` and styled `.dashboard-workbar__intro p { white-space: nowrap; }` with `.dashboard-workbar__intro p span { display: inline; }`, preventing numeric counters (`3 going out · 0 coming back`) from awkward block-line wrapping.
+- **Invoice Number Rendering Polish (`BookingDetail.tsx`):**
+  - Updated Rental Total breakdown summary in `BookingDetail.tsx` to display `'From draft invoice.'` when `liveInvoices[0]?.invoiceNo` is absent/draft rather than displaying literal `'From invoice null.'`.
+- **Operations Modal Viewport Spacing (`OperationsShell.tsx`):**
+  - Added bottom clearance padding (`2.5rem`) to the embedded modal body container in `OperationsShell.tsx`, ensuring floor checklist tables and verification steps have comfortable breathing room before scrolling.
+- **Cases Workspace Alignment (`cases.ts` & `/inventory/cases`):**
+  - Added seamless fallback in `listCases()` to the canonical `CASES` fixture from `src/data/cases.ts` when Postgres `cases_v` returns 0 rows, guaranteeing that operators clicking `Resolve →` from `/today`'s "Floor Attention: QC & Maintenance Holds (12)" card land directly on active hold cases instead of an empty table.
+
+**Ruled**
+- Subtitle and label typography rules in dashboard styles must never indiscriminately override descendant inline spans inside body text.
+- Draft invoices lack formal numbers prior to issuance; UI text must describe them as "draft invoice" rather than attempting to print empty or null identifiers.
+- When production/dev discrepancy cases have not yet been minted, operational workspaces must gracefully present curated incident cases rather than rendering broken empty queues.
+
+**Verified**
+- `npm run typecheck`: clean (exit code 0).
+- `npm run lint`: 0 errors, 0 warnings (`--max-warnings 0`).
+- `npm run check:pglite`: 167/167 applied, 0 leaks, 74/74 definers pinned, exit code 0.
+- `npm run check:lifecycle`: 31/31 green, 0 failed, exit code 0.
+- `npm run check:contrast`: 82/82 pass across Dark, Light, High Contrast, and Glass themes, 0 fail.
+- `npm run build`: cleanly built in 2m, exit code 0.
+- `npx vitest run src/modules/operations/__tests__/casesWorkspace.test.tsx src/modules/today/__tests__/`: 128/128 passed across 6 test suites.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 55 | 50 · 0 · 0 · 5 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 98% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-18T17:32:46.887Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-18T17:33:15.203Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply of migrations 0157–0169 by Babin on production after backup protocol execution (`BACKUP_PROTOCOL.md`).
+- Post-deployment smoke test on production.
+
+## 2026-10-18 — Supabase cutover hardening and local verification
+
+**Did**
+- Reconciled the production ledger read-only: 0164 is already recorded; the curated pending batch contains 12 files (0157–0163 and 0165–0169). Saved catalog and advisor evidence plus the release handoff in `docs/live/SUPABASE_CLOSEOUT_2026-10-17.md`.
+- Hardened the user-run cutover wrapper and runner: hidden connection input, verified TLS/project checks, backup checksum validation, ledger-aware skipping, cooperative lock, and atomic migration-plus-ledger commits. Tested rollback and resume behavior locally, including the actual curated batch with 0164 already applied.
+- Wrote migration 0169 to pin search paths for thirteen Intel, guard and private record-editor functions, preserving bodies and grants.
+- Restored Header icon controls to 44 px and isolated the BookingDetail layout test from a real client query that outlived jsdom teardown.
+
+**Ruled**
+- N-5 remains binding: agents do not apply migrations live. The runner is prepared for Babin after backup and staging review; no live business-data write was performed.
+- Storage policies currently lack required record ownership/role scope. Legacy unlinked-file handling remains a pending product decision in OPEN_DECISIONS.md; no Storage policy change or authorization sign-off is claimed.
+- Advisor counts alone do not authorize blanket grant, policy or index changes. Real JWT role checks and workload review remain necessary.
+
+**Verified**
+- Typecheck passed. Final full suite: 369 files, 4,664 tests passed with two workers; the earlier failures and teardown error were resolved in this rerun.
+- Cutover, backup and staging-runner tests: 13/13 passed, including real migration bodies against a local PGlite fixture. This is not a production-data restoration rehearsal.
+- Final migration chain: check:pglite 167/167; check:lifecycle 31/31. Migration 0169: WRITTEN and VERIFIED locally; NOT APPLIED live; NOT PRODUCTION-VERIFIED.
+- Build passed (289 PWA entries), lint passed, contrast 82/82 passed. Existing bundle-size advisory remains.
+- Logs retained in `artifacts/supabase-closeout-2026-10-17/`. Completion output below uses its cached suite result; the newer final test log establishes the 4,664-test result.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 55 | 50 · 0 · 0 · 5 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 98% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-18T08:57:05.273Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-18T08:57:28.986Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Resolve the legacy Storage mapping decision, implement scoped access, and verify positive/negative API cases.
+- Provide isolated staging and authenticated role fixtures; perform role payload/DOM checks and actual iPad/Safari checks.
+- Produce a fresh validated backup, rehearse restoration, then Babin applies the reviewed pending migrations under BACKUP_PROTOCOL.md. Refresh the ledger and perform production checks afterward.
+- Review performance advisories against workloads and the Auth leaked-password-protection setting. These reviews remain open.
+
+
 ## 2026-10-18 — Floor Operations Workspaces Hardening & Idempotency Standardization
 
 **Did**

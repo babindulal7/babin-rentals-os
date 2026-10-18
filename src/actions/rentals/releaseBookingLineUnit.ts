@@ -139,4 +139,4 @@ export const releaseBookingLineUnitConfig: ActionConfig<ReleaseBookingLineUnitIn
   },
 }
 
-export const releaseBookingLineUnit = createAction(releaseBookingLineUnitConfig)
+export const releaseBookingLineUnit = createAction<ReleaseBookingLineUnitInput, ReleaseBookingLineUnitResult>(releaseBookingLineUnitConfig)

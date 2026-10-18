@@ -633,4 +633,4 @@ export const confirmRentalConfig: ActionConfig<ConfirmRentalInput, ConfirmRental
   },
 }
 
-export const confirmRental = createAction(confirmRentalConfig)
+export const confirmRental = createAction<ConfirmRentalInput, ConfirmRentalResult>(confirmRentalConfig)

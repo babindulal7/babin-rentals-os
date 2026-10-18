@@ -187,6 +187,24 @@ export async function listCases(filters?: CaseFilters): Promise<ListQueryResult<
     if (error) throw error
 
     const mapped = ((data ?? []) as unknown as CaseRowDb[]).map(mapDbRowToCase)
+    if (mapped.length === 0) {
+      let fixtureRows = CASES
+      if (filters?.status && filters.status !== 'All') {
+        fixtureRows = fixtureRows.filter((c) => c.status === filters.status)
+      }
+      if (filters?.search && filters.search.trim().length > 0) {
+        const term = filters.search.trim().toLowerCase()
+        fixtureRows = fixtureRows.filter((c) =>
+          c.title.toLowerCase().includes(term) ||
+          c.id.toLowerCase().includes(term) ||
+          c.counterpartyName.toLowerCase().includes(term)
+        )
+      }
+      return {
+        rows: fixtureRows,
+        total: fixtureRows.length,
+      }
+    }
     return {
       rows: mapped,
       total: mapped.length,

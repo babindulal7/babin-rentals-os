@@ -2651,7 +2651,7 @@ function BookingDetailView() {
                           <span className="figure" style={{ fontFamily: 'var(--font-id, sans-serif)', fontSize: '15px' }}>{money(totals.total)}</span>
                         </div>
                         <p style={{ margin: '8px 0 0', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-                          From {liveInvoices.length === 1 ? `invoice ${liveInvoices[0]?.invoiceNo}` : `${liveInvoices.length} live invoices`}.
+                          From {liveInvoices.length === 1 ? (liveInvoices[0]?.invoiceNo ? `invoice ${liveInvoices[0].invoiceNo}` : 'draft invoice') : `${liveInvoices.length} live invoices`}.
                         </p>
                       </>
                     ) : (

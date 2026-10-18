@@ -593,7 +593,7 @@ export default function OperationsShell({
         footer={footerNode}
       >
         <FloorNarrowContext.Provider value={narrow}>
-          <div ref={setBodyEl}>{bodyNode}</div>
+          <div ref={setBodyEl} style={{ paddingBottom: '2.5rem' }}>{bodyNode}</div>
         </FloorNarrowContext.Provider>
       </Modal>
 

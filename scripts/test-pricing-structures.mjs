@@ -3,22 +3,11 @@
 // nothing), Owner/Admin/Manager write, Law 3 (nothing deleted), a database audit row per change, shape
 // checks, and that changing a product's pricing link is a money-visible-role action.
 // EXCLUDE_MIGRATION=0160 proves the checks fail without the migration.
-import { PGlite } from '@electric-sql/pglite'
-import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto'
-import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist'
-import { readdirSync, readFileSync } from 'node:fs'
-import { join, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { createTestDatabase } from './lib/pglite-test-utils.mjs'
 
-const HERE = dirname(fileURLToPath(import.meta.url))
-const MIG = join(HERE, '..', 'supabase', 'migrations')
 const skip = process.env.EXCLUDE_MIGRATION
-const db = await PGlite.create({ extensions: { pgcrypto, btree_gist } })
-await db.exec(readFileSync(join(HERE, '..', 'supabase', 'pglite-prelude.sql'), 'utf8'))
-for (const f of readdirSync(MIG).filter((f) => f.endsWith('.sql')).sort()) {
-  if (skip && skip.split(',').some((x) => f.startsWith(x))) continue
-  await db.exec(readFileSync(join(MIG, f), 'utf8'))
-}
+const excludeMigrations = skip ? skip.split(',') : []
+const db = await createTestDatabase({ excludeMigrations })
 let failed = 0
 const check = (ok, msg) => { console.log(`${ok ? '✓' : '✗'} ${msg}`); if (!ok) failed++ }
 const branchId = (await db.query(`select id from branches order by created_at limit 1`)).rows[0].id

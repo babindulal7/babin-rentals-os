@@ -1334,7 +1334,7 @@ export default function PackingWorkspace({
                       Pack job: {jobChip.label}
                     </span>
                   </div>
-                  <p style={{ margin: '5px 0 0', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+                  <div style={{ margin: '5px 0 0', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
                     <RentalIntelFromFloor floor={floor} context="packing" role={user?.role ?? 'Client'}>
                       <Link to={`/rentals/${id}`} style={{ color: 'var(--link)', fontWeight: 600, textDecoration: 'none' }} className="identifier">
                         {floor.bookingNo}
@@ -1342,7 +1342,7 @@ export default function PackingWorkspace({
                     </RentalIntelFromFloor>
                     {floor.project ? ` · ${floor.project}` : ''}
                     {floor.clientName ? ` · ${floor.clientName}` : ''}
-                  </p>
+                  </div>
                 </div>
               )}
 

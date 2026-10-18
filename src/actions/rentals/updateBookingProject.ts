@@ -170,4 +170,4 @@ export const updateBookingProjectConfig: ActionConfig<UpdateBookingProjectInput,
   },
 }
 
-export const updateBookingProject = createAction(updateBookingProjectConfig)
+export const updateBookingProject = createAction<UpdateBookingProjectInput, UpdateBookingProjectResult>(updateBookingProjectConfig)

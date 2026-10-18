@@ -399,4 +399,4 @@ export const updateBundleConfig: ActionConfig<UpdateBundleInput, UpdateBundleRes
   },
 };
 
-export const updateBundle = createAction(updateBundleConfig);
+export const updateBundle = createAction<UpdateBundleInput, UpdateBundleResult>(updateBundleConfig);

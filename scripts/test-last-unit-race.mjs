@@ -6,18 +6,9 @@
 // interleaved. This proves the constraints (exclusion + capacity ceiling) are what stops the
 // second writer regardless of any availability pre-check; it does NOT prove two live
 // connections cannot interleave. That needs a real Postgres (see PROGRESS.md 2026-10-06 (g)).
-import { PGlite } from '@electric-sql/pglite'
-import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto'
-import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist'
-import { readdirSync, readFileSync } from 'node:fs'
-import { join, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { createTestDatabase } from './lib/pglite-test-utils.mjs'
 
-const HERE = dirname(fileURLToPath(import.meta.url))
-const MIG = join(HERE, '..', 'supabase', 'migrations')
-const db = await PGlite.create({ extensions: { pgcrypto, btree_gist } })
-await db.exec(readFileSync(join(HERE, '..', 'supabase', 'pglite-prelude.sql'), 'utf8'))
-for (const f of readdirSync(MIG).filter((f) => f.endsWith('.sql')).sort()) await db.exec(readFileSync(join(MIG, f), 'utf8'))
+const db = await createTestDatabase()
 
 let failed = 0
 const check = (ok, msg) => { console.log(`${ok ? '✓' : '✗'} ${msg}`); if (!ok) failed++ }

@@ -445,4 +445,4 @@ export const createStockTransferConfig: ActionConfig<CreateStockTransferInput, C
   },
 }
 
-export const createStockTransfer = createAction(createStockTransferConfig)
+export const createStockTransfer = createAction<CreateStockTransferInput, CreateStockTransferResult>(createStockTransferConfig)

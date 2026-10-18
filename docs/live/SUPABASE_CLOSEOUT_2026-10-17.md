@@ -1,6 +1,6 @@
 # Supabase closeout: 17 October 2026
 
-## Status: local preparation in progress; production release blocked
+## Status: local hardening verified; production release blocked
 
 Production project: `sxguwvgoserhdolewibb`. Read-only ledger snapshot: [schema_migrations_2026-10-17.txt](schema_migrations_2026-10-17.txt), 156 rows. No live migration or business-data write was performed by this pass.
 
@@ -19,7 +19,7 @@ Production project: `sxguwvgoserhdolewibb`. Read-only ledger snapshot: [schema_m
 9. 0166 booking transport dispatch
 10. 0167 rental revert/archive
 11. 0168 booking line totals and breakdown
-12. 0169 Intel/guard search-path pinning (WRITTEN in this pass; verification recorded in PROGRESS.md)
+12. 0169 Intel/guard search-path pinning (WRITTEN and VERIFIED locally; NOT APPLIED live)
 
 The historical 0047 seed must stay excluded. Seven historical renames and two out-of-band ledger rows remain visible in the planner output; the curated runner does not replay them or automatically declare those identities reconciled. A migration ledger match is not proof of schema equivalence.
 
@@ -55,6 +55,16 @@ Advisor references: [Auth exposure](https://supabase.com/docs/guides/database/da
 Saved raw findings under `artifacts/supabase-closeout-2026-10-17/performance-advisors.json`: 346 unindexed-FK findings, 13 auth/RLS init-plan findings, 35 no-primary-key findings, 130 unused-index findings, 403 multiple-permissive-policy findings and two duplicate-index findings. These are advisor finding counts across its inspected schemas and role/action combinations, not verified application defects or a ranked migration list.
 
 No index or policy was dropped in response to an advisory count. Index removal needs workload/statistics review; policy consolidation must preserve the existing OR/AND permission semantics. Review [FK indexes](https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys), [RLS init plans](https://supabase.com/docs/guides/database/database-linter?lint=0003_auth_rls_initplan), [permissive policy combinations](https://supabase.com/docs/guides/database/database-linter?lint=0006_multiple_permissive_policies) and [duplicate indexes](https://supabase.com/docs/guides/database/database-linter?lint=0009_duplicate_index) against actual application query plans before proposing follow-up changes. This performance work is inventoried, not certified complete.
+
+## Local verification completed 18 October 2026
+
+- Typecheck passed; full suite passed with 369 files and 4,664 tests using two workers.
+- Cutover/backup/staging-runner tests: 13 passed, including the actual curated migration batch against a local PGlite fixture with 0164 already applied. This does not certify staging or restoration of a production backup.
+- Final migration chain: 167/167 applied locally; lifecycle: 31/31 passed.
+- Build passed with 289 PWA entries; lint passed; contrast: 82/82 passed. The existing bundle-size advisory remains.
+- Verification logs are retained under `artifacts/supabase-closeout-2026-10-17/`. The completion script's cached suite count predates this full test run; the final test log is the evidence for 4,664 tests.
+
+Migration 0169 is WRITTEN and VERIFIED locally, NOT APPLIED and NOT PRODUCTION-VERIFIED. No live backup, restoration, authenticated role acceptance or Storage authorization sign-off is claimed.
 
 ## Required remaining work
 
