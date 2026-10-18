@@ -15,15 +15,16 @@ function mockRow(overrides: Partial<BookingListRow>): BookingListRow {
     pickupAtAd: '2026-10-17T09:00:00.000Z',
     returnAtAd: '2026-10-18T09:00:00.000Z',
     actualReturnAtAd: null,
-    deliveryType: 'Customer Pickup',
+    deliveryType: 'Client Pickup',
     pickupLocation: null,
     returnLocation: null,
     quoteExpiresAtAd: null,
     createdAtAd: '2026-10-15T09:00:00.000Z',
     itemCount: 4,
     depositRequired: null,
-    depositHeld: null,
     totalAmount: null,
+    isCancelled: false,
+    isClosed: false,
     ...overrides,
   }
 }

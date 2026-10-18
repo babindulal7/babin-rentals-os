@@ -69,8 +69,8 @@ export function useTodayAttention(): TodayAttentionState {
       const lateTotal = latePickupsRes.total ?? latePickupsRes.rows.length
       const calculatedTotal = overdueTotal + lateTotal
 
-      const isOverdueTruncated = overdueRes.total !== null && overdueRes.total > overdueRes.rows.length
-      const isLateTruncated = latePickupsRes.total !== null && latePickupsRes.total > latePickupsRes.rows.length
+      const isOverdueTruncated = overdueRes.total != null && overdueRes.total > overdueRes.rows.length
+      const isLateTruncated = latePickupsRes.total != null && latePickupsRes.total > latePickupsRes.rows.length
 
       const derivedTasks = deriveAttentionTasks(overdueRes.rows, latePickupsRes.rows, nowAd)
 
