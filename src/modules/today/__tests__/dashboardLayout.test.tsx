@@ -128,6 +128,13 @@ describe('focused pickup and return dashboard', () => {
     expect(container.textContent).not.toContain('Packing due tomorrow')
   })
 
+  it('renders the Needs Attention panel directly under the workbar without duplicate alerts', async () => {
+    await mount()
+    const attentionPanel = container.querySelector('[data-testid="needs-attention-panel"]')
+    expect(attentionPanel).not.toBeNull()
+    expect(container.querySelector('.dashboard-alert-banner')).toBeNull()
+  })
+
   it('gives each panel its own accessible calendar control', async () => {
     await mount()
     expect(buttons().filter((b) => b.getAttribute('aria-label')?.includes('choose pickups date filter'))).toHaveLength(1)
