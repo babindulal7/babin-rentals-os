@@ -399,3 +399,53 @@ export function createAction<Input, Output>(config: ActionConfig<Input, Output>)
     return result;
   };
 }
+
+/** Error categories for structured recovery affordances in UI action surfaces. */
+export type ActionErrorKind =
+  | 'NOT_IMPLEMENTED'
+  | 'PERMISSION_DENIED'
+  | 'NETWORK_OFFLINE'
+  | 'SESSION_EXPIRED'
+  | 'CONCURRENCY_CONFLICT'
+  | 'VALIDATION_FAILED'
+  | 'DATABASE_ERROR'
+  | 'UNKNOWN';
+
+export interface ClassifiedActionError {
+  kind: ActionErrorKind;
+  message: string;
+  isRetryable: boolean;
+  action?: string | undefined;
+  raw?: unknown;
+}
+
+/** Classifies an error thrown from an action execution into a structured recovery contract. */
+export function classifyActionError(error: unknown, actionName?: string): ClassifiedActionError {
+  if (error instanceof ActionNotImplementedError) {
+    return { kind: 'NOT_IMPLEMENTED', message: error.message, isRetryable: false, action: error.action, raw: error };
+  }
+  if (error instanceof ActionPermissionError) {
+    return { kind: 'PERMISSION_DENIED', message: error.message, isRetryable: false, action: error.action, raw: error };
+  }
+  if (error instanceof ActionOfflineError) {
+    return { kind: 'NETWORK_OFFLINE', message: error.message, isRetryable: true, action: error.action, raw: error };
+  }
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+    if (msg.includes('jwt') || msg.includes('token expired') || msg.includes('not logged in') || msg.includes('session context')) {
+      return { kind: 'SESSION_EXPIRED', message: error.message, isRetryable: false, action: actionName, raw: error };
+    }
+    if (msg.includes('network') || msg.includes('offline') || msg.includes('failed to fetch') || msg.includes('timeout')) {
+      return { kind: 'NETWORK_OFFLINE', message: error.message, isRetryable: true, action: actionName, raw: error };
+    }
+    if (msg.includes('conflict') || msg.includes('exclusion') || msg.includes('concurrent') || msg.includes('409')) {
+      return { kind: 'CONCURRENCY_CONFLICT', message: error.message, isRetryable: true, action: actionName, raw: error };
+    }
+    if (msg.includes('validat') || msg.includes('required') || msg.includes('invalid input')) {
+      return { kind: 'VALIDATION_FAILED', message: error.message, isRetryable: false, action: actionName, raw: error };
+    }
+    return { kind: 'DATABASE_ERROR', message: error.message, isRetryable: true, action: actionName, raw: error };
+  }
+  return { kind: 'UNKNOWN', message: String(error), isRetryable: false, action: actionName, raw: error };
+}
+

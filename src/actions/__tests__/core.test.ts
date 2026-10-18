@@ -1,5 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
-import { createAction, ActionNotImplementedError, ActionPermissionError, ActionOfflineError } from '../core'
+import {
+  createAction,
+  ActionNotImplementedError,
+  ActionPermissionError,
+  ActionOfflineError,
+  classifyActionError,
+} from '../core'
 
 /**
  * The dispatcher's whole job now is to refuse. These assert the refusals,
@@ -470,3 +476,52 @@ describe('every declared capability resolves to a rule', () => {
     expect(orphaned).toEqual([])
   })
 })
+
+describe('classifyActionError — structured recovery classifications', () => {
+  it('classifies ActionNotImplementedError as NOT_IMPLEMENTED (non-retryable)', () => {
+    const err = new ActionNotImplementedError('customAction')
+    const classified = classifyActionError(err)
+    expect(classified.kind).toBe('NOT_IMPLEMENTED')
+    expect(classified.isRetryable).toBe(false)
+    expect(classified.action).toBe('customAction')
+  })
+
+  it('classifies ActionPermissionError as PERMISSION_DENIED (non-retryable)', () => {
+    const err = new ActionPermissionError('customAction', 'perm.x', 'Warehouse')
+    const classified = classifyActionError(err)
+    expect(classified.kind).toBe('PERMISSION_DENIED')
+    expect(classified.isRetryable).toBe(false)
+  })
+
+  it('classifies ActionOfflineError as NETWORK_OFFLINE (retryable)', () => {
+    const err = new ActionOfflineError('customAction', 'perm.x')
+    const classified = classifyActionError(err)
+    expect(classified.kind).toBe('NETWORK_OFFLINE')
+    expect(classified.isRetryable).toBe(true)
+  })
+
+  it('classifies JWT / session expiration errors as SESSION_EXPIRED', () => {
+    const classified = classifyActionError(new Error('JWT expired or invalid token'))
+    expect(classified.kind).toBe('SESSION_EXPIRED')
+    expect(classified.isRetryable).toBe(false)
+  })
+
+  it('classifies network fetch failures as NETWORK_OFFLINE', () => {
+    const classified = classifyActionError(new Error('Failed to fetch from server'))
+    expect(classified.kind).toBe('NETWORK_OFFLINE')
+    expect(classified.isRetryable).toBe(true)
+  })
+
+  it('classifies exclusion / conflict errors as CONCURRENCY_CONFLICT', () => {
+    const classified = classifyActionError(new Error('conflicting key value violates exclusion constraint'))
+    expect(classified.kind).toBe('CONCURRENCY_CONFLICT')
+    expect(classified.isRetryable).toBe(true)
+  })
+
+  it('classifies input validation errors as VALIDATION_FAILED', () => {
+    const classified = classifyActionError(new Error('invalid input value for enum'))
+    expect(classified.kind).toBe('VALIDATION_FAILED')
+    expect(classified.isRetryable).toBe(false)
+  })
+})
+

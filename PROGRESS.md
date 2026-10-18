@@ -12,6 +12,7 @@
   1. In `ResolveCaseModal` (`src/modules/operations/modals/ResolveCaseModal.tsx`), replaced raw `crypto.randomUUID()` with canonical `newClientUuid()` from `@/lib/supabase` for strict Law 16 compliance and environment resilience.
   2. In `operationReports` (`src/lib/queries/operationReports.ts`), replaced all legacy references to `'Customer Pickup'` with standard `'Client Pickup'`, upholding the zero-customer naming rule across operational mock and fallback pipelines.
   3. In `module-shell.css` (`src/components/ui/module-shell/module-shell.css`), stabilized active click states by replacing disruptive `translateY(1px)` button nudges with smooth brightness filtering.
+  4. In `src/actions/core.ts`, added `classifyActionError()` with test coverage in `src/actions/__tests__/core.test.ts` providing structured recovery contracts (`NOT_IMPLEMENTED`, `PERMISSION_DENIED`, `NETWORK_OFFLINE`, `SESSION_EXPIRED`, `CONCURRENCY_CONFLICT`, `VALIDATION_FAILED`, `DATABASE_ERROR`, `UNKNOWN`) and retryability flags for UI error handling.
 
 **Ruled**
 - Floor operational scanning and packing workflows must never evaluate raw line type strings directly against a hardcoded Set; `isNonPackableLineType()` is the mandatory authority across all workspaces.
@@ -24,11 +25,12 @@
 - `npm run check:pglite`: 167/167 applied, 0 leaks, 74/74 definers pinned, exit code 0.
 - `npm run check:lifecycle`: 31/31 green, 0 failed, exit code 0.
 - `npm run check:contrast`: 82/82 pass across Dark, Light, High Contrast, and Glass themes, 0 fail.
-- `npm run build`: built in 1m 36s, exit code 0.
+- `npm run build`: built in 43.13s, exit code 0.
 - `npx vitest run src/modules/operations/__tests__/casesWorkspace.test.tsx`: 9/9 passed.
 - `npx vitest run src/modules/rentals/__tests__/PackingWorkspace.kitBuild.test.tsx`: 5/5 passed.
 - `npx vitest run src/modules/rentals/__tests__/handoverWorkspace.test.tsx`: 10/10 passed.
 - `npx vitest run src/modules/rentals/__tests__/floorWorkspacesPersistence.test.tsx`: passed.
+- `npx vitest run src/actions/__tests__/core.test.ts`: 88/88 passed.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -38,7 +40,7 @@
 | DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
 | Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
 | Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
-| Overall | mean of five | ≈ 98% | -1 |
+| Overall | mean of five | ≈ 98% | +0 |
 Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-18T08:49:13.232Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
 Gates read from .lifecycle-result.json, written 2026-10-18T08:49:42.995Z.
 Counted by `npm run completion`, not typed.

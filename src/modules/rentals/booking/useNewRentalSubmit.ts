@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react'
-import type { ActionContext } from '../../../actions/core'
+import { classifyActionError, type ActionContext } from '../../../actions/core'
 import { createRental, deliveryTypeFromLabel, type BookingLineType } from '../../../actions/rentals/createRental'
 import { convertDraft, saveDraft as persistRentalDraft, type RentalDraftData } from '../../../actions/rentals/saveDraft'
 import { transportInstructions } from '../../../lib/bookingTransportForm'
@@ -385,7 +385,8 @@ export function useNewRentalSubmit({
         setConfirmedSuccess({ bookingId: bookedId, bookingNo: bookedNo })
       } catch (err) {
         setSaveState('error')
-        const reason = err instanceof Error ? err.message : String(err)
+        const classified = classifyActionError(err, 'confirmBooking')
+        const reason = classified.message
         if (step === 'convert' && createdQuote.current) {
           setActionError(
             `Booking ${createdQuote.current.no} is confirmed, but the draft link did not update: ${reason}. ` +
@@ -396,8 +397,13 @@ export function useNewRentalSubmit({
             `Booking saved as a Quote (${createdQuote.current.no}); Confirm did not land: ${reason}. Press Confirm Booking again to confirm that same Quote — no second booking will be created.`,
           )
         } else {
+          const actionTip = classified.kind === 'NETWORK_OFFLINE'
+            ? 'Check network connection and retry.'
+            : classified.kind === 'SESSION_EXPIRED'
+              ? 'Your session may have expired. Please log in again.'
+              : 'Retry uses the same booking reference.'
           setActionError(
-            `Not confirmed — ${reason}. Your entries have been kept. Retry uses the same booking reference.`,
+            `Not confirmed — ${reason}. Your entries have been kept. ${actionTip}`,
           )
         }
       } finally {
