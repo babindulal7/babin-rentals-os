@@ -1,5 +1,56 @@
 # Progress Log
 
+## 2026-10-18 — Interactive KPI & Analytics Design System (Phases P0–P6 complete)
+
+**Did**
+- Designed, authored, verified, and integrated an interactive, responsive, ChatGPT-inspired KPI card and multi-series chart analytics system across Babin Rentals OS without adding external charting libraries (pure SVG and design tokens):
+  1. **Phase P0 (Audit & Grounding):** Documented existing chart primitives, verified financial contracts (Law 1 integer paisa, Law 6 money blindness, Law 7 operational day, Law 16 no fabricated forecasts), and recorded baseline in `ANALYTICS_AUDIT.md`.
+  2. **Phase P1 (Analytics Foundations & Primitives):**
+     - Core analytics contracts, formatters (`formatAnalyticsPaisa`, `formatPercentDelta`, `formatRatio`), and comparative period logic (`computePeriodComparison`) in `src/lib/analytics/`.
+     - Visual primitives in `src/components/ui/analytics/`: `AnalyticsKpiCard`, `AnalyticsKpiGrid`, `TrendSparkline`, `ChartSourceNote`, and robust fallback states (`AnalyticsLoadingSkeleton`, `AnalyticsErrorState`, `AnalyticsRestrictedState`, `AnalyticsEmptyState`).
+  3. **Phase P2 (Actual Revenue Vertical Slice):**
+     - Upgraded `InteractiveRevenueTrend.tsx`: synchronized period header (month, taxable value, invoice count, share of period), vertical tracking crosshair with luminous point indicator, full-height $\ge$44px touch/hover hit columns, area gradient curve under `--cat-1`, roving keyboard navigation (`ArrowLeft`/`ArrowRight`/`Home`/`End`), and accessible table disclosure.
+     - Upgraded `RevenueReport.tsx`: 4 authoritative KPI cards (*Issued Taxable Revenue*, *Issued Invoices*, *Avg Taxable / Invoice*, *Voided Taxable (Excluded)*) with complete money-blindness restriction guards.
+  4. **Phase P3 (Reusable Multi-Series Chart Kit):**
+     - Created `MultiSeriesTrend.tsx` supporting 1–8 simultaneous series using categorical tokens `--cat-1`..`--cat-8`, synchronized mouse/touch crosshair reading all active series, interactive series toggle buttons ($\ge$44px touch target), accessible data tables, and roving keyboard tabindex.
+  5. **Phase P4 (Asset ROI Report Integration):**
+     - Upgraded `AssetRoiReport.tsx`: replaced legacy cards with `AnalyticsKpiGrid` and 5 authoritative KPIs (*Total Capital Invested*, *Lifetime Rental Revenue*, *Fleet Net Margin*, *Fleet Overall ROI*, *Avg Maintenance Drag*), preserving asset-level caveats and money blindness.
+  6. **Phase P5 (Forecasting & Scenario Studio):**
+     - Upgraded `ForecastingReports.tsx`: preserved strict Law 16 compliance ("Not computed yet" for automated ML models) while introducing an isolated, explicitly badged *Interactive What-If Scenario Studio* (`Illustrative Scenario · What-If Simulation`) with baseline revenue, growth rate (-20% to +50%), and 1–5 year horizon controls driving a 3-curve projection (`MultiSeriesTrend`).
+  7. **Phase P6 (Verification & Hardening):**
+     - Added comprehensive unit test suites across all analytics engines, primitives, and reports (`formatters.test.ts`, `comparison.test.ts`, `scenarioModel.test.ts`, `AnalyticsKpiCard.test.tsx`, `InteractiveRevenueTrend.test.tsx`, `RevenueReport.test.tsx`, `MultiSeriesTrend.test.tsx`, `AssetRoiReport.test.tsx`, `ForecastingReports.test.tsx`).
+
+**Ruled**
+- Zero external charting packages (no Recharts, Chart.js, or Motion) — all interactive visualizations are pure SVG conforming strictly to design tokens `--cat-1`..`--cat-8`.
+- Uncalculated ML forecasts must never be fabricated; hypothetical simulations must be explicitly badged as `Illustrative Scenario · What-If Simulation`.
+- Money blindness (Law 6) is strictly enforced: `Warehouse`, `Technician`, `Driver`, and `Client` roles see zero financial totals or metrics, rendering `AnalyticsRestrictedState` instead.
+
+**Verified**
+- `npm run typecheck`: clean (exit 0).
+- `npm run lint`: clean (exit 0, `--max-warnings 0`).
+- `npm run check:contrast`: 82/82 pass, 0 fail (WCAG AA).
+- `npx vitest run`: 13 analytics/reports suites, 73/73 tests pass (100%).
+- `npm run check:pglite`: 168/168 migrations applied, 0 leaks.
+- `npm run check:lifecycle`: 31/31 steps green.
+- `npm run build`: built in 25.89s, exit 0 (`dist/` generated with PWA precache).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 55 | 50 · 0 · 0 · 5 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 98% | -1 |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-18T05:55:35.982Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-18T05:55:52.229Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply of migrations 0157–0170 by Babin on production.
+- Physical iPad Safari verification of floor touch targets and 125% zoom acceptance.
+
 ## 2026-10-18 — Schema mapping audit remediation (product_units alignment & 0170 line_kind extension)
 
 **Did**
