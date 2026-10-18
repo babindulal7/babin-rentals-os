@@ -36,6 +36,7 @@ coverage/
 docs/docs.zip
 *.rar
 *.zip
+*.7z*
 
 # Per-session agent scratch space — dev-server and tunnel logs, throwaway HTML.
 # Regenerable runtime noise, not project history.
