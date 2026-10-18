@@ -46,7 +46,7 @@ describe('InteractiveRevenueTrend', () => {
 
     // SVG elements present
     const svg = host.querySelector('svg')
-    expect(svg).not.null
+    expect(svg).not.toBeNull()
     expect(svg?.getAttribute('aria-label')).toContain('Issued taxable revenue by AD month')
 
     // Point circles
@@ -68,7 +68,7 @@ describe('InteractiveRevenueTrend', () => {
 
     const circles = host.querySelectorAll<SVGCircleElement>('circle[tabindex="0"]')
     const secondCircle = circles[1]
-    expect(secondCircle).not.undefined
+    expect(secondCircle).toBeDefined()
 
     // Focus second circle
     act(() => {
@@ -118,7 +118,7 @@ describe('InteractiveRevenueTrend', () => {
     const { host, unmount } = renderComponent(<InteractiveRevenueTrend months={SAMPLE_MONTHS} />)
 
     const table = host.querySelector('table')
-    expect(table).not.null
+    expect(table).not.toBeNull()
 
     const rows = table?.querySelectorAll('tbody tr')
     expect(rows).toHaveLength(3)
@@ -142,7 +142,7 @@ describe('InteractiveRevenueTrend', () => {
 
     // Lock button should appear
     const clearButton = host.querySelector('button')
-    expect(clearButton).not.null
+    expect(clearButton).not.toBeNull()
     expect(clearButton?.textContent).toBe('Clear lock')
 
     // Click clear lock
