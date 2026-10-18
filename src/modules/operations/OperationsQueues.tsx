@@ -37,6 +37,7 @@ import AlertsPanel from '../today/AlertsPanel'
 import { useViewport } from '../../lib/device'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import OperationsShell from './OperationsShell'
+import { useCompactHeader } from '../../lib/headerRoom'
 import { kathmanduCivil, NPT_OFFSET_MIN, getBusinessToday } from '../../lib/bs'
 import { CalendarPopover, DateField } from '../../components/ui/DateField'
 import { FilterButton, FilterDrawer, FilterSection } from '../../components/ui/FilterDrawer'
@@ -562,8 +563,9 @@ export default function OperationsQueues() {
   /* RULING 2026-10-15: below desktop the two workspace links live in More and a fresh
      data badge takes no width, so the page title keeps the header (BLOCKER-02: at 375px
      the header overflowed by 207px; at 768px the title measured 0px). Revert = set this
-     to `false`. */
-  const compactHeader = viewport !== 'desktop'
+     to `false`. RULING 2026-10-15 (zoom audit): decided by the header's own width, so a
+     1280px desktop with the sidebar open (header 1024px) is compact too. */
+  const compactHeader = useCompactHeader()
 
   /* The URL is the state (§5.1). `?queue=packing` and `?quick=pickup` are
      mutually exclusive — setting either clears the other — so a queue is
@@ -1130,7 +1132,10 @@ export default function OperationsQueues() {
               </div>
             )}
             {tabular && (
-              <DataTableShell ariaLabel="Operations queues" data-table-scroll style={{ overflowX: 'auto', overflow: 'hidden' }}>
+              /* RULING 2026-10-17 (zoom audit): `overflow: 'hidden'` after `overflowX` won the cascade and
+                  clipped the queue at 911px — Action and the row link were unreachable. The corners
+                  still clip with overflowY hidden; the last two columns are pinned (operations.css). */
+              <DataTableShell ariaLabel="Operations queues" data-table-scroll style={{ overflowX: 'auto', overflowY: 'hidden' }}>
                 <table className="operations-v2__table">
                   <thead>
                     <tr>

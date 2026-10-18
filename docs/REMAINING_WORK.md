@@ -207,7 +207,7 @@ Despite the local test suite being 100% green, **production deployment remains o
 
 ### Task 4.2: Native Browser Desktop Zoom Testing (100% vs 125%)
 - **Priority:** P2 (Medium)
-- **Status:** OPEN
+- **Status:** DONE in emulation [15–16 Oct]. Rentals, Inventory, Finance, Operations and Settings were measured at 1093, 911, 1536 and 1280px (1366 and 1920 laptops at 125% and 150%), and the defects were fixed. Evidence: `artifacts/zoom-audit-2026-10-15/`; rulings: `RULINGS-2026-10-15.md`. Physical-laptop confirmation belongs to Task 4.1.
 - **Affected Files:** [`src/styles/theme.css`](../src/styles/theme.css), [`src/styles/responsive.css`](../src/styles/responsive.css)
 - **Description:** Windows laptops often default to 125% or 150% display scaling. Test all primary tables (Rentals, Inventory, Finance) under native 125% browser zoom to verify that headers, sticky summaries, and action columns do not collide or trigger horizontal scrollbars.
 - **Verification Criteria:** Complete usability maintained at 125% native browser zoom.

@@ -300,10 +300,12 @@ describe('Header — R1 simplification & abnormal sync gating', () => {
     viewport = 'desktop'
     syncMockState = { status: 'synced', syncStatus: 'synced', pendingCount: 0, error: null, triggerSync: vi.fn() }
     await mount(<Header crumbs={[{ label: 'Dashboard' }]} />)
-    /* Layout-stable slot: always mounted so its appearance can never push the
-       search box sideways, but invisible + unfocusable when healthy. */
+    /* Always mounted, invisible and unfocusable when healthy. Since the 15 Oct zoom
+       audit it also takes no width (display none) on desktops, as on tablets since 13 Oct:
+       the reserved 104px truncated Finance's title at 1280px. */
     const slot = container.querySelector<HTMLElement>('.header-sync-context')
     expect(slot).not.toBeNull()
+    expect(slot?.style.display).toBe('none')
     expect(slot?.style.visibility).toBe('hidden')
     expect(slot?.getAttribute('aria-hidden')).toBe('true')
     expect(container.querySelector('.header-sync-control')?.getAttribute('tabindex')).toBe('-1')

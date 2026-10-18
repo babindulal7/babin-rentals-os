@@ -27,7 +27,19 @@
 .operations-v2__facet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .operations-v2__facet { min-height: var(--tap) !important; justify-content: flex-start !important; padding: 0 10px !important; }
 .operations-v2__table-card { overflow: hidden; }
-.operations-v2__table { width: 100%; border-collapse: collapse; min-width: 900px; }
+/* RULING 2026-10-15 (zoom audit): no forced 900px floor. The eight columns need 777px, so the
+   floor alone scrolled ACTION and the row link off a 911px window (1366px laptop at 150%).
+   Nowrap cells still make a narrower box scroll rather than squash. Revert = `min-width: 900px`. */
+.operations-v2__table { width: 100%; border-collapse: collapse; }
+/* RULING 2026-10-17 (zoom audit): the Action column and the row link stay pinned to the scroller's
+   right edge when the queue is wider than its box (884px of columns in an 808px box at 911px,
+   a 1366px laptop at 150%) — Rentals §4.1's "action column stays visible". The link column is a
+   fixed 64px (44px target + padding) so Action can sit exactly beside it. Each cell repaints
+   opaque so columns sliding under it never show through. Revert = delete these rules. */
+.operations-v2__table th:last-child, .operations-v2__table td:last-child { position: sticky; right: 0; z-index: 1; width: 64px; min-width: 64px; max-width: 64px; box-sizing: border-box; background: var(--card); }
+.operations-v2__table th:nth-last-child(2), .operations-v2__table td:nth-last-child(2) { position: sticky; right: 64px; z-index: 1; background: var(--card); box-shadow: inset 1px 0 0 var(--border); }
+.operations-v2__table thead th:last-child, .operations-v2__table thead th:nth-last-child(2) { z-index: 3; background: var(--th-bg); }
+.operations-v2__table tbody tr:hover td:last-child, .operations-v2__table tbody tr:hover td:nth-last-child(2) { background: linear-gradient(color-mix(in srgb, var(--nav-active-bg) 36%, transparent), color-mix(in srgb, var(--nav-active-bg) 36%, transparent)), var(--card); }
 .operations-v2__table th { height: 48px; background: var(--th-bg); color: var(--text2); font-size: 12px; text-transform: none; letter-spacing: 0; }
 .operations-v2__table thead th { position: sticky; top: 0; z-index: 2; }
 .operations-v2__table tr { border-bottom: 1px solid var(--border); }

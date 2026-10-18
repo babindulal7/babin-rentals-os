@@ -37,6 +37,7 @@ export default defineConfig({
         /modules[\\/]today[\\/]dashboard\.css/,
         /modules[\\/]rentals[\\/].*\.css/,
         /modules[\\/]operations[\\/].*\.css/,
+        /components[\\/]shell[\\/]shell\.css/, // headerAddSlot.test.ts reads the slot floors
       ],
     },
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
