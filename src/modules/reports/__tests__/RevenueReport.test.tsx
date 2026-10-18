@@ -254,7 +254,14 @@ describe('RevenueReport — invoice register', () => {
     })
     await render()
     await clickTab('Invoice register')
-    expect(state.listInvoices).toHaveBeenCalledWith(expect.objectContaining({ withCount: true, chips: { status: ['Sent', 'Partially Paid', 'Paid', 'Void'] } }))
+    expect(state.listInvoices).toHaveBeenCalledWith(
+      expect.objectContaining({
+        withCount: true,
+        chips: { status: ['Sent', 'Partially Paid', 'Paid', 'Void'] },
+        // The same civil days the trend reads — a DATE column is not compared with +05:45 instants.
+        dateRange: { column: 'issue_date', fromAd: START, toAd: TODAY },
+      }),
+    )
     const link = [...container.querySelectorAll('a')].find((a) => a.textContent === 'INV-7')!
     expect(link.getAttribute('href')).toBe('/finance?tab=invoices&search=INV-7')
     expect(text()).toContain('Showing the 1 most recent of 240 invoices.')

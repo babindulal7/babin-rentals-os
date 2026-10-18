@@ -29,7 +29,7 @@ interface PageResult<T> {
 /**
  * Pages a query until it holds exactly the server's count of rows.
  *
- * RULING 2026-10-17 (#4): a short page is not the last page. PostgREST caps
+ * RULING 2026-10-17 (R17-4): a short page is not the last page. PostgREST caps
  * every response (`max-rows`), and a cap below PAGE_SIZE returns short pages
  * mid-read, so "stop on a short page" silently dropped rows. Each read asks for
  * the exact count, advances by the rows actually received, and refuses when

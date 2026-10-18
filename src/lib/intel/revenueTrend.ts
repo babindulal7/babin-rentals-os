@@ -89,8 +89,8 @@ export function aggregateIssuedRevenue(
     const last = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, 0)).toISOString().slice(0, 10)
     const startDay = first < fromAd ? fromAd : first
     const endDay = last > toAd ? toAd : last
-    // The month holding today is "to date" even on its last day: invoices for
-    // today can still be issued until the day ends.
+    // RULING 2026-10-17 (R17-3): the month holding today is "to date" even on
+    // its last day — invoices for today can still be issued until the day ends.
     const coverage: BucketCoverage =
       today !== undefined && today >= startDay && today <= endDay
         ? 'in-progress'
@@ -189,7 +189,7 @@ function daysInclusive(fromAd: string, toAd: string): number {
 }
 
 /**
- * RULING 2026-10-17 (#2): the comparison window is the same number of days
+ * RULING 2026-10-17 (R17-2): the comparison window is the same number of days
  * immediately before the period — what the toolbar's "Compare: previous
  * period" promises. "18 Jul – 15 Oct" (90 days) compares with "19 Apr – 17 Jul".
  */

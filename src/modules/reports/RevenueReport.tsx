@@ -31,6 +31,8 @@ import { listInvoices, type InvoiceListRow } from '../../lib/queries/finance'
  */
 
 type RevenueTab = 'trend' | 'invoices'
+// RULING 2026-10-17 (R17-8): the one view switcher is taxable amount or invoice count —
+// both from the same read. VAT views wait for the engine to read VAT (not ported from #16).
 type RevenueView = 'revenue' | 'count'
 
 const VIEWS: ReadonlyArray<{ id: RevenueView; label: string; series: string }> = [
@@ -191,7 +193,7 @@ export default function RevenueReport() {
           {tab === 'trend' ? (
             <TrendPanel state={state} view={view} onView={setView} onRetry={() => setRevision((r) => r + 1)} />
           ) : (
-            <InvoiceRegister filters={filters} />
+            <InvoiceRegister fromDay={fromDay} toDay={toDay} />
           )}
           <p style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
             Detailed invoice records and settlement corrections remain available in <Link to="/finance?tab=invoices">Finance invoices</Link>.
@@ -391,7 +393,7 @@ const th = {
 const td = { height: 'var(--row-min-h)', padding: '10px 12px', fontSize: 'var(--t-meta)', color: 'var(--text)', borderBottom: '1px solid var(--border)' }
 const num = { ...td, textAlign: 'right' as const }
 
-function InvoiceRegister({ filters }: { filters: ReportFilters }) {
+function InvoiceRegister({ fromDay, toDay }: { fromDay: string | null; toDay: string | null }) {
   const [rows, setRows] = useState<InvoiceListRow[] | null>(null)
   const [total, setTotal] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -401,7 +403,10 @@ function InvoiceRegister({ filters }: { filters: ReportFilters }) {
     let active = true
     setRows(null)
     setError(null)
-    listInvoices({ page: { index: 0, size: REGISTER_PAGE }, dateRange: filters.dateRange, chips: { status: REGISTER_STATUSES }, withCount: true })
+    // `issue_date` is a DATE, so the bounds are the toolbar's civil days — the same
+    // days the trend reads — not its +05:45 instants.
+    const dateRange = fromDay || toDay ? { column: 'issue_date', ...(fromDay ? { fromAd: fromDay } : {}), ...(toDay ? { toAd: toDay } : {}) } : undefined
+    listInvoices({ page: { index: 0, size: REGISTER_PAGE }, dateRange, chips: { status: REGISTER_STATUSES }, withCount: true })
       .then((res) => {
         if (!active) return
         setRows(res.rows)
@@ -413,7 +418,7 @@ function InvoiceRegister({ filters }: { filters: ReportFilters }) {
     return () => {
       active = false
     }
-  }, [filters.dateRange, revision])
+  }, [fromDay, toDay, revision])
 
   if (error) return <ErrorBanner title="The invoice register could not be loaded" message={error} onRetry={() => setRevision((r) => r + 1)} />
   if (rows === null) return <LoadingSkeleton rows={6} label="Loading invoices…" />
