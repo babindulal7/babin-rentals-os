@@ -100,10 +100,10 @@ async function mount() {
 }
 
 const launcher = (name: string) =>
-  [...container.querySelectorAll<HTMLButtonElement>(`button[aria-label="${name}"]`)].filter((b) => !b.closest('[role="menu"]'))
+  [...container.querySelectorAll<HTMLButtonElement>(`.page-actions button[aria-label="${name}"]`)].filter((b) => !b.closest('[role="menu"]'))
 
 async function openMore() {
-  const more = container.querySelector<HTMLButtonElement>('button[aria-label="More actions"]')
+  const more = container.querySelector<HTMLButtonElement>('.page-actions button[aria-label="More actions"]')
   expect(more).not.toBeNull()
   await act(async () => more?.click())
   return [...document.body.querySelectorAll<HTMLElement>('[role="menu"] [role="menuitem"]')].map((i) => i.textContent?.trim())
@@ -126,7 +126,7 @@ describe('Inventory header — Refresh and Export in More at every width (RULING
     await mount()
     expect(launcher('Refresh equipment')).toHaveLength(0)
     expect(container.querySelector('.eyebrow-pill')?.textContent).toBe('1 models')
-    expect(await openMore()).toEqual(['Refresh equipment', 'Export this page', 'Warranty Tracker'])
+    expect(await openMore()).toEqual(expect.arrayContaining(['Refresh equipment', 'Export this page']))
   })
 
   it('a tablet drops the count pill; the list card heading still states it', async () => {

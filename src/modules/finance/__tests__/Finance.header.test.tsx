@@ -58,12 +58,13 @@ async function mount() {
   })
 }
 
-/** A header launcher by its accessible name, outside the open More menu. */
+/** A header launcher by its accessible name: inside the page header's actions, outside the
+    open More menu (the Finance dashboard also has its own in-page toolbar). */
 const launcher = (name: string) =>
-  [...container.querySelectorAll<HTMLButtonElement>(`button[aria-label="${name}"]`)].filter((b) => !b.closest('[role="menu"]'))
+  [...container.querySelectorAll<HTMLButtonElement>(`.page-actions button[aria-label="${name}"]`)].filter((b) => !b.closest('[role="menu"]'))
 
 async function openMore() {
-  const more = container.querySelector<HTMLButtonElement>('button[aria-label="More actions"]')
+  const more = container.querySelector<HTMLButtonElement>('.page-actions button[aria-label="More actions"]')
   expect(more).not.toBeNull()
   await act(async () => more?.click())
   return [...document.body.querySelectorAll<HTMLElement>('[role="menu"] [role="menuitem"]')].map((i) => i.textContent?.trim())
