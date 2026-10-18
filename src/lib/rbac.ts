@@ -650,3 +650,21 @@ export function canPublishTeamViews(role: SystemRole): boolean {
 export function canExportClientPii(role: SystemRole): boolean {
   return role === 'Owner' || role === 'Admin' || role === 'Manager'
 }
+
+/**
+ * Executive financial reports — the Revenue trend first (P&L, cash flow and
+ * working capital belong here too as each is wired to real data).
+ *
+ * RULING 2026-10-17 (R17-1): Owner · Admin · Manager · Accounts, mirroring
+ * `auth_is_finance_or_admin()` as 0117 last defined it. Coordinator holds
+ * booking money (PERMISSIONS §5) but §3.1 C7 names the reports it may read —
+ * Rentals, Clients, Operations, Fulfillment, Discounts — and Revenue is not one
+ * of them; stricter wins (B-1). The invoice rows stay readable to Coordinator
+ * through RLS exactly as before; only the company-wide report is withheld.
+ * Revert = return `canViewMoney(role)` here.
+ */
+const FINANCIAL_REPORTS: ReadonlySet<SystemRole> = new Set<SystemRole>(['Owner', 'Admin', 'Manager', 'Accounts'])
+
+export function canViewFinancialReports(role: SystemRole): boolean {
+  return FINANCIAL_REPORTS.has(role)
+}

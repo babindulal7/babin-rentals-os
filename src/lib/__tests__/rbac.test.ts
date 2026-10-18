@@ -29,6 +29,7 @@ import {
   canMergeClients,
   canWriteSharedTriage,
   canApprovePurchase,
+  canViewFinancialReports,
 } from '../rbac'
 
 /**
@@ -266,6 +267,18 @@ describe('canPublishTeamViews and canExportClientPii (7 Oct 2026)', () => {
   it('are Owner, Admin and Manager — and nobody else, Client included', () => {
     expect(ALL_ROLES.filter((r) => canPublishTeamViews(r))).toEqual(['Owner', 'Admin', 'Manager'])
     expect(ALL_ROLES.filter((r) => canExportClientPii(r))).toEqual(['Owner', 'Admin', 'Manager'])
+  })
+})
+
+describe('canViewFinancialReports (R17-1, 17 Oct 2026)', () => {
+  it('is Owner, Admin, Manager and Accounts — the auth_is_finance_or_admin() set', () => {
+    expect(ALL_ROLES.filter((r) => canViewFinancialReports(r))).toEqual(['Owner', 'Admin', 'Manager', 'Accounts'])
+  })
+
+  it('is never wider than money visibility, and Coordinator keeps booking money without it (C7)', () => {
+    for (const r of ALL_ROLES) if (canViewFinancialReports(r)) expect(canViewMoney(r)).toBe(true)
+    expect(canViewMoney('Coordinator')).toBe(true)
+    expect(canViewFinancialReports('Coordinator')).toBe(false)
   })
 })
 

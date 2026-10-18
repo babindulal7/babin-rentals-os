@@ -1,16 +1,18 @@
 import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
-import { useCanViewMoney } from '../../lib/moneyVisibility'
+import { useCanViewFinancialReports, useCanViewMoney } from '../../lib/moneyVisibility'
 
 export interface ReportFamilyItem {
   label: string
   to: string | null
   money: boolean
+  /** Company-wide financial report: narrower than `money` (Coordinator excluded, PERMISSIONS §3.1 C7). */
+  financial?: boolean
 }
 
 export const REPORT_FAMILIES: readonly ReportFamilyItem[] = [
   { label: 'Dashboard', to: '/reports/pulse', money: false },
-  { label: 'Revenue', to: '/reports/revenue', money: true },
+  { label: 'Revenue', to: '/reports/revenue', money: true, financial: true },
   { label: 'Rentals', to: '/reports/rentals', money: false },
   { label: 'Inventory', to: '/reports/inventory', money: false },
   { label: 'Clients', to: '/reports/clients', money: true },
@@ -40,13 +42,18 @@ interface ReportFamiliesNavProps {
 
 export function ReportFamiliesNav({ current }: ReportFamiliesNavProps) {
   const money = useCanViewMoney()
+  const financial = useCanViewFinancialReports()
 
-  const tabs = REPORT_FAMILIES.map((t) => ({
-    label: t.label,
-    current: t.label.toLowerCase() === current.toLowerCase(),
-    to: t.to === null ? null : t.money && !money ? null : t.to,
-    gated: t.to !== null && t.money && !money,
-  }))
+  const tabs = REPORT_FAMILIES.map((t) => {
+    // RULING 2026-10-17 (R17-1): a financial family is gated for Coordinator too.
+    const gated = t.to !== null && ((t.money && !money) || (t.financial === true && !financial))
+    return {
+      label: t.label,
+      current: t.label.toLowerCase() === current.toLowerCase(),
+      to: t.to === null || gated ? null : t.to,
+      gated,
+    }
+  })
 
   const unbuiltTabs = tabs.filter((t) => t.to === null && !t.gated).map((t) => t.label)
   const gatedTabs = tabs.filter((t) => t.gated).map((t) => t.label)

@@ -1,5 +1,5 @@
 import { useAuth } from './auth'
-import { canViewMoney } from './rbac'
+import { canViewFinancialReports, canViewMoney } from './rbac'
 
 /**
  * Foundation §8.3 / CLAUDE.md — **the floor sees no money, anywhere.**
@@ -24,4 +24,14 @@ import { canViewMoney } from './rbac'
 export function useCanViewMoney(): boolean {
   const { user } = useAuth()
   return user ? canViewMoney(user.role) : false
+}
+
+/**
+ * True when the session may open company-wide financial reports (Revenue first).
+ * Narrower than `useCanViewMoney`: Coordinator sees booking money, not these
+ * (PERMISSIONS §3.1 C7). The page must not even fetch when this is false.
+ */
+export function useCanViewFinancialReports(): boolean {
+  const { user } = useAuth()
+  return user ? canViewFinancialReports(user.role) : false
 }
