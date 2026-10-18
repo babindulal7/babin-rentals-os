@@ -168,7 +168,7 @@ Staff never see the Client Portal as themselves; a Coordinator opening it uses "
 | **C4** | Coordinator | Draft purchase requests (from unmet demand / sub-rent events). No approval. |
 | **C5** | Coordinator | Create and edit clients incl. membership; sees outstanding, deposit held, credit limit. **Credit-limit override and payment-terms beyond Immediate need Manager+ approval.** Cannot block or merge. |
 | **C6** | Coordinator | Create Draft invoice from a booking, issue it, generate receipt. Cannot void (Manager+ / Accounts). |
-| **C7** | Coordinator | Rentals, Clients, Operations, Fulfillment, Discounts reports with **booking money**. No P&L, cash flow, working capital, expenses, VAT, equipment ROI/utilisation, staff reports. |
+| **C7** | Coordinator | Rentals, Clients, Operations, Fulfillment, Discounts reports with **booking money**. No company-wide Revenue report (RULINGS-2026-10-17 R17-1, `canViewFinancialReports`), P&L, cash flow, working capital, expenses, VAT, equipment ROI/utilisation, staff reports. |
 | **C8** | Coordinator | Inbox two-way conversations; all templates incl. money ones (booking money); Broadcasts drafts only; no channel settings. |
 | **A1** | Accounts | View cases; record recovery/absorbed amounts once disposition is approved. No disposition. |
 | **A2** | Accounts | Booking read with full money; create/issue/void invoice; no booking edits, no floor verbs. |

@@ -1,5 +1,22 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 17 October 2026: interactive reports, Phases 2–3 — TODO(decision)
+
+Phase 1 (the real-data Revenue trend, ported onto `main`) is built; its rulings are R17-1 … R17-8 in
+`docs/RULINGS-2026-10-17.md`. These need a person before Phases 2–3:
+- **(a) Pulse revenue basis.** Pulse's Revenue view is "spread across rental days" (`PERIOD_BASIS`, itself a
+  standing `TODO(decision)`); the Revenue report is **taxable amount on issued invoices, by issue date**. Should
+  Pulse adopt the invoice basis (one definition app-wide), or keep a separate recognised-revenue metric with its own
+  source?
+- **(b) Cash-out policy** for a Cash Flow chart: which postings count as cash out (approved expenses, supplier and
+  crew payouts, deposit refunds), and whether loan principal is shown apart. Blocks the Cash Flow view.
+- **(c) Five-year scenario explorer (Phase 3):** who may type a *manual illustrative baseline* (proposal: Owner
+  only), and whether it is ever saved (proposal: never in the browser; if saved, a server table with RLS and audit).
+- **(d) `issue_invoice()` dates an invoice with the database's `current_date` (UTC) when no date is passed**
+  (0108:85). An invoice issued 00:00–05:45 NPT then carries the previous day and lands in the previous month's
+  bucket. Fixing it is a migration (Babin applies, N-5) and a call on whether existing rows stay as they are
+  (Law 3 says yes).
+
 ## 17 October 2026: legacy Storage object mapping — TODO(decision)
 
 - Live `documents`/`evidence` object SELECT/INSERT/UPDATE policies currently test authenticated bucket membership only. Existing PERMISSIONS.md §3/§5 requires client ownership, money omission and identity-document restrictions. Private buckets alone do not enforce that matrix.

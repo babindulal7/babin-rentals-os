@@ -1,5 +1,77 @@
 # Progress Log
 
+## 2026-10-18 — Interactive Revenue report, ported onto main (Phase 1 of the interactive-reports brief)
+
+**Did**
+- babindulal7/babin-rentals-os#12 merged its own Revenue trend and credit-note reconciliation, so the first version of
+  this work (babindulal7/babin-rentals-os#16) was closed. This branch was reset onto `main` (`ad8ce1e`) and adds only
+  what #12 lacked. #12's engine, reader, definition and credit reconciliation are kept.
+- **Shared chart** `src/components/ui/charts/InteractiveTrendChart.tsx` (+ `lib/intel/chartScale.ts`): labelled
+  lakh/crore value axis, thinned period labels, legend with data status in words, marker shapes so colour is never
+  alone, hover tooltip, tap-to-freeze, keyboard ←/→/Home/End/Esc, Previous/Next buttons, readout below the chart on
+  narrow screens. Replaces #12's `InteractiveRevenueTrend.tsx` (removed; its only user was the Revenue page).
+- **Engine** (`lib/intel/revenueTrend.ts`): month coverage — "1–14 October 2026 (month to date)", "17–31 July 2026
+  (part month)" — plus `previousWindow`, `aggregateShiftedRevenue`, `changeLabel`, `coverageNotes`.
+- **Reader** (`lib/queries/reportRevenueTrend.ts`): `readAll` pages by exact count, advancing by rows received, for
+  invoices and every credit-note batch; `getPreviousIssuedRevenue`; `getEarliestIssueDay` for All dates.
+- **Page** (`modules/reports/RevenueReport.tsx`): opens on the toolbar's own "Last 90 days" (main drew 90 days while
+  the toolbar said "All dates"); All dates = first issued invoice → today; compare for bounded periods; KPI strip with
+  definitions; one view switcher (taxable amount / invoice count); #12's credit-note section and CSV kept, CSV gains
+  previous-period columns; invoice register tab (issued + voids, true count, inline error, links into Finance).
+- **Gate**: `canViewFinancialReports` (Owner · Admin · Manager · Accounts) in `rbac.ts` / `moneyVisibility.ts`, used
+  by the page and by `ReportFamiliesNav`, which no longer links Revenue for Coordinator.
+- Seeded mock invoices now carry `currency: 'NPR'` (#12's engine refused them, so the demo showed an error).
+- Docs: `docs/RULINGS-2026-10-17.md`, PERMISSIONS §3.1 C7 clarified, `docs/OPEN_DECISIONS.md` 17 Oct entry,
+  `docs/reports/INTERACTIVE_REPORTS_PHASE0_AUDIT.md` (Phase 0 audit, revised for the #12 merge).
+
+**Ruled** (R17-1 … R17-8, full rows in `docs/RULINGS-2026-10-17.md`, `RULING 2026-10-17 (R17-n)` at each site)
+- R17-1 Revenue report = Owner · Admin · Manager · Accounts; Coordinator gated in page and nav (C7, B-1).
+- R17-2 Previous period = same number of days immediately before, buckets shifted 1:1; bounded periods only.
+- R17-3 The month holding today is "month to date" (even on its last day); clipped months are "part month".
+- R17-4 A short page is not the last page: exact count, advance by rows received, refuse on mismatch or change.
+- R17-5 Register lists Sent · Partially Paid · Paid · Void, not Drafts; `Overdue` is derived, never a filter value.
+- R17-6 Seeded mock invoices carry `currency: 'NPR'`.
+- R17-7 The page opens on "Last 90 days"; All dates = first issued invoice → today; end after today clamped and said.
+- R17-8 One view switcher: taxable amount or invoice count. VAT views from #16 not ported.
+
+**Verified** (this session, on `ad8ce1e` + this branch)
+- `npm run typecheck` 0 · `npm run lint` 0 (max-warnings 0) · `lint:shell` 680 files ✓ · `lint:ui-copy` ✓ (4/4) ·
+  `check:contrast` ✓ · `npm run build` exit 0.
+- `npm run check:pglite` 167/167 applied, 0 failed · `npm run check:lifecycle` 31/31 green, 0 failed (same run) ·
+  `scripts/test-booking-financial-integrity.mjs` verified. No migration in this change.
+- `VITE_DATA_SOURCE=mock npx vitest run`: 4737 passed, **8 failed in 5 files** — `actions/core`, `queries/pulse`,
+  `clients/clientsCopy`, `finance/Finance.restricted`, `rentals/rentalsOperationsHeader`. The same 8 fail on a clean
+  `origin/main` checkout (`ad8ce1e`); none is in a file this change touches.
+- New and changed suites, all green: chart 18, chartScale 11, engine compare 7, reader 12 (server cap below page
+  size, count drift, missing count, earliest day, comparison read), Revenue page 21 (role gate × 9, window, All
+  dates, 24-month cap, compare, view switch, errors, register), report nav (Coordinator), rbac 64.
+- **Driven in Chromium against the mock seeded build, 27/27 checks:** opens on Last 90 days; All dates draws from the
+  first invoice with no Compare control; value axis reads Rs 0 … Rs 40 L; 1–31 Jul compares with 31 May – 30 Jun;
+  tooltip lists both series and sits beside the guide (it covered the marker before — fixed); CSV carries the
+  previous-period columns; measure switch; keyboard End; register has no Drafts and its links open Finance on the
+  invoice; phone 360 px dark: tap readout, 44 px step buttons, no overflow; Accounts sees the report; Warehouse is
+  refused (module gate) with no Revenue link and no money. Coordinator has no mock login — covered by unit tests only.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-18T13:38:06.225Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-18T13:38:13.587Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Phases 2–3 of the brief wait on `docs/OPEN_DECISIONS.md` (17 Oct): Pulse revenue basis, cash-out policy,
+  scenario-explorer baseline owner, and `issue_invoice()` dating by UTC `current_date`.
+- The 8 failing tests on `main` belong to other modules and need their own fix.
+- `canApproveDailyClosing` still admits Coordinator while RLS does not (filed 15 Oct, open).
+- Coordinator's view of the Revenue page has not been driven in a browser (no mock login for that role).
+
 ## 2026-10-18 — Booqable audit adoptions (duplication hygiene BQ-207, shortage action BQ-408, dashboard deep links BQ-205)
 
 **Did**
