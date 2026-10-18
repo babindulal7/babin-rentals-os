@@ -6,6 +6,7 @@ import { useCanViewMoney } from '../../../lib/moneyVisibility'
 import { useToast } from '../../../components/ui/Toast'
 import { formatMoney } from '../../../lib/money'
 import { resolveCase } from '../../../actions/cases/resolveCase'
+import { newClientUuid } from '../../../lib/supabase'
 import type { Case } from '../../../lib/queries/cases'
 
 export interface ResolveCaseModalProps {
@@ -65,7 +66,7 @@ export function ResolveCaseModal({
           resolution: resolution.trim(),
           chargedToClientAmount: chargedNum,
           absorbedAmount: absorbedNum,
-          clientUuid: crypto.randomUUID(),
+          clientUuid: newClientUuid(),
         },
         { userId: user.id, role: user.role },
       )

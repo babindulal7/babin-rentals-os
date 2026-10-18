@@ -68,7 +68,7 @@
   cursor: pointer;
   white-space: nowrap;
   box-shadow: var(--shadow-sm);
-  transition: filter var(--dur-fast, 120ms) var(--ease), transform var(--dur-fast, 120ms) var(--ease);
+  transition: filter var(--dur-fast, 120ms) var(--ease);
 }
 
 .module-sub-header__primary-cta:hover {
@@ -76,7 +76,7 @@
 }
 
 .module-sub-header__primary-cta:active {
-  transform: translateY(1px);
+  transform: none;
   filter: brightness(0.96);
 }
 
@@ -138,7 +138,7 @@
   cursor: pointer;
   text-align: left;
   user-select: none;
-  transition: border-color var(--dur-fast, 120ms) var(--ease), box-shadow var(--dur-fast, 120ms) var(--ease), transform var(--dur-fast, 120ms) var(--ease);
+  transition: border-color var(--dur-fast, 120ms) var(--ease), box-shadow var(--dur-fast, 120ms) var(--ease);
 }
 
 .module-kpi-card:hover {
@@ -147,7 +147,8 @@
 }
 
 .module-kpi-card:active {
-  transform: translateY(1px);
+  transform: none;
+  filter: brightness(0.97);
 }
 
 .module-kpi-card.is-active {
@@ -482,7 +483,7 @@
   cursor: pointer;
   white-space: nowrap;
   box-shadow: var(--shadow-sm);
-  transition: filter var(--dur-fast, 120ms) var(--ease), transform var(--dur-fast, 120ms) var(--ease);
+  transition: filter var(--dur-fast, 120ms) var(--ease);
 }
 
 .module-table__row-cta:hover {
@@ -490,7 +491,8 @@
 }
 
 .module-table__row-cta:active {
-  transform: translateY(1px);
+  transform: none;
+  filter: brightness(0.96);
 }
 
 .module-table__row-cta--prep {

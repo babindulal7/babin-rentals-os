@@ -38,7 +38,7 @@ import { deliveryTypeLabel } from '../../lib/format'
 import { formatGateError } from '../../lib/gates'
 import { clearFloorScan, loadFloorScan, saveFloorScan, recordFloorScanEvent } from '../../lib/floorScanStorage'
 import { rentalDaysBetween } from '../../lib/rentalDays'
-import { NON_PACKABLE_LINE_TYPES } from '../../lib/bookingLineTypes'
+import { isNonPackableLineType } from '../../lib/bookingLineTypes'
 import {
   playScanSuccess,
   playScanError,
@@ -258,7 +258,7 @@ function buildRows(floor: FloorBooking): ReturnRow[] {
 
   const rows: ReturnRow[] = []
   for (const line of floor.lines) {
-    if (NON_PACKABLE_LINE_TYPES.has(line.lineType)) continue
+    if (isNonPackableLineType(line.lineType)) continue
     /* RULING 2026-09-29 (Option A, OPEN_DECISIONS.md #4; gate 0141):
        Consumable-tracked lines are consumed at Handover (0142) and never come
        back, so they are not triaged here — same exemption the Return gate and

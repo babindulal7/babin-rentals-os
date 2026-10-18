@@ -34,7 +34,7 @@ import { serviceStatus, type ServiceRow } from '../../lib/serviceDue'
 import { formatGateError } from '../../lib/gates'
 import { clearFloorScan, loadFloorScan, saveFloorScan, recordFloorScanEvent } from '../../lib/floorScanStorage'
 import { rentalDaysBetween } from '../../lib/rentalDays'
-import { NON_PACKABLE_LINE_TYPES } from '../../lib/bookingLineTypes'
+import { isNonPackableLineType } from '../../lib/bookingLineTypes'
 import { useFloorPresence } from '../../lib/floorPresence'
 import {
   playScanSuccess,
@@ -238,7 +238,7 @@ const MIN_REASON = 10
 
 function packableLines(lines: readonly FloorLine[]): FloorLine[] {
   const parentIds = new Set(lines.map((l) => l.parentLineId).filter((p): p is string => p !== null))
-  return lines.filter((l) => !NON_PACKABLE_LINE_TYPES.has(l.lineType) && !(l.lineType === 'Bundle' && parentIds.has(l.id)))
+  return lines.filter((l) => !isNonPackableLineType(l.lineType) && !(l.lineType === 'Bundle' && parentIds.has(l.id)))
 }
 
 export function buildRows(floor: FloorBooking): PackRow[] {

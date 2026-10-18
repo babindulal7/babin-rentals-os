@@ -25,7 +25,7 @@ import { STATUS, STATUS_ICON, BRAND, BRAND_ON, BRAND_TEXT, PAYMENT_STATUS_TONE }
 import type { BrandKey } from '../../lib/status'
 import { BOOKING_STATUS, STATUS_ORDER } from '../../lib/workflow'
 import type { BookingStatus } from '../../lib/workflow'
-import { NON_PACKABLE_LINE_TYPES } from '../../lib/bookingLineTypes'
+import { isNonPackableLineType } from '../../lib/bookingLineTypes'
 import BookingOperationsMenu from './BookingOperationsMenu'
 import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext'
 import { jobForStage } from '../../data/operations'
@@ -1811,7 +1811,7 @@ function BookingDetailView() {
   const operationsUnavailable: string | null =
     cancelledReason ?? (stage === 'Quote' ? 'Operations open once this booking is Booked' : null)
 
-  const isServiceOnly = lines.length > 0 && lines.every((l) => NON_PACKABLE_LINE_TYPES.has(l.lineType))
+  const isServiceOnly = lines.length > 0 && lines.every((l) => isNonPackableLineType(l.lineType))
 
   /* Gear still out — the overdue predicate below without its time clause. The
      facts strip's Return cell counts down to `return_at` (or up past it) only

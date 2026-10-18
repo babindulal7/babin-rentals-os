@@ -1,5 +1,52 @@
 # Progress Log
 
+## 2026-10-18 — Floor Operations Workspaces Hardening & Idempotency Standardization
+
+**Did**
+- **Floor Operations Workspaces Line Normalization:**
+  1. Updated `PackingWorkspace` (`src/modules/rentals/PackingWorkspace.tsx`) to filter non-packable line items via `isNonPackableLineType()`, preventing barcode scanning and serial validation gates from blocking lines with lowercase, snake_case, or alternative strings (e.g. `service`, `sub_rental`, `manual item`).
+  2. Updated `HandoverWorkspace` (`src/modules/rentals/HandoverWorkspace.tsx`) to normalize `handoverLines` and `serviceLines` via `!isNonPackableLineType()`.
+  3. Updated `ReturnWorkspace` (`src/modules/rentals/ReturnWorkspace.tsx`) to consistently exclude non-packable lines from return verification and inspection checklists.
+  4. Updated `BookingDetail` (`src/modules/rentals/BookingDetail.tsx`) `isServiceOnly` check to test all lines with `isNonPackableLineType()`.
+- **Idempotency & Client Standards:**
+  1. In `ResolveCaseModal` (`src/modules/operations/modals/ResolveCaseModal.tsx`), replaced raw `crypto.randomUUID()` with canonical `newClientUuid()` from `@/lib/supabase` for strict Law 16 compliance and environment resilience.
+  2. In `operationReports` (`src/lib/queries/operationReports.ts`), replaced all legacy references to `'Customer Pickup'` with standard `'Client Pickup'`, upholding the zero-customer naming rule across operational mock and fallback pipelines.
+  3. In `module-shell.css` (`src/components/ui/module-shell/module-shell.css`), stabilized active click states by replacing disruptive `translateY(1px)` button nudges with smooth brightness filtering.
+
+**Ruled**
+- Floor operational scanning and packing workflows must never evaluate raw line type strings directly against a hardcoded Set; `isNonPackableLineType()` is the mandatory authority across all workspaces.
+- All client-side mutation transactions must source idempotency keys via `newClientUuid()`.
+- Customer terminology is prohibited across UI and report queries; always use 'Client'.
+
+**Verified**
+- `npm run typecheck`: clean (exit code 0).
+- `npm run lint`: 0 errors, 0 warnings (`--max-warnings 0`).
+- `npm run check:pglite`: 167/167 applied, 0 leaks, 74/74 definers pinned, exit code 0.
+- `npm run check:lifecycle`: 31/31 green, 0 failed, exit code 0.
+- `npm run check:contrast`: 82/82 pass across Dark, Light, High Contrast, and Glass themes, 0 fail.
+- `npm run build`: built in 1m 36s, exit code 0.
+- `npx vitest run src/modules/operations/__tests__/casesWorkspace.test.tsx`: 9/9 passed.
+- `npx vitest run src/modules/rentals/__tests__/PackingWorkspace.kitBuild.test.tsx`: 5/5 passed.
+- `npx vitest run src/modules/rentals/__tests__/handoverWorkspace.test.tsx`: 10/10 passed.
+- `npx vitest run src/modules/rentals/__tests__/floorWorkspacesPersistence.test.tsx`: passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 55 | 50 · 0 · 0 · 5 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 98% | -1 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-18T08:49:13.232Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-18T08:49:42.995Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply of migrations 0157–0168 by Babin on production after backup protocol execution (`BACKUP_PROTOCOL.md`).
+- Post-deployment smoke test on production.
+
 ## 2026-10-18 — Semantic Schema Mapping Audit, Rentals Table Alignment & /today Priority Repairs
 
 **Did**

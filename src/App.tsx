@@ -17,9 +17,9 @@ import { ToastProvider } from './components/ui/Toast'
 import { SyncProvider } from './lib/syncContext'
 import { CommandPalette } from './components/shell/CommandPalette'
 import Login from './modules/auth/Login'
-import ForgotPassword from './modules/auth/ForgotPassword'
-import ResetPassword from './modules/auth/ResetPassword'
-import ScreenLock from './modules/auth/ScreenLock'
+const ForgotPassword    = lazy(() => import('./modules/auth/ForgotPassword'))
+const ResetPassword     = lazy(() => import('./modules/auth/ResetPassword'))
+const ScreenLock        = lazy(() => import('./modules/auth/ScreenLock'))
 import { useAuth } from './lib/auth'
 import { useViewport } from './lib/device'
 import { canViewMoney, isStaff } from './lib/rbac'
@@ -132,8 +132,8 @@ export default function App() {
           NOTE — these two are NOT part of the administrative cut. They post-date
           the cut package and were re-added by hand when it was applied.
         */}
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/forgot-password" element={<Suspense fallback={<LoadingSkeleton />}><ForgotPassword /></Suspense>} />
+        <Route path="/reset-password" element={<Suspense fallback={<LoadingSkeleton />}><ResetPassword /></Suspense>} />
         <Route path="/" element={<Navigate to={user ? "/today" : "/login"} replace />} />
 
         {/*
@@ -1178,7 +1178,11 @@ function Shell({
       <ScannerFab />
 
       {/* Screen Lock Overlay */}
-      {isLocked && <ScreenLock onUnlock={() => setLocked(false)} />}
+      {isLocked && (
+        <Suspense fallback={null}>
+          <ScreenLock onUnlock={() => setLocked(false)} />
+        </Suspense>
+      )}
     </div>
   )
 }

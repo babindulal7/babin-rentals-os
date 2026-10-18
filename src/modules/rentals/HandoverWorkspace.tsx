@@ -20,7 +20,7 @@ import { STATUS } from '../../lib/status'
 import type { StatusKey } from '../../lib/status'
 import { statusToken, FLAGS } from '../../lib/workflow'
 import type { BookingStatus, JobState } from '../../lib/workflow'
-import { NON_PACKABLE_LINE_TYPES } from '../../lib/bookingLineTypes'
+import { isNonPackableLineType } from '../../lib/bookingLineTypes'
 import { BarcodeScannerModal, type ScanOutcome } from '../../components/ui/BarcodeScannerModal'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
@@ -279,7 +279,7 @@ function driverSignatureRequired(deliveryType: string | null): boolean {
  */
 function handoverLines(lines: readonly FloorLine[]): FloorLine[] {
   const parentIds = new Set(lines.map((l) => l.parentLineId).filter((p): p is string => p !== null))
-  return lines.filter((l) => !NON_PACKABLE_LINE_TYPES.has(l.lineType) && !(l.lineType === 'Bundle' && parentIds.has(l.id)))
+  return lines.filter((l) => !isNonPackableLineType(l.lineType) && !(l.lineType === 'Bundle' && parentIds.has(l.id)))
 }
 
 function buildRows(floor: FloorBooking): HandRow[] {
@@ -667,7 +667,7 @@ export default function HandoverWorkspace({
   }, [floorId])
 
   const rows = useMemo<HandRow[]>(() => (floor ? buildRows(floor) : []), [floor])
-  const serviceLines = useMemo(() => floor?.lines.filter((l) => NON_PACKABLE_LINE_TYPES.has(l.lineType)) ?? [], [floor])
+  const serviceLines = useMemo(() => floor?.lines.filter((l) => isNonPackableLineType(l.lineType)) ?? [], [floor])
   const rowByKey = useMemo(() => new Map(rows.map((r) => [r.key, r])), [rows])
   /** A mark wins over a prior state (the UI never lets a prior row be marked). */
   const stateOf = (key: string): RowState => marks[key]?.state ?? rowByKey.get(key)?.prior ?? 'Ready'

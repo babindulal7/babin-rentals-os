@@ -1,12 +1,12 @@
 import { useMemo } from 'react'
-import { getBusinessToday, kathmanduCivil } from '../../../lib/bs'
+import { getBusinessToday } from '../../../lib/bs'
 import { TouchTarget } from '../../../components/ui/TouchTarget'
 import type { Paisa } from '../../../lib/money'
 import { formatMoney } from '../../../lib/money'
 
 /** Today as YYYY-MM-DD in UTC (Kathmandu civil day starts at 06:00, but we use UTC for ISO) */
 function todayIso(): string {
-  return new Date(kathmanduCivil(getBusinessToday())).toISOString().slice(0, 10)
+  return getBusinessToday().toISOString().slice(0, 10)
 }
 
 /**

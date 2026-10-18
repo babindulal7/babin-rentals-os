@@ -155,6 +155,13 @@
 .new-rental-date-shortcuts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 14px; }
 .new-rental-date-shortcuts > [role='group'] { gap: 6px !important; padding: 0 !important; margin: 0 !important; font-size: 12px; }
 .new-rental-date-shortcuts button { min-height: 44px !important; padding-inline: 10px !important; border-radius: var(--r-btn) !important; }
+.new-rental-date-shortcuts button.is-active,
+.new-rental-date-shortcuts button[aria-pressed='true'] {
+  border-color: var(--st-primary-fg, #2563eb) !important;
+  background: var(--st-primary-bg, #eff6ff) !important;
+  color: var(--st-primary-fg, #1d4ed8) !important;
+  font-weight: 700 !important;
+}
 .new-rental-client-insights { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 8px; }
 .new-rental-client-insights > button { background: var(--surface) !important; border-color: var(--border) !important; color: var(--text2) !important; }
 

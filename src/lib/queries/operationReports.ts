@@ -98,7 +98,7 @@ const MOCK_OPERATIONS: OperationsReportData = {
     idVerificationRate: 95.7,
   },
   deliveryMethods: [
-    { method: 'Customer Pickup', count: 28, percent: 61 },
+    { method: 'Client Pickup', count: 28, percent: 61 },
     { method: 'Babin Delivery', count: 12, percent: 26 },
     { method: 'Courier', count: 4, percent: 9 },
     { method: 'Third Party', count: 2, percent: 4 },
@@ -109,11 +109,11 @@ const MOCK_OPERATIONS: OperationsReportData = {
     { condition: 'Damage Suspected', count: 3, percent: 7 },
   ],
   pickups: [
-    { id: 'pk-01', bookingNo: 'BK-2026-0071', clientName: 'Highland Pictures', pickupAt: '2026-09-24T08:00:00Z', deliveryType: 'Customer Pickup', receiverName: 'Bikash Shrestha', idVerified: true, staffName: 'Prakash Sharma', status: 'Completed' },
+    { id: 'pk-01', bookingNo: 'BK-2026-0071', clientName: 'Highland Pictures', pickupAt: '2026-09-24T08:00:00Z', deliveryType: 'Client Pickup', receiverName: 'Bikash Shrestha', idVerified: true, staffName: 'Prakash Sharma', status: 'Completed' },
     { id: 'pk-02', bookingNo: 'BK-2026-0072', clientName: 'KTM Motion Arts', pickupAt: '2026-09-24T09:30:00Z', deliveryType: 'Babin Delivery', receiverName: 'Sunil Thapa', idVerified: true, staffName: 'Rabin Tamang', status: 'Completed' },
-    { id: 'pk-03', bookingNo: 'BK-2026-0073', clientName: 'Aura Media Studio', pickupAt: '2026-09-25T07:45:00Z', deliveryType: 'Customer Pickup', receiverName: 'Anil Gurung', idVerified: true, staffName: 'Prakash Sharma', status: 'Completed' },
+    { id: 'pk-03', bookingNo: 'BK-2026-0073', clientName: 'Aura Media Studio', pickupAt: '2026-09-25T07:45:00Z', deliveryType: 'Client Pickup', receiverName: 'Anil Gurung', idVerified: true, staffName: 'Prakash Sharma', status: 'Completed' },
     { id: 'pk-04', bookingNo: 'BK-2026-0074', clientName: 'Red Panda Creative', pickupAt: '2026-09-25T11:00:00Z', deliveryType: 'Courier', receiverName: 'Courier Driver', idVerified: false, staffName: 'Rabin Tamang', status: 'Completed' },
-    { id: 'pk-05', bookingNo: 'BK-2026-0075', clientName: 'Mountain Trail Films', pickupAt: '2026-09-26T08:30:00Z', deliveryType: 'Customer Pickup', receiverName: 'Deepak Adhikari', idVerified: true, staffName: 'Prakash Sharma', status: 'Completed' },
+    { id: 'pk-05', bookingNo: 'BK-2026-0075', clientName: 'Mountain Trail Films', pickupAt: '2026-09-26T08:30:00Z', deliveryType: 'Client Pickup', receiverName: 'Deepak Adhikari', idVerified: true, staffName: 'Prakash Sharma', status: 'Completed' },
   ],
   returns: [
     { id: 'rt-01', bookingNo: 'BK-2026-0065', clientName: 'Everest Vision', returnAt: '2026-09-23T16:00:00Z', returningPerson: 'Bikash Shrestha', condition: 'Clean / Good Condition', cleaningRequired: false, damageSuspected: false, status: 'Completed' },
@@ -123,9 +123,9 @@ const MOCK_OPERATIONS: OperationsReportData = {
     { id: 'rt-05', bookingNo: 'BK-2026-0070', clientName: 'Aura Media Studio', returnAt: '2026-09-26T14:30:00Z', returningPerson: 'Suman Shrestha', condition: 'Clean / Good Condition', cleaningRequired: false, damageSuspected: false, status: 'Completed' },
   ],
   overdueList: [
-    { id: 'ov-01', bookingNo: 'BK-2026-0058', clientName: 'Studio Black Nepal', project: 'Indie Feature Shoot', scheduledReturn: '2026-09-22T18:00:00Z', daysOverdue: 4, deliveryType: 'Customer Pickup', severity: 'critical' },
+    { id: 'ov-01', bookingNo: 'BK-2026-0058', clientName: 'Studio Black Nepal', project: 'Indie Feature Shoot', scheduledReturn: '2026-09-22T18:00:00Z', daysOverdue: 4, deliveryType: 'Client Pickup', severity: 'critical' },
     { id: 'ov-02', bookingNo: 'BK-2026-0061', clientName: 'Valley Ad Agency', project: 'Automotive Commercial', scheduledReturn: '2026-09-24T17:00:00Z', daysOverdue: 2, deliveryType: 'Babin Delivery', severity: 'moderate' },
-    { id: 'ov-03', bookingNo: 'BK-2026-0055', clientName: 'Wild Yak Productions', project: 'Wildlife Series Episode 3', scheduledReturn: '2026-09-18T16:00:00Z', daysOverdue: 8, deliveryType: 'Customer Pickup', severity: 'severe' },
+    { id: 'ov-03', bookingNo: 'BK-2026-0055', clientName: 'Wild Yak Productions', project: 'Wildlife Series Episode 3', scheduledReturn: '2026-09-18T16:00:00Z', daysOverdue: 8, deliveryType: 'Client Pickup', severity: 'severe' },
   ],
   packingJobs: [
     { id: 'pj-01', bookingNo: 'BK-2026-0078', clientName: 'Metro Broadcast', project: 'Morning News Special', pickupScheduled: '2026-09-27T07:00:00Z', itemCount: 14, state: 'packed' },
@@ -205,7 +205,7 @@ export async function getOperationsReport(options?: ReportFilterOptions): Promis
     const packingJobs: PackingJobItem[] = []
 
     for (const b of bookings) {
-      const dType = b.delivery_type || 'Customer Pickup'
+      const dType = b.delivery_type || 'Client Pickup'
       deliveryMap[dType] = (deliveryMap[dType] || 0) + 1
 
       // Overdue check: On Rent & past return_at
@@ -264,7 +264,7 @@ export async function getOperationsReport(options?: ReportFilterOptions): Promis
           bookingNo: matchedBooking?.booking_no || `SES-${s.session_no}`,
           clientName: clientObj?.name || 'Client',
           pickupAt: s.completed_at || s.started_at || new Date().toISOString(),
-          deliveryType: matchedBooking?.delivery_type || 'Customer Pickup',
+          deliveryType: matchedBooking?.delivery_type || 'Client Pickup',
           receiverName: s.receiver_name || s.pickup_person_name || 'Staff Handover',
           idVerified: Boolean(s.government_id_verified),
           staffName: 'Warehouse Staff',
