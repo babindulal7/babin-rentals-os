@@ -207,6 +207,15 @@ export function reportDateRange(
 }
 
 /**
+ * The Kathmandu civil days a toolbar range covers, inclusive — `null` for an
+ * open end ("All dates" is both null). For a report that buckets by a DATE
+ * column (`invoices.issue_date`) and so compares days, not instants.
+ */
+export function reportRangeDays(range: ReportFilters['dateRange']): { fromDay: string | null; toDay: string | null } {
+  return { fromDay: dayOf(range?.fromAd), toDay: dayOf(range?.toAd) }
+}
+
+/**
  * Whether an instant falls inside a toolbar range.
  *
  * For the reports that still filter an in-memory array from `src/data/` rather
