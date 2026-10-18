@@ -8,6 +8,7 @@ export interface FilterTabOption {
   label: string
   count?: number | string | null | undefined
   icon?: IconName | undefined
+  tooltip?: string | undefined
 }
 
 export interface ModuleFilterBarProps {
@@ -53,6 +54,7 @@ export const ModuleFilterBar: React.FC<ModuleFilterBarProps> = ({
               type="button"
               role="tab"
               aria-label={tab.label}
+              title={tab.tooltip}
               aria-selected={isActive}
               aria-pressed={isActive}
               className={`module-filter-bar__tab press ${isActive ? 'is-active' : ''}`.trim()}
@@ -61,7 +63,7 @@ export const ModuleFilterBar: React.FC<ModuleFilterBarProps> = ({
               {tab.icon && <Icon name={tab.icon} size={14} />}
               <span data-view-label>{tab.label}</span>
               {tab.count !== undefined && tab.count !== null && (
-                <span className="module-filter-bar__tab-count">
+                <span className={`module-filter-bar__tab-count ${tab.count === 0 ? 'is-zero' : ''}`.trim()}>
                   {tab.count}
                 </span>
               )}

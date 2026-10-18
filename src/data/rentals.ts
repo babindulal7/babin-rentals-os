@@ -1116,12 +1116,12 @@ export function toRentalListRow(
     flags,
     ...(isOverdue
       ? { statusNote: lateDays > 0 ? `${lateDays} day${lateDays === 1 ? '' : 's'} late` : 'Late today' }
-      : (row.stage === 'Booked' || row.stage === 'Packed') && !row.isCancelled && row.pickupAtAd && row.pickupAtAd < nowAd
+      : (row.stage === 'Booked' || row.stage === 'Packed') && !row.isCancelled && row.pickupAtAd && Date.parse(row.pickupAtAd) < Date.parse(nowAd)
         ? { statusNote: 'Overdue pickup' }
-      : row.stage === 'Quote' && !row.isCancelled && row.quoteExpiresAtAd && row.quoteExpiresAtAd < nowAd
+      : row.stage === 'Quote' && !row.isCancelled && row.quoteExpiresAtAd && Date.parse(row.quoteExpiresAtAd) < Date.parse(nowAd)
         ? { statusNote: 'Quote expired' }
-      : row.stage === 'Quote' && !row.isCancelled && row.pickupAtAd < nowAd
-        ? { statusNote: 'Pickup date passed' }
+      : row.stage === 'Quote' && !row.isCancelled && row.pickupAtAd && Date.parse(row.pickupAtAd) < Date.parse(nowAd)
+        ? { statusNote: 'Expired dates' }
       : {}),
     isCancelled: row.isCancelled,
     isClosed: row.isClosed,

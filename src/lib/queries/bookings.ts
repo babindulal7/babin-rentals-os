@@ -476,26 +476,64 @@ async function readTotalAmounts(ids: string[]): Promise<Map<string, number | nul
   if (ids.length === 0) return new Map()
 
   try {
+    const totals = new Map<string, number>()
     const { data, error } = await supabase
       .from('invoices')
       .select('booking_id, total_amount, status, voided_at')
       .in('booking_id', ids)
 
-    if (error) {
-      return new Map()
+    if (!error && data) {
+      for (const inv of (data ?? []) as unknown as Array<{
+        booking_id: string
+        total_amount: number | null
+        status: string
+        voided_at: string | null
+      }>) {
+        if (inv.voided_at !== null || inv.status === 'Void') continue
+        const current = totals.get(inv.booking_id) ?? 0
+        totals.set(inv.booking_id, current + (inv.total_amount ?? 0))
+      }
     }
 
-    const totals = new Map<string, number>()
-    for (const inv of (data ?? []) as unknown as Array<{
-      booking_id: string
-      total_amount: number | null
-      status: string
-      voided_at: string | null
-    }>) {
-      if (inv.voided_at !== null || inv.status === 'Void') continue
-      const current = totals.get(inv.booking_id) ?? 0
-      totals.set(inv.booking_id, current + (inv.total_amount ?? 0))
+    // For any bookings that do not have an invoice yet, calculate total from booking_lines_v
+    const missingIds = ids.filter((id) => !totals.has(id))
+    if (missingIds.length > 0) {
+      const { data: lineData, error: lineError } = await supabase
+        .from('booking_lines_v')
+        .select('booking_id, is_included, line_total, voided_at, qty, days, rate, discount_amount')
+        .in('booking_id', missingIds)
+        .is('voided_at', null)
+
+      if (!lineError && lineData) {
+        const subtotalMap = new Map<string, number>()
+        for (const line of lineData as unknown as Array<{
+          booking_id: string
+          is_included: boolean
+          line_total: number | null
+          qty: number
+          days: number
+          rate: number | null
+          discount_amount: number | null
+        }>) {
+          if (line.is_included) continue
+          let amount = line.line_total
+          if (typeof amount !== 'number' && typeof line.rate === 'number') {
+            amount = Math.max(0, (line.qty * line.days * line.rate) - (line.discount_amount ?? 0))
+          }
+          if (typeof amount === 'number') {
+            const current = subtotalMap.get(line.booking_id) ?? 0
+            subtotalMap.set(line.booking_id, current + amount)
+          }
+        }
+
+        // Apply standard 13% VAT to taxable subtotal
+        for (const [bId, subtotal] of subtotalMap.entries()) {
+          const totalWithVat = Math.round(subtotal * 1.13 * 100) / 100
+          totals.set(bId, totalWithVat)
+        }
+      }
     }
+
     return totals
   } catch {
     return new Map()

@@ -357,6 +357,130 @@ describe('useNewRentalSubmit', () => {
     }
   })
 
+  it('sanitizes non-UUID bundleId and composite productId to null on bundle and equipment lines', async () => {
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const root = createRoot(host)
+
+    const dummyClient = {
+      dbId: '11111111-2222-4333-8444-555555555555',
+      id: 'CL-001',
+      name: 'Test Client',
+      phone: '9841000000',
+    } as unknown as ClientRecord
+
+    const dummyPricing = {
+      securityDeposit: { requiredPaisa: 0 },
+      discounts: { discountPaisa: 0, appliedPercent: 0 },
+    } as unknown as PricingPipelineResult
+
+    const sampleLines = [
+      {
+        id: 'BND-23',
+        name: 'Sony FX3 Kit',
+        lineType: 'Bundle' as const,
+        bundleId: 'BND-23',
+        qty: 1,
+        days: 1,
+        ratePaisa: 500000 as any,
+      },
+      {
+        id: 'BND-23::Sony FX3 Camera Body',
+        name: 'Sony FX3 Camera Body',
+        lineType: 'Equipment' as const,
+        bundleId: 'BND-23',
+        productId: null,
+        qty: 1,
+        days: 1,
+        ratePaisa: 0 as any,
+      },
+    ]
+
+    let submitHook!: ReturnType<typeof useNewRentalSubmit>
+    function TestComponent() {
+      submitHook = useNewRentalSubmit({
+        confirmBlocked: false,
+        saveState: 'saved',
+        setSaveState: vi.fn(),
+        dispatchContext: () => ({ userId: 'user-1', role: 'Coordinator' }),
+        setActionError: vi.fn(),
+        setConfirmedSuccess: vi.fn(),
+        showSuccessToast: vi.fn(),
+        client: dummyClient,
+        lines: sampleLines as any,
+        equipmentLines: sampleLines.slice(1) as any,
+        project: 'Commercial',
+        pickupAt: new Date('2026-11-01T09:00:00Z'),
+        returnAt: new Date('2026-11-02T18:00:00Z'),
+        deliveryType: 'Client Pickup',
+        pricing: dummyPricing,
+        manualDiscountReason: '',
+        manualDiscountAuthorizedBy: '',
+        womenDopEligible: false,
+        crew: [],
+        clientPickup: true,
+        deliveryChargePaisa: 0 as any,
+        fuelChargePaisa: 0 as any,
+        returnPickupType: 'Client Return',
+        returnPickupAddress: '',
+        returnPickupTime: '18:00',
+        returnPickupChargePaisa: 0,
+        returnTransportPaisa: 0,
+        vehicle: '',
+        numberPlate: '',
+        driverContact: '',
+        pickupLocation: '',
+        returnLocation: '',
+        specialInstructions: '',
+        days: 1,
+        draftId: null,
+        draftBookingNo: null,
+        draftHasUnsavedChanges: false,
+        draftData: {} as any,
+        setSavedDraftFingerprint: vi.fn(),
+        kind: 'Commercial',
+        kindOther: '',
+        confirmKey: { current: null },
+        draftBookingKey: { current: null },
+      })
+      return null
+    }
+
+    try {
+      await act(async () => {
+        root.render(<TestComponent />)
+      })
+
+      await act(async () => {
+        submitHook.confirmBooking()
+      })
+
+      expect(createRental).toHaveBeenCalledTimes(1)
+      const payload = vi.mocked(createRental).mock.calls[0]?.[0]
+      expect(payload?.lines).toHaveLength(2)
+
+      // Bundle line with string ID 'BND-23' has bundleId sanitized to null
+      expect(payload?.lines[0]).toMatchObject({
+        lineType: 'Bundle',
+        bundleId: null,
+        description: 'Sony FX3 Kit',
+      })
+
+      // Equipment component line has composite id 'BND-23::...' mapped to productId: null and bundleId: null
+      expect(payload?.lines[1]).toMatchObject({
+        lineType: 'Equipment',
+        productId: null,
+        bundleId: null,
+        description: 'Sony FX3 Camera Body',
+      })
+    } finally {
+      await act(async () => {
+        root.unmount()
+      })
+      host.remove()
+    }
+  })
+
   it('states structure quote totals on priced lines and leaves other lines flat', async () => {
     vi.mocked(fetchProductPricingTerms).mockResolvedValueOnce(
       new Map([

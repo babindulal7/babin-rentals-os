@@ -1,3 +1,5 @@
+import { IS_MOCK } from '../../lib/supabase'
+import LiveClientReports from './LiveClientReports'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
@@ -191,6 +193,10 @@ function clientsCsv(money: boolean): ReportCsvRow[] {
  * carries that note precisely because the order is the exception, not the rule.
  */
 export default function ClientReports() {
+  return IS_MOCK ? <MockClientReports /> : <LiveClientReports />
+}
+
+function MockClientReports() {
   /* Rulings §7 — the rail track goes away below 1280 so `ReflowRail`'s
      inline column is not squeezed by a rail column that is still there. */
   const railGridColumns = useRailGridColumns()

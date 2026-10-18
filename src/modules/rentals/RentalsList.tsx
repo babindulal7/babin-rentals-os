@@ -1742,7 +1742,7 @@ export default function RentalsList() {
             autoFocusShortcut={true}
             shortcutHint="Ctrl+K"
             aria-label="Search rentals"
-            placeholder="Search rentals (Ctrl+K or /)…"
+            placeholder="Search rentals…"
             wrapperStyle={{ width: '100%', minWidth: 0 }}
           />
         </div>
@@ -2015,6 +2015,14 @@ export default function RentalsList() {
           label: viewItem.label,
           icon: viewItem.icon as IconName,
           count: getTabCount(viewItem.id, viewItem.stages),
+          tooltip:
+            viewItem.id === 'Upcoming'
+              ? 'Upcoming rentals (Quote, Booked, Packed)'
+              : viewItem.id === 'Out'
+                ? 'Currently out on set (On Rent)'
+                : viewItem.id === 'Returns'
+                  ? 'Returned equipment awaiting reset or inspection'
+                  : undefined,
         }))}
         activeTab={activeRentalTab}
         onTabChange={handleTabChange}

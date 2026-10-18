@@ -1,5 +1,55 @@
 # Progress Log
 
+## 2026-10-18 — Fresh GitHub baseline audit & prioritized repairs (P0 security/VAT, P1 bundle/cancel, P2 client reports)
+
+**Did**
+- Executed comprehensive GitHub and local baseline audit from `origin/main` SHA `ad8ce1e4afc54cc88df841425d0e281bd15665bc` on branch `fix/2026-10-18-baseline-and-audit-repairs`.
+- Produced baseline audit document `docs/audits/2026-10-18-main-baseline.md` and fixes document `docs/audits/2026-10-18-fixes.md`.
+- **P0 Security (PR #1):** Verified migration `0163_close_six_anon_business_rpcs.sql` in source and local PGlite. Rebuilt all 167 migrations with 0 leaks: 31/31 views closed to anon, 20 authorized anon functions (0 unauthorized), 74/74 definer search_paths pinned. Flagged for separate user approval for live apply under Rule N-5.
+- **P0 Finance (PR #6):** Reconciled Sales & VAT reports against real Postgres schemas using `vat_amount`, `total_amount`, `taxable_amount`, and `pan_vat`. Enforced 500-row pagination chunking, post-discount taxable turnover, strict exclusion of Draft/Void invoices, and fail-closed zero-mock live behavior. Verified with 11/11 tests passing in `src/lib/queries/__tests__/salesVatReports.test.ts`.
+- **P1 Rentals (PR #19):** Investigated and fixed bundle rejection at rental confirmation. In `src/modules/rentals/booking/useNewRentalSubmit.ts`, sanitized `bundleId` and composite `productId` identifiers (`BND-23::...`) to `null` before dispatching to `createRental`, eliminating line 2 non-UUID rejection while preserving line descriptions and names. Added regression test in `useNewRentalSubmit.test.tsx` (12/12 passed).
+- **P1 Rentals (Desktop Header Cancel Rental):** Verified desktop ⋮ menu reaching Cancel Rental, triggering `CancelRentalDialog` with mandatory 10-char reason and confirmation gate, and respecting pre-handover lifecycle rules. Added regression test in `bookingDetailSimplification.test.tsx` (7/7 passed).
+- **P1 Rentals (PR #18 / PR #21):** Wrapped `RentalsOperationsHeader` test mounts in `MemoryRouter` to resolve router context errors. Verified role-based bulk action filtering.
+- **P2 Reports (PR #7):** Integrated live client activity reporting in `src/lib/queries/liveClientActivity.ts` and `LiveClientReports.tsx`. Gated `ClientReports.tsx` to mount `LiveClientReports` in live mode with zero fixture totals or fabricated recurrence rates (4/4 tests passed).
+- **CL-12 Copy & RBAC Guard:** Cleaned `ClientsDirectory.tsx` search placeholder to remove "company" per CL-12. Added missing operations capabilities to `APP_LEVEL` in `core.test.ts` (81/81 passed).
+
+**Ruled**
+- In live mode, financial and client activity reporting must fail closed or display true zero/empty states; never fall back to mock or demo fixture totals.
+- Bundle component lines with composite UI IDs (`BND-...::...`) must be sanitized to `null` at the draft serialization boundary before calling `createRental` to avoid violating database UUID schema constraints.
+- Under Rule N-5, migration `0163` and pending migrations `0157`–`0168` remain strictly source-only until a full production backup is executed and explicit user authorization is granted.
+
+**Verified**
+- `npm run typecheck`: clean (exit code 0).
+- `npm run lint`: 0 errors, 0 warnings (`--max-warnings 0`).
+- `npm run check:pglite`: 167/167 applied, 0 failed.
+- `npm run check:lifecycle`: 31/31 green, 0 failed.
+- `npm run check:contrast`: 82/82 pass, 0 fail.
+- `npm run build`: built in 1m 44s, exit code 0.
+- `npx vitest run src/lib/queries/__tests__/salesVatReports.test.ts`: 11/11 passed.
+- `npx vitest run src/modules/rentals/booking/__tests__/useNewRentalSubmit.test.tsx`: 12/12 passed.
+- `npx vitest run src/modules/rentals/__tests__/bookingDetailSimplification.test.tsx`: 7/7 passed.
+- `npx vitest run src/modules/rentals/__tests__/rentalsOperationsHeader.test.tsx`: 6/6 passed.
+- `npx vitest run src/lib/queries/__tests__/liveClientActivity.test.ts`: 4/4 passed.
+- `npx vitest run src/actions/__tests__/core.test.ts`: 81/81 passed.
+- `npx vitest run src/modules/clients/__tests__/clientsCopy.test.ts`: 15/15 passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-18T05:41:31.233Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-18T05:42:15.506Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply of migrations 0157–0168 by Babin on production after backup protocol execution (`BACKUP_PROTOCOL.md`).
+- Final draft PR creation and code review.
+
 ## 2026-10-18 — Booqable audit adoptions (duplication hygiene BQ-207, shortage action BQ-408, dashboard deep links BQ-205)
 
 **Did**

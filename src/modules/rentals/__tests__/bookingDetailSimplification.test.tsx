@@ -202,6 +202,22 @@ describe('BookingDetail Simplification (Task 4)', () => {
     expect(print).toBeDefined()
   })
 
+  it('offers Cancel Rental from the More menu and opens CancelRentalDialog', async () => {
+    await mount()
+    const more = [...container.querySelectorAll('button')].find((b) => b.getAttribute('aria-label') === 'More booking actions')
+    await act(async () => {
+      more?.click()
+    })
+    const cancel = [...document.body.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((b) => b.textContent?.trim() === 'Cancel Rental')
+    expect(cancel).toBeDefined()
+    await act(async () => {
+      cancel?.click()
+    })
+    expect(document.body.textContent).toContain('Cancel Rental · #B-715')
+    expect(document.body.textContent).toContain('Cancellation Reason')
+  })
+
+
   it('links client name to client detail page and shows contact phone', async () => {
     await mount()
     const link = [...container.querySelectorAll('a')].find((a) => a.getAttribute('href') === '/clients/c-1')

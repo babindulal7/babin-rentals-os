@@ -43,6 +43,7 @@ docs/docs.zip
 
 # Claude Code local config and worktrees
 .claude/
+.worktrees/
 
 # Unpacked documentation archive
 md2/
