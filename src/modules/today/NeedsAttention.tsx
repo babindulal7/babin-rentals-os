@@ -1,4 +1,3 @@
-import React from 'react'
 import Icon from '../../components/ui/Icon'
 import { useTodayAttention, type TodayAttentionState } from './useTodayAttention'
 import type { AttentionTask } from './attentionModel'
@@ -33,9 +32,24 @@ function taskButtonClass(task: AttentionTask): string {
   }
 }
 
-export function NeedsAttention({ onOpenTask, onViewAll, state: injectedState }: NeedsAttentionProps) {
+export function NeedsAttention(props: NeedsAttentionProps) {
+  if (props.state) {
+    return <NeedsAttentionView {...props} state={props.state} />
+  }
+  return <NeedsAttentionWithHook {...props} />
+}
+
+function NeedsAttentionWithHook(props: NeedsAttentionProps) {
   const hookState = useTodayAttention()
-  const { tasks, totalCount, loading, error, isOffline, refresh, truncated } = injectedState ?? hookState
+  return <NeedsAttentionView {...props} state={hookState} />
+}
+
+interface NeedsAttentionViewProps extends NeedsAttentionProps {
+  state: TodayAttentionState
+}
+
+function NeedsAttentionView({ onOpenTask, onViewAll, state }: NeedsAttentionViewProps) {
+  const { tasks, totalCount, loading, error, isOffline, refresh, truncated } = state
 
   const displayedTasks = tasks.slice(0, 3)
   const hasCritical = tasks.some((t) => t.severity === 'critical')

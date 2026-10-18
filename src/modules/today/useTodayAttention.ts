@@ -49,9 +49,18 @@ export function useTodayAttention(): TodayAttentionState {
 
   // Track request sequence to discard stale out-of-order responses
   const activeRequestId = useRef(0)
+  const isMountedRef = useRef(true)
+
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
 
   const fetchAttention = useCallback(async () => {
     const requestId = ++activeRequestId.current
+    if (!isMountedRef.current) return
     setLoading(true)
 
     try {
@@ -62,8 +71,8 @@ export function useTodayAttention(): TodayAttentionState {
         listBookings({ ...latePickups(nowAd), withCount: true }),
       ])
 
-      // If a newer request has started, drop this response
-      if (requestId !== activeRequestId.current) return
+      // If a newer request has started or unmounted, drop this response
+      if (!isMountedRef.current || requestId !== activeRequestId.current) return
 
       const overdueTotal = overdueRes.total ?? overdueRes.rows.length
       const lateTotal = latePickupsRes.total ?? latePickupsRes.rows.length
@@ -80,13 +89,13 @@ export function useTodayAttention(): TodayAttentionState {
       setError(null)
       setLastFetchedAt(new Date())
     } catch (err) {
-      if (requestId !== activeRequestId.current) return
+      if (!isMountedRef.current || requestId !== activeRequestId.current) return
       const message = err instanceof Error ? err.message : 'Attention items unavailable'
       setError(message)
       setTasks([])
       setTotalCount(0)
     } finally {
-      if (requestId === activeRequestId.current) {
+      if (isMountedRef.current && requestId === activeRequestId.current) {
         setLoading(false)
       }
     }

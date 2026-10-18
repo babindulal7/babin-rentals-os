@@ -25,6 +25,8 @@ import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext
 import type { BookingStatus } from '../../lib/workflow'
 import RawDashboardMovementPanel from './DashboardMovementPanel'
 import ShiftHandoverPanel from './ShiftHandoverPanel'
+import { NeedsAttention } from './NeedsAttention'
+import type { AttentionTask } from './attentionModel'
 import './dashboard.css'
 
 const DashboardMovementPanel = RawDashboardMovementPanel as React.ComponentType<
@@ -456,10 +458,6 @@ export default function Today() {
   const pickupCount = pickups.loading || pickups.error ? undefined : pickups.total ?? pickups.rows.length
   const returnCount = returns.loading || returns.error ? undefined : returns.total ?? returns.rows.length
 
-  const overduePickups = useMemo(() => {
-    return pickups.rows.filter((r) => r.flags.includes('Overdue'))
-  }, [pickups.rows])
-
   const [activeRentalsCount, setActiveRentalsCount] = useState<number>(0)
   const [activeRentalsItems, setActiveRentalsItems] = useState<number>(0)
   const [activeRentalsPaisa, setActiveRentalsPaisa] = useState<number>(0)
@@ -586,6 +584,21 @@ export default function Today() {
   }, [goToToday, stepDay, isPhone])
 
   const navigate = useNavigate()
+
+  const handleOpenAttentionTask = useCallback(
+    (task: AttentionTask) => {
+      openOperations(task.bookingNo, task.stage, task.job)
+    },
+    [openOperations],
+  )
+
+  const handleViewAllAttention = useCallback(
+    (exceptionParam?: string) => {
+      const target = exceptionParam ? `/operations?exception=${exceptionParam}` : '/operations'
+      navigate(target)
+    },
+    [navigate],
+  )
 
   const returnsEmptyFooter = useMemo(() => {
     if (!isReturnToday) return null
@@ -861,58 +874,11 @@ export default function Today() {
         </div>
       </div>
 
-      {/* Unresolved / Overdue Pickups Alert Banner */}
-      {isDispatchToday && overduePickups.length > 0 && (
-        <div
-          className="dashboard-alert-banner"
-          role="alert"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12,
-            padding: '10px 16px',
-            marginBottom: 'var(--sp-md, 12px)',
-            borderRadius: 'var(--r-card)',
-            background: 'color-mix(in srgb, var(--warn) 12%, var(--card))',
-            border: '1px solid color-mix(in srgb, var(--warn) 35%, transparent)',
-            color: 'var(--warn-text)',
-            fontSize: 'var(--t-meta, 13px)',
-            boxShadow: 'var(--shadow-xs)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Icon name="alert_triangle" size={18} style={{ color: 'var(--warn)', flexShrink: 0 }} />
-            <span>
-              <strong>Unresolved / Overdue Pickups <span className="font-mono tabular-nums">({overduePickups.length})</span></strong>
-              {' — '}
-              {overduePickups.length === 1 ? (
-                <>
-                  <span className="font-mono tabular-nums">1</span> booking is
-                </>
-              ) : (
-                <>
-                  <span className="font-mono tabular-nums">{overduePickups.length}</span> bookings are
-                </>
-              )}{' '}
-              past scheduled pickup time awaiting dispatch.
-            </span>
-          </div>
-          <button
-            type="button"
-            className="ui-button ui-button--sm ui-button--outline press tap"
-            style={{
-              borderColor: 'color-mix(in srgb, var(--warn) 40%, transparent)',
-              color: 'var(--warn-text)',
-              flexShrink: 0,
-              gap: 6,
-            }}
-            onClick={() => navigate('/operations?queue=pack')}
-          >
-            Resolve in Operations <Icon name="arrow_right" size={14} />
-          </button>
-        </div>
-      )}
+      {/* Needs Attention Panel — Replaces legacy overdue pickups banner with live verified exceptions */}
+      <NeedsAttention
+        onOpenTask={handleOpenAttentionTask}
+        onViewAll={handleViewAllAttention}
+      />
 
       {/* Spec §31: Mobile Segmented Control */}
       {isPhone && (
