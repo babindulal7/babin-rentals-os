@@ -1,5 +1,58 @@
 # Progress Log
 
+## 2026-10-18 — Semantic Schema Mapping Audit, Rentals Table Alignment & /today Priority Repairs
+
+**Did**
+- Executed comprehensive `/schema-mapping` audit across all 142 base tables, 31 views, and 481 foreign keys in Babin Rentals OS; created `schema_mapping_audit.md` mapping manifesto establishing strict field-level contracts across Rentals, Inventory, Clients, Finance, and Operations domains.
+- **Rentals Table & Filter Navigation Alignment:**
+  1. Normalized top bar actions: standard 36×36px dimensions and rounded borders for `BookingOperationsMenu` (compact) aligning with `OverflowMenu`.
+  2. Search input polish: shortened placeholder to `"Search rentals…"` with clear spacing preventing overlap with the `[Ctrl+K]` shortcut badge.
+  3. Filter tab tooltips: bound workflow stage descriptions to filter tabs (`Upcoming`, `Out`, `Returns`) and muted zero count indicators with `.module-filter-bar__tab-count.is-zero`.
+  4. Pre-Invoice Booking Totals: updated `readTotalAmounts(ids)` in `src/lib/queries/bookings.ts` to fall back to `booking_lines_v` line rate aggregation (+ 13% standard VAT) for bookings in `Booked` and `Packed` stages prior to invoice issuance, resolving blank `—` displays while strictly preserving Law 6 money-blind role security.
+  5. Timestamp comparison robustness: standardized on `Date.parse()` in `toRentalListRow` for timezone-resilient millisecond calculations; updated Quote past-pickup note to `'Expired dates'` to match Draft and eliminate false alarms.
+- **/today Dashboard Priorities (P1–P4):**
+  1. Compacted Pickup Card (P1): Replaced repetitive `⚠️ Overdue pickup · X days late` badge with clean `⚠️ Awaiting dispatch`, eliminating duplication with the left gutter and preventing badge wrapping.
+  2. Expired Return Window Alert (P1): Added `⚠️ Window passed · Reschedule or Cancel` alert badge on bookings whose scheduled return date has already elapsed without dispatch.
+  3. Quick Exception Actions (P1): Wired quick overflow actions (`View Booking`, `Reschedule Dates`, `Cancel No-Show`) directly onto movement card rows.
+  4. Empty Column Situational Fill (P2): When returns count is 0, auto-rendered `Floor Attention: QC & Maintenance Holds` preview card (displaying top 4 open cases with direct `Resolve →` deep link to `/inventory/cases`) and `Returning Tomorrow` prep queue, eliminating dead vertical space.
+  5. PWA Bundle Size & Font Precache (P3): Verified `vite.config.ts` Workbox `globIgnores` excludes legacy `.woff` and non-Nepal/English font subsets (`cyrillic`, `greek`, `vietnamese`, `latin-ext`), reducing precache payload by ~65%.
+  6. Non-Packable Line Types (P4): Verified centralized case-insensitive normalization in `src/lib/bookingLineTypes.ts` covering services, sub-rentals, and manual charges.
+
+**Ruled**
+- In `readTotalAmounts`, bookings without issued invoices must compute estimated pre-invoice totals from `booking_lines_v` so operations and sales staff can evaluate order value before invoicing.
+- Money-blind roles (`Warehouse`, `Technician`, `Driver`, `Client`) must continue receiving `null` for pre-invoice totals, enforced at the Postgres view and RLS level.
+- On the `/today` movement board, status badges must never duplicate duration or lateness metrics already shown in the left gutter.
+- All non-packable line item checks must normalize casing and whitespace via `isNonPackableLineType()`.
+
+**Verified**
+- `npm run typecheck`: clean (exit code 0).
+- `npm run lint`: 0 errors, 0 warnings (`--max-warnings 0`).
+- `npm run check:pglite`: 167/167 applied, 0 leaks, 74/74 definers pinned, exit code 0.
+- `npm run check:lifecycle`: 31/31 green, 0 failed, exit code 0.
+- `npm run check:contrast`: 82/82 pass across Dark, Light, High Contrast, and Glass themes, 0 fail.
+- `npm run build`: built in 1m 27s, exit code 0.
+- `npx vitest run src/modules/rentals/__tests__/rentalsList.render.test.tsx`: 41/41 passed.
+- `npx vitest run src/modules/rentals/__tests__/rentalsList.test.ts`: 91/91 passed.
+- `npx vitest run src/lib/__tests__/bookingLineTypes.test.ts`: 3/3 passed.
+- `npx vitest run src/modules/today/__tests__/`: 119/119 passed across 5 test suites.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-18T05:51:02.314Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-18T05:51:49.970Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply of migrations 0157–0168 by Babin on production after backup protocol execution (`BACKUP_PROTOCOL.md`).
+- Post-deployment smoke test on production.
+
 ## 2026-10-18 — Fresh GitHub baseline audit & prioritized repairs (P0 security/VAT, P1 bundle/cancel, P2 client reports)
 
 **Did**
