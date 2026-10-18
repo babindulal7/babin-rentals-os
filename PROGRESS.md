@@ -41,8 +41,8 @@
 | Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
 | Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
 | Overall | mean of five | ≈ 98% | +0 |
-Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-18T08:49:13.232Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
-Gates read from .lifecycle-result.json, written 2026-10-18T08:49:42.995Z.
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-18T08:57:05.273Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-18T08:57:28.986Z.
 Counted by `npm run completion`, not typed.
 
 ### Remaining
