@@ -580,6 +580,13 @@ const monthStart = new Date(Date.UTC(TODAY.getUTCFullYear(), TODAY.getUTCMonth()
 const lastMonthEnd = addDays(monthStart, -1)
 const lastMonthStart = new Date(Date.UTC(lastMonthEnd.getUTCFullYear(), lastMonthEnd.getUTCMonth(), 1))
 
+/**
+ * @deprecated ADOPTIONS item 5 — backward-looking preset list, frozen at import,
+ * seed-ledger-bound, BS-anchored fiscal. No caller imports it (verified 2026-10-17).
+ * Forward ranges come from `periodRange` (src/data/today.ts); instants from
+ * `businessNowAd`. Retiring the export is a one-line removal once the pulse
+ * screens migrate; until then it stays as a reference, not a dependency.
+ */
 export const PERIODS: PeriodOption[] = [
   opt('today', 'Today', TODAY, TODAY),
   opt('yesterday', 'Yesterday', addDays(TODAY, -1), addDays(TODAY, -1)),

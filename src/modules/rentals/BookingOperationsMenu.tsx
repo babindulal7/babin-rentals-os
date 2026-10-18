@@ -4,6 +4,8 @@ import type { IconName } from '../../components/ui/Icon'
 import { stepWriteGate } from '../../lib/operationsShell'
 import type { BookingStatus, JobName } from '../../lib/workflow'
 import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext'
+import { useAuth } from '../../lib/auth'
+import { canPerformOp, type OperationName } from '../../lib/rbac'
 
 const OPERATIONS: ReadonlyArray<{ job: JobName; label: string; icon: IconName }> = [
   { job: 'Pack', label: 'Packing', icon: 'box' },
@@ -40,6 +42,7 @@ export default function BookingOperationsMenu({
   const rootRef = useRef<HTMLDivElement | null>(null)
   const menuId = useId()
   const { openOperations } = useOperationsWorkspace()
+  const { user } = useAuth()
 
   useEffect(() => {
     if (!open) return
@@ -120,14 +123,18 @@ export default function BookingOperationsMenu({
           }}
         >
           {OPERATIONS.map(({ job, label, icon }) => {
+            const opName = job.toLowerCase() as OperationName
+            const roleAllowed = user ? canPerformOp(user.role, opName) : true
             const gate = bookingStatus ? stepWriteGate(job, bookingStatus) : null
             const reason =
               unavailable ??
               (!bookingNo
                 ? 'Save and confirm this booking before starting operations.'
-                : gate && !gate.allowed
-                  ? gate.reason
-                  : null)
+                : !roleAllowed
+                  ? `Your role (${user?.role}) does not have permission to perform ${label}.`
+                  : gate && !gate.allowed
+                    ? gate.reason
+                    : null)
             const disabled = reason !== null
 
             return (

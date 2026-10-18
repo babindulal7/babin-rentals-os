@@ -33,8 +33,11 @@ export interface EmptyStateProps {
   description?: string
   actionLabel?: string
   onAction?: () => void
+  secondaryActionLabel?: string
+  onSecondaryAction?: () => void
   icon?: ReactNode
   className?: string
+  children?: ReactNode
 }
 
 export function EmptyState({
@@ -43,8 +46,11 @@ export function EmptyState({
   description,
   actionLabel,
   onAction,
+  secondaryActionLabel,
+  onSecondaryAction,
   icon,
   className,
+  children,
 }: EmptyStateProps) {
   const defaultTitle = kind === 'nothing-yet' ? 'No records yet' : 'No items found'
   const defaultDescription =
@@ -92,11 +98,21 @@ export function EmptyState({
       <p style={{ margin: '0 0 16px', maxWidth: 340, fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.5 }}>
         {finalDescription}
       </p>
-      {actionLabel && onAction && (
-        <Button variant="secondary" onClick={onAction}>
-          {actionLabel}
-        </Button>
+      {((actionLabel && onAction) || (secondaryActionLabel && onSecondaryAction)) && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+          {actionLabel && onAction && (
+            <Button variant="secondary" onClick={onAction}>
+              {actionLabel}
+            </Button>
+          )}
+          {secondaryActionLabel && onSecondaryAction && (
+            <Button variant="tertiary" onClick={onSecondaryAction}>
+              {secondaryActionLabel}
+            </Button>
+          )}
+        </div>
       )}
+      {children}
     </div>
   )
 }

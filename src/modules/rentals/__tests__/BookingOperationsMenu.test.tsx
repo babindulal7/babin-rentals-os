@@ -12,6 +12,15 @@ vi.mock('../HandoverWorkspace', () => ({ default: () => <div>Handover workspace 
 vi.mock('../ReturnWorkspace', () => ({ default: () => <div>Return workspace body</div> }))
 vi.mock('../ResetWorkspace', () => ({ default: () => <div>Reset workspace body</div> }))
 
+let currentRole = 'Owner'
+vi.mock('../../../lib/auth', () => ({
+  useAuth: () => ({
+    user: { id: 'u-test', name: 'Test User', role: currentRole, isSharedDevice: false },
+    loading: false,
+    isLocked: false,
+  }),
+}))
+
 ;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
 
 let container: HTMLDivElement
@@ -51,6 +60,7 @@ afterEach(async () => {
   await act(async () => root.unmount())
   container.remove()
   path = ''
+  currentRole = 'Owner'
 })
 
 describe('booking-level Operations dropdown', () => {
@@ -83,5 +93,23 @@ describe('booking-level Operations dropdown', () => {
     expect(items).toHaveLength(4)
     expect(items.every((item) => item.getAttribute('aria-disabled') === 'true')).toBe(true)
     expect(items[0]?.getAttribute('title')).toContain('Save and confirm this booking')
+  })
+
+  it('disables Handover for Technician role who lacks client-facing handover grant (P0-B)', async () => {
+    currentRole = 'Technician'
+    await mount('B-715', 'Packed')
+    await openMenu()
+
+    const handover = [...container.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+      (item) => item.textContent?.trim() === 'Handover',
+    )
+    expect(handover?.getAttribute('aria-disabled')).toBe('true')
+    expect(handover?.getAttribute('title')).toContain('permission')
+
+    const packing = [...container.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+      (item) => item.textContent?.trim() === 'Packing',
+    )
+    // Packing is for stage Booked, so on stage Packed it reports completion, not role denial
+    expect(packing?.getAttribute('title')).not.toContain('permission')
   })
 })

@@ -225,6 +225,7 @@ export default function WorkingCapitalReport() {
           icon: 'dollar',
           accent: 'neutral',
           note: `at most ${money(workingCapitalCeiling())} — ${UNTRACKED_LABELS.toLowerCase()} unknown`,
+      definition: 'Upper bound on working capital; untracked liability lines are listed in the note.',
         }
       : {
           label: 'Working capital',
@@ -233,6 +234,7 @@ export default function WorkingCapitalReport() {
           accent: 'success',
           delta: { direction: 'up', text: 'Rs 62,000 vs last month', good: true },
           note: 'current assets less liabilities',
+          definition: 'Current assets minus current liabilities; negative means short-term obligations exceed liquid assets.',
         },
     currentRatio() === null
       ? {
@@ -241,6 +243,7 @@ export default function WorkingCapitalReport() {
           icon: 'chart',
           accent: 'neutral',
           note: `${money(currentAssets())} ÷ an incomplete liability total`,
+      definition: 'Current assets over an incomplete liability total; ratio understates true liquidity.',
         }
       : {
           label: 'Current ratio',
@@ -249,6 +252,7 @@ export default function WorkingCapitalReport() {
           accent: 'success',
           delta: { direction: 'up', text: 'healthy above 1.5', good: true },
           note: `${money(currentAssets())} ÷ ${money(currentLiabilities())}`,
+          definition: 'Current assets divided by current liabilities; below 1.0 means short-term obligations exceed liquid assets.',
         },
     {
       // The one the design got wrong: up is worse here.
@@ -277,6 +281,7 @@ export default function WorkingCapitalReport() {
           icon: 'dollar',
           accent: 'primary',
           note: `after obligations · ${freeCashMonths()} months cover`,
+      definition: 'Cash remaining after all known obligations; months of operating cost it covers.',
         },
     {
       label: 'Tied in receivables',
@@ -285,6 +290,7 @@ export default function WorkingCapitalReport() {
       accent: 'progress',
       delta: { direction: 'up', text: `${receivableShare()}% of assets`, good: false },
       note: `4 clients owing · ${money(OVERDUE)} overdue`,
+      definition: 'Total tied up in unpaid invoices; overdue portion is past due date.',
     },
   ]
 

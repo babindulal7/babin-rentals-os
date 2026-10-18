@@ -66,7 +66,14 @@ export default defineConfig({
          * the correct trade for an app whose stated premise is that the
          * warehouse has no signal.
          */
-        globPatterns: ['**/*.{js,wasm,css,html,woff,woff2,ico,png,svg}'],
+        globPatterns: ['**/*.{js,wasm,css,html,ico,png,svg,woff2}'],
+        globIgnores: [
+          '**/*.woff',
+          '**/*-cyrillic-*',
+          '**/*-greek-*',
+          '**/*-vietnamese-*',
+          '**/*-latin-ext-*',
+        ],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/[^/]+\.supabase\.co\/rest\/v1\/(equipment|clients|bundles)/,
@@ -144,7 +151,7 @@ export default defineConfig({
       '.trycloudflare.com',
     ],
     watch: {
-      ignored: ['**/__rar_*', '**/*.rartemp', '**/*.rar', '**/.tmp-*', '**/.claude/**', '**/artifacts/**', '**/.system_generated/**'],
+      ignored: ['**/__rar_*', '**/*.rartemp', '**/*.rar', '**/*.zip', '**/*.7z', '**/*.tar*', '**/.tmp-*', '**/.claude/**', '**/artifacts/**', '**/.system_generated/**'],
     },
   },
   preview: {

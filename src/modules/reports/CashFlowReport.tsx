@@ -181,6 +181,7 @@ export default function CashFlowReport() {
       accent: 'success',
       delta: { direction: 'up', text: 'cash-positive', good: true },
       note: 'operating + investing',
+      definition: 'Cash in minus cash out over the period; deposits held in trust are excluded.',
     },
     {
       label: 'Cash collected',
@@ -189,6 +190,7 @@ export default function CashFlowReport() {
       accent: 'primary',
       delta: { direction: 'up', text: '2% vs last month', good: true },
       note: `${collectionRate()}% of ${money(INVOICED)} invoiced`,
+      definition: 'Payments received against invoices issued in the period.',
     },
     {
       label: 'Closing cash',
@@ -197,6 +199,7 @@ export default function CashFlowReport() {
       accent: 'primary',
       delta: { direction: 'up', text: `from ${money(OPENING_CASH)}`, good: true },
       note: 'own funds, excludes deposits',
+      definition: 'Own funds on hand at period end; excludes client deposits held in trust.',
     },
     {
       // Rising uncollected cash is bad news. The delta arrow points up and the
@@ -207,6 +210,7 @@ export default function CashFlowReport() {
       accent: 'danger',
       delta: { direction: 'up', text: `${100 - collectionRate()}% of billed`, good: false },
       note: `receivables · ${money(OVERDUE)} overdue`,
+      definition: 'Outstanding invoices not yet collected; includes overdue amounts.',
     },
     {
       label: 'Operating runway',
@@ -215,6 +219,7 @@ export default function CashFlowReport() {
       accent: 'progress',
       delta: { direction: 'up', text: '0.2 mo vs last month', good: true },
       note: 'closing cash ÷ operating burn',
+      definition: 'Months of operating burn covered by closing cash.',
     },
   ]
 

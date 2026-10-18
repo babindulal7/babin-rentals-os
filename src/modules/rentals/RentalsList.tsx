@@ -19,12 +19,12 @@ import { PageShell } from '../../components/ui/PageShell'
 import { PageHeader } from '../../components/ui/header/PageHeader'
 import type { PageHeaderBulkSelection } from '../../lib/workspaceContext'
 import { useOptionalWorkspace } from '../../lib/workspaceContext'
+import { ModuleSubHeader, ModuleKpiStrip, ModuleFilterBar, StatusPill } from '../../components/ui/module-shell'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { ContextDrawer } from '../../components/ui/ContextDrawer'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { ActiveFilterChips, FilterButton } from '../../components/ui/FilterDrawer'
 import { SavedViewsMenu, type SavedListView } from '../../components/ui/SavedViewsMenu'
-import { FilterBar } from '../../components/ui/FilterBar'
 import { Pagination } from '../../components/ui/Pagination'
 import { BsAdDate } from '../../components/ui/BsAdDate'
 import { Badge } from '../../components/ui/Badge'
@@ -146,7 +146,9 @@ import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext
  * and those call sites do not change. It loses the paint, not its place.
  */
 function Tag({ text, status }: { text: string; status: StatusKey }) {
-  return <Badge tone={status} label={text} size="sm" />
+  const tone = status === 'in' ? 'emerald' : status === 'danger' ? 'red' : status === 'progress' || status === 'primary' ? 'blue' : 'amber'
+  const icon: IconName = status === 'in' ? 'check' : status === 'danger' ? 'alert_triangle' : status === 'progress' ? 'truck' : 'timer'
+  return <StatusPill tone={tone} label={text} icon={icon} />
 }
 
 /**
@@ -179,17 +181,6 @@ function Tag({ text, status }: { text: string; status: StatusKey }) {
  */
 const EXTERNAL_LABEL = 'Sub-rented — external gear'
 const EXTERNAL_ICON: IconName = 'external_link'
-
-const VIEW_TOOLTIPS: Record<string, string> = {
-  All: 'All rental bookings and drafts',
-  Draft: 'In-progress rental drafts',
-  Quote: 'Active price quotes',
-  Upcoming: 'Upcoming bookings (Filters BOOKED + PACKED)',
-  Out: 'Equipment currently on rent (ON RENT)',
-  Returns: 'Returned equipment (RETURNED)',
-  Closed: 'Archived and completed rentals (CLOSED)',
-  Cancelled: 'Cancelled bookings',
-}
 
 function draftToRentalListRow(d: RentalDraftRecord): RentalListRow {
   const data = d.data
@@ -513,10 +504,31 @@ function RowOperations({
   onInspect?: ((row: RentalListRow) => void) | undefined
 }) {
   const { openOperations } = useOperationsWorkspace()
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [up, setUp] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const ref = useDismiss(open, () => setOpen(false), menuRef)
+
+  const primaryOp = useMemo(() => {
+    if (row.isCancelled || row.isClosed) return null
+    if ((row.status as string) === 'Draft') {
+      return { label: 'Edit Draft', icon: 'edit' as const, isDraft: true, job: null }
+    }
+    if (row.status === 'Booked') {
+      return { label: 'Pack', icon: 'package' as const, isDraft: false, job: 'Pack' as const }
+    }
+    if (row.status === 'Packed') {
+      return { label: 'Handover', icon: 'truck' as const, isDraft: false, job: 'Handover' as const }
+    }
+    if (row.status === 'On Rent') {
+      return { label: 'Return', icon: 'return_arrow' as const, isDraft: false, job: 'Return' as const }
+    }
+    if (row.status === 'Returned') {
+      return { label: 'Reset', icon: 'refresh' as const, isDraft: false, job: 'Reset' as const }
+    }
+    return null
+  }, [row.isCancelled, row.isClosed, row.status])
 
   /**
    * The table scrolls horizontally, and CSS resolves the *other* axis to `auto`
@@ -536,6 +548,23 @@ function RowOperations({
 
   return (
     <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+      {primaryOp && (
+        <button
+          type="button"
+          className="module-table__row-cta tap"
+          onClick={() => {
+            if (primaryOp.isDraft) {
+              navigate(`/rentals?action=new&draft=${row.id}`)
+            } else if (primaryOp.job) {
+              openOperations(row.bookingNo, row.status, primaryOp.job)
+            }
+          }}
+          aria-label={`${primaryOp.label} ${row.bookingNo}`}
+        >
+          <Icon name={primaryOp.icon} size={13} />
+          <span>{primaryOp.label}</span>
+        </button>
+      )}
       <span ref={ref} style={{ position: 'relative', display: 'inline-flex' }}>
         <button
           type="button"
@@ -1429,9 +1458,9 @@ export default function RentalsList() {
   /* `All` is the absence of a quick filter, not a value of one — it drops the
      param rather than writing `?quick=All`, so an unfiltered list has a clean
      URL and the badge does not count a filter that filters nothing. */
-  function pickChip(c: ChipKey) {
+  const pickChip = useCallback((c: ChipKey) => {
     f.setExtra('quick', c === 'All' ? undefined : c)
-  }
+  }, [f])
 
   /* Both `useFilters` setters reset to page 1 themselves — see the hook's
      `put`. That is why neither of these calls `setPage`. */
@@ -1633,6 +1662,46 @@ export default function RentalsList() {
   }
 
   const countedTitle = total === null ? 'Rentals' : `${total} ${total === 1 ? 'Rental' : 'Rentals'} found`
+
+  const activeRentalTab = useMemo(() => {
+    if (chip === 'Cancelled') return 'Cancelled'
+    if (stageChips.length === 0 && chip === 'All') return 'All'
+    if (statusFilter.size === 3 && statusFilter.has('Quote') && statusFilter.has('Booked') && statusFilter.has('Packed')) {
+      return 'Upcoming'
+    }
+    const match = RENTAL_VIEWS.find((v) => v.stages.length === 1 && v.stages[0] && stageChips.includes(v.stages[0]))
+    return match?.id ?? 'All'
+  }, [chip, stageChips, statusFilter])
+
+  const handleTabChange = useCallback(
+    (viewId: string) => {
+      const viewItem = RENTAL_VIEWS.find((v) => v.id === viewId)
+      if (!viewItem) return
+      const isAll = viewItem.id === 'All'
+      const isCancelledView = viewItem.id === 'Cancelled'
+      const isActive =
+        isCancelledView
+          ? chip === 'Cancelled'
+          : isAll
+            ? stageChips.length === 0 && chip === 'All'
+            : viewItem.id === 'Upcoming'
+              ? statusFilter.size === 3 && statusFilter.has('Quote') && statusFilter.has('Booked') && statusFilter.has('Packed')
+              : viewItem.stages.length === 1 && viewItem.stages[0] !== undefined && stageChips.length === 1 && stageChips.includes(viewItem.stages[0])
+
+      if (isCancelledView) {
+        pickChip(isActive ? 'All' : 'Cancelled')
+      } else if (isAll) {
+        f.setChipGroup('stage', [])
+        if (chip !== 'All') pickChip('All')
+      } else if (isActive) {
+        f.setChipGroup('stage', [])
+      } else {
+        f.setChipGroup('stage', [...viewItem.stages])
+        if (chip !== 'All') pickChip('All')
+      }
+    },
+    [chip, stageChips, statusFilter, pickChip, f],
+  )
 
   if (isNew) {
     return (
@@ -1881,16 +1950,82 @@ export default function RentalsList() {
         onExport={handleBulkExport}
       />
 
-      {/* 5-view operational bar + Sub-Rental + active facet chip */}
-      <FilterBar
-        activeCount={f.activeCount}
-        onClearAll={clearFilters}
-        filterChips={<ActiveFilterChips filters={f.chips} {...(isFiltered ? { onClearAll: clearFilters } : {})} />}
-        groupAriaLabel="Filter by operational view"
-        rightSlot={
+      {/* Zone 1: Sub-Header & Primary Action Bar */}
+      <ModuleSubHeader
+        counter={
+          <span>
+            <strong style={{ color: 'var(--text)' }}>{total ?? list.rows.length}</strong> active bookings ·{' '}
+            <strong style={{ color: 'var(--text)' }}>{getTabCount('Out', ['On Rent']) ?? 0}</strong> on set ·{' '}
+            <strong style={{ color: chip === 'Overdue' ? 'var(--danger-text)' : 'var(--text)' }}>
+              {chip === 'Overdue' ? total ?? 0 : getTabCount('Overdue', []) ?? 0}
+            </strong> overdue
+          </span>
+        }
+        loadedAt={list.lastFetchedAt ?? new Date()}
+        loading={list.loading}
+        onRefresh={refreshAll}
+      />
+
+      {/* Zone 2: 3-Card KPI Strip */}
+      <ModuleKpiStrip
+        items={[
+          {
+            id: 'out-on-set',
+            label: 'Out on Set',
+            count: getTabCount('Out', ['On Rent']) ?? 0,
+            subtitle: 'Active on production sets',
+            icon: 'truck',
+            tone: 'success',
+            active: stageChips.length === 1 && stageChips.includes('On Rent'),
+            onClick: () => {
+              f.setChipGroup('stage', ['On Rent'])
+              if (chip !== 'All') pickChip('All')
+            },
+          },
+          {
+            id: 'prep-packing',
+            label: 'Prep & Packing',
+            count: getTabCount('Upcoming', ['Quote', 'Booked', 'Packed']) ?? 0,
+            subtitle: 'Upcoming & booked kits',
+            icon: 'package',
+            tone: 'warn',
+            active: statusFilter.size === 3 && statusFilter.has('Quote') && statusFilter.has('Booked') && statusFilter.has('Packed'),
+            onClick: () => {
+              f.setChipGroup('stage', ['Quote', 'Booked', 'Packed'])
+              if (chip !== 'All') pickChip('All')
+            },
+          },
+          {
+            id: 'overdue-returns',
+            label: 'Overdue Returns',
+            count: chip === 'Overdue' ? total ?? 0 : getTabCount('Overdue', []) ?? 0,
+            subtitle: 'Requires immediate return',
+            icon: 'alert_triangle',
+            tone: 'danger',
+            active: chip === 'Overdue',
+            onClick: () => pickChip(chip === 'Overdue' ? 'All' : 'Overdue'),
+          },
+        ]}
+      />
+
+      {/* Zone 3: Unified Filter & Tab Bar */}
+      <ModuleFilterBar
+        tabs={RENTAL_VIEWS.map((viewItem) => ({
+          id: viewItem.id,
+          label: viewItem.label,
+          icon: viewItem.icon as IconName,
+          count: getTabCount(viewItem.id, viewItem.stages),
+        }))}
+        activeTab={activeRentalTab}
+        onTabChange={handleTabChange}
+        dropdownFilters={
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            {/* Spec §19 — the list's only sort control. Pickup is the default;
-                the type sorts are opt-in and round-trip in the URL (§34). */}
+            <FilterButton
+              onClick={() => setFiltersOpen((o) => !o)}
+              activeCount={f.activeCount}
+              controls="rentals-filters"
+              expanded={filtersOpen}
+            />
             {tabular && (
               <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--t-meta)', color: 'var(--text2)', fontWeight: 600 }}>
                 Sort
@@ -1902,7 +2037,7 @@ export default function RentalsList() {
                     if (column) f.setSort(column, dir !== 'desc')
                   }}
                   style={{
-                    minHeight: 36,
+                    minHeight: 44,
                     padding: '0 8px',
                     borderRadius: 'var(--r-btn)',
                     border: '1px solid var(--border)',
@@ -1914,7 +2049,9 @@ export default function RentalsList() {
                     cursor: 'pointer',
                   }}
                 >
-                  <option value="pickup_at:asc">Pickup date</option><option value="clients(name):asc">Client</option><option value="stage:asc">Status</option>
+                  <option value="pickup_at:asc">Pickup date</option>
+                  <option value="clients(name):asc">Client</option>
+                  <option value="stage:asc">Status</option>
                   <option value="project_type:asc">Project Type A → Z</option>
                   <option value="project_type:desc">Project Type Z → A</option>
                 </select>
@@ -1933,70 +2070,7 @@ export default function RentalsList() {
             />
           </span>
         }
-      >
-        {RENTAL_VIEWS.map((viewItem) => {
-          const isAll = viewItem.id === 'All'
-          const isCancelledView = viewItem.id === 'Cancelled'
-          const isActive = isCancelledView
-            // Cancelled is a presence flag, not a stage (Law 3 / 0015) — its
-            // active state is the quick chip, never the stage group.
-            ? chip === 'Cancelled'
-            : isAll
-              ? stageChips.length === 0 && chip === 'All'
-              : viewItem.id === 'Upcoming'
-                ? statusFilter.size === 3 && statusFilter.has('Quote') && statusFilter.has('Booked') && statusFilter.has('Packed')
-                : viewItem.stages.length === 1 && viewItem.stages[0] !== undefined && stageChips.length === 1 && stageChips.includes(viewItem.stages[0])
-
-          const tabCount = getTabCount(viewItem.id, viewItem.stages)
-
-          return (
-            <button
-              key={viewItem.id}
-              type="button"
-              onClick={() => {
-                if (isCancelledView) {
-                  // Opt into / out of the excluded population. The stage group
-                  // is left alone — rentalsQuery intersects it either way.
-                  pickChip(isActive ? 'All' : 'Cancelled')
-                } else if (isAll) {
-                  f.setChipGroup('stage', [])
-                  if (chip !== 'All') pickChip('All')
-                } else if (isActive) {
-                  f.setChipGroup('stage', [])
-                } else {
-                  f.setChipGroup('stage', [...viewItem.stages])
-                  if (chip !== 'All') pickChip('All')
-                }
-              }}
-              aria-pressed={isActive}
-              aria-label={viewItem.label}
-              title={VIEW_TOOLTIPS[viewItem.id] ?? viewItem.label}
-              style={stageChipStyle(isActive)}
-            >
-              <TouchTarget axis="y" />
-              <Icon
-                name={viewItem.icon}
-                size={13}
-                style={{ color: isActive ? 'var(--nav-active-accent)' : 'var(--text2)' }}
-              />
-              <span data-view-label>{viewItem.label}</span>
-              <span
-                className="figure"
-                style={{
-                  marginLeft: 4,
-                  fontSize: 'var(--t-meta, 12px)',
-                  color: tabCount === 0 ? 'var(--muted)' : isActive ? 'var(--nav-active-accent)' : 'var(--text2)',
-                  opacity: tabCount === 0 ? 0.6 : 1,
-                  fontWeight: tabCount === 0 ? 400 : 600,
-                }}
-                aria-label={`${viewItem.label} count`}
-              >
-                {tabCount !== null ? tabCount : '—'}
-              </span>
-            </button>
-          )
-        })}
-      </FilterBar>
+      />
 
       {/* Row 2: Sub-Rental & Quick Chips on left, Results Count & Saved Views on right */}
       <div
@@ -2011,6 +2085,7 @@ export default function RentalsList() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', flexWrap: 'wrap' }}>
+          {isFiltered && <ActiveFilterChips filters={f.chips} onClearAll={clearFilters} />}
           {chip !== 'All' && (
             <button
               type="button"
@@ -2112,22 +2187,54 @@ export default function RentalsList() {
               hasRows={list.rows.length > 0}
               empty={list.isEmpty || query.impossible}
               emptyIsFiltered={list.isFiltered}
-              onClearFilters={clearFilters}
               noun="rentals"
               skeleton="table"
               skeletonRows={6}
-              emptyTitle={isFiltered ? 'No rentals match these filters' : 'No rentals yet'}
+              emptyTitle={
+                f.filters.search
+                  ? f.activeCount > 1
+                    ? `No rentals matching "${f.filters.search}" with active filters`
+                    : `No rentals matching "${f.filters.search}"`
+                  : isFiltered
+                    ? 'No rentals match these filters'
+                    : 'No rentals yet'
+              }
+              emptyMessage={
+                f.filters.search && f.activeCount > 1
+                  ? 'Try clearing the search query to keep your active filters, or clear all filters.'
+                  : f.filters.search
+                    ? 'Try searching for a different booking number, client, or project.'
+                    : isFiltered
+                      ? 'Try adjusting or clearing your active filters.'
+                      : 'Get started by creating your first rental.'
+              }
+              clearLabel={
+                f.filters.search ? 'Clear search' : 'Clear filters'
+              }
+              onClearFilters={
+                f.filters.search ? () => f.setSearch('') : clearFilters
+              }
+              {...(f.filters.search && f.activeCount > 1
+                ? {
+                    secondaryClearLabel: 'Clear all filters',
+                    onSecondaryClearFilters: clearFilters,
+                  }
+                : {})}
+              {...(isFiltered && f.chips.length > 0
+                ? {
+                    emptyExtra: (
+                      <div style={{ marginTop: 14, display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
+                        <ActiveFilterChips filters={f.chips} onClearAll={clearFilters} />
+                      </div>
+                    ),
+                  }
+                : {})}
               /* From main's 32c4d29: the unfiltered empty list offers its one
                  next step. Gated like `rental.create` so a role that cannot
                  create is not offered a page that refuses it. */
               {...(!isFiltered && canWriteDesk
                 ? { emptyActionLabel: 'New Rental', onEmptyAction: () => navigate('/rentals/new') }
                 : {})}
-              emptyMessage={
-                isFiltered
-                  ? 'Try adjusting your search or active filters.'
-                  : 'Get started by creating your first rental.'
-              }
             >
               {view === 'Timeline' && (
                 <RentalTimeline rows={rowsWithIntel.map(({ row }) => row)} />
@@ -2225,8 +2332,8 @@ export default function RentalsList() {
                           <Link
                             data-intel-identifier
                             to={(r.status as string) === 'Draft' ? `/rentals?action=new&draft=${r.id}` : `/rentals/${r.bookingNo}`}
-                            className="identifier"
-                            style={{ fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--link)', textDecoration: 'none' }}
+                            className="identifier module-table__code-badge"
+                            style={{ fontSize: 'var(--t-meta)', fontWeight: 700, textDecoration: 'none' }}
                           >
                             {(r.status as string) === 'Draft' ? r.bookingNo : formatBookingNo(r.bookingNo)}
                           </Link>
@@ -2442,11 +2549,10 @@ export default function RentalsList() {
                               <Link
                                 data-intel-identifier
                                 to={(r.status as string) === 'Draft' ? `/rentals?action=new&draft=${r.id}` : `/rentals/${r.bookingNo}`}
-                                className="identifier"
+                                className="identifier module-table__code-badge"
                                 style={{
                                   fontSize: 'var(--t-meta)',
                                   fontWeight: 700,
-                                  color: 'var(--link)',
                                   textDecoration: 'none',
                                 }}
                               >

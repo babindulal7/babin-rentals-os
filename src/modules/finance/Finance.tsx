@@ -1,15 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { recordExport } from '../../lib/exportAudit'
 import { Link, useSearchParams } from 'react-router-dom'
-import Icon from '../../components/ui/Icon'
-import { Badge } from '../../components/ui/Badge'
-import { Card, PageHeader, PageActions, Button, KpiStrip, Rail } from '../../components/ui/Page'
-import { SearchInput } from '../../components/ui/SearchInput'
-import { ListControlRow } from '../../components/ui/ListWorkspace'
+import Icon, { type IconName } from '../../components/ui/Icon'
+import { Card, PageHeader, PageActions, Button, Rail } from '../../components/ui/Page'
+import { ModuleSubHeader, ModuleKpiStrip, ModuleFilterBar, StatusPill } from '../../components/ui/module-shell'
 import { PageShell } from '../../components/ui/PageShell'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { FilterButton, FilterDrawer } from '../../components/ui/FilterDrawer'
-import type { Kpi } from '../../components/ui/Page'
 import { PageBody } from '../../components/ui/PageBody'
 import { ErrorBanner } from '../../components/ui/StateViews'
 import { Donut, Legend } from '../../components/ui/Charts'
@@ -37,7 +34,6 @@ import {
   STORED_INVOICE_STATUSES,
   invoiceGlance,
   invoiceDetailGroups,
-  INVOICE_TOKEN,
   businessDayAd,
   businessNowAd,
   SPEC_TABS,
@@ -815,40 +811,7 @@ export default function Finance() {
    *
    * Nothing here is money-gated per-tile any more: for a money-blind session
    * the whole strip is inside the restricted `PageBody` and is not constructed
-   * at all. That is a stronger guarantee than omitting a note.
    */
-  const kpis: Kpi[] = [
-    {
-      label: 'Outstanding Invoices',
-      value: countOf(outstanding),
-      icon: 'invoice',
-      accent: 'progress',
-      detail: `${moneyOf(receivableTotal)} receivable`,
-      // L1: what this tile counts and what its figure sums. L2: a zero is a
-      // stated empty set (count query answered 0), never an unknown — the
-      // explanation rides only when the total is known.
-      definition: 'Live unpaid and partially-paid invoices; figure is Σ outstanding.',
-      ...(outstanding.total !== null ? { zeroExplanation: 'Nothing receivable — no unpaid invoices.' } : {}),
-    },
-    {
-      label: 'Overdue',
-      value: countOf(overdue),
-      icon: 'alert_triangle',
-      accent: 'danger',
-      detail: `${moneyOf(overdueTotal)} past due`,
-      definition: 'Past due date and still unpaid; figure is Σ outstanding past due.',
-      ...(overdue.total !== null ? { zeroExplanation: 'Nothing past due — every invoice is within terms.' } : {}),
-    },
-    {
-      label: 'Received',
-      value: moneyOf(receivedTotal),
-      icon: 'card',
-      accent: 'success',
-      note: period.label,
-      definition: `Sum of payment rows dated within ${period.label}.`,
-      ...(receivedTotal !== null ? { zeroExplanation: `No payments recorded ${period.label}.` } : {}),
-    },
-  ]
 
   /**
    * §5.4 — the payment-method breakdown, from `bank_accounts.channel_group`
@@ -1468,18 +1431,107 @@ export default function Finance() {
       {(tab === 'Dashboard' || tab === 'Invoices') && (
       <PageBody noun="finance records" {...restriction}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-          {tab === 'Dashboard' && <KpiStrip items={kpis} columns={kpis.length} />}
+          <ModuleSubHeader
+            counter={`${list.total ?? 0} invoices · ${outstanding.total ?? 0} outstanding · ${overdue.total ?? 0} overdue`}
+            loadedAt={new Date()}
+            loading={list.loading || outstanding.loading}
+            secondaryActions={[
+              { label: 'Export', icon: 'download', onClick: exportCsv },
+              ...(canTakePayment && canIssueInvoice
+                ? [{ label: 'Create Invoice', icon: 'plus' as const, onClick: () => setShowCreateInvoice(true) }]
+                : []),
+            ]}
+            primaryAction={
+              canTakePayment
+                ? {
+                    label: '+ Record Payment',
+                    onClick: () => {
+                      setSelectedInvoiceForRecord('')
+                      setShowRecordPayment(true)
+                    },
+                  }
+                : canIssueInvoice
+                  ? {
+                      label: '+ Create Invoice',
+                      onClick: () => setShowCreateInvoice(true),
+                    }
+                  : undefined
+            }
+          />
+
+          <ModuleKpiStrip
+            items={[
+              {
+                id: 'Outstanding',
+                label: 'Outstanding Invoices',
+                count: countOf(outstanding),
+                subtitle: `${moneyOf(receivableTotal)} receivable`,
+                icon: 'receipt',
+                tone: 'amber',
+                active: chip === 'Partially Paid',
+                onClick: () => {
+                  setTab('Invoices')
+                  setChip(chip === 'Partially Paid' ? 'All' : 'Partially Paid')
+                },
+              },
+              {
+                id: 'Overdue',
+                label: 'Overdue Invoices',
+                count: countOf(overdue),
+                subtitle: `${moneyOf(overdueTotal)} past due`,
+                icon: 'alert_triangle',
+                tone: (overdue.total ?? 0) > 0 ? 'red' : 'neutral',
+                active: chip === 'Overdue',
+                onClick: () => {
+                  setTab('Invoices')
+                  setDateFrom('')
+                  setDateTo('')
+                  setChip(chip === 'Overdue' ? 'All' : 'Overdue')
+                },
+              },
+              {
+                id: 'Received',
+                label: 'Received',
+                count: moneyOf(receivedTotal),
+                subtitle: `Collected ${period.label}`,
+                icon: 'card',
+                tone: 'emerald',
+                active: chip === 'Paid',
+                onClick: () => {
+                  setTab('Invoices')
+                  setChip(chip === 'Paid' ? 'All' : 'Paid')
+                },
+              },
+            ]}
+          />
 
           {tab === 'Invoices' && (
-            <ListControlRow
-              search={
-                <SearchInput
-                  value={railSearch}
-                  onChange={setRailSearch}
-                  onClear={() => setRailSearch('')}
-                  placeholder="Search invoice or credit-note no…"
-                  aria-label="Search invoices by invoice or credit-note number"
-                />
+            <ModuleFilterBar
+              tabs={INVOICE_CHIPS.map((c) => ({
+                id: c,
+                label: c === 'Partially Paid' ? 'Partial' : c,
+                icon: c === 'Paid' ? 'check' : c === 'Overdue' ? 'alert_triangle' : c === 'Void' ? 'close' : undefined,
+              }))}
+              activeTab={chip}
+              onTabChange={(c) => {
+                if (c === 'Overdue') {
+                  setDateFrom('')
+                  setDateTo('')
+                }
+                setChip(c as InvoiceChip)
+              }}
+              searchValue={railSearch}
+              onSearchChange={setRailSearch}
+              searchPlaceholder="Search invoice or credit-note no…"
+              dropdownFilters={
+                <Button
+                  variant="secondary"
+                  icon="filter"
+                  onClick={() => setInvoiceFiltersOpen(true)}
+                  aria-label={invoiceFilterCount > 0 ? `Filters (${invoiceFilterCount})` : 'Filters'}
+                >
+                  {invoiceFilterCount > 0 ? `Filters (${invoiceFilterCount})` : 'Filters'}
+                </Button>
               }
             />
           )}
@@ -1629,39 +1681,6 @@ export default function Finance() {
                 </>
               ) : (
                 <>
-                  <div className="finance-chip-track" role="group" aria-label="Filter invoices by status">
-                        {INVOICE_CHIPS.map((c) => {
-                        const on = chip === c
-                        return (
-                          <button
-                            key={c}
-                            type="button"
-                            /* Overdue and the rail's date range are MUTUALLY
-                               EXCLUSIVE — `overdueInvoices()` IS a dateRange
-                               (due_date ≤ yesterday) and `ListFilters` carries
-                               one, so holding both would silently replace the
-                               chip's meaning. Same call as Operations' ?queue
-                               vs ?quick: setting either clears the other. */
-                            onClick={() => {
-                              if (c === 'Overdue') {
-                                setDateFrom('')
-                                setDateTo('')
-                              }
-                              setChip(c)
-                            }}
-                            aria-pressed={on}
-                            {...(c === 'Overdue' ? { title: 'Past due and unpaid invoices' } : {})}
-                            className={`finance-filter-chip ${on ? 'is-active' : ''}`}
-                            style={{
-                              minHeight: 44,
-                              padding: '0 14px',
-                            }}
-                          >
-                            {c}
-                          </button>
-                        )
-                        })}
-                  </div>
                 <Card title={invoiceCardTitle} bodyStyle={{ padding: 0 }}>
                   {/*
                     Fixed ladder: restricted → error → loading → empty → children.
@@ -1717,7 +1736,7 @@ export default function Finance() {
                           <tbody>
                             {invoiceRows.map(({ row: i, glance, detail }) => (
                               <tr key={i.id} className="finance-row" style={{ borderBottom: '1px solid var(--border)' }}>
-                                <td className="identifier finance-mono" style={{ ...td, color: 'var(--link)', fontWeight: 600 }}>
+                                <td className="identifier finance-mono module-table__code" style={{ ...td, color: 'var(--link)', fontWeight: 600 }}>
                                   <IntelCard
                                     glance={glance}
                                     detail={detail}
@@ -1960,27 +1979,9 @@ export default function Finance() {
  */
 function StatusBadge({ row }: { row: InvoiceListRow }) {
   const label = row.isVoid ? 'Void' : row.status
-  /*
-   * Delegates to <Badge> — DESIGN_DIRECTION_SPEC_v4.1 §8 step 2: "one
-   * component rendering the §4 map from lib/status; every screen inherits. No
-   * screen colours a status itself."
-   *
-   * This used to assemble the chip here: `--r-badge` (a 999 pill, which §3.3
-   * reserves for numeric COUNT badges), weight 600, sentence case, reading
-   * `STATUS[token]` straight. That is three deviations from §4's block
-   * anatomy, and it was one of fifteen local components doing the same thing —
-   * which is how the product ended up with no status block that actually had
-   * the ruled anatomy.
-   *
-   * The wrapper is KEPT rather than inlined at the call sites: it owns the
-   * isVoid-beats-status rule documented above, which is a Finance decision and
-   * not something <Badge> should know. What it no longer owns is the paint.
-   *
-   * `size="sm"` because these sit in dense invoice rows — it lands at roughly
-   * the 20px the hand-rolled version had, without giving up the weight,
-   * casing or tracking that ARE the identity of a status block.
-   */
-  return <Badge tone={INVOICE_TOKEN[label]} label={label} size="sm" />
+  const tone = row.isVoid ? 'red' : label === 'Paid' ? 'emerald' : label === 'Partially Paid' ? 'amber' : label === 'Sent' ? 'blue' : 'slate'
+  const icon: IconName = row.isVoid ? 'alert_triangle' : label === 'Paid' ? 'check' : label === 'Partially Paid' ? 'timer' : label === 'Sent' ? 'sparkles' : 'queues'
+  return <StatusPill tone={tone} label={label} icon={icon} />
 }
 
 /**

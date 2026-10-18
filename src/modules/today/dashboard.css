@@ -3100,6 +3100,14 @@
   gap: 0.4rem;
 }
 
+.rental-dashboard .movement-card__status--expired {
+  color: var(--danger-text);
+  background: color-mix(in srgb, var(--danger) 12%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--danger) 32%, transparent);
+  border-radius: var(--r-btn, 6px);
+  padding: 0.15rem 0.5rem;
+}
+
 .rental-dashboard .movement-card__tag {
   display: inline-flex;
   align-items: center;
@@ -3264,4 +3272,13 @@
   color: inherit;
   font-size: var(--t-meta);
   font-weight: 600;
+}
+
+/* Situational awareness cards */
+.rental-dashboard .dashboard-situational-card {
+  transition: transform var(--dur-fast, 120ms) var(--ease), box-shadow var(--dur-fast, 120ms) var(--ease), border-color var(--dur-fast, 120ms) var(--ease);
+}
+.rental-dashboard .dashboard-situational-card:hover {
+  border-color: var(--border2);
+  box-shadow: var(--shadow-md), var(--specular-rim);
 }

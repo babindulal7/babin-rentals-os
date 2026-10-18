@@ -239,4 +239,20 @@ describe('PageBody state content', () => {
     expect(container.textContent).toContain('No rentals yet')
     expect(container.textContent).not.toContain('Add rental')
   })
+
+  it('renders dual recovery actions and emptyExtra when search and filters both narrow the list', async () => {
+    const base = { restricted: false, error: null, loading: false } as const
+    await mount({
+      ...base,
+      emptyIsFiltered: true,
+      clearLabel: 'Clear search',
+      onClearFilters: () => {},
+      secondaryClearLabel: 'Clear all filters',
+      onSecondaryClearFilters: () => {},
+      emptyExtra: <div data-testid="empty-chips">Active filter tokens</div>,
+    })
+    expect(container.textContent).toContain('Clear search')
+    expect(container.textContent).toContain('Clear all filters')
+    expect(container.querySelector('[data-testid="empty-chips"]')?.textContent).toBe('Active filter tokens')
+  })
 })

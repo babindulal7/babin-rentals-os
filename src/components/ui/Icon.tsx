@@ -165,6 +165,7 @@ const REGISTRY = {
   flag: IconFlag,
   info: IconInfoCircle,
   timer: IconClock,
+  clock: IconClock,
 
   // evidence
   camera: IconCamera,

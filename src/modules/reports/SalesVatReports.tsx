@@ -77,6 +77,7 @@ export default function SalesVatReports() {
         icon: 'dollar',
         accent: 'primary',
         note: `${m.invoiceCount} invoices issued in period`,
+        definition: 'Total invoiced amount in the period, including VAT.',
       },
       {
         label: 'Collections',
@@ -84,6 +85,7 @@ export default function SalesVatReports() {
         icon: 'check',
         accent: 'success',
         note: `${m.collectionRate}% payment recovery rate`,
+        definition: 'Payments received against invoices issued in the period.',
       },
       {
         label: 'Outstanding Balance',
@@ -91,6 +93,7 @@ export default function SalesVatReports() {
         icon: 'alert_triangle',
         accent: m.totalOutstanding > 0 ? 'warn' : 'neutral',
         note: 'Pending client settlements',
+        definition: 'Unpaid portion of issued invoices; sum of outstanding balances.',
       },
       {
         label: '13% VAT Invoiced',
@@ -98,6 +101,7 @@ export default function SalesVatReports() {
         icon: 'file',
         accent: 'neutral',
         note: 'Output tax accrued',
+        definition: '13% VAT charged on taxable sales in the period.',
       },
     ]
   }, [data])
@@ -113,6 +117,7 @@ export default function SalesVatReports() {
         icon: 'dollar',
         accent: 'primary',
         note: 'Total billing including 13% VAT',
+        definition: 'Gross turnover = taxable sales + 13% VAT.',
       },
       {
         label: 'Taxable Turnover',
@@ -120,6 +125,7 @@ export default function SalesVatReports() {
         icon: 'dollar',
         accent: 'neutral',
         note: 'Sales subject to statutory VAT',
+        definition: 'Sales excluding VAT, subject to 13% output tax.',
       },
       {
         label: '13% Output VAT',
@@ -127,6 +133,7 @@ export default function SalesVatReports() {
         icon: 'file',
         accent: 'success',
         note: 'Statutory liability to IRD Nepal',
+        definition: 'Output VAT owed to IRD Nepal for the period.',
       },
       {
         label: 'Effective Tax Rate',

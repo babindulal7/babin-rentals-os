@@ -1,8 +1,9 @@
 import { Fragment, useMemo, useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import type { CSSProperties, ReactNode } from 'react'
-import { Card, Button, PageHeader, Rail, SummaryRows, cardStyle, KpiStrip } from '../../components/ui/Page'
+import { Card, Button, PageHeader, Rail, SummaryRows, cardStyle } from '../../components/ui/Page'
 import { PageShell } from '../../components/ui/PageShell'
+import { ModuleSubHeader, ModuleKpiStrip, ModuleFilterBar, StatusPill } from '../../components/ui/module-shell'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { thStyle } from '../../components/ui/TableHeaderCell'
 import { FilterButton, FilterDrawer } from '../../components/ui/FilterDrawer'
@@ -30,7 +31,6 @@ import {
   CREW_DATA,
   CREW_ROSTER,
   OPEN_ROLE_REQUESTS,
-  ROSTER_CHIPS,
   detectConflicts,
   conflictedAssignmentIds,
   detectTravelWarnings,
@@ -431,74 +431,85 @@ export function CrewBooking() {
         three of its four tabs rendered nothing but "— not built yet". §6.1 is a
         single surface: chips, CREW, ASSIGNMENTS, rail.
       */}
-      <>
-          {/* Toolbar & filter chips — §6.1 draws `(All)(Available)(Booked)(Unavailable)`,
-              roster availability rather than assignment status. The union and its
-              counts live in `data/crew.ts` so the chip and its number cannot drift. */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--sp-md)' }}>
-            <div
-              className="crew-chip-track rsp-chip-scroll"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 'var(--sp-sm)',
-                flexWrap: 'nowrap',
-                overflowX: 'auto',
-                width: '100%',
-                paddingBottom: phone ? 4 : 0,
-              }}
-            >
-              {ROSTER_CHIPS.map((label) => (
-                <button
-                  key={label}
-                  type="button"
-                  aria-pressed={rosterChip === label}
-                  onClick={() => setRosterChip(label)}
-                  className={`crew-filter-chip ${rosterChip === label ? 'is-active' : ''}`}
-                  style={{
-                    // Law 15 — 44×44 at every width, desktop included.
-                    minHeight: 44,
-                    padding: '6px 14px',
-                    borderRadius: 'var(--r-modal)',
-                    fontSize: 'var(--t-meta)',
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    fontFamily: 'inherit',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0,
-                    border: rosterChip === label ? '1px solid var(--nav-active-accent)' : '1px solid var(--border)',
-                    background: rosterChip === label ? 'var(--select-bg)' : 'var(--card)',
-                    color: rosterChip === label ? 'var(--select-fg)' : 'var(--text)',
-                  }}
-                >
-                  {label} <span className="crew-chip-badge">{chipCounts[label]}</span>
-                </button>
-              ))}
+        <ModuleSubHeader
+          counter={`${crewAssignments.length} active assignments · ${crewBookedToday} on set today · ${roster.available} available`}
+          loadedAt={new Date()}
+          loading={crewMembers.length === 0 && !rosterLoadError}
+          primaryAction={
+            canBookCrew
+              ? {
+                  label: '+ Assign Crew',
+                  onClick: () => setBookCrewOpen(true),
+                }
+              : undefined
+          }
+        />
+
+        <ModuleKpiStrip
+          items={[
+            {
+              id: 'Booked',
+              label: 'ON SET TODAY',
+              count: String(crewBookedToday),
+              subtitle: 'Confirmed shoot day is today',
+              icon: 'crew',
+              tone: 'emerald',
+              active: rosterChip === 'Booked',
+              onClick: () => setRosterChip(rosterChip === 'Booked' ? 'All' : 'Booked'),
+            },
+            {
+              id: 'Available',
+              label: 'ROSTER AVAILABLE',
+              count: String(roster.available),
+              subtitle: `${roster.total} crew members on roster`,
+              icon: 'check',
+              tone: 'emerald',
+              active: rosterChip === 'Available',
+              onClick: () => setRosterChip(rosterChip === 'Available' ? 'All' : 'Available'),
+            },
+            {
+              id: 'Conflicts',
+              label: 'CONFLICTS & ALERTS',
+              count: String(conflicts.length + travelWarnings.length),
+              subtitle: `${crewDays} shoot days · ${fill.pct}% role fill rate`,
+              icon: 'alert_triangle',
+              tone: conflicts.length > 0 ? 'red' : 'neutral',
+              active: rosterChip === 'Unavailable',
+              onClick: () => setRosterChip(rosterChip === 'Unavailable' ? 'All' : 'Unavailable'),
+            },
+          ]}
+        />
+
+        <ModuleFilterBar
+          tabs={[
+            { id: 'All', label: 'All', count: chipCounts['All'] },
+            { id: 'Booked', label: 'On Set Today', count: chipCounts['Booked'], icon: 'crew' },
+            { id: 'Available', label: 'Available', count: chipCounts['Available'], icon: 'check' },
+            { id: 'Unavailable', label: 'Unavailable / Conflict', count: chipCounts['Unavailable'], icon: 'alert_triangle' },
+          ]}
+          activeTab={rosterChip}
+          onTabChange={(id) => setRosterChip(id as RosterChip)}
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder="Search crew, role, production… (press /)"
+          dropdownFilters={
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-xs)' }}>
+              <Select
+                aria-label="Filter crew by role"
+                value={selectedRole}
+                onChange={(event) => setSelectedRole(event.target.value)}
+                style={{ minHeight: 44, fontSize: 'var(--t-meta)' }}
+              >
+                <option value="">All roles</option>
+                {roles.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
+              </Select>
             </div>
-
-          </div>
-
-          <KpiStrip
-            items={[
-              { label: 'Booked Today', value: String(crewBookedToday), note: 'Confirmed, shoot day is today', icon: 'crew', accent: 'primary' },
-              { label: 'Available', value: String(roster.available), note: `${roster.total} on the roster`, icon: 'check', accent: 'success' },
-              {
-                label: 'Conflicts',
-                value: String(conflicts.length + travelWarnings.length),
-                note: 'Next 7 days',
-                icon: 'alert_triangle',
-                accent: conflicts.length > 0 ? 'danger' : 'neutral',
-              },
-              {
-                label: 'Fill Rate',
-                value: `${crewDays} days · ${fill.pct}%`,
-                note: `${fill.filled} of ${fill.requested} roles filled`,
-                icon: 'users',
-                accent: crewDays === 0 && fill.pct === 0 ? 'neutral' : 'primary',
-              },
-            ]}
-            columns={phone ? 2 : 4}
-          />
+          }
+        />
 
           {/* Calendar + tables (left) · rail (right).
               One column below 1280 so the rail's sections reflow beneath the
@@ -608,8 +619,6 @@ export function CrewBooking() {
                       <tbody>
                         {rowsWithIntel.map(({ row: c, crewGroup, glance, detail }) => {
                           const inConflict = conflictIds.has(c.id)
-                          const tone = STATUS[assignmentTone(c, onShootToday(c))]
-                          const payoutTone = STATUS[PAYOUT_TONE[c.payoutStatus]]
                           return (
                             <tr
                               key={c.id}
@@ -661,20 +670,20 @@ export function CrewBooking() {
                                 </td>
                               )}
                               <td style={{ padding: '12px 14px' }}>
-                                {/* Law 11 — the dot is colour, so the glyph and the
-                                    word carry the state as well. */}
-                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: tone.fg, fontWeight: 600 }}>
-                                  <Icon name={STATUS_ICON[assignmentTone(c, onShootToday(c))]} size={12} />
-                                  {c.status}
-                                  {c.cancelled && ' · Cancelled'}
-                                </span>
+                                <StatusPill
+                                  tone={c.cancelled ? 'red' : c.status === 'Confirmed' ? 'emerald' : 'amber'}
+                                  label={`${c.status}${c.cancelled ? ' · Cancelled' : ''}`}
+                                  icon={c.cancelled ? 'alert_triangle' : c.status === 'Confirmed' ? 'check' : 'timer'}
+                                  liveDot={onShootToday(c)}
+                                />
                               </td>
                               {desktop && (
                                 <td style={{ padding: '12px 14px' }}>
-                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--t-meta)', fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--r-xs)', background: payoutTone.bg, color: payoutTone.fg }}>
-                                    <Icon name={STATUS_ICON[PAYOUT_TONE[c.payoutStatus]]} size={11} />
-                                    {c.payoutStatus}
-                                  </span>
+                                  <StatusPill
+                                    tone={c.payoutStatus === 'Paid' ? 'emerald' : c.payoutStatus === 'Due' ? 'blue' : 'amber'}
+                                    label={c.payoutStatus}
+                                    icon={c.payoutStatus === 'Paid' ? 'check' : c.payoutStatus === 'Due' ? 'sparkles' : 'timer'}
+                                  />
                                 </td>
                               )}
                               <td style={{ padding: '12px 14px', textAlign: 'right' }}>
@@ -703,7 +712,6 @@ export function CrewBooking() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0 }}>{railContent}</div>
             )}
           </div>
-        </>
       </div>
     </PageShell>
     <BookCrewFlow
@@ -718,26 +726,9 @@ export function CrewBooking() {
 
 /** Law 11 — colour + icon + label, never colour alone. */
 function StateChip({ label, tone }: { label: string; tone: StatusKey }) {
-  const c = STATUS[tone]
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 4,
-        fontSize: 'var(--t-meta)',
-        fontWeight: 600,
-        padding: '2px 8px',
-        borderRadius: 'var(--r-xs)',
-        background: c.bg,
-        color: c.fg,
-        ...(c.border ? { border: `1px solid ${c.border}` } : {}),
-      }}
-    >
-      <Icon name={STATUS_ICON[tone]} size={11} />
-      {label}
-    </span>
-  )
+  const pillTone = tone === 'in' ? 'emerald' : tone === 'danger' ? 'red' : tone === 'progress' || tone === 'primary' ? 'blue' : 'amber'
+  const icon: IconName = tone === 'in' ? 'check' : tone === 'danger' ? 'alert_triangle' : tone === 'progress' ? 'truck' : 'timer'
+  return <StatusPill tone={pillTone} label={label} icon={icon} />
 }
 
 /** §6.1's phone drawing for the CREW list: `name · role / rate [Book]`. */

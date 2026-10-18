@@ -8,6 +8,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
+import { MemoryRouter } from 'react-router-dom'
 import { ToastProvider } from '../../../../components/ui/Toast'
 import { RentalMoreActions } from '../RentalMoreActions'
 import type { SelectedRentalBookingFacts } from '../../../../lib/rentalMoreActionsRegistry'
@@ -48,9 +49,11 @@ describe('RentalMoreActions', () => {
     root = createRoot(container)
     await act(async () => {
       root.render(
-        <ToastProvider>
-          <RentalMoreActions booking={selectedBooking} selectedCount={selectedBooking ? 1 : 0} />
-        </ToastProvider>,
+        <MemoryRouter>
+          <ToastProvider>
+            <RentalMoreActions booking={selectedBooking} selectedCount={selectedBooking ? 1 : 0} />
+          </ToastProvider>
+        </MemoryRouter>,
       )
     })
   }

@@ -127,6 +127,11 @@ export interface PageBodyProps {
    * the same state but should say where the button goes ("Back to Today").
    */
   clearLabel?: string
+  /** Secondary action label for filtered empty state (e.g. 'Clear all filters' when primary is 'Clear search') */
+  secondaryClearLabel?: string
+  onSecondaryClearFilters?: () => void
+  /** Optional extra content to render inside the empty state (e.g. active filter chips) */
+  emptyExtra?: ReactNode
   /** Label for the empty state's one action, e.g. "Add client". Both this and `onEmptyAction` are needed for it to render. */
   emptyActionLabel?: string
   onEmptyAction?: () => void
@@ -150,6 +155,9 @@ export function PageBody({
   emptyTitle,
   emptyMessage,
   clearLabel,
+  secondaryClearLabel,
+  onSecondaryClearFilters,
+  emptyExtra,
   emptyActionLabel,
   onEmptyAction,
   children,
@@ -225,7 +233,10 @@ export function PageBody({
         title={emptyTitle ?? `No ${noun} match these filters`}
         description={emptyMessage ?? 'Clear the filters to see everything again.'}
         {...(onClearFilters ? { actionLabel: clearLabel ?? 'Clear filters', onAction: onClearFilters } : {})}
-      />
+        {...(secondaryClearLabel && onSecondaryClearFilters ? { secondaryActionLabel: secondaryClearLabel, onSecondaryAction: onSecondaryClearFilters } : {})}
+      >
+        {emptyExtra}
+      </EmptyState>
     ) : (
       <EmptyState
         title={emptyTitle ?? `No ${noun} yet`}

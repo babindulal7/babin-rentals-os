@@ -13,15 +13,17 @@
  */
 
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Modal } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Button'
 import Icon from '../../../components/ui/Icon'
 import { useAuth } from '../../../lib/auth'
 import { useToast } from '../../../components/ui/Toast'
-import { newClientUuid } from '../../../lib/supabase'
+import { newClientUuid, supabase } from '../../../lib/supabase'
 import { saveDraft, type RentalDraftData } from '../../../actions/rentals/saveDraft'
 import { formatBookingNo } from '../../../lib/format'
 import { fetchFloorBooking } from '../../../lib/queries/bookings'
+import { rentalDaysBetween } from '../../../lib/rentalDays'
 import type { SelectedRentalBookingFacts } from '../../../lib/rentalMoreActionsRegistry'
 
 export interface DuplicateRentalDialogProps {
@@ -55,6 +57,7 @@ export function DuplicateRentalDialog({
   booking,
   onSuccess,
 }: DuplicateRentalDialogProps) {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const { showSuccessToast } = useToast()
 
@@ -88,6 +91,33 @@ export function DuplicateRentalDialog({
       // 1. Fetch floor booking lines to copy actual equipment structure
       const floor = await fetchFloorBooking(booking.bookingNo).catch(() => null)
 
+      // Calculate days
+      const days =
+        rentalDaysBetween(
+          `${pickupDate}T${pickupTime}:00+05:45`,
+          `${returnDate}T${returnTime}:00+05:45`,
+        ) ?? 1
+
+      // Fetch catalogue rates for products
+      const productIds = (floor?.lines ?? [])
+        .map((l) => l.productId)
+        .filter((id): id is string => Boolean(id))
+
+      const rateMap = new Map<string, number>()
+      if (productIds.length > 0) {
+        const { data: prodData } = await supabase
+          .from('products')
+          .select('id, daily_rate')
+          .in('id', productIds)
+        if (prodData) {
+          for (const p of prodData as Array<{ id: string; daily_rate: number | null }>) {
+            if (typeof p.daily_rate === 'number') {
+              rateMap.set(p.id, p.daily_rate)
+            }
+          }
+        }
+      }
+
       const draftLines: RentalDraftData['lines'] = (floor?.lines ?? []).map((l, idx) => ({
         id: `draft-line-${idx + 1}-${Date.now()}`,
         clientUuid: newClientUuid(),
@@ -95,8 +125,8 @@ export function DuplicateRentalDialog({
         name: l.productName ?? l.description ?? 'Equipment Line',
         serial: '', // Do NOT copy serials or holds
         category: 'Equipment',
-        ratePaisa: 0,
-        days: 1,
+        ratePaisa: l.productId ? (rateMap.get(l.productId) ?? 0) : 0,
+        days,
         qty: l.qty || 1,
         discountPct: 0,
         location: 'Warehouse',
@@ -156,7 +186,7 @@ export function DuplicateRentalDialog({
         onSuccess(draftId)
       } else {
         // Direct to New Rental draft
-        window.location.assign(`/rentals?action=new&draft=${draftId}`)
+        navigate(`/rentals?action=new&draft=${draftId}`)
       }
       onClose()
     } catch (err: unknown) {

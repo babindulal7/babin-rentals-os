@@ -21,13 +21,13 @@
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 54 / 54 (100%) | +1 |
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
 | Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
 | DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +2 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
 | Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
 | Overall | mean of five | ≈ 99% | +0 |
-Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-17T07:27:04.216Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-17T19:05:49.049Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
 Gates read from .lifecycle-result.json, written 2026-10-14T20:37:10.038Z.
 Counted by `npm run completion`, not typed.
 
@@ -37,6 +37,146 @@ Counted by `npm run completion`, not typed.
 - Cancel's committed success needs the live `cancel_booking` RPC, or a mock implementation. Neither is done.
 - Correct the 19 Sep table: Cancel a booking 3 → 4 gestures (+1 typed); New Rental, Dashboard → Booked, 6–8 estimate → 10 gestures measured.
 - The 2026-10-15 "Clean UI improvements" entry exists only in `a995169`, not on main. Restore it, or leave it, at the owner's call.
+
+## 2026-10-18 — Booqable audit adoptions (duplication hygiene BQ-207, shortage action BQ-408, dashboard deep links BQ-205)
+
+**Did**
+- Extracted high-impact structural, operational, and UX improvements from the Booqable reverse-engineering audit (`C:\Users\use\Desktop\scrape`) and systematically implemented them in Babin Rentals OS:
+  1. **Rental Duplication Hygiene & Flow Navigation (BQ-207):**
+     - Enhanced `DuplicateRentalDialog.tsx`: looks up catalogue daily rates from `products_v` for `productId`s, calculates `days` from selected pickup/return dates via `rentalDaysBetween`, strips logistics/serials/crew/payment rows, and preserves client and equipment lines.
+     - Updated `RentalMoreActions.tsx`: instantiated `useNavigate` and wired `DuplicateRentalDialog`'s `onSuccess` callback to navigate directly to `/rentals?action=new&draft=${draftId}`, immediately opening the draft editor with pre-filled lines and client info.
+     - Updated `RentalMoreActions.test.tsx` with `MemoryRouter` integration (9/9 passed).
+  2. **Shortage Report as Buying Signal (BQ-408):**
+     - Added `Shortages for period` action in `Inventory.tsx` header overflow actions (`alert_triangle` icon), routing to `/reports/inventory` where `ShortageSection` evaluates period holds against total stock ceiling with direct links to conflicting rentals and the planning calendar.
+  3. **Dashboard Quick Deep-Links (BQ-205):**
+     - Enhanced `DashboardMovementPanel.tsx`: added header action `View in Rentals` for both Outgoing and Incoming queues, deep-linking directly into `/rentals?quick=Pickups+Today` and `/rentals?quick=Returns+Today`.
+     - Verified with all 119 tests passing in `src/modules/today/__tests__/`.
+  4. **P0-B Per-Operation Role Authorization:**
+     - Enforced `canPerformOp(user.role, stageJob)` on primary buttons and `BookingOperationsMenu.tsx` with explicit user-facing denial explanations.
+  5. **Empty-State Recovery & Filter Reset (BQ-105):**
+     - Enhanced empty states with dual recovery (`Clear search` and `Clear all filters`) plus active filter removal chips.
+  6. **Saved Views System & Fallback (BQ-VIEW-01/02):**
+     - Audited migration 0159 and added `DEFAULT_RENTALS_SYSTEM_VIEWS` device fallback in `savedViews.ts` for offline/mock resilience.
+
+**Ruled**
+- Rental duplication must always resolve real catalogue rates for referenced products and recompute duration via `rentalDaysBetween` rather than zeroing prices.
+- When an operator duplicates a rental, the system must navigate directly to the new draft editor rather than leaving them on the source booking.
+- Dashboard movement panels must provide direct deep links into canonical filtered rentals views (`?quick=Pickups+Today`, `?quick=Returns+Today`) to keep daily queues tightly synchronized.
+- Technician role remains authorized for staging/returns/resets but restricted from client-facing handovers.
+
+**Verified**
+- `npm run typecheck`: clean (exit code 0).
+- `npx vitest run src/modules/rentals/actions/__tests__/RentalMoreActions.test.tsx`: 9/9 passed.
+- `npx vitest run src/modules/today/__tests__/`: 119/119 passed across 5 test suites.
+- `npx vitest run src/modules/inventory/__tests__/`: 79/79 passed across 5 test suites.
+- `npx vitest run src/modules/reports/__tests__/ShortageSection.test.tsx`: 4/4 passed.
+- `npm run check:pglite`: 167/167 applied, 0 failed.
+- `npm run check:lifecycle`: 31/31 green, 0 failed.
+- `npm run lint`: 0 errors, 0 warnings (`--max-warnings 0`).
+- `npm run check:contrast`: 82/82 pass, 0 fail.
+- `npm run build`: built in 28.67s, exit code 0.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-17T19:05:49.049Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-17T19:06:13.122Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply of migrations 0157–0168 by Babin on production.
+- Physical iPad Safari verification of floor touch targets and 125% zoom acceptance.
+
+## 2026-10-18 — Unified 5-Module Page Shell implementation
+
+**Did**
+- Unified all 5 core operational pages (**Rentals**, **Crew Assist**, **Inventory**, **Clients**, and **Finance**) to share a single cohesive **Module Page Shell** matching the visual styling, card surfaces, and button hierarchy of the **Today** dispatch screen.
+- Built reusable modular primitives in `src/components/ui/module-shell/`:
+  - `ModulePageShell`: Standardized vertical container with 4-zone layout.
+  - `ModuleSubHeader`: Live counter + sync timestamp (`DataAgeBadge`) on left; secondary actions (`Scan`, `Export`, `Filters`) + pinned primary CTA (`+ New ...`) on right.
+  - `ModuleKpiStrip`: 3-card situational strip (uppercase title, subtle icon, bold count, muted subtitle; active ring filter states).
+  - `ModuleFilterBar`: Segmented status pills with counts on left; search input + dropdown filters on right.
+  - `ModuleTable`: Standardized 6-column operational table structure with monospace ID badges (`#BK-...`, `#CL-...`, `#INV-...`), entity hierarchy, and row CTAs.
+  - `StatusPill`: Semantic status pills (emerald, amber, red, slate, blue) with Tabler outline icons and optional live pulse indicator.
+- Standardized primary row action verbs in `getRentalPrimaryAction` and `BookingOperationsMenu` (`[Pack]`, `[Handover]`, `[Return]`, `[Reset]`, `[Edit Draft]`).
+- Added unit tests in `src/modules/rentals/__tests__/BookingOperationsMenu.test.tsx` verifying row verbs and money-blind gates.
+- Compacted Today Pickup Card: Added `isWindowExpired` check (`row.returnAtAd < now`) rendering `⚠️ Window passed · Reschedule or Cancel` with `.movement-card__status--expired`. Streamlined overdue pickup badge to `⚠️ Awaiting dispatch`, removing redundant day-late text that duplicated the left gutter and eliminating badge wrapping on "Client pickup". Added quick exception `OverflowMenu` (View Booking, Reschedule Dates, Cancel No-Show).
+- Filled empty Returns column: Extended `DashboardMovementPanel` with `emptyFooter` prop rendered inside `.movement-panel` boundary. Auto-expands "Returning Tomorrow" preview and "Floor Attention: QC & Maintenance Holds" card with direct `Resolve →` link to `/inventory/cases`.
+- PWA & font size cleanup: Constrained Workbox precache to `.woff2` and excluded `.woff` plus unused language subsets (cyrillic, greek, vietnamese, latin-ext). In `main.tsx` and `marketing/main.tsx`, imported explicit latin `.woff2` bundles.
+- Normalized non-stock booking line types: Supported `service`, `sub_rental`, `manual_item` across cases and added unit tests in `src/lib/__tests__/bookingLineTypes.test.ts`.
+
+**Ruled**
+- KPI cards placed in Zone 2 (top) above the filter bar and table, as confirmed by user.
+- All 5 modules standardized using Today design language while preserving 100% of underlying business logic, RLS policies, offline queueing rules, and money-blind enforcement.
+- Strict touch targets (>= 44px) and single primary action CTA per view strictly enforced.
+- Empty returns accessories strictly nested inside existing `DashboardMovementPanel` boundary to preserve dashboard layout contract invariants.
+
+**Verified**
+- `npm run lint:shell`: 679/679 files pass (0 violations).
+- `npm run typecheck`: clean (exit 0).
+- `npm run lint`: 0 errors, 0 warnings (`--max-warnings 0`).
+- `npm run check:contrast`: 82/82 pass (0 fail).
+- `npx vitest run src/__tests__/e2e/tier1-features.test.tsx src/modules/rentals/__tests__/BookingOperationsMenu.test.tsx`: 18/18 passed (100%).
+- `npx vitest run src/modules/today/ src/lib/__tests__/bookingLineTypes.test.ts`: 6 test files, 122/122 passed (100%).
+- `npm run check:pglite`: 167/167 applied, 0 failed.
+- `npm run check:lifecycle`: 31/31 green, 0 failed.
+- `npm run build`: production bundle built cleanly (exit 0).
+- Localhost dev server running on `http://localhost:3000`.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-17T18:27:39.641Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-17T18:28:20.338Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply of migrations 0157–0168 by Babin on production.
+- Physical iPad Safari verification of floor touch targets and 125% zoom acceptance.
+
+## 2026-10-17 — Status/role matrix (Chromium mock emulation)
+
+**Did**
+- Ran the app-wide status/role matrix pass in mock mode (`npm run dev:mock`, seeded corpus, Chromium via the desktop browser tools). Emulation only — not physical iPad Safari, recorded as such per `docs/UI_UX_IMPROVEMENT_PLAN.md`.
+- Status badges across the rentals filter views: Quote, Booked, Packed, On Rent, Returned, Closed each render an icon **and** a text label (never colour alone).
+- Money-blind check as Warehouse (Ram Thapa): `/today`, `/operations`, `/rentals`, `/rentals/902` (detail), `/calendar`, `/crew`, `/inventory`, `/clients`, `/tools`, `/settings` — zero `Rs`/`रू` figures; the Rentals table drops the Total Amount column; booking detail's "Total Items" is a count, not money. Direct URL to `/finance` shows "Access restricted — Your role (Warehouse) does not have access to this module" with no data.
+- Positive control as Accounts (Sita Sharma): `/rentals`, `/finance`, `/clients` all show amounts plus Total Amount / Outstanding columns — the gate is role-based, not a data outage.
+
+**Ruled**
+- No fix made for the one observation: `/settings` help text contains a static `Rs 1,85,000` example (number-format documentation), visible to Warehouse. It is copy, not client money — flagged for a product review call, not silently changed. `TODO(decision)` stands if Babin wants it hidden from money-blind roles.
+
+**Verified**
+- All findings above are live DOM evidence from this session's browser tab (console clean, zero errors). `browser.screenshot` requires a visible desktop window, so no PNGs were captured; the evidence is the recorded DOM/text extracts.
+- No source files changed by this pass; no gates needed. Concurrent session's in-progress edits left untouched.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-17T07:27:04.216Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-17T07:27:53.582Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Physical iPad/Safari + native 125% zoom acceptance (no Apple hardware here); this pass was Chromium width/DOM emulation only.
+- Open product calls: §4.64/§4.65 items, D-2 (Booqable seasonal rulesets), the `/settings` `Rs 1,85,000` help-text visibility question, border-merge decision, live apply of 0157–0168 by Babin.
 
 ## 2026-10-17 — Booqable ADOPTIONS 1–9 implementation (REFERENCE_SPEC v2.5)
 
