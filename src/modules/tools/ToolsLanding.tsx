@@ -13,8 +13,6 @@ import DepreciationCalculator from './DepreciationCalculator'
 import PricingCalculator from './PricingCalculator'
 import CineTools from '../settings/Tools'
 import LateFeeCalculator from './LateFeeCalculator'
-import QrGenerator from './QrGeneratorModal'
-import CouponsManager from './CouponsManager'
 
 /**
  * **Tools — Integrated Workbench**
@@ -74,26 +72,6 @@ const GROUPS: ToolGroup[] = [
         icon: 'timer',
         tab: 'latefee',
         to: '/tools/latefee',
-      },
-      {
-        label: 'Coupons & Promos',
-        hint: 'Manage promo codes and preview valid discounts',
-        icon: 'receipt',
-        tab: 'coupons',
-        to: '/tools/coupons',
-      },
-    ],
-  },
-  {
-    heading: 'Equipment & Package Utilities',
-    desktopColumns: 2,
-    cards: [
-      {
-        label: 'QR & Barcode Generator',
-        hint: 'Equipment asset tags and printable barcode labels',
-        icon: 'barcode',
-        tab: 'qr',
-        to: '/tools/qr',
       },
     ],
   },
@@ -155,17 +133,20 @@ export default function ToolsLanding() {
           { key: 'depreciation' as const, label: 'Depreciation', icon: 'chart' as const, money: true },
           { key: 'pricing' as const, label: 'Pricing', icon: 'dollar' as const, money: true },
           { key: 'latefee' as const, label: 'Late Fee', icon: 'timer' as const, money: true },
-          // RULING 2026-10-13: discounts are money (MONEY_ROUTES '/tools/coupons').
-          { key: 'coupons' as const, label: 'Coupons & Promos', icon: 'receipt' as const, money: true },
         ]
       : []),
-    { key: 'qr' as const, label: 'QR & Barcodes', icon: 'barcode' as const },
     { key: 'cinematography', label: 'Cinematography Suite', icon: 'camera' },
   ]
 
   // 7 Oct audit: the legacy sandbox contains invented gear/rates and does not save.
   // Keep its URL as a redirect to the real bundle registry; one supported builder.
   if (activeTab === 'bundle') return <Navigate to="/inventory?tab=bundles" replace />
+  /* RULING 2026-10-18 (Babin's ruling): Tools is calculators plus the
+     cinematography suite. Coupons & Promos moved to Clients (with Referral
+     Codes); QR & Barcode labels moved to Inventory. Old links still land.
+     Revert = restore the two tabs, their cards and render lines. */
+  if (activeTab === 'coupons') return <Navigate to="/clients?tab=coupons" replace />
+  if (activeTab === 'qr') return <Navigate to="/inventory/labels" replace />
 
   return (
     <PageShell width="full">
@@ -325,8 +306,6 @@ export default function ToolsLanding() {
       {/* RULING 2026-10-13: guarded like the two above — the tab strip hid Late
           Fee, but a typed `?tab=latefee` still rendered it for the floor. */}
       {activeTab === 'latefee' && money && <LateFeeCalculator />}
-      {activeTab === 'coupons' && money && <CouponsManager />}
-      {activeTab === 'qr' && <QrGenerator />}
       {activeTab === 'cinematography' && <CineTools embedded />}
 
       <FooterNote extra={['All calculators run locally within Tools without navigating away']} />

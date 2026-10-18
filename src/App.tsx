@@ -83,6 +83,7 @@ const DeliveryWorkspace = lazy(() => import('./modules/operations/DeliveryWorksp
 const TimesheetTab      = lazy(() => import('./modules/crew/TimesheetTab'))
 const ProductionsList   = lazy(() => import('./modules/rentals/ProductionsList'))
 const WarrantyTracker   = lazy(() => import('./modules/inventory/WarrantyTracker'))
+const QrLabels          = lazy(() => import('./modules/inventory/QrLabels'))
 const InternalNotesPage = lazy(() => import('./modules/notes/InternalNotesPage'))
 
 function FinanceTabRedirect({ tab }: { tab: FinanceTabSlug }) {
@@ -312,6 +313,18 @@ export default function App() {
           element={
             <Shell crumbs={[{ label: 'Inventory', to: '/inventory' }, { label: 'Warranty & RMA Tracker' }]} search="Search equipment, serial, provider…">
               <WarrantyTracker />
+            </Shell>
+          }
+        />
+
+        {/* RULING 2026-10-18: QR & barcode labels moved here from Tools (Babin's
+            ruling); /tools?tab=qr redirects. Static path, so it outranks
+            /inventory/:assetId. */}
+        <Route
+          path="/inventory/labels"
+          element={
+            <Shell crumbs={[{ label: 'Inventory', to: '/inventory' }, { label: 'QR & Barcode Labels' }]}>
+              <QrLabels />
             </Shell>
           }
         />

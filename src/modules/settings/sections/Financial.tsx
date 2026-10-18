@@ -10,6 +10,7 @@ import {
 } from '../../../lib/queries/settings'
 import type { Dest } from '../../../lib/queries/settings'
 import { NotTrackedYet, SectionCards, ToneChip, td } from './shared'
+import { CreditPolicyCard } from '../../clients/CreditPolicyCard'
 import type { Section } from './shared'
 
 /**
@@ -225,6 +226,11 @@ export function FinancialPane() {
           below 100%; a negative discount is refused because it is a price rise, and above 100% because it is a negative
           price. A plan discount simply sets the starting figure. */}Discounts may be between 0% and 100%. </p>
       </Card>
+
+      {/* RULING 2026-10-18: Credit policy by tier moved here from Clients ▸ Credit
+          (Babin's ruling: business rules live together). Read live from
+          membership_plans; this pane is money-only already (Settings.tsx). */}
+      <CreditPolicyCard />
 
       <Card title="Cancellation fee tiers">
         <NotTrackedYet title="Notice period → fee %" why={CANCELLATION_TIERS_UNAVAILABLE} />

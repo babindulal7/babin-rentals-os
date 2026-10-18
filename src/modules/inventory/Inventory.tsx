@@ -1610,6 +1610,12 @@ export default function Inventory() {
             icon: 'check',
             onClick: () => navigate('/inventory/warranty'),
           },
+          // RULING 2026-10-18: QR & barcode labels moved here from Tools (Babin's ruling).
+          {
+            label: 'QR & Barcode Labels',
+            icon: 'barcode' as const,
+            onClick: () => navigate('/inventory/labels'),
+          },
         ]}
       />
     ) : tab === 'Bundles' && params.get('action') !== 'new' ? (

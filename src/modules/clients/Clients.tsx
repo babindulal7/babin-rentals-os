@@ -12,7 +12,7 @@ import { ModuleSubHeader } from '../../components/ui/module-shell'
 import type { Kpi } from '../../components/ui/Page'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { ClientsDirectory } from './ClientsDirectory'
-import { useClients, useMembershipPlans } from '../../lib/queries/useClients'
+import { useClients } from '../../lib/queries/useClients'
 import { EmptyState } from '../../components/ui/StateViews'
 import { PageBody } from '../../components/ui/PageBody'
 import Membership from './Membership'
@@ -20,11 +20,11 @@ import { RecordForm } from '../../components/records/RecordForm'
 import ImportCenter from './ImportCenter'
 import DuplicateCenter from './DuplicateCenter'
 import GenerateReferralCode from './GenerateReferralCode'
-import { Unavailable } from '../../components/ui/Unavailable'
+import CouponsManager from '../tools/CouponsManager'
 import { useToast } from '../../components/ui/Toast'
 import { formatMoney, rupees, type Paisa } from '../../lib/money'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
-import { TIER_TONE, type ClientRecord, STACK_NOTE } from '../../lib/queries/clients'
+import { TIER_TONE, type ClientRecord } from '../../lib/queries/clients'
 import { STATUS } from '../../lib/status'
 import { FilterButton } from '../../components/ui/FilterDrawer'
 import './clients.css'
@@ -36,7 +36,7 @@ import { csvCell } from '../../lib/csv'
  * All workflows integrated directly in this module with tabs and in-page views.
  */
 
-type TabKey = 'clients' | 'new' | 'membership' | 'referral' | 'credit' | 'import' | 'duplicates'
+type TabKey = 'clients' | 'new' | 'membership' | 'referral' | 'coupons' | 'credit' | 'import' | 'duplicates'
 
 interface TabDef {
   key: TabKey
@@ -51,6 +51,9 @@ const TAB_DEFS: TabDef[] = [
   { key: 'new', label: 'New Client', hideInBar: true },
   { key: 'membership', label: 'Membership' },
   { key: 'referral', label: 'Referral' },
+  // RULING 2026-10-18: coupons join referral codes here (Babin's ruling); money,
+  // like the Tools tab they came from (MONEY_ROUTES '/tools/coupons', 13 Oct).
+  { key: 'coupons', label: 'Coupons & Promos', money: true },
   { key: 'credit', label: 'Credit', money: true },
   { key: 'import', label: 'Import' },
   { key: 'duplicates', label: 'Duplicates' },
@@ -224,8 +227,10 @@ export default function Clients() {
               ...(!clientsLoading && !clientsError ? [{ label: 'Export loaded directory', icon: 'download' as const, onClick: exportCsv }] : []),
               ...(user && canImportClients(user.role) ? [{ label: 'Import Clients', icon: 'upload' as const, onClick: () => setTab('import') }] : []),
               { label: 'Duplicate Center', icon: 'users', onClick: () => setTab('duplicates') },
-              ...(money ? [{ label: 'Credit Policies', icon: 'card' as const, onClick: () => setTab('credit') }] : []),
+              // RULING 2026-10-18: the tier policy moved to Settings ▸ Business; this opens the client-level credit view.
+              ...(money ? [{ label: 'Client Credit', icon: 'card' as const, onClick: () => setTab('credit') }] : []),
               { label: 'Referral Codes', icon: 'sparkles', onClick: () => setTab('referral') },
+              ...(money ? [{ label: 'Coupons & Promos', icon: 'receipt' as const, onClick: () => setTab('coupons') }] : []),
             ]}
           />
         }
@@ -290,6 +295,7 @@ export default function Clients() {
       {activeTab === 'duplicates' && <DuplicateCenter embedded />}
       {activeTab === 'membership' && <Membership embedded filtersOpen={membershipFiltersOpen} onFiltersClose={() => setMembershipFiltersOpen(false)} />}
       {activeTab === 'referral' && <ReferralView />}
+      {activeTab === 'coupons' && money && <CouponsManager />}
       {activeTab === 'credit' && money && (
         <CreditView clients={clients} loading={clientsLoading} error={clientsError} onRetry={refresh} />
       )}
@@ -466,8 +472,6 @@ function CreditView({
   error: string | null
   onRetry: () => void
 }) {
-  const plans = useMembershipPlans()
-
   const extended = clients.reduce((sum, c) => (sum + c.creditLimitPaisa) as Paisa, rupees(0))
   const owed = clients.reduce((sum, c) => (sum + c.outstandingPaisa) as Paisa, rupees(0))
   // `isBlocked` is a database fact now (0054's `client_directory_v.is_blocked`,
@@ -509,90 +513,16 @@ function CreditView({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
       <KpiStrip items={kpis} columns={kpis.length} />
 
-      <Card
-        title="Credit policy by membership tier"
-        action={
-          <Unavailable reason={/* The Manager override gate is not built yet — Foundation §10 requires an authorisation step and an immutable audit row that do not exist */ "Manager overrides are not available yet."}>
-            <Button icon="flag" disabled>
-              Request Override
-            </Button>
-          </Unavailable>
-        }
-      >
-        <p style={{ margin: '-4px 0 12px', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-          Credit limits derive from the membership plan — nobody types a limit onto a client record. An override
-          needs Manager authorisation with a reason of at least 10 characters, written to the immutable audit.
-        </p>
-
-        <PageBody
-          loading={plans.loading}
-          error={plans.error}
-          onRetry={plans.refetch}
-          hasRows={plans.rows.length > 0}
-          empty={plans.isEmpty}
-          noun="membership plans"
-          skeleton="card"
-          emptyTitle="No membership plan is on file"
-          emptyMessage="`membership_plans` holds no active plan, so there is no tier, no default credit limit and no plan discount to state. The five tiers this table used to list were written into the page."
-        >
-          <div className="credit-policy-grid">
-            {plans.rows.map((p) => (
-              <div
-                key={p.level}
-                className="credit-policy-card"
-              >
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignSelf: 'flex-start',
-                    alignItems: 'center',
-                    height: 19,
-                    padding: '0 7px',
-                    borderRadius: 5,
-                    background: STATUS[TIER_TONE[p.level]].bg,
-                    color: STATUS[TIER_TONE[p.level]].fg,
-                    fontSize: 'var(--t-th)',
-                    fontWeight: 600,
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {p.label}
-                </span>
-                <span className="figure client-mono" style={{ fontSize: 'var(--t-ui)', fontWeight: 700, color: 'var(--text)' }}>
-                  {/* null is withheld, never zero — see `MembershipPlanRow`. */}
-                  {p.defaultCreditLimit === null ? '—' : formatMoney(p.defaultCreditLimit)}
-                </span>
-                <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-                  {/* Null for Elite ("Negotiated") as well as for a withheld
-                      figure — the two are the same value here, so neither is
-                      claimed as a number. */}
-                  Discount{' '}
-                  <span className="figure client-mono">
-                    {p.individualDiscountPct === null ? 'Negotiated' : `${p.individualDiscountPct}%`}
-                  </span>
-                </span>
-              </div>
-            ))}
-          </div>
-        </PageBody>
-
-        <p
-          style={{
-            margin: '12px 0 0',
-            display: 'flex',
-            gap: 6,
-            alignItems: 'flex-start',
-            fontSize: 'var(--t-meta)',
-            color: 'var(--text2)',
-          }}
-        >
-          <Icon name="info" size={13} style={{ color: 'var(--muted)', flexShrink: 0, marginTop: 1 }} />
-          {/* The 25% stacking cap this line used to state was rescinded — see
-              STACK_NOTE's own note in data/membership.ts. Imported rather than
-              restated so the two surfaces cannot drift apart again. */}
-          {STACK_NOTE}
-        </p>
-      </Card>
+      {/* RULING 2026-10-18: the tier credit policy is a business rule, so it
+          moved to Settings ▸ Business (Babin's ruling); this view keeps the
+          client-level figures. Revert = render <CreditPolicyCard /> here again. */}
+      <p style={{ margin: 0, display: 'flex', gap: 6, alignItems: 'center', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+        <Icon name="info" size={13} style={{ color: 'var(--muted)', flexShrink: 0 }} />
+        Credit limits come from the membership tier.{' '}
+        <Link to="/settings?tab=business" style={{ color: 'var(--primary-text)', fontWeight: 600 }}>
+          Credit policy by tier is in Settings ▸ Business
+        </Link>
+      </p>
 
       <Card title="Accounts with an approved credit limit" bodyStyle={{ padding: withLimit.length ? 0 : undefined }}>
         <PageBody

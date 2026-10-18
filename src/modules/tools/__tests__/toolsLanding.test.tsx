@@ -24,7 +24,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
 import type { Viewport } from '../../../lib/device'
 
 let viewport: Viewport = 'desktop'
@@ -43,6 +43,12 @@ const { default: ToolsLanding } = await import('../ToolsLanding')
 let container: HTMLDivElement
 let root: Root
 
+/* Anything that is not /tools lands here, so a redirect's target can be read. */
+function Landed() {
+  const loc = useLocation()
+  return <output data-landed>{loc.pathname + loc.search}</output>
+}
+
 async function mount(path = '/tools') {
   container = document.createElement('div')
   document.body.appendChild(container)
@@ -50,11 +56,16 @@ async function mount(path = '/tools') {
   await act(async () => {
     root.render(
       <MemoryRouter initialEntries={[path]}>
-        <ToolsLanding />
+        <Routes>
+          <Route path="/tools" element={<ToolsLanding />} />
+          <Route path="*" element={<Landed />} />
+        </Routes>
       </MemoryRouter>,
     )
   })
 }
+
+const landed = (): string | null => container.querySelector('[data-landed]')?.textContent ?? null
 
 const hrefs = (): string[] =>
   [...container.querySelectorAll('a')].map((a) => a.getAttribute('href') ?? '')
@@ -131,26 +142,51 @@ describe('Tools landing — Law 6', () => {
     expect(container.textContent).not.toContain('Coupons')
   })
 
-  it('renders neither for a money-blind role even when the tab is typed into the URL', async () => {
+  it('does not render Late Fee for a money-blind role even when the tab is typed into the URL', async () => {
     money = false
-    for (const tab of ['latefee', 'coupons']) {
-      await mount(`/tools?tab=${tab}`)
-      expect(container.textContent, `?tab=${tab} rendered for the floor`).not.toContain('Late fee estimate')
-      expect(container.textContent, `?tab=${tab} rendered for the floor`).not.toMatch(/Rs\s?[\d,]/)
-      expect(container.textContent).not.toContain('Voucher')
+    await mount('/tools?tab=latefee')
+    expect(container.textContent, '?tab=latefee rendered for the floor').not.toContain('Late fee estimate')
+    expect(container.textContent, '?tab=latefee rendered for the floor').not.toMatch(/Rs\s?[\d,]/)
+  })
+
+  it('still shows Late Fee to a role that may see money', async () => {
+    await mount('/tools?tab=latefee')
+    expect(container.textContent).toContain('Late fee estimate')
+    await act(async () => root.unmount())
+    container.remove()
+    await mount()
+    expect(hrefs()).toContain('/tools/latefee')
+  })
+})
+
+/*
+ * RULING 2026-10-18 (Babin's ruling): Tools is calculators plus the
+ * cinematography suite. Coupons & Promos moved to Clients (with Referral Codes)
+ * and QR & Barcode labels to Inventory. Both halves are pinned: they are gone
+ * from Tools for every role, and an old `?tab=` link still lands at the new home.
+ */
+describe('Tools landing — Coupons and QR moved out (18 Oct)', () => {
+  it('offers neither as a Tools card or tab, for any role', async () => {
+    for (const sighted of [true, false]) {
+      money = sighted
+      await mount()
+      expect(hrefs()).not.toContain('/tools/coupons')
+      expect(hrefs()).not.toContain('/tools/qr')
+      expect(container.textContent).not.toContain('Coupons')
+      expect(container.textContent).not.toContain('QR & Barcode')
       await act(async () => root.unmount())
       container.remove()
     }
     await mount()
   })
 
-  it('still shows Late Fee and Coupons to a role that may see money', async () => {
-    await mount('/tools?tab=latefee')
-    expect(container.textContent).toContain('Late fee estimate')
+  it('redirects the old tabs to their new homes', async () => {
+    await mount('/tools?tab=coupons')
+    expect(landed()).toBe('/clients?tab=coupons')
     await act(async () => root.unmount())
     container.remove()
-    await mount()
-    expect(hrefs()).toEqual(expect.arrayContaining(['/tools/latefee', '/tools/coupons']))
+    await mount('/tools?tab=qr')
+    expect(landed()).toBe('/inventory/labels')
   })
 })
 
