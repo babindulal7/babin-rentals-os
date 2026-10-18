@@ -1,5 +1,39 @@
 # Progress Log
 
+## 2026-10-19 — App reorganization step 4: Coupons → Clients, Credit policy → Settings, QR labels → Inventory
+
+**Did**
+- Carried out Babin's four answers (asked in chat, 17–18 Oct). **Coupons & Promos** is a money-only Clients tab beside Referral Codes (`/clients?tab=coupons`, Clients ▸ More). The **tier credit policy** card (live from `membership_plans`) moved into Settings ▸ Business as `CreditPolicyCard`; Clients ▸ More now says **Client Credit** and keeps the client-level figures, with a link to the policy. **QR & Barcode labels** got their own page, `/inventory/labels`, from Inventory ▸ More (Inventory's four tabs are fixed by spec 07). Tools is Depreciation · Pricing · Late Fee · Cinematography Suite. Old `/tools?tab=coupons` and `?tab=qr` links redirect, like the existing `bundle` one. **Booking dates stay plain**: no code change, ruling logged.
+- Tests: `toolsLanding.test.tsx` +2 (no Coupons/QR in Tools for any role; both redirects land), the two older Coupons assertions rewritten; new `Clients.reorg.test.tsx` (5: More items per role, money-gated Coupons tab, Client Credit view's link) and `financialCreditPolicy.test.tsx` (1).
+
+**Ruled**
+- `RULINGS-2026-10-18.md`, rows 1–4 (Babin's), with the implementation choices and reverts; `RULING 2026-10-18` comments at every site, including the two booking-date tokens. Follow-up logged there: Settings' older "Membership matrix" still projects from hard-coded `PLANS`.
+
+**Verified**
+- Test-first by swap: the new Tools tests (2/2) and Clients tests (3 of 5; the other 2 assert absence) fail against `main`'s old files and pass against these.
+- Full suite before merging the latest `main`: 372 files, 4679 passed, **7 failed — the same 7 fail on plain `main` `ad8ce1e4`** (Finance phone header ×1, RentalsOperationsHeader ×4, core capability rule ×1, Clients CL-12 placeholder ×1), so none are from this change. `vite build` exit 0; `lint:shell` clean; `check:contrast` 82/82.
+- After merging `main` `54273363` (clean; it had also edited `Inventory.tsx`): `tsc` 0; inventory/tools/clients/settings/data tests 32 files, 430 passed, 1 failed (CL-12, pre-existing).
+- Browser (mock, `localhost:3500`, this branch). Owner: Tools tabs Overview · Depreciation · Pricing · Late Fee · Cinematography Suite; `?tab=coupons` → `/clients?tab=coupons` with the manager rendered; `?tab=qr` → `/inventory/labels` with the generator; Clients ▸ More = Export · Import · Duplicate Center · Client Credit · Referral Codes · Coupons & Promos; Client Credit has no policy card and links to `/settings?tab=business`, which shows it. Warehouse: Tools = Overview · Cinematography Suite; Clients ▸ More = Export · Duplicate Center · Referral Codes; typed coupons address shows no voucher or rupee figure; Inventory ▸ More includes QR & Barcode Labels and the page renders; Settings ▸ Business shows no policy card.
+- Not re-run: `check:lifecycle` (no migration, RPC or engine touched; the result below is from 12 Oct).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +2 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-17T19:05:49.049Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-12T20:38:59.536Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Settings ▸ Business "Membership matrix" should read `membership_plans` instead of hard-coded `PLANS` (0005), so it can't disagree with the live credit-policy card beside it.
+- Seven tests fail on `main` itself (listed above), independent of this work.
+- Crew Timesheet still runs on fabricated rows; rebuild on the migration-0003 crew-day table before giving it an entry point.
+
 ## 2026-10-16 — Task 4.2: headers and tables at Windows 125%/150% display scaling
 
 **Did**
