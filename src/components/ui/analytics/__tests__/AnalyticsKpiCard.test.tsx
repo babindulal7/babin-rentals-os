@@ -1,11 +1,22 @@
 // @vitest-environment jsdom
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { AnalyticsKpiCard } from '../AnalyticsKpiCard'
 import { rupees } from '../../../../lib/money'
 import type { KpiViewModel } from '../../../../lib/analytics/contracts'
+
+vi.mock('../../../../lib/supabase', () => ({
+  IS_MOCK: true,
+  supabase: {
+    from: () => ({ select: () => ({ then: (r: any) => Promise.resolve({ data: [] }).then(r) }) }),
+  },
+}))
+
+vi.mock('../../../../lib/auth', () => ({
+  useAuth: () => ({ user: { role: 'Owner' } }),
+}))
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 let host: HTMLDivElement
