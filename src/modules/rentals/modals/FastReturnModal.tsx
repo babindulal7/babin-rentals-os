@@ -516,9 +516,9 @@ export function FastReturnModal({
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 6,
-                    minHeight: 34,
-                    padding: '0 10px',
-                    borderRadius: 'var(--r-badge)',
+                    minHeight: 44,
+                    padding: '0 12px',
+                    borderRadius: 'var(--r-btn, 8px)',
                     border: bookingRef === b.booking_no ? '1px solid var(--primary)' : '1px solid var(--border)',
                     background: bookingRef === b.booking_no ? 'var(--hover-card)' : 'transparent',
                     color: bookingRef === b.booking_no ? 'var(--primary)' : 'var(--text)',
@@ -539,7 +539,7 @@ export function FastReturnModal({
         {/* Loaded booking equipment checklist */}
         {loadedBooking && (
           <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: 12, background: 'var(--card)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexWrap: 'wrap', gap: 6 }}>
               <div>
                 <strong style={{ fontSize: 'var(--t-ui)', color: 'var(--text)' }}>
                   {loadedBooking.bookingNo}
@@ -576,7 +576,7 @@ export function FastReturnModal({
                     }`,
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
                     <label
                       style={{
                         display: 'flex',
@@ -584,7 +584,7 @@ export function FastReturnModal({
                         gap: 8,
                         cursor: item.alreadyReturned ? 'default' : 'pointer',
                         flex: 1,
-                        minWidth: 0,
+                        minWidth: 160,
                       }}
                     >
                       <input
@@ -593,7 +593,7 @@ export function FastReturnModal({
                         disabled={item.alreadyReturned}
                         checked={item.selected}
                         onChange={() => toggleItemSelection(item.key)}
-                        style={{ width: 16, height: 16, accentColor: 'var(--primary)', cursor: 'pointer' }}
+                        style={{ width: 18, height: 18, accentColor: 'var(--primary)', cursor: 'pointer' }}
                       />
                       <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
                         {item.name}
@@ -618,13 +618,14 @@ export function FastReturnModal({
                         onChange={(e) => updateItemCondition(item.key, e.target.value as ItemCondition)}
                         aria-label={`Condition for ${item.name}`}
                         style={{
-                          height: 28,
-                          padding: '0 6px',
-                          fontSize: '12px',
-                          borderRadius: 'var(--r-xs)',
+                          minHeight: 38,
+                          padding: '0 8px',
+                          fontSize: 'var(--t-meta, 13px)',
+                          borderRadius: 'var(--r-sm)',
                           border: '1px solid var(--input-border)',
                           background: 'var(--input-bg)',
                           color: 'var(--text)',
+                          fontWeight: 500,
                         }}
                       >
                         {CONDITIONS.map((c) => (
@@ -642,7 +643,7 @@ export function FastReturnModal({
 
                   {/* If marked unreturned / missing, require reason and decision */}
                   {!item.alreadyReturned && !item.selected && (
-                    <div style={{ marginTop: 8, display: 'grid', gap: 6, paddingLeft: 24 }}>
+                    <div style={{ marginTop: 8, display: 'grid', gap: 6, paddingLeft: 26 }}>
                       <input
                         type="text"
                         aria-label={`Reason missing for ${item.name}`}
@@ -651,9 +652,9 @@ export function FastReturnModal({
                         onChange={(e) => updateItemMissingReason(item.key, e.target.value)}
                         style={{
                           width: '100%',
-                          height: 28,
-                          padding: '0 8px',
-                          fontSize: '12px',
+                          minHeight: 38,
+                          padding: '0 10px',
+                          fontSize: 'var(--t-meta, 13px)',
                           borderRadius: 'var(--r-input)',
                           border: '1px solid var(--danger)',
                           background: 'var(--input-bg)',
@@ -668,9 +669,9 @@ export function FastReturnModal({
                         aria-label={`Decision for ${item.name}`}
                         style={{
                           width: '100%',
-                          height: 28,
-                          padding: '0 8px',
-                          fontSize: '12px',
+                          minHeight: 38,
+                          padding: '0 10px',
+                          fontSize: 'var(--t-meta, 13px)',
                           borderRadius: 'var(--r-input)',
                           border: '1px solid var(--input-border)',
                           background: 'var(--input-bg)',

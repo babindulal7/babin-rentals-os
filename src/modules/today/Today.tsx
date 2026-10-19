@@ -831,8 +831,8 @@ export default function Today() {
                 type="button"
                 className="press tap"
                 style={{
-                  minHeight: 32,
-                  padding: '0 12px',
+                  minHeight: 44,
+                  padding: '0 14px',
                   borderRadius: 'var(--r-btn)',
                   border: 'none',
                   background: isActive ? 'var(--card)' : 'transparent',

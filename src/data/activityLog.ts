@@ -190,7 +190,7 @@ export const ACTIVITY_METRICS = {
  * severity to an activity row, so the card is gone rather than showing a number
  * with no derivation — Rulings §8, *"never a plausible default, never zero"*.
  */
-export const RETENTION_NOTE = 'Retention policy: 90 days. This build shows the seeded activity only.'
+export const RETENTION_NOTE = 'Retention policy: 90 days.'
 
 /* ── filter vocabularies, derived ──────────────────────────────────────── */
 

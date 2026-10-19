@@ -128,12 +128,15 @@ export function DueForService({ onCreateJob }: DueForServiceProps = {}) {
                           border: '1px solid var(--border)',
                           background: 'var(--btn-secondary-bg)',
                           color: 'var(--text)',
-                          borderRadius: 'var(--r-chip)',
-                          padding: '4px 10px',
+                          borderRadius: 'var(--r-btn, 8px)',
+                          padding: '0 14px',
                           fontSize: 'var(--t-meta)',
                           fontWeight: 600,
                           cursor: 'pointer',
-                          minHeight: 32,
+                          minHeight: 44,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                         }}
                       >
                         Create job

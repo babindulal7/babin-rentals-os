@@ -7,24 +7,69 @@ const state = vi.hoisted(() => ({
 }))
 vi.mock('../../../lib/supabase', () => ({
   newClientUuid: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-  supabase: { from: (table: string) => {
-    let field = '', value: unknown, row: Record<string, unknown>
-    const query = {
-      select: vi.fn(() => query),
-      eq: (key: string, val: unknown) => { field = key; value = val; return query },
-      insert: (data: Record<string, unknown>) => { row = data; return query },
-      maybeSingle: async () => {
-        if (table === 'bookings') return { data: state.missingBooking ? null : state.booking, error: state.bookingError ? { message: 'Connection failed' } : null }
-        if (table === 'crew_profiles_v2_v') return { data: state.people.find((p) => p[field as 'id' | 'crew_code'] === value) ?? null, error: null }
-        return { data: state.duplicate ? { ...state.inserted[state.inserted.length - 1], id: 'saved' } : null, error: null }
-      },
-      single: async () => {
-        state.inserted.push(row)
-        return { data: state.insertError || state.duplicate ? null : { id: `saved-${state.inserted.length}` }, error: state.insertError ? { code: '408', message: 'Network failed' } : state.duplicate ? { code: '23505', message: 'duplicate client_uuid' } : null }
-      },
-    }
-    return query
-  } },
+  supabase: {
+    from: (table: string) => {
+      let field = ''
+      let value: unknown
+      let inField = ''
+      let inValues: unknown[] = []
+      let rowsToInsert: Record<string, unknown>[] = []
+
+      const query: any = {
+        select: vi.fn(() => query),
+        eq: (key: string, val: unknown) => {
+          field = key
+          value = val
+          return query
+        },
+        in: (key: string, vals: unknown[]) => {
+          inField = key
+          inValues = vals
+          return query
+        },
+        insert: (data: Record<string, unknown> | Record<string, unknown>[]) => {
+          rowsToInsert = Array.isArray(data) ? data : [data]
+          return query
+        },
+        maybeSingle: async () => {
+          if (table === 'bookings') return { data: state.missingBooking ? null : state.booking, error: state.bookingError ? { message: 'Connection failed' } : null }
+          if (table === 'crew_profiles_v2_v') return { data: state.people.find((p) => p[field as 'id' | 'crew_code'] === value) ?? null, error: null }
+          return { data: state.duplicate ? { ...state.inserted[state.inserted.length - 1], id: 'saved' } : null, error: null }
+        },
+        single: async () => {
+          state.inserted.push(...rowsToInsert)
+          return { data: state.insertError || state.duplicate ? null : { id: `saved-${state.inserted.length}` }, error: state.insertError ? { code: '408', message: 'Network failed' } : state.duplicate ? { code: '23505', message: 'duplicate client_uuid' } : null }
+        },
+        then: (resolve: (val: any) => void, reject?: (err: any) => void) => {
+          if (table === 'crew_profiles_v2_v') {
+            const matches = state.people.filter((p) => inValues.includes(p[inField as 'id' | 'crew_code']))
+            return Promise.resolve({ data: matches, error: null }).then(resolve, reject)
+          }
+          if (table === 'crew_assignments') {
+            if (state.insertError) {
+              return Promise.resolve({ data: null, error: { code: '408', message: 'Network failed' } }).then(resolve, reject)
+            }
+            if (state.duplicate) {
+              state.inserted.push(...rowsToInsert)
+              return Promise.resolve({ data: null, error: { code: '23505', message: 'duplicate client_uuid' } }).then(resolve, reject)
+            }
+            state.inserted.push(...rowsToInsert)
+            const savedData = rowsToInsert.map((_, i) => ({ id: `saved-${state.inserted.length - rowsToInsert.length + i + 1}` }))
+            return Promise.resolve({ data: savedData, error: null }).then(resolve, reject)
+          }
+          if (table === 'crew_assignments_v') {
+            if (state.duplicate) {
+              const matched = state.inserted.map((ins) => ({ ...ins, id: 'saved' }))
+              return Promise.resolve({ data: matched, error: null }).then(resolve, reject)
+            }
+            return Promise.resolve({ data: [], error: null }).then(resolve, reject)
+          }
+          return Promise.resolve({ data: null, error: null }).then(resolve, reject)
+        },
+      }
+      return query
+    },
+  },
 }))
 const ctx = { userId: 'operator', role: 'Owner' as const }
 const input = () => ({ bookingId: state.booking.id, crewIds: [state.people[0]!.id], clientUuid: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' })
@@ -77,8 +122,31 @@ describe('bookCrew confirmed writes', () => {
     await expect(bookCrewConfig.execute(input(), { ...ctx, role: 'Coordinator' })).rejects.toThrow('Owner, Admin, or Manager')
     expect(state.inserted).toHaveLength(0)
   })
+  it('batches lookups and atomically inserts multiple crew members', async () => {
+    state.people.push({
+      id: '33333333-3333-4333-8333-333333333333',
+      crew_code: 'CR-2',
+      primary_role: 'Gaffer',
+      full_name: 'Crew Two',
+      daily_rate: 8000,
+      is_active: true,
+    })
+    const { result, events } = await bookCrewConfig.execute(
+      {
+        ...input(),
+        crewIds: [state.people[0]!.id, state.people[1]!.id],
+      },
+      ctx,
+    )
+    expect(result).toEqual({ success: true, count: 2, assignmentIds: ['saved-1', 'saved-2'] })
+    expect(state.inserted).toHaveLength(2)
+    expect(state.inserted[0]).toMatchObject({ crew_id: state.people[0]!.id, daily_rate: 6500 })
+    expect(state.inserted[1]).toMatchObject({ crew_id: state.people[1]!.id, daily_rate: 8000 })
+    expect(events[0]?.payload).toMatchObject({ crewCount: 2 })
+  })
   it.each([{ days: 1.5 }, { days: NaN }, { dailyRate: Infinity }, { dailyRate: -1 }, { clientUuid: 'bad-key' }, { bookingId: '' }, { callTime: 'bad date' }, { wrapTime: '2026-09-12T00:00:00Z' }])('refuses invalid input %j', async (override) => {
     await expect(bookCrewConfig.execute({ ...input(), ...override }, ctx)).rejects.toThrow()
     expect(state.inserted).toHaveLength(0)
   })
 })
+

@@ -1,5 +1,42 @@
 # Progress Log
 
+## 2026-10-20 — Mobile and Tablet Operational Flow & Touch Target Ergonomics Overhaul
+
+**Did**
+- Operations Queues (`src/modules/operations/OperationsQueues.tsx`): upgraded job verb action buttons (`Pack`, `Handover`, `Return`, `Reset`) in `getJobButtonProps` from `minHeight: 38px` to `minHeight: 44px`, strictly satisfying Law 15 touch target floors on all devices. On phone viewports (< 768px), upgraded the card item to display bold booking ID links, clean stage badge, client & project metadata, items count, and full-width 44px primary action button for zero mis-taps.
+- Stock Check Workspace (`src/modules/inventory/StockCheck.tsx`): upgraded phone sticky scan bar with safe area padding (`calc(10px + env(safe-area-inset-bottom, 0px))`), elevated shadow, full-width 48px primary "Scan to verify" button, and added spacer to eliminate viewport overlap with manifest rows.
+- Create Invoice Modal (`src/modules/finance/modals/CreateInvoiceModal.tsx`): added responsive line items preview using `useViewport()`. On mobile phone screens (< 768px), renders individual line items as clean, compact cards with description, rate, days, qty, and total instead of forcing a crushed 6-column data table; on tablets and desktop, retains the canonical `DataTableShell` table with smooth horizontal scroll.
+- Finance Workspace & Styles (`src/modules/finance/Finance.tsx` & `finance.css`): corrected media queries from `max-width: 768px` to `max-width: 767px` per strict breakpoint invariants (`DESIGN_DIRECTION_SPEC_v4.1 §7.7`, `breakpoints.test.ts`). Added left status border accents to mobile invoice cards (amber for outstanding, green for settled, muted for void) and enforced 44px minHeight touch floor on row actions.
+
+**Ruled**
+- All floor verb action buttons in operations queues must clear the 44px touch target floor (Law 15) without exception.
+- Modal tables with 5+ columns must switch to touch cards on mobile phone screens (< 768px) to preserve typography, hierarchy, and legibility.
+
+**Verified**
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (0 warnings).
+- `npm run check:contrast`: 82/82 passed.
+- `npm run check:pglite`: 168/168 applied, 0 violations.
+- `npm run check:lifecycle`: 31/31 passed.
+- `npx vitest run src/modules/finance src/modules/operations src/modules/inventory`: 363/363 passed (25 files).
+- `npm run build`: successful production build, 209 PWA precache entries.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-19T20:38:38.908Z). Suite: Historical suite: 4827/4837 passed, 10 failed (recorded 2026-10-19T19:53:37.839Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-19T20:39:01.750Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Browser visual acceptance at phone/tablet/desktop widths remains unverified because the preview connection is unavailable.
+
 ## 2026-10-20 — Mobile and Tablet Field Logistics & Touch Ergonomics Upgrade
 
 **Did**

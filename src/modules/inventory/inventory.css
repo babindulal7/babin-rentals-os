@@ -486,5 +486,22 @@
 @media (max-width: 767px) {
   .inventory-list-toolbar > .list-workspace__controls { flex-basis: 100%; }
   .inventory-list-toolbar > button { order: 0 !important; }
+
+  .asset-hero-card {
+    padding: 14px 16px;
+    gap: 14px;
+  }
+
+  .asset-hero-thumb {
+    width: 52px;
+    height: 52px;
+    border-radius: 10px;
+  }
+
+  .inventory-model-card {
+    padding: 12px 14px;
+    gap: 8px;
+  }
 }
+
 

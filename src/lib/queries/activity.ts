@@ -45,6 +45,8 @@ interface AuditEventRowDb {
   record_id: string | null
   table_name: string | null
   ip_address: string | null
+  actor_id: string | null
+  actor_role: string | null
 }
 
 function mapModuleToActivityModule(m: string | null | undefined): ActivityModule {
@@ -69,26 +71,37 @@ export async function listActivityEvents(_filters?: ListFilters): Promise<ListQu
   // Retry. It returned zero rows, which the page drew as "No activity matches
   // this filter" — an outage presented as an empty log. Revert = restore the
   // try/catch returning { rows: [], total: 0 }.
-  const { data, error } = await supabase
-    .from('audit_events')
-    .select('id, created_at, action, module, status, record_id, table_name, ip_address')
-    .order('created_at', { ascending: false })
-    .limit(100)
+  const [auditRes, usersRes] = await Promise.all([
+    supabase
+      .from('audit_events')
+      .select('id, created_at, action, module, status, record_id, table_name, ip_address, actor_id, actor_role')
+      .order('created_at', { ascending: false })
+      .limit(100),
+    supabase
+      .from('users')
+      .select('id, full_name, primary_role'),
+  ])
 
-  if (error) throw new Error(`listActivityEvents failed: ${error.message}`)
+  if (auditRes.error) throw new Error(`listActivityEvents failed: ${auditRes.error.message}`)
 
-  const rows: ActivityRow[] = ((data ?? []) as unknown as AuditEventRowDb[]).map((e, idx) => ({
-    id: `ACT-${String(idx + 1).padStart(3, '0')}`,
-    timestamp: e.created_at,
-    user: 'Staff Member',
-    action: e.action || 'Performed action',
-    module: mapModuleToActivityModule(e.module),
-    target: e.table_name ? { kind: e.table_name, code: null, ...(e.record_id ? { label: e.record_id } : {}) } : null,
-    where: `${e.module || 'System'} ▸ ${e.action || 'Activity'}`,
-    status: e.status === 'failure' || e.status === 'Failed' ? 'Failed' : 'Success',
-    ip: e.ip_address || '127.0.0.1',
-    location: 'Kathmandu, NP',
-  }))
+  const dbUsers = (usersRes?.data ?? []) as Array<{ id: string; full_name: string | null; primary_role: string | null }>
+  const userMap = new Map(dbUsers.map((u) => [u.id, u.full_name?.trim() || u.primary_role || '—']))
+
+  const rows: ActivityRow[] = ((auditRes.data ?? []) as unknown as AuditEventRowDb[]).map((e, idx) => {
+    const actorName = e.actor_id ? userMap.get(e.actor_id) ?? (e.actor_role || '—') : 'System'
+    return {
+      id: `ACT-${String(idx + 1).padStart(3, '0')}`,
+      timestamp: e.created_at,
+      user: actorName,
+      action: e.action || 'Performed action',
+      module: mapModuleToActivityModule(e.module),
+      target: e.table_name ? { kind: e.table_name, code: null, ...(e.record_id ? { label: e.record_id } : {}) } : null,
+      where: `${e.module || 'System'} ▸ ${e.action || 'Activity'}`,
+      status: e.status === 'failure' || e.status === 'Failed' ? 'Failed' : 'Success',
+      ip: e.ip_address || '—',
+      location: 'Kathmandu, NP',
+    }
+  })
 
   return {
     rows,
