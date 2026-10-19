@@ -46,7 +46,9 @@ export const completeReset = createAction<CompleteResetInput, FloorVerbResult>({
   name: 'COMPLETE_RESET',
   // Was `rental.reset`, which `core.ts:checkCapability` cannot resolve and
   // therefore denies. `operations.perform` is the rule that actually exists.
-  permissions: ['operations.perform'],
+  // P0-B per-operation grant: resolves through canReset (floor + Technician —
+  // QC/cleaning is floor work technicians perform), same set operations.perform admits.
+  permissions: ['operations.reset'],
   implemented: true,
 
   validate: (input) =>
