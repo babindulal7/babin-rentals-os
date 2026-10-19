@@ -163,7 +163,7 @@ export default function App() {
         <Route
           path="/clients"
           element={
-            <Shell crumbs={[{ label: 'Clients' }, { label: 'Directory & Membership' }]} search="Search client, company, PAN, phone…">
+            <Shell crumbs={[{ label: 'Clients' }, { label: 'Directory & Membership' }]} search="Search client, PAN, phone…">
               <Clients />
             </Shell>
           }
@@ -713,7 +713,7 @@ export default function App() {
         <Route
           path="/clients/:id"
           element={
-            <Shell crumbs={[{ label: 'Clients', to: '/clients' }, { label: 'Client Profile' }]} search="Search client, company, PAN, phone…">
+            <Shell crumbs={[{ label: 'Clients', to: '/clients' }, { label: 'Client Profile' }]} search="Search client, PAN, phone…">
               <ClientDetail />
             </Shell>
           }

@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
+import { MemoryRouter } from 'react-router-dom'
 import { RentalsOperationsHeader, type SelectedRentalInfo } from '../header/RentalsOperationsHeader'
 
 ;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
@@ -33,14 +34,16 @@ describe('RentalsOperationsHeader component', () => {
     const handleAdd = vi.fn()
     await act(async () => {
       root.render(
-        <RentalsOperationsHeader
-          totalCount={42}
-          selectedCount={0}
-          search={dummySearch}
-          onOpenOperations={vi.fn()}
-          onAddRental={handleAdd}
-          canWriteDesk={true}
-        />,
+        <MemoryRouter>
+          <RentalsOperationsHeader
+            totalCount={42}
+            selectedCount={0}
+            search={dummySearch}
+            onOpenOperations={vi.fn()}
+            onAddRental={handleAdd}
+            canWriteDesk={true}
+          />
+        </MemoryRouter>,
       )
     })
 
@@ -69,14 +72,16 @@ describe('RentalsOperationsHeader component', () => {
 
     await act(async () => {
       root.render(
-        <RentalsOperationsHeader
-          totalCount={42}
-          selectedCount={1}
-          selectedRental={rental}
-          search={dummySearch}
-          onOpenOperations={handleOpenOps}
-          canOperate={true}
-        />,
+        <MemoryRouter>
+          <RentalsOperationsHeader
+            totalCount={42}
+            selectedCount={1}
+            selectedRental={rental}
+            search={dummySearch}
+            onOpenOperations={handleOpenOps}
+            canOperate={true}
+          />
+        </MemoryRouter>,
       )
     })
 
@@ -109,14 +114,16 @@ describe('RentalsOperationsHeader component', () => {
 
     await act(async () => {
       root.render(
-        <RentalsOperationsHeader
-          totalCount={42}
-          selectedCount={1}
-          selectedRental={rental}
-          search={dummySearch}
-          onOpenOperations={handleOpenOps}
-          canOperate={true}
-        />,
+        <MemoryRouter>
+          <RentalsOperationsHeader
+            totalCount={42}
+            selectedCount={1}
+            selectedRental={rental}
+            search={dummySearch}
+            onOpenOperations={handleOpenOps}
+            canOperate={true}
+          />
+        </MemoryRouter>,
       )
     })
 
@@ -147,14 +154,16 @@ describe('RentalsOperationsHeader component', () => {
 
     await act(async () => {
       root.render(
-        <RentalsOperationsHeader
-          totalCount={42}
-          selectedCount={1}
-          selectedRental={rental}
-          search={dummySearch}
-          onOpenOperations={handleOpenOps}
-          canOperate={true}
-        />,
+        <MemoryRouter>
+          <RentalsOperationsHeader
+            totalCount={42}
+            selectedCount={1}
+            selectedRental={rental}
+            search={dummySearch}
+            onOpenOperations={handleOpenOps}
+            canOperate={true}
+          />
+        </MemoryRouter>,
       )
     })
 
@@ -185,16 +194,18 @@ describe('RentalsOperationsHeader component', () => {
 
     await act(async () => {
       root.render(
-        <RentalsOperationsHeader
-          totalCount={42}
-          selectedCount={1}
-          selectedRental={rental}
-          search={dummySearch}
-          onOpenOperations={vi.fn()}
-          onViewSummary={handleViewSummary}
-          canOperate={true}
-          canCloseRental={false}
-        />,
+        <MemoryRouter>
+          <RentalsOperationsHeader
+            totalCount={42}
+            selectedCount={1}
+            selectedRental={rental}
+            search={dummySearch}
+            onOpenOperations={vi.fn()}
+            onViewSummary={handleViewSummary}
+            canOperate={true}
+            canCloseRental={false}
+          />
+        </MemoryRouter>,
       )
     })
 
@@ -208,14 +219,16 @@ describe('RentalsOperationsHeader component', () => {
 
     await act(async () => {
       root.render(
-        <RentalsOperationsHeader
-          totalCount={42}
-          selectedCount={3}
-          onClearSelection={handleClear}
-          search={dummySearch}
-          onOpenOperations={vi.fn()}
-          onExportCsv={handleExport}
-        />,
+        <MemoryRouter>
+          <RentalsOperationsHeader
+            totalCount={42}
+            selectedCount={3}
+            onClearSelection={handleClear}
+            search={dummySearch}
+            onOpenOperations={vi.fn()}
+            onExportCsv={handleExport}
+          />
+        </MemoryRouter>,
       )
     })
 

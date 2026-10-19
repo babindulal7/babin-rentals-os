@@ -150,14 +150,10 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
       return rbac.canManageSettings(ctx.role);
     case 'operations.perform':
       return rbac.canPerformOperations(ctx.role);
-    case 'operations.pack':
-      return rbac.canPack(ctx.role);
-    case 'operations.handover':
-      return rbac.canHandover(ctx.role);
-    case 'operations.return':
-      return rbac.canReturn(ctx.role);
-    case 'operations.reset':
-      return rbac.canReset(ctx.role);
+    /* Stage-level gates (pack, handover, return, reset) are not capabilities: no
+       action declares them. Actions declare `operations.perform`; the stage helpers
+       in lib/rbac (`canPerformOp`) gate the UI. Dead cases removed 15 Oct 2026 so the
+       handled-but-undeclared check in core.test.ts holds. */
     case 'money.view':
       return rbac.canViewMoney(ctx.role);
     /*

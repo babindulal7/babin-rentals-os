@@ -1,5 +1,22 @@
 # Progress Log
 
+## 2026-10-19 — Seven pre-existing test failures on main fixed
+
+**Did**
+- `src/actions/core.ts`: removed four dispatcher cases (`operations.pack/handover/return/reset`) that no action declares. Actions declare `operations.perform`; the stage helpers in `lib/rbac` still gate the UI. Nothing that runs today changes.
+- Clients search placeholder no longer says "company" (`ClientsDirectory`, `Clients`, `App.tsx` ×2). The directory never fills company, so the promise was false. The search still matches phone and PAN.
+- `Finance.restricted` phone-header test: scoped the "no Create Invoice / Export on phone" check to the page `<header>`. The Invoices tab's own sub-header keeps its actions at every width.
+- `rentalsOperationsHeader.test.tsx`: the menu calls `useNavigate`, so the six renders are inside a `MemoryRouter`.
+
+**Verified**
+- Each failing file reproduced on a fresh branch from `main` (7 failures in 4 files), then passed after the fix (125/125 in those files).
+- Typecheck, lint, shell lint (680 files), UI-copy and fixtures pass. Full suite: 372 files, 4,797 tests, all passing.
+- No migration was touched, so PGlite and lifecycle were not re-run for this change.
+
+**Remaining**
+- Land on `main` after review (fast-forward).
+- Note for review: the handover floor-role rule (`canHandover`) is enforced only by the UI helper, not by the action's declared capability `operations.perform`. This is unchanged by this fix.
+
 ## 2026-10-17 — Phase 6 Task 3.4: the 13 Law 16 reports — real figures, then five states
 
 **Did**
