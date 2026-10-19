@@ -1,5 +1,55 @@
 # Progress Log
 
+## 2026-10-19 — 15 Oct follow-ups on `main`: Booking Detail phone title, `/` key, Inventory chip row (Today kept as `main` has it)
+
+**Did**
+- Landed three of the old line's 15 Oct follow-ups on `main`, on a fresh branch from `54273363`:
+  - **Booking Detail phone header.** The two old-line commits, plus two changes `main` needed: the phone search slot is left out when a page sets `searchInMore` (its fixed 44px stayed reserved otherwise), and the age badge is quiet when fresh on phones.
+  - **`/` focuses the header search** at tablet and desktop width. It now sits on `main`'s zoom-audit `<label>` search wrapper.
+  - **Inventory's status chips lead its toolbar row.** Stats stays where `main` keeps it.
+- **Today was not landed.** On 17 Oct `main`'s Today card was redesigned again (OpenCode, `12db6af1`), adding "Window passed", an overflow menu and "View in Rentals". Babin chose to keep it on 19 Oct. The one-statement card stays on `claude/booqable-followups-port` (`2d1358a1`, with `d664277a`'s fixes). RULINGS-2026-10-15 rows 19–23 are kept and marked "Not landed".
+- Not ported, because `main` already had them: removing the in-page search boxes, Clients' toolbar rework, and moving Stats into More.
+
+**Ruled**
+- Babin, 19 Oct: keep `main`'s Today card; land the other follow-ups. `RULINGS-2026-10-15.md` rows 19–23 are marked not landed; rows 24 (`/` key) and 25 (Inventory chips) are in force. `RULINGS-2026-10-16.md` rows 1–4 (Booking Detail phone header) are in force. Each row has a revert.
+- No migration, role, capability, money gate or write path changed. Phase 9's Stale and Offline warnings still show in words on phones.
+
+**Verified**
+- Browser, mock build of this exact tree (`vite build --mode mock`, served by `vite preview`, Owner):
+
+| Check | Width | Result |
+|---|---|---|
+| Booking Detail record title, 873 / 902 | 390 | 98 / 162px (both 0px on `main` before) |
+| Booking Detail record title, 873 / 902 | 375 | 83 / 147px |
+| `/` on Inventory and Clients | 1280 | focuses the header search (did nothing on `main`) |
+| Inventory toolbar | 1280 | one 52px line, 3 chips; table starts at 307px (388px on `main`) |
+| Inventory toolbar | 1024 | one 52px line, no chip clipped, no control under 44px |
+
+  Header and page overflow were 0 in every reading. The Booking Detail header is 64px and its phone search slot is gone. The "`main` before" figures were measured on `eac94cf0` on 16 Oct.
+- **Found on `main`, not changed here:** since 17 Oct (`dd1055f6`, `c40d75b4`) Clients renders two search boxes again, one in the header and one in the page, with the same placeholder. This is the duplicate `main` had removed on 15 Oct. The ported list-toolbar test now asserts Inventory only.
+- Gates on `f591f7cc` (base `54273363`): `tsc --noEmit` 0; `npm run lint` 0; `lint:shell` 680 files pass; `lint:ui-copy` pass; `check:contrast` 82/82; `npm run build` exit 0; `check:lifecycle` 31/31 (PGlite). `npx vitest run`: 4 files / 7 tests failed, 4,707 passed (4,714). **All 7 fail identically on `main` `54273363` without this branch**, in the same 4 files with the same tests (7 failed, 118 passed): `actions/__tests__/core.test.ts` (capability declarations), `clients/__tests__/clientsCopy.test.ts` ("company" in the search placeholder), `finance/__tests__/Finance.restricted.test.tsx` (phone header), and `rentals/__tests__/rentalsOperationsHeader.test.tsx` (4 Mode 2 tests). This branch adds no failures.
+- Mutation checks (16–17 Oct, same code): keeping the phone search slot, dropping `quietWhenFresh`, and disabling `/` each turned their test red.
+- Not verified: dark/glass by eye (no new tokens), live data, native phone hardware.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +2 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +1 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-17T19:05:49.049Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-18T20:07:32.375Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- `main` is red on 7 tests in 4 files, unrelated to this branch: listed above.
+- Clients' duplicate in-page search box is back on `main` (17 Oct): decide whether to remove it again.
+- Today: the one-statement card stays unlanded (Babin, 19 Oct). It can be re-ported onto `main`'s new card later, keeping its new features.
+- Babin to confirm or flip RULINGS-2026-10-15 rows 24–25 and RULINGS-2026-10-16 rows 1–4.
+
 ## 2026-10-16 — Booking Detail phone header: a one-word stage action, Search in the More
 
 **Did**
