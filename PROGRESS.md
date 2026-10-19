@@ -1,5 +1,62 @@
 # Progress Log
 
+## 2026-10-19 — Phase 2B.1 Session Evidence Persistence (Safety Patch) landed
+
+**Did**
+- Ported and verified the Phase 2B.1 Session Evidence Persistence Safety Patch on branch `fix/session-evidence-fail-closed`:
+  - **`src/lib/evidenceStorage.ts`:** Replaced unsafe false-positive uploader with fail-closed evidence persistence helper:
+    - Enforces cryptographic SHA-256 content hashing (`crypto.subtle.digest`) and de-duplication across sessions.
+    - Requires compulsory session anchor: validates UUID foreign keys for `userId`, `reference.bookingId`, `reference.sessionId`, and stage `reference.operationStage` ('Packing', 'Pickup', 'Delivery', 'Return').
+    - Pre-validates session existence, booking association, and operational stage against `operation_sessions` before touching storage.
+    - Rejects mutations against sealed sessions (`session.state === 'Completed'`).
+    - Enforces fail-closed private Supabase Storage object upload to `evidence` bucket without attempting unsafe client-side bucket creation.
+    - Atomically verifies `evidence_files` metadata row insertion with valid schema columns (`size_bytes`, `media_type`, `format`, `content_hash`, `category`, `created_by`, `storage_path`) matching `0003_operations.sql`.
+    - Inserts and verifies compulsory `evidence_references` relationship join linking the media to `operation_sessions` and `bookings`.
+    - Supports idempotent same-key retries via stable `clientUuid` while preventing key reuse across altered image bytes.
+    - Short-lived viewing `signedUrl` is treated as a transient convenience link and is nullable; signed URL generation failure never invalidates verified database persistence records.
+  - **`src/lib/__tests__/evidenceStorage.test.ts`:** Added comprehensive 11-test regression suite covering storage upload failure, metadata rejection, reference link failure, retry idempotency, tamper detection with mismatched image bytes, cross-booking session rejection, sealed session rejection, display identifier rejection, and graceful fallback on signed URL issuance failure.
+
+**Ruled**
+- Operational evidence must be anchored to an active `operation_sessions` record via `evidence_references`; storage paths or booking numbers alone are not valid stored records.
+- Completed operations sessions are sealed: neither new evidence files nor references can be attached after session completion.
+- Client-side bucket creation is prohibited; private storage buckets must be provisioned via reviewed database migrations.
+- Transient network or signing failures must fail closed: storage upload without verified SQL metadata is rejected and requires safe same-key retry.
+- Proof of Delivery (POD) completion or photo verification in the UI remains blocked pending server-side atomic finalization and storage authorization hardening (Phase 2B.2).
+
+**Verified**
+- Focused test suite: `npx vitest run src/lib/__tests__/evidenceStorage.test.ts`: 1/1 file, 11/11 tests passed.
+- Full test suite: `npm test`: 376/376 test files passed, 4,730/4,730 tests green (100% pass) in 281s.
+- `npm run typecheck`: 0 errors under TypeScript 5.7 strict mode.
+- `npm run lint`: 0 errors, 0 warnings (`--max-warnings 0`).
+- `npm run check:pglite`: 167/167 applied, 0 view leaks, 20 anon RPCs, 74 definer search_paths pinned.
+- `npm run check:lifecycle`: 31/31 stages green.
+- `npm run check:anon`: All anonymous exposure checks passed.
+- `npm run check:contrast`: 82/82 WCAG AA color pairs pass in dark, light, high-contrast, and glass.
+- `npm run build`: Exit 0, 214 precache assets.
+- `npm run lint:progress`: Newest entry verified with Completion and Remaining blocks.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 55 | 50 · 0 · 0 · 5 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 98% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-19T10:24:21.237Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-19T10:24:41.767Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Phase 2B.2: Wire signature canvas images (`HandoverWorkspace.tsx`) to fail-closed upload protocol and link `signatures.signature_evidence_file_id`.
+- Phase 2B.2: Storage policy hardening for `storage.objects` (`documents`, `evidence`) to scope SELECT/INSERT to booking/session assignments before enabling driver/client photo evidence in production.
+- Decision needed: Whether both Receiver and Warehouse staff are required to draw signatures or if typed legal attestation is acceptable (affects `SignOnGlassModal`).
+- Clients' duplicate in-page search box is back on `main` (17 Oct): decide whether to remove it again.
+- Today: the one-statement card stays unlanded (Babin, 19 Oct). It can be re-ported onto `main`'s new card later, keeping its new features.
+- Babin to confirm or flip RULINGS-2026-10-15 rows 24–25 and RULINGS-2026-10-16 rows 1–4.
+- Phase 7 Live Cutover tasks (Task 1.1–1.5 in `docs/REMAINING_WORK.md`) awaiting staging database provisioning and Babin sign-off under Rule N-5.
+
 ## 2026-10-19 — Phase 1 Offline Safety Patch (DATA-02) landed + 100% test suite green
 
 **Did**
@@ -30,25 +87,6 @@
 - `npm run check:lifecycle`: 31/31 stages green.
 - `npm run check:contrast`: 82/82 WCAG AA color pairs pass in dark, light, high-contrast, and glass.
 - `npm run build`: Exit 0, 214 precache assets.
-
-## Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
-| Real data | DB-only · mixed · seed · none / 55 | 50 · 0 · 0 · 5 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
-| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
-| Overall | mean of five | ≈ 98% | -1 |
-Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-19T09:51:44.998Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
-Gates read from .lifecycle-result.json, written 2026-10-19T09:52:12.872Z.
-Counted by `npm run completion`, not typed.
-
-## Remaining
-- Clients' duplicate in-page search box is back on `main` (17 Oct): decide whether to remove it again.
-- Today: the one-statement card stays unlanded (Babin, 19 Oct). It can be re-ported onto `main`'s new card later, keeping its new features.
-- Babin to confirm or flip RULINGS-2026-10-15 rows 24–25 and RULINGS-2026-10-16 rows 1–4.
-- Phase 7 Live Cutover tasks (Task 1.1–1.5 in `docs/REMAINING_WORK.md`) awaiting staging database provisioning and Babin sign-off under Rule N-5.
 
 ## 2026-10-19 — 15 Oct follow-ups on `main`: Booking Detail phone title, `/` key, Inventory chip row (Today kept as `main` has it)
 

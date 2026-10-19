@@ -206,16 +206,58 @@ function commitInsert(table: string, row: Row, at: string): void {
  * — an exclusion over a range type is not something this store can express.
  */
 function applyTriggers(table: string, row: Row): void {
-  if (table !== 'booking_stage_transitions') return
-  const bookingId = row['booking_id']
-  const to = row['to_stage']
-  if (typeof bookingId !== 'string' || typeof to !== 'string') return
-  const bookings = store['bookings'] ?? []
-  for (const b of bookings) {
-    if (b['id'] !== bookingId) continue
-    const patch: Row = { stage: to, updated_at: row['occurred_at'] ?? row['created_at'] ?? new Date().toISOString() }
-    Object.assign(b, patch)
-    overlay.updates.push({ table: 'bookings', id: b['id'], patch })
+  if (table === 'booking_stage_transitions') {
+    const bookingId = row['booking_id']
+    const to = row['to_stage']
+    if (typeof bookingId !== 'string' || typeof to !== 'string') return
+    const bookings = store['bookings'] ?? []
+    for (const b of bookings) {
+      if (b['id'] !== bookingId) continue
+      const patch: Row = { stage: to, updated_at: row['occurred_at'] ?? row['created_at'] ?? new Date().toISOString() }
+      Object.assign(b, patch)
+      overlay.updates.push({ table: 'bookings', id: b['id'], patch })
+    }
+    return
+  }
+
+  // Emulate `sync_payment_to_invoice()` (0010_triggers_functions.sql:255)
+  if (table === 'payments') {
+    const invoiceId = row['invoice_id']
+    const status = row['status']
+    if (typeof invoiceId !== 'string' || status !== 'Received') return
+    const invoices = store['invoices'] ?? []
+    const inv = invoices.find((i) => i['id'] === invoiceId)
+    if (!inv) return
+    const totalAmount = Number(inv['total_amount'] ?? 0)
+    const payments = store['payments'] ?? []
+    const totalPaid = payments
+      .filter((p) => p['invoice_id'] === invoiceId && p['status'] === 'Received')
+      .reduce((sum, p) => sum + Number(p['amount'] ?? 0), 0)
+    const outstanding = Math.max(0, Number((totalAmount - totalPaid).toFixed(2)))
+    const nextStatus = outstanding === 0 ? 'Paid' : totalPaid > 0 ? 'Partially Paid' : inv['status']
+    const patch: Row = {
+      paid_amount: Number(totalPaid.toFixed(2)),
+      outstanding_amount: outstanding,
+      status: nextStatus,
+      updated_at: new Date().toISOString(),
+    }
+    Object.assign(inv, patch)
+    overlay.updates.push({ table: 'invoices', id: inv['id'], patch })
+
+    const bookingId = inv['booking_id']
+    if (typeof bookingId === 'string') {
+      const bookings = store['bookings'] ?? []
+      const booking = bookings.find((b) => b['id'] === bookingId)
+      if (booking) {
+        const bookingPatch: Row = {
+          outstanding_amount: outstanding,
+          updated_at: new Date().toISOString(),
+        }
+        Object.assign(booking, bookingPatch)
+        overlay.updates.push({ table: 'bookings', id: booking['id'], patch: bookingPatch })
+      }
+    }
+    return
   }
 }
 

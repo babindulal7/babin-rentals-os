@@ -1,135 +1,234 @@
 import { supabase, IS_MOCK } from './supabase'
 import { generateClientUuid } from './dataAccess'
+import type { Database } from '../types/supabase'
 
+/** A private bucket installed by a reviewed database migration, never from the browser. */
 export const EVIDENCE_STORAGE_BUCKET = 'evidence'
+
+type EvidenceCategory = Database['public']['Enums']['evidence_category']
+type SessionStage = 'Packing' | 'Pickup' | 'Delivery' | 'Return'
+
+/**
+ * A session is compulsory for operational evidence. A booking number or a
+ * transport plan is not a valid session ID or booking foreign key.
+ */
+export interface EvidenceSessionReference {
+  bookingId: string
+  sessionId: string
+  operationStage: SessionStage
+}
 
 export interface UploadEvidencePhotoOptions {
   file: Blob | File
   filename: string
-  bookingId?: string | undefined
-  unitId?: string | undefined
-  category?: 'Packing' | 'Handover' | 'Return' | 'Damage' | 'General' | undefined
+  category: EvidenceCategory
+  reference: EvidenceSessionReference
+  /** An authenticated application users.id; database RLS remains authoritative. */
   userId: string
-  notes?: string | undefined
+  /** Preserve on retries of the SAME action; never generate a fresh retry key. */
+  clientUuid?: string | undefined
 }
 
 export interface StoredEvidencePhotoResult {
   id: string
+  referenceId: string
   storagePath: string
-  signedUrl: string
+  /** A temporary viewing link, not evidence of persistence. */
+  signedUrl: string | null
   filename: string
   fileSizeBytes: number
+  contentHash: string
 }
 
-interface StorageBucketClient {
-  upload: (path: string, file: Blob | ArrayBuffer | string, options?: { contentType?: string; upsert?: boolean; cacheControl?: string; duplex?: 'half' | 'full' }) => Promise<{ data: { path: string; fullPath: string; id?: string } | null; error: Error | null }>
-  createSignedUrl: (path: string, expiresIn: number, options?: { download?: boolean; transform?: { width: number; height: number; resize: 'cover' | 'contain' | 'fill' } }) => Promise<{ data: { signedUrl: string } | null; error: Error | null }>
-  download: (path: string, options?: { transform?: { width: number; height: number; resize: 'cover' | 'contain' | 'fill' } }) => Promise<{ data: Blob | null; error: Error | null }>
-  getPublicUrl: (path: string) => { data: { publicUrl: string } }
-  list: (folder?: string, options?: { limit?: number; offset?: number; sortBy?: { column: string; order: 'asc' | 'desc' } }) => Promise<{ data: Array<{ name: string; id: string; updated_at: string; created_at: string; last_accessed_at: string; metadata: Record<string, unknown> }> | null; error: Error | null }>
-  remove: (paths: string[]) => Promise<{ data: Array<{ name: string }> | null; error: Error | null }>
-  move: (fromPath: string, toPath: string) => Promise<{ data: { path: string } | null; error: Error | null }>
-  copy: (fromPath: string, toPath: string) => Promise<{ data: { path: string } | null; error: Error | null }>
+const ACCEPTED_IMAGE_FORMATS: Readonly<Record<string, string>> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
 }
 
-function getEvidenceBucketClient(): StorageBucketClient {
-  if (IS_MOCK) {
-    throw new Error('Mock mode not supported for evidence storage. Use real Supabase client.')
+function assertUuid(value: string, label: string): void {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
+    throw new Error(`${label} must be a database UUID, not a display identifier`)
   }
-  const client = supabase!
-  if (!client.storage || typeof client.storage.from !== 'function') {
-    throw new Error('Supabase storage client not available')
+}
+
+function assertLiveStorage(): void {
+  if (IS_MOCK) throw new Error('Evidence upload requires an authenticated live backend')
+  if (!supabase?.storage || typeof supabase.storage.from !== 'function') {
+    throw new Error('Evidence storage is unavailable')
   }
-  return client.storage.from(EVIDENCE_STORAGE_BUCKET) as unknown as StorageBucketClient
+}
+
+async function sha256(blob: Blob): Promise<string> {
+  if (typeof crypto === 'undefined' || !crypto.subtle) {
+    throw new Error('Secure browser hashing is unavailable; evidence was not uploaded')
+  }
+  const hash = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer())
+  return Array.from(new Uint8Array(hash), (x) => x.toString(16).padStart(2, '0')).join('')
 }
 
 /**
- * Uploads an evidence photo (JPEG, PNG, WebP) to Supabase Storage bucket `evidence`
- * and records a row in `evidence_files`.
+ * Fail-closed upload of a session-anchored JPEG/PNG/WebP.
+ * Returns only when BOTH the physical evidence_files row and its
+ * evidence_references link have been confirmed by the backend.
+ *
+ * This is an online-only operation. A storage object by itself is NOT a
+ * completed evidence record. Reuse clientUuid when retrying an unknown result.
+ * Data left in storage by an ambiguous network failure requires reconciliation;
+ * it is not safe for the browser to silently delete possibly committed proof.
  */
 export async function uploadEvidencePhoto(
   options: UploadEvidencePhotoOptions,
 ): Promise<StoredEvidencePhotoResult> {
-  const photoId = generateClientUuid()
-  const cleanBooking = (options.bookingId || 'general').replace(/[^a-zA-Z0-9_-]/g, '_')
-  const cleanName = options.filename.replace(/[^a-zA-Z0-9._-]/g, '_')
-  const storagePath = `${cleanBooking}/${photoId}_${cleanName}`
+  assertLiveStorage()
+  const { file, reference } = options
+  if (!(file instanceof Blob) || file.size === 0) throw new Error('Choose a non-empty image')
+  const format = ACCEPTED_IMAGE_FORMATS[file.type]
+  if (!format) throw new Error('Evidence photos must be JPEG, PNG, or WebP')
+  if (!options.filename.trim()) throw new Error('Evidence filename is required')
+  assertUuid(options.userId, 'User ID')
+  assertUuid(reference.bookingId, 'Booking ID')
+  assertUuid(reference.sessionId, 'Session ID')
+  if (!(['Packing', 'Pickup', 'Delivery', 'Return'] as string[]).includes(reference.operationStage)) {
+    throw new Error('Unsupported evidence operation stage')
+  }
+  const clientUuid = options.clientUuid ?? generateClientUuid()
+  assertUuid(clientUuid, 'Evidence retry ID')
 
-  const contentType = (options.file as File).type || 'image/jpeg'
-  const storage = getEvidenceBucketClient()
+  const expectedOperation = reference.operationStage === 'Packing'
+    ? 'Packing'
+    : reference.operationStage === 'Return'
+      ? 'Return'
+      : 'Handover'
+  const { data: session, error: sessionError } = await supabase
+    .from('operation_sessions')
+    .select('id, booking_id, operation, state')
+    .eq('id', reference.sessionId)
+    .single()
+  if (sessionError || !session) throw new Error(`Could not verify the evidence session: ${sessionError?.message ?? 'not found'}`)
+  if (session.booking_id !== reference.bookingId || session.operation !== expectedOperation) {
+    throw new Error('Evidence session does not match the booking and operation')
+  }
 
-  const { error: uploadError } = await storage.upload(storagePath, options.file, {
-    contentType,
-  })
+  const digest = await sha256(file)
+  const { data: byKey, error: keyError } = await supabase
+    .from('evidence_files').select('id, storage_path, content_hash')
+    .eq('client_uuid', clientUuid).maybeSingle()
+  if (keyError) throw new Error(`Could not verify evidence retry key: ${keyError.message}`)
+  if (byKey && byKey.content_hash !== digest) {
+    throw new Error('Evidence retry ID was already used for different image bytes')
+  }
+  const { data: byHash, error: hashError } = await supabase
+    .from('evidence_files').select('id, storage_path, content_hash')
+    .eq('content_hash', digest).maybeSingle()
+  if (hashError) throw new Error(`Could not check evidence hash: ${hashError.message}`)
+  if (byKey && byHash && byKey.id !== byHash.id) {
+    throw new Error('Conflicting evidence records; manual reconciliation required')
+  }
 
-  // Handle missing bucket or storage failure
-  if (uploadError && (uploadError.message?.toLowerCase().includes('bucket not found') || uploadError.name === 'StorageApiError')) {
-    if (supabase?.storage && 'createBucket' in supabase.storage && typeof supabase.storage.createBucket === 'function') {
-      const { error: createErr } = await supabase.storage.createBucket(EVIDENCE_STORAGE_BUCKET, { public: false })
-      if (!createErr) {
-        const retry = await storage.upload(storagePath, options.file, { contentType })
-        if (retry.error) {
-          throw new Error(`Failed to upload evidence photo: ${retry.error.message}`)
-        }
-      } else {
-        throw new Error(`Failed to upload evidence photo: ${createErr.message}`)
-      }
-    } else {
-      throw new Error(`Failed to upload evidence photo: ${uploadError.message || 'Unknown error'}`)
+  let evidence: { id: string; storage_path: string } | null = byKey ?? byHash
+  if (!evidence && session.state === 'Completed') {
+    throw new Error('Completed handover sessions are sealed; new evidence cannot be attached')
+  }
+
+  const storage = supabase.storage.from(EVIDENCE_STORAGE_BUCKET)
+  if (!evidence) {
+    const cleanName = options.filename.trim().replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120)
+    const storagePath = `${reference.bookingId}/${reference.sessionId}/${clientUuid}_${cleanName}`
+    const { data: uploaded, error: uploadError } = await storage.upload(storagePath, file, {
+      contentType: file.type,
+      upsert: false,
+    })
+    if (uploadError || !uploaded || uploaded.path !== storagePath) {
+      throw new Error(`Evidence image was not confirmed in private storage: ${uploadError?.message ?? 'invalid upload response'}`)
     }
+
+    const { data: recorded, error: recordError } = await supabase
+      .from('evidence_files')
+      .insert({
+        id: clientUuid,
+        client_uuid: clientUuid,
+        content_hash: digest,
+        storage_path: storagePath,
+        original_filename: options.filename,
+        media_type: 'Image',
+        format,
+        size_bytes: file.size,
+        category: options.category,
+        created_by: options.userId,
+      })
+      .select('id, storage_path').single()
+    if (recordError || !recorded) {
+      // The INSERT response may be lost AFTER commit. Never delete on an
+      // ambiguous response; surface a failure and allow safe same-key retry.
+      throw new Error(`Evidence metadata was not confirmed; retry with the same ID: ${recordError?.message ?? 'empty response'}`)
+    }
+    evidence = recorded
   }
 
-  if (uploadError && !uploadError.message?.toLowerCase().includes('already exists')) {
-    throw new Error(`Failed to upload evidence photo: ${uploadError.message || 'Unknown error'}`)
+  const { data: alreadyLinked, error: lookupError } = await supabase
+    .from('evidence_references').select('id, booking_id, item_id')
+    .eq('evidence_file_id', evidence.id)
+    .eq('operation_stage', reference.operationStage)
+    .eq('session_id', reference.sessionId)
+    .maybeSingle()
+  if (lookupError) throw new Error(`Could not verify evidence session link: ${lookupError.message}`)
+
+  if (alreadyLinked && (alreadyLinked.booking_id !== reference.bookingId || alreadyLinked.item_id != null)) {
+    throw new Error('Existing evidence link does not match the requested session scope')
+  }
+  let referenceId = alreadyLinked?.id
+  if (!referenceId) {
+    if (session.state === 'Completed') {
+      throw new Error('The session was sealed before evidence could be linked')
+    }
+    const linkId = generateClientUuid()
+    const { data: linked, error: linkError } = await supabase
+      .from('evidence_references')
+      .insert({
+        id: linkId,
+        client_uuid: linkId,
+        evidence_file_id: evidence.id,
+        operation_stage: reference.operationStage,
+        session_id: reference.sessionId,
+        booking_id: reference.bookingId,
+        created_by: options.userId,
+      })
+      .select('id').single()
+    if (linkError || !linked) {
+      throw new Error(`Evidence session link was not confirmed; retry with the same ID: ${linkError?.message ?? 'empty response'}`)
+    }
+    referenceId = linked.id
   }
 
-  // Create signed URL for viewing (valid for 7 days)
-  const { data: signedData, error: signError } = await storage.createSignedUrl(storagePath, 60 * 60 * 24 * 7)
-  const signedUrl = signedData?.signedUrl || `/evidence/${photoId}_${cleanName}`
-  if (signError && !signedData?.signedUrl) {
-    console.warn(`Could not create signed URL for evidence ${storagePath}:`, signError.message)
-  }
-
-  // Attempt to record in evidence_files if authenticated
+  // A viewing URL is optional and expires. A failure here does not undermine
+  // the separately confirmed storage + metadata + session reference records.
+  let signedUrl: string | null = null
   try {
-    await supabase.from('evidence_files').insert({
-      id: photoId,
-      client_uuid: photoId,
-      original_filename: options.filename,
-      storage_path: storagePath,
-      file_size_bytes: options.file.size,
-      mime_type: contentType,
-      category: options.category || 'General',
-      booking_id: options.bookingId || null,
-      unit_id: options.unitId || null,
-      created_by: options.userId,
-      created_at: new Date().toISOString(),
-    } as never)
-  } catch (err) {
-    console.warn('Could not insert evidence_files row (offline or mock):', err)
+    const { data, error } = await storage.createSignedUrl(evidence.storage_path, 60 * 60)
+    if (!error && data?.signedUrl) signedUrl = data.signedUrl
+  } catch {
+    // Re-request later via getEvidenceSignedUrl(). Do not invent a local URL.
   }
 
   return {
-    id: photoId,
-    storagePath,
+    id: evidence.id,
+    referenceId,
+    storagePath: evidence.storage_path,
     signedUrl,
     filename: options.filename,
-    fileSizeBytes: options.file.size,
+    fileSizeBytes: file.size,
+    contentHash: digest,
   }
 }
 
-/**
- * Retrieves a signed URL for an existing evidence photo storage path.
- */
 export async function getEvidenceSignedUrl(
   storagePath: string,
-  expiresInSeconds = 60 * 60 * 24 * 7,
+  expiresInSeconds = 60 * 60,
 ): Promise<string | null> {
-  const storage = getEvidenceBucketClient()
-  const { data, error } = await storage.createSignedUrl(storagePath, expiresInSeconds)
-  if (!error && data?.signedUrl) {
-    return data.signedUrl
-  }
-  console.warn(`Could not create signed URL for evidence ${storagePath}:`, error?.message)
-  return null
+  assertLiveStorage()
+  if (!storagePath.trim() || expiresInSeconds < 1) return null
+  const { data, error } = await supabase.storage.from(EVIDENCE_STORAGE_BUCKET)
+    .createSignedUrl(storagePath, expiresInSeconds)
+  return !error ? data?.signedUrl ?? null : null
 }

@@ -170,6 +170,7 @@ export function buildStore(options?: BuildStoreOptions): Store {
       booking_lines: [],
       booking_line_units: [],
       booking_crew_lines: [],
+      booking_transport: [],
       invoices: [],
       payments: [],
       security_deposits: [],
@@ -300,6 +301,7 @@ export function buildStore(options?: BuildStoreOptions): Store {
    */
   const bookingLineUnits: Row[] = []
   const crewLines: Row[] = []
+  const bookingTransport: Row[] = []
   const invoices: Row[] = []
   const payments: Row[] = []
   const deposits: Row[] = []
@@ -312,6 +314,7 @@ export function buildStore(options?: BuildStoreOptions): Store {
     const client = clientByCode.get(b.clientCode)
     const clientId = (client?.['id'] as string | undefined) ?? null
     const stage = b.spec.stage
+    const isBabinDelivery = b.bookingNo === 'B-715'
 
     bookings.push({
       id: bId,
@@ -324,8 +327,8 @@ export function buildStore(options?: BuildStoreOptions): Store {
       pickup_at: iso(b.spec.pickupAt),
       return_at: iso(b.spec.returnAt),
       actual_return_at: stage === 'Returned' || stage === 'Closed' ? iso(b.spec.returnAt) : null,
-      delivery_type: 'Pickup',
-      pickup_location: 'Kathmandu Main',
+      delivery_type: isBabinDelivery ? 'Babin Delivery' : 'Client Pickup',
+      pickup_location: isBabinDelivery ? 'Bakhundole, Lalitpur (Near Summit Hotel)' : 'Kathmandu Main',
       return_location: 'Kathmandu Main',
       quote_expires_at: stage === 'Quote' ? iso(new Date(b.spec.pickupAt.getTime() - 3 * 86_400_000)) : null,
       cancelled_at: null,
@@ -336,6 +339,32 @@ export function buildStore(options?: BuildStoreOptions): Store {
       outstanding_amount: money(b.breakdown.outstanding),
       created_at: iso(new Date(b.spec.pickupAt.getTime() - 7 * 86_400_000)),
     })
+
+    if (isBabinDelivery) {
+      bookingTransport.push({
+        id: id(`transport:${b.bookingNo}`),
+        client_uuid: seedUuid(`transport:${b.bookingNo}`),
+        booking_id: bId,
+        vehicle: 'Scorpio Van',
+        number_plate: 'Ba 3 Cha 8821',
+        driver_id: id('user:warehouse'),
+        driver_contact: '+977 9851098765',
+        delivery_charge: 3500,
+        fuel_charge: 0,
+        zero_charge_override_by: null,
+        zero_charge_override_reason: null,
+        special_instructions: 'Fragile: 2 Pelican cases (ARRI Alexa Mini LF + NiSi Cine Primes). Handle with extreme care.',
+        delivery_status: 'Scheduled',
+        scheduled_at: iso(b.spec.pickupAt),
+        dispatched_at: null,
+        delivered_at: null,
+        recipient_name: null,
+        delivery_revision: 1,
+        delivery_updated_at: iso(b.spec.pickupAt),
+        created_at: iso(b.spec.pickupAt),
+        created_by: id('user:owner'),
+      })
+    }
 
     for (const l of b.lines) {
       bookingLines.push({
@@ -728,6 +757,7 @@ export function buildStore(options?: BuildStoreOptions): Store {
     booking_lines: bookingLines,
     booking_line_units: bookingLineUnits,
     booking_crew_lines: crewLines,
+    booking_transport: bookingTransport,
     invoices,
     payments,
     security_deposits: deposits,

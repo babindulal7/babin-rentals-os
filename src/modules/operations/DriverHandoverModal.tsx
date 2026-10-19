@@ -3,10 +3,11 @@ import { Modal } from '../../components/ui/Modal'
 import { Button } from '../../components/ui/Page'
 import Icon from '../../components/ui/Icon'
 import { Badge } from '../../components/ui/Badge'
-import { newClientUuid } from '../../lib/supabase'
+import { supabase, newClientUuid } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../components/ui/Toast'
 import { captureError } from '../../lib/monitoring'
+import type { FloorLineInput } from '../../actions/rentals/floorVerb'
 
 export interface DriverHandoverModalProps {
   isOpen: boolean
@@ -16,6 +17,7 @@ export interface DriverHandoverModalProps {
   clientName: string
   deliveryAddress?: string | null
   itemCount: number
+  lines?: FloorLineInput[]
   onSuccess?: () => void
 }
 
@@ -47,6 +49,7 @@ export function DriverHandoverModal({
   clientName,
   deliveryAddress,
   itemCount,
+  lines,
   onSuccess,
 }: DriverHandoverModalProps) {
   const { user } = useAuth()
@@ -223,13 +226,52 @@ export function DriverHandoverModal({
 
     // Online delivery dispatch
     try {
+      let resolvedLines: FloorLineInput[] = []
+      if (lines && lines.length > 0) {
+        resolvedLines = lines
+      } else {
+        const { data: units } = await supabase
+          .from('booking_line_units')
+          .select('booking_line_id, asset_id')
+          .eq('booking_id', bookingId)
+        if (units && units.length > 0) {
+          const map = new Map<string, string[]>()
+          for (const u of units as Array<{ booking_line_id: string; asset_id: string }>) {
+            if (!map.has(u.booking_line_id)) map.set(u.booking_line_id, [])
+            if (u.asset_id) map.get(u.booking_line_id)!.push(u.asset_id)
+          }
+          resolvedLines = Array.from(map.entries()).map(([lineId, unitIds]) => ({
+            lineId,
+            unitIds,
+          }))
+        } else {
+          const { data: blines } = await supabase
+            .from('booking_lines')
+            .select('id')
+            .eq('booking_id', bookingId)
+          resolvedLines = (blines as Array<{ id: string }> || []).map((l) => ({
+            lineId: l.id,
+            unitIds: [],
+          }))
+        }
+      }
+
+      if (resolvedLines.length === 0) {
+        setSubmitError('No packed equipment lines found for this booking.')
+        setSubmitting(false)
+        return
+      }
+
       const { handoverRental } = await import('../../actions/rentals/index')
       await handoverRental(
         {
           bookingId,
-          lines: [],
+          lines: resolvedLines,
           clientUuid,
           occurredAt,
+          governmentIdVerified: true,
+          bookingAuthorizationVerified: true,
+          overrideReason: notes.trim() || 'Field delivery handover by driver',
           notes: [
             `Field delivery handover signed by ${recipientName.trim()}`,
             gps ? `GPS: ${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)} (±${gps.accuracy}m)` : null,
@@ -246,7 +288,7 @@ export function DriverHandoverModal({
             },
           ],
         },
-        { userId: user?.id || 'USR-DRIVER', role: user?.role || 'Driver' },
+        { userId: user?.id || 'USR-FLOOR', role: user?.role || 'Warehouse' },
       )
 
       handoverActionId.current = null

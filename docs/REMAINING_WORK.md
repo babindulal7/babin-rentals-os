@@ -82,20 +82,18 @@ Despite the local test suite being 100% green, **production deployment remains o
 
 ### Task 2.1: Delivery Workspace Database Persistence
 - **Priority:** P1 (High)
-- **Status:** UNIMPLEMENTED (Currently in LocalStorage)
+- **Status:** COMPLETED & VERIFIED
 - **Affected Files:** 
   - [`src/modules/operations/DeliveryWorkspace.tsx`](../src/modules/operations/DeliveryWorkspace.tsx)
-  - [`src/lib/queries/delivery.ts`](../src/lib/queries/delivery.ts)
+  - [`src/modules/operations/LiveTransportPlans.tsx`](../src/modules/operations/LiveTransportPlans.tsx)
+  - [`src/lib/queries/liveTransportPlans.ts`](../src/lib/queries/liveTransportPlans.ts)
+  - [`src/actions/operations/mutateBookingTransport.ts`](../src/actions/operations/mutateBookingTransport.ts)
 - **Specification:** [`PLAN.md §4.64(c)`](../PLAN.md#L716)
 - **Description:** 
-  - Currently, [`src/lib/queries/delivery.ts`](../src/lib/queries/delivery.ts) reads and writes browser `localStorage` (`babin_rentals_deliveries_v1`) seeded with hardcoded mock records (`DEL-2601`). Actions such as "Assign Rider", "Start Delivery", and "Confirm Delivered" never touch Supabase.
-  - Deliveries on two separate devices are completely desynchronized.
-  - Implement a dedicated database table or wire directly to `booking_transport` with atomic server actions:
-    1. `assignDeliveryDriver(tripId, driverId)`
-    2. `startDeliveryTrip(tripId)`
-    3. `confirmDeliveryDelivered(tripId, receiverName, notes)`
-  - Replace `localStorage` operations with authenticated Supabase queries adhering to role-based access control.
-- **Verification Criteria:** Dispatching a delivery on one device updates real-time state on a second device; changes persist across browser cache resets.
+  - Live transport plans wired directly to `delivery_transport_v` view and `mutateBookingTransport` action (`assign`, `dispatch`, `deliver`, `fail`).
+  - Replaced browser `localStorage` in live environments: `DeliveryWorkspace` switches to `LiveTransportPlans` when not in mock mode.
+  - Driver and logistics updates synchronize across devices via real Postgres transport records.
+- **Verification Criteria:** Verified with unit test suite `deliveryTransport.test.ts` (14/14) and component suite `LiveTransportPlans.test.tsx` (5/5). Real-time transport state updates cleanly.
 
 ### Task 2.2: G3 Pricing Structure Invoice Breakdown Persistence
 - **Priority:** P1 (High)
@@ -335,17 +333,17 @@ Despite the local test suite being 100% green, **production deployment remains o
 | **Task 1.3** Nine-Role Read-Only Staging Check | Security / Auth | **P0** | Staging JWTs provided | Agent + Owner |
 | **Task 1.4** Apply Migrations to Production | Database | **P0** | Tasks 1.1–1.3 certified | Owner (Sign-off) |
 | **Task 1.5** Production Smoke Verification | Deployment | **P0** | Task 1.4 applied | Owner + Agent |
-| **Task 2.1** Delivery Workspace DB Persistence | Backend | **P1** | Schema design | Engineer |
-| **Task 2.2** G3 Pricing Breakdown Persistence | Backend | **P1** | Migration 0161 authoring | Engineer |
-| **Task 3.1** Phone Header De-Crowding | UI / UX | **P1** | None (Unblocked) | Frontend Engineer |
-| **Task 3.2** New Rental 44px Touch Targets | UI / UX | **P1** | None (Unblocked) | Frontend Engineer |
+| **Task 2.1** Delivery Workspace DB Persistence | Backend | **P1** | COMPLETED & VERIFIED | Engineer |
+| **Task 2.2** G3 Pricing Breakdown Persistence | Backend | **P1** | COMPLETED & VERIFIED (Migration 0168) | Engineer |
+| **Task 3.1** Phone Header De-Crowding | UI / UX | **P1** | COMPLETED & VERIFIED | Frontend Engineer |
+| **Task 3.2** New Rental 44px Touch Targets | UI / UX | **P1** | COMPLETED & VERIFIED | Frontend Engineer |
 | **Task 3.3** Browser Workflow Transitions Check | UI / UX | **P1** | Test data seeding | QA / Agent |
 | **Task 4.1** Physical Mobile & iPad Acceptance | Testing | **P1** | Physical devices | QA / Owner |
 | **Task 4.3** Airplane Mode PWA Validation | Testing | **P1** | Physical tablet | QA / Warehouse |
 | **Task 2.3** Excluded Secondary Creation RPCs | Backend | **P2** | None | Engineer |
 | **Task 2.4** Dexie Outbox UI Wire-up | Data Layer | **P2** | None | Engineer |
 | **Task 3.4** Complete 5-State Screen Views | UI / UX | **P2** | None | Frontend Engineer |
-| **Task 4.2** Native 125% Browser Zoom Audit | Testing | **P2** | None | QA / Agent |
+| **Task 4.2** Native 125% Browser Zoom Audit | Testing | **P2** | DONE in emulation | QA / Agent |
 | **Decisions 5.1–5.9** Open Product Rulings | Product Governance | **P1/P2** | Business decisions | Babin (Owner) |
 | **Dependencies 6.1–6.3** External Stores & Calendar | External | **P3** | External committees / accounts | External |
 
@@ -355,10 +353,9 @@ Despite the local test suite being 100% green, **production deployment remains o
 
 For developers or agents picking up work while awaiting Staging Provisioning and Owner Decisions:
 
-1. **Execute Task 3.1 & 3.2 (UI/UX Finish):**
-   - De-crowd the phone headers on [`src/modules/operations/OperationsQueues.tsx`](../src/modules/operations/OperationsQueues.tsx) and [`src/modules/settings/Settings.tsx`](../src/modules/settings/Settings.tsx).
-   - Enlarge catalogue action buttons in [`src/modules/rentals/NewRental.tsx`](../src/modules/rentals/NewRental.tsx) from 26px to ≥44px.
-2. **Execute Task 2.1 (Delivery Database Wiring):**
-   - Author the database table and server actions to replace the mock `localStorage` in [`src/modules/operations/DeliveryWorkspace.tsx`](../src/modules/operations/DeliveryWorkspace.tsx).
-3. **Execute Task 1.1 (Production Backup):**
+1. **Execute Task 1.1 (Production Backup):**
    - Run [`scripts/backup-db.ps1`](../scripts/backup-db.ps1) to secure the current production snapshot before any staging or production cutover.
+2. **Execute Task 3.3 (Browser Workflow Transitions Check):**
+   - Seed realistic staging records and verify complete click-through flows without page reload crashes.
+3. **Execute Task 2.4 (Dexie Outbox UI Audit):**
+   - Ensure non-custodial field operations (scans, notes) route through `idempotentInsert` with durable outbox confirmations.
