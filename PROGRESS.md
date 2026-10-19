@@ -1,5 +1,64 @@
 # Progress Log
 
+## 2026-10-18 — Code Review Hardening & Standalone Test Utilities Extraction
+
+**Did**
+- **Shared PGlite Test Utilities (`scripts/lib/pglite-test-utils.mjs`):**
+  - Extracted common PGlite initialization boilerplate into `scripts/lib/pglite-test-utils.mjs` (`createTestDatabase`), eliminating duplicate in-process database setup across standalone test scripts.
+  - Refactored `scripts/test-pricing-structures.mjs` and `scripts/test-last-unit-race.mjs` to use `createTestDatabase`; verified all 16 test cases pass seamlessly.
+- **Explicit Action Creator Return Types:**
+  - Added explicit `<Input, Output>` type arguments to `createAction` exports across `src/actions/rentals/` and `src/actions/inventory/`:
+    - `confirmRental`: `createAction<ConfirmRentalInput, ConfirmRentalResult>(confirmRentalConfig)`
+    - `createRental`: `createAction<CreateRentalInput, CreateRentalResult>(createRentalConfig)`
+    - `releaseBookingLineUnit`: `createAction<ReleaseBookingLineUnitInput, ReleaseBookingLineUnitResult>(releaseBookingLineUnitConfig)`
+    - `updateBookingProject`: `createAction<UpdateBookingProjectInput, UpdateBookingProjectResult>(updateBookingProjectConfig)`
+    - `createStockTransfer`: `createAction<CreateStockTransferInput, CreateStockTransferResult>(createStockTransferConfig)`
+    - `updateBundle`: `createAction<UpdateBundleInput, UpdateBundleResult>(updateBundleConfig)`
+- **Verification Gates Clean Sweep:**
+  - Full vitest actions test suite: 44 test files passed (790/790 tests).
+  - TypeScript compiler (`tsc --noEmit`): 0 errors under TS 5.7 strict + `exactOptionalPropertyTypes` + `noUncheckedIndexedAccess`.
+  - ESLint (`eslint src --max-warnings 0`): 0 errors, 0 warnings.
+  - PGlite migrations check (`check:pglite`): 167/167 applied, 0 leaks, 74 definers pinned.
+  - Lifecycle suite (`check:lifecycle`): 31/31 stages green.
+  - Color contrast (`check:contrast`): 82/82 WCAG AA pairs pass.
+  - No fixture leaks (`check:fixtures`): 670 production files scanned, 0 fixture imports.
+  - UI copy lint (`lint:ui-copy`): 0 developer-text violations.
+  - Page shell lint (`lint:shell`): 681 files checked and compliant.
+  - Production build (`npm run build`): cleanly compiled in 41.50s.
+
+**Ruled**
+- Standalone test scripts must reuse `scripts/lib/pglite-test-utils.mjs` rather than duplicating PGlite and migration loop boilerplate.
+- Exported action functions must specify explicit generic parameters to lock down client contracts and prevent accidental breaking changes to caller return types.
+
+**Verified**
+- `npm run typecheck`: clean (exit code 0).
+- `npm run lint`: 0 errors, 0 warnings (`--max-warnings 0`).
+- `npm run check:pglite`: 167/167 applied, 0 leaks, 74 definers pinned, exit code 0.
+- `npm run check:lifecycle`: 31/31 green, 0 failed, exit code 0.
+- `npm run check:contrast`: 82/82 pass across Dark, Light, High Contrast, and Glass themes, 0 fail.
+- `npm run check:fixtures`: 670 production files scanned, 0 fixture imports.
+- `npm run lint:ui-copy`: 4/4 tests pass, 0 violations.
+- `npm run lint:shell`: 681 files checked and compliant.
+- `npm run build`: cleanly built in 41.50s, exit code 0.
+- `npx vitest run src/actions/`: 44/44 test files passed (790/790 tests).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 55 | 50 · 0 · 0 · 5 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 98% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-18T17:32:46.887Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-18T17:33:15.203Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply of migrations 0157–0169 by Babin on production after backup protocol execution (`BACKUP_PROTOCOL.md`).
+- Post-deployment smoke test on production.
+
 ## 2026-10-18 — Full Browser Workspace Audit & UI Continuity Hardening
 
 **Did**
