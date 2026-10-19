@@ -1,5 +1,38 @@
 # Progress Log
 
+## 2026-10-20 — Mirrored right-side slider for quick information and notes
+
+**Did**
+- Reused the left filter drawer presentation for existing right-side summaries, client/bundle previews, calendar details and rental information. A dedicated right-header toggle opens the panel; the panel reserves right workspace width on larger screens and opens as a phone sheet. Closing it keeps unfinished notes mounted.
+- Team Internal Notes now shares the slider presentation and retains its draft after first opening. Existing summary-review shortcuts reveal the rental summary. Drawer ownership prevents two panels claiming the same edge, and narrow screens keep one side drawer open at a time.
+- Essential operation checklists/completion controls and Calendar Full View's selected-event workspace remain reachable in place. Existing role and money gates, actions and calculations remain at their original sites. No migration authored or applied.
+
+**Ruled**
+- Babin's explicit request supersedes the 7 October always-visible supplemental-rail rule. See `RULINGS-2026-10-20.md` and `docs/UI_UX_RULES.md` §12; implementation comment at `InformationDrawer.tsx` / `Page.tsx`.
+
+**Verified**
+- Typecheck passed. Focused drawer/filter/shell/notes run: 4 files, 71 tests passed. Final information-drawer/main-feature rerun: 2 files, 19 passed (including five information-drawer checks). Header positions: 5 passed. Full lint passed; theme contrast 82/82.
+- Local existing migration rebuild: 168/168, no unauthorized anon views/RPCs or unpinned definer paths. Local lifecycle: 31/31. These are local checks only; no live application.
+- Production build passed, including 209 PWA precache entries. Full run completed: 379 files, 4,824 passed / 32 failed in eight files, with earlier module versions loaded while this session was being edited. A final fresh combined run of ALL eight initially failing files passed: 8/8 files, 61/61 tests. The other 371 files passed the broad run. None of the 32 original failures recurred in the fresh combined run. This is evidence across runs, not a claim that one final full-suite invocation was green.
+- Focused checks total 129 distinct passing tests across 11 files (drawer, filters, notes, shell ownership/positions/crumbs, main features, boundaries, toolbars and rental summary).
+- Visual driving is blocked: the in-app browser could not attach a webview after three attempts; opening the preview through the app returned queued. No browser visual acceptance claimed.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-19T19:17:38.220Z). Suite: Historical suite: 4646/4646 passed, 0 failed (recorded 2026-10-16T12:20:00.4333494Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-19T19:18:09.118Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Browser visual acceptance at phone/tablet/desktop widths remains unverified because the preview connection is unavailable.
+
 ## 2026-10-20 — Mobile and Tablet UI/UX Ergonomics & Visual Polish
 
 **Did**
@@ -41,38 +74,6 @@ Counted by `npm run completion`, not typed.
 ## Remaining
 - Continue field testing on touch devices at standard breakpoints (390px phone, 800px portrait tablet, 1194px landscape tablet).
 
-## 2026-10-20 — Mirrored right-side slider for quick information and notes
-
-**Did**
-- Reused the left filter drawer presentation for existing right-side summaries, client/bundle previews, calendar details and rental information. A dedicated right-header toggle opens the panel; the panel reserves right workspace width on larger screens and opens as a phone sheet. Closing it keeps unfinished notes mounted.
-- Team Internal Notes now shares the slider presentation and retains its draft after first opening. Existing summary-review shortcuts reveal the rental summary. Drawer ownership prevents two panels claiming the same edge, and narrow screens keep one side drawer open at a time.
-- Essential operation checklists/completion controls and Calendar Full View's selected-event workspace remain reachable in place. Existing role and money gates, actions and calculations remain at their original sites. No migration authored or applied.
-
-**Ruled**
-- Babin's explicit request supersedes the 7 October always-visible supplemental-rail rule. See `RULINGS-2026-10-20.md` and `docs/UI_UX_RULES.md` §12; implementation comment at `InformationDrawer.tsx` / `Page.tsx`.
-
-**Verified**
-- Typecheck passed. Focused drawer/filter/shell/notes run: 4 files, 71 tests passed. Final information-drawer/main-feature rerun: 2 files, 19 passed (including five information-drawer checks). Header positions: 5 passed. Full lint passed; theme contrast 82/82.
-- Local existing migration rebuild: 168/168, no unauthorized anon views/RPCs or unpinned definer paths. Local lifecycle: 31/31. These are local checks only; no live application.
-- Full regression run and production build are still running; final results will replace this pending note. The full run includes earlier code from this session; resolved failures are being rerun against the final source.
-- Visual driving is blocked: the in-app browser could not attach a webview after three attempts; opening the preview through the app returned queued. No browser visual acceptance claimed.
-
-## Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 54 / 54 (100%) | — |
-| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 | — |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
-| Permissions | capabilities mapped / declared | 44 / 44 (100%) | — |
-| Lifecycle | steps green / total | 31 / 31 (100%) | — |
-| Overall | mean of five | ≈ 99% | — |
-Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-19T18:50:49.652Z). Suite: Historical suite: 4646/4646 passed, 0 failed (recorded 2026-10-16T12:20:00.4333494Z); current source NOT VERIFIED.
-Gates read from .lifecycle-result.json, written 2026-10-19T18:52:00.855Z.
-Counted by `npm run completion`, not typed.
-
-## Remaining
-- Await full regression/build results and final targeted rechecks.
-- Browser visual acceptance at phone/tablet/desktop widths remains unverified because the preview connection is unavailable.
 
 ## 2026-10-20 — ASTRA Phase 0 integrated into current main
 

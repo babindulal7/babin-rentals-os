@@ -139,7 +139,10 @@ create function public.document_file_location(p_document uuid) returns text
 language plpgsql stable security definer set search_path = public, pg_temp as $$
 declare location text;
 begin
-  if auth_can_view_money() is not true then
+  if auth_can_view_money() is not true or not exists (
+    select 1 from public.users u where u.id = auth_user_id()
+      and u.is_active and u.deactivated_at is null
+  ) then
     raise exception 'Original document access requires monetary authorization' using errcode = '42501';
   end if;
   select d.file_url into location from public.document_registry d where d.id = p_document;
@@ -148,8 +151,8 @@ end $$;
 revoke all on function public.document_file_location(uuid) from public, anon;
 grant execute on function public.document_file_location(uuid) to authenticated;
 
--- Document upload ownership is encoded before metadata registration. Shared/portal
--- reads require an authoritative registry link; orphan legacy paths get no fallback.
+-- Document upload ownership is encoded before metadata registration. Shared
+-- financial-staff reads require a registry/invoice link; orphan paths fail closed.
 create function public.auth_storage_object_allowed(p_bucket text, p_name text, p_upload boolean)
 returns boolean language plpgsql stable security definer set search_path = public, pg_temp as $$
 declare
@@ -171,13 +174,18 @@ begin
       and split_part(p_name,'/',1) = 'staff' and split_part(p_name,'/',2) = v_actor::text then
       return true;
     end if;
+    if not coalesce(v_active,false) or v_role not in ('Owner','Admin','Manager','Coordinator','Accounts') then
+      return false;
+    end if;
     return exists (
       select 1 from document_registry d where
         (d.file_url = p_name or split_part(split_part(d.file_url,'/object/sign/documents/',2),'?',1) = p_name)
         -- P4 / N-1: ownership alone cannot authorize an unredacted PDF for a
         -- money-blind role, including Client. Redacted artifacts need their own
         -- verified publication path before any such access can be allowed.
-        and coalesce(v_active,false) and v_role in ('Owner','Admin','Manager','Coordinator','Accounts')
+    ) or exists (
+      select 1 from public.invoices i where i.pdf_url = p_name
+        or split_part(split_part(i.pdf_url,'/object/sign/documents/',2),'?',1) = p_name
     );
   elsif p_bucket = 'evidence' then
     if not coalesce(v_active,false) or v_role not in ('Owner','Admin','Manager','Coordinator','Warehouse','Technician') then

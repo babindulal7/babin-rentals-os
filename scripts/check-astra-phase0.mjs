@@ -121,11 +121,26 @@ try {
     const document=(await rows("insert into document_registry(client_uuid,document_no,document_type,file_url,signature_url,created_by) values(gen_random_uuid(),'PHASE0-OPERATIONAL','Delivery Note',$1,$1,$2) returning id",[url,owner]))[0].id
     assert.equal((await rows('select document_file_location($1) location',[document]))[0].location,url)
     await db.exec("reset role; select set_config('app.current_user_id','',false),set_config('request.jwt.claim.sub','',false)")
-    await db.query("update users set primary_role='Warehouse' where id=$1",[operator]); await actor(operator)
+    await db.query("update users set primary_role='Accounts',is_active=false,deactivated_at=now() where id=$1",[operator]); await actor(operator)
+    await denied('select document_file_location($1)',[document])
+    await db.exec("reset role; select set_config('app.current_user_id','',false),set_config('request.jwt.claim.sub','',false)")
+    await db.query("update users set primary_role='Warehouse',is_active=true,deactivated_at=null where id=$1",[operator]); await actor(operator)
     assert.equal((await rows('select id from document_registry where id=$1',[document])).length,1)
     await denied('select file_url from document_registry where id=$1',[document])
     await denied('select signature_url from document_registry where id=$1',[document])
     await denied('select document_file_location($1)',[document])
+  })
+  await test('SEC-01: financial staff can read an invoice-linked PDF but not an unregistered peer file',async()=>{
+    await db.exec("reset role; select set_config('app.current_user_id','',false),set_config('request.jwt.claim.sub','',false)")
+    const invoice=(await rows('select id from invoices order by id limit 1'))[0]
+    assert.ok(invoice,'The disposable migration chain must provide an invoice fixture')
+    const linked=`staff/${owner}/invoice-linked.pdf`,orphan=`staff/${owner}/unregistered-invoice.pdf`
+    await db.query('update invoices set pdf_url=$1 where id=$2',[linked,invoice.id])
+    await db.query("insert into storage.objects(bucket_id,name) values('documents',$1),('documents',$2)",[linked,orphan])
+    await actor(admin)
+    assert.deepEqual(await rows('select name from storage.objects where name in ($1,$2)',[linked,orphan]),[{name:linked}])
+    await actor(operator)
+    assert.equal((await rows('select name from storage.objects where name=$1',[linked])).length,0)
   })
   await test('SEC-01: unassigned Warehouse cannot read/upload another session evidence or commercial document',async()=>{
     await db.exec("reset role; select set_config('app.current_user_id','',false),set_config('request.jwt.claim.sub','',false)"); await db.query("update users set primary_role='Warehouse' where id=$1",[operator]); await actor(operator)
