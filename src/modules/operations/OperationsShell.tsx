@@ -109,9 +109,6 @@ export default function OperationsShell({
       const data = await fetchFloorBooking(bookingNo)
       if (data) {
         setFloor(data)
-        if (data.stage) {
-          setLiveStatus(data.stage as BookingStatus)
-        }
       }
     } catch {
       // Fallback silently if floor cannot be read (e.g. in headless unit test)

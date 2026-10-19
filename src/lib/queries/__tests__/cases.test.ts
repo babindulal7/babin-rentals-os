@@ -7,6 +7,7 @@ vi.mock('../../supabase', () => {
     supabase: {
       from: vi.fn(),
     },
+    IS_MOCK: false,
   }
 })
 

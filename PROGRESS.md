@@ -1,5 +1,54 @@
 # Progress Log
 
+## 2026-10-19 — Delivery Workspace Persistence & Automated Suite Verification
+
+**Did**
+- **Delivery Workspace Database Persistence (`src/modules/operations/LiveTransportPlans.tsx`, `src/lib/queries/deliveryTransport.ts`):**
+  - Completed REMAINING_WORK.md Task 2.1 by wiring the live delivery workspace directly to `delivery_transport_v` view and `mutateBookingTransport` action (`assign`, `dispatch`, `deliver`, `fail`).
+  - Gated read/write permissions via `deliveryTransportReadRefusal` and `mutateBookingTransportRefusal` with money masking for money-blind roles (Driver, Warehouse, Technician, Client).
+  - Integrated `fetchStaffDirectory` for dynamic driver assignment and dispatched system events (`TRANSPORT_UPDATED`, `RENTAL_HANDED_OVER`).
+  - Authored comprehensive test suites: `src/lib/queries/__tests__/deliveryTransport.test.ts` (14/14 passed) and `src/modules/operations/__tests__/LiveTransportPlans.test.tsx` (5/5 passed).
+- **Audit Category & Standalone Dispatch Harness (`supabase/migrations/0166_booking_transport_dispatch.sql`):**
+  - Fixed migration 0166 audit category insert from invalid `'Operations'::audit_category` to valid `'Rentals'::audit_category`.
+  - Created standalone PGlite test harness `scripts/test-booking-transport-dispatch.mjs` verifying driver assignment, revision locking, stage gating to `'On Rent'`, dispatch, delivery receipt check, audit logging, and `delivery_transport_v` read access for Driver (19/19 checks passed).
+- **Test Suite & Role Boundaries Stabilization:**
+  - `src/lib/queries/cases.ts` & `src/lib/queries/__tests__/cases.test.ts`: Added `IS_MOCK` guard so empty database results do not fall back to mock fixtures outside mock mode; updated test mock to export `IS_MOCK: false` (4/4 passed).
+  - `src/modules/finance/Finance.tsx`: Gated `ModuleSubHeader.secondaryActions` with `phone ? [] : [...]` to prevent button crowding on phone viewports (23/23 tests in `Finance.restricted.test.tsx` passed).
+  - `src/modules/operations/OperationsShell.tsx`: Removed unconditional `setLiveStatus` overwrite on initial booking fetch so caller-provided `bookingStatus` is preserved in headless test suites (38/38 tests passed).
+
+**Ruled**
+- `audit_category` in PostgreSQL enum only permits `'Authentication'`, `'Users'`, `'Rentals'`, `'Inventory'`, `'Finance'`, `'Administration'`, `'Uncategorised'`. Operational dispatches belong under `'Rentals'`.
+- PostgREST queries must never fall back to static fixtures unless `IS_MOCK` is explicitly enabled; an empty database table is a valid database state and must return empty rows, never seed fixtures.
+
+**Verified**
+- `npm run typecheck`: clean (0 errors, strict TS 5.7).
+- `npm run lint`: 0 errors, 0 warnings (`--max-warnings 0`).
+- `npm test`: 375 test files passed, 4,733 tests passed, 0 failures.
+- `npm run check:pglite`: 167/167 migrations applied, 0 view leaks, 74 definers pinned.
+- `npm run check:lifecycle`: 31/31 stages green.
+- `npm run check:contrast`: 82/82 WCAG AA pairs passed across all themes.
+- `npm run check:fixtures`: 673 production files scanned, 0 fixture imports.
+- `npm run lint:ui-copy`: 0 developer text violations.
+- `npm run lint:shell`: 684 files checked and compliant.
+- `npm run build`: built in 29.18s with 213 precache assets.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 55 / 55 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 55 | 50 · 0 · 0 · 5 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 45 / 45 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 98% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-19T08:01:53.896Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-19T08:02:13.474Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply of migrations 0157–0169 by Babin on production after backup protocol execution (`BACKUP_PROTOCOL.md`).
+- Post-deployment smoke test on production.
+
 ## 2026-10-19 — Operations Modal Button Jump & Stage Progression Repairs
 
 **Did**

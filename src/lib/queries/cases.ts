@@ -1,4 +1,4 @@
-import { supabase } from '../supabase'
+import { supabase, IS_MOCK } from '../supabase'
 import { rupees } from '../money'
 import type { ListFilters } from './listQuery'
 import type { ListQueryResult } from './useList'
@@ -187,7 +187,7 @@ export async function listCases(filters?: CaseFilters): Promise<ListQueryResult<
     if (error) throw error
 
     const mapped = ((data ?? []) as unknown as CaseRowDb[]).map(mapDbRowToCase)
-    if (mapped.length === 0) {
+    if (IS_MOCK && mapped.length === 0) {
       let fixtureRows = CASES
       if (filters?.status && filters.status !== 'All') {
         fixtureRows = fixtureRows.filter((c) => c.status === filters.status)

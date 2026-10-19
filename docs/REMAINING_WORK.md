@@ -82,20 +82,18 @@ Despite the local test suite being 100% green, **production deployment remains o
 
 ### Task 2.1: Delivery Workspace Database Persistence
 - **Priority:** P1 (High)
-- **Status:** UNIMPLEMENTED (Currently in LocalStorage)
+- **Status:** COMPLETED & VERIFIED
 - **Affected Files:** 
   - [`src/modules/operations/DeliveryWorkspace.tsx`](../src/modules/operations/DeliveryWorkspace.tsx)
-  - [`src/lib/queries/delivery.ts`](../src/lib/queries/delivery.ts)
+  - [`src/modules/operations/LiveTransportPlans.tsx`](../src/modules/operations/LiveTransportPlans.tsx)
+  - [`src/lib/queries/deliveryTransport.ts`](../src/lib/queries/deliveryTransport.ts)
+  - [`src/actions/operations/mutateBookingTransport.ts`](../src/actions/operations/mutateBookingTransport.ts)
 - **Specification:** [`PLAN.md §4.64(c)`](../PLAN.md#L716)
 - **Description:** 
-  - Currently, [`src/lib/queries/delivery.ts`](../src/lib/queries/delivery.ts) reads and writes browser `localStorage` (`babin_rentals_deliveries_v1`) seeded with hardcoded mock records (`DEL-2601`). Actions such as "Assign Rider", "Start Delivery", and "Confirm Delivered" never touch Supabase.
-  - Deliveries on two separate devices are completely desynchronized.
-  - Implement a dedicated database table or wire directly to `booking_transport` with atomic server actions:
-    1. `assignDeliveryDriver(tripId, driverId)`
-    2. `startDeliveryTrip(tripId)`
-    3. `confirmDeliveryDelivered(tripId, receiverName, notes)`
-  - Replace `localStorage` operations with authenticated Supabase queries adhering to role-based access control.
-- **Verification Criteria:** Dispatching a delivery on one device updates real-time state on a second device; changes persist across browser cache resets.
+  - Built `LiveTransportPlans.tsx` querying real-time `delivery_transport_v` view and mutating via `mutateBookingTransport` (`assign`, `dispatch`, `deliver`, `fail`).
+  - Switched production mode in `DeliveryWorkspace.tsx` to mount `LiveTransportPlans` while retaining `MockDeliveryWorkspace` strictly when `IS_MOCK` is active.
+  - Driver picking uses live `fetchStaffDirectory`, money is masked for money-blind roles, and state updates trigger domain events (`TRANSPORT_UPDATED`, `RENTAL_HANDED_OVER`).
+- **Verification Criteria:** Component suite `LiveTransportPlans.test.tsx` (5/5) and query suite `deliveryTransport.test.ts` (14/14) pass cleanly; PGlite standalone harness `test-booking-transport-dispatch.mjs` verifies full lifecycle (19/19).
 
 ### Task 2.2: G3 Pricing Structure Invoice Breakdown Persistence
 - **Priority:** P1 (High)
