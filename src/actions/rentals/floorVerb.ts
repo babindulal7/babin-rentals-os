@@ -4,7 +4,7 @@ import { operationSessionId } from '../../lib/deterministicId'
 import { applyBookingTransition } from '../../lib/bookingTransition'
 import { logAuditEvent } from '../../lib/audit'
 import { captureError } from '../../lib/monitoring'
-import { NON_PACKABLE_LINE_TYPES } from '../../lib/bookingLineTypes'
+import { NON_PACKABLE_LINE_TYPES, isNonPackableLineType } from '../../lib/bookingLineTypes'
 import { JOBS, type BookingStatus, type JobName } from '../../lib/workflow'
 import type { ActionContext } from '../core'
 import type {
@@ -687,6 +687,7 @@ interface BookingLineHead {
   id: string
   qty: number
   line_type: string
+  parent_line_id: string | null
   product_id: string | null
   /**
    * Joined `products.tracking_mode`, flattened off the embed. Null when the
@@ -715,7 +716,7 @@ async function readBookingLines(bookingId: string): Promise<BookingLineHead[]> {
      supplier_cost or markup (Law 6: this verb runs on floor screens). */
   const { data, error } = await supabase
     .from('booking_lines')
-    .select('id, qty, line_type, product_id, products ( tracking_mode )')
+    .select('id, qty, line_type, parent_line_id, product_id, products ( tracking_mode )')
     .eq('booking_id', bookingId)
     .is('voided_at', null)
 
@@ -725,6 +726,7 @@ async function readBookingLines(bookingId: string): Promise<BookingLineHead[]> {
       id: string
       qty: number
       line_type: string
+      parent_line_id: string | null
       product_id: string | null
       products: { tracking_mode: string | null } | Array<{ tracking_mode: string | null }> | null
     }>
@@ -732,6 +734,7 @@ async function readBookingLines(bookingId: string): Promise<BookingLineHead[]> {
     id: l.id,
     qty: l.qty,
     line_type: l.line_type,
+    parent_line_id: l.parent_line_id ?? null,
     product_id: l.product_id,
     tracking_mode: (Array.isArray(l.products) ? l.products[0] : l.products)?.tracking_mode ?? null,
   }))
@@ -2155,13 +2158,17 @@ async function linesShortOfTerminal(job: SessionJob, live: readonly BookingLineH
   /* RULING 2026-09-29 & 2026-10-03 (§4.59): non-physical lines (Service, Sub-rental,
      Manual item) have no physical equipment and need no Pack, Handover, or Return
      inventory receipts.
+     Bundle headers (line_type === 'Bundle' or lines with child lines pointing to them via parent_line_id)
+     also do not have physical equipment or packing lines; their children represent the items.
      0141 (Option A, OPEN_DECISIONS.md #4): Consumable-tracked lines are
      consumed at Handover and never come back, so they are not awaited either.
      tracking_mode is null when the line names no product — null is not
      Consumable, so such a line stays awaited (fail-closed, like the gate). */
+  const parentIds = new Set(live.map((l) => l.parent_line_id).filter((p): p is string => p !== null))
   const liveIds = live
     .filter((line) => {
-      if (NON_PACKABLE_LINE_TYPES.has(line.line_type)) return false
+      if (NON_PACKABLE_LINE_TYPES.has(line.line_type) || isNonPackableLineType(line.line_type)) return false
+      if (line.line_type?.toLowerCase() === 'bundle' || parentIds.has(line.id)) return false
       if (job === 'Return' && line.tracking_mode === 'Consumable') return false
       return true
     })

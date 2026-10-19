@@ -1,5 +1,5 @@
 import { formatAd } from '../../lib/bs'
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '../../components/ui/Page'
 import type { IconName } from '../../components/ui/Icon'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
@@ -109,16 +109,31 @@ export default function OperationsShell({
       const data = await fetchFloorBooking(bookingNo)
       if (data) {
         setFloor(data)
+        if (data.stage) {
+          setLiveStatus(data.stage as BookingStatus)
+        }
       }
     } catch {
       // Fallback silently if floor cannot be read (e.g. in headless unit test)
     }
   }, [bookingNo])
 
+  const prevOpenRef = useRef(false)
+  const prevBookingRef = useRef(bookingNo)
+
   useEffect(() => {
-    if (!isOpen) return
-    setJob(initialJob)
-    setLiveStatus(bookingStatus)
+    if (!isOpen) {
+      prevOpenRef.current = false
+      return
+    }
+    const isNewOpen = !prevOpenRef.current || prevBookingRef.current !== bookingNo
+    prevOpenRef.current = true
+    prevBookingRef.current = bookingNo
+
+    if (isNewOpen) {
+      setJob(initialJob)
+      setLiveStatus(bookingStatus)
+    }
     void refreshFloor()
   }, [bookingNo, bookingStatus, initialJob, isOpen, refreshFloor])
 

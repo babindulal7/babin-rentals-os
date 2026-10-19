@@ -80,11 +80,17 @@
    row instead of above them — a whole line of height back for the checklist. The dock keeps its
    stacked footer (it is too narrow for three things in a row). Phones keep the stacked footer. */
 @media (min-width: 768px) {
-  .app-modal .operations-shell__footer { flex-direction: row !important; align-items: center; gap: 12px !important; }
+  .app-modal .operations-shell__footer {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 12px !important;
+  }
   .app-modal .operations-shell__actions { display: contents; }
   .app-modal .operations-shell__actions > :first-child { order: 0; }
   .app-modal .operations-shell__blocked { order: 1; flex: 1 1 0; min-width: 0; text-align: center; }
-  .app-modal .operations-shell__actions > :last-child { order: 2; }
+  .app-modal .operations-shell__actions > :last-child { order: 2; margin-left: auto; }
 }
 
 /* Short tablets (landscape): the four stage steps are one line each, so they do not need the

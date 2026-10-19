@@ -1,5 +1,55 @@
 # Progress Log
 
+## 2026-10-19 — Operations Modal Button Jump & Stage Progression Repairs
+
+**Did**
+- **Operations Modal Button Positioning (`src/modules/operations/operationsShell.css`):**
+  - Resolved right-to-left footer button jumping where the primary action button ("Confirm Packing & Next") shifted across the screen when the "Still needed" requirement hint unmounted.
+  - Added flex layout rules (`display: flex !important; justify-content: space-between !important;`) on `.app-modal .operations-shell__footer` and `margin-left: auto;` on `.app-modal .operations-shell__actions > :last-child`.
+  - Verified via browser QA test script that bounding rect differential is `0px` (`leftDiff: 0px`, `rightDiff: 0px`) across packed/unpacked state toggles.
+- **Stage Progression for Bundle Headings (`src/actions/rentals/floorVerb.ts`):**
+  - Diagnosed stage progression blockage on bookings containing bundle heading lines (e.g. Booking 8's "Sony FX3 Documentary Kit"): bundle heading lines have 0 direct unit rows and are intentionally skipped during line movement dispatch in `PackingWorkspace.tsx`, but `linesShortOfTerminal` in `floorVerb.ts` lacked filtering for bundle headers, resulting in `stage: null` with `stageHeldBy: [bundleHeaderLineId]`.
+  - Added `parent_line_id` to `BookingLineHead` and `readBookingLines`.
+  - Updated `linesShortOfTerminal` to filter out `isNonPackableLineType(line.line_type)` and bundle parents (`line.line_type?.toLowerCase() === 'bundle' || parentIds.has(line.id)`).
+  - Added unit test in `src/actions/rentals/__tests__/floorVerbs.test.ts` asserting bundle heading lines and non-packable lines do not hold stage terminality.
+- **Operations Modal Lifecycle Hardening (`src/modules/operations/OperationsShell.tsx`):**
+  - Guarded `job` and `liveStatus` resets with `useRef` (`prevOpenRef`, `prevBookingRef`) so internal stage progressions (advancing from `Pack` to `Handover`) are not reset by background re-renders.
+  - Updated `refreshFloor()` to synchronize `liveStatus` from `data.stage`.
+- **Browser QA Verification:**
+  - Verified on live instance (`http://localhost:3000/rentals/8`) that packing completes, stage transitions to `Packed`, and modal shell automatically advances into the `Handover` stage displaying the handover item checklist and signatures.
+
+**Ruled**
+- Bundle header lines represent pricing/organizing constructs without direct physical units; their physical components are represented by child lines referencing `parent_line_id`. Stage terminality checks across all operations verbs (Pack, Handover, Return, Reset) must evaluate only physical lines and exclude bundle parent lines and non-packable line types.
+- Operations modal footer actions must remain pinned to their respective edges (`margin-left: auto` for primary action) so transient requirement status messages unmounting do not cause layout shifts.
+
+**Verified**
+- `npm run typecheck`: clean (exit code 0).
+- `npm run lint`: 0 errors, 0 warnings (`--max-warnings 0`).
+- `npx vitest run src/modules/operations/__tests__/OperationsShell.test.tsx`: 18/18 tests passed.
+- `npx vitest run src/actions/rentals/__tests__/floorVerbs.test.ts`: 72/72 tests passed.
+- `npm run check:pglite`: 167/167 applied, 0 leaks, 74 definers pinned, exit code 0.
+- `npm run check:lifecycle`: 31/31 green, 0 failed, exit code 0.
+- `npm run check:contrast`: 82/82 pass, 0 fail.
+- `npm run build`: cleanly built in 47.79s, exit code 0.
+- Live browser test on `http://localhost:3000/rentals/8`: confirmed zero button jump and successful transition into Handover workspace.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 55 / 55 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 55 | 50 · 0 · 0 · 5 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 45 / 45 (100%) | +1 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 98% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-19T07:43:33.857Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-19T07:44:23.641Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply of migrations 0157–0169 by Babin on production after backup protocol execution (`BACKUP_PROTOCOL.md`).
+- Post-deployment smoke test on production.
+
 ## 2026-10-18 — Code Review Hardening & Standalone Test Utilities Extraction
 
 **Did**

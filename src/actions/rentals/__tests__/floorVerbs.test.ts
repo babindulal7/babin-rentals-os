@@ -332,6 +332,27 @@ describe('Pack — the whole shape, in the order that makes a partial failure tr
     expect(result.stageHeldBy).toEqual([])
   })
 
+  it('does not await a Bundle heading line or non-packable line for stage terminality', async () => {
+    db.state.responses['booking_lines'] = [
+      [
+        { id: 'bundle-head', qty: 1, line_type: 'Bundle', parent_line_id: null, product_id: null, products: null },
+        { id: LINE_A, qty: 2, line_type: 'Equipment', parent_line_id: 'bundle-head', product_id: 'p-a', products: null },
+        { id: 'service-line', qty: 1, line_type: 'Service', parent_line_id: null, product_id: null, products: null },
+      ],
+    ]
+    db.state.responses['packing_lines'] = [
+      [],
+      [{ id: 'pl-1', booking_line_id: LINE_A, state: 'Packed' }],
+    ]
+
+    const result = await packRental(
+      { id: 'B-715', lines: [{ bookingLineId: LINE_A, unitIds: ['u1', 'u2'] }] },
+      OWNER,
+    )
+    expect(result.stage).toEqual({ from: 'Booked', to: 'Packed' })
+    expect(result.stageHeldBy).toEqual([])
+  })
+
   it('carries the caller action key onto operation_sessions.client_uuid — Law 8', async () => {
     await packRental(
       { id: 'B-715', clientUuid: 'action-key-1', lines: [{ bookingLineId: LINE_A, unitIds: ['unit-1', 'unit-2'] }] },
