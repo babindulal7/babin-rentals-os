@@ -309,6 +309,81 @@ describe('secureStorage', () => {
     });
   });
 
+  describe('ElectronSafeStorageAdapter (SEC-03)', () => {
+    it('detects electron platform when electronAPI.isElectron is true', () => {
+      (window as any).electronAPI = { isElectron: true };
+      expect(detectPlatform()).toBe('electron');
+      delete (window as any).electronAPI;
+    });
+
+    it('returns ElectronSafeStorageAdapter when platform is electron', () => {
+      (window as any).electronAPI = { isElectron: true };
+      const storage = getSecureAuthStorage();
+      expect(storage.constructor.name).toBe('ElectronSafeStorageAdapter');
+      delete (window as any).electronAPI;
+    });
+
+    it('stores token securely via electronAPI and removes any localStorage copy', async () => {
+      const mockSetItem = vi.fn().mockResolvedValue(true);
+      const mockGetItem = vi.fn().mockResolvedValue('electron_secret_token');
+      const mockRemoveItem = vi.fn().mockResolvedValue(true);
+
+      (window as any).electronAPI = {
+        isElectron: true,
+        secureStorage: {
+          getItem: mockGetItem,
+          setItem: mockSetItem,
+          removeItem: mockRemoveItem,
+        },
+      };
+
+      // Pretend localStorage had a stale token
+      localStorage.setItem('sb-auth-token', 'stale_insecure_token');
+
+      const storage = getSecureAuthStorage();
+      await storage.setItem('sb-auth-token', 'electron_secret_token');
+
+      expect(mockSetItem).toHaveBeenCalledWith('sb-auth-token', 'electron_secret_token');
+      // Must not leak or remain in window.localStorage
+      expect(localStorage.getItem('sb-auth-token')).toBeNull();
+
+      const retrieved = await storage.getItem('sb-auth-token');
+      expect(retrieved).toBe('electron_secret_token');
+      expect(mockGetItem).toHaveBeenCalledWith('sb-auth-token');
+
+      await storage.removeItem('sb-auth-token');
+      expect(mockRemoveItem).toHaveBeenCalledWith('sb-auth-token');
+      expect(localStorage.getItem('sb-auth-token')).toBeNull();
+
+      delete (window as any).electronAPI;
+    });
+
+    it('migrates legacy localStorage token to secureStorage and deletes it on read', async () => {
+      const mockSetItem = vi.fn().mockResolvedValue(true);
+      const mockGetItem = vi.fn().mockResolvedValue(null);
+
+      (window as any).electronAPI = {
+        isElectron: true,
+        secureStorage: {
+          getItem: mockGetItem,
+          setItem: mockSetItem,
+          removeItem: vi.fn(),
+        },
+      };
+
+      localStorage.setItem('sb-legacy-token', 'old_unencrypted_value');
+
+      const storage = getSecureAuthStorage();
+      const val = await storage.getItem('sb-legacy-token');
+
+      expect(val).toBe('old_unencrypted_value');
+      expect(mockSetItem).toHaveBeenCalledWith('sb-legacy-token', 'old_unencrypted_value');
+      expect(localStorage.getItem('sb-legacy-token')).toBeNull();
+
+      delete (window as any).electronAPI;
+    });
+  });
+
   describe('getSecureAuthStorage', () => {
     it('returns WebLocalStorageAdapter in standard browser environment', () => {
       const storage = getSecureAuthStorage();
@@ -316,3 +391,4 @@ describe('secureStorage', () => {
     });
   });
 });
+

@@ -2,6 +2,8 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { describe, expect, it, vi } from 'vitest'
+
+;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
 import { DatePresets, DEFAULT_PRESETS } from '../DatePresets'
 import { getBusinessToday, kathmanduCivil } from '../../../../lib/bs'
 

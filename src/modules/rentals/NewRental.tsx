@@ -133,40 +133,6 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
   const toggle = useCallback((idx: number) => setOpen((prev) => prev.map((v, i) => (i === idx ? !v : v))), [])
   const [activeSection, setActiveSection] = useState<'client-dates' | 'equipment' | 'crew-delivery' | 'pricing' | 'review'>('client-dates')
 
-  useEffect(() => {
-    if (typeof IntersectionObserver === 'undefined') return
-    const sectionMap: Record<string, 'client-dates' | 'equipment' | 'crew-delivery' | 'pricing' | 'review'> = {
-      'section-0': 'client-dates',
-      'section-1': 'client-dates',
-      'section-2': 'equipment',
-      'section-3': 'crew-delivery',
-      'section-5': 'pricing',
-      'rail-booking-summary': 'review',
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.filter((e) => e.isIntersecting)
-        if (visible.length > 0) {
-          const topVisible = visible.reduce((prev, curr) => (curr.intersectionRatio > prev.intersectionRatio ? curr : prev))
-          const target = sectionMap[topVisible.target.id]
-          if (target) setActiveSection(target)
-        }
-      },
-      {
-        rootMargin: '-10% 0px -45% 0px',
-        threshold: [0.1, 0.25, 0.5],
-      }
-    )
-
-    Object.keys(sectionMap).forEach((id) => {
-      const el = document.getElementById(id)
-      if (el) observer.observe(el)
-    })
-
-    return () => observer.disconnect()
-  }, [])
-
   const workflowRef = useRef<HTMLDivElement>(null)
 
 
@@ -759,6 +725,41 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     firstBlockingAction: blockingNotices[0]?.action,
   })
 
+  useEffect(() => {
+    if (draftLoading || quoteLoading) return
+    if (typeof IntersectionObserver === 'undefined') return
+    const sectionMap: Record<string, 'client-dates' | 'equipment' | 'crew-delivery' | 'pricing' | 'review'> = {
+      'section-0': 'client-dates',
+      'section-1': 'client-dates',
+      'section-2': 'equipment',
+      'section-3': 'crew-delivery',
+      'section-5': 'pricing',
+      'rail-booking-summary': 'review',
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting)
+        if (visible.length > 0) {
+          const topVisible = visible.reduce((prev, curr) => (curr.intersectionRatio > prev.intersectionRatio ? curr : prev))
+          const target = sectionMap[topVisible.target.id]
+          if (target) setActiveSection(target)
+        }
+      },
+      {
+        rootMargin: '-10% 0px -45% 0px',
+        threshold: [0.1, 0.25, 0.5],
+      }
+    )
+
+    Object.keys(sectionMap).forEach((id) => {
+      const el = document.getElementById(id)
+      if (el) observer.observe(el)
+    })
+
+    return () => observer.disconnect()
+  }, [draftLoading, quoteLoading, open])
+
   const bundleCount = useMemo(() => new Set(lines.map((l) => l.bundleCode).filter(Boolean)).size, [lines])
   const totalUnits = lines.reduce((s, l) => s + l.qty, 0)
   /* NR-12: documentTiles was removed — document storage/generation is unwired
@@ -918,7 +919,10 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
           type="button"
           className={activeSection === 'client-dates' ? 'is-active' : ''}
           data-active={activeSection === 'client-dates'}
-          onClick={() => jumpToSection('section-0')}
+          onClick={() => {
+            setActiveSection('client-dates')
+            jumpToSection('section-0')
+          }}
         >
           <Icon name="user" size={17} />Client &amp; dates
         </button>
@@ -926,7 +930,10 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
           type="button"
           className={activeSection === 'equipment' ? 'is-active' : ''}
           data-active={activeSection === 'equipment'}
-          onClick={() => jumpToSection('section-2')}
+          onClick={() => {
+            setActiveSection('equipment')
+            jumpToSection('section-2')
+          }}
         >
           <Icon name="box" size={17} />Equipment
         </button>
@@ -934,7 +941,11 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
           type="button"
           className={activeSection === 'crew-delivery' ? 'is-active' : ''}
           data-active={activeSection === 'crew-delivery'}
-          onClick={() => { setOpen((prev) => prev.map((v, i) => i === 3 || i === 4 || v)); jumpToSection('section-3') }}
+          onClick={() => {
+            setActiveSection('crew-delivery')
+            setOpen((prev) => prev.map((v, i) => i === 3 || i === 4 || v))
+            jumpToSection('section-3')
+          }}
         >
           <Icon name="truck" size={17} />Crew &amp; delivery
         </button>
@@ -943,7 +954,10 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
             type="button"
             className={activeSection === 'pricing' ? 'is-active' : ''}
             data-active={activeSection === 'pricing'}
-            onClick={() => jumpToSection('section-5')}
+            onClick={() => {
+              setActiveSection('pricing')
+              jumpToSection('section-5')
+            }}
           >
             <Icon name="receipt" size={17} />Pricing
           </button>
@@ -952,7 +966,10 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
           type="button"
           className={activeSection === 'review' ? 'is-active' : ''}
           data-active={activeSection === 'review'}
-          onClick={() => jumpToSection('rail-booking-summary')}
+          onClick={() => {
+            setActiveSection('review')
+            jumpToSection('rail-booking-summary')
+          }}
           aria-label={`Review booking${blockingNotices.length ? `, ${blockingNotices.length} outstanding checks` : ''}`}
         >
           {blockingNotices.length > 0 && !editBookingId ? (

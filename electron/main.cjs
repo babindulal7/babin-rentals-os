@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, safeStorage } = require('electron');
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
@@ -9,6 +9,81 @@ process.on('uncaughtException', (err) => {
 });
 process.on('unhandledRejection', (reason) => {
   console.error('[Electron Unhandled Rejection]', reason);
+});
+
+// Secure Storage handlers for Electron (SEC-03)
+function getSecureStoragePath() {
+  return path.join(app.getPath('userData'), 'secure-storage.json');
+}
+
+function readSecureStore() {
+  try {
+    const storePath = getSecureStoragePath();
+    if (fs.existsSync(storePath)) {
+      const raw = fs.readFileSync(storePath, 'utf8');
+      return JSON.parse(raw);
+    }
+  } catch (err) {
+    console.error('[Electron SecureStorage] Failed to read store:', err);
+  }
+  return {};
+}
+
+function writeSecureStore(store) {
+  try {
+    const storePath = getSecureStoragePath();
+    const dir = path.dirname(storePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(storePath, JSON.stringify(store, null, 2), 'utf8');
+  } catch (err) {
+    console.error('[Electron SecureStorage] Failed to write store:', err);
+  }
+}
+
+ipcMain.handle('secure-storage:getItem', async (_event, key) => {
+  const store = readSecureStore();
+  const encryptedBase64 = store[key];
+  if (!encryptedBase64) return null;
+  if (!safeStorage || !safeStorage.isEncryptionAvailable()) {
+    console.warn('[Electron SecureStorage] safeStorage encryption not available');
+    return null;
+  }
+  try {
+    const buffer = Buffer.from(encryptedBase64, 'base64');
+    const decrypted = safeStorage.decryptString(buffer);
+    return decrypted;
+  } catch (err) {
+    console.error('[Electron SecureStorage] Decrypt error:', err);
+    return null;
+  }
+});
+
+ipcMain.handle('secure-storage:setItem', async (_event, key, value) => {
+  if (!safeStorage || !safeStorage.isEncryptionAvailable()) {
+    console.warn('[Electron SecureStorage] safeStorage encryption not available');
+    return false;
+  }
+  try {
+    const encryptedBuffer = safeStorage.encryptString(value);
+    const store = readSecureStore();
+    store[key] = encryptedBuffer.toString('base64');
+    writeSecureStore(store);
+    return true;
+  } catch (err) {
+    console.error('[Electron SecureStorage] Encrypt error:', err);
+    return false;
+  }
+});
+
+ipcMain.handle('secure-storage:removeItem', async (_event, key) => {
+  const store = readSecureStore();
+  if (key in store) {
+    delete store[key];
+    writeSecureStore(store);
+  }
+  return true;
 });
 
 // Optional GPU workaround for virtual or problematic Windows display drivers
@@ -53,6 +128,17 @@ function createStaticDistServer(callback) {
         });
         fs.createReadStream(filePath).pipe(res);
       } else {
+        const ext = path.extname(reqUrl).toLowerCase();
+        // DESKTOP-09: Do not serve index.html for missing static assets (.js, .css, .wasm, etc.)
+        if (ext && ext !== '.html') {
+          res.writeHead(404, {
+            'Content-Type': 'text/plain; charset=utf-8',
+            'X-Content-Type-Options': 'nosniff',
+          });
+          res.end(`Not Found: ${reqUrl}`);
+          return;
+        }
+
         // SPA Fallback: serve index.html for client-side routing
         const indexPath = path.join(distDir, 'index.html');
         fs.readFile(indexPath, (readErr, content) => {

@@ -1,5 +1,58 @@
 # Progress Log
 
+## 2026-10-19 — Targeted System, Security & UI/UX Audit Bug Fixes
+
+**Did**
+- **DATA-02 (P1 High) — Durable Offline Queueing Guard (`src/lib/dataAccess.ts`, `src/lib/offlineQueue.ts`):**
+  - Resolved fail-open vulnerability where offline or network-failed writes claimed optimistic success `{ queued: true }` even when local IndexedDB storage was disabled, quota-blocked, or failed to write.
+  - Implemented `OfflineStorageUnavailableError` (`OFFLINE_STORAGE_UNAVAILABLE`) in `src/lib/dataAccess.ts`.
+  - Added storage write error trapping in `src/lib/offlineQueue.ts`'s `enqueueMutation` returning `false` on storage failures.
+  - Enforced affirmative durable enqueue checks in `idempotentInsert` and `safeUpdate`, throwing `OfflineStorageUnavailableError` when `enqueued === false`.
+  - Authored comprehensive test suite `src/lib/__tests__/dataAccess.offline.test.ts` (4/4 passed).
+- **SEC-03 (P1 High) & DESKTOP-09 (P2 Medium) — Electron OS-Protected Secure Storage & Asset 404s (`electron/main.cjs`, `electron/preload.cjs`, `src/lib/secureStorage.ts`):**
+  - Eliminated fallback to Chromium unencrypted `localStorage` for Supabase session tokens on Electron desktop.
+  - Implemented `safeStorage` (DPAPI on Windows, Keychain on macOS, Secret Service on Linux) IPC bridge in `electron/main.cjs` and exposed via `electronAPI.secureStorage` in `electron/preload.cjs`.
+  - Implemented `ElectronSafeStorageAdapter` in `src/lib/secureStorage.ts` with automatic migration and removal of legacy unencrypted `localStorage` tokens upon cutover.
+  - Added unit test suite in `src/lib/__tests__/secureStorage.test.ts` (22/22 passed).
+  - Fixed DESKTOP-09 in `electron/main.cjs`: missing static assets (`.js`, `.css`, `.wasm`, etc.) now return HTTP 404 with `X-Content-Type-Options: nosniff` instead of serving `index.html`.
+- **UI-05 (P2 Medium) & UI-06 (P2 Medium) — Narrow-Screen Mobile Polish (`src/components/shell/shell.css`, `src/modules/finance/Finance.tsx`):**
+  - UI-05: Resolved 56px phone slot compression for primary header actions. Buttons with icons cleanly collapse to accessible 44×44px square icon buttons with `aria-label`; text-only actions preserve natural readable width without overflow.
+  - UI-06: Added responsive layout branching in Finance Dashboard's Outstanding Invoices card. Below 768px (`!tabular`), invoices render as stacked card items with Invoice #, Outstanding amount (danger tone), Client, and Due date, eliminating clipped columns. On tablet/desktop, table container features horizontal scrolling with `data-table-scroll` and `minWidth: 500`.
+- **UX-07 (P2 Medium), UX-10 (P3 Low) & DEPLOY-08 (P2 Medium) — Truth in UI & Baseline Reconciliation (`src/App.tsx`, `docs/audits/2026-10-18-main-baseline.md`):**
+  - UX-07: Updated offline banner in `src/App.tsx` to truthfully distinguish queueable non-custodial actions from online-required custody operations (Packing, Handover, Return, Reset).
+  - UX-10: Added confirmation dialog in `src/App.tsx` prior to destructive mock user data wipe.
+  - DEPLOY-08: Reconciled migration manifest in `docs/audits/2026-10-18-main-baseline.md` with actual files in `supabase/migrations/` (`0157_audit_triggers...` through `0169_pin_intel...`).
+
+**Ruled**
+- No offline mutation may ever return optimistic success unless durably written to local persistence (`OfflineStorageUnavailableError` must throw).
+- Desktop sessions in native Electron shells must never persist auth credentials in unencrypted browser `localStorage`; OS-level credential encryption (`safeStorage`) is mandatory.
+
+**Verified**
+- `npm run typecheck`: clean (0 errors, strict TS 5.7).
+- `npm run lint`: 0 errors, 0 warnings (`--max-warnings 0`).
+- `npm run check:pglite`: 167/167 migrations applied, 0 view leaks, 74 definers pinned.
+- `npm run check:lifecycle`: 31/31 stages green.
+- `npm run check:contrast`: 82/82 WCAG AA pairs passed across all themes.
+- `npm run build`: built in 39.63s with 213 precached PWA assets.
+- `npm run lint:progress`: verified valid completion blocks.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 55 / 55 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 55 | 50 · 0 · 0 · 5 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 45 / 45 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 98% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-19T08:53:57.682Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-19T08:54:13.676Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live apply of migrations 0157–0169 by Babin on production after backup protocol execution (`BACKUP_PROTOCOL.md`).
+- Post-deployment smoke test on production.
+
 ## 2026-10-19 — Delivery Workspace Persistence & Automated Suite Verification
 
 **Did**

@@ -926,7 +926,7 @@ function OfflineBanner() {
       borderBottom: '1px solid var(--border)'
     }}>
       <Icon name="error" size={16} />
-      <span>You are offline. Changes will be saved locally and synced when you reconnect.</span>
+      <span>You are offline. Non-custodial changes queue locally and sync when you reconnect; custody operations (Packing, Handover, Return, Reset) require an active connection.</span>
     </div>
   )
 }
@@ -976,6 +976,9 @@ function MockBanner() {
       <button
         type="button"
         onClick={() => {
+          if (!window.confirm('Reset all mock test data? This will clear local test mutations and reload the clean baseline.')) {
+            return
+          }
           try {
             localStorage.setItem('babin_data_wiped', 'true')
             localStorage.setItem('babin_internal_notes_v1', JSON.stringify([]))

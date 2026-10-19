@@ -63,24 +63,25 @@ This baseline establishes the verified state of `babindulal7/babin-rentals-os` a
 ## 4. Migration Ledger Comparison (Source vs Production)
 
 Per Rule N-5 and Foundation Spec:
-- **Total Migrations in Source:** 167 files (`supabase/migrations/0001_...sql` through `0168_pricing_quotes.sql` and `0168b_...` / `0169_...`).
+- **Total Migrations in Source:** 169 files (`supabase/migrations/0001_...sql` through `0169_pin_intel_and_guard_search_paths.sql`).
 - **Applied in Production (Live Supabase `sxguwvgoserhdolewibb`):** 156 migrations (through `0156`).
-- **Pending Live Application (11 migrations):**
-  1. `0157_system_views_seed.sql`
-  2. `0158_deposit_tracking.sql`
-  3. `0159_saved_views_rbac.sql`
-  4. `0160_terminal_archive.sql`
-  5. `0161_client_portal_security.sql`
-  6. `0162_audit_event_indexing.sql`
+- **Pending Live Application (13 migrations):**
+  1. `0157_audit_triggers_for_trigger_less_tables.sql`
+  2. `0158_settings_table.sql`
+  3. `0159_saved_views.sql`
+  4. `0160_pricing_structures.sql`
+  5. `0161_grant_booking_project_type.sql`
+  6. `0162_grant_non_money_columns.sql`
   7. `0163_close_six_anon_business_rpcs.sql`
-  8. `0164_payment_receipt_reconciliation.sql`
-  9. `0165_credit_note_ledger.sql`
-  10. `0166_void_reason_audit.sql`
-  11. `0167_prehandover_reversal.sql`
-  12. `0168_pricing_quotes.sql`
+  8. `0164_booking_discount_vat_payment_integrity.sql`
+  9. `0165_delivery_jobs_and_event_rpc.sql`
+  10. `0166_booking_transport_dispatch.sql`
+  11. `0167_rental_revert_archive.sql`
+  12. `0168_booking_line_totals_and_breakdown.sql`
+  13. `0169_pin_intel_and_guard_search_paths.sql`
 
 > [!WARNING]
-> Under Rule N-5, none of these 11 migrations may be pushed to production without prior execution of `scripts/backup-db.ps1` and explicit user authorization. In local PGlite, all 167 migrations rebuild from scratch with 0 errors.
+> Under Rule N-5, none of these 13 migrations may be pushed to production without prior execution of `scripts/backup-db.ps1` and explicit user authorization. In local PGlite, all 169 migrations rebuild from scratch with 0 errors.
 
 ---
 

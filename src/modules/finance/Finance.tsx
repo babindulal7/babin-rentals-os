@@ -1646,31 +1646,65 @@ export default function Finance() {
                       emptyMessage="All issued invoices have been settled."
                       {...restriction}
                     >
-                      <DataTableShell ariaLabel="Outstanding invoices" className="finance-table-shell">
-                        <table className="finance-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-                          <thead>
-                            <tr style={{ background: 'var(--th-bg)' }}>
-                              {['Invoice', 'Client', 'Due', 'Outstanding'].map((h, i) => (
-                                <th key={h} style={i === 3 ? { ...th, textAlign: 'right' } : th}>
-                                  {h}
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {outstanding.rows.slice(0, 8).map((i) => (
-                              <tr key={i.id} className="finance-row">
-                                <td className="identifier finance-mono" style={{ ...td, color: 'var(--link)', fontWeight: 600 }}>{i.invoiceNo}</td>
-                                <td style={td}>{i.clientName}</td>
-                                <td className="finance-mono" style={{ ...td, color: 'var(--text2)' }}><BsAdDate date={i.dueDateAd} /></td>
-                                <td className="figure finance-mono" style={{ ...td, textAlign: 'right', fontWeight: 600 }}>
-                                  {formatMoney(i.outstandingAmount)}
-                                </td>
+                      {tabular ? (
+                        <DataTableShell ariaLabel="Outstanding invoices" className="finance-table-shell" data-table-scroll style={{ overflowX: 'auto' }}>
+                          <table className="finance-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500 }}>
+                            <thead>
+                              <tr style={{ background: 'var(--th-bg)' }}>
+                                {['Invoice', 'Client', 'Due', 'Outstanding'].map((h, i) => (
+                                  <th key={h} style={i === 3 ? { ...th, textAlign: 'right' } : th}>
+                                    {h}
+                                  </th>
+                                ))}
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </DataTableShell>
+                            </thead>
+                            <tbody>
+                              {outstanding.rows.slice(0, 8).map((i) => (
+                                <tr key={i.id} className="finance-row">
+                                  <td className="identifier finance-mono" style={{ ...td, color: 'var(--link)', fontWeight: 600 }}>{i.invoiceNo}</td>
+                                  <td style={td}>{i.clientName}</td>
+                                  <td className="finance-mono" style={{ ...td, color: 'var(--text2)' }}><BsAdDate date={i.dueDateAd} /></td>
+                                  <td className="figure finance-mono" style={{ ...td, textAlign: 'right', fontWeight: 600 }}>
+                                    {formatMoney(i.outstandingAmount)}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </DataTableShell>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          {outstanding.rows.slice(0, 8).map((i) => (
+                            <div
+                              key={i.id}
+                              className="finance-card-item"
+                              style={{
+                                padding: '12px 14px',
+                                borderBottom: '1px solid var(--border)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 6,
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                                <span className="identifier finance-mono" style={{ fontSize: 'var(--t-ui)', fontWeight: 700, color: 'var(--link)' }}>
+                                  {i.invoiceNo}
+                                </span>
+                                <span className="figure finance-mono" style={{ fontSize: 'var(--t-ui)', fontWeight: 700, color: 'var(--danger)' }}>
+                                  {formatMoney(i.outstandingAmount)}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text)', fontWeight: 500 }}>
+                                {i.clientName}
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+                                <span style={{ color: 'var(--muted)' }}>Due</span>
+                                <span className="finance-mono"><BsAdDate date={i.dueDateAd} /></span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       {outstanding.total !== null && outstanding.total > 8 && (
                         <p style={{ margin: 0, padding: '10px 14px', fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
                           The eight due soonest, of {outstanding.total}. The Invoices tab lists them all.

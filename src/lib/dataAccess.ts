@@ -42,6 +42,21 @@ function shouldQueueOffline(): boolean {
   return typeof navigator !== 'undefined' && !navigator.onLine
 }
 
+/**
+ * Thrown when an offline or network-failed mutation cannot be durably enqueued into local storage.
+ * Enforces DATA-02: the application must never claim an uncommitted write was saved or queued.
+ */
+export class OfflineStorageUnavailableError extends Error {
+  readonly code = 'OFFLINE_STORAGE_UNAVAILABLE' as const
+  constructor(table: string, action: string, reason?: string) {
+    super(
+      `[DataAccess] Offline storage is unavailable or failed to durably queue ${action} for ${table}` +
+        (reason ? `: ${reason}` : '. The change was NOT saved locally and will not sync.'),
+    )
+    this.name = 'OfflineStorageUnavailableError'
+  }
+}
+
 /** Generates standard UUIDv4 in browser/node */
 export function generateClientUuid(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -166,7 +181,10 @@ export async function idempotentInsert<
       )
     }
     console.warn(`[DataAccess] Device offline. Queuing insert for ${String(table)}.`)
-    await enqueueMutation(String(table), 'insert', finalPayload, finalPayload.client_uuid)
+    const enqueued = await enqueueMutation(String(table), 'insert', finalPayload, finalPayload.client_uuid)
+    if (!enqueued) {
+      throw new OfflineStorageUnavailableError(String(table), 'insert')
+    }
     return { data: finalPayload, error: null, queued: true as const } // Queued, not written — `queued` says so (Phase 9)
   }
 
@@ -194,7 +212,10 @@ export async function idempotentInsert<
          )
        }
        console.warn(`[DataAccess] Network failure during insert. Queuing ${String(table)}.`)
-       await enqueueMutation(String(table), 'insert', finalPayload, finalPayload.client_uuid)
+       const enqueued = await enqueueMutation(String(table), 'insert', finalPayload, finalPayload.client_uuid)
+       if (!enqueued) {
+         throw new OfflineStorageUnavailableError(String(table), 'insert', error.message)
+       }
        return { data: finalPayload, error: null, queued: true as const }
     }
 
@@ -296,7 +317,10 @@ export async function safeUpdate<
       )
     }
     console.warn(`[DataAccess] Device offline. Queuing update for ${String(table)} id=${id}.`)
-    await enqueueMutation(String(table), 'update', { ...payload, id }, `${actionUuid}:${id}`)
+    const enqueued = await enqueueMutation(String(table), 'update', { ...payload, id }, `${actionUuid}:${id}`)
+    if (!enqueued) {
+      throw new OfflineStorageUnavailableError(String(table), 'update')
+    }
     return { data: { ...payload, id }, error: null, queued: true as const } // Queued, not written — `queued` says so (Phase 9)
   }
 
@@ -312,7 +336,10 @@ export async function safeUpdate<
            `[DataAccess] The ${String(table)} update could not be confirmed (${error.message}) and is not queueable. Treat it as NOT written.`,
          )
        }
-       await enqueueMutation(String(table), 'update', { ...payload, id }, `${actionUuid}:${id}`)
+       const enqueued = await enqueueMutation(String(table), 'update', { ...payload, id }, `${actionUuid}:${id}`)
+       if (!enqueued) {
+         throw new OfflineStorageUnavailableError(String(table), 'update', error.message)
+       }
        return { data: { ...payload, id }, error: null, queued: true as const }
     }
 
