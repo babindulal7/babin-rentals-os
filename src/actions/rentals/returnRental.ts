@@ -47,7 +47,9 @@ export const completeReturn = createAction<CompleteReturnInput, FloorVerbResult>
   name: 'COMPLETE_RETURN',
   // Was `rental.return`, which `core.ts:checkCapability` cannot resolve and
   // therefore denies. `operations.perform` is the rule that actually exists.
-  permissions: ['operations.perform'],
+  // P0-B per-operation grant: resolves through canReturn (floor + Technician —
+  // technicians share return triage), same set operations.perform admits.
+  permissions: ['operations.return'],
   implemented: true,
 
   validate: (input) =>
