@@ -8,8 +8,7 @@ import { useViewport } from '../../lib/device'
 /**
  * A page-side panel that remembers its own open/closed state per route
  * (localStorage, keyed by `id` or the current pathname). `SideRail` in
- * `Page.tsx` uses this for left filters. Right summaries no longer use
- * collapse controls under the user's 7 Oct 2026 ruling.
+ * `Page.tsx` uses this for left filters. Right summaries use InformationDrawer under the user's 20 Oct 2026 ruling.
  */
 export function CollapsibleAside({
   children,

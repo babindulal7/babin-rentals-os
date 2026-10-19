@@ -704,13 +704,9 @@ export function CrewBooking() {
             {/* Right rail — §12. Rulings §7: rendered as a rail only at desktop;
                 below 1280 the same sections reflow into the column beneath the
                 lists, still visible, never behind a handle. */}
-            {desktop ? (
-              <Rail width={320} label="Crew summary">
+            <Rail width={320} label="Crew summary">
                 {railContent}
               </Rail>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0 }}>{railContent}</div>
-            )}
           </div>
       </div>
     </PageShell>

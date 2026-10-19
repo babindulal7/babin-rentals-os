@@ -1079,7 +1079,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
         ref={workflowRef}
         style={{
           display: 'grid',
-          gridTemplateColumns: isDesktop ? 'minmax(0, 68fr) minmax(320px, 32fr)' : 'minmax(0, 1fr)',
+          gridTemplateColumns: 'minmax(0, 1fr)',
           gap: 'var(--sp-md)',
           alignItems: 'start',
         }}
@@ -1260,22 +1260,8 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
 
         </div>
 
-        {/* Desktop summary scrolls above the action footer. Below 1280 it
-            reflows after pricing, with all notices still reachable. */}
-        {isDesktop && (
-          <div className="new-rental-summary-rail">
-            <Rail>
-              {bookingSummaryCard}
-            </Rail>
-          </div>
-        )}
+        <Rail label="Rental summary">{bookingSummaryCard}</Rail>
       </div>
-
-      {!isDesktop && (
-        <div className="new-rental-inline-summary" style={{ marginTop: 'var(--sp-md)' }}>
-          {bookingSummaryCard}
-        </div>
-      )}
 
       {/* Isolated previews without the application shell keep their local actions.
           In the real app there is exactly one action cluster, in the top header. */}
@@ -1289,7 +1275,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
           onCancel={handleCancelAction}
           extra={<>
             {canBookingMoney && <div className="new-rental-footer-total"><span>Rental total</span><strong>{formatMoney(pricing.rentalTotalPaisa)}</strong></div>}
-            {isPhone && <Button variant="ghost" aria-label="Review rental summary" onClick={() => document.getElementById('rail-booking-summary')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>Summary</Button>}
+            {isPhone && <Button variant="ghost" aria-label="Review rental summary" onClick={() => window.dispatchEvent(new CustomEvent('babin:show-information', { detail: 'Rental summary' }))}>Summary</Button>}
             {!editBookingId && <Button variant="outline" onClick={() => void saveDraft()} disabled={actionBusy}>Save draft</Button>}
           </>}
         />

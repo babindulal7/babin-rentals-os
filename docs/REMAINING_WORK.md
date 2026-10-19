@@ -1,5 +1,22 @@
 # Babin Rentals OS — Comprehensive Remaining Work Register
 
+> **20 October 2026 local checkpoint:** this folder is now on `main` at `dc6ccc00`. The ASTRA Phase 0 fixes saved on another local branch are being integrated here. Current-source verification is in progress; the dated baseline below does not certify this checkout. Follow [`AUDIT_WORKTREE_PROGRESS.md`](../AUDIT_WORKTREE_PROGRESS.md) and `astra-main-gates.jsonl` for this run. No hosted database changes are authorized.
+
+## ASTRA acceptance still required on current main
+
+| Finding | Current local work | Remaining acceptance |
+|---|---|---|
+| SEC-01 | Scoped immutable Storage policies, private business buckets, fail-closed document upload and session-linked evidence helper; regression tests added | Current migration/security/lifecycle run; hosted JWT/Storage and legacy object mapping |
+| SEC-02–05 | Internal financial RPC restrictions, server-bound audit identity, Admin superior-target protection, assigned Driver trip access | Current SQL gate and lifecycle results; actual authenticated API acceptance |
+| REL-01/02 | Account/project-scoped outbox, captured replay credentials, matching write receipts, preserved legacy payloads and durable enqueue confirmation | Full suite and current build; device/browser offline acceptance |
+| Driver custody | Offline queue fallback removed; failed confirmation keeps the form open; same retry key retained | Focused online/offline regression results; operational UI acceptance |
+| WF-01–08 | Newer report implementation on main preserved rather than overwritten by the earlier branch | Reproduce each finding against this revision; verify money, stored line totals, report completeness, date boundaries and every export |
+| UI-01–06 | No blanket UI merge from the earlier branch | Persistence/permissions for Productions, Shift Handover and Warranty; nested modal, phone Finance and date-preset acceptance |
+| QA-01/02 | Fresh local gate run started; old receipts explicitly historical | Full suite/coverage failures and stale completion receipt handling |
+| PERF-01 | No speculative bundle change | Measure current build and startup before choosing an optimization |
+
+Desktop, iPad and mobile browser verification remain pending. Local SQL verification does not mean a migration was APPLIED or PRODUCTION-VERIFIED.
+
 **Document Version:** 1.0.0  
 **Date:** 15 October 2026 (Asia/Kathmandu)  
 **Governing Authority:** [`docs/00_READ_FIRST.md`](00_READ_FIRST.md) · [`CLAUDE.md`](../CLAUDE.md) · [`AGENTS.md`](../AGENTS.md) · [`docs/PERMISSIONS.md`](PERMISSIONS.md)  

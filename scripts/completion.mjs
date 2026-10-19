@@ -52,6 +52,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from '
 import { join, dirname, resolve, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
+import { verificationSourceHash, testReceipt, describeTestReceipt } from './test-receipt.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, '..')
@@ -296,17 +297,33 @@ if (wantMigrations) {
 
 let testResult = 'not run this session (static inspection; pass --tests to execute suite)'
 if (wantTests) {
+  const before = verificationSourceHash(ROOT)
+  const output = join(ROOT, '.completion-tests.json')
+  // Refuse a stale JSON report if the new runner fails before writing one.
+  writeFileSync(output, '{}')
+  let exitCode = 0
   try {
-    execFileSync('npx', ['vitest', 'run', '--reporter=dot'], { cwd: ROOT, encoding: 'utf8', stdio: 'pipe' })
-    testResult = 'green (all test files passed)'
+    execFileSync(process.execPath, [join(ROOT, 'node_modules/vitest/vitest.mjs'), 'run', '--reporter=json', `--outputFile=${output}`],
+      { cwd: ROOT, encoding: 'utf8', stdio: 'pipe', maxBuffer: 128 * 1024 * 1024 })
   } catch (e) {
-    const out = String(e.stdout ?? '')
-    testResult = (out.match(/Tests\s+.*?(\d+ failed.*)$/m) ?? [, 'failed'])[1]
+    exitCode = e.status ?? 1
+  }
+  try {
+    const after = verificationSourceHash(ROOT)
+    const receipt = testReceipt(JSON.parse(readFileSync(output, 'utf8')), exitCode, before, after)
+    writeFileSync(join(ROOT, '.test-result.json'), JSON.stringify(receipt, null, 2) + '\n')
+    testResult = describeTestReceipt(receipt, after)
+    if (!receipt.success || receipt.sourceChanged) problems.push(`Tests: ${testResult}`)
+  } catch {
+    const receipt = { schemaVersion: 1, valid: false, total: 0, passed: 0, failed: 0, success: false, sourceHash: before, at: new Date().toISOString() }
+    writeFileSync(join(ROOT, '.test-result.json'), JSON.stringify(receipt, null, 2) + '\n')
+    testResult = 'NOT VERIFIED — test runner did not produce a valid structured result'
+    problems.push(`Tests: ${testResult}`)
   }
 } else if (exists('.test-result.json')) {
   try {
     const raw = JSON.parse(read('.test-result.json'))
-    testResult = `${raw.passed}/${raw.total} passed (recorded ${raw.at})`
+    testResult = describeTestReceipt(raw, verificationSourceHash(ROOT))
   } catch {
     // fallback
   }

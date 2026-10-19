@@ -1895,13 +1895,16 @@
   }
 }
 
-@media (min-width: 768px) and (max-width: 1279px) {
+@media (max-width: 1279px) {
   .rental-dashboard__panels {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .rental-dashboard__panels .movement-panel {
+  .rental-dashboard__panels .movement-panel,
+  .rental-dashboard__panels .movement-panel--outgoing,
+  .rental-dashboard__panels .movement-panel--incoming {
     grid-column: 1;
+    width: 100%;
   }
 }
 
@@ -3207,6 +3210,18 @@
 }
 
 @media (max-width: 1279px) {
+  .rental-dashboard .rental-dashboard__panels {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rental-dashboard .rental-dashboard__panels .movement-panel,
+  .rental-dashboard .movement-panel--outgoing,
+  .rental-dashboard .movement-panel--incoming {
+    grid-column: 1;
+    width: 100%;
+  }
+  .rental-dashboard .dashboard-situational-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
   .rental-dashboard .rental-dashboard__panels .movement-card {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
@@ -3231,6 +3246,12 @@
 }
 
 @media (max-width: 767px) {
+  .rental-dashboard .dashboard-situational-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .rental-dashboard .dashboard-mobile-nav {
+    margin-bottom: var(--sp-md, 12px);
+  }
   .rental-dashboard .dashboard-master-date-control__date-btn { padding-inline: 4px; gap: 4px; }
   .rental-dashboard .dashboard-master-date-control__cal { display: none; }
 }

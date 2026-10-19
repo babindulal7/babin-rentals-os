@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { drainQueue, getPendingMutations } from './offlineQueue'
+import { drainQueue, getOfflineQueueSummary } from './offlineQueue'
 import { localStore, isIndexedDbAvailable } from './localStore'
 import type { CachedClient, CachedProduct } from './localStore'
 import { captureError } from './monitoring'
@@ -91,10 +91,14 @@ class SyncEngine {
   public async refreshPendingCount(): Promise<number> {
     if (!isIndexedDbAvailable()) return 0
     try {
-      const pending = await getPendingMutations()
-      const count = pending.length
+      const summary = await getOfflineQueueSummary()
+      const count = summary.total
+      const error = summary.held > 0
+        ? 'Saved offline work is held for another account or needs its original identity verified. It has been preserved.'
+        : summary.failed > 0 ? 'Some saved offline work needs review before it can sync.' : undefined
       this.updateState({
         pendingCount: count,
+        error,
         status:
           typeof navigator !== 'undefined' && !navigator.onLine
             ? 'offline'
@@ -134,10 +138,9 @@ class SyncEngine {
         status: remainingPending > 0 ? 'pending' : 'synced',
         pendingCount: remainingPending,
         lastSyncTime: now,
-        error: undefined,
       })
 
-      return { success: true, pushed: 0 }
+      return { success: remainingPending === 0, pushed: 0 }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
       captureError(err, { where: 'syncEngine.sync' })

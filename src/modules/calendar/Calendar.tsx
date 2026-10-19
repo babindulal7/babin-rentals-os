@@ -3324,7 +3324,8 @@ export default function Calendar() {
           }}
         >
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>{centre}</div>
-          <Rail width={300} label="Event detail">
+          {/* Full view covers the app header; keep its selected-event workspace reachable. */}
+          <aside aria-label="Event detail" style={{ width: 300, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
             {selected ? (
               <SelectedEventPanel bar={selected.bar} row={selected.row} onClose={() => setSelectedId(null)} />
             ) : (
@@ -3354,7 +3355,7 @@ export default function Calendar() {
               </div>
             </Card>
             {shortcutsCard}
-          </Rail>
+          </aside>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 'var(--sp-md)' }}>
@@ -3559,17 +3560,7 @@ export default function Calendar() {
           {/* §5.1 phone — the selected-day agenda sits under the grid, not in a sheet. */}
           {phone && day && <Card bodyStyle={{ padding: 'var(--sp-md)' }}>{dayJobList}</Card>}
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: phone ? 'minmax(0,1fr)' : 'repeat(2, minmax(0,1fr))',
-              gap: 'var(--sp-md)',
-              alignItems: 'start',
-            }}
-          >
-            {railDefault}
-            {shortcutsCard}
-          </div>
+          <Rail width={300} label="Event detail">{railDefault}{shortcutsCard}</Rail>
         </div>
       )}
 

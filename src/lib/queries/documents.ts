@@ -101,7 +101,7 @@ export interface DocumentRowDb {
   booking_id: string | null
   client_id: string | null
   lifecycle_status: string
-  file_url: string
+  file_url?: string
   file_size_bytes: number | null
   generated_by: string | null
   signed_at: string | null
@@ -241,7 +241,7 @@ export function mapDbRowToDocRow(row: DocumentRowDb): DocRow {
 }
 
 const DOCUMENT_COLUMNS =
-  'id, client_uuid, document_no, document_type, booking_id, client_id, lifecycle_status, file_url, file_size_bytes, generated_by, signed_at, signed_by_name, created_at'
+  'id, client_uuid, document_no, document_type, booking_id, client_id, lifecycle_status, file_size_bytes, generated_by, signed_at, signed_by_name, created_at'
 
 export async function listDocuments(filters?: ListFilters): Promise<ListQueryResult<DocRow>> {
   try {

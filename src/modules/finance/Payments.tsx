@@ -943,7 +943,7 @@ export default function Payments({ embedded = false }: { embedded?: boolean }) {
 
         {/* Rulings §7 — below 1280 the rail REFLOWS beneath the list rather than
             hiding behind `CollapsibleAside`'s handle. */}
-        {railBesideList ? <Rail label="Deposits">{railContent}</Rail> : railContent}
+        {<Rail label="Deposits">{railContent}</Rail>}
       </div>
 
 

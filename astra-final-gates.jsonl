@@ -1,0 +1,2 @@
+{"gate":"typecheck","exitCode":2,"verified":false,"sourceStable":false,"at":"2026-10-19T19:18:30.714Z","log":"astra-final-typecheck.log"}
+{"gate":"lint","exitCode":0,"verified":true,"sourceStable":false,"at":"2026-10-19T19:20:49.918Z","log":"astra-final-lint.log"}

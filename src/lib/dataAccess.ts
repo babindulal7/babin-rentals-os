@@ -9,7 +9,7 @@
 
 import { supabase } from './supabase'
 import type { Database } from '../types/database'
-import { enqueueMutation } from './offlineQueue'
+import { ensureMutationQueued } from './offlineQueue'
 import { captureError } from './monitoring'
 import { IS_MOCK } from './supabase'
 
@@ -60,6 +60,9 @@ export function generateClientUuid(): string {
  * errors on PostgREST read-back for floor/money-blind sessions.
  */
 export const NON_MONEY_RETURNING_COLUMNS: Readonly<Record<string, string>> = {
+  // Original-file and signature bearer URLs require the protected document RPC.
+  document_registry:
+    'id, client_uuid, document_no, document_type, booking_id, client_id, lifecycle_status, file_size_bytes, generated_by, signed_at, signed_by_name, voided_at, void_reason, created_at, created_by, updated_at, updated_by',
   bookings:
     'id, client_uuid, booking_no, branch_id, client_id, contact_id, authorized_contact_id, project, project_type, project_type_other, pickup_at, return_at, actual_return_at, delivery_type, pickup_location, return_location, quote_expires_at, cancelled_at, cancelled_by, cancellation_reason, closed_at, locked_by, locked_at, version, created_at, created_by, updated_at, updated_by, stage',
   booking_lines:
@@ -166,7 +169,7 @@ export async function idempotentInsert<
       )
     }
     console.warn(`[DataAccess] Device offline. Queuing insert for ${String(table)}.`)
-    await enqueueMutation(String(table), 'insert', finalPayload, finalPayload.client_uuid)
+    await ensureMutationQueued(String(table), 'insert', finalPayload, finalPayload.client_uuid)
     return { data: finalPayload, error: null, queued: true as const } // Queued, not written — `queued` says so (Phase 9)
   }
 
@@ -194,7 +197,7 @@ export async function idempotentInsert<
          )
        }
        console.warn(`[DataAccess] Network failure during insert. Queuing ${String(table)}.`)
-       await enqueueMutation(String(table), 'insert', finalPayload, finalPayload.client_uuid)
+       await ensureMutationQueued(String(table), 'insert', finalPayload, finalPayload.client_uuid)
        return { data: finalPayload, error: null, queued: true as const }
     }
 
@@ -296,7 +299,7 @@ export async function safeUpdate<
       )
     }
     console.warn(`[DataAccess] Device offline. Queuing update for ${String(table)} id=${id}.`)
-    await enqueueMutation(String(table), 'update', { ...payload, id }, `${actionUuid}:${id}`)
+    await ensureMutationQueued(String(table), 'update', { ...payload, id }, `${actionUuid}:${id}`)
     return { data: { ...payload, id }, error: null, queued: true as const } // Queued, not written — `queued` says so (Phase 9)
   }
 
@@ -312,7 +315,7 @@ export async function safeUpdate<
            `[DataAccess] The ${String(table)} update could not be confirmed (${error.message}) and is not queueable. Treat it as NOT written.`,
          )
        }
-       await enqueueMutation(String(table), 'update', { ...payload, id }, `${actionUuid}:${id}`)
+       await ensureMutationQueued(String(table), 'update', { ...payload, id }, `${actionUuid}:${id}`)
        return { data: { ...payload, id }, error: null, queued: true as const }
     }
 

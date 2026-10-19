@@ -119,3 +119,9 @@ The Law 16 report pass (PROGRESS.md, 2026-10-16) replaced invented figures with 
 - **Cancellation fee policy** — the Rentals report showed a 48 h / 24 h / 50 % fee schedule no ruling contains. Removed; is there a policy, and does it charge?
 - **Bank / cash balance** — Cash Flow opening and closing cash, runway, Working Capital and the current ratio need a recorded bank balance; none exists.
 - **Utilization and idle cost** — need unit state history over time (Equipment Performance, Inventory, Damage & Maintenance downtime).
+
+## 14. ASTRA legacy storage and offline identity reconciliation (20 October 2026)
+
+- **TODO(decision): legacy unregistered document/evidence objects.** Migration 0170 retains all bytes but refuses access without an authoritative document or operation-session link. Establish verified ownership and the permitted role before mapping old paths; do not reopen bucket-wide access to recover a link.
+- **TODO(decision): unattributed offline work.** Earlier queue entries lack submitting-account/project identifiers. They remain on the device, including duplicate legacy payloads in the held-work store. A person must establish provenance before an explicit recovery workflow can adopt them; automatic reassignment or deletion is forbidden.
+- Root `PLAN.md` is absent on current main. These questions are recorded here and in the active progress ledger rather than inventing a replacement plan or product policy.

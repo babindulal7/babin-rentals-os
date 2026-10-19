@@ -1,5 +1,5 @@
 import { supabase } from '../supabase'
-import { rupees, type Paisa } from '../money'
+import { parseMoney, rupees, type Paisa } from '../money'
 
 /**
  * **Shared pieces for the report reads (Phase 6 Task 3.4, Law 16 pass).**
@@ -41,6 +41,7 @@ export function rowsOf<T>(res: ReadResult, what: string): T[] {
 
 /** `booking_lines` columns every money figure in the reports is built from. */
 export interface PricedLine {
+  line_total?: number | string | null
   qty?: number | null
   days?: number | null
   rate?: number | string | null
@@ -49,7 +50,8 @@ export interface PricedLine {
 }
 
 /**
- * One line's value in paisa: qty × days × rate − discount, never negative.
+ * Recorded net line value in paisa; legacy rows without a total retain the
+ * qty × days × rate − discount fallback.
  *
  * `booking_lines.rate` and `discount_amount` are RUPEES (numeric(14,2), see
  * `bookings.ts`). The reports used to compute this in rupees and then pass
@@ -58,6 +60,15 @@ export interface PricedLine {
  */
 export function lineValue(line: PricedLine, fallbackDays = 1): Paisa {
   if (line.voided_at) return 0 as Paisa
+  // 0168 records the net quote price, including structures/rulesets. Never
+  // rebuild it from a daily rate or subtract its discount a second time.
+  if (line.line_total != null) {
+    const recorded = String(line.line_total)
+    if (!/^\d+(?:\.\d+)?$/.test(recorded)) throw new Error('Invalid recorded booking-line total')
+    const amount = parseMoney(recorded)
+    if (amount === null || !Number.isSafeInteger(amount)) throw new Error('Recorded booking-line total exceeds safe paisa range')
+    return amount
+  }
   const qty = Number(line.qty ?? 1) || 1
   const days = Number(line.days ?? fallbackDays) || fallbackDays
   const rate = Number(line.rate ?? 0) || 0
@@ -100,7 +111,7 @@ export interface ReportLine extends PricedLine {
 export async function readLineValues(): Promise<Map<string, ReportLine[]>> {
   const res = await supabase
     .from('booking_lines_v')
-    .select('booking_id, product_id, bundle_id, qty, days, rate, discount_amount, voided_at')
+    .select('booking_id, product_id, bundle_id, qty, days, rate, discount_amount, line_total, voided_at')
     .is('voided_at', null)
   const rows = rowsOf<ReportLine>(res, 'Booking line values read failed')
   const out = new Map<string, ReportLine[]>()

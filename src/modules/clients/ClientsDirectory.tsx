@@ -2285,7 +2285,7 @@ export function ClientsDirectory({
             /* Rulings §7 again — the profile rail is beside the list at
                desktop and inline beneath it below 1280, never behind the
                collapse handle. */
-            return desktop ? <Rail width={330} label="Client profile">{profileContent}</Rail> : profileContent
+            return <Rail width={330} label="Client profile">{profileContent}</Rail>
           })()}
         </div>
       </div>

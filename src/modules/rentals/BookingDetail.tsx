@@ -2909,12 +2909,7 @@ function BookingDetailView() {
           )}
         </div>
 
-        {/* Rulings §7 — rails reflow below 1280, never hide. */}
-        {viewport === 'desktop' ? (
-          <Rail>{railBody}</Rail>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0 }}>{railBody}</div>
-        )}
+        <Rail label="Rental information">{railBody}</Rail>
 
         {/* The close dispatch's own failure. R-07 keeps Close a HARD gate, so a
             refusal here is the normal, expected answer when money is outstanding

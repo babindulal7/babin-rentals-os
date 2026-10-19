@@ -108,20 +108,16 @@ export const createDocumentConfig: ActionConfig<CreateDocumentInput, CreateDocum
 
     // Generate and upload PDF to Supabase Storage if fileUrl is not provided
     if (!resolvedFileUrl) {
-      try {
-        const stored = await generateAndStoreDocumentPdf({
+      const stored = await generateAndStoreDocumentPdf({
           documentNo,
           title: input.title,
           docType,
           bookingNo: input.relatedBookingId?.trim() || undefined,
         });
-        resolvedFileUrl = stored.signedUrl || stored.storagePath;
-        resolvedSizeBytes = stored.fileSizeBytes;
-      } catch (storageErr) {
-        // Fallback gracefully to default document path
-        console.warn('Could not upload generated PDF to Supabase Storage:', storageErr);
-        resolvedFileUrl = `/documents/${documentNo}.pdf`;
-      }
+      if (!stored.signedUrl || !stored.storagePath) throw new Error('Stored document access was not confirmed.');
+      // Persist the stable private object path, never an expiring bearer token.
+      resolvedFileUrl = stored.storagePath;
+      resolvedSizeBytes = stored.fileSizeBytes;
     }
 
     const lifecycleStatus = input.status || 'Draft';
@@ -139,8 +135,9 @@ export const createDocumentConfig: ActionConfig<CreateDocumentInput, CreateDocum
       created_by: ctx.userId,
     };
 
-    const inserted = await idempotentInsert('document_registry' as never, docRow as never);
-    const insertedId = (inserted as { id?: string })?.id || actionUuid;
+    const inserted = await idempotentInsert('document_registry' as never, docRow as never, { queueOnFailure: false, returningColumns: 'id' });
+    const insertedId = (inserted as { id?: string })?.id;
+    if (!insertedId) throw new Error('The document registry save was not confirmed.');
 
     // 4. Link to booking_documents if booking is attached
     if (resolvedBookingId) {

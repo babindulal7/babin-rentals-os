@@ -104,6 +104,8 @@ export default function Header({ crumbs, actions }: HeaderProps) {
   const [profileOpen, setProfileOpen] = useState(false)
   const [showHandover, setShowHandover] = useState(false)
   const [notesOpen, setNotesOpen] = useState(false)
+  const [notesVisited, setNotesVisited] = useState(false)
+  useEffect(() => { if (notesOpen) setNotesVisited(true) }, [notesOpen])
   const [activeConfirmAction, setActiveConfirmAction] = useState<PageActionItem | null>(null)
   const ws = useOptionalWorkspace()
   const profileBtnRef = useRef<HTMLButtonElement>(null)
@@ -929,6 +931,8 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             </>
           )}
 
+          <span ref={ws?.setHeaderInformationElement} className="workspace-header-information" data-header-slot="information" />
+
           {/* 7. Team Internal Notes Button (Alt+N) */}
           {!isPhone && <button
             type="button"
@@ -1136,12 +1140,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
         />
       )}
 
-      {notesOpen && (
-        <InternalNotesDrawer
-          isOpen={notesOpen}
-          onClose={() => setNotesOpen(false)}
-        />
-      )}
+      {(notesOpen || notesVisited) && <InternalNotesDrawer isOpen={notesOpen} onClose={() => setNotesOpen(false)} />}
     </>
   )
 }

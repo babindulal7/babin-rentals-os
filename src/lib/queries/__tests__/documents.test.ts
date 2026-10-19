@@ -93,6 +93,7 @@ describe('documents queries', () => {
     })
 
     const result = await listDocuments()
+    expect(mockSelect.mock.calls[0]?.[0]).not.toMatch(/file_url|signature_url/)
     expect(result.rows.length).toBe(1)
     expect(result.rows[0]?.id).toBe('DOC-2026-0001')
   })

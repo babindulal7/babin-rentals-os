@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { supabase } from '../supabase'
 import {
   buildPdfByteArray,
   generateDocumentPdfBlob,
@@ -11,6 +12,7 @@ import {
 // Mock supabase for tests
 vi.mock('../supabase', () => ({
   supabase: {
+    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'operator-1' } }, error: null }) },
     storage: {
       from: vi.fn(() => ({
         upload: vi.fn().mockResolvedValue({ data: { path: 'test/path.pdf' }, error: null }),
@@ -95,7 +97,7 @@ describe('AUD-010: Document Storage & PDF Generation', () => {
 
       expect(res.documentNo).toBe('Q-2026-0881')
       expect(res.docType).toBe('Quotation')
-      expect(res.storagePath).toBe('quotation/Q-2026-0881.pdf')
+      expect(res.storagePath).toMatch(/^staff\/operator-1\/Q-2026-0881_.+\.pdf$/)
       expect(res.signedUrl).toBeDefined()
       expect(typeof res.signedUrl).toBe('string')
       expect(res.fileSizeBytes).toBeGreaterThan(0)
@@ -106,7 +108,7 @@ describe('AUD-010: Document Storage & PDF Generation', () => {
       expect(download.data).toBeDefined()
     })
 
-    it('honors Law 3 immutability when uploading same path', async () => {
+    it('uses immutable versions rather than overwriting an earlier document', async () => {
       const payload = {
         docType: 'Rental Agreement',
         documentNo: 'RA-2026-0999',
@@ -114,11 +116,11 @@ describe('AUD-010: Document Storage & PDF Generation', () => {
       }
 
       const first = await uploadDocumentToStorage(payload)
-      expect(first.storagePath).toBe('rental_agreement/RA-2026-0999.pdf')
+      expect(first.storagePath).toMatch(/^staff\/operator-1\/RA-2026-0999_.+\.pdf$/)
 
       // Second call does not throw
       const second = await uploadDocumentToStorage(payload)
-      expect(second.storagePath).toBe('rental_agreement/RA-2026-0999.pdf')
+      expect(second.storagePath).not.toBe(first.storagePath)
       expect(second.signedUrl).toBeDefined()
     })
   })
@@ -140,7 +142,7 @@ describe('AUD-010: Document Storage & PDF Generation', () => {
 
       expect(res.documentNo).toBe('INV-2026-1055')
       expect(res.docType).toBe('Tax Invoice')
-      expect(res.storagePath).toBe('tax_invoice/INV-2026-1055.pdf')
+      expect(res.storagePath).toMatch(/^staff\/operator-1\/INV-2026-1055_.+\.pdf$/)
       expect(res.fileSizeBytes).toBeGreaterThan(200)
       expect(res.signedUrl).toBeDefined()
 
@@ -149,5 +151,23 @@ describe('AUD-010: Document Storage & PDF Generation', () => {
       expect(freshSignedUrl).toBeDefined()
       expect(typeof freshSignedUrl).toBe('string')
     })
+  })
+})
+
+describe('SEC-01 secure document upload failures', () => {
+  it('refuses uploads without a verified signed-in account', async () => {
+    vi.mocked(supabase.auth.getUser).mockResolvedValueOnce({data:{user:null},error:null} as never)
+    await expect(uploadDocumentToStorage({docType:'Quotation',documentNo:'Q-1',content:'bytes'})).rejects.toThrow('Sign in')
+  })
+  it('never creates buckets or treats upload errors as stored documents', async () => {
+    vi.mocked(supabase.storage.from).mockReturnValueOnce({upload:vi.fn().mockResolvedValue({error:new Error('Forbidden')})} as never)
+    await expect(uploadDocumentToStorage({docType:'Quotation',documentNo:'Q-1',content:'bytes'})).rejects.toThrow('Forbidden')
+  })
+  it('does not invent a viewing URL when signing fails', async () => {
+    vi.mocked(supabase.storage.from).mockReturnValueOnce({
+      upload:vi.fn().mockResolvedValue({error:null}),
+      createSignedUrl:vi.fn().mockResolvedValue({data:null,error:new Error('Forbidden')}),
+    } as never)
+    await expect(uploadDocumentToStorage({docType:'Quotation',documentNo:'Q-1',content:'bytes'})).rejects.toThrow('secure viewing could not be confirmed')
   })
 })

@@ -1369,7 +1369,7 @@ export function Bundles({
           )}
           </>
           )
-          return viewport === 'desktop' ? <Rail width={324} label="Bundle preview">{railContent}</Rail> : railContent
+          return <Rail width={324} label="Bundle preview">{railContent}</Rail>
         })()}
       </div>
     </div>

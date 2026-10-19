@@ -163,26 +163,28 @@ function Slot({
            see it reopened by the click — a button that never appears to work. */
         data-scanner
         onClick={toggleScanner}
-        aria-label="Scan"
+        aria-label="Scan equipment"
+        className="tap press"
         style={{ ...slotStyle, color: 'var(--text2)' }}
       >
         <span
           aria-hidden
           style={{
-            width: 34,
-            height: 34,
+            width: 36,
+            height: 36,
             marginTop: -14,
             borderRadius: 'var(--r-badge)',
             background: 'var(--btn-primary-bg)',
             color: 'var(--btn-primary-fg)',
-            boxShadow: 'var(--shadow-card)',
+            boxShadow: 'var(--shadow-md), 0 0 0 2px var(--sidebar)',
             display: 'grid',
             placeItems: 'center',
+            transition: 'transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease)',
           }}
         >
-          <Icon name="search" size={19} />
+          <Icon name="barcode" size={20} />
         </span>
-        <span style={{ ...labelStyle, fontWeight: 500 }}>Scan</span>
+        <span style={{ ...labelStyle, fontWeight: 600 }}>Scan</span>
       </button>
     )
   }

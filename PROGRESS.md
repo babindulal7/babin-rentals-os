@@ -1,5 +1,118 @@
 # Progress Log
 
+## 2026-10-20 — Mobile and Tablet UI/UX Ergonomics & Visual Polish
+
+**Did**
+- Fixed critical 2-column mobile and tablet layout defect in `src/modules/today/dashboard.css`: broadened media query to `@media (max-width: 1279px)` so both phones (< 768px) and tablets (768px–1279px) render full-width single-column panels without squishing either panel into a 50% split.
+- Upgraded the mobile bottom navigation bar in `src/components/shell/BottomBar.tsx` and `MoreSheet.tsx`: replaced search icon with the dedicated `barcode` hardware icon, styled the elevated center Scan button with tactile floating rim elevation (`0 0 0 2px var(--sidebar)`), and added touch press feedback.
+- Eliminated aggressive 56px action button clipping in the phone header (`src/components/shell/shell.css`): `.app-global-header__action-slot--primary` now scales cleanly up to 110px with `0 10px` padding, ensuring primary CTA text like "+ Rental", "Confirm", "Save" is legible and never truncated to 2 letters.
+- Enhanced situational awareness cards on tablet in `dashboard.css`: cards dynamically format as a 2-column grid (`repeat(2, minmax(0, 1fr))`) on tablets instead of squeezing 3 cards into narrow 180px columns, and single column on phones.
+- Added `overscroll-behavior-x: contain` to `.rsp-table-scroll` in `src/styles/responsive.css` to prevent horizontal swipe gestures on touchscreens from triggering unwanted browser back-navigation.
+- Fixed null narrowing in `src/lib/queries/reportSupport.ts` for `lineValue`.
+
+**Ruled**
+- Breakpoints remain strictly 768px and 1280px (`BP.phone` and `BP.desktop`).
+- Touch targets strictly maintain >= 44px (56px for primary floor verbs).
+- Colors use semantic variables from `theme.css`.
+
+**Verified**
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (0 errors, 0 warnings).
+- `npm run check:contrast`: 82/82 passed (WCAG AA across light + dark themes).
+- `npm run check:pglite`: 168/168 applied, 0 violations.
+- `npm run check:lifecycle`: 31/31 passed.
+- `npx vitest run src/lib/__tests__/breakpoints.test.ts`: 7/7 passed.
+- `npx vitest run src/modules/today src/components/shell`: 41/41 passed.
+- `npm run build`: built production bundles cleanly (`dist/index.html`, `dist/marketing.html`, PWA service worker).
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | — |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | — |
+| Lifecycle | steps green / total | 31 / 31 (100%) | — |
+| Overall | mean of five | ≈ 99% | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-19T19:17:41.378Z). Suite: Historical suite: 4646/4646 passed, 0 failed (recorded 2026-10-16T12:20:00.4333494Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-19T19:18:22.091Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Continue field testing on touch devices at standard breakpoints (390px phone, 800px portrait tablet, 1194px landscape tablet).
+
+## 2026-10-20 — Mirrored right-side slider for quick information and notes
+
+**Did**
+- Reused the left filter drawer presentation for existing right-side summaries, client/bundle previews, calendar details and rental information. A dedicated right-header toggle opens the panel; the panel reserves right workspace width on larger screens and opens as a phone sheet. Closing it keeps unfinished notes mounted.
+- Team Internal Notes now shares the slider presentation and retains its draft after first opening. Existing summary-review shortcuts reveal the rental summary. Drawer ownership prevents two panels claiming the same edge, and narrow screens keep one side drawer open at a time.
+- Essential operation checklists/completion controls and Calendar Full View's selected-event workspace remain reachable in place. Existing role and money gates, actions and calculations remain at their original sites. No migration authored or applied.
+
+**Ruled**
+- Babin's explicit request supersedes the 7 October always-visible supplemental-rail rule. See `RULINGS-2026-10-20.md` and `docs/UI_UX_RULES.md` §12; implementation comment at `InformationDrawer.tsx` / `Page.tsx`.
+
+**Verified**
+- Typecheck passed. Focused drawer/filter/shell/notes run: 4 files, 71 tests passed. Final information-drawer/main-feature rerun: 2 files, 19 passed (including five information-drawer checks). Header positions: 5 passed. Full lint passed; theme contrast 82/82.
+- Local existing migration rebuild: 168/168, no unauthorized anon views/RPCs or unpinned definer paths. Local lifecycle: 31/31. These are local checks only; no live application.
+- Full regression run and production build are still running; final results will replace this pending note. The full run includes earlier code from this session; resolved failures are being rerun against the final source.
+- Visual driving is blocked: the in-app browser could not attach a webview after three attempts; opening the preview through the app returned queued. No browser visual acceptance claimed.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | — |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | — |
+| Lifecycle | steps green / total | 31 / 31 (100%) | — |
+| Overall | mean of five | ≈ 99% | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-19T18:50:49.652Z). Suite: Historical suite: 4646/4646 passed, 0 failed (recorded 2026-10-16T12:20:00.4333494Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-19T18:52:00.855Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Await full regression/build results and final targeted rechecks.
+- Browser visual acceptance at phone/tablet/desktop widths remains unverified because the preview connection is unavailable.
+
+## 2026-10-20 — ASTRA Phase 0 integrated into current main
+
+**Did**
+- Found current main (dc6ccc00) clean, while previous ASTRA fixes were saved on fix/session-evidence-fail-closed. Created recovery branch codex/recovery-before-astra-main-20261020. Ported targeted security/storage/outbox fixes; preserved the newer reports and all concurrent UI edits.
+- Migration 0170 restricts Storage access, financial helpers, audit actors, superior staff targets and Driver trip scope. Business buckets are private; anonymous legacy policies cannot reopen them. Immutable document uploads and session-linked evidence refuse unconfirmed persistence.
+- Account/project-scoped offline replay uses captured credentials and matching server receipts. Legacy payloads remain preserved. dataAccess now refuses queued success unless the outbox confirms durability.
+- Driver Handover no longer queues custody or signals success after a failed/offline request; it keeps the form and retry key. Full photo/signature persistence and Driver workflow acceptance remain separate unfinished work.
+- Fixed QA-02 completion receipts: structured counts, source fingerprints, failure receipts, and explicit historical/unverified labels. Added five Node regression tests and a CI step. The old cached green suite no longer certifies this source.
+- Restored the five ASTRA reports as historical findings to revalidate, and updated AUDIT_WORKTREE_PROGRESS.md, OPEN_DECISIONS §14 and REMAINING_WORK.md. No remote push/PR, live database change, reset or business-data seeding.
+
+**Ruled**
+- No new product policy or permission widening. Existing P1–P4, R-40, Law 8 and N-5 apply. Legacy ownership/adoption questions remain TODO(decision); root PLAN.md remains absent.
+
+**Verified**
+- Current-run PGlite: 168/168 migrations, 31 anonymous-view checks, financial function boundary and definer search paths pass. Authenticated SQL regressions: 13 groups pass. Lifecycle: 31/31. Contrast: 82/82. The earlier 0170 version was locally VERIFIED. Its current bearer-link/column-ACL extension is WRITTEN, pending the final rebuild + lifecycle pair; NOT APPLIED / NOT PRODUCTION-VERIFIED.
+- Storage/outbox/durable-write focused tests: 49/49. Driver Handover: 5/5, including offline refusal and lost-response retry. Completion receipt tests: 5/5; actual completion output marks the old cached suite historical.
+- Initial typecheck and lint passed. The final rerun caught nullable parseMoney output in reportSupport; the current source now explicitly refuses null and needs the fresh typecheck/build result. Final lint passed; source changed during the run. Full-suite process exited zero but its log omitted a final summary, so it is not accepted as complete proof; structured recheck session 56549 was stopped when free physical memory fell below 0.5 GB amid concurrent checks. The initial mock-mode build completed (213 precache entries). Final sequential verification is running in session 23374, with one test worker, structured results, source fingerprints, and a live-mode build in a unique temporary output folder. Gate evidence is in astra-main-gates.jsonl and astra-main-*.log. Do not infer current source coverage from an older checkpoint.
+- Browser verification could not attach after two connection timeouts. No desktop/iPad/mobile layout acceptance claimed. The temporary mock preview was stopped.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | — |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | — |
+| Lifecycle | steps green / total | 31 / 31 (100%) | — |
+| Overall | mean of five | ≈ 99% | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-19T18:50:49.652Z). Suite: Historical suite: 4646/4646 passed, 0 failed (recorded 2026-10-16T12:20:00.4333494Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-19T18:52:00.855Z.
+Counted by `npm run completion`, not typed.
+The generated structural counts above are not a release-readiness certification. Shared gate receipts can be updated by concurrent work; this session's gate log is the authoritative evidence for these fixes.
+
+### Remaining
+- Finish current build, structured full-suite proof, current-source lint/typecheck follow-up and coverage. Preserve concurrent edits; do not certify a moving checkout from stale receipts.
+- Financial follow-up: reportSupport now selects and decodes stored line_total without repricing it or subtracting the discount twice. Six new regressions failed before the fix; all 8 now pass, alongside 31 report truth tests and 2 Pulse fixture tests (41 total). Explicit zero, voided lines, legacy fallback and invalid amounts are covered. Other WF findings still need revalidation.
+- Operations persistence and UI-01–06 acceptance, QA-01, measured PERF-01 work and responsive desktop/iPad/mobile verification remain.
+- Hosted JWT/Storage and real devices remain unverified. Legacy files/offline work remain retained and unassigned until provenance is established.
+
 ## 2026-10-20 — May page briefs: recover the decision text and ruling file on main
 
 **Did**

@@ -5,7 +5,7 @@
  *  1. Generates standard PDF 1.4 binary bytes.
  *  2. Uploads the generated PDF blob to the private 'documents' bucket.
  *  3. Obtains a signed URL for secure access.
- *  4. Persists the signed URL to `invoices.pdf_url` (or `document_registry.file_url`).
+ *  4. Persists the stable private object path to `invoices.pdf_url` (or `document_registry.file_url`).
  *  5. Triggers direct browser download when requested.
  */
 
@@ -55,6 +55,19 @@ async function getStorageClient() {
   return supabase.storage.from('documents')
 }
 
+/** Authenticated, immutable uploads; viewing links never become database identifiers. */
+async function uploadPrivatePdf(blob: Blob, safeName: string, expiresIn: number) {
+  const { data: identity, error: authError } = await supabase.auth.getUser()
+  if (authError || !identity.user) throw new Error('Sign in before uploading a PDF.')
+  const storagePath = `staff/${identity.user.id}/${safeName}_${crypto.randomUUID()}.pdf`
+  const storage = await getStorageClient()
+  const { data: uploaded, error: uploadError } = await storage.upload(storagePath, blob, { contentType: 'application/pdf', upsert: false })
+  if (uploadError || !uploaded || uploaded.path !== storagePath) throw new Error(`PDF upload was not confirmed: ${uploadError?.message ?? 'invalid response'}`)
+  const { data: signed, error: signError } = await storage.createSignedUrl(storagePath, expiresIn)
+  if (signError || !signed?.signedUrl) throw new Error('PDF secure viewing could not be confirmed.')
+  return { storagePath, signedUrl: signed.signedUrl }
+}
+
 /**
  * Exports an invoice as a PDF, uploads it to Supabase Storage bucket 'documents',
  * retrieves a signed URL, and persists `invoices.pdf_url`.
@@ -80,57 +93,15 @@ export async function exportInvoicePdf(
   let storagePath: string | undefined
   let signedUrl: string | undefined
 
-  // 2. Upload to Supabase Storage bucket 'documents'
   if (uploadToStorage) {
-    let targetPath = `invoices/${safeName}.pdf`
-    const storage = await getStorageClient()
-    let uploadRes: { data?: unknown; error?: { message?: string } | null }
-    try {
-      uploadRes = await storage.upload(targetPath, blob, { contentType: 'application/pdf' })
-    } catch (err) {
-      uploadRes = { error: { message: String(err) } }
-    }
-
-    // Law 3: If already exists, write new revision with timestamp rather than overwriting
-    if (uploadRes.error && uploadRes.error.message?.includes('already exists')) {
-      targetPath = `invoices/${safeName}_${Date.now()}.pdf`
-      try {
-        uploadRes = await storage.upload(targetPath, blob, { contentType: 'application/pdf' })
-      } catch (err) {
-        uploadRes = { error: { message: String(err) } }
-      }
-    }
-
-    if (uploadRes.error && !uploadRes.error.message?.includes('already exists')) {
-      throw new Error(`Failed to upload invoice PDF to storage: ${uploadRes.error.message || 'Unknown upload failure'}`)
-    }
-
-    if (!uploadRes.error) {
-      storagePath = targetPath
-
-      // 3. Obtain signed URL
-      const { data: signedData } = await storage.createSignedUrl(targetPath, expiresInSeconds)
-
-      if (signedData?.signedUrl) {
-        signedUrl = signedData.signedUrl
-
-        // 4. Persist to invoices table
-        try {
-          if (invoiceId) {
-            await supabase
-              .from('invoices')
-              .update({ pdf_url: signedUrl })
-              .eq('id', invoiceId)
-          } else if (invoiceData.invoiceNo) {
-            await supabase
-              .from('invoices')
-              .update({ pdf_url: signedUrl })
-              .eq('invoice_no', invoiceData.invoiceNo)
-          }
-        } catch (dbErr) {
-          console.warn('Could not persist pdf_url to invoices table:', dbErr)
-        }
-      }
+    const stored = await uploadPrivatePdf(blob, safeName, expiresInSeconds)
+    storagePath = stored.storagePath
+    signedUrl = stored.signedUrl
+    const reference = invoiceId || invoiceData.invoiceNo
+    if (reference) {
+      const { data, error } = await supabase.from('invoices').update({ pdf_url: storagePath })
+        .eq(invoiceId ? 'id' : 'invoice_no', reference).select('id').maybeSingle()
+      if (error || !data?.id) throw new Error('Invoice PDF attachment was not confirmed. The uploaded file was preserved.')
     }
   }
 
@@ -183,57 +154,15 @@ export async function exportDocumentPdf(
   let signedUrl: string | undefined
 
   if (uploadToStorage) {
-    let targetPath = `registry/${safeName}.pdf`
-    const storage = await getStorageClient()
-    let uploadRes: { data?: unknown; error?: { message?: string } | null }
-    try {
-      uploadRes = await storage.upload(targetPath, blob, { contentType: 'application/pdf' })
-    } catch (err) {
-      uploadRes = { error: { message: String(err) } }
-    }
-
-    if (uploadRes.error && uploadRes.error.message?.includes('already exists')) {
-      targetPath = `registry/${safeName}_${Date.now()}.pdf`
-      try {
-        uploadRes = await storage.upload(targetPath, blob, { contentType: 'application/pdf' })
-      } catch (err) {
-        uploadRes = { error: { message: String(err) } }
-      }
-    }
-
-    if (uploadRes.error && !uploadRes.error.message?.includes('already exists')) {
-      throw new Error(`Failed to upload document PDF to storage: ${uploadRes.error.message || 'Unknown upload failure'}`)
-    }
-
-    if (!uploadRes.error) {
-      storagePath = targetPath
-      const { data: signedData } = await storage.createSignedUrl(targetPath, expiresInSeconds)
-
-      if (signedData?.signedUrl) {
-        signedUrl = signedData.signedUrl
-
-        try {
-          if (documentId) {
-            await supabase
-              .from('document_registry')
-              .update({
-                file_url: signedUrl,
-                file_size_bytes: bytes.byteLength,
-              })
-              .eq('id', documentId)
-          } else if (documentData.documentNo) {
-            await supabase
-              .from('document_registry')
-              .update({
-                file_url: signedUrl,
-                file_size_bytes: bytes.byteLength,
-              })
-              .eq('document_no', documentData.documentNo)
-          }
-        } catch (dbErr) {
-          console.warn('Could not persist file_url to document_registry:', dbErr)
-        }
-      }
+    const stored = await uploadPrivatePdf(blob, safeName, expiresInSeconds)
+    storagePath = stored.storagePath
+    signedUrl = stored.signedUrl
+    const reference = documentId || documentData.documentNo
+    if (reference) {
+      const { data, error } = await supabase.from('document_registry')
+        .update({ file_url: storagePath, file_size_bytes: bytes.byteLength })
+        .eq(documentId ? 'id' : 'document_no', reference).select('id').maybeSingle()
+      if (error || !data?.id) throw new Error('Document PDF attachment was not confirmed. The uploaded file was preserved.')
     }
   }
 
