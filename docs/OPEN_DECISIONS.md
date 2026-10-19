@@ -98,7 +98,7 @@ Provisional rulings are in `RULINGS-2026-10-07.md`; these three are the ones tha
 
 ---
 
-## 12. The May page briefs (8 October 2026) — eight product calls, full text in PLAN.md
+## 12. The May page briefs (8 October 2026) — eight product calls, full text in MAY_BRIEF_DECISIONS.md
 
 From checking `D:\proects\md` against `step1-foundation`. Fonepay, the live return countdown and Create & add another were built (PROGRESS.md, 8 Oct). These were not, because each one needs a person to decide.
 - **§4.64 (a)–(e)** (filed as §4.61) — duplicate / re-book a rental · VAT-inclusive rates · rescheduling a delivery (the Delivery workspace also runs on `localStorage` seed rows) · a late/night charge at booking time · per-category useful lives for the Depreciation Reserve.

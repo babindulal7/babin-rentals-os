@@ -1,5 +1,23 @@
 # Progress Log
 
+## 2026-10-20 — May page briefs: recover the decision text and ruling file on main
+
+**Did**
+- Checked `claude/md-brief-gaps` against `main`. They share no history (`git merge-base` is empty), so there is nothing to merge or rebase. Compared by content instead: 20 source, test and script files from that branch (return countdown, Fonepay, tap cards, Create & add another, mock column defaults) are **byte-identical** on `main`. No code needed porting.
+- The only things `main` lacked were docs. `OPEN_DECISIONS.md` §12 said "full text in PLAN.md", and `main` has no root `PLAN.md`; and 16 code and doc comments cite `RULINGS-2026-10-08.md`, which `main` did not have.
+- Added `docs/MAY_BRIEF_DECISIONS.md` (the full text of the eight questions, from the old PLAN §4.61 and §4.62) and `RULINGS-2026-10-08.md`, and pointed `OPEN_DECISIONS.md` §12 at the new file.
+
+**Verified**
+- `git diff --no-index` of each of the 20 files against `git show main:<path>`: identical. `git grep` on `main` confirms the 16 `RULINGS-2026-10-08` references.
+- Docs only; no app behaviour changed, so nothing was driven in the browser. `npm run lint:progress` run on this entry.
+
+### Completion
+not measured (docs-only change; `npm run completion` needs the lifecycle result, which this fresh worktree does not have).
+
+### Remaining
+- The eight questions in `docs/MAY_BRIEF_DECISIONS.md` still wait on Babin. None is built.
+- `RULINGS-2026-10-08.md` is a verbatim copy from the old line. Its section numbers (§4.61/§4.62) were renumbered §4.64/§4.65 in `OPEN_DECISIONS.md`; the new doc says so at the top.
+
 ## 2026-10-19 — App reorganization step 4: Coupons → Clients, Credit policy → Settings, QR labels → Inventory
 
 **Did**
