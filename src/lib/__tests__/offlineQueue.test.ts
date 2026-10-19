@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   enqueueMutation,
+  ensureMutationQueued,
+  OfflineQueueWriteError,
   getPendingMutations,
   markMutationSyncing,
   markMutationFailed,
@@ -36,6 +38,13 @@ describe('offlineQueue — Phase 9 & Law 8 Guard Rails', () => {
     // When indexedDB is not available in node/headless environment without polyfill:
     const enqueued = await enqueueMutation('bookings', 'update', { status: 'Booked' }, 'test-uuid-1')
     expect(enqueued).toBe(false)
+
+    // Unlike noncritical event callers, dataAccess must never see this as a
+    // successfully queued mutation.
+    await expect(ensureMutationQueued('bookings', 'update', { status: 'Booked' }, 'test-uuid-1'))
+      .rejects.toMatchObject({ name: 'OfflineQueueWriteError', code: 'OFFLINE_STORAGE_UNAVAILABLE' })
+    expect(new OfflineQueueWriteError('OFFLINE_STORAGE_UNAVAILABLE', 'unavailable').code)
+      .toBe('OFFLINE_STORAGE_UNAVAILABLE')
 
     const pending = await getPendingMutations()
     expect(pending).toEqual([])

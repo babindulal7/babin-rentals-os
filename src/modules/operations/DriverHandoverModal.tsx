@@ -3,7 +3,6 @@ import { Modal } from '../../components/ui/Modal'
 import { Button } from '../../components/ui/Page'
 import Icon from '../../components/ui/Icon'
 import { Badge } from '../../components/ui/Badge'
-import { enqueueMutation } from '../../lib/offlineQueue'
 import { newClientUuid } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../components/ui/Toast'
@@ -36,7 +35,7 @@ interface GpsCoords {
  *  - Client digital signature canvas
  *  - GPS location stamping
  *  - Photo evidence capture
- *  - Offline queue fallback via IndexedDB
+ *  - Custody confirmation requires a verified server commit (no offline success)
  *  - Law 6: Zero money displayed
  *  - Law 17: Client, never customer
  */
@@ -62,7 +61,8 @@ export function DriverHandoverModal({
   const [photoData, setPhotoData] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const [offlineQueued, setOfflineQueued] = useState(false)
+  // Stable idempotency key across retries of an uncertain network request.
+  const handoverActionId = useRef<string | null>(null)
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const isDrawing = useRef(false)
@@ -211,43 +211,15 @@ export function DriverHandoverModal({
     setSubmitting(true)
     setSubmitError(null)
 
-    const clientUuid = newClientUuid()
-    const occurredAt = new Date().toISOString()
-    const signatureData = canvasRef.current?.toDataURL('image/png') || null
-
-    const deliveryPayload = {
-      booking_id: bookingId,
-      booking_no: bookingNo,
-      session_type: 'Handover',
-      receiver_name: recipientName.trim(),
-      notes: notes.trim() || null,
-      gps_lat: gps?.lat ?? null,
-      gps_lng: gps?.lng ?? null,
-      gps_accuracy: gps?.accuracy ?? null,
-      has_photo: photoData !== null,
-      signature_png: signatureData,
-      client_uuid: clientUuid,
-      occurred_at: occurredAt,
-      driver_name: user?.name || 'Driver',
-    }
-
-    // Offline mode or network drop fallback
     if (!isOnline) {
-      try {
-        await enqueueMutation('operation_sessions', 'insert', deliveryPayload, clientUuid)
-        setOfflineQueued(true)
-        setSubmitting(false)
-        setTimeout(() => {
-          onSuccess?.()
-          onClose()
-        }, 1800)
-      } catch (err) {
-        captureError(err, { where: 'DriverHandoverModal.offlineQueue' })
-        setSubmitError('Failed to save to local offline queue. Please try again.')
-        setSubmitting(false)
-      }
+      setSubmitError('No handover was confirmed. Reconnect to the internet before confirming equipment custody. Your form remains open.')
+      setSubmitting(false)
       return
     }
+
+    const clientUuid = handoverActionId.current ?? newClientUuid()
+    handoverActionId.current = clientUuid
+    const occurredAt = new Date().toISOString()
 
     // Online delivery dispatch
     try {
@@ -277,23 +249,18 @@ export function DriverHandoverModal({
         { userId: user?.id || 'USR-DRIVER', role: user?.role || 'Driver' },
       )
 
+      handoverActionId.current = null
       showSuccessToast('Handover Completed', `Delivery for ${bookingNo} handed over to ${recipientName.trim()}`)
       onSuccess?.()
       onClose()
     } catch (err) {
-      // Network failure during send: fall back to offline queue safely
-      console.warn('[DriverHandoverModal] Online handover failed, queueing offline:', err)
-      try {
-        await enqueueMutation('operation_sessions', 'insert', deliveryPayload, clientUuid)
-        setOfflineQueued(true)
-        setTimeout(() => {
-          onSuccess?.()
-          onClose()
-        }, 1800)
-      } catch (queueErr) {
-        captureError(queueErr, { where: 'DriverHandoverModal.fallbackQueue' })
-        setSubmitError(err instanceof Error ? err.message : String(err))
-      }
+      // A network failure can happen after a server commit. Do not claim a
+      // confirmed handover or create an unrelated operation_sessions row.
+      captureError(err, { where: 'DriverHandoverModal.confirm' })
+      setSubmitError(
+        `Handover not confirmed: ${err instanceof Error ? err.message : String(err)}. ` +
+          'Check the booking stage and try again once connected. No offline handover has been marked complete.',
+      )
     } finally {
       setSubmitting(false)
     }
@@ -331,33 +298,15 @@ export function DriverHandoverModal({
               aria-hidden="true"
             />
             <span style={{ fontSize: 'var(--t-caption)', fontWeight: 600 }}>
-              {isOnline ? 'Online (Direct Sync)' : 'Offline Mode (Edge Queue Active)'}
+              {isOnline ? 'Online (confirmation available)' : 'Offline — connection required for handover'}
             </span>
           </div>
           <Badge
             tone={isOnline ? 'in' : 'warning'}
-            label={isOnline ? 'Connected' : 'Offline Safe'}
+            label={isOnline ? 'Connected' : 'Cannot Confirm'}
             size="sm"
           />
         </div>
-
-        {/* Offline Confirmation Banner */}
-        {offlineQueued && (
-          <div
-            style={{
-              padding: '12px 14px',
-              background: 'var(--st-in-bg)',
-              color: 'var(--st-in-fg)',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--st-in-border)',
-              fontSize: 'var(--t-body)',
-              fontWeight: 500,
-            }}
-            role="status"
-          >
-            ✓ Delivery recorded offline in local queue. Will sync automatically once connection returns.
-          </div>
-        )}
 
         {/* Error Banner */}
         {submitError && (
@@ -598,7 +547,7 @@ export function DriverHandoverModal({
           <Button
             variant="primary"
             onClick={handleSubmit}
-            disabled={submitting || offlineQueued}
+            disabled={submitting || !isOnline}
             style={{
               flex: 2,
               minHeight: 52,
@@ -606,7 +555,7 @@ export function DriverHandoverModal({
               fontWeight: 600,
             }}
           >
-            {submitting ? 'Confirming...' : offlineQueued ? 'Queued Offline ✓' : 'Confirm Delivery Handover'}
+            {submitting ? 'Confirming...' : !isOnline ? 'Reconnect to Confirm' : 'Confirm Delivery Handover'}
           </Button>
         </div>
       </div>

@@ -9,7 +9,7 @@
 
 import { supabase } from './supabase'
 import type { Database } from '../types/database'
-import { enqueueMutation } from './offlineQueue'
+import { ensureMutationQueued } from './offlineQueue'
 import { captureError } from './monitoring'
 import { IS_MOCK } from './supabase'
 
@@ -166,7 +166,7 @@ export async function idempotentInsert<
       )
     }
     console.warn(`[DataAccess] Device offline. Queuing insert for ${String(table)}.`)
-    await enqueueMutation(String(table), 'insert', finalPayload, finalPayload.client_uuid)
+    await ensureMutationQueued(String(table), 'insert', finalPayload, finalPayload.client_uuid)
     return { data: finalPayload, error: null, queued: true as const } // Queued, not written — `queued` says so (Phase 9)
   }
 
@@ -194,7 +194,7 @@ export async function idempotentInsert<
          )
        }
        console.warn(`[DataAccess] Network failure during insert. Queuing ${String(table)}.`)
-       await enqueueMutation(String(table), 'insert', finalPayload, finalPayload.client_uuid)
+       await ensureMutationQueued(String(table), 'insert', finalPayload, finalPayload.client_uuid)
        return { data: finalPayload, error: null, queued: true as const }
     }
 
@@ -296,7 +296,7 @@ export async function safeUpdate<
       )
     }
     console.warn(`[DataAccess] Device offline. Queuing update for ${String(table)} id=${id}.`)
-    await enqueueMutation(String(table), 'update', { ...payload, id }, `${actionUuid}:${id}`)
+    await ensureMutationQueued(String(table), 'update', { ...payload, id }, `${actionUuid}:${id}`)
     return { data: { ...payload, id }, error: null, queued: true as const } // Queued, not written — `queued` says so (Phase 9)
   }
 
@@ -312,7 +312,7 @@ export async function safeUpdate<
            `[DataAccess] The ${String(table)} update could not be confirmed (${error.message}) and is not queueable. Treat it as NOT written.`,
          )
        }
-       await enqueueMutation(String(table), 'update', { ...payload, id }, `${actionUuid}:${id}`)
+       await ensureMutationQueued(String(table), 'update', { ...payload, id }, `${actionUuid}:${id}`)
        return { data: { ...payload, id }, error: null, queued: true as const }
     }
 

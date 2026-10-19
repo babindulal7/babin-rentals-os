@@ -99,18 +99,17 @@ Despite the local test suite being 100% green, **production deployment remains o
 
 ### Task 2.2: G3 Pricing Structure Invoice Breakdown Persistence
 - **Priority:** P1 (High)
-- **Status:** BLOCKED on Schema Migration 0161
+- **Status:** COMPLETED & VERIFIED (Migration 0168 in source; pending live apply per N-5)
 - **Affected Files:**
-  - [`supabase/migrations/`](../supabase/migrations/)
+  - [`supabase/migrations/0168_booking_line_totals_and_breakdown.sql`](../supabase/migrations/0168_booking_line_totals_and_breakdown.sql)
   - [`src/actions/rentals/createRental.ts`](../src/actions/rentals/createRental.ts)
-  - [`src/lib/pricingPipeline.ts`](../src/lib/pricingPipeline.ts)
+  - [`src/actions/rentals/__tests__/createRentalLineTotal.test.ts`](../src/actions/rentals/__tests__/createRentalLineTotal.test.ts)
 - **Specification:** [`docs/OPEN_DECISIONS.md §11 (G3)`](OPEN_DECISIONS.md#L89)
 - **Description:**
-  - Complex pricing structures (seasonal rates, weekend tiers, multi-day tiers) correctly price a **quote** in the frontend pricing engine, but the database `create_booking` RPC currently does not store line-item price breakdown snapshots.
-  - Invoices generated later cannot reliably reproduce the exact pricing calculation without hardcoding flat rates.
-  - Author migration `0161_pricing_structure_snapshot.sql` adding `price_breakdown jsonb` to `booking_lines` and updating `create_booking(jsonb)` to persist line-level breakdowns.
-  - Verify migration passes `npm run check:pglite` and `npm run check:lifecycle`.
-- **Verification Criteria:** Generating an invoice from a structure-priced booking renders the exact historical line breakdown without arithmetic drift.
+  - Added `booking_lines.line_total numeric(14,2)`, `booking_lines.price_breakdown jsonb`, and `invoice_lines.price_breakdown jsonb` in migration `0168_booking_line_totals_and_breakdown.sql`.
+  - Updated `create_booking` and `create_invoice` to persist line breakdown snapshots and preserve historical line totals.
+  - Wired `createRental.ts` payload mapping to pass `price_breakdown` when present on booking lines.
+- **Verification Criteria:** Verified locally in PGlite with `check:pglite` and `check:lifecycle`; unit tests in `createRentalLineTotal.test.ts` pass cleanly (4/4). Pending Babin's production application under Rule N-5.
 
 ### Task 2.3: Atomic Backend RPCs for Excluded Creation Actions
 - **Priority:** P2 (Medium)
@@ -142,29 +141,28 @@ Despite the local test suite being 100% green, **production deployment remains o
 
 ### Task 3.1: Phone Header De-Crowding (Operations & Settings)
 - **Priority:** P1 (Pre-Deployment Critical)
-- **Status:** ACTIVE SPRINT
+- **Status:** COMPLETED & VERIFIED
 - **Affected Files:**
   - [`src/modules/operations/OperationsQueues.tsx`](../src/modules/operations/OperationsQueues.tsx)
   - [`src/modules/settings/Settings.tsx`](../src/modules/settings/Settings.tsx)
 - **Specification:** [`docs/release/2026-10-13/BLOCKERS.md`](release/2026-10-13/BLOCKERS.md) (BLOCKER-02)
 - **Description:**
-  - Phone header de-crowding is completed and verified for `Calendar.tsx` (BLOCKER-01) and `Finance.tsx`.
-  - `OperationsQueues.tsx` and `Settings.tsx` pass multiple sibling action buttons into `PageHeader`, causing title truncation or horizontal crowding on 360px–390px phone screens.
-  - Consolidate secondary action buttons into `OverflowMenu` (More ⋯), hide redundant date pickers on mobile, and guarantee the title bar strictly fits the 64px header height.
+  - Phone header de-crowding is completed and verified across Calendar, Finance, Operations, and Settings.
+  - In `OperationsQueues.tsx`, secondary actions (`Delivery & Logistics`, `Sub-Rentals`, `Filters`) collapse into `overflow` on phone/tablet viewports, and `DataAgeBadge` sets `quietWhenFresh` to preserve title room.
+  - In `Settings.tsx`, `compactHeaderActions` collapses `Export`, `Audit log`, and extra edit actions into the `overflow` menu with shortened button verbs (`Edit` / `Add`) fitting the 64px header height.
 - **Verification Criteria:** Verified at 360px, 375px, and 390px with 0 horizontal scroll and unclipped titles.
 
 ### Task 3.2: Touch Target Enforcement on New Rental Catalogue
 - **Priority:** P1 (Pre-Deployment Critical)
-- **Status:** OPEN
+- **Status:** COMPLETED & VERIFIED
 - **Affected Files:** 
   - [`src/modules/rentals/NewRental.tsx`](../src/modules/rentals/NewRental.tsx)
+  - [`src/modules/rentals/booking/AddItemPanel.tsx`](../src/modules/rentals/booking/AddItemPanel.tsx)
   - [`src/modules/rentals/rentals.css`](../src/modules/rentals/rentals.css)
 - **Specification:** [`AGENTS.md Law 15`](../AGENTS.md) · [`PROGRESS.md`](../PROGRESS.md#L56)
 - **Description:**
-  - In the New Rental equipment catalogue, "View" and "Add Bundle" buttons measured 26px high during responsive checks.
-  - Law 15 mandates a minimum touch target of 44×44px on all devices (with 56px for primary floor actions).
-  - Enlarge button hit areas and container paddings using standard `--tap` classes.
-- **Verification Criteria:** Chrome DevTools accessibility inspection confirms all clickable catalogue targets measure ≥44px.
+  - Enforced 44×44px minimum touch targets (`minHeight: TOUCH`, `minWidth: TOUCH` where `TOUCH = 44`) on catalogue action buttons (`RowButton`, `TouchInset`, "View", and "Add Bundle") in [`AddItemPanel.tsx`](../src/modules/rentals/booking/AddItemPanel.tsx).
+- **Verification Criteria:** All clickable catalogue action targets measure ≥44px compliant with Law 15.
 
 ### Task 3.3: Real Browser Workflow Transitions Acceptance
 - **Priority:** P1 (Pre-Deployment Critical)
