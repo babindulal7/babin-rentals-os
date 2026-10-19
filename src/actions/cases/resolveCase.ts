@@ -3,41 +3,16 @@ import { EVENT_TYPES } from '../../events/eventBus'
 import { supabase } from '../../lib/supabase'
 import { safeUpdate } from '../../lib/dataAccess'
 
-/**
- * # RESOLVE_CASE — Incident resolution and disposition action
- *
- * Sets the disposition and settles an incident case:
- * - Moves case `status` to 'Resolved' (or 'Closed').
- * - Stamped `settled_at` timestamp.
- * - Stored `disposition` text describing the resolution.
- * - Records optional allocation amounts if specified.
- * - Permissions: Owner, Manager per R-25 / `canApproveDamage`.
- * - Emits `EVENT_TYPES.CASE_RESOLVED`.
- */
-
 export type ResolveCaseInput = {
-  /**
-   * `cases.id` (UUID) or `cases.case_no` (e.g. `CASE-2026-0001`).
-   */
   caseId: string
-  /**
-   * Stated disposition or resolution note.
-   */
   resolution?: string | null | undefined
-  /**
-   * Target status for the settled case. Defaults to 'Resolved'.
-   */
   status?: 'Resolved' | 'Closed' | undefined
-  /**
-   * Optional allocation amounts (numeric rupees).
-   */
   chargedToClientAmount?: number | undefined
   absorbedAmount?: number | undefined
   depositAppliedAmount?: number | undefined
   insuranceClaimedAmount?: number | undefined
   warrantyCoveredAmount?: number | undefined
   recoveredFromPartnerAmount?: number | undefined
-  /** Law 8 idempotency key. */
   clientUuid?: string | undefined
 }
 
@@ -67,39 +42,28 @@ export const resolveCaseConfig: ActionConfig<ResolveCaseInput, ResolveCaseResult
   },
 
   execute: async (input, ctx: ActionContext) => {
+    if (ctx.isOnline === false || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
+      throw new Error('This device is offline. Case resolution affects rental closing gates and cannot be queued offline.')
+    }
+
     const rawId = input.caseId.trim()
     const now = new Date().toISOString()
     const targetStatus = input.status ?? 'Resolved'
     const disposition = input.resolution?.trim() || 'Resolved'
 
-    let realCaseId = rawId
-    let caseNo: string | undefined
+    const lookupCol = UUID_RE.test(rawId) ? 'id' : 'case_no'
+    const { data, error } = await supabase
+      .from('cases_v')
+      .select('id, case_no, status')
+      .eq(lookupCol, rawId)
+      .maybeSingle()
 
-    if (UUID_RE.test(rawId)) {
-      const { data, error } = await supabase
-        .from('cases_v')
-        .select('id, case_no, status')
-        .eq('id', rawId)
-        .maybeSingle()
-
-      if (error || !data) {
-        throw new Error(`Case ${rawId} was not found: ${error?.message ?? 'no matching row'}`)
-      }
-      realCaseId = data.id
-      caseNo = data.case_no
-    } else {
-      const { data, error } = await supabase
-        .from('cases_v')
-        .select('id, case_no, status')
-        .eq('case_no', rawId)
-        .maybeSingle()
-
-      if (error || !data) {
-        throw new Error(`Case ${rawId} was not found: ${error?.message ?? 'no matching row'}`)
-      }
-      realCaseId = data.id
-      caseNo = data.case_no
+    if (error || !data) {
+      throw new Error(`Case ${rawId} was not found: ${error?.message ?? 'no matching row'}`)
     }
+
+    const realCaseId = data.id
+    const caseNo = data.case_no
 
     const patch: Record<string, unknown> = {
       status: targetStatus,
@@ -115,8 +79,17 @@ export const resolveCaseConfig: ActionConfig<ResolveCaseInput, ResolveCaseResult
     if (input.warrantyCoveredAmount !== undefined) patch.warranty_covered_amount = input.warrantyCoveredAmount
     if (input.recoveredFromPartnerAmount !== undefined) patch.recovered_from_partner_amount = input.recoveredFromPartnerAmount
 
-    /* `as never` — the sanctioned cast: the hand-written Database type has no cases entry. */
-    await safeUpdate('cases' as never, realCaseId, patch as never, input.clientUuid, { returnRow: false })
+    const updateRes = await safeUpdate('cases' as never, realCaseId, patch as never, input.clientUuid, {
+      returnRow: false,
+    })
+
+    if (updateRes?.error) {
+      throw new Error(
+        `Case ${caseNo ?? realCaseId} could not be resolved: ${
+          (updateRes.error as { message?: string }).message ?? String(updateRes.error)
+        }`,
+      )
+    }
 
     return {
       result: {

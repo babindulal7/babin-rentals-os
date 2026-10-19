@@ -30,6 +30,8 @@ export type MergeClientsResult = {
   };
 };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const mergeClientsConfig: ActionConfig<MergeClientsInput, MergeClientsResult> = {
   name: 'MERGE_CLIENTS',
   permissions: ['client.merge'],
@@ -51,9 +53,15 @@ export const mergeClientsConfig: ActionConfig<MergeClientsInput, MergeClientsRes
         throw new Error('Typed confirmation cannot be empty or "yes".');
       }
     }
+    if (input.clientUuid !== undefined && !UUID_RE.test(input.clientUuid)) {
+      throw new Error('A valid clientUuid is required.');
+    }
   },
 
   execute: async (input, ctx: ActionContext) => {
+    if (ctx.isOnline === false || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
+      throw new Error('This device is offline. Merging clients reassigns financial and booking history and cannot be queued offline.');
+    }
     const rawSurvivor = input.survivorId.trim();
     const rawDuplicate = input.duplicateId.trim();
 
@@ -196,7 +204,7 @@ export const mergeClientsConfig: ActionConfig<MergeClientsInput, MergeClientsRes
     const now = new Date().toISOString();
     const actionUuid = input.clientUuid || generateClientUuid();
 
-    await safeUpdate(
+    const updateRes = await safeUpdate(
       'clients' as never,
       duplicateId,
       {
@@ -210,6 +218,9 @@ export const mergeClientsConfig: ActionConfig<MergeClientsInput, MergeClientsRes
       actionUuid,
       { returnRow: false }
     );
+    if (updateRes?.error) {
+      throw new Error(`Failed to deactivate duplicate client: ${String((updateRes.error as { message?: string }).message ?? updateRes.error)}`);
+    }
 
     // 4. Insert audit record in client_merges
     const confirmation = input.typedConfirmation?.trim() || `MERGE ${duplicateProfile.record.id} INTO ${survivorProfile.record.id}`;
@@ -222,7 +233,10 @@ export const mergeClientsConfig: ActionConfig<MergeClientsInput, MergeClientsRes
       created_by: ctx.userId,
     };
 
-    await idempotentInsert('client_merges' as never, mergeRow as never, { returnRow: false });
+    const insertRes = await idempotentInsert('client_merges' as never, mergeRow as never, { returnRow: false });
+    if (insertRes?.error) {
+      throw new Error(`Failed to log client merge audit record: ${String((insertRes.error as { message?: string }).message ?? insertRes.error)}`);
+    }
 
     // 5. Emit domain event
     const events = [

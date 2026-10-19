@@ -33,6 +33,19 @@ function amountToPaisa(val: number | string | null | undefined): Paisa {
   return rupees(Number(val ?? 0))
 }
 
+async function deriveMovementUuid(rootKey: string, kind: 'applied' | 'release'): Promise<string> {
+  if (typeof crypto !== 'undefined' && crypto.subtle) {
+    const digest = new Uint8Array(
+      await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${rootKey}:${kind}`)),
+    )
+    digest[6] = (digest[6]! & 15) | 80
+    digest[8] = (digest[8]! & 63) | 128
+    const hex = Array.from(digest.slice(0, 16), (b) => b.toString(16).padStart(2, '0')).join('')
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+  }
+  return `${rootKey}-${kind}`
+}
+
 export type SettleDepositInput = {
   /** The booking number (e.g. 'B-715') or booking UUID */
   bookingRef: string
@@ -191,7 +204,7 @@ export const settleDepositConfig: ActionConfig<SettleDepositInput, SettleDeposit
     // 3. Insert 'Applied' movement if applicable
     if (appliedPaisa > 0) {
       const appliedNo = `${depositRow.deposit_no}-M${movementIndex++}`
-      const appliedUuid = `${input.clientUuid}-applied`
+      const appliedUuid = await deriveMovementUuid(input.clientUuid, 'applied')
       const result = await idempotentInsert('deposit_movements', {
         client_uuid: appliedUuid,
         movement_no: appliedNo,
@@ -203,8 +216,11 @@ export const settleDepositConfig: ActionConfig<SettleDepositInput, SettleDeposit
         handled_by: ctx.userId,
       }, { queueOnFailure: false })
 
-      if (result.error) {
-        throw new Error(`Failed to record deposit charge application: ${result.error.message}`)
+      const persisted = result.data as { id?: string } | null
+      if (result.error || !persisted || typeof persisted.id !== 'string') {
+        throw new Error(
+          `Failed to record deposit charge application: ${result.error?.message ?? 'row was not persisted'}`,
+        )
       }
       movementNos.push(appliedNo)
     }
@@ -212,7 +228,7 @@ export const settleDepositConfig: ActionConfig<SettleDepositInput, SettleDeposit
     // 4. Insert 'Released' movement if applicable
     if (input.releasePaisa > 0) {
       const releaseNo = `${depositRow.deposit_no}-M${movementIndex++}`
-      const releaseUuid = `${input.clientUuid}-release`
+      const releaseUuid = await deriveMovementUuid(input.clientUuid, 'release')
       const result = await idempotentInsert('deposit_movements', {
         client_uuid: releaseUuid,
         movement_no: releaseNo,
@@ -224,8 +240,11 @@ export const settleDepositConfig: ActionConfig<SettleDepositInput, SettleDeposit
         handled_by: ctx.userId,
       }, { queueOnFailure: false })
 
-      if (result.error) {
-        throw new Error(`Failed to record deposit release: ${result.error.message}`)
+      const persisted = result.data as { id?: string } | null
+      if (result.error || !persisted || typeof persisted.id !== 'string') {
+        throw new Error(
+          `Failed to record deposit release: ${result.error?.message ?? 'row was not persisted'}`,
+        )
       }
       movementNos.push(releaseNo)
     }

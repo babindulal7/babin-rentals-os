@@ -54,13 +54,12 @@ export const reconcileStockCheckConfig: ActionConfig<ReconcileStockCheckInput, R
         .or(`id.eq.${rawTarget},audit_no.eq.${rawTarget}`)
         .maybeSingle();
 
-      if (data) {
-        resolvedAudit = data;
+      if (!data) {
+        throw new Error(`Stock audit "${rawTarget}" was not found.`);
       }
-    }
-
-    // If no target or not found by target, look for the current In Progress / Draft audit
-    if (!resolvedAudit) {
+      resolvedAudit = data;
+    } else {
+      // If no target was specified, look for the current In Progress / Draft audit
       const { data } = await supabase
         .from('stock_audits')
         .select('id, audit_no, branch_id, warehouse_id')

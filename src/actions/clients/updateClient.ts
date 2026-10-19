@@ -6,28 +6,9 @@ import { supabase } from '../../lib/supabase'
 import { getClientRecord } from '../../lib/queries/clients'
 import { isValidLocalPhone, canonicalPhone, PHONE_STORED_RE } from '../../lib/phone'
 
-/**
- * The write seam for inline edit on `ClientDetail`.
- *
- * `patch` carries **only the keys the operator changed** — never the whole
- * record. `useEditMode` guarantees that, and it is the guarantee that stops an
- * edit of one field silently rewriting a column nobody touched.
- *
- * `safeUpdate` writes through `lib/dataAccess` with mandatory `client_uuid`
- * idempotency tracking (Law 8). Column read-back is strictly non-monetary
- * ('id, client_code, name, phone, updated_at') to avoid 42501 permission traps
- * under Law 6 (0038/0062).
- */
-
 export type UpdateClientInput = {
-  /**
-   * The client UUID (`clients.id`) or client code (`client_code`, e.g. `CL-2026-0001`).
-   * When a code is passed, it is resolved to the client's row UUID before writing.
-   */
   clientId: string
-  /** Changed keys only. */
   patch: Record<string, unknown>
-  /** Law 8 idempotency key. */
   clientUuid?: string | undefined
 }
 
@@ -51,6 +32,11 @@ const FORBIDDEN_KEYS = new Set([
   'deactivated_by',
   'deactivation_reason',
   'merged_into_client_id',
+  // 0005:162-164 & 0130: Written ONLY by an Approved client_commercial_overrides row.
+  'approved_credit_limit',
+  'approvedCreditLimit',
+  'payment_terms',
+  'paymentTerms',
 ])
 
 export const updateClientConfig: ActionConfig<UpdateClientInput, UpdateClientResult> = {
@@ -95,18 +81,19 @@ export const updateClientConfig: ActionConfig<UpdateClientInput, UpdateClientRes
   },
 
   execute: async (input, ctx: ActionContext) => {
+    if (ctx.isOnline === false || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
+      throw new Error('This device is offline. Client edits are not queued offline — try again when back online.')
+    }
+
     const rawId = input.clientId.trim()
     let resolvedId = rawId
     let clientCode: string | undefined
 
     if (CLIENT_UUID_RE.test(rawId)) {
       resolvedId = rawId
-      // Attempt lookup to obtain clientCode if available
       try {
         const profile = await getClientRecord(rawId)
-        if (profile) {
-          clientCode = profile.record.id
-        }
+        if (profile) clientCode = profile.record.id
       } catch {
         // Fall back to resolvedId
       }
@@ -152,23 +139,22 @@ export const updateClientConfig: ActionConfig<UpdateClientInput, UpdateClientRes
     if ('type_parent' in patch) clientPayload.type_parent = patch.type_parent ?? null
     if ('organisationType' in patch) clientPayload.org_subtype = patch.organisationType ?? null
     if ('org_subtype' in patch) clientPayload.org_subtype = patch.org_subtype ?? null
-    if ('paymentTerms' in patch && patch.paymentTerms !== undefined) clientPayload.payment_terms = patch.paymentTerms
-    if ('payment_terms' in patch && patch.payment_terms !== undefined) clientPayload.payment_terms = patch.payment_terms
-    if ('approvedCreditLimit' in patch) clientPayload.approved_credit_limit = patch.approvedCreditLimit ?? null
-    if ('approved_credit_limit' in patch) clientPayload.approved_credit_limit = patch.approved_credit_limit ?? null
     if ('portal_default_language' in patch) clientPayload.portal_default_language = patch.portal_default_language
     if ('preferred_contact_channels' in patch) clientPayload.preferred_contact_channels = patch.preferred_contact_channels
 
-    // Check contact person fields
     const hasContactFields = 'contact_name' in patch || 'contact_designation' in patch || 'contact_phone' in patch
     if (hasContactFields) {
-      const { data: existingContact } = await supabase
+      const { data: existingContact, error: contactReadErr } = await supabase
         .from('client_contacts')
         .select('id')
         .eq('client_id', resolvedId)
         .eq('is_primary', true)
         .eq('status', 'Active')
         .maybeSingle()
+
+      if (contactReadErr) {
+        throw new Error(`Could not read primary contact for client '${resolvedId}': ${contactReadErr.message}`)
+      }
 
       if (existingContact && (existingContact as { id: string }).id) {
         const contactUpdate: Record<string, unknown> = {}
@@ -182,15 +168,18 @@ export const updateClientConfig: ActionConfig<UpdateClientInput, UpdateClientRes
           contactUpdate.phone = patch.contact_phone ? String(patch.contact_phone).trim() : null
         }
         if (Object.keys(contactUpdate).length > 0) {
-          await safeUpdate(
+          const contactRes = await safeUpdate(
             'client_contacts' as unknown as keyof Database['public']['Tables'],
             (existingContact as { id: string }).id,
             contactUpdate as unknown as Database['public']['Tables']['branches']['Update'],
-            input.clientUuid
+            input.clientUuid,
           )
+          if (contactRes.error) {
+            throw new Error(`Failed to update primary contact: ${String((contactRes.error as { message?: string }).message ?? contactRes.error)}`)
+          }
         }
       } else if (patch.contact_name && String(patch.contact_name).trim()) {
-        await idempotentInsert('client_contacts' as unknown as keyof Database['public']['Tables'], {
+        const contactIns = await idempotentInsert('client_contacts' as unknown as keyof Database['public']['Tables'], {
           client_id: resolvedId,
           full_name: String(patch.contact_name).trim(),
           designation: patch.contact_designation ? String(patch.contact_designation).trim() : null,
@@ -198,6 +187,9 @@ export const updateClientConfig: ActionConfig<UpdateClientInput, UpdateClientRes
           is_primary: true,
           client_uuid: input.clientUuid,
         } as unknown as Database['public']['Tables']['branches']['Insert'])
+        if (contactIns.error) {
+          throw new Error(`Failed to create primary contact: ${String((contactIns.error as { message?: string }).message ?? contactIns.error)}`)
+        }
       }
     }
 
@@ -207,35 +199,20 @@ export const updateClientConfig: ActionConfig<UpdateClientInput, UpdateClientRes
         resolvedId,
         clientPayload as unknown as Database['public']['Tables']['branches']['Update'],
         input.clientUuid,
-        { returnRow: true, returningColumns: 'id, client_code, name, phone, updated_at' }
+        { returnRow: true, returningColumns: 'id, client_code, name, phone, updated_at' },
       )
       if (error) {
-        throw new Error(`Failed to update client: ${error}`)
+        throw new Error(`Failed to update client: ${String((error as { message?: string }).message ?? error)}`)
       }
-      if (!updatedRow && (typeof navigator === 'undefined' || navigator.onLine !== false)) {
+      if (!updatedRow) {
         throw new Error(`Update returned no row for client '${resolvedId}'. Nothing was saved.`)
       }
-      if (updatedRow && (updatedRow as unknown as { client_code?: string }).client_code) {
+      if ((updatedRow as unknown as { client_code?: string }).client_code) {
         clientCode = (updatedRow as unknown as { client_code: string }).client_code
       }
     }
 
     const changedKeys = Object.keys(input.patch)
-    const events = [
-      {
-        type: EVENT_TYPES.CLIENT_UPDATED,
-        payload: {
-          clientId: resolvedId,
-          clientCode,
-          /* Keys, not values. A client patch can carry PAN, phone and address;
-             the event log is read by roles that `fieldGating` keeps those from. */
-          changedKeys,
-          timestamp: new Date().toISOString(),
-          userId: ctx.userId,
-        },
-      },
-    ]
-
     return {
       result: {
         success: true,
@@ -243,7 +220,18 @@ export const updateClientConfig: ActionConfig<UpdateClientInput, UpdateClientRes
         clientCode,
         changedKeys,
       },
-      events,
+      events: [
+        {
+          type: EVENT_TYPES.CLIENT_UPDATED,
+          payload: {
+            clientId: resolvedId,
+            clientCode,
+            changedKeys,
+            timestamp: new Date().toISOString(),
+            userId: ctx.userId,
+          },
+        },
+      ],
     }
   },
 }
