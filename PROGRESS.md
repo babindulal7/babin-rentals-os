@@ -13,7 +13,20 @@
 - Typecheck, lint, shell lint (680 files), UI-copy and fixtures pass. Full suite: 372 files, 4,797 tests, all passing.
 - No migration was touched, so PGlite and lifecycle were not re-run for this change.
 
-**Remaining**
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | -1 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-17T19:05:49.049Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-15T15:55:46.973Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
 - Land on `main` after review (fast-forward).
 - Note for review: the handover floor-role rule (`canHandover`) is enforced only by the UI helper, not by the action's declared capability `operations.perform`. This is unchanged by this fix.
 
