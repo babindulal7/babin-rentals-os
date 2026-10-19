@@ -7,8 +7,7 @@
  * wrapped at 1280px with the sidebar open. These tests render each page the way
  * the app does (inside the workspace shell, under the global `Header`) and pin:
  *
- *  1. Inventory has exactly one search box, and it is the header's (Clients is not
- *     asserted: `main` gave it an in-page box again on 17 Oct — see PROGRESS, 19 Oct);
+ *  1. exactly one search box per list page, and it is the header's;
  *  2. `/` focuses the header search at desktop width on both pages, as the
  *     "(press /)" placeholder promises;
  *  3. every Inventory status chip is still in its toolbar row — moving controls
@@ -154,11 +153,8 @@ afterEach(async () => {
 })
 
 describe('RULING 2026-10-15 — one search per list page, one toolbar line', { timeout: 90_000 }, () => {
-  // Inventory only: since 17 Oct `main` renders Clients with a second, in-page search box
-  // again (header + page, same placeholder). That is `main`'s own change, outside this port;
-  // it is reported in PROGRESS (19 Oct) rather than asserted or reverted here.
-  it('inventory renders exactly one search box, the header one', async () => {
-    await mountInShell('inventory')
+  it.each(['inventory', 'clients'] as const)('%s renders exactly one search box, the header one', async (page) => {
+    await mountInShell(page)
     const boxes = searchBoxes()
     expect(boxes.map((b) => b.placeholder)).toHaveLength(1)
     expect(boxes[0]!.closest('.app-global-header')).not.toBeNull()

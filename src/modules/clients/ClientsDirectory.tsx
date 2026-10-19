@@ -1083,9 +1083,8 @@ export function ClientsDirectory({
             applyFilter(id as FilterKey)
           }
         }}
-        searchValue={searchQuery}
-        onSearchChange={(val) => patchParams({ q: val ? val : null })}
-        searchPlaceholder="Search client, PAN, phone… (press /)"
+        // RULING 2026-10-15 (row 11): one search per list page. The header search holds ?q=
+        // and answers "/", so the in-page copy is not rendered. Revert = restore the three props.
         rightActions={
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--sp-sm)', flexShrink: 0 }}>
             {tabular &&
