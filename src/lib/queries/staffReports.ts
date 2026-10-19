@@ -1,4 +1,4 @@
-import { supabase } from '../supabase'
+import { IS_MOCK, supabase } from '../supabase'
 export { STAFF_METRICS, STAFF_LIST } from '../../data/staffReports'
 export type { StaffMember } from '../../data/staffReports'
 import { STAFF_METRICS, STAFF_LIST, type StaffMember } from '../../data/staffReports'
@@ -15,22 +15,32 @@ export interface StaffReportsSummary {
 export async function getStaffReportsSummary(): Promise<StaffReportsSummary> {
   try {
     const [usersRes, auditRes] = await Promise.all([
-      supabase.from('users').select('id, name, role, is_active'),
-      supabase.from('audit_events').select('id, user_id, action'),
+      supabase.from('users').select('id, full_name, primary_role, is_active'),
+      supabase.from('audit_events').select('id, actor_id, action'),
     ])
 
     const users = usersRes.data ?? []
     const audit = auditRes.data ?? []
 
     if (users.length === 0) {
+      if (IS_MOCK) {
+        return {
+          staffCount: STAFF_LIST.length,
+          metrics: STAFF_METRICS,
+          staffList: STAFF_LIST,
+        }
+      }
       return {
-        staffCount: STAFF_LIST.length,
-        metrics: STAFF_METRICS,
-        staffList: STAFF_LIST,
+        staffCount: 0,
+        metrics: {
+          ...STAFF_METRICS,
+          tasksCompleted: 0,
+        },
+        staffList: [],
       }
     }
 
-    const tasksCount = audit.length || STAFF_METRICS.tasksCompleted
+    const tasksCount = audit.length
 
     return {
       staffCount: users.length,
@@ -41,10 +51,20 @@ export async function getStaffReportsSummary(): Promise<StaffReportsSummary> {
       staffList: STAFF_LIST,
     }
   } catch {
+    if (IS_MOCK) {
+      return {
+        staffCount: STAFF_LIST.length,
+        metrics: STAFF_METRICS,
+        staffList: STAFF_LIST,
+      }
+    }
     return {
-      staffCount: STAFF_LIST.length,
-      metrics: STAFF_METRICS,
-      staffList: STAFF_LIST,
+      staffCount: 0,
+      metrics: {
+        ...STAFF_METRICS,
+        tasksCompleted: 0,
+      },
+      staffList: [],
     }
   }
 }

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, safeStorage } = require('electron');
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
@@ -191,7 +191,82 @@ if (!gotTheLock) {
     }
   });
 
+// SEC-03: Electron OS-protected credential storage (Windows DPAPI / macOS Keychain / Linux Secret Service)
+function getSecureStoragePath() {
+  return path.join(app.getPath('userData'), 'secure_session.json');
+}
+
+function readSecureStorage() {
+  try {
+    const p = getSecureStoragePath();
+    if (fs.existsSync(p)) {
+      return JSON.parse(fs.readFileSync(p, 'utf8'));
+    }
+  } catch (err) {
+    console.error('[Electron SecureStorage] Read error:', err);
+  }
+  return {};
+}
+
+function writeSecureStorage(obj) {
+  try {
+    const p = getSecureStoragePath();
+    fs.writeFileSync(p, JSON.stringify(obj), 'utf8');
+  } catch (err) {
+    console.error('[Electron SecureStorage] Write error:', err);
+  }
+}
+
+function setupSecureStorageIPC() {
+  ipcMain.handle('secure-storage:getItem', async (_event, key) => {
+    try {
+      const store = readSecureStorage();
+      const encryptedB64 = store[key];
+      if (!encryptedB64) return null;
+      if (safeStorage.isEncryptionAvailable()) {
+        const buffer = Buffer.from(encryptedB64, 'base64');
+        return safeStorage.decryptString(buffer);
+      }
+      return null;
+    } catch (err) {
+      console.error('[Electron SecureStorage] getItem error:', err);
+      return null;
+    }
+  });
+
+  ipcMain.handle('secure-storage:setItem', async (_event, key, value) => {
+    try {
+      const store = readSecureStorage();
+      if (safeStorage.isEncryptionAvailable()) {
+        const buffer = safeStorage.encryptString(value);
+        store[key] = buffer.toString('base64');
+        writeSecureStorage(store);
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('[Electron SecureStorage] setItem error:', err);
+      return false;
+    }
+  });
+
+  ipcMain.handle('secure-storage:removeItem', async (_event, key) => {
+    try {
+      const store = readSecureStorage();
+      if (key in store) {
+        delete store[key];
+        writeSecureStorage(store);
+      }
+      return true;
+    } catch (err) {
+      console.error('[Electron SecureStorage] removeItem error:', err);
+      return false;
+    }
+  });
+}
+
   app.whenReady().then(() => {
+    setupSecureStorageIPC();
     createWindow();
 
     app.on('activate', () => {

@@ -1,4 +1,4 @@
-import { supabase } from '../supabase'
+import { IS_MOCK, supabase } from '../supabase'
 
 export interface OperationMetrics {
   totalPickups: number
@@ -135,6 +135,25 @@ const MOCK_OPERATIONS: OperationsReportData = {
   ],
 }
 
+const EMPTY_OPERATIONS: OperationsReportData = {
+  metrics: {
+    totalPickups: 0,
+    onTimePickupRate: 0,
+    totalReturns: 0,
+    onTimeReturnRate: 0,
+    currentlyOverdue: 0,
+    totalPackingJobs: 0,
+    packingFulfillmentRate: 0,
+    idVerificationRate: 0,
+  },
+  deliveryMethods: [],
+  returnConditions: [],
+  pickups: [],
+  returns: [],
+  overdueList: [],
+  packingJobs: [],
+}
+
 /* ── Query Aggregations from PostgreSQL ─────────────────────────────────── */
 
 export async function getOperationsReport(options?: ReportFilterOptions): Promise<OperationsReportData> {
@@ -189,13 +208,15 @@ export async function getOperationsReport(options?: ReportFilterOptions): Promis
     const returnLines = returnsRes.data || []
 
     if (bookings.length === 0 && sessions.length === 0) {
-      return MOCK_OPERATIONS
+      return IS_MOCK ? MOCK_OPERATIONS : EMPTY_OPERATIONS
     }
 
     // Delivery method counts
     const deliveryMap: Record<string, number> = {}
     let totalPickups = 0
     let verifiedIdCount = 0
+    let onTimePickupsCount = 0
+    let onTimeReturnsCount = 0
 
     // Overdue tracking
     const overdueList: OverdueRentalItem[] = []
@@ -253,12 +274,23 @@ export async function getOperationsReport(options?: ReportFilterOptions): Promis
     const returnList: ReturnSessionItem[] = []
 
     for (const s of sessions) {
-      if (s.operation === 'dispatch') {
+      const matchedBooking = bookings.find((b) => b.id === s.booking_id)
+      const clientObj = matchedBooking?.clients as { name?: string } | null
+
+      if (s.operation === 'dispatch' || s.operation === 'Handover') {
         totalPickups++
         if (s.government_id_verified) verifiedIdCount++
 
-        const matchedBooking = bookings.find((b) => b.id === s.booking_id)
-        const clientObj = matchedBooking?.clients as { name?: string } | null
+        if (matchedBooking?.pickup_at && s.completed_at) {
+          const compMs = Date.parse(s.completed_at)
+          const schedMs = Date.parse(matchedBooking.pickup_at)
+          if (!isNaN(compMs) && !isNaN(schedMs) && compMs <= schedMs + 3600000) {
+            onTimePickupsCount++
+          }
+        } else if (!matchedBooking?.pickup_at) {
+          onTimePickupsCount++
+        }
+
         pickupList.push({
           id: s.id,
           bookingNo: matchedBooking?.booking_no || `SES-${s.session_no}`,
@@ -268,11 +300,19 @@ export async function getOperationsReport(options?: ReportFilterOptions): Promis
           receiverName: s.receiver_name || s.pickup_person_name || 'Staff Handover',
           idVerified: Boolean(s.government_id_verified),
           staffName: 'Warehouse Staff',
-          status: s.state === 'completed' ? 'Completed' : 'In Progress',
+          status: s.state === 'completed' || s.state === 'Completed' ? 'Completed' : 'In Progress',
         })
-      } else if (s.operation === 'return') {
-        const matchedBooking = bookings.find((b) => b.id === s.booking_id)
-        const clientObj = matchedBooking?.clients as { name?: string } | null
+      } else if (s.operation === 'return' || s.operation === 'Return') {
+        if (matchedBooking?.return_at && s.completed_at) {
+          const compMs = Date.parse(s.completed_at)
+          const schedMs = Date.parse(matchedBooking.return_at)
+          if (!isNaN(compMs) && !isNaN(schedMs) && compMs <= schedMs + 3600000) {
+            onTimeReturnsCount++
+          }
+        } else if (!matchedBooking?.return_at) {
+          onTimeReturnsCount++
+        }
+
         const matchedLines = returnLines.filter((rl) => rl.session_id === s.id)
         const hasCleaning = matchedLines.some((rl) => rl.cleaning_required)
         const hasDamage = matchedLines.some((rl) => rl.damage_suspected)
@@ -292,7 +332,7 @@ export async function getOperationsReport(options?: ReportFilterOptions): Promis
           condition: condStr,
           cleaningRequired: hasCleaning,
           damageSuspected: hasDamage,
-          status: s.state === 'completed' ? 'Completed' : 'In Progress',
+          status: s.state === 'completed' || s.state === 'Completed' ? 'Completed' : 'In Progress',
         })
       }
     }
@@ -320,27 +360,31 @@ export async function getOperationsReport(options?: ReportFilterOptions): Promis
       percent: Math.round((count / totalReturnsCount) * 100),
     }))
 
-    const idRate = totalPickups > 0 ? Number(((verifiedIdCount / totalPickups) * 100).toFixed(1)) : 95.7
+    const idRate = totalPickups > 0 ? Number(((verifiedIdCount / totalPickups) * 100).toFixed(1)) : 0
+    const onTimePickupRate = pickupList.length > 0 ? Number(((onTimePickupsCount / pickupList.length) * 100).toFixed(1)) : 0
+    const onTimeReturnRate = returnList.length > 0 ? Number(((onTimeReturnsCount / returnList.length) * 100).toFixed(1)) : 0
+    const packedCount = packingJobs.filter((j) => j.state === 'packed').length
+    const packingFulfillmentRate = packingJobs.length > 0 ? Number(((packedCount / packingJobs.length) * 100).toFixed(1)) : 0
 
     return {
       metrics: {
-        totalPickups: totalPickups || MOCK_OPERATIONS.metrics.totalPickups,
-        onTimePickupRate: 93.5,
-        totalReturns: returnList.length || MOCK_OPERATIONS.metrics.totalReturns,
-        onTimeReturnRate: 88.1,
+        totalPickups,
+        onTimePickupRate,
+        totalReturns: returnList.length,
+        onTimeReturnRate,
         currentlyOverdue: overdueList.length,
-        totalPackingJobs: packingJobs.length || MOCK_OPERATIONS.metrics.totalPackingJobs,
-        packingFulfillmentRate: 98.2,
+        totalPackingJobs: packingJobs.length,
+        packingFulfillmentRate,
         idVerificationRate: idRate,
       },
-      deliveryMethods: deliveryMethods.length > 0 ? deliveryMethods : MOCK_OPERATIONS.deliveryMethods,
+      deliveryMethods,
       returnConditions,
-      pickups: pickupList.length > 0 ? pickupList.slice(0, 10) : MOCK_OPERATIONS.pickups,
-      returns: returnList.length > 0 ? returnList.slice(0, 10) : MOCK_OPERATIONS.returns,
-      overdueList: overdueList.length > 0 ? overdueList : MOCK_OPERATIONS.overdueList,
-      packingJobs: packingJobs.length > 0 ? packingJobs.slice(0, 10) : MOCK_OPERATIONS.packingJobs,
+      pickups: pickupList.slice(0, 10),
+      returns: returnList.slice(0, 10),
+      overdueList,
+      packingJobs: packingJobs.slice(0, 10),
     }
   } catch {
-    return MOCK_OPERATIONS
+    return IS_MOCK ? MOCK_OPERATIONS : EMPTY_OPERATIONS
   }
 }

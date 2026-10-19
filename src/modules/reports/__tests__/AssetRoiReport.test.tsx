@@ -32,6 +32,7 @@ vi.mock('../../../lib/moneyVisibility', () => ({
 }))
 
 vi.mock('../../../lib/supabase', () => ({
+  IS_MOCK: true,
   supabase: {
     from: () => ({
       select: () => Promise.resolve({ data: [] }),

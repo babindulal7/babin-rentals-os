@@ -1,0 +1,8 @@
+{"command":"typecheck","exit":2,"log":"phase1-typecheck.log"}
+{"command":"lint","exit":0,"log":"phase1-lint.log"}
+{"command":"typecheck","exit":2,"log":"phase1-typecheck-rerun.log"}
+{"command":"test","exit":1,"log":"phase1-test.log"}
+{"command":"check:pglite","exit":0,"log":"phase1-check-pglite.log"}
+{"command":"check:security","exit":0,"log":"phase1-check-security.log"}
+{"command":"check:lifecycle","exit":0,"log":"phase1-check-lifecycle.log"}
+{"command":"build","exit":0,"log":"phase1-build.log"}

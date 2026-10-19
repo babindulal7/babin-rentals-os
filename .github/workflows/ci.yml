@@ -74,6 +74,9 @@ jobs:
       # database that accepted a double booking and refused every discounted
       # booking, because both failures live on the far side of the mock seam.
       # A red step blocks merge.
+      - name: Authenticated security regressions (local PGlite)
+        run: npm run check:security
+
       - name: Lifecycle
         run: npm run check:lifecycle
 

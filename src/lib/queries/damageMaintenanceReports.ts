@@ -1,4 +1,4 @@
-import { supabase } from '../supabase'
+import { IS_MOCK, supabase } from '../supabase'
 import { rupees, type Paisa } from '../money'
 
 export interface DamageIncidentItem {
@@ -274,6 +274,26 @@ const MOCK_DM: DamageMaintenanceReportData = {
   ],
 }
 
+const EMPTY_DM: DamageMaintenanceReportData = {
+  metrics: {
+    totalFindings: 0,
+    totalDamageCost: rupees(0),
+    totalChargedToClient: rupees(0),
+    activeRepairs: 0,
+    averageTurnaroundDays: 0,
+    totalRepairSpend: rupees(0),
+    routineServicesCompleted: 0,
+    fleetAvailabilityRate: 100,
+    sidelinedUnitsCount: 0,
+  },
+  severityBreakdown: [],
+  damageTypeBreakdown: [],
+  incidents: [],
+  repairs: [],
+  servicing: [],
+  sidelinedUnits: [],
+}
+
 /* ── Query Aggregations from PostgreSQL ─────────────────────────────────── */
 
 export async function getDamageMaintenanceReport(options?: ReportFilterOptions): Promise<DamageMaintenanceReportData> {
@@ -296,7 +316,7 @@ export async function getDamageMaintenanceReport(options?: ReportFilterOptions):
     if (options?.from) findingsQuery = findingsQuery.gte('created_at', options.from)
     if (options?.to) findingsQuery = findingsQuery.lte('created_at', options.to)
 
-    const [findingsRes, maintenanceRes, casesRes] = await Promise.all([
+    const [findingsRes, maintenanceRes, casesRes, sidelinedRes] = await Promise.all([
       findingsQuery,
       supabase
         .from('maintenance_records')
@@ -329,14 +349,27 @@ export async function getDamageMaintenanceReport(options?: ReportFilterOptions):
           charged_to_client_amount,
           deposit_applied_amount
         `),
+      supabase
+        .from('product_units')
+        .select(`
+          id,
+          serial_no,
+          asset_tag,
+          status,
+          condition,
+          updated_at,
+          products!product_id(name)
+        `)
+        .in('status', ['Maintenance', 'Inspection', 'Missing']),
     ])
 
     const findings = findingsRes.data || []
     const mntRecords = maintenanceRes.data || []
     const cases = casesRes.data || []
+    const rawSidelined = sidelinedRes.data || []
 
-    if (findings.length === 0 && mntRecords.length === 0) {
-      return MOCK_DM
+    if (findings.length === 0 && mntRecords.length === 0 && rawSidelined.length === 0) {
+      return IS_MOCK ? MOCK_DM : EMPTY_DM
     }
 
     let totalDamageCostVal = 0
@@ -454,26 +487,40 @@ export async function getDamageMaintenanceReport(options?: ReportFilterOptions):
 
     const avgTurnaround = completedRepairsCount > 0 ? Number((totalTurnaroundDays / completedRepairsCount).toFixed(1)) : 3.4
 
+    const sidelinedUnits: SidelinedUnitItem[] = rawSidelined.length > 0
+      ? rawSidelined.map((u) => {
+          const prodObj = u.products as { name?: string } | null
+          return {
+            id: u.id,
+            serial: u.serial_no || u.asset_tag || 'SN-UNKNOWN',
+            modelName: prodObj?.name || 'Equipment Unit',
+            status: u.status === 'Maintenance' ? 'In Maintenance' : u.status === 'Inspection' ? 'Pending QC' : 'Missing',
+            sidelinedSince: u.updated_at ? u.updated_at.slice(0, 10) : new Date().toISOString().slice(0, 10),
+            reason: `${u.status}: Condition ${u.condition || 'Unknown'}`,
+          }
+        })
+      : (IS_MOCK ? MOCK_DM.sidelinedUnits : [])
+
     return {
       metrics: {
-        totalFindings: findings.length || MOCK_DM.metrics.totalFindings,
-        totalDamageCost: rupees(Math.round(totalDamageCostVal / 100)) || MOCK_DM.metrics.totalDamageCost,
-        totalChargedToClient: rupees(Math.round(totalChargedVal / 100)) || MOCK_DM.metrics.totalChargedToClient,
-        activeRepairs: repairs.filter((r) => r.status === 'In Progress').length || MOCK_DM.metrics.activeRepairs,
+        totalFindings: findings.length,
+        totalDamageCost: rupees(Math.round(totalDamageCostVal / 100)),
+        totalChargedToClient: rupees(Math.round(totalChargedVal / 100)),
+        activeRepairs: repairs.filter((r) => r.status === 'In Progress').length,
         averageTurnaroundDays: avgTurnaround,
-        totalRepairSpend: rupees(Math.round(totalRepairSpendVal / 100)) || MOCK_DM.metrics.totalRepairSpend,
-        routineServicesCompleted: servicing.filter((s) => s.status === 'Completed').length || MOCK_DM.metrics.routineServicesCompleted,
+        totalRepairSpend: rupees(Math.round(totalRepairSpendVal / 100)),
+        routineServicesCompleted: servicing.filter((s) => s.status === 'Completed').length,
         fleetAvailabilityRate: 94.2,
-        sidelinedUnitsCount: MOCK_DM.metrics.sidelinedUnitsCount,
+        sidelinedUnitsCount: sidelinedUnits.length,
       },
-      severityBreakdown: severityBreakdown.some((s) => s.count > 0) ? severityBreakdown : MOCK_DM.severityBreakdown,
-      damageTypeBreakdown: damageTypeBreakdown.length > 0 ? damageTypeBreakdown : MOCK_DM.damageTypeBreakdown,
-      incidents: incidents.length > 0 ? incidents.slice(0, 10) : MOCK_DM.incidents,
-      repairs: repairs.length > 0 ? repairs.slice(0, 10) : MOCK_DM.repairs,
-      servicing: servicing.length > 0 ? servicing.slice(0, 10) : MOCK_DM.servicing,
-      sidelinedUnits: MOCK_DM.sidelinedUnits,
+      severityBreakdown: severityBreakdown.some((s) => s.count > 0) ? severityBreakdown : (IS_MOCK ? MOCK_DM.severityBreakdown : []),
+      damageTypeBreakdown: damageTypeBreakdown.length > 0 ? damageTypeBreakdown : (IS_MOCK ? MOCK_DM.damageTypeBreakdown : []),
+      incidents: incidents.slice(0, 10),
+      repairs: repairs.slice(0, 10),
+      servicing: servicing.slice(0, 10),
+      sidelinedUnits,
     }
   } catch {
-    return MOCK_DM
+    return IS_MOCK ? MOCK_DM : EMPTY_DM
   }
 }

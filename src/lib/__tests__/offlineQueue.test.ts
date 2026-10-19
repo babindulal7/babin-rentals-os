@@ -27,9 +27,9 @@ describe('offlineQueue — Phase 9 & Law 8 Guard Rails', () => {
     vi.clearAllMocks()
   })
 
-  it('declares and builds versions 1 through 4 cleanly on Dexie instance', () => {
+  it('declares and builds versions 1 through 5 cleanly on Dexie instance', () => {
     testDb = new OfflineQueueDB()
-    expect(testDb.verno).toBe(4)
+    expect(testDb.verno).toBe(5)
     expect(testDb.tables.some((t) => t.name === 'mutations')).toBe(true)
     expect(testDb.tables.some((t) => t.name === 'conflicts')).toBe(true)
   })

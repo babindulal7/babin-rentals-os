@@ -1,4 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { beforeAll, describe, it, expect, vi } from 'vitest'
+import { loadMockClient } from '../../supabase'
+
+// Match main.tsx bootstrap and keep this fixture test off the live backend.
+vi.hoisted(() => { vi.stubEnv('VITE_DATA_SOURCE', 'mock') })
+beforeAll(async () => { await loadMockClient() })
 import {
   getPulseLiveSummary,
   PERIODS,

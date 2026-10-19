@@ -1,0 +1,27 @@
+{
+  "head": "c9ea1297325f304e5d0e7b9c073337cc6b0bb160",
+  "files": {
+    ".github/workflows/ci.yml": "298680137e68dd262f19c266c3650dd5a9608ac62b5821a12711b18e3b2fb4fc",
+    "package-lock.json": "bafc4dffe4d7cbabed7f65f8450296e1bc79fe38897bd75939b21cb7edd540df",
+    "package.json": "e7c759f0ecf6be701c96ceac86015900cc979a49ad79a4756f592433de557aac",
+    "scripts/check-astra-phase0.mjs": "2f6978e19a0f1d22840d27401ba0fadc0bc824f3751cf21cdb86d8687cba3a9c",
+    "src/actions/documents/__tests__/createDocument.test.ts": "95a5373932e55de9a08ec5eb00dd7dfd9b3eb3a3d563d3b75a76b96a29b24b50",
+    "src/actions/documents/createDocument.ts": "8f2774a054f3b34774334c3f655a6ecfe03f8c60bf30cfac9d3d4254c2d0f86a",
+    "src/lib/__tests__/documentStorage.test.ts": "cf0801c1c14174ede4b6e460fd36afccddba1e2750a0b7961a76d22385de511e",
+    "src/lib/__tests__/offlineIdentity.test.ts": "d7205d63945a43927cb2cc233d375be828f6f9bef34dd53572e0c714c6f91936",
+    "src/lib/__tests__/offlineQueue.phase0.test.ts": "d74440e4441e4066afd12001bcf5fd32742ebd635eaf25a1715a3c7425c1a507",
+    "src/lib/__tests__/offlineQueue.test.ts": "262506583a710b7d310bf3da764c033e0a78e54891c4a7b0898d23055a96e750",
+    "src/lib/__tests__/secureStorage.test.ts": "ff44d30d6a4ca4fd5d5bd92c9297f5d4d7bfc689ceaa9abd52ee788a30b7183d",
+    "src/lib/__tests__/syncEngine.phase0.test.ts": "57218d7301a050f6f980f697dc33d54d45af8861c0bd4e3d155e89ed54184016",
+    "src/lib/documentStorage.ts": "e53626411d35fd04296766ee38c871d2e9d44133c495193af5a0f2d19d3fac8b",
+    "src/lib/offlineIdentity.ts": "821ed837e985ff6ec5bb40dab058671f7d01566775ec0e90786db95897358742",
+    "src/lib/offlineQueue.ts": "89bdcd9857e1af60471598a1d1ae1f065327e22560305f74cf997b7fed7cbb1e",
+    "src/lib/queries/__tests__/pulse.test.ts": "bb1fb86bae1326d1ec84da17ac3ac00859fef8278287a19909fdc0ab105c6dde",
+    "src/lib/queries/rentalReports.ts": "6af859926c9dfd1ebe399b6c8e95e43d57c16b71f620fe6fff6bf5c4008f9f36",
+    "src/lib/queries/salesVatReports.ts": "46687207cad957526fb82f4ecb7be987e342d3534d35ab778878abe42377c50a",
+    "src/lib/secureStorage.ts": "b93eb9fdb32a5102c518619576a9436ef76e244a0e9d85493b3ebce582c7a5f9",
+    "src/lib/syncEngine.ts": "23a398b5faf4d8e2787e64d063ed8c637d38de83aa0e5a750f0fe93148c7ab53",
+    "src/modules/operations/DriverHandoverModal.tsx": "e7b9897bc876d18a849d854dae55dc1bf837f037caf7183327d01e8b0934558a",
+    "supabase/migrations/0170_astra_phase0_authorization.sql": "7f478bdb54c0f4160fbc6e6e0be6c7389a0f5924c127dfaa2886efc1a863315b"
+  }
+}

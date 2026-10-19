@@ -3,7 +3,7 @@ import { Modal } from '../../components/ui/Modal'
 import { Button } from '../../components/ui/Page'
 import Icon from '../../components/ui/Icon'
 import { Badge } from '../../components/ui/Badge'
-import { supabase, newClientUuid } from '../../lib/supabase'
+import { supabase, newClientUuid, IS_MOCK } from '../../lib/supabase'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../components/ui/Toast'
 import { captureError } from '../../lib/monitoring'
@@ -26,6 +26,26 @@ interface GpsCoords {
   lng: number
   accuracy: number
   capturedAt: string
+}
+
+function dataUrlToBlob(dataUrl: string): Blob | null {
+  try {
+    const parts = dataUrl.split(',')
+    if (parts.length < 2) return null
+    const mimeMatch = parts[0]?.match(/:(.*?);/)
+    const mime = mimeMatch?.[1] ?? 'image/png'
+    const b64 = parts[1]
+    if (!b64) return null
+    const binary = atob(b64)
+    const len = binary.length
+    const buffer = new Uint8Array(len)
+    for (let i = 0; i < len; i++) {
+      buffer[i] = binary.charCodeAt(i)
+    }
+    return new Blob([buffer], { type: mime })
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -263,7 +283,7 @@ export function DriverHandoverModal({
       }
 
       const { handoverRental } = await import('../../actions/rentals/index')
-      await handoverRental(
+      const actionResponse = await handoverRental(
         {
           bookingId,
           lines: resolvedLines,
@@ -290,6 +310,55 @@ export function DriverHandoverModal({
         },
         { userId: user?.id || 'USR-FLOOR', role: user?.role || 'Warehouse' },
       )
+
+      // Upload signature and photo evidence to authenticated storage when session is established
+      const sessionId = actionResponse?.sessionId
+      const bookingUuid = actionResponse?.bookingId
+      const isUuid = (val: string | undefined): val is string =>
+        Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val))
+
+      if (sessionId && bookingUuid && isUuid(sessionId) && isUuid(bookingUuid) && isUuid(user?.id) && !IS_MOCK) {
+        try {
+          const { uploadEvidencePhoto } = await import('../../lib/evidenceStorage')
+          // 1. Signature image
+          if (hasSignature && canvasRef.current) {
+            const sigBlob = dataUrlToBlob(canvasRef.current.toDataURL('image/png'))
+            if (sigBlob) {
+              await uploadEvidencePhoto({
+                file: sigBlob,
+                filename: `signature-receiver-${bookingNo}-${Date.now()}.png`,
+                category: 'Pickup / Delivery',
+                reference: {
+                  bookingId: bookingUuid,
+                  sessionId,
+                  operationStage: 'Delivery',
+                },
+                userId: user.id,
+              })
+            }
+          }
+          // 2. Drop-off photo
+          if (photoData) {
+            const photoBlob = dataUrlToBlob(photoData)
+            if (photoBlob) {
+              await uploadEvidencePhoto({
+                file: photoBlob,
+                filename: `delivery-dropoff-${bookingNo}-${Date.now()}.jpg`,
+                category: 'Pickup / Delivery',
+                reference: {
+                  bookingId: bookingUuid,
+                  sessionId,
+                  operationStage: 'Delivery',
+                },
+                userId: user.id,
+              })
+            }
+          }
+        } catch (evidenceErr) {
+          // Handover custody is already committed; capture evidence upload warning without breaking UX
+          captureError(evidenceErr, { where: 'DriverHandoverModal.evidenceUpload' })
+        }
+      }
 
       handoverActionId.current = null
       showSuccessToast('Handover Completed', `Delivery for ${bookingNo} handed over to ${recipientName.trim()}`)

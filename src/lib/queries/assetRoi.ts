@@ -1,4 +1,4 @@
-import { supabase } from '../supabase'
+import { IS_MOCK, supabase } from '../supabase'
 import { rupees, type Paisa } from '../money'
 
 /**
@@ -145,16 +145,18 @@ export function computeFleetSummary(rows: readonly UnitRoiRow[]): FleetRoiSummar
  */
 export async function getFleetAssetRoiSummary(): Promise<FleetRoiSummary> {
   try {
-    const [unitsRes, maintRes] = await Promise.all([
+    const [unitsRes, maintRes, bluRes] = await Promise.all([
       supabase.from('product_units_v').select('id, asset_tag, serial_no, product_name, category_name, purchase_price, purchase_date, created_at'),
       supabase.from('maintenance_records').select('product_unit_id, cost, status'),
+      supabase.from('booking_line_units').select('asset_id, booking_lines(rate, days, qty, discount_amount, voided_at)'),
     ])
 
     const units = unitsRes.data ?? []
     const maint = maintRes.data ?? []
+    const bluList = bluRes.data ?? []
 
     if (units.length === 0) {
-      return computeFleetSummary(DEFAULT_FLEET_ROWS)
+      return IS_MOCK ? computeFleetSummary(DEFAULT_FLEET_ROWS) : computeFleetSummary([])
     }
 
     const maintByUnit = new Map<string, number>()
@@ -165,23 +167,32 @@ export async function getFleetAssetRoiSummary(): Promise<FleetRoiSummary> {
       }
     }
 
+    const revenueByUnit = new Map<string, number>()
+    for (const blu of bluList) {
+      if (blu.asset_id && blu.booking_lines) {
+        const bl = blu.booking_lines as { rate?: number; days?: number; qty?: number; discount_amount?: number; voided_at?: string | null }
+        if (!bl.voided_at) {
+          const rev = Math.max(0, (bl.qty || 1) * (bl.days || 1) * (bl.rate || 0) - (bl.discount_amount || 0))
+          revenueByUnit.set(blu.asset_id, (revenueByUnit.get(blu.asset_id) ?? 0) + rev)
+        }
+      }
+    }
+
     const now = Date.now()
     const rows: UnitRoiRow[] = units.map((u, i) => {
-      const purchasePrice = Number(u.purchase_price) || 500000
+      const purchasePrice = Number(u.purchase_price) || 0
       const purchasePricePaisa = rupees(purchasePrice)
-      const maintCost = maintByUnit.get(u.id) ?? Math.round(purchasePrice * 0.05)
+      const maintCost = maintByUnit.get(u.id) ?? 0
       const maintenanceCostPaisa = rupees(maintCost)
 
-      // Estimate revenue from utilization if direct invoice-line link not populated
       const purchaseDate = u.purchase_date ? Date.parse(u.purchase_date) : Date.parse(u.created_at || '')
-      const daysOwned = Math.max(30, Math.round((now - (isNaN(purchaseDate) ? now - 180 * 86400000 : purchaseDate)) / 86400000))
-      
-      const defaultRow = DEFAULT_FLEET_ROWS[i % DEFAULT_FLEET_ROWS.length]
-      const revMultiplier = defaultRow ? defaultRow.roiPercent > 0 ? 1.6 : 0.6 : 1.2
-      const lifetimeRevenuePaisa = rupees(Math.round(purchasePrice * revMultiplier))
+      const daysOwned = Math.max(1, Math.round((now - (isNaN(purchaseDate) ? now - 180 * 86400000 : purchaseDate)) / 86400000))
+
+      const realRev = revenueByUnit.get(u.id) ?? 0
+      const lifetimeRevenuePaisa = rupees(realRev)
 
       const netProfit = (lifetimeRevenuePaisa as number) - ((purchasePricePaisa as number) + (maintenanceCostPaisa as number))
-      const roiPercent = purchasePrice > 0 ? (netProfit / (purchasePricePaisa as number)) * 100 : 0
+      const roiPercent = (purchasePricePaisa as number) > 0 ? (netProfit / (purchasePricePaisa as number)) * 100 : 0
       const maintDrag = (lifetimeRevenuePaisa as number) > 0 ? ((maintenanceCostPaisa as number) / (lifetimeRevenuePaisa as number)) * 100 : 0
 
       return {
@@ -196,13 +207,13 @@ export async function getFleetAssetRoiSummary(): Promise<FleetRoiSummary> {
         netProfitPaisa: netProfit as Paisa,
         roiPercent: Math.round(roiPercent * 10) / 10,
         maintenanceDragPercent: Math.round(maintDrag * 10) / 10,
-        utilizationPercent: defaultRow?.utilizationPercent ?? 65,
+        utilizationPercent: daysOwned > 0 ? Math.min(100, Math.round(((realRev > 0 ? 1 : 0) / daysOwned) * 100)) : 0,
         daysOwned,
       }
     })
 
     return computeFleetSummary(rows)
   } catch {
-    return computeFleetSummary(DEFAULT_FLEET_ROWS)
+    return IS_MOCK ? computeFleetSummary(DEFAULT_FLEET_ROWS) : computeFleetSummary([])
   }
 }

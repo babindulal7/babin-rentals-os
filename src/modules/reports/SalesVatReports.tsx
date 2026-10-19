@@ -44,10 +44,15 @@ export default function SalesVatReports() {
   const viewport = useViewport()
   const [activeTab, setActiveTab] = useState<FinanceReportTab>('sales')
   const [filters, setFilters] = useState<ReportFilters>({})
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [attempt, setAttempt] = useState(0)
   const [data, setData] = useState<{ sales: SalesReportData; vat: VatTaxReportData } | null>(null)
 
   useEffect(() => {
+    if (!money) return
     let active = true
+    setData(null)
+    setLoadError(null)
 
     const branchId = filters.chips?.branch_id?.[0]
     const queryOpts: ReportFilterOptions = {
@@ -58,12 +63,14 @@ export default function SalesVatReports() {
 
     void getSalesVatReport(queryOpts).then((res) => {
       if (active) setData(res)
+    }).catch(() => {
+      if (active) setLoadError('Sales and VAT records could not be loaded. Please try again.')
     })
 
     return () => {
       active = false
     }
-  }, [filters])
+  }, [filters, money, attempt])
 
 
   // Sales KPI Strip
@@ -243,6 +250,17 @@ export default function SalesVatReports() {
           restrictedReason="Sales and VAT reports contain statutory financial ledgers, invoice totals, and tax returns, so there is no version of this page your role can see."
           restrictedRequiredRole="Owner, Admin, Coordinator or Accounts"
         >
+          {null}
+        </PageBody>
+      </div>
+    )
+  }
+
+  if (loadError || !data) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+        <PageHeader icon="file" title="Sales & VAT Register" />
+        <PageBody error={loadError} loading={!loadError} onRetry={() => setAttempt(value => value + 1)}>
           {null}
         </PageBody>
       </div>

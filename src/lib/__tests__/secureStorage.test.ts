@@ -6,6 +6,7 @@ import {
   WebLocalStorageAdapter,
   CapacitorKeystoreAdapter,
   TauriStrongholdAdapter,
+  ElectronSafeStorageAdapter,
 } from '../secureStorage';
 
 describe('secureStorage', () => {
@@ -35,6 +36,12 @@ describe('secureStorage', () => {
       (window as any).__TAURI__ = {};
       expect(detectPlatform()).toBe('tauri');
       delete (window as any).__TAURI__;
+    });
+
+    it('detects electron platform when electronAPI.isElectron is true', () => {
+      (window as any).electronAPI = { isElectron: true };
+      expect(detectPlatform()).toBe('electron');
+      delete (window as any).electronAPI;
     });
   });
 
@@ -309,10 +316,71 @@ describe('secureStorage', () => {
     });
   });
 
+  describe('ElectronSafeStorageAdapter (SEC-03)', () => {
+    it('uses Electron IPC invoke for secureStorage and purges unencrypted localStorage', async () => {
+      const mockGet = vi.fn().mockResolvedValue('encrypted_vault_secret');
+      const mockSet = vi.fn().mockResolvedValue(true);
+      const mockRemove = vi.fn().mockResolvedValue(true);
+
+      (window as any).electronAPI = {
+        isElectron: true,
+        secureStorage: {
+          getItem: mockGet,
+          setItem: mockSet,
+          removeItem: mockRemove,
+        },
+      };
+
+      // Seed a legacy plaintext token in localStorage to verify automatic purge
+      localStorage.setItem('sb-token', 'plaintext_leak');
+
+      const adapter = new ElectronSafeStorageAdapter();
+      await adapter.setItem('sb-token', 'jwt_secret_val');
+
+      expect(mockSet).toHaveBeenCalledWith('sb-token', 'jwt_secret_val');
+      // Plain localStorage should be cleared of the sensitive key
+      expect(localStorage.getItem('sb-token')).toBeNull();
+
+      const val = await adapter.getItem('sb-token');
+      expect(val).toBe('encrypted_vault_secret');
+      expect(mockGet).toHaveBeenCalledWith('sb-token');
+
+      await adapter.removeItem('sb-token');
+      expect(mockRemove).toHaveBeenCalledWith('sb-token');
+
+      delete (window as any).electronAPI;
+    });
+
+    it('falls back to in-memory pending map when electron secureStorage write fails', async () => {
+      const mockSet = vi.fn().mockRejectedValue(new Error('IPC failed'));
+      (window as any).electronAPI = {
+        isElectron: true,
+        secureStorage: {
+          getItem: vi.fn().mockResolvedValue(null),
+          setItem: mockSet,
+          removeItem: vi.fn().mockResolvedValue(true),
+        },
+      };
+
+      const adapter = new ElectronSafeStorageAdapter();
+      await adapter.setItem('session', 'fallback_secret');
+      expect(await adapter.getItem('session')).toBe('fallback_secret');
+
+      delete (window as any).electronAPI;
+    });
+  });
+
   describe('getSecureAuthStorage', () => {
     it('returns WebLocalStorageAdapter in standard browser environment', () => {
       const storage = getSecureAuthStorage();
       expect(storage).toBeInstanceOf(WebLocalStorageAdapter);
+    });
+
+    it('returns ElectronSafeStorageAdapter in Electron desktop environment (SEC-03)', () => {
+      (window as any).electronAPI = { isElectron: true };
+      const storage = getSecureAuthStorage();
+      expect(storage).toBeInstanceOf(ElectronSafeStorageAdapter);
+      delete (window as any).electronAPI;
     });
   });
 });

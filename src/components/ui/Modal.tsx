@@ -25,16 +25,20 @@ const modalStack: symbol[] = []
 let scrollLocks = 0
 
 function lockScroll(id: symbol) {
-  modalStack.push(id)
-  scrollLocks += 1
-  document.body.style.overflow = 'hidden'
+  if (!modalStack.includes(id)) {
+    modalStack.push(id)
+    scrollLocks += 1
+    document.body.style.overflow = 'hidden'
+  }
 }
 
 function unlockScroll(id: symbol) {
   const i = modalStack.indexOf(id)
-  if (i !== -1) modalStack.splice(i, 1)
-  scrollLocks = Math.max(0, scrollLocks - 1)
-  if (scrollLocks === 0) document.body.style.overflow = ''
+  if (i !== -1) {
+    modalStack.splice(i, 1)
+    scrollLocks = Math.max(0, scrollLocks - 1)
+    if (scrollLocks === 0) document.body.style.overflow = ''
+  }
 }
 
 /* What can take focus inside the dialog, for the Tab trap and initial focus.

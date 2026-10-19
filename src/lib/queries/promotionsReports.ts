@@ -1,4 +1,4 @@
-import { supabase } from '../supabase'
+import { IS_MOCK, supabase } from '../supabase'
 import {
   METRICS,
   RETURN_ON_PROMOTION,
@@ -49,28 +49,75 @@ export async function getPromotionsReportsSummary(): Promise<PromotionsReportsSu
     const bundles = bundlesRes.data ?? []
     const discounts = discountsRes.data ?? []
 
+    if (coupons.length === 0 && redemptions.length === 0 && bundles.length === 0 && discounts.length === 0) {
+      if (IS_MOCK) {
+        return {
+          couponCount: TOP_COUPONS.length,
+          redemptionCount: 842,
+          bundleCount: BUNDLE_ANALYSIS.length,
+          promotionRevenue: METRICS.promotionRevenue as Paisa,
+          discountsGiven: METRICS.discountsGiven as Paisa,
+          metrics: METRICS,
+          topCoupons: TOP_COUPONS,
+        }
+      }
+      return {
+        couponCount: 0,
+        redemptionCount: 0,
+        bundleCount: 0,
+        promotionRevenue: rupees(0),
+        discountsGiven: rupees(0),
+        metrics: {
+          ...METRICS,
+          promotionRevenue: rupees(0),
+          discountsGiven: rupees(0),
+          redemptionRate: 0,
+        },
+        topCoupons: [],
+      }
+    }
+
     const totalDiscounts = rupees(
-      discounts.reduce((sum, d) => sum + (Number(d.discount_amount) || 0), 0) || Number(METRICS.discountsGiven),
+      discounts.reduce((sum, d) => sum + (Number(d.discount_amount) || 0), 0),
     )
 
     return {
-      couponCount: coupons.length || TOP_COUPONS.length,
-      redemptionCount: redemptions.length || 842,
-      bundleCount: bundles.length || BUNDLE_ANALYSIS.length,
+      couponCount: coupons.length,
+      redemptionCount: redemptions.length,
+      bundleCount: bundles.length,
       promotionRevenue: METRICS.promotionRevenue as Paisa,
       discountsGiven: totalDiscounts,
-      metrics: METRICS,
+      metrics: {
+        ...METRICS,
+        discountsGiven: totalDiscounts,
+      },
       topCoupons: TOP_COUPONS,
     }
   } catch {
+    if (IS_MOCK) {
+      return {
+        couponCount: TOP_COUPONS.length,
+        redemptionCount: 842,
+        bundleCount: BUNDLE_ANALYSIS.length,
+        promotionRevenue: METRICS.promotionRevenue as Paisa,
+        discountsGiven: METRICS.discountsGiven as Paisa,
+        metrics: METRICS,
+        topCoupons: TOP_COUPONS,
+      }
+    }
     return {
-      couponCount: TOP_COUPONS.length,
-      redemptionCount: 842,
-      bundleCount: BUNDLE_ANALYSIS.length,
-      promotionRevenue: METRICS.promotionRevenue as Paisa,
-      discountsGiven: METRICS.discountsGiven as Paisa,
-      metrics: METRICS,
-      topCoupons: TOP_COUPONS,
+      couponCount: 0,
+      redemptionCount: 0,
+      bundleCount: 0,
+      promotionRevenue: rupees(0),
+      discountsGiven: rupees(0),
+      metrics: {
+        ...METRICS,
+        promotionRevenue: rupees(0),
+        discountsGiven: rupees(0),
+        redemptionRate: 0,
+      },
+      topCoupons: [],
     }
   }
 }

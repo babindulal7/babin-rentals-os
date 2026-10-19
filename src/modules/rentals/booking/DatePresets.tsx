@@ -87,7 +87,7 @@ export function DatePresets({
       const minRet = minReturnDate || out
       const isValid = ret >= minRet
       const price = priceHints?.[p.days]
-      const isActive = (days !== undefined && days === p.days) || (Boolean(returnDate) && ret === returnDate)
+      const isActive = days !== undefined ? days === p.days : Boolean(returnDate) && ret === returnDate
 
       return {
         ...p,

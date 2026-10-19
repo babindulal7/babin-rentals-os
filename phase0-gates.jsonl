@@ -1,0 +1,12 @@
+{"command":"typecheck","exit":0,"log":"phase0-typecheck.log"}
+{"command":"lint","exit":0,"log":"phase0-lint.log"}
+{"command":"test","exit":1,"log":"phase0-test.log"}
+{"command":"check:pglite","exit":0,"log":"phase0-check-pglite.log"}
+{"command":"check:security","exit":0,"log":"phase0-check-security.log"}
+{"command":"check:lifecycle","exit":0,"log":"phase0-check-lifecycle.log"}
+{"command":"build","exit":0,"log":"phase0-build.log"}
+{"command":"check:contrast","exit":0,"log":"phase0-check-contrast.log"}
+{"command":"test","exit":0,"log":"phase0-test-final.log"}
+{"command":"lint","exit":0,"log":"phase0-lint-final.log"}
+{"command":"typecheck","exit":2,"log":"phase0-typecheck-final.log"}
+{"command":"typecheck","exit":0,"log":"phase0-current-typecheck.log"}

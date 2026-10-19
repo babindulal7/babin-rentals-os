@@ -370,38 +370,38 @@ All 24 audit findings are imported as follow-up tasks in [§9](#9-astra-audit-fo
 
 ## 9. ASTRA Audit Follow-up — imported 19 October 2026
 
-**Status: TRACKED / OPEN FOR REVALIDATION. No finding is marked fixed by this documentation update.**
+**Status (19 October): Phase 0 implemented and locally verified; hosted acceptance remains open.** See [the active local fix log](../AUDIT_WORKTREE_PROGRESS.md) for affected files and receipts. The other audit findings remain open until current source and rendered behavior prove their closure.
 
-Source evidence was collected on main commit `ad8ce1e4afc54cc88df841425d0e281bd15665bc`. This working copy is at `bd5061bc12b74caa850039d1a59a2e0ef83b9e43` with additional local edits. The 24 rows below are baseline findings, not a freshly verified defect count for this working copy. Reproduce each against the intended fix revision, check newer progress/rulings, and record resolved/superseded status with evidence before changing it. Production presence/exposure remains NOT VERIFIED.
+Source evidence was collected on main commit `ad8ce1e4afc54cc88df841425d0e281bd15665bc`. At import, the working copy was `bd5061bc12b74caa850039d1a59a2e0ef83b9e43` with additional local edits. Authorized local fixes began at `c9ea1297`; consult the active local log for subsequent verification. The 24 rows below are baseline findings, not a freshly verified defect count for this working copy. Reproduce each against the intended fix revision, check newer progress/rulings, and record resolved/superseded status with evidence before changing it. Production presence/exposure remains NOT VERIFIED.
 
 Reports: [full audit](audits/ASTRA-2026-10-19/ASTRA_FULL_APP_AUDIT.md), [bug register](audits/ASTRA-2026-10-19/ASTRA_BUG_REGISTER.md), [security](audits/ASTRA-2026-10-19/ASTRA_SECURITY_AUDIT.md), [UI/UX](audits/ASTRA-2026-10-19/ASTRA_UI_UX_AUDIT.md), [fix roadmap](audits/ASTRA-2026-10-19/ASTRA_FIX_ROADMAP.md). Per-finding source locations, evidence strength, reproduction and correction details remain in the bug register. Storage reproduction simulated ordinary table grants; REL-01 is source-confirmed dataflow; other source-only versus executed findings are explicitly labeled there.
 
-| Audit task | Priority | Work to revalidate and resolve | Closure evidence required |
-|---|---|---|---|
-| SEC-01 | P1 | Scope document/evidence Storage access to authorized records | Real staging Storage API denies foreign objects and unmapped/inactive identities |
-| SEC-02 | P1 | Close money-blind access to privileged financial helpers | Nine-role direct RPC matrix denies unauthorized financial scalars |
-| SEC-03 | P1 | Prevent forged actor/role on audit INSERT | Server binds actor identity; forged audit inserts refused; append-only rules retained |
-| SEC-04 | P1 | Protect existing Owner accounts from Admin demotion | Direct UPDATE and RPC target-role tests enforce old and new role ceilings |
-| SEC-05 | P1 | Restrict Driver reads to assigned open trips | Unassigned Driver cannot read client/booking directory; reassignment revokes access |
-| REL-01 | P1 | Bind queued work to submitting identity and environment | Queue as A, sign in B, reconnect: B cannot replay A work; preserve pending records |
-| REL-02 | P1 | Retain queued work when replay updates zero rows | Missing/RLS-filtered target remains visibly pending or refused; require authoritative receipt |
-| WF-01 | P1 | Correct Sales/VAT schema contracts and remove fabricated fallback | Empty/error/real periods retain correct state; exported totals reconcile with SQL |
-| WF-02 | P1 | Correct rental-report rupee/paisa conversion | Known Rs 1,000 source value displays Rs 1,000 with integer-paisa expectations |
-| WF-03 | P1 | Use actual closed/cancelled lifecycle fields in reports | Closed and cancelled fixture cohorts reconcile; query errors never invent cancellations |
-| WF-04 | P1 | Remove fabricated operational and maintenance metrics | Real zero/error states preserved; compliance and cost metrics have traceable sources |
-| WF-05 | P1 | Replace invented asset ROI inputs and results | Revenue reconciles with invoices; unknown cost/utilization remains unavailable; no invented policy |
-| WF-08 | P1 | Remove fabricated staff/client/product/promotion results | Empty sources return zero/empty; errors unavailable; populated metrics and exports reconcile |
-| UI-01 | P1 | Make Productions durable and authorized | Approved production model persists across devices; no live-mode sample fallback |
-| UI-02 | P1 | Persist shift handovers and implement actual cash recount | Shared durable handover, actual timestamp, working authorized recount or explicit unavailable state |
-| UI-03 | P1 | Persist warranty claims and enforce financial authorization | Money-blind actors cannot submit hidden amounts; validated claim persists across devices |
-| WF-06 | P2 | Paginate availability holds and candidates | Cap-plus-one datasets preserve conflict detection; final custody gates remain authoritative |
-| WF-07 | P2 | Anchor Today filters to the 06:00 operational boundary | Before/at/after 06:00 NPT and civil-midnight tests select the correct operational shift |
-| UI-04 | P2 | Balance shared Modal scroll-lock ownership | Closing nested/dormant modal preserves outer scroll lock and focus behavior |
-| UI-05 | P2 | Remove duplicate/clipped Finance phone actions | One responsive action owner; payment visible at 375/430px; keyboard overflow accessible |
-| UI-06 | P2 | Give rental duration presets one selected meaning | Exactly one active preset; displayed operational days and price agree at date boundaries |
-| QA-01 | P2 | Resolve red full-suite and coverage gates | Fix real Finance regression and contract/fixture defects; full CI green at one SHA |
-| QA-02 | P2 | Make completion/test receipts reflect evidence provenance | Stale test receipt visibly identified; failed current run cannot appear as current green |
-| PERF-01 | P3 | Measure and reduce confirmed bundle/startup bottlenecks | Production profiles on phone/iPad precede optimization; preserve offline fonts and shell |
+| Audit task | Priority | Work to revalidate and resolve | Closure evidence required | Current follow-up state |
+|---|---|---|---|---|
+| SEC-01 | P1 | Scope document/evidence Storage access to authorized records | Real staging Storage API denies foreign objects and unmapped/inactive identities | Implemented + locally verified; hosted/physical acceptance pending |
+| SEC-02 | P1 | Close money-blind access to privileged financial helpers | Nine-role direct RPC matrix denies unauthorized financial scalars | Implemented + locally verified; hosted/physical acceptance pending |
+| SEC-03 | P1 | Prevent forged actor/role on audit INSERT | Server binds actor identity; forged audit inserts refused; append-only rules retained | Implemented + locally verified; hosted/physical acceptance pending |
+| SEC-04 | P1 | Protect existing Owner accounts from Admin demotion | Direct UPDATE and RPC target-role tests enforce old and new role ceilings | Implemented + locally verified; hosted/physical acceptance pending |
+| SEC-05 | P1 | Restrict Driver reads to assigned open trips | Unassigned Driver cannot read client/booking directory; reassignment revokes access | Implemented + locally verified; hosted/physical acceptance pending |
+| REL-01 | P1 | Bind queued work to submitting identity and environment | Queue as A, sign in B, reconnect: B cannot replay A work; preserve pending records | Implemented + locally verified; hosted/physical acceptance pending |
+| REL-02 | P1 | Retain queued work when replay updates zero rows | Missing/RLS-filtered target remains visibly pending or refused; require authoritative receipt | Implemented + locally verified; hosted/physical acceptance pending |
+| WF-01 | P1 | Correct Sales/VAT schema contracts and remove fabricated fallback | Empty/error/real periods retain correct state; exported totals reconcile with SQL | PARTIAL: read-error truth, Retry and money-blind request refusal tested; full financial reconciliation pending |
+| WF-02 | P1 | Correct rental-report rupee/paisa conversion | Known Rs 1,000 source value displays Rs 1,000 with integer-paisa expectations | Open; revalidate current source and test before closure |
+| WF-03 | P1 | Use actual closed/cancelled lifecycle fields in reports | Closed and cancelled fixture cohorts reconcile; query errors never invent cancellations | Open; revalidate current source and test before closure |
+| WF-04 | P1 | Remove fabricated operational and maintenance metrics | Real zero/error states preserved; compliance and cost metrics have traceable sources | Open; revalidate current source and test before closure |
+| WF-05 | P1 | Replace invented asset ROI inputs and results | Revenue reconciles with invoices; unknown cost/utilization remains unavailable; no invented policy | Open; revalidate current source and test before closure |
+| WF-08 | P1 | Remove fabricated staff/client/product/promotion results | Empty sources return zero/empty; errors unavailable; populated metrics and exports reconcile | Open; revalidate current source and test before closure |
+| UI-01 | P1 | Make Productions durable and authorized | Approved production model persists across devices; no live-mode sample fallback | Open; revalidate current source and test before closure |
+| UI-02 | P1 | Persist shift handovers and implement actual cash recount | Shared durable handover, actual timestamp, working authorized recount or explicit unavailable state | Open; revalidate current source and test before closure |
+| UI-03 | P1 | Persist warranty claims and enforce financial authorization | Money-blind actors cannot submit hidden amounts; validated claim persists across devices | Open; revalidate current source and test before closure |
+| WF-06 | P2 | Paginate availability holds and candidates | Cap-plus-one datasets preserve conflict detection; final custody gates remain authoritative | Open; revalidate current source and test before closure |
+| WF-07 | P2 | Anchor Today filters to the 06:00 operational boundary | Before/at/after 06:00 NPT and civil-midnight tests select the correct operational shift | Open; revalidate current source and test before closure |
+| UI-04 | P2 | Balance shared Modal scroll-lock ownership | Closing nested/dormant modal preserves outer scroll lock and focus behavior | Open; revalidate current source and test before closure |
+| UI-05 | P2 | Remove duplicate/clipped Finance phone actions | One responsive action owner; payment visible at 375/430px; keyboard overflow accessible | Open; revalidate current source and test before closure |
+| UI-06 | P2 | Give rental duration presets one selected meaning | Exactly one active preset; displayed operational days and price agree at date boundaries | Open; revalidate current source and test before closure |
+| QA-01 | P2 | Resolve red full-suite and coverage gates | Fix real Finance regression and contract/fixture defects; full CI green at one SHA | Open; revalidate current source and test before closure |
+| QA-02 | P2 | Make completion/test receipts reflect evidence provenance | Stale test receipt visibly identified; failed current run cannot appear as current green | Open; revalidate current source and test before closure |
+| PERF-01 | P3 | Measure and reduce confirmed bundle/startup bottlenecks | Production profiles on phone/iPad precede optimization; preserve offline fonts and shell | Open; revalidate current source and test before closure |
 
 ### Execution order and dependencies
 
@@ -425,3 +425,9 @@ Reports: [full audit](audits/ASTRA-2026-10-19/ASTRA_FULL_APP_AUDIT.md), [bug reg
 At the audited commit, typecheck/lint/build, 167 migration rebuilds, 31 lifecycle cases and 82 contrast pairs passed. Full test and coverage executions each reported **4,670 passed / 8 failed** (365 passing / 5 failing files). Separate live-default build, financial-integrity, sequential race and six supplementary local gates passed; see retained logs. None of those results has been rerun on this dirty working copy in this documentation-only session.
 
 The completion command still reads an October 16 green test receipt. Its generated structural dimensions must not be presented as full functional readiness. Keep QA-02 open until provenance is corrected and a current full-suite receipt is available.
+
+### 19 October local implementation checkpoint
+
+The user authorized local source fixes after the audit. SEC-01–05 and REL-01/02 now have actual source/migration changes and local regressions, not documentation-only proposals. Current typecheck/lint pass; the complete rerun passed 380 files / 4,760 tests; 168 migration rebuilds, 12 security regression groups, 31 lifecycle scenarios, build and contrast passed. See ../AUDIT_WORKTREE_PROGRESS.md and its named logs for scope/provenance. Migration 0170 is WRITTEN + VERIFIED locally, NOT APPLIED / NOT PRODUCTION-VERIFIED.
+
+The root completion generator still cites an older test receipt (QA-02 remains open). Live Storage/JWT, orphan-file reconciliation, unattributed offline-work recovery, real concurrency and physical device acceptance remain outstanding. Financial report changes appearing in the shared working copy require fresh regression validation; their presence alone does not close WF/UI tasks. Existing original-scope completed tasks remain preserved.

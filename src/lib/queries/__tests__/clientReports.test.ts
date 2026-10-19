@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+vi.mock('../../supabase', () => ({ IS_MOCK: true, supabase: { from: vi.fn() } }))
 import {
   getClientReportsSummary,
   KPIS,

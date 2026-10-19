@@ -61,4 +61,37 @@ describe('DatePresets', () => {
       host.remove()
     }
   })
+
+  it('prevents dual active presets when days and returnDate conflict (UI-06)', async () => {
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const root = createRoot(host)
+    const onPick = vi.fn()
+    const today = todayIso()
+
+    try {
+      await act(async () => {
+        root.render(
+          <DatePresets
+            outDate={today}
+            days={2}
+            returnDate={today} // Conflicting returnDate that would match 0 or 1 day if not prioritized
+            onPick={onPick}
+          />
+        )
+      })
+
+      // Exactly one duration pill should be active
+      const durationButtons = Array.from(host.querySelectorAll('button')).filter((b) =>
+        ['1 day', '2 days', '3 days', '1 week'].includes(b.textContent?.trim() || '')
+      )
+      const activePills = durationButtons.filter((b) => b.getAttribute('aria-pressed') === 'true')
+      expect(activePills).toHaveLength(1)
+      expect(activePills[0]?.textContent?.trim()).toBe('2 days')
+    } finally {
+      await act(async () => root.unmount())
+      host.remove()
+    }
+  })
 })
+

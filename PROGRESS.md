@@ -1,5 +1,96 @@
 # Progress Log
 
+## 2026-10-19 — Financial Reports Truth (WF-01..05, WF-08), UI Fixes (UI-04, UI-06) and Offline Durability
+
+**Did**
+- Completed Phase 1 Offline Safety Patch (DATA-02): fail-closed durable queue contract in offlineQueue.ts and dataAccess.ts; offline banner and DriverHandoverModal fail-closed offline handling.
+- Resolved Driver Handover blockers: fixed empty handover line list rejection by resolving booking line units; wired authenticated photo evidence upload.
+- Implemented SEC-03 Electron OS-Protected Credential Vault via ElectronSafeStorageAdapter with DPAPI/Keychain backing.
+- Implemented ASTRA Phase 0 authorization and queue isolation (SEC-01..05, REL-01..02) with migration 0170, check:security gate, user actor scoping, and syncEngine affected-row assertions.
+- Remediated WF-02 & WF-03 (Rental Reports Truth): removed false / 100 on rupee values, included Closed stage in completed count, checked cancelled_at flag, handled !IS_MOCK empty states with zero metrics.
+- Remediated WF-01 (Sales & VAT Reports Truth): replaced invalid schema columns (tax_amount -> vat_amount, grand_total -> total_amount, pan_number -> pan_vat), filtered voided_at is null, unified paisa/rupee arithmetic, built dynamic monthly schedules, fail-closed empty report handling.
+- Remediated WF-04 (Operations & Maintenance Reports Truth): replaced hardcoded percentages with calculated on-time rates; removed live || MOCK fallback; queried product_units for Maintenance/Inspection/Missing.
+- Remediated WF-05 (Asset ROI True Revenue): removed invented 5,00,000 purchase price and 1.6/0.6 demo multipliers; derived genuine revenue from booking_line_units joined to booking_lines.
+- Remediated WF-08 (Report Families Fail-Closed Empty State): fixed staffReports, clientReports, productReports, promotionsReports to return truthful zero metrics in live mode (!IS_MOCK) and retain fixtures in mock mode.
+- Fixed UI-04 (Nested Modal Scroll Lock): ensured modalStack ID tracking in Modal.tsx so dormant/nested modal unmount does not prematurely release the outer modal's body scroll lock.
+- Fixed UI-06 (Date Presets Dual-Active Collision): in DatePresets.tsx, prioritized explicit days over calendar returnDate matching so operational-day vs calendar-day boundary discrepancies never light up two preset pills simultaneously.
+
+**Ruled**
+- In live mode (!IS_MOCK), all query engines fail closed and return truthful empty state structures rather than falling back to demo or mock fixtures.
+- Integer paisa discipline preserved across all financial queries; money-blind roles make no money queries and leak no figures.
+- Migration 0170: WRITTEN and VERIFIED locally in PGlite (168/168 applied, 0 failed); NOT pushed to remote live Supabase per Rule N-5.
+
+**Verified**
+- npm run typecheck: PASS (0 errors).
+- npm run lint: PASS (0 warnings/errors).
+- npm test: PASS (387 test files, 4,777 tests passed, 0 failed).
+- npm run check:pglite: PASS (168/168 migrations applied, 0 failed, 0 leaks).
+- npm run check:lifecycle: PASS (31/31 steps green).
+- npm run check:security: PASS (12/12 Phase 0 security checks passed).
+- npm run check:contrast: PASS (82/82 pass).
+- npm run build: PASS (Vite production bundle compiled, PWA generated).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 55 | 50 · 0 · 0 · 5 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 98% | +0 |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-19T15:01:52.482Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-19T15:02:13.712Z.
+Counted by `npm run completion`, not typed.
+
+Measured Vitest run for this session: 387 files / 4,777 tests passed.
+
+### Remaining
+- Live staging testing with real Supabase Auth/Storage and physical hardware/scanner.
+- Remote application of migration 0170 to live Supabase following BACKUP_PROTOCOL.md by Babin (Rule N-5).
+- Further field device tests on narrow mobile viewports and intermittent network conditions.
+
+
+
+**Did**
+- Saved clean HEAD c9ea1297 to local recovery branch codex/recovery-before-astra-phase0-20261019, then worked directly in this project.
+- Added migration 0170 for scoped/immutable Storage, restricted financial helpers, server-bound direct audit actors, superior-account protection and assignment-scoped Driver reads with a narrow trip context.
+- Bound offline work to account/project and pinned replay credentials; retained zero-row/unconfirmed writes and legacy duplicate payloads. Held/failed work stays visible without exposing another operator's payload or reporting successful sync.
+- Removed false document upload/registry success; added source regressions and check:security to local scripts/CI. Preserved concurrent edits, including the Driver Handover work; corrected its three type errors.
+- Started WF-01 read-error remediation in the Sales/VAT query and page: inline Retry replaces false zero reports, and money-blind roles issue no report request. Four focused regressions pass; full Phase 1 verification remains in progress.
+- Created AUDIT_WORKTREE_PROGRESS.md as the active per-fix implementation log and updated the remaining-work register. No application data was added; synthetic regression fixtures ran only in disposable test databases.
+
+**Ruled**
+- Implements existing permissions and durability rules; no new product ruling. Legacy unregistered files/unattributed offline work remain retained and held for evidence-backed reconciliation.
+- Migration 0170: WRITTEN + VERIFIED locally; NOT APPLIED / NOT PRODUCTION-VERIFIED. No live Supabase changes, resets, GitHub push or PR.
+
+**Verified**
+- Latest current-source typecheck and lint PASS. Complete rerun: 380 files / 4,760 tests PASS; focused Phase 0 storage/outbox/action tests 33/33 PASS.
+- Same-run migration rebuild 168/168 and lifecycle 31/31 PASS; authenticated SQL security regressions 12 groups PASS. Production build and contrast PASS. See phase0-gates.jsonl and AUDIT_WORKTREE_PROGRESS.md for logs, scopes and retained earlier failures.
+- Shipped build includes the v5 held-work store and fail-closed document action. These are local tests, not hosted Storage/Auth or physical-device certification.
+- Shared financial-report files changed during/after verification; their remediation requires its own current-source regression pass. No financial finding is closed merely because its source changed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 55 | 50 · 0 · 0 · 5 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 98% | +0 |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-19T14:31:01.354Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-19T14:31:20.171Z.
+Counted by `npm run completion`, not typed.
+
+The generator still cites an October 16 suite receipt. The measured full-suite result for this work is 4,760 passing tests; the generated structural percentage does not establish whole-product readiness (QA-02 remains open).
+
+### Remaining
+- Financial/report truth (WF-01–05/WF-08), remaining workflow/operations/UI findings, completion provenance and performance work in docs/REMAINING_WORK.md §9.
+- Real staging JWT/Storage, legacy-path/work reconciliation, true concurrent writers, physical device/offline/peripheral and full responsive acceptance.
+- Repeat complete gates after subsequent shared-source changes; release remains HOLD and production apply remains Owner-controlled under N-5.
+
+
 ## 2026-10-19 — ASTRA audit imported into active progress and remaining work
 
 **Did**

@@ -1,4 +1,4 @@
-import { supabase } from '../supabase'
+import { IS_MOCK, supabase } from '../supabase'
 import {
   KPIS,
   SALES_TREND,
@@ -59,20 +59,44 @@ export async function getProductReportsSummary(): Promise<ProductReportsSummary>
       .select('id, name, category, daily_rate')
 
     const productList = products ?? []
-    const productCount = productList.length || PRODUCTS.length
+
+    if (productList.length === 0) {
+      if (IS_MOCK) {
+        return {
+          productCount: PRODUCTS.length,
+          kpis: KPIS,
+          topRevenue: TOP_REVENUE,
+          byCategory: BY_CATEGORY,
+        }
+      }
+      return {
+        productCount: 0,
+        kpis: KPIS,
+        topRevenue: { ...TOP_REVENUE, rows: [] },
+        byCategory: [],
+      }
+    }
 
     return {
-      productCount,
+      productCount: productList.length,
       kpis: KPIS,
       topRevenue: TOP_REVENUE,
       byCategory: BY_CATEGORY,
     }
   } catch {
+    if (IS_MOCK) {
+      return {
+        productCount: PRODUCTS.length,
+        kpis: KPIS,
+        topRevenue: TOP_REVENUE,
+        byCategory: BY_CATEGORY,
+      }
+    }
     return {
-      productCount: PRODUCTS.length,
+      productCount: 0,
       kpis: KPIS,
-      topRevenue: TOP_REVENUE,
-      byCategory: BY_CATEGORY,
+      topRevenue: { ...TOP_REVENUE, rows: [] },
+      byCategory: [],
     }
   }
 }

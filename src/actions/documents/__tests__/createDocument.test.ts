@@ -1,3 +1,4 @@
+import { generateAndStoreDocumentPdf } from '../../../lib/documentStorage';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createDocumentConfig, type CreateDocumentInput } from '../createDocument';
 import { EVENT_TYPES } from '../../../events/eventBus';
@@ -63,6 +64,12 @@ const db = vi.hoisted(() => {
 vi.mock('../../../lib/supabase', () => ({
   supabase: db.supabase,
   IS_MOCK: false,
+}));
+
+vi.mock('../../../lib/documentStorage', () => ({
+  generateAndStoreDocumentPdf: vi.fn().mockResolvedValue({
+    storagePath:'staff/desk-user-1/confirmed.pdf',signedUrl:'https://storage.example.test/confirmed',fileSizeBytes:250,
+  }),
 }));
 
 vi.mock('../../../lib/dataAccess', () => ({
@@ -147,4 +154,12 @@ describe('CREATE_DOCUMENT action', () => {
     expect(linkInsert.row.doc_type).toBe('Rental Agreement');
     expect(linkInsert.row.origin).toBe('Generated');
   });
+});
+
+
+it('SEC-01: upload refusal cannot create a fake document record or success event', async () => {
+  db.state.inserts=[];
+  vi.mocked(generateAndStoreDocumentPdf).mockRejectedValueOnce(new Error('Upload refused'));
+  await expect(createDocumentConfig.execute({title:'Quotation'}, {userId:'desk-user-1',role:'Coordinator'})).rejects.toThrow('Upload refused');
+  expect(db.state.inserts).toHaveLength(0);
 });

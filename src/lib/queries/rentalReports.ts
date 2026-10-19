@@ -1,4 +1,4 @@
-import { supabase } from '../supabase'
+import { IS_MOCK, supabase } from '../supabase'
 import { rupees, type Paisa } from '../money'
 import { rentalDaysBetween } from '../rentalDays'
 
@@ -183,6 +183,41 @@ const MOCK_CANCELLATIONS: CancellationsReportData = {
   ],
 }
 
+const EMPTY_PERFORMANCE: RentalPerformanceReportData = {
+  metrics: {
+    totalBookings: 0,
+    activeRentals: 0,
+    completedRentals: 0,
+    cancelledRentals: 0,
+    totalRevenue: rupees(0),
+    averageBookingValue: rupees(0),
+    totalRentalDays: 0,
+    averageDurationDays: 0,
+  },
+  stages: [],
+  projectTypes: [],
+  trend: [],
+  topBookings: [],
+}
+
+const EMPTY_DURATION: RentalDurationReportData = {
+  totalRentals: 0,
+  averageDuration: 0,
+  medianDuration: 0,
+  longestDuration: 0,
+  shortestDuration: 0,
+  buckets: [],
+}
+
+const EMPTY_CANCELLATIONS: CancellationsReportData = {
+  totalCancellations: 0,
+  cancellationRate: 0,
+  totalLostRevenue: rupees(0),
+  averageNoticeDays: 0,
+  reasons: [],
+  cancelledBookings: [],
+}
+
 /* ── Query Aggregations from PostgreSQL ─────────────────────────────────── */
 
 export async function getRentalPerformanceReport(options?: ReportFilterOptions): Promise<RentalPerformanceReportData> {
@@ -198,6 +233,7 @@ export async function getRentalPerformanceReport(options?: ReportFilterOptions):
         pickup_at,
         return_at,
         project,
+        cancelled_at,
         created_at,
         clients!client_id(name),
         booking_lines(id, qty, days, rate, discount_amount, voided_at)
@@ -216,7 +252,7 @@ export async function getRentalPerformanceReport(options?: ReportFilterOptions):
     const { data: rows, error } = await query
 
     if (error || !rows || rows.length === 0) {
-      return MOCK_PERFORMANCE
+      return IS_MOCK ? MOCK_PERFORMANCE : EMPTY_PERFORMANCE
     }
 
     let totalRevenueVal = 0
@@ -231,9 +267,14 @@ export async function getRentalPerformanceReport(options?: ReportFilterOptions):
 
     for (const b of rows) {
       const stageStr = b.stage as string
-      if (stageStr === 'On Rent' || stageStr === 'Packed') activeCount++
-      if (stageStr === 'Completed' || stageStr === 'Returned') completedCount++
-      if (stageStr === 'Cancelled') cancelledCount++
+      const isCancelled = Boolean(b.cancelled_at || stageStr === 'Cancelled')
+
+      if (isCancelled) {
+        cancelledCount++
+      } else {
+        if (stageStr === 'On Rent' || stageStr === 'Packed' || stageStr === 'Dispatched' || stageStr === 'Ready' || stageStr === 'Confirmed') activeCount++
+        if (stageStr === 'Completed' || stageStr === 'Returned' || stageStr === 'Closed') completedCount++
+      }
 
       const days = rentalDaysBetween(b.pickup_at, b.return_at) ?? 1
       totalRentalDaysVal += days
@@ -248,7 +289,7 @@ export async function getRentalPerformanceReport(options?: ReportFilterOptions):
         }
       }
 
-      if (stageStr !== 'Cancelled') {
+      if (!isCancelled) {
         totalRevenueVal += bookingRev
       }
 
@@ -272,8 +313,8 @@ export async function getRentalPerformanceReport(options?: ReportFilterOptions):
         clientName: clientObj?.name || 'Standard Client',
         project: b.project || 'Commercial Shoot',
         days,
-        stage: stageStr,
-        value: rupees(Math.round(bookingRev / 100)),
+        stage: isCancelled ? 'Cancelled' : stageStr,
+        value: rupees(Math.round(bookingRev)),
       })
     }
 
@@ -284,14 +325,14 @@ export async function getRentalPerformanceReport(options?: ReportFilterOptions):
     const stages: StageBreakdownItem[] = Object.entries(stageCounts).map(([st, val]) => ({
       stage: st,
       count: val.count,
-      revenue: rupees(Math.round(val.revenue / 100)),
+      revenue: rupees(Math.round(val.revenue)),
       percent: Math.round((val.count / totalBookings) * 100),
     }))
 
     const projectTypes: ProjectTypeBreakdownItem[] = Object.entries(projectTypeCounts).slice(0, 5).map(([pt, val]) => ({
       projectType: pt,
       count: val.count,
-      revenue: rupees(Math.round(val.revenue / 100)),
+      revenue: rupees(Math.round(val.revenue)),
       percent: Math.round((val.count / totalBookings) * 100),
     }))
 
@@ -303,18 +344,18 @@ export async function getRentalPerformanceReport(options?: ReportFilterOptions):
         activeRentals: activeCount,
         completedRentals: completedCount,
         cancelledRentals: cancelledCount,
-        totalRevenue: rupees(Math.round(totalRevenueVal / 100)),
-        averageBookingValue: rupees(Math.round(avgVal / 100)),
+        totalRevenue: rupees(Math.round(totalRevenueVal)),
+        averageBookingValue: rupees(Math.round(avgVal)),
         totalRentalDays: totalRentalDaysVal,
         averageDurationDays: avgDuration,
       },
       stages,
       projectTypes,
-      trend: MOCK_PERFORMANCE.trend,
+      trend: IS_MOCK ? MOCK_PERFORMANCE.trend : [],
       topBookings: bookingValList.slice(0, 5),
     }
   } catch {
-    return MOCK_PERFORMANCE
+    return IS_MOCK ? MOCK_PERFORMANCE : EMPTY_PERFORMANCE
   }
 }
 
@@ -330,6 +371,7 @@ export async function getRentalDurationReport(options?: ReportFilterOptions): Pr
         booking_lines(qty, days, rate, discount_amount, voided_at)
       `)
       .neq('stage', 'Cancelled')
+      .is('cancelled_at', null)
 
     if (options?.from) query = query.gte('pickup_at', options.from)
     if (options?.to) query = query.lte('pickup_at', options.to)
@@ -338,7 +380,7 @@ export async function getRentalDurationReport(options?: ReportFilterOptions): Pr
     const { data: rows, error } = await query
 
     if (error || !rows || rows.length === 0) {
-      return MOCK_DURATION
+      return IS_MOCK ? MOCK_DURATION : EMPTY_DURATION
     }
 
     const bucketDefs = [
@@ -381,7 +423,7 @@ export async function getRentalDurationReport(options?: ReportFilterOptions): Pr
 
     const buckets: DurationBucket[] = bucketDefs.map((b) => {
       const share = totalRentals > 0 ? Math.round((b.count / totalRentals) * 100) : 0
-      const avgDaily = b.totalDays > 0 ? Math.round(b.revenueVal / b.totalDays / 100) : 0
+      const avgDaily = b.totalDays > 0 ? Math.round(b.revenueVal / b.totalDays) : 0
       return {
         key: b.key,
         label: b.label,
@@ -390,7 +432,7 @@ export async function getRentalDurationReport(options?: ReportFilterOptions): Pr
         count: b.count,
         sharePercent: share,
         totalDays: b.totalDays,
-        revenue: rupees(Math.round(b.revenueVal / 100)),
+        revenue: rupees(Math.round(b.revenueVal)),
         avgDailyRate: rupees(avgDaily),
       }
     })
@@ -404,41 +446,57 @@ export async function getRentalDurationReport(options?: ReportFilterOptions): Pr
       buckets,
     }
   } catch {
-    return MOCK_DURATION
+    return IS_MOCK ? MOCK_DURATION : EMPTY_DURATION
   }
 }
 
 export async function getCancellationsReport(options?: ReportFilterOptions): Promise<CancellationsReportData> {
   try {
-    let allQuery = supabase.from('bookings').select('id, stage')
+    let allQuery = supabase.from('bookings').select('id, stage, cancelled_at')
     if (options?.from) allQuery = allQuery.gte('pickup_at', options.from)
     if (options?.to) allQuery = allQuery.lte('pickup_at', options.to)
     if (options?.branchId) allQuery = allQuery.eq('branch_id', options.branchId)
 
+    let cancelQuery = supabase
+      .from('bookings')
+      .select(`
+        id,
+        booking_no,
+        stage,
+        pickup_at,
+        return_at,
+        cancellation_reason,
+        cancelled_at,
+        project,
+        clients!client_id(name),
+        booking_lines(qty, days, rate, discount_amount)
+      `)
+      .or('cancelled_at.not.is.null,stage.eq.Cancelled')
+
+    if (options?.from) cancelQuery = cancelQuery.gte('pickup_at', options.from)
+    if (options?.to) cancelQuery = cancelQuery.lte('pickup_at', options.to)
+    if (options?.branchId) cancelQuery = cancelQuery.eq('branch_id', options.branchId)
+
     const [allRes, cancelRes] = await Promise.all([
       allQuery,
-      supabase
-        .from('bookings')
-        .select(`
-          id,
-          booking_no,
-          stage,
-          pickup_at,
-          return_at,
-          cancellation_reason,
-          cancelled_at,
-          project,
-          clients!client_id(name),
-          booking_lines(qty, days, rate, discount_amount)
-        `)
-        .eq('stage', 'Cancelled'),
+      cancelQuery,
     ])
+
+    if (allRes.error || cancelRes.error) {
+      return IS_MOCK ? MOCK_CANCELLATIONS : EMPTY_CANCELLATIONS
+    }
 
     const totalAll = allRes.data?.length || 0
     const cancelRows = cancelRes.data || []
 
     if (cancelRows.length === 0) {
-      return MOCK_CANCELLATIONS
+      if (IS_MOCK && totalAll === 0) {
+        return MOCK_CANCELLATIONS
+      }
+      return {
+        ...EMPTY_CANCELLATIONS,
+        cancellationRate: 0,
+      }
     }
 
     let totalLostRev = 0
@@ -479,7 +537,7 @@ export async function getCancellationsReport(options?: ReportFilterOptions): Pro
         project: b.project || 'Project',
         cancelledAt: b.cancelled_at || new Date().toISOString(),
         scheduledPickup: b.pickup_at,
-        lostRevenue: rupees(Math.round(lost / 100)),
+        lostRevenue: rupees(Math.round(lost)),
         reason: rText,
       })
     }
@@ -492,18 +550,18 @@ export async function getCancellationsReport(options?: ReportFilterOptions): Pro
       reason: rs,
       count: val.count,
       percent: Math.round((val.count / cancelCount) * 100),
-      lostRevenue: rupees(Math.round(val.lostRev / 100)),
+      lostRevenue: rupees(Math.round(val.lostRev)),
     }))
 
     return {
       totalCancellations: cancelCount,
       cancellationRate: cancelRate,
-      totalLostRevenue: rupees(Math.round(totalLostRev / 100)),
+      totalLostRevenue: rupees(Math.round(totalLostRev)),
       averageNoticeDays: avgNoticeDays,
       reasons,
       cancelledBookings: list,
     }
   } catch {
-    return MOCK_CANCELLATIONS
+    return IS_MOCK ? MOCK_CANCELLATIONS : EMPTY_CANCELLATIONS
   }
 }

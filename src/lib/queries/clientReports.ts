@@ -1,4 +1,4 @@
-import { supabase } from '../supabase'
+import { IS_MOCK, supabase } from '../supabase'
 import {
   KPIS,
   GROWTH,
@@ -66,9 +66,28 @@ export async function getClientReportsSummary(): Promise<ClientReportsSummary> {
     const clients = clientsRes.data ?? []
     const memberships = membershipsRes.data ?? []
 
-    const totalClients = clients.length || 1248
+    const totalClients = clients.length
     const activeClients =
-      clients.filter((c) => c.status === 'Active').length || (memberships.length ? memberships.length : 436)
+      clients.filter((c) => c.status === 'Active').length || (memberships.length ? memberships.length : 0)
+
+    if (totalClients === 0) {
+      if (IS_MOCK) {
+        return {
+          totalClients: 1248,
+          activeClients: 436,
+          kpis: KPIS,
+          clients: CLIENTS,
+          summary: SUMMARY,
+        }
+      }
+      return {
+        totalClients: 0,
+        activeClients: 0,
+        kpis: KPIS,
+        clients: [],
+        summary: [],
+      }
+    }
 
     return {
       totalClients,
@@ -78,12 +97,21 @@ export async function getClientReportsSummary(): Promise<ClientReportsSummary> {
       summary: SUMMARY,
     }
   } catch {
+    if (IS_MOCK) {
+      return {
+        totalClients: 1248,
+        activeClients: 436,
+        kpis: KPIS,
+        clients: CLIENTS,
+        summary: SUMMARY,
+      }
+    }
     return {
-      totalClients: 1248,
-      activeClients: 436,
+      totalClients: 0,
+      activeClients: 0,
       kpis: KPIS,
-      clients: CLIENTS,
-      summary: SUMMARY,
+      clients: [],
+      summary: [],
     }
   }
 }
