@@ -21,6 +21,13 @@
 - **Gate**: `canViewFinancialReports` (Owner · Admin · Manager · Accounts) in `rbac.ts` / `moneyVisibility.ts`, used
   by the page and by `ReportFamiliesNav`, which no longer links Revenue for Coordinator.
 - Seeded mock invoices now carry `currency: 'NPR'` (#12's engine refused them, so the demo showed an error).
+- **Adversarial review (19 Oct)**: two reviewers (data, page) returned 9 findings; their skeptics hit a usage
+  limit, so each was checked by hand against the code and all 9 reproduced and were fixed in `1eb7dcc`:
+  a "Last 7 days" bucket called "month to date" (now "part month, to date"); "31–31 July"; "−100%" for a fall that
+  left revenue ("−>99.9%"); All dates' first month called "part month" (now opens on the 1st); page default vs the
+  toolbar's own today after midnight (`reportPresetRange`); void numbers linking to a Finance list that cannot show
+  them (now plain text); voided Drafts with no issue date heading the register (`presence: { issue_date: true }`);
+  a 100-row register cap with untrue copy (now Newer / Older paging in place).
 - Docs: `docs/RULINGS-2026-10-17.md`, PERMISSIONS §3.1 C7 clarified, `docs/OPEN_DECISIONS.md` 17 Oct entry,
   `docs/reports/INTERACTIVE_REPORTS_PHASE0_AUDIT.md` (Phase 0 audit, revised for the #12 merge).
 
@@ -39,6 +46,9 @@
   `check:contrast` ✓ · `npm run build` exit 0.
 - `npm run check:pglite` 167/167 applied, 0 failed · `npm run check:lifecycle` 31/31 green, 0 failed (same run) ·
   `scripts/test-booking-financial-integrity.mjs` verified. No migration in this change.
+- After the review fixes (19 Oct, `1eb7dcc`): typecheck, lint, lint:shell, lint:ui-copy, lint:progress,
+  check:contrast all 0; build 0; full suite 4740 passed, the same 8 failed; Chromium drive 27/27 again, plus All
+  dates now reads "1 Jun 2026 – 19 Oct 2026" with no part-month note.
 - `VITE_DATA_SOURCE=mock npx vitest run`: 4737 passed, **8 failed in 5 files** — `actions/core`, `queries/pulse`,
   `clients/clientsCopy`, `finance/Finance.restricted`, `rentals/rentalsOperationsHeader`. The same 8 fail on a clean
   `origin/main` checkout (`ad8ce1e`); none is in a file this change touches.
@@ -69,6 +79,9 @@ Counted by `npm run completion`, not typed.
 - Phases 2–3 of the brief wait on `docs/OPEN_DECISIONS.md` (17 Oct): Pulse revenue basis, cash-out policy,
   scenario-explorer baseline owner, and `issue_invoice()` dating by UTC `current_date`.
 - The 8 failing tests on `main` belong to other modules and need their own fix.
+- **GitHub Actions has not run a job since at least 15 Oct**: every CI run, `main` included, ends in ~3 s with no
+  runner assigned. Account-level (billing / spending limit / Actions disabled) — Babin's to check.
+- Finance ▸ Invoices cannot be opened on its Void chip by link; void numbers in the register are text until it can.
 - `canApproveDailyClosing` still admits Coordinator while RLS does not (filed 15 Oct, open).
 - Coordinator's view of the Revenue page has not been driven in a browser (no mock login for that role).
 
