@@ -1,5 +1,37 @@
 # Progress Log
 
+## 2026-10-19 — Rentals header at 768px: duplicate filter toggle and an over-wide search box
+
+**Did**
+- Measured the shared header at 768px on 8 routes in a production mock build (`.env.mock` seeded, signed in as the mock Owner). Only `/rentals` collided; the other seven had no overlaps, no truncation and no horizontal overflow.
+- Two causes, both in `RentalsList.tsx`: (1) `FilterButton` defaults to `inHeader`, and Rentals rendered it twice (header toggle plus a second one in the toolbar), so two 44px toggles sat in the one header slot and over the "Rentals" title; (2) the search wrapper had `minWidth: 280` inside a 235px centre zone, pushing the box and its Ctrl+K hint 45px over New Rental.
+- Removed the toolbar's second `FilterButton` (the Sort control stays) and dropped the 280px floor (the box fills its zone up to 360px). Shortened the placeholder to "Search rentals…" — the Ctrl+K badge already shows the shortcut and the long text clipped.
+
+**Ruled**
+- RULING 2026-10-19: the Rentals filter toggle lives only in the header (extends RULING 2026-10-15). Revert = restore the `FilterButton` in the toolbar and `minWidth: 280` on the search wrapper, both marked at the site.
+
+**Verified**
+- Browser, 768px, loaded Rentals: one filter toggle at the left (x 58–102 → clear of the title at 134), search 232–467, New Rental from 483, no document overflow. 1024px: one toggle, search 302–582, New Rental 739–848, no overflow.
+- `tsc --noEmit` exit 0. Vitest `src/components/shell src/modules/rentals src/components/ui/__tests__` with `VITE_DATA_SOURCE=mock`: 94 files, 901 tests passed.
+- Chromium viewport emulation only; not physical iPad Safari, not native zoom; Rentals only re-checked at 768 and 1024 after the fix.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | not measured | not measured | |
+| Real data | not measured | not measured | |
+| DB enforcement | not measured (no .lifecycle-result.json) | not measured | |
+| Permissions | not measured | not measured | |
+| Lifecycle | not measured (no .lifecycle-result.json) | not measured | |
+| Overall | not measured | not measured | |
+UI-only change; no migration or action touched.
+
+## Remaining
+- The 15 re-layered z-index overlays from the earlier entry are still not driven in a browser.
+- Phone width (390/320) not re-measured on Rentals after this change.
+- Physical iPad Safari and the status × role × persistence matrix remain untested.
+
+
 ## 2026-10-17 — Phase 6 Task 3.4: the 13 Law 16 reports — real figures, then five states
 
 **Did**

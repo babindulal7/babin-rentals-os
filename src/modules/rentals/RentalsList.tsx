@@ -1734,7 +1734,10 @@ export default function RentalsList() {
       )}
       {/* Search portal into the shell's original fixed-height header */}
       <WorkspaceHeaderSearch>
-        <div style={{ width: '100%', minWidth: 280, maxWidth: 360 }} className="min-w-[280px] lg:min-w-[340px]">
+        {/* RULING 2026-10-19: no minWidth — the header's centre zone is 235px at 768px, and a 280px floor
+            pushed the box (and its Ctrl+K hint) 45px over New Rental. It fills its zone up to 360px.
+            Revert = `minWidth: 280` back on this div. */}
+        <div style={{ width: '100%', minWidth: 0, maxWidth: 360 }}>
           <SearchInput
             value={f.filters.search ?? ''}
             onChange={(val) => f.setSearch(val)}
@@ -1742,7 +1745,7 @@ export default function RentalsList() {
             autoFocusShortcut={true}
             shortcutHint="Ctrl+K"
             aria-label="Search rentals"
-            placeholder="Search rentals (Ctrl+K or /)…"
+            placeholder="Search rentals…"
             wrapperStyle={{ width: '100%', minWidth: 0 }}
           />
         </div>
@@ -2020,12 +2023,9 @@ export default function RentalsList() {
         onTabChange={handleTabChange}
         dropdownFilters={
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <FilterButton
-              onClick={() => setFiltersOpen((o) => !o)}
-              activeCount={f.activeCount}
-              controls="rentals-filters"
-              expanded={filtersOpen}
-            />
+            {/* RULING 2026-10-19: the filter toggle is the header's (RULING 2026-10-15). This second
+                FilterButton also defaulted to `inHeader`, so two toggles landed in the header slot and
+                sat on the "Rentals" title at 768px. Revert = restore the FilterButton here. */}
             {tabular && (
               <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--t-meta)', color: 'var(--text2)', fontWeight: 600 }}>
                 Sort
