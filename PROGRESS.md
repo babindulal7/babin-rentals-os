@@ -1,5 +1,46 @@
 # Progress Log
 
+## 2026-10-20 — Mobile and Tablet Modal Ergonomics, Touch Targets & Breakpoint Alignment
+
+**Did**
+- Fast Return Modal (`src/modules/rentals/modals/FastReturnModal.tsx`): upgraded quick-select on-rent booking chips from `minHeight: 34` to `minHeight: 44px` with `padding: '0 12px'`. Upgraded item condition select dropdowns from `height: 28` to `minHeight: 38px`, and missing reason input/decision selects from `height: 28` to `minHeight: 38px`. Added responsive flex wrapping and min-width constraints so check-in rows adapt smoothly to narrow phone viewports without text collision.
+- Barcode & Serial Lookup Modal (`src/modules/rentals/modals/BarcodeLookupModal.tsx`): upgraded search button from 36×36px to 44×44px interactive target with `padding: '0 52px 0 14px'` on the search input, satisfying Law 15 touch target floors on all touch devices. Added `minHeight: 48px` to lookup result rows for tactile, mis-tap-free item selection.
+- Asset Detail Workspace (`src/modules/inventory/AssetDetail.tsx` & `inventory.css`): made page header actions responsive on mobile viewports ("Edit", "Labels", "Book") preventing horizontal header overflow. On mobile unit cards, surfaced the `ServiceDueBadge` beside asset tags for parity with the desktop table, styled unit cards with 12px padding and 8px gap on phone screens, and wired the unit edit button to toggle the inline `UnitEditor` row. Added responsive hero card styles for `< 768px`.
+- Today Dashboard (`src/modules/today/Today.tsx`): upgraded dispatch period buttons (`Today`, `Tomorrow`, `Next 7 Days`) from `minHeight: 32` to `minHeight: 44px` with `padding: '0 14px'`, satisfying Law 15 touch targets and creating vertical alignment parity with the master date control.
+- Return Settlement Modal (`src/modules/rentals/modals/ReturnSettlementModal.tsx`): upgraded damage charge estimation inputs from `minHeight: 36` to `minHeight: 40px` with `padding: '0 10px'` and `13px` typography for touch ergonomics.
+- Entity Reference Selector Modal (`src/modules/notes/EntityIdSelectorModal.tsx`): upgraded category tabs from `minHeight: 36` to `minHeight: 44px`, upgraded "Insert in Text" and "Attach ID" action buttons from `minHeight: 36` to `minHeight: 44px`, and enabled responsive flex wrapping on narrow mobile screens.
+- Equipment Service Plan & Due Components (`src/modules/inventory/components/DueForService.tsx` & `ServicePlanCard.tsx`): upgraded "Create job" action from `minHeight: 32` to `minHeight: 44px` and service trigger inputs from `minHeight: 36` to `minHeight: 44px`.
+- Universal Breakpoint Hygiene (`pageHeader.css`, `clients.css`, `crew.css`, `notes.css`, `calendar.css`): updated media queries from `max-width: 768px` to `max-width: 767px` per strict breakpoint invariants (`DESIGN_DIRECTION_SPEC_v4.1 §7.7`, `breakpoints.test.ts`), ensuring tablet viewports (768px–1279px) are never mistakenly compressed into mobile layout rules.
+
+**Ruled**
+- All interactive controls across modals and workspaces (chips, buttons, inputs, selects) must satisfy the 44px touch target floor (Law 15).
+- Media queries for phone viewports must strictly target `max-width: 767px` to prevent tablet viewports at 768px from collapsing into mobile layout modes.
+
+**Verified**
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (0 warnings).
+- `npm run check:contrast`: 82/82 passed.
+- `npm run check:pglite`: 168/168 applied, 0 violations.
+- `npm run check:lifecycle`: 31/31 passed.
+- `npx vitest run src/modules/rentals/modals/__tests__/FastReturnModal.test.tsx src/modules/rentals/modals/__tests__/BarcodeLookupModal.test.tsx src/lib/__tests__/breakpoints.test.ts src/modules/inventory/__tests__/inventoryUnits.test.tsx`: 23/23 passed.
+- `npm run build`: successful production build, 209 PWA precache entries.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-19T21:00:33.574Z). Suite: Historical suite: 4827/4837 passed, 10 failed (recorded 2026-10-19T19:53:37.839Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-19T21:01:02.903Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Browser visual acceptance at phone/tablet/desktop widths remains unverified because the preview connection is unavailable.
+
 ## 2026-10-20 — Mobile and Tablet Operational Flow & Touch Target Ergonomics Overhaul
 
 **Did**
