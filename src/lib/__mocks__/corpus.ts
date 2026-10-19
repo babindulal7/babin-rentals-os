@@ -434,6 +434,9 @@ export function buildStore(options?: BuildStoreOptions): Store {
       total_amount: money(b.breakdown.rentalTotal),
       paid_amount: money(b.breakdown.payments),
       outstanding_amount: money(b.breakdown.outstanding),
+      // 0006: `currency text not null default 'NPR'` — the Revenue report refuses a
+      // row without it, so the mimic carries the column default live always has.
+      currency: 'NPR',
       issue_date: day(b.spec.pickupAt),
       due_date: day(new Date(b.spec.pickupAt.getTime() + 15 * 86_400_000)),
       voided_at: null,
@@ -449,7 +452,11 @@ export function buildStore(options?: BuildStoreOptions): Store {
         invoice_id: id(`invoice:${b.invoiceNo}`),
         client_id: clientId,
         amount: money(b.breakdown.payments),
-        payment_type: 'Rental',
+        // RULING 2026-10-16: was 'Rental', which is not a `payment_type` value
+        // (Advance Payment · Security Deposit · Refund, 0001). The SQL seed and
+        // Finance's collected filter use 'Advance Payment', so every report that
+        // filters the enum read Rs 0 collected in the mock build.
+        payment_type: 'Advance Payment',
         method: 'Bank Transfer',
         status: 'Received',
         payment_date: day(b.spec.pickupAt),

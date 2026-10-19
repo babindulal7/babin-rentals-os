@@ -532,9 +532,13 @@ describe('Finance — phone header de-crowding (<768px)', () => {
     expect(paymentBtn).toBeDefined()
     expect(paymentBtn?.getAttribute('aria-label')).toBe('Record Payment')
 
-    // On phone, secondary actions (Create Invoice, Export) are NOT in the header row
-    expect(byText(c, /^Create Invoice$/)).toBeUndefined()
-    expect(byText(c, /^Export$/)).toBeUndefined()
+    // On phone, secondary actions (Create Invoice, Export) are NOT in the header row.
+    // Scoped to the header: the body's own sub-header keeps an Export button on phone.
+    const header = c.querySelector('header')!
+    expect(header).not.toBeNull()
+    const inHeader = (re: RegExp) => Array.from(header.querySelectorAll('button')).find((b) => re.test(b.textContent ?? ''))
+    expect(inHeader(/^Create Invoice$/)).toBeUndefined()
+    expect(inHeader(/^Export$/)).toBeUndefined()
 
     // More actions menu button exists and has 44px hit target
     const moreBtn = c.querySelector('button[aria-haspopup="menu"][aria-label="More actions"]')

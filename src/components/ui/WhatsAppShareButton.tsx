@@ -94,7 +94,7 @@ export function WhatsAppShareButton({
             position: 'absolute',
             top: 'calc(100% + 4px)',
             right: 0,
-            zIndex: 100,
+            zIndex: 'var(--z-dropdown)',
             minWidth: 240,
             background: 'var(--card)',
             border: '1px solid var(--border)',

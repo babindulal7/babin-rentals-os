@@ -1085,7 +1085,7 @@ export function ClientsDirectory({
         }}
         searchValue={searchQuery}
         onSearchChange={(val) => patchParams({ q: val ? val : null })}
-        searchPlaceholder="Search client, company, PAN, phone… (press /)"
+        searchPlaceholder="Search client, PAN, phone… (press /)"
         rightActions={
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--sp-sm)', flexShrink: 0 }}>
             {tabular &&
@@ -1802,7 +1802,7 @@ export function ClientsDirectory({
                                     position: 'absolute',
                                     right: 0,
                                     ...(openMenuId.up ? { bottom: 30 } : { top: 30 }),
-                                    zIndex: 30,
+                                    zIndex: 'var(--z-dropdown)',
                                     minWidth: 208,
                                     padding: 6,
                                     borderRadius: 'var(--r-btn)',

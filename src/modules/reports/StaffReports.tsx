@@ -1,77 +1,76 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { PageHeader, KpiStrip, cardStyle } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { PageBody } from '../../components/ui/PageBody'
 import { ReportToolbar } from '../../components/ui/ReportToolbar'
-import type { ReportCsvRow } from '../../components/ui/ReportToolbar'
+import type { ReportCsvRow, ReportFilters } from '../../components/ui/ReportToolbar'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
 import { useAuth } from '../../lib/auth'
 import { formatMoney } from '../../lib/money'
-import type { Paisa } from '../../lib/money'
-import {
-  STAFF_METRICS,
-  STAFF_LIST,
-  getStaffReportsSummary,
-  type StaffReportsSummary,
-} from '../../lib/queries/staffReports'
+import { useLoad } from '../../lib/queries/useLoad'
+import { NOT_TRACKED } from '../../lib/queries/reportSupport'
+import { getStaffReportsSummary, type StaffReportsSummary } from '../../lib/queries/staffReports'
+import { reportFilterOptions, hasReportFilters } from './reportStates'
 
-/**
- * The export body.
- *
- * ⚠ It takes the same two arguments the TABLE uses to decide whether a
- * performance score is visible, and withholds the score the same way. An export
- * that dumped every score regardless would be a way to read, in a spreadsheet,
- * exactly what the screen refuses to show — which is how a permission gate gets
- * quietly repealed by a download button.
- */
-function staffCsv(isManager: boolean, myName: string | undefined): ReportCsvRow[] {
+const cell = { padding: 'var(--sp-sm) var(--sp-md)' } as const
+
+/** The export body: the same figures and rows the page draws, nothing the page withholds. */
+function staffCsv(summary: StaffReportsSummary | null): ReportCsvRow[] {
+  if (!summary) return []
   return [
     ['Figure', 'Value'],
-    ['Revenue handled', formatMoney(STAFF_METRICS.revenueHandled as Paisa)],
-    ['Collection rate', `${STAFF_METRICS.collectionRate}%`],
-    ['Tasks completed', STAFF_METRICS.tasksCompleted],
-    ['Average response time', STAFF_METRICS.averageResponseTime],
+    ['Bookings created', summary.totals.bookingsCreated],
+    ['Value of bookings created', formatMoney(summary.totals.bookingValue)],
+    ['Rental collections received', formatMoney(summary.totals.collections)],
+    ['Floor sessions completed', summary.totals.sessionsCompleted],
+    ['Average response time', NOT_TRACKED],
     [],
-    ['Staff', 'Role', 'Revenue Handled', 'Collections', 'Collection Rate', 'Tasks', 'Performance Score'],
-    ...STAFF_LIST.map((s): ReportCsvRow => [
+    ['Staff', 'Role', 'Bookings Created', 'Booking Value', 'Collections Received', 'Sessions Completed'],
+    ...summary.rows.map((s): ReportCsvRow => [
       s.name,
       s.role,
-      formatMoney(s.revenueHandled as Paisa),
-      formatMoney(s.collections as Paisa),
-      `${((s.collections / s.revenueHandled) * 100).toFixed(1)}%`,
-      s.tasksCompleted,
-      isManager || s.name === myName ? s.performanceScore : 'Hidden',
+      s.bookingsCreated,
+      formatMoney(s.bookingValue),
+      formatMoney(s.collections),
+      s.sessionsCompleted,
     ]),
   ]
 }
 
+/**
+ * Staff Performance.
+ *
+ * Phase 6 + Law 16: this page rendered five invented people from
+ * `data/staffReports` whatever the read returned. It now draws the per-person
+ * figures `getStaffReportsSummary` derives from bookings, payments and floor
+ * sessions, through `useLoad` + `PageBody` (loading · Error + Retry ·
+ * nothing-yet vs nothing in this period). The invented "performance score" and
+ * response time are gone — no table records either.
+ */
 export default function StaffReports() {
   const money = useCanViewMoney()
   const { user } = useAuth()
   const viewport = useViewport()
-  const [, setSummary] = useState<StaffReportsSummary | null>(null)
+  const [filters, setFilters] = useState<ReportFilters>({})
+  const filtered = hasReportFilters(filters)
+  // Law 6 — a money-blind role never sends the read.
+  const load = useLoad(() => getStaffReportsSummary(reportFilterOptions(filters)), {
+    key: JSON.stringify(filters),
+    enabled: money,
+  })
+  const summary = load.data
 
-  useEffect(() => {
-    let active = true
-    void getStaffReportsSummary().then((res) => {
-      if (active) setSummary(res)
-    })
-    return () => {
-      active = false
-    }
-  }, [])
-
-  // Law 6 — revenue handled and collections are the report; there is no
+  // Law 6 — booking value and collections are the report; there is no
   // money-free version of it, so the shared RESTRICTED state stands in for the
   // whole page and no export is offered above it.
   if (!money) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-        <PageHeader icon="users" title="Staff Performance" description="Track revenue handled, collections, and task completion." />
+        <PageHeader icon="users" title="Staff Performance" description="Bookings created, collections received and floor work, per person." />
         <PageBody
           restricted
-          restrictedReason="Staff performance is measured in revenue handled and collections, so there is no version of this page your role can see."
+          restrictedReason="Staff performance is measured in booking value and collections, so there is no version of this page your role can see."
           restrictedRequiredRole="Owner, Admin, Coordinator or Accounts"
         >
           {null}
@@ -80,117 +79,109 @@ export default function StaffReports() {
     )
   }
 
-  const isManager = user?.role === 'Owner' || user?.role === 'Manager' || user?.role === 'Admin'
-  const myName = user?.name // For hiding/showing performance score
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-      <PageHeader
-        icon="users"
-        title="Staff Performance"
-        description="Track revenue handled, collections, and task completion."
-      />
+      <PageHeader icon="users" title="Staff Performance" description="Bookings created, collections received and floor work, per person." />
 
-      {/*
-        Export only. `data/staffReports` is two constants — a headline block and
-        one row per person — with no date on any row and no branch column, so a
-        date range or a branch picker here would narrow nothing.
-      */}
       <ReportToolbar
         title="Staff Performance"
+        value={filters}
+        onChange={setFilters}
+        dateColumn="created_at"
         csv={{
           filename: 'staff-performance',
-          build: () => staffCsv(isManager, myName),
+          build: () => staffCsv(summary),
           ...(user?.name ? { generatedBy: user.name } : {}),
         }}
       />
 
-      {/* The shared strip — typed items, icon tile drawn, viewport clamp built
-          in. The old hand-rolled `StaffKpiCard` was `any`-typed and silently
-          dropped its `icon` prop ("clock" was not even a registry name — never
-          caught, because nothing rendered it). */}
-      <KpiStrip
-        columns={viewport === 'phone' ? 1 : viewport === 'tablet' ? 2 : 4}
-        items={[
-          {
-            label: 'Revenue Handled',
-            value: formatMoney(STAFF_METRICS.revenueHandled as Paisa),
-            icon: 'dollar',
-            accent: 'primary',
-            note: 'Total gross handled this month',
-          },
-          {
-            label: 'Collection Rate',
-            value: `${STAFF_METRICS.collectionRate}%`,
-            icon: 'check',
-            accent: 'success',
-            note: 'Average across all staff',
-          },
-          {
-            label: 'Tasks Completed',
-            value: String(STAFF_METRICS.tasksCompleted),
-            icon: 'check',
-            accent: 'progress',
-            note: 'Across all workspaces',
-          },
-          {
-            label: 'Avg Response Time',
-            value: STAFF_METRICS.averageResponseTime,
-            icon: 'timer',
-            accent: 'neutral',
-            note: 'Time to acknowledge task',
-          },
-        ]}
-      />
+      <PageBody
+        noun="staff figures"
+        loading={load.loading}
+        error={load.error}
+        onRetry={load.reload}
+        hasRows={summary !== null}
+        skeleton="kpi"
+        empty={summary !== null && summary.rows.length === 0}
+        emptyIsFiltered={filtered}
+        onClearFilters={() => setFilters({})}
+        emptyTitle={filtered ? 'No staff activity in this period' : 'No staff activity yet'}
+        emptyMessage={
+          filtered
+            ? 'Nobody created a booking, received a payment or completed a floor session in the selected period.'
+            : 'Figures appear here once staff create bookings, receive payments or complete floor work.'
+        }
+      >
+        {summary && (
+          <>
+            <KpiStrip
+              columns={viewport === 'phone' ? 1 : viewport === 'tablet' ? 2 : 4}
+              items={[
+                {
+                  label: 'Booking Value',
+                  value: formatMoney(summary.totals.bookingValue),
+                  icon: 'dollar',
+                  accent: 'primary',
+                  note: `${summary.totals.bookingsCreated} bookings created, not cancelled`,
+                },
+                {
+                  label: 'Collections Received',
+                  value: formatMoney(summary.totals.collections),
+                  icon: 'check',
+                  accent: 'success',
+                  note: 'Rental payments received; deposits excluded',
+                },
+                {
+                  label: 'Floor Sessions',
+                  value: String(summary.totals.sessionsCompleted),
+                  icon: 'check',
+                  accent: 'progress',
+                  note: 'Packing, handover, return and more, completed',
+                },
+                {
+                  label: 'Avg Response Time',
+                  value: NOT_TRACKED,
+                  icon: 'timer',
+                  accent: 'neutral',
+                  note: 'Nothing records when a task was acknowledged',
+                },
+              ]}
+            />
 
-      {/* Rulings §7 — this table is the report's CONTENT, not a rail. It used
-          to be passed into `ReflowRail`, which at desktop is a 288px sticky
-          collapsible box, so the whole seven-column table rendered inside one
-          self-scrolling rail. There is no aside content on this page, so there
-          is no rail at all. */}
-      <section aria-label="Staff Breakdown" style={cardStyle}>
-        <div style={{ fontSize: 'var(--t-body)', fontWeight: 600, padding: 'var(--sp-md)', borderBottom: '1px solid var(--border)' }}>Team Breakdown</div>
-        <DataTableShell ariaLabel="Staff team breakdown" data-table-scroll style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 'var(--t-meta)', minWidth: 640 }}>
-            <thead>
-              <tr style={{ color: 'var(--text2)' }}>
-                <th style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>Staff</th>
-                <th style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>Role</th>
-                <th style={{ padding: 'var(--sp-sm) var(--sp-md)', textAlign: 'right' }}>Revenue Handled</th>
-                <th style={{ padding: 'var(--sp-sm) var(--sp-md)', textAlign: 'right' }}>Collections</th>
-                <th style={{ padding: 'var(--sp-sm) var(--sp-md)', textAlign: 'right' }}>Collection Rate</th>
-                <th style={{ padding: 'var(--sp-sm) var(--sp-md)', textAlign: 'center' }}>Tasks</th>
-                <th style={{ padding: 'var(--sp-sm) var(--sp-md)', textAlign: 'center' }}>Performance Score</th>
-              </tr>
-            </thead>
-            <tbody>
-              {STAFF_LIST.map((s) => {
-                const rate = ((s.collections / s.revenueHandled) * 100).toFixed(1)
-                // RBAC for performance score
-                const canSeeScore = isManager || s.name === myName
-
-                return (
-                  <tr key={s.id} style={{ borderTop: '1px solid var(--border)' }}>
-                    <td style={{ padding: 'var(--sp-sm) var(--sp-md)', fontWeight: 600 }}>{s.name}</td>
-                    <td style={{ padding: 'var(--sp-sm) var(--sp-md)', textTransform: 'capitalize' }}>{s.role}</td>
-                    <td style={{ padding: 'var(--sp-sm) var(--sp-md)', textAlign: 'right' }}>{formatMoney(s.revenueHandled as Paisa)}</td>
-                    <td style={{ padding: 'var(--sp-sm) var(--sp-md)', textAlign: 'right', color: 'var(--success)' }}>{formatMoney(s.collections as Paisa)}</td>
-                    <td style={{ padding: 'var(--sp-sm) var(--sp-md)', textAlign: 'right' }}>{rate}%</td>
-                    <td style={{ padding: 'var(--sp-sm) var(--sp-md)', textAlign: 'center' }}>{s.tasksCompleted}</td>
-                    <td style={{ padding: 'var(--sp-sm) var(--sp-md)', textAlign: 'center', fontWeight: 600 }}>
-                      {canSeeScore ? (
-                        <span style={{ color: s.performanceScore >= 90 ? 'var(--success)' : 'var(--primary)' }}>{s.performanceScore}</span>
-                      ) : (
-                        <span style={{ color: 'var(--text3)' }}>Hidden</span>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </DataTableShell>
-      </section>
+            <section aria-label="Staff Breakdown" style={cardStyle}>
+              <div style={{ fontSize: 'var(--t-body)', fontWeight: 600, padding: 'var(--sp-md)', borderBottom: '1px solid var(--border)' }}>
+                Team Breakdown
+              </div>
+              <DataTableShell ariaLabel="Staff team breakdown" data-table-scroll style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 'var(--t-meta)', minWidth: 640 }}>
+                  <thead>
+                    <tr style={{ color: 'var(--text2)' }}>
+                      <th style={cell}>Staff</th>
+                      <th style={cell}>Role</th>
+                      <th style={{ ...cell, textAlign: 'right' }}>Bookings Created</th>
+                      <th style={{ ...cell, textAlign: 'right' }}>Booking Value</th>
+                      <th style={{ ...cell, textAlign: 'right' }}>Collections Received</th>
+                      <th style={{ ...cell, textAlign: 'right' }}>Sessions Completed</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {summary.rows.map((s) => (
+                      <tr key={s.userId} style={{ borderTop: '1px solid var(--border)' }}>
+                        <td style={{ ...cell, fontWeight: 600 }}>{s.name}</td>
+                        <td style={cell}>{s.role}</td>
+                        <td style={{ ...cell, textAlign: 'right' }}>{s.bookingsCreated}</td>
+                        <td style={{ ...cell, textAlign: 'right' }}>{formatMoney(s.bookingValue)}</td>
+                        <td style={{ ...cell, textAlign: 'right' }}>{formatMoney(s.collections)}</td>
+                        <td style={{ ...cell, textAlign: 'right' }}>{s.sessionsCompleted}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </DataTableShell>
+            </section>
+          </>
+        )}
+      </PageBody>
     </div>
   )
 }

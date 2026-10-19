@@ -111,3 +111,11 @@ From checking `D:\proects\md` against `step1-foundation`. Fonepay, the live retu
 
 - **Explicit answers:** Manager reversals before handover only; Archive only Closed/Cancelled bookings, retaining searchable history. Post-handover custody undo is excluded.
 - **Implementation:** O16-3 in RULINGS-2026-10-16-operations-ui.md; migration 0167 adds the audited, idempotent writer. See PROGRESS.md for verification and application status.
+
+## 13. Report figures with no source (16 October 2026, Law 16 pass) — open
+
+The Law 16 report pass (PROGRESS.md, 2026-10-16) replaced invented figures with "Not tracked yet". Each of these needs a person before it can be measured:
+- **Per-unit revenue attribution** — how a booking line's value is split across the units that served it (Asset ROI revenue, margin, ROI, maintenance drag). `TODO(decision)` in `src/lib/queries/assetRoi.ts`.
+- **Cancellation fee policy** — the Rentals report showed a 48 h / 24 h / 50 % fee schedule no ruling contains. Removed; is there a policy, and does it charge?
+- **Bank / cash balance** — Cash Flow opening and closing cash, runway, Working Capital and the current ratio need a recorded bank balance; none exists.
+- **Utilization and idle cost** — need unit state history over time (Equipment Performance, Inventory, Damage & Maintenance downtime).

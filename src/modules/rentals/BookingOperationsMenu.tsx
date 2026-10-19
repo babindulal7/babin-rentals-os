@@ -111,7 +111,7 @@ export default function BookingOperationsMenu({
           aria-label="Operations"
           style={{
             position: 'absolute',
-            zIndex: 40,
+            zIndex: 'var(--z-dropdown)',
             top: 'calc(100% + 6px)',
             right: 0,
             minWidth: 220,

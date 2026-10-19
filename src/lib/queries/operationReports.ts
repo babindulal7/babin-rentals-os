@@ -1,14 +1,21 @@
 import { supabase } from '../supabase'
+import { embeddedName, percentOf, rowsOf, type ReportFilterOptions } from './reportSupport'
+
+export type { ReportFilterOptions } from './reportSupport'
 
 export interface OperationMetrics {
   totalPickups: number
-  onTimePickupRate: number
+  /** No source yet: nothing records the scheduled handover time a session is measured against. */
+  onTimePickupRate: number | null
   totalReturns: number
-  onTimeReturnRate: number
+  /** Share of returned bookings whose `actual_return_at` is on or before `return_at`; null when none has returned. */
+  onTimeReturnRate: number | null
   currentlyOverdue: number
   totalPackingJobs: number
-  packingFulfillmentRate: number
-  idVerificationRate: number
+  /** No source yet: packing does not record a verified-vs-expected line count. */
+  packingFulfillmentRate: number | null
+  /** Share of completed handovers with government ID verified; null when there were none. */
+  idVerificationRate: number | null
 }
 
 export interface DeliveryMethodBreakdown {
@@ -41,8 +48,8 @@ export interface ReturnSessionItem {
   clientName: string
   returnAt: string
   returningPerson: string
+  /** The worst inspected condition on the session's lines, or "Not inspected". */
   condition: string
-  cleaningRequired: boolean
   damageSuspected: boolean
   status: string
 }
@@ -78,269 +85,212 @@ export interface OperationsReportData {
   packingJobs: PackingJobItem[]
 }
 
-export interface ReportFilterOptions {
-  from?: string | undefined
-  to?: string | undefined
-  branchId?: string | undefined
+/*
+ * RULING 2026-10-16 (R-P6-STATES, Law 16): this read returned MOCK_OPERATIONS on
+ * a failure and on an empty database, and patched figures one by one with
+ * `|| MOCK_OPERATIONS.metrics…` — the on-time, fulfilment and ID rates were
+ * literals (93.5, 88.1, 98.2, 95.7) on every path. It now throws on failure,
+ * returns honest empties, and a rate with no source is `null` ("Not tracked
+ * yet" on the page). Also fixed, each of which hid every live session:
+ *   - `operation_kind` is Handover/Return (0001), not 'dispatch'/'return';
+ *   - `session_state` is 'Completed', not 'completed';
+ *   - `return_lines` has no cleaning_required/damage_suspected columns — the
+ *     read failed silently; damage is now `condition` Damaged/Lost (0001
+ *     `item_condition`), and cleaning is not claimed at all;
+ *   - the staff name was the literal 'Warehouse Staff'; it is now the
+ *     session's `warehouse_staff_id` user.
+ * Revert = restore MOCK_OPERATIONS and the `catch`.
+ */
+
+const CONDITION_RANK: Record<string, number> = { Excellent: 0, Good: 1, Fair: 2, Damaged: 3, Lost: 4 }
+
+type BookingRow = {
+  id: string
+  booking_no: string
+  stage: string
+  pickup_at: string
+  return_at: string
+  actual_return_at: string | null
+  delivery_type: string | null
+  project: string | null
+  cancelled_at: string | null
+  clients?: unknown
+  booking_lines?: { qty: number | null; voided_at: string | null }[] | null
 }
 
-/* ── Fallback Seed Data (Hermetic baseline for mock mode & empty DB) ──────── */
-
-const MOCK_OPERATIONS: OperationsReportData = {
-  metrics: {
-    totalPickups: 46,
-    onTimePickupRate: 93.5,
-    totalReturns: 42,
-    onTimeReturnRate: 88.1,
-    currentlyOverdue: 3,
-    totalPackingJobs: 48,
-    packingFulfillmentRate: 98.2,
-    idVerificationRate: 95.7,
-  },
-  deliveryMethods: [
-    { method: 'Customer Pickup', count: 28, percent: 61 },
-    { method: 'Babin Delivery', count: 12, percent: 26 },
-    { method: 'Courier', count: 4, percent: 9 },
-    { method: 'Third Party', count: 2, percent: 4 },
-  ],
-  returnConditions: [
-    { condition: 'Clean / Good Condition', count: 32, percent: 76 },
-    { condition: 'Needs Cleaning', count: 7, percent: 17 },
-    { condition: 'Damage Suspected', count: 3, percent: 7 },
-  ],
-  pickups: [
-    { id: 'pk-01', bookingNo: 'BK-2026-0071', clientName: 'Highland Pictures', pickupAt: '2026-09-24T08:00:00Z', deliveryType: 'Customer Pickup', receiverName: 'Bikash Shrestha', idVerified: true, staffName: 'Prakash Sharma', status: 'Completed' },
-    { id: 'pk-02', bookingNo: 'BK-2026-0072', clientName: 'KTM Motion Arts', pickupAt: '2026-09-24T09:30:00Z', deliveryType: 'Babin Delivery', receiverName: 'Sunil Thapa', idVerified: true, staffName: 'Rabin Tamang', status: 'Completed' },
-    { id: 'pk-03', bookingNo: 'BK-2026-0073', clientName: 'Aura Media Studio', pickupAt: '2026-09-25T07:45:00Z', deliveryType: 'Customer Pickup', receiverName: 'Anil Gurung', idVerified: true, staffName: 'Prakash Sharma', status: 'Completed' },
-    { id: 'pk-04', bookingNo: 'BK-2026-0074', clientName: 'Red Panda Creative', pickupAt: '2026-09-25T11:00:00Z', deliveryType: 'Courier', receiverName: 'Courier Driver', idVerified: false, staffName: 'Rabin Tamang', status: 'Completed' },
-    { id: 'pk-05', bookingNo: 'BK-2026-0075', clientName: 'Mountain Trail Films', pickupAt: '2026-09-26T08:30:00Z', deliveryType: 'Customer Pickup', receiverName: 'Deepak Adhikari', idVerified: true, staffName: 'Prakash Sharma', status: 'Completed' },
-  ],
-  returns: [
-    { id: 'rt-01', bookingNo: 'BK-2026-0065', clientName: 'Everest Vision', returnAt: '2026-09-23T16:00:00Z', returningPerson: 'Bikash Shrestha', condition: 'Clean / Good Condition', cleaningRequired: false, damageSuspected: false, status: 'Completed' },
-    { id: 'rt-02', bookingNo: 'BK-2026-0066', clientName: 'Urban Frame', returnAt: '2026-09-23T17:30:00Z', returningPerson: 'Nabin KC', condition: 'Needs Cleaning', cleaningRequired: true, damageSuspected: false, status: 'Completed' },
-    { id: 'rt-03', bookingNo: 'BK-2026-0067', clientName: 'Pokhara Studios', returnAt: '2026-09-24T15:00:00Z', returningPerson: 'Karan Rana', condition: 'Clean / Good Condition', cleaningRequired: false, damageSuspected: false, status: 'Completed' },
-    { id: 'rt-04', bookingNo: 'BK-2026-0068', clientName: 'Himalaya Films', returnAt: '2026-09-25T18:00:00Z', returningPerson: 'Anish Rai', condition: 'Damage Suspected', cleaningRequired: true, damageSuspected: true, status: 'Completed' },
-    { id: 'rt-05', bookingNo: 'BK-2026-0070', clientName: 'Aura Media Studio', returnAt: '2026-09-26T14:30:00Z', returningPerson: 'Suman Shrestha', condition: 'Clean / Good Condition', cleaningRequired: false, damageSuspected: false, status: 'Completed' },
-  ],
-  overdueList: [
-    { id: 'ov-01', bookingNo: 'BK-2026-0058', clientName: 'Studio Black Nepal', project: 'Indie Feature Shoot', scheduledReturn: '2026-09-22T18:00:00Z', daysOverdue: 4, deliveryType: 'Customer Pickup', severity: 'critical' },
-    { id: 'ov-02', bookingNo: 'BK-2026-0061', clientName: 'Valley Ad Agency', project: 'Automotive Commercial', scheduledReturn: '2026-09-24T17:00:00Z', daysOverdue: 2, deliveryType: 'Babin Delivery', severity: 'moderate' },
-    { id: 'ov-03', bookingNo: 'BK-2026-0055', clientName: 'Wild Yak Productions', project: 'Wildlife Series Episode 3', scheduledReturn: '2026-09-18T16:00:00Z', daysOverdue: 8, deliveryType: 'Customer Pickup', severity: 'severe' },
-  ],
-  packingJobs: [
-    { id: 'pj-01', bookingNo: 'BK-2026-0078', clientName: 'Metro Broadcast', project: 'Morning News Special', pickupScheduled: '2026-09-27T07:00:00Z', itemCount: 14, state: 'packed' },
-    { id: 'pj-02', bookingNo: 'BK-2026-0079', clientName: 'Lalitpur Arts', project: 'Festival Documentary', pickupScheduled: '2026-09-27T08:30:00Z', itemCount: 22, state: 'packed' },
-    { id: 'pj-03', bookingNo: 'BK-2026-0080', clientName: 'Chitwan Wildlife Media', project: 'Jungle Feature', pickupScheduled: '2026-09-28T06:00:00Z', itemCount: 35, state: 'pending' },
-    { id: 'pj-04', bookingNo: 'BK-2026-0081', clientName: 'Zenith Studio', project: 'Music Video Production', pickupScheduled: '2026-09-28T09:00:00Z', itemCount: 18, state: 'pending' },
-  ],
+type SessionRow = {
+  id: string
+  booking_id: string
+  operation: string
+  state: string
+  started_at: string | null
+  completed_at: string | null
+  cancelled_at: string | null
+  warehouse_staff_id: string | null
+  receiver_name: string | null
+  pickup_person_name: string | null
+  returning_person_name: string | null
+  government_id_verified: boolean | null
 }
 
-/* ── Query Aggregations from PostgreSQL ─────────────────────────────────── */
+type ReturnLineRow = { session_id: string | null; condition: string | null }
 
-export async function getOperationsReport(options?: ReportFilterOptions): Promise<OperationsReportData> {
-  try {
-    let bookingsQuery = supabase
-      .from('bookings')
-      .select(`
-        id,
-        booking_no,
-        client_id,
-        branch_id,
-        stage,
-        pickup_at,
-        return_at,
-        actual_return_at,
-        delivery_type,
-        project,
-        clients!client_id(name),
-        booking_lines(id, qty)
-      `)
+function severityOf(daysLate: number): OverdueRentalItem['severity'] {
+  return daysLate >= 6 ? 'severe' : daysLate >= 3 ? 'critical' : 'moderate'
+}
 
-    if (options?.from) bookingsQuery = bookingsQuery.gte('pickup_at', options.from)
-    if (options?.to) bookingsQuery = bookingsQuery.lte('pickup_at', options.to)
-    if (options?.branchId) bookingsQuery = bookingsQuery.eq('branch_id', options.branchId)
+export async function getOperationsReport(options?: ReportFilterOptions, now: Date = new Date()): Promise<OperationsReportData> {
+  let bookingsQuery = supabase
+    .from('bookings')
+    .select(
+      'id, booking_no, stage, pickup_at, return_at, actual_return_at, delivery_type, project, cancelled_at, clients!client_id(name), booking_lines(qty, voided_at)',
+    )
+  if (options?.from) bookingsQuery = bookingsQuery.gte('pickup_at', options.from)
+  if (options?.to) bookingsQuery = bookingsQuery.lte('pickup_at', options.to)
+  if (options?.branchId) bookingsQuery = bookingsQuery.eq('branch_id', options.branchId)
 
-    const [bookingsRes, sessionsRes, returnsRes] = await Promise.all([
-      bookingsQuery,
-      supabase
-        .from('operation_sessions')
-        .select(`
-          id,
-          booking_id,
-          operation,
-          session_no,
-          state,
-          started_at,
-          completed_at,
-          receiver_name,
-          government_id_verified,
-          booking_authorization_verified,
-          returning_person_name,
-          pickup_person_name
-        `)
-        .order('completed_at', { ascending: false }),
-      supabase
-        .from('return_lines')
-        .select('id, session_id, condition, cleaning_required, damage_suspected'),
-    ])
+  const [bookingsRes, sessionsRes, linesRes, usersRes] = await Promise.all([
+    bookingsQuery,
+    supabase
+      .from('operation_sessions')
+      .select(
+        'id, booking_id, operation, state, started_at, completed_at, cancelled_at, warehouse_staff_id, receiver_name, pickup_person_name, returning_person_name, government_id_verified',
+      )
+      .in('operation', ['Handover', 'Return'])
+      .order('completed_at', { ascending: false }),
+    supabase.from('return_lines').select('session_id, condition'),
+    supabase.from('users').select('id, full_name'),
+  ])
 
-    const bookings = bookingsRes.data || []
-    const sessions = sessionsRes.data || []
-    const returnLines = returnsRes.data || []
+  const bookings = rowsOf<BookingRow>(bookingsRes, 'Operations bookings read failed')
+  const sessions = rowsOf<SessionRow>(sessionsRes, 'Operation sessions read failed')
+  const returnLines = rowsOf<ReturnLineRow>(linesRes, 'Return lines read failed')
+  const users = rowsOf<{ id: string; full_name: string | null }>(usersRes, 'Staff names read failed')
 
-    if (bookings.length === 0 && sessions.length === 0) {
-      return MOCK_OPERATIONS
+  const byId = new Map(bookings.map((b) => [b.id, b]))
+  const staffName = new Map(users.map((u) => [u.id, u.full_name?.trim() || '—']))
+  const nowMs = now.getTime()
+
+  const deliveryMap = new Map<string, number>()
+  const overdueList: OverdueRentalItem[] = []
+  const packingJobs: PackingJobItem[] = []
+  let returnedCount = 0
+  let returnedOnTime = 0
+
+  for (const b of bookings) {
+    if (b.cancelled_at) continue
+    const method = b.delivery_type || 'Not set'
+    deliveryMap.set(method, (deliveryMap.get(method) ?? 0) + 1)
+
+    if (b.actual_return_at) {
+      returnedCount++
+      if (Date.parse(b.actual_return_at) <= Date.parse(b.return_at)) returnedOnTime++
     }
 
-    // Delivery method counts
-    const deliveryMap: Record<string, number> = {}
-    let totalPickups = 0
-    let verifiedIdCount = 0
-
-    // Overdue tracking
-    const overdueList: OverdueRentalItem[] = []
-    const nowMs = Date.now()
-
-    // Packing jobs
-    const packingJobs: PackingJobItem[] = []
-
-    for (const b of bookings) {
-      const dType = b.delivery_type || 'Customer Pickup'
-      deliveryMap[dType] = (deliveryMap[dType] || 0) + 1
-
-      // Overdue check: On Rent & past return_at
-      if (b.stage === 'On Rent' && b.return_at) {
-        const retMs = Date.parse(b.return_at)
-        if (!isNaN(retMs) && retMs < nowMs && !b.actual_return_at) {
-          const daysLate = Math.max(1, Math.floor((nowMs - retMs) / 86400000))
-          const severity: OverdueRentalItem['severity'] =
-            daysLate >= 6 ? 'severe' : daysLate >= 3 ? 'critical' : 'moderate'
-
-          const clientObj = b.clients as { name?: string } | null
-          overdueList.push({
-            id: b.id,
-            bookingNo: b.booking_no,
-            clientName: clientObj?.name || 'Client',
-            project: b.project || 'Active Production',
-            scheduledReturn: b.return_at,
-            daysOverdue: daysLate,
-            deliveryType: dType,
-            severity,
-          })
-        }
-      }
-
-      // Packing jobs check: Booked or Packed
-      if (b.stage === 'Booked' || b.stage === 'Packed') {
-        const clientObj = b.clients as { name?: string } | null
-        const lines = (b.booking_lines as Array<{ id: string; qty: number }>) || []
-        const totalItems = lines.reduce((acc, l) => acc + (l.qty || 1), 0)
-
-        packingJobs.push({
+    if (b.stage === 'On Rent' && !b.actual_return_at) {
+      const retMs = Date.parse(b.return_at)
+      if (!Number.isNaN(retMs) && retMs < nowMs) {
+        const daysLate = Math.max(1, Math.floor((nowMs - retMs) / 86_400_000))
+        overdueList.push({
           id: b.id,
           bookingNo: b.booking_no,
-          clientName: clientObj?.name || 'Client',
-          project: b.project || 'Upcoming Hire',
-          pickupScheduled: b.pickup_at,
-          itemCount: totalItems || 1,
-          state: b.stage === 'Packed' ? 'packed' : 'pending',
+          clientName: embeddedName(b.clients),
+          project: b.project?.trim() || '—',
+          scheduledReturn: b.return_at,
+          daysOverdue: daysLate,
+          deliveryType: method,
+          severity: severityOf(daysLate),
         })
       }
     }
 
-    // Session breakdowns (dispatch & return)
-    const pickupList: PickupSessionItem[] = []
-    const returnList: ReturnSessionItem[] = []
+    if (b.stage === 'Booked' || b.stage === 'Packed') {
+      packingJobs.push({
+        id: b.id,
+        bookingNo: b.booking_no,
+        clientName: embeddedName(b.clients),
+        project: b.project?.trim() || '—',
+        pickupScheduled: b.pickup_at,
+        itemCount: (b.booking_lines ?? []).filter((l) => !l.voided_at).reduce((acc, l) => acc + (Number(l.qty) || 0), 0),
+        state: b.stage === 'Packed' ? 'packed' : 'pending',
+      })
+    }
+  }
 
-    for (const s of sessions) {
-      if (s.operation === 'dispatch') {
-        totalPickups++
-        if (s.government_id_verified) verifiedIdCount++
+  const worstBySession = new Map<string, string>()
+  for (const l of returnLines) {
+    if (!l.session_id || !l.condition) continue
+    const prev = worstBySession.get(l.session_id)
+    if (prev === undefined || (CONDITION_RANK[l.condition] ?? 0) > (CONDITION_RANK[prev] ?? 0)) worstBySession.set(l.session_id, l.condition)
+  }
 
-        const matchedBooking = bookings.find((b) => b.id === s.booking_id)
-        const clientObj = matchedBooking?.clients as { name?: string } | null
-        pickupList.push({
-          id: s.id,
-          bookingNo: matchedBooking?.booking_no || `SES-${s.session_no}`,
-          clientName: clientObj?.name || 'Client',
-          pickupAt: s.completed_at || s.started_at || new Date().toISOString(),
-          deliveryType: matchedBooking?.delivery_type || 'Customer Pickup',
-          receiverName: s.receiver_name || s.pickup_person_name || 'Staff Handover',
-          idVerified: Boolean(s.government_id_verified),
-          staffName: 'Warehouse Staff',
-          status: s.state === 'completed' ? 'Completed' : 'In Progress',
-        })
-      } else if (s.operation === 'return') {
-        const matchedBooking = bookings.find((b) => b.id === s.booking_id)
-        const clientObj = matchedBooking?.clients as { name?: string } | null
-        const matchedLines = returnLines.filter((rl) => rl.session_id === s.id)
-        const hasCleaning = matchedLines.some((rl) => rl.cleaning_required)
-        const hasDamage = matchedLines.some((rl) => rl.damage_suspected)
+  const pickups: PickupSessionItem[] = []
+  const returns: ReturnSessionItem[] = []
+  let handovers = 0
+  let idVerified = 0
 
-        const condStr = hasDamage
-          ? 'Damage Suspected'
-          : hasCleaning
-            ? 'Needs Cleaning'
-            : 'Clean / Good Condition'
-
-        returnList.push({
-          id: s.id,
-          bookingNo: matchedBooking?.booking_no || `SES-${s.session_no}`,
-          clientName: clientObj?.name || 'Client',
-          returnAt: s.completed_at || s.started_at || new Date().toISOString(),
-          returningPerson: s.returning_person_name || 'Client Representative',
-          condition: condStr,
-          cleaningRequired: hasCleaning,
-          damageSuspected: hasDamage,
-          status: s.state === 'completed' ? 'Completed' : 'In Progress',
-        })
+  for (const s of sessions) {
+    if (s.cancelled_at) continue
+    const b = byId.get(s.booking_id)
+    // A session outside the filtered bookings is outside the period/branch.
+    if (!b || b.cancelled_at) continue
+    const when = s.completed_at ?? s.started_at ?? ''
+    const status = s.state
+    if (s.operation === 'Handover') {
+      if (s.state === 'Completed') {
+        handovers++
+        if (s.government_id_verified) idVerified++
       }
+      pickups.push({
+        id: s.id,
+        bookingNo: b.booking_no,
+        clientName: embeddedName(b.clients),
+        pickupAt: when,
+        deliveryType: b.delivery_type || 'Not set',
+        receiverName: s.receiver_name?.trim() || s.pickup_person_name?.trim() || '—',
+        idVerified: Boolean(s.government_id_verified),
+        staffName: (s.warehouse_staff_id && staffName.get(s.warehouse_staff_id)) || '—',
+        status,
+      })
+    } else if (s.operation === 'Return') {
+      const condition = worstBySession.get(s.id) ?? 'Not inspected'
+      returns.push({
+        id: s.id,
+        bookingNo: b.booking_no,
+        clientName: embeddedName(b.clients),
+        returnAt: when,
+        returningPerson: s.returning_person_name?.trim() || '—',
+        condition,
+        damageSuspected: condition === 'Damaged' || condition === 'Lost',
+        status,
+      })
     }
+  }
 
-    const totalMethods = Object.values(deliveryMap).reduce((a, b) => a + b, 0) || 1
-    const deliveryMethods: DeliveryMethodBreakdown[] = Object.entries(deliveryMap).map(([m, cnt]) => ({
-      method: m,
-      count: cnt,
-      percent: Math.round((cnt / totalMethods) * 100),
-    }))
+  const methodTotal = [...deliveryMap.values()].reduce((a, n) => a + n, 0)
+  const condMap = new Map<string, number>()
+  for (const r of returns) condMap.set(r.condition, (condMap.get(r.condition) ?? 0) + 1)
 
-    // Return condition breakdown
-    const condMap: Record<string, number> = {
-      'Clean / Good Condition': 0,
-      'Needs Cleaning': 0,
-      'Damage Suspected': 0,
-    }
-    for (const r of returnList) {
-      condMap[r.condition] = (condMap[r.condition] || 0) + 1
-    }
-    const totalReturnsCount = returnList.length || 1
-    const returnConditions: ReturnConditionBreakdown[] = Object.entries(condMap).map(([cond, count]) => ({
-      condition: cond,
-      count,
-      percent: Math.round((count / totalReturnsCount) * 100),
-    }))
-
-    const idRate = totalPickups > 0 ? Number(((verifiedIdCount / totalPickups) * 100).toFixed(1)) : 95.7
-
-    return {
-      metrics: {
-        totalPickups: totalPickups || MOCK_OPERATIONS.metrics.totalPickups,
-        onTimePickupRate: 93.5,
-        totalReturns: returnList.length || MOCK_OPERATIONS.metrics.totalReturns,
-        onTimeReturnRate: 88.1,
-        currentlyOverdue: overdueList.length,
-        totalPackingJobs: packingJobs.length || MOCK_OPERATIONS.metrics.totalPackingJobs,
-        packingFulfillmentRate: 98.2,
-        idVerificationRate: idRate,
-      },
-      deliveryMethods: deliveryMethods.length > 0 ? deliveryMethods : MOCK_OPERATIONS.deliveryMethods,
-      returnConditions,
-      pickups: pickupList.length > 0 ? pickupList.slice(0, 10) : MOCK_OPERATIONS.pickups,
-      returns: returnList.length > 0 ? returnList.slice(0, 10) : MOCK_OPERATIONS.returns,
-      overdueList: overdueList.length > 0 ? overdueList : MOCK_OPERATIONS.overdueList,
-      packingJobs: packingJobs.length > 0 ? packingJobs.slice(0, 10) : MOCK_OPERATIONS.packingJobs,
-    }
-  } catch {
-    return MOCK_OPERATIONS
+  return {
+    metrics: {
+      totalPickups: handovers,
+      onTimePickupRate: null,
+      totalReturns: returns.length,
+      onTimeReturnRate: returnedCount > 0 ? Number(((returnedOnTime / returnedCount) * 100).toFixed(1)) : null,
+      currentlyOverdue: overdueList.length,
+      totalPackingJobs: packingJobs.length,
+      packingFulfillmentRate: null,
+      idVerificationRate: handovers > 0 ? Number(((idVerified / handovers) * 100).toFixed(1)) : null,
+    },
+    deliveryMethods: [...deliveryMap.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([method, count]) => ({ method, count, percent: percentOf(count, methodTotal) })),
+    returnConditions: [...condMap.entries()]
+      .sort((a, b) => (CONDITION_RANK[a[0]] ?? -1) - (CONDITION_RANK[b[0]] ?? -1))
+      .map(([condition, count]) => ({ condition, count, percent: percentOf(count, returns.length) })),
+    pickups: pickups.slice(0, 10),
+    returns: returns.slice(0, 10),
+    overdueList: overdueList.sort((a, b) => b.daysOverdue - a.daysOverdue),
+    packingJobs: packingJobs.sort((a, b) => a.pickupScheduled.localeCompare(b.pickupScheduled)).slice(0, 10),
   }
 }

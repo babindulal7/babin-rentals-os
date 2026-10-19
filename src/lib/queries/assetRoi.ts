@@ -1,19 +1,29 @@
 import { supabase } from '../supabase'
 import { rupees, type Paisa } from '../money'
+import { rowsOf } from './reportSupport'
 
 /**
- * # Asset ROI & True Cost of Ownership Engine (Pillar 4)
+ * # Asset ROI & True Cost of Ownership (Pillar 4)
  *
- * Implements rigorous capital allocation analytics:
- *  - Purchase Price (Capital Expenditure)
- *  - Lifetime Rental Revenue (Invoiced Paisa)
- *  - Cumulative Maintenance Expense (Repairs, servicing)
- *  - Net Return / Margin = Revenue - (Purchase Price + Maintenance)
- *  - ROI % = (Net Return / Purchase Price) * 100
- *  - Maintenance Drag % = (Maintenance Cost / Revenue) * 100
+ *  - Purchase Price (Capital Expenditure)         — `product_units_v.purchase_price`
+ *  - Cumulative Maintenance Expense               — `maintenance_records_v.cost`
+ *  - Lifetime Rental Revenue per unit             — NOT TRACKED YET (see below)
+ *  - Net Return = Revenue − (Purchase Price + Maintenance), ROI %, Maintenance Drag %
+ *    — all need the revenue figure, so they are `null` until it exists.
  *
- * All financial metrics adhere strictly to Law 1 (exact integer Paisa math).
- * Protected under Law 6: money-blind roles cannot view this surface.
+ * RULING 2026-10-16 (R-P6-STATES, Law 16): this module used to "estimate"
+ * revenue as purchase price × 1.6 (or × 0.6, chosen by cycling five seed rows),
+ * default a missing purchase price to ₹5,00,000, invent 5 % maintenance where
+ * none was recorded, copy utilization from the seed rows, and return those
+ * five seed rows whenever the read failed or found no units. Every figure on
+ * the page was therefore fiction. It now throws on failure, returns no rows for
+ * an empty fleet, and leaves revenue-derived figures `null` ("Not tracked yet").
+ * TODO(decision): how a booking line's value is attributed to the units that
+ * served it (PLAN §4 / OPEN_DECISIONS) — until ruled, per-unit revenue has no
+ * source. Revert = restore DEFAULT_FLEET_ROWS and the estimate.
+ *
+ * All money is integer paisa (Law 1). Money-blind roles never reach this read
+ * (Law 6) — and the view returns null prices to them anyway.
  */
 
 export interface UnitRoiRow {
@@ -22,187 +32,108 @@ export interface UnitRoiRow {
   readonly serialNo: string | null
   readonly productName: string
   readonly category: string
-  readonly purchasePricePaisa: Paisa
-  readonly lifetimeRevenuePaisa: Paisa
+  /** Null when no purchase price is recorded on the unit. */
+  readonly purchasePricePaisa: Paisa | null
+  /** Null: no per-unit revenue attribution exists yet. */
+  readonly lifetimeRevenuePaisa: Paisa | null
   readonly maintenanceCostPaisa: Paisa
-  readonly netProfitPaisa: Paisa
-  readonly roiPercent: number
-  readonly maintenanceDragPercent: number
-  readonly utilizationPercent: number
-  readonly daysOwned: number
+  readonly netProfitPaisa: Paisa | null
+  readonly roiPercent: number | null
+  readonly maintenanceDragPercent: number | null
+  /** Null: no rate-over-time source exists yet. */
+  readonly utilizationPercent: number | null
+  /** Null when neither a purchase date nor a created date is recorded. */
+  readonly daysOwned: number | null
 }
 
 export interface FleetRoiSummary {
   readonly totalCapitalInvestedPaisa: Paisa
-  readonly totalInvoicedRevenuePaisa: Paisa
+  /** Units with no purchase price recorded — excluded from the capital total, and said so. */
+  readonly unpricedUnits: number
+  /** Null when any row's revenue is unknown — a partial sum would understate it. */
+  readonly totalInvoicedRevenuePaisa: Paisa | null
   readonly totalMaintenanceExpensePaisa: Paisa
-  readonly netFleetReturnPaisa: Paisa
-  readonly fleetRoiPercent: number
-  readonly averageMaintenanceDragPercent: number
+  readonly netFleetReturnPaisa: Paisa | null
+  readonly fleetRoiPercent: number | null
+  readonly averageMaintenanceDragPercent: number | null
   readonly rows: readonly UnitRoiRow[]
 }
 
-const DEFAULT_FLEET_ROWS: UnitRoiRow[] = [
-  {
-    unitId: 'unit-red-01',
-    assetTag: 'CAM-001',
-    serialNo: 'RK-884192',
-    productName: 'RED Komodo 6K Cinema Package',
-    category: 'Cameras',
-    purchasePricePaisa: rupees(950000),
-    lifetimeRevenuePaisa: rupees(1420000),
-    maintenanceCostPaisa: rupees(65000),
-    netProfitPaisa: rupees(405000),
-    roiPercent: 42.6,
-    maintenanceDragPercent: 4.6,
-    utilizationPercent: 78,
-    daysOwned: 420,
-  },
-  {
-    unitId: 'unit-fx6-01',
-    assetTag: 'CAM-002',
-    serialNo: 'FX6-302194',
-    productName: 'Sony FX6 Full-Frame Cinema',
-    category: 'Cameras',
-    purchasePricePaisa: rupees(820000),
-    lifetimeRevenuePaisa: rupees(1640000),
-    maintenanceCostPaisa: rupees(42000),
-    netProfitPaisa: rupees(778000),
-    roiPercent: 94.9,
-    maintenanceDragPercent: 2.6,
-    utilizationPercent: 88,
-    daysOwned: 380,
-  },
-  {
-    unitId: 'unit-aputure-01',
-    assetTag: 'LIG-001',
-    serialNo: 'AP-600D-91',
-    productName: 'Aputure 600d Pro Daylight LED',
-    category: 'Lighting',
-    purchasePricePaisa: rupees(320000),
-    lifetimeRevenuePaisa: rupees(580000),
-    maintenanceCostPaisa: rupees(28000),
-    netProfitPaisa: rupees(232000),
-    roiPercent: 72.5,
-    maintenanceDragPercent: 4.8,
-    utilizationPercent: 65,
-    daysOwned: 310,
-  },
-  {
-    unitId: 'unit-tripod-01',
-    assetTag: 'GRIP-001',
-    serialNo: 'SC-V20-112',
-    productName: 'Sachtler Video 20 Carbon System',
-    category: 'Grip',
-    purchasePricePaisa: rupees(410000),
-    lifetimeRevenuePaisa: rupees(690000),
-    maintenanceCostPaisa: rupees(15000),
-    netProfitPaisa: rupees(265000),
-    roiPercent: 64.6,
-    maintenanceDragPercent: 2.2,
-    utilizationPercent: 72,
-    daysOwned: 450,
-  },
-  {
-    unitId: 'unit-ursa-01',
-    assetTag: 'CAM-015',
-    serialNo: 'BM-UM-4011',
-    productName: 'Blackmagic URSA Mini Pro 4.6K',
-    category: 'Cameras',
-    purchasePricePaisa: rupees(650000),
-    lifetimeRevenuePaisa: rupees(280000),
-    maintenanceCostPaisa: rupees(85000),
-    netProfitPaisa: rupees(-455000),
-    roiPercent: -70.0,
-    maintenanceDragPercent: 30.4,
-    utilizationPercent: 18,
-    daysOwned: 520,
-  },
-]
+const round1 = (n: number) => Math.round(n * 10) / 10
 
 export function computeFleetSummary(rows: readonly UnitRoiRow[]): FleetRoiSummary {
-  const totalCap = rows.reduce((s, r) => s + (r.purchasePricePaisa as number), 0)
-  const totalRev = rows.reduce((s, r) => s + (r.lifetimeRevenuePaisa as number), 0)
-  const totalMaint = rows.reduce((s, r) => s + (r.maintenanceCostPaisa as number), 0)
-  const netFleet = totalRev - (totalCap + totalMaint)
-
-  const fleetRoi = totalCap > 0 ? (netFleet / totalCap) * 100 : 0
-  const maintDrag = totalRev > 0 ? (totalMaint / totalRev) * 100 : 0
+  const totalCap = rows.reduce((s, r) => s + (r.purchasePricePaisa ?? 0), 0)
+  const totalMaint = rows.reduce((s, r) => s + r.maintenanceCostPaisa, 0)
+  const revenueKnown = rows.length > 0 && rows.every((r) => r.lifetimeRevenuePaisa !== null)
+  const totalRev = revenueKnown ? rows.reduce((s, r) => s + (r.lifetimeRevenuePaisa ?? 0), 0) : null
+  const netFleet = totalRev === null ? null : totalRev - (totalCap + totalMaint)
 
   return {
     totalCapitalInvestedPaisa: totalCap as Paisa,
-    totalInvoicedRevenuePaisa: totalRev as Paisa,
+    unpricedUnits: rows.filter((r) => r.purchasePricePaisa === null).length,
+    totalInvoicedRevenuePaisa: totalRev as Paisa | null,
     totalMaintenanceExpensePaisa: totalMaint as Paisa,
-    netFleetReturnPaisa: netFleet as Paisa,
-    fleetRoiPercent: Math.round(fleetRoi * 10) / 10,
-    averageMaintenanceDragPercent: Math.round(maintDrag * 10) / 10,
+    netFleetReturnPaisa: netFleet as Paisa | null,
+    fleetRoiPercent: netFleet === null || totalCap <= 0 ? null : round1((netFleet / totalCap) * 100),
+    averageMaintenanceDragPercent: totalRev === null || totalRev <= 0 ? null : round1((totalMaint / totalRev) * 100),
     rows,
   }
 }
 
-/**
- * Loads asset ROI metrics from Supabase database or falls back to verified reference corpus.
- */
-export async function getFleetAssetRoiSummary(): Promise<FleetRoiSummary> {
-  try {
-    const [unitsRes, maintRes] = await Promise.all([
-      supabase.from('product_units_v').select('id, asset_tag, serial_no, product_name, category_name, purchase_price, purchase_date, created_at'),
-      supabase.from('maintenance_records').select('product_unit_id, cost, status'),
-    ])
+type UnitRow = {
+  id: string
+  asset_tag: string | null
+  serial_no: string | null
+  product_id: string | null
+  purchase_price: number | string | null
+  purchase_date: string | null
+  created_at: string | null
+  retired_at: string | null
+}
 
-    const units = unitsRes.data ?? []
-    const maint = maintRes.data ?? []
+/** Throws on a failed read (Error + Retry); an empty fleet is an empty summary. */
+export async function getFleetAssetRoiSummary(now: Date = new Date()): Promise<FleetRoiSummary> {
+  const [unitsRes, maintRes, productsRes, categoriesRes] = await Promise.all([
+    supabase
+      .from('product_units_v')
+      .select('id, asset_tag, serial_no, product_id, purchase_price, purchase_date, created_at, retired_at'),
+    supabase.from('maintenance_records_v').select('product_unit_id, cost'),
+    supabase.from('products').select('id, name, category_id'),
+    supabase.from('inventory_categories').select('id, name'),
+  ])
+  const units = rowsOf<UnitRow>(unitsRes, 'Units read failed').filter((u) => !u.retired_at)
+  const maint = rowsOf<{ product_unit_id: string | null; cost: number | string | null }>(maintRes, 'Maintenance read failed')
+  const products = rowsOf<{ id: string; name: string | null; category_id: string | null }>(productsRes, 'Products read failed')
+  const categories = rowsOf<{ id: string; name: string | null }>(categoriesRes, 'Categories read failed')
 
-    if (units.length === 0) {
-      return computeFleetSummary(DEFAULT_FLEET_ROWS)
-    }
-
-    const maintByUnit = new Map<string, number>()
-    for (const m of maint) {
-      if (m.product_unit_id && m.cost != null) {
-        const cur = maintByUnit.get(m.product_unit_id) ?? 0
-        maintByUnit.set(m.product_unit_id, cur + Number(m.cost))
-      }
-    }
-
-    const now = Date.now()
-    const rows: UnitRoiRow[] = units.map((u, i) => {
-      const purchasePrice = Number(u.purchase_price) || 500000
-      const purchasePricePaisa = rupees(purchasePrice)
-      const maintCost = maintByUnit.get(u.id) ?? Math.round(purchasePrice * 0.05)
-      const maintenanceCostPaisa = rupees(maintCost)
-
-      // Estimate revenue from utilization if direct invoice-line link not populated
-      const purchaseDate = u.purchase_date ? Date.parse(u.purchase_date) : Date.parse(u.created_at || '')
-      const daysOwned = Math.max(30, Math.round((now - (isNaN(purchaseDate) ? now - 180 * 86400000 : purchaseDate)) / 86400000))
-      
-      const defaultRow = DEFAULT_FLEET_ROWS[i % DEFAULT_FLEET_ROWS.length]
-      const revMultiplier = defaultRow ? defaultRow.roiPercent > 0 ? 1.6 : 0.6 : 1.2
-      const lifetimeRevenuePaisa = rupees(Math.round(purchasePrice * revMultiplier))
-
-      const netProfit = (lifetimeRevenuePaisa as number) - ((purchasePricePaisa as number) + (maintenanceCostPaisa as number))
-      const roiPercent = purchasePrice > 0 ? (netProfit / (purchasePricePaisa as number)) * 100 : 0
-      const maintDrag = (lifetimeRevenuePaisa as number) > 0 ? ((maintenanceCostPaisa as number) / (lifetimeRevenuePaisa as number)) * 100 : 0
-
-      return {
-        unitId: u.id,
-        assetTag: u.asset_tag || `ASSET-${i + 1}`,
-        serialNo: u.serial_no ?? null,
-        productName: u.product_name || `Equipment Model ${i + 1}`,
-        category: u.category_name || 'General AV',
-        purchasePricePaisa,
-        lifetimeRevenuePaisa,
-        maintenanceCostPaisa,
-        netProfitPaisa: netProfit as Paisa,
-        roiPercent: Math.round(roiPercent * 10) / 10,
-        maintenanceDragPercent: Math.round(maintDrag * 10) / 10,
-        utilizationPercent: defaultRow?.utilizationPercent ?? 65,
-        daysOwned,
-      }
-    })
-
-    return computeFleetSummary(rows)
-  } catch {
-    return computeFleetSummary(DEFAULT_FLEET_ROWS)
+  const maintByUnit = new Map<string, number>()
+  for (const m of maint) {
+    if (!m.product_unit_id || m.cost == null) continue
+    maintByUnit.set(m.product_unit_id, (maintByUnit.get(m.product_unit_id) ?? 0) + rupees(Number(m.cost) || 0))
   }
+  const productById = new Map(products.map((p) => [p.id, p]))
+  const categoryName = new Map(categories.map((c) => [c.id, c.name?.trim() || '—']))
+
+  const rows: UnitRoiRow[] = units.map((u) => {
+    const product = u.product_id ? productById.get(u.product_id) : undefined
+    const price = u.purchase_price == null || u.purchase_price === '' ? null : rupees(Number(u.purchase_price) || 0)
+    const since = Date.parse(u.purchase_date ?? u.created_at ?? '')
+    return {
+      unitId: u.id,
+      assetTag: u.asset_tag?.trim() || '—',
+      serialNo: u.serial_no ?? null,
+      productName: product?.name?.trim() || '—',
+      category: (product?.category_id && categoryName.get(product.category_id)) || 'Uncategorised',
+      purchasePricePaisa: price,
+      lifetimeRevenuePaisa: null,
+      maintenanceCostPaisa: (maintByUnit.get(u.id) ?? 0) as Paisa,
+      netProfitPaisa: null,
+      roiPercent: null,
+      maintenanceDragPercent: null,
+      utilizationPercent: null,
+      daysOwned: Number.isNaN(since) ? null : Math.max(0, Math.round((now.getTime() - since) / 86_400_000)),
+    }
+  })
+
+  return computeFleetSummary(rows)
 }

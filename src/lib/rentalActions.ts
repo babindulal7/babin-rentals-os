@@ -34,6 +34,12 @@ export interface RentalPrimaryAction {
   label: string
   /** Short action verb */
   verb: string
+  /**
+   * One word for a header too narrow for `label` (the phone header). It is a word of
+   * `label`, so the visible text stays part of the accessible name (WCAG 2.5.3).
+   * RULING 2026-10-16.
+   */
+  shortLabel: string
   /** Standard icon for this action */
   icon: IconName
   /** Associated operational job name if any */
@@ -155,6 +161,7 @@ export function getRentalPrimaryAction(
       return {
         label: 'Confirm Booking',
         verb: 'Confirm',
+        shortLabel: 'Confirm',
         icon: 'plus',
         actionType: 'confirm',
         disabled: true,
@@ -165,6 +172,7 @@ export function getRentalPrimaryAction(
     return {
       label: 'Cancelled',
       verb: 'Cancelled',
+      shortLabel: 'Cancelled',
       icon: 'close',
       actionType: 'view',
       disabled: true,
@@ -177,6 +185,7 @@ export function getRentalPrimaryAction(
     return {
       label: 'Rental Closed',
       verb: 'Closed',
+      shortLabel: 'Closed',
       icon: 'check',
       actionType: 'view',
       disabled: true,
@@ -190,6 +199,7 @@ export function getRentalPrimaryAction(
       return {
         label: 'Confirm Booking',
         verb: 'Confirm',
+        shortLabel: 'Confirm',
         icon: 'plus',
         actionType: 'confirm',
         disabled: Boolean(cancelledReason),
@@ -203,6 +213,7 @@ export function getRentalPrimaryAction(
         return {
           label: 'Complete Service',
           verb: 'Fulfill',
+          shortLabel: 'Complete',
           icon: 'check',
           actionType: 'fulfill',
           disabled,
@@ -217,6 +228,7 @@ export function getRentalPrimaryAction(
       return {
         label: 'Start Packing',
         verb: 'Pack',
+        shortLabel: 'Pack',
         icon: 'box',
         job: 'Pack',
         route,
@@ -236,6 +248,7 @@ export function getRentalPrimaryAction(
         return {
           label: 'Complete Service',
           verb: 'Fulfill',
+          shortLabel: 'Complete',
           icon: 'check',
           actionType: 'fulfill',
           disabled,
@@ -250,6 +263,7 @@ export function getRentalPrimaryAction(
       return {
         label: 'Handover',
         verb: 'Handover',
+        shortLabel: 'Handover',
         icon: 'truck',
         job: 'Handover',
         route,
@@ -269,6 +283,7 @@ export function getRentalPrimaryAction(
         return {
           label: 'Complete Service',
           verb: 'Fulfill',
+          shortLabel: 'Complete',
           icon: 'check',
           actionType: 'fulfill',
           disabled,
@@ -284,6 +299,7 @@ export function getRentalPrimaryAction(
         return {
           label: 'Continue Return',
           verb: 'Continue Return',
+          shortLabel: 'Return',
           icon: 'return_arrow',
           job: 'Return',
           route,
@@ -299,6 +315,7 @@ export function getRentalPrimaryAction(
       return {
         label: isOverdue ? 'Receive Overdue Return' : 'Return & Inspect',
         verb: isOverdue ? 'Receive Return' : 'Return',
+        shortLabel: 'Return',
         icon: 'return_arrow',
         job: 'Return',
         route,
@@ -319,6 +336,7 @@ export function getRentalPrimaryAction(
         return {
           label: 'Close Rental',
           verb: 'Close',
+          shortLabel: 'Close',
           icon: 'check',
           actionType: 'close',
           disabled: Boolean(cancelledReason),
@@ -331,6 +349,7 @@ export function getRentalPrimaryAction(
         return {
           label: 'QC Done · Awaiting Close',
           verb: 'Awaiting Close',
+          shortLabel: 'Awaiting',
           icon: 'check',
           actionType: 'view',
           disabled: true,
@@ -344,6 +363,7 @@ export function getRentalPrimaryAction(
       return {
         label: 'Cleaning & Reset',
         verb: 'Reset',
+        shortLabel: 'Reset',
         icon: 'refresh',
         job: 'Reset',
         route,
@@ -361,6 +381,7 @@ export function getRentalPrimaryAction(
       return {
         label: 'View Booking',
         verb: 'View',
+        shortLabel: 'View',
         icon: 'eye',
         actionType: 'view',
         disabled: false,

@@ -895,7 +895,7 @@ export function AddItemPanel({
             // Floating it inside an overflow:hidden section clips its actions.
             position: inline ? 'relative' : 'absolute',
             ...(inline ? { marginTop: 6, width: '100%' } : {
-              zIndex: 45,
+              zIndex: 'var(--z-dropdown)',
               top: 'calc(100% + 6px)',
               ...(onPhone
                 ? { left: 0, right: 0, width: '100%' }

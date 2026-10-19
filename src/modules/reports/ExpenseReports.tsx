@@ -1,5 +1,5 @@
 import { Pagination } from '../../components/ui/Pagination'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
@@ -19,6 +19,7 @@ import type { Paisa } from '../../lib/money'
 import { toBs, formatBs, formatAd } from '../../lib/bs'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
+import { useLoad } from '../../lib/queries/useLoad'
 import {
   CATEGORIES,
   EXPENSE_STATUSES,
@@ -224,19 +225,13 @@ export default function ExpenseReports() {
   const [report, setReport] = useState<ReportFilters>({ dateRange: SEEDED_RANGE })
   const branch = report.chips?.branch?.[0] ?? ''
 
-  const [expenseList, setExpenseList] = useState<ExpenseRow[]>([])
-
-  useEffect(() => {
-    let active = true
-    getExpenseReportsSummary().then((summary) => {
-      if (active && summary.rows) {
-        setExpenseList(summary.rows)
-      }
-    })
-    return () => {
-      active = false
-    }
-  }, [])
+  /* Phase 6 — the read is `useLoad`'s: skeleton while in flight, the failure
+     as an inline banner with Retry (offline-worded when it is). It used to be a
+     bare `.then` whose query turned any failure into zero rows, which this page
+     then drew as "No expenses recorded" under Rs 0 totals. Skipped entirely for
+     a money-blind session, which is refused below without the rows being read. */
+  const load = useLoad(getExpenseReportsSummary, { enabled: money })
+  const expenseList = useMemo<ExpenseRow[]>(() => load.data?.rows ?? [], [load.data])
 
   const vendors = useMemo(() => [...new Set(expenseList.map((r) => r.vendor))].sort(), [expenseList])
 
@@ -370,6 +365,14 @@ export default function ExpenseReports() {
         }
       />
 
+      <PageBody
+        noun="expenses"
+        loading={load.loading}
+        error={load.error}
+        onRetry={load.reload}
+        hasRows={load.data !== null}
+        skeleton="kpi"
+      >
       {/* A seed that stops reconciling is shown, not thrown — a module-scope
           throw runs before React mounts and blanks the app with no message. */}
       {SEED_ERRORS.length > 0 && (
@@ -709,6 +712,7 @@ export default function ExpenseReports() {
           </Card>
         </ReflowRail>
       </div>
+      </PageBody>
 
       <FooterNote extra={['Capital purchases become assets in Inventory, never expenses']} />
     </div>

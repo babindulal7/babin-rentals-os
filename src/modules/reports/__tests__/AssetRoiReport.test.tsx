@@ -31,13 +31,17 @@ vi.mock('../../../lib/moneyVisibility', () => ({
   useCanViewMoney: () => state.canSeeMoney,
 }))
 
-vi.mock('../../../lib/supabase', () => ({
-  supabase: {
-    from: () => ({
-      select: () => Promise.resolve({ data: [] }),
-    }),
-  },
-}))
+// One real-shaped unit. The report used to fall back to five invented seed
+// units (CAM-001 "RED Komodo") and estimate revenue as price × 1.6 (Law 16).
+vi.mock('../../../lib/supabase', async () => {
+  const { fakeSupabase } = await import('../../../lib/queries/__tests__/fakeSupabase')
+  return {
+    supabase: fakeSupabase({
+      product_units_v: [{ id: 'u1', asset_tag: 'CAM-101', serial_no: 'SN-1', product_id: 'p1', purchase_price: 950000, purchase_date: '2026-01-01', created_at: null, retired_at: null }],
+      products: [{ id: 'p1', name: 'Sony FX6', category_id: null }],
+    }).client,
+  }
+})
 
 describe('computeFleetSummary (Pillar 4 calculations)', () => {
   it('correctly aggregates capital, revenue, maintenance, and ROI', () => {
@@ -78,6 +82,7 @@ describe('computeFleetSummary (Pillar 4 calculations)', () => {
 
     expect(summary.totalCapitalInvestedPaisa).toBe(rupees(150000))
     expect(summary.totalInvoicedRevenuePaisa).toBe(rupees(240000))
+    expect(summary.unpricedUnits).toBe(0)
     expect(summary.totalMaintenanceExpensePaisa).toBe(rupees(15000))
     expect(summary.netFleetReturnPaisa).toBe(rupees(75000))
     expect(summary.fleetRoiPercent).toBe(50.0)
@@ -135,7 +140,11 @@ describe('AssetRoiReport UI Component', () => {
     expect(bodyText).toContain('Total Capital Invested')
     expect(bodyText).toContain('Lifetime Rental Revenue')
     expect(bodyText).toContain('Fleet Net Margin')
-    expect(bodyText).toContain('CAM-001')
-    expect(bodyText).toContain('RED Komodo 6K')
+    expect(bodyText).toContain('CAM-101')
+    expect(bodyText).toContain('Sony FX6')
+    expect(bodyText).toContain('Rs 9,50,000')
+    // Revenue has no per-unit source: it says so instead of estimating it.
+    expect(bodyText).toContain('Not tracked yet')
+    expect(bodyText).not.toContain('RED Komodo')
   })
 })

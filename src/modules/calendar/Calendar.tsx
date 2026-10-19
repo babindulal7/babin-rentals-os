@@ -1340,7 +1340,7 @@ function DayJobList({
 function DaySheet({ side, onClose, children }: { side: 'right' | 'bottom'; onClose: () => void; children: ReactNode }) {
   const bottom = side === 'bottom'
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 90, display: 'flex', alignItems: bottom ? 'flex-end' : 'stretch', justifyContent: bottom ? 'center' : 'flex-end' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 'var(--z-drawer)', display: 'flex', alignItems: bottom ? 'flex-end' : 'stretch', justifyContent: bottom ? 'center' : 'flex-end' }}>
       <div aria-hidden style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.40)' }} onClick={onClose} />
       <div
         role="dialog"
@@ -3280,7 +3280,7 @@ export default function Calendar() {
         role="dialog"
         aria-label="Calendar — full view"
         className="calendar-v2"
-        style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'var(--app)', overflow: 'auto', padding: 'var(--sp-md)', display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}
+        style={{ position: 'fixed', inset: 0, zIndex: 'var(--z-modal)', background: 'var(--app)', overflow: 'auto', padding: 'var(--sp-md)', display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', flexWrap: 'wrap' }}>
           {/* Inside the full-view overlay, which covers the global header: stays in place. */}

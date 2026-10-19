@@ -34,6 +34,270 @@ Counted by `npm run completion`, not typed.
 - Seven tests fail on `main` itself (listed above), independent of this work.
 - Crew Timesheet still runs on fabricated rows; rebuild on the migration-0003 crew-day table before giving it an entry point.
 
+
+## 2026-10-19 — Rentals header at 768px: duplicate filter toggle and an over-wide search box
+
+**Did**
+- Measured the shared header at 768px on 8 routes in a production mock build (`.env.mock` seeded, signed in as the mock Owner). Only `/rentals` collided; the other seven had no overlaps, no truncation and no horizontal overflow.
+- Two causes, both in `RentalsList.tsx`: (1) `FilterButton` defaults to `inHeader`, and Rentals rendered it twice (header toggle plus a second one in the toolbar), so two 44px toggles sat in the one header slot and over the "Rentals" title; (2) the search wrapper had `minWidth: 280` inside a 235px centre zone, pushing the box and its Ctrl+K hint 45px over New Rental.
+- Removed the toolbar's second `FilterButton` (the Sort control stays) and dropped the 280px floor (the box fills its zone up to 360px). Shortened the placeholder to "Search rentals…" — the Ctrl+K badge already shows the shortcut and the long text clipped.
+
+**Ruled**
+- RULING 2026-10-19: the Rentals filter toggle lives only in the header (extends RULING 2026-10-15). Revert = restore the `FilterButton` in the toolbar and `minWidth: 280` on the search wrapper, both marked at the site.
+
+**Verified**
+- Browser, 768px, loaded Rentals: one filter toggle at the left (x 58–102 → clear of the title at 134), search 232–467, New Rental from 483, no document overflow. 1024px: one toggle, search 302–582, New Rental 739–848, no overflow.
+- `tsc --noEmit` exit 0. Vitest `src/components/shell src/modules/rentals src/components/ui/__tests__` with `VITE_DATA_SOURCE=mock`: 94 files, 901 tests passed.
+- Chromium viewport emulation only; not physical iPad Safari, not native zoom; Rentals only re-checked at 768 and 1024 after the fix.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | not measured | not measured | |
+| Real data | not measured | not measured | |
+| DB enforcement | not measured (no .lifecycle-result.json) | not measured | |
+| Permissions | not measured | not measured | |
+| Lifecycle | not measured (no .lifecycle-result.json) | not measured | |
+| Overall | not measured | not measured | |
+UI-only change; no migration or action touched.
+
+## Remaining
+- The 15 re-layered z-index overlays from the earlier entry are still not driven in a browser.
+- Phone width (390/320) not re-measured on Rentals after this change.
+- Physical iPad Safari and the status × role × persistence matrix remain untested.
+
+
+## 2026-10-17 — Phase 6 Task 3.4: the 13 Law 16 reports — real figures, then five states
+
+**Did**
+- Finished Task 3.4 for the reports the 16 Oct inventory left blocked on Law 16. Every one now reads the ledger, throws on failure, and draws loading · Error + Retry (offline-worded, retries on reconnect) · nothing-yet vs nothing-in-this-period through `useLoad` + `PageBody`, with the money-blind restriction kept (read not sent, or no rupee figure).
+- **Queries that returned `MOCK_*` on error, on empty and per figure** — Rental, Operations, Damage & Maintenance, Sales/VAT, Activity — now throw and return honest empties. Writing them against the schema showed most could never succeed on live, so they only ever showed seed: cancellation read `stage = 'Cancelled'` (it is `cancelled_at`, 0015); Operations filtered `operation = 'dispatch'`/`state = 'completed'` (enum is `Handover`/`Completed`) and selected `return_lines` columns that do not exist; Sales/VAT selected `tax_amount`/`grand_total`/`pan_number` (0006: `vat_amount`/`total_amount`, clients `pan_vat`); staff names read `users.name` (it is `full_name`); and every money figure embedded base `booking_lines(rate, …)`, which 0062 revokes — now read from `booking_lines_v` (`readLineValues`). Rental money was also divided by 100 twice (1/100 of real revenue).
+- **Revenue Report** (already honest on `main`) moved onto `useLoad` + `PageBody`. **Asset ROI** no longer estimates revenue as price × 1.6, defaults ₹5,00,000 or invents 5 % maintenance: capital and maintenance are real, revenue/margin/ROI/drag/utilization read "Not tracked yet", unpriced units are counted.
+- **Seven seed showcases rebuilt over real reads** (they fetched a summary and discarded it): Client (base, frequency, top clients, receivables ageing, 60+ days overdue), Staff (bookings created, value, rental collections, floor sessions per person — the invented "performance score" and response time removed), Promotions (coupon redemptions, discount sources, bundle usage), Equipment Performance and Product (per-product/category revenue from priced lines, units, not-booked, reorder level), Cash Flow (collections, refunds, paid expenses, deposits apart — Law 4) and Working Capital (receivables + ageing, deposits held, approved unpaid expenses, DSO). Bank balance, supplier payables, utilization, profit: "Not tracked yet".
+- `liquidity.ts` `'Completed'` → `'Received'` (payment_status enum), as part of its rewrite.
+- Removed invented narrative cards (duration "insights" with fixed percentages, an unruled 50 % cancellation-fee schedule, "95.7 % ID verified", "76 % restock").
+- Shared: `lib/queries/reportSupport.ts` (`rowsOf`, `lineValue`, `readLineValues`, `NOT_TRACKED`), `modules/reports/reportStates.tsx` (filters → options, filtered-vs-nothing-yet, `NoMatchRow`).
+- Mock corpus brought in line with live: `payment_type 'Rental'` → `'Advance Payment'` (Cash Flow read Rs 0 collected while Sales showed Rs 31.5 lakh paid), invoices gain `currency: 'NPR'` (Revenue refused every mock row).
+
+**Ruled**
+- R-P6-STATES (Law 16 pass) in `RULINGS-2026-10-16.md`, 11 rows with reverts; `// RULING 2026-10-16` at each query. Open decisions logged in `docs/OPEN_DECISIONS.md` §13 (per-unit revenue attribution, cancellation fee, bank balance, utilization). Tolerated refusal: `bookings.project_type` is granted by 0161/0162, not on live (0156) — a 42501 there degrades only the Production Types card.
+- No migration written or applied. Nothing landed on `main`: branch `claude/phase6-law16-reports` from `main` (`eac94cf0`); it does not contain `claude/phase6-five-states` (Cases/Inventory/Expense/Activity Log) — the two touch different files except `RULINGS-2026-10-16.md` and this file.
+
+**Verified**
+- Final run, same tree: `npm run typecheck` exit 0 · `npm run lint` exit 0 · `npm run lint:shell` exit 0 (674 files) · `npm run lint:ui-copy` exit 0 · `npm test` 361 files, **4,718/4,718 passed** · `check:pglite` 165/165 and `check:lifecycle` 31/31 in the same run (no migration in this change) · `npm run build` exit 0 (289 precache entries).
+- New tests: `reportQueries.law16.test.ts` (31 — every read throws on a failed table, honest empty, enum/column/view fixes held, money-blind Client sends no invoice read), `reportQueries.mockStore.test.ts` (15 — every read resolves over the mock corpus), `Reports.law16.states.test.tsx` (40 — per report: loading → failing query banner + Retry, no figure, Retry → nothing-yet; offline wording; 8 money-only reports refuse Warehouse without sending the read; Rental/Client show no rupee to Warehouse). A mutation (Sales/VAT read enabled for every role) turned the restricted test red. Seven seed-asserting query tests deleted; `ActivityReports.test` and `AssetRoiReport.test` updated (they asserted seed rows).
+- Browser, mock build (Owner, own Vite cache dir, port 3461): all 14 routes render real mock figures and agree with each other — Rental revenue = Product revenue = Equipment revenue Rs 43,78,870; Sales outstanding = Client receivables = Working Capital receivables Rs 46,92,466.60; Cash Flow collected = Sales collections Rs 31,54,425.40; Damage fleet 192 ready = Inventory 192 In Stock. Staff and Promotions show nothing-yet (the corpus records no `created_by`/`received_by`, coupons or bundle lines) where they used to show invented people and 842 redemptions. Error/offline/restricted paths verified by the tests above, not in the browser (the mock store cannot fail). Console: only `ERR_CONNECTION_REFUSED` lines from the two preview-server restarts; every request after the last restart returned 200.
+- Not verified: live Supabase (no session here); a Warehouse sign-in in the browser.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 165 files · check:pglite 165/165 applied, 0 failed (recorded 2026-10-17T06:42:09.688Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-17T06:43:07.225Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Live acceptance: run the 14 reports against Supabase with an Owner and a Warehouse session; apply 0161/0162 so `bookings.project_type` is readable (Babin, after BACKUP_PROTOCOL.md).
+- Product calls in OPEN_DECISIONS §13: per-unit revenue attribution, cancellation fee, bank balance, utilization history.
+- Merge order with `claude/phase6-five-states` (both edit RULINGS-2026-10-16.md and PROGRESS.md); landing on `main` needs Babin's go-ahead.
+- Dead seed modules now unused by any page (`data/clientReports`, `staffReports`, `promotionsReports`, `equipmentPerformance`, `productReports`; `liquidityReports` is still read by `payables.test.ts`).
+- A Warehouse sign-in in the browser was not driven; restricted paths are covered by tests only.
+
+## 2026-10-19 — Design review: overlay z-index literals moved onto the theme tokens
+
+**Did**
+- Reviewed the wireframe rulings (`WIREFRAME_RULINGS_2026-08-12.md`), the screen catalogue and the 28 Aug / 7 Oct / 13 Oct UI audits against current code. The wireframe sources themselves (`../updated mds/01..11`, the screenshot set) are not in this checkout.
+- Moved 15 overlay-class `zIndex` literals onto `--z-dropdown` / `--z-drawer` / `--z-modal` / `--z-toast`: in-page menus (ClientsDirectory, Expenses, MovementList ×2, AddItemPanel, WhatsAppShareButton, BookingOperationsMenu, RentalsList), drawers and sheets (Calendar DaySheet, booking Drawer, InternalNotesDrawer), modal-class surfaces (AssetDetail, Warehouses, Calendar full view), InfoTooltip.
+- Stale findings, checked in code and not changed: Modal focus trap and scroll-lock counting, Select keyboard/ARIA, the hardcoded VAT and Toast layering are already fixed. The Rentals filter rail is now a drawer with Timeline wired (one deliberately disabled "Save as new filter"). `TimelinePanel` is no longer rendered on Today. The nav is the 10-item set ruled on 7 Oct, so the 8-vs-15 sidebar conflict in `SCREENS.md` is moot.
+
+**Ruled**
+- RULING 2026-10-19: the shell ladder stays as literals — Header 20/90/91, BottomBar 50, SchemaGuardBanner 50, MoreSheet 55, QuickActionPanel 55, ScannerFab 60 — and so do the 1–10 local stacking values. The tokens start at 1100, so moving the sticky chrome onto `--z-sticky-nav` (1200) would put the header above in-page dropdowns (1100). Revert = restore the 15 numbers, one per line.
+
+**Verified**
+- `tsc --noEmit` exit 0.
+- Focused vitest (`calendar today notes components/ui rentals`, `VITE_DATA_SOURCE=mock`): 935 passed, 4 failed in `RentalsOperationsHeader` ("useNavigate() may be used only in the context of a Router"). The file was not touched; not checked against a clean tree.
+- Not driven in a browser: no stacking was observed in the running app.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | not measured | not measured | |
+| Real data | not measured | not measured | |
+| DB enforcement | not measured (no .lifecycle-result.json) | not measured | |
+| Permissions | not measured | not measured | |
+| Lifecycle | not measured (no .lifecycle-result.json) | not measured | |
+| Overall | not measured | not measured | |
+`npm run completion` refused to print a block without `.lifecycle-result.json`; no migration or action changed.
+
+## Remaining
+- Browser check of the 15 re-layered overlays (menus open over the header, drawers under modals).
+- 768px header crowding between Search and More (13–16 Oct notes) not re-measured here.
+- `RentalsOperationsHeader` test failures: confirm pre-existing on `main`.
+- Physical iPad Safari and the status × role × persistence matrix remain untested.
+
+
+## 2026-10-16 — Phase 6 Task 3.4: five states on the routed secondary views (inventory + fixes)
+
+**Did**
+- Inventoried every routed secondary view (Reports, Settings panes, Admin) against the five states by reading each screen's read and render path. The register's "42/72" figure was not reused: it counted files that *import* a state component, which says nothing about whether a state is drawn from a real read.
+- Shared primitive `src/lib/queries/useLoad.ts`: one-shot read → loading · bare error reason · offline-worded reason (`OFFLINE_REASON`) with automatic retry on the `online` event · `reload` · last good data kept on a failed refresh. Same contract as `useList` ↔ `PageBody`.
+- Fixed (each state now driven by the real read, not by props): **Pulse** (live + demo bodies in one `PageBody` ladder; Client refused without the read being sent; nothing-yet vs period no-results); **Settings** (search no-results with Clear search); **Staff Directory** (nothing-yet vs filtered, offline wording); **Device PIN** (a failed status check says "Could not check the PIN" + Retry instead of "Not set"; `PinStatus.unavailable`, `hasPin` still false); **Cases Report** (a failure used to leave "Loading" forever; toolbar date range now actually narrows); **Inventory Reports**, **Expense Reports** (read not sent for a money-blind role), **Shortages** (shared components), **Activity Log** (loading/failure/empty no longer all read "No activity matches this filter").
+- Queries that now throw instead of returning zeros/empties (`RULING 2026-10-15` at each site): `getPulseLiveSummary`, `getInventoryReportSummary`, `getExpenseReportsSummary`, `listActivityEvents`.
+- Bug surfaced by the throw: Pulse filtered `payments.status = 'Completed'`, which is not a `payment_status` value (Received/Refunded/Failed/Cancelled) — Postgres rejected it and the zero-fallback showed "Rs 0 collected". Now `'Received'`. `lib/queries/liquidity.ts:111` has the same wrong literal (its result is discarded by Cash Flow / Working Capital; left for the follow-up).
+
+**Inventory — routed secondary views × states** (L Loading · E Error+Retry · M Empty nothing-yet/no-results · R Restricted · O Offline; ✓ drawn from the real read, ✗ missing, n/a no read)
+
+| View | Before | After | Note |
+|---|---|---|---|
+| Pulse `/reports/pulse` | L✗ E✗ M½ R✓ O shell | all ✓ | demo ledger still seed (mock-only, disclosed) |
+| Settings page | L✓ E✓ M✗(search) R✓ | all ✓ | |
+| Settings ▸ Staff Directory | L✓ E✓ M½ R✓ O✗ | all ✓ | |
+| Settings ▸ Device PIN | E✗ (failure read "Not set") | E✓ O✓ | |
+| Settings ▸ Branches pane | n/a — renders `data/settings` BRANCHES seed | **blocked** | `getSettingsSummary` exists, unused; DB lacks manager/staff/revenue columns |
+| Settings ▸ Users matrix, Business, System, Financial | n/a (computed / settings store, covered by page load) | — | Financial absent for money-blind ✓ |
+| Cases Report | L½ E✗ (stuck loading) M½ | all ✓ | |
+| Inventory Reports | L✗ E½ (no retry) M✗ | all ✓ | |
+| Expense Reports | L✗ E✗ (error = "no expenses") M✓ R✓ | all ✓ | rows carry stub category/method/branch (`'Cash'`, `'Boudha (Head Office)'`) — Law 16 follow-up |
+| Shortages (in Inventory Reports) | hand-rolled | shared ✓ | |
+| Activity Log `/admin/activity-log` | L✗ E✗ M✗ | all ✓ | rows carry invented `user: 'Staff Member'`, `ip: '127.0.0.1'`, `location: 'Kathmandu, NP'` — follow-up |
+| Audit Log, Numbering, Backup & Restore | all ✓ already (useList + PageBody) | — | |
+| Audit Settings | n/a (read discarded, page is config copy) | — | |
+| Rental, Operations, Damage & Maintenance, Sales/VAT, Activity reports | query returns MOCK_* on error **and** on empty, plus `|| MOCK` per figure | **blocked (Law 16)** | an Error/Empty state over invented figures would be decoration |
+| Revenue Report | invented fallback figures ("42 invoices", fixed rupee buckets) | **blocked (Law 16)** | |
+| Asset ROI | revenue fabricated (purchase price × 1.6, ₹5,00,000 default price) | **blocked (Law 16)** | |
+| Client, Staff, Promotions, Equipment Performance, Cash Flow, Working Capital, Product reports | read fetched and **discarded**; page renders seed constants | **blocked (Law 16)** | R ✓ (shell + money-blind PageBody) |
+| Forecasting, Custom Report, Tools landing/tabs | n/a (no read) | — | |
+
+Restricted at route level: the Shell refuses `/reports/*` and `/admin/*` to money-blind roles (`isMoneySurface`) and staff surfaces to Client; Offline is the Shell's `OfflineBanner` plus, now, each converted read's own offline reason and auto-retry.
+
+**Ruled**
+- RULING 2026-10-15 (B-1/B-6, stricter + reversible): a failed secondary-view read throws and draws Error + Retry; it never resolves to zeros, empties or seed data. Revert = restore each query's `catch` (noted at every site).
+- No migration written or applied. Nothing landed on `main`: the slice-4 commit sits on `claude/phase6-five-states` (cut from current `main`); slices 1–3 were already ported to `main` as `7431e303` / `a50b31a3`.
+
+**Verified**
+- `npm run typecheck` exit 0 · `npm run lint` exit 0 · `npm run lint:ui-copy` exit 0 · `npm run build` exit 0 (PWA, 297 precache entries).
+- `npm test`: 365 files, 4,630/4,630 passed. New/changed state tests: `useLoad.test.tsx` (8), `Pulse.states.test.tsx` (8), `Settings.states.test.tsx` (12), `Reports.states.test.tsx` (8) — each drives a failing query → banner + Retry, an offline failure, and a restricted role (read not sent / no rupee figure).
+- `check:pglite` 163/163 and `check:lifecycle` 30/30, **same run** (no migration in this change).
+- `npm run lint:shell` **exit 1 — pre-existing, not this change**: `src/modules/inventory/Bundles.tsx:1494` minHeight 36 (landed on `main` in `067585b3`); no file in this diff is flagged.
+- Browser, mock build (`dev:mock`, Owner): Pulse ready state drawn after the read; Cases Report shows "No incident cases yet" on the empty store; Inventory Reports counts (192 units) and Activity Log render; Settings search "zzqx" shows "No settings match this search" with Clear search (screenshot taken). The Error/Offline paths cannot be provoked in the mock store and are verified by the tests above, not by the browser. Console: only 403s on font files served from the shared Desktop `node_modules` (worktree-preview artifact).
+- Note: `pulse.test.ts` reads the **live** project anonymously whenever `.env.local` is present (read-only; this is how the `'Completed'` enum bug surfaced).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 163 files · check:pglite 163/163 applied, 0 failed (recorded 2026-10-16T09:29:13.692Z). Suite: 4609/4609 passed (recorded 2026-10-15T20:16:18.000Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T09:29:59.456Z.
+Counted by `npm run completion`, not typed.
+
+The counter's "Real data · 0 seed" disagrees with the inventory above: at least 13 routed reports render seed constants or seed fallbacks. Its registry classifies a screen by whether it calls a query, not by whether it renders the result.
+
+### Remaining
+- **Law 16 first, then states** for the 13 blocked reports (Rental, Operations, Damage & Maintenance, Sales/VAT, Activity, Revenue, Asset ROI, Client, Staff, Promotions, Equipment Performance, Cash Flow, Working Capital, Product): remove MOCK_* / seed fallbacks, render "Not tracked yet" where no source exists, then wire `useLoad` + `PageBody`. Includes `liquidity.ts:111` `'Completed'` → `'Received'`.
+- Settings ▸ Branches pane renders seed BRANCHES; needs the branch read (`getSettingsSummary`) plus a decision on the columns the DB lacks.
+- Invented display fields: Activity Log (`'Staff Member'`, `'127.0.0.1'`, `'Kathmandu, NP'`), Expense rows (category/method/branch stubs).
+- Other secondary modules not covered here (Notes, Crew, Timesheet, Warranty, Productions, Sub-rental, Delivery, Tools tabs).
+- `lint:shell` red on `Bundles.tsx:1494` (pre-existing on `main`).
+- Branch `claude/phase6-five-states` (from `main`) holds the reports/admin slice; not merged — landing on `main` needs Babin's go-ahead.
+
+## 2026-10-19 — 15 Oct follow-ups on `main`: Booking Detail phone title, `/` key, Inventory chip row (Today kept as `main` has it)
+
+**Did**
+- Landed three of the old line's 15 Oct follow-ups on `main`, on a fresh branch from `54273363`:
+  - **Booking Detail phone header.** The two old-line commits, plus two changes `main` needed: the phone search slot is left out when a page sets `searchInMore` (its fixed 44px stayed reserved otherwise), and the age badge is quiet when fresh on phones.
+  - **`/` focuses the header search** at tablet and desktop width. It now sits on `main`'s zoom-audit `<label>` search wrapper.
+  - **Inventory's status chips lead its toolbar row.** Stats stays where `main` keeps it.
+- **Today was not landed.** On 17 Oct `main`'s Today card was redesigned again (OpenCode, `12db6af1`), adding "Window passed", an overflow menu and "View in Rentals". Babin chose to keep it on 19 Oct. The one-statement card stays on `claude/booqable-followups-port` (`2d1358a1`, with `d664277a`'s fixes). RULINGS-2026-10-15 rows 19–23 are kept and marked "Not landed".
+- Not ported, because `main` already had them: removing the in-page search boxes, Clients' toolbar rework, and moving Stats into More.
+
+**Ruled**
+- Babin, 19 Oct: keep `main`'s Today card; land the other follow-ups. `RULINGS-2026-10-15.md` rows 19–23 are marked not landed; rows 24 (`/` key) and 25 (Inventory chips) are in force. `RULINGS-2026-10-16.md` rows 1–4 (Booking Detail phone header) are in force. Each row has a revert.
+- No migration, role, capability, money gate or write path changed. Phase 9's Stale and Offline warnings still show in words on phones.
+
+**Verified**
+- Browser, mock build of this exact tree (`vite build --mode mock`, served by `vite preview`, Owner):
+
+| Check | Width | Result |
+|---|---|---|
+| Booking Detail record title, 873 / 902 | 390 | 98 / 162px (both 0px on `main` before) |
+| Booking Detail record title, 873 / 902 | 375 | 83 / 147px |
+| `/` on Inventory and Clients | 1280 | focuses the header search (did nothing on `main`) |
+| Inventory toolbar | 1280 | one 52px line, 3 chips; table starts at 307px (388px on `main`) |
+| Inventory toolbar | 1024 | one 52px line, no chip clipped, no control under 44px |
+
+  Header and page overflow were 0 in every reading. The Booking Detail header is 64px and its phone search slot is gone. The "`main` before" figures were measured on `eac94cf0` on 16 Oct.
+- **Found on `main`, not changed here:** since 17 Oct (`dd1055f6`, `c40d75b4`) Clients renders two search boxes again, one in the header and one in the page, with the same placeholder. This is the duplicate `main` had removed on 15 Oct. The ported list-toolbar test now asserts Inventory only.
+- Gates on `f591f7cc` (base `54273363`): `tsc --noEmit` 0; `npm run lint` 0; `lint:shell` 680 files pass; `lint:ui-copy` pass; `check:contrast` 82/82; `npm run build` exit 0; `check:lifecycle` 31/31 (PGlite). `npx vitest run`: 4 files / 7 tests failed, 4,707 passed (4,714). **All 7 fail identically on `main` `54273363` without this branch**, in the same 4 files with the same tests (7 failed, 118 passed): `actions/__tests__/core.test.ts` (capability declarations), `clients/__tests__/clientsCopy.test.ts` ("company" in the search placeholder), `finance/__tests__/Finance.restricted.test.tsx` (phone header), and `rentals/__tests__/rentalsOperationsHeader.test.tsx` (4 Mode 2 tests). This branch adds no failures.
+- Mutation checks (16–17 Oct, same code): keeping the phone search slot, dropping `quietWhenFresh`, and disabling `/` each turned their test red.
+- Not verified: dark/glass by eye (no new tokens), live data, native phone hardware.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +2 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +1 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-17T19:05:49.049Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-18T20:07:32.375Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- `main` is red on 7 tests in 4 files, unrelated to this branch: listed above.
+- Clients' duplicate in-page search box is back on `main` (17 Oct): decide whether to remove it again.
+- Today: the one-statement card stays unlanded (Babin, 19 Oct). It can be re-ported onto `main`'s new card later, keeping its new features.
+- Babin to confirm or flip RULINGS-2026-10-15 rows 24–25 and RULINGS-2026-10-16 rows 1–4.
+
+## 2026-10-16 — Booking Detail phone header: a one-word stage action, Search in the More
+
+**Did**
+- Fixed the 375px overflow left open by the 15 Oct triage. At 375, booking 873's 182px "Receive Overdue Return" overflowed the header by 37px. The title got 0px, the avatar sat off-screen (x 368–412) and Operations covered the back button. The fixed controls (back, Operations, More, Search, avatar and gaps) leave the title 83px minus the stage action, so the fix has two parts. Phone only (< 768px).
+- The stage action on a phone is its icon over one word (`PHONE_STAGE_FACE` in `BookingDetail.tsx`): 11px `--t-th`, 44–60px wide, 44px tall, like the bottom bar's tabs. The full label stays the accessible name and tooltip, and a busy state shows the spinner. The word comes from the resolver: `getRentalPrimaryAction` returns a new `shortLabel` (Confirm, Pack, Handover, Return, Reset, Close, Complete, …), always a word of `label`.
+- Search: a page can register `searchInMore` (`workspaceContext.tsx`, `PageHeader.tsx`). On a phone the shell (`Header.tsx`) then drops its Search button. Booking Detail sets it and puts **Search** first in "More booking actions", where it opens the same command palette.
+- Tests (11 new): `BookingDetail.layout.test.tsx` checks one word and the full name at 375/390, Search in More opening the palette at 375/390, and the full label with no Search row at 768/1280. `headerOwnership.test.tsx` checks that the phone Search drops only for `searchInMore` and that tablet/desktop keep their search. `rentalActions.test.ts` checks every state's `shortLabel` is one word of its label, and that the overdue case maps to "Return". Run against the unfixed code, 5 of the new page/shell cases failed (one-word face ×2, Search row ×2, shell phone Search). The other 4 already passed, because they guard the unchanged widths and pages.
+
+**Ruled**
+- `RULINGS-2026-10-16.md` rows 1–2, each with a revert. Flippable calls: the phone stage action shows one word, not its full label (row 1); Search from Booking Detail on a phone costs one more tap (row 2). Operations stays in the header (15 Oct row 16). No migration written or applied. No role, capability, money gate or write path changed.
+
+**Verified**
+- Browser, mock Owner (`dev:mock`), measured with `getBoundingClientRect` in same-origin frames at the exact widths, plus the real page at 375 for 873. Header overflow · title shown/full · stage action, at 375 and 390: 873 0 · 87/256 · 46 and 0 · 102/257; 716 0 · 89/234 · 44 and 0 · 104/235; 893 0 · 89/284 · 44 and 0 · 104/286; 902 0 · 141/217 and 0 · 156/218 (was 91). The widest words: 715 "Handover" 60px → 73/88; 800 "Confirm" 52px → 81/96. In all 12, page overflow 0, header 64px, every control ≥44×44, no overlap, nothing off-screen.
+- 873's More at 375: 11 rows of 236×44, Search first. A real tap on Search opened the command palette with its input focused and closed the menu.
+- Tablet/desktop re-measured on 873 and 902 at 1024/1280/1440. They match the 15 Oct table exactly: 873 134/298 · 246 · 398, 144/314 · 188 · 398, 220/327 · 272 · 398; 902 134/253 · 320 · 208, 219/267 · 303 · 208, 234/278 · 348 · 208.
+- Gates, this worktree: `tsc --noEmit` exit 0; `npm run lint` exit 0; `lint:shell` 653 files pass; `lint:ui-copy` exit 0, 4/4; `npx vitest run` 347 files / 4,428 tests passed; `npm run build` exit 0 (PWA precache 296 entries); `check:lifecycle` 30/30 (PGlite). `check:pglite` not rerun (no migration). The Completion block's "Suite 4329/4329" is the value recorded on 13 Oct, not this run.
+- Not verified: dark/glass themes by eye, a real touch device, live data, a Cancelled-quote booking's disabled phone face (same `stageFace` path, unit-covered only).
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 53 / 53 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 42 / 42 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 160 files · check:pglite 160/160 applied, 0 failed (recorded 2026-10-13T13:31:48.507Z). Suite: 4329/4329 passed (recorded 2026-10-13T07:46:29.1524909Z).
+Gates read from .lifecycle-result.json, written 2026-10-16T11:44:05.663Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Babin to confirm or flip `RULINGS-2026-10-16.md` rows 1–2 (one-word phone stage action; Search one tap deeper on Booking Detail's phone header).
+- The two smallest phone titles are Packed bookings ("Handover", 73px at 375) and Quotes ("Confirm", 81px). Seen on screen: 873 at 87px reads "873 · Mach…". 73px was measured, not looked at. More room needs a shell-wide change, such as the empty `workspace-page-actions` span's 6px gap.
+- Still open from 15 Oct: desktop worst case 144px title at 1280 (row 8 / sync slot); the registry's Duplicate/Audit/Cancel refusals use `title` only.
+- The work commit `6d6c0782` was made outside this session (app Commit) and included the temporary `.claude/launch.json` preview entry. This entry's commit removes it. The branch is on 4f3309dd (old line) and not merged into `main`.
+
 ## 2026-10-16 — Task 4.2: headers and tables at Windows 125%/150% display scaling
 
 **Did**
