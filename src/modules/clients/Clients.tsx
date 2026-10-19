@@ -185,7 +185,7 @@ export default function Clients() {
                   else next.delete('q')
                   setParams(next, { replace: true })
                 },
-                placeholder: 'Search client, company, PAN, phone… (press /)',
+                placeholder: 'Search client, PAN, phone… (press /)',
                 onClear: () => {
                   const next = new URLSearchParams(params)
                   next.delete('q')

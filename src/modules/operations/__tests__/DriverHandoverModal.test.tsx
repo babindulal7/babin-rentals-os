@@ -114,4 +114,43 @@ describe('DriverHandoverModal (Pillar 2)', () => {
     const bodyText = document.body.textContent || ''
     expect(bodyText).toContain('Client signature is required for delivery handover.')
   })
+
+  it('disables confirmation button and shows warning banner when offline', async () => {
+    // Simulate offline
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+
+    await act(async () => {
+      root.render(
+        <DriverHandoverModal
+          isOpen={true}
+          onClose={vi.fn()}
+          bookingNo="B-902"
+          bookingId="id-b-902"
+          clientName="Suman Shakya"
+          itemCount={2}
+        />,
+      )
+      window.dispatchEvent(new Event('offline'))
+    })
+
+    const bodyText = document.body.textContent || ''
+    expect(bodyText).toContain('Offline — connection required for handover')
+    expect(bodyText).toContain('Cannot Confirm')
+
+    const reconnectBtn = Array.from(document.querySelectorAll('button')).find((btn) =>
+      btn.textContent?.includes('Reconnect to Confirm'),
+    )
+    expect(reconnectBtn).toBeDefined()
+    expect(reconnectBtn?.disabled).toBe(true)
+
+    // Restore online
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true)
+    await act(async () => {
+      window.dispatchEvent(new Event('online'))
+    })
+
+    const onlineBodyText = document.body.textContent || ''
+    expect(onlineBodyText).toContain('Online (confirmation available)')
+    expect(onlineBodyText).toContain('Connected')
+  })
 })

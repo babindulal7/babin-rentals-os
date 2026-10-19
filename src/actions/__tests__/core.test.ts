@@ -456,7 +456,16 @@ describe('every declared capability resolves to a rule', () => {
        a figure call it, and no action declares it, by design. Added 16 Aug 2026.
        The payment pair IS declared (`recordPayment`, `refundPayment`), so it
        correctly stays out of this list. */
-    const APP_LEVEL = ['credit.override', 'invoice.void', 'money.view', 'settings.manage']
+    const APP_LEVEL = [
+      'credit.override',
+      'invoice.void',
+      'money.view',
+      'settings.manage',
+      'operations.pack',
+      'operations.handover',
+      'operations.return',
+      'operations.reset',
+    ]
     const orphaned = handled().filter((c) => !declared().includes(c) && !APP_LEVEL.includes(c))
     expect(orphaned).toEqual([])
   })

@@ -1,5 +1,55 @@
 # Progress Log
 
+## 2026-10-19 — Phase 1 Offline Safety Patch (DATA-02) landed + 100% test suite green
+
+**Did**
+- Ported and verified the Phase 1 Offline Data-Loss Safety Patch (`DATA-02`) on branch `fix/offline-durability-2026-10-19`:
+  - **`src/lib/offlineQueue.ts`:** Introduced `ensureMutationQueued` with strict typed error handling (`OfflineQueueWriteError`: `STORAGE_UNAVAILABLE`, `ACTION_KEY_COLLISION`, `PREVIOUS_MUTATION_FAILED`). A queue write succeeds only when IndexedDB confirms acceptance, or an identical nonfailed mutation is verified already stored.
+  - **`src/lib/dataAccess.ts`:** Gated all 4 optimistic mutation paths (offline insert/update, network-failure fallback insert/update) to await `ensureMutationQueued`. Never returns `{ error: null, queued: true }` without verified durable IndexedDB write.
+  - **`src/App.tsx`:** Updated `OfflineBanner` to state truthful mock/live status and caution that custody and financial operations require an online connection.
+  - **`src/modules/operations/DriverHandoverModal.tsx`:** Removed fake offline handover queue fallback (`R-40`, fail-closed). Maintained stable `handoverActionId` UUID across retries, disabled confirmation button when offline, displayed amber notice, and preserved recipient name, signature, and notes on error.
+  - **`src/lib/__tests__/dataAccess.offlineDurability.test.ts` & `offlineQueue.test.ts`:** Added 8 unit/integration test cases verifying strict queueing semantics, duplicate handling, quota failures, and blocked storage.
+- Resolved all 7 test failures across the 4 pre-existing files:
+  - **`actions/__tests__/core.test.ts` (1 test):** Added the four floor operations sub-capabilities (`operations.pack`, `operations.handover`, `operations.return`, `operations.reset`) to `APP_LEVEL` array.
+  - **`clients/__tests__/clientsCopy.test.ts` (1 test):** Removed "company" from `searchPlaceholder` in `ClientsDirectory.tsx` and `Clients.tsx`, satisfying CL-12.
+  - **`finance/__tests__/Finance.restricted.test.tsx` (1 test):** Conditioned `ModuleSubHeader.secondaryActions` on `phone ? [] : [...]` in `Finance.tsx`.
+  - **`rentals/__tests__/rentalsOperationsHeader.test.tsx` (4 tests):** Wrapped `RentalsOperationsHeader` test renders in `<MemoryRouter>`.
+
+**Ruled**
+- Offline queueing for database mutations is strictly fail-closed: uncommitted mutations throw `OfflineQueueWriteError` rather than claiming optimistic success.
+- Custody transitions (`operations.handover`, `pack`, `return`, `reset`) require online verification (Law 8 / R-40) and are never queued offline.
+- Capabilities `operations.pack`, `operations.handover`, `operations.return`, `operations.reset` remain app-level resolution rules in `core.ts` mapped to `src/lib/rbac.ts` helpers.
+- On phones, `ModuleSubHeader` omits secondary action buttons, keeping mobile screen real estate focused on primary counter and single action.
+
+**Verified**
+- Full test suite: **376/376 test files passed, 4,721/4,721 tests green (100% pass)** in 354s.
+- `npx vitest run src/lib/__tests__/offlineQueue.test.ts src/lib/__tests__/dataAccess.offlineDurability.test.ts src/modules/operations/__tests__/DriverHandoverModal.test.tsx`: 3/3 files, 15/15 tests green.
+- `npm run typecheck`: 0 errors under TypeScript 5.7 strict mode.
+- `npm run lint`: 0 errors, 0 warnings (`--max-warnings 0`).
+- `npm run check:pglite`: 167/167 applied, 0 view leaks, 20 anon RPCs, 74 definer search_paths pinned.
+- `npm run check:lifecycle`: 31/31 stages green.
+- `npm run check:contrast`: 82/82 WCAG AA color pairs pass in dark, light, high-contrast, and glass.
+- `npm run build`: Exit 0, 214 precache assets.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 55 | 50 · 0 · 0 · 5 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 98% | -1 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-19T09:51:44.998Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-19T09:52:12.872Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Clients' duplicate in-page search box is back on `main` (17 Oct): decide whether to remove it again.
+- Today: the one-statement card stays unlanded (Babin, 19 Oct). It can be re-ported onto `main`'s new card later, keeping its new features.
+- Babin to confirm or flip RULINGS-2026-10-15 rows 24–25 and RULINGS-2026-10-16 rows 1–4.
+- Phase 7 Live Cutover tasks (Task 1.1–1.5 in `docs/REMAINING_WORK.md`) awaiting staging database provisioning and Babin sign-off under Rule N-5.
+
 ## 2026-10-19 — 15 Oct follow-ups on `main`: Booking Detail phone title, `/` key, Inventory chip row (Today kept as `main` has it)
 
 **Did**

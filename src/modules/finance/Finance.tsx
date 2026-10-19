@@ -1442,7 +1442,7 @@ export default function Finance() {
             counter={`${list.total ?? 0} invoices · ${outstanding.total ?? 0} outstanding · ${overdue.total ?? 0} overdue`}
             loadedAt={new Date()}
             loading={list.loading || outstanding.loading}
-            secondaryActions={[
+            secondaryActions={phone ? [] : [
               { label: 'Export', icon: 'download', onClick: exportCsv },
               ...(canTakePayment && canIssueInvoice
                 ? [{ label: 'Create Invoice', icon: 'plus' as const, onClick: () => setShowCreateInvoice(true) }]
