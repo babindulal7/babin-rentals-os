@@ -159,7 +159,8 @@ describe('RevenueReport — the window the toolbar names is the window drawn', (
     expect(container.querySelector('select[aria-label="Comparison"]')).not.toBeNull()
     await choose('Date range', 'all')
     expect(state.earliest).toHaveBeenCalledTimes(1)
-    expect(state.trend).toHaveBeenLastCalledWith(shift(TODAY, -40), TODAY, TODAY)
+    // Nothing was issued earlier in that month, so the first month is complete, not "part month".
+    expect(state.trend).toHaveBeenLastCalledWith(`${shift(TODAY, -40).slice(0, 8)}01`, TODAY, TODAY)
     expect(container.querySelector('select[aria-label="Comparison"]')).toBeNull()
   })
 
@@ -240,15 +241,19 @@ describe('RevenueReport — figures', () => {
 })
 
 describe('RevenueReport — invoice register', () => {
-  it('lists issued invoices and voids with their count; links open Finance on the invoice', async () => {
+  const row = (patch: Record<string, unknown>) => ({
+    id: 'i1', invoiceNo: 'INV-7', bookingId: 'b', bookingNo: '7', clientId: 'c', clientName: 'Aura Media', status: 'Sent',
+    issueDateAd: '2026-10-01', dueDateAd: '2026-10-15', currency: 'NPR', subtotal: 100, discountAmount: 0, discountPercent: 0,
+    taxableAmount: 100, vatRate: 0.13, vatAmount: 13, totalAmount: 113, paidAmount: 0, outstandingAmount: 113,
+    isVoid: false, voidedAtAd: null, voidReason: null, creditNoteNo: null, notes: null, createdAtAd: '2026-10-01T00:00:00Z',
+    ...patch,
+  })
+
+  it('lists issued invoices and voids with their count; live numbers open Finance on the invoice', async () => {
     state.listInvoices.mockResolvedValue({
       rows: [
-        {
-          id: 'i1', invoiceNo: 'INV-7', bookingId: 'b', bookingNo: '7', clientId: 'c', clientName: 'Aura Media', status: 'Void',
-          issueDateAd: '2026-10-01', dueDateAd: '2026-10-15', currency: 'NPR', subtotal: 100, discountAmount: 0, discountPercent: 0,
-          taxableAmount: 100, vatRate: 0.13, vatAmount: 13, totalAmount: 113, paidAmount: 0, outstandingAmount: 113,
-          isVoid: true, voidedAtAd: '2026-10-02T00:00:00Z', voidReason: 'Duplicate invoice raised', creditNoteNo: null, notes: null, createdAtAd: '2026-10-01T00:00:00Z',
-        },
+        row({}),
+        row({ id: 'i2', invoiceNo: 'INV-8', status: 'Void', isVoid: true, voidedAtAd: '2026-10-02T00:00:00Z', voidReason: 'Duplicate invoice raised' }),
       ],
       total: 240,
     })
@@ -257,16 +262,34 @@ describe('RevenueReport — invoice register', () => {
     expect(state.listInvoices).toHaveBeenCalledWith(
       expect.objectContaining({
         withCount: true,
+        page: { index: 0, size: 100 },
         chips: { status: ['Sent', 'Partially Paid', 'Paid', 'Void'] },
+        // A Draft voided before issue has no issue date: it is not an issued invoice.
+        presence: { issue_date: true },
         // The same civil days the trend reads — a DATE column is not compared with +05:45 instants.
         dateRange: { column: 'issue_date', fromAd: START, toAd: TODAY },
       }),
     )
     const link = [...container.querySelectorAll('a')].find((a) => a.textContent === 'INV-7')!
     expect(link.getAttribute('href')).toBe('/finance?tab=invoices&search=INV-7')
-    expect(text()).toContain('Showing the 1 most recent of 240 invoices.')
+    // Finance opens on live invoices, so a void's number is text, not a link to an empty list.
+    expect([...container.querySelectorAll('a')].some((a) => a.textContent === 'INV-8')).toBe(false)
+    expect(text()).toContain('INV-8')
+    expect(text()).toContain('Invoices 1–2 of 240, newest first.')
     expect(text()).toContain('they are never counted as revenue')
     expect(text()).toContain('Drafts are not listed until they are issued.')
+  })
+
+  it('pages through a long register in place', async () => {
+    state.listInvoices.mockResolvedValue({ rows: [row({})], total: 240 })
+    await render()
+    await clickTab('Invoice register')
+    const button = (name: string) => [...container.querySelectorAll('button')].find((b) => b.textContent?.trim() === name)!
+    expect(button('Newer').disabled).toBe(true)
+    await act(async () => button('Older').click())
+    expect(state.listInvoices).toHaveBeenLastCalledWith(expect.objectContaining({ page: { index: 1, size: 100 } }))
+    expect(text()).toContain('Invoices 101–101 of 240')
+    expect(button('Newer').disabled).toBe(false)
   })
 
   it('a register read failure is an inline error with Retry', async () => {

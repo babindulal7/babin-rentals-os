@@ -256,6 +256,18 @@ function presetWindow(days: number): { fromDay: string; toDay: string } {
 }
 
 /**
+ * The `dateRange` a rolling preset produces, from this toolbar's own today — so
+ * a page that STARTS on a preset is always shown as that preset, even in a
+ * session that crossed midnight since the toolbar loaded.
+ */
+export function reportPresetRange(column: string, key: Exclude<ReportRangePresetKey, 'all' | 'custom'>): ListFilters['dateRange'] {
+  const preset = REPORT_RANGE_PRESETS.find((p) => p.key === key)
+  if (!preset || preset.days === null) return undefined
+  const window = presetWindow(preset.days)
+  return reportDateRange(column, window.fromDay, window.toDay)
+}
+
+/**
  * Which preset produced this range — derived rather than stored, so there is no
  * second copy of the selection to fall out of step with the range itself.
  */

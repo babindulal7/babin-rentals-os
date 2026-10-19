@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { PageHeader, KpiStrip, cardStyle } from '../../components/ui/Page'
+import { PageHeader, KpiStrip, Button, cardStyle } from '../../components/ui/Page'
 import type { Kpi } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { ReportFamiliesNav } from '../../components/ui/ReportFamiliesNav'
-import { ReportToolbar, reportDateRange, reportRangeDays } from '../../components/ui/ReportToolbar'
+import { ReportToolbar, reportPresetRange, reportRangeDays } from '../../components/ui/ReportToolbar'
 import type { ReportCompare, ReportCsvRow, ReportFilters } from '../../components/ui/ReportToolbar'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { EmptyState, ErrorBanner, LoadingSkeleton, RestrictedState } from '../../components/ui/StateViews'
@@ -42,12 +42,6 @@ const VIEWS: ReadonlyArray<{ id: RevenueView; label: string; series: string }> =
 
 const MAX_MONTHS = 24
 
-function daysAgo(day: string, count: number): string {
-  const d = new Date(day + 'T00:00:00Z')
-  d.setUTCDate(d.getUTCDate() - count)
-  return d.toISOString().slice(0, 10)
-}
-
 function monthSpan(fromAd: string, toAd: string): number {
   return (Number(toAd.slice(0, 4)) - Number(fromAd.slice(0, 4))) * 12 + Number(toAd.slice(5, 7)) - Number(fromAd.slice(5, 7)) + 1
 }
@@ -78,7 +72,9 @@ type LoadState =
 async function resolveWindow(fromDay: string | null, toDay: string | null, today: string): Promise<Window> {
   const earliest = fromDay === null ? await getEarliestIssueDay() : null
   if (fromDay === null && earliest === null) return { kind: 'nothing-issued' }
-  const fromAd = fromDay ?? (earliest as string)
+  // Nothing was issued earlier in the first invoice's month, so "All dates" opens
+  // that month on the 1st: a complete month, not a "part month".
+  const fromAd = fromDay ?? `${(earliest as string).slice(0, 8)}01`
   const toAd = toDay === null || toDay > today ? today : toDay
   if (fromDay !== null && toDay !== null && fromDay > toDay) return { kind: 'inverted' }
   if (fromAd > today) return { kind: 'future' }
@@ -94,7 +90,8 @@ export default function RevenueReport() {
   const today = businessDayAd()
   const [tab, setTab] = useState<RevenueTab>('trend')
   const [view, setView] = useState<RevenueView>('revenue')
-  const [filters, setFilters] = useState<ReportFilters>(() => ({ dateRange: reportDateRange('issue_date', daysAgo(today, 89), today) }))
+  // The toolbar's own preset, so the control always names the window drawn (R17-7).
+  const [filters, setFilters] = useState<ReportFilters>(() => ({ dateRange: reportPresetRange('issue_date', 'last90') }))
   const [compare, setCompare] = useState<ReportCompare>('off')
   const [revision, setRevision] = useState(0)
   const [state, setState] = useState<LoadState>({ kind: 'loading' })
@@ -193,7 +190,7 @@ export default function RevenueReport() {
           {tab === 'trend' ? (
             <TrendPanel state={state} view={view} onView={setView} onRetry={() => setRevision((r) => r + 1)} />
           ) : (
-            <InvoiceRegister fromDay={fromDay} toDay={toDay} />
+            <InvoiceRegister key={`${fromDay}|${toDay}`} fromDay={fromDay} toDay={toDay} />
           )}
           <p style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
             Detailed invoice records and settlement corrections remain available in <Link to="/finance?tab=invoices">Finance invoices</Link>.
@@ -398,6 +395,7 @@ function InvoiceRegister({ fromDay, toDay }: { fromDay: string | null; toDay: st
   const [total, setTotal] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [revision, setRevision] = useState(0)
+  const [page, setPage] = useState(0)
 
   useEffect(() => {
     let active = true
@@ -406,7 +404,14 @@ function InvoiceRegister({ fromDay, toDay }: { fromDay: string | null; toDay: st
     // `issue_date` is a DATE, so the bounds are the toolbar's civil days — the same
     // days the trend reads — not its +05:45 instants.
     const dateRange = fromDay || toDay ? { column: 'issue_date', ...(fromDay ? { fromAd: fromDay } : {}), ...(toDay ? { toAd: toDay } : {}) } : undefined
-    listInvoices({ page: { index: 0, size: REGISTER_PAGE }, dateRange, chips: { status: REGISTER_STATUSES }, withCount: true })
+    listInvoices({
+      page: { index: page, size: REGISTER_PAGE },
+      dateRange,
+      chips: { status: REGISTER_STATUSES },
+      // A Draft voided before issue has no issue date or number; it is not an issued invoice.
+      presence: { issue_date: true },
+      withCount: true,
+    })
       .then((res) => {
         if (!active) return
         setRows(res.rows)
@@ -418,11 +423,11 @@ function InvoiceRegister({ fromDay, toDay }: { fromDay: string | null; toDay: st
     return () => {
       active = false
     }
-  }, [fromDay, toDay, revision])
+  }, [fromDay, toDay, page, revision])
 
   if (error) return <ErrorBanner title="The invoice register could not be loaded" message={error} onRetry={() => setRevision((r) => r + 1)} />
   if (rows === null) return <LoadingSkeleton rows={6} label="Loading invoices…" />
-  if (rows.length === 0) {
+  if (rows.length === 0 && page === 0) {
     return (
       <section aria-label="Invoice register" style={cardStyle}>
         <EmptyState title="No invoices in this period" description="Choose a wider period, or issue an invoice from a rental." />
@@ -433,8 +438,8 @@ function InvoiceRegister({ fromDay, toDay }: { fromDay: string | null; toDay: st
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
       <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-        {total !== null && total > rows.length
-          ? `Showing the ${rows.length} most recent of ${total} invoices. Finance ▸ Invoices lists them all.`
+        {total !== null && total > REGISTER_PAGE
+          ? `Invoices ${page * REGISTER_PAGE + 1}–${page * REGISTER_PAGE + rows.length} of ${total}, newest first.`
           : `${rows.length} invoice${rows.length === 1 ? '' : 's'}, newest first.`}{' '}
         Voided invoices are listed for the record; they are never counted as revenue. Drafts are not listed until they are issued.
       </p>
@@ -457,12 +462,13 @@ function InvoiceRegister({ fromDay, toDay }: { fromDay: string | null; toDay: st
             {rows.map((inv) => (
               <tr key={inv.id}>
                 <td style={td}>
-                  {inv.invoiceNo ? (
+                  {/* Finance ▸ Invoices opens on live invoices, so a void's link would find nothing. */}
+                  {inv.invoiceNo && !inv.isVoid ? (
                     <Link to={`/finance?tab=invoices&search=${encodeURIComponent(inv.invoiceNo)}`} style={{ color: 'var(--link)', fontWeight: 600, textDecoration: 'none' }}>
                       {inv.invoiceNo}
                     </Link>
                   ) : (
-                    'No number'
+                    inv.invoiceNo || 'No number'
                   )}
                 </td>
                 <td style={td}>{inv.clientName}</td>
@@ -478,6 +484,16 @@ function InvoiceRegister({ fromDay, toDay }: { fromDay: string | null; toDay: st
           </tbody>
         </table>
       </DataTableShell>
+      {total !== null && total > REGISTER_PAGE && (
+        <div style={{ display: 'flex', gap: 'var(--sp-sm)', justifyContent: 'flex-end' }}>
+          <Button icon="chevron_left" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+            Newer
+          </Button>
+          <Button icon="chevron_right" disabled={(page + 1) * REGISTER_PAGE >= total} onClick={() => setPage((p) => p + 1)}>
+            Older
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

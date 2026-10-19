@@ -49,6 +49,19 @@ describe('month coverage', () => {
     expect(last.longLabel).toBe('1–31 October 2026 (month to date)')
   })
 
+  it('a bucket holding today but starting after the 1st is never called "month to date"', () => {
+    const t = aggregateIssuedRevenue([], '2026-10-12', '2026-10-18', '2026-10-18')
+    expect(t.months[0]!.longLabel).toBe('12–18 October 2026 (part month, to date)')
+    expect(coverageNotes(t)).toEqual(['Oct 2026 covers 12–18 October 2026 only, to date.'])
+  })
+
+  it('a one-day bucket names its day once', () => {
+    const t = aggregateIssuedRevenue([], '2026-07-31', '2026-10-28', '2026-10-28')
+    expect(t.months[0]!.longLabel).toBe('31 July 2026 (part month)')
+    expect(coverageNotes(t)).toContain('Jul 2026 covers 31 July 2026 only.')
+    expect(aggregateIssuedRevenue([], '2026-10-01', '2026-11-01', '2026-11-01').months[1]!.longLabel).toBe('1 November 2026 (month to date)')
+  })
+
   it('without today, a window ending on a month end is a full month (existing callers unchanged)', () => {
     const t = aggregateIssuedRevenue([], '2026-08-01', '2026-09-30')
     expect(t.months.map((m) => m.coverage)).toEqual(['full', 'full'])
@@ -102,5 +115,8 @@ describe('changeLabel', () => {
     expect(changeLabel(0, 0)).toBe('no change')
     expect(changeLabel(rupees(2500500), rupees(2500000))).toBe('+<0.1%')
     expect(changeLabel(rupees(2499500), rupees(2500000))).toBe('−<0.1%')
+    // A real fall that leaves revenue is never printed as "−100%".
+    expect(changeLabel(2000, 5_000_000)).toBe('−>99.9%')
+    expect(changeLabel(0, 5_000_000)).toBe('−100%')
   })
 })

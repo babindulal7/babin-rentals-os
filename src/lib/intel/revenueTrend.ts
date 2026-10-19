@@ -31,7 +31,7 @@ export interface RevenueMonth {
   startDay: string
   endDay: string
   coverage: BucketCoverage
-  /** Full text: "October 2026", "1–14 October 2026 (month to date)", "3 May 2026 – 2 Jun 2026". */
+  /** Full text: "October 2026", "1–14 October 2026 (month to date)", "12–18 October 2026 (part month, to date)", "3 May 2026 – 2 Jun 2026". */
   longLabel: string
 }
 
@@ -173,11 +173,24 @@ export function windowLabel(fromAd: string, toAd: string): string {
   return fromAd === toAd ? dayLabel(fromAd) : `${dayLabel(fromAd)} – ${dayLabel(toAd)}`
 }
 
-function monthLongLabel(startDay: string, endDay: string, coverage: BucketCoverage): string {
+/** "17–31 July 2026", or "31 July 2026" for a one-day bucket. */
+function monthSpan(startDay: string, endDay: string): string {
   const month = `${MONTHS_LONG[Number(startDay.slice(5, 7)) - 1]} ${startDay.slice(0, 4)}`
-  if (coverage === 'full') return month
-  const span = `${Number(startDay.slice(8, 10))}–${Number(endDay.slice(8, 10))} ${month}`
-  return coverage === 'in-progress' ? `${span} (month to date)` : `${span} (part month)`
+  const from = Number(startDay.slice(8, 10))
+  const to = Number(endDay.slice(8, 10))
+  return from === to ? `${from} ${month}` : `${from}–${to} ${month}`
+}
+
+/**
+ * RULING 2026-10-17 (R17-3): "month to date" only when the bucket starts on the
+ * 1st — a "Last 7 days" bucket holding today is "part month, to date", never a
+ * claim about the whole month so far.
+ */
+function monthLongLabel(startDay: string, endDay: string, coverage: BucketCoverage): string {
+  if (coverage === 'full') return `${MONTHS_LONG[Number(startDay.slice(5, 7)) - 1]} ${startDay.slice(0, 4)}`
+  const span = monthSpan(startDay, endDay)
+  if (coverage === 'clipped') return `${span} (part month)`
+  return startDay.endsWith('-01') ? `${span} (month to date)` : `${span} (part month, to date)`
 }
 
 const DAY_MS = 86_400_000
@@ -238,7 +251,10 @@ export function changeLabel(current: number, previous: number): string {
   if (pct === 0) return 'no change'
   const sign = pct > 0 ? '+' : '−'
   const rounded = Math.round(Math.abs(pct) * 10) / 10
-  return rounded === 0 ? `${sign}<0.1%` : `${sign}${rounded}%`
+  if (rounded === 0) return `${sign}<0.1%`
+  // A fall that leaves something issued is never "−100%", which reads as nothing.
+  if (pct < 0 && current > 0 && rounded >= 100) return '−>99.9%'
+  return `${sign}${rounded}%`
 }
 
 /** Plain sentences about coverage, for under the chart. */
@@ -247,9 +263,15 @@ export function coverageNotes(trend: RevenueTrend): string[] {
   const first = trend.months[0]
   const last = trend.months[trend.months.length - 1]
   if (!first || !last) return notes
-  if (last.coverage === 'in-progress') notes.push(`${last.label} is month to date, through ${dayLabel(last.endDay)}.`)
-  if (first.coverage === 'clipped') notes.push(`${first.label} covers ${first.longLabel.replace(' (part month)', '')} only.`)
-  if (last.coverage === 'clipped' && trend.months.length > 1) notes.push(`${last.label} covers ${last.longLabel.replace(' (part month)', '')} only.`)
+  if (last.coverage === 'in-progress') {
+    notes.push(
+      last.startDay.endsWith('-01')
+        ? `${last.label} is month to date, through ${dayLabel(last.endDay)}.`
+        : `${last.label} covers ${monthSpan(last.startDay, last.endDay)} only, to date.`,
+    )
+  }
+  if (first.coverage === 'clipped') notes.push(`${first.label} covers ${monthSpan(first.startDay, first.endDay)} only.`)
+  if (last.coverage === 'clipped' && trend.months.length > 1) notes.push(`${last.label} covers ${monthSpan(last.startDay, last.endDay)} only.`)
   return notes
 }
 
