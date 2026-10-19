@@ -1,2 +1,9 @@
 {"gate":"typecheck","exitCode":2,"verified":false,"sourceStable":false,"at":"2026-10-19T19:18:30.714Z","log":"astra-final-typecheck.log"}
 {"gate":"lint","exitCode":0,"verified":true,"sourceStable":false,"at":"2026-10-19T19:20:49.918Z","log":"astra-final-lint.log"}
+{"gate":"test","exitCode":1,"verified":false,"sourceStable":false,"at":"2026-10-19T19:53:37.843Z","log":"astra-final-test.log","detail":{"passed":4827,"total":4837,"failed":10}}
+{"gate":"test:receipts","exitCode":0,"verified":true,"sourceStable":true,"at":"2026-10-19T19:53:38.943Z","log":"astra-final-test-receipts.log"}
+{"gate":"check:pglite","exitCode":0,"verified":true,"sourceStable":true,"at":"2026-10-19T19:53:50.390Z","log":"astra-final-check-pglite.log"}
+{"gate":"check:security","exitCode":0,"verified":true,"sourceStable":false,"at":"2026-10-19T19:53:59.989Z","log":"astra-final-check-security.log"}
+{"gate":"check:lifecycle","exitCode":0,"verified":true,"sourceStable":false,"at":"2026-10-19T19:54:12.426Z","log":"astra-final-check-lifecycle.log"}
+{"gate":"check:contrast","exitCode":0,"verified":true,"sourceStable":true,"at":"2026-10-19T19:54:12.839Z","log":"astra-final-check-contrast.log"}
+{"gate":"build","exitCode":0,"verified":true,"sourceStable":false,"at":"2026-10-19T19:57:54.332Z","log":"astra-final-build.log","output":"C:\\Users\\use\\AppData\\Local\\Temp\\babin-astra-production-HrNwUg\\dist"}

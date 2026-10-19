@@ -16,6 +16,24 @@
   margin-bottom: var(--sp-md);
 }
 
+@media (max-width: 767px) {
+  .delivery-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .delivery-kpi-card {
+    padding: 10px 12px;
+    min-height: 74px;
+  }
+  .delivery-kpi-val {
+    font-size: 20px;
+    margin-top: 2px;
+  }
+  .delivery-kpi-card--revenue {
+    grid-column: span 2;
+  }
+}
+
 .delivery-kpi-card {
   padding: 14px 16px;
   border-radius: var(--r-card);
@@ -111,6 +129,19 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+@media (max-width: 767px) {
+  .delivery-toolbar-left {
+    width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-bottom: 4px;
+    flex-wrap: nowrap;
+  }
+  .delivery-toolbar-right {
+    width: 100%;
+  }
 }
 
 /* Table styling */

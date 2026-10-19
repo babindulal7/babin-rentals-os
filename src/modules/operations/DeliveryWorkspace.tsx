@@ -526,6 +526,210 @@ function MockDeliveryWorkspace() {
                 )
               })}
             </div>
+          ) : isMobile ? (
+            /* Mobile Cards View */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
+              {filtered.map((d) => {
+                const badge = STATUS_BADGE_STYLE[d.status]
+                return (
+                  <article
+                    key={d.id}
+                    style={{
+                      background: 'var(--card)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--r-card)',
+                      padding: '16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 12,
+                      boxShadow: 'var(--shadow-sm)',
+                    }}
+                  >
+                    {/* Header: ID, Booking, Status Badge, Gatepass */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span className="identifier" style={{ fontWeight: 800, color: 'var(--accent2)', fontSize: '14px' }}>
+                            {d.id}
+                          </span>
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              padding: '2px 8px',
+                              borderRadius: 'var(--r-badge, 4px)',
+                              background: badge.bg,
+                              color: badge.color,
+                              border: badge.border,
+                              fontSize: '11.5px',
+                              fontWeight: 700,
+                            }}
+                          >
+                            <Icon name={badge.icon} size={12} />
+                            {d.status}
+                          </span>
+                        </div>
+                        <div style={{ marginTop: 4 }}>
+                          <Link
+                            to={`/rentals/${d.bookingNo}`}
+                            style={{
+                              fontSize: '13px',
+                              fontWeight: 600,
+                              color: 'var(--primary-text)',
+                              textDecoration: 'none',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                            }}
+                          >
+                            <Icon name="truck" size={13} /> {d.bookingNo}
+                          </Link>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        title="Print Gate Pass"
+                        aria-label={`Print Gate Pass for ${d.id}`}
+                        onClick={() => setGatePassSlip(d)}
+                        style={{
+                          minWidth: 'var(--tap, 44px)',
+                          minHeight: 'var(--tap, 44px)',
+                          padding: '4px 8px',
+                          borderRadius: 'var(--r-xs)',
+                          background: 'var(--surface2)',
+                          border: '1px solid var(--border)',
+                          color: 'var(--text2)',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Icon name="file" size={14} />
+                      </button>
+                    </div>
+
+                    {/* Client & Address */}
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)' }}>
+                        {d.clientName}
+                      </div>
+                      <div style={{ fontSize: '13px', color: 'var(--text2)', marginTop: 4, display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                        <Icon name="truck" size={14} style={{ flexShrink: 0, marginTop: 2, color: 'var(--muted)' }} />
+                        <span style={{ wordBreak: 'break-word' }}>{d.address}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6, flexWrap: 'wrap' }}>
+                        {d.clientPhone && (
+                          <a
+                            href={`tel:${d.clientPhone}`}
+                            style={{
+                              fontSize: '12px',
+                              color: 'var(--info)',
+                              textDecoration: 'none',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              fontWeight: 600,
+                              minHeight: 32,
+                            }}
+                          >
+                            <Icon name="phone" size={13} /> {d.clientPhone}
+                          </a>
+                        )}
+                        {d.neighborhood && (
+                          <span style={{ fontSize: '11px', color: 'var(--text3)', background: 'var(--surface2)', padding: '2px 6px', borderRadius: 4 }}>
+                            {d.neighborhood}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Scheduled & Rider Info */}
+                    <div
+                      style={{
+                        padding: '10px 12px',
+                        background: 'var(--card2)',
+                        borderRadius: 'var(--r-sm, 6px)',
+                        border: '1px solid var(--border)',
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                        gap: 8,
+                        fontSize: '12.5px',
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: '10.5px', color: 'var(--text3)', textTransform: 'uppercase', fontWeight: 600 }}>
+                          Scheduled
+                        </div>
+                        <div style={{ fontWeight: 600, color: 'var(--text)', marginTop: 2 }}>
+                          {d.scheduledDate} · {d.scheduledTime}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '10.5px', color: 'var(--text3)', textTransform: 'uppercase', fontWeight: 600 }}>
+                          Rider / Driver
+                        </div>
+                        <div style={{ fontWeight: 600, color: d.driverName ? 'var(--text)' : 'var(--warn-text)', marginTop: 2 }}>
+                          {d.driverName ? `${d.driverName} ${d.vehiclePlate ? `(${d.vehiclePlate})` : ''}` : 'Unassigned'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Delivery Fee if money permitted */}
+                    {canMoney && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px' }}>
+                        <span style={{ color: 'var(--text2)' }}>Delivery Fee:</span>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--text)' }}>
+                          {formatMoney(rupees(d.deliveryFeeNpr))}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div style={{ marginTop: 2 }}>
+                      {canChange && d.status === 'Scheduled' && (
+                        <Button
+                          variant="secondary"
+                          style={{ width: '100%', minHeight: 44, justifyContent: 'center' }}
+                          disabled={!!writeRefusal}
+                          onClick={() => handleOpenAssign(d)}
+                        >
+                          Assign Driver
+                        </Button>
+                      )}
+                      {canChange && d.status === 'Ready' && (
+                        <Button
+                          variant="primary"
+                          data-primary-verb
+                          style={{ width: '100%', minHeight: 48, justifyContent: 'center', fontWeight: 600 }}
+                          disabled={!!writeRefusal}
+                          onClick={() => handleStartTransit(d)}
+                        >
+                          Dispatch Now
+                        </Button>
+                      )}
+                      {canChange && d.status === 'In Transit' && (
+                        <Button
+                          variant="primary"
+                          data-primary-verb
+                          style={{ width: '100%', minHeight: 48, justifyContent: 'center', fontWeight: 600 }}
+                          disabled={!!writeRefusal}
+                          onClick={() => handleOpenDeliver(d)}
+                        >
+                          Confirm Delivered ✓
+                        </Button>
+                      )}
+                      {d.status === 'Delivered' && (
+                        <div style={{ fontSize: '12px', color: 'var(--success-text)', textAlign: 'center', padding: '6px' }}>
+                          ✓ Delivered{d.recipientName ? ` to ${d.recipientName}` : ''}
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
           ) : (
             /* Table View */
             <div className="delivery-table-wrapper">

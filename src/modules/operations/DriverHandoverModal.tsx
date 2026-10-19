@@ -362,7 +362,7 @@ export function DriverHandoverModal({
               size="sm"
               onClick={captureGps}
               disabled={gpsLoading}
-              style={{ minHeight: 36 }}
+              style={{ minHeight: 44 }}
             >
               <Icon name="flag" size={13} style={{ marginRight: 4 }} />
               {gpsLoading ? 'Locating...' : gps ? 'Update GPS' : 'Tag GPS Location'}
@@ -394,10 +394,13 @@ export function DriverHandoverModal({
                   background: 'none',
                   border: 'none',
                   color: 'var(--text2)',
-                  fontSize: 'var(--t-micro)',
+                  fontSize: 'var(--t-caption, 12px)',
                   cursor: 'pointer',
                   textDecoration: 'underline',
-                  padding: '4px 8px',
+                  padding: '6px 10px',
+                  minHeight: 44,
+                  display: 'inline-flex',
+                  alignItems: 'center',
                 }}
               >
                 Clear signature
@@ -488,12 +491,20 @@ export function DriverHandoverModal({
                   type="button"
                   onClick={() => setPhotoData(null)}
                   style={{
+                    width: 44,
+                    height: 44,
+                    minWidth: 44,
+                    minHeight: 44,
+                    display: 'grid',
+                    placeItems: 'center',
                     background: 'none',
                     border: 'none',
                     color: 'var(--text2)',
-                    fontSize: 'var(--t-caption)',
+                    fontSize: '18px',
                     cursor: 'pointer',
+                    borderRadius: 'var(--radius-sm)',
                   }}
+                  aria-label="Remove photo"
                   title="Remove photo"
                 >
                   ✕
