@@ -1,1 +1,0 @@
-function i(r,e,a){return r<0?{valid:!1,requiresApproval:!1,error:"Discount percent cannot be negative"}:r>100?{valid:!1,requiresApproval:!1,error:"A discount above 100% is a negative price, not a discount."}:{valid:!0,requiresApproval:!1,error:null}}export{i as v};

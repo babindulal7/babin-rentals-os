@@ -1812,6 +1812,13 @@ export default function Finance() {
                           <div
                             key={i.id}
                             className="finance-card-item"
+                            style={{
+                              borderLeft: i.isVoid
+                                ? '4px solid var(--muted)'
+                                : i.outstandingAmount > 0
+                                  ? '4px solid var(--st-warn-fg, #d97706)'
+                                  : '4px solid var(--st-success-fg, #15803d)',
+                            }}
                           >
                             <span style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
                               <IntelCard
@@ -2023,7 +2030,7 @@ function RowActions({
   onVoid: () => void
   onExportPdf?: () => void
 }) {
-  const layout = phone ? { flex: '1 1 88px' } : undefined
+  const layout = phone ? { flex: '1 1 88px', minHeight: 44, justifyContent: 'center' } : undefined
 
   return (
     <>

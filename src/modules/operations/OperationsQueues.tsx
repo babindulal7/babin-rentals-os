@@ -380,7 +380,7 @@ function getJobButtonProps(job: JobName): {
         icon: 'package',
         style: {
           minWidth: 104,
-          minHeight: 38,
+          minHeight: 44,
           justifyContent: 'center',
           gap: 6,
           background: 'color-mix(in srgb, var(--primary, #2563eb) 12%, var(--card))',
@@ -396,7 +396,7 @@ function getJobButtonProps(job: JobName): {
         icon: 'truck',
         style: {
           minWidth: 104,
-          minHeight: 38,
+          minHeight: 44,
           justifyContent: 'center',
           gap: 6,
           background: 'color-mix(in srgb, var(--success, #16a34a) 12%, var(--card))',
@@ -412,7 +412,7 @@ function getJobButtonProps(job: JobName): {
         icon: 'return_arrow',
         style: {
           minWidth: 104,
-          minHeight: 38,
+          minHeight: 44,
           justifyContent: 'center',
           gap: 6,
           background: 'color-mix(in srgb, var(--warn, #ea580c) 12%, var(--card))',
@@ -428,7 +428,7 @@ function getJobButtonProps(job: JobName): {
         icon: 'tool',
         style: {
           minWidth: 104,
-          minHeight: 38,
+          minHeight: 44,
           justifyContent: 'center',
           gap: 6,
           background: 'color-mix(in srgb, var(--ready, #ca8a04) 14%, var(--card))',
@@ -1065,10 +1065,11 @@ export default function OperationsQueues() {
                       key={job.id}
                       style={{
                         ...cardStyle,
-                        padding: '12px 14px',
+                        padding: '14px 16px',
                         display: 'grid',
-                        gap: 8,
+                        gap: 10,
                         borderLeft: job.isPastDue ? '4px solid var(--danger, #ef4444)' : undefined,
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
@@ -1078,6 +1079,7 @@ export default function OperationsQueues() {
                           style={{
                             color: 'var(--link)',
                             fontWeight: 700,
+                            fontSize: 'var(--t-ui, 15px)',
                             textDecoration: 'none',
                             fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
                           }}
@@ -1094,38 +1096,36 @@ export default function OperationsQueues() {
                           <span style={{ color: 'var(--muted)', fontStyle: 'italic' }}> · Direct Rental</span>
                         )}
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 }}>
-                        <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-                          <span className="figure" style={{ fontWeight: job.isPastDue ? 700 : 500, color: job.isPastDue ? 'var(--danger-text)' : 'inherit' }}>
-                            {formatDueAt(job.dueAtAd)}
-                          </span>
-                          {' · '}
-                          <span className="figure">{job.itemCount}</span> items
-                          <span
-                            style={{
-                              marginLeft: 6,
-                              fontSize: '11px',
-                              padding: '1px 6px',
-                              borderRadius: 4,
-                              background: 'var(--surface2, rgba(0,0,0,0.04))',
-                              color: 'var(--text2)',
-                              fontWeight: 500,
-                            }}
-                            title={`${job.itemCount} items in this ${job.job} queue`}
-                          >
-                            {job.itemCount >= 10 ? 'Heavy pull' : job.itemCount >= 4 ? 'Standard kit' : 'Quick pull'}
-                          </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+                        <span className="figure" style={{ fontWeight: job.isPastDue ? 700 : 500, color: job.isPastDue ? 'var(--danger-text)' : 'inherit' }}>
+                          {formatDueAt(job.dueAtAd)}
                         </span>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          style={jobBtn.style}
-                          onClick={() => navigate(jobRoute(job.bookingNo, job.job))}
+                        <span style={{ color: 'var(--muted)' }}>·</span>
+                        <span><span className="figure">{job.itemCount}</span> items</span>
+                        <span
+                          style={{
+                            marginLeft: 2,
+                            fontSize: '11px',
+                            padding: '2px 7px',
+                            borderRadius: 4,
+                            background: 'var(--surface2, rgba(0,0,0,0.04))',
+                            color: 'var(--text2)',
+                            fontWeight: 500,
+                          }}
+                          title={`${job.itemCount} items in this ${job.job} queue`}
                         >
-                          <Icon name={jobBtn.icon} size={15} />
-                          {job.job}
-                        </Button>
+                          {job.itemCount >= 10 ? 'Heavy pull' : job.itemCount >= 4 ? 'Standard kit' : 'Quick pull'}
+                        </span>
                       </div>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        style={{ ...jobBtn.style, width: '100%', minHeight: 44, marginTop: 2 }}
+                        onClick={() => navigate(jobRoute(job.bookingNo, job.job))}
+                      >
+                        <Icon name={jobBtn.icon} size={15} />
+                        {job.job}
+                      </Button>
                     </article>
                   )
                 })}

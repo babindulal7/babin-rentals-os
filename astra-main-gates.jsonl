@@ -1,8 +1,0 @@
-{"gate":"typecheck","exitCode":0,"at":"2026-10-19T18:31:07.454Z"}
-{"gate":"lint","exitCode":0,"at":"2026-10-19T18:32:46.432Z"}
-{"gate":"test","exitCode":0,"at":"2026-10-19T18:42:29.720Z"}
-{"gate":"check:pglite","exitCode":0,"at":"2026-10-19T18:43:05.543Z"}
-{"gate":"check:security","exitCode":0,"at":"2026-10-19T18:43:35.275Z"}
-{"gate":"check:lifecycle","exitCode":0,"at":"2026-10-19T18:44:04.957Z"}
-{"gate":"check:contrast","exitCode":0,"at":"2026-10-19T18:44:07.628Z"}
-{"gate":"build","exitCode":0,"at":"2026-10-19T19:02:53.538Z"}
