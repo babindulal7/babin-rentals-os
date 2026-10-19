@@ -17,7 +17,8 @@ export const REPORT_FAMILIES: readonly ReportFamilyItem[] = [
   { label: 'Inventory', to: '/reports/inventory', money: false },
   { label: 'Clients', to: '/reports/clients', money: true },
   { label: 'Operations', to: '/reports/operations', money: false },
-  { label: 'Finance', to: '/reports/cash-flow', money: true },
+  // RULING 2026-10-17 (R17-1): cash flow and working capital are not Coordinator's (§5, C7).
+  { label: 'Finance', to: '/reports/cash-flow', money: true, financial: true },
   { label: 'Maintenance', to: '/reports/damage-maintenance', money: false },
   { label: 'Cases', to: '/reports/cases', money: false },
   { label: 'Staff', to: '/reports/staff', money: false },

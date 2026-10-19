@@ -275,6 +275,7 @@ export function InteractiveTrendChart({
     fontSize: 'var(--t-meta)',
     cursor: 'pointer',
   } as const
+  const stepButtonOff = { color: 'var(--muted)', cursor: 'default' } as const
 
   return (
     <div ref={rootRef} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)', minWidth: 0 }}>
@@ -416,25 +417,43 @@ export function InteractiveTrendChart({
         )}
       </div>
 
-      <div
-        id={descId}
-        aria-live="polite"
-        style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--sp-sm)', minHeight: 44, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}
-      >
-        {selected === null ? (
-          <span>{narrow ? 'Tap a point to see its exact values.' : 'Hover, tap or use the arrow keys to read each period.'}</span>
-        ) : (
-          <span className={narrow ? undefined : 'sr-only'} data-testid="trend-readout" style={{ color: 'var(--text)' }}>
-            {detailText(selected)}
-          </span>
-        )}
+      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--sp-sm)', minHeight: 44, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+        {/* The described / live text is the readout alone — the buttons are not data. */}
+        <div id={descId} aria-live="polite">
+          {selected === null ? (
+            <span>{narrow ? 'Tap a point to see its exact values.' : 'Hover, tap or use the arrow keys to read each period.'}</span>
+          ) : (
+            <span className={narrow ? undefined : 'sr-only'} data-testid="trend-readout" style={{ color: 'var(--text)' }}>
+              {detailText(selected)}
+            </span>
+          )}
+        </div>
         {selected !== null && (
           <div style={{ display: 'flex', gap: 'var(--sp-xs, 6px)', marginLeft: narrow ? 0 : 'auto' }}>
-            {/* Precise stepping where a finger cannot hit an 8px column. */}
-            <button type="button" className="tap" aria-label="Previous period" disabled={selected === 0} onClick={() => move(selected - 1)} style={stepButton}>
+            {/* Precise stepping where a finger cannot hit an 8px column. aria-disabled, not
+                disabled: a focused button that becomes disabled drops focus to <body>. */}
+            <button
+              type="button"
+              className="tap"
+              aria-label="Previous period"
+              aria-disabled={selected === 0}
+              onClick={() => {
+                if (selected > 0) move(selected - 1)
+              }}
+              style={{ ...stepButton, ...(selected === 0 ? stepButtonOff : {}) }}
+            >
               ‹ Previous
             </button>
-            <button type="button" className="tap" aria-label="Next period" disabled={selected === n - 1} onClick={() => move(selected + 1)} style={stepButton}>
+            <button
+              type="button"
+              className="tap"
+              aria-label="Next period"
+              aria-disabled={selected === n - 1}
+              onClick={() => {
+                if (selected < n - 1) move(selected + 1)
+              }}
+              style={{ ...stepButton, ...(selected === n - 1 ? stepButtonOff : {}) }}
+            >
               Next ›
             </button>
             <button type="button" className="tap" onClick={clearSelection} style={stepButton}>

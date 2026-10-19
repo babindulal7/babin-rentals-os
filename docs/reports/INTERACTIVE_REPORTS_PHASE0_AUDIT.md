@@ -86,11 +86,11 @@ with the previous day. The report reads the stored date as written.
 | Completeness | Stops paging at the first short page — silently truncates if PostgREST `max-rows` is below 500. | Advances by rows received, requires the server's exact count, refuses on mismatch or change mid-read (R17-4). |
 | Axis | No value axis; unreadable without hovering. | Shared `InteractiveTrendChart`: labelled lakh/crore axis, thinned period labels, legend with status in words, keyboard/touch/tooltip. |
 | Current month | Plotted as a complete month. | *Month to date*; clipped edges *part month* (R17-3). |
-| Window | 90 days drawn while the toolbar read "All dates". | Opens on the toolbar's "Last 90 days"; All dates = first issued invoice → today; future end clamped and said; #12's 24-month cap kept (R17-7). |
+| Window | 90 days drawn while the toolbar read "All dates". | Opens on the toolbar's "Last 90 days"; All dates = 1st of the first issued invoice's month → today; future end clamped and said; #12's 24-month cap kept (R17-7). |
 | Compare | — | Same number of days immediately before, buckets shifted 1:1; bounded periods only (R17-2). |
 | Views | — | One switcher: taxable amount or invoice count (R17-8). |
 | Register | Removed. | Issued + voids, true count, inline error, links into Finance (R17-5). |
-| Coordinator | Page only. | `canViewFinancialReports` in `rbac.ts`; nav link gated too (R17-1). |
+| Coordinator | Page only. | `canViewFinancialReports` in `rbac.ts`; nav Revenue and Finance links gated too (R17-1). |
 | Credit notes | #12's reconciliation section and CSV rows. | Kept unchanged. |
 
 ## 7. Not done here (by design)

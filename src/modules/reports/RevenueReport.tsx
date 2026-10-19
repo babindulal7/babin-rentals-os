@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageHeader, KpiStrip, Button, cardStyle } from '../../components/ui/Page'
 import type { Kpi } from '../../components/ui/Page'
@@ -53,8 +53,9 @@ const fmtView = (view: RevenueView, v: number) =>
 /**
  * What the toolbar's range resolves to. RULING 2026-10-17 (R17-7): the page
  * starts on the toolbar's own "Last 90 days", so the control names the window
- * the chart draws. "All dates" runs from the first issued invoice to today; an
- * end after today stops at today, because no invoice can be issued later.
+ * the chart draws. "All dates" runs from the 1st of the first issued invoice's
+ * month (voids included) to today; an end after today stops at today, because
+ * no invoice can be issued later.
  */
 type Window =
   | { kind: 'ok'; fromAd: string; toAd: string; clamped: boolean }
@@ -396,10 +397,15 @@ function InvoiceRegister({ fromDay, toDay }: { fromDay: string | null; toDay: st
   const [error, setError] = useState<string | null>(null)
   const [revision, setRevision] = useState(0)
   const [page, setPage] = useState(0)
+  const [loading, setLoading] = useState(true)
+  // After Newer / Older, focus lands on the summary that names the new range.
+  const summaryRef = useRef<HTMLParagraphElement>(null)
+  const paged = useRef(false)
 
   useEffect(() => {
     let active = true
-    setRows(null)
+    // Rows stay on screen while the next page loads; only the first read shows a skeleton.
+    setLoading(true)
     setError(null)
     // `issue_date` is a DATE, so the bounds are the toolbar's civil days — the same
     // days the trend reads — not its +05:45 instants.
@@ -416,9 +422,16 @@ function InvoiceRegister({ fromDay, toDay }: { fromDay: string | null; toDay: st
         if (!active) return
         setRows(res.rows)
         setTotal(res.total ?? null)
+        setLoading(false)
+        if (paged.current) {
+          paged.current = false
+          summaryRef.current?.focus()
+        }
       })
       .catch((cause: unknown) => {
-        if (active) setError(cause instanceof Error ? cause.message : 'The invoices could not be read.')
+        if (!active) return
+        setError(cause instanceof Error ? cause.message : 'The invoices could not be read.')
+        setLoading(false)
       })
     return () => {
       active = false
@@ -436,8 +449,8 @@ function InvoiceRegister({ fromDay, toDay }: { fromDay: string | null; toDay: st
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
-      <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+    <div aria-busy={loading} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
+      <p ref={summaryRef} tabIndex={-1} style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--text2)', outline: 'none' }}>
         {total !== null && total > REGISTER_PAGE
           ? `Invoices ${page * REGISTER_PAGE + 1}–${page * REGISTER_PAGE + rows.length} of ${total}, newest first.`
           : `${rows.length} invoice${rows.length === 1 ? '' : 's'}, newest first.`}{' '}
@@ -486,10 +499,29 @@ function InvoiceRegister({ fromDay, toDay }: { fromDay: string | null; toDay: st
       </DataTableShell>
       {total !== null && total > REGISTER_PAGE && (
         <div style={{ display: 'flex', gap: 'var(--sp-sm)', justifyContent: 'flex-end' }}>
-          <Button icon="chevron_left" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+          {/* aria-disabled, not disabled: a focused button that becomes disabled drops focus. */}
+          <Button
+            icon="chevron_left"
+            aria-disabled={page === 0 || loading}
+            style={page === 0 || loading ? { opacity: 0.45 } : undefined}
+            onClick={() => {
+              if (page === 0 || loading) return
+              paged.current = true
+              setPage((p) => p - 1)
+            }}
+          >
             Newer
           </Button>
-          <Button icon="chevron_right" disabled={(page + 1) * REGISTER_PAGE >= total} onClick={() => setPage((p) => p + 1)}>
+          <Button
+            icon="chevron_right"
+            aria-disabled={(page + 1) * REGISTER_PAGE >= total || loading}
+            style={(page + 1) * REGISTER_PAGE >= total || loading ? { opacity: 0.45 } : undefined}
+            onClick={() => {
+              if ((page + 1) * REGISTER_PAGE >= total || loading) return
+              paged.current = true
+              setPage((p) => p + 1)
+            }}
+          >
             Older
           </Button>
         </div>

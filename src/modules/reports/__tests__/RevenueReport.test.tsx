@@ -280,16 +280,25 @@ describe('RevenueReport — invoice register', () => {
     expect(text()).toContain('Drafts are not listed until they are issued.')
   })
 
-  it('pages through a long register in place', async () => {
+  it('pages through a long register in place, keeping the table and focus while the next page loads', async () => {
     state.listInvoices.mockResolvedValue({ rows: [row({})], total: 240 })
     await render()
     await clickTab('Invoice register')
     const button = (name: string) => [...container.querySelectorAll('button')].find((b) => b.textContent?.trim() === name)!
-    expect(button('Newer').disabled).toBe(true)
-    await act(async () => button('Older').click())
+    expect(button('Newer').getAttribute('aria-disabled')).toBe('true')
+    let release: (v: unknown) => void = () => {}
+    state.listInvoices.mockImplementationOnce(() => new Promise((r) => (release = r)))
+    const older = button('Older')
+    older.focus()
+    await act(async () => older.click())
+    // Still mounted while page 2 is read: no skeleton swap, nothing to lose focus to.
+    expect(container.contains(older)).toBe(true)
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull()
     expect(state.listInvoices).toHaveBeenLastCalledWith(expect.objectContaining({ page: { index: 1, size: 100 } }))
+    await act(async () => release({ rows: [row({ id: 'i9', invoiceNo: 'INV-9' })], total: 240 }))
     expect(text()).toContain('Invoices 101–101 of 240')
-    expect(button('Newer').disabled).toBe(false)
+    expect(document.activeElement?.textContent).toMatch(/^Invoices 101–101 of 240/)
+    expect(button('Newer').getAttribute('aria-disabled')).toBe('false')
   })
 
   it('a register read failure is an inline error with Retry', async () => {

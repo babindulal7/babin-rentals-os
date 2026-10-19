@@ -48,7 +48,9 @@ export function niceScale(
 
   let step = niceStep((hi - lo) / target)
   if (step < minStep) step = minStep
-  if (minStep >= 1) step = Math.round(step)
+  // A multiple of minStep, not merely an integer: 2.5 × 100 paisa is Rs 2.50, which
+  // a whole-rupee label would print as "Rs 3".
+  if (minStep > 0) step = Math.ceil(step / minStep - 1e-9) * minStep
 
   const min = Math.floor(lo / step) * step
   const max = Math.ceil(hi / step) * step

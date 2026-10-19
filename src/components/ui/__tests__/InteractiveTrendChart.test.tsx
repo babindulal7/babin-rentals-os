@@ -145,15 +145,30 @@ describe('InteractiveTrendChart', () => {
     render()
     act(() => column(0).dispatchEvent(new MouseEvent('click', { bubbles: true })))
     const btn = (name: string) => container.querySelector(`button[aria-label="${name}"]`) as HTMLButtonElement
-    expect(btn('Previous period').disabled).toBe(true)
+    expect(btn('Previous period').getAttribute('aria-disabled')).toBe('true')
     act(() => btn('Next period').click())
     expect(readout()).toMatch(/^September 2026/)
     act(() => btn('Next period').click())
     expect(readout()).toMatch(/month to date/)
-    expect(btn('Next period').disabled).toBe(true)
+    expect(btn('Next period').getAttribute('aria-disabled')).toBe('true')
+    // Pressing it at the end keeps the selection and the focus where they are.
+    btn('Next period').focus()
+    act(() => btn('Next period').click())
+    expect(readout()).toMatch(/month to date/)
+    expect(document.activeElement).toBe(btn('Next period'))
     act(() => btn('Previous period').click())
     expect(readout()).toMatch(/^September 2026/)
     expect(btn('Next period').style.minHeight).toBe('44px')
+  })
+
+  it("the chart's description is the readout alone, not the step buttons' labels", () => {
+    observedWidth = 340
+    render()
+    act(() => column(0).dispatchEvent(new MouseEvent('click', { bubbles: true })))
+    const desc = document.getElementById(chart().getAttribute('aria-describedby') ?? '')!
+    expect(desc.getAttribute('aria-live')).toBe('polite')
+    expect(desc.querySelector('button')).toBeNull()
+    expect(desc.textContent).not.toMatch(/Next period|Clear selection|‹ Previous/)
   })
 
   it('a dense chart still draws each series in its own marker shape', () => {

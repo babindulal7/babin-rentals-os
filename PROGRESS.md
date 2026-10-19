@@ -15,7 +15,7 @@
 - **Reader** (`lib/queries/reportRevenueTrend.ts`): `readAll` pages by exact count, advancing by rows received, for
   invoices and every credit-note batch; `getPreviousIssuedRevenue`; `getEarliestIssueDay` for All dates.
 - **Page** (`modules/reports/RevenueReport.tsx`): opens on the toolbar's own "Last 90 days" (main drew 90 days while
-  the toolbar said "All dates"); All dates = first issued invoice → today; compare for bounded periods; KPI strip with
+  the toolbar said "All dates"); All dates = 1st of the first issued invoice's month → today; compare for bounded periods; KPI strip with
   definitions; one view switcher (taxable amount / invoice count); #12's credit-note section and CSV kept, CSV gains
   previous-period columns; invoice register tab (issued + voids, true count, inline error, links into Finance).
 - **Gate**: `canViewFinancialReports` (Owner · Admin · Manager · Accounts) in `rbac.ts` / `moneyVisibility.ts`, used
@@ -28,6 +28,12 @@
   toolbar's own today after midnight (`reportPresetRange`); void numbers linking to a Finance list that cannot show
   them (now plain text); voided Drafts with no issue date heading the register (`presence: { issue_date: true }`);
   a 100-row register cap with untrue copy (now Newer / Older paging in place).
+- **Second review (19 Oct)**: chart, permissions and the fix commit, each with a skeptic; 5 confirmed, 2 refuted,
+  all 5 fixed: the nav still linked Coordinator to Finance (cash flow, §5 ✕) and the new test asserted it (now
+  `financial: true`; the pages' own gate filed as a task); chart Previous/Next dropped focus to `<body>` at the ends
+  (now `aria-disabled` + guarded handler); step-button labels inside the chart's description / live region (moved
+  out); money ticks at Rs 2.50 printed "Rs 3" (step is now a multiple of `minStep`); register paging swapped the
+  table for a skeleton and lost focus (rows stay mounted, `aria-busy`, focus moves to the range summary).
 - Docs: `docs/RULINGS-2026-10-17.md`, PERMISSIONS §3.1 C7 clarified, `docs/OPEN_DECISIONS.md` 17 Oct entry,
   `docs/reports/INTERACTIVE_REPORTS_PHASE0_AUDIT.md` (Phase 0 audit, revised for the #12 merge).
 
@@ -38,7 +44,7 @@
 - R17-4 A short page is not the last page: exact count, advance by rows received, refuse on mismatch or change.
 - R17-5 Register lists Sent · Partially Paid · Paid · Void, not Drafts; `Overdue` is derived, never a filter value.
 - R17-6 Seeded mock invoices carry `currency: 'NPR'`.
-- R17-7 The page opens on "Last 90 days"; All dates = first issued invoice → today; end after today clamped and said.
+- R17-7 The page opens on "Last 90 days"; All dates = 1st of the first invoice's month → today; end after today clamped and said.
 - R17-8 One view switcher: taxable amount or invoice count. VAT views from #16 not ported.
 
 **Verified** (this session, on `ad8ce1e` + this branch)
@@ -49,6 +55,9 @@
 - After the review fixes (19 Oct, `1eb7dcc`): typecheck, lint, lint:shell, lint:ui-copy, lint:progress,
   check:contrast all 0; build 0; full suite 4740 passed, the same 8 failed; Chromium drive 27/27 again, plus All
   dates now reads "1 Jun 2026 – 19 Oct 2026" with no part-month note.
+- After the second review's fixes: the same gates 0, build 0, suite 4742 passed / the same 8 failed; Chromium
+  27/27, plus Previous keeps focus at the first period (`aria-disabled`) and the chart's description is the
+  readout alone.
 - `VITE_DATA_SOURCE=mock npx vitest run`: 4737 passed, **8 failed in 5 files** — `actions/core`, `queries/pulse`,
   `clients/clientsCopy`, `finance/Finance.restricted`, `rentals/rentalsOperationsHeader`. The same 8 fail on a clean
   `origin/main` checkout (`ad8ce1e`); none is in a file this change touches.
@@ -82,6 +91,8 @@ Counted by `npm run completion`, not typed.
 - **GitHub Actions has not run a job since at least 15 Oct**: every CI run, `main` included, ends in ~3 s with no
   runner assigned. Account-level (billing / spending limit / Actions disabled) — Babin's to check.
 - Finance ▸ Invoices cannot be opened on its Void chip by link; void numbers in the register are text until it can.
+- `CashFlowReport.tsx` / `WorkingCapitalReport.tsx` still admit Coordinator by direct URL (`useCanViewMoney`; §5 ✕). The
+  nav no longer links them; gate the pages with `useCanViewFinancialReports`.
 - `canApproveDailyClosing` still admits Coordinator while RLS does not (filed 15 Oct, open).
 - Coordinator's view of the Revenue page has not been driven in a browser (no mock login for that role).
 

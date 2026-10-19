@@ -73,4 +73,10 @@ describe('visibleLabelIndexes', () => {
     expect(visibleLabelIndexes(0, 300)).toEqual([])
     expect(visibleLabelIndexes(1, 300)).toEqual([0])
   })
+
+  it('money ticks stay on whole rupees even where the 2.5 rung would land between them', () => {
+    const { ticks } = niceScale([900], { minStep: 100 })
+    expect(ticks.every((t) => t % 100 === 0)).toBe(true)
+    expect(ticks.map(compactMoneyLabel)).toEqual(ticks.map((t) => `Rs ${t / 100}`))
+  })
 })

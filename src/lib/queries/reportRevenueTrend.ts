@@ -132,7 +132,7 @@ export async function getPreviousIssuedRevenue(current: RevenueTrend): Promise<R
 }
 
 /**
- * The first day any invoice was issued — where "All dates" starts. Drafts carry
+ * The first day any invoice was issued; "All dates" opens on the 1st of its month. Drafts carry
  * no issue_date (R-15); voids are included so the credit audit covers them.
  * Null when nothing has been issued yet.
  */

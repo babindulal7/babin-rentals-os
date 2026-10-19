@@ -123,7 +123,7 @@ describe('ReportFamiliesNav', () => {
     expect(linkTexts).toContain('Cases')
   })
 
-  it('Coordinator: booking money keeps Clients and Finance links but not the company-wide Revenue report (C7)', async () => {
+  it('Coordinator: booking money keeps Clients, but not the company Revenue or Finance (cash flow) reports (C7, §5)', async () => {
     state.canSeeMoney = true
     state.canSeeFinancialReports = false
     await act(async () => {
@@ -136,8 +136,8 @@ describe('ReportFamiliesNav', () => {
 
     const linkTexts = Array.from(container?.querySelectorAll('a') ?? []).map((l) => l.textContent?.trim())
     expect(linkTexts).not.toContain('Revenue')
+    expect(linkTexts).not.toContain('Finance')
     expect(linkTexts).toContain('Clients')
-    expect(linkTexts).toContain('Finance')
-    expect(container?.textContent).toContain('Not in your role’s view: Revenue.')
+    expect(container?.textContent).toContain('Not in your role’s view: Revenue · Finance.')
   })
 })
