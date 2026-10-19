@@ -1802,7 +1802,7 @@ export function ClientsDirectory({
                                     position: 'absolute',
                                     right: 0,
                                     ...(openMenuId.up ? { bottom: 30 } : { top: 30 }),
-                                    zIndex: 30,
+                                    zIndex: 'var(--z-dropdown)',
                                     minWidth: 208,
                                     padding: 6,
                                     borderRadius: 'var(--r-btn)',

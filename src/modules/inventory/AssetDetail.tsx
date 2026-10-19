@@ -974,7 +974,7 @@ function AssetDetailView() {
             backdropFilter: 'blur(4px)',
             display: 'grid',
             placeItems: 'center',
-            zIndex: 1000,
+            zIndex: 'var(--z-modal)',
             padding: 16,
           }}
         >

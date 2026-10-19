@@ -42,6 +42,39 @@ Counted by `npm run completion`, not typed.
 - Dead seed modules now unused by any page (`data/clientReports`, `staffReports`, `promotionsReports`, `equipmentPerformance`, `productReports`; `liquidityReports` is still read by `payables.test.ts`).
 - A Warehouse sign-in in the browser was not driven; restricted paths are covered by tests only.
 
+## 2026-10-19 — Design review: overlay z-index literals moved onto the theme tokens
+
+**Did**
+- Reviewed the wireframe rulings (`WIREFRAME_RULINGS_2026-08-12.md`), the screen catalogue and the 28 Aug / 7 Oct / 13 Oct UI audits against current code. The wireframe sources themselves (`../updated mds/01..11`, the screenshot set) are not in this checkout.
+- Moved 15 overlay-class `zIndex` literals onto `--z-dropdown` / `--z-drawer` / `--z-modal` / `--z-toast`: in-page menus (ClientsDirectory, Expenses, MovementList ×2, AddItemPanel, WhatsAppShareButton, BookingOperationsMenu, RentalsList), drawers and sheets (Calendar DaySheet, booking Drawer, InternalNotesDrawer), modal-class surfaces (AssetDetail, Warehouses, Calendar full view), InfoTooltip.
+- Stale findings, checked in code and not changed: Modal focus trap and scroll-lock counting, Select keyboard/ARIA, the hardcoded VAT and Toast layering are already fixed. The Rentals filter rail is now a drawer with Timeline wired (one deliberately disabled "Save as new filter"). `TimelinePanel` is no longer rendered on Today. The nav is the 10-item set ruled on 7 Oct, so the 8-vs-15 sidebar conflict in `SCREENS.md` is moot.
+
+**Ruled**
+- RULING 2026-10-19: the shell ladder stays as literals — Header 20/90/91, BottomBar 50, SchemaGuardBanner 50, MoreSheet 55, QuickActionPanel 55, ScannerFab 60 — and so do the 1–10 local stacking values. The tokens start at 1100, so moving the sticky chrome onto `--z-sticky-nav` (1200) would put the header above in-page dropdowns (1100). Revert = restore the 15 numbers, one per line.
+
+**Verified**
+- `tsc --noEmit` exit 0.
+- Focused vitest (`calendar today notes components/ui rentals`, `VITE_DATA_SOURCE=mock`): 935 passed, 4 failed in `RentalsOperationsHeader` ("useNavigate() may be used only in the context of a Router"). The file was not touched; not checked against a clean tree.
+- Not driven in a browser: no stacking was observed in the running app.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | not measured | not measured | |
+| Real data | not measured | not measured | |
+| DB enforcement | not measured (no .lifecycle-result.json) | not measured | |
+| Permissions | not measured | not measured | |
+| Lifecycle | not measured (no .lifecycle-result.json) | not measured | |
+| Overall | not measured | not measured | |
+`npm run completion` refused to print a block without `.lifecycle-result.json`; no migration or action changed.
+
+## Remaining
+- Browser check of the 15 re-layered overlays (menus open over the header, drawers under modals).
+- 768px header crowding between Search and More (13–16 Oct notes) not re-measured here.
+- `RentalsOperationsHeader` test failures: confirm pre-existing on `main`.
+- Physical iPad Safari and the status × role × persistence matrix remain untested.
+
+
 ## 2026-10-16 — Phase 6 Task 3.4: five states on the routed secondary views (inventory + fixes)
 
 **Did**

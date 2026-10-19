@@ -2186,7 +2186,7 @@ export default function Warehouses() {
         <div
           role="presentation"
           onClick={() => setModalOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: 'var(--sp-lg)' }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'grid', placeItems: 'center', zIndex: 'var(--z-modal)', padding: 'var(--sp-lg)' }}
         >
           <div
             role="dialog"

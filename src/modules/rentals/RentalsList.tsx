@@ -373,7 +373,7 @@ const menuStyle = {
   background: 'var(--dropdown)',
   border: '1px solid var(--border)',
   boxShadow: 'var(--shadow-modal)',
-  zIndex: 30,
+  zIndex: 'var(--z-dropdown)',
 }
 
 /*

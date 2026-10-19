@@ -73,7 +73,7 @@ export function Drawer({ open, onClose, title, subtitle, id, children, footer, w
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 70,
+        zIndex: 'var(--z-drawer)',
         display: 'flex',
         alignItems: phone ? 'flex-end' : 'stretch',
         justifyContent: phone ? 'center' : 'flex-end',

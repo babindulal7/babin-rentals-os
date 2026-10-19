@@ -160,7 +160,7 @@ export function InfoTooltip({ content, label = 'More info', size = 14, style }: 
             fontSize: 'var(--t-meta, 12px)',
             fontWeight: 400,
             lineHeight: 1.45,
-            zIndex: 9999,
+            zIndex: 'var(--z-toast)',
             pointerEvents: 'auto',
             wordBreak: 'break-word',
             animation: 'fadeIn 0.15s ease-out',

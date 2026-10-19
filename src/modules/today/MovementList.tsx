@@ -224,7 +224,7 @@ function HoverCard({ m }: { m: MovementRow }) {
         position: 'absolute',
         top: 'calc(100% - 4px)',
         left: 10,
-        zIndex: 45,
+        zIndex: 'var(--z-dropdown)',
         /* 340px was the desktop nav rail plus the page gutter. Below 768 the
            nav is a bottom bar, so subtracting it left the long-press card 35px
            wide on a 375px phone — a card that only exists for touch, unreadable
@@ -364,7 +364,7 @@ function RowMenu({ onClose, m, up }: { onClose: () => void; m: MovementRow; up: 
         position: 'absolute',
         ...(up ? { bottom: 26 } : { top: 26 }),
         right: 0,
-        zIndex: 45,
+        zIndex: 'var(--z-dropdown)',
         minWidth: 190,
         padding: 5,
         borderRadius: 'var(--r-btn)',

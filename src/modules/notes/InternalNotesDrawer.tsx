@@ -130,7 +130,7 @@ export default function InternalNotesDrawer({ isOpen, onClose, initialReference 
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 100,
+        zIndex: 'var(--z-drawer)',
         display: 'flex',
         justifyContent: 'flex-end',
         background: 'rgba(0, 0, 0, 0.45)',
