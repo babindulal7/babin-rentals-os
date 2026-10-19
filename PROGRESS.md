@@ -1,5 +1,43 @@
 # Progress Log
 
+## 2026-10-20 — Mobile and Tablet Field Logistics & Touch Ergonomics Upgrade
+
+**Did**
+- Live Transport Plans (`src/modules/operations/LiveTransportPlans.tsx`): added responsive `useViewport()` conditional rendering. On mobile phones (< 768px), replaces the 920px horizontal table with ergonomic, touch-friendly delivery job cards featuring prominent booking links, delivery method badges, client contact with direct `tel:` tap-to-call, destination address, vehicle assignment, and a full-width 48px "Deliver & Sign" primary action.
+- Driver Handover Modal (`src/modules/operations/DriverHandoverModal.tsx`): enforced Law 15 touch target floors (>= 44px). Upgraded GPS delivery location button to `minHeight: 44px`, enlarged the Clear Signature action to 44px with comfortable padding, and expanded photo delete target to 44x44px.
+- Delivery & Logistics Workspace (`src/modules/operations/DeliveryWorkspace.tsx` & `delivery.css`): implemented dedicated mobile card layout for dispatch records, added responsive 2-column compact grid for KPI status tiles on phones (< 768px) with full-width revenue card, and added smooth horizontal touch scrolling (`overscroll-behavior-x: contain`) to the delivery status filter bar.
+- RBAC Capabilities in Core Actions (`src/actions/core.ts`): mapped `operations.pack`, `operations.handover`, `operations.return`, and `operations.reset` to corresponding `rbac.canPack`, `rbac.canHandover`, `rbac.canReturn`, and `rbac.canReset` rules in `checkCapability`. Resolved 100% (47/47) of declared action permissions and fixed 40 test failures across `floorVerbs.test.ts` and `core.test.ts`.
+
+**Ruled**
+- Mobile phone viewports (< 768px) must never force horizontal scrolling across multi-column data tables when card presentations can provide immediate thumb-reach actionability.
+- Touch target floor of 44x44px (Law 15) strictly enforced across all interactive modal controls.
+
+**Verified**
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (0 warnings).
+- `npm run check:contrast`: 82/82 passed.
+- `npm run check:pglite`: 168/168 applied, 0 violations.
+- `npm run check:lifecycle`: 31/31 passed.
+- `npx vitest run src/lib/__tests__/breakpoints.test.ts`: 7/7 passed.
+- `npx vitest run src/actions/__tests__/core.test.ts src/actions/rentals/__tests__/floorVerbs.test.ts`: 152/152 passed.
+- `npm run build`: successful production build, 209 PWA precache entries.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +3 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-19T20:14:10.051Z). Suite: Historical suite: 4827/4837 passed, 10 failed (recorded 2026-10-19T19:53:37.839Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-19T20:14:35.251Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Browser visual acceptance at phone/tablet/desktop widths remains unverified because the preview connection is unavailable.
+
 ## 2026-10-20 — Mirrored right-side slider for quick information and notes
 
 **Did**

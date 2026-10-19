@@ -1,5 +1,13 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 20 October 2026: per-operation grant matrix (P0-B) — ACTIVE, one open cell
+
+- The four global operations now carry **one grant each** (Booqable adoption spec P0-B: Booqable's 13 flat grants cover no operational action, so the granularity is net-new). `lib/rbac.ts` exposes `canPack` / `canHandover` / `canReturn` / `canReset` + `canPerformOp(role, op)`; `actions/core.ts` resolves `operations.pack|handover|return|reset`; the four rental actions declare their specific grant instead of the coarse `operations.perform` (kept as a dispatcher case for compatibility).
+- Matrix as shipped: **Pack / Return / Reset** = Owner · Admin · Manager · Warehouse · Technician (identical to the old coarse set — no behaviour change). **Handover** = Owner · Admin · Manager · Warehouse — Technician excluded, matching the committed UI wiring (`BookingOperationsMenu`, `BookingDetail` primary action) that already gates the Handover control per-op.
+- Consequence: a Technician can no longer complete a handover through any path (UI hides it, dispatcher now denies it). This closes the UI-stricter-than-engine divergence but is a real product change.
+- **TODO(decision):** confirm Babin wants Technician excluded from Handover (client-facing handoff). Veto = point `canHandover` at `canPerformOperations` in `src/lib/rbac.ts` — one line, no migration, the dispatcher and UI follow automatically.
+- **Still open (the other half of P0-B):** location scoping — a grant is meaningless without a site. Needs a grant table + RLS (migration under N-5: write, verify `check:pglite` + `check:lifecycle`, Babin applies).
+
 ## 17 October 2026: legacy Storage object mapping — TODO(decision)
 
 - Live `documents`/`evidence` object SELECT/INSERT/UPDATE policies currently test authenticated bucket membership only. Existing PERMISSIONS.md §3/§5 requires client ownership, money omission and identity-document restrictions. Private buckets alone do not enforce that matrix.
