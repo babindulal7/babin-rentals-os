@@ -6,7 +6,6 @@ import type { Paisa } from '../lib/money'
 import { APP_VERSION, BRANCH } from './nav'
 import { WAREHOUSES } from './warehouse'
 import type { Warehouse } from './warehouse'
-import { PLANS } from './membership'
 import { openCasesCount } from './cases'
 
 /*
@@ -615,43 +614,12 @@ export const BRANCH_ACTIVITY: ActivityEntry[] = [
 
 /* ── §11.4 Financial ───────────────────────────────────────────────────── */
 
-/**
- * **Membership matrix — level │ discount % │ credit │ priority.**
- *
- * Rulings §5: the plan matrix appears in Settings ▸ Financial *in addition to*
- * the Memberships tab on Clients, which a user ruling keeps. So this is a
- * **projection of `data/membership.ts:PLANS`**, never a second transcription —
- * two hand-typed copies of one price list is exactly how a client gets quoted
- * a discount the invoice does not give.
- *
- * The `priority` column reads the plan's own priority feature back verbatim,
- * including whether the plan marks it included, not included, or merely
- * listed. It is not re-scored into a "high / medium / low" ranking: no such
- * ranking exists in the seed, and inventing one here would put a number on a
- * screen that no other screen agrees with.
- */
-export interface MembershipMatrixRow {
-  level: string
-  badge: string
-  /** The individual discount, as the plan states it. */
-  discount: string
-  /** Default credit limit — a rupee figure, so the whole matrix is money-gated. */
-  credit: string
-  priority: string
-}
-
-export const MEMBERSHIP_MATRIX: MembershipMatrixRow[] = PLANS.map((p) => {
-  const priority = p.features.find((f) => /priority|vip/i.test(f.text))
-  return {
-    level: p.name,
-    badge: p.badge,
-    discount: p.discounts[0]?.split(' Individual')[0] ?? '—',
-    credit: p.limits.find((l) => l.label === 'Default Credit Limit')?.value ?? '—',
-    priority: priority
-      ? `${priority.text} · ${priority.kind === 'on' ? 'included' : priority.kind === 'off' ? 'not included' : 'listed'}`
-      : '—',
-  }
-})
+/* RULING 2026-10-19: `MEMBERSHIP_MATRIX` / `MembershipMatrixRow` removed. They
+   were a projection of the hard-coded `data/membership.ts:PLANS`, with a
+   Priority column read from marketing copy no table holds; 0005 says no plan
+   value may be hardcoded in application code. Settings ▸ Business now shows
+   the live `membership_plans` figures in `CreditPolicyCard`. Revert = restore
+   from git history. */
 
 /**
  * §11.4 draws a `category │ % of repl. val` table. **Nothing in this build

@@ -1,15 +1,12 @@
 import { Card } from '../../../components/ui/Page'
-import { DataTableShell } from '../../../components/ui/DataTable'
-import { thStyle as th } from '../../../components/ui/TableHeaderCell'
 import { toRupees } from '../../../lib/money'
 import { FEE_PER_CREW_DAY_PAISA } from '../../../lib/queries/crew'
 import {
-  MEMBERSHIP_MATRIX,
   DEPOSIT_BY_CATEGORY_UNAVAILABLE,
   CANCELLATION_TIERS_UNAVAILABLE,
 } from '../../../lib/queries/settings'
 import type { Dest } from '../../../lib/queries/settings'
-import { NotTrackedYet, SectionCards, ToneChip, td } from './shared'
+import { NotTrackedYet, SectionCards } from './shared'
 import { CreditPolicyCard } from '../../clients/CreditPolicyCard'
 import type { Section } from './shared'
 
@@ -175,57 +172,12 @@ export function FinancialPane() {
         <NotTrackedYet title="Deposit % of replacement value, per gear category" why={DEPOSIT_BY_CATEGORY_UNAVAILABLE} />
       </Card>
 
-      {/* Rulings §5 — the plan matrix lives here **in addition to** the
-          Memberships tab on Clients, which a user ruling keeps. It is a
-          projection of `data/membership.ts:PLANS`, so the two surfaces cannot
-          quote different discounts. Law 6 already removed this whole tab for a
-          money-blind session, so the credit column needs no second gate. */}
-      <Card
-        title="Membership matrix"
-        action={
-          <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-            Projected from the plan list — Clients ▸ Memberships shows the same five
-          </span>
-        }
-      >
-        <DataTableShell ariaLabel="Membership matrix" data-table-scroll style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 620 }}>
-            <thead>
-              <tr>
-                <th scope="col" style={th}>Level</th>
-                <th scope="col" style={th}>Discount %</th>
-                <th scope="col" style={th}>Credit</th>
-                <th scope="col" style={th}>Priority</th>
-              </tr>
-            </thead>
-            <tbody>
-              {MEMBERSHIP_MATRIX.map((m) => (
-                <tr key={m.level}>
-                  <td style={{ ...td, fontWeight: 600 }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-                      {m.level}
-                      <ToneChip tone="neutral" icon="dot">
-                        {m.badge}
-                      </ToneChip>
-                    </span>
-                  </td>
-                  <td style={td} className="figure">
-                    {m.discount}
-                  </td>
-                  <td style={{ ...td, whiteSpace: 'nowrap' }} className="figure">
-                    {m.credit}
-                  </td>
-                  <td style={{ ...td, color: 'var(--text2)' }}>{m.priority}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </DataTableShell>
-        <p style={{ margin: '10px 0 0', fontSize: 'var(--t-th)', color: 'var(--muted)', lineHeight: 1.55 }}>
-          {/* Discounts are ungated — ruled by the owner, 31 Aug 2026 (Law 10 as amended). No reason, no approver, no cap
-          below 100%; a negative discount is refused because it is a price rise, and above 100% because it is a negative
-          price. A plan discount simply sets the starting figure. */}Discounts may be between 0% and 100%. </p>
-      </Card>
+      {/* RULING 2026-10-19: the hard-coded "Membership matrix" that stood here
+          (projected from data/membership.ts PLANS, with a Priority column taken
+          from marketing copy) is gone. 0005: "no plan value may be hardcoded in
+          application code" — the live credit-policy card below carries the same
+          level / discount / credit from membership_plans. Revert = restore the
+          Card from git history. */}
 
       {/* RULING 2026-10-18: Credit policy by tier moved here from Clients ▸ Credit
           (Babin's ruling: business rules live together). Read live from

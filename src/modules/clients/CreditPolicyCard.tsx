@@ -107,6 +107,15 @@ export function CreditPolicyCard() {
             restated so the two surfaces cannot drift apart again. */}
         {STACK_NOTE}
       </p>
+
+      {/* Moved here from the removed Membership matrix card. Discounts are
+          ungated — ruled by the owner, 31 Aug 2026 (Law 10 as amended). No
+          reason, no approver, no cap below 100%; a negative discount is refused
+          because it is a price rise, and above 100% because it is a negative
+          price. A plan discount simply sets the starting figure. */}
+      <p style={{ margin: '8px 0 0', fontSize: 'var(--t-th)', color: 'var(--muted)', lineHeight: 1.55 }}>
+        Discounts may be between 0% and 100%.
+      </p>
     </Card>
   )
 }

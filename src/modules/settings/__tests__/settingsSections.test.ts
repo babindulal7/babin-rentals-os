@@ -22,14 +22,12 @@ import {
   SYSTEM_ALERTS,
   LEGACY_TAB,
   DEFAULT_TAB,
-  MEMBERSHIP_MATRIX,
   WAREHOUSE_BRANCH_ID,
   isTabKey,
   isDestVisible,
   warehousesOfBranch,
 } from '../../../data/settings'
 import { WAREHOUSES } from '../../../data/warehouse'
-import { PLANS } from '../../../data/membership'
 import { FEE_PER_CREW_DAY_PAISA } from '../../../data/crew'
 import { rupees } from '../../../lib/money'
 import { FIELD_SECTIONS, FINANCIAL_SECTIONS } from '../sections'
@@ -225,13 +223,11 @@ describe('§11.4 Financial — one fee definition, no invented figures', () => {
     expect(settings.CANCELLATION_TIERS_UNAVAILABLE).not.toMatch(/\d+\s?%/)
   })
 
-  it('projects the membership matrix from the plan list rather than retyping it', () => {
-    expect(MEMBERSHIP_MATRIX.map((m) => m.level)).toEqual(PLANS.map((p) => p.name))
-    for (const m of MEMBERSHIP_MATRIX) {
-      const plan = PLANS.find((p) => p.name === m.level)!
-      expect(plan.discounts[0]).toContain(m.discount)
-      expect(plan.limits.map((l) => l.value)).toContain(m.credit)
-    }
+  it('carries no hard-coded membership matrix — plan figures come from membership_plans', () => {
+    /* RULING 2026-10-19: the old matrix projected `PLANS` (a hand-typed price
+       list) into Settings; 0005 forbids hard-coding plan values. The live card
+       is covered by `financialCreditPolicy.test.tsx`. */
+    expect('MEMBERSHIP_MATRIX' in settings).toBe(false)
   })
 
   it('names the screens that read the VAT rate, so “none is hardcoded” is checkable', () => {
