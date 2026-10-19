@@ -2360,6 +2360,51 @@ STEPS.push({
   },
 })
 
+/*
+ * RULING 2026-10-18: closing.approve is Owner/Admin/Manager/Accounts.
+ *
+ * `rbac.canApproveDailyClosing` offered Coordinator a sign-off that
+ * `daily_closings_finance_insert` refused, because 0117 narrowed
+ * `auth_is_finance_or_admin()` and the predicate was not moved with it (N-3).
+ * This asks the POLICY, role by role, which seats it admits — the set the UI
+ * offers the control to must equal it. Each insert is rolled back.
+ */
+STEPS.push({
+  id: 'L32',
+  title: 'Daily closing sign-off: RLS admits exactly Owner, Admin, Manager, Accounts — Coordinator refused (0117, N-3)',
+  expect: 'green',
+  async run() {
+    const admitted = []
+    await undone(async () => {
+      for (const role of Object.keys(U)) {
+        await as(role, async () => {
+          await q('savepoint closing_probe')
+          try {
+            await q(
+              `insert into daily_closings (
+                 client_uuid, branch_id, business_date, counted_cash, expected_cash, variance,
+                 pickups_count, returns_count, new_count, collected_cash, collected_bank,
+                 collected_card, collected_other, receivables, deposits_held, approved_by)
+               values (gen_random_uuid(), $1, '2099-12-31', 2500, 2000, 500, 0, 0, 0, 2000, 0, 0, 0, 0, 0, $2)`,
+              [BRANCH, U[role]],
+            )
+            admitted.push(role)
+          } catch (e) {
+            const message = String(e.message)
+            if (!/row-level security/i.test(message)) {
+              throw new Refused(`${role}: refused by the wrong thing — ${message.split('\n')[0]}`)
+            }
+          } finally {
+            await q('rollback to savepoint closing_probe')
+            await q('release savepoint closing_probe')
+          }
+        })
+      }
+    })
+    assertEq(admitted.join(', '), 'Owner, Admin, Manager, Accounts', 'roles daily_closings_finance_insert admits')
+  },
+})
+
 /* ── Run ──────────────────────────────────────────────────────────────────── */
 
 await seed()

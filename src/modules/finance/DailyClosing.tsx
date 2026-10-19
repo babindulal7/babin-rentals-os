@@ -42,11 +42,12 @@ import './finance.css'
  * enforced by 0078's freeze trigger rather than by this screen.
  *
  * What is still NOT ruled is **who** may sign one. INSERT is gated on
- * `auth_is_finance_or_admin()` and `rbac.canApproveDailyClosing` mirrors it
- * exactly (§4.20's method); PLAN.md §4.40(a) records that an Owner/Manager
- * reading is open. This screen therefore hides the control for a role the
- * database would refuse, rather than offering a button that fails at the last
- * step.
+ * `auth_is_finance_or_admin()` — Owner, Admin, Manager, Accounts since 0117,
+ * Coordinator excluded — and `rbac.canApproveDailyClosing` mirrors it exactly
+ * (§4.20's method); PLAN.md §4.40(a) records that an Owner/Manager reading is
+ * open. This screen therefore hides the control for a role the database would
+ * refuse, rather than offering a button that fails at the last step. A
+ * Coordinator still reads the figures (`canViewMoney`); it cannot sign them.
  *
  * ## The count is the only input, and it is cash only
  *

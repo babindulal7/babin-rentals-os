@@ -19,7 +19,8 @@ vi.mock('../../../lib/supabase', () => ({
 
 const { idempotentInsert } = await import('../../../lib/dataAccess')
 const { supabase } = await import('../../../lib/supabase')
-const { approveDailyClosingConfig } = await import('../approveDailyClosing')
+const { approveDailyClosingConfig, approveDailyClosing } = await import('../approveDailyClosing')
+const { ActionPermissionError } = await import('../../core')
 
 const asMock = (f: unknown) => f as ReturnType<typeof vi.fn>
 const CTX = { userId: 'user-1', role: 'Owner' as const }
@@ -56,6 +57,26 @@ beforeEach(() => {
 
 const run = (over: Partial<typeof INPUT> = {}) =>
   approveDailyClosingConfig.execute({ ...INPUT, ...over }, CTX)
+
+describe('who may sign — closing.approve, refused before anything is read or written', () => {
+  /* RULING 2026-10-18: Coordinator was offered the control while 0117's
+     `auth_is_finance_or_admin()` refused the INSERT (N-3). The dispatcher now
+     refuses it first, so no branch lookup and no write is ever attempted. */
+  it('refuses a Coordinator with ActionPermissionError', async () => {
+    await expect(
+      approveDailyClosing(INPUT, { userId: 'user-c', role: 'Coordinator', isOnline: true }),
+    ).rejects.toBeInstanceOf(ActionPermissionError)
+    expect(supabase.from).not.toHaveBeenCalled()
+    expect(idempotentInsert).not.toHaveBeenCalled()
+  })
+
+  it.each(['Owner', 'Admin', 'Manager', 'Accounts'] as const)('lets %s through to the write', async (role) => {
+    await expect(approveDailyClosing(INPUT, { userId: 'user-1', role, isOnline: true })).resolves.toMatchObject({
+      closingId: 'closing-1',
+    })
+    expect(idempotentInsert).toHaveBeenCalledTimes(1)
+  })
+})
 
 describe('the write', () => {
   it('stores the day, not the instant — business_date is a date column', async () => {

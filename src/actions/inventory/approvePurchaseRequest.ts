@@ -40,12 +40,14 @@ import { captureError } from '../../lib/monitoring'
  *    reason; the column is left NULL rather than invented. TODO(decision):
  *    a Reject dialog that collects the ruled reasons.
  *
- * ## Permission — the finance/admin five (0064, applied 23 Aug 2026)
+ * ## Permission — Owner and Manager (0069, applied 25 Aug 2026)
  *
- * `purchase.approve` → `rbac.canApprovePurchase` — Owner, Admin, Manager,
- * Coordinator, Accounts — mirroring `purchase_requests_approval_rank`
- * (0064, RESTRICTIVE): any UPDATE whose resulting row is Approved or Rejected
- * requires `auth_is_finance_or_admin()`. The §4.29 breadth (Driver/Technician
+ * `purchase.approve` → `rbac.canApprovePurchase` — Owner, Manager — mirroring
+ * `purchase_requests_approval_rank` (RESTRICTIVE): any UPDATE whose resulting
+ * row is Approved or Rejected requires `auth_can_approve_purchase()`. 0064
+ * (23 Aug) first gated it on `auth_is_finance_or_admin()`, then five roles with
+ * Coordinator; 0069 narrowed it, and 0117 has since dropped Coordinator from
+ * that predicate too. The §4.29 breadth (Driver/Technician
  * admitted to a spend-authorising verb via `purchase_requests_all`) is closed;
  * raising, editing, submitting, cancelling, and Ordered/Received legwork stay
  * on the broad policy and are not this action's business.

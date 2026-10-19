@@ -1,5 +1,87 @@
 # Progress Log
 
+## 2026-10-18 — Daily closing sign-off narrowed to RLS (N-3); suite back to green
+
+**Did**
+- `rbac.canApproveDailyClosing` admitted Coordinator, so the Daily Closing screen offered a
+  Coordinator "Approve closing". `daily_closings_finance_insert` (0078) has refused that INSERT
+  since 0117 redefined `auth_is_finance_or_admin()` as Owner · Admin · Manager · Accounts
+  (R-05 / S1-a). The UI was more permissive than RLS (§15.2 N-3). Narrowed it to those four,
+  still refused offline. Coordinator still reads the closing (`canViewMoney`).
+- Checked that nothing after 0117 widens it again: grep over all 167 migrations finds the
+  function defined in 0011/0014/0018/0117 only (0050 pins its `search_path`). The policy is
+  created once, in 0078, and no later migration drops, alters or re-creates a `daily_closings`
+  policy. 0093 restates grants only.
+- Corrected every comment that still described `auth_is_finance_or_admin()` as including
+  Coordinator: `rbac.ts` (closing and the purchase history note), `core.ts` `closing.approve`,
+  `DailyClosing.tsx`, `approveDailyClosing.ts`, `approvePurchaseRequest.ts` (also stale on 0069:
+  purchase approval is Owner/Manager), and `queries/finance.ts`, whose "identical set" claim is now
+  "strict subset".
+- `PERMISSIONS.md` (B-3): §4.6 gets the missing `closing.approve` row, M+ · Accounts, Coordinator
+  excluded. §16 V-6 is marked superseded by 0117, and V-7 notes the row was added. §3 has no Daily
+  Closing row and §6 no closing gate, so neither changed.
+- Tests: `rbac.test.ts` (exact four, Coordinator refused, offline refused);
+  `approveDailyClosing.test.ts` (Coordinator → `ActionPermissionError` before any read or write;
+  the four reach the write); new `DailyClosing.approve.test.tsx` (Coordinator sees the figures and
+  no approve control; the four see it). `e2e-lifecycle.mjs` **L32** asks the policy itself: an
+  INSERT as each of the 9 roles, rolled back. Admitted = exactly the four, and Coordinator is
+  refused by row-level security.
+- The suite was **red on `main` before this change**: 8 tests in 5 files, the same on an untouched
+  `ad8ce1e`. Fixed alongside (RULINGS-2026-10-18 #2–#5): removed the four dead
+  `operations.*` cases in `core.ts`; removed "company" from the Clients search placeholder again
+  (CL-12); Finance's module sub-header now follows the 13 Oct phone rule (Export and Create Invoice
+  in More); and two test harnesses were repaired (`loadMockClient` for pulse, a Router for the rentals
+  header since BQ-207).
+
+**Ruled** — `RULINGS-2026-10-18.md`, rows flippable by number
+- #1 `closing.approve` = Owner · Admin · Manager · Accounts, the set 0117's predicate admits. No
+  migration. §4.40(a) (an Owner/Manager-only reading) stays open; if ruled, the policy moves first.
+- #2 dead `operations.pack/handover/return/reset` cases removed. Behaviour unchanged.
+- #3 CL-12 restored in both Clients placeholders. #4 13 Oct phone rule applied to Finance's
+  sub-header. #5 two test harnesses only.
+
+**Verified**
+- Mutation check: putting Coordinator back into `canApproveDailyClosing` fails exactly the 4 new
+  Coordinator tests across the 3 files (rbac, action, screen). Restored, they pass.
+- Driven in the mock build (Chromium, `vite --mode mock`). Accounts and Owner see "Approve
+  closing". A session whose `users.primary_role` was overlaid to Coordinator (avatar menu reads
+  "Coordinator · Kathmandu HQ") sees the figures and only "Send digest on WhatsApp", with no
+  approve control and no signing hint. Finance at 375px has no sub-header secondaries, and More
+  lists "Create Invoice" and "Export invoices"; 1280px is unchanged. The Clients placeholder reads
+  "Search client, PAN, phone… (press /)".
+- One run, after every edit: `npm run typecheck` exit 0 · `npm run lint` exit 0 (0 warnings) ·
+  `VITE_DATA_SOURCE=mock npm test` 371/371 files, 4691/4691 tests · `npm run check:pglite`
+  167/167 applied, 0 failed · `npm run check:lifecycle` 32/32 green, 0 known-red. The migration
+  chain is **Verified** per R-35 (both green in the same run). No migration was written.
+- N-5: nothing applied to any live Supabase project.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 32 / 32 (100%) | +1 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-18T20:02:11.436Z). Suite: green (all test files passed).
+Gates read from .lifecycle-result.json, written 2026-10-18T20:02:19.590Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- **Open, not decided here:** the four floor actions still declare `operations.perform`, which
+  admits Technician at Handover, while the screens (`canPerformOp`) hide Handover from Technician.
+  Declaring `operations.handover` from `handoverRental.ts` would refuse it at the action layer
+  too. That is a permission change, so it waits for a ruling.
+- **Open question:** Coordinator still reads the whole closing: day takings by channel, total
+  receivables, deposits held. §2 scopes Coordinator to "booking money + client balance/deposit",
+  and §3 has Finance — Dashboard ✕ for Coordinator but no Daily Closing row. Whether Coordinator
+  should see the closing at all is unruled.
+- `PLAN.md` (cited by CLAUDE.md and many comments, incl. §4.40(a)) is not in the repo.
+- `.test-result.json` still records 4646/4646 from 16 Oct. This entry's Suite line comes from
+  `completion --tests`, not that file.
+- Live apply of migrations 0157–0168 by Babin on production (unchanged).
+
 ## 2026-10-18 — Booqable audit adoptions (duplication hygiene BQ-207, shortage action BQ-408, dashboard deep links BQ-205)
 
 **Did**

@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { act } from 'react'
+import { act, type ReactElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
+import { MemoryRouter } from 'react-router-dom'
 import { RentalsOperationsHeader, type SelectedRentalInfo } from '../header/RentalsOperationsHeader'
 
 ;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
@@ -23,6 +24,10 @@ describe('RentalsOperationsHeader component', () => {
     host.remove()
   })
 
+  /* `RentalMoreActions` navigates after a duplicate (BQ-207), so the header
+     needs a router around it, as it has in the app. */
+  const render = (el: ReactElement) => root.render(<MemoryRouter>{el}</MemoryRouter>)
+
   const dummySearch = {
     value: '',
     onChange: vi.fn(),
@@ -32,7 +37,7 @@ describe('RentalsOperationsHeader component', () => {
   it('renders Mode 1 (0 rentals selected) correctly', async () => {
     const handleAdd = vi.fn()
     await act(async () => {
-      root.render(
+      render(
         <RentalsOperationsHeader
           totalCount={42}
           selectedCount={0}
@@ -68,7 +73,7 @@ describe('RentalsOperationsHeader component', () => {
     }
 
     await act(async () => {
-      root.render(
+      render(
         <RentalsOperationsHeader
           totalCount={42}
           selectedCount={1}
@@ -108,7 +113,7 @@ describe('RentalsOperationsHeader component', () => {
     }
 
     await act(async () => {
-      root.render(
+      render(
         <RentalsOperationsHeader
           totalCount={42}
           selectedCount={1}
@@ -146,7 +151,7 @@ describe('RentalsOperationsHeader component', () => {
     }
 
     await act(async () => {
-      root.render(
+      render(
         <RentalsOperationsHeader
           totalCount={42}
           selectedCount={1}
@@ -184,7 +189,7 @@ describe('RentalsOperationsHeader component', () => {
     }
 
     await act(async () => {
-      root.render(
+      render(
         <RentalsOperationsHeader
           totalCount={42}
           selectedCount={1}
@@ -207,7 +212,7 @@ describe('RentalsOperationsHeader component', () => {
     const handleExport = vi.fn()
 
     await act(async () => {
-      root.render(
+      render(
         <RentalsOperationsHeader
           totalCount={42}
           selectedCount={3}

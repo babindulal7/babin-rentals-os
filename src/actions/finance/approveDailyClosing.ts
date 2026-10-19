@@ -29,9 +29,9 @@ import type { Paisa } from '../../lib/money'
  *
  * §4.20's ruled method: the RLS policy on the table this writes.
  * `daily_closings_finance_insert` (0078) is `auth_is_finance_or_admin()` —
- * Owner, Admin, Manager, Coordinator, Accounts — and `rbac.canApproveDailyClosing`
- * is that list. **PLAN.md §4.40(a) is open**: an Owner/Manager reading is
- * plausible, and if it is ruled the POLICY moves first.
+ * Owner, Admin, Manager, Accounts since 0117 (R-05; Coordinator excluded) — and
+ * `rbac.canApproveDailyClosing` is that list. **PLAN.md §4.40(a) is open**: an
+ * Owner/Manager reading is plausible, and if it is ruled the POLICY moves first.
  *
  * ## Branch comes from the approver's own row
  *

@@ -1085,7 +1085,8 @@ export function ClientsDirectory({
         }}
         searchValue={searchQuery}
         onSearchChange={(val) => patchParams({ q: val ? val : null })}
-        searchPlaceholder="Search client, company, PAN, phone… (press /)"
+        // RULING 2026-10-18: CL-12 restored — the view has no company column, so the placeholder does not promise one.
+        searchPlaceholder="Search client, PAN, phone… (press /)"
         rightActions={
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--sp-sm)', flexShrink: 0 }}>
             {tabular &&

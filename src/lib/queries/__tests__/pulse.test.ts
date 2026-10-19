@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeAll } from 'vitest'
+import { loadMockClient } from '../../supabase'
 import {
   getPulseLiveSummary,
   PERIODS,
@@ -7,6 +8,12 @@ import {
   figuresFor,
   rangeLabel,
 } from '../pulse'
+
+/* `main.tsx` awaits this before the app renders; a test that reads through
+   `supabase` must do the same, or the mock forwarder throws. */
+beforeAll(async () => {
+  await loadMockClient()
+})
 
 describe('pulse queries', () => {
   it('loads live pulse summary with non-negative metrics', async () => {

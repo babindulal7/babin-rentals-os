@@ -150,14 +150,7 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
       return rbac.canManageSettings(ctx.role);
     case 'operations.perform':
       return rbac.canPerformOperations(ctx.role);
-    case 'operations.pack':
-      return rbac.canPack(ctx.role);
-    case 'operations.handover':
-      return rbac.canHandover(ctx.role);
-    case 'operations.return':
-      return rbac.canReturn(ctx.role);
-    case 'operations.reset':
-      return rbac.canReset(ctx.role);
+    // RULING 2026-10-18: no action declares operations.pack/handover/return/reset, so their cases were dead and are removed; screens gate per-op through rbac.canPerformOp.
     case 'money.view':
       return rbac.canViewMoney(ctx.role);
     /*
@@ -247,11 +240,12 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
       return rbac.canWriteBookingDesk(ctx.role);
 
     /* `closing.approve` (1 Sep, §5.4) mirrors `daily_closings_finance_insert`
-       (0078) — `auth_is_finance_or_admin()`, read off the live project the day
-       it applied. It is its OWN rule rather than one of the sets below because
-       no existing helper carries that exact five: `canRecordPayment` is
+       (0078) — `auth_is_finance_or_admin()`, which 0117 (R-05) defines as
+       Owner/Admin/Manager/Accounts, Coordinator excluded. It is its OWN rule
+       rather than one of the sets below because `canRecordPayment` is
        Owner/Coordinator/Accounts and `canPerformOperations` is a floor set.
        §4.40(a) records that a narrower Owner/Manager reading is open. */
+    // RULING 2026-10-18: closing.approve narrowed to 0117's four; Coordinator refused, as RLS refuses it.
     case 'closing.approve':
       return rbac.canApproveDailyClosing(ctx.role, online);
 

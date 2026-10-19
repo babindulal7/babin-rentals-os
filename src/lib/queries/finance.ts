@@ -90,15 +90,16 @@ const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
  *    table's read surface, never narrow it. `invoices` is therefore not
  *    narrower than `expenses` by virtue of having two policies.
  *  - It does not widen it either, **today**: `auth_is_finance_or_admin()`
- *    (0018:20, the live definition, restated to re-add Manager) is
- *    `in ('Owner','Admin','Manager','Coordinator','Accounts')`, and over the
- *    nine-member `system_role` enum that is the exact complement of
- *    `auth_can_view_money()`'s excluded four. The two predicates select the
- *    identical set. All three tables answer to the same five roles.
+ *    (0117, the latest definition, R-05) is
+ *    `in ('Owner','Admin','Manager','Accounts')` — a strict subset of
+ *    `auth_can_view_money()`'s five, since Coordinator is in the money set and
+ *    not the finance set. OR-ing the subset in adds nobody, so all three
+ *    tables answer to the same five roles. (Until 0117 the two predicates
+ *    selected the identical set; 0018:20's definition included Coordinator.)
  *
- * That coincidence is a property of the current enum, not a guarantee. If a
- * tenth role is ever added it lands in one predicate and not the other, and
- * `invoices` and `expenses` diverge. `financeRestriction()` gates on
+ * That containment is a property of the current definitions, not a guarantee.
+ * If either predicate is redefined so the finance set reaches outside the money
+ * set, `invoices` and `expenses` diverge. `financeRestriction()` gates on
  * `useCanViewMoney()`, the narrower and Law-6-derived of the two, so a divergence
  * makes this module over-restrictive (a role sees a restricted state it could
  * have read past) rather than under-restrictive. That is the safe direction, and

@@ -323,7 +323,8 @@ export function canWriteSharedTriage(role: SystemRole): boolean {
  * ## Why narrower than the money-visibility tier
  *
  * 0064 (23 Aug 2026) moved this verb off `auth_is_staff()` onto
- * `auth_is_finance_or_admin()` — Owner, Admin, Manager, Coordinator, Accounts
+ * `auth_is_finance_or_admin()` — then Owner, Admin, Manager, Coordinator,
+ * Accounts; 0117 has since dropped Coordinator from that predicate (R-05)
  * — closing the real incoherence of a Driver authorising spend it is forbidden
  * by Law 6 from even reading. 0069 narrows it again: seeing a cost and being
  * allowed to commit the business to it are different powers. Admin,
@@ -542,13 +543,19 @@ export function canReversePayment(role: SystemRole, isOnline: boolean = true): b
  * Approve a daily closing — **§4.20's method, mirrored not invented.**
  *
  * The RLS policy on the table this writes is `daily_closings_finance_insert`
- * (0078, applied 1 Sep 2026), whose predicate is `auth_is_finance_or_admin()`:
+ * (0078), whose predicate is `auth_is_finance_or_admin()`. Its latest
+ * definition is 0117 (R-05 / S1-a):
  *
- *     select auth_user_role() in ('Owner','Admin','Manager','Coordinator','Accounts')
+ *     select auth_user_role() in ('Owner','Admin','Manager','Accounts')
  *
- * — read from `pg_get_functiondef` on the live project the day 0078 landed, not
- * from a migration file. This function is that list and nothing else, so a
- * refusal here and a refusal from Postgres cannot disagree.
+ * Coordinator is excluded. When 0078 landed (1 Sep 2026) the live function
+ * still admitted Coordinator, and this list did too; 0117 narrowed the
+ * predicate and this function was left wider than the policy — a Coordinator
+ * saw "Approve closing" and Postgres refused the INSERT, the exact failure
+ * §15.2 N-3 forbids. No later migration redefines the function or the policy.
+ * This function is that list and nothing else, so a refusal here and a refusal
+ * from Postgres cannot disagree; `e2e-lifecycle.mjs` L32 asserts the policy's
+ * admitted set under PGlite.
  *
  * ⚠ **PLAN.md §4.40(a) is OPEN and this is the wider of the two readings.** The
  * schema also carries `auth_can_approve_late_fee_waiver()` = Owner/Manager, and
@@ -560,15 +567,10 @@ export function canReversePayment(role: SystemRole, isOnline: boolean = true): b
  * `canVoidInvoice`, `canOverrideCreditLimit`): a signed record the database has
  * not confirmed is the one thing a closing must never be.
  */
+// RULING 2026-10-18: closing.approve is Owner/Admin/Manager/Accounts — the set 0117's auth_is_finance_or_admin() admits.
 export function canApproveDailyClosing(role: SystemRole, isOnline: boolean = true): boolean {
   if (!isOnline) return false
-  return (
-    role === 'Owner' ||
-    role === 'Admin' ||
-    role === 'Manager' ||
-    role === 'Coordinator' ||
-    role === 'Accounts'
-  )
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Accounts'
 }
 
 /** Check if role can override client credit limits */
