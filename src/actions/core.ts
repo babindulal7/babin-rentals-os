@@ -352,6 +352,8 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     // this the same day the database did.
     case 'purchase.approve':
       return rbac.canApprovePurchase(ctx.role);
+    case 'transport.mutate':
+      return ctx.role === 'Owner' || ctx.role === 'Admin';
     default:
       return undefined;
   }

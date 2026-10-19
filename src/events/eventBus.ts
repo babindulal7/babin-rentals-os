@@ -177,4 +177,5 @@ export const EVENT_TYPES = {
   
   MAINTENANCE_STARTED: 'maintenance.started',
   MAINTENANCE_COMPLETED: 'maintenance.completed',
+  TRANSPORT_UPDATED: 'operations.transport_updated',
 } as const;

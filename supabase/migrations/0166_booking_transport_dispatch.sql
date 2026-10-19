@@ -89,7 +89,7 @@ begin
     delivery_revision=delivery_revision+1,delivery_updated_at=clock_timestamp()
     where id=p_id;
   insert into audit_events(client_uuid,event_class,category,module,action,severity,status,table_name,record_id,actor_id,actor_role,branch_id,old_values,new_values)
-  values(p_key,'status change','Operations','Operations','Update','Informational','Success','booking_transport',p_id,actor,actor_role::system_role,booking.branch_id,
+  values(p_key,'status change','Rentals','Operations','Update','Informational','Success','booking_transport',p_id,actor,actor_role::system_role,booking.branch_id,
     jsonb_build_object('delivery_status',trip.delivery_status,'revision',trip.delivery_revision),
     jsonb_build_object('delivery_status',next_status,'revision',trip.delivery_revision+1,'operation',p_action));
   response:=jsonb_build_object('id',p_id,'revision',trip.delivery_revision+1);
