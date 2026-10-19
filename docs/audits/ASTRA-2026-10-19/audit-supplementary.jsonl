@@ -1,0 +1,6 @@
+{"command":"npm run test:audit-coverage","exit":0,"log":"audit-test-audit-coverage.log"}
+{"command":"npm run test:settings","exit":0,"log":"audit-test-settings.log"}
+{"command":"npm run test:saved-views","exit":0,"log":"audit-test-saved-views.log"}
+{"command":"npm run test:pricing-structures","exit":0,"log":"audit-test-pricing-structures.log"}
+{"command":"npm run check:fixtures","exit":0,"log":"audit-check-fixtures.log"}
+{"command":"npm run db:plan:selftest","exit":0,"log":"audit-db-plan-selftest.log"}

@@ -1,0 +1,273 @@
+{
+  "baseline": "ad8ce1e4afc54cc88df841425d0e281bd15665bc",
+  "files": [
+    {
+      "file": "ASTRA_BUG_REGISTER.md",
+      "sha256": "e7540c523ff79ac0af816aacc9fa569951028d90780a1d71d076045bd4b0a4b4"
+    },
+    {
+      "file": "ASTRA_FIX_ROADMAP.md",
+      "sha256": "e18914b77fba5f4ff47e4ee5ecdcebab1174cf9522adb126c108dc4c21c4789b"
+    },
+    {
+      "file": "ASTRA_FULL_APP_AUDIT.md",
+      "sha256": "af179a2b1a3753efbbdf9d7c185f51f75cb4c8faf1306b46861395b40649cbe8"
+    },
+    {
+      "file": "ASTRA_SECURITY_AUDIT.md",
+      "sha256": "379d776b2ccc1da40cd52c13f3c294aa04435e56c8f3c09e9eb4411eab3774ea"
+    },
+    {
+      "file": "ASTRA_UI_UX_AUDIT.md",
+      "sha256": "366dc6d5206702329d370c1d33ff0013c47ad3f1678c9b4f00c01d2323ec9815"
+    },
+    {
+      "file": "audit-build-live.log",
+      "sha256": "81cf0b1c6ee628eac7f1355ab05a415b165bbd706bbab9b3071d158cff43036a"
+    },
+    {
+      "file": "audit-build.log",
+      "sha256": "d06b18852adb8cf443676a80cb47855cd56816cab0ca8d59ba2fdcf3c84a2d2f"
+    },
+    {
+      "file": "audit-check-contrast.log",
+      "sha256": "d45c0d2cd7349c98ccd2b0749275a1a6fa8962d2b063f333b2f140f389e6528d"
+    },
+    {
+      "file": "audit-check-fixtures.log",
+      "sha256": "f580a440a3b4bd9a85a2764297c256072aa08599530557b127ce1b381f2556a8"
+    },
+    {
+      "file": "audit-check-lifecycle.log",
+      "sha256": "ff18a55cf572de323b0eefefc719824a1df145250b572df4b329305e4c5c4709"
+    },
+    {
+      "file": "audit-check-pglite.log",
+      "sha256": "c305a4f9db6ca44368f2032f336ccb8ae34952b20fc51a03c4927a52181f8ee9"
+    },
+    {
+      "file": "audit-completion-final.log",
+      "sha256": "7877352f00dcffa219d443f90214d50131045ba5e8449be556945d87e6519ad1"
+    },
+    {
+      "file": "audit-completion.log",
+      "sha256": "7877352f00dcffa219d443f90214d50131045ba5e8449be556945d87e6519ad1"
+    },
+    {
+      "file": "audit-db-plan-selftest.log",
+      "sha256": "3c22caff269e5a8cd222e2281148a19309118df76ef7e4db8ab3704edaf49b39"
+    },
+    {
+      "file": "audit-evidence/finance-375.png",
+      "sha256": "f04ac66dc564954158dcfc42acf8cec22b028661967348eff0782bb8b9f96500"
+    },
+    {
+      "file": "audit-evidence/finance-820.png",
+      "sha256": "4470b8ce78933e685c7000e0e3d76bf03dd7302d63add0332456c1661f39d0da"
+    },
+    {
+      "file": "audit-evidence/modal-lock-targeted.log",
+      "sha256": "470c82767e0c794989fa6f962c307f989b4c858177f403d7af6ae83b24acda0d"
+    },
+    {
+      "file": "audit-evidence/modal-lock.log",
+      "sha256": "206f6199d6c2ce237121794b8f0f3e2055737fde95b4119e3766390783909e81"
+    },
+    {
+      "file": "audit-evidence/modal-lock.test.tsx",
+      "sha256": "b42501eb50ecd74fd41433eb4259955f140f91b06959b9d9e60df24b22e35dae"
+    },
+    {
+      "file": "audit-evidence/new-rental-1024.png",
+      "sha256": "08a234f59986f1327854c041bd42077f5d5c26fc163070f093043b76e9477f56"
+    },
+    {
+      "file": "audit-evidence/new-rental-1440.png",
+      "sha256": "8d992fbc899c6d51c72448d73819c858fa14d5b3bed67331406ad10269fe9d76"
+    },
+    {
+      "file": "audit-evidence/new-rental-1920.png",
+      "sha256": "3951e6b927ae2765465bd8c9420c99abc0c7c1bc90791159995a4211899e0f2c"
+    },
+    {
+      "file": "audit-evidence/new-rental-375.png",
+      "sha256": "fa7c8f45e68b61fe79e49ffd4c8df17c72b8e85fe2a7c29a046d5b0ca632b478"
+    },
+    {
+      "file": "audit-evidence/new-rental-430.png",
+      "sha256": "b4c1674ed8300f7194c4878a5ed61a780fa3c157f0ba9b1029a76401af6ea037"
+    },
+    {
+      "file": "audit-evidence/new-rental-768.png",
+      "sha256": "a9ba06403acce8735f5295f765a41c9d38c6d68c04ccf2638c31d6794441b2e5"
+    },
+    {
+      "file": "audit-evidence/new-rental-820.png",
+      "sha256": "a3d63908d9c017f820bb16602126167f5570f81f07eebfd34c3797ddf85153cb"
+    },
+    {
+      "file": "audit-evidence/reports-smoke.json",
+      "sha256": "459cb490b6466b170abf4563bc66488096d05c7fb3eb1b2bf98ce87821e6daa5"
+    },
+    {
+      "file": "audit-evidence/route-smoke-settled.json",
+      "sha256": "f8f3d6b66d0a2dd85ed53c591cc9466288e804d5008dc3a8cd84097dae89c92f"
+    },
+    {
+      "file": "audit-evidence/route-smoke.json",
+      "sha256": "cb31dc144fe9832ccc151a2ef04770aec51272d16b8d57db4d301d5879a97e1d"
+    },
+    {
+      "file": "audit-evidence/today-1024.png",
+      "sha256": "6c6032bd098a7fec9ca9f5dd1639e8c39a6570eae9280cc19cd27aaf24d7865c"
+    },
+    {
+      "file": "audit-evidence/today-1440.png",
+      "sha256": "fabf377e1f9cb11a6d8926d60f745f79b4ec8487e22ff65fb6f597b926792885"
+    },
+    {
+      "file": "audit-evidence/today-1920.png",
+      "sha256": "199424cd2ea171e91b29786693f70ed932485bd0902152b135c7aabb54948076"
+    },
+    {
+      "file": "audit-evidence/today-375.png",
+      "sha256": "51603c6a7f0e49b564c1787016ba381409ae89e23876c767cc77084a95a99d64"
+    },
+    {
+      "file": "audit-evidence/today-430.png",
+      "sha256": "904806f8feb45ba31e75e72015003b2d20460fef1b83090e61420a7660b807f6"
+    },
+    {
+      "file": "audit-evidence/today-768.png",
+      "sha256": "f07a7129639d569a9aa65784a293b1612878939ac56d23c028e4222fff8f4514"
+    },
+    {
+      "file": "audit-evidence/today-820.png",
+      "sha256": "3eb95150effb57494124e7e0ae8b8ecfe46b68b5e2d49ceb007d6f104cf17e97"
+    },
+    {
+      "file": "audit-evidence/vitest.audit.config.ts",
+      "sha256": "dfddf6e5931d5a162cab2560093a6c3b78373384a7b8e22d21710bbc15f0fe6e"
+    },
+    {
+      "file": "audit-extra-gates.json",
+      "sha256": "154334884ebab0b728baebf52e03ba2ba9099c8f09a2d732381acea08690a8ca"
+    },
+    {
+      "file": "audit-financial-integrity.log",
+      "sha256": "e09726435468ec6aa4db89da02f0a39c3bc354ddab1bd02c59529ef493e725c1"
+    },
+    {
+      "file": "audit-gates.jsonl",
+      "sha256": "8c0ebd0d21574b6b376fdc14c44385294fd3e44e0cba2b667201b9e4feedbf15"
+    },
+    {
+      "file": "audit-install.log",
+      "sha256": "b245b08951bfe388f86da7286beb817f712e0d75b70ecab38bf542de1b6c98bd"
+    },
+    {
+      "file": "audit-lint-progress.log",
+      "sha256": "cad9ad16ef00ca9ff85b1713a57c55b7ba0d218d0844956fea0c7fbbc6df6006"
+    },
+    {
+      "file": "audit-lint-shell.log",
+      "sha256": "e9a84c0ea47a6d4273b752674defe940d9548c372ddd642890c69425cc3ce1ed"
+    },
+    {
+      "file": "audit-lint-ui-copy.log",
+      "sha256": "3814b6553c185ac14ddf55018d50bad162a3b19fabe8f77514bb92d93c2f4016"
+    },
+    {
+      "file": "audit-lint.log",
+      "sha256": "529c6b38d7531e3e23981753cd334c8f6a714f020db2047d6069e16a2cdf8e5f"
+    },
+    {
+      "file": "audit-offline-repro.cjs",
+      "sha256": "5ceb4a20f8809dc805033d24f977f8ee29a87e76db2a7aa6aa8ad3c4bb919ab8"
+    },
+    {
+      "file": "audit-offline-repro.log",
+      "sha256": "258b5d9581a705f73a3337a5606b45f1805ea24c1048c20696608095960673ec"
+    },
+    {
+      "file": "audit-package.cjs",
+      "sha256": "ae14b08e9b52984a7e7fa53032cbe69315f4bb2a63ff21f1fbe1463227e0bf28"
+    },
+    {
+      "file": "audit-race.log",
+      "sha256": "5bb5ab41abae16dc8961d0f110093206d7548ade05ec1d2dfeab0850bcce327c"
+    },
+    {
+      "file": "audit-report-family-repro.cjs",
+      "sha256": "9dbbfd798af19bb385787453fa04f8b2fbbd2e1f8d7f97057fc494a71deb590c"
+    },
+    {
+      "file": "audit-report-family-repro.log",
+      "sha256": "93d71c98661a2adfc1bedbf57af58dd7851c1d25ee70158c92891ba9ab1e1a07"
+    },
+    {
+      "file": "audit-security-catalog.json",
+      "sha256": "ce288f911784299551d7626e5db6065fa2e854d19bbf89c402f0f9a3ba3a5ca7"
+    },
+    {
+      "file": "audit-security-extend.mjs",
+      "sha256": "df11533ff0f92794047e39d7e9fdc0a9a0651a8a505135fc2c3b478f4172bef6"
+    },
+    {
+      "file": "audit-security-probe.log",
+      "sha256": "74089f3dbeb8d0b58841d9a1e0f1b48d0879e0ca99f1bba5350a26666d00395d"
+    },
+    {
+      "file": "audit-security-probe.mjs",
+      "sha256": "6aa9352a080f32f7372f830debb13bed0d73df2e9817001c5b9f31a27747e99a"
+    },
+    {
+      "file": "audit-supplementary.jsonl",
+      "sha256": "fce5f155f50235a0d636f076e4d6a3180ba7600b4fbfaf6e739525db4762ed21"
+    },
+    {
+      "file": "audit-test-audit-coverage.log",
+      "sha256": "3a49cfc7e110b7c91fe649f115d73af969ec33435cff480929861d23d57aa2b7"
+    },
+    {
+      "file": "audit-test-coverage.log",
+      "sha256": "dece10288ed87412b0456236508d5d4e396a32011e45b4164802a1c4a1ba7043"
+    },
+    {
+      "file": "audit-test-pricing-structures.log",
+      "sha256": "5b1ca1b5c05544a1035c485d9b489d909dc04469dc17fa36bc9706ad68eea094"
+    },
+    {
+      "file": "audit-test-saved-views.log",
+      "sha256": "5b5dae82863a36ae3ea161444316624bee9d14446ad6c82b00abd47f4a455283"
+    },
+    {
+      "file": "audit-test-settings.log",
+      "sha256": "da4c7c0ab108446961b61b0ca325ad4862c1591ab3f4d3c78ae9337821a3a235"
+    },
+    {
+      "file": "audit-test.log",
+      "sha256": "d3f2453656714c92e1730d91daee97598173d1315313a041bab45d967ab34add"
+    },
+    {
+      "file": "audit-typecheck.log",
+      "sha256": "f4c6b362d0b057456178fbe44b5e96439c800c3c352198041ec3c9189ad63409"
+    },
+    {
+      "file": "audit-workflow-notes.md",
+      "sha256": "c88b4f66374fe3f2b5845979abe95e215ad982c0c60e585e7ab76c3c795061fb"
+    },
+    {
+      "file": "audit-workflow-repro-output.txt",
+      "sha256": "559b99937b9169d235f8687aff61ef92fbb96a8bcc72d60e9545fa83b0196777"
+    },
+    {
+      "file": "audit-workflow-repro.cjs",
+      "sha256": "208cd96dee076b8825eae2e1a6a56204f59ff0b4e15eb8cd2cc3b77b3bb3ec48"
+    },
+    {
+      "file": "AUDIT_WORKTREE_PROGRESS.md",
+      "sha256": "ceefc7312a96f7cf40970e6bd2236235dfe44aadf9c21a135a8730e7eab4b9a4"
+    }
+  ]
+}

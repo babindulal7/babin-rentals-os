@@ -955,6 +955,7 @@ export default function ReturnWorkspace({
               code,
               result: 'warning',
               resultReason: `Flight Case "${caseRows[0]?.group}" is already fully returned`,
+              userId: user?.id,
             })
           }
           setScanLog((p) => [`• Flight Case "${caseRows[0]?.group}" is already fully returned`, ...p].slice(0, 5))
@@ -968,6 +969,7 @@ export default function ReturnWorkspace({
               code,
               result: 'accepted',
               resultReason: `Flight Case "${caseRows[0]?.group}" identified`,
+              userId: user?.id,
             })
           }
           setScanLog((p) => [
@@ -989,6 +991,7 @@ export default function ReturnWorkspace({
         code: ambientBarcode.trim(),
         result: 'rejected',
         resultReason: `No equipment matching "${ambientBarcode.trim()}" in this booking`,
+        userId: user?.id,
       })
     }
     setScanLog((p) => [`✕ No equipment matching "${ambientBarcode.trim()}" in this booking`, ...p].slice(0, 5))
@@ -1009,6 +1012,7 @@ export default function ReturnWorkspace({
             code: key,
             result: 'rejected',
             resultReason: 'is not on this booking',
+            userId: user?.id,
           })
         }
       }
@@ -1026,6 +1030,7 @@ export default function ReturnWorkspace({
             result: 'warning',
             resultReason: 'was returned in an earlier session',
             resolvedUnitId: row.assetId,
+            userId: user?.id,
           })
         }
       }
@@ -1044,6 +1049,7 @@ export default function ReturnWorkspace({
             result: 'warning',
             resultReason: 'already received in this session',
             resolvedUnitId: row.assetId,
+            userId: user?.id,
           })
         }
       }
@@ -1066,6 +1072,7 @@ export default function ReturnWorkspace({
           code: row.serial ?? row.name,
           result: 'accepted',
           resolvedUnitId: row.assetId,
+          userId: user?.id,
         })
       }
     }

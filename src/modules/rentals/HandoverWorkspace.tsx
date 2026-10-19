@@ -904,6 +904,7 @@ export default function HandoverWorkspace({
             code: key,
             result: 'rejected',
             resultReason: 'is not on this booking',
+            userId: user?.id,
           })
         }
       }
@@ -927,6 +928,7 @@ export default function HandoverWorkspace({
             result: 'warning',
             resultReason: `was recorded ${row.prior} in an earlier session`,
             resolvedUnitId: row.assetId,
+            userId: user?.id,
           })
         }
       }
@@ -946,6 +948,7 @@ export default function HandoverWorkspace({
             result: 'warning',
             resultReason: 'was already marked Picked Up',
             resolvedUnitId: row.assetId,
+            userId: user?.id,
           })
         }
       }
@@ -962,6 +965,7 @@ export default function HandoverWorkspace({
           code: row.serial ?? row.name,
           result: 'accepted',
           resolvedUnitId: row.assetId,
+          userId: user?.id,
         })
       }
       triggerScanPulse('success')

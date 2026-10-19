@@ -1,0 +1,11 @@
+const fs=require('fs'),path=require('path'),crypto=require('crypto');
+const root=process.cwd(), dest='C:/Users/use/Desktop/babin-rentals-os/docs/audits/ASTRA-2026-10-19';
+if(fs.existsSync(dest))throw Error('Destination already exists; inspect before updating');
+fs.mkdirSync(dest,{recursive:true});
+for(const name of fs.readdirSync(path.join(root,'reports')))fs.copyFileSync(path.join(root,'reports',name),path.join(dest,name));
+for(const name of fs.readdirSync(root))if(/^audit-.*\.(log|json|jsonl|cjs|mjs|txt|md)$/.test(name)&&!name.includes('preview')&&!name.includes('write-reports')&&!name.includes('finalize'))fs.copyFileSync(path.join(root,name),path.join(dest,name));
+fs.cpSync(path.join(root,'audit-evidence'),path.join(dest,'audit-evidence'),{recursive:true});
+fs.copyFileSync('PROGRESS.md',path.join(dest,'AUDIT_WORKTREE_PROGRESS.md'));
+const manifest=[];function walk(dir){for(const e of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,e.name);if(e.isDirectory())walk(p);else manifest.push({file:path.relative(dest,p).replaceAll('\\','/'),sha256:crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex')})}}walk(dest);
+fs.writeFileSync(path.join(dest,'EVIDENCE_MANIFEST.json'),JSON.stringify({baseline:'ad8ce1e4afc54cc88df841425d0e281bd15665bc',files:manifest},null,2));
+console.log('Packaged',manifest.length,'files in',dest);

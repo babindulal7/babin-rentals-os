@@ -6,6 +6,7 @@ import { DataTableShell } from '../../components/ui/DataTable'
 import { ReportToolbar } from '../../components/ui/ReportToolbar'
 import type { ReportCsvRow, ReportFilters } from '../../components/ui/ReportToolbar'
 import { ReportFamiliesNav } from '../../components/ui/ReportFamiliesNav'
+import { EmptyState } from '../../components/ui/StateViews'
 import Icon from '../../components/ui/Icon'
 import { formatMoney, rupees } from '../../lib/money'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
@@ -407,9 +408,16 @@ export default function CustomReport() {
       {/* Dynamic Data Table */}
       <DataTableShell ariaLabel={`Custom tabular query with ${selectedColumns.length} fields over ${domain}`}>
         {rows.length === 0 ? (
-          <div style={{ padding: 'var(--sp-xl)', textAlign: 'center', color: 'var(--muted)' }}>
-            No records match the current filters.
-          </div>
+          <EmptyState
+            kind={search.trim() ? 'no-results' : 'nothing-yet'}
+            title={search.trim() ? 'No records match search' : `No ${domain} records found`}
+            description={
+              search.trim()
+                ? `No ${domain} records matched "${search.trim()}". Try clearing the search term or adjusting filters.`
+                : `There are no ${domain} records available in the system for this view.`
+            }
+            {...(search.trim() ? { actionLabel: 'Clear search', onAction: () => setSearch('') } : {})}
+          />
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>

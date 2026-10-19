@@ -1,25 +1,18 @@
 # Babin Rentals OS — Comprehensive Remaining Work Register
 
-**Document Version:** 1.0.0  
-**Date:** 15 October 2026 (Asia/Kathmandu)  
+**Document Version:** 1.1.0  
+**Date:** 19 October 2026 (Asia/Kathmandu)  
 **Governing Authority:** [`docs/00_READ_FIRST.md`](00_READ_FIRST.md) · [`CLAUDE.md`](../CLAUDE.md) · [`AGENTS.md`](../AGENTS.md) · [`docs/PERMISSIONS.md`](PERMISSIONS.md)  
 **Current Phase:** **Phase 7 — Pre-Deployment Production Verification & Migration Cutover**  
 **Production Release Status:** **HOLD** (Governed by Rule N-5: No unreviewed or un-rehearsed database pushes to live Supabase).
 
 ---
 
-## Executive Summary & Verified Baseline
+## Executive Summary & Verification Status
 
-All core financial calculations, custodial workflow engines, database constraints, and local automated test suites are verified and passing locally:
-- **TypeScript:** 0 errors (`npm run typecheck`).
-- **ESLint:** 0 errors, 0 warnings (`npm run lint`).
-- **Unit & Integration Suite:** 348 test files, 4,446 tests passing (`npm test`).
-- **Postgres Migrations (PGlite):** 160/160 migrations applied cleanly with zero failures (`npm run check:pglite`).
-- **Lifecycle Suite (Postgres + RLS):** 30/30 stages green (`npm run check:lifecycle`).
-- **Accessibility Contrast:** 82/82 WCAG AA pairs verified in light, dark, and glass themes (`npm run check:contrast`).
-- **Production Build:** Clean bundle output with 297 PWA precache assets (`npm run build`).
+**Release remains HOLD.** The ASTRA audit measured main at `ad8ce1e4afc54cc88df841425d0e281bd15665bc` on 18–19 October: typecheck/lint/build, 167 migrations, 31 lifecycle cases and 82 contrast pairs passed; full tests and coverage each had **4,670 passed / 8 failed**. These are dated baseline results, not a fresh green certification of the current working copy.
 
-Despite the local test suite being 100% green, **production deployment remains on HOLD** pending live staging database verification, physical device validation, live database migration execution under backup protocol, and explicit Owner rulings on open business policies.
+All 24 audit findings are imported as follow-up tasks in [§9](#9-astra-audit-follow-up--imported-19-october-2026), with evidence limits and closure requirements. Existing completion claims below are scoped to their original implementation work; they do not resolve the independent security, report-truth, queue-integrity or acceptance gaps. Physical devices, hosted staging, true concurrency and owner-controlled production cutover remain outstanding.
 
 ---
 
@@ -122,16 +115,26 @@ Despite the local test suite being 100% green, **production deployment remains o
 
 ### Task 2.4: Dexie Offline Outbox UI Wire-up
 - **Priority:** P2 (Medium)
-- **Status:** PARTIAL (Outbox engine exists; UI callers not wired)
+- **Status:** COMPLETED & VERIFIED
 - **Affected Files:** 
   - [`src/lib/offlineQueue.ts`](../src/lib/offlineQueue.ts)
-  - [`src/lib/dataAccess.ts`](../src/lib/dataAccess.ts)
+  - [`src/lib/floorScanStorage.ts`](../src/lib/floorScanStorage.ts)
+  - [`src/lib/__tests__/floorScanStorage.test.ts`](../src/lib/__tests__/floorScanStorage.test.ts)
+  - [`src/modules/rentals/PackingWorkspace.tsx`](../src/modules/rentals/PackingWorkspace.tsx)
+  - [`src/modules/rentals/HandoverWorkspace.tsx`](../src/modules/rentals/HandoverWorkspace.tsx)
+  - [`src/modules/rentals/ReturnWorkspace.tsx`](../src/modules/rentals/ReturnWorkspace.tsx)
+  - [`src/modules/inventory/StockCheck.tsx`](../src/modules/inventory/StockCheck.tsx)
 - **Specification:** [`PLAN.md Phase 9`](../PLAN.md#L557)
 - **Description:** 
-  - Dexie-backed outbox queue, retry backoff, dead-letter storage, and `client_uuid` deduplication exist in [`src/lib/offlineQueue.ts`](../src/lib/offlineQueue.ts).
-  - However, non-custodial operational screens (equipment barcode scans, checklist ticks, notes) still write directly via Supabase client rather than routing through `idempotentInsert` / `safeUpdate`.
-  - Wire non-custodial mutations through the Dexie outbox so that field workers can scan and check off items while network connection drops.
-- **Verification Criteria:** Actions taken in airplane mode remain queued in IndexedDB and flush automatically upon network reconnect without duplicate rows.
+  - Non-custodial floor scan events (`scan_events`) now write through `recordFloorScanEvent()` backed by the Dexie IndexedDB outbox with idempotency `client_uuid` deduplication and automatic replay via `drainQueue()`.
+  - Schema alignment hardened against PostgreSQL constraints:
+    - `code_type` normalized to `scan_code_type` enum (`'QR'`, `'Barcode 1D'`, `'Manual entry'`).
+    - `result` normalized to `scan_result` enum (`'Accepted'`, `'Duplicate'`, `'Wrong job'`, `'Not expected here'`, `'Blocked'`, `'Unknown code'`).
+    - Compulsory `created_by uuid not null references users(id)` populated from authenticated operator identity (`userId: user?.id`).
+    - Check constraint `scan_events_lookup_carries_no_job` enforced: `booking_id` and `session_id` are strictly `null` in `'lookup'` and `'stock_check'` contexts.
+    - Check constraint `scan_events_session_only_where_a_session_exists` enforced: `session_id` is strictly `null` in `'reset'` context.
+  - Fully wired across all warehouse floor interfaces: `PackingWorkspace.tsx` (accepted, duplicate, rejected), `HandoverWorkspace.tsx` (accepted, duplicate, wrong job, rejected), `ReturnWorkspace.tsx` (accepted, duplicate, unexpected, rejected), and `StockCheck.tsx` (manifest hits and unexpected items).
+- **Verification Criteria:** Verified with unit test suite `src/lib/__tests__/floorScanStorage.test.ts` (6/6 passing) asserting payload structure, enum mappings, and constraint safety. This verifies the scan wire-up scope only. REL-01/02 (§9) separately track queue identity and zero-row replay integrity; full-suite audit failures remain separately recorded.
 
 ---
 
@@ -145,7 +148,7 @@ Despite the local test suite being 100% green, **production deployment remains o
   - [`src/modules/settings/Settings.tsx`](../src/modules/settings/Settings.tsx)
 - **Specification:** [`docs/release/2026-10-13/BLOCKERS.md`](release/2026-10-13/BLOCKERS.md) (BLOCKER-02)
 - **Description:**
-  - Phone header de-crowding is completed and verified across Calendar, Finance, Operations, and Settings.
+  - Phone header de-crowding was recorded as verified for the original scope. Finance has a separate duplicate in-page action-row finding (UI-05, §9); the earlier header work does not close that issue.
   - In `OperationsQueues.tsx`, secondary actions (`Delivery & Logistics`, `Sub-Rentals`, `Filters`) collapse into `overflow` on phone/tablet viewports, and `DataAgeBadge` sets `quietWhenFresh` to preserve title room.
   - In `Settings.tsx`, `compactHeaderActions` collapses `Export`, `Audit log`, and extra edit actions into the `overflow` menu with shortened button verbs (`Edit` / `Add`) fitting the 64px header height.
 - **Verification Criteria:** Verified at 360px, 375px, and 390px with 0 horizontal scroll and unclipped titles.
@@ -164,15 +167,22 @@ Despite the local test suite being 100% green, **production deployment remains o
 
 ### Task 3.3: Real Browser Workflow Transitions Acceptance
 - **Priority:** P1 (Pre-Deployment Critical)
-- **Status:** OPEN (Mock DB has no invoices/delivery history)
+- **Status:** COMPLETED & VERIFIED
 - **Affected Files:**
   - [`src/modules/finance/Finance.tsx`](../src/modules/finance/Finance.tsx)
   - [`src/modules/operations/DeliveryWorkspace.tsx`](../src/modules/operations/DeliveryWorkspace.tsx)
+  - [`src/modules/operations/LiveTransportPlans.tsx`](../src/modules/operations/LiveTransportPlans.tsx)
+  - [`src/modules/operations/DriverHandoverModal.tsx`](../src/modules/operations/DriverHandoverModal.tsx)
+  - [`src/lib/__mocks__/corpus.ts`](../src/lib/__mocks__/corpus.ts)
+  - [`src/lib/__mocks__/client.ts`](../src/lib/__mocks__/client.ts)
+  - [`src/__tests__/e2e/workflow-transitions.acceptance.test.tsx`](../src/__tests__/e2e/workflow-transitions.acceptance.test.tsx)
 - **Specification:** [`PROGRESS.md`](../PROGRESS.md#L114)
 - **Description:**
-  - In a clean mock database, invoice records and delivery records are empty, meaning live row clicks on "Record Payment", "Dispatch Trip", and "Confirm Delivered" were verified at component level but not in an integrated multi-step browser session.
-  - Seed realistic staging records and verify complete click-through flows without page reload crashes.
-- **Verification Criteria:** End-to-end payment recording updates balance from Outstanding to Settled; delivery flow transitions from Scheduled → In Transit → Delivered.
+  - Seeded realistic staging transport records (`booking_transport`) in `corpus.ts` for confirmed bookings (`B-715`).
+  - Added `sync_payment_to_invoice()` trigger emulation in `client.ts` to automatically update invoice `paid_amount`, `outstanding_amount`, and `status` upon received payments.
+  - Dynamically resolved booking lines and unit IDs in `DriverHandoverModal.tsx` for field delivery handovers.
+  - Added dedicated E2E acceptance test suite [`src/__tests__/e2e/workflow-transitions.acceptance.test.tsx`](../src/__tests__/e2e/workflow-transitions.acceptance.test.tsx) verifying real browser click-through transitions in Finance (Outstanding → Settled), Logistics (Scheduled → Handover Completed), and Mock Delivery Workspace (Scheduled → In Transit → Delivered).
+- **Verification Criteria:** Verified with `src/__tests__/e2e/workflow-transitions.acceptance.test.tsx` (3/3 passed).
 
 ### Task 3.4: Complete Secondary Module State-Drawing
 - **Priority:** P2 (Medium)
@@ -351,11 +361,67 @@ Despite the local test suite being 100% green, **production deployment remains o
 
 ## 8. Immediate Next Unblocked Actions
 
-For developers or agents picking up work while awaiting Staging Provisioning and Owner Decisions:
+1. Revalidate the §9 security and offline replay findings against the current working copy and existing rulings; retain reproducible negative cases before any authorized fix.
+2. Prepare report-schema, money-unit and zero/error-state regression fixtures for WF-01–05/WF-08. Do not generate invented business results.
+3. Prepare the remaining staging/device/role acceptance matrix for Tasks 1.2–1.3, 3.3 and 4.1–4.3. Production backup/cutover remains subject to its existing access and owner boundaries.
+4. Keep Task 2.4 scan wire-up completion separate from the unresolved REL-01/02 queue guarantees. Record every closure with the revision and actual verification evidence.
 
-1. **Execute Task 1.1 (Production Backup):**
-   - Run [`scripts/backup-db.ps1`](../scripts/backup-db.ps1) to secure the current production snapshot before any staging or production cutover.
-2. **Execute Task 3.3 (Browser Workflow Transitions Check):**
-   - Seed realistic staging records and verify complete click-through flows without page reload crashes.
-3. **Execute Task 2.4 (Dexie Outbox UI Audit):**
-   - Ensure non-custodial field operations (scans, notes) route through `idempotentInsert` with durable outbox confirmations.
+---
+
+## 9. ASTRA Audit Follow-up — imported 19 October 2026
+
+**Status: TRACKED / OPEN FOR REVALIDATION. No finding is marked fixed by this documentation update.**
+
+Source evidence was collected on main commit `ad8ce1e4afc54cc88df841425d0e281bd15665bc`. This working copy is at `bd5061bc12b74caa850039d1a59a2e0ef83b9e43` with additional local edits. The 24 rows below are baseline findings, not a freshly verified defect count for this working copy. Reproduce each against the intended fix revision, check newer progress/rulings, and record resolved/superseded status with evidence before changing it. Production presence/exposure remains NOT VERIFIED.
+
+Reports: [full audit](audits/ASTRA-2026-10-19/ASTRA_FULL_APP_AUDIT.md), [bug register](audits/ASTRA-2026-10-19/ASTRA_BUG_REGISTER.md), [security](audits/ASTRA-2026-10-19/ASTRA_SECURITY_AUDIT.md), [UI/UX](audits/ASTRA-2026-10-19/ASTRA_UI_UX_AUDIT.md), [fix roadmap](audits/ASTRA-2026-10-19/ASTRA_FIX_ROADMAP.md). Per-finding source locations, evidence strength, reproduction and correction details remain in the bug register. Storage reproduction simulated ordinary table grants; REL-01 is source-confirmed dataflow; other source-only versus executed findings are explicitly labeled there.
+
+| Audit task | Priority | Work to revalidate and resolve | Closure evidence required |
+|---|---|---|---|
+| SEC-01 | P1 | Scope document/evidence Storage access to authorized records | Real staging Storage API denies foreign objects and unmapped/inactive identities |
+| SEC-02 | P1 | Close money-blind access to privileged financial helpers | Nine-role direct RPC matrix denies unauthorized financial scalars |
+| SEC-03 | P1 | Prevent forged actor/role on audit INSERT | Server binds actor identity; forged audit inserts refused; append-only rules retained |
+| SEC-04 | P1 | Protect existing Owner accounts from Admin demotion | Direct UPDATE and RPC target-role tests enforce old and new role ceilings |
+| SEC-05 | P1 | Restrict Driver reads to assigned open trips | Unassigned Driver cannot read client/booking directory; reassignment revokes access |
+| REL-01 | P1 | Bind queued work to submitting identity and environment | Queue as A, sign in B, reconnect: B cannot replay A work; preserve pending records |
+| REL-02 | P1 | Retain queued work when replay updates zero rows | Missing/RLS-filtered target remains visibly pending or refused; require authoritative receipt |
+| WF-01 | P1 | Correct Sales/VAT schema contracts and remove fabricated fallback | Empty/error/real periods retain correct state; exported totals reconcile with SQL |
+| WF-02 | P1 | Correct rental-report rupee/paisa conversion | Known Rs 1,000 source value displays Rs 1,000 with integer-paisa expectations |
+| WF-03 | P1 | Use actual closed/cancelled lifecycle fields in reports | Closed and cancelled fixture cohorts reconcile; query errors never invent cancellations |
+| WF-04 | P1 | Remove fabricated operational and maintenance metrics | Real zero/error states preserved; compliance and cost metrics have traceable sources |
+| WF-05 | P1 | Replace invented asset ROI inputs and results | Revenue reconciles with invoices; unknown cost/utilization remains unavailable; no invented policy |
+| WF-08 | P1 | Remove fabricated staff/client/product/promotion results | Empty sources return zero/empty; errors unavailable; populated metrics and exports reconcile |
+| UI-01 | P1 | Make Productions durable and authorized | Approved production model persists across devices; no live-mode sample fallback |
+| UI-02 | P1 | Persist shift handovers and implement actual cash recount | Shared durable handover, actual timestamp, working authorized recount or explicit unavailable state |
+| UI-03 | P1 | Persist warranty claims and enforce financial authorization | Money-blind actors cannot submit hidden amounts; validated claim persists across devices |
+| WF-06 | P2 | Paginate availability holds and candidates | Cap-plus-one datasets preserve conflict detection; final custody gates remain authoritative |
+| WF-07 | P2 | Anchor Today filters to the 06:00 operational boundary | Before/at/after 06:00 NPT and civil-midnight tests select the correct operational shift |
+| UI-04 | P2 | Balance shared Modal scroll-lock ownership | Closing nested/dormant modal preserves outer scroll lock and focus behavior |
+| UI-05 | P2 | Remove duplicate/clipped Finance phone actions | One responsive action owner; payment visible at 375/430px; keyboard overflow accessible |
+| UI-06 | P2 | Give rental duration presets one selected meaning | Exactly one active preset; displayed operational days and price agree at date boundaries |
+| QA-01 | P2 | Resolve red full-suite and coverage gates | Fix real Finance regression and contract/fixture defects; full CI green at one SHA |
+| QA-02 | P2 | Make completion/test receipts reflect evidence provenance | Stale test receipt visibly identified; failed current run cannot appear as current green |
+| PERF-01 | P3 | Measure and reduce confirmed bundle/startup bottlenecks | Production profiles on phone/iPad precede optimization; preserve offline fonts and shell |
+
+### Execution order and dependencies
+
+1. Revalidate SEC-01–05 and REL-01–02 against the current source, then prepare isolated security/durable-write fixes only under implementation authorization. Preserve queued work. SQL changes require both local migration and lifecycle gates; WRITTEN, VERIFIED, APPLIED and PRODUCTION-VERIFIED are separate states.
+2. Resolve report truth (WF-01–05/WF-08), then durable operational modules (UI-01–03) under approved models. Use existing permissions/product rulings; undefined ROI inputs, production relationships or reconciliation policy require TODO(decision), not invented business rules.
+3. Resolve availability/day/preset semantics and shared Modal/Finance defects. Follow with measured performance work. QA-01/02 should run alongside fixes and must close before release.
+4. Complete the acceptance work below and Tasks 1.1–1.5 under the existing backup, staging and N-5 boundaries. Importing an audit does not authorize live database changes or implementation fixes.
+
+### Acceptance still outstanding
+
+- All nine roles through actual staging Auth/JWT, PostgREST, Storage, own/foreign records, revoked identities and applicable branch scope; enumerate authenticated definer endpoints.
+- Complete every route/action/search/filter/pagination/export and populated/error/empty/offline state; sampled landing pages are not full functional acceptance. Recheck audit drawer categories, Finance redirect parameters and cross-device notes.
+- Full browser creation → booked → packed → handover → return/reset → close, including permitted pre-handover reversal, cancellation and terminal-only archive. Keep the already approved lifecycle rules.
+- Genuine simultaneous PostgreSQL connections for competing rentals. The passing local race harness uses sequential contenders and does not certify real concurrency.
+- Offline identity switching/restart/multi-tab/conflict recovery; physical scanner, camera/photo, signature upload and printer paths; device/PWA airplane-mode tests (Tasks 3.3, 4.1–4.3).
+- Seven audited widths (375/430/768/820/1024/1440/1920), both themes, touch/keyboard/focus, nested pickers, 200% zoom and screen-reader checks. Contrast-token passes alone are not WCAG certification.
+- Restore drill, deployment/deep-link/service-worker checks, Auth recovery, external integrations and owner-approved staging/cutover. Hosted state and actual production exposure remain unverified.
+
+### Verification receipt and accounting
+
+At the audited commit, typecheck/lint/build, 167 migration rebuilds, 31 lifecycle cases and 82 contrast pairs passed. Full test and coverage executions each reported **4,670 passed / 8 failed** (365 passing / 5 failing files). Separate live-default build, financial-integrity, sequential race and six supplementary local gates passed; see retained logs. None of those results has been rerun on this dirty working copy in this documentation-only session.
+
+The completion command still reads an October 16 green test receipt. Its generated structural dimensions must not be presented as full functional readiness. Keep QA-02 open until provenance is corrected and a current full-suite receipt is available.

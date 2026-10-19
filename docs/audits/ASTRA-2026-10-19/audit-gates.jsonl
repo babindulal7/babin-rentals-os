@@ -1,0 +1,12 @@
+{"command":"npm run typecheck","exit":0,"log":"audit-typecheck.log","finished":"2026-10-19T00:10:34.9922301+05:45"}
+{"command":"npm run lint","exit":0,"log":"audit-lint.log","finished":"2026-10-19T00:11:50.0105353+05:45"}
+{"command":"npm run test","exit":1,"log":"audit-test.log","finished":"2026-10-19T00:16:21.7644305+05:45"}
+{"command":"npm run check:pglite","exit":0,"log":"audit-check-pglite.log","finished":"2026-10-19T00:16:34.5782845+05:45"}
+{"command":"npm run check:lifecycle","exit":0,"log":"audit-check-lifecycle.log","finished":"2026-10-19T00:16:51.2585533+05:45"}
+{"command":"npm run build","exit":0,"log":"audit-build.log","finished":"2026-10-19T00:20:09.0391553+05:45"}
+{"command":"npm run check:contrast","exit":0,"log":"audit-check-contrast.log","finished":"2026-10-19T00:20:09.5996844+05:45"}
+{"command":"npm run lint:shell","exit":0,"log":"audit-lint-shell.log","finished":"2026-10-19T00:20:10.5293290+05:45"}
+{"command":"npm run lint:ui-copy","exit":0,"log":"audit-lint-ui-copy.log","finished":"2026-10-19T00:20:13.8503509+05:45"}
+{"command":"npm run lint:progress","exit":0,"log":"audit-lint-progress.log","finished":"2026-10-19T00:20:14.4581235+05:45"}
+{"command":"npm run test:coverage","exit":1,"log":"audit-test-coverage.log","finished":"2026-10-19T00:25:36.7653561+05:45"}
+{"command":"npm run completion","exit":0,"log":"audit-completion.log","finished":"2026-10-19T00:25:37.5677523+05:45"}

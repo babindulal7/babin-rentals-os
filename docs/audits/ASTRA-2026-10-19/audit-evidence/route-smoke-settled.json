@@ -1,0 +1,30 @@
+[
+  {
+    "route": "/rentals",
+    "text": "0 active bookings · 0 on set · 0 overdue\nUpdated Just now\nOUT ON SET\n0\n\nActive on production sets\n\nPREP & PACKING\n0\n\nUpcoming & booked kits\n\nOVERDUE RETURNS\n0\n\nRequires immediate return\n\nAll\n0\nDraft\n0\nQuote\n0\nUpcoming\n0\nOut\n0\nReturns\n0\nClosed\n0\nCancelled\n0\nSort\nPickup date\nClient\nStatus\nProject Type A → Z\nProject Type Z → A\nTable\nCards\nTimeline\nSub-Rental\n0 Rentals found\nSaved views\nNo rentals yet\n\nGet started by creating your first rental.\n\nNew Rental"
+  },
+  {
+    "route": "/inventory",
+    "text": "Equipment\nBundles\nStock Check\nMaintenance\nStats\nSort\nEquipment A–Z\nEquipment Z–A\nCategory A–Z\nTable\nCards\nAll\n0\nAvailable\n0\nOn Rent\n0\n0 Models found\nNo equipment yet\n\nNo equipment has been added to the catalogue yet.\n\nAdd Equipment"
+  },
+  {
+    "route": "/clients",
+    "text": "Directory\nMembership\n0 registered clients\nNo cache\nExport CSV\n+ New Client\nAll\n0\nOpen Rentals\n0\nVIP / Tier\n0\nPayment Due\n0\nBlocked\n0\nOrganisation\n0\nIndividual\n0\nTable\nCards\nStats\nNo clients yet\n\nThe directory is empty. Register the first client to start booking.\n\nRegister a client"
+  },
+  {
+    "route": "/crew",
+    "text": "11 active assignments · 0 on set today · 5 available\nUpdated Just now\n+ Assign Crew\nON SET TODAY\n0\n\nConfirmed shoot day is today\n\nROSTER AVAILABLE\n5\n\n12 crew members on roster\n\nCONFLICTS & ALERTS\n2\n\n20 shoot days · 78% role fill rate\n\nAll\n12\nOn Set Today\n5\nAvailable\n5\nUnavailable / Conflict\n2\nAll roles\n1st AC\n2nd AC\nDIT\nDirector of Photography\nDrone Operator\nGaffer\nGrip\nSound Recordist\nAll roles\nCrew Calendar\nWeek view\nNo bookings this week\n\nNobody on the roster has an assignment overlapping this week.\n\nCrew\nNAME\tROLE\tAVAILABILITY\tDAY RATE\nBikram Rai\tDirector of Photography\t\nBooked\n\tRs 25,000 / day\nSita Tamang\t1st AC\t\nBooked\n\tRs 15,000 / day\nArjun Magar\tGaffer\t\nBooked\n\tRs 12,000 / day\nNima S"
+  },
+  {
+    "route": "/finance",
+    "text": "Dashboard\nInvoices\nPayments\nExpenses\nDocuments\nClosing\nReports\n0 invoices · 0 outstanding · 0 overdue\nUpdated Just now\nExport\nCreate Invoice\n+ Record Payment\nOUTSTANDING INVOICES\n0\n\nRs 0 receivable\n\nOVERDUE INVOICES\n0\n\nRs 0 past due\n\nRECEIVED\nRs 0\n\nCollected 15 Ashwin 2083 – 14 Kartik 2083\n\nCollections by day\n15 Ashwin 2083\n1 Oct 2026\n–\n14 Kartik 2083\n31 Oct 2026\n\nNo payments received in this period.\n\nOutstanding invoices (0)\nNothing outstanding\n\nAll issued invoices have been settled.\n\nP&L summary\n\nProfit and loss figures will appear when rental costs and approved expenses are available.\n\nBy method · 15 Ashwin 2083 – 14 Kartik 2083\n\nNo payment was received in this period."
+  },
+  {
+    "route": "/settings",
+    "text": "BD\nBabin Dulal\nOWNER\nActive Session\nBabin Rentals Pvt. Ltd.\n·\n2 Kartik · 19/10/2026\n·\nRBAC Protected\nLight\nDark\nGlass\nPREFERENCES & POLICIES\nBusiness\nIdentity, VAT & financial policies\nPeople\nStaff directory & 9-role matrix\nBranches\nBranches, warehouses & fleet\nSystem\nPreferences, security & audit\nBusiness\n\nName, VAT and language · tax, terms, deposits and memberships.\n\nGeneral\nOrganisation name\nShown on documents and the sidebar.\nRead live by every generated document header\nBabin Rentals\nBranch\nThe operating branch for this session.\nThe active branch is chosen per session, not set here. Manage the list on the Branches & Warehouses tab.\nBoudha, Kathmandu\nVAT number\nPrinted on tax invoices.\nR"
+  },
+  {
+    "route": "/tools",
+    "text": "Overview\nDepreciation\nPricing\nLate Fee\nCoupons & Promos\nQR & Barcodes\nCinematography Suite\nCALCULATORS\nDepreciation\nBook view · IRD pool view (schedule & book value curve)\nPricing\nRate, days, discount — quote sandbox engine\nCOMMERCIAL UTILITIES\nLate Fee\n30 minutes free · under 2 hours: half day · 2 hours or more: full day\nCoupons & Promos\nManage promo codes and preview valid discounts\nEQUIPMENT & PACKAGE UTILITIES\nQR & Barcode Generator\nEquipment asset tags and printable barcode labels\nCINEMATOGRAPHY SUITE\n\n15 categories of camera, lens, exposure, timecode and power calculators.\n\nCamera & lens tools\nCrop factor · field of view · depth of field · ND · timecode · storage · battery"
+  }
+]

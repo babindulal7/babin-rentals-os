@@ -1,5 +1,102 @@
 # Progress Log
 
+## 2026-10-19 — ASTRA audit imported into active progress and remaining work
+
+**Did**
+- Linked all five ASTRA reports and retained evidence in the active remaining-work register (§9).
+- Imported all 24 finding IDs with priorities, concrete closure evidence, dependency order and outstanding hosted/device/role acceptance. Existing tasks and implementation history are preserved.
+- Replaced the stale remaining-work summary claiming all tests green; scoped earlier Finance header and scan-wire-up completion claims so they do not imply closure of UI-05 or REL-01/02.
+
+**Ruled**
+- Documentation/accounting update only; no new product or permission ruling. No fixes, migrations or production changes performed.
+- Audit results belong to commit ad8ce1e4afc54cc88df841425d0e281bd15665bc. Current HEAD bd5061bc12b74caa850039d1a59a2e0ef83b9e43 and local work were not re-audited. Findings remain follow-up tasks requiring current-code revalidation; no present-tense blocker count is inferred from the dated report.
+
+**Verified**
+- Checked report finding IDs against the new task table and checked local report links.
+- Audit baseline evidence: typecheck/lint/build passed; migrations 167/167; lifecycle 31/31; full tests and coverage each 4,670 passed / 8 failed. These are prior audit executions, not tests run in this documentation session.
+- Ran the completion generator for this working copy. Its structural summary below still cites a stale October 16 suite receipt; it does not establish current full-suite or product readiness.
+- Documentation checks: npm run lint:progress and git diff --check (results recorded after execution).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 55 | 50 · 0 · 0 · 5 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 98% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-19T11:06:44.541Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-19T11:07:09.080Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Revalidate and resolve the 24 tracked audit findings in docs/REMAINING_WORK.md §9; no finding was fixed by importing it.
+- Complete staging nine-role/API/Storage, genuine concurrent rentals, full browser workflow, physical-device/offline/peripheral, accessibility and restore acceptance.
+- Maintain release HOLD pending verified fixes, current CI receipts and owner-controlled N-5 backup/cutover. Product questions retain their existing decision process.
+
+
+## 2026-10-19 — Dexie Offline Outbox Floor Scan Wire-up & Schema Alignment (Task 2.4) landed
+
+**Did**
+- Audited and wired non-custodial floor barcode scanning into Dexie IndexedDB outbox across warehouse interfaces (`Task 2.4`):
+  - **`src/lib/floorScanStorage.ts`**:
+    - Normalized scan code type to PostgreSQL enum `scan_code_type` (`'QR'`, `'Barcode 1D'`, `'Manual entry'`).
+    - Normalized scan result to PostgreSQL enum `scan_result` (`'Accepted'`, `'Duplicate'`, `'Wrong job'`, `'Not expected here'`, `'Blocked'`, `'Unknown code'`).
+    - Enforced database constraint `scan_events_lookup_carries_no_job`: when context is `'lookup'` or `'stock_check'`, `booking_id` and `session_id` are strictly set to `null`.
+    - Enforced database constraint `scan_events_session_only_where_a_session_exists`: when context is `'reset'`, `session_id` is strictly set to `null`.
+    - Populated compulsory `created_by uuid not null` constraint from authenticated operator `userId` (`userId: user?.id`) with safe fallbacks.
+    - Updated `FloorScanEventParams` interface to permit `undefined` on optional properties for compatibility with `exactOptionalPropertyTypes: true`.
+  - **Warehouse Workspaces Wired**:
+    - **`src/modules/rentals/PackingWorkspace.tsx`**: Updated 3 `recordFloorScanEvent` calls to pass operator `userId`.
+    - **`src/modules/rentals/HandoverWorkspace.tsx`**: Updated 4 `recordFloorScanEvent` calls to pass operator `userId`.
+    - **`src/modules/rentals/ReturnWorkspace.tsx`**: Updated 7 `recordFloorScanEvent` calls to pass operator `userId`.
+    - **`src/modules/inventory/StockCheck.tsx`**: Integrated `recordFloorScanEvent` for both manifest hits (`result: 'Accepted'`, `resolvedUnitId`) and unexpected items (`result: 'Not expected here'`), with `context: 'stock_check'` and operator `userId`.
+  - **Secondary Reporting State Polish (`Task 3.4`)**:
+    - **`src/modules/reports/CustomReport.tsx`**: Standardized empty state presentation using the canonical `EmptyState` component (`kind: 'no-results'` with search clearing action or `kind: 'nothing-yet'`), replacing raw unstyled text.
+  - **Test Suite Updates**:
+    - **`src/lib/__tests__/floorScanStorage.test.ts`**: Expanded regression test suite to 6 comprehensive tests asserting schema enum normalization, null constraint handling across contexts (`packing`, `stock_check`, `reset`), and safe offline mutation queueing.
+
+**Ruled**
+- Non-custodial barcode scan events are safe for offline queueing via Dexie IndexedDB (`scan_events` table) with idempotency keys and automatic `drainQueue()` replay.
+- Custody state transitions (`packRental`, `handoverRental`, `returnRental`, `completeReset`) and financial writes remain strictly online and fail-closed (`queueOnFailure: false`, Law 8 / R-40).
+- Offline scan events must adhere to database enum and check constraints (`scan_events_lookup_carries_no_job`, `scan_events_session_only_where_a_session_exists`, `created_by` foreign key) so that background replay does not fail on Postgres constraints.
+
+**Verified**
+- Unit test suite: `npx vitest run src/lib/__tests__/floorScanStorage.test.ts`: 1/1 file, 6/6 tests passed.
+- Global add menu test suite: `npx vitest run src/components/ui/creation/__tests__/globalAddMenu.test.tsx`: 1/1 file, 23/23 tests passed.
+- `npm run typecheck`: 0 errors under TypeScript 5.7 strict mode.
+- `npm run lint`: 0 errors, 0 warnings (`--max-warnings 0`).
+- `npm run check:pglite`: 167/167 applied, 0 view leaks, 20 anon RPCs, 74 definer search_paths pinned.
+- `npm run check:lifecycle`: 31/31 stages green.
+- `npm run check:contrast`: 82/82 WCAG AA color pairs pass in dark, light, high-contrast, and glass.
+- `npm run lint:shell`: 680 files checked, 100% compliant.
+- `npm run lint:ui-copy`: 0 developer-text violations, 4/4 test cases pass.
+- `npm run build`: Exit 0, 214 precache assets.
+- `npm run lint:progress`: Newest entry verified with Completion and Remaining blocks.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 55 | 50 · 0 · 0 · 5 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 98% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-19T11:06:44.541Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-19T11:07:09.080Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Phase 2B.2: Wire signature canvas images (`HandoverWorkspace.tsx`) to fail-closed upload protocol and link `signatures.signature_evidence_file_id`.
+- Phase 2B.2: Storage policy hardening for `storage.objects` (`documents`, `evidence`) to scope SELECT/INSERT to booking/session assignments before enabling driver/client photo evidence in production.
+- Decision needed: Whether both Receiver and Warehouse staff are required to draw signatures or if typed legal attestation is acceptable (affects `SignOnGlassModal`).
+- Clients' duplicate in-page search box is back on `main` (17 Oct): decide whether to remove it again.
+- Today: the one-statement card stays unlanded (Babin, 19 Oct). It can be re-ported onto `main`'s new card later, keeping its new features.
+- Babin to confirm or flip RULINGS-2026-10-15 rows 24–25 and RULINGS-2026-10-16 rows 1–4.
+- Phase 7 Live Cutover tasks (Task 1.1–1.5 in `docs/REMAINING_WORK.md`) awaiting staging database provisioning and Babin sign-off under Rule N-5.
+
 ## 2026-10-19 — Phase 2B.1 Session Evidence Persistence (Safety Patch) landed
 
 **Did**

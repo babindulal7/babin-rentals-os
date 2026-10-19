@@ -1,0 +1,42 @@
+[
+  {
+    "route": "/rentals",
+    "text": "Loading…"
+  },
+  {
+    "route": "/operations",
+    "text": "All Active\n0\nPack\n0\nHandover\n0\nReturn\n0\nReset\n0\nCases\n0\nToday\nNo jobs right now\n\nNo booking is sitting at a stage that has floor work in this range."
+  },
+  {
+    "route": "/inventory",
+    "text": "Loading…"
+  },
+  {
+    "route": "/clients",
+    "text": "Directory\nMembership\n0 registered clients\nNo cache\n+ New Client\n\nLoading clients…"
+  },
+  {
+    "route": "/calendar",
+    "text": "Month\nWeek\nTimeline\nAvailability\nAll Clients\nAll Clients\nQuote\nReserved\nOn Rent\nCompleted\nDraft\nQuotes and drafts are provisional and do not reserve equipment.\n1 Kartik – 4 Mangsir\n18/10/2026 – 20/11/2026 AD\nSUN\nMON\nTUE\nWED\nTHU\nFRI\nSAT\n1\n18/10/2026\n2\n19/10/2026\n3\n20/10/2026\n4\n21/10/2026\n5\n22/10/2026\n6\n23/10/2026\n7\n24/10/2026\n8\n25/10/2026\n9\n26/10/2026\n10\n27/10/2026\n11\n28/10/2026\n12\n29/10/2026\n13\n30/10/2026\n14\n31/10/2026\n15\n1/11/2026\n16\n2/11/2026\n17\n3/11/2026\n18\n4/11/2026\n19\n5/11/2026\n20\n6/11/2026\n21\n7/11/2026\n22\n8/11/2026\n23\n9/11/2026\n24\n10/11/2026\n25\n11/11/2026\n26\n12/11/2026\n27\n13/11/2026\n28\n14/11/2026\n29\n15/11/2026\n30\n16/11/2026\n1\n17/11/2026\n2\n18/11/2026\n3\n19/11/2026\n4\n20/11/2026\n\nKartik 2083 BS. Pick a day to peek at its jobs.\n\nNothing is booked in this window. Bookings appear here from the day they are confirmed until the day they come back.\n\nPickup\nReturn\nHandover\nReturn Session\nCleaning\nMaintenance\nSub-Rental Out\nSub-Rental In\nCase Escalation\nQuote Expiry\nPayment Due\nFestivals & Holidays\nManage\nnot tracked yet\n\nThe festival and holiday calendar No holiday calendar is loaded.\n\nToday's Summary\n2 Kartik (19/10/2026)\n0\nPickup\n0\nReturn\nUpcoming (Next 7 Days)\n0\nPickups\n0\nQuote Expir"
+  },
+  {
+    "route": "/crew",
+    "text": "Loading…"
+  },
+  {
+    "route": "/finance",
+    "text": "Loading…"
+  },
+  {
+    "route": "/settings",
+    "text": "Loading…"
+  },
+  {
+    "route": "/tools",
+    "text": "Loading…"
+  },
+  {
+    "route": "/rentals/productions",
+    "text": "ACTIVE PRODUCTIONS\n6\nSHOOTING NOW\n2\nPRE-PRODUCTION\n1\nTOTAL PRODUCTION BUDGET\nRs 6,50,000\nAll\nPre-Production\nShoot\nReturn\nWrap\nPRD-101 · BR-2613\n\"Echoes of Mustang\"\nHimalayan Films Pvt. Ltd.\nPRE-PRODUCTION\nPre-Production\nShoot\nReturn\nWrap\nDates & Place\n21 Jul – 28 Jul 2026\nMustang / Jomsom\nGear & Budget\n24 items\nRs 1,85,000\nBikash Tamang (DOP), Suman Rai (Gaffer)\nView Details\nPRD-102 · BR-2611\n\"Sajilo Pay TVC\"\nKathmandu Ad Lab\nSHOOT\nPre-Production\nShoot\nReturn\nWrap\nDates & Place\n21 Jul – 23 Jul 2026\nJhamsikhel Studio\nGear & Budget\n16 items\nRs 95,000\nHari KC (Driver), Mingma Sherpa (Lightman)\nView Details\nPRD-103 · BR-2608\nMusic Video \"Maya\"\nStudio Nine\nSHOOT\nPre-Production\nShoot\nReturn\nWrap\nDates & Place\n20 Jul – 22 Jul 2026\nBhaktapur Durbar Square\nGear & Budget\n12 items\nRs 68,000\nRajan Thapa (Focus Puller)\nView Details\nPRD-104 · BR-2607\n\"Glacier Lines\"\nWhite Peak Documentaries\nRETURN\nPre-Production\nShoot\nReturn\nWrap\nDates & Place\n14 Jul – 21 Jul 2026\nPokhara & Annapurna Base\nGear & Budget\n18 items\nRs 1,42,000\nBikash Tamang (DOP)\nView Details\nPRD-105 · BR-2604\n\"Rato Tika\"\nMirage Pictures\nRETURN\nPre-Production\nShoot\nReturn\nWrap\nDates & Place\n16 Jul – 20 Jul 2026\nPatan Old City\nGear &"
+  }
+]

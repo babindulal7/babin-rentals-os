@@ -15,6 +15,7 @@ import { useAuth } from '../../lib/auth'
 import { formatAd, formatAdDateTime, formatBs, toBs } from '../../lib/bs'
 import { captureError } from '../../lib/monitoring'
 import { useList } from '../../lib/queries/useList'
+import { recordFloorScanEvent } from '../../lib/floorScanStorage'
 import type { ListFilters } from '../../lib/queries/listQuery'
 import {
   auditItemKpiFilters,
@@ -277,16 +278,31 @@ export default function StockCheck({ embedded = false }: { embedded?: boolean } 
       .then((hit) => {
         if (hit) {
           const code = hit.serialNo ?? hit.assetTag ?? hit.productUnitId
+          void recordFloorScanEvent({
+            context: 'stock_check',
+            code,
+            codeType: 'Barcode 1D',
+            result: 'Accepted',
+            resolvedUnitId: hit.productUnitId,
+            userId: user?.id,
+          })
           setLastScannedFeedback({
             serial: code,
             name: hit.productName ?? 'Manifest unit',
             match: true,
             message: `${hit.productName ?? 'Unit'} (${code}) is on this manifest — currently ${unitStateOfOutcome(
               hit.outcome,
-            )}. Recording a scan is not wired yet (Phase 2), so nothing was saved.`,
+            )}. Scan recorded to floor history (manifest outcome unchanged).`,
           })
         } else {
           const serial = query.toUpperCase()
+          void recordFloorScanEvent({
+            context: 'stock_check',
+            code: serial,
+            codeType: 'Barcode 1D',
+            result: 'Not expected here',
+            userId: user?.id,
+          })
           // Not on this manifest — a MISPLACED statement about where a unit is,
           // not a statement that any expected unit is gone. Deduped: scanning
           // the same unknown code twice is one fact, not two rows.
@@ -306,7 +322,7 @@ export default function StockCheck({ embedded = false }: { embedded?: boolean } 
             serial,
             name: 'Unexpected item',
             match: false,
-            message: `${serial} is not on this audit's manifest. Logged under Unexpected for this session only — nothing was saved, and no expected unit was marked missing.`,
+            message: `${serial} is not on this audit's manifest. Logged under Unexpected for this session — scan event recorded to floor history.`,
           })
         }
         setScanInput('')

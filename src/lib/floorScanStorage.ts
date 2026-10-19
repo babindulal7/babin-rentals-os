@@ -112,15 +112,27 @@ export function clearFloorScan(verb: FloorVerb, bookingId: string): void {
 }
 
 export interface FloorScanEventParams {
-  bookingId: string
-  context: 'packing' | 'handover' | 'return' | 'lookup' | 'stock_check'
+  bookingId?: string | null | undefined
+  context: 'packing' | 'handover' | 'return' | 'reset' | 'lookup' | 'stock_check'
   code: string
-  codeType?: 'barcode' | 'qr_code' | 'manual_entry' | 'rfid'
-  result?: 'accepted' | 'rejected' | 'warning' | 'override'
-  resultReason?: string | null
-  resolvedUnitId?: string | null
-  sessionId?: string | null
-  deviceId?: string
+  codeType?: 'barcode' | 'qr_code' | 'manual_entry' | 'rfid' | 'Barcode 1D' | 'QR' | 'Manual entry' | undefined
+  result?:
+    | 'accepted'
+    | 'rejected'
+    | 'warning'
+    | 'override'
+    | 'Accepted'
+    | 'Duplicate'
+    | 'Wrong job'
+    | 'Not expected here'
+    | 'Blocked'
+    | 'Unknown code'
+    | undefined
+  resultReason?: string | null | undefined
+  resolvedUnitId?: string | null | undefined
+  sessionId?: string | null | undefined
+  deviceId?: string | undefined
+  userId?: string | undefined
 }
 
 /**
@@ -129,19 +141,59 @@ export interface FloorScanEventParams {
  */
 export async function recordFloorScanEvent(params: FloorScanEventParams): Promise<boolean> {
   const clientUuid = newClientUuid()
+
+  // Canonical code_type matching scan_code_type enum (0001_enums.sql)
+  let codeType: 'QR' | 'Barcode 1D' | 'Manual entry' = 'Barcode 1D'
+  if (params.codeType === 'QR' || params.codeType === 'qr_code') {
+    codeType = 'QR'
+  } else if (params.codeType === 'Manual entry' || params.codeType === 'manual_entry') {
+    codeType = 'Manual entry'
+  } else {
+    codeType = 'Barcode 1D'
+  }
+
+  // Canonical result matching scan_result enum (0001_enums.sql)
+  let result: 'Accepted' | 'Duplicate' | 'Wrong job' | 'Not expected here' | 'Blocked' | 'Unknown code' = 'Accepted'
+  if (params.result === 'Duplicate' || params.result === 'warning') {
+    result = 'Duplicate'
+  } else if (params.result === 'Wrong job') {
+    result = 'Wrong job'
+  } else if (params.result === 'Not expected here' || params.result === 'rejected') {
+    result = 'Not expected here'
+  } else if (params.result === 'Blocked') {
+    result = 'Blocked'
+  } else if (params.result === 'Unknown code') {
+    result = 'Unknown code'
+  } else {
+    result = 'Accepted'
+  }
+
+  // Schema constraint: scan_events_lookup_carries_no_job
+  // check (context not in ('lookup', 'stock_check') or (session_id is null and booking_id is null))
+  const isNoJobContext = params.context === 'lookup' || params.context === 'stock_check'
+  const bookingId = isNoJobContext ? null : (params.bookingId ?? null)
+
+  // Schema constraint: scan_events_session_only_where_a_session_exists
+  // check (context in ('packing', 'handover', 'return') or session_id is null)
+  const isSessionContext = params.context === 'packing' || params.context === 'handover' || params.context === 'return'
+  const sessionId = isSessionContext ? (params.sessionId ?? null) : null
+
+  const userId = params.userId ?? '00000000-0000-4000-8000-000000000001'
+
   const payload = {
     client_uuid: clientUuid,
     context: params.context,
-    booking_id: params.bookingId,
-    session_id: params.sessionId ?? null,
+    booking_id: bookingId,
+    session_id: sessionId,
     code: params.code,
-    code_type: params.codeType ?? 'barcode',
+    code_type: codeType,
     resolved_unit_id: params.resolvedUnitId ?? null,
-    result: params.result ?? 'accepted',
+    result,
     result_reason: params.resultReason ?? null,
     scanned_at: new Date().toISOString(),
     queued_offline: typeof navigator !== 'undefined' ? !navigator.onLine : false,
     device_id: params.deviceId ?? (typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 50) : 'device-web'),
+    created_by: userId,
   }
 
   try {

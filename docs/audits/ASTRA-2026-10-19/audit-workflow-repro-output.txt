@@ -1,0 +1,5 @@
+PASS controls: 06:00 NPT half-open rental days and advance 5000/5001/10000/12000 boundaries
+VERIFIED: dashboard civil today at 05:30NPT=2026-10-19 while operational shift=2026-10-18
+VERIFIED: sales error -> 42 invented invoices; total paisa 545225000
+VERIFIED: Closed booking Rs1000 -> report paisa 1000 (Rs10), completedRentals 0
+VERIFIED: invalid cancellation enum/error -> 8 invented cancellations

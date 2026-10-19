@@ -875,6 +875,7 @@ export default function PackingWorkspace({
           code: key,
           result: 'rejected',
           resultReason: 'is not on this booking checklist',
+          userId: user?.id,
         })
       }
       return { ok: false, message: 'is not on this booking checklist — nothing was ticked.' }
@@ -890,6 +891,7 @@ export default function PackingWorkspace({
           result: 'warning',
           resultReason: 'was already ticked packed',
           resolvedUnitId: row.assetId,
+          userId: user?.id,
         })
       }
       return { ok: false, message: 'was already ticked packed — nothing changed.' }
@@ -904,6 +906,7 @@ export default function PackingWorkspace({
         code: row.serial ?? row.name,
         result: 'accepted',
         resolvedUnitId: row.assetId,
+        userId: user?.id,
       })
     }
 

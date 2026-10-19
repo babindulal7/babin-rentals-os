@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { clearFloorScan, loadFloorScan, saveFloorScan, recordFloorScanEvent } from '../floorScanStorage'
 
 describe('floorScanStorage', () => {
@@ -67,6 +67,87 @@ describe('floorScanStorage', () => {
     })
     // In JSDOM test environment without indexedDB, safely handles and returns boolean
     expect(typeof result).toBe('boolean')
+  })
+
+  it('normalizes scan_events payload to match Postgres schema constraints and enums', async () => {
+    const offlineQueue = await import('../offlineQueue')
+    const spy = vi.spyOn(offlineQueue, 'enqueueMutation').mockResolvedValue(true)
+
+    // 1. Packing with barcode and warning -> Barcode 1D, Duplicate
+    await recordFloorScanEvent({
+      bookingId: '00000000-0000-4000-8000-000000000010',
+      sessionId: '00000000-0000-4000-8000-000000000020',
+      context: 'packing',
+      code: 'CAM-01',
+      codeType: 'barcode',
+      result: 'warning',
+      userId: '00000000-0000-4000-8000-000000000001',
+    })
+
+    expect(spy).toHaveBeenCalledWith(
+      'scan_events',
+      'insert',
+      expect.objectContaining({
+        context: 'packing',
+        booking_id: '00000000-0000-4000-8000-000000000010',
+        session_id: '00000000-0000-4000-8000-000000000020',
+        code: 'CAM-01',
+        code_type: 'Barcode 1D',
+        result: 'Duplicate',
+        created_by: '00000000-0000-4000-8000-000000000001',
+      }),
+      expect.any(String),
+    )
+
+    // 2. Stock check context -> booking_id and session_id MUST be null per scan_events_lookup_carries_no_job
+    await recordFloorScanEvent({
+      bookingId: 'some-booking',
+      sessionId: 'some-session',
+      context: 'stock_check',
+      code: 'LENS-85MM',
+      codeType: 'qr_code',
+      result: 'rejected',
+      userId: '00000000-0000-4000-8000-000000000001',
+    })
+
+    expect(spy).toHaveBeenCalledWith(
+      'scan_events',
+      'insert',
+      expect.objectContaining({
+        context: 'stock_check',
+        booking_id: null,
+        session_id: null,
+        code: 'LENS-85MM',
+        code_type: 'QR',
+        result: 'Not expected here',
+        created_by: '00000000-0000-4000-8000-000000000001',
+      }),
+      expect.any(String),
+    )
+
+    // 3. Reset context -> session_id must be null per scan_events_session_only_where_a_session_exists
+    await recordFloorScanEvent({
+      bookingId: '00000000-0000-4000-8000-000000000010',
+      sessionId: 'should-be-cleared',
+      context: 'reset',
+      code: 'MON-01',
+      result: 'Accepted',
+      userId: '00000000-0000-4000-8000-000000000001',
+    })
+
+    expect(spy).toHaveBeenCalledWith(
+      'scan_events',
+      'insert',
+      expect.objectContaining({
+        context: 'reset',
+        booking_id: '00000000-0000-4000-8000-000000000010',
+        session_id: null,
+        result: 'Accepted',
+      }),
+      expect.any(String),
+    )
+
+    spy.mockRestore()
   })
 })
 

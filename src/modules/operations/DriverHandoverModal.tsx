@@ -240,8 +240,8 @@ export function DriverHandoverModal({
             if (!map.has(u.booking_line_id)) map.set(u.booking_line_id, [])
             if (u.asset_id) map.get(u.booking_line_id)!.push(u.asset_id)
           }
-          resolvedLines = Array.from(map.entries()).map(([lineId, unitIds]) => ({
-            lineId,
+          resolvedLines = Array.from(map.entries()).map(([bookingLineId, unitIds]) => ({
+            bookingLineId,
             unitIds,
           }))
         } else {
@@ -250,7 +250,7 @@ export function DriverHandoverModal({
             .select('id')
             .eq('booking_id', bookingId)
           resolvedLines = (blines as Array<{ id: string }> || []).map((l) => ({
-            lineId: l.id,
+            bookingLineId: l.id,
             unitIds: [],
           }))
         }
