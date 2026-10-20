@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bookingPaymentUnavailableReason } from './bookingPaymentGate'
+import { bookingPaymentUnavailableReason, chooseBookingPaymentInvoice } from './bookingPaymentGate'
 
 const base = {
   hasInvoice: true,
@@ -25,5 +25,23 @@ describe('booking payment quick-action eligibility', () => {
   })
   it('does not infer terminal booking restrictions from invoice data', () => {
     expect(bookingPaymentUnavailableReason({ ...base, outstandingPaisa: 100_00 })).toBeNull()
+  })
+})
+
+describe('payment invoice default', () => {
+  it('picks the unpaid invoice instead of a fully paid draft', () => {
+    const paid = { id: 'paid-draft', status: 'Draft', outstandingAmount: 0 }
+    const owed = { id: 'owed-sent', status: 'Sent', outstandingAmount: 750_00 }
+    expect(chooseBookingPaymentInvoice([paid, owed])?.id).toBe('owed-sent')
+  })
+  it('falls back to another unsettled invoice status', () => {
+    const rows = [
+      { id: 'settled', status: 'Draft', outstandingAmount: 0 },
+      { id: 'overdue', status: 'Overdue', outstandingAmount: 100_00 },
+    ]
+    expect(chooseBookingPaymentInvoice(rows)?.id).toBe('overdue')
+  })
+  it('does not fabricate an invoice on an empty list', () => {
+    expect(chooseBookingPaymentInvoice([])).toBeUndefined()
   })
 })
