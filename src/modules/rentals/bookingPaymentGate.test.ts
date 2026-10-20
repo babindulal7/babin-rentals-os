@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import { bookingPaymentUnavailableReason } from './bookingPaymentGate'
 
 const base = {
-  cancelledReason: null,
   hasInvoice: true,
   invoicesUnknownReason: null,
   outstandingPaisa: 500_00,
