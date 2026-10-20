@@ -16,6 +16,9 @@ vi.mock('../offlineQueue', () => ({
   ensureMutationQueued: mocks.ensureMutationQueued,
 }))
 vi.mock('../monitoring', () => ({ captureError: vi.fn() }))
+vi.mock('../offlineIdentity', () => ({
+  getOfflineSession: async () => ({ actorId: 'operator-a', environment: 'project-a' }),
+}))
 vi.mock('../supabase', () => ({
   IS_MOCK: false,
   supabase: {
@@ -66,7 +69,7 @@ describe('dataAccess offline durability gate', () => {
   it('returns queued only after offline insert is accepted by the durable outbox', async () => {
     vi.stubGlobal('navigator', { onLine: false })
     expect(await insert()).toMatchObject({ queued: true, error: null })
-    expect(mocks.ensureMutationQueued).toHaveBeenCalledWith('clients', 'insert', expect.any(Object), expect.any(String))
+    expect(mocks.ensureMutationQueued).toHaveBeenCalledWith('clients', 'insert', expect.any(Object), expect.any(String), { actorId: 'operator-a', environment: 'project-a' })
   })
 
   it('allows repeat update of the same action only when the queue confirmed a duplicate', async () => {
@@ -74,7 +77,7 @@ describe('dataAccess offline durability gate', () => {
     mocks.ensureMutationQueued.mockResolvedValueOnce('already_queued')
     expect(await update()).toMatchObject({ queued: true, error: null })
     expect(mocks.ensureMutationQueued).toHaveBeenCalledWith(
-      'clients', 'update', { name: 'Revised', id: 'client-1' }, 'action-1:client-1',
+      'clients', 'update', { name: 'Revised', id: 'client-1' }, 'action-1:client-1', { actorId: 'operator-a', environment: 'project-a' },
     )
   })
 

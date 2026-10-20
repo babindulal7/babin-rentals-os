@@ -1,0 +1,16 @@
+{
+  "scope": "Isolated fake IndexedDB and mocked network failures; no live Supabase or browser business-data writes",
+  "finding": "REL-01 follow-up: dataAccess captures outbox identity after a delayed online failure",
+  "sourceHashBeforeFix": "2ce28603ccbdade6f7124a7275a6f84e3226a9bef80d3ba96e17cb33ff1a3d18",
+  "reproduction": {
+    "tests": 3,
+    "passed": 0,
+    "failed": 3,
+    "cases": [
+      { "action": "insert", "expectedQueueActor": "operator-a", "actualQueueActor": "operator-b" },
+      { "action": "update", "expectedQueueActor": "operator-a", "actualQueueActor": "operator-b" },
+      { "action": "insert", "expectedQueueProject": "project-a", "actualQueueProject": "project-b" }
+    ]
+  },
+  "status": "Confirmed; source fix and after-change verification pending"
+}

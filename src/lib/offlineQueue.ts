@@ -1,6 +1,6 @@
 import Dexie, { type Table } from 'dexie'
 import { supabase } from './supabase'
-import { getOfflineSession, ownsOfflineWork, type OfflineSession } from './offlineIdentity'
+import { getOfflineSession, ownsOfflineWork, type OfflineSession, type OfflineIdentity } from './offlineIdentity'
 import { captureError } from './monitoring'
 
 export interface QueuedMutation {
@@ -135,13 +135,14 @@ export async function enqueueMutation(
   table: string,
   action: 'insert' | 'update' | 'delete',
   payload: Record<string, unknown>,
-  clientUuid: string
+  clientUuid: string,
+  submittingIdentity?: OfflineIdentity,
 ): Promise<boolean> {
   if (!canUseOfflineQueue()) {
     console.warn(`[OfflineQueue] Storage unavailable, cannot queue mutation for ${table}`)
     return false
   }
-  const identity = await getOfflineSession()
+  const identity = submittingIdentity ?? await getOfflineSession()
   if (!identity) throw new OfflineQueueWriteError('OFFLINE_IDENTITY_REQUIRED', 'Sign in before saving offline work. Nothing was queued.')
   return await db.transaction('rw', db.mutations, async () => {
     const existing = await db.mutations
@@ -201,6 +202,7 @@ export async function ensureMutationQueued(
   action: QueuedMutation['action'],
   payload: Record<string, unknown>,
   clientUuid: string,
+  submittingIdentity?: OfflineIdentity,
 ): Promise<'added' | 'already_queued'> {
   const unavailable = () => new OfflineQueueWriteError(
     'OFFLINE_STORAGE_UNAVAILABLE',
@@ -211,7 +213,11 @@ export async function ensureMutationQueued(
   if (!canUseOfflineQueue()) throw unavailable()
 
   try {
-    const inserted = await enqueueMutation(table, action, payload, clientUuid)
+    // Capture once, including duplicate confirmation. dataAccess supplies the
+    // identity from before its online request, not from the later failure.
+    const identity = submittingIdentity ?? await getOfflineSession()
+    if (!identity) throw new OfflineQueueWriteError('OFFLINE_IDENTITY_REQUIRED', 'Sign in before saving offline work. Nothing was queued.')
+    const inserted = await enqueueMutation(table, action, payload, clientUuid, identity)
     if (inserted) return 'added'
 
     // False also means "duplicate". Verify that the earlier write was actually
@@ -221,8 +227,7 @@ export async function ensureMutationQueued(
       .equals([table, action, clientUuid])
       .first()
     if (!existing) throw unavailable()
-    const identity = await getOfflineSession()
-    if (!identity || !ownsOfflineWork(existing, identity)) {
+    if (!ownsOfflineWork(existing, identity)) {
       throw new OfflineQueueWriteError('OFFLINE_MUTATION_CONFLICT', 'This action key belongs to another or an unverified offline identity. Existing work was preserved.')
     }
     if (existing.status === 'failed') {

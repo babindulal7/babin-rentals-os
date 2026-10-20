@@ -1,5 +1,33 @@
 # Progress Log
 
+## 2026-10-20 — REL-01 follow-up: capture the submitting identity before network fallback
+
+**Did**
+- Reproduced a delayed-failure race with actual isolated Dexie storage: insert and update started under A were queued under a later B login; a project switch also retagged the pending work. All three reproduction tests failed before the change. Persistent evidence: `docs/verification/ASTRA_OFFLINE_IDENTITY_RACE_2026-10-20.json`.
+- `src/lib/dataAccess.ts` now captures submitting account/project identifiers before a queueable online attempt and passes them to every offline fallback. Missing initial identity cannot be replaced with a later login. Custody writes retain `queueOnFailure: false` behavior.
+- `src/lib/offlineQueue.ts` accepts the captured identity and uses one identity for both insertion and duplicate confirmation. It persists identifiers only; no credential is added to IndexedDB. Existing work is retained.
+- Added `src/lib/__tests__/dataAccess.identityCapture.test.ts` (account switch on insert/update, project switch, unavailable initial identity) and aligned durable-write fixtures with the explicit identity argument. Local recovery branch before editing: `codex/recovery-before-offline-identity-capture-20261020`.
+
+**Ruled**
+- REL-01 applies when work is submitted, not merely when replay starts. An asynchronous failure cannot transfer ownership of the original payload to the next login or project.
+- No permission, custody-stage or rental pricing rule changed. No hosted modification, real business-data write or pending offline-work deletion.
+
+**Verified**
+- The preceding financial/source checkpoint passed all gates with a stable source fingerprint: 382 files / 4,879 tests plus coverage; 6 receipt tests; 168 migrations; financial-integrity checks; 15 security groups; lifecycle 31/31; contrast; source/progress/shell/UI-copy lint; build typecheck and production Vite/PWA build. Durable result: `docs/verification/ASTRA_FINANCE_CHECKPOINT_2026-10-20.json`. That checkpoint predates this race fix.
+- Race reproduction: 3/3 failed before the fix in isolated fake IndexedDB; no browser or hosted data was touched.
+- Current race typecheck and focused regressions are pending. The earlier green full suite does not certify this changed source.
+- Browser preview navigation returned only an empty accessibility tree and screenshot capture timed out; desktop/iPad/mobile layout acceptance remains NOT VERIFIED. Stopped the task-owned mock preview server afterward.
+
+## Completion
+
+Not measured for this source revision yet; rerun the completion generator after current verification. Prior structural percentages are not release approval.
+
+## Remaining
+
+- Finish race regressions and current-source gates. Retain the pre-fix financial checkpoint separately rather than overwriting its provenance.
+- Revalidate remaining availability, date, document workflow and browser-local operational-tool findings. VAT classification and legacy recovery decisions remain open.
+- Desktop/iPad/mobile, real offline-device and hosted JWT/Storage acceptance remain open. No migration is APPLIED or PRODUCTION-VERIFIED by this task.
+
 ## 2026-10-20 — ASTRA continuation: complete sales registers and trustworthy test counts
 
 **Did**
