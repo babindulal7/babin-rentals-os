@@ -39,7 +39,8 @@ describe('product CSV import validation (BQ-407)', () => {
       0: 'name', 1: 'category', 2: 'brand', 3: 'model', 4: 'tracking',
       5: 'quantity', 6: 'serials', 7: 'dailyRate', 8: 'description', 9: 'notes',
     })
-    const result = buildProductImportPreview([...PRODUCT_IMPORT_SAMPLE_ROW].map((v) => String(v)), mapping, opts, new Set())[0]!
+    const sampleRow = [...PRODUCT_IMPORT_SAMPLE_ROW].map((v) => String(v))
+    const result = buildProductImportPreview([sampleRow], mapping, opts, new Set())[0]!
     expect(result.errors).toEqual([])
     expect(result.record).toMatchObject({
       name: 'Sony FX3 Cinema Camera',

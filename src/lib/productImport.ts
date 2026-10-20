@@ -20,7 +20,7 @@
  *   - money parses through the one money engine (`parseMoney` → Paisa) and
  *     crosses to rupees exactly once, inside `createEquipment`.
  */
-import { parseMoney } from './money'
+import { parseMoney, type Paisa } from './money'
 import { canCreateBundle } from './rbac'
 import type { SystemRole } from '../types/database'
 
@@ -101,10 +101,10 @@ export interface ImportedProductFields {
   tracking: ProductTrackingMode
   /** Quantity / Consumable only — `products.total_quantity` at creation. */
   quantity?: number | undefined
-  /** Serialised only — one serial per unit row. */
+  /** Serialised only — one serial per unit row. `[]` for Quantity / Consumable. */
   serials: string[]
-  /** Paisa. Absent, never zero, when the column is blank (Law 6's shape). */
-  dailyRatePaisa?: number | undefined
+  /** Paisa, branded by the money engine. Absent, never zero, when the column is blank (Law 6's shape). */
+  dailyRatePaisa?: Paisa | undefined
   description?: string | undefined
   notes?: string | undefined
 }
@@ -131,7 +131,7 @@ function cell(raw: Partial<Record<ProductImportTargetField, string>>, key: Produ
 }
 
 /** Case- and space-insensitive — the duplicate key is a business identity, not a string. */
-export function productIdentityKey(name: string, brand: string, model?: string | undefined): string {
+export function productIdentityKey(name: string, brand: string, model?: string | null | undefined): string {
   return `${name.trim().toLowerCase()}|${brand.trim().toLowerCase()}|${(model ?? '').trim().toLowerCase()}`
 }
 
@@ -208,13 +208,13 @@ export function buildProductImportRow(
     if (quantity === undefined) errors.push(`A ${tracking} product needs a Quantity of 1 or more.`)
   }
 
-  let dailyRatePaisa: number | undefined
+  let dailyRatePaisa: Paisa | undefined
   if (dailyRateRaw) {
     const paisa = parseMoney(dailyRateRaw)
     if (paisa == null) {
       errors.push(`Daily Rate "${dailyRateRaw}" is not a money amount.`)
     } else {
-      dailyRatePaisa = Number(paisa)
+      dailyRatePaisa = paisa
       if (dailyRatePaisa < 0) errors.push('Daily Rate cannot be negative.')
     }
   }
@@ -233,13 +233,10 @@ export function buildProductImportRow(
           name,
           category,
           brand,
-          ...(model ? { model } : {}),
           tracking,
-          ...(tracking === 'Serialised'
-            ? { serials }
-            : quantity !== undefined
-              ? { quantity }
-              : {}),
+          serials: tracking === 'Serialised' ? serials : [],
+          ...(model ? { model } : {}),
+          ...(tracking !== 'Serialised' && quantity !== undefined ? { quantity } : {}),
           ...(dailyRatePaisa !== undefined ? { dailyRatePaisa } : {}),
           ...(cell(raw, 'description') ? { description: cell(raw, 'description') } : {}),
           ...(cell(raw, 'notes') ? { notes: cell(raw, 'notes') } : {}),
@@ -306,6 +303,33 @@ export function buildProductImportPreview(
     for (const row of matches) row.errors.push(message)
   }
   return rows
+}
+
+/**
+ * The action's `validate` half: the structural rules that need no server
+ * context (requireds, the tracking enum, quantity/serial shapes, money).
+ * Category existence and catalogue duplicates are checked against live data —
+ * at the dry-run by the screen, and again at commit by the action's execute.
+ */
+export function validateImportedProduct(fields: ImportedProductFields): string[] {
+  const errors: string[] = []
+  if (!fields.name.trim()) errors.push('Product Name is required.')
+  if (!fields.brand.trim()) errors.push('Brand is required.')
+  if (!fields.category.trim()) errors.push('Category is required.')
+  if (fields.tracking === 'Serialised') {
+    if (fields.serials.length === 0) errors.push('A Serialised product needs at least one serial number.')
+    const seen = new Set<string>()
+    for (const s of fields.serials) {
+      const key = s.trim().toLowerCase()
+      if (seen.has(key)) errors.push(`Serial "${s}" is entered twice on this row.`)
+      seen.add(key)
+    }
+  } else {
+    const qty = fields.quantity ?? 0
+    if (!Number.isInteger(qty) || qty < 1) errors.push(`A ${fields.tracking} product needs a whole quantity of 1 or more.`)
+  }
+  if (fields.dailyRatePaisa !== undefined && fields.dailyRatePaisa < 0) errors.push('Daily Rate cannot be negative.')
+  return errors
 }
 
 /** The one-line sample file offered on the screen — every required column, no more. */
