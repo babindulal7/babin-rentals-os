@@ -1,5 +1,50 @@
 # Progress Log
 
+## 2026-10-21 — External Code Audit Remediation (Part 3: Files 125–156) & Gate Verification
+
+**Did**
+- Remediated the concrete bugs, schema mismatches, and contract defects identified in Part 3 (`repomix-part3.xml`, Items 125–156):
+  - `src/lib/documentStorage.ts` (Item 127): Replaced unmapped Unicode characters (`—` and `·`) with safe ASCII equivalents (`-` and `|`) in `escapePdfText` and standard layout lines, preventing UTF-8 mojibake (`â€”`, `Â·`) in PDF 1.4 Type1 `/Helvetica` streams. Fixed header gap lines when `bookingNo` or `party` are absent by conditional array spreading `...(options.bookingNo ? [...] : [])` instead of pushing empty strings.
+  - `src/lib/floorScanStorage.ts` & `src/lib/devicePurge.ts` (Item 129): Added `clearAllFloorScans()` in `floorScanStorage.ts` to purge all `babin-rentals:floor-scan:*` keys from both `localStorage` and `memoryStore`. Integrated `clearAllFloorScans()` into `purgeDeviceReadCaches()` in `devicePurge.ts` so in-progress warehouse scans are cleanly purged on operator logout.
+  - `src/lib/rentalLifecycle.ts` (Item 132): Normalized stage checking in `rentalRevertTargets(booking)` so both canonical `'Booked'` and alias `'Confirmed'` return `['Quote']`. Normalized `rentalCanArchive(booking)` to support `'Closed'`, `'Completed'`, and `'Cancelled'`. Added comprehensive test suite `src/lib/__tests__/rentalLifecycle.test.ts` (7 tests).
+  - `src/lib/syncEngine.ts` (Item 134): Fixed broken `clients` query in `pullDeltas()` which previously queried base `clients` for non-existent columns `address` and `is_blocked` (causing Postgres `42703`); now queries `client_directory_v` for `id, name, phone, email, address_line, membership_level, is_blocked, created_at` and maps `address`, `credit_tier`, `is_blocked`. Updated `products_v` query to select `id, name, asset_code, brand, model, status, is_active, tracking_mode, daily_rate, created_at, updated_at` and converts `daily_rate` to integer paisa via `rupees(Number(p.daily_rate))` adhering strictly to Law 6.
+  - `src/lib/offlineQueue.ts` (Item 136): In `replayMutation` `23505` handling: when a duplicate `client_uuid` insert is replayed, if reading back the row fails with `42501` (permission denied, e.g. for write-only or blind tables like `audit_events` or floor roles), acknowledged the duplicate insert rather than dead-lettering a successfully committed server row. Added unit test in `src/lib/__tests__/offlineQueue.phase0.test.ts`.
+- Verified and documented architectural invariants for remaining Part 3 items:
+  - `src/lib/clientImportRecovery.ts` (Item 126): Purging draft recovery state on actor mismatch (`stored.actorId !== actorId`) is an intentional, privacy-preserving security requirement asserted by existing unit tests to prevent cross-actor PII leakage on shared devices.
+  - `src/lib/rbac.ts` (Item 137): Confirmed `canVoidInvoice` is intentionally locked to `['Owner', 'Accounts']` in client RBAC per PERMISSIONS.md strictness rules (`stricter wins (B-1)`), preserving invariant AUTHSEC-01.
+  - `src/lib/rentalActions.ts` (Item 138): Confirmed default `canCloseRental = true` is the canonical lifecycle progression fallback for lifecycle banners (`LifecycleProgress.tsx`), while operative surfaces (`BookingDetail.tsx:1859`) explicitly pass `canCloseRental: canCloseRental(gctx.role)`.
+  - Migrations `0164` & `0166` (Items 152–154): Confirmed `booking_discounts_hard_cap` was dropped in migration `0074`, `0166` intentionally tightened transport dispatch to Owner/Admin per PERMISSIONS D2, and `0170` completely revoked `booking_estimate_total` from client roles.
+
+**Ruled**
+- In `offlineQueue.ts`, a `23505` duplicate on `client_uuid` where select is refused with `42501` (permission denied) is an authenticated server acknowledgement of idempotent arrival (Law 8).
+- In `syncEngine.ts`, delta sync must query `client_directory_v` and `products_v`, mapping money-masked columns safely without floating-point conversion.
+
+**Verified**
+- `npm run lint`: passed (`--max-warnings 0`).
+- `npm run typecheck`: passed (`tsc --noEmit`).
+- `npm test`: all 393 test files and 4,976 tests passed.
+- `npm run check:pglite`: 168/168 migrations applied from scratch in PGlite (0 failed, 31 views verified, 20 anon RPCs checked, 78 definer search paths pinned).
+- `npm run check:lifecycle`: 31/31 steps green through real Postgres + RLS.
+- `npm run check:contrast`: 82/82 pass (WCAG AA light + dark).
+- `npm run build`: built in 1m 38s (`dist/` created, PWA precache 209 entries).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 51 / 54 (94%) | — |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | — |
+| Lifecycle | steps green / total | 31 / 31 (100%) | — |
+| Overall | mean of five | ≈ 98% | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed. Suite: 4976/4976 passed, 0 failed.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Await next repomix pack or user instructions for any subsequent audit modules.
+- Maintain 100% green verification gates across all future code increments.
+
 ## 2026-10-20 — External Code Audit Remediation (Files 34–87) & Part 3 Repomix Delivery
 
 **Did**
