@@ -114,7 +114,9 @@ export function ContextDrawer({
     if (!pushing) return
     const root = document.documentElement
     root.style.setProperty('--context-drawer-w', DOCK_WIDTH)
-    return () => root.style.removeProperty('--context-drawer-w')
+    return () => {
+      root.style.removeProperty('--context-drawer-w')
+    }
   }, [pushing])
 
   /* RULING 2026-10-20 — one drawer owns each edge. A dock-enabled inspector

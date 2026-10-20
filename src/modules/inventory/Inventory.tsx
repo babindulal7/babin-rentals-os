@@ -37,6 +37,9 @@ import { Maintenance } from './Maintenance'
 import StockCheck from './StockCheck'
 import { LoadingSkeleton } from '../../components/ui/StateViews'
 const AddEquipment = lazy(() => import('./AddEquipment'))
+// BQ-407 (Booqable adoption): catalogue CSV import with a mandatory dry-run.
+const ProductsImportCenter = lazy(() => import('./ProductsImportCenter'))
+import { canImportProducts } from '../../lib/productImport'
 import { FloatingBulkActionBar } from '../../components/ui/QuickActionPanel'
 import { BarcodeLookupModal } from '../rentals/modals/BarcodeLookupModal'
 import { PrintLabelModal } from '../../components/ui/PrintLabelModal'
@@ -1236,6 +1239,13 @@ function parseFacetsFromParams(searchParams: URLSearchParams): Facets {
  *  · §4.3's chip-count invariant is **gone with the counts it guarded** — see the
  *    note where `CHIP_COUNTS` used to be in `data/inventory.ts`.
  */
+
+/**
+ * Premium Workbench v1 — stable ID accessor for record traversal. Module scope
+ * so `useInspectorTraversal`'s memos never churn on function identity.
+ */
+const equipmentInspectorId = (row: InventoryListRow) => row.id
+
 export default function Inventory() {
   /*
    * §7 — four tab panes under `/inventory`, **with the active tab in the URL**.
@@ -1253,6 +1263,10 @@ export default function Inventory() {
   const searchTerm = params.get('q') ?? ''
   const tabParam = params.get('tab')
   const isNew = tabParam === 'new'
+  /* BQ-407: the import pane rides the same `?tab=` state as Add Equipment —
+     one addressable pseudo-tab, no new route, no fourth visible tab (the
+     2026-10-07 four-tab ruling stands). */
+  const isImport = tabParam === 'import'
   const tab = tabFromSlug(tabParam)
   const setTab = useCallback(
     (next: InventoryTab) => {
@@ -1548,6 +1562,26 @@ export default function Inventory() {
   const pageCount = total === null ? 1 : Math.max(1, Math.ceil(total / rowsPerPage))
 
   /*
+   * Premium Workbench v1 — the inspected model is DERIVED from the live page,
+   * never from the row object captured at click time. `inspectingEquipment`
+   * stays the user's selection request (so open/close behaves exactly as
+   * before), but everything rendered — drawer facts, actions, the
+   * `.is-inspected` row mark — reads `activeEquipment`, so a filter/page/search
+   * change that drops the model clears the inspection instead of showing
+   * stale details. Browsing runs no query: previous/next walk `list.rows`, the
+   * already-loaded visible page, in rendered order, and disable at its edges.
+   */
+  const activeEquipment = inspectingEquipment
+    ? list.rows.find((row) => row.id === inspectingEquipment.id) ?? null
+    : null
+  const equipmentTraversal = useInspectorTraversal({
+    rows: list.rows,
+    selectedId: activeEquipment?.id ?? null,
+    getId: equipmentInspectorId,
+    onSelect: setInspectingEquipment,
+  })
+
+  /*
    * A stale page past the end of a freshly-narrowed list would ask Postgres for
    * rows that do not exist and render a blank table with a live pager. Every
    * filter control already resets to page 1; this is the net under them.
@@ -1598,7 +1632,7 @@ export default function Inventory() {
    */
   const phone = viewport === 'phone'
   const equipmentActions =
-    tab === 'Equipment' && !isNew ? (
+    tab === 'Equipment' && !isNew && !isImport ? (
       <PageActions
         primary={<GlobalAddMenu module="inventory" />}
         // RULING 2026-10-13: on a phone, Refresh and Export live in More so the title and Add keep the header.
@@ -1624,6 +1658,22 @@ export default function Inventory() {
             icon: 'barcode' as const,
             onClick: () => navigate('/inventory/labels'),
           },
+          // BQ-407 (Booqable adoption): catalogue CSV import with a mandatory
+          // dry-run. Owner/Admin/Manager only — the same seat that may create
+          // equipment, per the import capability in lib/productImport.
+          ...(user && canImportProducts(user.role)
+            ? [
+                {
+                  label: 'Import catalogue from CSV',
+                  icon: 'upload' as const,
+                  onClick: () => {
+                    const p = new URLSearchParams(params)
+                    p.set('tab', 'import')
+                    setParams(p, { replace: true })
+                  },
+                },
+              ]
+            : []),
         ]}
       />
     ) : tab === 'Bundles' && params.get('action') !== 'new' ? (
@@ -1635,7 +1685,7 @@ export default function Inventory() {
   return (
     <PageShell>
       <PageHeader
-        {...((tab === 'Equipment' || tab === 'Bundles') && !isNew && params.get('action') !== 'new' ? {
+        {...((tab === 'Equipment' || tab === 'Bundles') && !isNew && !isImport && params.get('action') !== 'new' ? {
           leading: (
             <FilterButton
               onClick={() => setFiltersOpen((open) => !open)}
@@ -1650,7 +1700,7 @@ export default function Inventory() {
            list card's own heading says "N Models found" — because with Filters and info it
            filled the tablet title zone's 260px and cut "Inventory" short at 1093px. */
         status={
-          tab === 'Equipment' && !isNew && !list.loading && !compactHeader ? (
+          tab === 'Equipment' && !isNew && !isImport && !list.loading && !compactHeader ? (
             <span
               className="eyebrow-pill"
               style={{
@@ -1665,7 +1715,7 @@ export default function Inventory() {
           ) : null
         }
         search={
-          tab === 'Equipment' && !isNew
+          tab === 'Equipment' && !isNew && !isImport
             ? {
                 value: searchTerm,
                 onChange: setSearchTerm,
@@ -1704,7 +1754,7 @@ export default function Inventory() {
       />
       <FilterDrawer
         id="inventory-filters"
-        open={filtersOpen && tab === 'Equipment' && !isNew}
+        open={filtersOpen && tab === 'Equipment' && !isNew && !isImport}
         onClose={() => setFiltersOpen(false)}
         desktopMode="overlay"
         resultCount={list.loading ? null : list.total}
@@ -1742,22 +1792,34 @@ export default function Inventory() {
           options={[
             ...TABS.map((t) => ({ id: t, label: t })),
             ...(isNew ? [{ id: 'new', label: 'Add Equipment' }] : []),
+            ...(isImport ? [{ id: 'import', label: 'Import CSV' }] : []),
           ]}
-          value={isNew ? 'new' : tab}
+          value={isNew ? 'new' : isImport ? 'import' : tab}
           onChange={(selectedId) => {
-            if (isNew && selectedId !== 'new') {
+            if ((isNew || isImport) && selectedId !== 'new' && selectedId !== 'import') {
               const p = new URLSearchParams(params)
               p.delete('tab')
               setParams(p, { replace: true })
             }
-            if (selectedId !== 'new') {
+            if (selectedId !== 'new' && selectedId !== 'import') {
               setTab(selectedId as InventoryTab)
             }
           }}
         />
       </div>
 
-      {isNew ? (
+      {isImport ? (
+        <Suspense fallback={<LoadingSkeleton type="card" label="Loading catalogue import…" />}>
+          <ProductsImportCenter
+            embedded
+            onDone={() => {
+              const p = new URLSearchParams(params)
+              p.delete('tab')
+              setParams(p, { replace: true })
+            }}
+          />
+        </Suspense>
+      ) : isNew ? (
         <Suspense fallback={<LoadingSkeleton type="card" label="Loading equipment form…" />}>
           <AddEquipment
             embedded
@@ -2181,7 +2243,7 @@ export default function Inventory() {
                             checked={selected.has(p.id)}
                             onToggle={() => toggleRow(p.id)}
                             onInspect={setInspectingEquipment}
-                            isInspected={inspectingEquipment?.id === p.id}
+                            isInspected={activeEquipment?.id === p.id}
                           />
                         ))}
                       </tbody>
@@ -2217,72 +2279,61 @@ export default function Inventory() {
 
       <ContextDrawer
         id="equipment-quick-view"
-        open={Boolean(inspectingEquipment)}
+        docked
+        open={activeEquipment !== null}
         onClose={() => setInspectingEquipment(null)}
         title="EQUIPMENT PREVIEW"
-        subtitle={inspectingEquipment ? `${inspectingEquipment.category ?? 'Uncategorised'} · ${inspectingEquipment.assetCode}` : undefined}
-        status={inspectingEquipment ? <ConditionBadge condition={conditionOf(inspectingEquipment)} /> : undefined}
+        subtitle={activeEquipment ? `${activeEquipment.category ?? 'Uncategorised'} · ${activeEquipment.assetCode}` : undefined}
+        status={activeEquipment ? <ConditionBadge condition={conditionOf(activeEquipment)} /> : undefined}
+        navigation={
+          <InspectorNavigator
+            active={activeEquipment !== null}
+            position={equipmentTraversal.position}
+            index={equipmentTraversal.index}
+            total={equipmentTraversal.total}
+            canPrevious={equipmentTraversal.canPrevious}
+            canNext={equipmentTraversal.canNext}
+            onPrevious={equipmentTraversal.previous}
+            onNext={equipmentTraversal.next}
+          />
+        }
       >
-        {inspectingEquipment && (
+        {activeEquipment && (
           <div style={{ display: 'grid', gap: 'var(--space-4, 16px)' }}>
             <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
               <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text)' }}>
-                {inspectingEquipment.name}
+                {activeEquipment.name}
               </h2>
               <div className="figure" style={{ fontSize: '13px', color: 'var(--muted)', marginTop: 4 }}>
-                {inspectingEquipment.assetCode} · {inspectingEquipment.category ?? 'Uncategorised'} · {inspectingEquipment.trackingMode}
+                {activeEquipment.assetCode} · {activeEquipment.category ?? 'Uncategorised'} · {activeEquipment.trackingMode}
               </div>
             </div>
-            <section aria-labelledby="equipment-quick-view-stock">
-              <h3 id="equipment-quick-view-stock" style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)', fontWeight: 600 }}>Stock & Identity</h3>
-              <dl style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, margin: 'var(--space-3) 0 0' }}>
-                <div style={{ padding: '8px 10px', borderRadius: 'var(--r-btn)', background: 'var(--card2)', border: '1px solid var(--border)' }}>
-                  <dt style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text2)' }}>Availability</dt>
-                  <dd className="figure" style={{ margin: '3px 0 0', fontWeight: 600, fontSize: '13px', color: 'var(--text)' }}>{stockLabel(inspectingEquipment)}</dd>
-                </div>
-                <div style={{ padding: '8px 10px', borderRadius: 'var(--r-btn)', background: 'var(--card2)', border: '1px solid var(--border)' }}>
-                  <dt style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text2)' }}>Tracking</dt>
-                  <dd style={{ margin: '3px 0 0', fontWeight: 600, fontSize: '13px', color: 'var(--text)' }}>{inspectingEquipment.trackingMode}</dd>
-                </div>
-                <div style={{ padding: '8px 10px', borderRadius: 'var(--r-btn)', background: 'var(--card2)', border: '1px solid var(--border)' }}>
-                  <dt style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text2)' }}>Category</dt>
-                  <dd style={{ margin: '3px 0 0', fontWeight: 600, fontSize: '13px', color: 'var(--text)' }}>{inspectingEquipment.category ?? '—'}</dd>
-                </div>
-                {inspectingEquipment.brand && (
-                  <div style={{ padding: '8px 10px', borderRadius: 'var(--r-btn)', background: 'var(--card2)', border: '1px solid var(--border)' }}>
-                    <dt style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text2)' }}>Brand</dt>
-                    <dd style={{ margin: '3px 0 0', fontWeight: 600, fontSize: '13px', color: 'var(--text)' }}>{inspectingEquipment.brand}</dd>
-                  </div>
-                )}
-                {money && inspectingEquipment.dailyRate !== null && (
-                  <div style={{ padding: '8px 10px', borderRadius: 'var(--r-btn)', background: 'var(--card2)', border: '1px solid var(--border)' }}>
-                    <dt style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text2)' }}>Daily Rate</dt>
-                    <dd className="figure" style={{ margin: '3px 0 0', fontWeight: 700, fontSize: '13px', color: 'var(--nav-active-accent)' }}>
-                      {formatMoney(inspectingEquipment.dailyRate)}
-                    </dd>
-                  </div>
-                )}
-              </dl>
-            </section>
+            {/* Law 6 — the money fact is constructed AND mounted only when the
+                role gate allows it (the screen's own `asset-finance` gate);
+                never hidden with CSS. */}
+            <InspectorFacts title="Stock & Identity" facts={[
+              { key: 'availability', label: 'Availability', value: stockLabel(activeEquipment), strong: true },
+              { key: 'tracking', label: 'Tracking', value: activeEquipment.trackingMode },
+              { key: 'category', label: 'Category', value: activeEquipment.category ?? '—' },
+              ...(activeEquipment.brand ? [{ key: 'brand', label: 'Brand', value: activeEquipment.brand }] : []),
+              ...(money && activeEquipment.dailyRate !== null
+                ? [{ key: 'rate', label: 'Daily Rate', value: formatMoney(activeEquipment.dailyRate), mono: true }]
+                : []),
+            ]} />
             <section aria-labelledby="equipment-quick-view-status">
               <h3 id="equipment-quick-view-status" style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)', fontWeight: 600 }}>Status breakdown</h3>
               <div style={{ marginTop: 'var(--space-3)', padding: '10px 12px', borderRadius: 'var(--r-btn)', background: 'var(--card2)', border: '1px solid var(--border)' }}>
-                <StatusBreakdown breakdown={breakdownOf(inspectingEquipment)} />
+                <StatusBreakdown breakdown={breakdownOf(activeEquipment)} />
               </div>
             </section>
             {money && (
-              <section aria-labelledby="equipment-quick-view-finance">
-                <h3 id="equipment-quick-view-finance" style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)', fontWeight: 600 }}>Replacement value</h3>
-                <div style={{ marginTop: 'var(--space-3)', padding: '10px 14px', borderRadius: 'var(--r-btn)', background: 'var(--card2)', border: '1px solid var(--border)' }}>
-                  <p className="figure" style={{ margin: 0, color: 'var(--text)', fontWeight: 700, fontSize: '15px' }}>
-                    {inspectingEquipment.replacementValue === null ? '—' : formatMoney(inspectingEquipment.replacementValue)}
-                  </p>
-                </div>
-              </section>
+              <InspectorFacts title="Replacement value" facts={[
+                { key: 'replacement', label: 'Per unit', value: activeEquipment.replacementValue === null ? '—' : formatMoney(activeEquipment.replacementValue), strong: true, mono: true, wide: true },
+              ]} />
             )}
             <div style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
               <Link
-                to={`/rentals/new?item=${encodeURIComponent(inspectingEquipment.id)}`}
+                to={`/rentals/new?item=${encodeURIComponent(activeEquipment.id)}`}
                 style={{ textDecoration: 'none' }}
               >
                 <Button
@@ -2294,7 +2345,7 @@ export default function Inventory() {
                 </Button>
               </Link>
               <Link
-                to={`/inventory/${encodeURIComponent(inspectingEquipment.assetCode)}`}
+                to={`/inventory/${encodeURIComponent(activeEquipment.assetCode)}`}
                 style={{ textDecoration: 'none' }}
               >
                 <Button
@@ -2310,10 +2361,10 @@ export default function Inventory() {
                 size="sm"
                 onClick={() => {
                   setPrintingLabel({
-                    assetCode: inspectingEquipment.assetCode,
-                    title: inspectingEquipment.name,
-                    subtitle: inspectingEquipment.brand || '',
-                    barcodeValue: inspectingEquipment.assetCode,
+                    assetCode: activeEquipment.assetCode,
+                    title: activeEquipment.name,
+                    subtitle: activeEquipment.brand || '',
+                    barcodeValue: activeEquipment.assetCode,
                     orgName: 'BABIN RENTALS OS',
                   })
                 }}
