@@ -2476,15 +2476,22 @@ function BookingDetailView() {
                     ? user
                     : null
                 return editorUser ? (
-                  <details><summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center' }}>Edit project type</summary><ProjectTypeEditor
-                    key={`${booking.id}·${booking.projectType ?? ''}·${booking.projectTypeOther ?? ''}`}
-                    bookingId={booking.id}
-                    currentType={booking.projectType}
-                    currentOther={booking.projectTypeOther}
-                    userId={editorUser.id}
-                    role={editorUser.role}
-                    onSaved={() => refreshBookingData()}
-                  /></details>
+                  <details style={{ marginTop: 'var(--sp-xs)' }}>
+                    <summary style={{ cursor: 'pointer', minHeight: 44, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--t-meta, 13px)', color: 'var(--text2)', fontWeight: 600 }}>
+                      Edit project type
+                    </summary>
+                    <div style={{ marginTop: 8 }}>
+                      <ProjectTypeEditor
+                        key={`${booking.id}·${booking.projectType ?? ''}·${booking.projectTypeOther ?? ''}`}
+                        bookingId={booking.id}
+                        currentType={booking.projectType}
+                        currentOther={booking.projectTypeOther}
+                        userId={editorUser.id}
+                        role={editorUser.role}
+                        onSaved={() => refreshBookingData()}
+                      />
+                    </div>
+                  </details>
                 ) : null
               })()}
               {/* BD-08 — inline and persistent, in the block this failure is
