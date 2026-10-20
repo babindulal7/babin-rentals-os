@@ -5,10 +5,19 @@ export type RevertTarget = 'Quote' | 'Booked'
 /** Server rechecks the live stage, custody and branch under a booking lock. */
 export function rentalRevertTargets(booking: SelectedRentalBookingFacts): RevertTarget[] {
   if (booking.isCancelled || booking.isClosed) return []
-  if (booking.stage === 'Packed') return ['Booked', 'Quote']
-  return booking.stage === 'Booked' ? ['Quote'] : []
+  const stage = (booking.stage || '').trim()
+  if (stage === 'Packed') return ['Booked', 'Quote']
+  if (stage === 'Booked' || stage === 'Confirmed') return ['Quote']
+  return []
 }
 
 export function rentalCanArchive(booking: SelectedRentalBookingFacts): boolean {
-  return Boolean(booking.isCancelled || booking.isClosed || booking.stage === 'Closed')
+  const stage = (booking.stage || '').trim()
+  return Boolean(
+    booking.isCancelled ||
+    booking.isClosed ||
+    stage === 'Closed' ||
+    stage === 'Completed' ||
+    stage === 'Cancelled'
+  )
 }

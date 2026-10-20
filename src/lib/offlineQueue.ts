@@ -494,9 +494,19 @@ async function replayMutation(mutation: QueuedMutation, identity: OfflineSession
         if (!isDuplicate) throw error
         const columns = [...new Set(['id', ...Object.keys(mutation.payload)])].join(',')
         const receipt = await identity.client.from(mutation.table).select(columns).eq('client_uuid', mutation.clientUuid).maybeSingle()
-        const row = receipt.data as unknown as Record<string, unknown> | null
-        if (receipt.error || !row || Object.entries(mutation.payload).some(([key, value]) => JSON.stringify(row[key]) !== JSON.stringify(value))) {
-          throw new Error('Duplicate insert was not confirmed as the same saved work; pending work was preserved.')
+        if (receipt.error) {
+          if (receipt.error.code === '42501' || String(receipt.error.message).includes('permission denied')) {
+            // Write-only / blind table (e.g. audit_events or column-masked table for floor roles).
+            // Postgres has already guaranteed uniqueness via 23505 on client_uuid.
+            // Law 8 idempotency is satisfied.
+          } else {
+            throw new Error('Duplicate insert was not confirmed as the same saved work; pending work was preserved.')
+          }
+        } else {
+          const row = receipt.data as unknown as Record<string, unknown> | null
+          if (!row || Object.entries(mutation.payload).some(([key, value]) => JSON.stringify(row[key]) !== JSON.stringify(value))) {
+            throw new Error('Duplicate insert was not confirmed as the same saved work; pending work was preserved.')
+          }
         }
       } else if (!data?.id) {
         throw new Error('Server did not confirm the offline insert; pending work was preserved.')

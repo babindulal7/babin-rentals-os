@@ -3,12 +3,32 @@ import { drainQueue, getOfflineQueueSummary } from './offlineQueue'
 import { localStore, isIndexedDbAvailable } from './localStore'
 import type { CachedClient, CachedProduct } from './localStore'
 import { captureError } from './monitoring'
+import { rupees } from './money'
 
-/* What the two delta pulls read off `select('*')`. The client carries no
-   `Database` generic at this layer, so the shape is declared rather than
-   inferred — every field but `id` is optional because `*` promises nothing. */
-interface RemoteProduct extends Partial<Omit<CachedProduct, 'id'>> { id: string }
-interface RemoteClient extends Partial<Omit<CachedClient, 'id'>> { id: string }
+interface RemoteProduct {
+  id: string
+  name?: string | null
+  asset_code?: string | null
+  brand?: string | null
+  model?: string | null
+  status?: string | null
+  is_active?: boolean | null
+  tracking_mode?: string | null
+  daily_rate?: number | string | null
+  created_at?: string | null
+  updated_at?: string | null
+}
+
+interface RemoteClient {
+  id: string
+  name?: string | null
+  phone?: string | null
+  email?: string | null
+  address_line?: string | null
+  membership_level?: string | null
+  is_blocked?: boolean | null
+  created_at?: string | null
+}
 
 /* Dexie treats an absent key and an `undefined` value alike;
    `exactOptionalPropertyTypes` does not — an optional field may be missing,
@@ -164,30 +184,27 @@ class SyncEngine {
       // Pull products / equipment
       const { data: products } = await supabase
         .from('products_v')
-        .select('id, name, asset_code, brand, model, status, is_active, created_at')
+        .select('id, name, asset_code, brand, model, status, is_active, tracking_mode, daily_rate, created_at, updated_at')
         .limit(300)
       if (products && products.length > 0) {
         await localStore.products.bulkPut(
           products.map((p: RemoteProduct) => withoutUndefined<CachedProduct>({
             id: p.id,
             name: p.name ?? '',
-            serial_no: p.serial_no,
-            asset_tag: p.asset_tag,
-            category: p.category,
-            daily_rate_paisa: p.daily_rate_paisa,
-            status: p.status,
-            rack: p.rack,
-            shelf: p.shelf,
-            bin: p.bin,
-            updated_at: p.updated_at || new Date().toISOString(),
+            asset_tag: p.asset_code ?? undefined,
+            category: p.brand ? `${p.brand} ${p.model ?? ''}`.trim() : undefined,
+            daily_rate_paisa: p.daily_rate != null ? rupees(Number(p.daily_rate)) : undefined,
+            tracking_mode: p.tracking_mode ?? undefined,
+            status: p.status ?? undefined,
+            updated_at: p.updated_at || p.created_at || new Date().toISOString(),
           }))
         )
       }
 
       // Pull client directory
       const { data: clients } = await supabase
-        .from('clients')
-        .select('id, name, phone, email, address, is_blocked, created_at')
+        .from('client_directory_v')
+        .select('id, name, phone, email, address_line, membership_level, is_blocked, created_at')
         .limit(300)
       if (clients && clients.length > 0) {
         await localStore.clients.bulkPut(
@@ -195,11 +212,11 @@ class SyncEngine {
             id: c.id,
             name: c.name ?? '',
             phone: c.phone ?? '',
-            email: c.email,
-            address: c.address,
-            credit_tier: c.credit_tier,
-            is_blocked: c.is_blocked || false,
-            updated_at: c.updated_at || new Date().toISOString(),
+            email: c.email ?? undefined,
+            address: c.address_line ?? undefined,
+            credit_tier: c.membership_level ?? undefined,
+            is_blocked: c.is_blocked === true,
+            updated_at: c.created_at || new Date().toISOString(),
           }))
         )
       }

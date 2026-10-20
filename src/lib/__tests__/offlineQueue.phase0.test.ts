@@ -8,6 +8,7 @@ const api = vi.hoisted(() => ({
   updateRow: null as { id: string } | null,
   insertRow: { id: 'inserted-row' } as { id: string } | null,
   duplicate: false, duplicateRow: null as Record<string, unknown> | null,
+  selectError: null as { code: string; message: string } | null,
   calls: [] as Array<{ actor: string; action: string }>, switchOnRead: false,
 }))
 vi.mock('../supabase', () => ({ supabase: { from: vi.fn() } }))
@@ -24,7 +25,7 @@ vi.mock('../offlineIdentity', async importOriginal => {
           select: (columns: string) => ({ eq: () => ({ maybeSingle: async () => {
             api.calls.push({ actor, action: 'read' })
             if (api.switchOnRead) api.actor = 'operator-b'
-            return { data: columns.includes('updated_at') ? null : api.duplicateRow, error: null }
+            return { data: columns.includes('updated_at') ? null : api.duplicateRow, error: api.selectError ?? null }
           } }) }),
           update: () => ({ eq: () => ({ select: () => ({ maybeSingle: async () => {
             api.calls.push({ actor, action: 'update' }); return { data: api.updateRow, error: null }
@@ -46,7 +47,7 @@ beforeEach(async () => {
   vi.stubGlobal('navigator', { onLine: true })
   await db.mutations.clear(); await db.conflicts.clear(); await db.heldMutations.clear()
   Object.assign(api, { actor: 'operator-a', environment: 'https://project-a.supabase.co', signedIn: true,
-    updateRow: null, insertRow: { id: 'inserted-row' }, duplicate: false, duplicateRow: null, calls: [], switchOnRead: false })
+    updateRow: null, insertRow: { id: 'inserted-row' }, duplicate: false, duplicateRow: null, selectError: null, calls: [], switchOnRead: false })
 })
 afterAll(async () => { await db.delete(); vi.unstubAllGlobals() })
 
@@ -110,6 +111,13 @@ describe('Phase 0 offline ownership and authoritative replay receipts', () => {
     await enqueueMutation('scan_events','insert',{client_uuid:'insert-1'},'insert-1'); api.duplicate=true
     api.duplicateRow={id:'inserted-row',client_uuid:'insert-1'}
     await drainQueue(); expect(await db.mutations.count()).toBe(0)
+  })
+  it('acknowledges duplicate insert when select is denied with 42501 (write-only table)', async () => {
+    await enqueueMutation('audit_events','insert',{client_uuid:'audit-1',action:'login'},'audit-1')
+    api.duplicate = true
+    api.selectError = { code: '42501', message: 'permission denied for table audit_events' }
+    await drainQueue()
+    expect(await db.mutations.count()).toBe(0)
   })
   it('retains conflict and work when force-local updates zero rows', async () => {
     const work=await queueUpdate()

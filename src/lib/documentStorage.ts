@@ -44,6 +44,8 @@ export interface StoredDocumentResult {
  */
 function escapePdfText(text: string): string {
   return text
+    .replace(/—/g, ' - ')
+    .replace(/·/g, ' | ')
     .replace(/\\/g, '\\\\')
     .replace(/\(/g, '\\(')
     .replace(/\)/g, '\\)')
@@ -144,13 +146,13 @@ export function generateDocumentPdfBlob(options: GeneratePdfOptions): Blob {
   const dateStr = options.dateStr ? (/^\d{4}-\d{2}-\d{2}/.test(options.dateStr) ? formatAd(new Date(options.dateStr)) : options.dateStr) : formatAd(new Date())
   const contentLines: string[] = [
     '============================================================',
-    `                 BABIN RENTALS OS — ${options.docType.toUpperCase()}`,
+    `                 BABIN RENTALS OS - ${options.docType.toUpperCase()}`,
     '============================================================',
     '',
     `Document Number: ${options.documentNo}`,
     `Date of Issue:   ${dateStr}`,
-    options.bookingNo ? `Booking Ref:     ${options.bookingNo}` : '',
-    options.party ? `Party:           ${options.party}` : '',
+    ...(options.bookingNo ? [`Booking Ref:     ${options.bookingNo}`] : []),
+    ...(options.party ? [`Party:           ${options.party}`] : []),
     `Title:           ${options.title}`,
     '',
     '------------------------------------------------------------',
@@ -179,9 +181,9 @@ export function generateDocumentPdfBlob(options: GeneratePdfOptions): Blob {
   contentLines.push('')
   contentLines.push('Authorized Signature: _______________________      Date: _______________')
   contentLines.push('')
-  contentLines.push('Babin Rentals · Kathmandu, Nepal · info@babinrentals.com')
+  contentLines.push('Babin Rentals | Kathmandu, Nepal | info@babinrentals.com')
 
-  const byteArray = buildPdfByteArray(contentLines.filter((l) => l !== undefined))
+  const byteArray = buildPdfByteArray(contentLines)
   return new Blob([byteArray as unknown as BlobPart], { type: 'application/pdf' })
 }
 
