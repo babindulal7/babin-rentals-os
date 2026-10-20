@@ -28,6 +28,7 @@ import { BOOKING_STATUS, STATUS_ORDER } from '../../lib/workflow'
 import type { BookingStatus } from '../../lib/workflow'
 import { NON_PACKABLE_LINE_TYPES } from '../../lib/bookingLineTypes'
 import BookingOperationsMenu from './BookingOperationsMenu'
+import { bookingPaymentUnavailableReason } from './bookingPaymentGate'
 import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext'
 import { jobForStage } from '../../data/operations'
 import { useDomainEvent } from '../../events/useDomainEvent'
@@ -1935,11 +1936,13 @@ function BookingDetailView() {
     /* Three reasons, not one. `NO_INVOICE_PAYMENT_UNAVAILABLE` is a statement
        about this booking; while the read is in flight or after it failed the
        app does not know that yet, and saying it anyway is the Law 12 defect. */
-    const reason = cancelledReason ?? (hasInvoice
-      ? totals.outstanding <= 0
-        ? 'This booking has no outstanding rental balance to collect.'
-        : null
-      : (invoicesUnknownReason ?? NO_INVOICE_PAYMENT_UNAVAILABLE))
+    const reason = bookingPaymentUnavailableReason({
+      cancelledReason,
+      hasInvoice,
+      invoicesUnknownReason,
+      outstandingPaisa: totals.outstanding,
+      noInvoiceReason: NO_INVOICE_PAYMENT_UNAVAILABLE,
+    })
     return reason === null ? (
       <Button icon="dollar" variant="secondary" onClick={() => setShowPaymentModal(true)}>
         {label}
