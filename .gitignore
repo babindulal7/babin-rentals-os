@@ -106,3 +106,4 @@ astra-main-tests-final.json
 .pglite-result.json
 .test-result.json
 repomix-output.*
+repomix-part*.xml

@@ -1,5 +1,49 @@
 # Progress Log
 
+## 2026-10-20 — External Code Audit Remediation (Files 34–87) & Part 3 Repomix Delivery
+
+**Did**
+- Remediated the concrete bugs and schema/contract violations identified across Files 34–87 of `src/lib/`:
+  - `src/lib/kitBuildVerification.ts`: replaced false-positive substring match `lower.includes('mic')` with word-boundary regex `/\bmic(rophone)?\b/i` so cables, cloths, and dynamic/ceramic accessories are not misclassified as audio kit dependencies.
+  - `src/lib/kpiEngine.ts`: normalized all calendar day comparisons to Kathmandu civil calendar (`kathmanduCivil(d)` from `src/lib/bs.ts`) eliminating the 18:15–23:59 UTC boundary bug; eliminated float division/multiplication roundtrips on Paisa (`r.due / 100`, `r.amount / 100`) by summing integer `Paisa` directly.
+  - `src/lib/labelPrinter.ts`: implemented `escapeHtml()` escaping `&`, `<`, `>`, `"`, and `'` on all interpolated values injected into the thermal printer iframe document.
+  - `src/lib/menuFlip.ts`: added SSR guard (`typeof window === 'undefined'`) to prevent `ReferenceError` during Node/headless execution.
+  - `src/lib/money.ts`: fixed prefix dot bug in `parseMoney` where `"Rs. 1,39,506.50"` retained a dot and failed parsing. Added prefix stripper `/^(-?)\s*(?:Rs\.?|NPR)\s*/i`.
+  - `src/lib/network.ts`: added SSR guards for `navigator.onLine` and `window` event listeners.
+  - `src/lib/pricingPipeline.ts`: enforced exclusivity on student bundles in `evaluateDiscounts()` to prevent unhandled multi-discount exceptions in `bookingDiscountRows.ts`. Corrected deposit documentation to NPR 10,000 baseline.
+  - `src/lib/printSlip.ts`: implemented `escapeHtml()` on all user and item strings; added dynamic `vatRatePercent` property to `RentalSlipData` and voucher HTML.
+  - `src/lib/productDeposit.ts`: replaced `Math.round(total / 100) * 100` with standard money engine `roundHalfUp(total / 100) * 100` to preserve integer Paisa rounding invariants.
+  - `src/lib/rentalDraftPricing.ts`: added `'Accessory'` to the equipment line items bucket in `calculateDraftTotal` so physical accessories are not priced at Rs 0 in drafts.
+  - `src/lib/rentalMoreActionsRegistry.ts`: changed default fallback in `evaluateRentalSecondaryActions` from `'Owner'` to least-privileged `'Client'`, ensuring money-gated actions and views are never leaked by omission (Law 6).
+  - `src/lib/scannerFeedback.ts`: respected audio mute setting via `isAudioFeedbackMuted()`; debounced visual scan flash by clearing existing `flashTimeout` on rapid triggers.
+  - `src/lib/scannerLookup.ts`: sanitized PostgREST `.or()` filter characters against grammar breakage; inspected query errors honestly to return `query_failed` instead of falsely claiming `unknown_code` on network/database failure.
+  - `src/lib/smartHoverLoaders.ts`: in `toPaymentTx()`, added support for `'Deposit'`, `'Damage Charge'`, and `'Late Fee'`, eliminating unhandled exceptions during hover card preview rendering.
+  - `src/lib/useFirstRun.ts`: replaced direct `localStorage` access with `readLocal` and `writeLocal` from `src/lib/safeStorage.ts` to prevent iOS Lockdown Mode `SecurityError` throws.
+- Added comprehensive unit test suites: `src/lib/__tests__/printSlip.test.ts`, `src/lib/__tests__/scannerFeedback.test.ts`, `src/lib/__tests__/useFirstRun.test.tsx`, and updated `scannerLookup.test.ts`, `smartHoverLoaders.test.ts`, `kitBuildVerification.test.ts`, `kpiEngine.test.ts`, `labelPrinter.test.ts`, and `money.test.ts`.
+- Generated `repomix-part3.xml` containing the 16 remaining `src/lib/` modules, 21 migrations (`0150`–`0170`), `package.json`, and `vite.config.ts` (39 files, 102k tokens), and added `repomix-part*.xml` to `.gitignore`.
+
+**Ruled**
+- In `whatsappTemplates.ts`, preserved the explicit specification invariant in `WHATSAPP_LINKS_SPEC_v1.0 §4` that exactly three templates (`balance_due`, `daily_digest`, `payment_receipt`) carry `money: true`, with `booking_confirmed` and `return_receipt` guarded in `whatsappActions.ts` by checking `f.total == null` and omitting deposit/balance when withheld.
+- Default role fallback in secondary action evaluators must always be `'Client'` (never `'Owner'`) to enforce Law 6 least privilege.
+
+**Verified**
+- `npm run lint`: passed (`--max-warnings 0`).
+- `npm run typecheck`: passed (`tsc --noEmit`).
+- `npm test`: all 392 test files and 4,968 tests passed.
+- `npm run check:pglite`: 168/168 migrations applied from scratch in PGlite (0 failed, 31 views verified, 20 anon RPCs checked, 78 definer search paths pinned).
+- `npm run check:lifecycle`: 31/31 steps green through real Postgres + RLS.
+- `npm run check:contrast`: 82/82 pass (WCAG AA light + dark).
+- `npm run build`: built in 26.09s (`dist/` created, PWA precache 209 entries).
+
+## Completion
+
+- Remediation of Files 34–87 complete. Part 3 Repomix pack `repomix-part3.xml` generated. Full test suite and DB/lifecycle gates are 100% green.
+
+## Remaining
+
+- Await external auditor feedback on `repomix-part3.xml` (Files 88–104, migrations 0150–0170, and configs).
+- Maintain verified gates across all future feature increments.
+
 ## 2026-10-20 — Current-source top-ten app review
 
 **Did**
