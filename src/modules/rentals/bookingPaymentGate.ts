@@ -3,7 +3,6 @@
  * booking stage or a refundable security deposit.
  */
 export function bookingPaymentUnavailableReason(args: {
-  cancelledReason: string | null
   hasInvoice: boolean
   invoicesUnknownReason: string | null
   outstandingPaisa: number
