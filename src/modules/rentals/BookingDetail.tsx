@@ -28,7 +28,7 @@ import { BOOKING_STATUS, STATUS_ORDER } from '../../lib/workflow'
 import type { BookingStatus } from '../../lib/workflow'
 import { NON_PACKABLE_LINE_TYPES } from '../../lib/bookingLineTypes'
 import BookingOperationsMenu from './BookingOperationsMenu'
-import { bookingPaymentUnavailableReason } from './bookingPaymentGate'
+import { bookingPaymentUnavailableReason, chooseBookingPaymentInvoice } from './bookingPaymentGate'
 import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext'
 import { jobForStage } from '../../data/operations'
 import { useDomainEvent } from '../../events/useDomainEvent'
@@ -1280,17 +1280,10 @@ function BookingDetailView() {
     }
   }, [booking, canBookingMoney, totals.total])
 
-  /* The invoice a Record Payment settles by default: the first still owed,
-     else the newest (the list arrives issue_date desc).
-
-     'Draft' joined that set with MONEY-05. R-02 keeps an invoice in Draft for
-     the whole rental and R-14 leaves it in Draft when a payment lands, so a
-     Draft is the invoice carrying the running balance for most of a booking's
-     life — preferring an issued one over it would only ever apply to a booking
-     past return. */
-  const primaryInvoice =
-    liveInvoices.find((r) => r.status === 'Draft' || r.status === 'Sent' || r.status === 'Partially Paid') ??
-    liveInvoices[0]
+  /* One booking can have several invoices. The picker must default to a
+     LIVE invoice that is still owed, not a fully paid Draft when another
+     invoice is outstanding. The pure selector is regression tested. */
+  const primaryInvoice = chooseBookingPaymentInvoice(liveInvoices)
 
   /*
    * Payment History rows — live `payments` mapped into the display shape the
