@@ -72,9 +72,9 @@ const INVOICES = [
 async function mount(
   onSuccess: (p: unknown) => void,
   overrides?: {
-    invoices?: typeof INVOICES
-    initialInvoiceId?: string
-    bookingId?: string
+    invoices?: typeof INVOICES | undefined
+    initialInvoiceId?: string | undefined
+    bookingId?: string | undefined
   },
 ) {
   const container = document.createElement('div')

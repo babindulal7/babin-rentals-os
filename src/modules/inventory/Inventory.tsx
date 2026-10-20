@@ -16,6 +16,7 @@ import { useFacetCounts } from '../../lib/queries/facetCounts'
 import type { Kpi } from '../../components/ui/Page'
 import { PageBody } from '../../components/ui/PageBody'
 import { ContextDrawer } from '../../components/ui/ContextDrawer'
+import { useDisplayDensity } from '../../lib/displayDensity'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { Unavailable } from '../../components/ui/Unavailable'
 import { Badge } from '../../components/ui/Badge'
@@ -1295,7 +1296,7 @@ export default function Inventory() {
   const [subRentalSearch, setSubRentalSearch] = useState('')
   const [sort, setSort] = useState<SortKey>('Equipment A–Z')
   const [view, setView] = useState<'table' | 'grid'>('table')
-  const [density, setDensity] = useState<Density>('comfortable')
+  const { density, setDensity } = useDisplayDensity()
   const [rowsPerPage, setRowsPerPage] = useState<number>(25)
   const [page, setPage] = useState(1)
   const setSearchTerm = useCallback((value: string) => {
@@ -1892,7 +1893,7 @@ export default function Inventory() {
             view={!phone ? <>
               <button
                 type="button"
-                onClick={() => setDensity((d) => (d === 'compact' ? 'comfortable' : 'compact'))}
+                onClick={() => setDensity(density === 'compact' ? 'comfortable' : 'compact')}
                 aria-pressed={density === 'compact'}
                 aria-label={density === 'compact' ? 'Comfortable rows' : 'Compact rows'}
                 title={density === 'compact' ? 'Comfortable rows' : 'Compact rows'}
@@ -2215,12 +2216,20 @@ export default function Inventory() {
         id="equipment-quick-view"
         open={Boolean(inspectingEquipment)}
         onClose={() => setInspectingEquipment(null)}
-        title={inspectingEquipment?.name ?? 'Equipment'}
+        title="EQUIPMENT PREVIEW"
         subtitle={inspectingEquipment ? `${inspectingEquipment.category ?? 'Uncategorised'} · ${inspectingEquipment.assetCode}` : undefined}
         status={inspectingEquipment ? <ConditionBadge condition={conditionOf(inspectingEquipment)} /> : undefined}
       >
         {inspectingEquipment && (
-          <div style={{ display: 'grid', gap: 'var(--space-6)' }}>
+          <div style={{ display: 'grid', gap: 'var(--space-4, 16px)' }}>
+            <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text)' }}>
+                {inspectingEquipment.name}
+              </h2>
+              <div className="figure" style={{ fontSize: '13px', color: 'var(--muted)', marginTop: 4 }}>
+                {inspectingEquipment.assetCode} · {inspectingEquipment.category ?? 'Uncategorised'} · {inspectingEquipment.trackingMode}
+              </div>
+            </div>
             <section aria-labelledby="equipment-quick-view-stock">
               <h3 id="equipment-quick-view-stock" style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)', fontWeight: 600 }}>Stock & Identity</h3>
               <dl style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, margin: 'var(--space-3) 0 0' }}>

@@ -4,7 +4,7 @@ import { canExportClientPii } from '../../lib/rbac'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
-import { Card, Button, Rail } from '../../components/ui/Page'
+import { Card, Button } from '../../components/ui/Page'
 import { ModuleKpiStrip, type ModuleKpiItem, ModuleFilterBar, type FilterTabOption, StatusPill } from '../../components/ui/module-shell'
 import {
   ActiveFilterChips,
@@ -24,6 +24,8 @@ import {
   type FacetSelection,
 } from './clientFacets'
 import { Modal } from '../../components/ui/Modal'
+import { ContextDrawer } from '../../components/ui/ContextDrawer'
+import { useDisplayDensity } from '../../lib/displayDensity'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { EmptyState, ErrorBanner } from '../../components/ui/StateViews'
 import { Unavailable } from '../../components/ui/Unavailable'
@@ -235,10 +237,11 @@ const th = {
 
 /** Mirrors Inventory.tsx's `tdFor` — same helper name, same compact/comfortable split. */
 const tdFor = (d: Density) => ({
-  padding: d === 'compact' ? '5px 12px' : '11px 12px',
+  height: 'var(--row-min-h)',
+  padding: d === 'compact' ? '6px 10px' : '11px 12px',
   fontSize: 'var(--t-meta)',
   color: 'var(--text)',
-  verticalAlign: 'top' as const,
+  verticalAlign: 'middle' as const,
 })
 
 function SortHeader({
@@ -521,6 +524,7 @@ export function ClientsDirectory({
   /** Tablet keeps the table but not nine columns of it — see the `<table>` below. */
   const narrow = viewport === 'tablet'
   void _phone
+  void desktop
 
   /**
    * §18 — chip, overlays and search are DERIVED from the query string rather
@@ -549,8 +553,7 @@ export function ClientsDirectory({
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null)
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set())
   const [view, setView] = useState<ViewKey>('Table')
-  const [density, _setDensity] = useState<Density>('comfortable')
-  void _setDensity
+  const { density } = useDisplayDensity()
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'name', dir: 'asc' })
   const [openMenuId, setOpenMenuId] = useState<{ id: string; up: boolean } | null>(null)
   /** Tallest the row menu gets — profile, new rental, active booking, payments. */
@@ -1312,7 +1315,7 @@ export function ClientsDirectory({
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: desktop && selectedClient ? 'minmax(0,1fr) auto' : 'minmax(0,1fr)',
+            gridTemplateColumns: 'minmax(0,1fr)',
             gap: 'var(--sp-md)',
             alignItems: 'start',
           }}
@@ -1557,10 +1560,14 @@ export function ClientsDirectory({
                           aria-label={`Open ${client.name}'s profile`}
                           aria-pressed={isSelected}
                           tabIndex={0}
-                          onClick={() => setSelectedClientId(isSelected ? null : client.id)}
+                          onClick={(e) => {
+                            const target = e.target as HTMLElement
+                            if (target.closest('input, button, a, [data-intel-identifier]')) return
+                            setSelectedClientId(isSelected ? null : client.id)
+                          }}
                           onKeyDown={(e) => {
                             // Only the row itself opening/closing the profile
-                            // rail, never a keypress bubbling up from the
+                            // drawer, never a keypress bubbling up from the
                             // checkbox, the IntelCard trigger, the row's
                             // action button or its "more" menu — all of
                             // those are their own focus stops with their own
@@ -1571,10 +1578,11 @@ export function ClientsDirectory({
                               setSelectedClientId(isSelected ? null : client.id)
                             }
                           }}
-                          className={`client-row ${isSelected ? 'is-selected' : ''}`}
+                          className={`client-row press ${isSelected ? 'is-selected' : ''}`}
                           style={{
                             borderBottom: '1px solid var(--border)',
-                            background: isSelected ? 'var(--tr-hover)' : 'transparent',
+                            background: isSelected ? 'color-mix(in srgb, var(--primary) 8%, var(--card))' : 'transparent',
+                            boxShadow: isSelected ? 'inset 3px 0 0 var(--primary)' : undefined,
                             cursor: 'pointer',
                           }}
                         >
@@ -1902,51 +1910,48 @@ export function ClientsDirectory({
             )}
           </Card>
 
-          {/* ── client profile rail ─────────────────────────────────── */}
-          {selectedClient && (() => {
-            const profileContent = (
-            <Card bodyStyle={{ padding: 0 }}>
-              <div
-                style={{
-                  padding: 14,
-                  borderBottom: '1px solid var(--border)',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 'var(--sp-sm)',
-                }}
-              >
-                <div style={{ minWidth: 0, flex: 1 }}>
+          {/* ── client quick-view context drawer ───────────────────── */}
+          <ContextDrawer
+            id="client-quick-view"
+            open={Boolean(selectedClient)}
+            onClose={() => setSelectedClientId(null)}
+            title="CLIENT PREVIEW"
+            subtitle={selectedClient ? `${selectedClient.id} · ${selectedClient.membership}` : undefined}
+            status={selectedClient?.isVip ? <Tone text="VIP" entity /> : undefined}
+            actions={
+              selectedClient ? (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setSelectedClientId(null)
+                      navigate(`/clients/${selectedClient.id}`)
+                    }}
+                  >
+                    View profile →
+                  </Button>
+                </div>
+              ) : undefined
+            }
+          >
+            {selectedClient && (
+              <div style={{ display: 'grid', gap: 'var(--space-4, 16px)' }}>
+                <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-                    <h3 style={{ fontSize: 'var(--t-ui)', fontWeight: 700, color: 'var(--text)', margin: 0 }}>
+                    <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', margin: 0 }}>
                       {selectedClient.name}
-                    </h3>
+                    </h2>
                     {selectedClient.isVip && <Tone text="VIP" entity />}
+                    {selectedClient.isVerified && (
+                      <span title="KYC and PAN verified" style={{ color: 'var(--success-text)', display: 'inline-flex' }}>
+                        <Icon name="checklist" size={15} />
+                      </span>
+                    )}
                   </div>
-                  <div className="figure" style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)', marginTop: 3 }}>
-                    {selectedClient.id} · {selectedClient.membership}
+                  <div className="figure" style={{ fontSize: '13px', color: 'var(--muted)', marginTop: 4 }}>
+                    #{selectedClient.id} · {selectedClient.membership} · {selectedClient.clientType}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  aria-label="Close client profile"
-                  onClick={() => setSelectedClientId(null)}
-                  style={{
-                    border: 'none',
-                    background: 'transparent',
-                    color: 'var(--muted)',
-                    cursor: 'pointer',
-                    // Law 15 — the rail's only dismiss control.
-                    minWidth: 44,
-                    minHeight: 44,
-                    padding: 0,
-                    borderRadius: 'var(--r-xs)',
-                    display: 'grid',
-                    placeItems: 'center',
-                  }}
-                >
-                  <Icon name="close" size={15} />
-                </button>
-              </div>
 
               <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {/*
@@ -2280,13 +2285,9 @@ export function ClientsDirectory({
                   )}
                 </div>
               </div>
-            </Card>
-            )
-            /* Rulings §7 again — the profile rail is beside the list at
-               desktop and inline beneath it below 1280, never behind the
-               collapse handle. */
-            return <Rail width={330} label="Client profile">{profileContent}</Rail>
-          })()}
+            </div>
+          )}
+        </ContextDrawer>
         </div>
       </div>
 

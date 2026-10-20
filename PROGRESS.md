@@ -1,5 +1,171 @@
 # Progress Log
 
+## 2026-10-21 — Feature Expansion Phase L1: Record Payment Quick Action in Booking Detail
+
+**Did**
+- Implemented Phase L1 / P0 from `BABIN_RENTALS_OS_LOCAL_FEATURE_EXPANSION.md`: Quick Actions Record Payment on existing bookings.
+- `src/actions/finance/recordPayment.ts`:
+  - Added `bookingId?: string | undefined` to `RecordPaymentInput`.
+  - Added booking isolation check in `resolvePaymentTarget` preventing cross-booking invoice misallocation.
+  - Added Rule 5 validation refusing payments against already settled/paid invoices.
+- `src/modules/finance/modals/RecordPaymentModal.tsx`:
+  - Forwarded `bookingId` to `recordPayment`.
+  - Computed `isFullySettled` (`status === 'Paid' || outstandingRupees <= 0`).
+  - Disabled submit button and amount input when `isFullySettled`, rendering inline alert.
+  - Appended `' — Settled'` label in invoice select dropdown.
+- `src/modules/rentals/BookingDetail.tsx`:
+  - Added `<Card title="Quick Actions">` in `InformationDrawer` right rail (and mobile `Money` tab).
+  - Double-gated display: `canBookingMoney && canRecordPayment(user.role)`.
+  - Implemented `recordPaymentButton` handling loading, read error with Retry, no invoice (with `Create Invoice` action), fully settled invoice, and active payable states.
+  - Added `SummaryRows` in `Booking Summary` when invoice exists.
+- Cleaned up pre-existing type errors in `EquipmentRecordEditor.tsx`, `equipmentAssist.tsx`, and `RecordForm.tsx` for `exactOptionalPropertyTypes`.
+- Created comprehensive test suite `src/modules/rentals/__tests__/BookingDetail.quickActionsPayment.test.tsx` (9 tests covering permissions, money-blind exclusion, settled handling, no-invoice state, and prefill modal invocation).
+- Created automated screenshot capture script `scripts/capture-l1-screenshots.mjs` and generated responsive screenshots in `docs/audits/l1/` and artifact store.
+- Created `LOCAL_IMPLEMENTATION_LOG.md` documenting all phase details, checkpoints, verification outputs, and rollback procedures.
+
+**Ruled**
+- Quick Actions sitting in `InformationDrawer` must be double-gated by both screen money permission (`canBookingMoney`) and capability (`canRecordPayment`). Money-blind roles (Warehouse, Technician, Driver, Client) must never see payment actions.
+- Payment recording against an already settled invoice is strictly rejected in both client UI (disabled with inline warning) and backend action (throws).
+- Payment recording from an existing booking is pinned to that booking's ID to prevent cross-booking invoice misattribution.
+
+**Verified**
+- `npm run typecheck`: **PASS (0 errors across repository)**.
+- `npm run build`: **PASS (Built production bundle and PWA, 0 errors)**.
+- `npm run lint`: **PASS (0 warnings, 0 errors)**.
+- `npm run check:pglite`: **168/168 applied, 0 failed, 0 leaks, 78 definer search paths pinned**.
+- `npm run check:lifecycle`: **31/31 green**.
+- `npm run check:contrast`: **82/82 PASS, 0 FAIL**.
+- `npm run lint:shell`: **689/689 files pass**.
+- L1 test suites: 126/126 passed (`recordPayment.test.ts`, `RecordPaymentModal.test.tsx`, `RecordPaymentModal.prefill.test.tsx`, `BookingDetail.quickActionsPayment.test.tsx`, `BookingDetail.honesty.test.tsx`, `BookingDetail.edit.test.tsx`, `BookingDetail.layout.test.tsx`).
+
+## Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 51 / 54 (94%) | +0 |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 98% | +0 |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-20T20:32:48.741Z). Suite: Historical suite: 4948/4948 passed, 0 failed (recorded 2026-10-20T17:16:49.928Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-20T20:33:12.524Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+
+- Phase L2: Quick-Create / Bulk-Unit Intake implementation per `BABIN_RENTALS_OS_LOCAL_FEATURE_EXPANSION.md`.
+- Remote cutover / Supabase deployment: unblocked locally; awaiting Babin backup & cutover protocol per N-5.
+- Multi-device real-world tablet field testing (physical iPad and Zebra scanner hardware over Wi-Fi `http://192.168.1.75:3000`).
+
+## 2026-10-21 — Add & Edit Equipment v3.0 Unified Workspace (Wireframe & Spec Alignment)
+
+**Did**
+- Unified desktop Add/Edit Equipment experience (`src/modules/inventory/AddEquipment.tsx`, `AssetDetail.tsx?action=edit`) to match reference photo `media_1792526193867_48d6e903.jpg` and `Add Equipment Specification v3.0`.
+- Built `src/components/records/EquipmentRecordEditor.tsx`:
+  - 7 canonical sections with sticky section anchor jump navigation and completeness status dots: `Identity`, `Stock & Units`, `Relationships`, `Location`, `Purchase`, `Pricing & Rental`, `Maintenance & Documents`.
+  - Identity: Category, Name, Short Name, Brand, Model, conditional Manufacturer toggle, Description with 1000-character counter, Thumbnail & 5 Gallery slots with honest storage disclaimer.
+  - Stock & Units: Tracking segmented control (`Serialised`, `Quantity`, `Consumable`), unit count badge, auto asset tag generation (`Generate Asset Tags`), multi-serial paste drawer, and editable unit table (`#`, `Serial *`, `Asset Tag`, `Barcode`, read-only `Status`, intake-editable `Condition`, `Warehouse`, `Actions`).
+  - Relationships: 3 high-density relationship cards (Physical Accessories / Sub-components, Commercial Bundles / Kits, Compatibility / Pairs With) with honest pending-wiring notices.
+  - Location: Primary warehouse selector, rack, shelf, bin, and "Apply to all units" batch action.
+  - Purchase & Pricing (Law 6 gated): Purchase date (AD+BS conversion), price, replacement value; daily, weekly, monthly, hourly, weekend rates; deposit percentage / fixed amount, minimum rental days, rental enabled flag.
+  - Maintenance & Documents: Prep turnaround & cleaning turnaround minutes, outbound & inbound inspection checkboxes, internal staff notes, warehouse packing notes, and document attachment guidance.
+- Enhanced `src/components/records/equipmentAssist.tsx`:
+  - Updated `equipmentSectionState` to evaluate all 7 canonical sections (`Location` handles 0-row optional state cleanly).
+  - Built `EquipmentInformationDrawerContent` rendering all 6 reference preview panels: Quick Info (AD/BS stamps, audit verification), Codes (live Code 128 SVG barcode + QR payload + copy), Equipment Preview (interactive live hierarchy tree with parent/children reconciliation invariants), Relationship Summary (containment, units, bundle eligibility), Ready to Rent (5 live operational criteria), and Quick Actions (Generate Tags, Check Duplicates, Copy Code).
+- Updated `src/components/records/RecordForm.tsx`:
+  - Seamlessly mounted `EquipmentRecordEditor` when `kind === 'equipment'`, preserving existing `RecordForm` contracts and atomic RPC execution (`save_record_editor`).
+  - Completely preserved client and bundle forms without regression.
+  - Configured `optionalSections.equipment` (`['Relationships', 'Purchase', 'Maintenance & Documents']`).
+- Added token-based styling in `src/components/records/equipment-assist.css` ensuring WCAG AA contrast on both Obsidian Studio and Precision Light themes, and minimum 44px touch targets.
+- Updated `src/components/records/__tests__/RecordForm.test.tsx` to assert the 7 canonical section titles and section jump links.
+
+**Ruled**
+- Unit `Status` is strictly engine-owned and read-only; initial unit intake status is always `In Stock`.
+- Unit `Condition` is editable at initial intake only (`Excellent`, `Good`, `Fair`, `Damaged`, `Lost`).
+- Money-blind roles (`useCanViewMoney() === false`) never see or render `Purchase` and `Pricing & Rental` sections (Law 6).
+- Database allowlist rule (0146/0153): `warehouse_id`, `rack`, `shelf`, `bin` belong to `product_units` (`p_rows`), not `products` (`p_values`).
+- Equipment section jump navigation is flat anchor navigation with status dots, not a multi-step sequential wizard.
+
+**Verified**
+- `npm run typecheck`: **PASS (0 errors across entire repository)**.
+- `npm run lint`: **PASS (0 warnings)**.
+- `npm run check:contrast`: **82/82 PASS, 0 FAIL**.
+- `npm run check:pglite`: **168/168 migrations applied from scratch, 0 failed, 0 leaks, 78 definer search paths pinned**.
+- `npm run check:lifecycle`: **31/31 green, 0 known-red, 0 failed**.
+- `npm run lint:shell`: **689 files checked, 0 violations**.
+- `npm run lint:ui-copy`: **PASS, 0 developer-text violations**.
+- `npm run build`: **Built in 52.57s, 0 errors**.
+- Focused Vitest:
+  - `src/components/records/__tests__/RecordForm.test.tsx`: 24/24 PASS.
+  - `src/components/ui/__tests__/RecordWorkspace.test.tsx`: 9/9 PASS.
+  - `src/actions/__tests__/recordEditor.test.ts`: 6/6 PASS.
+  - `src/modules/inventory/__tests__/`: 83/83 PASS.
+
+## Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 51 / 54 (94%) | +0 |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 98% | +0 |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-20T20:29:54.957Z). Suite: Historical suite: 4948/4948 passed, 0 failed (recorded 2026-10-20T17:16:49.928Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-20T20:33:12.524Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+
+- Remote cutover / Supabase deployment: unblocked locally; awaiting Babin backup & cutover protocol per N-5.
+- Multi-device real-world tablet field testing (physical iPad and Zebra scanner hardware over Wi-Fi `http://192.168.1.75:3000`).
+
+## 2026-10-21 — Security Hardening, Verification Gate Harmonization & Local Network Access
+
+**Did**
+- Remediated high/medium-priority findings across `scripts/`, `electron/`, `packages/`, and `public/`:
+  - **Shared Anon Allow-List Single Source of Truth:** Created `scripts/allowed-anon-functions.mjs` exporting canonical `ALLOWED_ANON_FUNCTIONS` (20 allowed functions); updated both `scripts/check-pglite.mjs` and `scripts/check-anon-exposure.mjs` to import it, removing drift and ensuring `invoice_paid_net` is strictly excluded per migration 0150.
+  - **Remote Cutover Script Hardening (`apply-cutover-remote.mjs`):** Enforced TLS certificate validation by default (`rejectUnauthorized: true`), removed the hardcoded migration ceiling (`num > 152` -> `num >= 125`), and wrapped migration execution in `try...finally` to guarantee `SELECT set_config('app.in_create_booking', 'off', false)` is executed on both success and failure. Also hardened `scripts/check-memberships.mjs`.
+  - **Electron Local Static Server Traversal Hardening (`electron/main.cjs`):** Wrapped URI parsing in `decodeURIComponent` with `try...catch` (returning HTTP 400 on malformed input) and enforced strict containment within `resolvedDist` using `candidate.startsWith(resolvedDist + path.sep)` (returning HTTP 403 on traversal attempts).
+  - **Font Token JetBrains Mono Restoration:** Updated `packages/design-tokens/src/index.ts` and `src/styles/theme.css` so `mono`, `id`, and `num` tokens map to `JetBrains Mono` rather than falling back to sans-serif `Source Sans 3`.
+  - **Crawler Access Restriction (`public/robots.txt`):** Restricted indexing of internal operational SPA routes (`Disallow: /`) while explicitly allowing `/marketing.html` and public assets.
+  - **Obsolete Script Cleanup:** Removed placeholder `scripts/execute-generated-sql.mjs` and broken stub `scripts/package-desktop-ipa.py`.
+  - **LAN / Wi-Fi Dev Server Verification:** Confirmed Vite dev server is running on `0.0.0.0:3000` (`host: true`), verified accessibility over local loopback (`http://localhost:3000`) and Wi-Fi adapter (`http://192.168.1.75:3000`), and validated Windows Firewall allows inbound connections to `node.exe`.
+
+**Ruled**
+- Anon function execution allowlists must never be duplicated across test gates; `scripts/allowed-anon-functions.mjs` is the sole source of truth.
+- Migrations remain strictly managed per N-5: zero remote push or direct execution against live database without cutover protocol.
+- Local static file servers in desktop wrappers must always validate directory traversal after URI decoding.
+
+**Verified**
+- `npm run typecheck`: **PASS (0 errors)**.
+- `npm run lint`: **PASS (0 warnings)**.
+- `npm run check:contrast`: **82/82 PASS, 0 FAIL**.
+- `npm run check:pglite`: **168/168 migrations applied from scratch, 0 failed, 0 leaks, 78/78 definer search paths pinned**.
+- `node scripts/check-anon-exposure.mjs`: **PASS (20 allow-listed functions callable, 129 tables RLS guarded, 0 views readable, all role behavioral checks pass)**.
+- `npm run check:lifecycle`: **31/31 green, 0 known-red, 0 failed**.
+- `curl.exe http://192.168.1.75:3000/`: **HTTP 200 OK**.
+
+## Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 51 / 54 (94%) | +0 |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 98% | +0 |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-20T20:05:56.141Z). Suite: Historical suite: 4948/4948 passed, 0 failed (recorded 2026-10-20T17:16:49.928Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-20T20:11:10.440Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+
+- Remote cutover / Supabase deployment: unblocked locally; awaiting Babin backup & cutover protocol per N-5.
+- Multi-device real-world tablet field testing (physical iPad and Zebra scanner hardware over Wi-Fi `http://192.168.1.75:3000`).
+
 ## 2026-10-21 — Single-Shell Operational Workspace & Smart Compact Density Implementation (Wireframe Alignment)
 
 **Did**
