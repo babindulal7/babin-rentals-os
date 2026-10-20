@@ -18,19 +18,23 @@ function drawer(open = true, onClose = () => {}, options: { docked?: boolean; na
       onClose={onClose}
       title="BR-2083-0142"
       subtitle="Himalayan Films"
-      docked={options.docked}
-      navigation={options.navigation ? (
-        <InspectorNavigator
-          active={open}
-          position={open ? 2 : 0}
-          index={open ? 1 : -1}
-          total={25}
-          canPrevious={open}
-          canNext={open}
-          onPrevious={() => {}}
-          onNext={() => {}}
-        />
-      ) : undefined}
+      /* exactOptionalPropertyTypes: an absent option must be an absent prop,
+         never an explicit undefined. */
+      {...(options.docked !== undefined ? { docked: options.docked } : {})}
+      {...(options.navigation ? {
+        navigation: (
+          <InspectorNavigator
+            active={open}
+            position={open ? 2 : 0}
+            index={open ? 1 : -1}
+            total={25}
+            canPrevious={open}
+            canNext={open}
+            onPrevious={() => {}}
+            onNext={() => {}}
+          />
+        ),
+      } : {})}
     >
       <button type="button">First action</button>
       <button type="button">Last action</button>

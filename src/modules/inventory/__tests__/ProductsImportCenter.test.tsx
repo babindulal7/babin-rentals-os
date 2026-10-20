@@ -47,6 +47,7 @@ vi.mock('../../../components/ui/RecordWorkspace', () => ({
 }))
 
 const { importProducts } = await import('../../../actions/inventory/importProducts')
+const { listInventoryCategories, listProductImportCorpus } = await import('../../../lib/queries/inventory')
 
 const SAMPLE = [
   'Product Name,Category,Brand,Model,Tracking Mode,Quantity,Serial Numbers,Daily Rate,Description,Internal Notes',
@@ -67,6 +68,15 @@ describe('ProductsImportCenter (BQ-407)', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    /* clearAllMocks does not strip implementations, so a previous test's
+       in-flight-corpus promise would leak into the next one. Re-seed the
+       defaults every time. */
+    ;(listInventoryCategories as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { id: 'c-1', name: 'Cameras', code: 'camera' },
+      { id: 'c-2', name: 'Audio', code: 'audio' },
+    ])
+    ;(listProductImportCorpus as ReturnType<typeof vi.fn>).mockResolvedValue([])
+    ;(importProducts as ReturnType<typeof vi.fn>).mockReset()
     host = document.createElement('div')
     document.body.appendChild(host)
     root = createRoot(host)
@@ -152,7 +162,6 @@ describe('ProductsImportCenter (BQ-407)', () => {
   }
 
   it('blocks the commit while the duplicate check has not finished, then shows duplicates', async () => {
-    const { listProductImportCorpus } = await import('../../../lib/queries/inventory')
     let release: ((rows: unknown[]) => void) | undefined
     ;(listProductImportCorpus as ReturnType<typeof vi.fn>).mockImplementation(
       () => new Promise((resolve) => { release = resolve }),

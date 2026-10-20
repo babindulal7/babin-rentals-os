@@ -1,5 +1,49 @@
 # Progress Log
 
+## 2026-10-21 (iii) — Booqable adoption BQ-407: catalogue CSV import with a mandatory dry-run
+
+**Did**
+- Built the products (equipment catalogue) CSV import the scrape report scoped as the last open buildable P1 item — `docs/booqable/SCRAPE_ADOPTABLE_FEATURES.md` §2.9:
+  - **Engine** `src/lib/productImport.ts` (Law 1 — pages collect, the engine decides): target-field map + header guessing, per-row validation (name/brand/category required; category resolved against `inventory_categories` at the dry-run, never at the FK; Tracking Mode is a rejected-not-defaulted enum; Serialised takes serials and refuses a quantity, Quantity/Consumable the reverse; repeated serials in a row refused), in-file duplicate grouping on name+brand+model, duplicate blocking against the existing catalogue, money parsed once through `parseMoney` → branded Paisa, and on-hand-count headers deliberately never guessed into the quantity target (BQ-407: stock counts are excluded from import).
+  - **Action** `src/actions/inventory/importProducts.ts` (capability `inventory.create`): mirrors `importClients` — one Law 8 receipt key per row (plus one per serialised unit), online-or-refused, previous-attempt reconciliation by `products.client_uuid` read-back so a retry never creates a second product, commit-time duplicate re-check against the live catalogue, stop-after-current-row, timeout → `unconfirmed`. Every row commits as a **Draft** through the existing `createEquipment` action (the Ready-to-Rent gate is never bulk-cleared); serialised rows land in one facility for the whole file (`serialHome`), because `product_units.warehouse_id` is NOT NULL.
+  - **Query** `listProductImportCorpus()` added to `src/lib/queries/inventory.ts` — the identity set (id/name/brand/model, bounded at 5000) the dry-run checks duplicates against; no money, no PII.
+  - **UI** `src/modules/inventory/ProductsImportCenter.tsx` — four-step flow (Choose a file → Map columns → Preview & validate → Import) with the mandatory fully-rendered dry-run: per-row verdicts with reasons, skip-without-losing, KPI strip with definition/zero-explanation tooltips, parser errors blocking the mapping step (R3-6 rule), the duplicate check shown as '—' until it has actually finished, and the serial-home picker appearing only when a serialised row is ready. Reached from Inventory ▸ Equipment ▸ More ▸ "Import catalogue from CSV" as a `?tab=import` pseudo-tab (the 2026-10-07 four-tab ruling untouched), gated to Owner/Admin/Manager.
+  - Fixed a repo-wide typecheck break in `src/components/ui/__tests__/ContextDrawer.test.tsx` (parallel stream's committed file): `exactOptionalPropertyTypes` violation in the test's prop helper — absent options are now absent props, not explicit `undefined`.
+- Verified export column parity (BQ-COL) is already complete — rentals export honours hidden columns, drops money for money-blind roles, writes integer paisa, audits itself with columns+scope (G5, `RentalsList.tsx:1501-1527`). No work needed.
+
+**Ruled**
+- Import creates **Drafts**, never Active products: the Ready-to-Rent gate is the Add Equipment page's own rule and a bulk import cannot evaluate it (stated in the action header).
+- The duplicate key is name+brand+model, matched case- and space-insensitively, both in-file and against the live catalogue, and it **blocks the whole commit** (BQ-407), re-checked at commit time because the file may have sat on disk since the dry-run.
+- Catalogue import takes the creation capability (Owner/Admin/Manager) — RULING 2026-10-13's clients-import reasoning transferred: an import is bulk creation, no widening, no new gate.
+- No recovery-draft machinery (unlike the clients import): a catalogue row is a price-list line a re-upload restores in seconds, not contact data a walk-in may not say twice. Stated in the component header so the omission is a decision, not an accident.
+- Location scoping (P0-B second half) and Technician-on-Handover remain **ruled open** in `docs/OPEN_DECISIONS.md` — both need Babin's word and (for scoping) coordination with the ASTRA authorization stream; they were not invented to "finish the list".
+
+**Verified**
+- `npm run typecheck`: **0 errors repo-wide** (after the ContextDrawer test fix).
+- `npx vitest run src/lib/__tests__/productImport.test.ts`: 33 tests, engine.
+- `npx vitest run src/actions/inventory/__tests__/importProducts.test.ts`: 17 tests, write outcomes incl. receipt replay, duplicate block, timeout, stop, role and offline refusals.
+- `npx vitest run src/modules/inventory/__tests__/ProductsImportCenter.test.tsx`: 6 tests, screen-level dry-run contract.
+- `npx vitest run src/modules/inventory src/lib/__tests__/productImport.test.ts src/actions/inventory`: **16 files, 285 tests passed** — no existing inventory surface moved.
+- `npx vitest run src/components/ui/__tests__/ContextDrawer.test.tsx`: 14 passed after the type fix.
+- `npx eslint` on every touched file: clean.
+- `npm run completion`: Backend **52/55 (95%, +1)**, Permissions 47/47, Lifecycle 31/31, DB enforcement 9/9, Overall ≈ 98%.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +1 |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | — |
+| Lifecycle | steps green / total | 31 / 31 (100%) | — |
+| Overall | mean of five | ≈ 98% | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed. Counted by `npm run completion`, not typed.
+
+## Remaining
+- **Babin rulings outstanding** (logged in `docs/OPEN_DECISIONS.md`): Technician-on-Handover (one-line veto in `rbac.ts`); per-site grant scoping (needs a grant table + RLS migration under N-5, coordinated with the ASTRA stream).
+- Historical suite record shows 5 failures from 2026-10-20T21:39 — re-run the full suite (`npm test`) before the next release gate; every suite touched this session is green at HEAD.
+- Scrape adoptions now complete: P0 core (state machine, wizard, global control, saved views, audit, per-op grants, 06:00 engine, officer dashboard), P1 buildables (import dry-run, export parity, 6-state deposit, versioned docs), P2 a11y (calendar BQ-CAL-06). Remaining P3 items (calendar drag, iCal, offline writes, storefront) are deferred by the roadmap until usage justifies them.
+
 ## 2026-10-21 — Mock Mode Visual Refinement (Replacement of Yellow Warning with Subtle Icon)
 
 **Did**
