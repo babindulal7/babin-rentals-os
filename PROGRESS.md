@@ -15,15 +15,28 @@
 **Verified**
 - Before availability changes: 11/11 new regressions failed. After changes: 134/134 across four availability suites passed; targeted lint and typecheck passed. Evidence: `docs/verification/ASTRA_AVAILABILITY_2026-10-20.json`.
 - Financial checkpoint: 4,879 tests passed with coverage and all recorded gates green on unchanged source (`ASTRA_FINANCE_CHECKPOINT_2026-10-20.json`). The subsequent run passed 4,899 tests and every command, but source changed during lint/tests: preserved as `ASTRA_PRE_AVAILABILITY_CHECKPOINT_2026-10-20.json`, not current-source certification.
-- A fresh full run after this fix is in progress. Its per-gate fingerprints and actual outcomes are recorded in `docs/verification/ASTRA_LOCAL_2026-10-20.json`; final status will be appended here after it finishes. No live Supabase changes, resets, pushes, PRs or real business-data writes occurred.
+- Fresh current-source verification: 387 files / 4,931 tests passed with coverage; lint, receipt tests, 168-migration rebuild, financial integrity, 15 SQL security groups, 31 lifecycle steps, 82 contrast pairs, shell/UI-copy checks, final typecheck and live-mode build all passed on fingerprint `ae78994762597f7fd9df832378ef184b77eed5f5a2cbf7402882c1bbc4adb0f8`. The first typecheck overlapped other edits; its changed-source result is retained, and the final complete typecheck supersedes it. `ASTRA_LOCAL_2026-10-20.json` preserves every raw result and computes a current-source assessment requiring all necessary checks to match this fingerprint. No stale receipt was changed into a pass.
+- Migration 0170 is locally VERIFIED by same-run rebuild/lifecycle/security checks; NOT APPLIED and NOT PRODUCTION-VERIFIED. Coverage measured 64.48% statements / 73.61% branches / 50.05% functions / 64.41% lines for the configured scope. Build measured main 704.47 kB (gzip 199.61 kB), New Rental 278.83 kB, scanner vendor 453.49 kB; the large-chunk warning remains. No live Supabase changes, resets, pushes, PRs or real business-data writes occurred.
 
 ## Completion
 
-Pending the completion generator after this run. Its import-based backend classification does not certify working shared workflows or release readiness.
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 51 / 54 (94%) | — |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | — |
+| Lifecycle | steps green / total | 31 / 31 (100%) | — |
+| Overall | mean of five | ≈ 98% | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-20T16:17:20.721Z). Suite: PASS — 4931/4931 passed, 0 failed (recorded 2026-10-20T16:17:12.806Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-10-20T16:17:43.916Z.
+Counted by `npm run completion`, not typed.
+
+The generator's import-based backend classification is a structural estimate; it does not certify shared workflows or release readiness.
 
 ## Remaining
 
-- Current-source full gate results, shared operational-tool persistence and role acceptance; VAT classification provenance; remaining report/date/document/evidence workflow checks; measured bundle improvements.
+- Shared operational-tool persistence and role acceptance; VAT classification provenance; remaining report/date/document/evidence workflow checks; bundle/startup improvements. Review booking-line/product metadata and post-commit held-summary completeness separately; this fix covers candidates, serial/quantity holds and reset entries.
 - Desktop/iPad/mobile layouts, real-device offline behavior and authenticated hosted JWT/Storage acceptance remain unverified. Migration 0170 has local SQL evidence only; NOT APPLIED and NOT PRODUCTION-VERIFIED. Existing open decisions remain in `docs/OPEN_DECISIONS.md`.
 
 ## 2026-10-20 — Query Layer Hardening, Law 6 Masking & PDF Offset Fixes (Repomix Pack 4 Audit)
