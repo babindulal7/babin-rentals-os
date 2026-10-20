@@ -1935,7 +1935,11 @@ function BookingDetailView() {
     /* Three reasons, not one. `NO_INVOICE_PAYMENT_UNAVAILABLE` is a statement
        about this booking; while the read is in flight or after it failed the
        app does not know that yet, and saying it anyway is the Law 12 defect. */
-    const reason = hasInvoice ? null : (invoicesUnknownReason ?? NO_INVOICE_PAYMENT_UNAVAILABLE)
+    const reason = cancelledReason ?? (hasInvoice
+      ? totals.outstanding <= 0
+        ? 'This booking has no outstanding rental balance to collect.'
+        : null
+      : (invoicesUnknownReason ?? NO_INVOICE_PAYMENT_UNAVAILABLE))
     return reason === null ? (
       <Button icon="dollar" variant="secondary" onClick={() => setShowPaymentModal(true)}>
         {label}
@@ -2018,9 +2022,21 @@ function BookingDetailView() {
         </Card>
       )}
 
-      {/* Same booking-money figures as the Facts strip and Block 4 — gated the
-          same way, omitted rather than masked. On phone this card is the
-          `Money` segment's rail content. */}
+      {/* Payment is a quick action on the existing booking. Reuse the invoice-
+          linked modal and its payment.create RBAC gate; never post money from
+          a row button or route the operator away to the Finance ledger.
+          On phones this rail belongs to the Money segment. */}
+      {canBookingMoney && showSegment('Money') && (
+        <Card title="Quick Actions">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
+            {canTakePayment && recordPaymentButton('Record Payment')}
+            {canRaiseInvoice && createInvoiceButton(hasInvoice ? 'View Invoice' : 'Create Invoice')}
+          </div>
+        </Card>
+      )}
+
+      {/* Live invoice values; never combine the refundable deposit with rental
+          payments or display balances to money-blind warehouse roles. */}
       {canBookingMoney && showSegment('Money') && (
         <Card title="Booking Summary">
           {!hasInvoice && (
@@ -2029,9 +2045,15 @@ function BookingDetailView() {
                 'No invoice has been raised for this booking, so there is no Rental Total to state yet.'}
             </p>
           )}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)', marginTop: 12 }}>
-            {canRaiseInvoice && createInvoiceButton('Create Invoice')}
-          </div>
+          {hasInvoice && (
+            <SummaryRows
+              rows={[
+                { label: 'Rental Total', value: money(totals.total), tone: 'neutral' as BrandKey },
+                { label: 'Rental Paid', value: money(totals.paid), tone: 'success' as BrandKey },
+                { label: 'Rental Outstanding', value: money(totals.outstanding), tone: totals.outstanding > 0 ? 'danger' as BrandKey : 'success' as BrandKey },
+              ]}
+            />
+          )}
         </Card>
       )}
 
@@ -2849,7 +2871,7 @@ function BookingDetailView() {
                         </DataTableShell>
                       </div>
                     )}
-                    {canTakePayment && <div style={{ marginTop: 10 }}>{recordPaymentButton('Record Payment')}</div>}
+                    {onPhone && canTakePayment && <div style={{ marginTop: 10 }}>{recordPaymentButton('Record Payment')}</div>}
                   </div>
                 </div>
               )}
