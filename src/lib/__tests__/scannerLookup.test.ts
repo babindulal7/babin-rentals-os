@@ -1,10 +1,15 @@
-import { describe, it, expect, beforeAll } from 'vitest'
-import { resolveScannedCode } from '../scannerLookup'
-import { loadMockClient } from '../supabase'
+import { describe, it, expect, vi } from 'vitest'
 
-beforeAll(async () => {
-  await loadMockClient()
+vi.mock('../supabase', async () => {
+  const { mockSupabase } = await import('../__mocks__/client')
+  return {
+    supabase: mockSupabase,
+    IS_MOCK: true,
+    loadMockClient: vi.fn(),
+  }
 })
+
+import { resolveScannedCode } from '../scannerLookup'
 
 describe('AUD-002: Barcode Scanner Truthfulness', () => {
   it('returns unknown_code for empty input', async () => {
@@ -29,5 +34,21 @@ describe('AUD-002: Barcode Scanner Truthfulness', () => {
     expect(res.status).toBeDefined()
     // It should not throw or return 'ok' as false positive
     expect(['unknown_code', 'unit_matched', 'booking_matched', 'product_matched', 'query_failed']).toContain(res.status)
+  })
+
+  it('safely handles strings with injection characters (commas, parentheses, quotes)', async () => {
+    const maliciousCode = 'test,id.eq.00000000-0000-0000-0000-000000000000()'
+    const res = await resolveScannedCode(maliciousCode)
+    expect(res.status).toBeDefined()
+    expect(['unknown_code', 'unit_matched', 'booking_matched', 'product_matched', 'query_failed']).toContain(res.status)
+  })
+
+  it('returns unknown_code if barcode consists only of stripped filter characters', async () => {
+    const strippedOnly = ',,,()""\\\\'
+    const res = await resolveScannedCode(strippedOnly)
+    expect(res.status).toBe('unknown_code')
+    if (res.status === 'unknown_code') {
+      expect(res.message).toContain('Invalid or unparseable barcode')
+    }
   })
 })

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import { Card, Button, cardStyle } from '../../components/ui/Page'
@@ -857,11 +857,23 @@ export default function ReturnWorkspace({
   const [activeSigningRole, setActiveSigningRole] = useState<'returning' | 'warehouse' | null>(null)
   const [scanPulse, setScanPulse] = useState<'success' | 'error' | null>(null)
   const [qcStatusMap, setQcStatusMap] = useState<Record<string, boolean>>({})
+  // Held in a ref so the pulse's timeout is cancelled on unmount — an
+  // uncleared timer fires `setState` after the environment is gone.
+  const scanPulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(
+    () => () => {
+      if (scanPulseTimer.current !== null) clearTimeout(scanPulseTimer.current)
+    },
+    [],
+  )
 
   const triggerScanPulse = (verdict: 'success' | 'error') => {
     setScanPulse(verdict)
-    setTimeout(() => {
+    if (scanPulseTimer.current !== null) clearTimeout(scanPulseTimer.current)
+    scanPulseTimer.current = setTimeout(() => {
       setScanPulse((cur) => (cur === verdict ? null : cur))
+      scanPulseTimer.current = null
     }, 600)
   }
 

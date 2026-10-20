@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react'
+import { readLocal, writeLocal } from './safeStorage'
 
 // Helper to detect first run and set a flag
 export function useFirstRun(): { firstRun: boolean; setFirstRun: (value: boolean) => void } {
   const [firstRun, setFirstRun] = useState(true)
 
   useEffect(() => {
-    const stored = localStorage.getItem('babin-first-run')
+    const stored = readLocal('babin-first-run')
     if (stored === 'true') {
       setFirstRun(false)
     } else {
       // Mark as not first run after this effect
-      localStorage.setItem('babin-first-run', 'true')
+      writeLocal('babin-first-run', 'true')
       setFirstRun(true) // Will be false on next mount
     }
   }, [])
@@ -64,7 +65,7 @@ export function useOnboarding(onComplete: () => void) {
   }, [firstRun])
 
   const completeOnboarding = () => {
-    localStorage.setItem('babin-first-run', 'true')
+    writeLocal('babin-first-run', 'true')
     setCurrentStep(steps.length + 1)
     onComplete()
   }

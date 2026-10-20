@@ -404,7 +404,18 @@ export async function loadPaymentPreview(paymentRef: string, ctx: GateContext): 
 
 function toPaymentTx(row: PaymentListRow): PaymentTransaction {
   const paymentType = String(row.paymentType)
-  if (paymentType !== 'Advance Payment' && paymentType !== 'Rental' && paymentType !== 'Refund') throw new Error(`Unsupported payment type: ${paymentType}`)
+  let type: PaymentTransaction['type'] = 'rental_payment'
+  if (paymentType === 'Refund') {
+    type = 'refund'
+  } else if (paymentType === 'Deposit' || paymentType === 'Security Deposit') {
+    type = 'deposit'
+  } else if (paymentType === 'Damage' || paymentType === 'Damage Charge') {
+    type = 'damage_charge'
+  } else if (paymentType === 'Late Fee') {
+    type = 'late_fee'
+  } else if (paymentType === 'Advance Payment' || paymentType === 'Rental') {
+    type = 'rental_payment'
+  }
   const method = mapChannelToMethod(row.channelGroup)
   const status = row.status === 'Received' ? 'completed' : row.status === 'Failed' ? 'failed' : row.status === 'Refunded' ? 'refunded' : 'cancelled'
   return {
@@ -413,7 +424,7 @@ function toPaymentTx(row: PaymentListRow): PaymentTransaction {
     ...(row.bookingId ? { rentalId: row.bookingId } : {}),
     rentalNo: row.bookingNo,
     ...(row.invoiceId ? { invoiceId: row.invoiceId } : {}),
-    type: paymentType === 'Refund' ? 'refund' : 'rental_payment',
+    type,
     status,
     ...(method ? { method } : {}),
     amountPaisa: row.amount,

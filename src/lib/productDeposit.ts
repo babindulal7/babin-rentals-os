@@ -1,4 +1,4 @@
-import type { Paisa } from './money'
+import { roundHalfUp, type Paisa } from './money'
 
 /**
  * # What a product itself asks as a security deposit (C6)
@@ -82,7 +82,7 @@ export function productDepositPaisa(
     const unit = unitDepositPaisa(terms.get(line.productId))
     if (unit !== null) total += unit * line.qty
   }
-  return (Math.round(total / 100) * 100) as Paisa
+  return (roundHalfUp(total / 100) * 100) as Paisa
 }
 
 /** The recommendation: the flat rule, raised (never lowered) by what the products ask. */

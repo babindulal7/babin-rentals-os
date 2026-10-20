@@ -178,4 +178,27 @@ describe('complete rental Intel data', () => {
     expect(preview.readiness.clientAllowed).toBe(false)
     expect(listPayments).toHaveBeenCalledTimes(2)
   })
+
+  it('maps diverse payment types including Deposit, Damage Charge, and Late Fee without throwing', async () => {
+    vi.mocked(fetchFloorBooking).mockResolvedValue({ id: UUID, bookingNo: 'B-1', stage: 'Booked', clientName: 'Client One',
+      pickupAtAd: null, returnAtAd: null, linesPresence: 'present', lines: [],
+    } as never)
+    vi.mocked(listBookings).mockResolvedValue({ rows: [{ id: UUID, clientId: 'client-1', totalAmount: 500000, depositRequired: 0 }], total: 1 } as never)
+    vi.mocked(getClientBlockStatus).mockResolvedValue(false)
+    const diversePayments = [
+      { id: 'pay-1', clientId: 'client-1', bookingId: UUID, paymentType: 'Deposit', channelGroup: 'Cash', status: 'Received', amount: 50000, createdAtAd: '2026-10-13T00:00:00Z' },
+      { id: 'pay-2', clientId: 'client-1', bookingId: UUID, paymentType: 'Damage Charge', channelGroup: 'Bank', status: 'Received', amount: 15000, createdAtAd: '2026-10-13T00:00:00Z' },
+      { id: 'pay-3', clientId: 'client-1', bookingId: UUID, paymentType: 'Late Fee', channelGroup: 'Cards', status: 'Received', amount: 10000, createdAtAd: '2026-10-13T00:00:00Z' },
+      { id: 'pay-4', clientId: 'client-1', bookingId: UUID, paymentType: 'Advance Payment', channelGroup: 'Digital wallets', status: 'Received', amount: 200000, createdAtAd: '2026-10-13T00:00:00Z' },
+    ]
+    vi.mocked(listPayments).mockResolvedValue({ rows: diversePayments, total: 4 } as never)
+    const preview = await loadRentalPreview(UUID, { role: 'Owner' })
+    expect(preview.payments?.history).toHaveLength(4)
+    expect(preview.payments?.history.map(p => p.type)).toEqual([
+      'deposit',
+      'damage_charge',
+      'late_fee',
+      'rental_payment',
+    ])
+  })
 })

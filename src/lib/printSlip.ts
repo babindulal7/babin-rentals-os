@@ -19,6 +19,7 @@ export interface RentalSlipData {
   subtotalPaisa?: Paisa
   discountPaisa?: Paisa
   vatPaisa?: Paisa
+  vatRatePercent?: number
   totalPaisa?: Paisa
   depositPaisa?: Paisa
   advancePaisa?: Paisa
@@ -28,22 +29,39 @@ export interface RentalSlipData {
   branchVat?: string
 }
 
+export function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 /**
  * Generates an 80mm thermal printer format and triggers native window.print() or returns formatted HTML.
  */
 export function printRentalSlip(data: RentalSlipData): void {
   if (typeof window === 'undefined') return
 
-  const branch = data.branchName || 'Babin Rentals Kathmandu'
-  const vat = data.branchVat || 'VAT: 601234567'
-  const dateStr = formatAdDateTime(new Date().toISOString())
+  const branch = escapeHtml(data.branchName || 'Babin Rentals Kathmandu')
+  const vat = escapeHtml(data.branchVat || 'VAT: 601234567')
+  const dateStr = escapeHtml(formatAdDateTime(new Date().toISOString()))
+  const bookingNo = escapeHtml(data.bookingNo)
+  const stage = escapeHtml(data.stage)
+  const clientName = escapeHtml(data.clientName)
+  const clientPhone = escapeHtml(data.clientPhone)
+  const pickupDate = escapeHtml(data.pickupDate)
+  const returnDate = escapeHtml(data.returnDate)
+  const operatorName = escapeHtml(data.operatorName || 'Babin HQ')
+  const vatRate = data.vatRatePercent ?? 13
 
   const itemsHtml = data.lines
     .map(
       (l) => `
     <tr style="border-bottom: 1px dashed #ccc;">
       <td style="padding: 4px 0; font-size: 11px;">
-        <b>${l.name}</b>${l.serial ? `<br/><span style="font-size: 9px; color: #555;">S/N: ${l.serial}</span>` : ''}
+        <b>${escapeHtml(l.name)}</b>${l.serial ? `<br/><span style="font-size: 9px; color: #555;">S/N: ${escapeHtml(l.serial)}</span>` : ''}
       </td>
       <td style="text-align: center; padding: 4px 0; font-size: 11px;">${l.qty}</td>
       <td style="text-align: center; padding: 4px 0; font-size: 11px;">${l.days}d</td>
@@ -63,7 +81,7 @@ export function printRentalSlip(data: RentalSlipData): void {
     <!DOCTYPE html>
     <html>
       <head>
-        <title>Rental Voucher — ${data.bookingNo}</title>
+        <title>Rental Voucher — ${bookingNo}</title>
         <style>
           @page { size: 80mm auto; margin: 0; }
           body {
@@ -92,14 +110,14 @@ export function printRentalSlip(data: RentalSlipData): void {
         <div class="divider"></div>
 
         <div class="flex-between">
-          <span>Booking: <b>${data.bookingNo}</b></span>
-          <span>Stage: ${data.stage}</span>
+          <span>Booking: <b>${bookingNo}</b></span>
+          <span>Stage: ${stage}</span>
         </div>
         <div>Date: ${dateStr}</div>
-        <div>Client: <b>${data.clientName}</b></div>
-        <div>Phone: ${data.clientPhone}</div>
+        <div>Client: <b>${clientName}</b></div>
+        <div>Phone: ${clientPhone}</div>
         <div class="divider"></div>
-        <div>Period: ${data.pickupDate} &rarr; ${data.returnDate}</div>
+        <div>Period: ${pickupDate} &rarr; ${returnDate}</div>
 
         <div class="divider"></div>
 
@@ -124,7 +142,7 @@ export function printRentalSlip(data: RentalSlipData): void {
             ? `
           <div class="flex-between"><span>Subtotal:</span><span>${formatMoney(data.subtotalPaisa)}</span></div>
           ${data.discountPaisa ? `<div class="flex-between"><span>Discount:</span><span>-${formatMoney(data.discountPaisa)}</span></div>` : ''}
-          ${data.vatPaisa ? `<div class="flex-between"><span>VAT (13%):</span><span>${formatMoney(data.vatPaisa)}</span></div>` : ''}
+          ${data.vatPaisa ? `<div class="flex-between"><span>VAT (${vatRate}%):</span><span>${formatMoney(data.vatPaisa)}</span></div>` : ''}
           <div class="flex-between bold" style="font-size: 13px; margin: 4px 0;"><span>RENTAL TOTAL:</span><span>${formatMoney(data.totalPaisa ?? data.subtotalPaisa)}</span></div>
           <div class="divider"></div>
           ${data.depositPaisa ? `<div class="flex-between"><span>Security Bond:</span><span>${formatMoney(data.depositPaisa)}</span></div>` : ''}
@@ -146,7 +164,7 @@ export function printRentalSlip(data: RentalSlipData): void {
             Client Signature
           </div>
           <div style="border-top: 1px solid #000; width: 45%; text-align: center; font-size: 9px; padding-top: 3px;">
-            Staff: ${data.operatorName || 'Babin HQ'}
+            Staff: ${operatorName}
           </div>
         </div>
 

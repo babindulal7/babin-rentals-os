@@ -7,9 +7,12 @@
  * - 'error': Low error double buzz (140Hz) + heavy vibration pulse
  */
 
+import { isAudioFeedbackMuted } from './acousticFeedback'
+
 export type ScanFeedbackTone = 'ok' | 'wrong' | 'error'
 
 let audioCtx: AudioContext | null = null
+let flashTimeout: ReturnType<typeof setTimeout> | null = null
 
 function getAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null
@@ -32,6 +35,7 @@ function getAudioContext(): AudioContext | null {
  * Plays a distinct sound chime for scan results.
  */
 export function playScanSound(tone: ScanFeedbackTone): void {
+  if (isAudioFeedbackMuted()) return
   const ctx = getAudioContext()
   if (!ctx) return
 
@@ -148,16 +152,22 @@ export function triggerVisualScanFlash(tone: ScanFeedbackTone): void {
     ? '6px solid rgba(245, 158, 11, 0.95)'
     : '6px solid rgba(239, 68, 68, 0.95)'
 
+  if (flashTimeout !== null) {
+    clearTimeout(flashTimeout)
+    flashTimeout = null
+  }
+
   flashEl.style.boxShadow = `inset 0 0 50px ${color}`
   flashEl.style.border = border
   flashEl.style.opacity = '1'
 
-  setTimeout(() => {
+  flashTimeout = setTimeout(() => {
     if (flashEl) {
       flashEl.style.opacity = '0'
       flashEl.style.boxShadow = 'none'
       flashEl.style.border = 'none'
     }
+    flashTimeout = null
   }, 220)
 }
 
