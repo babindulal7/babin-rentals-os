@@ -48,4 +48,22 @@ describe('Asset Tag & Thermal Label Printer', () => {
     expect(html).toContain('50mm 25mm')
     expect(html).toContain('<svg')
   })
+
+  it('escapes special HTML characters to prevent XSS and markup corruption', () => {
+    const data: LabelData = {
+      assetCode: 'CAM<1>&"TEST"',
+      title: 'Camera & Rig <Ultra>',
+      subtitle: 'Lens > 50mm & "Fast"',
+      serialNo: 'SN<123>&',
+      barcodeValue: 'BARCODE&123',
+      orgName: 'BABIN & SONS <LTD>',
+    }
+
+    const html = generateLabelHtml(data, 'standard')
+    expect(html).not.toContain('<Ultra>')
+    expect(html).toContain('Camera &amp; Rig &lt;Ultra&gt;')
+    expect(html).toContain('CAM&lt;1&gt;&amp;&quot;TEST&quot;')
+    expect(html).toContain('Lens &gt; 50mm &amp; &quot;Fast&quot;')
+    expect(html).toContain('BABIN &amp; SONS &lt;LTD&gt;')
+  })
 })

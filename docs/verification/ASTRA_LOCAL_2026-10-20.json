@@ -1,24 +1,24 @@
 {
-  "startedAt": "2026-10-20T16:49:25.162Z",
-  "sourceHash": "debd1a4ac0bec844b2c35c14201687547a04969f4b56a54146bffaebf476ca95",
+  "startedAt": "2026-10-20T16:59:29.213Z",
+  "sourceHash": "21c7eb2b18f71d63c199d9bc308b97d77f3d006ae9b2b559d83256caca94a950",
   "scope": "Local only; no hosted access or business-data writes",
   "gates": [
     {
       "name": "typecheck",
       "exitCode": 0,
-      "sourceHashBefore": "debd1a4ac0bec844b2c35c14201687547a04969f4b56a54146bffaebf476ca95",
-      "sourceHashAfter": "debd1a4ac0bec844b2c35c14201687547a04969f4b56a54146bffaebf476ca95",
+      "sourceHashBefore": "21c7eb2b18f71d63c199d9bc308b97d77f3d006ae9b2b559d83256caca94a950",
+      "sourceHashAfter": "21c7eb2b18f71d63c199d9bc308b97d77f3d006ae9b2b559d83256caca94a950",
       "sourceStable": true,
-      "at": "2026-10-20T16:50:34.046Z",
+      "at": "2026-10-20T17:02:30.200Z",
       "outputTail": ""
     },
     {
       "name": "lint",
       "exitCode": 0,
-      "sourceHashBefore": "debd1a4ac0bec844b2c35c14201687547a04969f4b56a54146bffaebf476ca95",
-      "sourceHashAfter": "debd1a4ac0bec844b2c35c14201687547a04969f4b56a54146bffaebf476ca95",
+      "sourceHashBefore": "21c7eb2b18f71d63c199d9bc308b97d77f3d006ae9b2b559d83256caca94a950",
+      "sourceHashAfter": "21c7eb2b18f71d63c199d9bc308b97d77f3d006ae9b2b559d83256caca94a950",
       "sourceStable": true,
-      "at": "2026-10-20T16:51:29.939Z",
+      "at": "2026-10-20T17:03:52.730Z",
       "outputTail": ""
     }
   ]

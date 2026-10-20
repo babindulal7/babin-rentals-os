@@ -38,9 +38,13 @@ describe('Kit-Build Verification Engine (src/lib/kitBuildVerification.ts)', () =
       expect(detectKitCategory('Sound Devices MixPre-6 II')).toBe('audio')
     })
 
-    it('returns general for loose cables or grip accessories', () => {
+    it('returns general for loose cables or grip accessories and avoids mic substring false-positives', () => {
       expect(detectKitCategory('HDMI Cable 2m Braided')).toBe('general')
       expect(detectKitCategory('Pelican 1510 TrekPak Case')).toBe('general')
+      expect(detectKitCategory('Micro-HDMI Cable')).toBe('general')
+      expect(detectKitCategory('Microfiber Cloth')).toBe('general')
+      expect(detectKitCategory('Dynamic Stand')).toBe('general')
+      expect(detectKitCategory('Ceramic Filter')).toBe('general')
     })
   })
 

@@ -36,6 +36,7 @@
 **Verified**
 - Before the fix: eight new regressions failed; all 11 earlier cases passed. After: 200/200 tests across five suites passed, including 58 confirmation action cases and all 19 completeness cases.
 - Preliminary typecheck exited 0. Full source-bound typecheck, lint, coverage suite, local DB/security/lifecycle gates and build are running. The earlier checkpoint is historical for these edits; actual outcomes will be recorded in `docs/verification/ASTRA_LOCAL_2026-10-20.json`.
+- The first complete-suite attempt was interrupted after unrelated Finance and floor-workspace edits arrived during testing. Its completed typecheck/lint and interruption are preserved in `ASTRA_PLANNING_INTERRUPTED_2026-10-20.json`; no full pass is claimed. After those edits settled, the full checker was restarted against the combined current source. Other sessions' changes were preserved.
 
 ## Completion
 

@@ -73,9 +73,11 @@ export function formatMoney(p: Paisa): string {
 export const formatPaisa = formatMoney
 
 
-/** Parses user input — "1,39,506", "Rs 1,39,506", "139506.50" — to paisa without float drift. */
+/** Parses user input — "1,39,506", "Rs 1,39,506", "Rs. 1,39,506.50" — to paisa without float drift. */
 export function parseMoney(input: string): Paisa | null {
-  const cleaned = input.replace(/[^\d.-]/g, '')
+  // Strip currency prefixes like "Rs.", "Rs", "NPR" before stripping other non-digits
+  const withoutPrefix = input.trim().replace(/^(-?)\s*(?:Rs\.?|NPR)\s*/i, '$1')
+  const cleaned = withoutPrefix.replace(/[^\d.-]/g, '')
   if (!cleaned || !/^-?\d*(\.\d*)?$/.test(cleaned) || cleaned === '-' || cleaned === '.' || cleaned === '-.') return null
   const isNegative = cleaned.startsWith('-')
   const abs = isNegative ? cleaned.slice(1) : cleaned

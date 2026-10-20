@@ -64,7 +64,7 @@ export function detectKitCategory(productName: string): KitCategory {
     return 'lighting'
   }
   if (
-    lower.includes('mic') ||
+    /\bmic(rophone)?\b/i.test(lower) ||
     lower.includes('sound devices') ||
     lower.includes('zoom h') ||
     lower.includes('wireless go') ||

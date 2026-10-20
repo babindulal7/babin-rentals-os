@@ -107,6 +107,15 @@ export function generateCode128Svg(text: string, height = 40): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalWidth} ${height}" width="100%" height="${height}" preserveAspectRatio="none">${rects.join('')}</svg>`
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 /**
  * Generates complete printable HTML document for thermal label printing.
  */
@@ -115,11 +124,18 @@ export function generateLabelHtml(data: LabelData, preset: LabelPreset = 'standa
   const barcodeSvg = generateCode128Svg(data.barcodeValue, preset === 'cable' ? 24 : 36)
   const org = data.orgName || 'BABIN RENTALS OS · KATHMANDU'
 
+  const safeAssetCode = escapeHtml(data.assetCode)
+  const safeTitle = escapeHtml(data.title)
+  const safeSubtitle = data.subtitle ? escapeHtml(data.subtitle) : ''
+  const safeSerialNo = data.serialNo ? escapeHtml(data.serialNo) : ''
+  const safeBarcodeValue = escapeHtml(data.barcodeValue)
+  const safeOrg = escapeHtml(org)
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Label — ${data.assetCode}</title>
+<title>Label — ${safeAssetCode}</title>
 <style>
   @page {
     size: ${dim.widthMm}mm ${dim.heightMm}mm;
@@ -208,16 +224,16 @@ export function generateLabelHtml(data: LabelData, preset: LabelPreset = 'standa
 </head>
 <body>
   <div class="header">
-    <span class="org-name">${org}</span>
-    <span class="asset-code">${data.assetCode}</span>
+    <span class="org-name">${safeOrg}</span>
+    <span class="asset-code">${safeAssetCode}</span>
   </div>
   <div class="title-block">
-    <div class="title">${data.title}</div>
-    ${data.subtitle || data.serialNo ? `<div class="subtitle">${data.subtitle || ''}${data.serialNo ? ` · SN: ${data.serialNo}` : ''}</div>` : ''}
+    <div class="title">${safeTitle}</div>
+    ${safeSubtitle || safeSerialNo ? `<div class="subtitle">${safeSubtitle}${safeSerialNo ? ` · SN: ${safeSerialNo}` : ''}</div>` : ''}
   </div>
   <div class="barcode-wrap">
     ${barcodeSvg}
-    <div class="barcode-text">${data.barcodeValue}</div>
+    <div class="barcode-text">${safeBarcodeValue}</div>
   </div>
 </body>
 </html>`

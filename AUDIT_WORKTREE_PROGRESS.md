@@ -6,6 +6,7 @@
 - Confirmed and corrected truncated booking-line and tracking/stock metadata reads in `src/lib/queries/availability.ts`, including the existing explicitly granted nonfinancial base fallback. Missing datasets and later-page failures now stop the plan instead of returning incomplete inputs.
 - Eight new regressions failed before the source fix; after it, 200/200 across five suites pass, including all 19 completeness and 58 confirmation-action tests. Full gates are running; `docs/verification/ASTRA_LOCAL_2026-10-20.json` records actual results, not an assumed carry-forward pass.
 - The earlier 4,931-test source-matched result is preserved as `docs/verification/ASTRA_AVAILABILITY_CHECKPOINT_2026-10-20.json`. It does not certify these later edits. Post-confirmation summary semantics and the other remaining acceptance items below stay open. No business-data or hosted changes were made.
+- Another session changed Finance/PDF and handover/return files during the first full-suite attempt. That run was interrupted and preserved as `ASTRA_PLANNING_INTERRUPTED_2026-10-20.json`, without a full pass claim. After a stable-source check, the complete checker was restarted against the combined source; all external edits remain intact.
 
 ## Earlier availability checkpoint
 
