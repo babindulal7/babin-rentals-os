@@ -34,7 +34,6 @@ describe('scannerFeedback', () => {
   describe('triggerScanVibration', () => {
     it('calls navigator.vibrate when available', () => {
       const vibrateMock = vi.fn()
-      // @ts-expect-error mock navigator.vibrate
       navigator.vibrate = vibrateMock
 
       triggerScanVibration('ok')
