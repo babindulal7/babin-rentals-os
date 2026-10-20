@@ -350,12 +350,9 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             display: 'flex',
             alignItems: 'center',
             gap: 6,
-            minWidth: isPhone ? 0 : isTablet ? '140px' : '180px',
-            // RULING 2026-10-13: on a phone the title takes whatever the controls leave, and ends in "…".
-            // RULING 2026-10-15: on desktop a module title (one crumb — "Inventory") does not shrink;
-            // the search beside it yields first. Sharing the squeeze crushed it to "I." at 1280px.
-            // A record title (a crumb trail ending in "902 · Client name") is any length, so it
-            // still ellipsizes rather than taking the search's space.
+            minWidth: isPhone ? '110px' : isTablet ? '140px' : '180px',
+            // On phone, keep at least 110px so module names (Rentals, Today, Finance) and IDs do not truncate to Re... or 71...
+            // On desktop a module title (one crumb — "Inventory") does not shrink; the search beside it yields first.
             flex: isPhone ? '1 1 auto' : isTablet || displayCrumbs.length > 1 ? '0 1 auto' : '0 0 auto',
             maxWidth: isPhone ? undefined : 'min(520px, 45vw)',
             overflow: 'hidden',
@@ -804,7 +801,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 8,
+            gap: isPhone ? 4 : 8,
             flexShrink: 0,
             marginLeft: 'auto',
             minWidth: 0,

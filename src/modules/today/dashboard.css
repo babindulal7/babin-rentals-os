@@ -2324,7 +2324,7 @@
   flex-wrap: wrap;
 }
 
-.dashboard-workbar__intro span {
+.dashboard-workbar__intro > span {
   display: block;
   margin-bottom: 0.2rem;
   color: var(--primary-text);
@@ -3023,19 +3023,23 @@
    classes deep to outrank the older `.rental-dashboard__panels … .is-dominant` link style. */
 .rental-dashboard .rental-dashboard__panels .movement-card__cta-btn {
   min-height: 56px;
-  padding: 0 0.95rem;
-  border: 1px solid var(--select-bg);
+  padding: 0 1rem;
+  border: 1px solid var(--btn-primary-bg, var(--primary));
   border-radius: var(--r-btn, 8px);
-  background: var(--select-bg);
-  color: var(--select-fg);
+  background: var(--btn-primary-bg, var(--primary));
+  color: var(--btn-primary-fg, var(--on-primary));
   font-size: var(--t-meta);
   font-weight: 650;
   text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
 }
 
 .rental-dashboard .rental-dashboard__panels .movement-card__cta-btn:hover {
-  border-color: var(--primary);
+  filter: brightness(1.08);
+  border-color: var(--primary-hover, var(--primary));
   background: var(--btn-primary-bg, var(--primary));
   color: var(--btn-primary-fg, var(--on-primary));
 }

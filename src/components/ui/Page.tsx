@@ -313,24 +313,38 @@ export function SideRail({
 }
 
 /** Label/value rows — the shape every "… Summary" card in the renders uses. */
-export function SummaryRows({ rows }: { rows: Array<{ label: string; value: React.ReactNode; tone?: BrandKey }> }) {
+export function SummaryRows({ rows }: { rows: Array<{ label: string; value: React.ReactNode; tone?: BrandKey; mono?: boolean }> }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
-      {rows.map((r) => (
-        <div key={r.label} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 'var(--t-meta)' }}>
-          <span style={{ color: 'var(--text2)', minWidth: 0, flex: 1 }}>{r.label}</span>
-          <span
-            className="figure"
-            style={{
-              fontWeight: 600,
-              color: (typeof r.value === 'number' && r.value === 0) || (typeof r.value === 'string' && /^(?:(?:Rs\.?|NPR)\s*)?0(?:\.0+)?\s*%?$/.test(r.value.trim())) ? 'var(--muted)' : r.tone ? BRAND_TEXT[r.tone] : 'var(--text)',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {r.value}
-          </span>
-        </div>
-      ))}
+      {rows.map((r) => {
+        const isNumeric =
+          typeof r.value === 'number' ||
+          (typeof r.value === 'string' &&
+            (/^(?:(?:Rs\.?|NPR)\s*)?[\d,]+(?:\.\d+)?(?:\s*%)?$/.test(r.value.trim()) ||
+              /^\d{4}-\d{2}-\d{2}/.test(r.value.trim())))
+        const useFigure = r.mono ?? isNumeric
+        return (
+          <div key={r.label} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 'var(--t-meta)' }}>
+            <span style={{ color: 'var(--text2)', minWidth: 0, flex: 1 }}>{r.label}</span>
+            <span
+              className={useFigure ? 'figure' : undefined}
+              style={{
+                fontWeight: 600,
+                color:
+                  (typeof r.value === 'number' && r.value === 0) ||
+                  (typeof r.value === 'string' && /^(?:(?:Rs\.?|NPR)\s*)?0(?:\.0+)?\s*%?$/.test(r.value.trim()))
+                    ? 'var(--muted)'
+                    : r.tone
+                      ? BRAND_TEXT[r.tone]
+                      : 'var(--text)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {r.value}
+            </span>
+          </div>
+        )
+      })}
     </div>
   )
 }

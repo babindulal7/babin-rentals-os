@@ -1424,22 +1424,6 @@ export default function Finance() {
                 ? [{ label: 'Create Invoice', icon: 'plus' as const, onClick: () => setShowCreateInvoice(true) }]
                 : []),
             ]}
-            primaryAction={
-              canTakePayment
-                ? {
-                    label: '+ Record Payment',
-                    onClick: () => {
-                      setSelectedInvoiceForRecord('')
-                      setShowRecordPayment(true)
-                    },
-                  }
-                : canIssueInvoice
-                  ? {
-                      label: '+ Create Invoice',
-                      onClick: () => setShowCreateInvoice(true),
-                    }
-                  : undefined
-            }
           />
 
           <ModuleKpiStrip

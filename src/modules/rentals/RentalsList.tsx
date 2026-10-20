@@ -1890,7 +1890,7 @@ export default function RentalsList() {
       <WorkspaceHeaderAddActions>
           {canWriteDesk && (
             <Button
-              variant="secondary"
+              variant="primary"
               size="sm"
               icon="plus"
               aria-label="New Rental"
@@ -2474,7 +2474,8 @@ export default function RentalsList() {
                             style={{
                               ...th,
                               whiteSpace: 'nowrap',
-                              ...(h === 'Project Type' ? { minWidth: 130 } : {}),
+                              ...(h === 'Project Type' ? { minWidth: 120 } : {}),
+                              ...(h === 'Pickup' || h === 'Return' ? { minWidth: 140 } : {}),
                             }}
                             className="whitespace-nowrap"
                           >
@@ -2972,10 +2973,10 @@ const RENTAL_COLUMN_SHARES: Record<string, number> = {
   'Booking ID': 0.075, ID: 0.075,
   'Created Date': 0.08, Created: 0.08,
   'Client / Project': 0.17,
-  'Project Type': 0.12,
+  'Project Type': 0.10,
   Items: 0.065,
-  Pickup: 0.125,
-  Return: 0.125,
+  Pickup: 0.135,
+  Return: 0.135,
   Status: 0.11,
   'Total Amount': 0.11,
 }

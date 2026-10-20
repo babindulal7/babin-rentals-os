@@ -786,12 +786,13 @@ export default function Today() {
       <div className="dashboard-workbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <div className="dashboard-workbar__intro" style={{ margin: 0 }}>
-            <p style={{ margin: 0 }}>
+            <p style={{ margin: 0, display: 'inline-flex', alignItems: 'baseline', gap: '0.35rem', whiteSpace: 'nowrap' }}>
               {pickupCount === undefined || returnCount === undefined ? (
                 'Movement board'
               ) : (
                 <>
-                  <span className="font-mono tabular-nums">{pickupCount}</span> going out ·{' '}
+                  <span className="font-mono tabular-nums">{pickupCount}</span> going out
+                  <span style={{ color: 'var(--muted)', margin: '0 0.15rem' }}>·</span>
                   <span className="font-mono tabular-nums">{returnCount}</span> coming back
                 </>
               )}
