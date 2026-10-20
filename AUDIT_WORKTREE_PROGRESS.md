@@ -1,4 +1,14 @@
-# Current verification checkpoint — 20 October 2026
+# Current continuation — 20 October 2026
+
+- Started from clean `main` at `b00b60e2`; created local recovery branch `codex/recovery-before-astra-continue-20261020-b00b60e2` before editing. Later automatic commits and other sessions' changes are preserved.
+- Retrieved the completed prior checker: 168 migrations rebuilt, 15 Phase 0 security groups passed, lifecycle 31/31, contrast and live-mode build passed. Its full suite had 4,827 / 4,837 passing tests and 10 failures. Several gates recorded source changes during execution; these results are historical evidence, not certification of today's newer source.
+- Revalidated the reported interface failures against current code and its newer 20 October information-drawer ruling. Header slots, notes and rental summary tests have already changed in this shared checkout; no old UI was restored.
+- Confirmed a current financial defect: Sales/VAT registers and exports kept only ten invoices while totals included more, and Net Sales ignored recorded discounts. Added `salesVatCompleteness.test.ts`; all 8 regressions failed before the source change (`artifacts/astra-sales-register-before-20261020.log`).
+- Updated `salesVatReports.ts` to read stable ordered pages through an empty confirmed page, retain every register row, refuse a failed/repeated/incomplete page, use validated integer paisa and refuse unsafe aggregate totals. Net Sales deducts recorded invoice discounts; register subtotal remains the recorded gross subtotal. Updated the CSV metric label in `SalesVatReports.tsx`; report test client now honors range boundaries.
+- Also reproduced and corrected QA-02's incomplete-count hole: a nominally green test receipt with missing test outcomes is refused. The Node regression failed before the fix (5 passed / 1 failed) and now passes 6/6 (`artifacts/astra-receipts-before-20261020.log`, `astra-receipts-after-20261020.log`).
+- Current typecheck and focused report/interface tests are running; their results will be recorded below. The completion generator and progress-format lint passed; the generator labels the historical full-suite receipt as current source NOT VERIFIED. No full verification claim is made yet. No live Supabase change, destructive reset, push, pull request or real business-data write was performed.
+
+## Previous integration checkpoint — 20 October 2026
 
 **Current candidate status:** the original 13-group SQL checkpoint below predates the latest bearer-link protection. Migration 0170 now also denies unredacted originals to Client, protects `document_registry.file_url` / `signature_url` with column ACLs, and exposes a guarded original-location RPC for money-visible staff. Document lists retain safe metadata. Both PDF exporters now use authenticated immutable paths, persist stable locations, and require attachment receipts. These latest changes are WRITTEN and awaiting the final unit / rebuild / lifecycle / live-mode build results; do not carry forward the earlier VERIFIED label to this extension. No migration has been applied remotely.
 

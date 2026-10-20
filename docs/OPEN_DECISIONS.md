@@ -133,3 +133,7 @@ The Law 16 report pass (PROGRESS.md, 2026-10-16) replaced invented figures with 
 - **TODO(decision): legacy unregistered document/evidence objects.** Migration 0170 retains all bytes but refuses access without an authoritative document or operation-session link. Establish verified ownership and the permitted role before mapping old paths; do not reopen bucket-wide access to recover a link.
 - **TODO(decision): unattributed offline work.** Earlier queue entries lack submitting-account/project identifiers. They remain on the device, including duplicate legacy payloads in the held-work store. A person must establish provenance before an explicit recovery workflow can adopt them; automatic reassignment or deletion is forbidden.
 - Root `PLAN.md` is absent on current main. These questions are recorded here and in the active progress ledger rather than inventing a replacement plan or product policy.
+
+## 15. VAT classification provenance (20 October 2026)
+
+- **TODO(decision): distinguish exempt from zero-rated turnover.** The Sales/VAT report currently groups invoices with zero recorded VAT under a combined category. A zero tax amount alone does not establish an exemption. Identify the authoritative persisted classification and the intended register/export treatment before changing that classification; do not infer legal tax status from an amount. This is separate from the corrected register truncation and recorded-discount arithmetic.

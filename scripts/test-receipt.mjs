@@ -25,7 +25,7 @@ export function verificationSourceHash(root) {
 export function testReceipt(report, exitCode, before, after, at = new Date().toISOString()) {
   const keys = ['numTotalTests', 'numPassedTests', 'numFailedTests', 'numPendingTests']
   if (!report || keys.some(key => !Number.isSafeInteger(report[key]) || report[key] < 0)
-    || report.numPassedTests + report.numFailedTests + report.numPendingTests > report.numTotalTests
+    || report.numPassedTests + report.numFailedTests + report.numPendingTests !== report.numTotalTests
     || typeof report.success !== 'boolean') throw new Error('Missing or invalid structured test result')
   return { schemaVersion: 1, valid: true, at, total: report.numTotalTests, passed: report.numPassedTests,
     failed: report.numFailedTests, skipped: report.numPendingTests,
@@ -36,7 +36,10 @@ export function testReceipt(report, exitCode, before, after, at = new Date().toI
 export function describeTestReceipt(receipt, currentHash) {
   if (!receipt || receipt.valid === false || !Number.isSafeInteger(receipt.total) || !Number.isSafeInteger(receipt.passed)
     || !Number.isSafeInteger(receipt.failed) || receipt.total < 0 || receipt.passed < 0
-    || receipt.failed < 0 || receipt.passed > receipt.total) {
+    || receipt.failed < 0 || receipt.passed > receipt.total
+    || (receipt.sourceHash && (receipt.schemaVersion !== 1 || receipt.valid !== true
+      || !Number.isSafeInteger(receipt.skipped) || receipt.skipped < 0
+      || receipt.passed + receipt.failed + receipt.skipped !== receipt.total))) {
     return 'NOT VERIFIED — invalid test receipt'
   }
   const figures = `${receipt.passed}/${receipt.total} passed, ${receipt.failed} failed (recorded ${receipt.at ?? 'unknown'})`

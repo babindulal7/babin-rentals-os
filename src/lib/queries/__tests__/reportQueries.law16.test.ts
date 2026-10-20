@@ -167,7 +167,10 @@ describe('the fixes that made live reads impossible stay fixed', () => {
     expect(vat.monthlySchedule).toHaveLength(1)
     const select = filtersOn('invoices').find((c) => c.method === 'select')?.args[0] as string
     expect(select).not.toMatch(/grand_total|tax_amount|pan_number/)
-    expect(filtersOn('invoices').filter((c) => c.method === 'neq').map((c) => c.args[1])).toEqual(['Draft', 'Void'])
+    // The final empty page confirms completeness and must retain the same
+    // exclusions as the populated first page.
+    expect(filtersOn('invoices').filter((c) => c.method === 'neq').map((c) => c.args[1])).toEqual(['Draft', 'Void', 'Draft', 'Void'])
+    expect(filtersOn('invoices').filter((c) => c.method === 'range').map((c) => c.args)).toEqual([[0, 499], [1, 500]])
   })
 
   it('Cash Flow counts payments with status "Received" (the enum value), and keeps deposits apart', async () => {

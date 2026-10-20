@@ -142,7 +142,7 @@ export default function SalesVatReports() {
         ['Invoiced Sales Report'],
         ['Metric', 'Value'],
         ['Total Invoiced', formatMoney(data?.sales.metrics.totalInvoiced ?? (0 as Paisa))],
-        ['Net Sales (Subtotal)', formatMoney(data?.sales.metrics.netSales ?? (0 as Paisa))],
+        ['Net Sales (After Discount)', formatMoney(data?.sales.metrics.netSales ?? (0 as Paisa))],
         ['Total VAT (13%)', formatMoney(data?.sales.metrics.totalVat ?? (0 as Paisa))],
         ['Total Collected', formatMoney(data?.sales.metrics.totalCollected ?? (0 as Paisa))],
         ['Outstanding Balance', formatMoney(data?.sales.metrics.totalOutstanding ?? (0 as Paisa))],

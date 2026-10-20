@@ -1,5 +1,5 @@
 import { supabase } from '../supabase'
-import { rupees, type Paisa } from '../money'
+import { parseMoney, type Paisa } from '../money'
 import { BS_MONTHS, formatAdMonth, toBs } from '../bs'
 import { embeddedName, percentOf, rowsOf, type ReportFilterOptions } from './reportSupport'
 
@@ -116,7 +116,15 @@ type InvoiceRow = {
   bookings?: unknown
 }
 
-const money = (v: number | string | null | undefined): Paisa => rupees(Number(v ?? 0) || 0)
+const money = (v: number | string | null | undefined): Paisa => {
+  const raw = String(v ?? 0)
+  const amount = /^\d+(?:\.\d{1,2})?$/.test(raw) ? parseMoney(raw) : null
+  if (amount === null || !Number.isSafeInteger(amount)) throw new Error('Invalid or unsafe invoice amount')
+  return amount
+}
+
+const PAGE_SIZE = 500
+const MAX_ROWS = 50_000
 
 function bsMonthOf(isoDate: string): { key: string; label: string } | null {
   const bs = toBs(new Date(`${isoDate.slice(0, 10)}T12:00:00Z`))
@@ -125,7 +133,8 @@ function bsMonthOf(isoDate: string): { key: string; label: string } | null {
 }
 
 export async function getSalesVatReport(options?: ReportFilterOptions): Promise<{ sales: SalesReportData; vat: VatTaxReportData }> {
-  let query = supabase
+  const invoiceQuery = () => {
+    let query = supabase
     .from('invoices')
     .select(
       'id, invoice_no, client_id, status, issue_date, due_date, subtotal, discount_amount, taxable_amount, vat_rate, vat_amount, total_amount, paid_amount, outstanding_amount, voided_at, clients!client_id(name, pan_vat), bookings!booking_id(booking_no)',
@@ -134,11 +143,30 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
     .neq('status', 'Void')
     .is('voided_at', null)
     .order('issue_date', { ascending: false })
-  if (options?.from) query = query.gte('issue_date', options.from)
-  if (options?.to) query = query.lte('issue_date', options.to)
-  if (options?.branchId) query = query.eq('branch_id', options.branchId)
+    .order('id', { ascending: false })
+    if (options?.from) query = query.gte('issue_date', options.from)
+    if (options?.to) query = query.lte('issue_date', options.to)
+    if (options?.branchId) query = query.eq('branch_id', options.branchId)
+    return query
+  }
 
-  const rows = rowsOf<InvoiceRow>(await query, 'Invoices read failed')
+  // A register/export must contain the same invoices as its headline totals.
+  // Continue until an empty confirmed page, including servers with a lower
+  // page cap. A failed page or repeated row refuses the whole partial report.
+  const rows: InvoiceRow[] = []
+  const seen = new Set<string>()
+  while (true) {
+    const result = await invoiceQuery().range(rows.length, rows.length + PAGE_SIZE - 1)
+    if (!Array.isArray(result.data) && !result.error) throw new Error('Invoices read returned no confirmed dataset')
+    const page = rowsOf<InvoiceRow>(result, 'Invoices read failed')
+    if (page.length === 0) break
+    for (const row of page) {
+      if (!row.id || seen.has(row.id)) throw new Error('Invoice register changed during pagination; retry the report')
+      seen.add(row.id)
+      rows.push(row)
+    }
+    if (rows.length > MAX_ROWS) throw new Error('Invoice register exceeds safe report limit; narrow the period')
+  }
 
   let invoiced = 0
   let net = 0
@@ -159,16 +187,21 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
     const vat = money(r.vat_amount)
     const taxableAmt = money(r.taxable_amount)
     const paid = money(r.paid_amount)
+    const discount = money(r.discount_amount)
+    if (discount > sub) throw new Error('Invalid invoice amount: discount exceeds subtotal')
     invoiced += total
-    net += sub
+    net += sub - discount
     vatTotal += vat
-    discounts += money(r.discount_amount)
+    discounts += discount
     paidTotal += paid
     outstanding += money(r.outstanding_amount)
     // An invoice with no VAT charged is exempt (or zero-rated) turnover.
     const isExempt = vat === 0
     if (isExempt) exempt += taxableAmt
     else taxable += taxableAmt
+    if (![invoiced, net, vatTotal, discounts, paidTotal, outstanding, taxable, exempt, taxable + exempt].every(Number.isSafeInteger)) {
+      throw new Error('Invoice report exceeds safe paisa range; narrow the period')
+    }
 
     const st = statusMap.get(r.status) ?? { count: 0, amount: 0 }
     st.count++
@@ -250,7 +283,7 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
       }))
       .sort((a, b) => b.totalInvoiced - a.totalInvoiced)
       .slice(0, 5),
-    invoices: invoices.slice(0, 10),
+    invoices,
   }
 
   const vat: VatTaxReportData = {
@@ -263,7 +296,7 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
       invoicesCount: count,
     },
     monthlySchedule: months.map(({ invoicedTotal: _i, collectedTotal: _c, ...row }) => row),
-    taxRegister: invoices.slice(0, 10),
+    taxRegister: invoices,
   }
 
   return { sales, vat }

@@ -25,3 +25,10 @@ test('missing, malformed and empty output never prove success', () => {
   assert.match(describeTestReceipt(null, 'same'), /NOT VERIFIED/)
   assert.match(describeTestReceipt(testReceipt({ ...green, numTotalTests: 0, numPassedTests: 0 }, 0, 'same', 'same'), 'same'), /^NOT PASSING/)
 })
+
+test('an incomplete test count cannot certify a suite', () => {
+  assert.throws(() => testReceipt({ ...green, numTotalTests: 11 }, 0, 'same', 'same'), /structured/)
+  const receipt = testReceipt(green, 0, 'same', 'same')
+  assert.match(describeTestReceipt({ ...receipt, total: 11 }, 'same'), /NOT VERIFIED/)
+  assert.match(describeTestReceipt({ ...receipt, valid: undefined }, 'same'), /NOT VERIFIED/)
+})
