@@ -82,12 +82,46 @@ describe('generatePdf', () => {
       expect(text).toContain('SN-RED-KOM-001')
       expect(text).toContain('B-715')
 
-      // 4. Cross-reference & Trailer
+      // 4. Cross-reference & Trailer byte-accuracy
       expect(text).toContain('xref\n0 ')
       expect(text).toContain('trailer\n<<')
       expect(text).toContain('/Root 1 0 R')
       expect(text).toContain('startxref\n')
       expect(text.trimEnd().endsWith('%%EOF')).toBe(true)
+
+      // Assert that startxref byte offset in the file points directly to 'xref\n'
+      const startXrefMatch = text.match(/startxref\s+(\d+)\s+%%EOF/)
+      expect(startXrefMatch).not.toBeNull()
+      const startXrefPos = Number(startXrefMatch![1])
+      const xrefSlice = new TextDecoder().decode(bytes.slice(startXrefPos, startXrefPos + 4))
+      expect(xrefSlice).toBe('xref')
+    })
+
+    it('handles zero VAT percent dynamically and displays overflow indicator for >12 lines', () => {
+      const overflowData: InvoicePdfData = {
+        invoiceNo: 'INV-2026-0099',
+        status: 'Sent',
+        bookingNo: 'BK-999',
+        client: { name: 'Large Project Crew' },
+        lines: Array.from({ length: 15 }, (_, i) => ({
+          description: `Gear Item #${i + 1}`,
+          quantity: 1,
+          rentalDays: 1,
+          ratePaisa: rupees(1000),
+          totalPaisa: rupees(1000),
+        })),
+        subtotalPaisa: rupees(15000),
+        taxablePaisa: rupees(15000),
+        vatPercent: 0,
+        vatPaisa: rupees(0),
+        totalPaisa: rupees(15000),
+      }
+
+      const bytes = generateInvoicePdf(overflowData)
+      const text = new TextDecoder().decode(bytes)
+
+      expect(text).toContain('VAT \\(0%\\):')
+      expect(text).toContain('...and 4 more items included in totals')
     })
 
     it('handles Draft invoices with no invoice_no cleanly', () => {

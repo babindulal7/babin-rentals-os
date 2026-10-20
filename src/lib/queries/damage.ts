@@ -6,6 +6,24 @@ import { rupees } from '../money'
 export { DAMAGE_FINDINGS }
 export type { DamageFinding }
 
+interface ReturnLineBookingRow {
+  id: string
+  booking_lines?: {
+    bookings?: {
+      booking_no?: string | null
+      clients?: { name?: string | null } | null
+    } | null
+  } | null
+}
+
+interface CleaningEntryBookingRow {
+  id: string
+  bookings?: {
+    booking_no?: string | null
+    clients?: { name?: string | null } | null
+  } | null
+}
+
 export async function getDamageFindings(): Promise<DamageFinding[]> {
   try {
     // Law 6: Read from damage_findings_v to respect masked estimated_cost for money-blind roles
@@ -85,7 +103,7 @@ export async function getDamageFindings(): Promise<DamageFinding[]> {
         .select('id, booking_lines(bookings(booking_no, clients(name)))')
         .in('id', returnLineIds)
 
-      for (const rl of (returnLines ?? []) as any[]) {
+      for (const rl of ((returnLines ?? []) as unknown as ReturnLineBookingRow[])) {
         const booking = rl.booking_lines?.bookings
         if (booking) {
           bookingDetails.set(`ret-${rl.id}`, {
@@ -102,7 +120,7 @@ export async function getDamageFindings(): Promise<DamageFinding[]> {
         .select('id, bookings(booking_no, clients(name))')
         .in('id', cleaningIds)
 
-      for (const cl of (cleaningEntries ?? []) as any[]) {
+      for (const cl of ((cleaningEntries ?? []) as unknown as CleaningEntryBookingRow[])) {
         const booking = cl.bookings
         if (booking) {
           bookingDetails.set(`clean-${cl.id}`, {
