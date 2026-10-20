@@ -1,5 +1,31 @@
 # Progress Log
 
+## 2026-10-20 — Complete availability reads and ASTRA evidence reconciliation
+
+**Did**
+- Created recovery branch `codex/recovery-before-availability-20261020` at `790ddc7a` and preserved the existing working diff plus the untracked booking-rules test under the local temporary recovery folder before editing. Other sessions' library and test changes remain intact.
+- Reproduced truncated equipment, serial reservations, quantity reservations and open-reset reads in `src/lib/queries/availability.ts`. Added ordered pagination through a confirmed empty page, including servers whose row cap is smaller than the requested range. Missing data, failed later pages, repeated rows and over-limit reads refuse the availability result. Unreadable reservation periods now refuse instead of silently dropping a hold. Database custody/reservation rules are unchanged.
+- Added `src/lib/queries/__tests__/availabilityCompleteness.test.ts` and gave the existing availability query fixture real range slicing. The new tests exercise later holds, later reset work, current-booking exclusion, failure propagation, missing data, repeated pages and unreadable periods.
+- Reconciled the financial checkpoint, offline account-switch regression and live unavailable states in the ASTRA progress/remaining registers. Shared production, warranty, staff-shift and notes backends remain unimplemented; the live safeguards preserve existing local bytes.
+
+**Ruled**
+- Applied existing fail-closed availability and Law 16 requirements; no new booking lifecycle, role grant, pricing or stock policy was introduced. A paginated preview is not a database snapshot; the authoritative online transaction still arbitrates concurrent reservations.
+- Verification belongs to the source fingerprint in its receipt. Another session's passing count or an earlier checkpoint cannot certify later source changes.
+
+**Verified**
+- Before availability changes: 11/11 new regressions failed. After changes: 134/134 across four availability suites passed; targeted lint and typecheck passed. Evidence: `docs/verification/ASTRA_AVAILABILITY_2026-10-20.json`.
+- Financial checkpoint: 4,879 tests passed with coverage and all recorded gates green on unchanged source (`ASTRA_FINANCE_CHECKPOINT_2026-10-20.json`). The subsequent run passed 4,899 tests and every command, but source changed during lint/tests: preserved as `ASTRA_PRE_AVAILABILITY_CHECKPOINT_2026-10-20.json`, not current-source certification.
+- A fresh full run after this fix is in progress. Its per-gate fingerprints and actual outcomes are recorded in `docs/verification/ASTRA_LOCAL_2026-10-20.json`; final status will be appended here after it finishes. No live Supabase changes, resets, pushes, PRs or real business-data writes occurred.
+
+## Completion
+
+Pending the completion generator after this run. Its import-based backend classification does not certify working shared workflows or release readiness.
+
+## Remaining
+
+- Current-source full gate results, shared operational-tool persistence and role acceptance; VAT classification provenance; remaining report/date/document/evidence workflow checks; measured bundle improvements.
+- Desktop/iPad/mobile layouts, real-device offline behavior and authenticated hosted JWT/Storage acceptance remain unverified. Migration 0170 has local SQL evidence only; NOT APPLIED and NOT PRODUCTION-VERIFIED. Existing open decisions remain in `docs/OPEN_DECISIONS.md`.
+
 ## 2026-10-20 — Query Layer Hardening, Law 6 Masking & PDF Offset Fixes (Repomix Pack 4 Audit)
 
 **Did**

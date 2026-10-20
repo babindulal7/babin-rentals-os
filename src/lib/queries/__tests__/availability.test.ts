@@ -211,10 +211,11 @@ const db = vi.hoisted(() => {
     const preds: Array<(r: Row) => boolean> = []
     let patch: Row | null = null
     let eqId: string | null = null
+    let page: [number, number] | null = null
 
     function settle(): { data: unknown; error: { message: string } | null } {
       const hit = rows(table).filter((r) => preds.every((f) => f(r)))
-      if (patch === null) return { data: hit, error: null }
+      if (patch === null) return { data: page === null ? hit : hit.slice(page[0], page[1] + 1), error: null }
       if (eqId !== null && state.releaseErrors.has(eqId)) {
         return { data: null, error: { message: `simulated failure releasing ${eqId}` } }
       }
@@ -252,6 +253,10 @@ const db = vi.hoisted(() => {
         return builder
       },
       order() {
+        return builder
+      },
+      range(from: number, to: number) {
+        page = [from, to]
         return builder
       },
       maybeSingle() {

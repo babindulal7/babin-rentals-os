@@ -19,20 +19,19 @@
  * NPR stay Latin in both languages**, so the mono face never swaps and
  * `lib/bs.ts`'s existing "never renders Devanagari digits" test keeps holding.
  *
- * ## What is deliberately empty
+ * ## Core Catalogue and Coverage Gate
  *
- * `NE` below is an **empty catalogue**, and `coverage()` reports 0%.
+ * `NE` below holds verified translations for the core navigation, status, and
+ * primary action keys.
  *
- * That is not an oversight or a stub to fill in later with placeholder text. A
- * string catalogue for 55 screens is *product copy in Nepali for a real rental
- * business* — vendor terms, tax wording, status names an operator has to act
- * on. Guessing it would put plausible-looking wrong Nepali in front of staff
- * who would reasonably trust it, which is worse than shipping nothing.
+ * A full string catalogue for 55 screens requires product copy in Nepali for
+ * a real rental business — vendor terms, tax wording, status names an operator
+ * has to act on. Guessing would put plausible-looking wrong Nepali in front of
+ * staff who would reasonably trust it, which is worse than shipping nothing.
  *
- * So the machinery is real and tested, the gap is **measured rather than
- * described**, and `canEnable()` refuses to turn NE on until the catalogue
- * actually covers the app. Someone who speaks Nepali fills `NE`; nothing else
- * about this file has to change when they do.
+ * The machinery is real and tested, the gap is **measured rather than
+ * described**, and `canEnable()` refuses to turn NE on unless the catalogue
+ * achieves 100% coverage of defined keys (`COVERAGE_THRESHOLD = 100`).
  *
  * Recorded as **PLAN.md §4.26**, which supersedes §4.2's "a Devanagari-capable
  * face is needed" — the face was never the hard part.
@@ -170,10 +169,9 @@ export const EN = {
 export type StringKey = keyof typeof EN
 
 /**
- * The Nepali catalogue. **Intentionally empty** — see the file header.
- *
- * Fill this and nothing else in this file has to change. `coverage()` will
- * report the real number and `canEnable()` will start returning true.
+ * The Nepali core catalogue. Translates the primary navigation, status, and
+ * action verbs. Additional screen catalogues must achieve 100% coverage before
+ * `canEnable('ne')` allows activation.
  */
 export const NE: Partial<Record<StringKey, string>> = {
   'nav.today': 'आज',

@@ -632,10 +632,13 @@ export function parseGateError(error: unknown): ParsedGateError {
   }
 
   // Look for GATE:<gate.id>|<human message>
-  const match = rawMessage.match(/GATE:([a-z_0-9.]+)(?:\|([^'\n\r]+))?/i)
+  // Message captures up to newline, preserving apostrophes within words (e.g. "client's")
+  // and stripping only trailing enclosing quotes from SQL error wrappers.
+  const match = rawMessage.match(/GATE:([a-z_0-9.]+)(?:\|([^\n\r]+))?/i)
   if (match) {
     const gateId = match[1] ?? ''
-    const cleanMessage = (match[2] || '').trim() || rawMessage
+    const rawClean = (match[2] || '').trim().replace(/['"]+$/, '').trim()
+    const cleanMessage = rawClean || rawMessage
     const definition = gateId ? GATE_REGISTRY[gateId] : undefined
     return {
       isGate: true,
@@ -647,13 +650,14 @@ export function parseGateError(error: unknown): ParsedGateError {
   }
 
   // Also catch legacy 'Gate Check Failure: <message>' if any
-  const legacyMatch = rawMessage.match(/Gate Check Failure:\s*([^'\n\r]+)/i)
+  const legacyMatch = rawMessage.match(/Gate Check Failure:\s*([^\n\r]+)/i)
   if (legacyMatch) {
+    const rawClean = (legacyMatch[1] ?? '').trim().replace(/['"]+$/, '').trim()
     return {
       isGate: true,
       gateId: null,
       rawMessage,
-      cleanMessage: (legacyMatch[1] ?? '').trim(),
+      cleanMessage: rawClean,
     }
   }
 

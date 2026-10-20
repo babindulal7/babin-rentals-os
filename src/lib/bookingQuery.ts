@@ -1833,7 +1833,7 @@ function toDiscount(raw: RawDiscount): CanonicalBookingDiscount {
 export interface CanonicalDiscountIntegrity {
   /** Σ `booking_discounts.percent`, exactly as stored. **Never clamped.** */
   sumPercent: number
-  /** `DISCOUNT_CAP` from money.ts — the same 25 the database enforces. */
+  /** `DISCOUNT_CAP` from money.ts — the arithmetic ceiling (100) per D3 ruling. */
   cap: number
   /**
    * What the stored rows break, or `null` when they break nothing.
@@ -2256,7 +2256,7 @@ export interface SuppliedPriceInputs {
    * Σ transport charges. §2.1: "Rs 0 on client pickup" — the caller applies
    * that rule, because it also has to honour
    * `booking_transport.zero_charge_override_by` (0002:383), and this module
-   * does not read that table. `booking.deliveryType === 'Customer Pickup'` is
+   * does not read that table. `booking.deliveryType === 'Client Pickup'` is
    * the enum literal to test against; see the note on that field.
    *
    * `null` = not read. `rupees(0)` = read, and nothing is charged for transport.

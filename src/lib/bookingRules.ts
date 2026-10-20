@@ -1,3 +1,5 @@
+import { readLocal, writeLocal } from './safeStorage'
+
 /**
  * redesign v1 §3 — the "Allow overbooking" valve (Settings ▸ Financial ▸
  * Booking rules). Off by default; when on, a booked/maintenance chip in Add
@@ -24,8 +26,7 @@
 const KEY = 'br.bookingRules.allowOverbooking'
 
 function readAllowOverbooking(): boolean {
-  if (typeof window === 'undefined') return false
-  return window.localStorage.getItem(KEY) === 'true'
+  return readLocal(KEY) === 'true'
 }
 
 export function getAllowOverbooking(): boolean {
@@ -33,6 +34,5 @@ export function getAllowOverbooking(): boolean {
 }
 
 export function setAllowOverbooking(value: boolean): void {
-  if (typeof window === 'undefined') return
-  window.localStorage.setItem(KEY, value ? 'true' : 'false')
+  writeLocal(KEY, value ? 'true' : 'false')
 }
