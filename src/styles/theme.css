@@ -46,6 +46,33 @@
   --app-sidebar-collapsed-width: 64px;
   --global-header-height: 64px;
   --app-panel-width: 320px;
+
+  /* Density Tokens (Default / Fallback) */
+  --density-card-pad: 12px;
+  --density-panel-gap: 12px;
+  --density-section-gap: 12px;
+  --density-table-row: 44px;
+  --density-situational-min-h: 96px;
+}
+
+:root[data-density='compact'],
+.app-workspace[data-density='compact'] {
+  --density-card-pad: 12px;
+  --density-panel-gap: 12px;
+  --density-section-gap: 12px;
+  --density-table-row: 44px;
+  --density-situational-min-h: 96px;
+  --app-sidebar-width: 224px;
+}
+
+:root[data-density='comfortable'],
+.app-workspace[data-density='comfortable'] {
+  --density-card-pad: 16px;
+  --density-panel-gap: 20px;
+  --density-section-gap: 16px;
+  --density-table-row: 48px;
+  --density-situational-min-h: 140px;
+  --app-sidebar-width: 256px;
 }
 
 /* ============================================================================

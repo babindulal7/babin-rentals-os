@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { ThemeProvider } from './lib/theme'
+import { DisplayDensityProvider } from './lib/displayDensity'
 import { AuthProvider } from './lib/auth'
 
 /**
@@ -110,9 +111,11 @@ if (REFERENCE_CASE_ERROR) {
       <StrictMode>
         <AuthProvider>
           <ThemeProvider initial="light">
-            <BrowserRouter>
-              <App />
-            </BrowserRouter>
+            <DisplayDensityProvider>
+              <BrowserRouter>
+                <App />
+              </BrowserRouter>
+            </DisplayDensityProvider>
           </ThemeProvider>
         </AuthProvider>
       </StrictMode>,

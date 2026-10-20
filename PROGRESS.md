@@ -1,5 +1,58 @@
 # Progress Log
 
+## 2026-10-21 — Precision Cinema Aesthetic Direction v1.0 Implementation & Visual Polish
+
+**Did**
+- Executed the approved visual and layout polish across Babin Rentals OS (Desktop, Tablet, Phone) adhering strictly to the **Precision Cinema Aesthetic Direction v1.0** while preserving all business logic, operational day boundaries, integer paisa math (`money.ts`), and RLS/DB policies:
+  - **Phase 1 (Shell & Token Primitives):**
+    - `src/components/shell/Sidebar.tsx`: Split tablet and desktop navigation collapse states (`isTablet ? 'sidebar:tablet' : 'sidebar:desktop'`). On tablets (768px–1279px, including iPad), the sidebar defaults to the 64px compact icon rail, liberating 756px+ of horizontal space for operational data grids without truncating table columns.
+    - `src/components/shell/Header.tsx` & `src/components/shell/shell.css`: Enforced `minWidth: isPhone ? '110px' : ...` on `.app-global-header__breadcrumbs` and narrowed Zone 3 gap to `4px` on mobile, permanently eliminating the 40px breadcrumb truncation bug (`Re...` / `71...`) on iPhone/Android viewports.
+  - **Phase 2 (Today & Rentals Command Center):**
+    - `src/modules/rentals/RentalsList.tsx`: Upgraded the header creation button to canonical `variant="primary"` (solid Precision blue `#2456D6`), providing the single solid primary action slot on the page. Added `minWidth: 140px` to `Pickup` and `Return` table headers and adjusted column shares (`Pickup`: 0.135, `Return`: 0.135, `Project Type`: 0.10) to prevent date-time text collisions on compact viewports.
+    - `src/components/ui/module-shell/module-shell.css`: Refactored `.module-kpi-grid` under `@media (max-width: 767px)` into a compact 3-column ribbon (`padding: 8px 10px; gap: 8px; font-size: 1.15rem; displayCount`), reducing mobile KPI height from ~460px to ~58px so that the rentals table is immediately accessible without scrolling.
+    - `src/modules/today/dashboard.css`: Elevated movement card action verbs (`Handover`, `Return & Inspect`) to 56px primary floor buttons styled with `var(--btn-primary-bg, var(--primary))` and `color: var(--btn-primary-fg, var(--on-primary))`. Corrected `.dashboard-workbar__intro > span` direct-child selector so that inline movement counts (`pickupCount going out · returnCount coming back`) render with crisp typography instead of 11px block captions.
+    - `src/modules/today/Today.tsx`: Streamlined movement board header flex baseline layout and dot separator for crisp alignment.
+  - **Phase 3 (Rental Detail, Inventory & Finance):**
+    - `src/components/ui/Page.tsx`: Enhanced `SummaryRows` to conditionally apply `className="figure"` (JetBrains Mono) only for numeric, currency, and date values, rendering client names, projects, and text in Source Sans 3 per the Precision Cinema typography law.
+    - `src/modules/rentals/BookingDetail.tsx`: Styled `<details><summary>` project-type editor disclosure with refined typography and spacing, eliminating raw browser disclosure appearance.
+    - `src/modules/finance/Finance.tsx`: Removed redundant duplicate `+ Record Payment` primaryAction prop from `ModuleSubHeader`, leaving the page header's `PageActions.primary` as the single authoritative primary action on the page.
+  - **Phase 4 (Visual Verification & Artifacts):**
+    - Captured comprehensive after-implementation screenshots across desktop, tablet, and mobile viewports in light and dark themes using headless Chrome CDP.
+    - Confirmed 0 regressions across all verification suites.
+
+**Ruled**
+- In `SummaryRows`, text values (e.g. client and project names) use the primary body font (Source Sans 3); `className="figure"` (JetBrains Mono) is strictly reserved for numbers, monetary values, dates, and codes.
+- Floor action buttons on Today movement cards are primary operational verbs (56px touch target) adhering strictly to CSS token custom properties.
+- Each workspace module header owns the single primary action slot; sub-headers must not duplicate primary actions.
+
+**Verified**
+- `npm run lint`: passed (`--max-warnings 0`).
+- `npm run lint:shell`: passed (687 files checked; 0 violations).
+- `npm run typecheck`: passed (`tsc --noEmit`, 0 errors).
+- `npm test`: all 393 test files and 4,976 tests passed.
+- `npm run check:pglite`: 168/168 migrations applied from scratch in PGlite (0 failed, 31 views verified, 20 anon RPCs checked, 78 definer search paths pinned).
+- `npm run check:lifecycle`: 31/31 steps green through real Postgres + RLS.
+- `npm run check:contrast`: 82/82 pass (WCAG AA light + dark).
+- `npm run build`: built in 1m 19s (`dist/` created, PWA precache 209 entries).
+- Visual verification: Automated headless CDP captures confirmed visual parity, eliminated title clipping, and established crisp typography across viewports.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 51 / 54 (94%) | — |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | — |
+| Lifecycle | steps green / total | 31 / 31 (100%) | — |
+| Overall | mean of five | ≈ 98% | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed. Suite: 4976/4976 passed, 0 failed.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Await user review of the implemented Precision Cinema aesthetic improvements and captured verification screenshots.
+- Continue monitoring and maintaining 100% green verification gates across all modules.
+
 ## 2026-10-21 — External Code Audit Remediation (Part 3: Files 125–156) & Gate Verification
 
 **Did**
