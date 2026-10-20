@@ -1666,7 +1666,8 @@ export async function fetchInvoiceLines(invoiceId: string): Promise<InvoiceLineI
     .eq('invoice_id', invoiceId)
     .order('sort_order', { ascending: true })
 
-  if (error || !data) return []
+  if (error) throw new Error(`Invoice lines could not be loaded: ${error.message}`)
+  if (!data) throw new Error('Invoice lines could not be loaded: no response data')
   return (data as Array<Record<string, unknown>>).map((r) => ({
     id: String(r.id),
     description: String(r.description),

@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { readCandidates, readHolds, readQuantityHolds } from '../availability'
+import { planAssignment, readCandidates, readHolds, readProductModes, readQuantityHolds } from '../availability'
 
 const db = vi.hoisted(() => ({
   tables: {} as Record<string, Array<Record<string, unknown>>>,
   cap: 2,
   failure: '' as string,
   nullPage: false,
+  nullTable: '',
   repeat: false,
   calls: [] as Array<{ table: string; start: number }>,
 }))
@@ -24,19 +25,24 @@ vi.mock('../../supabase', () => ({
       is: (key: string, value: unknown) => { predicates.push(row => (row[key] ?? null) === value); return query },
       not: (key: string, _op: string, value: unknown) => { predicates.push(row => (row[key] ?? null) !== value); return query },
       range: (from: number, to: number) => { start = from; end = to; return query },
+      maybeSingle: () => Promise.resolve({ data: (db.tables[table] ?? []).find(row => predicates.every(predicate => predicate(row))) ?? null, error: null }),
       then: (resolve: (value: unknown) => unknown) => {
         db.calls.push({ table, start })
         const failed = db.failure === table && start > 0
         const rows = (db.tables[table] ?? []).filter(row => predicates.every(predicate => predicate(row)))
         const offset = db.repeat ? 0 : start
         return Promise.resolve({
-          data: failed || db.nullPage ? null : rows.slice(offset, offset + Math.min(end - start + 1, db.cap)),
+          data: failed || db.nullPage || db.nullTable === table ? null : rows.slice(offset, offset + Math.min(end - start + 1, db.cap)),
           error: failed ? { message: 'later page failed' } : null,
         }).then(resolve)
       },
     }
     return query
   } },
+}))
+
+vi.mock('../../settingsStore', () => ({
+  getSetting: (key: string) => key === 'unitAvailabilityRule' ? 'Condition only' : 'Same-instant handover allowed',
 }))
 
 const period = '[2026-10-20T00:00:00Z,2026-10-22T00:00:00Z)'
@@ -51,7 +57,7 @@ const units = () => Array.from({ length: 3 }, (_, n) => ({
 describe('availability reads must be complete before reporting stock', () => {
   beforeEach(() => {
     db.tables = { inventory_reservations: reservations(), product_units_v: units() }
-    db.failure = ''; db.nullPage = false; db.repeat = false; db.calls = []; db.cap = 2
+    db.failure = ''; db.nullPage = false; db.nullTable = ''; db.repeat = false; db.calls = []; db.cap = 2
   })
 
   it('includes serial holds beyond a server cap smaller than the requested page', async () => {
@@ -96,5 +102,59 @@ describe('availability reads must be complete before reporting stock', () => {
     db.tables.inventory_reservations = [{ ...reservations()[0], period: 'empty' }]
     const read = kind === 'serial' ? readHolds(null) : readQuantityHolds(['p-1'], null)
     await expect(read).rejects.toThrow(/period|window/i)
+  })
+})
+
+describe('booking inputs must be complete before planning stock', () => {
+  const bookingId = '11111111-2222-4333-8444-555555555555'
+  const products = () => Array.from({ length: 3 }, (_, n) => ({ id: `p-${n + 1}`, tracking_mode: 'Quantity', total_quantity: 2 }))
+
+  beforeEach(() => {
+    db.cap = 2; db.failure = ''; db.nullPage = false; db.nullTable = ''; db.repeat = false; db.calls = []
+    db.tables = {
+      bookings: [{ id: bookingId, booking_no: 'BK-TEST', pickup_at: '2026-10-20T00:00:00Z', return_at: '2026-10-22T00:00:00Z' }],
+      products_v: products(),
+      // The third line claims the last unit again; missing it falsely makes the plan complete.
+      booking_lines: Array.from({ length: 3 }, (_, n) => ({ id: `line-${n}`, booking_id: bookingId, product_id: 'p-1', qty: 1, line_type: 'Equipment', description: `Cable ${n}`, voided_at: null })),
+    }
+  })
+
+  it('checks a later booking line instead of declaring the truncated plan complete', async () => {
+    const plan = await planAssignment(bookingId)
+    expect(plan.lines).toHaveLength(3)
+    expect(plan.complete).toBe(false)
+    expect(plan.lines[2]?.problem).toMatch(/earlier line/)
+  })
+
+  it('refuses a failed later booking-line page', async () => {
+    db.failure = 'booking_lines'
+    await expect(planAssignment(bookingId)).rejects.toThrow(/later page failed/)
+  })
+
+  it('refuses a missing booking-line dataset rather than an empty, complete plan', async () => {
+    db.nullTable = 'booking_lines'
+    await expect(planAssignment(bookingId)).rejects.toThrow(/missing|incomplete/i)
+  })
+
+  it('loads tracking modes and stock ceilings beyond the view row cap', async () => {
+    expect((await readProductModes(['p-1', 'p-2', 'p-3'])).size).toBe(3)
+    expect(db.calls.filter(call => call.table === 'products_v').map(call => call.start)).toEqual([0, 2, 3])
+    expect(db.calls.some(call => call.table === 'products')).toBe(false)
+  })
+
+  it('loads every money-safe base fallback row when the view has no matching rows', async () => {
+    db.tables.products_v = []; db.tables.products = products()
+    expect((await readProductModes(['p-1', 'p-2', 'p-3'])).size).toBe(3)
+  })
+
+  it.each(['products_v', 'products'])('refuses a failed later %s metadata page', async table => {
+    if (table === 'products') { db.tables.products_v = []; db.tables.products = products() }
+    db.failure = table
+    await expect(readProductModes(['p-1', 'p-2', 'p-3'])).rejects.toThrow(/later page failed/)
+  })
+
+  it('refuses missing metadata rather than treating it as an empty catalogue', async () => {
+    db.nullPage = true
+    await expect(readProductModes(['p-1'])).rejects.toThrow(/missing|incomplete/i)
   })
 })

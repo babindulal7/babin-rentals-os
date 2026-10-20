@@ -1074,7 +1074,7 @@ export default function ReturnWorkspace({
     )
   }
 
-  /** 1-Click Quick Check-in: Marks all outstanding actionable items Returned in Good Condition and sets signatures */
+  /** Bulk receipt records item marks only; QC and signatures require their own explicit capture. */
   const checkInAllClean = () => {
     unlockAudioContext()
     const at = new Date().toISOString()
@@ -1096,35 +1096,10 @@ export default function ReturnWorkspace({
       return next
     })
 
-    // Auto-mark QC passed for any cinema items
-    const newQcMap: Record<string, boolean> = { ...qcStatusMap }
-    for (const r of outstanding) {
-      if (getCinemaQcItem(r.name)) {
-        newQcMap[r.key] = true
-      }
-    }
-    setQcStatusMap(newQcMap)
-
-    // Auto-fill signatures if not yet recorded
-    if (!sigWarehouse && user?.name) {
-      setSigWarehouse({
-        name: user.name,
-        role: 'Warehouse Staff',
-        atIso: at,
-      })
-    }
-    if (!sigReturning) {
-      setSigReturning({
-        name: returningName || floor?.clientName || 'Returning Person',
-        role: 'Returning Person',
-        atIso: at,
-      })
-    }
-
     triggerScanPulse('success')
     playCaseComplete()
     setScanLog((p) => [
-      `⚡ Quick Check-in All: ${outstanding.length} item(s) received in Good Condition`,
+      `• ${outstanding.length} item(s) marked received by hand — QC and signatures unchanged`,
       ...p,
     ].slice(0, 5))
   }

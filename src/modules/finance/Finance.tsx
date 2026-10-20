@@ -56,6 +56,7 @@ import DailyClosing from './DailyClosing'
 import { ReportCatalog } from '../reports/ReportCatalog'
 import { DateField } from '../../components/ui/DateField'
 import { exportInvoicePdf } from '../../lib/pdf/exportPdf'
+import { invoicePdfData } from '../../lib/pdf/invoicePdfData'
 import { Pagination } from '../../components/ui/Pagination'
 import './finance.css'
 import { BsAdDate } from '../../components/ui/BsAdDate'
@@ -944,46 +945,21 @@ export default function Finance() {
   }, [refreshAll])
 
   const handleExportPdf = useCallback(async (row: InvoiceListRow) => {
+    setNotPersisted(null)
     try {
       const dbLines = await fetchInvoiceLines(row.id)
-      const lines =
-        dbLines.length > 0
-          ? dbLines.map((l) => ({
-              description: l.description,
-              quantity: l.quantity,
-              totalPaisa: rupees(l.lineTotal),
-            }))
-          : [
-              {
-                description: 'Equipment Rental & Production Services',
-                quantity: 1,
-                totalPaisa: row.totalAmount,
-              },
-            ]
-
       await exportInvoicePdf(
-        {
-          invoiceNo: row.invoiceNo,
-          status: row.status,
-          issueDateAd: row.issueDateAd,
-          dueDateAd: row.dueDateAd,
-          bookingNo: row.bookingNo,
-          client: { name: row.clientName },
-          lines,
-          subtotalPaisa: row.totalAmount,
-          taxablePaisa: row.totalAmount,
-          vatPaisa: row.vatAmount,
-          totalPaisa: row.totalAmount,
-          paidPaisa: row.paidAmount,
-          outstandingPaisa: row.outstandingAmount,
-        },
+        invoicePdfData(row, dbLines),
         {
           invoiceId: row.id,
           download: true,
         },
       )
     } catch (err) {
-      console.error('Failed to export invoice PDF:', err)
+      setNotPersisted({
+        title: 'Invoice PDF was not exported',
+        message: err instanceof Error ? err.message : 'The invoice could not be exported. Please retry.',
+      })
     }
   }, [])
 

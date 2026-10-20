@@ -9,6 +9,8 @@ import ReturnWorkspace from '../ReturnWorkspace'
 import { loadFloorScan, saveFloorScan } from '../../../lib/floorScanStorage'
 import { loadMockClient } from '../../../lib/supabase'
 
+;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
+
 beforeAll(async () => {
   await loadMockClient()
 })
@@ -117,6 +119,7 @@ async function flush(rounds = 4) {
 
 beforeEach(() => {
   localStorage.clear()
+  Object.defineProperty(window, 'innerWidth', { value: 1440, configurable: true, writable: true })
 })
 
 afterEach(async () => {
@@ -181,6 +184,36 @@ describe('Floor Workspaces State Persistence (AUD-018)', () => {
   })
 
   describe('ReturnWorkspace', () => {
+    it.each([1440, 390])('bulk receipt at %ipx leaves QC and signatures for explicit capture', async (width) => {
+      mockBookingStage = 'On Rent'
+      Object.defineProperty(window, 'innerWidth', { value: width, configurable: true, writable: true })
+      container = document.createElement('div')
+      document.body.appendChild(container)
+      root = createRoot(container)
+      await act(async () => {
+        root.render(
+          <MemoryRouter initialEntries={['/rentals/B-901/return']}>
+            <ToastProvider>
+              <Routes>
+                <Route path="/rentals/:bookingNo/return" element={<ReturnWorkspace />} />
+              </Routes>
+            </ToastProvider>
+          </MemoryRouter>,
+        )
+      })
+      await flush()
+      const bulk = [...document.body.querySelectorAll('button')].find((b) => /^Check In All(?: Clean)?$/.test(b.textContent?.trim() ?? ''))
+      expect(bulk).toBeTruthy()
+      await act(async () => bulk?.click())
+      const text = document.body.textContent ?? ''
+      expect(text).toContain('Sensor QC')
+      expect(text).not.toContain('Sensor Clean')
+      expect(text).toContain('Missing: Returning person, Warehouse staff')
+      const complete = [...document.body.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Complete Return')
+      expect(complete).toBeTruthy()
+      expect(complete?.disabled).toBe(true)
+    })
+
     it('restores persisted return triage state on mount and displays restored banner', async () => {
       mockBookingStage = 'On Rent'
 

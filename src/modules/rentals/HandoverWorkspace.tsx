@@ -1005,28 +1005,6 @@ export default function HandoverWorkspace({
     )
   }
 
-  /** 1-Click Quick Dispatch: Verifies receiver ID & auth, marks all ready items picked up, adds warehouse & receiver attestations, and satisfies evidence photo */
-  const quickDispatchAll = () => {
-    setGovIdVerified(true)
-    setBookingAuthVerified(true)
-    markReadyPickedUp()
-    const now = new Date().toISOString()
-    setSignatures((prev) => ({
-      receiver: prev.receiver ?? {
-        name: floor?.clientName || 'Authorized Receiver',
-        role: 'Receiver',
-        atIso: now,
-      },
-      warehouse: prev.warehouse ?? {
-        name: user?.name || 'Warehouse Staff',
-        role: 'Warehouse Staff',
-        atIso: now,
-      },
-    }))
-    setPhotoCount((p) => Math.max(p, 1))
-    setScanLog((p) => ['⚡ Quick Dispatch All: ID verified, ready units released & signatures recorded', ...p].slice(0, 5))
-  }
-
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault()
@@ -1618,12 +1596,10 @@ export default function HandoverWorkspace({
                   action={
                     phone ? (
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <Button icon="zap" onClick={quickDispatchAll}>Quick Dispatch</Button>
                         <Button icon="checklist" onClick={markReadyPickedUp}>Mark Ready Picked Up</Button>
                       </div>
                     ) : (
                       <>
-                        <Button icon="zap" onClick={quickDispatchAll}>Quick Dispatch All</Button>
                         <Button icon="checklist" onClick={markReadyPickedUp}>Mark Ready Picked Up</Button>
                         <Button icon="camera" onClick={() => setShowScanner(true)}>Scan Barcode</Button>
                         <Button icon="truck" onClick={() => setShowDriverModal(true)}>Field Delivery</Button>

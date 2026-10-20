@@ -1,5 +1,14 @@
 # Current continuation — 20 October 2026, availability follow-up
 
+## Next batch — booking-planning inputs
+
+- Started from clean `ba2f80cb`, recovery `codex/recovery-before-planning-reads-20261020`.
+- Confirmed and corrected truncated booking-line and tracking/stock metadata reads in `src/lib/queries/availability.ts`, including the existing explicitly granted nonfinancial base fallback. Missing datasets and later-page failures now stop the plan instead of returning incomplete inputs.
+- Eight new regressions failed before the source fix; after it, 200/200 across five suites pass, including all 19 completeness and 58 confirmation-action tests. Full gates are running; `docs/verification/ASTRA_LOCAL_2026-10-20.json` records actual results, not an assumed carry-forward pass.
+- The earlier 4,931-test source-matched result is preserved as `docs/verification/ASTRA_AVAILABILITY_CHECKPOINT_2026-10-20.json`. It does not certify these later edits. Post-confirmation summary semantics and the other remaining acceptance items below stay open. No business-data or hosted changes were made.
+
+## Earlier availability checkpoint
+
 - Recovery: `codex/recovery-before-availability-20261020` at `790ddc7a`, plus a local temporary copy of existing uncommitted work. Other sessions' changes are preserved. No clone, remote write, reset, push or PR.
 - **WF-06 confirmed and source corrected:** equipment candidates, serial/quantity holds and open-reset work now read stable ordered pages until an empty page; incomplete/error/repeated results stop the preview. Unreadable hold periods also stop the preview. Files: `src/lib/queries/availability.ts`, existing availability query test fixture, new `availabilityCompleteness.test.ts`. Before: 11 regressions failed; after: 134 related tests, targeted lint/typecheck and full current-source gates pass; see the final verification below. GiST/capacity and custody rules are unchanged.
 - **WF-01 financial checkpoint verified locally:** complete Sales/VAT registers and exports, recorded invoice discounts, validated integer amounts and aggregate bounds; 8 new cases passed. The unchanged-source checkpoint passed 4,879 tests plus coverage, lint, rebuild, financial/security/lifecycle, contrast and build. Durable receipt: `docs/verification/ASTRA_FINANCE_CHECKPOINT_2026-10-20.json`.

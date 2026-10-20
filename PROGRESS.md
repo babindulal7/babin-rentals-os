@@ -1,5 +1,51 @@
 # Progress Log
 
+## 2026-10-20 — Current-source top-ten app review
+
+**Did**
+- Reviewed current handover/return shortcuts, Finance invoice-export inputs, PDF generation, membership settings, shared-tool live boundaries, VAT classification and operation location scope. Prepared ten source-backed findings for Babin; no application code or live data was changed.
+- Confirmed Quick Dispatch manufactures verification/signature/photo state and Quick Check-in manufactures QC/signature state. Confirmed Finance exports total as subtotal/taxable amount, omits stored discount/rate inputs, and does not supply company settings. PDF generation truncates larger invoices and strips non-ASCII text. Settings retains a static membership matrix beside live credit policy; four shared tools remain unavailable; VAT reporting infers classification from zero VAT; operation site binding remains unimplemented.
+
+**Ruled**
+- No new product decisions. Findings describe current source behavior and explicitly do not certify hosted behavior or claim that UI evidence counters satisfy database gates.
+
+**Verified**
+- Focused existing tests: `npx vitest run src/lib/pdf/__tests__/generatePdf.test.ts src/__tests__/e2e/localOnlyTools.live.test.tsx` — 2 files, 17 tests PASS. These tests confirm existing boundaries/structure, not correctness of all reported workflows.
+- Ran `npm run completion`; it identifies the stored full-suite receipt as historical and current source as NOT VERIFIED. Other sessions are editing this checkout. Full typecheck, migration/lifecycle gates and build were not rerun for this documentation-only review; no migration was written or applied.
+
+## Completion
+
+- Review completed. The completion generator was executed; its structural estimate and prior SQL/lifecycle receipts do not certify this review's workflows. Current-source full-suite and production acceptance were not measured by this review.
+
+## Remaining
+
+- Ten reported issues require remediation or approved product decisions, followed by appropriate regression and hosted/device acceptance. No fixes were requested or claimed in this review.
+- Next: address manufactured verification/evidence and QC/signature state, then invoice-export correctness.
+
+## 2026-10-20 — Complete booking-planning inputs
+
+**Did**
+- Began on clean `main` at `ba2f80cb`; created `codex/recovery-before-planning-reads-20261020` before editing. Preserved existing code, data, configuration and earlier source-bound verification receipts.
+- Reproduced a booking plan that incorrectly reported complete stock coverage when a later line exceeded the API row cap. Also reproduced truncated product tracking/quantity metadata, incomplete legacy fallback rows and missing/later-failed datasets.
+- Updated `src/lib/queries/availability.ts`: live booking lines, product-view metadata and the existing money-safe base fallback now use the complete ordered-page reader. Failed or missing datasets refuse planning; existing stock, quantity, custody and fallback permissions remain unchanged.
+- Extended `src/lib/queries/__tests__/availabilityCompleteness.test.ts` with eight new regressions. Kept all 11 earlier availability cases. Preserved the verified 4,931-test checkpoint in `docs/verification/ASTRA_AVAILABILITY_CHECKPOINT_2026-10-20.json` before the fresh run.
+
+**Ruled**
+- Applied existing complete-read/fail-closed requirements. No pricing, role, booking lifecycle or terminal-action policy was introduced. The post-confirmation display summary retains its existing non-throwing contract and needs a separate review.
+
+**Verified**
+- Before the fix: eight new regressions failed; all 11 earlier cases passed. After: 200/200 tests across five suites passed, including 58 confirmation action cases and all 19 completeness cases.
+- Preliminary typecheck exited 0. Full source-bound typecheck, lint, coverage suite, local DB/security/lifecycle gates and build are running. The earlier checkpoint is historical for these edits; actual outcomes will be recorded in `docs/verification/ASTRA_LOCAL_2026-10-20.json`.
+
+## Completion
+
+Pending the completion generator after the current run. Structural import counts are not release acceptance.
+
+## Remaining
+
+- Final source-matched verification; separate post-confirmation held-summary and confirmation query completeness review. Shared operational persistence, VAT classification, document/evidence acceptance and bundle/startup work remain open.
+- Hosted JWT/Storage, real-device offline behavior and desktop/iPad/mobile browser acceptance remain unverified. No hosted changes, database reset, push, PR, fabricated business records or offline-work deletion occurred.
+
 ## 2026-10-20 — Complete availability reads and ASTRA evidence reconciliation
 
 **Did**

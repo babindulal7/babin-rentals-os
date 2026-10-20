@@ -226,10 +226,17 @@ interface ProductMode {
   readonly totalQuantity: number
 }
 
+interface ProductModeRow {
+  id: string
+  tracking_mode: string | null
+  total_quantity: number | null
+}
+
 /**
  * `tracking_mode` and `total_quantity` for a set of products, read through
- * **`products_v`** and never the base table — 0062 revokes table-level SELECT on
- * `products`, the same reason `readCandidates` reads `product_units_v`.
+ * **`products_v`**. The existing fallback names only `id`, `tracking_mode` and
+ * `total_quantity`, which 0062 explicitly grants on `products`; it never asks
+ * for the table's financial columns. Both reads must finish before planning.
  *
  * Neither column is money. `products_v` returns `null` for its nine money
  * columns to a money-blind session (`queries/inventory.ts` MONEY) and these two
@@ -249,20 +256,14 @@ export async function readProductModes(productIds: readonly string[]): Promise<M
   if (productIds.length === 0) return byId
 
   const uniqueIds = [...new Set(productIds)]
-  const { data, error } = await supabase
+  const rows = await readCompleteAvailability<ProductModeRow>((from, to) => supabase
     .from('products_v')
     .select('id, tracking_mode, total_quantity')
     .in('id', uniqueIds)
+    .order('id', { ascending: true })
+    .range(from, to), 'product tracking and stock')
 
-  if (error) {
-    throw new Error(`Could not read how these products are tracked, so nothing was assigned: ${error.message}`)
-  }
-
-  for (const row of (data ?? []) as unknown as Array<{
-    id: string
-    tracking_mode: string | null
-    total_quantity: number | null
-  }>) {
+  for (const row of rows) {
     byId.set(row.id, {
       /* A null mode is not a mode. Falling back to `Serialised` sends the line
          down the unit path, which can only ever REFUSE a booking — the safe
@@ -276,16 +277,14 @@ export async function readProductModes(productIds: readonly string[]): Promise<M
 
   const missing = uniqueIds.filter((id) => !byId.has(id))
   if (missing.length > 0) {
-    const { data: baseData } = await supabase
+    const baseRows = await readCompleteAvailability<ProductModeRow>((from, to) => supabase
       .from('products')
       .select('id, tracking_mode, total_quantity')
       .in('id', missing)
+      .order('id', { ascending: true })
+      .range(from, to), 'product tracking fallback')
 
-    for (const row of (baseData ?? []) as unknown as Array<{
-      id: string
-      tracking_mode: string | null
-      total_quantity: number | null
-    }>) {
+    for (const row of baseRows) {
       byId.set(row.id, {
         trackingMode: row.tracking_mode ?? 'Serialised',
         totalQuantity: typeof row.total_quantity === 'number' ? row.total_quantity : 0,
@@ -307,21 +306,19 @@ async function readLines(bookingId: string): Promise<{
   assignable: AssignableLine[]
   skipped: AssignmentPlan['skipped']
 }> {
-  const { data, error } = await supabase
-    .from('booking_lines')
-    .select('id, product_id, qty, line_type, description')
-    .eq('booking_id', bookingId)
-    .is('voided_at', null)
-
-  if (error) throw new Error(`Could not read the booking's lines, so nothing was assigned: ${error.message}`)
-
-  const rows = (data ?? []) as unknown as Array<{
+  const rows = await readCompleteAvailability<{
     id: string
     product_id: string | null
     qty: number
     line_type: string
     description: string | null
-  }>
+  }>((from, to) => supabase
+    .from('booking_lines')
+    .select('id, product_id, qty, line_type, description')
+    .eq('booking_id', bookingId)
+    .is('voided_at', null)
+    .order('id', { ascending: true })
+    .range(from, to), "booking's lines")
 
   const modes = await readProductModes(
     rows.map((row) => row.product_id).filter((id): id is string => id !== null),
