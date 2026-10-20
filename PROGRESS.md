@@ -1,5 +1,43 @@
 # Progress Log
 
+## 2026-10-20 — Action Invariants, Damage Approvals & Schema Unit Verification (Repomix Pack 3 Audit)
+
+**Did**
+- Clarified `approveDailyClosing.ts` schema facts: confirmed `0078_daily_closings.sql:75-78` intentionally stores `bigint` paisa for all amounts (`counted_cash`, `expected_cash`, `variance`, `collected_*`, `receivables`, `deposits_held`). Documented that passing integer Paisa directly is required and that `toRupees()` would introduce a 100× unit discrepancy.
+- Documented `writeIntel.ts` RLS constraints: verified `0143_smart_intel_notes_fields.sql:87, 198` explicitly gates equipment intel notes and field values to `('Owner', 'Admin', 'Manager')` in Postgres RLS, which `permissions: ['inventory.create']` (mapped to `canCreateBundle`) precisely mirrors. Added documentation and comprehensive test suite (`src/actions/intel/__tests__/writeIntel.test.ts`, 14 tests).
+- Hardened `resolveDamage.ts`: routed findings updates through `safeUpdate('damage_findings')` with Law 8 idempotency key and `queueOnFailure: false`. Added offline guard, UUID format validation, and enforced the Rs 25,000 threshold (`OWNER_APPROVAL_THRESHOLD`): charges >= Rs 25,000 require Owner approval while charges below Rs 25,000 admit Manager per `0057_damage_approval_rank.sql` and `approverFor(chargePaisa)`.
+- Updated `DamageTab.tsx` to generate and pass Law 8 `clientUuid` to `resolveDamageFinding`.
+- Updated stale comments in `createClient.ts` and `blockClient.ts` to reflect the 15 Aug 2026 rulings (`rbac.canCreateClient` and `rbac.canBlockClient`), and in `approvePurchaseRequest.ts` to reflect migration `0069` (Owner and Manager only).
+- Generated clean non-test code pack (`repomix-output.xml`) covering 461 files (~1.9M tokens).
+
+**Ruled**
+- Upheld `0057_damage_approval_rank.sql`: damage findings >= Rs 25,000 require Owner approval at the action layer.
+- Upheld Law 4 (payments immutability) and Law 8 (idempotent action keys).
+
+**Verified**
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (0 warnings, 0 errors).
+- Vitest suites: 203/203 passed across 6 affected test suites (`writeIntel.test.ts`, `createClient.test.ts`, `blockClient.test.ts`, `resolveDamage.test.ts`, `inventoryWrites.test.ts`, `DamageTab.test.tsx`).
+- `npm run check:pglite`: 168/168 migrations applied, 0 leaks.
+- `npm run check:lifecycle`: 31/31 steps green.
+- `npm run build`: production bundle passed cleanly.
+- `npm run completion`: counted by script.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 51 / 54 (94%) | — |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | — |
+| Lifecycle | steps green / total | 31 / 31 (100%) | — |
+| Overall | mean of five | ≈ 98% | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed.
+
+### Remaining
+- Await external auditor review of `repomix-output.xml` (lib, modules, and migrations 0150–0170).
+- Remote migration push remains blocked by N-5 until Babin executes `BACKUP_PROTOCOL.md`.
+
 ## 2026-10-20 — Live boundaries for local-only operational tools
 
 **Did**
