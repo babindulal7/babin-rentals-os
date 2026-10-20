@@ -1,0 +1,81 @@
+/* Premium Workbench v1 — presentation-only additions on the existing design tokens.
+   Imported once by ContextDrawer.tsx.
+
+   Docking reuses the convention FilterDrawer already established for BOTH edge
+   drawers (RULINGS-2026-10-15 / 2026-10-20): while a docked inspector is open at
+   desktop, ContextDrawer sets `--context-drawer-w` on :root and `.app-workspace`
+   (ui-v2.css) reserves the strip through its animated padding-right. The
+   `context-drawer--docked` class below is applied by ContextDrawer ONLY at
+   BP.desktop (>=1280) — tablet keeps the existing right-hand overlay and phone
+   keeps the bottom sheet, so no media query is duplicated here. No new
+   breakpoints; tap targets stay >=44px. */
+
+.premium-inspector-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-sm);
+  padding: var(--sp-sm) var(--sp-lg);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.premium-inspector-nav__count {
+  color: var(--text2);
+  font-size: var(--t-meta);
+  font-variant-numeric: tabular-nums;
+}
+.premium-inspector-nav__buttons { display: flex; gap: var(--sp-xs); }
+.premium-inspector-nav__buttons button {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--r-btn);
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.premium-inspector-nav__buttons button:hover:not(:disabled) { background: var(--hover-card); }
+.premium-inspector-nav__buttons button:disabled { opacity: 0.42; cursor: not-allowed; }
+.premium-inspector-nav__buttons button:focus-visible {
+  outline: 2px solid var(--input-focus);
+  outline-offset: 2px;
+}
+
+.premium-inspector-section { padding: 0; }
+.premium-inspector-section + .premium-inspector-section {
+  margin-top: var(--sp-lg);
+  border-top: 1px solid var(--border);
+  padding-top: var(--sp-lg);
+}
+.premium-inspector-section__title {
+  margin: 0 0 var(--sp-md);
+  font-family: var(--font-display);
+  font-size: var(--t-ui);
+  font-weight: 650;
+  color: var(--text);
+}
+.premium-inspector-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; margin: 0; }
+.premium-inspector-fact { min-width: 0; padding: var(--sp-md) var(--sp-sm) var(--sp-md) 0; border-top: 1px solid var(--border); }
+.premium-inspector-fact--wide { grid-column: 1 / -1; }
+.premium-inspector-fact dt { color: var(--text2); font-size: var(--t-meta); line-height: 1.3; }
+.premium-inspector-fact dd { margin: var(--sp-xs) 0 0; color: var(--text); font-size: var(--t-ui); line-height: 1.4; overflow-wrap: anywhere; }
+.premium-inspector-fact dd.is-strong { font-weight: 700; }
+.premium-inspector-fact dd.is-mono { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+/* Docked desktop inspector: sit with the workspace drawers rather than above
+   the modals, and drop the floating modal shadow — the reserved strip means
+   the panel no longer covers anything. The border-left from .context-drawer__panel
+   (ui-v2.css) provides the separation. Panel width keeps the existing
+   `min(var(--context-drawer-width), 100vw)` rule; ContextDrawer sets the inline
+   variable to the same clamp it reserved on :root, so panel and strip cannot
+   disagree. */
+.context-drawer.context-drawer--docked { z-index: var(--z-drawer); }
+.context-drawer--docked .context-drawer__panel { box-shadow: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .premium-inspector-nav, .premium-inspector-nav__buttons button { transition: none !important; animation: none !important; }
+}

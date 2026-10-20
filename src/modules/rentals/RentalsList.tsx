@@ -22,6 +22,9 @@ import { useOptionalWorkspace } from '../../lib/workspaceContext'
 import { ModuleSubHeader, ModuleKpiStrip, ModuleFilterBar, StatusPill } from '../../components/ui/module-shell'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { ContextDrawer } from '../../components/ui/ContextDrawer'
+import { InspectorFacts } from '../../components/ui/InspectorFacts'
+import { InspectorNavigator } from '../../components/ui/InspectorNavigator'
+import { useInspectorTraversal } from '../../components/ui/useInspectorTraversal'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { ActiveFilterChips, FilterButton } from '../../components/ui/FilterDrawer'
 import { SavedViewsMenu, type SavedListView } from '../../components/ui/SavedViewsMenu'
@@ -849,6 +852,13 @@ function ColumnMenu({
  * money filter groups and the Payment Due chip are removed from their arrays
  * *before* render, so a money-blind session has no masked cell to un-hide.
  */
+
+/**
+ * Premium Workbench v1 — stable ID accessor for record traversal. Module scope
+ * so `useInspectorTraversal`'s memos never churn on function identity.
+ */
+const rentalInspectorId = (row: RentalListRow) => row.id
+
 export default function RentalsList() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -1424,6 +1434,26 @@ export default function RentalsList() {
       }),
     [list.rows, subIdSet, gctx],
   )
+
+  /*
+   * Premium Workbench v1 — the inspected record is DERIVED from the live page,
+   * never from the row object captured at click time. `inspectingRental` stays
+   * the user's selection request (so open/close behaves exactly as before), but
+   * everything rendered — drawer facts, actions, row highlight — reads
+   * `activeRental`, so a filter/page/search change that drops the record
+   * clears the inspection instead of showing stale details. Browsing runs no
+   * query: previous/next walk `list.rows`, the already-loaded visible page, in
+   * rendered order, and disable at its boundaries.
+   */
+  const activeRental = inspectingRental
+    ? list.rows.find((row) => row.id === inspectingRental.id) ?? null
+    : null
+  const rentalTraversal = useInspectorTraversal({
+    rows: list.rows,
+    selectedId: activeRental?.id ?? null,
+    getId: rentalInspectorId,
+    onSelect: setInspectingRental,
+  })
 
   /**
    * §4.1's tablet table is `BR# │ client │ dates │ badge │ [prim]⋮` — four
@@ -2527,8 +2557,8 @@ export default function RentalsList() {
                           className="data-table-row press"
                           style={{
                             borderBottom: '1px solid var(--border)',
-                            background: inspectingRental?.id === r.id ? 'color-mix(in srgb, var(--primary) 8%, var(--card))' : selectedIds.has(r.id) ? 'var(--hover-card)' : undefined,
-                            boxShadow: inspectingRental?.id === r.id ? 'inset 3px 0 0 var(--primary)' : undefined,
+                            background: activeRental?.id === r.id ? 'color-mix(in srgb, var(--primary) 8%, var(--card))' : selectedIds.has(r.id) ? 'var(--hover-card)' : undefined,
+                            boxShadow: activeRental?.id === r.id ? 'inset 3px 0 0 var(--primary)' : undefined,
                             cursor: 'pointer',
                             ...externalRowStyle(r.isExternal),
                           }}
@@ -2835,19 +2865,32 @@ export default function RentalsList() {
 
       <ContextDrawer
         id="rental-quick-view"
-        open={Boolean(inspectingRental)}
+        docked
+        open={activeRental !== null}
         onClose={() => setInspectingRental(null)}
-        title={inspectingRental?.bookingNo ?? 'Rental'}
-        subtitle={inspectingRental ? `${inspectingRental.client}${inspectingRental.project ? ` · ${inspectingRental.project}` : ''}` : undefined}
-        status={inspectingRental ? <Badge status={inspectingRental.status} size="sm" /> : undefined}
-        actions={inspectingRental ? (
+        title={activeRental?.bookingNo ?? 'Rental'}
+        subtitle={activeRental ? `${activeRental.client}${activeRental.project ? ` · ${activeRental.project}` : ''}` : undefined}
+        status={activeRental ? <Badge status={activeRental.status} size="sm" /> : undefined}
+        navigation={
+          <InspectorNavigator
+            active={activeRental !== null}
+            position={rentalTraversal.position}
+            index={rentalTraversal.index}
+            total={rentalTraversal.total}
+            canPrevious={rentalTraversal.canPrevious}
+            canNext={rentalTraversal.canNext}
+            onPrevious={rentalTraversal.previous}
+            onNext={rentalTraversal.next}
+          />
+        }
+        actions={activeRental ? (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <BookingOperationsMenu bookingNo={inspectingRental.bookingNo} bookingStatus={inspectingRental.status} unavailable={inspectingRental.isCancelled ? 'Cancelled rentals cannot run operations.' : null} />
+            <BookingOperationsMenu bookingNo={activeRental.bookingNo} bookingStatus={activeRental.status} unavailable={activeRental.isCancelled ? 'Cancelled rentals cannot run operations.' : null} />
             <Button
               variant="primary"
               onClick={() => {
                 setInspectingRental(null)
-                navigate(`/rentals/${inspectingRental.bookingNo}`)
+                navigate(`/rentals/${activeRental.bookingNo}`)
               }}
             >
               Open rental →
@@ -2855,20 +2898,20 @@ export default function RentalsList() {
           </div>
         ) : undefined}
       >
-        {inspectingRental && (
+        {activeRental && (
           <div style={{ display: 'grid', gap: 'var(--space-4, 16px)' }}>
             {/* Title / Project Heading matching wireframe */}
             <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
               <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text)' }}>
-                {inspectingRental.project && inspectingRental.project !== '—' ? inspectingRental.project : inspectingRental.client}
+                {activeRental.project && activeRental.project !== '—' ? activeRental.project : activeRental.client}
               </h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
                 <span className="font-mono font-bold" style={{ fontSize: '13px', color: 'var(--text2)' }}>
-                  {inspectingRental.bookingNo}
+                  {activeRental.bookingNo}
                 </span>
                 <span style={{ color: 'var(--muted)' }}>·</span>
                 <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
-                  {inspectingRental.status}
+                  {activeRental.status}
                 </span>
               </div>
             </div>
@@ -2878,9 +2921,9 @@ export default function RentalsList() {
               style={{
                 padding: '10px 14px',
                 borderRadius: 'var(--r-btn, 6px)',
-                background: inspectingRental.status === 'Packed'
+                background: activeRental.status === 'Packed'
                   ? 'color-mix(in srgb, var(--primary) 12%, var(--card))'
-                  : inspectingRental.status === 'On Rent'
+                  : activeRental.status === 'On Rent'
                   ? 'color-mix(in srgb, var(--warn) 12%, var(--card))'
                   : 'var(--surface-2)',
                 border: '1px solid var(--border)',
@@ -2889,57 +2932,47 @@ export default function RentalsList() {
                 gap: 8,
                 fontSize: '13px',
                 fontWeight: 600,
-                color: inspectingRental.status === 'Packed'
+                color: activeRental.status === 'Packed'
                   ? 'var(--primary-text)'
-                  : inspectingRental.status === 'On Rent'
+                  : activeRental.status === 'On Rent'
                   ? 'var(--warn-text)'
                   : 'var(--text)',
               }}
             >
               <Icon
-                name={inspectingRental.status === 'Packed' ? 'package' : inspectingRental.status === 'On Rent' ? 'truck' : 'info'}
+                name={activeRental.status === 'Packed' ? 'package' : activeRental.status === 'On Rent' ? 'truck' : 'info'}
                 size={16}
               />
               <span>
-                {inspectingRental.status === 'Packed'
+                {activeRental.status === 'Packed'
                   ? 'Pending handover'
-                  : inspectingRental.status === 'On Rent'
+                  : activeRental.status === 'On Rent'
                   ? 'Currently active on production set'
-                  : inspectingRental.status === 'Booked'
+                  : activeRental.status === 'Booked'
                   ? 'Confirmed booking — prep needed'
-                  : inspectingRental.status === 'Returned'
+                  : activeRental.status === 'Returned'
                   ? 'Gear returned — inspection complete'
-                  : `${inspectingRental.status} stage`}
+                  : `${activeRental.status} stage`}
               </span>
             </div>
 
-            <section aria-labelledby="rental-quick-view-schedule">
-              <h3 id="rental-quick-view-schedule" style={{ margin: 0, fontSize: '12px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Schedule</h3>
-              <dl style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px 16px', margin: '10px 0 0' }}>
-                <dt style={{ color: 'var(--muted)', fontSize: '13px' }}>Pickup</dt>
-                <dd className="figure" style={{ margin: 0, fontSize: '13px', fontWeight: 600 }}>{inspectingRental.pickup.date} · {inspectingRental.pickup.time}</dd>
+            <InspectorFacts title="Schedule" facts={[
+              { key: 'pickup', label: 'Pickup', value: `${activeRental.pickup.date} · ${activeRental.pickup.time}`, mono: true },
+              { key: 'return', label: 'Return', value: `${activeRental.ret.date} · ${activeRental.ret.time}`, mono: true },
+              { key: 'items', label: 'Items', value: `${activeRental.itemCount} item${activeRental.itemCount === 1 ? '' : 's'}`, strong: true },
+            ]} />
 
-                <dt style={{ color: 'var(--muted)', fontSize: '13px' }}>Return</dt>
-                <dd className="figure" style={{ margin: 0, fontSize: '13px', fontWeight: 600 }}>{inspectingRental.ret.date} · {inspectingRental.ret.time}</dd>
+            <InspectorFacts title="Client" facts={[
+              { key: 'client', label: 'Client', value: activeRental.client, strong: true },
+              { key: 'pickup-location', label: 'Pickup location', value: activeRental.pickupLocation ?? 'Lalitpur Warehouse' },
+            ]} />
 
-                <dt style={{ color: 'var(--muted)', fontSize: '13px' }}>Equipment</dt>
-                <dd style={{ margin: 0, fontSize: '13px', fontWeight: 600 }}>{inspectingRental.itemCount} item{inspectingRental.itemCount === 1 ? '' : 's'}</dd>
-              </dl>
-            </section>
-
-            <section aria-labelledby="rental-quick-view-client">
-              <h3 id="rental-quick-view-client" style={{ margin: 0, fontSize: '12px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Client</h3>
-              <p style={{ margin: '8px 0 0', color: 'var(--text)', fontWeight: 600, fontSize: '14px' }}>{inspectingRental.client}</p>
-              <p style={{ margin: '4px 0 0', color: 'var(--text2)', fontSize: '13px' }}>{inspectingRental.pickupLocation ?? 'Lalitpur Warehouse'}</p>
-            </section>
-
+            {/* Law 6 — the money fact is constructed AND mounted only when the
+                role gate allows it; never hidden with CSS. */}
             {money && (
-              <section aria-labelledby="rental-quick-view-finance">
-                <h3 id="rental-quick-view-finance" style={{ margin: 0, fontSize: '12px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Amount</h3>
-                <p className="figure" style={{ margin: '8px 0 0', color: 'var(--text)', fontWeight: 700, fontSize: '18px' }}>
-                  {typeof inspectingRental.totalAmount === 'number' ? formatMoney(inspectingRental.totalAmount) : '—'}
-                </p>
-              </section>
+              <InspectorFacts title="Total Amount" facts={[
+                { key: 'total', label: 'Total', value: typeof activeRental.totalAmount === 'number' ? formatMoney(activeRental.totalAmount) : '—', strong: true, mono: true, wide: true },
+              ]} />
             )}
           </div>
         )}

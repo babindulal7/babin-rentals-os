@@ -684,10 +684,14 @@ input[type='search']::-webkit-search-results-decoration {
 }
 
 /* RULING 2026-10-15: filter drawers slide in at nav-bar width and push the workspace instead of covering it;
-   each FilterSection carries its own solid accent (--fs-accent). */
+   each FilterSection carries its own solid accent (--fs-accent).
+   Premium Workbench v1: the docked record inspector reserves the right edge the
+   same way through --context-drawer-w. max() because the two right-edge drawers
+   are mutually exclusive (babin:side-drawer-open, RULING 2026-10-20) — it only
+   matters during one drawer's 220ms exit while the other enters. */
 .app-workspace {
   padding-left: var(--filter-drawer-w, 0px);
-  padding-right: var(--information-drawer-w, 0px);
+  padding-right: max(var(--information-drawer-w, 0px), var(--context-drawer-w, 0px));
   transition: padding-left var(--dur-drawer, 220ms) ease-out, padding-right var(--dur-drawer, 220ms) ease-out;
 }
 @media (max-width: 767px) { .app-workspace { padding-left: 0; padding-right: 0; } }

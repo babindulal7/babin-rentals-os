@@ -1925,7 +1925,6 @@ function BookingDetailView() {
     blockers.push(`Security deposit required: ${formatMoney(booking.depositRequired)}`)
   }
 
-  const isFullySettled = hasInvoice && totals.outstanding <= 0
   const recordPaymentButton = (label: string) => {
     /* Four reasons, not one. `NO_INVOICE_PAYMENT_UNAVAILABLE` is a statement
        about this booking; while the read is in flight or after it failed the
