@@ -11,6 +11,8 @@ import { listInventory } from '../../lib/queries/inventory'
 import { findClientsByPhoneTail } from '../../lib/queries/clients'
 import { Button, Card, PageHeader } from '../ui/Page'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
+import { Modal } from '../ui/Modal'
+import { EquipmentDraftPreview } from './EquipmentDraftPreview'
 import { RecordWorkspace, RecordSection, RecordActions, RecordErrorSummary, focusRecordField, useUnsavedRecord } from '../ui/RecordWorkspace'
 import { useToast } from '../ui/Toast'
 import { EquipmentSectionLinks, EquipmentSummary, INTAKE_CONDITIONS, PasteSerials, equipmentSectionState, useEquipmentDuplicate } from './equipmentAssist'
@@ -35,6 +37,7 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
   const [duplicate,setDuplicate]=useState<{id:string;name:string}|null>(null)
   /** Add Equipment §3: Manufacturer shows only when it differs from Brand. */
   const [manufacturerDiffers,setManufacturerDiffers]=useState(false)
+  const [equipmentPreviewOpen,setEquipmentPreviewOpen]=useState(false)
   const saved=useRef(false); const submitting=useRef(false); const saveKey=useRef<{fingerprint:string;key:string}|null>(null)
   const initial=useRef(JSON.stringify({values:{...recordDefaults[kind]},rows:[]}))
   const fingerprint=JSON.stringify({values,rows}); const dirty=!saved.current && fingerprint!==initial.current
@@ -195,7 +198,10 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
         onConfirm: () => { setConfirmDialog(null); navigate(`/inventory/${equipmentDuplicate.id}`) },
       })
     }}>Open existing equipment</Button></Card>}
-    <RecordWorkspace summary={kind==='equipment'?<EquipmentSummary values={values} rows={rows} categoryName={(options.categories??[]).find(c=>c.id===values.category_id)?.name} editing={Boolean(recordId)}/>:<Card title={`${names[kind]} summary`}><strong>{String(values.name||`New ${kind}`)}</strong><p>{recordId?'Editing the existing record.':'A new record will be created.'}</p>{kind!=='client'&&<p>{rows.length} {kind==='bundle'?'components':'units'}</p>}</Card>} actions={<RecordActions busy={busy} dirty={dirty || !recordId} label={recordId?'Save changes':`Create ${kind}`} onSave={()=>void save()} onCancel={cancel} extra={canAddAnother?<Button type="button" variant="secondary" icon="plus" aria-label="Create & add another" title="Create & add another" disabled={busy} onClick={()=>void save('another')}>{phone?'':'Create & add another'}</Button>:undefined}/> }>
+    <RecordWorkspace summary={kind==='equipment'?<EquipmentSummary values={values} rows={rows} categoryName={(options.categories??[]).find(c=>c.id===values.category_id)?.name} editing={Boolean(recordId)}/>:<Card title={`${names[kind]} summary`}><strong>{String(values.name||`New ${kind}`)}</strong><p>{recordId?'Editing the existing record.':'A new record will be created.'}</p>{kind!=='client'&&<p>{rows.length} {kind==='bundle'?'components':'units'}</p>}</Card>} actions={<RecordActions busy={busy} dirty={dirty || !recordId} label={recordId?'Save changes':`Create ${kind}`} onSave={()=>void save()} onCancel={cancel} extra={<>
+      {kind==='equipment' && !recordId && <Button type="button" variant="secondary" icon="eye" aria-label="Preview equipment before saving" disabled={busy} onClick={()=>setEquipmentPreviewOpen(true)}>Preview</Button>}
+      {canAddAnother && <Button type="button" variant="secondary" icon="plus" aria-label="Create & add another" title="Create & add another" disabled={busy} onClick={()=>void save('another')}>{phone?'':'Create & add another'}</Button>}
+    </>}/> }>
       {kind==='equipment'&&<EquipmentSectionLinks sections={sections} stateOf={section=>equipmentSectionState(section,values,rows)} idOf={sectionId}/>}
       {sections.map(section=><RecordSection key={section} title={section} id={sectionId(section)} collapsible={optionalSections[kind].includes(section)} defaultOpen={!optionalSections[kind].includes(section)||sectionHasValue(section)||(section==='Notes'&&false)} collapsedHint="Empty"><div className="record-fields">{recordFields[kind].filter(f=>f.section===section).map(renderField)}</div>
         {kind==='client'&&section==='Contact'&&<><h3>Primary contact</h3>{rows.map((row,index)=><div className="record-fields" key={String(row.id??index)}>{rowField(row,index,'full_name','Contact name')}{rowField(row,index,'designation','Designation')}{rowField(row,index,'phone','Contact phone')}{rowField(row,index,'email','Contact email')}<Button disabled={busy} onClick={()=>setRows([])}>Remove primary contact</Button></div>)}{!rows.length&&<Button disabled={busy} onClick={()=>setRows([{full_name:'',designation:null,phone:null,email:null}])}>Add primary contact</Button>}</>}
@@ -203,5 +209,23 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
         {kind==='equipment'&&section==='Units & location'&&values.tracking_mode==='Serialised'&&<div id="record-units" tabIndex={-1}>{rows.map((row,index)=><Card key={String(row.id??index)} title={String(row.asset_tag||`Unit ${index+1}`)}><div className="record-fields">{recordId&&rowField(row,index,'asset_tag','Asset tag')}{rowField(row,index,'serial_no','Serial number')}{rowField(row,index,'warehouse_id','Warehouse')}{rowField(row,index,'rack','Rack')}{rowField(row,index,'shelf','Shelf')}{rowField(row,index,'bin','Bin')}{!recordId&&<label className="record-field" htmlFor={`record-unit-${index}-condition`}><span>Condition at intake</span><select id={`record-unit-${index}-condition`} disabled={busy} value={String(row.condition??'Excellent')} onChange={e=>setRows(prev=>prev.map((r,i)=>i===index?{...r,condition:e.target.value}:r))}>{INTAKE_CONDITIONS.map(c=><option key={c} value={c}>{c}</option>)}</select></label>}</div>{recordId?<p>{String(row.status)} · {String(row.condition)}</p>:<Button disabled={busy} onClick={()=>setRows(prev=>prev.filter((_,i)=>i!==index))}>Remove unit</Button>}</Card>)}{!recordId&&<Button disabled={busy} onClick={()=>setRows(prev=>[...prev,{serial_no:null,warehouse_id:prev[prev.length-1]?.warehouse_id??null,rack:null,shelf:null,bin:null,condition:'Excellent'}])}>Add unit</Button>}{!recordId&&<PasteSerials existing={rows.map(r=>r.serial_no)} disabled={busy} onAdd={serials=>setRows(prev=>[...prev,...serials.map(serial=>({serial_no:serial,warehouse_id:prev[prev.length-1]?.warehouse_id??null,rack:null,shelf:null,bin:null,condition:'Excellent'}))])}/>}{recordId&&<p>Use stock adjustments or intake to change unit counts; use operational actions to change condition or custody.</p>}</div>}
         {kind==='bundle'&&section==='Components'&&<div id="record-components" tabIndex={-1}><label className="record-field"><span>Find equipment</span><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search equipment…"/></label><div>{products.filter(p=>!rows.some(r=>r.product_id===p.id)).map(p=><Button disabled={busy} key={p.id} onClick={()=>setRows(prev=>[...prev,{product_id:p.id,name:p.name,quantity:1,days:1,is_mandatory:true,sort_order:prev.length}])}>Add {p.name}</Button>)}</div>{rows.map((row,index)=><Card key={String(row.id??row.product_id)} title={String(row.name??'Component')}><div className="record-fields">{rowField(row,index,'quantity','Quantity','number')}{rowField(row,index,'days','Days','number')}{rowField(row,index,'is_mandatory','Required component','checkbox')}<Button disabled={busy} onClick={()=>setRows(prev=>prev.filter((_,i)=>i!==index))}>Remove component</Button></div></Card>)}</div>}
       </RecordSection>)}
-    </RecordWorkspace></>
+    </RecordWorkspace>
+    {kind==='equipment' && !recordId && (
+      <Modal
+        isOpen={equipmentPreviewOpen}
+        onClose={()=>setEquipmentPreviewOpen(false)}
+        title="Equipment preview"
+        subtitle="Review before creating · unsaved"
+        size="lg"
+        footer={<Button type="button" variant="primary" onClick={()=>setEquipmentPreviewOpen(false)}>Back to editing</Button>}
+      >
+        <EquipmentDraftPreview
+          values={values}
+          rows={rows}
+          categoryName={(options.categories??[]).find(c=>c.id===values.category_id)?.name}
+          warehouses={options.warehouses??[]}
+        />
+      </Modal>
+    )}
+  </>
 }
