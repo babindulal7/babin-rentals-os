@@ -165,11 +165,20 @@ export const importProductsConfig: ActionConfig<ImportProductsInput, ImportProdu
        catalogue is small (it is a rental shop, not a warehouse log), so one
        full read is both simpler and more honest than name-only server filters. */
     const { data: catalogue, error: catalogueError } = await confirmedWithin(
-      Promise.resolve(supabase.from('products').select('id, name, brand, model').limit(5000)),
+      Promise.resolve(supabase.from('products').select('id, name, brand, model, client_uuid').limit(5000)),
     )
     if (catalogueError) throw new Error(`The catalogue could not be read for duplicate checking: ${catalogueError.message}`)
-    const existing = ((catalogue ?? []) as unknown as Array<{ id: string; name: string; brand: string; model: string | null }>)
-      .filter((p) => !savedByKey.has(p.id)) /* own rows from this import are not duplicates of themselves */
+    const existing = (
+      (catalogue ?? []) as unknown as Array<{
+        id: string
+        name: string
+        brand: string
+        model: string | null
+        client_uuid: string
+      }>
+    )
+      /* A row this same import already saved (reconciled above) is not a duplicate of itself. */
+      .filter((p) => !savedByKey.has(p.client_uuid.toLowerCase()))
       .map((p) => ({ key: productIdentityKey(p.name, p.brand, p.model), id: p.id }))
     const duplicate = rows.find((row) => {
       const key = productIdentityKey(row.values.name, row.values.brand, row.values.model)
