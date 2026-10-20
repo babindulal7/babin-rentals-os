@@ -14,7 +14,7 @@ const singleFile = args.find(a => a.startsWith('--only='))?.split('=')[1];
 
 const client = new pg.Client({
   connectionString: match[1].trim(),
-  ssl: { rejectUnauthorized: false }
+  ssl: { rejectUnauthorized: process.env.SUPABASE_SSL_REJECT_UNAUTHORIZED === 'false' ? false : true }
 });
 
 await client.connect();
@@ -28,12 +28,12 @@ const allFiles = fs.readdirSync('supabase/migrations')
   .filter(f => f.endsWith('.sql'))
   .sort();
 
-// Find pending files between 0125 and 0152
+// Find pending cutover files starting at 0125
 const pendingFiles = allFiles.filter(f => {
   const m = f.match(/^(\d{4})/);
   if (!m) return false;
   const num = parseInt(m[1], 10);
-  if (num < 125 || num > 152) return false;
+  if (num < 125) return false;
   if (singleFile && !f.includes(singleFile)) return false;
   const baseName = f.replace(/\.sql$/, '');
   return !appliedNames.has(baseName);
@@ -73,6 +73,12 @@ for (const file of pendingFiles) {
     if (err.where) console.error(`  Where: ${err.where}`);
     console.error('Aborting execution.');
     break;
+  } finally {
+    try {
+      await client.query("SELECT set_config('app.in_create_booking', 'off', false);");
+    } catch (resetErr) {
+      console.warn('Warning: Failed to reset app.in_create_booking to off:', resetErr?.message || resetErr);
+    }
   }
 }
 
