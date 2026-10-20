@@ -658,9 +658,9 @@ describe('readHeldForBooking — what the DATABASE holds, read back', () => {
    */
   it('counts serial holds as rows and quantity holds as rows AND items', async () => {
     db.rows('inventory_reservations').push(
-      { booking_id: BOOKING_ID, asset_id: 'unit-1', product_id: null, qty: 1, released_at: null },
-      { booking_id: BOOKING_ID, asset_id: 'unit-2', product_id: null, qty: 1, released_at: null },
-      { booking_id: BOOKING_ID, asset_id: null, product_id: P_QTY, qty: 40, released_at: null },
+      { id: 'held-1', booking_id: BOOKING_ID, asset_id: 'unit-1', product_id: null, qty: 1, released_at: null },
+      { id: 'held-2', booking_id: BOOKING_ID, asset_id: 'unit-2', product_id: null, qty: 1, released_at: null },
+      { id: 'held-3', booking_id: BOOKING_ID, asset_id: null, product_id: P_QTY, qty: 40, released_at: null },
     )
 
     expect(await readHeldForBooking(BOOKING_ID)).toEqual({
@@ -672,8 +672,9 @@ describe('readHeldForBooking — what the DATABASE holds, read back', () => {
 
   it('leaves released rows out — they are history, not stock off the shelf', async () => {
     db.rows('inventory_reservations').push(
-      { booking_id: BOOKING_ID, asset_id: 'unit-1', product_id: null, qty: 1, released_at: null },
+      { id: 'held-1', booking_id: BOOKING_ID, asset_id: 'unit-1', product_id: null, qty: 1, released_at: null },
       {
+        id: 'held-2',
         booking_id: BOOKING_ID,
         asset_id: 'unit-2',
         product_id: null,
@@ -682,15 +683,15 @@ describe('readHeldForBooking — what the DATABASE holds, read back', () => {
       },
     )
 
-    expect((await readHeldForBooking(BOOKING_ID)).units).toBe(1)
+    expect((await readHeldForBooking(BOOKING_ID))?.units).toBe(1)
   })
 
   it('counts only this booking, never the whole table', async () => {
     db.rows('inventory_reservations').push(
-      { booking_id: BOOKING_ID, asset_id: 'unit-1', product_id: null, qty: 1, released_at: null },
-      { booking_id: 'other-booking', asset_id: 'unit-9', product_id: null, qty: 1, released_at: null },
+      { id: 'held-1', booking_id: BOOKING_ID, asset_id: 'unit-1', product_id: null, qty: 1, released_at: null },
+      { id: 'held-9', booking_id: 'other-booking', asset_id: 'unit-9', product_id: null, qty: 1, released_at: null },
     )
 
-    expect((await readHeldForBooking(BOOKING_ID)).units).toBe(1)
+    expect((await readHeldForBooking(BOOKING_ID))?.units).toBe(1)
   })
 })

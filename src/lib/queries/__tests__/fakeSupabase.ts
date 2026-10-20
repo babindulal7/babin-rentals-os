@@ -7,7 +7,7 @@
  * is recorded so a test can assert the filter literal a query sends (e.g.
  * `payments.status = 'Received'`, not the non-enum 'Completed').
  */
-export type TableAnswer = readonly Record<string, unknown>[] | { error: string }
+export type TableAnswer = readonly Record<string, unknown>[] | { error: string } | { unconfirmed: true }
 
 export interface FakeCall {
   table: string
@@ -20,9 +20,9 @@ export function fakeSupabase(tables: Record<string, TableAnswer>) {
   const from = (table: string) => {
     const answer = tables[table] ?? []
     const result =
-      'error' in answer
+      'unconfirmed' in answer ? { data: null, error: null } : 'error' in answer
         ? { data: null, error: { message: (answer as { error: string }).error } }
-        : { data: [...(answer as readonly Record<string, unknown>[])], error: null }
+        : { data: (answer as readonly Record<string, unknown>[]).map((row, index) => ({ id: `${table}-${index}`, ...row })), error: null }
     const builder: Record<string, unknown> = {}
     let fromRow = 0
     let toRow = Number.POSITIVE_INFINITY

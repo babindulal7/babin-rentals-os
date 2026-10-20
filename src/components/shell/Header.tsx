@@ -24,6 +24,7 @@ import { AddDropdownButton } from '../ui/header/PageHeader'
 import { GlobalAddMenu } from '../ui/creation/GlobalAddMenu'
 import { MobileHeaderSearch } from './MobileHeaderSearch'
 import { UnsavedChangesIndicator } from '../ui/header/UnsavedChangesIndicator'
+import { IS_MOCK } from '../../lib/supabase'
 import './shell.css'
 
 export interface Crumb {
@@ -107,6 +108,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
   const [notesVisited, setNotesVisited] = useState(false)
   useEffect(() => { if (notesOpen) setNotesVisited(true) }, [notesOpen])
   const [activeConfirmAction, setActiveConfirmAction] = useState<PageActionItem | null>(null)
+  const [showMockDialog, setShowMockDialog] = useState(false)
   const ws = useOptionalWorkspace()
   const profileBtnRef = useRef<HTMLButtonElement>(null)
 
@@ -966,6 +968,34 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             </span>
           )}
 
+          {/* Mock Mode Icon Indicator (Law 15: >= 44x44px hit area) */}
+          {IS_MOCK && (
+            <button
+              type="button"
+              onClick={() => setShowMockDialog(true)}
+              aria-label="Mock Mode Active"
+              title="Mock Mode — Local test database active (click for options)"
+              style={{
+                ...iconBtn,
+                color: 'var(--brand-mark)',
+                position: 'relative',
+              }}
+            >
+              <Icon name="flask" size={17} />
+              <span
+                style={{
+                  position: 'absolute',
+                  top: 9,
+                  right: 9,
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: 'var(--brand-mark)',
+                }}
+              />
+            </button>
+          )}
+
           {/* 9. User Profile Trigger (Law 15: >= 44x44px hit area) */}
           <div style={{ position: 'relative' }}>
             <button
@@ -1138,6 +1168,40 @@ export default function Header({ crumbs, actions }: HeaderProps) {
       )}
 
       {(notesOpen || notesVisited) && <InternalNotesDrawer isOpen={notesOpen} onClose={() => setNotesOpen(false)} />}
+
+      {showMockDialog && (
+        <ConfirmDialog
+          isOpen={true}
+          title="Mock Mode Active"
+          description="You are currently running Babin Rentals OS with a local in-browser mock database. Real database mutations are simulated locally. You can reset all local test data at any time."
+          confirmLabel="Wipe Mock Data & Reload"
+          cancelLabel="Close"
+          variant="danger"
+          onClose={() => setShowMockDialog(false)}
+          onConfirm={() => {
+            setShowMockDialog(false)
+            try {
+              localStorage.setItem('babin_data_wiped', 'true')
+              localStorage.setItem('babin_internal_notes_v1', JSON.stringify([]))
+              const toRemove: string[] = []
+              for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i)
+                if (k && (k.startsWith('babin.mock.') || k.startsWith('sb-') || k.startsWith('babin-active-') || k.startsWith('babin-today-'))) {
+                  toRemove.push(k)
+                }
+              }
+              toRemove.forEach((k) => localStorage.removeItem(k))
+              if (typeof indexedDB !== 'undefined') {
+                try { indexedDB.deleteDatabase('babin.mock.storage.v1') } catch {}
+                try { indexedDB.deleteDatabase('BabinOfflineQueue') } catch {}
+              }
+              window.location.reload()
+            } catch {
+              /* ignore */
+            }
+          }}
+        />
+      )}
     </>
   )
 }

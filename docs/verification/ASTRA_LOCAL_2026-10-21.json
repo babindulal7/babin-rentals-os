@@ -1,0 +1,25 @@
+{
+  "startedAt": "2026-10-20T21:06:10.070Z",
+  "sourceHash": "a7e3186745024de76894a319567328c4ad07e2ca9b1114f108b3a2d34ebdd262",
+  "scope": "Local only; no hosted access or business-data writes",
+  "gates": [
+    {
+      "name": "typecheck",
+      "exitCode": 0,
+      "sourceHashBefore": "a7e3186745024de76894a319567328c4ad07e2ca9b1114f108b3a2d34ebdd262",
+      "sourceHashAfter": "32e43af484fb420c16748982220df3089aacf167a74542a38d4ba9754b479e65",
+      "sourceStable": false,
+      "at": "2026-10-20T21:11:50.180Z",
+      "outputTail": ""
+    },
+    {
+      "name": "lint",
+      "exitCode": 0,
+      "sourceHashBefore": "32e43af484fb420c16748982220df3089aacf167a74542a38d4ba9754b479e65",
+      "sourceHashAfter": "c6e486fd111fc5efaa5c880af82178ea8ee81827e8c14f44a30e05ac03a24341",
+      "sourceStable": false,
+      "at": "2026-10-20T21:14:45.417Z",
+      "outputTail": ""
+    }
+  ]
+}

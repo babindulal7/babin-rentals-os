@@ -10,6 +10,7 @@ const api = vi.hoisted(() => ({
   duplicate: false, duplicateRow: null as Record<string, unknown> | null,
   selectError: null as { code: string; message: string } | null,
   calls: [] as Array<{ actor: string; action: string }>, switchOnRead: false,
+  lockHeld: false,
 }))
 vi.mock('../supabase', () => ({ supabase: { from: vi.fn() } }))
 vi.mock('../monitoring', () => ({ captureError: vi.fn() }))
@@ -44,10 +45,14 @@ import { db, drainQueue, enqueueMutation, ensureMutationQueued, getPendingMutati
 
 beforeEach(async () => {
   vi.stubGlobal('window', { addEventListener: vi.fn() })
-  vi.stubGlobal('navigator', { onLine: true })
+  vi.stubGlobal('navigator', { onLine: true, locks: { request: vi.fn(async (_name, _options, run) => {
+    if (api.lockHeld) return run(null)
+    api.lockHeld = true
+    try { return await run({ name: 'babin-offline-replay' }) } finally { api.lockHeld = false }
+  }) } })
   await db.mutations.clear(); await db.conflicts.clear(); await db.heldMutations.clear()
   Object.assign(api, { actor: 'operator-a', environment: 'https://project-a.supabase.co', signedIn: true,
-    updateRow: null, insertRow: { id: 'inserted-row' }, duplicate: false, duplicateRow: null, selectError: null, calls: [], switchOnRead: false })
+    updateRow: null, insertRow: { id: 'inserted-row' }, duplicate: false, duplicateRow: null, selectError: null, calls: [], switchOnRead: false, lockHeld: false })
 })
 afterAll(async () => { await db.delete(); vi.unstubAllGlobals() })
 
@@ -94,6 +99,26 @@ describe('Phase 0 offline ownership and authoritative replay receipts', () => {
     await queueUpdate(); api.updateRow={id:'client-1'}; await drainQueue()
     expect(await db.mutations.count()).toBe(0)
   })
+  it('does not reset another tab\'s in-flight work or replay while that tab holds the lock', async () => {
+    const work = await queueUpdate()
+    await db.mutations.update(work.id!, { status: 'syncing' })
+    api.lockHeld = true
+    await drainQueue()
+    expect(api.calls).toEqual([])
+    expect((await db.mutations.get(work.id!))?.status).toBe('syncing')
+    api.lockHeld = false
+    api.updateRow = { id: 'client-1' }
+    await drainQueue()
+    expect(api.calls.filter(call => call.action === 'update')).toHaveLength(1)
+    expect(await db.mutations.count()).toBe(0)
+  })
+  it('preserves work when cross-tab coordination is unavailable', async () => {
+    await queueUpdate()
+    vi.stubGlobal('navigator', { onLine: true })
+    await expect(drainQueue()).rejects.toThrow('coordination')
+    expect(api.calls).toEqual([])
+    expect(await db.mutations.count()).toBe(1)
+  })
   it('keeps the original account credentials when the UI account switches during a read', async () => {
     await queueUpdate(); api.updateRow={id:'client-1'}; api.switchOnRead=true; await drainQueue()
     expect(api.actor).toBe('operator-b')
@@ -112,12 +137,16 @@ describe('Phase 0 offline ownership and authoritative replay receipts', () => {
     api.duplicateRow={id:'inserted-row',client_uuid:'insert-1'}
     await drainQueue(); expect(await db.mutations.count()).toBe(0)
   })
-  it('acknowledges duplicate insert when select is denied with 42501 (write-only table)', async () => {
+  it('preserves duplicate work when permission denial prevents payload confirmation', async () => {
     await enqueueMutation('audit_events','insert',{client_uuid:'audit-1',action:'login'},'audit-1')
     api.duplicate = true
     api.selectError = { code: '42501', message: 'permission denied for table audit_events' }
     await drainQueue()
-    expect(await db.mutations.count()).toBe(0)
+    expect(await db.mutations.count()).toBe(1)
+    expect((await db.mutations.toArray())[0]).toMatchObject({
+      clientUuid: 'audit-1', payload: { client_uuid: 'audit-1', action: 'login' },
+      status: 'pending', error: expect.stringContaining('not confirmed'),
+    })
   })
   it('retains conflict and work when force-local updates zero rows', async () => {
     const work=await queueUpdate()

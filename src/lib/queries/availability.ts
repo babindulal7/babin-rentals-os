@@ -1073,34 +1073,41 @@ export interface HeldForBooking {
  *
  * Never throws. A booking that is confirmed is confirmed; failing the whole
  * action because the read-back of a display figure hiccuped would turn a
- * successful confirm into a reported failure, which is the worse error. The
- * zeroes are visible in the result and in the event either way.
+ * successful confirm into a reported failure. `null` means the counts could
+ * not be verified; zero is reserved for a complete read that found no holds.
  */
-export async function readHeldForBooking(bookingId: string): Promise<HeldForBooking> {
-  const { data, error } = await supabase
-    .from('inventory_reservations')
-    .select('asset_id, product_id, qty')
-    .eq('booking_id', bookingId)
-    .is('released_at', null)
+export async function readHeldForBooking(bookingId: string): Promise<HeldForBooking | null> {
+  try {
+    const rows = await readCompleteAvailability<{
+      id: string
+      asset_id: string | null
+      product_id: string | null
+      qty: number
+    }>((from, to) => supabase
+      .from('inventory_reservations')
+      .select('id, asset_id, product_id, qty')
+      .eq('booking_id', bookingId)
+      .is('released_at', null)
+      .order('id', { ascending: true })
+      .range(from, to), 'confirmed reservations')
 
-  if (error) return { units: 0, quantityHolds: 0, quantityReserved: 0 }
-
-  let units = 0
-  let quantityHolds = 0
-  let quantityReserved = 0
-  for (const row of (data ?? []) as unknown as Array<{
-    asset_id: string | null
-    product_id: string | null
-    qty: number
-  }>) {
-    if (row.asset_id !== null) {
-      units += 1
-      continue
+    let units = 0
+    let quantityHolds = 0
+    let quantityReserved = 0
+    for (const row of rows) {
+      if (typeof row.asset_id === 'string' && row.product_id === null) {
+        units += 1
+      } else if (row.asset_id === null && typeof row.product_id === 'string' && Number.isSafeInteger(row.qty) && row.qty > 0) {
+        quantityHolds += 1
+        quantityReserved += row.qty
+        if (!Number.isSafeInteger(quantityReserved)) return null
+      } else {
+        return null
+      }
     }
-    if (row.product_id !== null) {
-      quantityHolds += 1
-      quantityReserved += row.qty
-    }
+    return { units, quantityHolds, quantityReserved }
+  } catch {
+    // The stage has already committed. Failed display reads cannot undo it.
+    return null
   }
-  return { units, quantityHolds, quantityReserved }
 }

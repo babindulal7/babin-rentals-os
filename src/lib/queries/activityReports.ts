@@ -1,5 +1,5 @@
 import { supabase } from '../supabase'
-import { rowsOf } from './reportSupport'
+import { completeReportRead, rowsOf } from './reportSupport'
 
 export interface ActivityReportFilterOptions {
   from?: string | undefined
@@ -119,9 +119,9 @@ export async function getActivityReport(
   options?: ActivityReportFilterOptions,
 ): Promise<ActivityReportData> {
   const [usersRes, auditRes] = await Promise.all([
-    supabase
+    completeReportRead(supabase
       .from('users')
-      .select('id, employee_code, full_name, primary_role, department, is_active'),
+      .select('id, employee_code, full_name, primary_role, department, is_active'), 'Staff read failed'),
     (() => {
       let q = supabase
         .from('audit_events')
@@ -129,14 +129,13 @@ export async function getActivityReport(
           'id, created_at, action, category, module, severity, status, actor_id, actor_role, table_name, record_id, ip_address, device_type, reason',
         )
         .order('created_at', { ascending: false })
-        .limit(300)
 
       if (options?.from) q = q.gte('created_at', options.from)
       if (options?.to) q = q.lte('created_at', options.to)
       if (options?.userId) q = q.eq('actor_id', options.userId)
       if (options?.module) q = q.eq('module', options.module)
 
-      return q
+      return completeReportRead(q, 'Audit events read failed')
     })(),
   ])
 

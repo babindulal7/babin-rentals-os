@@ -533,16 +533,23 @@ describe('Finance — phone header de-crowding (<768px)', () => {
     expect(paymentBtn?.getAttribute('aria-label')).toBe('Record Payment')
 
     // On phone, secondary actions (Create Invoice, Export) are NOT in the header row.
-    // Scoped to the header: the body's own sub-header keeps an Export button on phone.
+    // The page header owns these actions; the sub-header must not duplicate them.
     const header = c.querySelector('header')!
     expect(header).not.toBeNull()
     const inHeader = (re: RegExp) => Array.from(header.querySelectorAll('button')).find((b) => re.test(b.textContent ?? ''))
     expect(inHeader(/^Create Invoice$/)).toBeUndefined()
     expect(inHeader(/^Export$/)).toBeUndefined()
+    expect(c.querySelector('.module-sub-header [aria-label="Export"]')).toBeNull()
+    expect(c.querySelector('.module-sub-header [aria-label="Create Invoice"]')).toBeNull()
+    expect(c.querySelectorAll('button[aria-label="Record Payment"]')).toHaveLength(1)
 
     // More actions menu button exists and has 44px hit target
     const moreBtn = c.querySelector('button[aria-haspopup="menu"][aria-label="More actions"]')
     expect(moreBtn).not.toBeNull()
+    await act(async () => (moreBtn as HTMLButtonElement).click())
+    const menu = document.querySelector('[role="menu"][aria-label="More actions"]')!
+    expect(menu.textContent).toContain('Create Invoice')
+    expect(menu.textContent).toContain('Export')
 
     // Reset innerWidth for other tests
     Object.defineProperty(window, 'innerWidth', { value: 1280, configurable: true, writable: true })

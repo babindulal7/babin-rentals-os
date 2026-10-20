@@ -1,5 +1,13 @@
 # Current continuation — 20 October 2026, availability follow-up
 
+## 21 October continuation — confirmed-booking readback
+
+- Resumed clean at `5d26cf8d`, recovery branch `codex/recovery-before-confirmation-readback-20261021`. New shell/L1 and other sessions' changes are preserved.
+- The completed 20 October checker passed 4,948 tests and every command, but recorded changes during tests/security/lifecycle/build. It is historical for the newer merge; no current-source pass is carried forward.
+- Actual source fix in `availability.ts` and `confirmRental.ts`: complete reservation pages; unavailable summaries become `null` in successful confirmed results/events, preserving the non-throwing post-commit contract. Missing, failed, repeated or invalid data can no longer become fabricated zero counts or partial totals.
+- Seven new regressions failed before the fix. After-change checks are underway. Tests/affected files and remaining work are in the newest `PROGRESS.md` entry; current evidence will be `docs/verification/ASTRA_LOCAL_2026-10-21.json`.
+- No hosted mutation or real business-data writes; no source/config/data replacement, reset, push, PR or offline-work deletion. Pre-commit confirmation-line counts, shared workflows, tax/document/evidence decisions and device/hosted acceptance remain open.
+
 ## Next batch — booking-planning inputs
 
 - Started from clean `ba2f80cb`, recovery `codex/recovery-before-planning-reads-20261020`.

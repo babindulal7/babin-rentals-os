@@ -31,12 +31,42 @@ interface ReadResult {
 /**
  * The rows of a read, or a throw naming which read failed.
  *
- * `data: null` with no error is an empty read (PostgREST returns `[]`, but a
- * mock or a head-only read may not) — an honest zero rows, not a failure.
+ * Only an array confirms a dataset. These are row reads, never head-only
+ * counts; null/malformed responses cannot establish zero business activity.
  */
 export function rowsOf<T>(res: ReadResult, what: string): T[] {
   if (res.error) throw new Error(`${what}: ${res.error.message}`)
-  return Array.isArray(res.data) ? (res.data as T[]) : []
+  if (!Array.isArray(res.data)) throw new Error(`${what}: no confirmed dataset`)
+  return res.data as T[]
+}
+
+interface ReportPageQuery {
+  order(column: string, options: { ascending: boolean }): ReportPageQuery
+  range(from: number, to: number): PromiseLike<ReadResult>
+}
+
+/** Complete ordered reads, including servers that impose a smaller page cap.
+ * Every projection must include id. Refuse later-page failure, repeated rows
+ * and excessive datasets rather than presenting a partial business total.
+ */
+export async function completeReportRead(query: ReportPageQuery, what: string): Promise<ReadResult> {
+  const ordered = query.order('id', { ascending: true })
+  const rows: unknown[] = []
+  const seen = new Set<string>()
+  while (true) {
+    const result = await ordered.range(rows.length, rows.length + 499)
+    if (result.error) return { data: null, error: result.error }
+    const page = rowsOf<unknown>(result, what)
+    if (page.length === 0) return { data: rows, error: null }
+    for (const row of page) {
+      const id = row && typeof row === 'object' ? (row as { id?: unknown }).id : undefined
+      if (typeof id !== 'string' || !id) throw new Error(`${what}: missing row identity`)
+      if (seen.has(id)) throw new Error(`${what}: dataset changed or repeated during pagination; retry`)
+      seen.add(id)
+      rows.push(row)
+    }
+    if (rows.length > 50_000) throw new Error(`${what}: narrow the report period to load a complete dataset`)
+  }
 }
 
 /** `booking_lines` columns every money figure in the reports is built from. */
@@ -109,10 +139,10 @@ export interface ReportLine extends PricedLine {
 }
 
 export async function readLineValues(): Promise<Map<string, ReportLine[]>> {
-  const res = await supabase
+  const res = await completeReportRead(supabase
     .from('booking_lines_v')
-    .select('booking_id, product_id, bundle_id, qty, days, rate, discount_amount, line_total, voided_at')
-    .is('voided_at', null)
+    .select('id, booking_id, product_id, bundle_id, qty, days, rate, discount_amount, line_total, voided_at')
+    .is('voided_at', null), 'Booking line values read failed')
   const rows = rowsOf<ReportLine>(res, 'Booking line values read failed')
   const out = new Map<string, ReportLine[]>()
   for (const r of rows) {

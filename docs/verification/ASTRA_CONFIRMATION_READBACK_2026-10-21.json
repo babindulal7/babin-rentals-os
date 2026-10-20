@@ -1,0 +1,32 @@
+{
+  "finding": "Post-confirmation reservation readback completeness and unknown counts",
+  "scope": "Mocked query/action regressions; no hosted access or real business-data writes",
+  "recoveryBranch": "codex/recovery-before-confirmation-readback-20261021",
+  "before": {
+    "existingPassed": 77,
+    "failed": 7,
+    "newCases": 7
+  },
+  "after": {
+    "suites": 5,
+    "failed": 0,
+    "confirmationCases": 59,
+    "completenessCases": 25,
+    "focusedPassed": 207
+  },
+  "semantics": "A verified committed stage remains successful; null means counts are unknown, genuine empty reads still return zero",
+  "files": [
+    "src/lib/queries/availability.ts",
+    "src/actions/rentals/confirmRental.ts",
+    "src/lib/queries/__tests__/availabilityCompleteness.test.ts",
+    "src/lib/queries/__tests__/availability.test.ts",
+    "src/actions/rentals/__tests__/confirmRental.test.ts"
+  ],
+  "status": "Focused checks passed; full current-source checks running",
+  "currentEvidence": "ASTRA_LOCAL_2026-10-21.json",
+  "remaining": [
+    "Pre-commit confirmation line-count completeness",
+    "Shared operational workflows",
+    "Real browser/device and hosted acceptance"
+  ]
+}

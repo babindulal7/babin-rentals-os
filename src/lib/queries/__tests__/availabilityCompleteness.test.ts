@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { planAssignment, readCandidates, readHolds, readProductModes, readQuantityHolds } from '../availability'
+import { planAssignment, readCandidates, readHeldForBooking, readHolds, readProductModes, readQuantityHolds } from '../availability'
 
 const db = vi.hoisted(() => ({
   tables: {} as Record<string, Array<Record<string, unknown>>>,
@@ -7,6 +7,7 @@ const db = vi.hoisted(() => ({
   failure: '' as string,
   nullPage: false,
   nullTable: '',
+  networkThrows: false,
   repeat: false,
   calls: [] as Array<{ table: string; start: number }>,
 }))
@@ -27,6 +28,7 @@ vi.mock('../../supabase', () => ({
       range: (from: number, to: number) => { start = from; end = to; return query },
       maybeSingle: () => Promise.resolve({ data: (db.tables[table] ?? []).find(row => predicates.every(predicate => predicate(row))) ?? null, error: null }),
       then: (resolve: (value: unknown) => unknown) => {
+        if (db.networkThrows) throw new Error('network unavailable')
         db.calls.push({ table, start })
         const failed = db.failure === table && start > 0
         const rows = (db.tables[table] ?? []).filter(row => predicates.every(predicate => predicate(row)))
@@ -57,7 +59,7 @@ const units = () => Array.from({ length: 3 }, (_, n) => ({
 describe('availability reads must be complete before reporting stock', () => {
   beforeEach(() => {
     db.tables = { inventory_reservations: reservations(), product_units_v: units() }
-    db.failure = ''; db.nullPage = false; db.nullTable = ''; db.repeat = false; db.calls = []; db.cap = 2
+    db.failure = ''; db.nullPage = false; db.nullTable = ''; db.networkThrows = false; db.repeat = false; db.calls = []; db.cap = 2
   })
 
   it('includes serial holds beyond a server cap smaller than the requested page', async () => {
@@ -110,7 +112,7 @@ describe('booking inputs must be complete before planning stock', () => {
   const products = () => Array.from({ length: 3 }, (_, n) => ({ id: `p-${n + 1}`, tracking_mode: 'Quantity', total_quantity: 2 }))
 
   beforeEach(() => {
-    db.cap = 2; db.failure = ''; db.nullPage = false; db.nullTable = ''; db.repeat = false; db.calls = []
+    db.cap = 2; db.failure = ''; db.nullPage = false; db.nullTable = ''; db.networkThrows = false; db.repeat = false; db.calls = []
     db.tables = {
       bookings: [{ id: bookingId, booking_no: 'BK-TEST', pickup_at: '2026-10-20T00:00:00Z', return_at: '2026-10-22T00:00:00Z' }],
       products_v: products(),
@@ -156,5 +158,45 @@ describe('booking inputs must be complete before planning stock', () => {
   it('refuses missing metadata rather than treating it as an empty catalogue', async () => {
     db.nullPage = true
     await expect(readProductModes(['p-1'])).rejects.toThrow(/missing|incomplete/i)
+  })
+})
+
+describe('post-confirmation reservation counts distinguish unknown from zero', () => {
+  beforeEach(() => {
+    db.cap = 2; db.failure = ''; db.nullPage = false; db.nullTable = ''; db.networkThrows = false; db.repeat = false; db.calls = []
+    db.tables = { inventory_reservations: [
+      { id: 'r-0', booking_id: 'confirmed-booking', asset_id: 'u-0', product_id: null, qty: 1, released_at: null },
+      { id: 'r-1', booking_id: 'confirmed-booking', asset_id: null, product_id: 'p-1', qty: 2, released_at: null },
+      { id: 'r-2', booking_id: 'confirmed-booking', asset_id: null, product_id: 'p-1', qty: 3, released_at: null },
+    ] }
+  })
+
+  it('counts every serial and quantity hold beyond the server cap', async () => {
+    expect(await readHeldForBooking('confirmed-booking')).toEqual({ units: 1, quantityHolds: 2, quantityReserved: 5 })
+  })
+
+  it('returns unknown for a failed later page instead of partial counts', async () => {
+    db.failure = 'inventory_reservations'
+    expect(await readHeldForBooking('confirmed-booking')).toBeNull()
+  })
+
+  it('returns unknown for a missing dataset instead of reporting zero holds', async () => {
+    db.nullPage = true
+    expect(await readHeldForBooking('confirmed-booking')).toBeNull()
+  })
+
+  it('contains thrown network failures after the booking has already committed', async () => {
+    db.networkThrows = true
+    expect(await readHeldForBooking('confirmed-booking')).toBeNull()
+  })
+
+  it('returns unknown for repeated pages', async () => {
+    db.repeat = true
+    expect(await readHeldForBooking('confirmed-booking')).toBeNull()
+  })
+
+  it('returns unknown for an invalid quantity instead of a misleading count', async () => {
+    db.tables.inventory_reservations = [{ id: 'invalid', booking_id: 'confirmed-booking', asset_id: null, product_id: 'p-1', qty: null, released_at: null }]
+    expect(await readHeldForBooking('confirmed-booking')).toBeNull()
   })
 })

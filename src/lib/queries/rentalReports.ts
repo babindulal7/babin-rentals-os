@@ -1,7 +1,7 @@
 import { supabase } from '../supabase'
 import type { Paisa } from '../money'
 import { rentalDaysBetween } from '../rentalDays'
-import { embeddedName, isPermissionDenied, linesValue, percentOf, readLineValues, rowsOf, type ReportFilterOptions } from './reportSupport'
+import { completeReportRead, embeddedName, isPermissionDenied, linesValue, percentOf, readLineValues, rowsOf, type ReportFilterOptions } from './reportSupport'
 
 export type { ReportFilterOptions } from './reportSupport'
 
@@ -148,11 +148,11 @@ function daysOf(b: Pick<BookingRow, 'pickup_at' | 'return_at'>): number {
 
 export async function getRentalPerformanceReport(options?: ReportFilterOptions): Promise<RentalPerformanceReportData> {
   const [res, typeRes, lineMap] = await Promise.all([
-    filtered(
+    completeReportRead(filtered(
       supabase.from('bookings').select('id, booking_no, stage, pickup_at, return_at, project, cancelled_at, clients!client_id(name)'),
       options,
-    ),
-    filtered(supabase.from('bookings').select('id, project_type'), options),
+    ), 'Rental performance read failed'),
+    completeReportRead(filtered(supabase.from('bookings').select('id, project_type'), options), 'Project type read failed'),
     readLineValues(),
   ])
   const rows = rowsOf<BookingRow>(res, 'Rental performance read failed')
@@ -246,7 +246,7 @@ const BUCKETS = [
 
 export async function getRentalDurationReport(options?: ReportFilterOptions): Promise<RentalDurationReportData> {
   const [res, lineMap] = await Promise.all([
-    filtered(supabase.from('bookings').select('id, pickup_at, return_at').is('cancelled_at', null), options),
+    completeReportRead(filtered(supabase.from('bookings').select('id, pickup_at, return_at').is('cancelled_at', null), options), 'Rental duration read failed'),
     readLineValues(),
   ])
   const rows = rowsOf<Pick<BookingRow, 'id' | 'pickup_at' | 'return_at'>>(res, 'Rental duration read failed')
@@ -288,14 +288,14 @@ export async function getRentalDurationReport(options?: ReportFilterOptions): Pr
 
 export async function getCancellationsReport(options?: ReportFilterOptions): Promise<CancellationsReportData> {
   const [allRes, cancelRes, lineMap] = await Promise.all([
-    filtered(supabase.from('bookings').select('id'), options),
-    filtered(
+    completeReportRead(filtered(supabase.from('bookings').select('id'), options), 'Booking count read failed'),
+    completeReportRead(filtered(
       supabase
         .from('bookings')
         .select('id, booking_no, pickup_at, return_at, project, cancelled_at, cancellation_reason, clients!client_id(name)')
         .not('cancelled_at', 'is', null),
       options,
-    ),
+    ), 'Cancellations read failed'),
     readLineValues(),
   ])
   const totalAll = rowsOf(allRes, 'Booking count read failed').length

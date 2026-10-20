@@ -12,7 +12,7 @@ import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { useDomainEvent } from '../../events/useDomainEvent'
 import { EVENT_TYPES } from '../../events/eventBus'
 import { formatAd } from '../../lib/bs'
-import { businessDayAd, businessNowAd, overDays, pickupsQuery, timeOf, toMovementRow, type MovementRow } from '../../lib/queries/today'
+import { operationalTodayAd, businessNowAd, overDays, pickupsQuery, timeOf, toMovementRow, type MovementRow } from '../../lib/queries/today'
 import { listBookings, operationQueue, todaysOutgoing } from '../../lib/queries/bookings'
 import type { ListFilters } from '../../lib/queries/listQuery'
 import { useList, type ListQueryResult, type ListResult } from '../../lib/queries/useList'
@@ -402,7 +402,7 @@ export default function Today() {
 
   const [pickupPage, setPickupPage] = useState(0)
   const [returnPage, setReturnPage] = useState(0)
-  const dayAd = businessDayAd()
+  const dayAd = operationalTodayAd()
 
   const syncBothPanels = useCallback((nextFilter: DateFilter) => {
     setPickupPage(0)

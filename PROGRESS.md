@@ -1,5 +1,68 @@
 # Progress Log
 
+## 2026-10-21 — Mock Mode Visual Refinement (Replacement of Yellow Warning with Subtle Icon)
+
+**Did**
+- Removed the intrusive full-width yellow warning banner across all screens when running in mock mode:
+  - In `src/App.tsx`, updated `MockBanner` to return `null` and cleaned up unused `IS_MOCK` imports. The screen real estate is restored with zero jarring amber warning backgrounds.
+  - In `src/components/ui/Icon.tsx`, imported and registered `flask: IconFlask`, `mock: IconFlask`, and `database: IconDatabase` from `@tabler/icons-react`.
+  - In `src/components/shell/Header.tsx`, added a sleek mock indicator icon button (`<Icon name="flask" size={17} />`) in the header action cluster (Zone 3, next to notes and avatar) when `IS_MOCK` is active. It is 44×44px touch-target compliant (Law 15), styled in brand accent with a subtle status pip.
+  - Clicking the mock icon opens a clean, accessible `ConfirmDialog` allowing operators to review mock mode status or safely execute "Wipe Mock Data & Reload" with a single click.
+
+**Ruled**
+- Mock/test execution state must never obstruct core operational workflows with full-width alert banners; indicator icons in the global header preserve ambient disclosure without cluttering the canvas.
+- Interactive controls in the global header must strictly adhere to the ≥44×44px touch target floor (Law 15).
+
+**Verified**
+- `npm run typecheck`: **PASS (0 errors)**.
+- `npm run lint`: **PASS (0 warnings)**.
+- `npx vitest run src/components/shell`: **14/14 test files passed (128 tests)**.
+- `npm run check:contrast`: **82/82 PASS, 0 FAIL (WCAG AA across all modes)**.
+
+## Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 51 / 54 (94%) | — |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | — |
+| Lifecycle | steps green / total | 31 / 31 (100%) | — |
+| Overall | mean of five | ≈ 98% | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-20T20:32:48.741Z). Suite: Historical suite: 4948/4948 passed, 0 failed (recorded 2026-10-20T17:16:49.928Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-20T20:33:12.524Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+
+- Remote cutover / Supabase deployment: unblocked locally; awaiting Babin backup & cutover protocol per N-5.
+- Multi-device real-world tablet field testing (physical iPad and Zebra scanner hardware over Wi-Fi `http://192.168.1.75:3000`).
+
+## 2026-10-21 — Honest post-confirmation reservation readback
+
+**Did**
+- Resumed on clean `main` at `5d26cf8d` after the single-shell/L1 merge. Created recovery branch `codex/recovery-before-confirmation-readback-20261021` before editing; preserved incoming shell and other sessions' changes.
+- Retrieved the completed 20 October run: all 4,948 tests and all commands passed, but several checks overlapped source edits. That receipt does not certify the newer merge. The earlier booking-input fix remains integrated and its 8 red-before / 200 focused-pass results are retained.
+- Reproduced truncated post-confirmation reservation counts, false zero counts for missing data, thrown network errors, failed/repeated pages and invalid bulk quantities. Updated `src/lib/queries/availability.ts` to read every reservation page and return `null` for an unverified summary while retaining its non-throwing post-commit contract.
+- Updated `src/actions/rentals/confirmRental.ts` to preserve successful, stage-verified confirmation when summary counts are unknown, and carry `null` rather than invented zeroes in the result/event. Real empty reads still return zero. No custody or reservation write rule changed.
+- Added six query regressions and one confirmation-action regression, and supplied real row IDs in existing readback fixtures. Affected tests: `availabilityCompleteness.test.ts`, `availability.test.ts`, `confirmRental.test.ts`.
+
+**Ruled**
+- Applied existing truthfulness and atomic-transition requirements. Unknown display counts cannot undo a committed booking or fabricate an empty reservation result. No role, pricing, custody or cancellation policy changed.
+
+**Verified**
+- Before source changes: all 7 new cases failed, with 77 existing cases passing. After: 207/207 across five suites passed, including all 25 completeness and 59 confirmation-action cases. The overlapping preliminary typecheck was stopped under memory pressure; no pass is inferred from it. Fresh complete source-bound checks are underway after resources cleared.
+- Full current-source evidence will be recorded in `docs/verification/ASTRA_LOCAL_2026-10-21.json`. Prior records remain intact. No hosted access/change, database reset, push, PR, fake business records or offline-work deletion occurred.
+
+## Completion
+
+Pending the completion generator after verification; its import classifications are structural counts, not release approval.
+
+## Remaining
+
+- Finish current merged-source gates; separately review the confirmation action's pre-commit line-count read. Shared operational persistence, legacy ownership recovery, VAT classification, document/evidence workflows and performance acceptance remain open.
+- Hosted JWT/Storage, actual responsive/browser layouts and real-device offline acceptance remain unverified. Migration 0170 has earlier local evidence only, NOT APPLIED or PRODUCTION-VERIFIED; newer source requires fresh gates.
+
 ## 2026-10-21 (ii) — Booqable adoptions: per-operation grants (P0-B) + calendar keyboard stepping (BQ-CAL-06)
 
 **Did**

@@ -152,7 +152,7 @@ const assign = vi.hoisted(() => {
     /** Live holds the pre-check finds in the way. */
     collisions: [] as Array<{ unitId: string; bookingNo: string }>,
     /** What the database reports holding, read back after the transition. */
-    held: { units: 2, quantityHolds: 0, quantityReserved: 0 },
+    held: { units: 2, quantityHolds: 0, quantityReserved: 0 } as { units: number; quantityHolds: number; quantityReserved: number } | null,
     /** Ordered log of every availability call, for interleaving assertions. */
     calls: [] as string[],
     /** Arguments the pre-check was handed, so the question asked can be asserted. */
@@ -778,6 +778,21 @@ describe('reservations are the database\'s to write (R-26)', () => {
 
     expect(result.units).toBe(5)
     expect(result.unitsReserved).toBe(1)
+  })
+
+  it('keeps a confirmed booking successful when reservation counts are unavailable, without inventing zeroes', async () => {
+    assign.state.held = null
+    setUpConfirmable()
+
+    const { result, events } = await confirm({ id: 'B-715', clientUuid: ACTION_KEY })
+
+    expect(result.success).toBe(true)
+    expect(result.stage.to).toBe(CONFIRM_TO)
+    expect(result.unitsReserved).toBeNull()
+    expect(result.quantityReserved).toBeNull()
+    expect(result.quantityHolds).toBeNull()
+    expect(events[0]?.payload).toMatchObject({ unitsReserved: null, quantityReserved: null, quantityHolds: null })
+    expect(writes.state.ops.filter(op => op.kind === 'insert' && op.table === 'booking_stage_transitions')).toHaveLength(1)
   })
 
   /**

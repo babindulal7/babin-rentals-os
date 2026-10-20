@@ -247,7 +247,8 @@ export type ConfirmRentalResult = {
    * a booking whose serials moved between creation and confirm the plan's number
    * and the table's number differ, and the table is the one that is true.
    */
-  unitsReserved: number
+  /** Null when the post-commit reservation read was unavailable. */
+  unitsReserved: number | null
   /**
    * Items of bulk stock held — Σ `qty` across the product-level
    * `inventory_reservations` rows this Confirm wrote.
@@ -256,12 +257,12 @@ export type ConfirmRentalResult = {
    * `tracking_mode = 'Quantity'` with no `product_units` rows, so `unitsReserved`
    * is 0 and this is the number that says the booking has stock behind it.
    */
-  quantityReserved: number
+  quantityReserved: number | null
   /**
    * How many product-level rows carried that quantity — one per quantity line.
    * Separate from `quantityReserved` because one row can hold forty cables.
    */
-  quantityHolds: number
+  quantityHolds: number | null
 }
 
 interface BookingHead {
@@ -605,9 +606,9 @@ export const confirmRentalConfig: ActionConfig<ConfirmRentalInput, ConfirmRental
         stage: { from: booking.stage, to },
         lines: lines.length,
         units,
-        unitsReserved: held.units,
-        quantityReserved: held.quantityReserved,
-        quantityHolds: held.quantityHolds,
+        unitsReserved: held?.units ?? null,
+        quantityReserved: held?.quantityReserved ?? null,
+        quantityHolds: held?.quantityHolds ?? null,
       },
       events: [
         {
@@ -621,9 +622,9 @@ export const confirmRentalConfig: ActionConfig<ConfirmRentalInput, ConfirmRental
             to,
             lines: lines.length,
             units,
-            unitsReserved: held.units,
-            quantityReserved: held.quantityReserved,
-            quantityHolds: held.quantityHolds,
+            unitsReserved: held?.units ?? null,
+            quantityReserved: held?.quantityReserved ?? null,
+            quantityHolds: held?.quantityHolds ?? null,
             occurredAt,
             userId: ctx.userId,
           },

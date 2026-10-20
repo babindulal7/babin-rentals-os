@@ -23,7 +23,8 @@ describe('reports preserve the recorded net booking-line value (0168)', () => {
     expect(() => lineValue(priced(value))).toThrow()
   })
   it('selects the stored total through the money-masked view and carries it into the adapter', async () => {
-    query.select.mockReturnValue({ is: async () => ({ data: [{ ...priced('666.09'), booking_id: 'b1', product_id: null, bundle_id: null }], error: null }) })
+    const paged = { order: () => paged, range: async (from: number) => ({ data: from ? [] : [{ id: 'line-1', ...priced('666.09'), booking_id: 'b1', product_id: null, bundle_id: null }], error: null }) }
+    query.select.mockReturnValue({ is: () => paged })
     const rows = await readLineValues()
     expect(query.select.mock.calls.at(-1)?.[0].split(',').map((column: string) => column.trim())).toContain('line_total')
     const row = rows.get('b1')?.[0]

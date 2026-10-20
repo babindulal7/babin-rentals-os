@@ -63,6 +63,10 @@ describe('every converted read throws on failure instead of returning seed data'
     useTables({ [table]: DOWN })
     await expect(run()).rejects.toThrow(/permission denied/)
   })
+  it.each(cases)('%s refuses a missing dataset from %s instead of claiming zero activity', async (_name, table, run) => {
+    useTables({ [table]: { unconfirmed: true } })
+    await expect(run()).rejects.toThrow(/confirmed dataset/)
+  })
 })
 
 describe('an empty database is an honest empty, never a seed figure', () => {

@@ -1,6 +1,6 @@
 import { supabase } from '../supabase'
 import { rupees, type Paisa } from '../money'
-import { linesValue, readLineValues, rowsOf, type ReportFilterOptions } from './reportSupport'
+import { completeReportRead, linesValue, readLineValues, rowsOf, type ReportFilterOptions } from './reportSupport'
 
 /**
  * Promotions & Discounts — coupons, redemptions, discount sources and bundles.
@@ -57,8 +57,8 @@ export interface PromotionsReportsSummary {
 }
 
 export async function getPromotionsReportsSummary(options?: ReportFilterOptions): Promise<PromotionsReportsSummary> {
-  let redemptionsQ = supabase.from('coupon_redemptions').select('coupon_id, booking_id, discount_amount, redeemed_at')
-  let discountsQ = supabase.from('booking_discounts').select('discount_source, percent, applied_at')
+  let redemptionsQ = supabase.from('coupon_redemptions').select('id, coupon_id, booking_id, discount_amount, redeemed_at')
+  let discountsQ = supabase.from('booking_discounts').select('id, discount_source, percent, applied_at')
   let bookingsQ = supabase.from('bookings').select('id').is('cancelled_at', null)
   if (options?.from) {
     redemptionsQ = redemptionsQ.gte('redeemed_at', options.from)
@@ -76,11 +76,11 @@ export async function getPromotionsReportsSummary(options?: ReportFilterOptions)
   }
 
   const [couponsRes, redemptionsRes, discountsRes, bundlesRes, bookingsRes, lineMap] = await Promise.all([
-    supabase.from('coupons').select('id, code, discount_percent, is_active'),
-    redemptionsQ,
-    discountsQ,
-    supabase.from('bundles').select('id, name'),
-    bookingsQ,
+    completeReportRead(supabase.from('coupons').select('id, code, discount_percent, is_active'), 'Coupons read failed'),
+    completeReportRead(redemptionsQ, 'Coupon redemptions read failed'),
+    completeReportRead(discountsQ, 'Booking discounts read failed'),
+    completeReportRead(supabase.from('bundles').select('id, name'), 'Bundles read failed'),
+    completeReportRead(bookingsQ, 'Bookings read failed'),
     readLineValues(),
   ])
   const coupons = rowsOf<{ id: string; code: string; discount_percent: number | string | null; is_active: boolean | null }>(couponsRes, 'Coupons read failed')

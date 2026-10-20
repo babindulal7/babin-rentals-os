@@ -1,6 +1,6 @@
 import { supabase } from '../supabase'
 import { rupees, type Paisa } from '../money'
-import { embeddedName, percentOf, rowsOf, type ReportFilterOptions } from './reportSupport'
+import { completeReportRead, embeddedName, percentOf, rowsOf, type ReportFilterOptions } from './reportSupport'
 
 export type { ReportFilterOptions } from './reportSupport'
 
@@ -165,12 +165,12 @@ export async function getDamageMaintenanceReport(options?: ReportFilterOptions):
   }
 
   const [findingsRes, maintenanceRes, casesRes, unitsRes, productsRes, usersRes] = await Promise.all([
-    findingsQuery,
-    maintenanceQuery,
-    supabase.from('cases_v').select('id, charged_to_client_amount'),
-    supabase.from('product_units_v').select('id, product_id, serial_no, status, updated_at'),
-    supabase.from('products').select('id, name'),
-    supabase.from('users').select('id, full_name'),
+    completeReportRead(findingsQuery, 'Damage findings read failed'),
+    completeReportRead(maintenanceQuery, 'Maintenance records read failed'),
+    completeReportRead(supabase.from('cases_v').select('id, charged_to_client_amount'), 'Cases read failed'),
+    completeReportRead(supabase.from('product_units_v').select('id, product_id, serial_no, status, updated_at'), 'Units read failed'),
+    completeReportRead(supabase.from('products').select('id, name'), 'Products read failed'),
+    completeReportRead(supabase.from('users').select('id, full_name'), 'Staff names read failed'),
   ])
   const findings = rowsOf<FindingRow>(findingsRes, 'Damage findings read failed')
   const records = rowsOf<MaintenanceRow>(maintenanceRes, 'Maintenance records read failed')

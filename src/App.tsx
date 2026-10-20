@@ -904,7 +904,6 @@ const UNBUILT: Array<{ to: string; title: string; crumbs: Crumb[] }> = NAV.flatM
   .filter((r, i, all) => all.findIndex((x) => x.to === r.to) === i)
 
 import { useNetwork } from './lib/network'
-import { IS_MOCK } from './lib/supabase'
 import Icon from './components/ui/Icon'
 
 function OfflineBanner() {
@@ -963,68 +962,9 @@ function OfflineBanner() {
  * applied, because the cut package predates mock mode.
  */
 function MockBanner() {
-  if (!IS_MOCK) return null
-  return (
-    <div
-      role="status"
-      style={{
-        background: 'var(--st-progress-bg)',
-        color: 'var(--st-progress-fg)',
-        padding: '6px 16px',
-        fontSize: 'var(--t-meta)',
-        fontWeight: 600,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 8,
-        borderBottom: '1px solid var(--border)',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-        <Icon name="error" size={16} />
-        <span style={{ minWidth: 0 }}>
-          Mock mode (clean database) — all user data & AI-generated records removed. Login with owner@babinrentals.com.
-        </span>
-      </div>
-      <button
-        type="button"
-        onClick={() => {
-          try {
-            localStorage.setItem('babin_data_wiped', 'true')
-            localStorage.setItem('babin_internal_notes_v1', JSON.stringify([]))
-            const toRemove: string[] = []
-            for (let i = 0; i < localStorage.length; i++) {
-              const k = localStorage.key(i)
-              if (k && (k.startsWith('babin.mock.') || k.startsWith('sb-') || k.startsWith('babin-active-') || k.startsWith('babin-today-'))) {
-                toRemove.push(k)
-              }
-            }
-            toRemove.forEach((k) => localStorage.removeItem(k))
-            if (typeof indexedDB !== 'undefined') {
-              try { indexedDB.deleteDatabase('babin.mock.storage.v1') } catch {}
-              try { indexedDB.deleteDatabase('BabinOfflineQueue') } catch {}
-            }
-            window.location.reload()
-          } catch {
-            /* ignore */
-          }
-        }}
-        style={{
-          background: 'transparent',
-          border: '1px solid currentColor',
-          color: 'inherit',
-          padding: '2px 8px',
-          borderRadius: 4,
-          cursor: 'pointer',
-          fontSize: '11px',
-          fontWeight: 600,
-          whiteSpace: 'nowrap',
-        }}
-      >
-        Wipe All User Data
-      </button>
-    </div>
-  )
+  // Legacy full-width yellow warning banner retired; mock status is indicated
+  // via the sleek mock icon in HeaderBar.
+  return null
 }
 
 /*

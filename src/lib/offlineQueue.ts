@@ -355,6 +355,10 @@ export async function resolveConflict(
   _resolvedBy?: string,
 ): Promise<void> {
   if (!canUseOfflineQueue()) return
+  await withReplayLock(() => resolveOwnedConflict(conflictId, resolution), true)
+}
+
+async function resolveOwnedConflict(conflictId: number, resolution: 'keep_server' | 'force_local'): Promise<void> {
   const conflict = await db.conflicts.get(conflictId)
   if (!conflict) return
   const identity = await getOfflineSession()
@@ -395,6 +399,20 @@ export async function resetStaleSyncingMutations(): Promise<number> {
 
 let draining = false
 
+/** One origin-wide owner, including conflict resolution. A crashed tab releases
+ * its Web Lock automatically; only the next owner may recover stranded writes.
+ * Without coordination, preserve work and surface an error through syncEngine.
+ */
+async function withReplayLock(run: () => Promise<void>, requireAvailable = false): Promise<void> {
+  if (typeof navigator === 'undefined' || !navigator.locks?.request) {
+    throw new Error('Offline replay coordination is unavailable in this browser. Saved work was preserved.')
+  }
+  await navigator.locks.request('babin-offline-replay', { mode: 'exclusive', ifAvailable: true }, async lock => {
+    if (lock) await run()
+    else if (requireAvailable) throw new Error('Another tab is syncing offline work. Retry after it finishes.')
+  })
+}
+
 /**
  * Replays every pending mutation through the same idempotentInsert/safeUpdate path that queued
  * it, reusing its already-stored client_uuid (never a fresh one) so a re-post is idempotent —
@@ -409,14 +427,16 @@ export async function drainQueue(): Promise<void> {
   if (typeof navigator !== 'undefined' && !navigator.onLine) return
   draining = true
   try {
-    await resetStaleSyncingMutations()
-    const pending = await getPendingMutations()
-    for (const mutation of pending) {
-      const identity = await getOfflineSession()
-      if (!identity || !ownsOfflineWork(mutation, identity)) continue
-      if (mutation.id === undefined) continue
-      await replayMutation(mutation, identity)
-    }
+    await withReplayLock(async () => {
+      await resetStaleSyncingMutations()
+      const pending = await getPendingMutations()
+      for (const mutation of pending) {
+        const identity = await getOfflineSession()
+        if (!identity || !ownsOfflineWork(mutation, identity)) continue
+        if (mutation.id === undefined) continue
+        await replayMutation(mutation, identity)
+      }
+    })
   } finally {
     draining = false
   }
@@ -495,13 +515,9 @@ async function replayMutation(mutation: QueuedMutation, identity: OfflineSession
         const columns = [...new Set(['id', ...Object.keys(mutation.payload)])].join(',')
         const receipt = await identity.client.from(mutation.table).select(columns).eq('client_uuid', mutation.clientUuid).maybeSingle()
         if (receipt.error) {
-          if (receipt.error.code === '42501' || String(receipt.error.message).includes('permission denied')) {
-            // Write-only / blind table (e.g. audit_events or column-masked table for floor roles).
-            // Postgres has already guaranteed uniqueness via 23505 on client_uuid.
-            // Law 8 idempotency is satisfied.
-          } else {
-            throw new Error('Duplicate insert was not confirmed as the same saved work; pending work was preserved.')
-          }
+          // A uniqueness violation proves that a key exists, not that it belongs
+          // to this actor or has the same payload. A denied read is no receipt.
+          throw new Error('Duplicate insert was not confirmed as the same saved work; pending work was preserved.')
         } else {
           const row = receipt.data as unknown as Record<string, unknown> | null
           if (!row || Object.entries(mutation.payload).some(([key, value]) => JSON.stringify(row[key]) !== JSON.stringify(value))) {

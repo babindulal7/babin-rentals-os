@@ -4,10 +4,12 @@ import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ToastProvider } from '../../../components/ui/Toast'
+import type { ListFilters } from '../../../lib/queries/listQuery'
 
-const queueResults = vi.hoisted(() => ({ counts: [0, 0], calls: 0, refetch: vi.fn() }))
+const queueResults = vi.hoisted(() => ({ counts: [0, 0], calls: 0, refetch: vi.fn(), filters: [] as ListFilters[] }))
 vi.mock('../../../lib/queries/useList', () => ({
-  useList: () => {
+  useList: (_fetcher: unknown, filters: ListFilters) => {
+    queueResults.filters.push(filters)
     const total = queueResults.counts[queueResults.calls++ % 2] ?? 0
     return {
     rows: [],
@@ -59,14 +61,41 @@ beforeEach(() => {
   window.sessionStorage.clear()
   queueResults.counts = [0, 0]
   queueResults.calls = 0
+  queueResults.filters = []
   queueResults.refetch.mockClear()
 })
 afterEach(async () => {
   await act(async () => root.unmount())
   container.remove()
+  vi.useRealTimers()
 })
 
 describe('focused pickup and return dashboard', () => {
+  it.each([
+    ['2026-10-21T05:59:59+05:45', '2026-10-21'],
+    ['2026-10-21T06:00:00+05:45', '2026-10-22'],
+  ])('quick Today retains carry-over and ends at the correct shift boundary at %s', async (now, endDay) => {
+    vi.setSystemTime(new Date(now))
+    await mount()
+    const filters = queueResults.filters.find(f => f.dateRange?.column === 'pickup_at')!
+    expect(filters.dateRange?.fromAd).toBeUndefined()
+    expect(filters.dateRange?.toAd).toBe(`${endDay}T05:59:59.999+05:45`)
+  })
+  it('quick Tomorrow before 06:00 starts at the upcoming shift', async () => {
+    vi.setSystemTime(new Date('2026-10-21T05:59:59+05:45'))
+    window.sessionStorage.setItem('dashboard.pickupDateFilter', JSON.stringify({ kind: 'quick', period: 'Tomorrow' }))
+    await mount()
+    const filter = queueResults.filters.find(f => f.dateRange?.column === 'pickup_at')!
+    expect(filter.dateRange?.fromAd).toBe('2026-10-21T06:00:00.000+05:45')
+    expect(filter.dateRange?.toAd).toBe('2026-10-22T05:59:59.999+05:45')
+  })
+  it('an explicit picked day keeps that date before 06:00', async () => {
+    vi.setSystemTime(new Date('2026-10-21T05:59:59+05:45'))
+    window.sessionStorage.setItem('dashboard.pickupDateFilter', JSON.stringify({ kind: 'custom', from: '2026-10-25', to: '2026-10-25' }))
+    await mount()
+    const filter = queueResults.filters.find(f => f.dateRange?.column === 'pickup_at')!
+    expect(filter.dateRange?.fromAd).toBe('2026-10-25T06:00:00.000+05:45')
+  })
   it('places the date beside queues and refreshes both queues from More', async () => {
     await mount()
     expect(container.querySelector('[aria-label="Date filter for pickups"]')).not.toBeNull()

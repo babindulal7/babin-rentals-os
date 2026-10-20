@@ -84,6 +84,8 @@ import {
   IconCash,
   IconQrcode,
   IconWallet,
+  IconFlask,
+  IconDatabase,
   type Icon as TablerIconType,
 } from '@tabler/icons-react'
 import { captureError } from '../../lib/monitoring'
@@ -135,6 +137,9 @@ const REGISTRY = {
   sparkles: IconSparkles,
   activity: IconActivity,
   chevron_up: IconChevronUp,
+  flask: IconFlask,
+  mock: IconFlask,
+  database: IconDatabase,
 
   // kpi tiles
   briefcase: IconBriefcase,
