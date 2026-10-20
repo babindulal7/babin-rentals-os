@@ -8,7 +8,7 @@ This describes requested *future* features based on user-provided concept images
 ## Phase 1 — Existing booking payment quick actions
 - Booking Detail right rail `Quick Actions > Record Payment` automatically uses only that booking's real invoice(s) and the existing `RecordPaymentModal`. No new money write path.
 - Preserve `canRecordPayment` RBAC, invoice UUID selection, outstanding prefill, server re-fetch and receipts. No settlement of security deposits as rental payment.
-- Missing invoice/read error/cancelled/fully-paid have distinct gates. Mobile retains an actionable entry in the Money segment.
+- Missing invoice, invoice-read error, and fully-paid cases have distinct gates; do not automatically block settlement of a cancelled booking with an unpaid invoice (existing §4.16 policy remains open). Mobile retains an actionable entry in the Money segment.
 - Tests: payment gate states + CI, manual money-blind checks, no cross-booking invoice attachment and no duplicate posts.
 
 ## Phase 2 — Smart Compact + global shell
