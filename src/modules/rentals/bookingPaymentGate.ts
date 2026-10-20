@@ -8,7 +8,6 @@ export function bookingPaymentUnavailableReason(args: {
   outstandingPaisa: number
   noInvoiceReason: string
 }): string | null {
-  if (args.cancelledReason) return args.cancelledReason
   if (!args.hasInvoice) return args.invoicesUnknownReason ?? args.noInvoiceReason
   if (args.outstandingPaisa <= 0) return 'This booking has no outstanding rental balance to collect.'
   return null
