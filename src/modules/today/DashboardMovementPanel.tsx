@@ -458,6 +458,15 @@ export default function DashboardMovementPanel({
             </div>
           )}
         </PageBody>
+        {/* ADOPTIONS item 7 (Booqable §4.3): footer link carries the panel's named
+            filter, widened. "View all" is the widen (no separate query). A counted
+            "View late" (overdue) drill-down is deferred — it needs an activity-scoped
+            /rentals route param that is not wired yet, so it is not shipped half-built. */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 12px', borderTop: '1px solid var(--border)' }}>
+          <Link to="/rentals" style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--link)', textDecoration: 'none' }}>
+            View all {side === 'outgoing' ? 'bookings' : 'rentals'} <Icon name="arrow_right" size={14} />
+          </Link>
+        </div>
       </div>}
     </section>
   )
