@@ -1,4 +1,5 @@
 import { formatAd } from '../bs'
+import { IS_MOCK } from '../supabase'
 /**
  * Canonical Team Internal Notes & Dispatch Log — Babin Rentals OS
  *
@@ -125,6 +126,7 @@ export const INTERNAL_NOTES_SEED: InternalNote[] = [
 ]
 
 export function listInternalNotes(): InternalNote[] {
+  if (!IS_MOCK) throw new Error('Shared team notes are unavailable. Existing local entries have been preserved.')
   try {
     const isWiped = typeof localStorage !== 'undefined' && localStorage.getItem('babin_data_wiped') === 'true'
     const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null
@@ -150,6 +152,7 @@ export function listInternalNotes(): InternalNote[] {
 }
 
 export function saveInternalNotes(notes: InternalNote[]): void {
+  if (!IS_MOCK) throw new Error('Shared team notes are unavailable. Existing local entries have been preserved.')
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(notes))

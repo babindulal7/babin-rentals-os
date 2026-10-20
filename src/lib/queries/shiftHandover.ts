@@ -6,6 +6,8 @@
  * 14:00–15:00 overlap window where the checklist handover runs.
  */
 
+import { IS_MOCK } from '../supabase'
+
 // ── Checklist ────────────────────────────────────────────────────────
 
 export interface ShiftCheckItem {
@@ -101,6 +103,7 @@ const SEED_RECORDS: HandoverRecord[] = [
 // ── CRUD ─────────────────────────────────────────────────────────────
 
 export function getHandoverRecords(): HandoverRecord[] {
+  if (!IS_MOCK) throw new Error('Staff shift handover is unavailable. Existing local entries have been preserved.')
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
@@ -114,6 +117,7 @@ export function getHandoverRecords(): HandoverRecord[] {
 }
 
 export function saveHandoverRecords(records: HandoverRecord[]): void {
+  if (!IS_MOCK) throw new Error('Staff shift handover is unavailable. Existing local entries have been preserved.')
   localStorage.setItem(STORAGE_KEY, JSON.stringify(records))
 }
 

@@ -123,6 +123,13 @@ export const approveDailyClosingConfig: ActionConfig<ApproveDailyClosingInput, A
       )
     }
 
+    /* Money is paisa (0078_daily_closings.sql:75-78).
+       Unlike payments or invoices where Postgres numeric(14,2) columns store rupees
+       and require toRupees(), daily_closings explicitly defines counted_cash,
+       expected_cash, variance, collected_cash, collected_bank, collected_card,
+       collected_other, receivables, and deposits_held as bigint (paisa).
+       Passing raw integer Paisa here is mandatory; wrapping in toRupees() would be a
+       100x unit discrepancy dividing figures by 100. */
     let inserted
     try {
       inserted = await idempotentInsert(

@@ -62,6 +62,12 @@ function noteConfig(name: string, permissions: string[], entityType: AddIntelEnt
 }
 
 export const addClientIntelNote = createAction(noteConfig('ADD_CLIENT_INTEL_NOTE', ['note.create'], 'client'))
+/**
+ * 0143_smart_intel_notes_fields.sql:87 specifically restricts equipment note inserts
+ * in Postgres RLS: `(entity_type = 'equipment' and auth_user_role() in ('Owner','Admin','Manager'))`.
+ * Hence, 'inventory.create' (Owner, Admin, Manager via canCreateBundle) mirrors the database
+ * policy; using 'note.create' would fail closed with 42501 in Postgres for floor roles.
+ */
 export const addEquipmentIntelNote = createAction(noteConfig('ADD_EQUIPMENT_INTEL_NOTE', ['inventory.create'], 'equipment'))
 
 export interface ConfigureIntelFieldInput {
@@ -139,5 +145,10 @@ function valueConfig(name: string, permissions: string[], entityType: SetIntelFi
 }
 
 export const setClientIntelField = createAction(valueConfig('SET_CLIENT_INTEL_FIELD', ['note.create'], 'client'))
+/**
+ * 0143_smart_intel_notes_fields.sql:198 specifically restricts equipment field value inserts
+ * in Postgres RLS: `(d.entity_type = 'equipment' and product_id is not null and auth_user_role() in ('Owner','Admin','Manager'))`.
+ * 'inventory.create' correctly mirrors the schema's gate.
+ */
 export const setEquipmentIntelField = createAction(valueConfig('SET_EQUIPMENT_INTEL_FIELD', ['inventory.create'], 'equipment'))
 export const setRentalIntelField = createAction(valueConfig('SET_RENTAL_INTEL_FIELD', ['note.create'], 'rental'))

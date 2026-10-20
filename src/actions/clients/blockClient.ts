@@ -56,30 +56,12 @@ import { getClientRecord } from '../../lib/queries/clients'
  * invoices, remove portal access to existing records, or touch rental history.
  * Nothing in this file writes anything but the flag row.
  *
- * ## ⚠ TODO(decision) — `client.block` resolves to no rule in `lib/rbac`
+ * ## Permission — `client.block` (Ruled 15 Aug 2026)
  *
- * `actions/core.ts:105-126` resolves seven capability strings and `client.block`
- * is not one of them, so the dispatcher denies this action before `execute`
- * runs. Fail-closed and deliberate — and, like `client.create`, not actually
- * unknown. The rule is applied to the database and simply has no mirror in
- * `lib/rbac`, which rbac's own header says is the drift it exists to prevent.
- * Read off the live project, 12 Aug 2026:
- *
- *     policy client_flags_insert  with check (
- *       (flag_type =  'Blocked' and auth_user_role() = any (array['Owner','Admin','Manager']))
- *       or
- *       (flag_type <> 'Blocked' and auth_user_role() = any (array['Owner','Admin','Manager','Coordinator','Warehouse']))
- *     )
- *     policy client_flags_update  using  (… Owner, Admin, Manager, Coordinator, Warehouse …)
- *                                 with check (… same Blocked/non-Blocked split as above …)
- *
- * i.e. **Owner, Admin and Manager may block and unblock; Coordinator and
- * Warehouse may not** — 0038 split 0025's single policy specifically to take
- * Blocked away from the Coordinator seat (0005:1044). Because the UPDATE policy's
- * WITH CHECK is evaluated against the post-update row, whose `flag_type` is still
- * `'Blocked'`, the same three roles gate the unblock. Writing that into
- * `lib/rbac` is a one-function change in a file this task was not given, so it is
- * recorded here rather than invented here.
+ * `actions/core.ts:185-186` maps `client.block` to `rbac.canBlockClient(ctx.role)`.
+ * Mirrors `policy client_flags_insert` and `policy client_flags_update` (0005/0038):
+ * Owner, Admin and Manager may block and unblock; Coordinator, Warehouse, Technician,
+ * Accounts, Driver, and Client may not.
  *
  * ## ⚠ TODO(decision) — is a reason mandatory?
  *

@@ -10,7 +10,9 @@ import { Link } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
-import { PageHeader } from '../../components/ui/Page'
+import { PageHeader, Card } from '../../components/ui/Page'
+import { PageShell } from '../../components/ui/PageShell'
+import { IS_MOCK } from '../../lib/supabase'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { useAuth } from '../../lib/auth'
 import { useOptionalToast } from '../../components/ui/Toast'
@@ -77,6 +79,18 @@ const QUICK_TEMPLATES = [
 ]
 
 export default function InternalNotesPage() {
+  if (IS_MOCK) return <InternalNotesPreview />
+  return (
+    <PageShell header={<PageHeader title="Team Notes" />}>
+      <Card><div role="status" style={{ padding: 'var(--sp-md)' }}>
+        <h2>Shared team notes unavailable</h2>
+        <p>Team notes cannot be shared between staff yet. Existing entries on this device have been kept.</p>
+      </div></Card>
+    </PageShell>
+  )
+}
+
+function InternalNotesPreview() {
   const { user } = useAuth()
   const toast = useOptionalToast()
 

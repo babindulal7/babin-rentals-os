@@ -56,27 +56,13 @@ import { PHONE_STORED_RE, PHONE_REJECTION } from '../../lib/phone'
  *    including Owner."* Add Client collects both; the screen says plainly that
  *    they are not saved rather than dropping them silently.
  *
- * ## ⚠ TODO(decision) — `client.create` resolves to no rule in `lib/rbac`
+ * ## Permission — `client.create` (Ruled 15 Aug 2026)
  *
- * `actions/core.ts:105-126` can resolve seven capability strings and
- * `client.create` is not one of them, so `checkCapability` returns `undefined`
- * and the dispatcher denies this action **before** `execute` ever runs
- * (`core.ts:144-149`). That is the fail-closed direction and it is deliberate;
- * it also means this body cannot be exercised through the UI until the matrix
- * `core.ts:45-52` marks TODO(decision) is ruled.
- *
- * The rule is not actually unknown — it is already applied to the database and
- * simply has no mirror in `lib/rbac`, which is the drift rbac's own header says
- * must not exist. Read off the live project, 12 Aug 2026:
- *
- *     policy clients_insert  with check (auth_user_role() = any (array[
- *       'Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse'
- *     ]))
- *
- * Writing that into `lib/rbac` is a one-function change in a file this task was
- * not given, so it is recorded here rather than invented here. `permissions`
- * below is left naming the real capability rather than being re-pointed at a
- * mapped-but-different one.
+ * `actions/core.ts:183-184` maps `client.create` to `rbac.canCreateClient(ctx.role)`.
+ * The role list mirrors `policy clients_insert with check (auth_user_role() = any (array[
+ * 'Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse']))` (0005).
+ * Admitted: Owner, Admin, Manager, Coordinator, Warehouse.
+ * Denied: Technician, Accounts, Driver, Client.
  *
  * ## ⚠ TODO(decision) — the `client_code` format mismatch (PLAN.md §4.20)
  *
@@ -268,8 +254,7 @@ export const createClientConfig: ActionConfig<CreateClientInput, CreateClientRes
    * ⚠ The write was driven against the live project as SQL, inside a
    * PL/pgSQL block aborted by `raise exception` so nothing committed
    * (`next_document_number('client')` → `CL-2026-0001`, insert accepted, the
-   * sequence left at 0). It could **not** be driven through the UI, because the
-   * dispatcher denies `client.create` before `execute` runs — see the header.
+   * sequence left at 0). Ruled 15 Aug 2026: `client.create` resolves to `rbac.canCreateClient`.
    */
   implemented: true,
 

@@ -1,5 +1,32 @@
 # Progress Log
 
+## 2026-10-20 — Live boundaries for local-only operational tools
+
+**Did**
+- Revalidated UI-01–03 and the notes-sync finding against current source: Productions, Staff Shift Handover, Warranty and Team Notes used unscoped browser storage; several supplied sample business records. The audit roadmap explicitly permits an unavailable state until shared persistence exists (`ASTRA_FIX_ROADMAP.md`, phase 1).
+- Added live read/write guards in `src/lib/queries/productions.ts`, `shiftHandover.ts`, `warranty.ts` and `internalNotes.ts`. They refuse before reading or replacing local entries. Existing development mock prototypes remain available only in mock mode; no business records were added, deleted or adopted.
+- Added honest unavailable states to Productions, Warranty, Staff Shift Handover and both Team Notes surfaces, using existing shell/card/drawer components. Live pages expose no sample records, local financial values, claim/completion actions or false success messages. Existing local entries remain intact. Shared backend workflows are still unimplemented; this mitigation does not claim otherwise.
+- Added `src/__tests__/e2e/localOnlyTools.live.test.tsx` covering live read/write refusal, unavailable UI, absent sample/money text, no business-storage reads and byte-for-byte preservation of existing entries.
+
+**Ruled**
+- Applied existing Law 16 and the audit's “durable or explicitly unavailable” requirement. No new production lifecycle, shift schedule, warranty policy, role grant or shared-notes model was invented.
+- Actual rental booking/custody workflows remain separate from Staff Shift Handover; their business rules were not changed.
+
+**Verified**
+- Original tools: 9/9 new regressions failed before the guards. Notes extension: 4 failed / 9 passed before its guards (after correcting the toast fixture). After changes: typecheck PASS; 44/44 across 5 files, including all 13 live-boundary cases and the existing mock notes/warranty tests.
+- The REL-01 identity capture fix also passed typecheck and 36/36 focused tests across 6 files. Earlier reproduction was 3/3 failed. Full current-source gates are being rerun after both changes.
+- The earlier financial checkpoint remains separately recorded in `docs/verification/ASTRA_FINANCE_CHECKPOINT_2026-10-20.json`; it predates these changes and does not certify them.
+
+## Completion
+
+Awaiting the completion generator for this frozen source after final gates; static import counts do not prove a shared backend exists.
+
+## Remaining
+
+- Finish full current-source tests/coverage, lint, migration/security/financial/lifecycle/contrast checks and build; retain the fingerprinted result in `docs/verification/ASTRA_LOCAL_2026-10-20.json`.
+- Implement approved shared persistence and role scopes before re-enabling these live tools. Preserve and reconcile existing local work explicitly; never silently import it into another account.
+- Availability row caps, operational-day boundaries, document workflow gaps, tax-classification provenance, performance and responsive/device acceptance remain in the audit register. Hosted JWT/Storage remains unverified; no migration was applied remotely.
+
 ## 2026-10-20 — REL-01 follow-up: capture the submitting identity before network fallback
 
 **Did**

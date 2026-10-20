@@ -6,6 +6,8 @@
  * and warranty ROI (% of premiums recovered).
  */
 
+import { IS_MOCK } from '../supabase'
+
 export type WarrantyState = 'Active' | 'Expiring' | 'Expired'
 
 export interface WarrantyItem {
@@ -51,6 +53,7 @@ export function computeWarrantyState(endDateStr: string, now: Date = getBusiness
 }
 
 export function getWarrantyItems(now: Date = getBusinessToday()): WarrantyItem[] {
+  if (!IS_MOCK) throw new Error('Warranty claims are unavailable. Existing local entries have been preserved.')
   try {
     if (typeof localStorage !== 'undefined') {
       const raw = localStorage.getItem(STORAGE_KEY)
@@ -94,6 +97,7 @@ export function getWarrantyItems(now: Date = getBusinessToday()): WarrantyItem[]
 }
 
 export function saveWarrantyItems(items: WarrantyItem[]): void {
+  if (!IS_MOCK) throw new Error('Warranty claims are unavailable. Existing local entries have been preserved.')
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(items))

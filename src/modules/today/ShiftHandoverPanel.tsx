@@ -13,6 +13,7 @@ import { Badge } from '../../components/ui/Badge'
 import { useToast } from '../../components/ui/Toast'
 import { useViewport } from '../../lib/device'
 import { useAuth } from '../../lib/auth'
+import { IS_MOCK } from '../../lib/supabase'
 import {
   SHIFT_CHECKLIST,
   getHandoverRecords,
@@ -97,6 +98,16 @@ const noteBoxStyle: React.CSSProperties = {
 // ── Component ────────────────────────────────────────────────────────
 
 export default function ShiftHandoverPanel() {
+  if (IS_MOCK) return <ShiftHandoverPreview />
+  return (
+    <Card><section role="status" aria-label="Staff shift handover" style={{ padding: 'var(--sp-md)' }}>
+      <h2>Staff shift handover unavailable</h2>
+      <p>Shared staff shift records are not available yet. Existing entries on this device have been kept.</p>
+    </section></Card>
+  )
+}
+
+function ShiftHandoverPreview() {
   const { showSuccessToast } = useToast()
   const viewport = useViewport()
   const isPhone = viewport === 'phone'

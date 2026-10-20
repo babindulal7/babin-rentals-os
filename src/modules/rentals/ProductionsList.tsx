@@ -20,6 +20,7 @@ import { formatMoney, rupees } from '../../lib/money'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
 import { getBusinessToday } from '../../lib/bs'
+import { IS_MOCK } from '../../lib/supabase'
 import {
   PROD_PHASES,
   getProductions,
@@ -64,6 +65,19 @@ const stepperStepStyle = (isCurrent: boolean, isPast: boolean): React.CSSPropert
 })
 
 export default function ProductionsList() {
+  if (IS_MOCK) return <ProductionPreview />
+  return (
+    <PageShell header={<PageHeader title="Productions" />}>
+      <Card><div role="status" style={{ padding: 'var(--sp-md)' }}>
+        <h2>Production tracking unavailable</h2>
+        <p>Shared production tracking is not available yet. Existing entries on this device have been kept.</p>
+        <Link to="/rentals">Open Rentals</Link>
+      </div></Card>
+    </PageShell>
+  )
+}
+
+function ProductionPreview() {
   const { showSuccessToast } = useToast()
   const viewport = useViewport()
   const isPhone = viewport === 'phone'

@@ -137,3 +137,9 @@ The Law 16 report pass (PROGRESS.md, 2026-10-16) replaced invented figures with 
 ## 15. VAT classification provenance (20 October 2026)
 
 - **TODO(decision): distinguish exempt from zero-rated turnover.** The Sales/VAT report currently groups invoices with zero recorded VAT under a combined category. A zero tax amount alone does not establish an exemption. Identify the authoritative persisted classification and the intended register/export treatment before changing that classification; do not infer legal tax status from an amount. This is separate from the corrected register truncation and recorded-discount arithmetic.
+
+## 16. Shared operational tools and existing local records (20 October 2026)
+
+- **TODO(decision): production model and lifecycle.** Confirm the production-to-booking relationships, record ownership and approved lifecycle before introducing a shared production schema, as required by the audit roadmap's phase 2. The old browser prototype is unavailable in live mode.
+- **TODO(decision): legacy local-record ownership.** Productions, staff shift records, warranties and team notes were not account-scoped. Their existing browser bytes are retained. Establish provenance before any shared import; neither the next login nor a matching name establishes ownership.
+- Engineering work remains for authoritative staff-shift, warranty-claim and team-note persistence with the existing permission matrix enforced in the database. Until that work and its acceptance tests pass, live read/write APIs refuse and pages explain their unavailability. No shared-data model or permission grant is inferred from the old sample records.

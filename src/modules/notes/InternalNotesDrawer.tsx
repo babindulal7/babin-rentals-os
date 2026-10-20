@@ -12,6 +12,7 @@ import { Badge } from '../../components/ui/Badge'
 import { FilterDrawer } from '../../components/ui/FilterDrawer'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from '../../lib/auth'
+import { IS_MOCK } from '../../lib/supabase'
 import { useOptionalToast } from '../../components/ui/Toast'
 import {
   listInternalNotes,
@@ -32,7 +33,20 @@ interface InternalNotesDrawerProps {
   initialReference?: string
 }
 
-export default function InternalNotesDrawer({ isOpen, onClose, initialReference }: InternalNotesDrawerProps) {
+export default function InternalNotesDrawer(props: InternalNotesDrawerProps) {
+  if (IS_MOCK) return <InternalNotesPreview {...props} />
+  return (
+    <FilterDrawer id="team-internal-notes" open={props.isOpen} onClose={props.onClose} side="right" width={360}
+      title="Team Internal Notes" keepMounted>
+      <div role="status" style={{ padding: 'var(--sp-md)' }}>
+        <h2>Shared team notes unavailable</h2>
+        <p>Team notes cannot be shared between staff yet. Existing entries on this device have been kept.</p>
+      </div>
+    </FilterDrawer>
+  )
+}
+
+function InternalNotesPreview({ isOpen, onClose, initialReference }: InternalNotesDrawerProps) {
   const { user } = useAuth()
   const toast = useOptionalToast()
   const navigate = useNavigate()

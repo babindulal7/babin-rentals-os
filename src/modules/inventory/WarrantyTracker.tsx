@@ -18,6 +18,7 @@ import { useToast } from '../../components/ui/Toast'
 import { formatMoney, rupees } from '../../lib/money'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
+import { IS_MOCK } from '../../lib/supabase'
 import {
   getWarrantyItems,
   recordWarrantyClaim,
@@ -42,6 +43,18 @@ const chipStyle = (active: boolean): React.CSSProperties => ({
 })
 
 export default function WarrantyTracker() {
+  if (IS_MOCK) return <WarrantyPreview />
+  return (
+    <PageShell header={<PageHeader title="Equipment Warranty" />}>
+      <Card><div role="status" style={{ padding: 'var(--sp-md)' }}>
+        <h2>Warranty claims unavailable</h2>
+        <p>Shared warranty tracking and claims are not available yet. Existing entries on this device have been kept.</p>
+      </div></Card>
+    </PageShell>
+  )
+}
+
+function WarrantyPreview() {
   const { showSuccessToast } = useToast()
   const viewport = useViewport()
   const isPhone = viewport === 'phone'
