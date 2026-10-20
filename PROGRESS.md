@@ -1,5 +1,47 @@
 # Progress Log
 
+## 2026-10-21 (iv) — Premium Workbench V1: docked, keyboard-browsable record inspector (Rentals + Inventory)
+
+**Did**
+- Implemented the owner-supplied Premium Workbench V1 pack (`BABIN_PREMIUM_WORKBENCH_GLM_5_3_CODE_PACK.zip`; full detail + revert in `PREMIUM_WORKBENCH_CHANGELOG.md`): selecting a rental or equipment model keeps the list's scroll/filters/page untouched and, at desktop (>=1280), the workspace reserves a right-hand strip so the inspector docks beside the list instead of covering it; `previous/next` plus `n of N on this page` traverse the loaded page in rendered order; Alt+↑/↓ browse without intercepting typing; tablet keeps the overlay; phone keeps the bottom sheet.
+- New presentation-only files: `src/lib/inspectorNavigation.ts` (+4 tests), `src/components/ui/useInspectorTraversal.ts`, `InspectorNavigator.tsx`, `InspectorFacts.tsx`, `premium-inspector.css`.
+- Extended — did not fork — `ContextDrawer.tsx` with opt-in `docked` + `navigation` props; a docked open drawer does not steal focus from the list; non-docked call sites (ClientsDirectory, RentalAuditDrawer) unchanged and covered by tests.
+- `RentalsList.tsx` / `Inventory.tsx`: the inspected record is derived from the live page (`activeRental` / `activeEquipment`), so a filter/page/search change that drops the record clears the inspection instead of rendering stale details; drawer facts compacted via `InspectorFacts`; every existing action, permission and money gate (incl. Inventory's stricter `asset-finance` gate) kept at its original site; browsing runs no query.
+- Removed one dead binding at `BookingDetail.tsx` (`isFullySettled`, never read) that made the typecheck red at session start.
+- Adaptations over the pack (fresher local code won; pack §5 authorizes reconciling): docking reuses the FilterDrawer reservation convention (`--context-drawer-w` on `:root`, consumed by `.app-workspace`'s animated `max()` padding) instead of `:has()` + `!important`; the inspector joins the existing `babin:side-drawer-open` one-drawer-per-edge protocol (RULINGS-2026-10-20) rather than ad-hoc dismissal; no `premium-row--inspecting` class was added because Rentals' inline tint and Inventory's `.is-inspected` already paint the same inspector-only row mark — both were re-pointed at the live row.
+
+**Ruled**
+- No product decision invented — the pack is Babin's own direction. Where it conflicted with fresher local conventions the binding 15/20 Oct drawer rulings were followed and each deviation logged in the changelog.
+- Concurrent-session attribution (shared tree; auto-sync commits landed during this session and swept these changes into local commits): the 4 full-suite failures below belong to other sessions' in-flight work — tier2 touch-target audit (`No "IS_MOCK" export` in their `lib/supabase` mock; Header/Sidebar only), `reportQueries.law16` unreadable-column degradation, `Finance.restricted` phone de-crowding, and `BookingDetail.quickActionsPayment` fully-settled reason (the last verified failing at pristine HEAD via a stash round-trip). Left for those sessions; nothing in this feature's surface is red. The parallel session's `exactOptionalPropertyTypes` fix to this session's ContextDrawer test helper is acknowledged and kept.
+
+**Verified**
+- `npm run typecheck` PASS (0 errors) · `npm run lint` PASS (0 warnings) · `npm run check:contrast` 82/82 PASS · `npm run build` PASS (exit 0; PWA precache 211 entries; the >500 kB main-chunk warning pre-dates this feature).
+- Full `npm test`: **5,116 / 5,120 passed (403 files)** — the 4 failures attributed above; none touch ContextDrawer, the inspector files, RentalsList or Inventory.
+- Focused: 18/18 (14 ContextDrawer incl. 9 new docked-contract tests + 4 inspectorNavigation); InformationDrawer 5/5 unchanged.
+- Real-browser verification (headless Chrome over CDP, mock corpus, sign-in through the real login form as Owner and as money-blind Warehouse): dock class + `--context-drawer-w = clamp(320px, 27vw, 420px)` applied at 1600px; **table right edge == panel left edge (1180px) — the list is not covered** on both pages; focus stays on BODY (not stolen); Alt+ArrowDown moves 1 → 2 with the drawer open; Previous returns to 1; Escape releases the reservation; 1194px keeps the overlay with no reservation; 390px flips an open drawer to the modal sheet (`aria-modal`, body lock, scrim, 44px nav buttons); **Law 6 in the real DOM: Owner sees Total Amount / Daily Rate / Replacement value, Warehouse sees none of them** (absent, not CSS-hidden). 14 screenshots + assertion log in `C:\Users\use\AppData\Local\Temp\opencode\workbench-shots\` (deliberately outside the repo).
+- Not run this session (UI-only change, no SQL touched): `check:pglite` / `check:lifecycle` — the completion generator reads the 20 Oct receipts; release HOLD unchanged.
+
+## Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 98% | +0 |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-20T21:39:36.339Z). Suite: Historical suite: 5034/5039 passed, 5 failed (recorded 2026-10-20T21:39:16.908Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-20T21:40:29.485Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+
+- Owner's visual pass over the captured screenshots (light/dark, real displays) — this session verified layout via DOM geometry + real screenshots, but no human eye has confirmed aesthetics.
+- The 4 concurrent-session suite failures remain theirs to finish; the tree also carries their uncommitted `ProductsImportCenter.test.tsx` mock-hygiene fix, left untouched.
+- Phone rows on Rentals/Inventory have no row-click inspector (pre-existing: phone goes straight to the record page); phone inspection would be a new decision.
+- Cross-page previous/next stays out of scope by the pack's own §5 until pagination semantics are designed.
+
 ## 2026-10-21 (iii) — Booqable adoption BQ-407: catalogue CSV import with a mandatory dry-run
 
 **Did**

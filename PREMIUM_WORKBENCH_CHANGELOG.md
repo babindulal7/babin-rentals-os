@@ -82,25 +82,59 @@ filter semantics, or status engine was changed.
 - `npx vitest run src/lib/__tests__/inspectorNavigation.test.ts src/components/ui/__tests__/ContextDrawer.test.tsx`
   — 18/18 PASS (14 ContextDrawer incl. 9 new docked tests + 4 traversal).
 - `npx vitest run src/modules/inventory src/modules/rentals src/components/ui/__tests__/InformationDrawer.test.tsx`
-  — 595/599 PASS. The 4 failures are in concurrent sessions' in-flight work, verified against
-  pristine HEAD via a stash round-trip: `ProductsImportCenter.test.tsx` (BQ-407 — 2×
-  `commitButton is not defined` test scoping + 1 commit-flow) and
-  `BookingDetail.quickActionsPayment.test.tsx` (fully-settled reason — the same unfinished work
-  that left the dead `isFullySettled`). None touch the workbench surface.
-- Full `npm test`, `npm run lint`, `npm run check:contrast`, `npm run build` — see PROGRESS.md
-  entry for this session (recorded there because a concurrent auto-sync moved HEAD mid-session;
-  commands were run against the tree containing this feature).
+  — 595/599 at that point; the 4 failures were in concurrent sessions' in-flight work (verified
+  against pristine HEAD via a stash round-trip where reproducible).
+- Full `npm test` — **5,116 / 5,120 passed (403 files)**. The 4 failures are all attributed to
+  concurrent sessions' in-flight work, not this feature, each with its evidence:
+  - `tier2-boundaries › Touch Target Audit` — fails on `[vitest] No "IS_MOCK" export is defined on
+    the "../../lib/supabase" mock`; the test mounts only `Header` + `Sidebar` (untouched here).
+  - `reportQueries.law16 › unreadable project_type column` — `expected [] to be null` (their
+    report-read work).
+  - `Finance.restricted › phone header de-crowding` — `expected <button aria-label="Export"> to be
+    null` (their finance header work).
+  - `BookingDetail.quickActionsPayment › fully settled` — fails at pristine HEAD too (verified).
+- `npm run lint` — PASS (0 warnings). `npm run check:contrast` — **82/82 PASS**.
+- `npm run build` — see PROGRESS.md session entry.
+
+### Real-browser visual verification (mock corpus, real login form)
+
+Driven with headless Chrome over CDP against `npm run dev:mock` (port 3002), signed in through the
+real login form as `owner@babinrentals.com` and as `warehouse@babinrentals.com` (money-blind role).
+14 screenshots + a JSON assertion log live in
+`C:\Users\use\AppData\Local\Temp\opencode\workbench-shots\` (not in the repo).
+
+Measured at desktop 1600×1000 (both roles, both pages):
+- `.context-drawer--docked` applied; `--context-drawer-w = clamp(320px, 27vw, 420px)` on `:root`;
+  `.app-workspace` computed `padding-right: 420px`.
+- **The list is not covered:** table right edge == panel left edge (1180px == 1180px) on Rentals
+  and Inventory; panel spans to the viewport edge.
+- Focus not stolen (`document.activeElement` stays BODY while the drawer is open).
+- Navigator count truthful ("1 of 20 on this page"); **Alt+ArrowDown moves 1 → 2** with the drawer
+  staying open; the Previous button returns to 1.
+- Escape closes and releases the strip (`--context-drawer-w` removed, padding back to 0).
+- **Law 6 in the real DOM:** Owner sees Total Amount / Daily Rate / Replacement value in the
+  inspector; **Warehouse sees none of them** (facts absent, not CSS-hidden).
+
+At tablet 1194×834: no dock class, no reservation, existing 420px right overlay kept.
+At phone 390×844 (open drawer narrowed): modal bottom sheet, `aria-modal="true"`, body scroll
+locked, scrim present, navigator buttons still ≥44px.
+
+Known harness notes (not app defects): the first verification run measured `padding-right` inside
+the 220ms entry transition (read 0px; settled value is 420px — re-measured after 700ms), and phone
+rows on these pages are card rows without a row-click inspector (pre-existing: phone goes straight
+to the record page), so the phone sheet was verified by narrowing an open drawer.
 
 ## Known limitations / not done
 
-- **Screenshots were not captured in this session** (no interactive browser display was driven).
-  Layout claims rest on the component tests + the reused, already-shipped FilterDrawer docking
-  mechanism; a human pass at 1280/1440/1920 + 820/1194 + 390, light and dark, is still owed.
+- The screenshots live outside the repo (temp directory) so nothing unreviewed lands in git;
+  copy any of them into the repo if you want them versioned.
 - Previous/next is page-local by design (spec §2); it does not cross backend pages — the count
   says "on this page" truthfully.
 - The dock reserves width only while a record is actually being inspected (respects the 20 Oct
   on-demand-rail ruling); it is not a permanent rail.
 - Cross-page traversal, saved views, and any SQL change are explicitly out of scope (spec §5).
+- 4 full-suite failures are concurrent sessions' in-flight work (attribution above), not this
+  feature; they were left for those sessions to finish.
 
 ## Revert
 
