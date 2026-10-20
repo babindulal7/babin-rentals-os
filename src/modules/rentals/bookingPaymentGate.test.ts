@@ -23,8 +23,7 @@ describe('booking payment quick-action eligibility', () => {
     expect(bookingPaymentUnavailableReason({ ...base, hasInvoice: false, invoicesUnknownReason: 'Invoice service unavailable' }))
       .toBe('Invoice service unavailable')
   })
-  it('blocks cancelled bookings before other conditions', () => {
-    expect(bookingPaymentUnavailableReason({ ...base, cancelledReason: 'Booking cancelled' }))
-      .toBe('Booking cancelled')
+  it('does not infer terminal booking restrictions from invoice data', () => {
+    expect(bookingPaymentUnavailableReason({ ...base, outstandingPaisa: 100_00 })).toBeNull()
   })
 })
