@@ -1,5 +1,96 @@
 # Progress Log
 
+## 2026-10-21 — Single-Shell Operational Workspace & Smart Compact Density Implementation (Wireframe Alignment)
+
+**Did**
+- Fully implemented the Single-Shell Operational Workspace and Precision Cinema Compact Density System in local environment on branch `design/single-shell-desktop-workspace` aligned strictly with wireframe sketches `media_1792523386879_c6c0271a.png` (Today Dispatch Board) and `media_1792523386520_4255193b.png` (Rentals Management Workspace):
+  - **Shared Compact Density Tokens & Context:**
+    - Created `src/lib/displayDensity.tsx` exporting `useDisplayDensity()`, `DisplayDensityProvider` with persistent safe storage (`br-display-density`) and `data-density="compact" | "comfortable"` attached to `<html>`.
+    - Added display density preference switcher to `src/modules/settings/Settings.tsx` (`Compact` / `Comfortable`) with Tabler `table` and `layout` icons added to `src/components/ui/Icon.tsx`.
+    - Configured CSS variable layer in `src/styles/theme.css`: `--density-table-row: 44px`, `--density-card-pad: 12px 14px`, `--density-panel-gap: 12px`, `--density-section-gap: 16px`, `--density-situational-min-h: 96px`, and compacted `--app-sidebar-width` to `224px` (+32px primary canvas room on 1440px desktop).
+  - **Today Dispatch Board Refactor (`Today.tsx` & `dashboard.css`):**
+    - Subheader updated to match sketch: `Today • Dispatch board` + description + soft-tinted quick indicators (`pickupCount going out` in soft blue, `returnCount coming back` in soft green) + unified date pill selector.
+    - Compacted movement panel header height to `3.5rem` (56px) and row height to `var(--density-table-row, 3.25rem)` (52px–56px) with 44px minimum touch targets preserved (Law 15).
+    - Compacted situational cards from hardcoded 140px to `var(--density-situational-min-h, 96px)`.
+    - Added wireframe bottom section: `After the dispatch queues` with subtitle `Shift handover / unresolved exceptions / equipment attention` and badge `Secondary, below the daily work`.
+  - **Rentals Management Workspace Refactor (`RentalsList.tsx`):**
+    - Subheader updated to match sketch: `Rentals • Management workspace` + subtitle `A dense table for search, booking status, availability and fast drill-down.` with active stats badge.
+    - Compact table density: rows tightened to `height: var(--row-min-h)` with `padding: 6px 8px` and vertical alignment `middle`.
+    - Row selection & preview: clicking any row opens the enhanced Context Drawer (`#rental-quick-view`) matching sketch with `RENTAL PREVIEW` heading, booking number + client title, stage notice card (`Pending handover`, `Currently active on production set`, etc.), schedule/location metadata, and solid primary blue `[ Open rental → ]` action. Action column preserved at strict 60px width.
+  - **Visual Verification & Metrics Capture:**
+    - Created `scripts/capture-precision-after.mjs` and captured full after-implementation screenshot suite across Desktop 1440×900, iPad 820×1180, and Phone 375×812 in light and dark mode, stored in `docs/audits/precision-cinema-after/` and mirrored to artifact directory.
+    - Verified table row density above the fold increased from 3 rows to 4–8 rows depending on table, sidebar width compacted to 224px, and 0 horizontal overflow.
+
+**Ruled**
+- Row selection and preview drawer in `RentalsList` opens on table row click (excluding direct button/link/checkbox targets), maintaining the fixed 60px action column width constraint (`ACTION_COL_W = 60`) required by `rentalsList.render.test.tsx`.
+- Money-blind roles (`Warehouse`, `Technician`, `Driver`, `Client`) are strictly guarded in both table rows and `RENTAL PREVIEW` context drawer: financial sections and amounts are completely withheld via `money` capability checks (Law 6 & RBAC).
+- Minimum touch targets for all interactive floor controls and buttons remain ≥44×44px (Law 15), verified by E2E Tier 2 boundary test.
+- N-5 / Local safety rule: No migrations touched or pushed; zero modifications to remote Supabase or credentials.
+
+**Verified**
+- `npm run typecheck`: **PASS (0 errors)**.
+- `npm run check:pglite`: **168/168 migrations applied from scratch, 0 failed, 0 leaks**.
+- `npm run check:lifecycle`: **31/31 green, 0 known-red, 0 failed**.
+- `npm run check:contrast`: **82/82 PASS, 0 FAIL (WCAG AA across light, dark, high-contrast, obsidian glass)**.
+- `npx vitest run src/__tests__/e2e/`: **8/8 test files passed (59 tests)**.
+- `npx vitest run src/modules/today src/modules/rentals`: **53/53 test files passed (603 tests)**.
+- `npx vitest run src/actions/finance src/modules/finance`: **18/18 test files passed (248 tests)**.
+- `npm run build`: **PASS (tsc --noEmit && vite build, PWA 209 entries generated cleanly)**.
+- Headless Chrome captures verified across Desktop (1440x900), iPad (820x1180, 1180x820), and Phone (375x812) in Light and Dark themes.
+
+## Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 51 / 54 (94%) | +0 |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 98% | +0 |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-20T19:38:53.402Z). Suite: Historical suite: 4948/4948 passed, 0 failed (recorded 2026-10-20T17:16:49.928Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-20T19:39:11.961Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+
+- Remote cutover / Supabase deployment: unblocked locally; awaiting Babin backup & cutover protocol per N-5.
+- Multi-device real-world tablet field testing (physical iPad and Zebra scanner hardware).
+
+## 2026-10-21 — Current-source bug check (full gates + post-checkpoint diff review)
+
+**Did**
+- Ran the complete verification battery against current source to check for bugs: typecheck, full test suite, lint, migration rebuild, lifecycle, contrast and production build.
+- Manually reviewed every source diff that landed after the last source-matched verification checkpoint (`92d4cc6c..3a2404e8`, ~1,200 lines across `src/lib`, `src/modules/rentals`, `src/modules/finance`): kpiEngine paisa summation and Kathmandu civil date keys, `parseMoney` currency-prefix stripping, print-slip and label-printer HTML escaping, scannerLookup PostgREST filter sanitization and fail-closed query errors, Finance invoice-PDF snapshot inputs (`invoicePdfData`), removal of Quick Dispatch / Quick Check-in manufactured verification/QC/signature state, the ReturnWorkspace scan-pulse timer cleanup, and the availability complete-read pagination loop.
+- No application code, migration, or data was changed by this session.
+
+**Ruled**
+- No new product decisions. Verified the `invoicePdfData` paisa conversions against the schema: `invoice_lines.unit_rate`/`line_total` are `numeric(14,2)` rupees (×100 at the boundary), while `InvoiceListRow` amounts are already Paisa — both paths are internally consistent, no hundredfold conversion. The availability pagination loop is guarded (duplicate-row refusal, confirmed-empty-page termination, 50k cap), so it cannot loop or truncate silently.
+- Gate passes certify local source behavior only. Per the lifecycle script's own header, a green PGlite run is necessary, never sufficient, for hosted Supabase; hosted JWT/Storage and real-device acceptance remain unverified. The documented top-ten review findings (shared-tool backends, VAT classification, operation-site binding, static membership matrix, large-invoice PDF truncation) remain open with their owners — none were re-litigated here.
+
+**Verified**
+- `npm run typecheck` PASS. `npm test`: **392 files / 4,968 tests passed, 0 failed** (≈281s). `npm run lint` PASS (`--max-warnings 0`). `npm run check:pglite`: 168/168 migrations applied from scratch, view-leak 0, function-leak 0, definer search_path hygiene 78/78. `npm run check:lifecycle`: **31/31 green, 0 known-red, 0 failed**. `npm run check:contrast`: 82/82 PASS. `npm run build` PASS (main 706.95 kB / gzip 200.29 kB; pre-existing large-chunk warning).
+- Concurrent sessions were editing this shared checkout during the runs (auto-syncs landed mid-suite; audit-remediation and display-density edits are in flight now), so these results certify the source state each gate actually executed against, and the newest in-flight edits are not covered by this pass.
+
+## Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 51 / 54 (94%) | — |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | — |
+| Lifecycle | steps green / total | 31 / 31 (100%) | — |
+| Overall | mean of five | ≈ 98% | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-20T19:38:53.402Z). Suite: Historical suite: 4948/4948 passed, 0 failed (recorded 2026-10-20T17:16:49.928Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-20T19:39:11.961Z.
+Counted by `npm run completion`, not typed. The generator correctly reports that its stored full-suite receipt is historical for current source; this session's own fresh full-suite run (4,968 passed, 0 failed) and every other gate above were executed directly and are recorded under **Verified**.
+
+## Remaining
+
+- No new bugs found by the gates or the diff review; no fixes were requested or claimed.
+- Open items unchanged: hosted JWT/Storage verification, legacy ownership reconciliation, shared operational backends, VAT classification, document/evidence acceptance, responsive/device acceptance, and the top-ten remediation queue.
+
 ## 2026-10-21 — Precision Cinema Aesthetic Direction v1.0 Implementation & Visual Polish
 
 **Did**

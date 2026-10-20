@@ -74,6 +74,8 @@ import {
   IconMinus,
   IconMessage,
   IconBarcode,
+  IconTable,
+  IconLayout,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
   IconFilter,
@@ -198,6 +200,8 @@ const REGISTRY = {
   minus: IconMinus,
   message: IconMessage,
   barcode: IconBarcode,
+  table: IconTable,
+  layout: IconLayout,
   panel_left_close: IconLayoutSidebarLeftCollapse,
   panel_left_open: IconLayoutSidebarLeftExpand,
 
