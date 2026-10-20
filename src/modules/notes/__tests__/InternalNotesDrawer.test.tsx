@@ -7,6 +7,11 @@ import InternalNotesDrawer from '../InternalNotesDrawer'
 
 ;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
 
+vi.mock('../../../lib/supabase', () => ({
+  IS_MOCK: true,
+  supabase: {},
+}))
+
 vi.mock('../../../lib/auth', () => ({
   useAuth: () => ({ user: { id: 'usr-1', name: 'Babin Dulal', role: 'Operations Lead' } }),
 }))

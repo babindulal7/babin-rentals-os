@@ -1,5 +1,45 @@
 # Progress Log
 
+## 2026-10-20 — Query Layer Hardening, Law 6 Masking & PDF Offset Fixes (Repomix Pack 4 Audit)
+
+**Did**
+- Remediated `src/lib/queries/damage.ts` (P0): Rewrote `getDamageFindings()` to query through `damage_findings_v` (enforcing Law 6 masked `estimated_cost` for money-blind roles), resolved base-table column name mismatches (`serial_number` -> `serial_no`, `users.name` -> `users.full_name`), and performed batched resolution of `product_units`, `products_v`, `users`, and linked bookings via `return_lines` and `cleaning_queue_entries`. Updated `src/lib/queries/__tests__/damage.test.ts` to mock the view/table schema.
+- Remediated `src/lib/queries/entityLookup.ts` (P0): Guarded `FLEET_CATALOG_SEED` behind `IS_MOCK` to prevent leaking mock equipment tags and sample records in production searches; corrected invalid booking column query (`client_name` -> `client:clients(name)`) and client table search (`company` -> `org_subtype`, selecting `client_code`); typed booking lookup row strictly without `any`.
+- Remediated `src/lib/queries/audit.ts` (P1): Removed fabricated `totalEvents: 12846` fallback in `getAuditSettingsSummary()`, returning real counted rows (`count ?? 0`).
+- Remediated `src/lib/pdf/generatePdf.ts` (P2): Fixed UTF-8 multi-byte encoding drift in `PdfDocumentBuilder.build()` (where high-byte binary header characters caused 4-byte xref pointer misalignments) by incrementally computing byte lengths using `new TextEncoder().encode()`; made VAT percentage label dynamic (`VAT (${vatPercent}%):`); added line items overflow indicator row when items exceed single-page capacity (>12). Added unit tests in `src/lib/pdf/__tests__/generatePdf.test.ts`.
+- Remediated `src/lib/queries/cases.ts` (P2): Removed hardcoded `'Babin Shrestha'` / `'Owner'` fallback in `mapDbRowToCase()`, returning `'Assigned Staff'` / `'Operations Desk'` and typed `ownerRole: 'Manager'`.
+- Cleaned up dead / redundant queries: Replaced dead `listActiveBundleTemplates` query in `src/lib/queries/addBundle.ts` with direct `[]`; removed dead legacy `createClient` from `src/lib/queries/clients.ts`.
+- Fixed mock test harnesses in `src/lib/queries/__tests__/internalNotes.test.ts`, `warranty.test.ts`, `src/modules/notes/__tests__/InternalNotesDrawer.test.tsx`, and `InternalNotesPage.test.tsx` to explicitly mock `IS_MOCK: true` so the mock preview engines and local storage behaviors are verified alongside the live refusal tests in `localOnlyTools.live.test.tsx`.
+
+**Ruled**
+- Enforced Law 6 (column-level access control / money-blind masking) across `damage_findings_v` and `products_v`.
+- Enforced Law 16 (live-first / durable or explicitly unavailable): production entity lookup queries live Postgres only, never falling back to static seed catalogs.
+
+**Verified**
+- `npm run lint`: 0 warnings, 0 errors.
+- `npm run typecheck`: clean (0 errors).
+- `npm test`: 385/385 test files passed, 4,914/4,914 tests passed (100% green).
+- `npm run check:pglite`: 168/168 migrations applied cleanly, 0 leaks, 0 unpinned definer search_paths.
+- `npm run check:lifecycle`: 31/31 steps green.
+- `npm run check:contrast`: 82/82 checks pass across dark, light, high-contrast, and glass tokens.
+- `npm run build`: dual-entry production build passed cleanly.
+- `npm run completion`: counted by script.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 51 / 54 (94%) | +0 |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 98% | +0 |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed.
+
+### Remaining
+- Finalize remaining Repomix code pack audit items if external auditor provides pack 5 (`src/lib/*.ts`, etc.).
+- Remote migration push remains blocked by N-5 until Babin executes `BACKUP_PROTOCOL.md`.
+
 ## 2026-10-20 — Action Invariants, Damage Approvals & Schema Unit Verification (Repomix Pack 3 Audit)
 
 **Did**
