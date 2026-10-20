@@ -1,5 +1,46 @@
 # Progress Log
 
+## 2026-10-21 (ii) — Booqable adoptions: per-operation grants (P0-B) + calendar keyboard stepping (BQ-CAL-06)
+
+**Did**
+- Completed the per-operation grant chain (Booqable audit spec P0-B; earlier parts landed via auto-sync):
+  - `src/actions/rentals/packRental.ts`, `handoverRental.ts`, `returnRental.ts`, `completeReset.ts` now declare `operations.pack|handover|return|reset` instead of the coarse `operations.perform` (kept as a dispatcher case for compatibility; nothing declares it anymore).
+  - `src/modules/rentals/BookingDetail.tsx` computes `canOperatePrimary` from the stage's job via `canPerformOp` and passes it as `canOperate` to `getRentalPrimaryAction`; the coarse `canPerformOperations` remains for the crew-money gates.
+  - Matrix as shipped: Pack / Return / Reset = Owner · Admin · Manager · Warehouse · Technician (identical to the old set — no behaviour change); **Handover = floor only (Technician excluded)**, matching the committed UI wiring in `BookingOperationsMenu` / `BookingDetail`. Engine and UI now agree, so the Handover gate is no longer cosmetic.
+- Added calendar month-grid keyboard navigation (`src/modules/calendar/Calendar.tsx`, BQ-CAL-06 "required whenever the calendar ships"): arrows walk days (±1 horizontal, ±7 vertical), Home/End jump to the month's first/last day, a step past an edge leaves focus put, Enter/Space activate the focused cell natively (cells were already real `<button>`s). Focus only moves; selection does not follow focus.
+- New suite `src/modules/calendar/__tests__/CalendarKeyboardNav.test.tsx` (6 tests) locking in the movement semantics (ArrowRight/Left/Down, Home/End, edge behaviour, click-to-pick).
+- Decision record in `docs/OPEN_DECISIONS.md` (20 Oct): per-op matrix ACTIVE; Technician-on-Handover is the one open cell (veto = one line in `rbac.ts`); location scoping logged as the remaining P0-B half (needs grant table + RLS migration under N-5).
+- Feature catalogue from the full Booqable scrape written to `docs/booqable/SCRAPE_ADOPTABLE_FEATURES.md` (P0–P3, UX/ops patterns, deliberate non-copies, net-new systems).
+
+**Ruled**
+- Per-op grant matrix (17 Oct, mirrored from the existing floor/technician split): Handover is client-facing and floor-only; Pack/Return/Reset stay floor + Technician. Veto path recorded in OPEN_DECISIONS rather than invented as final.
+- Calendar arrows move focus but do not change selection — Enter on the focused cell picks it, exactly as a click would (BQ-CAL-06 "Enter opens the rental" via the existing day dialog).
+- PageUp/PageDown month-paging deliberately not wired: the month nav buttons are already labelled and reachable, and `MonthGrid` does not own the anchor.
+
+**Verified**
+- `npm run typecheck`: 0 errors in the touched files (3 pre-existing errors in `Inventory.tsx` / `BookingDetail.quickActionsPayment.test.tsx` belong to the parallel design stream and were not touched).
+- `npx vitest run src/lib/__tests__/rbac.test.ts src/actions/rentals src/actions/__tests__`: 21 files, 461 tests passed.
+- `npx vitest run src/modules/calendar`: 3 files, 12 tests passed (6 new).
+- `npx vitest run src/modules/operations`: 7 files, 115 tests passed (per-op config switch did not break the floor).
+- `npx eslint` on every touched file: clean.
+- `npm run completion`: Overall ≈ 98% (Backend 51/54, Permissions 47/47, Lifecycle 31/31, DB enforcement 9/9).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 51 / 54 (94%) | — |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | — |
+| Lifecycle | steps green / total | 31 / 31 (100%) | — |
+| Overall | mean of five | ≈ 98% | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed. Counted by `npm run completion`, not typed.
+
+## Remaining
+- Location scoping for grants (P0-B second half): needs a grant table + RLS migration under N-5, and a Babin ruling on per-site operations; `users.branch_id` is the natural foundation. Coordinate with the active ASTRA authorization stream (0170) before writing it.
+- Babin to confirm (or veto) Technician-on-Handover — one line in `src/lib/rbac.ts`.
+- Next scrape adoptions still open: products CSV import with mandatory dry-run (BQ-407 — the clients ImportCenter already has the pattern), export column parity (BQ-COL); saved views and the 06:00 engine are done.
+
 ## 2026-10-21 — Feature Expansion Phase L1: Record Payment Quick Action in Booking Detail
 
 **Did**
