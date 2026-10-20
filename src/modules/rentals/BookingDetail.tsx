@@ -1937,7 +1937,6 @@ function BookingDetailView() {
        about this booking; while the read is in flight or after it failed the
        app does not know that yet, and saying it anyway is the Law 12 defect. */
     const reason = bookingPaymentUnavailableReason({
-      cancelledReason,
       hasInvoice,
       invoicesUnknownReason,
       outstandingPaisa: totals.outstanding,
