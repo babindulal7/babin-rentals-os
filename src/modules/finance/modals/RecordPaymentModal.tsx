@@ -81,6 +81,11 @@ interface RecordPaymentModalProps {
     outstandingRupees?: number
   }>
   /**
+   * Optional booking UUID (L1 booking isolation). When passed, `recordPayment`
+   * enforces that the selected invoice belongs to this booking.
+   */
+  bookingId?: string | undefined
+  /**
    * Present when the invoice list itself failed to load (the modal renders
    * the reason inline with the picker, never an empty picker in silence).
    * Pair with `onRetryInvoices`.
@@ -151,6 +156,7 @@ export function RecordPaymentModal({
   onSuccess,
   initialInvoiceId = '',
   initialAmount,
+  bookingId,
   invoices,
   invoicesError = null,
   onRetryInvoices,
@@ -158,6 +164,12 @@ export function RecordPaymentModal({
   const { user } = useAuth()
   const isOnline = useNetwork()
   const [invoiceId, setInvoiceId] = useState(() => defaultInvoiceId(initialInvoiceId, invoices))
+
+  const selectedInvoice = invoices.find((i) => i.id === invoiceId)
+  const isFullySettled = selectedInvoice
+    ? selectedInvoice.status === 'Paid' ||
+      (typeof selectedInvoice.outstandingRupees === 'number' && selectedInvoice.outstandingRupees <= 0)
+    : false
   const prevInvoicesLen = useRef(invoices.length)
   useEffect(() => {
     if (prevInvoicesLen.current === 0 && invoices.length > 0 && !invoiceId) {
@@ -296,6 +308,10 @@ export function RecordPaymentModal({
     if (e) e.preventDefault()
     if (!invoiceId) {
       setError('Please select an invoice.')
+      return
+    }
+    if (isFullySettled) {
+      setError('This invoice is already fully settled (Rs 0 outstanding). New payments cannot be recorded against it.')
       return
     }
     /*
@@ -458,6 +474,7 @@ export function RecordPaymentModal({
       await recordPayment(
         {
           invoiceId,
+          bookingId: bookingId || undefined,
           amountPaisa: rupees(amount),
           paymentMethod: method,
           // The chosen account's row id, or nothing at all — the action never
@@ -510,13 +527,28 @@ export function RecordPaymentModal({
           <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={() => handleSubmit()} disabled={isSubmitting}>
+          <Button variant="primary" onClick={() => handleSubmit()} disabled={isSubmitting || isFullySettled}>
             {isSubmitting ? 'Recording...' : 'Record Payment'}
           </Button>
         </>
       }
     >
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+        {isFullySettled && (
+          <div
+            role="alert"
+            style={{
+              padding: '10px 14px',
+              borderRadius: 'var(--r-btn)',
+              background: 'var(--card2, #f1f5f9)',
+              border: '1px solid var(--border)',
+              color: 'var(--text)',
+              fontSize: 'var(--t-meta)',
+            }}
+          >
+            This invoice is fully settled (no outstanding balance). New payments cannot be recorded against it.
+          </div>
+        )}
         {error && (
           <div
             style={{
@@ -614,6 +646,9 @@ export function RecordPaymentModal({
             {invoices.map((inv) => (
               <option key={inv.id} value={inv.id}>
                 {inv.invoiceNo ?? DRAFT_NO_NUMBER} — {inv.client} ({inv.amount})
+                {inv.status === 'Paid' || (typeof inv.outstandingRupees === 'number' && inv.outstandingRupees <= 0)
+                  ? ' — Settled'
+                  : ''}
               </option>
             ))}
           </select>
@@ -628,6 +663,7 @@ export function RecordPaymentModal({
             type="number"
             inputMode="numeric"
             min={1}
+            disabled={isFullySettled}
             /*
              * 0 renders as an empty box, not a typed-looking "0": the state
              * has to be a number for the guard and for `rupees()`, but the

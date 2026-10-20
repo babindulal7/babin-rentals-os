@@ -1953,16 +1953,24 @@ export default function RentalsList() {
         onExport={handleBulkExport}
       />
 
-      {/* Zone 1: Sub-Header & Primary Action Bar */}
+      {/* Zone 1: Sub-Header & Primary Action Bar matching wireframe */}
       <ModuleSubHeader
         counter={
-          <span>
-            <strong style={{ color: 'var(--text)' }}>{total ?? list.rows.length}</strong> active bookings ·{' '}
-            <strong style={{ color: 'var(--text)' }}>{getTabCount('Out', ['On Rent']) ?? 0}</strong> on set ·{' '}
-            <strong style={{ color: chip === 'Overdue' ? 'var(--danger-text)' : 'var(--text)' }}>
-              {chip === 'Overdue' ? total ?? 0 : getTabCount('Overdue', []) ?? 0}
-            </strong> overdue
-          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h1 style={{ margin: 0, fontSize: 'var(--t-h3, 18px)', fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                Rentals
+                <span style={{ color: 'var(--muted)', fontWeight: 400 }}>•</span>
+                <span style={{ fontSize: 'var(--t-meta, 14px)', fontWeight: 600, color: 'var(--text2)' }}>Management workspace</span>
+              </h1>
+              <span style={{ color: 'var(--muted)', fontSize: '13px' }}>
+                (<strong style={{ color: 'var(--text)' }}>{total ?? list.rows.length}</strong> active bookings · <strong style={{ color: 'var(--text)' }}>{getTabCount('Out', ['On Rent']) ?? 0}</strong> on set)
+              </span>
+            </div>
+            <p style={{ margin: 0, fontSize: 'var(--t-meta, 13px)', color: 'var(--muted)' }}>
+              A dense table for search, booking status, availability and fast drill-down.
+            </p>
+          </div>
         }
         loadedAt={list.lastFetchedAt ?? new Date()}
         loading={list.loading}
@@ -2516,10 +2524,18 @@ export default function RentalsList() {
                       {rowsWithIntel.map(({ row: r, glance, detail }) => (
                         <tr
                           key={r.id}
+                          className="data-table-row press"
                           style={{
                             borderBottom: '1px solid var(--border)',
-                            background: selectedIds.has(r.id) ? 'var(--hover-card)' : undefined,
+                            background: inspectingRental?.id === r.id ? 'color-mix(in srgb, var(--primary) 8%, var(--card))' : selectedIds.has(r.id) ? 'var(--hover-card)' : undefined,
+                            boxShadow: inspectingRental?.id === r.id ? 'inset 3px 0 0 var(--primary)' : undefined,
+                            cursor: 'pointer',
                             ...externalRowStyle(r.isExternal),
+                          }}
+                          onClick={(e) => {
+                            const target = e.target as HTMLElement
+                            if (target.closest('input, button, a, [role="button"], [data-intel-identifier]')) return
+                            setInspectingRental(r)
                           }}
                         >
                           <td style={{ ...td, width: 44, paddingLeft: 12 }}>
@@ -2828,36 +2844,99 @@ export default function RentalsList() {
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <BookingOperationsMenu bookingNo={inspectingRental.bookingNo} bookingStatus={inspectingRental.status} unavailable={inspectingRental.isCancelled ? 'Cancelled rentals cannot run operations.' : null} />
             <Button
-              variant="secondary"
+              variant="primary"
               onClick={() => {
                 setInspectingRental(null)
                 navigate(`/rentals/${inspectingRental.bookingNo}`)
               }}
             >
-              Open rental
+              Open rental →
             </Button>
           </div>
         ) : undefined}
       >
         {inspectingRental && (
-          <div style={{ display: 'grid', gap: 'var(--space-6)' }}>
+          <div style={{ display: 'grid', gap: 'var(--space-4, 16px)' }}>
+            {/* Title / Project Heading matching wireframe */}
+            <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text)' }}>
+                {inspectingRental.project && inspectingRental.project !== '—' ? inspectingRental.project : inspectingRental.client}
+              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                <span className="font-mono font-bold" style={{ fontSize: '13px', color: 'var(--text2)' }}>
+                  {inspectingRental.bookingNo}
+                </span>
+                <span style={{ color: 'var(--muted)' }}>·</span>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
+                  {inspectingRental.status}
+                </span>
+              </div>
+            </div>
+
+            {/* Status notice card matching wireframe */}
+            <div
+              style={{
+                padding: '10px 14px',
+                borderRadius: 'var(--r-btn, 6px)',
+                background: inspectingRental.status === 'Packed'
+                  ? 'color-mix(in srgb, var(--primary) 12%, var(--card))'
+                  : inspectingRental.status === 'On Rent'
+                  ? 'color-mix(in srgb, var(--warn) 12%, var(--card))'
+                  : 'var(--surface-2)',
+                border: '1px solid var(--border)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: '13px',
+                fontWeight: 600,
+                color: inspectingRental.status === 'Packed'
+                  ? 'var(--primary-text)'
+                  : inspectingRental.status === 'On Rent'
+                  ? 'var(--warn-text)'
+                  : 'var(--text)',
+              }}
+            >
+              <Icon
+                name={inspectingRental.status === 'Packed' ? 'package' : inspectingRental.status === 'On Rent' ? 'truck' : 'info'}
+                size={16}
+              />
+              <span>
+                {inspectingRental.status === 'Packed'
+                  ? 'Pending handover'
+                  : inspectingRental.status === 'On Rent'
+                  ? 'Currently active on production set'
+                  : inspectingRental.status === 'Booked'
+                  ? 'Confirmed booking — prep needed'
+                  : inspectingRental.status === 'Returned'
+                  ? 'Gear returned — inspection complete'
+                  : `${inspectingRental.status} stage`}
+              </span>
+            </div>
+
             <section aria-labelledby="rental-quick-view-schedule">
-              <h3 id="rental-quick-view-schedule" style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)', fontWeight: 600 }}>Schedule</h3>
-              <dl style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 'var(--space-2) var(--space-4)', margin: 'var(--space-3) 0 0' }}>
-                <dt style={{ color: 'var(--muted)' }}>Pickup</dt><dd className="figure" style={{ margin: 0 }}>{inspectingRental.pickup.date} · {inspectingRental.pickup.time}</dd>
-                <dt style={{ color: 'var(--muted)' }}>Return</dt><dd className="figure" style={{ margin: 0 }}>{inspectingRental.ret.date} · {inspectingRental.ret.time}</dd>
-                <dt style={{ color: 'var(--muted)' }}>Equipment</dt><dd style={{ margin: 0 }}>{inspectingRental.itemCount} item{inspectingRental.itemCount === 1 ? '' : 's'}</dd>
+              <h3 id="rental-quick-view-schedule" style={{ margin: 0, fontSize: '12px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Schedule</h3>
+              <dl style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px 16px', margin: '10px 0 0' }}>
+                <dt style={{ color: 'var(--muted)', fontSize: '13px' }}>Pickup</dt>
+                <dd className="figure" style={{ margin: 0, fontSize: '13px', fontWeight: 600 }}>{inspectingRental.pickup.date} · {inspectingRental.pickup.time}</dd>
+
+                <dt style={{ color: 'var(--muted)', fontSize: '13px' }}>Return</dt>
+                <dd className="figure" style={{ margin: 0, fontSize: '13px', fontWeight: 600 }}>{inspectingRental.ret.date} · {inspectingRental.ret.time}</dd>
+
+                <dt style={{ color: 'var(--muted)', fontSize: '13px' }}>Equipment</dt>
+                <dd style={{ margin: 0, fontSize: '13px', fontWeight: 600 }}>{inspectingRental.itemCount} item{inspectingRental.itemCount === 1 ? '' : 's'}</dd>
               </dl>
             </section>
+
             <section aria-labelledby="rental-quick-view-client">
-              <h3 id="rental-quick-view-client" style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)', fontWeight: 600 }}>Client</h3>
-              <p style={{ margin: 'var(--space-3) 0 0', color: 'var(--text)', fontWeight: 600 }}>{inspectingRental.client}</p>
-              <p style={{ margin: 'var(--space-1) 0 0', color: 'var(--text2)' }}>{inspectingRental.pickupLocation ?? 'Pickup location not set'}</p>
+              <h3 id="rental-quick-view-client" style={{ margin: 0, fontSize: '12px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Client</h3>
+              <p style={{ margin: '8px 0 0', color: 'var(--text)', fontWeight: 600, fontSize: '14px' }}>{inspectingRental.client}</p>
+              <p style={{ margin: '4px 0 0', color: 'var(--text2)', fontSize: '13px' }}>{inspectingRental.pickupLocation ?? 'Lalitpur Warehouse'}</p>
             </section>
+
             {money && (
               <section aria-labelledby="rental-quick-view-finance">
-                <h3 id="rental-quick-view-finance" style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)', fontWeight: 600 }}>Total Amount</h3>
-                <p className="figure" style={{ margin: 'var(--space-3) 0 0', color: 'var(--text)', fontWeight: 700 }}>
+                <h3 id="rental-quick-view-finance" style={{ margin: 0, fontSize: '12px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Amount</h3>
+                <p className="figure" style={{ margin: '8px 0 0', color: 'var(--text)', fontWeight: 700, fontSize: '18px' }}>
                   {typeof inspectingRental.totalAmount === 'number' ? formatMoney(inspectingRental.totalAmount) : '—'}
                 </p>
               </section>
@@ -3044,12 +3123,12 @@ const th = {
  */
 const td = {
   height: 'var(--row-min-h)',
-  padding: '11px 8px',
+  padding: '6px 8px',
   fontSize: 'var(--t-meta)',
   // RULING 2026-10-15: dense data rows read at 1.35, not the 1.5 body leading.
   lineHeight: 1.35,
   color: 'var(--text)',
-  verticalAlign: 'top' as const,
+  verticalAlign: 'middle' as const,
   whiteSpace: 'normal' as const,
 }
 

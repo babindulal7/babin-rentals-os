@@ -69,7 +69,14 @@ const INVOICES = [
   },
 ]
 
-async function mount(onSuccess: (p: unknown) => void) {
+async function mount(
+  onSuccess: (p: unknown) => void,
+  overrides?: {
+    invoices?: typeof INVOICES | undefined
+    initialInvoiceId?: string | undefined
+    bookingId?: string | undefined
+  },
+) {
   const container = document.createElement('div')
   document.body.appendChild(container)
   const root = createRoot(container)
@@ -79,7 +86,14 @@ async function mount(onSuccess: (p: unknown) => void) {
         {/* The two invoices belong to two bookings, so since 14 Oct nothing is preselected for them
             (`defaultInvoiceId`); these tests are about conversion, Drafts and idempotency, so they name
             the invoice the way Booking Detail and a selected Rentals row do. */}
-        <RecordPaymentModal isOpen onClose={() => {}} onSuccess={onSuccess as never} invoices={INVOICES} initialInvoiceId={INVOICE_UUID} />
+        <RecordPaymentModal
+          isOpen
+          onClose={() => {}}
+          onSuccess={onSuccess as never}
+          invoices={overrides?.invoices ?? INVOICES}
+          initialInvoiceId={overrides?.initialInvoiceId ?? INVOICE_UUID}
+          bookingId={overrides?.bookingId}
+        />
       </StrictMode>,
     )
   })
@@ -261,5 +275,33 @@ describe('RecordPaymentModal — the amount default', () => {
     expect(radios.map((r) => r.value)).toEqual(['Bank Transfer', 'Cash', 'Fonepay', 'eSewa', 'Khalti', 'Card', 'Cheque'])
     expect(radios.filter((r) => r.checked).map((r) => r.value)).toEqual(['Bank Transfer'])
     expect(c.querySelector('fieldset legend')?.textContent).toContain('Payment Method')
+  })
+
+  it('disables submit, disables amount and displays notice when invoice is fully settled (L1 Rule 5)', async () => {
+    const paidInvoice = {
+      id: 'inv-paid-1',
+      invoiceNo: 'INV-PAID-01',
+      client: 'Acme Corp',
+      amount: 'Rs 15,000',
+      status: 'Paid',
+      booking: 'B-715',
+      outstandingRupees: 0,
+    }
+    const c = await mount(() => {}, { invoices: [paidInvoice], initialInvoiceId: 'inv-paid-1' })
+
+    expect(c.textContent).toContain('This invoice is fully settled (no outstanding balance)')
+    expect(submitButton(c).disabled).toBe(true)
+    expect(amountInput(c).disabled).toBe(true)
+  })
+
+  it('passes bookingId to recordPayment action when provided', async () => {
+    recordPaymentSpy.mockClear()
+    const c = await mount(() => {}, { bookingId: 'booking-uuid-715' })
+    await typeAmount(amountInput(c), '5000')
+    await act(async () => { submitButton(c).click() })
+
+    expect(recordPaymentSpy).toHaveBeenCalledTimes(1)
+    const [input] = recordPaymentSpy.mock.calls[0] as [Record<string, unknown>, unknown]
+    expect(input.bookingId).toBe('booking-uuid-715')
   })
 })

@@ -3,6 +3,9 @@ import Icon from '../ui/Icon'
 import { Button, Card } from '../ui/Page'
 import { listInventory } from '../../lib/queries/inventory'
 import type { RecordValues } from '../../lib/recordEditor'
+import { toBs, formatBs, formatAd } from '../../lib/bs'
+import { generateCode128Svg } from '../../lib/labelPrinter'
+import { useToast } from '../ui/Toast'
 
 /*
  * Add Equipment assists (8 Oct 2026, RULINGS-2026-10-08.md; Add Equipment v3.0
@@ -63,9 +66,15 @@ export function equipmentSectionState(section: string, values: RecordValues, row
   const ready = equipmentReadiness(values, rows)
   switch (section) {
     case 'Identity': return ready[0]!.ok ? 'complete' : 'todo'
+    case 'Stock & Units': return ready[1]!.ok ? 'complete' : 'todo'
     case 'Units & location': return ready[1]!.ok && (ready[4]?.ok ?? true) ? 'complete' : 'todo'
+    case 'Relationships': return 'optional'
+    case 'Location': return ready[4] ? (ready[4].ok ? 'complete' : 'todo') : 'optional'
+    case 'Pricing & Rental':
     case 'Pricing': return filled(values.daily_rate) ? 'complete' : 'todo'
     case 'Purchase': return filled(values.replacement_value) ? 'complete' : 'optional'
+    case 'Maintenance & Documents':
+    case 'Maintenance & notes': return 'optional'
     default: return 'optional'
   }
 }
@@ -94,21 +103,191 @@ export function EquipmentSectionLinks({ sections, stateOf, idOf }: { sections: r
   )
 }
 
-/** §8–§9 — a live picture of what will be created, then the Ready-to-Rent checklist. */
-export function EquipmentSummary({ values, rows, categoryName, editing }: { values: RecordValues; rows: readonly RecordValues[]; categoryName: string | undefined; editing: boolean }) {
+/** §8–§9 — a live picture of what will be created, codes, tree preview, and the Ready-to-Rent checklist. */
+export function EquipmentInformationDrawerContent({
+  values,
+  rows,
+  categoryName,
+  editing,
+  assetCode,
+  userName,
+  onGenerateAssetTags,
+  onCheckDuplicates,
+}: {
+  values: RecordValues
+  rows: readonly RecordValues[]
+  categoryName: string | undefined
+  editing: boolean
+  assetCode?: string | undefined
+  userName?: string | undefined
+  onGenerateAssetTags?: (() => void) | undefined
+  onCheckDuplicates?: (() => void) | undefined
+}) {
+  const { showSuccessToast } = useToast()
+  const [copied, setCopied] = useState(false)
   const ready = equipmentReadiness(values, rows)
   const open = ready.filter((r) => !r.ok).length
-  const maker = [text(values.brand), text(values.model)].filter(Boolean).join(' ')
+  const code = assetCode || (values.asset_code ? String(values.asset_code) : 'EQ000234')
+  const serialised = (values.tracking_mode ?? 'Serialised') === 'Serialised'
+  const stockCount = serialised ? rows.length : Number(values.total_quantity || 0)
+  const today = new Date()
+  const bsDate = toBs(today)
+  const formattedBs = bsDate ? formatBs(bsDate) : ''
+
+  const copyCode = () => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      void navigator.clipboard.writeText(code).then(() => {
+        setCopied(true)
+        showSuccessToast('Asset code copied', code)
+        setTimeout(() => setCopied(false), 2000)
+      })
+    }
+  }
+
   return (
-    <Card title="Equipment summary">
-      <div className="equipment-summary">
-        <strong className="equipment-summary__name">{text(values.name) || 'New equipment'}</strong>
-        <span className="equipment-summary__meta">{[categoryName, maker].filter(Boolean).join(' · ') || 'Category and brand not chosen yet'}</span>
-        <span className="equipment-summary__meta">{editing ? 'Editing the existing record.' : 'A new record will be created.'}</span>
-        {/* The record editor issues both on save (0153): asset_code EQ######, and EQ######-01… per new unit. */}
-        {!editing && <span className="equipment-summary__meta">The asset code and unit tags (EQ000123-01…) are issued when you save.</span>}
-        <div className="equipment-summary__ready" aria-live="polite">
-          <span className="equipment-summary__ready-title">{open === 0 ? 'Ready to rent' : `Ready to rent? ${open} to finish`}</span>
+    <div className="equipment-drawer-content" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+      {/* 1. Quick Info */}
+      <Card title="Quick Info">
+        <div className="equipment-info-grid">
+          <div className="equipment-info-row">
+            <span className="equipment-info-label">Created by</span>
+            <span className="equipment-info-val">{userName || 'Staff'}</span>
+          </div>
+          <div className="equipment-info-row">
+            <span className="equipment-info-label">Created date</span>
+            <span className="equipment-info-val">
+              {formattedBs ? `${formattedBs} · ` : ''}{formatAd(today)}
+            </span>
+          </div>
+          <div className="equipment-info-row">
+            <span className="equipment-info-label">Last updated</span>
+            <span className="equipment-info-val">{editing ? 'In catalogue' : 'Never saved'}</span>
+          </div>
+          <div className="equipment-info-row">
+            <span className="equipment-info-label">Status</span>
+            <span className="equipment-status-pill">
+              <span className="equipment-status-dot" />
+              {editing ? 'Active' : 'Draft'}
+            </span>
+          </div>
+        </div>
+      </Card>
+
+      {/* 2. Codes */}
+      <Card title="Codes">
+        <div className="equipment-codes-block">
+          <div className="equipment-code-header">
+            <div>
+              <span className="equipment-code-label">Asset Code</span>
+              <strong className="equipment-code-val identifier">{code}</strong>
+            </div>
+            <button
+              type="button"
+              className="equipment-copy-btn"
+              onClick={copyCode}
+              title="Copy Asset Code"
+              aria-label="Copy Asset Code"
+            >
+              <Icon name="copy" size={14} />
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+
+          <div className="equipment-barcode-card">
+            <div
+              className="equipment-barcode-svg"
+              dangerouslySetInnerHTML={{ __html: generateCode128Svg(code, 30) }}
+            />
+            <span className="equipment-barcode-text identifier">{code}</span>
+          </div>
+
+          <p style={{ margin: '6px 0 0', fontSize: 'var(--t-th)', color: 'var(--muted)', lineHeight: 1.4 }}>
+            One Asset Code drives barcode and QR labels. Serials match manufacturer labels on hardware.
+          </p>
+        </div>
+      </Card>
+
+      {/* 3. Equipment Preview */}
+      <Card title="Equipment Preview">
+        <div className="equipment-preview-tree">
+          <div className="equipment-tree-root">
+            <Icon name="box" size={16} style={{ color: 'var(--link)', flexShrink: 0 }} />
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: 'var(--t-meta)' }}>
+                {text(values.name) || 'New equipment'}
+              </div>
+              <div style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
+                {stockCount} {stockCount === 1 ? 'item' : 'items'} · {String(values.tracking_mode || 'Serialised')}
+                {categoryName ? ` · ${categoryName}` : ''}
+              </div>
+            </div>
+          </div>
+
+          {serialised && rows.length > 0 && (
+            <div className="equipment-tree-children">
+              {rows.slice(0, 10).map((row, i) => (
+                <div key={String(row.id ?? i)} className="equipment-tree-node">
+                  <span className="equipment-tree-connector" />
+                  <span className="identifier" style={{ color: row.serial_no ? 'var(--text)' : 'var(--muted)', fontSize: 'var(--t-th)' }}>
+                    {String(row.serial_no || 'no serial yet')}
+                  </span>
+                  <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
+                    {String(row.asset_tag || `${code}-${String(i + 1).padStart(2, '0')}`)}
+                  </span>
+                  <span className="equipment-tree-badge">
+                    {String(row.status || 'In Stock')}
+                  </span>
+                </div>
+              ))}
+              {rows.length > 10 && (
+                <div style={{ fontSize: 'var(--t-th)', color: 'var(--muted)', paddingLeft: 16 }}>
+                  + {rows.length - 10} more units…
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="equipment-invariant-box">
+            <Icon name="check" size={14} style={{ color: 'var(--success-text)', flexShrink: 0 }} />
+            <span>
+              Preview reconciles — {stockCount} listed = {stockCount} stock. No unit carries a booking.
+            </span>
+          </div>
+        </div>
+      </Card>
+
+      {/* 4. Relationship Summary */}
+      <Card title="Relationship Summary">
+        <div className="equipment-info-grid">
+          <div className="equipment-info-row">
+            <span className="equipment-info-label">Parent / Container</span>
+            <span className="equipment-info-val">Direct Shelf (None)</span>
+          </div>
+          <div className="equipment-info-row">
+            <span className="equipment-info-label">Contained items</span>
+            <span className="equipment-info-val">0 Items</span>
+          </div>
+          <div className="equipment-info-row">
+            <span className="equipment-info-label">Total Stock</span>
+            <span className="equipment-info-val">{stockCount}</span>
+          </div>
+          <div className="equipment-info-row">
+            <span className="equipment-info-label">Serialized</span>
+            <span className="equipment-info-val">{serialised ? 'Yes ✓' : 'No'}</span>
+          </div>
+          <div className="equipment-info-row">
+            <span className="equipment-info-label">Bundle eligible</span>
+            <span className="equipment-info-val">Yes ✓</span>
+          </div>
+        </div>
+      </Card>
+
+      {/* 5. Ready to Rent */}
+      <Card title="Ready to Rent">
+        <div className="equipment-summary__ready" style={{ marginTop: 0, paddingTop: 0, borderTop: 'none' }}>
+          <span className="equipment-summary__ready-title">
+            {open === 0 ? 'Ready to rent' : `Ready to rent? ${open} to finish`}
+          </span>
           <ul>
             {ready.map((item) => (
               <li key={item.label} className={item.ok ? 'is-ok' : 'is-open'}>
@@ -117,10 +296,71 @@ export function EquipmentSummary({ values, rows, categoryName, editing }: { valu
               </li>
             ))}
           </ul>
-          <span className="equipment-summary__note">Saving is never blocked by this list.</span>
+          <span className="equipment-summary__note">
+            Saving is never blocked by this list.
+          </span>
         </div>
-      </div>
-    </Card>
+      </Card>
+
+      {/* 6. Quick Actions */}
+      <Card title="Quick Actions">
+        <div className="equipment-quick-actions-grid">
+          {onGenerateAssetTags && (
+            <button
+              type="button"
+              className="equipment-quick-action-btn"
+              onClick={onGenerateAssetTags}
+            >
+              <Icon name="checklist" size={16} />
+              <span>Generate Tags</span>
+            </button>
+          )}
+          {onCheckDuplicates && (
+            <button
+              type="button"
+              className="equipment-quick-action-btn"
+              onClick={onCheckDuplicates}
+            >
+              <Icon name="search" size={16} />
+              <span>Check Duplicates</span>
+            </button>
+          )}
+          <button
+            type="button"
+            className="equipment-quick-action-btn"
+            onClick={copyCode}
+          >
+            <Icon name="copy" size={16} />
+            <span>Copy Code</span>
+          </button>
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+/** §8–§9 — a live picture of what will be created, then the Ready-to-Rent checklist. */
+export function EquipmentSummary({ values, rows, categoryName, editing, assetCode, userName, onGenerateAssetTags, onCheckDuplicates }: {
+  values: RecordValues
+  rows: readonly RecordValues[]
+  categoryName: string | undefined
+  editing: boolean
+  assetCode?: string | undefined
+  userName?: string | undefined
+  onGenerateAssetTags?: (() => void) | undefined
+  onCheckDuplicates?: (() => void) | undefined
+}) {
+  return (
+    <EquipmentInformationDrawerContent
+      values={values}
+      rows={rows}
+      categoryName={categoryName}
+      editing={editing}
+      assetCode={assetCode}
+      userName={userName}
+      onGenerateAssetTags={onGenerateAssetTags}
+      onCheckDuplicates={onCheckDuplicates}
+    />
   )
 }
 

@@ -100,6 +100,12 @@ export type RecordPaymentInput = {
    * no other way in. Pass exactly one of `invoiceId` or `invoiceNo`.
    */
   invoiceId?: string
+  /**
+   * Optional booking UUID. When supplied, `resolvePaymentTarget` asserts that the
+   * invoice belongs strictly to this booking, preventing cross-booking payment
+   * leakage even if a crafted or stale invoice ID is provided.
+   */
+  bookingId?: string | undefined
   /** Integer paisa, from `lib/money`'s `rupees()`. Converted to rupees once, below. */
   amountPaisa: Paisa | number
   /**
@@ -201,7 +207,11 @@ type PaymentTarget = {
  * uuids: `payments.branch_id` is NOT NULL, `InvoiceListRow` does not carry it,
  * and `AuthUser` has no branch either — the invoice is the only place it is.
  */
-async function resolvePaymentTarget(ref: { invoiceId?: string | undefined; invoiceNo?: string | undefined }): Promise<PaymentTarget> {
+async function resolvePaymentTarget(ref: {
+  invoiceId?: string | undefined
+  invoiceNo?: string | undefined
+  bookingId?: string | undefined
+}): Promise<PaymentTarget> {
   /*
    * A Draft carries no number (R-15), so the uuid is the only handle that works
    * for the whole rental. Number lookup stays for issued invoices and for every
@@ -212,7 +222,7 @@ async function resolvePaymentTarget(ref: { invoiceId?: string | undefined; invoi
   // and "No invoice with id <uuid> exists".
   const label = byId ? `with id ${ref.invoiceId}` : `numbered ${ref.invoiceNo}`
 
-  const base = supabase.from('invoices').select('id, booking_id, client_id, branch_id, invoice_no, voided_at')
+  const base = supabase.from('invoices').select('id, booking_id, client_id, branch_id, invoice_no, voided_at, status, outstanding_amount')
   const { data, error } = await (byId
     ? base.eq('id', (ref.invoiceId as string).trim())
     : base.eq('invoice_no', (ref.invoiceNo as string).trim())
@@ -238,6 +248,8 @@ async function resolvePaymentTarget(ref: { invoiceId?: string | undefined; invoi
     branch_id: string
     invoice_no: string
     voided_at: string | null
+    status?: string | null
+    outstanding_amount?: number | string | null
   }
 
   /*
@@ -252,6 +264,29 @@ async function resolvePaymentTarget(ref: { invoiceId?: string | undefined; invoi
     throw new Error(
       `Invoice ${row.invoice_no} was voided on ${row.voided_at}. A voided invoice is settled by its credit note, ` +
         `not by a new payment — nothing was recorded.`,
+    )
+  }
+
+  /*
+   * L1 / P0 Booking isolation guard: an invoice cannot be settled by a payment
+   * dispatched for a different booking.
+   */
+  if (ref.bookingId && row.booking_id !== ref.bookingId) {
+    throw new Error(
+      `Invoice ${label} belongs to booking ${row.booking_id}, not the current booking ${ref.bookingId}. A payment cannot be recorded across bookings.`,
+    )
+  }
+
+  /*
+   * L1 / P0 Rule 5: A non-void invoice with zero outstanding is not payable.
+   * Prevent new submissions against fully paid invoices.
+   */
+  if (
+    row.status === 'Paid' ||
+    (row.outstanding_amount !== null && row.outstanding_amount !== undefined && Number(row.outstanding_amount) <= 0)
+  ) {
+    throw new Error(
+      `Invoice ${label} is already fully settled (no outstanding balance). A new payment cannot be recorded against it.`,
     )
   }
 
@@ -337,7 +372,11 @@ export const recordPayment = createAction<RecordPaymentInput, RecordPaymentResul
       )
     }
 
-    const target = await resolvePaymentTarget({ invoiceId: input.invoiceId, invoiceNo: input.invoiceNo })
+    const target = await resolvePaymentTarget({
+      invoiceId: input.invoiceId,
+      invoiceNo: input.invoiceNo,
+      bookingId: input.bookingId,
+    })
 
     /*
      * `payment_no` from the database's allocator, never from the clock.

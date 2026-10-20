@@ -975,7 +975,7 @@ function BookingDetailView() {
      containers gate on `canBookingMoney`, the payment buttons additionally on
      `rbac.canRecordPayment` (the rule the dispatcher itself resolves
      `payment.create` through). Absent, not disabled. */
-  const canTakePayment = user ? canRecordPayment(user.role) : false
+  const canTakePayment = user && canBookingMoney ? canRecordPayment(user.role) : false
   /*
    * **R-01** — *"Invoice creation … Manual only, from **Finance** and from
    * **Booking Detail**. Nothing generates an invoice at Confirm."* This screen
@@ -1931,11 +1931,17 @@ function BookingDetailView() {
     blockers.push(`Security deposit required: ${formatMoney(booking.depositRequired)}`)
   }
 
+  const isFullySettled = hasInvoice && totals.outstanding <= 0
   const recordPaymentButton = (label: string) => {
-    /* Three reasons, not one. `NO_INVOICE_PAYMENT_UNAVAILABLE` is a statement
+    /* Four reasons, not one. `NO_INVOICE_PAYMENT_UNAVAILABLE` is a statement
        about this booking; while the read is in flight or after it failed the
-       app does not know that yet, and saying it anyway is the Law 12 defect. */
-    const reason = hasInvoice ? null : (invoicesUnknownReason ?? NO_INVOICE_PAYMENT_UNAVAILABLE)
+       app does not know that yet, and saying it anyway is the Law 12 defect.
+       If the invoice is fully settled (outstanding <= 0), new payment is disabled. */
+    const reason = !hasInvoice
+      ? (invoicesUnknownReason ?? NO_INVOICE_PAYMENT_UNAVAILABLE)
+      : isFullySettled
+      ? "This booking's invoice is fully settled (no outstanding balance)."
+      : null
     return reason === null ? (
       <Button icon="dollar" variant="secondary" onClick={() => setShowPaymentModal(true)}>
         {label}
@@ -2022,17 +2028,46 @@ function BookingDetailView() {
           same way, omitted rather than masked. On phone this card is the
           `Money` segment's rail content. */}
       {canBookingMoney && showSegment('Money') && (
-        <Card title="Booking Summary">
-          {!hasInvoice && (
-            <p style={{ margin: '8px 0 0', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-              {invoicesUnknownReason ??
-                'No invoice has been raised for this booking, so there is no Rental Total to state yet.'}
-            </p>
-          )}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)', marginTop: 12 }}>
-            {canRaiseInvoice && createInvoiceButton('Create Invoice')}
-          </div>
-        </Card>
+        <>
+          <Card title="Quick Actions">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
+              {canTakePayment && recordPaymentButton('Record Payment')}
+              {canRaiseInvoice && !hasInvoice && createInvoiceButton('Create Invoice')}
+              {invoicesList.error && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 }}>
+                  <span style={{ fontSize: 'var(--t-meta)', color: 'var(--danger-text)' }}>Could not read invoices</span>
+                  <Button variant="secondary" size="sm" onClick={() => invoicesList.refetch()}>
+                    Retry
+                  </Button>
+                </div>
+              )}
+            </div>
+          </Card>
+
+          <Card title="Booking Summary">
+            {!hasInvoice && (
+              <p style={{ margin: '8px 0 0', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
+                {invoicesUnknownReason ??
+                  'No invoice has been raised for this booking, so there is no Rental Total to state yet.'}
+              </p>
+            )}
+            {hasInvoice && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-xs)', marginTop: 8 }}>
+                <SummaryRows
+                  rows={[
+                    { label: 'Rental Total', value: money(totals.total) },
+                    { label: 'Total Paid', value: money(totals.paid) },
+                    {
+                      label: 'Outstanding',
+                      value: totals.outstanding > 0 ? money(totals.outstanding) : 'Settled',
+                      tone: totals.outstanding > 0 ? 'danger' : 'success',
+                    },
+                  ]}
+                />
+              </div>
+            )}
+          </Card>
+        </>
       )}
 
       {showSegment('Docs') && (
@@ -3047,6 +3082,9 @@ function BookingDetailView() {
             outstandingRupees: toRupees(inv.outstandingAmount),
           }))}
           initialInvoiceId={primaryInvoice.id}
+          bookingId={bookingId ?? undefined}
+          invoicesError={invoicesList.error}
+          onRetryInvoices={invoicesList.refetch}
           onSuccess={(p) => {
             paymentsList.refetch()
             invoicesList.refetch()

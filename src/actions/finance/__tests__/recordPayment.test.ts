@@ -292,4 +292,31 @@ describe('recordPayment — the refusals, each of which must write nothing', () 
     await expect(recordPayment(INPUT)).rejects.toThrow(/session context/)
     expect(access.inserts).toHaveLength(0)
   })
+
+  it('refuses payment when invoice belongs to a different booking (L1 booking isolation)', async () => {
+    db.state.invoiceRow = { ...LIVE_INVOICE, booking_id: 'booking-uuid-aaa' }
+    await expect(
+      recordPayment({ ...INPUT, bookingId: 'booking-uuid-bbb' }, CTX),
+    ).rejects.toThrow(/belongs to booking booking-uuid-aaa, not the current booking booking-uuid-bbb/)
+    expect(access.inserts).toHaveLength(0)
+  })
+
+  it('allows payment when bookingId matches the invoice booking_id', async () => {
+    db.state.invoiceRow = { ...LIVE_INVOICE, booking_id: 'booking-uuid-aaa' }
+    const result = await recordPayment({ ...INPUT, bookingId: 'booking-uuid-aaa' }, CTX)
+    expect(result.paymentNo).toBe('PAY-2026-0001')
+    expect(access.inserts).toHaveLength(1)
+  })
+
+  it('refuses payment when the invoice is already Paid (L1 Rule 5)', async () => {
+    db.state.invoiceRow = { ...LIVE_INVOICE, status: 'Paid', outstanding_amount: 0 }
+    await expect(recordPayment(INPUT, CTX)).rejects.toThrow(/already fully settled/)
+    expect(access.inserts).toHaveLength(0)
+  })
+
+  it('refuses payment when the invoice has zero outstanding balance (L1 Rule 5)', async () => {
+    db.state.invoiceRow = { ...LIVE_INVOICE, status: 'Partially Paid', outstanding_amount: 0 }
+    await expect(recordPayment(INPUT, CTX)).rejects.toThrow(/already fully settled/)
+    expect(access.inserts).toHaveLength(0)
+  })
 })
