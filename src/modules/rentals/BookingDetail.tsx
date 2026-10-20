@@ -28,6 +28,7 @@ import { BOOKING_STATUS, STATUS_ORDER } from '../../lib/workflow'
 import type { BookingStatus } from '../../lib/workflow'
 import { NON_PACKABLE_LINE_TYPES } from '../../lib/bookingLineTypes'
 import BookingOperationsMenu from './BookingOperationsMenu'
+import { bookingPaymentUnavailableReason, chooseBookingPaymentInvoice } from './bookingPaymentGate'
 import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext'
 import { jobForStage } from '../../data/operations'
 import { useDomainEvent } from '../../events/useDomainEvent'
@@ -1279,17 +1280,10 @@ function BookingDetailView() {
     }
   }, [booking, canBookingMoney, totals.total])
 
-  /* The invoice a Record Payment settles by default: the first still owed,
-     else the newest (the list arrives issue_date desc).
-
-     'Draft' joined that set with MONEY-05. R-02 keeps an invoice in Draft for
-     the whole rental and R-14 leaves it in Draft when a payment lands, so a
-     Draft is the invoice carrying the running balance for most of a booking's
-     life — preferring an issued one over it would only ever apply to a booking
-     past return. */
-  const primaryInvoice =
-    liveInvoices.find((r) => r.status === 'Draft' || r.status === 'Sent' || r.status === 'Partially Paid') ??
-    liveInvoices[0]
+  /* One booking can have several invoices. The picker must default to a
+     LIVE invoice that is still owed, not a fully paid Draft when another
+     invoice is outstanding. The pure selector is regression tested. */
+  const primaryInvoice = chooseBookingPaymentInvoice(liveInvoices)
 
   /*
    * Payment History rows — live `payments` mapped into the display shape the
@@ -1935,13 +1929,13 @@ function BookingDetailView() {
   const recordPaymentButton = (label: string) => {
     /* Four reasons, not one. `NO_INVOICE_PAYMENT_UNAVAILABLE` is a statement
        about this booking; while the read is in flight or after it failed the
-       app does not know that yet, and saying it anyway is the Law 12 defect.
-       If the invoice is fully settled (outstanding <= 0), new payment is disabled. */
-    const reason = !hasInvoice
-      ? (invoicesUnknownReason ?? NO_INVOICE_PAYMENT_UNAVAILABLE)
-      : isFullySettled
-      ? "This booking's invoice is fully settled (no outstanding balance)."
-      : null
+       app does not know that yet, and saying it anyway is the Law 12 defect. */
+    const reason = bookingPaymentUnavailableReason({
+      hasInvoice,
+      invoicesUnknownReason,
+      outstandingPaisa: totals.outstanding,
+      noInvoiceReason: NO_INVOICE_PAYMENT_UNAVAILABLE,
+    })
     return reason === null ? (
       <Button icon="dollar" variant="secondary" onClick={() => setShowPaymentModal(true)}>
         {label}
@@ -2024,9 +2018,21 @@ function BookingDetailView() {
         </Card>
       )}
 
-      {/* Same booking-money figures as the Facts strip and Block 4 — gated the
-          same way, omitted rather than masked. On phone this card is the
-          `Money` segment's rail content. */}
+      {/* Payment is a quick action on the existing booking. Reuse the invoice-
+          linked modal and its payment.create RBAC gate; never post money from
+          a row button or route the operator away to the Finance ledger.
+          On phones this rail belongs to the Money segment. */}
+      {canBookingMoney && showSegment('Money') && (
+        <Card title="Quick Actions">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
+            {canTakePayment && recordPaymentButton('Record Payment')}
+            {canRaiseInvoice && createInvoiceButton(hasInvoice ? 'View Invoice' : 'Create Invoice')}
+          </div>
+        </Card>
+      )}
+
+      {/* Live invoice values; never combine the refundable deposit with rental
+          payments or display balances to money-blind warehouse roles. */}
       {canBookingMoney && showSegment('Money') && (
         <>
           <Card title="Quick Actions">
@@ -2052,19 +2058,13 @@ function BookingDetailView() {
               </p>
             )}
             {hasInvoice && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-xs)', marginTop: 8 }}>
-                <SummaryRows
-                  rows={[
-                    { label: 'Rental Total', value: money(totals.total) },
-                    { label: 'Total Paid', value: money(totals.paid) },
-                    {
-                      label: 'Outstanding',
-                      value: totals.outstanding > 0 ? money(totals.outstanding) : 'Settled',
-                      tone: totals.outstanding > 0 ? 'danger' : 'success',
-                    },
-                  ]}
-                />
-              </div>
+              <SummaryRows
+                rows={[
+                  { label: 'Rental Total', value: money(totals.total), tone: 'neutral' as BrandKey },
+                  { label: 'Rental Paid', value: money(totals.paid), tone: 'success' as BrandKey },
+                  { label: 'Rental Outstanding', value: money(totals.outstanding), tone: totals.outstanding > 0 ? 'danger' as BrandKey : 'success' as BrandKey },
+                ]}
+              />
             )}
           </Card>
         </>
@@ -2891,7 +2891,7 @@ function BookingDetailView() {
                         </DataTableShell>
                       </div>
                     )}
-                    {canTakePayment && <div style={{ marginTop: 10 }}>{recordPaymentButton('Record Payment')}</div>}
+                    {onPhone && canTakePayment && <div style={{ marginTop: 10 }}>{recordPaymentButton('Record Payment')}</div>}
                   </div>
                 </div>
               )}
