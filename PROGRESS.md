@@ -1,5 +1,44 @@
 # Progress Log
 
+## 2026-10-20 — Action Invariant Remediation, Commercial Gating & Persistence Verification
+
+**Did**
+- Fail-Closed Inspection Stubs (`src/actions/inspections/startInspection.ts`, `passInspection.ts`, `failInspection.ts`): restored `implemented: false` on all three unbuilt inspection actions so the dispatcher fails closed with `ActionNotImplementedError` rather than logging false-positive success events. Added `src/actions/inspections/__tests__/inspections.test.ts` asserting fail-closed behavior.
+- Commercial Override & Contact Guard (`src/actions/clients/updateClient.ts`): prohibited direct modification of `approved_credit_limit`, `approvedCreditLimit`, `payment_terms`, and `paymentTerms` on `clients` (enforcing 0005:162-164 & 0130 approved override requirements). Added offline execution check (`ctx.isOnline === false || navigator.onLine === false`) and verified persistence of primary contact and client row updates. Added unit test coverage in `src/actions/clients/__tests__/updateClient.test.ts`.
+- Case Resolution Persistence (`src/actions/cases/resolveCase.ts`): added offline execution guard and verified `safeUpdate` response so unpersisted or errored updates never report success.
+- Client Merge Invariants (`src/actions/clients/mergeClients.ts`): added offline execution guard, validated caller-provided `clientUuid`, and verified error results on both duplicate deactivation and `client_merges` audit insert.
+- Settle Deposit UUID & Verification (`src/actions/finance/settleDeposit.ts`): implemented `deriveMovementUuid` using deterministic SHA-256 v5-style UUID derivation instead of string suffix concatenation, and verified persisted row `id` on both `Applied` and `Released` movements.
+- Stock Check Reconciliation (`src/actions/inventory/reconcileStockCheck.ts` & `reconcileStockCheck.test.ts`): updated action to throw `not found` when an explicitly requested `auditId` does not exist, and completed test assertions in `src/actions/inventory/__tests__/reconcileStockCheck.test.ts`.
+
+**Ruled**
+- Actions that do not write database records must declare `implemented: false` (Law 1, createAction fail-closed contract).
+- Client commercial fields (credit limit, payment terms) can never be updated directly via `updateClient`; only approved commercial override records may adjust them.
+- Sub-movement idempotency keys must be valid RFC 4122 UUIDs derived deterministically, never arbitrary string concatenations.
+
+**Verified**
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (0 warnings).
+- `npm run check:pglite`: 168/168 applied, 0 violations.
+- `npm run check:lifecycle`: 31/31 passed.
+- `npx vitest run src/actions/inspections/__tests__/inspections.test.ts src/actions/clients/__tests__/updateClient.test.ts src/actions/cases/__tests__/resolveCase.test.ts src/actions/clients/__tests__/mergeClients.test.ts src/actions/finance/__tests__/settleDeposit.test.ts src/actions/inventory/__tests__/reconcileStockCheck.test.ts`: 43/43 passed across 6 test files.
+- `npm run build`: successful production build, 209 PWA precache entries.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 51 / 54 (94%) | -3 |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 98% | -1 |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-19T21:00:33.574Z). Suite: Historical suite: 4827/4837 passed, 10 failed (recorded 2026-10-19T19:53:37.839Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-19T21:01:02.903Z.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Browser visual acceptance at phone/tablet/desktop widths remains unverified because the preview connection is unavailable.
+
 ## 2026-10-20 — Mobile and Tablet Modal Ergonomics, Touch Targets & Breakpoint Alignment
 
 **Did**
