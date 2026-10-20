@@ -12,3 +12,17 @@ export function bookingPaymentUnavailableReason(args: {
   if (args.outstandingPaisa <= 0) return 'This booking has no outstanding rental balance to collect.'
   return null
 }
+
+/**
+ * A booking can have more than one live invoice. Prefer an unsettled invoice,
+ * not merely the first Draft, to avoid preselecting a fully-paid invoice while
+ * a different invoice carries the outstanding balance.
+ */
+export function chooseBookingPaymentInvoice<T extends { status: string; outstandingAmount: number }>(
+  invoices: readonly T[],
+): T | undefined {
+  return invoices.find((invoice) =>
+    invoice.outstandingAmount > 0 &&
+    (invoice.status === 'Draft' || invoice.status === 'Sent' || invoice.status === 'Partially Paid'),
+  ) ?? invoices.find((invoice) => invoice.outstandingAmount > 0) ?? invoices[0]
+}
