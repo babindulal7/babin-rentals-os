@@ -28,10 +28,18 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const PADDING: Record<NonNullable<CardProps['padding']>, number | string> = {
   none: 0,
-  sm: 'var(--space-4)',
+  sm: 'var(--section-padding)',
   md: 'var(--space-4)',
   lg: 'var(--space-6)',
 }
+
+/** Compatibility recipe for older surface consumers without a Card wrapper. */
+export const surfaceStyle = {
+  background: 'var(--surface-content)',
+  border: 'var(--surface-outline)',
+  borderRadius: 'var(--r-card)',
+  boxShadow: 'var(--elevation-surface)',
+} as const
 
 export function Card({
   title,
@@ -49,34 +57,18 @@ export function Card({
   ...props
 }: CardProps) {
   const rootStyle: CSSProperties = {
-    background: 'var(--surface-card, var(--card))',
-    border: '1.5px solid var(--border)',
     ...(statusColor ? { borderLeft: `3px solid ${statusColor}` } : {}),
-    borderRadius: 'var(--r-card)',
-    boxShadow: 'var(--shadow-card), var(--specular-rim)',
-    color: 'var(--text)',
     display: 'flex',
     flexDirection: 'column',
     minWidth: 0,
-    transition: 'transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background-color var(--dur-theme) var(--ease), border-color var(--dur-theme) var(--ease)',
     ...style,
   }
 
   return (
     <Element className={['surface-card', className].filter(Boolean).join(' ')} style={rootStyle} {...props}>
       {(title || subtitle || action) && (
-        <div
-          className="surface-card__header"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 'var(--sp-md)',
-            padding: 'var(--space-3) var(--space-4)',
-            borderBottom: '1.5px solid var(--border)',
-          }}
-        >
-          <div>
+        <div className="surface-card__header">
+          <div className="surface-card__heading">
             {title && (
               <Heading style={{ margin: 0, fontSize: 'var(--t-h3)', fontWeight: 600, color: 'var(--text)' }}>{title}</Heading>
             )}
@@ -84,22 +76,14 @@ export function Card({
               <p style={{ margin: '2px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>{subtitle}</p>
             )}
           </div>
-          {action && <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)' }}>{action}</div>}
+          {action && <div className="surface-card__action">{action}</div>}
         </div>
       )}
 
       <div className="surface-card__body" style={{ flex: 1, minWidth: 0, padding: PADDING[padding], ...bodyStyle }}>{children}</div>
 
       {footer && (
-        <div
-          style={{
-            padding: '14px 20px',
-            background: 'var(--card2)',
-            borderTop: '1.5px solid var(--border)',
-            borderBottomLeftRadius: 'var(--r-card)',
-            borderBottomRightRadius: 'var(--r-card)',
-          }}
-        >
+        <div className="surface-card__footer">
           {footer}
         </div>
       )}
@@ -134,11 +118,7 @@ export function KpiCard({ label, value, subtext, trend, icon, onClick }: KpiCard
       aria-label={onClick ? `${label}: ${value}` : undefined}
       className={['surface-card', 'kpi-card', onClick ? 'lift' : ''].filter(Boolean).join(' ')}
       style={{
-        background: 'var(--card)',
-        border: '1.5px solid var(--border)',
-        borderRadius: 'var(--r-card)',
-        boxShadow: 'var(--shadow-card), var(--specular-rim)',
-        padding: '18px 22px',
+        padding: 'var(--sp-lg)',
         display: 'flex',
         flexDirection: 'column',
         gap: 'var(--sp-sm)',
@@ -147,7 +127,7 @@ export function KpiCard({ label, value, subtext, trend, icon, onClick }: KpiCard
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--muted)' }}>
-        <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--muted)' }}>
+        <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--muted)' }}>
           {label}
         </span>
         {icon && (
@@ -167,7 +147,7 @@ export function KpiCard({ label, value, subtext, trend, icon, onClick }: KpiCard
         )}
       </div>
 
-      <div style={{ fontSize: '26px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums', fontFamily: 'var(--font-display)' }}>
+      <div style={{ fontSize: 'var(--t-kpi)', fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums', fontFamily: 'var(--font-id)' }}>
         {value}
       </div>
 

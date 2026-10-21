@@ -52,7 +52,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from '
 import { join, dirname, resolve, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
-import { verificationSourceHash, testReceipt, describeTestReceipt } from './test-receipt.mjs'
+import { beginVerification, finishVerification, isCurrentVerification, verificationSourceHash, testReceipt, describeTestReceipt } from './test-receipt.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, '..')
@@ -62,6 +62,7 @@ const wantMigrations = args.includes('--migrations')
 const asJson = args.includes('--json')
 
 const problems = []
+const currentSourceHash = verificationSourceHash(ROOT)
 const read = (p) => readFileSync(join(ROOT, p), 'utf8')
 const exists = (p) => existsSync(join(ROOT, p))
 
@@ -227,6 +228,9 @@ let lifecycleAge = null
 if (exists('.lifecycle-result.json')) {
   try {
     const raw = JSON.parse(read('.lifecycle-result.json'))
+    if (!isCurrentVerification(raw, currentSourceHash) || raw.success !== true) {
+      lifecycleAge = `Historical, incomplete or failed receipt (${raw.at ?? 'unknown'}); current source NOT VERIFIED`
+    } else {
     const rows = raw.results ?? raw.steps ?? []
     const isGreen = (r) => {
       const v = String(r.outcome ?? r.status ?? '').toUpperCase()
@@ -244,11 +248,12 @@ if (exists('.lifecycle-result.json')) {
     const at = raw.at ?? raw.ran_at
     if (at) lifecycleAge = at
     if (rows.length === 0) problems.push('DB enforcement: .lifecycle-result.json listed no steps')
+    }
   } catch (e) {
     problems.push(`DB enforcement: .lifecycle-result.json is unreadable — ${e.message}`)
   }
 } else {
-  problems.push('DB enforcement and Lifecycle: no .lifecycle-result.json. Run `npm run check:lifecycle` first.')
+  lifecycleAge = 'not measured — run npm run check:lifecycle'
 }
 
 // ---------------------------------------------------------------------------
@@ -289,7 +294,9 @@ if (wantMigrations) {
 } else if (exists('.pglite-result.json')) {
   try {
     const raw = JSON.parse(read('.pglite-result.json'))
-    migrationResult = `${raw.applied}/${raw.applied} applied, ${raw.failed} failed (recorded ${raw.at})`
+    migrationResult = isCurrentVerification(raw, currentSourceHash) && raw.success === true
+      ? `${raw.applied}/${raw.total} applied, ${raw.failed} failed (recorded ${raw.at})`
+      : `Historical, incomplete or failed receipt (${raw.at ?? 'unknown'}); current source NOT VERIFIED`
   } catch {
     // fallback
   }
@@ -297,7 +304,9 @@ if (wantMigrations) {
 
 let testResult = 'not run this session (static inspection; pass --tests to execute suite)'
 if (wantTests) {
+  const start = beginVerification(ROOT, 'node scripts/completion.mjs --tests', `local Vitest; data source=${process.env.VITE_DATA_SOURCE ?? 'default'}`)
   const before = verificationSourceHash(ROOT)
+  writeFileSync(join(ROOT, '.test-result.json'), JSON.stringify(start, null, 2))
   const output = join(ROOT, '.completion-tests.json')
   // Refuse a stale JSON report if the new runner fails before writing one.
   writeFileSync(output, '{}')
@@ -310,7 +319,8 @@ if (wantTests) {
   }
   try {
     const after = verificationSourceHash(ROOT)
-    const receipt = testReceipt(JSON.parse(readFileSync(output, 'utf8')), exitCode, before, after)
+    const context = finishVerification(start, ROOT, exitCode === 0)
+    const receipt = testReceipt(JSON.parse(readFileSync(output, 'utf8')), exitCode, before, after, context.at, context)
     writeFileSync(join(ROOT, '.test-result.json'), JSON.stringify(receipt, null, 2) + '\n')
     testResult = describeTestReceipt(receipt, after)
     if (!receipt.success || receipt.sourceChanged) problems.push(`Tests: ${testResult}`)
@@ -373,19 +383,20 @@ if (problems.length) {
 const scores = [
   pct(backend.n, backend.d),
   pct(realData.n, realData.d),
-  pct(gates.n, gates.d),
+  gates ? pct(gates.n, gates.d) : null,
   pct(permissions.n, permissions.d),
-  pct(lifecycle.n, lifecycle.d),
+  lifecycle ? pct(lifecycle.n, lifecycle.d) : null,
 ]
-const overall = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+const overall = scores.every(value => value !== null) ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null
 
 const cells = {
   Backend: `${backend.n} / ${backend.d} (${scores[0]}%)`,
   'Real data': `${buckets.db} · ${buckets.mixed} · ${buckets.seed} · ${buckets.none}`,
-  'DB enforcement': `${gates.n} / ${gates.d} (${scores[2]}%)`,
+  'DB enforcement': gates ? `${gates.n} / ${gates.d} (${scores[2]}%)` : 'not measured — current receipt required',
   Permissions: `${permissions.n} / ${permissions.d} (${scores[3]}%)`,
-  Lifecycle: `${lifecycle.n} / ${lifecycle.d} (${scores[4]}%)`,
+  Lifecycle: lifecycle ? `${lifecycle.n} / ${lifecycle.d} (${scores[4]}%)` : 'not measured — current receipt required',
 }
+const suiteNotPassing = testResult.startsWith('NOT PASSING') || testResult.startsWith('NOT VERIFIED')
 
 if (asJson) {
   console.log(JSON.stringify({
@@ -393,7 +404,7 @@ if (asJson) {
     migrations: { files: migrationFiles.length, result: migrationResult },
     tests: testResult, lifecycle_ran_at: lifecycleAge,
   }, null, 2))
-  process.exit(0)
+  process.exit(suiteNotPassing ? 1 : 0)
 }
 
 const block = [
@@ -403,14 +414,15 @@ const block = [
   '|---|---|---|---|',
   `| Backend | actions implemented / total | ${cells.Backend} | ${delta('Backend', cells.Backend)} |`,
   `| Real data | DB-only · mixed · seed · none / ${realData.d} | ${cells['Real data']} | ${prev ? '' : '—'} |`,
-  `| DB enforcement | gates in Postgres / ${gates.d} | ${cells['DB enforcement']} | ${delta('DB enforcement', cells['DB enforcement'])} |`,
+  `| DB enforcement | gates in Postgres / ${gates?.d ?? 'unknown'} | ${cells['DB enforcement']} | ${delta('DB enforcement', cells['DB enforcement'])} |`,
   `| Permissions | capabilities mapped / declared | ${cells.Permissions} | ${delta('Permissions', cells.Permissions)} |`,
   `| Lifecycle | steps green / total | ${cells.Lifecycle} | ${delta('Lifecycle', cells.Lifecycle)} |`,
-  `| Overall | mean of five | ≈ ${overall}% | ${prev?.Overall ? `${overall - Number(String(prev.Overall).replace(/\D/g, '')) >= 0 ? '+' : ''}${overall - Number(String(prev.Overall).replace(/\D/g, ''))}` : '—'} |`,
+  `| Overall | structural mean of five | ${overall === null ? 'not measured' : `≈ ${overall}%`} | — |`,
   '',
   `Migrations ${migrationFiles.length} files · check:pglite ${migrationResult}. Suite: ${testResult}.`,
   lifecycleAge ? `Gates read from .lifecycle-result.json, written ${lifecycleAge}.` : '',
   'Counted by `npm run completion`, not typed.',
+  'Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.',
 ].filter((l) => l !== '').join('\n')
 
 console.log(block)
@@ -419,7 +431,8 @@ if (permissions.unmapped.length) {
   console.log(`\nCapabilities declared by an action and NOT answered by the dispatcher (${permissions.unmapped.length}):`)
   for (const c of permissions.unmapped) console.log(`  ${c}`)
 }
-if (gates.rows.some(([, ok]) => !ok)) {
+if (gates?.rows.some(([, ok]) => !ok)) {
   console.log('\nGates not yet in Postgres:')
   for (const [name, ok] of gates.rows) if (!ok) console.log(`  ${name}`)
 }
+if (suiteNotPassing) process.exitCode = 1

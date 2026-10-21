@@ -22,12 +22,32 @@ export function verificationSourceHash(root) {
   return hash.digest('hex')
 }
 
-export function testReceipt(report, exitCode, before, after, at = new Date().toISOString()) {
+export function beginVerification(root, command, environment) {
+  return { schemaVersion: 1, valid: false, success: false,
+    sha: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root }).toString().trim(),
+    command, environment, node: process.version, platform: process.platform,
+    at: new Date().toISOString(), startedMs: Date.now(), sourceHash: verificationSourceHash(root) }
+}
+
+export function finishVerification(start, root, success) {
+  return { ...start, valid: true, success, at: new Date().toISOString(),
+    elapsedMs: Date.now() - start.startedMs, sourceChanged: start.sourceHash !== verificationSourceHash(root) }
+}
+
+export function isCurrentVerification(receipt, currentHash) {
+  return receipt?.schemaVersion === 1 && receipt.valid === true && receipt.sourceHash === currentHash
+    && receipt.sourceChanged === false && typeof receipt.sha === 'string' && receipt.sha.length > 0
+    && typeof receipt.command === 'string' && receipt.command.length > 0
+    && typeof receipt.environment === 'string' && receipt.environment.length > 0
+    && Number.isSafeInteger(receipt.elapsedMs) && receipt.elapsedMs >= 0
+}
+
+export function testReceipt(report, exitCode, before, after, at = new Date().toISOString(), context = {}) {
   const keys = ['numTotalTests', 'numPassedTests', 'numFailedTests', 'numPendingTests']
   if (!report || keys.some(key => !Number.isSafeInteger(report[key]) || report[key] < 0)
     || report.numPassedTests + report.numFailedTests + report.numPendingTests !== report.numTotalTests
     || typeof report.success !== 'boolean') throw new Error('Missing or invalid structured test result')
-  return { schemaVersion: 1, valid: true, at, total: report.numTotalTests, passed: report.numPassedTests,
+  return { ...context, schemaVersion: 1, valid: true, at, total: report.numTotalTests, passed: report.numPassedTests,
     failed: report.numFailedTests, skipped: report.numPendingTests,
     success: exitCode === 0 && report.success && report.numTotalTests > 0 && report.numFailedTests === 0,
     sourceHash: before, sourceChanged: before !== after }
@@ -43,7 +63,7 @@ export function describeTestReceipt(receipt, currentHash) {
     return 'NOT VERIFIED — invalid test receipt'
   }
   const figures = `${receipt.passed}/${receipt.total} passed, ${receipt.failed} failed (recorded ${receipt.at ?? 'unknown'})`
-  if (!receipt.sourceHash || receipt.sourceHash !== currentHash || receipt.sourceChanged) {
+  if (!isCurrentVerification(receipt, currentHash)) {
     return `Historical suite: ${figures}; current source NOT VERIFIED`
   }
   return receipt.success === true && receipt.total > 0 && receipt.failed === 0

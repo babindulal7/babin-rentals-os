@@ -14,6 +14,15 @@
   box-sizing: border-box;
 }
 
+.module-page-shell__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--section-gap);
+  min-width: 0;
+  width: 100%;
+}
+.module-page-shell__content:empty { display: none; }
+
 /* ── Zone 1: Sub-Header & Primary Action Bar ────────────────────────────── */
 .module-sub-header {
   display: flex;
@@ -370,10 +379,10 @@
 .module-table-container {
   width: 100%;
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: var(--surface-outline);
   border-radius: var(--r-card, 14px);
-  background: var(--surface-card, var(--card));
-  box-shadow: var(--shadow-sm);
+  background: var(--surface);
+  box-shadow: var(--elevation-surface);
 }
 
 .module-table-scroll {
@@ -389,9 +398,10 @@
 }
 
 .module-table th {
-  padding: 12px 16px;
-  background: color-mix(in srgb, var(--card2) 65%, var(--card));
-  border-bottom: 1px solid var(--border);
+  height: var(--table-header-height);
+  padding: 0 var(--sp-md);
+  background: var(--th-bg);
+  border-bottom: var(--surface-outline);
   color: var(--text2);
   font-size: var(--t-meta, 13px);
   font-weight: 600;
@@ -400,8 +410,9 @@
 }
 
 .module-table td {
-  padding: 12px 16px;
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
+  height: var(--table-row-height);
+  padding: var(--sp-xs) var(--sp-md);
+  border-bottom: var(--surface-outline);
   color: var(--text);
   font-size: var(--t-ui, 14px);
   vertical-align: middle;

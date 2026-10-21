@@ -3,12 +3,7 @@
    (canonical bands are 768 / 1280 — see styles/responsive.css). The old
    720px gap tweak collapsed into the default 768 phone band, which stacks
    the layout through the shared density rules instead. */
-.rentals-v2 [data-table-scroll] {
-  border-radius: var(--r-card, 12px);
-  border: 1px solid var(--border);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
-  background: var(--card);
-}
+/* DataTableShell owns the surface; this module only owns rental geometry. */
 /* RULING 2026-10-15: no uppercase override here — theme.css already rules
    operations-table headers sentence case, and uppercase + tracking pushed
    "BOOKING ID" / "TOTAL AMOUNT" onto two lines at 1280px. */
@@ -49,13 +44,12 @@
   background: var(--surface-card, var(--card));
   border: 1px solid var(--border);
   border-radius: var(--r-card, 14px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--elevation-surface);
   transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
 }
 .rentals-card-item:hover {
   border-color: var(--border2, var(--border));
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-  filter: brightness(1.02);
+  background: var(--hover-card);
 }
 .rentals-card-item.is-selected {
   border-color: var(--select-fg);

@@ -145,3 +145,123 @@ This is the active implementation log for the local fixes requested on 19 Octobe
 - Offline mock session compatibility is retained without weakening live token requirements; two new offlineIdentity regressions are included in the final suite.
 - QA-02 Node regressions pass 5/5. Completion output now calls old receipts historical.
 - Final ordered run: session 23374; astra-final-gates.jsonl and astra-final-*.log. One test worker, structured test receipt with source hashes, then SQL gates and a live-mode production build in a unique temporary folder. Do not claim final completion before inspecting these outcomes.
+
+## 2026-10-21 09:41 NPT — Fix REL-01
+- Workspace/branch/SHA: C:\Users\use\Desktop\babin-rentals-os; main; initial 5d26cf8d8a420c07400b1124a0fafb1b6e7b3710, continuation 43dec886bb98d82138f7f87b4fe3fd532f8933f4.
+- Previous local changes preserved: Icon recovery copy/patch and progress snapshot in artifacts/astra-20261021-024418; subsequent shared edits retained.
+- Evidence/reproduction on actual local tree: Replay had only a per-tab mutex and recovered every syncing row before acquiring shared ownership. Replay and conflict resolution now share an origin-wide Web Lock; missing coordination refuses replay. Original actor/project token capture remains intact.
+- Files changed: src/lib/offlineQueue.ts; src/lib/__tests__/offlineQueue.phase0.test.ts.
+- Migration files added (local only): none; existing 0170 retained.
+- Summary of code correction: Replay had only a per-tab mutex and recovered every syncing row before acquiring shared ownership. Replay and conflict resolution now share an origin-wide Web Lock; missing coordination refuses replay. Original actor/project token capture remains intact.
+- Data preservation/recovery path: browser data untouched; no migration or queue entries deleted. Fake IndexedDB fixtures alone are reset by tests.
+- Tests added or modified: Two new coordination tests failed before the change; the combined Phase 0 suite passes 29 checks. Branch-context/revocation and real multi-tab/browser recovery acceptance remain open.
+- Commands executed with actual pass/fail counts: see artifacts/astra-20261021-024418/*.log and machine-readable gate receipts; no interrupted run claimed passing.
+- Manual browser/device results: browser attachment unavailable; physical devices NOT VERIFIED.
+- Current state: PARTIAL.
+- Remaining risk or missing business decision: final full verification; hosted/device acceptance and documented OPEN_DECISIONS remain open.
+- Safe rollback guidance: revert only this fix's source changes after preserving subsequent work; do not delete queue/storage bytes or undo applied migrations.
+
+## 2026-10-21 09:41 NPT — Fix REL-02
+- Workspace/branch/SHA: C:\Users\use\Desktop\babin-rentals-os; main; initial 5d26cf8d8a420c07400b1124a0fafb1b6e7b3710, continuation 43dec886bb98d82138f7f87b4fe3fd532f8933f4.
+- Previous local changes preserved: Icon recovery copy/patch and progress snapshot in artifacts/astra-20261021-024418; subsequent shared edits retained.
+- Evidence/reproduction on actual local tree: A uniqueness violation followed by a permission-denied readback used to delete pending work. It now preserves payload/idempotency key as unresolved until a matching receipt exists.
+- Files changed: src/lib/offlineQueue.ts; src/lib/__tests__/offlineQueue.phase0.test.ts.
+- Migration files added (local only): none; existing 0170 retained.
+- Summary of code correction: A uniqueness violation followed by a permission-denied readback used to delete pending work. It now preserves payload/idempotency key as unresolved until a matching receipt exists.
+- Data preservation/recovery path: browser data untouched; no migration or queue entries deleted. Fake IndexedDB fixtures alone are reset by tests.
+- Tests added or modified: Regression failed before (13 pass / 1 fail), passes in the 29-check Phase 0 suite. Zero-row update and force-local tests remain enforced.
+- Commands executed with actual pass/fail counts: see artifacts/astra-20261021-024418/*.log and machine-readable gate receipts; no interrupted run claimed passing.
+- Manual browser/device results: browser attachment unavailable; physical devices NOT VERIFIED.
+- Current state: VERIFIED LOCAL.
+- Remaining risk or missing business decision: final full verification; hosted/device acceptance and documented OPEN_DECISIONS remain open.
+- Safe rollback guidance: revert only this fix's source changes after preserving subsequent work; do not delete queue/storage bytes or undo applied migrations.
+
+## 2026-10-21 09:41 NPT — Fix UI-04
+- Workspace/branch/SHA: C:\Users\use\Desktop\babin-rentals-os; main; initial 5d26cf8d8a420c07400b1124a0fafb1b6e7b3710, continuation 43dec886bb98d82138f7f87b4fe3fd532f8933f4.
+- Previous local changes preserved: Icon recovery copy/patch and progress snapshot in artifacts/astra-20261021-024418; subsequent shared edits retained.
+- Evidence/reproduction on actual local tree: Closed-modal cleanups could release another modal lock and discarded the original overflow. Only actual owners now acquire/release; original overflow is restored after the last owner.
+- Files changed: src/components/ui/Modal.tsx; src/components/ui/__tests__/Modal.locks.test.tsx.
+- Migration files added (local only): none; existing 0170 retained.
+- Summary of code correction: Closed-modal cleanups could release another modal lock and discarded the original overflow. Only actual owners now acquire/release; original overflow is restored after the last owner.
+- Data preservation/recovery path: browser data untouched; no migration or queue entries deleted. Fake IndexedDB fixtures alone are reset by tests.
+- Tests added or modified: StrictMode, dormant sibling, nested close, final restoration and top Escape tests; 16 related modal/preset component checks passed. Browser attach failed twice; touch/device acceptance is open.
+- Commands executed with actual pass/fail counts: see artifacts/astra-20261021-024418/*.log and machine-readable gate receipts; no interrupted run claimed passing.
+- Manual browser/device results: browser attachment unavailable; physical devices NOT VERIFIED.
+- Current state: VERIFIED LOCAL.
+- Remaining risk or missing business decision: final full verification; hosted/device acceptance and documented OPEN_DECISIONS remain open.
+- Safe rollback guidance: revert only this fix's source changes after preserving subsequent work; do not delete queue/storage bytes or undo applied migrations.
+
+## 2026-10-21 09:41 NPT — Fix UI-06
+- Workspace/branch/SHA: C:\Users\use\Desktop\babin-rentals-os; main; initial 5d26cf8d8a420c07400b1124a0fafb1b6e7b3710, continuation 43dec886bb98d82138f7f87b4fe3fd532f8933f4.
+- Previous local changes preserved: Icon recovery copy/patch and progress snapshot in artifacts/astra-20261021-024418; subsequent shared edits retained.
+- Evidence/reproduction on actual local tree: Conflicting calendar-span and billable-day matches selected two presets. Presets now use the unchanged billing engine with the entered times, choose a matching return date, and disable impossible durations. Exactly one canonical duration match; 44px targets.
+- Files changed: src/lib/rentalDatePreset.ts; src/lib/__tests__/rentalDatePreset.test.ts; src/modules/rentals/booking/DatePresets.tsx; BookingDatesSection.tsx; booking/__tests__/DatePresets.test.tsx.
+- Migration files added (local only): none; existing 0170 retained.
+- Summary of code correction: Conflicting calendar-span and billable-day matches selected two presets. Presets now use the unchanged billing engine with the entered times, choose a matching return date, and disable impossible durations. Exactly one canonical duration match; 44px targets.
+- Data preservation/recovery path: browser data untouched; no migration or queue entries deleted. Fake IndexedDB fixtures alone are reset by tests.
+- Tests added or modified: Four preset regressions failed before; six component cases and the boundary helper matrix now pass. The added boundary-test expectation was corrected to cover all impossible equal-time one-day combinations; no engine rule was changed.
+- Commands executed with actual pass/fail counts: see artifacts/astra-20261021-024418/*.log and machine-readable gate receipts; no interrupted run claimed passing.
+- Manual browser/device results: browser attachment unavailable; physical devices NOT VERIFIED.
+- Current state: VERIFIED LOCAL.
+- Remaining risk or missing business decision: final full verification; hosted/device acceptance and documented OPEN_DECISIONS remain open.
+- Safe rollback guidance: revert only this fix's source changes after preserving subsequent work; do not delete queue/storage bytes or undo applied migrations.
+
+## 2026-10-21 09:41 NPT — Fix WF-07
+- Workspace/branch/SHA: C:\Users\use\Desktop\babin-rentals-os; main; initial 5d26cf8d8a420c07400b1124a0fafb1b6e7b3710, continuation 43dec886bb98d82138f7f87b4fe3fd532f8933f4.
+- Previous local changes preserved: Icon recovery copy/patch and progress snapshot in artifacts/astra-20261021-024418; subsequent shared edits retained.
+- Evidence/reproduction on actual local tree: Quick Today/Tomorrow were anchored to a civil date. They now use operationalDayOf with the configured start; explicit custom dates and carry-over lower-bound behavior are retained.
+- Files changed: src/lib/queries/today.ts; src/modules/today/Today.tsx; src/modules/today/__tests__/dashboardLayout.test.tsx.
+- Migration files added (local only): none; existing 0170 retained.
+- Summary of code correction: Quick Today/Tomorrow were anchored to a civil date. They now use operationalDayOf with the configured start; explicit custom dates and carry-over lower-bound behavior are retained.
+- Data preservation/recovery path: browser data untouched; no migration or queue entries deleted. Fake IndexedDB fixtures alone are reset by tests.
+- Tests added or modified: 05:59:59 failed before; 06:00, Tomorrow and custom-date regressions pass in the 123-check integration run.
+- Commands executed with actual pass/fail counts: see artifacts/astra-20261021-024418/*.log and machine-readable gate receipts; no interrupted run claimed passing.
+- Manual browser/device results: browser attachment unavailable; physical devices NOT VERIFIED.
+- Current state: VERIFIED LOCAL.
+- Remaining risk or missing business decision: final full verification; hosted/device acceptance and documented OPEN_DECISIONS remain open.
+- Safe rollback guidance: revert only this fix's source changes after preserving subsequent work; do not delete queue/storage bytes or undo applied migrations.
+
+## 2026-10-21 09:41 NPT — Fix UI-05
+- Workspace/branch/SHA: C:\Users\use\Desktop\babin-rentals-os; main; initial 5d26cf8d8a420c07400b1124a0fafb1b6e7b3710, continuation 43dec886bb98d82138f7f87b4fe3fd532f8933f4.
+- Previous local changes preserved: Icon recovery copy/patch and progress snapshot in artifacts/astra-20261021-024418; subsequent shared edits retained.
+- Evidence/reproduction on actual local tree: Finance sub-header duplicated header Export/Create Invoice controls. The page header now owns those actions; phone Payment remains a single action and secondary commands stay usable in More.
+- Files changed: src/modules/finance/Finance.tsx; src/modules/finance/__tests__/Finance.restricted.test.tsx.
+- Migration files added (local only): none; existing 0170 retained.
+- Summary of code correction: Finance sub-header duplicated header Export/Create Invoice controls. The page header now owns those actions; phone Payment remains a single action and secondary commands stay usable in More.
+- Data preservation/recovery path: browser data untouched; no migration or queue entries deleted. Fake IndexedDB fixtures alone are reset by tests.
+- Tests added or modified: New phone duplicate assertion failed before; all 23 Finance checks pass in the 123-check integration run. Rendered width/screenshot acceptance unavailable after browser attachment failure.
+- Commands executed with actual pass/fail counts: see artifacts/astra-20261021-024418/*.log and machine-readable gate receipts; no interrupted run claimed passing.
+- Manual browser/device results: browser attachment unavailable; physical devices NOT VERIFIED.
+- Current state: PARTIAL.
+- Remaining risk or missing business decision: final full verification; hosted/device acceptance and documented OPEN_DECISIONS remain open.
+- Safe rollback guidance: revert only this fix's source changes after preserving subsequent work; do not delete queue/storage bytes or undo applied migrations.
+
+## 2026-10-21 09:41 NPT — Fix WF-02 / WF-03 / WF-04 / WF-05 / WF-08
+- Workspace/branch/SHA: C:\Users\use\Desktop\babin-rentals-os; main; initial 5d26cf8d8a420c07400b1124a0fafb1b6e7b3710, continuation 43dec886bb98d82138f7f87b4fe3fd532f8933f4.
+- Previous local changes preserved: Icon recovery copy/patch and progress snapshot in artifacts/astra-20261021-024418; subsequent shared edits retained.
+- Evidence/reproduction on actual local tree: Missing datasets previously became zero; one-shot report reads and ten-row operational exports truncated data. Shared reads now confirm every ordered page and refuse failures/repeated rows. Closed is completed; cancelled values cannot inflate earned stage/type revenue. ROI remains unknown with missing acquisition cost.
+- Files changed: src/lib/queries/reportSupport.ts; rentalReports.ts; operationReports.ts; damageMaintenanceReports.ts; assetRoi.ts; staffReports.ts; clientReports.ts; productReports.ts; promotionsReports.ts; activityReports.ts; related report tests.
+- Migration files added (local only): none; existing 0170 retained.
+- Summary of code correction: Missing datasets previously became zero; one-shot report reads and ten-row operational exports truncated data. Shared reads now confirm every ordered page and refuse failures/repeated rows. Closed is completed; cancelled values cannot inflate earned stage/type revenue. ROI remains unknown with missing acquisition cost.
+- Data preservation/recovery path: browser data untouched; no migration or queue entries deleted. Fake IndexedDB fixtures alone are reset by tests.
+- Tests added or modified: 14 missing-dataset regressions failed before; 4 further stage/export/ROI cases failed before. Cap+1 family regressions and final command results are recorded separately. Remaining branch/tax/attribution acceptance is not inferred from fake-client tests.
+- Commands executed with actual pass/fail counts: see artifacts/astra-20261021-024418/*.log and machine-readable gate receipts; no interrupted run claimed passing.
+- Manual browser/device results: browser attachment unavailable; physical devices NOT VERIFIED.
+- Current state: PARTIAL.
+- Remaining risk or missing business decision: final full verification; hosted/device acceptance and documented OPEN_DECISIONS remain open.
+- Safe rollback guidance: revert only this fix's source changes after preserving subsequent work; do not delete queue/storage bytes or undo applied migrations.
+
+## 2026-10-21 09:41 NPT — Fix QA-02
+- Workspace/branch/SHA: C:\Users\use\Desktop\babin-rentals-os; main; initial 5d26cf8d8a420c07400b1124a0fafb1b6e7b3710, continuation 43dec886bb98d82138f7f87b4fe3fd532f8933f4.
+- Previous local changes preserved: Icon recovery copy/patch and progress snapshot in artifacts/astra-20261021-024418; subsequent shared edits retained.
+- Evidence/reproduction on actual local tree: Test attempts invalidate previous green evidence before starting. Receipts record command/SHA/source/elapsed/environment; stale DB receipts cannot contribute a completion percentage. Structural counts are explicitly separate from acceptance.
+- Files changed: scripts/test-receipt.mjs; test-receipt.test.mjs; run-tests.mjs; check-pglite.mjs; e2e-lifecycle.mjs; completion.mjs; package.json; .gitignore.
+- Migration files added (local only): none; existing 0170 retained.
+- Summary of code correction: Test attempts invalidate previous green evidence before starting. Receipts record command/SHA/source/elapsed/environment; stale DB receipts cannot contribute a completion percentage. Structural counts are explicitly separate from acceptance.
+- Data preservation/recovery path: browser data untouched; no migration or queue entries deleted. Fake IndexedDB fixtures alone are reset by tests.
+- Tests added or modified: 7 Node regressions pass. Intentional isolated failing fixture produced test exit 1 and completion exit 1 with 0/1, rather than stale green. Final full gates must replace this probe with real current results.
+- Commands executed with actual pass/fail counts: see artifacts/astra-20261021-024418/*.log and machine-readable gate receipts; no interrupted run claimed passing.
+- Manual browser/device results: browser attachment unavailable; physical devices NOT VERIFIED.
+- Current state: PARTIAL.
+- Remaining risk or missing business decision: final full verification; hosted/device acceptance and documented OPEN_DECISIONS remain open.
+- Safe rollback guidance: revert only this fix's source changes after preserving subsequent work; do not delete queue/storage bytes or undo applied migrations.

@@ -184,20 +184,20 @@ export async function getDamageMaintenanceReport(options?: ReportFilterOptions):
   const bookingOfFinding = new Map<string, { bookingNo: string; clientName: string }>()
   if (returnLineIds.length > 0) {
     const rl = rowsOf<{ id: string; booking_line_id: string }>(
-      await supabase.from('return_lines').select('id, booking_line_id').in('id', returnLineIds),
+      await completeReportRead(supabase.from('return_lines').select('id, booking_line_id').in('id', returnLineIds), 'Return lines read failed'),
       'Return lines read failed',
     )
     const lineIds = [...new Set(rl.map((r) => r.booking_line_id))]
     const bl = lineIds.length
       ? rowsOf<{ id: string; booking_id: string }>(
-          await supabase.from('booking_lines').select('id, booking_id').in('id', lineIds),
+          await completeReportRead(supabase.from('booking_lines').select('id, booking_id').in('id', lineIds), 'Booking lines read failed'),
           'Booking lines read failed',
         )
       : []
     const bookingIds = [...new Set(bl.map((l) => l.booking_id))]
     const bk = bookingIds.length
       ? rowsOf<{ id: string; booking_no: string; clients?: unknown }>(
-          await supabase.from('bookings').select('id, booking_no, clients!client_id(name)').in('id', bookingIds),
+          await completeReportRead(supabase.from('bookings').select('id, booking_no, clients!client_id(name)').in('id', bookingIds), 'Bookings read failed'),
           'Bookings read failed',
         )
       : []
@@ -326,9 +326,9 @@ export async function getDamageMaintenanceReport(options?: ReportFilterOptions):
     damageTypeBreakdown: [...typeMap.entries()]
       .sort((a, b) => b[1] - a[1])
       .map(([damageType, count]) => ({ damageType, count, percent: percentOf(count, typeTotal) })),
-    incidents: incidents.slice(0, 10),
-    repairs: repairs.slice(0, 10),
-    servicing: servicing.slice(0, 10),
+    incidents,
+    repairs,
+    servicing,
     sidelinedUnits: sidelined.map((u) => ({
       id: u.id,
       serial: u.serial_no?.trim() || '—',

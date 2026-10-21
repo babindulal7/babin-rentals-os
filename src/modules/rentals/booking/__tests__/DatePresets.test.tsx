@@ -3,12 +3,12 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { describe, expect, it, vi } from 'vitest'
 import { DatePresets, DEFAULT_PRESETS } from '../DatePresets'
-import { getBusinessToday, kathmanduCivil } from '../../../../lib/bs'
+import { kathmanduCivil } from '../../../../lib/bs'
 import { rentalDaysBetween } from '../../../../lib/rentalDays'
 ;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
 
 function todayIso(): string {
-  return new Date(kathmanduCivil(getBusinessToday())).toISOString().slice(0, 10)
+  return new Date(kathmanduCivil(new Date())).toISOString().slice(0, 10)
 }
 
 describe('DatePresets', () => {

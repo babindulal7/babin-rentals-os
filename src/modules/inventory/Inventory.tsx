@@ -634,9 +634,9 @@ function ParentRowView({
               aria-expanded={open}
               aria-label={`${open ? 'Collapse' : 'Expand'} ${row.name}`}
               style={{
-                width: 28,
-                height: 28,
-                borderRadius: 6,
+                width: 'var(--control-height)',
+                height: 'var(--control-height)',
+                borderRadius: 'var(--r-btn)',
                 border: '1px solid var(--border)',
                 background: open ? 'var(--select-bg)' : 'var(--card2)',
                 color: open ? 'var(--select-fg)' : 'var(--text2)',
@@ -712,8 +712,8 @@ function ParentRowView({
               background: 'var(--card2)',
               color: 'var(--text2)',
               cursor: 'pointer',
-              width: 32,
-              height: 32,
+              width: 'var(--control-height)',
+              height: 'var(--control-height)',
               display: 'grid',
               placeItems: 'center',
               transition: 'all var(--dur-fast) var(--ease)',

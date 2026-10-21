@@ -2895,18 +2895,18 @@
    text title, so it is never colour alone. Tokens only — both themes follow.
    Last in the file so it is the layer that wins; earlier rules are unchanged. */
 .rental-dashboard .rental-dashboard__panels .movement-panel {
-  border: 1px solid var(--border);
+  border: var(--surface-outline);
   border-radius: var(--r-card, 14px);
   background: var(--card);
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--elevation-surface);
   overflow: hidden;
 }
 
 .rental-dashboard .rental-dashboard__panels .movement-panel__header {
   min-height: 0;
-  padding: 1rem 1.25rem;
+  padding: var(--section-padding) var(--sp-lg);
   background: transparent;
-  border-bottom: 1px solid var(--border);
+  border-bottom: var(--surface-outline);
 }
 
 .rental-dashboard .rental-dashboard__panels .movement-panel__heading h2 {
@@ -3081,7 +3081,7 @@
 }
 
 .rental-dashboard .movement-card__when strong {
-  font-family: var(--font-display);
+  font-family: var(--font-id);
   font-size: 1.2rem;
   font-weight: 650;
   line-height: 1.1;
@@ -3305,5 +3305,5 @@
 }
 .rental-dashboard .dashboard-situational-card:hover {
   border-color: var(--border2);
-  box-shadow: var(--shadow-md), var(--specular-rim);
+  box-shadow: var(--elevation-surface);
 }

@@ -110,7 +110,7 @@ export interface CancellationsReportData {
  *   - cancellation is `bookings.cancelled_at` (0015), not `stage = 'Cancelled'`
  *     — Postgres rejects that literal, so the Cancellations tab could only ever
  *     show the mock block;
- *   - "completed" is Returned/Closed (the canonical six have no 'Completed');
+ *   - "completed" is Closed; Returned remains a distinct custody stage;
  *   - money was computed in rupees then divided by 100 again (see `lineValue`);
  *   - line money was read from base `booking_lines`, whose rate columns 0062
  *     revokes — it now comes from `booking_lines_v` (`readLineValues`).
@@ -129,12 +129,11 @@ type BookingRow = {
   clients?: unknown
 }
 
-// Loosely typed on purpose: supabase-js's builder generics recurse past tsc's
-// depth limit when threaded through a helper (TS2589).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyQuery = any
-
-function filtered(q: AnyQuery, options?: ReportFilterOptions): AnyQuery {
+function filtered<Q extends {
+  gte(column: string, value: string): Q
+  lte(column: string, value: string): Q
+  eq(column: string, value: string): Q
+}>(q: Q, options?: ReportFilterOptions): Q {
   let out = q
   if (options?.from) out = out.gte('pickup_at', options.from)
   if (options?.to) out = out.lte('pickup_at', options.to)
@@ -181,17 +180,17 @@ export async function getRentalPerformanceReport(options?: ReportFilterOptions):
     const stage = isCancelled ? 'Cancelled' : b.stage
     if (isCancelled) cancelled++
     else if (b.stage === 'Packed' || b.stage === 'On Rent') active++
-    else if (b.stage === 'Returned' || b.stage === 'Closed') completed++
+    else if (b.stage === 'Closed') completed++
 
     const st = stageMap.get(stage) ?? { count: 0, revenue: 0 }
     st.count++
-    st.revenue += value
+    st.revenue += isCancelled ? 0 : value
     stageMap.set(stage, st)
 
     const type = typeById.get(b.id)?.trim() || 'Not set'
     const pt = typeMap.get(type) ?? { count: 0, revenue: 0 }
     pt.count++
-    pt.revenue += value
+    pt.revenue += isCancelled ? 0 : value
     typeMap.set(type, pt)
 
     if (isCancelled) continue

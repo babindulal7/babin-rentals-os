@@ -782,6 +782,20 @@
   --page-padding: clamp(14px, 1.35vw, 18px);
   --section-gap: var(--space-4);
 
+  /* Precision Cinema Operations: roles within the existing palette. */
+  --surface-canvas: var(--app);
+  --surface-content: var(--surface-card);
+  --surface-inset: var(--card2);
+  --surface-overlay: var(--card);
+  --divider: color-mix(in srgb, var(--border) 52%, transparent);
+  --surface-outline: 1px solid var(--divider);
+  --elevation-surface: var(--shadow-card);
+  --elevation-overlay: var(--shadow-modal);
+  --section-padding: var(--sp-md);
+  --field-gap: var(--sp-sm);
+  --table-row-height: 52px;
+  --table-header-height: 44px;
+
   /* Brand aliases. ui-v2-era rules and a handful of components read --brand;
      it aliases the canonical --primary triple (never a fourth colour). */
   --brand: var(--primary);
@@ -1012,33 +1026,8 @@ body {
   */
 }
 
-/* Bordered card variant for dense lists / tables where separation is needed */
-.card--bordered {
-  border: 1.5px solid var(--border);
-}
-
-/* DESIGN_DIRECTION_SPEC v4.2 §4 & §6 Card Glass & Layered Elevation */
-.card {
-  background: var(--surface-card);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: var(--shadow-card);
-  /* Border removed per design audit: cards use background color for elevation */
-  border: none;
-  border-radius: var(--r-card);
-  transition: box-shadow var(--dur) var(--ease), background-color var(--dur) var(--ease), border-color var(--dur) var(--ease);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .card.interactive:hover,
-  .card[data-interactive='true']:hover {
-    box-shadow: var(--shadow-lg);
-  }
-  .card--bordered.interactive:hover,
-  .card--bordered[data-interactive='true']:hover {
-    box-shadow: var(--shadow-lg);
-  }
-}
+/* Card presentation belongs to the shared primitive rules in ui-v2.css.
+   Theme/style choices (including opt-in glass) remain token-owned here. */
 
 /* Tables stay solid per DESIGN_DIRECTION_SPEC v4.2 §4 */
 table,
@@ -1091,6 +1080,7 @@ table,
    step onto the chrome too, which is a different (and unruled) change. */
 [data-floor='true'] {
   --surface-card: var(--surface);
+  --surface-content: var(--surface-card);
   --surface-card-hover: var(--surface-2);
   --card: var(--surface);
   --tap: 48px;
@@ -1359,7 +1349,7 @@ section[id] {
 }
 .lift:hover,
 .card-interactive:hover {
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--elevation-surface);
   border-color: var(--lift-accent, var(--border2));
 }
 
@@ -1515,9 +1505,6 @@ p {
 }
 
 /* Cards must not clip or isolate the dropdowns rendered inside them. */
-.surface-card__header {
-  background: color-mix(in srgb, var(--surface-card) 76%, transparent);
-}
 
 .ui-button {
   -webkit-tap-highlight-color: transparent;
@@ -1577,7 +1564,7 @@ p {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-inline: contain;
   background: var(--surface) !important;
-  border: 1.5px solid var(--border);
+  border: var(--surface-outline);
   border-radius: var(--r-card);
 }
 

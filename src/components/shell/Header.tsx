@@ -969,7 +969,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
           )}
 
           {/* Mock Mode Icon Indicator (Law 15: >= 44x44px hit area) */}
-          {IS_MOCK && (
+          {IS_MOCK && !isPhone && (
             <button
               type="button"
               onClick={() => setShowMockDialog(true)}
@@ -1002,8 +1002,8 @@ export default function Header({ crumbs, actions }: HeaderProps) {
               ref={profileBtnRef}
               type="button"
               onClick={() => setProfileOpen((v) => !v)}
-              aria-label={`${initials} — user profile`}
-              title="User profile"
+              aria-label={`${initials} — user profile${IS_MOCK ? ' · Mock mode' : ''}`}
+              title={IS_MOCK ? 'User profile · Mock mode' : 'User profile'}
               aria-expanded={profileOpen}
               style={{
                 ...iconBtn,
@@ -1025,7 +1025,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                   fontWeight: 700,
                 }}
               >
-                {initials}
+                {IS_MOCK && isPhone ? 'Mock' : initials}
               </span>
             </button>
 
@@ -1081,6 +1081,14 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                     }}>
                       Team internal notes
                     </Button>
+                  )}
+                  {/* RULING 2026-10-21: retain mock options in the phone
+                      profile; a separate 44px control clipped primary actions. */}
+                  {IS_MOCK && isPhone && (
+                    <Button variant="secondary" icon="flask" onClick={() => {
+                      setProfileOpen(false)
+                      setShowMockDialog(true)
+                    }}>Mock Mode Active</Button>
                   )}
                   {hasPin && (
                     <button

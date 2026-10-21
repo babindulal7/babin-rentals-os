@@ -59,9 +59,6 @@
 /* ── Inventory Table Shell & Rows ───────────────────────────────────────── */
 .inventory-table-shell {
   overflow-x: auto;
-  border-radius: var(--r-card, 12px);
-  border: 1px solid var(--border);
-  background: var(--card);
 }
 
 .inventory-table {
@@ -75,11 +72,11 @@
   padding: 8px 12px;
   font-size: var(--t-th);
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  text-transform: none;
+  letter-spacing: normal;
   color: var(--text2);
   background: var(--th-bg, var(--card2));
-  border-bottom: 1px solid var(--border);
+  border-bottom: var(--surface-outline);
   position: sticky;
   top: 0;
   z-index: 2;
@@ -201,13 +198,13 @@
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--r-card, 12px);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-shadow: var(--elevation-surface);
   transition: all var(--dur-fast, 150ms) var(--ease);
 }
 
 .inventory-model-card:hover {
   border-color: var(--border2, var(--border));
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  background: var(--hover-card);
 }
 
 .inventory-model-card.is-selected {
@@ -251,7 +248,7 @@
 
 .inventory-grid-item:hover {
   border-color: var(--nav-active-accent);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  background: var(--hover-card);
 }
 
 /* ── Asset Badge & Thumb ────────────────────────────────────────────────── */

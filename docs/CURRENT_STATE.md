@@ -1,5 +1,7 @@
 # Babin Rentals OS — Current State
 
+> **ASTRA master repair continuation, 21 October 2026:** outbox, report completeness and modal/date/Today/Finance repairs are prepared with focused regressions. Full current-source gates are pending; earlier source receipts do not certify these newer edits. See root AUDIT_WORKTREE_PROGRESS.md and artifacts/astra-20261021-024418. Production launch remains HOLD; hosted and device acceptance remain open.
+
 > **21 October 2026 continuation — release HOLD:** the clean single-shell/L1 merge at `5d26cf8d` supersedes earlier source checkpoints. The previous run passed 4,948 tests but changed during verification and does not certify this merge. Post-confirmation reservation readback now distinguishes unknown counts from genuine zero without reporting a committed booking as failed; seven regressions were red before the fix. Fresh checks are underway in `ASTRA_LOCAL_2026-10-21.json`. Earlier results below are retained as history. No hosted application is implied.
 
 > **Later local edits — booking inputs:** booking-line and product tracking/stock reads now load complete ordered pages and refuse missing/later-failed datasets. Eight regressions failed before the fix; 200 focused checks pass afterward. Full verification is running in `ASTRA_LOCAL_2026-10-20.json`; the 4,931-test checkpoint below is preserved as `ASTRA_AVAILABILITY_CHECKPOINT_2026-10-20.json` and does not certify these edits. Release remains HOLD.

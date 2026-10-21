@@ -165,7 +165,7 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
   if(!permitted)return <Card title="Record unavailable">Your role cannot edit this record.</Card>
   if(loading)return <Card title="Loading record">Loading saved values…</Card>
   if(recordId && !snapshot)return <Card title="Record not loaded"><p role="alert">{error}</p><Button onClick={()=>setReload(r=>r+1)}>Retry</Button></Card>
-  return <><PageHeader title={`${recordId?'Edit':'Add'} ${names[kind]}`}/>
+  return <><PageHeader title={`${recordId?'Edit':'Add'} ${names[kind]}`} showAddMenu={false} searchInMore={phone}/>
     {confirmDialog && (
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}

@@ -1,6 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { describeTestReceipt, testReceipt } from './test-receipt.mjs'
+import { describeTestReceipt, isCurrentVerification, testReceipt as createTestReceipt } from './test-receipt.mjs'
+
+const context = { sha: 'test-sha', command: 'npm run test', environment: 'isolated test', elapsedMs: 100 }
+const testReceipt = (report, code, before, after) => createTestReceipt(report, code, before, after, '2026-10-21', context)
 
 const green = { success: true, numTotalTests: 10, numPassedTests: 10, numFailedTests: 0, numPendingTests: 0 }
 test('old receipts cannot certify current source', () => {
@@ -31,4 +34,15 @@ test('an incomplete test count cannot certify a suite', () => {
   const receipt = testReceipt(green, 0, 'same', 'same')
   assert.match(describeTestReceipt({ ...receipt, total: 11 }, 'same'), /NOT VERIFIED/)
   assert.match(describeTestReceipt({ ...receipt, valid: undefined }, 'same'), /NOT VERIFIED/)
+})
+
+test('source-bound evidence still requires command, commit, elapsed time and environment', () => {
+  const receipt = testReceipt(green, 0, 'same', 'same')
+  assert.equal(isCurrentVerification(receipt, 'same'), true)
+  for (const field of ['sha', 'command', 'environment', 'elapsedMs']) {
+    const incomplete = { ...receipt, [field]: undefined }
+    assert.equal(isCurrentVerification(incomplete, 'same'), false)
+    assert.match(describeTestReceipt(incomplete, 'same'), /NOT VERIFIED/)
+  }
+  assert.equal(isCurrentVerification({ ...receipt, valid: false }, 'same'), false)
 })

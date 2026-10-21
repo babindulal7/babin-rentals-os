@@ -66,7 +66,8 @@ export function computeFleetSummary(rows: readonly UnitRoiRow[]): FleetRoiSummar
   const totalMaint = rows.reduce((s, r) => s + r.maintenanceCostPaisa, 0)
   const revenueKnown = rows.length > 0 && rows.every((r) => r.lifetimeRevenuePaisa !== null)
   const totalRev = revenueKnown ? rows.reduce((s, r) => s + (r.lifetimeRevenuePaisa ?? 0), 0) : null
-  const netFleet = totalRev === null ? null : totalRev - (totalCap + totalMaint)
+  const costKnown = rows.every(row => row.purchasePricePaisa !== null)
+  const netFleet = totalRev === null || !costKnown ? null : totalRev - (totalCap + totalMaint)
 
   return {
     totalCapitalInvestedPaisa: totalCap as Paisa,

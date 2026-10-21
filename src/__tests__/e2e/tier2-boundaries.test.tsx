@@ -71,6 +71,7 @@ vi.mock('../../modules/operations/OperationsWorkspaceContext', () => ({
 }))
 
 vi.mock('../../lib/supabase', () => ({
+  IS_MOCK: true,
   newClientUuid: () => '11111111-1111-4111-8111-111111111111',
   supabase: {
     from: () => ({

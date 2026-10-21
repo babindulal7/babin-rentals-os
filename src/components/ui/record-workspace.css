@@ -1,4 +1,4 @@
-.record-workspace,.record-workspace-body{display:flex;flex-direction:column;gap:var(--sp-lg);min-width:0}
+.record-workspace,.record-workspace-body{display:flex;flex-direction:column;gap:var(--section-gap);min-width:0}
 .record-workspace-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--sp-lg);align-items:start}
 .record-workspace-summary{min-width:0}
 .record-section{scroll-margin-top:100px;min-width:0}
@@ -7,9 +7,11 @@
 /* Keep the global scanner clear of the shared save/confirm controls. */
 @media(min-width:768px){body:has(.record-actions){--scanner-bottom:112px}}
 .record-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:var(--sp-md)}
-.record-field{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:var(--t-meta)}
+.record-field{display:flex;flex-direction:column;gap:var(--field-gap);min-width:0;font-size:var(--t-meta)}
 .record-field input,.record-field select,.record-field textarea{min-height:44px;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--r-input);background:var(--card2);color:var(--text);font:inherit;width:100%;box-sizing:border-box}
-.record-field input[type=checkbox]{width:44px}
+.record-field input[type=checkbox]{width:var(--control-height);height:var(--control-height);padding:var(--sp-md);background-clip:content-box;appearance:none;flex-shrink:0;cursor:pointer}
+.record-field input[type=checkbox]:checked{background-color:var(--btn-primary-bg);border-color:var(--input-focus)}
+.record-field input[type=checkbox]:checked::after{content:'✓';display:block;color:var(--btn-primary-fg);text-align:center;line-height:1;font-weight:700}
 .record-field textarea{min-height:88px}
 .record-field [role=alert]{color:var(--danger-text)}
 @media(min-width:1280px){.record-workspace-grid:has(>.record-workspace-summary){grid-template-columns:minmax(0,1fr) 324px}.record-workspace-summary{position:sticky;top:var(--sp-lg)}}

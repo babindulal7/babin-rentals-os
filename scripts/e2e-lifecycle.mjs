@@ -66,6 +66,7 @@ import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist'
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { beginVerification, finishVerification } from './test-receipt.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, '..')
@@ -75,6 +76,8 @@ const args = process.argv.slice(2)
 const verbose = args.includes('--verbose')
 const onlyIdx = args.indexOf('--only')
 const only = onlyIdx === -1 ? null : args[onlyIdx + 1]
+const verificationStart = beginVerification(ROOT, `npm run check:lifecycle${args.length ? ` -- ${args.join(' ')}` : ''}`, 'disposable local PGlite with RLS; no hosted JWT/PostgREST')
+writeFileSync(join(ROOT, '.lifecycle-result.json'), JSON.stringify(verificationStart, null, 2))
 
 /* ── The corpus this script seeds ─────────────────────────────────────────
  *
@@ -2423,7 +2426,7 @@ console.log(`\n${String(green)}/${String(results.length)} green, ${String(red)} 
 
 writeFileSync(
   join(ROOT, '.lifecycle-result.json'),
-  `${JSON.stringify({ at: new Date().toISOString(), green, red, total: results.length, results }, null, 2)}\n`,
+  `${JSON.stringify({ ...finishVerification(verificationStart, ROOT, failed.length === 0 && red === 0 && !only), green, red, total: results.length, results }, null, 2)}\n`,
 )
 
 if (failed.length > 0) {

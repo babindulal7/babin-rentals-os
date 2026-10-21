@@ -15,22 +15,45 @@
    Status/financial semantics remain in lib/status.ts — never in CSS. */
 
 .card, .surface-card {
-  box-shadow: var(--shadow-card), var(--specular-rim);
-  /* Border removed per design audit: cards should use background color for elevation, not border+shadow */
-  border: none;
+  background: var(--surface-content);
+  color: var(--text);
+  box-shadow: var(--elevation-surface);
+  border: var(--surface-outline);
   border-radius: var(--r-card);
   position: relative;
+  min-width: 0;
+  transition: background-color var(--dur-theme) var(--ease), border-color var(--dur-fast) var(--ease);
 }
 
 .card--bordered, .surface-card--bordered {
-  border: 1.5px solid var(--border);
+  border-color: var(--border);
 }
-.surface-card__header { background: var(--surface); }
+.surface-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-md);
+  padding: var(--sp-sm) var(--section-padding);
+  background: transparent;
+  border-bottom: var(--surface-outline);
+  border-radius: var(--r-card) var(--r-card) 0 0;
+}
+.surface-card__heading { min-width: 0; }
+.surface-card__action { display: flex; align-items: center; gap: var(--sp-sm); flex-shrink: 0; }
+.surface-card__footer {
+  padding: var(--section-padding);
+  background: var(--surface-inset);
+  border-top: var(--surface-outline);
+  border-radius: 0 0 var(--r-card) var(--r-card);
+}
+.surface-card[aria-disabled='true'] { background: var(--surface-inset); box-shadow: none; }
+.surface-card[data-interactive='true']:focus-visible,
+.card[data-interactive='true']:focus-visible { outline: 2px solid var(--input-focus); outline-offset: 2px; }
 .ui-button { transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), filter var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
 .ui-button:active:not(:disabled) { filter: brightness(0.96); transform: none; }
 .ui-button:hover:not(:disabled) { transform: none; }
 /* Button.tsx sets resting fills inline; hover must override them as a pair. */
-.ui-button--primary:hover:not(:disabled) { background: var(--hover-button) !important; color: var(--btn-primary-fg) !important; box-shadow: var(--shadow-primary-glow), var(--specular-rim); }
+.ui-button--primary:hover:not(:disabled) { background: var(--hover-button) !important; color: var(--btn-primary-fg) !important; box-shadow: var(--shadow-xs); }
 .ui-button--link:hover:not(:disabled) { text-decoration: underline; }
 .ui-button--link:active:not(:disabled) { transform: none; opacity: 0.7; }
 .ui-button--secondary:hover:not(:disabled),
@@ -229,9 +252,9 @@ input[type='search']::-webkit-search-results-decoration {
 }
 .data-table-shell, [data-table-scroll], .operations-v2__table-card {
   border-radius: var(--r-card);
-  border: 1.5px solid var(--border);
+  border: var(--surface-outline);
   background: var(--card);
-  box-shadow: var(--shadow-card), var(--specular-rim);
+  box-shadow: var(--elevation-surface);
   overflow: hidden;
 }
 .data-table, .operations-table, .operations-v2__table {
@@ -240,14 +263,14 @@ input[type='search']::-webkit-search-results-decoration {
   font-variant-numeric: tabular-nums;
 }
 .data-table thead th, .operations-table thead th, .operations-v2__table thead th, .data-table__head th {
-  height: 48px;
+  height: var(--table-header-height);
   background: var(--th-bg);
   color: var(--text2);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1.5px solid var(--border);
+  font-size: var(--t-meta);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  border-bottom: var(--surface-outline);
   position: sticky;
   top: 0;
   z-index: 2;
@@ -310,8 +333,8 @@ input[type='search']::-webkit-search-results-decoration {
 .data-table__mobile-list { display: none; }
 .data-table-shell { overflow-x: auto; }
 .data-table-shell:focus-visible { outline: 2px solid var(--input-focus); outline-offset: 2px; }
-.data-table--compact .data-table__row td { height: 40px; padding: 6px 12px; }
-.data-table--comfortable .data-table__row td { height: 48px; padding: 10px 12px; }
+.data-table--compact .data-table__row td { height: var(--table-row-height); padding: var(--sp-xs) var(--sp-md); }
+.data-table--comfortable .data-table__row td { height: var(--table-row-height); padding: var(--sp-sm) var(--sp-md); }
 .data-table__records { display: grid; gap: var(--space-3); min-width: 0; }
 .data-table__record { min-width: 0; border: 1.5px solid var(--border); border-radius: var(--r-card); background: var(--surface); padding: var(--space-3); }
 .data-table__record dl { display: grid; gap: var(--space-2); margin: 0; }
@@ -320,9 +343,6 @@ input[type='search']::-webkit-search-results-decoration {
 .data-table__record dd { margin: 0; overflow-wrap: anywhere; }
 .data-table__record-select { display: flex; align-items: center; gap: var(--space-2); min-height: 44px; }
 .data-table__record-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-top: var(--space-2); border-top: 1px solid var(--border); }
-@media (pointer: coarse) {
-  .data-table--compact .data-table__row td { height: 44px; }
-}
 .data-table td button,
 .data-table td .btn,
 .data-table td [role="button"],

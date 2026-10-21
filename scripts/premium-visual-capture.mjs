@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
+import { setMaxListeners } from 'node:events'
 
 const phase = process.argv[2] ?? 'before'
 if (!['before', 'after', 'inspect'].includes(phase)) throw new Error('Use before, after or inspect')
@@ -24,6 +25,7 @@ try {
   }
   if (!target) throw new Error('Headless Chromium did not start')
   socket = new WebSocket(target.webSocketDebuggerUrl)
+  setMaxListeners(100, socket)
   await new Promise(resolve => socket.addEventListener('open', resolve, { once: true }))
   let id = 0
   const command = (method, params = {}) => new Promise((resolve, reject) => {
@@ -44,6 +46,7 @@ try {
     return r.result?.value
   }
   await command('Page.enable')
+  await command('Emulation.setDeviceMetricsOverride', { width:1440, height:1000, deviceScaleFactor:1, mobile:false })
   await command('Network.enable')
   // Only the isolated Vite origin and inline/local resources may load.
   await command('Fetch.enable', { patterns: [{ urlPattern: '*' }] })
@@ -62,7 +65,12 @@ try {
       await delay(200)
     }
     await evaluate('document.fonts.ready.then(() => true)')
-    await delay(600)
+    await delay(1500)
+    for (let i = 0; i < 80; i++) {
+      const loading = await evaluate("/Loading (equipment form|record|saved|rentals|clients|inventory)|Loading[….]{1,3}/i.test(document.body.innerText)")
+      if (!loading) break
+      await delay(200)
+    }
   }
   await navigate('/login')
   if (!await evaluate("!!document.querySelector('.auth-mock-btn')")) {
@@ -72,9 +80,11 @@ try {
   await evaluate("document.querySelector('.auth-mock-btn').click()")
   await delay(1500)
   await navigate('/rentals')
-  const booking = await evaluate("Array.from(document.querySelectorAll('a[href^=\"/rentals/\"]')).map(a=>a.getAttribute('href')).find(h=>!h.includes('/new') && h.split('/').length===3)")
+  await delay(1500)
+  const booking = await evaluate("(() => {const n=document.querySelector('tbody')?.innerText.match(/#(\\d+)/)?.[1];return n ? '/rentals/'+n : null})()")
   await navigate('/inventory')
-  const asset = await evaluate("Array.from(document.querySelectorAll('a[href^=\"/inventory/\"]')).map(a=>a.getAttribute('href')).find(h=>!/(new|labels|stock|purchase|warranty|bundles|cases|maintenance)/.test(h))")
+  await delay(1500)
+  const asset = await evaluate("(() => {const n=document.querySelector('tbody')?.innerText.match(/EQ\\d+/)?.[0];return n ? '/inventory/'+n : null})()")
   console.log(JSON.stringify({ booking, asset }))
   const routes = [ ['today','/today'], ['rentals','/rentals'], ['new-rental','/rentals?action=new'],
     ['booking', booking], ['inventory','/inventory'], ['add-equipment','/inventory?tab=new'],
@@ -84,8 +94,10 @@ try {
   configs.push({width:820,theme:'dark',zoom:1},{width:1440,theme:'dark',zoom:1},
     {width:820,theme:'light',zoom:1.25},{width:1440,theme:'dark',zoom:1.25},
     {width:1440,theme:'hc',zoom:1,contrast:true},{width:375,theme:'light',zoom:1,reduce:true})
-  const results = []
+  const selected = process.argv[3]?.split(',')
+  const results = selected && fs.existsSync(path.join(out,'measurements.json')) ? JSON.parse(fs.readFileSync(path.join(out,'measurements.json'),'utf8')).filter(r=>!selected.includes(r.screen)) : []
   for (const [screen, route] of routes) {
+    if (selected && !selected.includes(screen)) continue
     if (!route) { results.push({screen, error:'No actual mock record link found'}); continue }
     await navigate(route)
     for (const config of phase === 'inspect' ? configs.filter(c=>[375,1440].includes(c.width) && c.zoom===1 && !c.reduce && !c.contrast) : configs) {

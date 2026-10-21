@@ -8,7 +8,7 @@ import { InformationDrawer } from './InformationDrawer'
 import { CollapsibleAside } from './CollapsibleAside'
 import { useViewport } from '../../lib/device'
 import { Button as SharedButton, type ButtonProps } from './Button'
-import { Card as SharedCard } from './Card'
+import { Card as SharedCard, surfaceStyle } from './Card'
 
 /**
  * Page furniture shared by every Generation C screen.
@@ -20,13 +20,7 @@ import { Card as SharedCard } from './Card'
 
 /* ── card ──────────────────────────────────────────────────────────────── */
 
-export const cardStyle = {
-  background: 'var(--surface-card, var(--card))',
-  border: '1.5px solid var(--border)',
-  borderRadius: 'var(--r-card)',
-  boxShadow: 'var(--shadow-card), var(--specular-rim)',
-  transition: 'transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background-color var(--dur-theme) var(--ease), border-color var(--dur-theme) var(--ease)',
-} as const
+export const cardStyle = surfaceStyle
 
 export function Card({
   id,
@@ -154,7 +148,7 @@ export function KpiStrip({ items, columns }: { items: Kpi[]; columns?: number })
         // The delta stays inline — it is a figure, not an explanation.
         const info = [k.definition, k.note, isZero ? k.zeroExplanation : undefined].filter((t): t is string => Boolean(t))
         return (
-          <article key={k.label} className="surface-card kpi-tile lift" style={{ ...cardStyle, padding: '13px 14px', minWidth: 0 }}>
+          <article key={k.label} className="surface-card kpi-tile" style={{ padding: 'var(--section-padding)', minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
               <span
                 style={{
@@ -182,10 +176,8 @@ export function KpiStrip({ items, columns }: { items: Kpi[]; columns?: number })
                 <span
                   className="kpi-tile__label"
                   style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.12em',
+                    fontSize: 'var(--t-meta)',
+                    fontWeight: 600,
                     color: 'var(--muted)',
                     minWidth: 0,
                     whiteSpace: 'nowrap',
@@ -222,7 +214,7 @@ export function KpiStrip({ items, columns }: { items: Kpi[]; columns?: number })
                 marginTop: 9,
                 fontSize: k.value.length > 8 ? 'clamp(16px, 1.05vw, var(--t-kpi, 22px))' : 'clamp(16px, 1.5vw, var(--t-kpi, 22px))',
                 fontWeight: 700,
-                fontFamily: 'var(--font-display)',
+                fontFamily: 'var(--font-id)',
                 color: 'var(--text)',
                 lineHeight: 1.15,
                 letterSpacing: '-0.025em',

@@ -105,5 +105,6 @@ artifacts/
 astra-main-tests-final.json
 .pglite-result.json
 .test-result.json
+.coverage-result.json
 repomix-output.*
 repomix-part*.xml

@@ -33,7 +33,7 @@ export const ModulePageShell: React.FC<ModulePageShellProps> = ({
       {subHeader}
       {kpiStrip}
       {filterBar}
-      <div className="module-page-shell__content" style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0, width: '100%' }}>
+      <div className="module-page-shell__content">
         {children}
       </div>
       {footer}

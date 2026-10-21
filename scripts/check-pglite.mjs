@@ -51,6 +51,7 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ALLOWED_ANON_FUNCTIONS } from './allowed-anon-functions.mjs'
+import { beginVerification, finishVerification } from './test-receipt.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, '..')
@@ -61,6 +62,8 @@ const args = process.argv.slice(2)
 const stopFirst = args.includes('--stop')
 const fromIdx = args.indexOf('--from')
 const from = fromIdx === -1 ? null : args[fromIdx + 1]
+const verificationStart = beginVerification(ROOT, `npm run check:pglite${args.length ? ` -- ${args.join(' ')}` : ''}`, 'disposable local PGlite; no network')
+writeFileSync(join(ROOT, '.pglite-result.json'), JSON.stringify(verificationStart, null, 2))
 
 const db = await PGlite.create({ extensions: { pgcrypto, btree_gist } })
 const version = (await db.query('select version()')).rows[0].version.split(',')[0]
@@ -254,6 +257,7 @@ if (definerAudit.unpinned.length) {
   process.exit(1)
 }
 const pgliteResult = {
+  ...finishVerification(verificationStart, ROOT, !from),
   applied,
   total: files.length,
   failed: failures.length,

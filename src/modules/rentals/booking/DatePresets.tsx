@@ -1,13 +1,13 @@
 import { useMemo } from 'react'
-import { getBusinessToday, kathmanduCivil } from '../../../lib/bs'
+import { kathmanduCivil } from '../../../lib/bs'
 import { TouchTarget } from '../../../components/ui/TouchTarget'
 import type { Paisa } from '../../../lib/money'
 import { formatMoney } from '../../../lib/money'
 import { rentalPresetReturnDate } from '../../../lib/rentalDatePreset'
 
-/** Today as YYYY-MM-DD in UTC (Kathmandu civil day starts at 06:00, but we use UTC for ISO) */
+/** Today's civil date for the pickup date field; convert the instant only once. */
 function todayIso(): string {
-  return new Date(kathmanduCivil(getBusinessToday())).toISOString().slice(0, 10)
+  return new Date(kathmanduCivil(new Date())).toISOString().slice(0, 10)
 }
 
 /**

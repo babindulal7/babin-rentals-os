@@ -312,7 +312,7 @@ describe('L1 / P0 — Quick Actions Record Payment in BookingDetail', () => {
 
     const recordBtn = button('Record Payment')
     expect(recordBtn?.disabled).toBe(true)
-    expect(hasReason('is fully settled (no outstanding balance)')).toBe(true)
+    expect(hasReason('no outstanding rental balance')).toBe(true)
   })
 
   it('disables Record Payment and offers Create Invoice when booking has no invoice', async () => {

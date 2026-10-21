@@ -288,9 +288,9 @@ export async function getOperationsReport(options?: ReportFilterOptions, now: Da
     returnConditions: [...condMap.entries()]
       .sort((a, b) => (CONDITION_RANK[a[0]] ?? -1) - (CONDITION_RANK[b[0]] ?? -1))
       .map(([condition, count]) => ({ condition, count, percent: percentOf(count, returns.length) })),
-    pickups: pickups.slice(0, 10),
-    returns: returns.slice(0, 10),
+    pickups,
+    returns,
     overdueList: overdueList.sort((a, b) => b.daysOverdue - a.daysOverdue),
-    packingJobs: packingJobs.sort((a, b) => a.pickupScheduled.localeCompare(b.pickupScheduled)).slice(0, 10),
+    packingJobs: packingJobs.sort((a, b) => a.pickupScheduled.localeCompare(b.pickupScheduled)),
   }
 }

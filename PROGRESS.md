@@ -1,5 +1,81 @@
 # Progress Log
 
+## 2026-10-21 — ASTRA master repair continuation (current full gates pending)
+
+**Did**
+- Preserved the initial Icon.tsx edit and progress snapshot in artifacts/astra-20261021-024418; continued in the existing project. Subsequent shared edits and automatic local checkpoints are retained.
+- Corrected outbox duplicate-receipt loss and cross-tab replay coordination; repaired nested modal locks, billable date presets, Today shift anchors and duplicate Finance sub-header actions.
+- Added complete confirmed report pagination; missing datasets now refuse instead of asserting zero. Operational/damage exports retain every row; cancelled values do not inflate earned stage totals, Closed is completed, and missing capital prevents a known fleet return.
+- Full-suite attempts now invalidate prior receipts; migration/lifecycle receipts record command, SHA, source, timing and environment. Completion leaves stale dimensions unmeasured and labels structural counts separately.
+
+**Ruled**
+- No new financial, production, warranty, handover or branch permission model was invented. Existing OPEN_DECISIONS and unavailable live prototype states remain. No new SQL migration was written or applied.
+
+**Verified**
+- Outbox/identity/sync: 29 focused checks pass; SQL security: 15 existing groups pass locally.
+- UI/report integration: 123 focused checks pass; additional report completeness/stage/export/ROI checks: 72 pass. Modal/preset checks: 16 pass.
+- Receipt Node tests: 7 pass. An intentional isolated failed fixture returned exit 1 and completion exit 1 with 0/1, proving stale-green refusal. It is outside the normal suite.
+- Initial full-suite attempt was interrupted before a summary and certifies nothing. The ordered final run records exact current results in artifacts/astra-20261021-024418; no full passing count is claimed yet.
+- Two browser attachment attempts failed. No screenshots, responsive matrix, hosted Storage/JWT, physical device or true PostgreSQL race acceptance is claimed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 168 files · check:pglite Historical, incomplete or failed receipt (2026-10-20T21:39:36.339Z); current source NOT VERIFIED. Suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-20T21:40:29.485Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Finish current-source full suite, coverage, SQL gates, lints and live-default build; repair any failures and refresh this entry with actual results.
+- Shared backends and legacy ownership recovery; VAT/per-unit revenue/branch scope acceptance; authenticated hosted API, device, document/evidence and performance acceptance remain open. Production launch HOLD. No GitHub write, deployment or live Supabase operation was performed.
+
+
+
+## 2026-10-21 — Review findings 1–3: honest floor shortcuts and recorded invoice exports
+
+**Did**
+- Removed Quick Dispatch and its manufactured government-ID/authorization checks, receiver/warehouse signatures and photo count. The existing Mark Ready Picked Up bulk action remains and does not clear those gates.
+- Bulk return receipt no longer auto-passes cinema QC or fills signature records. Explicit QC state and signature capture remain separate from marking items received.
+- Added `src/lib/pdf/invoicePdfData.ts` to map the recorded invoice subtotal, discount, taxable amount, VAT rate/amount, total, paid and outstanding values plus line days/rates into PDF data. Finance no longer substitutes the grand total for the subtotal/taxable amount or invents a generic line when line reads fail. Read errors and empty line results refuse export with an inline message.
+- Added eight regressions across handover, return and Finance PDF tests; preserved unrelated concurrent work. Application changes were retained through automatic sync/other-session merges; this session did not deploy or apply a migration.
+
+**Ruled**
+- Applied existing explicit-verification, financial-integrity and inline-error requirements. No new product decision, permission grant, custody transition or tax policy was introduced. Findings 4–10 were outside this request.
+
+**Verified**
+- Final focused run against the latest merged app: 3 files / 23 tests PASS, covering desktop and phone bulk actions, retained blocking gates, stored invoice amounts, zero/non-standard VAT rates and missing/error invoice-line refusal.
+- Recorded typecheck and lint PASS; contrast 82/82, local PGlite rebuild 168/168 and lifecycle 31/31 PASS. Production Vite build completed with PWA generation; the existing large-chunk warning remains.
+- Earlier post-fix full run passed 4,947 tests. A later shared-source run passed 5,003/5,008 with five failures outside these fixes and a changed source fingerprint. Targeted recheck after other-session date changes passed 14/15: date presets cleared; the shell boundary fixture still lacks `IS_MOCK` on its Supabase mock. Neither run certifies the entire current checkout. Durable scoped record: `docs/verification/REVIEW_FIXES_1_3_2026-10-21.json`.
+
+## Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | mean of five | ≈ 98% | +0 |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-20T21:39:36.339Z). Suite: Historical suite: 5034/5039 passed, 5 failed (recorded 2026-10-20T21:39:16.908Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-20T21:40:29.485Z.
+Counted by `npm run completion`, not typed.
+
+The generator's structural estimate and stored repository receipts are not release acceptance. Requested fixes 1–3 are implemented and their focused tests pass; the broader shared-source suite is not certified green.
+
+## Remaining
+
+- Requested fixes remaining (0); new product rulings (0).
+- Broader verification follow-up (1): reconcile the shell test mock and the current shared-checkout full-suite failures in their owning workstreams, then obtain a stable-source run. Keep historical failing/changed-source receipts intact.
+- Next session: address the remaining audit findings only when requested; retain the existing hosted/device acceptance requirements. No live migration or production verification is claimed.
+
 ## 2026-10-21 (iv) — Premium Workbench V1: docked, keyboard-browsable record inspector (Rentals + Inventory)
 
 **Did**
