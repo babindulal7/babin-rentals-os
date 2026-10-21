@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { describeTestReceipt, isCurrentVerification, latestTestReceipt, testReceipt as createTestReceipt, writeTestReceipt } from './test-receipt.mjs'
+import { coverageRunDirectory, describeTestReceipt, isCurrentVerification, latestCoverageReceipt, latestTestReceipt, testReceipt as createTestReceipt, writeTestReceipt } from './test-receipt.mjs'
 
 const context = { sha: 'test-sha', command: 'npm run test', environment: 'isolated test', elapsedMs: 100, scope: 'full-suite' }
 const testReceipt = (report, code, before, after) => createTestReceipt(report, code, before, after, '2026-10-21', context)
@@ -65,4 +65,28 @@ test('an older run finishing green cannot hide a newer failed attempt', () => {
     assert.equal(latestTestReceipt(root).runId, 'newer')
     assert.match(describeTestReceipt(latestTestReceipt(root), 'same'), /^NOT PASSING/)
   } finally { rmSync(root, { recursive: true, force: true }) }
+})
+
+test('concurrent coverage runs have separate cleanup and temporary directories', () => {
+  const root = join(tmpdir(), 'babin-coverage-paths')
+  assert.notEqual(coverageRunDirectory(root, 'run-a'), coverageRunDirectory(root, 'run-b'))
+  assert.equal(coverageRunDirectory(root, 'run-a'), join(root, 'coverage', 'runs', 'run-a'))
+  assert.throws(() => coverageRunDirectory(root, '../shared'), /safe run/)
+})
+
+test('a later plain test success cannot hide an incomplete or failed coverage run', () => {
+  const root = mkdtempSync(join(tmpdir(), 'babin-coverage-receipt-'))
+  try {
+    const older = {...testReceipt(green,0,'same','same'),runId:'old-coverage',startedMs:100,kind:'coverage'}
+    const current = {...older,runId:'new-coverage',startedMs:200,valid:false,success:false}
+    writeTestReceipt(root, older)
+    writeTestReceipt(root, current)
+    writeTestReceipt(root, {...older,runId:'plain-success',startedMs:300,kind:'test'})
+    writeTestReceipt(root, older)
+    assert.equal(latestCoverageReceipt(root).runId,'new-coverage')
+    assert.match(describeTestReceipt(latestCoverageReceipt(root),'same'),/NOT VERIFIED/)
+    assert.equal(latestTestReceipt(root).runId,'plain-success')
+    writeTestReceipt(root,{...current,valid:true,failed:1,passed:9})
+    assert.match(describeTestReceipt(latestCoverageReceipt(root),'same'),/NOT PASSING/)
+  } finally { rmSync(root,{recursive:true,force:true}) }
 })

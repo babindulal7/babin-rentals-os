@@ -57,6 +57,7 @@ describe('exportPdf', () => {
         status: 'Sent',
         bookingNo: 'B-750',
         client: { name: 'Kailash Films' },
+        company: { name: 'Recorded Rentals', panVat: '123456789' },
         lines: [
           {
             description: 'Sony BURANO 8K Cinema Camera',
@@ -95,6 +96,7 @@ describe('exportPdf', () => {
       status: 'Paid',
       bookingNo: 'B-751',
       client: { name: 'Muktinath Media' },
+      company: { name: 'Recorded Rentals', panVat: '123456789' },
       lines: [
         {
           description: 'DJI Ronin 4D 6K',

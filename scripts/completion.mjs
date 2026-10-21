@@ -52,7 +52,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from '
 import { join, dirname, resolve, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
-import { beginVerification, finishVerification, isCurrentVerification, latestTestReceipt, verificationSourceHash, testReceipt, describeTestReceipt, writeTestReceipt } from './test-receipt.mjs'
+import { beginVerification, finishVerification, isCurrentVerification, latestCoverageReceipt, latestTestReceipt, verificationSourceHash, testReceipt, describeTestReceipt, writeTestReceipt } from './test-receipt.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, '..')
@@ -397,15 +397,17 @@ const cells = {
   Permissions: `${permissions.n} / ${permissions.d} (${scores[3]}%)`,
   Lifecycle: lifecycle ? `${lifecycle.n} / ${lifecycle.d} (${scores[4]}%)` : 'not measured — current receipt required',
 }
-const suiteNotPassing = testResult.startsWith('NOT PASSING') || testResult.startsWith('NOT VERIFIED')
+const suiteNotPassing = !testResult.startsWith('PASS —')
+const coverageResult = describeTestReceipt(latestCoverageReceipt(ROOT), verificationSourceHash(ROOT))
+const coverageNotPassing = !coverageResult.startsWith('PASS —')
 
 if (asJson) {
   console.log(JSON.stringify({
     backend, realData, gates, permissions, lifecycle, overall,
     migrations: { files: migrationFiles.length, result: migrationResult },
-    tests: testResult, lifecycle_ran_at: lifecycleAge,
+    tests: testResult, coverage: coverageResult, lifecycle_ran_at: lifecycleAge,
   }, null, 2))
-  process.exit(suiteNotPassing ? 1 : 0)
+  process.exit(suiteNotPassing || coverageNotPassing ? 1 : 0)
 }
 
 const block = [
@@ -421,6 +423,7 @@ const block = [
   `| Overall | structural mean of five | ${overall === null ? 'not measured' : `≈ ${overall}%`} | — |`,
   '',
   `Migrations ${migrationFiles.length} files · check:pglite ${migrationResult}. Suite: ${testResult}.`,
+  `Coverage suite: ${coverageResult}.`,
   lifecycleAge ? `Gates read from .lifecycle-result.json, written ${lifecycleAge}.` : '',
   'Counted by `npm run completion`, not typed.',
   'Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.',
@@ -436,4 +439,4 @@ if (gates?.rows.some(([, ok]) => !ok)) {
   console.log('\nGates not yet in Postgres:')
   for (const [name, ok] of gates.rows) if (!ok) console.log(`  ${name}`)
 }
-if (suiteNotPassing) process.exitCode = 1
+if (suiteNotPassing || coverageNotPassing) process.exitCode = 1

@@ -48,3 +48,23 @@ Use `docs/verification/premium-design/verification.json` for the final run and `
 The viewport scaling matrix simulates 125% browser layout/DPR; actual browser-chrome zoom and physical iPad/scanner behavior remain unverified. The initial high-contrast baseline used an invalid theme name and is excluded as a valid before comparison; the final after capture uses the real `high-contrast` theme. Browser money checks use the built-in Warehouse sign-in; Technician/Driver coverage comes from automated permission tests, not an invented mock identity. No release or production certification is implied.
 
 Observed row geometry is retained in the raw matrix: Inventory sample rows are 56px; Edit Equipment unit rows increased from 51px to 57px to accommodate actual 44px fields. Multi-line Rentals sample rows remain 74.6px (client/project plus BS/AD dates); no text or date is hidden to force the proposed 48–56px band. This pass makes no blanket claim that every row is 52px.
+
+## Final local verification
+
+All nine command checks passed on one unchanged source fingerprint (`f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b`). The final test rerun replaced the earlier changing-source typecheck/test receipts.
+
+| Command | Result |
+|---|---|
+| `npm run typecheck` | PASS (exit 0) |
+| `npm test -- --maxWorkers=2` | PASS (exit 0) |
+| `npm run check:pglite` | PASS (exit 0) |
+| `npm run check:lifecycle` | PASS (exit 0) |
+| `npm run check:contrast` | PASS (exit 0) |
+| `npm run lint` | PASS (exit 0) |
+| `npm run lint:shell` | PASS (exit 0) |
+| `npm run lint:ui-copy` | PASS (exit 0) |
+| `npm run build` | PASS (exit 0) |
+
+Full suite: **5,162 tests across 410 files**, no skipped tests reported. Local PGlite: **168 migrations, zero failed**. Lifecycle: **31/31**. Contrast: **82/82**. Browser: **48/48 interactions**, **156 final captures**, zero measured page/header geometry failures. All **329** gallery/matrix links resolve.
+
+`npm run completion` regenerated the repository structural counter; its raw output is `docs/verification/premium-design/completion.log`. It is not a visual or device-completion percentage. Final command provenance is `verification.json`, assembled from the integration-pass and final-test-pass receipts; per-command raw logs are in that directory. Historical typecheck/test log filenames were superseded by the final rerun; historical test JSON remains under `artifacts/`.

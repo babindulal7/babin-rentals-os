@@ -246,68 +246,68 @@
   "finishedAt": "2026-10-21T11:58:31.435Z",
   "sourceUnchangedSinceStart": false,
   "currentSourceAssessment": {
-    "at": "2026-10-21T12:19:52.442Z",
-    "sourceHash": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
-    "verified": true,
+    "at": "2026-10-21T17:41:23.395Z",
+    "sourceHash": "142ce80647fccf77da7201fca98ae6ed4ed9e8b3ade4a983ddad5d0694581279",
+    "verified": false,
     "checks": [
       {
         "name": "lint",
-        "passed": true
+        "passed": false
       },
       {
         "name": "test:coverage",
-        "passed": true
+        "passed": false
       },
       {
         "name": "test:receipts",
-        "passed": true
+        "passed": false
       },
       {
         "name": "check:pglite",
-        "passed": true
+        "passed": false
       },
       {
         "name": "check:financial-integrity",
-        "passed": true
+        "passed": false
       },
       {
         "name": "check:security",
-        "passed": true
+        "passed": false
       },
       {
         "name": "check:lifecycle",
-        "passed": true
+        "passed": false
       },
       {
         "name": "check:contrast",
-        "passed": true
+        "passed": false
       },
       {
         "name": "lint:progress",
-        "passed": true
+        "passed": false
       },
       {
         "name": "lint:shell",
-        "passed": true
+        "passed": false
       },
       {
         "name": "lint:ui-copy",
-        "passed": true
+        "passed": false
       },
       {
         "name": "test:ui-copy",
-        "passed": true
+        "passed": false
       },
       {
         "name": "build:typecheck",
-        "passed": true
+        "passed": false
       },
       {
         "name": "build:vite",
-        "passed": true
+        "passed": false
       }
     ],
-    "testDescription": "PASS — 5162/5162 passed, 0 failed (recorded 2026-10-21T12:19:37.453Z); source fingerprint matches",
+    "testDescription": "Historical suite: 5162/5162 passed, 0 failed (recorded 2026-10-21T12:19:37.453Z); current source NOT VERIFIED",
     "typecheckEvidence": "build:typecheck (final complete tsc --noEmit)",
     "gateSelection": "Latest recorded gate with each required name; original failures and source-change flags remain in the report.",
     "note": "The original sourceUnchangedSinceStart and per-gate results are retained. An early changed-source check is not certified; all required checks above must independently match the current source.",

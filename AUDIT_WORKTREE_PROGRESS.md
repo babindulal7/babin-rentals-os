@@ -1,5 +1,13 @@
 # Current continuation — 21 October 2026, integrated local fixes
 
+> **21 October 2026 — confirmation completeness continuation, release HOLD:** the saved `ASTRA_UI_STABLE_CHECKPOINT_2026-10-21.json` records 5,162 passing tests and all required local gates on fingerprint `f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b`. Subsequent local source edits are not certified by that checkpoint. Pre-commit confirmation now reads complete ordered booking-line pages and refuses incomplete/invalid results before any transition; nine new regressions failed against the prior source. Current checks: `docs/verification/ASTRA_CONFIRM_LINES_2026-10-21.json`. Earlier entries below are historical; hosted, physical-device and full offline acceptance remain open.
+
+## Latest integration checkpoint
+
+- 5162/5162 tests passed; 0 failed. All required local gates match the assessed source.
+- Actual fixes: post-confirmation reservation readback preserves unknown counts; dashboard calendar footer Today restores its operational preset; overflow trigger meets 44px minimum. Regressions: 207 readback, 107 integration, 18 touch/header and 38 dashboard/calendar/form checks passed in their respective scoped runs.
+- Affected files, raw gate results and remaining acceptance: newest PROGRESS.md entry and docs/verification/ASTRA_UI_FOLLOWUP_2026-10-21.json. Existing recovery branches/local edits retained. Hosted/device/offline/shared-workflow acceptance remains OPEN.
+
 ## UI fixes — checkpoint before final gate results
 
 - The previous complete run passed 5,130/5,131 tests; database, financial integrity, security, lifecycle, contrast and build commands passed. Source changed during verification, so it did not certify the checkout. Preserved at `docs/verification/ASTRA_UI_INTEGRATION_CHECKPOINT_2026-10-21.json`.
@@ -37,7 +45,7 @@
 
 ### Final local verification for this checkpoint
 
-- **Current source verified locally:** fingerprint `ae78994762597f7fd9df832378ef184b77eed5f5a2cbf7402882c1bbc4adb0f8`, 387 files / **4,931 tests passed**, zero failed/skipped, with coverage. Full lint, receipt tests, 168 migrations, financial integrity, 15 SQL security groups, 31 lifecycle steps, 82 contrast checks, shell/UI-copy checks, final complete typecheck and production build passed against that same fingerprint. Durable source assessment: `docs/verification/ASTRA_LOCAL_2026-10-20.json`.
+- **Current source verified locally:** fingerprint `ae78994762597f7fd9df832378ef184b77eed5f5a2cbf7402882c1bbc4adb0f8`, 387 files / **4,931 tests passed**, zero failed/skipped, with coverage. Full lint, receipt tests, 168 migrations, financial integrity, 15 SQL security groups, 31 lifecycle steps, 82 contrast checks, shell/UI-copy checks, final complete typecheck and production build passed against that same fingerprint. Durable historical source assessment: `docs/verification/ASTRA_AVAILABILITY_CHECKPOINT_2026-10-20.json`.
 - The first typecheck overlapped edits, so the conservative batch runner exits 1 and retains `sourceUnchangedSinceStart: false`. The final complete typecheck is stable and supersedes it. The separate computed current-source assessment requires every necessary check, including full tests and build, to match the current fingerprint; it is true. No raw failure/change flag was erased.
 - Coverage: statements 64.48%, branches 73.61%, functions 50.05%, lines 64.41% for configured coverage scope. Build: main 704.47 kB / gzip 199.61 kB; New Rental 278.83 kB; scanner vendor 453.49 kB. Large-chunk warning remains; startup/device performance is unmeasured.
 - Migration 0170 is **locally VERIFIED**, **NOT APPLIED**, **NOT PRODUCTION-VERIFIED**. Browser retry failed attaching to the existing preview (`Emulation.setFocusEmulationEnabled` timeout); the temporary mock preview server was stopped, without touching user data or other servers. Desktop/iPad/mobile acceptance remains OPEN.

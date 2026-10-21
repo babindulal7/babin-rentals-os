@@ -33,14 +33,29 @@ export function beginVerification(root, command, environment) {
 /** Concurrent runs retain separate receipts. Completion reads the newest
  * attempt, so an older slow green run cannot overwrite a later failure.
  */
-export function latestTestReceipt(root) {
+function readTestReceipts(root) {
   const dir = join(root, 'artifacts', 'test-receipts')
   const paths = existsSync(dir) ? readdirSync(dir).filter(name => name.endsWith('.json')).map(name => join(dir, name)) : []
   paths.push(join(root, '.test-result.json'))
-  const receipts = paths.flatMap(path => {
+  paths.push(join(root, '.coverage-result.json'))
+  return paths.flatMap(path => {
     try { return [JSON.parse(readFileSync(path, 'utf8'))] } catch { return [] }
   })
-  return receipts.sort((a, b) => (b.startedMs ?? 0) - (a.startedMs ?? 0))[0] ?? null
+}
+
+export function latestTestReceipt(root) {
+  return readTestReceipts(root).sort((a, b) => (b.startedMs ?? 0) - (a.startedMs ?? 0))[0] ?? null
+}
+
+export function latestCoverageReceipt(root) {
+  return readTestReceipts(root).filter(receipt => receipt.kind === 'coverage' || /^npm run test:coverage\b/.test(receipt.command ?? ''))
+    .sort((a, b) => (b.startedMs ?? 0) - (a.startedMs ?? 0))[0] ?? null
+}
+
+/** Vitest cleans its reports directory, including .tmp. Never share it across runs. */
+export function coverageRunDirectory(root, runId) {
+  if (!/^[a-zA-Z0-9-]+$/.test(runId ?? '')) throw new Error('Coverage requires a safe run ID')
+  return join(root, 'coverage', 'runs', runId)
 }
 
 export function writeTestReceipt(root, receipt) {
@@ -56,6 +71,7 @@ export function writeTestReceipt(root, receipt) {
   if (latestTestReceipt(root)?.runId === receipt.runId) {
     atomicWrite(join(root, '.test-result.json'))
   }
+  if (latestCoverageReceipt(root)?.runId === receipt.runId) atomicWrite(join(root, '.coverage-result.json'))
 }
 
 export function finishVerification(start, root, success) {

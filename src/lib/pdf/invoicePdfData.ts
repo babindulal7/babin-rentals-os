@@ -1,9 +1,9 @@
 import { rupees } from '../money'
 import type { InvoiceLineItem, InvoiceListRow } from '../queries/finance'
-import type { InvoicePdfData } from './generatePdf'
+import type { InvoicePdfCompany, InvoicePdfData } from './generatePdf'
 
 /** Export the recorded invoice snapshot; never reconstruct tax or discounts from the grand total. */
-export function invoicePdfData(invoice: InvoiceListRow, lines: readonly InvoiceLineItem[]): InvoicePdfData {
+export function invoicePdfData(invoice: InvoiceListRow, lines: readonly InvoiceLineItem[], company: InvoicePdfCompany): InvoicePdfData {
   if (lines.length === 0) throw new Error('No persisted invoice lines were returned. Retry after the invoice lines are available.')
   return {
     invoiceNo: invoice.invoiceNo,
@@ -12,6 +12,7 @@ export function invoicePdfData(invoice: InvoiceListRow, lines: readonly InvoiceL
     dueDateAd: invoice.dueDateAd,
     bookingNo: invoice.bookingNo,
     client: { name: invoice.clientName },
+    company,
     lines: lines.map((line) => ({
       description: line.description,
       quantity: line.quantity,

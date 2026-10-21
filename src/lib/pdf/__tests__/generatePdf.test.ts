@@ -8,6 +8,41 @@ import { rupees } from '../../money'
 
 describe('generatePdf', () => {
   describe('generateInvoicePdf', () => {
+    const basicInvoice: InvoicePdfData = {
+      client: { name: 'Test Client' }, lines: [], subtotalPaisa: rupees(1000),
+      taxablePaisa: rupees(1000), vatPaisa: rupees(130), totalPaisa: rupees(1130),
+    }
+
+    it('refuses an invoice without a saved business name instead of inventing one', () => {
+      expect(() => generateInvoicePdf(basicInvoice)).toThrow(/organisation name/i)
+    })
+
+    it('refuses a VAT-bearing invoice without a saved VAT/PAN', () => {
+      expect(() => generateInvoicePdf({ ...basicInvoice, company: { name: 'Recorded Rentals' } })).toThrow(/VAT\/PAN/i)
+    })
+
+    it('omits unset VAT/PAN and optional contacts when no VAT is charged', () => {
+      const text = new TextDecoder().decode(generateInvoicePdf({ ...basicInvoice, vatPaisa: rupees(0), company: { name: 'Recorded Rentals' } }))
+      expect(text).not.toContain('PAN/VAT:')
+      expect(text).not.toContain('601234567')
+      expect(text).not.toContain('Kathmandu, Nepal')
+    })
+
+    it('prints supplied business details without adding invented contact details or a tagline', () => {
+      const text = new TextDecoder().decode(generateInvoicePdf({
+        ...basicInvoice,
+        company: { name: 'Recorded Rentals', panVat: '123456789', phone: '+977 9801234567', description: 'Saved business description' },
+      }))
+      expect(text).toContain('Recorded Rentals')
+      expect(text).toContain('PAN/VAT: 123456789')
+      expect(text).toContain('+977 9801234567')
+      expect(text).toContain('Saved business description')
+      expect(text).not.toContain('601234567')
+      expect(text).not.toContain('4400000')
+      expect(text).not.toContain('Kathmandu, Nepal')
+      expect(text).not.toContain('Professional Camera, Lighting')
+    })
+
     it('produces valid PDF 1.4 binary bytes with standard structure', () => {
       const data: InvoicePdfData = {
         invoiceNo: 'INV-2026-0001',
@@ -23,7 +58,7 @@ describe('generatePdf', () => {
         },
         company: {
           name: 'Babin Rentals Kathmandu',
-          panVat: 'VAT: 601234567',
+          panVat: '123456789',
         },
         lines: [
           {
@@ -103,6 +138,7 @@ describe('generatePdf', () => {
         status: 'Sent',
         bookingNo: 'BK-999',
         client: { name: 'Large Project Crew' },
+        company: { name: 'Recorded Rentals', panVat: '123456789' },
         lines: Array.from({ length: 15 }, (_, i) => ({
           description: `Gear Item #${i + 1}`,
           quantity: 1,
@@ -130,6 +166,7 @@ describe('generatePdf', () => {
         status: 'Draft',
         bookingNo: 'B-720',
         client: { name: 'Everest Cine' },
+        company: { name: 'Recorded Rentals', panVat: '123456789' },
         lines: [
           {
             description: 'Sony FX3 Cinema Camera',

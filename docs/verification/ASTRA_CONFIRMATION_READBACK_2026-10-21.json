@@ -22,7 +22,7 @@
     "src/lib/queries/__tests__/availability.test.ts",
     "src/actions/rentals/__tests__/confirmRental.test.ts"
   ],
-  "status": "Focused checks passed; full current-source checks running",
+  "status": "207 focused tests passed; full integration outcome: 5162/5162 tests passed; 0 failed. All required local gates match the assessed source.",
   "currentEvidence": "ASTRA_LOCAL_2026-10-21.json",
   "remaining": [
     "Pre-commit confirmation line-count completeness",

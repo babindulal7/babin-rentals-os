@@ -1,5 +1,84 @@
 # Progress Log
 
+## 2026-10-21 — Calendar Today semantics, touch targets and integration verification
+
+**Did**
+- Repaired two stale integration test contracts: the Supabase mock declares mock mode, and settled payments assert the current truthful refusal while retaining the disabled-payment and money-role checks. Five affected suites: 107/107 PASS.
+- Repaired the later profile-selector failure against its accessible name; all 15 ownership tests PASS, including notes access and focus restoration.
+- Browser observation reproduced the dashboard footer Today defect: it selected a custom day, cleared the quick Today preset and removed overdue/QC context. Added an optional CalendarPopover onToday callback; Today uses its existing quick-preset commit for master/pickup/return controls. Ordinary calendar date selection is unchanged. Files: DateField.tsx, Today.tsx and their tests.
+- Corrected the shared OverflowMenu trigger from 36px to the required 44px minimum, preserving its actions, portal and keyboard behavior. Regression was red before the fix; 18 related tests PASS afterward.
+- At the minimum supported 360px width, browser measurement still found the profile ending at 366px. Reduced phone-only Header.tsx gaps while retaining the 110px title floor and all 44px targets. The browser regression then passed for all five buttons, with the final profile edge at 348px.
+- Preserved all concurrent local source/configuration changes, recovery branches and the previous failed full run (ASTRA_READBACK_CHECKPOINT_2026-10-21.json). No push, PR, live mutation, destructive reset or offline-work deletion.
+
+**Ruled**
+- Applied existing Today/overdue semantics and 44px secondary touch-target law. No new pricing, custody, permission or product decision. Migration 0170 remains WRITTEN and locally VERIFIED, NOT APPLIED and NOT PRODUCTION-VERIFIED. No new migration was needed for these UI fixes.
+
+**Verified**
+- Footer reproduction: 3 new cases failed before the fix; afterward 38/38 across dashboard/calendar/overflow/New Rental suites PASS, including ordinary Today date selection and phone/tablet form structure. Confirmation readback remains covered by the earlier 207 focused cases.
+- Full local run: 5162/5162 tests passed; 0 failed. All required local gates match the assessed source. Raw results: typecheck: exit 0; lint: exit 0; test:coverage: exit 0 (source changed); test:receipts: exit 0; check:pglite: exit 0; check:financial-integrity: exit 0; check:security: exit 0; check:lifecycle: exit 0; check:contrast: exit 0; lint:progress: exit 0; lint:shell: exit 0; lint:ui-copy: exit 0; test:ui-copy: exit 0; build:typecheck: exit 0; build:vite: exit 0; lint (follow-up): exit 0; test:coverage (follow-up): exit 0. Source assessment: docs/verification/ASTRA_LOCAL_2026-10-21.json.
+- Browser regressions: the fixed desktop Today footer retains identical panel geometry, one header and overdue context. New Rental at 360x800 has all five header buttons fully inside the viewport at 44x44px; catalogue bottom 729.79px stays above bottom navigation at 742px. A clean 820x1180 Today load has one header, stacked queues inside the viewport and visible overdue context; its screenshot was inspected and that tab/viewport cleanup confirmed. Earlier transient-resize and attachment failures remain recorded separately. These are mock-preview checks, not physical-device or complete-workflow acceptance. Screenshots/results: docs/verification/astra-responsive-2026-10-21/fixed-regressions.json. The original equipment form was not edited.
+- An intermediate typecheck reported two excessive-depth errors in concurrently edited rentalReports.ts; the final build:typecheck result above is the later authority. No earlier failure was erased.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 98% | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-21T12:19:48.804Z). Suite: PASS — 5162/5162 passed, 0 failed (recorded 2026-10-21T12:19:23.038Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-10-21T12:20:14.639Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+
+- The saved f25235dd checkpoint passes the required local gates. Later source edits, including confirmation completeness, require fresh verification; see ASTRA_CONFIRM_LINES_2026-10-21.json. This is not hosted or complete device acceptance.
+- Finish physical-device and offline acceptance, nested drawers, complete tablet workflows and remaining layout/contrast variants. Desktop Today footer, clean 820px Today layout and 360px booking-header/catalogue browser regressions passed; broader screenshots remain scoped observations.
+- Review pre-commit confirmation line-count completeness; complete shared operational tools and explicit legacy outbox ownership recovery. VAT classification, document numbering/atomicity, floor evidence persistence, hosted JWT/Storage and measured performance remain open in docs/REMAINING_WORK.md.
+
+
+## 2026-10-21 — Premium design recovery: local presentation and browser verification
+
+**Did**
+- Consolidated Card appearance and semantic surface/elevation/spacing ownership; kept the existing palette, fonts, theme choice and shared Add/Edit Equipment engine.
+- Put equipment Create/Save in the existing global header with secondary actions in More; corrected phone action clipping, 44px equipment controls, tracking-selector contrast, tablet full-width form groups and on-demand 320px summary drawers. Retained Today queues, statuses and domain actions.
+- Added shared component/header regression tests, repeatable isolated mock Chromium captures/interactions and a presentation-literal audit. The complete changed-file list is in PREMIUM_DESIGN_CHANGES.md.
+- Created BEFORE_AFTER_VISUAL_MATRIX.md, PREMIUM_DESIGN_CHANGES.md and REMAINING_UI_ISSUES.md; side-by-side screenshots are in docs/verification/premium-design/gallery.html. All 329 evidence links resolve.
+
+**Ruled**
+- Presentation-only consolidation under the supplied brief and existing rulings. No new product/permission decision, working equipment draft persistence, fake data, custody transition or monetary behavior.
+- No migration was authored or applied to Supabase. PGlite migration rebuilds and lifecycle checks below are disposable LOCAL verification; no production application or production verification is claimed. No GitHub write, push, PR, deployment or agent-created commit.
+- Preserved staged/unstaged/untracked user changes and concurrent edits/automatic sync checkpoints; local files were never reset to the audited GitHub reference.
+
+**Verified**
+- Final same-source command receipts: typecheck; full npm test with two workers (**5,162/5,162, 410 files**); check:pglite (**168/168, zero failed**); check:lifecycle (**31/31**); check:contrast (**82/82**); lint; lint:shell; lint:ui-copy; build — all exit 0. Source fingerprint: f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b.
+- Browser: **48/48** real Chromium interaction checks, **156** final route/theme/viewport captures with zero measured page/header geometry failures. Widths 375/768/820/1024/1280/1440/1920; light/dark, high contrast, reduced motion and 125% viewport/DPR emulation. Card variants, header actions, drawers, validation, edit prefills, Finance modal, Calendar Availability, filter URL, focus and sidebar persistence checked.
+- Actual browser-chrome zoom, physical iPad/scanner and screen-reader acceptance remain unverified. The invalid initial high-contrast before theme is excluded; Warehouse's current editor restriction was preserved. Technician/Driver role checks are automated, not invented browser identities.
+- Exact command output and source hashes: docs/verification/premium-design/verification.json. Earlier changing-source passes are retained as historical receipts, not silently presented as current proof.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | — |
+| Overall | structural mean of five | ≈ 98% | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-21T12:19:48.804Z). Suite: PASS — 5162/5162 passed, 0 failed (recorded 2026-10-21T12:19:23.038Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-10-21T12:20:14.639Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+
+- Complete the hardware/actual-browser-zoom and external concept/spec comparisons listed in REMAINING_UI_ISSUES.md. This is local visual implementation evidence, not full hosted/device release acceptance.
+- Equipment draft persistence, attachment storage and relationship backend wiring remain separate tasks; production behavior/permissions were not changed during this pass.
+- Structural completion above comes directly from npm run completion and does not measure visual acceptance.
+
 ## 2026-10-21 (v) — Smart Workspace Views V1: saved views on the Inventory Equipment list
 
 **Did**

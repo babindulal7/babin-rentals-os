@@ -10,7 +10,14 @@ const state = vi.hoisted(() => ({
   total: 967.5,
   linesError: false,
   noLines: false,
+  companyError: false,
   exportPdf: vi.fn().mockResolvedValue({}),
+}))
+vi.mock('../../../lib/queries/invoiceCompany', () => ({
+  fetchInvoiceCompany: vi.fn(async () => {
+    if (state.companyError) throw new Error('Saved business details could not be loaded')
+    return { name: 'Recorded Rentals Ltd', panVat: '123456789', address: 'Recorded branch address', phone: '+977 9801234567', description: 'Recorded business description' }
+  }),
 }))
 vi.mock('../../../lib/pdf/exportPdf', () => ({ exportInvoicePdf: state.exportPdf }))
 vi.mock('../../../lib/auth', () => ({
@@ -48,7 +55,7 @@ let root: Root | undefined
 let container: HTMLDivElement
 
 beforeEach(() => {
-  Object.assign(state, { vatRate: 0.075, vatAmount: 67.5, total: 967.5, linesError: false, noLines: false })
+  Object.assign(state, { vatRate: 0.075, vatAmount: 67.5, total: 967.5, linesError: false, noLines: false, companyError: false })
   state.exportPdf.mockClear()
 })
 afterEach(async () => {
@@ -78,6 +85,7 @@ describe('Finance invoice PDF uses the persisted financial breakdown', () => {
       taxablePaisa: 90000, vatPercent: rate * 100, vatPaisa: state.vatAmount * 100,
       totalPaisa: state.total * 100, paidPaisa: 20000, outstandingPaisa: (state.total - 200) * 100,
       notes: 'Recorded invoice note',
+      company: { name: 'Recorded Rentals Ltd', panVat: '123456789', address: 'Recorded branch address', phone: '+977 9801234567', description: 'Recorded business description' },
       lines: [{ description: 'Sony FX3', quantity: 1, rentalDays: 2, ratePaisa: 50000, totalPaisa: 90000 }],
     }), expect.objectContaining({ invoiceId: '11111111-1111-4111-8111-111111111111', download: true }))
   })
@@ -88,5 +96,13 @@ describe('Finance invoice PDF uses the persisted financial breakdown', () => {
     await exportInvoice()
     expect(state.exportPdf).not.toHaveBeenCalled()
     expect(container.textContent).toContain('Invoice PDF was not exported')
+  })
+
+  it('refuses export inline when saved business details are unavailable', async () => {
+    state.companyError = true
+    await exportInvoice()
+    expect(state.exportPdf).not.toHaveBeenCalled()
+    expect(container.textContent).toContain('Invoice PDF was not exported')
+    expect(container.textContent).toContain('Saved business details could not be loaded')
   })
 })

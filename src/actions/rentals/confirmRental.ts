@@ -298,14 +298,33 @@ async function readBooking(ref: string): Promise<BookingHead> {
 
 /** Live lines only — Law 3, a removed line is `voided_at`, never deleted, and a voided line is not booked. */
 async function readLiveLines(bookingId: string): Promise<Array<{ id: string; qty: number }>> {
-  const { data, error } = await supabase
-    .from('booking_lines')
-    .select('id, qty')
-    .eq('booking_id', bookingId)
-    .is('voided_at', null)
+  const lines: Array<{ id: string; qty: number }> = []
+  const seen = new Set<string>()
+  let units = 0
+  for (;;) {
+    const { data, error } = await supabase
+      .from('booking_lines')
+      .select('id, qty')
+      .eq('booking_id', bookingId)
+      .is('voided_at', null)
+      .order('id', { ascending: true })
+      .range(lines.length, lines.length + 499)
 
-  if (error) throw new Error(`Could not read the lines of the booking, so nothing was confirmed: ${error.message}`)
-  return (data ?? []) as unknown as Array<{ id: string; qty: number }>
+    if (error) throw new Error(`Could not read the lines of the booking, so nothing was confirmed: ${error.message}`)
+    if (!Array.isArray(data)) throw new Error('The booking lines are incomplete. Nothing was confirmed.')
+    // A short page can reflect a server cap; only an empty page finishes the read.
+    if (data.length === 0) return lines
+    for (const row of data) {
+      if (!row || typeof row.id !== 'string' || !row.id.trim() || seen.has(row.id) ||
+          !Number.isSafeInteger(row.qty) || row.qty <= 0 || !Number.isSafeInteger(units + row.qty)) {
+        throw new Error('The booking lines are incomplete or contain invalid quantities. Nothing was confirmed.')
+      }
+      seen.add(row.id)
+      units += row.qty
+      lines.push({ id: row.id, qty: row.qty })
+    }
+    if (lines.length > 50_000) throw new Error('The booking lines exceed the read limit. Nothing was confirmed.')
+  }
 }
 
 /*

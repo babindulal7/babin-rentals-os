@@ -58,6 +58,7 @@ import { ReportCatalog } from '../reports/ReportCatalog'
 import { DateField } from '../../components/ui/DateField'
 import { exportInvoicePdf } from '../../lib/pdf/exportPdf'
 import { invoicePdfData } from '../../lib/pdf/invoicePdfData'
+import { fetchInvoiceCompany } from '../../lib/queries/invoiceCompany'
 import { Pagination } from '../../components/ui/Pagination'
 import './finance.css'
 import { BsAdDate } from '../../components/ui/BsAdDate'
@@ -948,9 +949,9 @@ export default function Finance() {
   const handleExportPdf = useCallback(async (row: InvoiceListRow) => {
     setNotPersisted(null)
     try {
-      const dbLines = await fetchInvoiceLines(row.id)
+      const [dbLines, company] = await Promise.all([fetchInvoiceLines(row.id), fetchInvoiceCompany(row.bookingId)])
       await exportInvoicePdf(
-        invoicePdfData(row, dbLines),
+        invoicePdfData(row, dbLines, company),
         {
           invoiceId: row.id,
           download: true,
