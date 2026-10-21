@@ -12,7 +12,7 @@ const origin = 'http://127.0.0.1:3011'
 const out = path.resolve("docs/verification/premium-design/reverify-20261021-2327", phase)
 fs.mkdirSync(out, { recursive: true })
 const chrome = spawn('C:/Program Files/Google/Chrome/Application/chrome.exe', [
-  '--headless=new', '--remote-debugging-port=9253', '--no-first-run', '--no-default-browser-check', '--disable-gpu',
+  '--headless=new', '--disable-background-networking', '--disable-component-update', '--disable-default-apps', '--disable-extensions', '--remote-debugging-port=9253', '--no-first-run', '--no-default-browser-check', '--disable-gpu',
   `--user-data-dir=${path.join(os.tmpdir(), `babin-premium-${Date.now()}`)}`, 'about:blank',
 ], { windowsHide: true, stdio: ['ignore', 'ignore', fs.openSync(path.join(out,'chromium.log'),'w')] })
 chrome.on('error', error => console.error(error))
@@ -31,7 +31,7 @@ try {
   let id = 0
   const command = (method, params = {}) => new Promise((resolve, reject) => {
     const current = ++id
-    const timer = setTimeout(() => { socket.removeEventListener('message', handler); reject(new Error(`Timed out: ${method}`)) }, 30000)
+    const timer = setTimeout(() => { socket.removeEventListener('message', handler); reject(new Error(`Timed out: ${method}`)) }, 60000)
     const handler = event => {
       const msg = JSON.parse(event.data)
       if (msg.id !== current) return

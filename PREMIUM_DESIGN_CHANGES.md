@@ -1,5 +1,11 @@
 # Precision Cinema Operations — local design recovery
 
+## Follow-up verification
+
+The user requested a fresh verification after the earlier pass. New local edits changed the source fingerprint. Fresh evidence is being recorded separately in `docs/verification/premium-design/reverify-20261021-2327`. The earlier command table below is historical until the new run finishes.
+
+Visual review found and corrected two missed defects: phone KPI labels were clipped by the shared layout, and the identifier font tokens named a family different from the installed self-hosted variable font. Phone KPI labels now wrap at the existing secondary text size; decorative KPI icons yield space on phones. Runtime and package font tokens prefer the installed `JetBrains Mono Variable` family, retaining existing fallbacks. No external font was added. The Card browser fixture now discovers versioned React URLs from the running Vite entry rather than assuming a cache directory.
+
 21 October 2026 (NPT). Local implementation and browser evidence; final verification receipts linked below.
 
 ## Baseline and boundaries

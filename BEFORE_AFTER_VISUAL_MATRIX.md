@@ -1,5 +1,7 @@
 # Before / after visual matrix
 
+Follow-up verification evidence: `docs/verification/premium-design/reverify-20261021-2327`. This later pass found clipped phone KPI labels and an identifier-font registration mismatch; corrected captures are kept separately from the original matrix below.
+
 Local mock only · 21 October 2026 NPT. The tables measure page overflow, header height and header control bounds/targets; PASS is scoped to those measurements, not an entire workflow certification.
 
 Before screenshots: `docs/verification/premium-design/before/`. After screenshots: `after/`. Raw computed values are in each folder’s `measurements.json`. [Side-by-side gallery](docs/verification/premium-design/gallery.html).

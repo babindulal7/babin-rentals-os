@@ -2,7 +2,7 @@
 
 21 October 2026 NPT. Local design recovery acceptance has the following limits; it is not a hosted/device release approval.
 
-- Final current-source command status: see `docs/verification/premium-design/verification.json`; any failing or changed-source check is explicit there. Earlier successful checks are retained separately.
+- Follow-up current-source verification is in progress under `docs/verification/premium-design/reverify-20261021-2327`; the earlier `docs/verification/premium-design/verification.json` is historical for the newer checkout. New failures, interrupted attempts and final results are recorded separately.
 - Physical iPad, scanner, hosted/JWT verification are outside a local mock browser run.
 - The external concept image and full uploaded Add Equipment v3.0 document are not attached here; supplied rules and current seven-section editor are the available authority.
 - Equipment draft persistence, attachment storage and relationship backend wiring are separate tasks. No working Save Draft action is introduced.
