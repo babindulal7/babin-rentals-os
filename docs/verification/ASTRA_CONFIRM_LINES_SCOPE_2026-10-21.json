@@ -1,0 +1,17 @@
+{
+  "at": "2026-10-21T17:53:03.758Z",
+  "sourceHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+  "focusedGateSourceHash": "f723fef07b34b889267c074274403c93f391a1ae0b6ea70f11e0035b2d19f6b9",
+  "focusedGatePassed": true,
+  "matchesFocusedSource": false,
+  "files": [
+    {
+      "path": "src/actions/rentals/confirmRental.ts",
+      "sha256": "20ba0cec8d4654a133d3fa6bf6596fd4c30fe7a76f85a7ab1be93b3e25abbccd"
+    },
+    {
+      "path": "src/actions/rentals/__tests__/confirmRental.test.ts",
+      "sha256": "dd0005d220bee809d61de6a7f5524036b8e81087faaac755f6c355be0d55acde"
+    }
+  ]
+}

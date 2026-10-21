@@ -297,3 +297,33 @@ This is the active implementation log for the local fixes requested on 19 Octobe
 - Current state: PARTIAL.
 - Remaining risk or missing business decision: original form-observed server version is not captured for legacy edits. Device enqueue time remains insufficient evidence of that baseline; this CAS protects the replay-read-to-write interval only. Branch/provenance and actual browser restart matrices remain open.
 - Safe rollback guidance: selectively restore only this correction after preserving subsequent edits. Do not discard pending work, remove conflict records or change remote schema.
+
+## 2026-10-21 23:31 NPT — Fix QA-02: isolated coverage and explicit coverage acceptance
+- Workspace/branch/SHA: C:\Users\use\Desktop\babin-rentals-os; main; c4138d5aeacae682c501c28f8d0853d34c039528; source 4adeb7186d615f6804604e0c5e752bf9aeaa1b05f8b567cc2569c85b8f884a35.
+- Previous local changes preserved: all parallel edits retained; prior runner versions remain in local Git at d870bf2aa930052f130156f9cf73f8e0356e94de. No reset, checkout or cleanup.
+- Evidence/reproduction on actual local tree: final-3 full suite passed 5162/5162 with 410 files and no skips; coverage failed ENOENT on shared coverage/.tmp/coverage-1.json. Remaining final-3 commands exited 0, but that batch does not establish successful coverage.
+- Files changed: scripts/run-tests.mjs; scripts/test-receipt.mjs; scripts/test-receipt.test.mjs; scripts/completion.mjs.
+- Migration files added (local only): none.
+- Summary of code correction: coverage writes to unique coverage/runs/<runId> directories. Separate latest coverage receipts are invalidated before runs and preserved on failure. Completion prints coverage separately and exits nonzero for unsuccessful, missing, incomplete or stale suite/coverage evidence. CI still uploads coverage/ recursively.
+- Data preservation/recovery path: existing reports and all browser/user stores retained; no global coverage cleanup performed by this task. Each Vitest run owns only its generated UUID directory.
+- Tests added or modified: 11 Node receipt/path tests pass; two concurrent focused coverage runs each passed 6/6 and wrote distinct surviving lcov reports. These are focused smoke results, not full coverage.
+- Commands executed with actual pass/fail counts: logs coverage-isolation-a.log and coverage-isolation-b.log; isolated deliberate failing coverage fixture exited 1. The initial completion probe returned 0 while labeling failed historical evidence; after strengthening the exit gate, coverage-failure-completion-after.log records completion exit 1. Exact historical failures are retained. Final-4 broad verification is in progress and source-changed gates are explicitly unverified.
+- Manual browser/device results: no new browser/device acceptance.
+- Current state: PARTIAL pending full current-source coverage and gates.
+- Remaining risk or missing business decision: shared source edits require matching fingerprints; hosted/device/business-model acceptance stays open. No coverage threshold or security assertion relaxed.
+- Safe rollback guidance: preserve later shared edits and revert only the four runner/receipt changes if necessary; retain artifacts and never treat failed/stale coverage as current success.
+
+## 2026-10-21 23:37 NPT — Fix QA-02 coverage isolation compatibility follow-up
+- Workspace/branch/SHA: C:\Users\use\Desktop\babin-rentals-os; main; c4138d5aeacae682c501c28f8d0853d34c039528.
+- Previous local changes preserved: all concurrent source/doc edits and existing coverage outputs retained.
+- Evidence/reproduction on actual local tree: a per-run child of legacy coverage/ would still be reachable by a direct or older Vitest cleanup of that parent. Final directories therefore live outside that tree.
+- Files changed: scripts/test-receipt.mjs; scripts/test-receipt.test.mjs; scripts/run-tests.mjs; .github/workflows/ci.yml (with the earlier completion.mjs correction).
+- Migration files added (local only): none.
+- Summary of code correction: reports now use artifacts/coverage-runs/<UUID>; CI's existing coverage artifact collects that directory as well as legacy coverage/. Default JSON report names also use UUIDs rather than a shared millisecond timestamp.
+- Data preservation/recovery path: no old reports or browser stores cleared. Each new run owns one generated directory.
+- Tests added or modified: all 11 Node checks pass with the outside-parent contract; two simultaneous CLI smoke runs each passed 6/6 and retained distinct lcov files. Logs: artifacts/astra-20261021-024418/coverage-outside-a.log and coverage-outside-b.log. These focused checks do not substitute for full coverage.
+- Commands executed with actual pass/fail counts: see those logs; final-4 broad batch remains in progress, with changed-source typecheck/lint receipts explicitly unverified.
+- Manual browser/device results: none added.
+- Current state: PARTIAL pending matching-source full gates.
+- Remaining risk or missing business decision: other active source edits can invalidate a receipt; no assertion or threshold was relaxed to accommodate them.
+- Safe rollback guidance: preserve subsequent changes, revert only the relevant runner/workflow diffs, and retain all evidence. Do not reuse stale successful coverage receipts.

@@ -67,7 +67,11 @@ describe('invoice company identity comes from shared records', () => {
     await expect(fetchInvoiceCompany('invoice-booking')).rejects.toThrow(/could not be (loaded|confirmed)/)
   })
 
-  it.each([[], [{ key: 'organisationName', value: '   ' }], [{ key: 'organisationName', value: 123 }]])('does not replace an absent business name with a default: %j', async (settings) => {
+  it.each([
+    { label: 'absent', settings: [] },
+    { label: 'blank', settings: [{ key: 'organisationName', value: '   ' }] },
+    { label: 'invalid', settings: [{ key: 'organisationName', value: 123 }] },
+  ])('does not replace a $label business name with a default', async ({ settings }) => {
     db.settings = settings
     await expect(fetchInvoiceCompany('invoice-booking')).rejects.toThrow(/organisation name/)
   })

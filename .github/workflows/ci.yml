@@ -141,6 +141,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage
-          path: coverage/
+          path: |
+            coverage/
+            artifacts/coverage-runs/
           retention-days: 7
           if-no-files-found: ignore

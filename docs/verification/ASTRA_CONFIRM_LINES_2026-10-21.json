@@ -1,0 +1,32 @@
+{
+  "startedAt": "2026-10-21T17:47:26.850Z",
+  "sourceHash": "4adeb7186d615f6804604e0c5e752bf9aeaa1b05f8b567cc2569c85b8f884a35",
+  "scope": "Local only. No hosted connection, business data or repository dist writes.",
+  "priorCheckpoint": "ASTRA_UI_STABLE_CHECKPOINT_2026-10-21.json",
+  "regression": {
+    "before": "9 failed, 59 passed",
+    "log": "artifacts/astra-confirm-lines-before-20261021.log"
+  },
+  "gates": [
+    {
+      "name": "typecheck",
+      "exitCode": 0,
+      "sourceHashBefore": "4adeb7186d615f6804604e0c5e752bf9aeaa1b05f8b567cc2569c85b8f884a35",
+      "sourceHashAfter": "f723fef07b34b889267c074274403c93f391a1ae0b6ea70f11e0035b2d19f6b9",
+      "sourceStable": false,
+      "log": "artifacts/astra-confirm-lines-typecheck-20261021.log",
+      "at": "2026-10-21T17:51:30.572Z",
+      "outputTail": ""
+    },
+    {
+      "name": "test:focused",
+      "exitCode": 0,
+      "sourceHashBefore": "f723fef07b34b889267c074274403c93f391a1ae0b6ea70f11e0035b2d19f6b9",
+      "sourceHashAfter": "f723fef07b34b889267c074274403c93f391a1ae0b6ea70f11e0035b2d19f6b9",
+      "sourceStable": true,
+      "log": "artifacts/astra-confirm-lines-test-focused-20261021.log",
+      "at": "2026-10-21T17:51:46.532Z",
+      "outputTail": "\n RUN  v3.2.7 C:/Users/use/Desktop/babin-rentals-os\n\n ✓ src/lib/queries/__tests__/availability.test.ts (33 tests) 41ms\n ✓ src/lib/queries/__tests__/availabilityCompleteness.test.ts (25 tests) 42ms\n ✓ src/actions/rentals/__tests__/confirmRental.test.ts (68 tests) 126ms\n\n Test Files  3 passed (3)\n      Tests  126 passed (126)\n   Start at  23:36:33\n   Duration  11.37s (transform 5.45s, setup 0ms, collect 11.86s, tests 209ms, environment 1ms, prepare 1.14s)\n\n"
+    }
+  ]
+}

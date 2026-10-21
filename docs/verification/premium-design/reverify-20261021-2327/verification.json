@@ -1,0 +1,16 @@
+{
+  "startedAt": "2026-10-21T17:51:57.904Z",
+  "environment": "local; mock browser and in-process PGlite only; no remote writes",
+  "steps": [
+    {
+      "name": "typecheck",
+      "command": "npm run typecheck",
+      "exitCode": 0,
+      "sourceHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "afterHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "sourceChanged": false,
+      "seconds": 249,
+      "log": "docs\\verification\\premium-design\\reverify-20261021-2327\\typecheck.log"
+    }
+  ]
+}

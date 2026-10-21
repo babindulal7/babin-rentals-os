@@ -863,9 +863,9 @@ body,
 :root {
   --font-display: 'Outfit', system-ui, sans-serif;
   --font-body: 'Source Sans 3', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-  --font-id: 'JetBrains Mono', ui-monospace, monospace;
-  --font-num: 'JetBrains Mono', ui-monospace, monospace;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+  --font-id: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+  --font-num: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
   /* Declared, not loaded — §4.3.7 keeps Devanagari off the English path. */
   --font-ne-display: 'Asar', serif;
   --font-ne-body: 'Hind', system-ui, sans-serif;

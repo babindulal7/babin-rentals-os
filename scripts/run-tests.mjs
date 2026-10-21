@@ -1,5 +1,6 @@
 /** A new full-suite attempt invalidates old green evidence before Vitest starts. */
 import { spawn } from 'node:child_process'
+import { randomUUID } from 'node:crypto'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -9,7 +10,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const args = process.argv.slice(2)
 const coverage = args.includes('--coverage')
 const outputArgument = args.find(arg => arg.startsWith('--outputFile='))
-const output = outputArgument?.slice('--outputFile='.length) ?? join(root, 'artifacts', `test-run-${Date.now()}.json`)
+const output = outputArgument?.slice('--outputFile='.length) ?? join(root, 'artifacts', `test-run-${randomUUID()}.json`)
 mkdirSync(dirname(output), { recursive: true })
 writeFileSync(output, '{}')
 const command = `npm run ${coverage ? 'test:coverage' : 'test'}${args.length ? ` -- ${args.join(' ')}` : ''}`

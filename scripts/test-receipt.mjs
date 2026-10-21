@@ -55,7 +55,9 @@ export function latestCoverageReceipt(root) {
 /** Vitest cleans its reports directory, including .tmp. Never share it across runs. */
 export function coverageRunDirectory(root, runId) {
   if (!/^[a-zA-Z0-9-]+$/.test(runId ?? '')) throw new Error('Coverage requires a safe run ID')
-  return join(root, 'coverage', 'runs', runId)
+  // Keep outside legacy coverage/: a direct/older Vitest run may clean that
+  // entire tree. Its cleanup must not reach any current run's .tmp files.
+  return join(root, 'artifacts', 'coverage-runs', runId)
 }
 
 export function writeTestReceipt(root, receipt) {

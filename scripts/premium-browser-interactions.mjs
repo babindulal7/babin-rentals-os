@@ -85,8 +85,13 @@ export async function runInteractions({command,evaluate,navigate,out,asset}) {
   }
   // Actual shared Card component, mounted only in a temporary labelled test fixture.
   const variants=await evaluate(`(async()=>{
-    const React=(await import('/node_modules/.vite/deps/react.js')).default;
-    const ReactDOM=await import('/node_modules/.vite/deps/react-dom_client.js');
+    const entry=await (await fetch('/src/main.tsx')).text();
+    const imports=[...entry.matchAll(/from\\s+["']([^"']+)["']/g)].map(match=>match[1]);
+    const reactUrl=imports.find(url=>url.includes('/react.js?'));
+    const domUrl=imports.find(url=>url.includes('/react-dom_client.js?'));
+    if(!reactUrl||!domUrl)throw new Error('Cannot resolve the running Vite React dependency URLs');
+    const React=(await import(reactUrl)).default;
+    const ReactDOM=await import(domUrl);
     const createRoot=ReactDOM.createRoot??ReactDOM.default.createRoot;
     const {Card}=await import('/src/components/ui/Card.tsx');
     const host=document.createElement('div');host.setAttribute('aria-label','Temporary card verification fixture');document.querySelector('main').append(host);

@@ -127,49 +127,6 @@
   margin-bottom: 4px;
 }
 
-@media (max-width: 767px) {
-  .module-kpi-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    margin-top: 0;
-    margin-bottom: 6px;
-  }
-
-  .module-kpi-card {
-    padding: 8px 10px;
-    gap: 2px;
-    border-radius: var(--r-card-sm, 8px);
-  }
-
-  .module-kpi-card__top {
-    gap: 4px;
-  }
-
-  .module-kpi-card__label {
-    font-size: 10.5px;
-    letter-spacing: 0.02em;
-  }
-
-  .module-kpi-card__icon {
-    width: 20px;
-    height: 20px;
-  }
-
-  .module-kpi-card__icon svg {
-    width: 13px;
-    height: 13px;
-  }
-
-  .module-kpi-card__count {
-    font-size: 1.15rem;
-    margin-top: 0;
-  }
-
-  .module-kpi-card__subtitle {
-    display: none;
-  }
-}
-
 .module-kpi-card {
   position: relative;
   display: flex;
@@ -210,14 +167,13 @@
 }
 
 .module-kpi-card__label {
+  min-width: 0;
   font-size: var(--t-meta, 13px);
   font-weight: 600;
   color: var(--muted);
   text-transform: none;
   letter-spacing: normal;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .module-kpi-card__icon {
@@ -263,6 +219,39 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Phone overrides follow the shared rules so compact spacing actually applies.
+   Keep the full KPI name readable; its icon is supplementary at this width. */
+@media (max-width: 767px) {
+  .module-kpi-grid {
+    gap: var(--sp-sm);
+    margin-top: 0;
+    margin-bottom: var(--sp-xs);
+  }
+
+  .module-kpi-card {
+    padding: var(--sp-sm);
+    gap: var(--sp-xs);
+  }
+
+  .module-kpi-card__top {
+    min-height: 2.6em;
+    align-items: flex-start;
+  }
+
+  .module-kpi-card__icon {
+    display: none;
+  }
+
+  .module-kpi-card__count {
+    font-size: 1.15rem;
+    margin-top: var(--sp-xs);
+  }
+
+  .module-kpi-card__subtitle {
+    display: none;
+  }
 }
 
 /* ── Zone 3: Unified Filter & Tab Bar ───────────────────────────────────── */

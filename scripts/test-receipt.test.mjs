@@ -70,7 +70,7 @@ test('an older run finishing green cannot hide a newer failed attempt', () => {
 test('concurrent coverage runs have separate cleanup and temporary directories', () => {
   const root = join(tmpdir(), 'babin-coverage-paths')
   assert.notEqual(coverageRunDirectory(root, 'run-a'), coverageRunDirectory(root, 'run-b'))
-  assert.equal(coverageRunDirectory(root, 'run-a'), join(root, 'coverage', 'runs', 'run-a'))
+  assert.equal(coverageRunDirectory(root, 'run-a'), join(root, 'artifacts', 'coverage-runs', 'run-a'))
   assert.throws(() => coverageRunDirectory(root, '../shared'), /safe run/)
 })
 

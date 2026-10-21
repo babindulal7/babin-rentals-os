@@ -157,6 +157,27 @@ if(phase==='checks') {
  await navigate('/today');
  const motion=await evaluate('[...document.querySelectorAll(".animate-entrance,.movement-card,.status-live-dot")].filter(e=>e.getClientRects().length).slice(0,12).map(e=>({class:e.className,name:getComputedStyle(e).animationName,transition:getComputedStyle(e).transitionDuration}))');
  assert('Reduced-motion preference removes entrance and row motion',motion.length>0&&motion.every(e=>e.name==='none'&&e.transition.split(",").every(s=>parseFloat(s)===0)),motion);
+
+ for(const width of [375,820,1440]) {
+   await command('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:false});
+   await navigate('/today');
+   const opened=await click('.movement-card__cta-btn');
+   await delay(500);
+   const verbs=await evaluate('[...document.querySelectorAll(".operations-shell__actions .ui-button--primary")].filter(e=>e.getClientRects().length).map(e=>({label:e.textContent.trim(),height:e.getBoundingClientRect().height,width:e.getBoundingClientRect().width,disabled:e.disabled}))');
+   assert('Operations '+width+': real floor completion target is at least 56px',opened&&verbs.length>0&&verbs.every(e=>e.height>=56&&e.width>=44),verbs);
+   await shot('operations-'+width+'-floor-target');
+   await command('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+   await command('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
+ }
+ await navigate('/today');
+ const fonts=await evaluate('({body:getComputedStyle(document.body).fontFamily,heading:getComputedStyle(document.querySelector("h1")).fontFamily,number:getComputedStyle(document.querySelector(".movement-card__number")).fontFamily,loaded:[...document.fonts].filter(f=>f.status==="loaded").map(f=>f.family)})');
+ assert('Typography uses loaded self-hosted body, heading and identifier families',fonts.body.includes('Source Sans 3')&&fonts.heading.includes('Outfit')&&fonts.number.includes('JetBrains Mono')&&['Outfit','Source Sans 3','JetBrains Mono'].every(name=>fonts.loaded.some(f=>f.includes(name))),fonts);
+
+ await command('Emulation.setDeviceMetricsOverride',{width:375,height:1000,deviceScaleFactor:1,mobile:false});
+ await navigate('/finance');
+ const labels=await evaluate('[...document.querySelectorAll(".module-kpi-card__label")].map(e=>({text:e.textContent.trim(),width:e.clientWidth,scrollWidth:e.scrollWidth,height:e.clientHeight,scrollHeight:e.scrollHeight,font:parseFloat(getComputedStyle(e).fontSize),overflow:getComputedStyle(e).overflow,whiteSpace:getComputedStyle(e).whiteSpace}))');
+ assert('Finance phone KPI labels are fully readable at secondary text size',labels.length===3&&['Outstanding Invoices','Overdue Invoices','Received'].every(name=>labels.some(e=>e.text===name))&&labels.every(e=>e.font>=12&&e.scrollWidth<=e.width+1&&e.scrollHeight<=e.height+1&&e.whiteSpace!=='nowrap'),labels);
+ await shot('finance-375-readable-kpi-labels');
  fs.writeFileSync(path.join(out,'additional-browser-checks.json'),JSON.stringify({environment:'local mock; remote requests blocked',checks},null,2));
  if(checks.some(c=>!c.pass))process.exitCode=1;
 }

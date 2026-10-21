@@ -1,0 +1,18 @@
+{
+  "startedAt": "2026-10-21T17:42:06.897Z",
+  "environment": "local; mock browser and in-process PGlite only; no remote writes",
+  "steps": [
+    {
+      "name": "typecheck",
+      "command": "npm run typecheck",
+      "exitCode": 0,
+      "sourceHash": "f362a2db39226d1ae46bede7fd23db1ce815bd5446227a289417c29c6caa93da",
+      "afterHash": "5c83308548ebcc3788d1aa11dc024bab46411488b27374a7a0c3825afe5e842a",
+      "sourceChanged": true,
+      "seconds": 230,
+      "log": "docs\\verification\\premium-design\\reverify-20261021-2327\\typecheck.log"
+    }
+  ],
+  "interruptedAt": "2026-10-21T17:48:20.104Z",
+  "interruptedReason": "Source changed during typecheck; fresh phone screenshot revealed truncated KPI labels, requiring a CSS correction before a valid final run."
+}

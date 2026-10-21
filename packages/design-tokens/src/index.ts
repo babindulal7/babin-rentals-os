@@ -370,8 +370,8 @@ export const space = {
 export const fontFamilies = {
   display: ['Outfit', 'system-ui', 'sans-serif'],
   body: ['Source Sans 3', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
-  mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
-  id: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+  mono: ['JetBrains Mono Variable', 'JetBrains Mono', 'ui-monospace', 'monospace'],
+  id: ['JetBrains Mono Variable', 'JetBrains Mono', 'ui-monospace', 'monospace'],
   neDisplay: ['Asar', 'serif'],
   neBody: ['Hind', 'system-ui', 'sans-serif'],
 } as const;

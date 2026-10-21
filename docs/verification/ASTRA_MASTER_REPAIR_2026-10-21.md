@@ -2,31 +2,32 @@
 
 **NOT READY. PRODUCTION LAUNCH HOLD.** Local repairs and targeted evidence do not close the remaining acceptance work.
 
-Workspace: C:\Users\use\Desktop\babin-rentals-os. Initial SHA: 5d26cf8d8a420c07400b1124a0fafb1b6e7b3710. Report HEAD: 7931f4c9425e722c91366c4dad592459e2d678b7. Current source fingerprint: f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b. Generated 2026-10-21T12:06:22.220Z. Automatic/shared commits are retained; each command records its actual SHA, so a changing HEAD is not presented as one tested commit.
+Workspace: C:\Users\use\Desktop\babin-rentals-os. Initial SHA: 5d26cf8d8a420c07400b1124a0fafb1b6e7b3710. Report HEAD: c4138d5aeacae682c501c28f8d0853d34c039528. Current source fingerprint: f723fef07b34b889267c074274403c93f391a1ae0b6ea70f11e0035b2d19f6b9. Generated 2026-10-21T17:51:46.414Z. Automatic/shared commits are retained; each command records its actual SHA, so a changing HEAD is not presented as one tested commit.
 
 24 issues: 6 verified local; 5 pending staging; 5 blocked; 8 remaining/in progress. Verified local refers to the targeted correction, with broader acceptance explicitly stated per row.
 
 ## Verification
 
-Full suite: 5162/5162 passed, 0 failed, 0 skipped, 410 files. Coverage suite: 5138/5139 passed, 1 failed, 0 skipped, 406 files. All required gates match the current fingerprint: false.
+Full suite: 5162/5162 passed, 0 failed, 0 skipped, 410 files. Coverage suite: PENDING. All required gates match the current fingerprint: false.
 
 | Command | Exit | Source status | Actual SHA | Evidence log |
 |---|---:|---|---|---|
-| typecheck | 0 | MATCHES current source | 53ed0ba7329cd5db769e30a6c51d2e2e3b1723b1 | artifacts/astra-20261021-024418/final-3-typecheck.log |
-| lint | 0 | MATCHES current source | 53ed0ba7329cd5db769e30a6c51d2e2e3b1723b1 | artifacts/astra-20261021-024418/final-3-lint.log |
-| test | 0 | MATCHES current source | 53ed0ba7329cd5db769e30a6c51d2e2e3b1723b1 | artifacts/astra-20261021-024418/final-3-test.log |
-| test:coverage | 1 | NOT VERIFIED for current source | 9a20db3372cb511c35238c72e207144891733938 | artifacts/astra-20261021-024418/final-1-test-coverage.log |
-| check:pglite | 0 | NOT VERIFIED for current source | 9a20db3372cb511c35238c72e207144891733938 | artifacts/astra-20261021-024418/final-1-check-pglite.log |
-| check:security | 0 | NOT VERIFIED for current source | 383a9fb1c938c139db9fdd950293097d9f7a2da1 | artifacts/astra-20261021-024418/final-1-check-security.log |
-| node scripts/test-booking-financial-integrity.mjs | 0 | NOT VERIFIED for current source | 383a9fb1c938c139db9fdd950293097d9f7a2da1 | artifacts/astra-20261021-024418/final-1-receipt-tests.log |
-| check:lifecycle | 0 | NOT VERIFIED for current source | 383a9fb1c938c139db9fdd950293097d9f7a2da1 | artifacts/astra-20261021-024418/final-1-check-lifecycle.log |
-| check:contrast | 0 | NOT VERIFIED for current source | 383a9fb1c938c139db9fdd950293097d9f7a2da1 | artifacts/astra-20261021-024418/final-1-check-contrast.log |
-| lint:shell | 0 | NOT VERIFIED for current source | 383a9fb1c938c139db9fdd950293097d9f7a2da1 | artifacts/astra-20261021-024418/final-1-lint-shell.log |
-| lint:ui-copy | 0 | NOT VERIFIED for current source | 383a9fb1c938c139db9fdd950293097d9f7a2da1 | artifacts/astra-20261021-024418/final-1-lint-ui-copy.log |
-| node --test scripts/test-receipt.test.mjs | PENDING | NOT VERIFIED for current source | — | — |
-| lint:progress | PENDING | NOT VERIFIED for current source | — | — |
-| build | PENDING | NOT VERIFIED for current source | — | — |
-| completion | PENDING | NOT VERIFIED for current source | — | — |
+| typecheck | 0 | NOT VERIFIED for current source | d870bf2aa930052f130156f9cf73f8e0356e94de | artifacts/astra-20261021-024418/final-4-typecheck.log |
+| lint | 0 | NOT VERIFIED for current source | c4138d5aeacae682c501c28f8d0853d34c039528 | artifacts/astra-20261021-024418/final-4-lint.log |
+| test | 0 | NOT VERIFIED for current source | 53ed0ba7329cd5db769e30a6c51d2e2e3b1723b1 | artifacts/astra-20261021-024418/final-3-test.log |
+| test:coverage | 1 | NOT VERIFIED for current source | 7931f4c9425e722c91366c4dad592459e2d678b7 | artifacts/astra-20261021-024418/final-3-test-coverage.log |
+| check:pglite | 0 | NOT VERIFIED for current source | 2c21ec5d05a96ee42e0b9582a7982aa5fe8dbcb9 | artifacts/astra-20261021-024418/final-3-check-pglite.log |
+| check:security | 0 | NOT VERIFIED for current source | 2c21ec5d05a96ee42e0b9582a7982aa5fe8dbcb9 | artifacts/astra-20261021-024418/final-3-check-security.log |
+| node scripts/test-booking-financial-integrity.mjs | 0 | NOT VERIFIED for current source | 2c21ec5d05a96ee42e0b9582a7982aa5fe8dbcb9 | artifacts/astra-20261021-024418/final-3-financial-integrity.log |
+| check:lifecycle | 0 | NOT VERIFIED for current source | 2c21ec5d05a96ee42e0b9582a7982aa5fe8dbcb9 | artifacts/astra-20261021-024418/final-3-check-lifecycle.log |
+| check:contrast | 0 | NOT VERIFIED for current source | 2c21ec5d05a96ee42e0b9582a7982aa5fe8dbcb9 | artifacts/astra-20261021-024418/final-3-check-contrast.log |
+| lint:shell | 0 | NOT VERIFIED for current source | 2c21ec5d05a96ee42e0b9582a7982aa5fe8dbcb9 | artifacts/astra-20261021-024418/final-3-lint-shell.log |
+| lint:ui-copy | 0 | NOT VERIFIED for current source | 2c21ec5d05a96ee42e0b9582a7982aa5fe8dbcb9 | artifacts/astra-20261021-024418/final-3-lint-ui-copy.log |
+| node --test scripts/test-receipt.test.mjs | 0 | NOT VERIFIED for current source | 2c21ec5d05a96ee42e0b9582a7982aa5fe8dbcb9 | artifacts/astra-20261021-024418/final-3-receipt-tests.log |
+| lint:progress | 0 | NOT VERIFIED for current source | 2c21ec5d05a96ee42e0b9582a7982aa5fe8dbcb9 | artifacts/astra-20261021-024418/final-3-lint-progress.log |
+| build | 0 | NOT VERIFIED for current source | 2c21ec5d05a96ee42e0b9582a7982aa5fe8dbcb9 | artifacts/astra-20261021-024418/final-3-build.log |
+| completion | 0 | NOT VERIFIED for current source | 2c21ec5d05a96ee42e0b9582a7982aa5fe8dbcb9 | artifacts/astra-20261021-024418/final-3-completion.log |
+| node artifacts/astra-20261021-024418/inactive-identity-probe.mjs | 0 | NOT VERIFIED for current source | 2c21ec5d05a96ee42e0b9582a7982aa5fe8dbcb9 | artifacts/astra-20261021-024418/inactive-local-inactive-identity.log |
 
 Earlier failed/interrupted/source-changed attempts remain in artifacts/astra-20261021-024418; they are not silently upgraded to verified. The initial full baseline did not complete and supplies no count. Tests use isolated/mock fixtures; the production build uses the live-default bundle without connecting to a hosted database.
 
@@ -34,8 +35,8 @@ Earlier failed/interrupted/source-changed attempts remain in artifacts/astra-202
 
 | ID | Status | Exact source paths (relative to workspace) | Correction / current behavior | Regression / evidence | Outstanding acceptance / decision |
 |---|---|---|---|---|---|
-| SEC-01 | PENDING STAGING | supabase/migrations/0170_astra_phase0_authorization.sql; src/lib/documentStorage.ts; src/lib/evidenceStorage.ts; src/actions/documents/createDocument.ts | Existing scoped immutable/private storage and bearer-link protection retained; no new migration. | scripts/check-astra-phase0.mjs; src/lib/__tests__/documentStorage.test.ts; src/lib/__tests__/evidenceStorage.test.ts | Hosted Storage JWTs, branch/active-user matrix, floor upload integration, legacy-object ownership/backfill. Existing originals are deliberately unavailable to money-blind roles; review compatibility before any application. |
-| SEC-02 | PENDING STAGING | supabase/migrations/0170_astra_phase0_authorization.sql | Existing direct estimate-helper execute revocation and monetary rate guard retained. | scripts/check-astra-phase0.mjs (nine-role helper assertions) | Authenticated hosted PostgREST; complete own/foreign/inactive/branch routine inventory and trusted internal-call coverage. |
+| SEC-01 | PENDING STAGING | supabase/migrations/0170_astra_phase0_authorization.sql; src/lib/documentStorage.ts; src/lib/evidenceStorage.ts; src/actions/documents/createDocument.ts | Existing scoped immutable/private storage and bearer-link protection retained; no new migration. | scripts/check-astra-phase0.mjs; src/lib/__tests__/documentStorage.test.ts; src/lib/__tests__/evidenceStorage.test.ts; artifacts/astra-20261021-024418/inactive-identity-probe.mjs: 25 extended SQL groups, including all nine inactive roles and an unknown identity (includes the original 15 groups) | Hosted Storage JWTs, branch/active-user matrix, floor upload integration, legacy-object ownership/backfill. Existing originals are deliberately unavailable to money-blind roles; review compatibility before any application. |
+| SEC-02 | PENDING STAGING | supabase/migrations/0170_astra_phase0_authorization.sql | Existing direct estimate-helper execute revocation and monetary rate guard retained. | scripts/check-astra-phase0.mjs (nine-role helper assertions); artifacts/astra-20261021-024418/inactive-identity-probe.mjs: 25 extended SQL groups, including all nine inactive roles and an unknown identity (includes the original 15 groups) | Authenticated hosted PostgREST; complete own/foreign/inactive/branch routine inventory and trusted internal-call coverage. |
 | SEC-03 | PENDING STAGING | supabase/migrations/0170_astra_phase0_authorization.sql | Existing external Client audit refusal and server-bound staff actor/role/time retained. | scripts/check-astra-phase0.mjs (forgery refusal and actor readback) | Hosted direct INSERT/trigger behavior; full authoritative-target authorization and telemetry separation review remain open. |
 | SEC-04 | PENDING STAGING | supabase/migrations/0170_astra_phase0_authorization.sql | Existing OLD superior-target and NEW privilege protection retained with Owner positive path. | scripts/check-astra-phase0.mjs (Admin superior/self/identity denials and Owner success) | Hosted direct update, additional inactive/peer/last-Owner matrix. |
 | SEC-05 | PENDING STAGING | supabase/migrations/0170_astra_phase0_authorization.sql | Existing assigned open-trip Driver scope and narrow trip context retained. | scripts/check-astra-phase0.mjs (unassigned, assigned, foreign and terminal trips) | Hosted endpoint/view/export coverage, reassignment/branch/active-state matrix. |
@@ -56,7 +57,7 @@ Earlier failed/interrupted/source-changed attempts remain in artifacts/astra-202
 | UI-04 | VERIFIED LOCAL | src/components/ui/Modal.tsx | Only a lock owner can release it; nested/closed siblings and StrictMode are balanced; last close restores original overflow. | src/components/ui/__tests__/Modal.locks.test.tsx; src/components/ui/__tests__/Modal.fill.test.tsx; src/components/ui/__tests__/Modal.overflow.test.tsx | Rendered touch/focus/scroll acceptance across the responsive matrix remains open. |
 | UI-05 | IN PROGRESS | src/modules/finance/Finance.tsx; src/modules/finance/__tests__/Finance.restricted.test.tsx | Removed duplicate sub-header Export/Create Invoice actions. Phone has one Payment and accessible secondary actions in More. | src/modules/finance/__tests__/Finance.restricted.test.tsx: all 23 passed in focused integration | 375/430/768/820/1024/1440/1920 rendered measurements/screenshots and shared-module action hierarchy remain unverified in this task after two browser-attachment failures. |
 | QA-01 | IN PROGRESS | src/actions/__tests__/core.test.ts; src/lib/queries/__tests__/pulse.test.ts; src/modules/finance/__tests__/Finance.restricted.test.tsx; src/modules/rentals/__tests__/rentalsOperationsHeader.test.tsx; src/modules/clients/__tests__/clientsCopy.test.ts | Existing capability/Pulse/Router/client-copy corrections retained; fixtures updated for actual paginated reads. Full commands on current source are recorded below; no negative security assertion was relaxed. | Full test and coverage JSON receipts; focused regressions cited per issue | Technician Packing authority remains inconsistent with PERMISSIONS.md; see OPEN_DECISIONS §17. A passing dispatcher/full suite does not certify that authorization contract. Any failing or source-changed gate remains open. |
-| QA-02 | VERIFIED LOCAL | scripts/test-receipt.mjs; scripts/test-receipt.test.mjs; scripts/run-tests.mjs; scripts/check-pglite.mjs; scripts/e2e-lifecycle.mjs; scripts/completion.mjs; package.json; .gitignore | New attempts invalidate green evidence; immutable per-run receipts prevent older concurrent results from hiding later failures. Commands/SHA/source/time/environment are required; stale DB dimensions stay unmeasured; focused runs cannot certify full suites. | 9 Node regressions; isolated intentional failing fixture returned test=1 and completion=1, showing 0/1 | Structural completion is never a production/device/integration acceptance score. |
+| QA-02 | VERIFIED LOCAL | scripts/test-receipt.mjs; scripts/test-receipt.test.mjs; scripts/run-tests.mjs; scripts/check-pglite.mjs; scripts/e2e-lifecycle.mjs; scripts/completion.mjs; package.json; .gitignore; .github/workflows/ci.yml | New attempts invalidate green evidence; per-run receipts and coverage directories isolate concurrent runs. Coverage failures cannot be hidden by a later plain test success. Commands/SHA/source/time/environment are required; stale dimensions stay unmeasured; focused runs cannot certify full suites. | 11 Node regressions; two concurrent focused coverage runs each passed 6/6 with separate reports. Deliberate failed coverage returned 1, and strengthened completion returned 1. Final full coverage is recorded in the gate table, not inferred from these smoke tests. | Structural completion is never a production/device/integration acceptance score. Final-3 coverage ENOENT and the earlier stale-evidence completion exit 0 are preserved; neither is presented as a successful verification. |
 | PERF-01 | BLOCKED | vite.config.ts | Configuration unchanged: no unmeasured bundling, scanner or PWA/font optimization was introduced. Production build output is recorded in the command logs. | Current live-default production build log; historical values kept separate | Representative device/network p75 startup/Today/booking/scanner/report measurements, agreed budgets and physical iPad access remain unavailable. |
 
 ## Preservation and compatibility
@@ -94,4 +95,4 @@ The parallel design pass retained screenshots and DOM measurements under docs/ve
 
 ## Working-tree identity
 
-No tracked source differences from the report HEAD were present when this ledger was generated; each command still retains its actual SHA and source fingerprint.
+The tested tree includes uncommitted source edits. HEAD alone does not identify these fixes; the matching source fingerprint and per-command receipts identify the tested files. Current source differences from HEAD: `scripts/premium-browser-interactions.mjs`, `scripts/run-tests.mjs`, `scripts/test-receipt.mjs`, `scripts/test-receipt.test.mjs`, `src/components/ui/module-shell/module-shell.css`, `src/lib/queries/__tests__/invoiceCompany.test.ts`.
