@@ -1978,23 +1978,29 @@ export default function Inventory() {
               {phone ? '' : 'Clear Filters'}
             </button>}
           <ListControlRow
-            extras={
-              /* Smart Workspace Views v1 — the SAME control Rentals uses, on the
-                 Equipment pane's own toolbar row. Device-local fallback when the
-                 saved_views migration is not applied is the menu's own established
-                 behaviour and says so in its footer. */
-              <SavedViewsMenu
-                listKey="inventory"
-                legacyStorageKey={`babin-inventory:saved-views:${user?.id ?? 'anonymous'}`}
-                canPublish={canPublishTeamViews(user?.role ?? 'Client')}
-                userId={user?.id ?? null}
-                currentQuery={currentInventoryViewQuery}
-                currentHiddenColumns={[]}
-                onApply={applyInventorySavedView}
-                disabled={!user}
-              />
-            }
-            sort={<label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+            sort={
+              <>
+                {/*
+                  Smart Workspace Views v1 — the SAME control Rentals uses, on the
+                  Equipment toolbar's right-hand control group (beside Sort), where
+                  it stays right-justified at every width: in the `extras` slot the
+                  phone band's wrapped row left-strands the trigger and its
+                  right-anchored menu escapes the viewport (measured -151px at
+                  390px). Device-local fallback when the saved_views migration is
+                  not applied is the menu's own established behaviour and says so
+                  in its footer.
+                */}
+                <SavedViewsMenu
+                  listKey="inventory"
+                  legacyStorageKey={`babin-inventory:saved-views:${user?.id ?? 'anonymous'}`}
+                  canPublish={canPublishTeamViews(user?.role ?? 'Client')}
+                  userId={user?.id ?? null}
+                  currentQuery={currentInventoryViewQuery}
+                  currentHiddenColumns={[]}
+                  onApply={applyInventorySavedView}
+                  disabled={!user}
+                />
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
               Sort
               <select
                 value={sort}
@@ -2004,7 +2010,9 @@ export default function Inventory() {
               >
                 {SORTS.filter((s) => !SORT_UNAVAILABLE[s]).map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
-            </label>}
+                </label>
+              </>
+            }
             view={!phone ? <>
               <button
                 type="button"
