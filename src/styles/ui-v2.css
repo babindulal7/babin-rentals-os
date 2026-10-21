@@ -233,7 +233,8 @@ input[type='search']::-webkit-search-results-decoration {
 
 @media (hover: hover) and (pointer: fine) {
   .surface-card.lift:hover, .card.interactive:hover,
-  .card[data-interactive='true']:hover {
+  .card[data-interactive='true']:hover,
+  .surface-card[data-interactive='true']:not([aria-disabled='true']):hover {
     background: var(--hover-card);
     transition: background-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
   }

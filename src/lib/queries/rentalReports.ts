@@ -137,6 +137,10 @@ interface FilteredBookingQuery extends ReportQuery {
   lte(column: string, value: string): FilteredBookingQuery
   eq(column: string, value: string): FilteredBookingQuery
 }
+function bookingRead(columns: string): FilteredBookingQuery {
+  // The transport result is unknown until rowsOf validates the response.
+  return supabase.from('bookings').select<string, unknown>(columns) as unknown as FilteredBookingQuery
+}
 function filtered(q: unknown, options?: ReportFilterOptions): FilteredBookingQuery {
   let out = q as FilteredBookingQuery
   if (options?.from) out = out.gte('pickup_at', options.from)
@@ -152,10 +156,10 @@ function daysOf(b: Pick<BookingRow, 'pickup_at' | 'return_at'>): number {
 export async function getRentalPerformanceReport(options?: ReportFilterOptions): Promise<RentalPerformanceReportData> {
   const [res, typeRes, lineMap] = await Promise.all([
     completeReportRead(filtered(
-      supabase.from('bookings').select<string, unknown>('id, booking_no, stage, pickup_at, return_at, project, cancelled_at, clients!client_id(name)'),
+      bookingRead('id, booking_no, stage, pickup_at, return_at, project, cancelled_at, clients!client_id(name)'),
       options,
     ), 'Rental performance read failed'),
-    completeReportRead(filtered(supabase.from('bookings').select('id, project_type'), options), 'Project type read failed'),
+    completeReportRead(filtered(bookingRead('id, project_type'), options), 'Project type read failed'),
     readLineValues(),
   ])
   const rows = rowsOf<BookingRow>(res, 'Rental performance read failed')
@@ -249,7 +253,7 @@ const BUCKETS = [
 
 export async function getRentalDurationReport(options?: ReportFilterOptions): Promise<RentalDurationReportData> {
   const [res, lineMap] = await Promise.all([
-    completeReportRead(filtered(supabase.from('bookings').select('id, pickup_at, return_at').is('cancelled_at', null), options), 'Rental duration read failed'),
+    completeReportRead(filtered(supabase.from('bookings').select<string, unknown>('id, pickup_at, return_at').is('cancelled_at', null) as unknown as FilteredBookingQuery, options), 'Rental duration read failed'),
     readLineValues(),
   ])
   const rows = rowsOf<Pick<BookingRow, 'id' | 'pickup_at' | 'return_at'>>(res, 'Rental duration read failed')
@@ -291,12 +295,12 @@ export async function getRentalDurationReport(options?: ReportFilterOptions): Pr
 
 export async function getCancellationsReport(options?: ReportFilterOptions): Promise<CancellationsReportData> {
   const [allRes, cancelRes, lineMap] = await Promise.all([
-    completeReportRead(filtered(supabase.from('bookings').select('id'), options), 'Booking count read failed'),
+    completeReportRead(filtered(bookingRead('id'), options), 'Booking count read failed'),
     completeReportRead(filtered(
       supabase
         .from('bookings')
         .select<string, unknown>('id, booking_no, pickup_at, return_at, project, cancelled_at, cancellation_reason, clients!client_id(name)')
-        .not('cancelled_at', 'is', null),
+        .not('cancelled_at', 'is', null) as unknown as FilteredBookingQuery,
       options,
     ), 'Cancellations read failed'),
     readLineValues(),

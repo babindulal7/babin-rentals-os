@@ -99,14 +99,16 @@ try {
   configs.push({width:820,theme:'dark',zoom:1},{width:1440,theme:'dark',zoom:1},
     {width:820,theme:'light',zoom:1.25},{width:1440,theme:'dark',zoom:1.25},
     {width:1440,theme:'high-contrast',zoom:1,contrast:true},{width:375,theme:'light',zoom:1,reduce:true})
-  const selected = process.argv[3]?.split(',')
-  const results = selected && fs.existsSync(path.join(out,'measurements.json')) ? JSON.parse(fs.readFileSync(path.join(out,'measurements.json'),'utf8')).filter(r=>!selected.includes(r.screen)) : []
+  const selected = process.argv[3] && process.argv[3] !== 'all' ? process.argv[3].split(',') : undefined
+  const phoneOnly = process.argv[4] === 'phone'
+  const results = (selected || phoneOnly) && fs.existsSync(path.join(out,'measurements.json')) ? JSON.parse(fs.readFileSync(path.join(out,'measurements.json'),'utf8')).filter(r=>!((!selected || selected.includes(r.screen)) && (!phoneOnly || r.config?.width === 375))) : []
   for (const [screen, route] of routes) {
     if (phase === 'checks') continue
     if (selected && !selected.includes(screen)) continue
     if (!route) { results.push({screen, error:'No actual mock record link found'}); continue }
     await navigate(route)
     for (const config of phase === 'inspect' ? configs.filter(c=>[375,1440].includes(c.width) && c.zoom===1 && !c.reduce && !c.contrast) : configs) {
+      if (phoneOnly && config.width !== 375) continue
       const { width, theme, zoom } = config
       await command('Emulation.setDeviceMetricsOverride', { width: Math.floor(width/zoom), height: Math.floor(1000/zoom), deviceScaleFactor: zoom, mobile:false })
       await command('Emulation.setEmulatedMedia', { features: [ {name:'prefers-reduced-motion',value:config.reduce?'reduce':'no-preference'}, {name:'prefers-contrast',value:config.contrast?'more':'no-preference'} ] })

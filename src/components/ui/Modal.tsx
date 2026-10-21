@@ -132,6 +132,8 @@ export function Modal({
   const openerRef = useRef<HTMLElement | null>(null)
   const titleId = useId()
   const touchStartY = useRef<number | null>(null)
+  const closeHandlers = useRef({ onClose, onEscape })
+  useEffect(() => { closeHandlers.current = { onClose, onEscape } }, [onClose, onEscape])
 
   useEffect(() => {
     if (!isOpen) return
@@ -139,7 +141,7 @@ export function Modal({
     const handleKeyDown = (e: KeyboardEvent) => {
       // Only the top of the stack answers Escape — see module comment above.
       if (e.key === 'Escape' && isOpen && modalStack[modalStack.length - 1] === id) {
-        ;(onEscape ?? onClose)()
+        ;(closeHandlers.current.onEscape ?? closeHandlers.current.onClose)()
       }
     }
     lockScroll(id)
@@ -148,7 +150,7 @@ export function Modal({
       unlockScroll(id)
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isOpen, onClose, onEscape])
+  }, [isOpen])
 
   /*
    * Focus contract (WCAG 2.4.3 / 2.1.2) — the piece FilterDrawer and MoreSheet

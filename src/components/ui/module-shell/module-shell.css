@@ -176,8 +176,8 @@
   flex-direction: column;
   justify-content: space-between;
   gap: 10px;
-  padding: 16px 20px;
-  border: 1px solid var(--border);
+  padding: var(--section-padding) var(--sp-lg);
+  border: var(--surface-outline);
   border-radius: var(--r-card, 14px);
   background: var(--surface-card, var(--card));
   box-shadow: var(--shadow-sm);
@@ -213,8 +213,8 @@
   font-size: var(--t-meta, 13px);
   font-weight: 600;
   color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  text-transform: none;
+  letter-spacing: normal;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -246,7 +246,7 @@
 }
 
 .module-kpi-card__count {
-  font-family: var(--font-display);
+  font-family: var(--font-id);
   font-size: 1.5rem;
   font-weight: 700;
   line-height: 1.2;

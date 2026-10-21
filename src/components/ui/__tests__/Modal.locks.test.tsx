@@ -48,4 +48,18 @@ describe('UI-04 modal scroll lock ownership', () => {
     await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })))
     expect(close).toHaveBeenCalledTimes(1)
   })
+  it('changing the outer callback does not move it above an already open inner dialog', async () => {
+    const outer = vi.fn(), inner = vi.fn()
+    const renderPair = async (onClose: () => void) => {
+      await act(async () => root.render(<>
+        <Modal isOpen onClose={onClose} title="Outer">Outer</Modal>
+        <Modal isOpen onClose={inner} title="Inner">Inner</Modal>
+      </>))
+    }
+    await renderPair(outer)
+    await renderPair(() => outer())
+    await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })))
+    expect(inner).toHaveBeenCalledTimes(1)
+    expect(outer).not.toHaveBeenCalled()
+  })
 })
