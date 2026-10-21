@@ -15,7 +15,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom'
 import type { InventoryListRow } from '../../../lib/queries/inventory'
 
 const state = vi.hoisted(() => ({
-  user: { id: 'USR-1', name: 'Babin', role: 'Owner', isSharedDevice: false } as { id: string; name: string; role: string } | null,
+  user: { id: 'USR-1', name: 'Babin', role: 'Owner' } as { id: string; name: string; role: string } | null,
 }))
 
 vi.mock('../../../lib/device', async (importOriginal) => {
@@ -110,22 +110,29 @@ async function saveCurrentView(name: string) {
   await act(async () => { menuItem(menu, 'Save current view')?.click() })
   const input = document.body.querySelector<HTMLInputElement>('#saved-view-name')
   expect(input).not.toBeNull()
-  await act(async () => {
-    const set = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
-    set.call(input, name)
-    input?.dispatchEvent(new Event('input', { bubbles: true }))
-  })
+  await act(async () => { setNativeValue(input, name) })
   const saveBtn = [...document.body.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Save view')
   await act(async () => { saveBtn?.click() })
+}
+
+/** Set a form control's value the way a real keystroke does, with the guards
+ * strict mode demands, and dispatch the event React listens for. */
+function setNativeValue(el: HTMLInputElement | HTMLSelectElement | null | undefined, value: string) {
+  if (!el) throw new Error('expected a form control, found none')
+  const proto = el instanceof HTMLSelectElement ? window.HTMLSelectElement.prototype : window.HTMLInputElement.prototype
+  const set = Object.getOwnPropertyDescriptor(proto, 'value')?.set
+  if (!set) throw new Error('native value setter missing')
+  set.call(el, value)
+  el.dispatchEvent(new Event(el instanceof HTMLSelectElement ? 'change' : 'input', { bubbles: true }))
 }
 
 const sortSelect = () => container.querySelector<HTMLSelectElement>('select[aria-label="Sort equipment"]')
 
 const layoutTab = (label: string) =>
-  [...container.querySelectorAll('[role="tablist"][aria-label="View layout"] [role="tab"]')].find((b) => b.textContent === label)
+  [...container.querySelectorAll<HTMLButtonElement>('[role="tablist"][aria-label="View layout"] [role="tab"]')].find((b) => b.textContent === label)
 
 beforeEach(() => {
-  state.user = { id: 'USR-1', name: 'Babin', role: 'Owner', isSharedDevice: false }
+  state.user = { id: 'USR-1', name: 'Babin', role: 'Owner' }
   localStorage.clear()
 })
 
@@ -159,12 +166,7 @@ describe('Inventory saved views — save and re-apply', () => {
   it('restores search, chip, sort and layout; the saved view row marks itself active', async () => {
     await mountAt('/inventory?q=FX3&chip=on-rent')
     /* Change presentation so the view carries non-default sort + layout. */
-    await act(async () => {
-      const select = sortSelect()
-      const set = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value').set
-      set.call(select, 'Category A–Z')
-      select?.dispatchEvent(new Event('change', { bubbles: true }))
-    })
+    setNativeValue(sortSelect(), 'Category A–Z')
     await act(async () => { layoutTab('Cards')?.click() })
 
     await saveCurrentView('FX3 on rent')
@@ -176,7 +178,6 @@ describe('Inventory saved views — save and re-apply', () => {
     expect(lastSearch).toBe('')
     expect(sortSelect()?.value).toBe('Equipment A–Z')
     expect(layoutTab('Cards')?.getAttribute('aria-selected')).toBe('false')
-
     /* Re-apply the saved view: filters, sort and layout return together. */
     const menu2 = await openMenu()
     const row = menuItem(menu2, 'FX3 on rent')
@@ -193,12 +194,7 @@ describe('Inventory saved views — save and re-apply', () => {
   it('resets the page and clears multi-selection and the open inspector when a view applies', async () => {
     await mountAt('/inventory')
     await act(async () => { container.querySelector<HTMLButtonElement>('button[aria-label="Page 2"]')?.click() })
-    await act(async () => {
-      const select = sortSelect()
-      const set = Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value').set
-      set.call(select, 'Equipment Z–A')
-      select?.dispatchEvent(new Event('change', { bubbles: true }))
-    })
+    setNativeValue(sortSelect(), 'Equipment Z–A')
 
     /* One row bulk-selected, one record being inspected. */
     await act(async () => { container.querySelector<HTMLInputElement>(`input[aria-label="Select ${ROW2.name}"]`)?.click() })

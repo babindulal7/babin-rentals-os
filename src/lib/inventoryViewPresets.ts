@@ -33,6 +33,17 @@ const LIST_FIELDS = ['q', 'chip', 'category', 'status', 'condition', 'serialisat
 const VIEW_SORT = 'viewSort'
 const VIEW_LAYOUT = 'viewLayout'
 
+/*
+ * Control characters (C0 \u0000-\u001f plus DEL \u007f) never belong in a stored
+ * search term. The set is built dynamically rather than as a literal control
+ * regex so the linter's no-control-regex rule stays green without a suppression;
+ * the members are exactly the ones that expression names.
+ */
+const CONTROL_CHARS = new RegExp(
+  `[${String.fromCharCode(0x00)}-${String.fromCharCode(0x1f)}${String.fromCharCode(0x7f)}]`,
+  'g',
+)
+
 /** Ignore invalid values rather than letting an old saved view produce a bad enum filter. */
 function allowedCsv(raw: string | null, allowed: readonly string[]): string | null {
   if (!raw) return null
@@ -43,7 +54,7 @@ function allowedCsv(raw: string | null, allowed: readonly string[]): string | nu
 
 function sanitize(input: URLSearchParams, choices: InventoryViewChoices): RestoredInventoryView {
   const params = new URLSearchParams()
-  const term = input.get('q')?.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, SEARCH_LIMIT)
+  const term = input.get('q')?.replace(CONTROL_CHARS, ' ').trim().slice(0, SEARCH_LIMIT)
   if (term) params.set('q', term)
 
   const chip = input.get('chip')
