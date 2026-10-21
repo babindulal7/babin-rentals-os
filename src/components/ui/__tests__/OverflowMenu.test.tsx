@@ -18,6 +18,18 @@ afterEach(() => {
 })
 
 describe('OverflowMenu keyboard interaction', () => {
+  it('keeps the actions trigger at the 44px secondary touch target floor', () => {
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+    act(() => root?.render(<OverflowMenu items={[{ label: 'Edit', icon: 'edit', onClick: vi.fn() }]} />))
+
+    const trigger = container.querySelector<HTMLButtonElement>('[aria-haspopup="menu"]')!
+    const style = getComputedStyle(trigger)
+    expect(Number.parseFloat(style.minWidth)).toBeGreaterThanOrEqual(44)
+    expect(Number.parseFloat(style.minHeight)).toBeGreaterThanOrEqual(44)
+  })
+
   it('focuses actions, skips unavailable actions, and restores focus on Escape', () => {
     container = document.createElement('div')
     document.body.appendChild(container)

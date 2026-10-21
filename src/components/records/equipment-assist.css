@@ -1,9 +1,9 @@
 /* Add Equipment assists (8 Oct 2026, RULINGS-2026-10-08.md). Tokens only. */
-.record-section-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.record-section-links { display: flex; flex-wrap: nowrap; gap: var(--sp-sm); overflow-x: auto; min-width: 0; padding-block: var(--sp-xs); }
 .record-section-link {
   display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px;
   border: 1px solid var(--border); border-radius: var(--r-btn); background: var(--card);
-  color: var(--text); font-size: var(--t-meta); font-weight: 600; text-decoration: none;
+  color: var(--text); font-size: var(--t-meta); font-weight: 600; text-decoration: none; flex-shrink: 0;
 }
 .record-section-link:hover { border-color: var(--primary); }
 .record-section-link:focus-visible { outline: 2px solid var(--input-focus); outline-offset: 2px; }
@@ -44,6 +44,8 @@
 .equipment-tracking-option:hover { border-color: var(--border2); }
 .equipment-tracking-option:focus-visible { outline: 2px solid var(--input-focus); outline-offset: 2px; }
 .equipment-tracking-option.is-active { border-color: var(--nav-active-accent, #386af7); background: var(--select-bg, rgba(56,106,247,0.1)); }
+.equipment-tracking-option.is-active strong,
+.equipment-tracking-option.is-active span { color: var(--select-fg); }
 .equipment-tracking-option strong { font-size: var(--t-meta); color: var(--text); }
 .equipment-tracking-option span { font-size: var(--t-th); color: var(--muted); line-height: 1.35; }
 

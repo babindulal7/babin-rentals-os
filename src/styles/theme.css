@@ -62,7 +62,7 @@
   --density-section-gap: 12px;
   --density-table-row: 44px;
   --density-situational-min-h: 96px;
-  --app-sidebar-width: 224px;
+  --app-sidebar-width: 256px;
 }
 
 :root[data-density='comfortable'],

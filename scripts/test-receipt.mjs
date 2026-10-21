@@ -1,6 +1,6 @@
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 /** Hash source and verification inputs, never environment files or business data. */
@@ -24,9 +24,33 @@ export function verificationSourceHash(root) {
 
 export function beginVerification(root, command, environment) {
   return { schemaVersion: 1, valid: false, success: false,
+    runId: randomUUID(),
     sha: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root }).toString().trim(),
     command, environment, node: process.version, platform: process.platform,
     at: new Date().toISOString(), startedMs: Date.now(), sourceHash: verificationSourceHash(root) }
+}
+
+/** Concurrent runs retain separate receipts. Completion reads the newest
+ * attempt, so an older slow green run cannot overwrite a later failure.
+ */
+export function latestTestReceipt(root) {
+  const dir = join(root, 'artifacts', 'test-receipts')
+  const paths = existsSync(dir) ? readdirSync(dir).filter(name => name.endsWith('.json')).map(name => join(dir, name)) : []
+  paths.push(join(root, '.test-result.json'))
+  const receipts = paths.flatMap(path => {
+    try { return [JSON.parse(readFileSync(path, 'utf8'))] } catch { return [] }
+  })
+  return receipts.sort((a, b) => (b.startedMs ?? 0) - (a.startedMs ?? 0))[0] ?? null
+}
+
+export function writeTestReceipt(root, receipt) {
+  if (!/^[a-zA-Z0-9-]+$/.test(receipt.runId ?? '')) throw new Error('Receipt requires a safe run ID')
+  const dir = join(root, 'artifacts', 'test-receipts')
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(join(dir, `${receipt.runId}.json`), JSON.stringify(receipt, null, 2))
+  if (latestTestReceipt(root)?.runId === receipt.runId) {
+    writeFileSync(join(root, '.test-result.json'), JSON.stringify(receipt, null, 2))
+  }
 }
 
 export function finishVerification(start, root, success) {
@@ -66,6 +90,7 @@ export function describeTestReceipt(receipt, currentHash) {
   if (!isCurrentVerification(receipt, currentHash)) {
     return `Historical suite: ${figures}; current source NOT VERIFIED`
   }
+  if (receipt.success === true && receipt.scope !== 'full-suite') return `NOT VERIFIED — focused or unspecified run: ${figures}`
   return receipt.success === true && receipt.total > 0 && receipt.failed === 0
     ? `PASS — ${figures}; source fingerprint matches`
     : `NOT PASSING — ${figures}; source fingerprint matches`

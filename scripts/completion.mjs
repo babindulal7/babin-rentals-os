@@ -52,7 +52,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from '
 import { join, dirname, resolve, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
-import { beginVerification, finishVerification, isCurrentVerification, verificationSourceHash, testReceipt, describeTestReceipt } from './test-receipt.mjs'
+import { beginVerification, finishVerification, isCurrentVerification, latestTestReceipt, verificationSourceHash, testReceipt, describeTestReceipt, writeTestReceipt } from './test-receipt.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, '..')
@@ -305,8 +305,9 @@ if (wantMigrations) {
 let testResult = 'not run this session (static inspection; pass --tests to execute suite)'
 if (wantTests) {
   const start = beginVerification(ROOT, 'node scripts/completion.mjs --tests', `local Vitest; data source=${process.env.VITE_DATA_SOURCE ?? 'default'}`)
+  start.scope = 'full-suite'
   const before = verificationSourceHash(ROOT)
-  writeFileSync(join(ROOT, '.test-result.json'), JSON.stringify(start, null, 2))
+  writeTestReceipt(ROOT, start)
   const output = join(ROOT, '.completion-tests.json')
   // Refuse a stale JSON report if the new runner fails before writing one.
   writeFileSync(output, '{}')
@@ -321,18 +322,18 @@ if (wantTests) {
     const after = verificationSourceHash(ROOT)
     const context = finishVerification(start, ROOT, exitCode === 0)
     const receipt = testReceipt(JSON.parse(readFileSync(output, 'utf8')), exitCode, before, after, context.at, context)
-    writeFileSync(join(ROOT, '.test-result.json'), JSON.stringify(receipt, null, 2) + '\n')
+    writeTestReceipt(ROOT, receipt)
     testResult = describeTestReceipt(receipt, after)
     if (!receipt.success || receipt.sourceChanged) problems.push(`Tests: ${testResult}`)
   } catch {
-    const receipt = { schemaVersion: 1, valid: false, total: 0, passed: 0, failed: 0, success: false, sourceHash: before, at: new Date().toISOString() }
-    writeFileSync(join(ROOT, '.test-result.json'), JSON.stringify(receipt, null, 2) + '\n')
+    const receipt = { ...finishVerification(start, ROOT, false), valid: false, total: 0, passed: 0, failed: 0, success: false }
+    writeTestReceipt(ROOT, receipt)
     testResult = 'NOT VERIFIED — test runner did not produce a valid structured result'
     problems.push(`Tests: ${testResult}`)
   }
-} else if (exists('.test-result.json')) {
+} else if (latestTestReceipt(ROOT)) {
   try {
-    const raw = JSON.parse(read('.test-result.json'))
+    const raw = latestTestReceipt(ROOT)
     testResult = describeTestReceipt(raw, verificationSourceHash(ROOT))
   } catch {
     // fallback
