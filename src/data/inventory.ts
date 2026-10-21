@@ -850,8 +850,12 @@ export const TRACKING_MODES = Object.keys(TRACKING_PRESENT) as TrackingModeDb[]
  *    both are ranges. `RailRow` models a checkbox list and nothing else.
  *  - **more than one column** (Location) — the schema splits the idea five ways.
  *  - **three joins** (Booking) — a second query, not a facet.
- *  - **genuinely nothing** (Tags, Saved Views) — no column in any of the 54
- *    migrations.
+ *  - **genuinely nothing** (Tags) — no column in any of the 54 migrations.
+ *
+ * Saved Views is no longer in this list: `saved_views` (0159) is its backing
+ * table, and Smart Workspace Views v1 serves it from the Equipment toolbar's
+ * SavedViewsMenu — the same control Rentals uses. A rail row is for facets;
+ * this is not one.
  */
 export type RailRow =
   | { kind: 'live'; key: FacetKey; label: string; icon: IconName; options: readonly string[] }
@@ -924,12 +928,6 @@ export const FILTER_RAIL: RailRow[] = [
     label: 'Tags',
     icon: 'flag',
     reason: 'Tagging is not built — no tag column or table exists in any of the 54 migrations.',
-  },
-  {
-    kind: 'blocked',
-    label: 'Saved Views',
-    icon: 'file',
-    reason: 'Saved views are not built — there is nowhere to store one.',
   },
 ]
 
