@@ -222,6 +222,14 @@ export function SavedViewsMenu({
     fontSize: 'var(--t-meta)',
   }
 
+  /* Smart Workspace Views v1 — one shared control serves two lists, so the copy
+     names the list it is on. Rentals' strings are unchanged; nothing here alters
+     save/retire/permission logic. */
+  const isInventory = listKey === 'inventory'
+  const groupTitle = isInventory ? 'INVENTORY VIEWS' : 'RENTAL VIEWS'
+  const allTitle = isInventory ? 'All equipment' : 'All rentals'
+  const menuLabel = `Saved ${isInventory ? 'inventory' : 'rental'} views`
+
   const groupLabel = (text: string) => (
     <div style={{ padding: '7px 10px 5px', color: 'var(--muted)', fontSize: 'var(--t-caption)', fontWeight: 700 }}>
       {text}
@@ -287,7 +295,7 @@ export function SavedViewsMenu({
         {menuOpen && (
           <div
             role="menu"
-            aria-label="Saved rental views"
+            aria-label={menuLabel}
             style={{
               position: 'absolute',
               top: 'calc(100% + 8px)',
@@ -304,7 +312,7 @@ export function SavedViewsMenu({
               boxShadow: 'var(--shadow-lg)',
             }}
           >
-            {groupLabel('RENTAL VIEWS')}
+            {groupLabel(groupTitle)}
             <button
               type="button"
               role="menuitem"
@@ -315,7 +323,7 @@ export function SavedViewsMenu({
               style={menuButtonStyle}
             >
               <Icon name="checklist" size={16} />
-              <span style={{ flex: 1 }}>All rentals</span>
+              <span style={{ flex: 1 }}>{allTitle}</span>
               {!normaliseSavedViewQuery(currentQuery) && currentHiddenColumns.length === 0 && (
                 <Icon name="check" size={15} style={{ color: 'var(--primary)' }} />
               )}
@@ -366,7 +374,7 @@ export function SavedViewsMenu({
         isOpen={saveOpen}
         onClose={() => setSaveOpen(false)}
         title={updatingOwn ? 'Update saved view' : 'Save current view'}
-        subtitle="Keep this filter and column setup ready for one-click access."
+        subtitle={isInventory ? 'Keep this filter and layout setup ready for one-click access.' : 'Keep this filter and column setup ready for one-click access.'}
         size="sm"
         footer={
           <>
@@ -413,7 +421,9 @@ export function SavedViewsMenu({
           </label>
         )}
         <div style={{ marginTop: 16, padding: 13, borderRadius: 'var(--r-sm)', background: 'var(--select-bg)', color: 'var(--select-fg)', fontSize: 'var(--t-caption)', lineHeight: 1.5 }}>
-          This saves the active filters, search, sorting and visible columns. Page number and rows per page stay unchanged.
+          {isInventory
+            ? 'This saves the active filters, search, sorting and layout. Page number and rows per page stay unchanged.'
+            : 'This saves the active filters, search, sorting and visible columns. Page number and rows per page stay unchanged.'}
           {deviceMode
             ? ' Saved on this device only for now — shared views arrive with the next database update.'
             : canPublish && shareWithTeam

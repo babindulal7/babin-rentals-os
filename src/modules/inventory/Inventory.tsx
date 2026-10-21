@@ -19,6 +19,9 @@ import { ContextDrawer } from '../../components/ui/ContextDrawer'
 import { InspectorFacts } from '../../components/ui/InspectorFacts'
 import { InspectorNavigator } from '../../components/ui/InspectorNavigator'
 import { useInspectorTraversal } from '../../components/ui/useInspectorTraversal'
+import { SavedViewsMenu, type SavedListView } from '../../components/ui/SavedViewsMenu'
+import { captureInventoryView, restoreInventoryView, type InventoryViewChoices } from '../../lib/inventoryViewPresets'
+import { canPublishTeamViews } from '../../lib/rbac'
 import { useDisplayDensity } from '../../lib/displayDensity'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { Unavailable } from '../../components/ui/Unavailable'
@@ -78,6 +81,8 @@ import {
      not show, or withheld from one it does. */
   PRODUCT_CATEGORIES,
   INV_ORDER,
+  CONDITIONS,
+  TRACKING_MODES,
   SORTS,
   SORT_UNAVAILABLE,
   breakdownOf,
@@ -1131,12 +1136,6 @@ function FilterRail({
       <p style={{ margin: '8px 0 0', fontSize: 'var(--t-th)', color: 'var(--muted)', lineHeight: 1.45 }}>
         Greyed filters have no query behind them — most of their columns exist. Hover one for its own reason.
       </p>
-
-      <Unavailable reason="Saved views are not built — there is nowhere to store one.">
-        <Button icon="file" disabled>
-          Save Current View
-        </Button>
-      </Unavailable>
     </Card>
   )
 }
@@ -1362,6 +1361,41 @@ export default function Inventory() {
     [facets],
   )
   const filtersOn = activeFacetCount > 0 || chip.kind !== 'all' || searchTerm.trim() !== ''
+
+  /*
+   * Smart Workspace Views v1 — one trusted allowlist built from the REAL option
+   * lists this pane renders from, so a saved view can never re-create a filter
+   * the rail does not offer, a sort the database cannot order by, or a param
+   * the codec never persisted (tab/action/page/per/selection/record IDs).
+   */
+  const inventoryViewChoices = useMemo<InventoryViewChoices>(() => ({
+    chips: EQUIPMENT_CHIPS.map(chipSlug),
+    categories: PRODUCT_CATEGORIES,
+    statuses: INV_ORDER,
+    conditions: CONDITIONS,
+    trackingModes: TRACKING_MODES,
+    sorts: SORTS.filter((s) => !SORT_UNAVAILABLE[s]),
+    defaultSort: 'Equipment A–Z',
+  }), [])
+  const currentInventoryViewQuery = useMemo(
+    () => captureInventoryView(params, { sort, layout: view }, inventoryViewChoices),
+    [params, sort, view, inventoryViewChoices],
+  )
+  const applyInventorySavedView = useCallback((saved: SavedListView | null) => {
+    const restored = restoreInventoryView(saved?.query ?? null, inventoryViewChoices)
+    setParams(restored.params, { replace: false })
+    /* Safe cast: choices.sorts is sliced from the exact SORTS list minus the
+       two server-unsupported entries, so restore can only return a working
+       SortKey. Widen the codec's typing rather than this cast if SORTS moves. */
+    setSort(restored.sort as SortKey)
+    setView(restored.layout)
+    setPage(1)
+    setSelected(new Set())
+    /* The inspector must not keep a stale selection across a view switch —
+       its actions belong to the record the operator can still see. */
+    setInspectingEquipment(null)
+    setFiltersOpen(false)
+  }, [inventoryViewChoices, setParams])
 
   const toggleFacet = useCallback(
     (key: FacetKey, value: string) => {
@@ -1944,6 +1978,22 @@ export default function Inventory() {
               {phone ? '' : 'Clear Filters'}
             </button>}
           <ListControlRow
+            extras={
+              /* Smart Workspace Views v1 — the SAME control Rentals uses, on the
+                 Equipment pane's own toolbar row. Device-local fallback when the
+                 saved_views migration is not applied is the menu's own established
+                 behaviour and says so in its footer. */
+              <SavedViewsMenu
+                listKey="inventory"
+                legacyStorageKey={`babin-inventory:saved-views:${user?.id ?? 'anonymous'}`}
+                canPublish={canPublishTeamViews(user?.role ?? 'Client')}
+                userId={user?.id ?? null}
+                currentQuery={currentInventoryViewQuery}
+                currentHiddenColumns={[]}
+                onApply={applyInventorySavedView}
+                disabled={!user}
+              />
+            }
             sort={<label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
               Sort
               <select
