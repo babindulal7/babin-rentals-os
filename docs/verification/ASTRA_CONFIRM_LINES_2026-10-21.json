@@ -148,6 +148,16 @@
       "log": "artifacts/astra-confirm-lines-test-ui-copy-20261021.log",
       "at": "2026-10-21T18:13:11.945Z",
       "outputTail": "✔ rejects developer text in JSX, attributes, templates, and copy metadata (157.2982ms)\n✔ permits imports, import types, and comments (25.1853ms)\n✔ permits ordinary staff copy and technical strings outside UI (2.1922ms)\n✔ rejects developer text in exported staff-note constants (52.06ms)\nℹ tests 4\nℹ suites 0\nℹ pass 4\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 1824.7801\n"
+    },
+    {
+      "name": "build:typecheck",
+      "exitCode": 0,
+      "sourceHashBefore": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "sourceHashAfter": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "sourceStable": true,
+      "log": "artifacts/astra-confirm-lines-build-typecheck-20261021.log",
+      "at": "2026-10-21T18:17:42.423Z",
+      "outputTail": ""
     }
   ]
 }
