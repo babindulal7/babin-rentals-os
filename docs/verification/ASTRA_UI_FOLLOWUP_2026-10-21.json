@@ -1,0 +1,49 @@
+{
+  "scope": "Existing local checkout only; mock preview and automated regressions; no hosted writes",
+  "recoveryBranches": [
+    "codex/recovery-before-astra-gate-repair-20261021b",
+    "codex/recovery-before-overflow-touch-fix-20261021",
+    "codex/recovery-before-dashboard-today-footer-20261021"
+  ],
+  "integrationRepairs": {
+    "files": [
+      "src/__tests__/e2e/tier2-boundaries.test.tsx",
+      "src/modules/rentals/__tests__/BookingDetail.quickActionsPayment.test.tsx"
+    ],
+    "behavior": "Supply the mock environment flag and assert the current truthful fully-paid refusal; disabled payment and money-role assertions retained",
+    "before": { "passed": 105, "failed": 2 },
+    "after": { "files": 5, "passed": 107, "failed": 0 },
+    "log": "artifacts/astra-gate-repairs-20261021.log"
+  },
+  "overflowTouchTarget": {
+    "files": [
+      "src/components/ui/OverflowMenu.tsx",
+      "src/components/ui/__tests__/OverflowMenu.test.tsx"
+    ],
+    "observedBefore": "More rental actions was 36x36px at 390px viewport; inline minimum dimensions overrode the shell's 44px floor",
+    "change": "Shared overflow trigger dimensions and minima are 44px; portal, permissions, actions and keyboard behavior retained",
+    "before": { "passed": 3, "failed": 1 },
+    "after": { "files": 3, "passed": 18, "failed": 0 },
+    "logs": ["artifacts/astra-overflow-touch-before-20261021.log", "artifacts/astra-overflow-touch-after-20261021.log"]
+  },
+  "dashboardTodayFooter": {
+    "files": [
+      "src/components/ui/DateField.tsx",
+      "src/modules/today/Today.tsx",
+      "src/components/ui/__tests__/CalendarPopover.test.tsx",
+      "src/modules/today/__tests__/dashboardLayout.test.tsx"
+    ],
+    "observedBefore": "Activating calendar footer Today replaced the quick Today preset with a custom date, removed overdue/QC context and added Back to Today controls",
+    "change": "Optional CalendarPopover onToday callback; dashboard footer uses existing quick Today commit. Ordinary date fields retain literal-day selection",
+    "before": { "passed": 20, "failed": 3 },
+    "after": { "files": 4, "passed": 38, "failed": 0 },
+    "logs": ["artifacts/astra-today-footer-before-20261021.log", "artifacts/astra-today-footer-after-20261021.log"]
+  },
+  "fullVerification": {
+    "status": "In progress; source changed during the run, so it cannot certify the whole current checkout",
+    "previousFailedRunPreserved": "ASTRA_READBACK_CHECKPOINT_2026-10-21.json",
+    "currentEvidence": "ASTRA_LOCAL_2026-10-21.json"
+  },
+  "responsiveEvidence": "astra-responsive-2026-10-21/observations.json",
+  "releaseStatus": "HOLD; physical device, offline and hosted acceptance still open"
+}

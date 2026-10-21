@@ -4,9 +4,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
 import { setMaxListeners } from 'node:events'
+import { runInteractions } from './premium-browser-interactions.mjs'
 
 const phase = process.argv[2] ?? 'before'
-if (!['before', 'after', 'inspect'].includes(phase)) throw new Error('Use before, after or inspect')
+if (!['before', 'after', 'inspect', 'checks'].includes(phase)) throw new Error('Use before, after, inspect or checks')
 const origin = 'http://127.0.0.1:3011'
 const out = path.resolve('docs/verification/premium-design', phase)
 fs.mkdirSync(out, { recursive: true })
@@ -46,6 +47,10 @@ try {
     return r.result?.value
   }
   await command('Page.enable')
+  // Hard navigation between test cases discards only this isolated browser's drafts.
+  socket.addEventListener('message', event => {
+    if (JSON.parse(event.data).method === 'Page.javascriptDialogOpening') void command('Page.handleJavaScriptDialog',{accept:true})
+  })
   await command('Emulation.setDeviceMetricsOverride', { width:1440, height:1000, deviceScaleFactor:1, mobile:false })
   await command('Network.enable')
   // Only the isolated Vite origin and inline/local resources may load.
@@ -93,10 +98,11 @@ try {
   const configs = [375,768,820,1024,1280,1440,1920].map(width=>({ width, theme:'light', zoom:1 }))
   configs.push({width:820,theme:'dark',zoom:1},{width:1440,theme:'dark',zoom:1},
     {width:820,theme:'light',zoom:1.25},{width:1440,theme:'dark',zoom:1.25},
-    {width:1440,theme:'hc',zoom:1,contrast:true},{width:375,theme:'light',zoom:1,reduce:true})
+    {width:1440,theme:'high-contrast',zoom:1,contrast:true},{width:375,theme:'light',zoom:1,reduce:true})
   const selected = process.argv[3]?.split(',')
   const results = selected && fs.existsSync(path.join(out,'measurements.json')) ? JSON.parse(fs.readFileSync(path.join(out,'measurements.json'),'utf8')).filter(r=>!selected.includes(r.screen)) : []
   for (const [screen, route] of routes) {
+    if (phase === 'checks') continue
     if (selected && !selected.includes(screen)) continue
     if (!route) { results.push({screen, error:'No actual mock record link found'}); continue }
     await navigate(route)
@@ -120,4 +126,5 @@ try {
     fs.writeFileSync(path.join(out,'measurements.json'),JSON.stringify(results,null,2))
     console.log(`${screen}: ${results.filter(r=>r.screen===screen).length} captures`)
   }
+  if (phase === 'checks') await runInteractions({command,evaluate,navigate,out,asset})
 } finally { socket?.close(); chrome.kill() }

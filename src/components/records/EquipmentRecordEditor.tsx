@@ -446,6 +446,7 @@ export function EquipmentRecordEditor({
                         </td>
                         <td>
                           <span className="equipment-badge-status">
+                            <Icon name="lock" size={12} />
                             {String(row.status || 'In Stock')}
                           </span>
                         </td>

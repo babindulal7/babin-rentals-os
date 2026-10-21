@@ -1,4 +1,4 @@
-import type { HTMLAttributes, ReactNode } from 'react'
+import { Children, type HTMLAttributes, type ReactNode } from 'react'
 
 /** Layout only. Data loading, permissions and errors remain owned by PageBody. */
 export interface PageShellProps extends HTMLAttributes<HTMLDivElement> {
@@ -26,6 +26,7 @@ export function Toolbar({ children, actions, label = 'Page controls' }: {
   actions?: ReactNode
   label?: string
 }) {
+  if (Children.toArray(children).length === 0 && Children.toArray(actions).length === 0) return null
   return (
     <div className="page-toolbar" role="group" aria-label={label}>
       {children}

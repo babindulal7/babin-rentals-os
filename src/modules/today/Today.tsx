@@ -276,6 +276,7 @@ function DashboardCalendarContent({
         title={title}
         value={selected.from}
         todayDate={today}
+        onToday={() => commit({ kind: 'quick', period: 'Today' })}
         shadePastDates={false}
         onSelect={(day) => commit({ kind: 'custom', from: day, to: day })}
         onDismiss={onClose}

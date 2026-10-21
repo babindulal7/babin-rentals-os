@@ -63,7 +63,7 @@
 
 /* Badges and buttons */
 .equipment-badge-subtle { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--r-badge); background: var(--card2); border: 1px solid var(--border); font-size: var(--t-th); color: var(--muted); }
-.equipment-badge-status { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: var(--r-badge); background: var(--st-ready-bg, rgba(22,163,74,0.1)); color: var(--success-text); font-size: var(--t-th); font-weight: 600; }
+.equipment-badge-status { display: inline-flex; align-items: center; gap: var(--sp-xs); padding: 2px 8px; border-radius: var(--r-badge); background: var(--st-ready-bg, rgba(22,163,74,0.1)); color: var(--success-text); font-size: var(--t-th); font-weight: 600; }
 .equipment-badge-condition { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: var(--r-badge); background: var(--card2); border: 1px solid var(--border); color: var(--text2); font-size: var(--t-th); }
 .equipment-icon-button { display: inline-flex; align-items: center; justify-content: center; width: var(--control-height); height: var(--control-height); padding: 0; border: 1px solid transparent; border-radius: var(--r-sm); background: transparent; color: var(--muted); cursor: pointer; }
 .equipment-icon-button:hover:not(:disabled) { background: var(--st-danger-bg); color: var(--danger-text); }

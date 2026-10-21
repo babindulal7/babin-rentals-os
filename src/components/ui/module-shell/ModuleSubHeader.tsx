@@ -22,7 +22,7 @@ export interface ModuleSecondaryAction {
 }
 
 export interface ModuleSubHeaderProps {
-  counter: React.ReactNode
+  counter?: React.ReactNode
   loadedAt?: Date | number | string | null | undefined
   loading?: boolean | undefined
   onRefresh?: (() => void) | undefined
@@ -49,6 +49,10 @@ export const ModuleSubHeader: React.FC<ModuleSubHeaderProps> = ({
   className = '',
   style,
 }) => {
+  const hasSecondaryActions = Array.isArray(secondaryActions) ? secondaryActions.length > 0 : Boolean(secondaryActions)
+  if (React.Children.toArray(counter).length === 0 && loadedAt === undefined &&
+    !hasSecondaryActions && !primaryAction &&
+    React.Children.toArray(children).length === 0) return null
   return (
     <div className={`module-sub-header ${className}`.trim()} style={style}>
       <div className="module-sub-header__left">

@@ -1,6 +1,14 @@
 {
   "reference": "7af2870a",
-  "generatedAt": "2026-10-21T03:57:00.322Z",
+  "generatedAt": "2026-10-21T04:11:02.586Z",
   "scope": "Added presentation declarations in src only; not a palette replacement or automatic fixer.",
-  "findings": []
+  "findings": [
+    {
+      "file": "src/components/records/equipment-assist.css",
+      "line": 66,
+      "property": "padding",
+      "value": "2px 8px",
+      "review": "Review context; use a semantic token or document an existing geometry exception."
+    }
+  ]
 }

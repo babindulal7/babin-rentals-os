@@ -506,7 +506,7 @@ export const breakpoints = {
 export const layout = {
   sidebarWidth: '256px',
   sidebarCollapsedWidth: '64px',
-  headerHeight: '60px',
+  headerHeight: '64px',
   panelWidth: '320px',
   maxContentWidth: '1400px',
   pagePadding: 'clamp(14px, 1.35vw, 18px)',
@@ -520,6 +520,22 @@ export const layout = {
 // ============================================================================
 // STATUS TOKENS (mapped from lib/status.ts)
 // ============================================================================
+
+/** Semantic surface roles; theme.css supplies their palette-dependent values. */
+export const surfaceRoles = {
+  canvas: 'var(--app)',
+  content: 'var(--surface-card)',
+  inset: 'var(--card2)',
+  overlay: 'var(--card)',
+  divider: 'color-mix(in srgb, var(--border) 52%, transparent)',
+  outline: '1px solid var(--divider)',
+  elevation: 'var(--shadow-card)',
+  overlayElevation: 'var(--shadow-modal)',
+  sectionPadding: 'var(--sp-md)',
+  fieldGap: 'var(--sp-sm)',
+  tableRowHeight: '52px',
+  tableHeaderHeight: '44px',
+} as const;
 
 export const status = {
   neutral: { bg: 'var(--st-neutral-bg)', fg: 'var(--st-neutral-fg)' },
@@ -552,6 +568,7 @@ export const tokens = {
   transitions,
   breakpoints,
   layout,
+  surfaceRoles,
   status,
 };
 

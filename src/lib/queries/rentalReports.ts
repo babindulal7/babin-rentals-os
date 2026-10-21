@@ -129,12 +129,16 @@ type BookingRow = {
   clients?: unknown
 }
 
-function filtered<Q extends {
-  gte(column: string, value: string): Q
-  lte(column: string, value: string): Q
-  eq(column: string, value: string): Q
-}>(q: Q, options?: ReportFilterOptions): Q {
-  let out = q
+// Keep the filtering boundary structural: recursively inferring the entire
+// PostgREST embedded-select builder exceeds TS's depth after paginated reads.
+type ReportQuery = Parameters<typeof completeReportRead>[0]
+interface FilteredBookingQuery extends ReportQuery {
+  gte(column: string, value: string): FilteredBookingQuery
+  lte(column: string, value: string): FilteredBookingQuery
+  eq(column: string, value: string): FilteredBookingQuery
+}
+function filtered(q: unknown, options?: ReportFilterOptions): FilteredBookingQuery {
+  let out = q as FilteredBookingQuery
   if (options?.from) out = out.gte('pickup_at', options.from)
   if (options?.to) out = out.lte('pickup_at', options.to)
   if (options?.branchId) out = out.eq('branch_id', options.branchId)
@@ -148,7 +152,7 @@ function daysOf(b: Pick<BookingRow, 'pickup_at' | 'return_at'>): number {
 export async function getRentalPerformanceReport(options?: ReportFilterOptions): Promise<RentalPerformanceReportData> {
   const [res, typeRes, lineMap] = await Promise.all([
     completeReportRead(filtered(
-      supabase.from('bookings').select('id, booking_no, stage, pickup_at, return_at, project, cancelled_at, clients!client_id(name)'),
+      supabase.from('bookings').select<string, unknown>('id, booking_no, stage, pickup_at, return_at, project, cancelled_at, clients!client_id(name)'),
       options,
     ), 'Rental performance read failed'),
     completeReportRead(filtered(supabase.from('bookings').select('id, project_type'), options), 'Project type read failed'),
@@ -291,7 +295,7 @@ export async function getCancellationsReport(options?: ReportFilterOptions): Pro
     completeReportRead(filtered(
       supabase
         .from('bookings')
-        .select('id, booking_no, pickup_at, return_at, project, cancelled_at, cancellation_reason, clients!client_id(name)')
+        .select<string, unknown>('id, booking_no, pickup_at, return_at, project, cancelled_at, cancellation_reason, clients!client_id(name)')
         .not('cancelled_at', 'is', null),
       options,
     ), 'Cancellations read failed'),

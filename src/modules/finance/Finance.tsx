@@ -5,6 +5,7 @@ import Icon, { type IconName } from '../../components/ui/Icon'
 import { Card, PageHeader, PageActions, Button, Rail } from '../../components/ui/Page'
 import { ModuleSubHeader, ModuleKpiStrip, ModuleFilterBar, StatusPill } from '../../components/ui/module-shell'
 import { PageShell } from '../../components/ui/PageShell'
+import { openCommandPalette } from '../../components/shell/CommandPalette'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { FilterButton, FilterDrawer } from '../../components/ui/FilterDrawer'
 import { PageBody } from '../../components/ui/PageBody'
@@ -1162,6 +1163,7 @@ export default function Finance() {
         </Button>,
       ].filter(Boolean)}
       overflow={[
+        ...(phone ? [{ label: 'Search', icon: 'search' as const, onClick: openCommandPalette }] : []),
         ...(compactHeader ? [
           ...(canTakePayment && canIssueInvoice ? [{
             label: 'Create Invoice',
@@ -1326,6 +1328,8 @@ export default function Finance() {
         } : {})}
         icon="card"
         title="Finance"
+        // RULING 2026-10-21: keep Payment and information reachable at 375px.
+        searchInMore={phone && (tab === 'Dashboard' || tab === 'Invoices')}
         module={tab === 'Expenses' ? 'expenses' : 'payments'}
         {...(money && (tab === 'Dashboard' || tab === 'Invoices') ? { actions: headerActions } : phone && ((money && tab === 'Expenses') || tab === 'Documents') ? {
           // RULING 2026-10-14: hosted Finance filters use phone More, matching Invoices and Calendar.

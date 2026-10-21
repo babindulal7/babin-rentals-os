@@ -72,6 +72,31 @@ afterEach(async () => {
 
 describe('focused pickup and return dashboard', () => {
   it.each([
+    ['master dispatch', ['pickup', 'return']],
+    ['pickups', ['pickup']],
+    ['returns', ['return']],
+  ] as const)('calendar footer Today restores the operational preset for %s', async (control, affected) => {
+    vi.setSystemTime(new Date('2026-10-21T05:59:59+05:45'))
+    for (const panel of ['pickup', 'return']) {
+      window.sessionStorage.setItem(`dashboard.${panel}DateFilter`, JSON.stringify({ kind: 'quick', period: 'Tomorrow' }))
+    }
+    await mount()
+    await act(async () => buttonByLabel(`choose ${control} date`)!.click())
+    const footerToday = [...document.querySelectorAll<HTMLButtonElement>('.dashboard-calendar button')]
+      .find(button => button.textContent?.trim() === 'Today' && !button.hasAttribute('aria-pressed'))
+    expect(footerToday).toBeDefined()
+    await act(async () => footerToday!.click())
+
+    for (const panel of ['pickup', 'return']) {
+      expect(JSON.parse(window.sessionStorage.getItem(`dashboard.${panel}DateFilter`)!)).toEqual({
+        kind: 'quick', period: affected.some(value => value === panel) ? 'Today' : 'Tomorrow',
+      })
+    }
+    expect(document.querySelector('.dashboard-calendar')).toBeNull()
+    if (affected.some(value => value === 'return')) expect(container.textContent).toContain('Today · Overdue included')
+  })
+
+  it.each([
     ['2026-10-21T05:59:59+05:45', '2026-10-21'],
     ['2026-10-21T06:00:00+05:45', '2026-10-22'],
   ])('quick Today retains carry-over and ends at the correct shift boundary at %s', async (now, endDay) => {

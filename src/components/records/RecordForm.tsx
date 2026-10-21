@@ -262,7 +262,7 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
                 disabled={busy}
                 onClick={() => void save('another')}
               >
-                {phone ? '' : 'Create & add another'}
+                Create &amp; add another
               </Button>
             ) : undefined
           }

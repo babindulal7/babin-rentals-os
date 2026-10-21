@@ -8,17 +8,17 @@ import { WorkspaceProvider } from '../../../lib/workspaceContext'
 import { PageHeader } from '../header/PageHeader'
 import { RecordActions } from '../RecordWorkspace'
 
-const state = vi.hoisted(() => ({ viewport:'desktop' }))
+const state = vi.hoisted(() => ({ viewport:'desktop',mock:false }))
 vi.mock('../../../lib/device', () => ({useViewport:()=>state.viewport}))
 vi.mock('../../../lib/auth', () => ({useAuth:()=>({user:{name:'Operator',role:'Owner'},logout:vi.fn(),lockNow:vi.fn(),hasPin:false})}))
-vi.mock('../../../lib/supabase', () => ({IS_MOCK:false}))
+vi.mock('../../../lib/supabase', () => ({get IS_MOCK(){return state.mock}}))
 vi.mock('../../../lib/syncContext', () => ({useSync:()=>({status:'synced',pendingCount:0})}))
 vi.mock('../../shell/CommandPalette', () => ({openCommandPalette:vi.fn()}))
 vi.mock('../creation/GlobalAddMenu', () => ({GlobalAddMenu:()=> <button>Global Add</button>}))
 ;(globalThis as Record<string,unknown>).IS_REACT_ACT_ENVIRONMENT=true
 let container:HTMLDivElement
 let root:Root
-beforeEach(()=>{state.viewport='desktop';container=document.createElement('div');document.body.append(container);root=createRoot(container)})
+beforeEach(()=>{state.viewport='desktop';state.mock=false;container=document.createElement('div');document.body.append(container);root=createRoot(container)})
 afterEach(async()=>{await act(async()=>root.unmount());container.remove()})
 
 describe('hosted record action hierarchy',()=>{
@@ -60,5 +60,17 @@ describe('hosted record action hierarchy',()=>{
     expect(primary.getAttribute('aria-busy')).toBe('true')
     await act(async()=>container.querySelector<HTMLButtonElement>('[aria-label="More record actions"]')!.click())
     expect(document.querySelector<HTMLButtonElement>('[role="menuitem"]')?.disabled).toBe(true)
+  })
+  it('keeps mock mode visible and its options reachable without a separate phone header control',async()=>{
+    state.viewport='phone'
+    state.mock=true
+    await render()
+    expect(container.querySelector('header [aria-label="Mock Mode Active"]')).toBeNull()
+    const profile=container.querySelector<HTMLButtonElement>('button[aria-label*="user profile"]')!
+    expect(profile.textContent).toBe('Mock')
+    await act(async()=>profile.click())
+    const options=container.querySelector<HTMLButtonElement>('[role="dialog"] button')!
+    expect(options).not.toBeNull()
+    expect(container.querySelector('[role="dialog"]')?.textContent).toContain('Mock Mode Active')
   })
 })

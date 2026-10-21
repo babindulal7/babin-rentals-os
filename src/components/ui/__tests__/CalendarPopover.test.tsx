@@ -51,6 +51,15 @@ describe('CalendarPopover & Date Selection UI (Booqable Availability & Range Spe
     }
   })
 
+  it('keeps Today as a literal operational date when no preset callback is supplied', () => {
+    const onSelect = vi.fn()
+    act(() => root!.render(<CalendarPopover value="2026-10-25" todayDate="2026-10-20" onSelect={onSelect} onDismiss={vi.fn()} />))
+    const today = [...host!.querySelectorAll<HTMLButtonElement>('button')]
+      .find(button => button.textContent?.trim() === 'Today')!
+    act(() => today.click())
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith('2026-10-20')
+  })
+
   it('renders Quantity stepper when showQuantity is enabled and updates quantity', () => {
     const onQtyChange = vi.fn()
     act(() => {

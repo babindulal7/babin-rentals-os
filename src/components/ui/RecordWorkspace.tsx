@@ -28,7 +28,7 @@ export function RecordWorkspace({ children, summary, actions }: { children: Reac
       <div className="record-workspace-grid">
         <div className="record-workspace-body">{children}</div>
         {summary && (
-          <Rail label="Record summary" width={324}>{summary}</Rail>
+          <Rail label="Record summary" width={320}>{summary}</Rail>
         )}
       </div>
       {actions}

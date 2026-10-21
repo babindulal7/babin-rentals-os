@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 /** Hash source and verification inputs, never environment files or business data. */
@@ -47,9 +47,14 @@ export function writeTestReceipt(root, receipt) {
   if (!/^[a-zA-Z0-9-]+$/.test(receipt.runId ?? '')) throw new Error('Receipt requires a safe run ID')
   const dir = join(root, 'artifacts', 'test-receipts')
   mkdirSync(dir, { recursive: true })
-  writeFileSync(join(dir, `${receipt.runId}.json`), JSON.stringify(receipt, null, 2))
+  const atomicWrite = path => {
+    const temp = `${path}.${process.pid}.tmp`
+    writeFileSync(temp, JSON.stringify(receipt, null, 2))
+    renameSync(temp, path)
+  }
+  atomicWrite(join(dir, `${receipt.runId}.json`))
   if (latestTestReceipt(root)?.runId === receipt.runId) {
-    writeFileSync(join(root, '.test-result.json'), JSON.stringify(receipt, null, 2))
+    atomicWrite(join(root, '.test-result.json'))
   }
 }
 
