@@ -1,80 +1,179 @@
 {
-  "at": "2026-10-21T04:09:22.454Z",
+  "at": "2026-10-21T11:54:15.700Z",
   "workspace": "C:\\Users\\use\\Desktop\\babin-rentals-os",
-  "sha": "19506f5a40819d783745dfd4f5aa2c857559cad9",
-  "sourceHash": "4b51302e4569dd4513da9a4c861d9e960f0c90620bccebe554cce1c9b2d684cf",
+  "sha": "53ed0ba7329cd5db769e30a6c51d2e2e3b1723b1",
+  "sourceHash": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
   "counts": {
-    "verifiedLocal": 7,
+    "verifiedLocal": 6,
     "pendingStaging": 5,
     "blocked": 5,
-    "remaining": 7
+    "remaining": 8
   },
   "total": 24,
   "gates": [
     {
       "name": "typecheck",
       "command": "npm run typecheck",
-      "sha": "19506f5a40819d783745dfd4f5aa2c857559cad9",
-      "startedAt": "2026-10-21T04:02:25.526Z",
-      "elapsedMs": 166207,
-      "exitCode": 2,
-      "before": "590bc214e2ed815bad0218db93c253cadeb5b86f79643a4685a5daff6d17e1c1",
-      "after": "35eec76a095232491916807d82b1054f46897f9238d477d55dadff6ed5343b9c",
-      "sourceUnchanged": false,
+      "sha": "53ed0ba7329cd5db769e30a6c51d2e2e3b1723b1",
+      "startedAt": "2026-10-21T11:47:34.802Z",
+      "elapsedMs": 158451,
+      "exitCode": 0,
+      "before": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
+      "after": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
+      "sourceUnchanged": true,
       "environment": "local disposable fixtures; live-default build, no hosted operations",
       "node": "v24.19.0",
-      "log": "artifacts/astra-20261021-024418/final-1-typecheck.log",
-      "current": false
+      "log": "artifacts/astra-20261021-024418/final-3-typecheck.log",
+      "current": true
     },
     {
       "name": "lint",
       "command": "npm run lint",
-      "sha": "19506f5a40819d783745dfd4f5aa2c857559cad9",
-      "startedAt": "2026-10-21T04:05:12.371Z",
-      "elapsedMs": 69342,
-      "exitCode": 1,
-      "before": "35eec76a095232491916807d82b1054f46897f9238d477d55dadff6ed5343b9c",
-      "after": "8b1bc9eb05955482b9374c805050599d1d88b9c75d285c1f8042f47a2d7e9689",
-      "sourceUnchanged": false,
+      "sha": "53ed0ba7329cd5db769e30a6c51d2e2e3b1723b1",
+      "startedAt": "2026-10-21T11:50:13.960Z",
+      "elapsedMs": 53053,
+      "exitCode": 0,
+      "before": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
+      "after": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
+      "sourceUnchanged": true,
       "environment": "local disposable fixtures; live-default build, no hosted operations",
       "node": "v24.19.0",
-      "log": "artifacts/astra-20261021-024418/final-1-lint.log",
-      "current": false
+      "log": "artifacts/astra-20261021-024418/final-3-lint.log",
+      "current": true
     },
     {
       "name": "test",
+      "command": "npm run test -- --maxWorkers=1 --reporter=json --outputFile=artifacts/astra-20261021-024418/final-1-tests.json",
+      "sha": "19506f5a40819d783745dfd4f5aa2c857559cad9",
+      "startedAt": "2026-10-21T04:06:22.581Z",
+      "elapsedMs": 1503601,
+      "exitCode": 1,
+      "before": "8b1bc9eb05955482b9374c805050599d1d88b9c75d285c1f8042f47a2d7e9689",
+      "after": "6a5524cc6c75943479b2a6a824ca4436ddbc9908bb5164fe3edc9827196b97ec",
+      "sourceUnchanged": false,
+      "environment": "local disposable fixtures; live-default build, no hosted operations",
+      "node": "v24.19.0",
+      "log": "artifacts/astra-20261021-024418/final-1-test.log",
       "current": false
     },
     {
       "name": "test:coverage",
+      "command": "npm run test:coverage -- --maxWorkers=1 --reporter=json --outputFile=artifacts/astra-20261021-024418/final-1-coverage-tests.json",
+      "sha": "9a20db3372cb511c35238c72e207144891733938",
+      "startedAt": "2026-10-21T04:31:26.612Z",
+      "elapsedMs": 689071,
+      "exitCode": 1,
+      "before": "6a5524cc6c75943479b2a6a824ca4436ddbc9908bb5164fe3edc9827196b97ec",
+      "after": "6a5524cc6c75943479b2a6a824ca4436ddbc9908bb5164fe3edc9827196b97ec",
+      "sourceUnchanged": true,
+      "environment": "local disposable fixtures; live-default build, no hosted operations",
+      "node": "v24.19.0",
+      "log": "artifacts/astra-20261021-024418/final-1-test-coverage.log",
       "current": false
     },
     {
       "name": "check:pglite",
+      "command": "npm run check:pglite",
+      "sha": "9a20db3372cb511c35238c72e207144891733938",
+      "startedAt": "2026-10-21T04:42:55.950Z",
+      "elapsedMs": 10306,
+      "exitCode": 0,
+      "before": "6a5524cc6c75943479b2a6a824ca4436ddbc9908bb5164fe3edc9827196b97ec",
+      "after": "6a5524cc6c75943479b2a6a824ca4436ddbc9908bb5164fe3edc9827196b97ec",
+      "sourceUnchanged": true,
+      "environment": "local disposable fixtures; live-default build, no hosted operations",
+      "node": "v24.19.0",
+      "log": "artifacts/astra-20261021-024418/final-1-check-pglite.log",
       "current": false
     },
     {
       "name": "check:security",
+      "command": "npm run check:security",
+      "sha": "383a9fb1c938c139db9fdd950293097d9f7a2da1",
+      "startedAt": "2026-10-21T04:43:07.103Z",
+      "elapsedMs": 10831,
+      "exitCode": 0,
+      "before": "6a5524cc6c75943479b2a6a824ca4436ddbc9908bb5164fe3edc9827196b97ec",
+      "after": "6a5524cc6c75943479b2a6a824ca4436ddbc9908bb5164fe3edc9827196b97ec",
+      "sourceUnchanged": true,
+      "environment": "local disposable fixtures; live-default build, no hosted operations",
+      "node": "v24.19.0",
+      "log": "artifacts/astra-20261021-024418/final-1-check-security.log",
       "current": false
     },
     {
       "name": "node scripts/test-booking-financial-integrity.mjs",
+      "command": "node scripts/test-booking-financial-integrity.mjs",
+      "sha": "383a9fb1c938c139db9fdd950293097d9f7a2da1",
+      "startedAt": "2026-10-21T04:43:18.167Z",
+      "elapsedMs": 6997,
+      "exitCode": 0,
+      "before": "6a5524cc6c75943479b2a6a824ca4436ddbc9908bb5164fe3edc9827196b97ec",
+      "after": "6a5524cc6c75943479b2a6a824ca4436ddbc9908bb5164fe3edc9827196b97ec",
+      "sourceUnchanged": true,
+      "environment": "local disposable fixtures; live-default build, no hosted operations",
+      "node": "v24.19.0",
+      "log": "artifacts/astra-20261021-024418/final-1-receipt-tests.log",
       "current": false
     },
     {
       "name": "check:lifecycle",
+      "command": "npm run check:lifecycle",
+      "sha": "383a9fb1c938c139db9fdd950293097d9f7a2da1",
+      "startedAt": "2026-10-21T04:43:25.391Z",
+      "elapsedMs": 9009,
+      "exitCode": 0,
+      "before": "6a5524cc6c75943479b2a6a824ca4436ddbc9908bb5164fe3edc9827196b97ec",
+      "after": "6a5524cc6c75943479b2a6a824ca4436ddbc9908bb5164fe3edc9827196b97ec",
+      "sourceUnchanged": true,
+      "environment": "local disposable fixtures; live-default build, no hosted operations",
+      "node": "v24.19.0",
+      "log": "artifacts/astra-20261021-024418/final-1-check-lifecycle.log",
       "current": false
     },
     {
       "name": "check:contrast",
+      "command": "npm run check:contrast",
+      "sha": "383a9fb1c938c139db9fdd950293097d9f7a2da1",
+      "startedAt": "2026-10-21T04:43:34.641Z",
+      "elapsedMs": 766,
+      "exitCode": 0,
+      "before": "6a5524cc6c75943479b2a6a824ca4436ddbc9908bb5164fe3edc9827196b97ec",
+      "after": "6a5524cc6c75943479b2a6a824ca4436ddbc9908bb5164fe3edc9827196b97ec",
+      "sourceUnchanged": true,
+      "environment": "local disposable fixtures; live-default build, no hosted operations",
+      "node": "v24.19.0",
+      "log": "artifacts/astra-20261021-024418/final-1-check-contrast.log",
       "current": false
     },
     {
       "name": "lint:shell",
+      "command": "npm run lint:shell",
+      "sha": "383a9fb1c938c139db9fdd950293097d9f7a2da1",
+      "startedAt": "2026-10-21T04:43:35.668Z",
+      "elapsedMs": 1071,
+      "exitCode": 0,
+      "before": "6a5524cc6c75943479b2a6a824ca4436ddbc9908bb5164fe3edc9827196b97ec",
+      "after": "6a5524cc6c75943479b2a6a824ca4436ddbc9908bb5164fe3edc9827196b97ec",
+      "sourceUnchanged": true,
+      "environment": "local disposable fixtures; live-default build, no hosted operations",
+      "node": "v24.19.0",
+      "log": "artifacts/astra-20261021-024418/final-1-lint-shell.log",
       "current": false
     },
     {
       "name": "lint:ui-copy",
+      "command": "npm run lint:ui-copy",
+      "sha": "383a9fb1c938c139db9fdd950293097d9f7a2da1",
+      "startedAt": "2026-10-21T04:43:36.985Z",
+      "elapsedMs": 3123,
+      "exitCode": 0,
+      "before": "6a5524cc6c75943479b2a6a824ca4436ddbc9908bb5164fe3edc9827196b97ec",
+      "after": "6a5524cc6c75943479b2a6a824ca4436ddbc9908bb5164fe3edc9827196b97ec",
+      "sourceUnchanged": true,
+      "environment": "local disposable fixtures; live-default build, no hosted operations",
+      "node": "v24.19.0",
+      "log": "artifacts/astra-20261021-024418/final-1-lint-ui-copy.log",
       "current": false
     },
     {
@@ -94,8 +193,24 @@
       "current": false
     }
   ],
-  "tests": null,
-  "coverage": null,
+  "tests": {
+    "total": 5136,
+    "passed": 5134,
+    "failed": 2,
+    "skipped": 0,
+    "files": 405,
+    "success": false,
+    "report": "artifacts/astra-20261021-024418/final-1-tests.json"
+  },
+  "coverage": {
+    "total": 5139,
+    "passed": 5138,
+    "failed": 1,
+    "skipped": 0,
+    "files": 406,
+    "success": false,
+    "report": "artifacts/astra-20261021-024418/final-1-coverage-tests.json"
+  },
   "allRequiredGatesCurrent": false,
   "issues": [
     {
@@ -103,7 +218,7 @@
       "status": "PENDING STAGING",
       "paths": "supabase/migrations/0170_astra_phase0_authorization.sql; src/lib/documentStorage.ts; src/lib/evidenceStorage.ts; src/actions/documents/createDocument.ts",
       "correction": "Existing scoped immutable/private storage and bearer-link protection retained; no new migration.",
-      "evidence": "scripts/check-astra-phase0.mjs; src/lib/__tests__/documentStorage.test.ts; evidenceStorage.test.ts",
+      "evidence": "scripts/check-astra-phase0.mjs; src/lib/__tests__/documentStorage.test.ts; src/lib/__tests__/evidenceStorage.test.ts",
       "remaining": "Hosted Storage JWTs, branch/active-user matrix, floor upload integration, legacy-object ownership/backfill. Existing originals are deliberately unavailable to money-blind roles; review compatibility before any application."
     },
     {
@@ -143,23 +258,23 @@
       "status": "IN PROGRESS",
       "paths": "src/lib/offlineQueue.ts; src/lib/offlineIdentity.ts; src/lib/syncEngine.ts",
       "correction": "Kept account/project-bound tokens and preserved legacy work; added origin-wide replay/conflict lock and refusal without coordination.",
-      "evidence": "src/lib/__tests__/offlineQueue.phase0.test.ts; offlineIdentity.test.ts; syncEngine.phase0.test.ts",
+      "evidence": "src/lib/__tests__/offlineQueue.phase0.test.ts; src/lib/__tests__/offlineIdentity.test.ts; src/lib/__tests__/syncEngine.phase0.test.ts",
       "remaining": "Original branch/authorization context, device/revocation/account-switch acceptance and an explicit legacy recovery/handoff UI remain open; provenance must not be guessed."
     },
     {
       "id": "REL-02",
-      "status": "VERIFIED LOCAL",
-      "paths": "src/lib/offlineQueue.ts; src/lib/__tests__/offlineQueue.phase0.test.ts",
-      "correction": "Denied duplicate readback preserves the queued payload/key; existing zero-row, delete refusal and force-local confirmation remain enforced.",
-      "evidence": "29 focused identity/outbox/sync checks; rel02-before.log and phase0-after.log",
-      "remaining": "Physical crash/restart and cross-device/browser acceptance remain part of the broad offline release matrix."
+      "status": "IN PROGRESS",
+      "paths": "src/lib/offlineQueue.ts; src/lib/__tests__/offlineQueue.phase0.test.ts; src/lib/__tests__/offlineQueue.conflicts.test.ts",
+      "correction": "Zero-row/denied duplicate receipts preserve payload/key. Unreadable target/version now refuses before writing; updates and reviewed conflicts compare the confirmed server version atomically.",
+      "evidence": "40 focused checks pass after 6 negative regressions failed before; conflict-confirmation-before.log and conflict-confirmation-after.log",
+      "remaining": "The historical conflict detector still compares server time with the device enqueue clock. Original observed-revision provenance and clock-skew acceptance, physical crash/restart and cross-device replay remain open. Read→write compare-and-swap does not establish that original baseline."
     },
     {
       "id": "WF-01",
       "status": "IN PROGRESS",
       "paths": "src/lib/queries/salesVatReports.ts; src/lib/queries/reportSupport.ts",
       "correction": "Existing real invoice columns, exact amounts, complete invoice register and no fallback retained. Missing datasets now refuse across reports.",
-      "evidence": "salesVatCompleteness.test.ts; reportQueries.law16.test.ts; reportStoredTotals.test.ts",
+      "evidence": "src/lib/queries/__tests__/salesVatCompleteness.test.ts; src/lib/queries/__tests__/reportQueries.law16.test.ts; src/lib/queries/__tests__/reportStoredTotals.test.ts",
       "remaining": "VAT exempt/zero-rate provenance (OPEN_DECISIONS §15), credit/refund/export/date/branch reconciliation and authenticated invoice fixtures."
     },
     {
@@ -167,7 +282,7 @@
       "status": "VERIFIED LOCAL",
       "paths": "src/lib/queries/reportSupport.ts; src/lib/queries/rentalReports.ts",
       "correction": "Verified existing rupee→paisa correction and stored net totals; added full line pagination and cap+1 fractional-rupee reconciliation.",
-      "evidence": "reportStoredTotals.test.ts; reportFamiliesCompleteness.test.ts; reportQueries.law16.test.ts",
+      "evidence": "src/lib/queries/__tests__/reportStoredTotals.test.ts; src/lib/queries/__tests__/reportFamiliesCompleteness.test.ts; src/lib/queries/__tests__/reportQueries.law16.test.ts",
       "remaining": "Rental-line value is not a blanket certification of invoice attribution, crew/transport, all credits or every report export. Broader finance matrix remains open."
     },
     {
@@ -175,7 +290,7 @@
       "status": "VERIFIED LOCAL",
       "paths": "src/lib/queries/rentalReports.ts",
       "correction": "Completed is Closed; Returned stays separate. Cancelled bookings retain cancellation counts and cannot add earned stage/type revenue. Both cancellation cohorts now read complete scoped pages.",
-      "evidence": "reportFamiliesCompleteness.test.ts; reportQueries.law16.test.ts",
+      "evidence": "src/lib/queries/__tests__/reportFamiliesCompleteness.test.ts; src/lib/queries/__tests__/reportQueries.law16.test.ts",
       "remaining": "Hosted filters and full cancellation/archive operational matrix remain open."
     },
     {
@@ -183,7 +298,7 @@
       "status": "IN PROGRESS",
       "paths": "src/lib/queries/operationReports.ts; src/lib/queries/damageMaintenanceReports.ts; src/lib/queries/reportSupport.ts",
       "correction": "Existing fictional rates/fallbacks remain removed. Complete pages and full operational/damage detail exports now reconcile locally; real zero costs survive.",
-      "evidence": "reportFamiliesCompleteness.test.ts; reportQueries.law16.test.ts; reportCompleteness.test.ts",
+      "evidence": "src/lib/queries/__tests__/reportFamiliesCompleteness.test.ts; src/lib/queries/__tests__/reportQueries.law16.test.ts; src/lib/queries/__tests__/reportCompleteness.test.ts",
       "remaining": "Historical/current branch attribution, all KPI denominator/return-case charge rules, independently verified SQL/export cohorts and missing evidence semantics."
     },
     {
@@ -191,15 +306,15 @@
       "status": "BLOCKED",
       "paths": "src/lib/queries/assetRoi.ts; src/lib/queries/reportSupport.ts",
       "correction": "No invented purchase basis or revenue. Units/maintenance paginate; missing acquisition cost now also prevents known fleet net return.",
-      "evidence": "reportFamiliesCompleteness.test.ts; reportQueries.law16.test.ts",
+      "evidence": "src/lib/queries/__tests__/reportFamiliesCompleteness.test.ts; src/lib/queries/__tests__/reportQueries.law16.test.ts",
       "remaining": "Per-unit invoice/credit/bundle allocation and state-history utilization require the recorded decision in OPEN_DECISIONS §13."
     },
     {
       "id": "WF-08",
       "status": "IN PROGRESS",
-      "paths": "src/lib/queries/staffReports.ts; clientReports.ts; productReports.ts; promotionsReports.ts; activityReports.ts; reportSupport.ts",
+      "paths": "src/lib/queries/staffReports.ts; clientReports.ts; productReports.ts; promotionsReports.ts; src/lib/queries/activityReports.ts; src/lib/queries/reportSupport.ts",
       "correction": "Real empty/error behavior retained; missing datasets refuse. Added complete ordered reads for each family, removing the activity 300-row cap.",
-      "evidence": "reportFamiliesCompleteness.test.ts; reportQueries.law16.test.ts; reportQueries.mockStore.test.ts",
+      "evidence": "src/lib/queries/__tests__/reportFamiliesCompleteness.test.ts; src/lib/queries/__tests__/reportQueries.law16.test.ts; src/lib/queries/__tests__/reportQueries.mockStore.test.ts",
       "remaining": "Full source-backed field/role/date/branch cohorts, cross-family card/export reconciliation and authenticated report API acceptance remain open."
     },
     {
@@ -231,7 +346,7 @@
       "status": "IN PROGRESS",
       "paths": "src/lib/queries/availability.ts; src/actions/rentals/confirmRental.ts",
       "correction": "Preserved concurrent work on complete candidate/hold/tracking/line reads and confirmation readback; no replacement implementation.",
-      "evidence": "availabilityCompleteness.test.ts; availability.test.ts; src/actions/rentals/__tests__/confirmRental.test.ts",
+      "evidence": "src/lib/queries/__tests__/availabilityCompleteness.test.ts; availability.test.ts; src/actions/rentals/__tests__/confirmRental.test.ts",
       "remaining": "Full post-confirmation held-summary coverage, authenticated serial/quantity acceptance and true simultaneous PostgreSQL writer test remain open."
     },
     {
@@ -245,7 +360,7 @@
     {
       "id": "UI-06",
       "status": "VERIFIED LOCAL",
-      "paths": "src/lib/rentalDatePreset.ts; src/modules/rentals/booking/DatePresets.tsx; BookingDatesSection.tsx",
+      "paths": "src/lib/rentalDatePreset.ts; src/modules/rentals/booking/DatePresets.tsx; src/modules/rentals/booking/BookingDatesSection.tsx",
       "correction": "Presets use billable days from the existing engine, preserving entered times; impossible presets are disabled, active state has one meaning, and controls have 44px targets.",
       "evidence": "src/lib/__tests__/rentalDatePreset.test.ts; src/modules/rentals/booking/__tests__/DatePresets.test.tsx",
       "remaining": "Actual device keyboard/popover and price-display acceptance remain open."
@@ -255,7 +370,7 @@
       "status": "VERIFIED LOCAL",
       "paths": "src/components/ui/Modal.tsx",
       "correction": "Only a lock owner can release it; nested/closed siblings and StrictMode are balanced; last close restores original overflow.",
-      "evidence": "src/components/ui/__tests__/Modal.locks.test.tsx; Modal.fill.test.tsx; Modal.overflow.test.tsx",
+      "evidence": "src/components/ui/__tests__/Modal.locks.test.tsx; src/components/ui/__tests__/Modal.fill.test.tsx; src/components/ui/__tests__/Modal.overflow.test.tsx",
       "remaining": "Rendered touch/focus/scroll acceptance across the responsive matrix remains open."
     },
     {
@@ -263,16 +378,16 @@
       "status": "IN PROGRESS",
       "paths": "src/modules/finance/Finance.tsx; src/modules/finance/__tests__/Finance.restricted.test.tsx",
       "correction": "Removed duplicate sub-header Export/Create Invoice actions. Phone has one Payment and accessible secondary actions in More.",
-      "evidence": "Finance.restricted.test.tsx: all 23 passed in focused integration",
+      "evidence": "src/modules/finance/__tests__/Finance.restricted.test.tsx: all 23 passed in focused integration",
       "remaining": "375/430/768/820/1024/1440/1920 rendered measurements/screenshots and shared-module action hierarchy remain unverified in this task after two browser-attachment failures."
     },
     {
       "id": "QA-01",
       "status": "IN PROGRESS",
-      "paths": "Existing capability/Pulse/Router/client-copy fixes preserved; focused fixtures updated for actual paginated report reads",
-      "correction": "Full commands on current local source are recorded below; no negative security assertion was relaxed.",
+      "paths": "src/actions/__tests__/core.test.ts; src/lib/queries/__tests__/pulse.test.ts; src/modules/finance/__tests__/Finance.restricted.test.tsx; src/modules/rentals/__tests__/rentalsOperationsHeader.test.tsx; src/modules/clients/__tests__/clientsCopy.test.ts",
+      "correction": "Existing capability/Pulse/Router/client-copy corrections retained; fixtures updated for actual paginated reads. Full commands on current source are recorded below; no negative security assertion was relaxed.",
       "evidence": "Full test and coverage JSON receipts; focused regressions cited per issue",
-      "remaining": "Any current failing or source-changed gate remains open; no historical audit test count is reused."
+      "remaining": "Technician Packing authority remains inconsistent with PERMISSIONS.md; see OPEN_DECISIONS §17. A passing dispatcher/full suite does not certify that authorization contract. Any failing or source-changed gate remains open."
     },
     {
       "id": "QA-02",

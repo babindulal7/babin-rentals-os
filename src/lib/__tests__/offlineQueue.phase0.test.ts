@@ -9,6 +9,8 @@ const api = vi.hoisted(() => ({
   insertRow: { id: 'inserted-row' } as { id: string } | null,
   duplicate: false, duplicateRow: null as Record<string, unknown> | null,
   selectError: null as { code: string; message: string } | null,
+  conflictRow: { updated_at: '2020-01-01T00:00:00.000Z', name: 'Original' } as Record<string, unknown> | null,
+  updateFilters: [] as Array<[string, unknown]>, changedAfterRead: false,
   calls: [] as Array<{ actor: string; action: string }>, switchOnRead: false,
   lockHeld: false,
 }))
@@ -26,11 +28,13 @@ vi.mock('../offlineIdentity', async importOriginal => {
           select: (columns: string) => ({ eq: () => ({ maybeSingle: async () => {
             api.calls.push({ actor, action: 'read' })
             if (api.switchOnRead) api.actor = 'operator-b'
-            return { data: columns.includes('updated_at') ? null : api.duplicateRow, error: api.selectError ?? null }
+            return { data: columns.includes('updated_at') ? api.conflictRow : api.duplicateRow, error: api.selectError ?? null }
           } }) }),
-          update: () => ({ eq: () => ({ select: () => ({ maybeSingle: async () => {
-            api.calls.push({ actor, action: 'update' }); return { data: api.updateRow, error: null }
-          } }) }) }),
+          update: () => { const query = { eq: (column: string, value: unknown) => { api.updateFilters.push([column, value]); return query }, select: () => ({ maybeSingle: async () => {
+            api.calls.push({ actor, action: 'update' })
+            const versionNoLongerMatches = api.changedAfterRead && api.updateFilters.some(([column]) => column === 'updated_at')
+            return { data: versionNoLongerMatches ? null : api.updateRow, error: null }
+          } }) }; return query },
           insert: () => ({ select: () => ({ maybeSingle: async () => {
             api.calls.push({ actor, action: 'insert' })
             return { data: api.insertRow, error: api.duplicate ? { code: '23505', message: 'scan_events_client_uuid_key' } : null }
@@ -52,7 +56,9 @@ beforeEach(async () => {
   }) } })
   await db.mutations.clear(); await db.conflicts.clear(); await db.heldMutations.clear()
   Object.assign(api, { actor: 'operator-a', environment: 'https://project-a.supabase.co', signedIn: true,
-    updateRow: null, insertRow: { id: 'inserted-row' }, duplicate: false, duplicateRow: null, selectError: null, calls: [], switchOnRead: false, lockHeld: false })
+    updateRow: null, insertRow: { id: 'inserted-row' }, duplicate: false, duplicateRow: null, selectError: null,
+    conflictRow: { updated_at: '2020-01-01T00:00:00.000Z', name: 'Original' }, updateFilters: [], changedAfterRead: false,
+    calls: [], switchOnRead: false, lockHeld: false })
 })
 afterAll(async () => { await db.delete(); vi.unstubAllGlobals() })
 
@@ -98,6 +104,20 @@ describe('Phase 0 offline ownership and authoritative replay receipts', () => {
   it('removes only a positively confirmed matching update', async () => {
     await queueUpdate(); api.updateRow={id:'client-1'}; await drainQueue()
     expect(await db.mutations.count()).toBe(0)
+    expect(api.updateFilters).toContainEqual(['updated_at', '2020-01-01T00:00:00.000Z'])
+  })
+  it('retains the edit and performs no write when conflict verification is refused', async () => {
+    await queueUpdate(); api.updateRow={id:'client-1'}
+    api.selectError={code:'42501',message:'permission denied'}
+    await drainQueue()
+    expect(api.calls.filter(call=>call.action==='update')).toEqual([])
+    expect((await db.mutations.toArray())[0]).toMatchObject({status:'pending',payload:{name:'Revised'},error:expect.stringContaining('conflict')})
+  })
+  it('preserves an update when the server changes between the read and write', async () => {
+    await queueUpdate(); api.updateRow={id:'client-1'}; api.changedAfterRead=true
+    await drainQueue()
+    expect(api.calls.filter(call=>call.action==='update')).toHaveLength(1)
+    expect((await db.mutations.toArray())[0]).toMatchObject({status:'pending',payload:{name:'Revised'},error:expect.stringContaining('did not confirm')})
   })
   it('does not reset another tab\'s in-flight work or replay while that tab holds the lock', async () => {
     const work = await queueUpdate()
@@ -150,8 +170,12 @@ describe('Phase 0 offline ownership and authoritative replay receipts', () => {
   })
   it('retains conflict and work when force-local updates zero rows', async () => {
     const work=await queueUpdate()
-    const id=await db.conflicts.add({mutationId:work.id!,clientUuid:work.clientUuid,table:'clients',recordId:'client-1',localChanges:{name:'Revised'},remoteState:{name:'Server'},detectedAt:new Date().toISOString(),status:'unresolved'})
+    const id=await db.conflicts.add({mutationId:work.id!,clientUuid:work.clientUuid,table:'clients',recordId:'client-1',localChanges:{name:'Revised'},remoteState:{name:'Server',updated_at:'2020-01-01T00:00:00.000Z'},detectedAt:new Date().toISOString(),status:'unresolved'})
     await expect(resolveConflict(id,'force_local','spoofed-user')).rejects.toThrow('did not confirm')
+    expect(await db.mutations.count()).toBe(1); expect((await db.conflicts.get(id))?.status).toBe('unresolved')
+    expect(api.updateFilters).toContainEqual(['updated_at', '2020-01-01T00:00:00.000Z'])
+    api.updateRow={id:'client-1'}; api.changedAfterRead=true
+    await expect(resolveConflict(id,'force_local')).rejects.toThrow('did not confirm')
     expect(await db.mutations.count()).toBe(1); expect((await db.conflicts.get(id))?.status).toBe('unresolved')
     api.actor='operator-b'
     await expect(resolveConflict(id,'keep_server')).rejects.toThrow('another or an unverified identity')

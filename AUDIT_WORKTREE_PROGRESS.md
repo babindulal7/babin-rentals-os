@@ -1,11 +1,20 @@
-# Current continuation — 20 October 2026, availability follow-up
+# Current continuation — 21 October 2026, integrated local fixes
+
+## UI fixes — checkpoint before final gate results
+
+- The previous complete run passed 5,130/5,131 tests; database, financial integrity, security, lifecycle, contrast and build commands passed. Source changed during verification, so it did not certify the checkout. Preserved at `docs/verification/ASTRA_UI_INTEGRATION_CHECKPOINT_2026-10-21.json`.
+- Repaired stale environment/payment/profile test contracts. Scoped checks: 107 integration cases and 15 header-ownership cases passed, with disabled-payment, notes-access and Escape focus behavior retained.
+- Fixed the calendar footer Today action to restore the operational Today preset. Three regressions failed before the fix; 38 dashboard/calendar/overflow/New Rental tests pass afterward. Ordinary date selection keeps its existing behavior.
+- Increased the shared overflow trigger from 36px to 44px; 18 related cases pass. Reduced phone header gaps to fit the supported 360px viewport without shrinking the 110px title floor or any 44px action.
+- Real browser assertions pass: desktop Today keeps identical panel geometry and overdue context after footer Today; all five booking-header buttons fit at 360px (profile right edge 348px); catalogue bottom 729.79px stays above bottom navigation at 742px. These are mock-preview samples, not complete device/offline/hosted acceptance. Evidence: `docs/verification/astra-responsive-2026-10-21/fixed-regressions.json`.
+- A new complete local gate run is underway in `docs/verification/ASTRA_LOCAL_2026-10-21.json`; no result is assumed. All existing local changes, recovery points, data and offline work are preserved. No hosted mutation, push, PR or reset.
 
 ## 21 October continuation — confirmed-booking readback
 
 - Resumed clean at `5d26cf8d`, recovery branch `codex/recovery-before-confirmation-readback-20261021`. New shell/L1 and other sessions' changes are preserved.
 - The completed 20 October checker passed 4,948 tests and every command, but recorded changes during tests/security/lifecycle/build. It is historical for the newer merge; no current-source pass is carried forward.
 - Actual source fix in `availability.ts` and `confirmRental.ts`: complete reservation pages; unavailable summaries become `null` in successful confirmed results/events, preserving the non-throwing post-commit contract. Missing, failed, repeated or invalid data can no longer become fabricated zero counts or partial totals.
-- Seven new regressions failed before the fix. After-change checks are underway. Tests/affected files and remaining work are in the newest `PROGRESS.md` entry; current evidence will be `docs/verification/ASTRA_LOCAL_2026-10-21.json`.
+- Seven new regressions failed before the fix; 207 focused checks passed afterward. Tests/affected files and remaining work are in `PROGRESS.md`; later integration evidence is `docs/verification/ASTRA_LOCAL_2026-10-21.json`.
 - No hosted mutation or real business-data writes; no source/config/data replacement, reset, push, PR or offline-work deletion. Pre-commit confirmation-line counts, shared workflows, tax/document/evidence decisions and device/hosted acceptance remain open.
 
 ## Next batch — booking-planning inputs
@@ -265,3 +274,18 @@ This is the active implementation log for the local fixes requested on 19 Octobe
 - Current state: PARTIAL.
 - Remaining risk or missing business decision: final full verification; hosted/device acceptance and documented OPEN_DECISIONS remain open.
 - Safe rollback guidance: revert only this fix's source changes after preserving subsequent work; do not delete queue/storage bytes or undo applied migrations.
+
+## 2026-10-21 17:33 NPT — Fix REL-02 (conflict confirmation follow-up)
+- Workspace/branch/SHA: C:\Users\use\Desktop\babin-rentals-os; main; 53ed0ba7329cd5db769e30a6c51d2e2e3b1723b1.
+- Previous local changes preserved: existing shared work retained; source before this correction copied to artifacts/astra-20261021-024418/offlineQueue.before-conflict-confirmation.ts.
+- Evidence/reproduction on actual local tree: six regressions failed before the correction. A failed conflict read previously allowed the update, and a confirmed read did not constrain the following write to that version.
+- Files changed: src/lib/offlineQueue.ts; src/lib/__tests__/offlineQueue.phase0.test.ts; src/lib/__tests__/offlineQueue.conflicts.test.ts.
+- Migration files added (local only): none.
+- Summary of code correction: unreadable target/version/fields refuse replay and preserve the edit. Replay updates and force-local conflict writes compare updated_at with their confirmed server snapshot; zero affected rows remain unresolved.
+- Data preservation/recovery path: queue payloads, IDs and conflict records retained. No browser store was opened, cleared or exported by this task. Unsupported version reads remain pending rather than pretending to be saved.
+- Tests added or modified: refused/missing/invalid conflict read; confirmed version filter; intervening server change; version-constrained conflict resolution. Prior permissive read-error assertion deliberately replaced with fail-closed behavior required by REL-02.
+- Commands executed with actual pass/fail counts: focused before 20 passed / 6 failed; focused after 40 passed / 0 failed across 6 files. Logs: artifacts/astra-20261021-024418/conflict-confirmation-before.log and conflict-confirmation-after.log. Full final-2 was interrupted deliberately before completion; final-3 is the new full verification attempt.
+- Manual browser/device results: further isolated Chrome navigation/state attempts timed out; rendered responsive/physical-device acceptance NOT VERIFIED. The task's mock server was stopped.
+- Current state: PARTIAL.
+- Remaining risk or missing business decision: original form-observed server version is not captured for legacy edits. Device enqueue time remains insufficient evidence of that baseline; this CAS protects the replay-read-to-write interval only. Branch/provenance and actual browser restart matrices remain open.
+- Safe rollback guidance: selectively restore only this correction after preserving subsequent edits. Do not discard pending work, remove conflict records or change remote schema.

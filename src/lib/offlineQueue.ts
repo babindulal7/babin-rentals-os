@@ -368,7 +368,12 @@ async function resolveOwnedConflict(conflictId: number, resolution: 'keep_server
   }
 
   if (resolution === 'force_local') {
-    const { data, error } = await identity.client.from(conflict.table).update(conflict.localChanges).eq('id', conflict.recordId).select('id').maybeSingle()
+    const revision = conflict.remoteState['updated_at']
+    if (typeof revision !== 'string' || !Number.isFinite(Date.parse(revision))) {
+      throw new Error('Server did not confirm the conflict version; pending work was preserved.')
+    }
+    const { data, error } = await identity.client.from(conflict.table).update(conflict.localChanges)
+      .eq('id', conflict.recordId).eq('updated_at', revision).select('id').maybeSingle()
     if (error) throw error
     if (!data || data.id !== conflict.recordId) throw new Error('Server did not confirm the offline update; pending work was preserved.')
   }
@@ -457,9 +462,8 @@ export async function drainQueue(): Promise<void> {
  * device running fast can miss a conflict; that errs toward replaying, which
  * is what happened before this check existed.
  *
- * Returns true when the write is held. A failed read (offline again, refused,
- * a table with no `updated_at`) returns false, and the update meets the same
- * condition and is retried as before.
+ * Returns true when the write is held. An unreadable target/version refuses
+ * replay; the caller preserves the pending edit for retry/review.
  */
 export async function holdIfConflicting(
   id: number,
@@ -468,20 +472,36 @@ export async function holdIfConflicting(
   changes: Record<string, unknown>,
   client = supabase,
 ): Promise<boolean> {
+  return (await checkReplayConflict(id, mutation, rowId, changes, client)).held
+}
+
+async function checkReplayConflict(
+  id: number,
+  mutation: QueuedMutation,
+  rowId: string,
+  changes: Record<string, unknown>,
+  client: typeof supabase,
+): Promise<{ held: boolean; revision: string }> {
   const fields = Object.keys(changes).filter((f) => f !== 'updated_at')
-  if (fields.length === 0) return false
+  if (fields.length === 0) throw new Error('No offline changes were confirmed; pending work was preserved.')
   const { data, error } = await client
     .from(mutation.table)
     .select(['updated_at', ...fields].join(','))
     .eq('id', rowId)
     .maybeSingle()
-  if (error || !data) return false
+  if (error) throw new Error('Could not verify the offline conflict state; pending work was preserved.')
+  if (!data) throw new Error('Server did not confirm the offline target; pending work was preserved.')
   // A dynamic column list types `data` as a parser error; the row is a plain record.
   const remote = data as unknown as Record<string, unknown>
-  const remoteAt = typeof remote['updated_at'] === 'string' ? Date.parse(remote['updated_at']) : Number.NaN
-  if (!(remoteAt > Date.parse(mutation.timestamp))) return false
+  const revision = remote['updated_at']
+  if (typeof revision !== 'string' || !Number.isFinite(Date.parse(revision)) || fields.some(field => !(field in remote))) {
+    throw new Error('Server did not confirm the offline conflict version and fields; pending work was preserved.')
+  }
+  const remoteAt = Date.parse(revision)
+  if (!Number.isFinite(Date.parse(mutation.timestamp))) throw new Error('Offline edit time is unconfirmed; work was preserved.')
+  if (!(remoteAt > Date.parse(mutation.timestamp))) return { held: false, revision }
   const differs = fields.some((f) => f in remote && JSON.stringify(remote[f]) !== JSON.stringify(changes[f]))
-  if (!differs) return false
+  if (!differs) return { held: false, revision }
 
   await db.conflicts.add({
     mutationId: id,
@@ -498,7 +518,7 @@ export async function holdIfConflicting(
     error: `Conflict: the server changed this record at ${String(remote['updated_at'])}, after the offline edit at ${mutation.timestamp}.`,
     retryCount: MAX_RETRIES,
   })
-  return true
+  return { held: true, revision }
 }
 
 async function replayMutation(mutation: QueuedMutation, identity: OfflineSession): Promise<void> {
@@ -530,8 +550,10 @@ async function replayMutation(mutation: QueuedMutation, identity: OfflineSession
     } else if (mutation.action === 'update') {
       const { id: rowId, ...rest } = mutation.payload
       if (typeof rowId !== 'string' || !rowId) throw new Error('Offline update has no target ID; work was preserved.')
-      if (await holdIfConflicting(id, mutation, rowId, rest, identity.client)) return
-      const { data, error } = await identity.client.from(mutation.table).update(rest).eq('id', rowId).select('id').maybeSingle()
+      const check = await checkReplayConflict(id, mutation, rowId, rest, identity.client)
+      if (check.held) return
+      const { data, error } = await identity.client.from(mutation.table).update(rest)
+        .eq('id', rowId).eq('updated_at', check.revision).select('id').maybeSingle()
       if (error) throw error
       if (!data || data.id !== rowId) throw new Error('Server did not confirm the offline update; pending work was preserved.')
     } else {

@@ -101,9 +101,15 @@ describe('holdIfConflicting — a queued update never silently overwrites a newe
     expect(await holdIfConflicting(7, mutation, 'unit-1', { status: 'Maintenance', updated_at: QUEUED_AT })).toBe(false)
   })
 
-  it('replays as before when the read fails — the update meets the same condition and retries', async () => {
+  it('refuses replay when permission denial prevents conflict verification', async () => {
     server.error = { message: 'permission denied for table product_units' }
-    expect(await holdIfConflicting(7, mutation, 'unit-1', { status: 'Maintenance' })).toBe(false)
+    await expect(holdIfConflicting(7, mutation, 'unit-1', { status: 'Maintenance' })).rejects.toThrow('conflict')
+    expect(added).toHaveLength(0)
+  })
+
+  it.each([null, { status: 'In Stock' }, { updated_at: 'invalid', status: 'In Stock' }])('refuses an unconfirmed target/version: %j', async row => {
+    server.row = row
+    await expect(holdIfConflicting(7, mutation, 'unit-1', { status: 'Maintenance' })).rejects.toThrow('confirm')
     expect(added).toHaveLength(0)
   })
 })

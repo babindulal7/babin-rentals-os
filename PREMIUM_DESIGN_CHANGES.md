@@ -38,7 +38,7 @@ Behavioral invariants: no migration, money calculation, capability, custody tran
 - Existing form, header, Finance, roles and lifecycle suites remain active.
 - `scripts/premium-visual-capture.mjs`: repeatable screenshots and computed measurements on the isolated local mock server.
 - `scripts/premium-browser-interactions.mjs`: real Chromium mouse/keyboard checks of drawers, validation, action menus, payment modal, focus, selector contrast and actual Card variants. The Warehouse route is restricted in current source; verification preserves that stricter gate. It does not widen roles to make a screenshot.
-- `scripts/audit-premium-tokens.mjs`: reports added presentation literals without replacing them automatically. One flagged line retains the existing noninteractive status badge padding (`2px 8px`); the change adds icon spacing, not a smaller hit target.
+- `scripts/audit-premium-tokens.mjs`: reports added presentation literals without replacing them automatically. Four findings at the final audit: retained noninteractive badge padding (`2px 8px`); two existing/concurrent compact-header gap expressions (4/8px and 0/8px, preserving 44px controls); and one false positive from a test assertion string containing `box-shadow:`. These are documented exceptions, not automatic replacements.
 - `scripts/verify-premium-design.mjs`: ordered local commands with per-command logs, exit codes and source fingerprints.
 
 ## Evidence and practical limits
@@ -46,3 +46,5 @@ Behavioral invariants: no migration, money calculation, capability, custody tran
 Use `docs/verification/premium-design/verification.json` for the final run and `verification-first-pass.json` for the earlier pass. Raw output is retained alongside each command. Full browser detail is in the visual matrix and `checks/interactions.json`.
 
 The viewport scaling matrix simulates 125% browser layout/DPR; actual browser-chrome zoom and physical iPad/scanner behavior remain unverified. The initial high-contrast baseline used an invalid theme name and is excluded as a valid before comparison; the final after capture uses the real `high-contrast` theme. Browser money checks use the built-in Warehouse sign-in; Technician/Driver coverage comes from automated permission tests, not an invented mock identity. No release or production certification is implied.
+
+Observed row geometry is retained in the raw matrix: Inventory sample rows are 56px; Edit Equipment unit rows increased from 51px to 57px to accommodate actual 44px fields. Multi-line Rentals sample rows remain 74.6px (client/project plus BS/AD dates); no text or date is hidden to force the proposed 48–56px band. This pass makes no blanket claim that every row is 52px.
