@@ -68,6 +68,36 @@ export function SavedViewsMenu({
      this device's own list, exactly as before G2, and says so. */
   const [deviceMode, setDeviceMode] = useState(false)
   const menuRef = useRef<HTMLSpanElement>(null)
+  const menuDropdownRef = useRef<HTMLDivElement>(null)
+  /*
+   * The dropdown is right-anchored to the trigger (`right: 0`), which is correct
+   * wherever the trigger sits near the screen's right edge — but a wrapped
+   * toolbar row can leave it further left (Inventory's Equipment toolbar at 390px
+   * measured the menu at left: -151px, half off-screen). Standard popover flip:
+   * on open, measure the rendered menu and slide it right by exactly its
+   * overflow, so it enters under the trigger instead of escaping the viewport.
+   * jsdom has no layout, so the real-width behaviour is verified in the browser
+   * driver, not in a unit test.
+   */
+  const [menuShift, setMenuShift] = useState(0)
+  useEffect(() => {
+    if (!menuOpen) {
+      setMenuShift(0)
+      return
+    }
+    const measure = () => {
+      const dropdown = menuDropdownRef.current
+      if (!dropdown) return
+      const overflow = 16 - dropdown.getBoundingClientRect().left
+      setMenuShift(overflow > 0 ? overflow : 0)
+    }
+    const frame = window.requestAnimationFrame(measure)
+    window.addEventListener('resize', measure)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.removeEventListener('resize', measure)
+    }
+  }, [menuOpen])
 
   useEffect(() => {
     let live = true
@@ -294,6 +324,7 @@ export function SavedViewsMenu({
 
         {menuOpen && (
           <div
+            ref={menuDropdownRef}
             role="menu"
             aria-label={menuLabel}
             style={{
@@ -310,6 +341,7 @@ export function SavedViewsMenu({
               borderRadius: 'var(--r-card)',
               background: 'var(--card)',
               boxShadow: 'var(--shadow-lg)',
+              ...(menuShift ? { transform: `translateX(${menuShift}px)` } : undefined),
             }}
           >
             {groupLabel(groupTitle)}
