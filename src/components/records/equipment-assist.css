@@ -28,9 +28,9 @@
 /* Unified Desktop Add/Edit Equipment (Spec v3.0, Oct 2026) */
 .equipment-record-editor { display: flex; flex-direction: column; gap: var(--sp-lg); min-width: 0; }
 .equipment-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: var(--sp-md); }
+.equipment-form-span-full { grid-column: 1 / -1; }
 @media (min-width: 1280px) {
   .equipment-form-span-2 { grid-column: span 2; }
-  .equipment-form-span-full { grid-column: 1 / -1; }
 }
 
 /* Tracking mode selector */

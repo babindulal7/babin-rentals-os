@@ -3,7 +3,9 @@
   "recoveryBranches": [
     "codex/recovery-before-astra-gate-repair-20261021b",
     "codex/recovery-before-overflow-touch-fix-20261021",
-    "codex/recovery-before-dashboard-today-footer-20261021"
+    "codex/recovery-before-dashboard-today-footer-20261021",
+    "codex/recovery-before-profile-test-contract-20261021",
+    "codex/recovery-before-minimum-width-header-20261021"
   ],
   "integrationRepairs": {
     "files": [
@@ -42,7 +44,23 @@
   "fullVerification": {
     "status": "In progress; source changed during the run, so it cannot certify the whole current checkout",
     "previousFailedRunPreserved": "ASTRA_READBACK_CHECKPOINT_2026-10-21.json",
+    "laterFailedRunPreserved": "ASTRA_UI_INTEGRATION_CHECKPOINT_2026-10-21.json",
     "currentEvidence": "ASTRA_LOCAL_2026-10-21.json"
+  },
+  "profileTestContract": {
+    "file": "src/components/shell/__tests__/headerOwnership.test.tsx",
+    "change": "Locate the profile by accessible name while retaining notes access, Escape dismissal and focus-restoration assertions",
+    "before": "The preserved full run passed 5130/5131; this selector was its sole failure",
+    "after": { "passed": 15, "failed": 0 },
+    "log": "artifacts/astra-header-ownership-after-20261021.log"
+  },
+  "minimumWidthHeader": {
+    "file": "src/components/shell/Header.tsx",
+    "change": "Reduce phone-only outer and action gaps while retaining the 110px title floor and 44px action targets",
+    "before": { "viewportWidth": 360, "profileRight": 366 },
+    "after": { "viewportWidth": 360, "profileRight": 348, "allFiveButtonsFitAt44px": true },
+    "regression": "Read-only browser assertion: each visible header button has width/height >=44, left>=0 and right<=viewport width",
+    "evidence": "astra-responsive-2026-10-21/fixed-regressions.json"
   },
   "responsiveEvidence": "astra-responsive-2026-10-21/observations.json",
   "releaseStatus": "HOLD; physical device, offline and hosted acceptance still open"

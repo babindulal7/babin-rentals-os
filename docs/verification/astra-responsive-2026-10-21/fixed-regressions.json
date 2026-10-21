@@ -1,0 +1,291 @@
+{
+  "at": "2026-10-21T11:42:03.751Z",
+  "environment": "Existing localhost:3000 mock development preview, Chrome viewport emulation",
+  "todayFooter": {
+    "before": {
+      "documentWidth": 1440,
+      "headers": 1,
+      "overdue": true,
+      "panels": [
+        {
+          "id": "outgoing-panel-title",
+          "rect": {
+            "bottom": 214.4500026702881,
+            "height": 26.149999618530273,
+            "left": 290.8000183105469,
+            "right": 402.8125228881836,
+            "top": 188.3000030517578,
+            "width": 112.01250457763672,
+            "x": 290.8000183105469,
+            "y": 188.3000030517578
+          }
+        },
+        {
+          "id": "incoming-panel-title",
+          "rect": {
+            "bottom": 214.4500026702881,
+            "height": 26.149999618530273,
+            "left": 868.3125,
+            "right": 997.125,
+            "top": 188.3000030517578,
+            "width": 128.8125,
+            "x": 868.3125,
+            "y": 188.3000030517578
+          }
+        }
+      ],
+      "width": 1440
+    },
+    "after": {
+      "documentWidth": 1440,
+      "headers": 1,
+      "overdue": true,
+      "panels": [
+        {
+          "id": "outgoing-panel-title",
+          "rect": {
+            "bottom": 214.4500026702881,
+            "height": 26.149999618530273,
+            "left": 290.8000183105469,
+            "right": 402.8125228881836,
+            "top": 188.3000030517578,
+            "width": 112.01250457763672,
+            "x": 290.8000183105469,
+            "y": 188.3000030517578
+          }
+        },
+        {
+          "id": "incoming-panel-title",
+          "rect": {
+            "bottom": 214.4500026702881,
+            "height": 26.149999618530273,
+            "left": 868.3125,
+            "right": 997.125,
+            "top": 188.3000030517578,
+            "width": 128.8125,
+            "x": 868.3125,
+            "y": 188.3000030517578
+          }
+        }
+      ],
+      "width": 1440
+    },
+    "passed": true,
+    "screenshot": "today-fixed-footer-desktop.jpg"
+  },
+  "minimumHeader": {
+    "before": {
+      "buttons": [
+        {
+          "name": "More rental actions",
+          "rect": {
+            "bottom": 53.60000038146973,
+            "height": 44,
+            "left": 130,
+            "right": 174,
+            "top": 9.600000381469728,
+            "width": 44,
+            "x": 130,
+            "y": 9.600000381469728
+          }
+        },
+        {
+          "name": "Confirm Booking",
+          "rect": {
+            "bottom": 53.60000038146973,
+            "height": 44,
+            "left": 178,
+            "right": 222,
+            "top": 9.600000381469728,
+            "width": 44,
+            "x": 178,
+            "y": 9.600000381469728
+          }
+        },
+        {
+          "name": "Rental summary",
+          "rect": {
+            "bottom": 53.60000038146973,
+            "height": 44,
+            "left": 226,
+            "right": 270,
+            "top": 9.600000381469728,
+            "width": 44,
+            "x": 226,
+            "y": 9.600000381469728
+          }
+        },
+        {
+          "name": "Search",
+          "rect": {
+            "bottom": 53.60000038146973,
+            "height": 44,
+            "left": 274,
+            "right": 318,
+            "top": 9.600000381469728,
+            "width": 44,
+            "x": 274,
+            "y": 9.600000381469728
+          }
+        },
+        {
+          "name": "BA — user profile · Mock mode",
+          "rect": {
+            "bottom": 53.60000038146973,
+            "height": 44,
+            "left": 322,
+            "right": 366,
+            "top": 9.600000381469728,
+            "width": 44,
+            "x": 322,
+            "y": 9.600000381469728
+          }
+        }
+      ],
+      "documentWidth": 360,
+      "page": "/rentals?action=new",
+      "width": 360
+    },
+    "after": {
+      "buttons": [
+        {
+          "name": "More rental actions",
+          "rect": {
+            "bottom": 53.60000038146973,
+            "height": 44,
+            "left": 128,
+            "right": 172,
+            "top": 9.600000381469728,
+            "width": 44,
+            "x": 128,
+            "y": 9.600000381469728
+          }
+        },
+        {
+          "name": "Confirm Booking",
+          "rect": {
+            "bottom": 53.60000038146973,
+            "height": 44,
+            "left": 172,
+            "right": 216,
+            "top": 9.600000381469728,
+            "width": 44,
+            "x": 172,
+            "y": 9.600000381469728
+          }
+        },
+        {
+          "name": "Rental summary",
+          "rect": {
+            "bottom": 53.60000038146973,
+            "height": 44,
+            "left": 216,
+            "right": 260,
+            "top": 9.600000381469728,
+            "width": 44,
+            "x": 216,
+            "y": 9.600000381469728
+          }
+        },
+        {
+          "name": "Search",
+          "rect": {
+            "bottom": 53.60000038146973,
+            "height": 44,
+            "left": 260,
+            "right": 304,
+            "top": 9.600000381469728,
+            "width": 44,
+            "x": 260,
+            "y": 9.600000381469728
+          }
+        },
+        {
+          "name": "BA — user profile · Mock mode",
+          "rect": {
+            "bottom": 53.60000038146973,
+            "height": 44,
+            "left": 304,
+            "right": 348,
+            "top": 9.600000381469728,
+            "width": 44,
+            "x": 304,
+            "y": 9.600000381469728
+          }
+        }
+      ],
+      "documentWidth": 360,
+      "width": 360
+    },
+    "passed": true,
+    "screenshot": "new-rental-fixed-360-after.jpg"
+  },
+  "catalogue": {
+    "bottomNavigation": [
+      {
+        "label": "Breadcrumb",
+        "rect": {
+          "bottom": 41.04999923706055,
+          "height": 18.899999618530273,
+          "left": 12,
+          "right": 89.9124984741211,
+          "top": 22.149999618530273,
+          "width": 77.9124984741211,
+          "x": 12,
+          "y": 22.149999618530273
+        }
+      },
+      {
+        "label": "Rental sections",
+        "rect": {
+          "bottom": 133.60000228881836,
+          "height": 57.60000228881836,
+          "left": 12,
+          "right": 337.6000061035156,
+          "top": 76,
+          "width": 325.6000061035156,
+          "x": 12,
+          "y": 76
+        }
+      },
+      {
+        "label": "Main",
+        "rect": {
+          "bottom": 800,
+          "height": 58,
+          "left": 0,
+          "right": 360,
+          "top": 742,
+          "width": 360,
+          "x": 0,
+          "y": 742
+        }
+      }
+    ],
+    "height": 800,
+    "panel": {
+      "bottom": 729.7875061035156,
+      "height": 333.1875,
+      "left": 26.80000114440918,
+      "right": 322.8000011444092,
+      "top": 396.6000061035156,
+      "width": 296,
+      "x": 26.80000114440918,
+      "y": 396.6000061035156
+    },
+    "width": 360
+  },
+  "notes": [
+    "The 360px header was corrected after its initial profile edge measured 366px. Final edge is 348px with all 44px targets.",
+    "Earlier Today tablet screenshot may show a transient resize state; it is not a settled tablet acceptance pass.",
+    "Phone Today shows one active queue tab; overdue text is not rendered in the pickup tab.",
+    "Browser samples do not certify physical devices, hosted access, all responsive states or complete workflows.",
+    "No booking, payment, client or equipment record was submitted; existing draft was left untouched."
+  ],
+  "cleanup": [
+    "Viewport reset could not be confirmed",
+    "Close not confirmed for 1598437048",
+    "Close not confirmed for 1598437039",
+    "Earlier tab close not confirmed"
+  ]
+}

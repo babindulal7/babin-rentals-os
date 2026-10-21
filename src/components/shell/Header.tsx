@@ -329,7 +329,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
           height: 'var(--header-h)',
           maxHeight: 'var(--header-h)',
           padding: isPhone ? '0 12px' : '0 20px',
-          gap: 8,
+          gap: isPhone ? 4 : 8,
           flexShrink: 0,
           borderBottom: '1px solid var(--border)',
           background: 'var(--sidebar)',
@@ -803,7 +803,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: isPhone ? 4 : 8,
+            gap: isPhone ? 0 : 8,
             flexShrink: 0,
             marginLeft: 'auto',
             minWidth: 0,

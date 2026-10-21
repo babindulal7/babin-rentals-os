@@ -158,10 +158,14 @@ describe('Calendar application header and mobile de-crowding', () => {
     const checkBtn = container.querySelector('[aria-label="Check availability"]')
     expect(checkBtn).not.toBeNull()
     expect(checkBtn?.textContent?.trim()).toBe('Availability')
+    expect(checkBtn?.querySelector('svg')).toBeNull()
+    expect(container.querySelector('[data-header-slot="search"]')).toBeNull()
 
     // 3. Overflow menu contains Filters item and Today shortcut
     const moreBtn = container.querySelector('[aria-label="More actions"]')
     expect(moreBtn).not.toBeNull()
+    await act(async () => (moreBtn as HTMLButtonElement).click())
+    expect(document.querySelector('[role="menu"]')?.textContent).toContain('Search')
 
     // 4. Content contains dedicated phone nav bar with date steppers
     const phoneNav = container.querySelector('.calendar-phone-nav')

@@ -6,6 +6,7 @@ import type { IconName } from '../../components/ui/Icon'
 import { Select, SearchInput, EmptyState, TouchTarget, PageBody, CheckAvailabilityModal, Modal } from '../../components/ui'
 import { PageShell } from '../../components/ui/PageShell'
 import { Card, PageHeader, PageActions, Button, FooterNote, cardStyle, Rail } from '../../components/ui/Page'
+import { openCommandPalette } from '../../components/shell/CommandPalette'
 import { FilterButton, FilterDrawer } from '../../components/ui/FilterDrawer'
 import { listInventory } from '../../lib/queries/inventory'
 import './calendar.css'
@@ -3480,6 +3481,8 @@ export default function Calendar() {
           leading={!phone ? <FilterButton onClick={() => setShowFilters((open) => !open)} activeCount={activeFilterCount} controls="calendar-filters" expanded={showFilters} /> : undefined}
           icon="calendar"
           title="Calendar"
+          // RULING 2026-10-21: retain the visible Availability verb and drawer at 375px.
+          searchInMore={phone}
           module="calendar"
           search={{
             value: query,
@@ -3491,7 +3494,7 @@ export default function Calendar() {
             <PageActions
               extra={!phone ? navButtons : undefined}
               primary={
-                <Button icon="calendar_event" variant="primary" onClick={() => setShowCheckAvailability(true)} aria-label="Check availability">
+                <Button icon={phone ? undefined : 'calendar_event'} variant="primary" onClick={() => setShowCheckAvailability(true)} aria-label="Check availability">
                   {phone ? 'Availability' : 'Check availability'}
                 </Button>
               }
@@ -3504,6 +3507,7 @@ export default function Calendar() {
               ].filter(Boolean)}
               overflow={[
                 ...(phone ? [
+                  { label: 'Search', icon: 'search' as const, onClick: openCommandPalette },
                   {
                     label: activeFilterCount > 0 ? `Filters (${activeFilterCount})` : 'Filters',
                     icon: 'filter' as const,
