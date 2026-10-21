@@ -280,12 +280,57 @@
     "Earlier Today tablet screenshot may show a transient resize state; it is not a settled tablet acceptance pass.",
     "Phone Today shows one active queue tab; overdue text is not rendered in the pickup tab.",
     "Browser samples do not certify physical devices, hosted access, all responsive states or complete workflows.",
-    "No booking, payment, client or equipment record was submitted; existing draft was left untouched."
+    "No booking, payment, client or equipment record was submitted; existing draft was left untouched.",
+    "A later clean 820x1180 load passed: single header, stacked pickup/return panels inside the viewport, and overdue context visible. The saved settled screenshot was inspected."
   ],
   "cleanup": [
     "Viewport reset could not be confirmed",
     "Close not confirmed for 1598437048",
     "Close not confirmed for 1598437039",
     "Earlier tab close not confirmed"
-  ]
+  ],
+  "todayTabletCleanLoad": {
+    "measurements": {
+      "documentWidth": 820,
+      "headerCount": 1,
+      "height": 1180,
+      "panels": [
+        {
+          "id": "outgoing-panel-title",
+          "rect": {
+            "bottom": 280,
+            "height": 25.3125,
+            "left": 92.8000030517578,
+            "right": 200.07500457763672,
+            "top": 254.6875,
+            "width": 107.2750015258789,
+            "x": 92.8000030517578,
+            "y": 254.6875
+          }
+        },
+        {
+          "id": "incoming-panel-title",
+          "rect": {
+            "bottom": 532.9250183105469,
+            "height": 25.3125,
+            "left": 92.8000030517578,
+            "right": 210.87500762939453,
+            "top": 507.6125183105469,
+            "width": 118.07500457763672,
+            "x": 92.8000030517578,
+            "y": 507.6125183105469
+          }
+        }
+      ],
+      "width": 820
+    },
+    "passed": true,
+    "screenshot": "today-settled-tablet.jpg",
+    "screenshotInspected": true,
+    "scope": "Clean mock-preview load at 820x1180; not physical-device or complete-workflow acceptance",
+    "cleanup": [
+      "Viewport reset confirmed",
+      "Temporary tablet tab closed confirmed"
+    ]
+  }
 }

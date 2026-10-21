@@ -1,86 +1,16 @@
 {
-  "startedAt": "2026-10-21T11:37:06.278Z",
+  "startedAt": "2026-10-21T12:01:54.175Z",
   "environment": "local; mock browser and in-process PGlite only; no remote writes",
   "steps": [
     {
       "name": "typecheck",
       "command": "npm run typecheck",
       "exitCode": 0,
-      "sourceHash": "48d114e1fb63144ed604ff649dd684fd0dd33cf7fd84d826b47d91c725649f77",
-      "afterHash": "96ed3e8b012f9fd7155c34994fb07a36a1fcbc36f6cff47e7e34c7a15ff74f17",
-      "sourceChanged": true,
-      "seconds": 193,
+      "sourceHash": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
+      "afterHash": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
+      "sourceChanged": false,
+      "seconds": 165,
       "log": "docs\\verification\\premium-design\\typecheck.log"
-    },
-    {
-      "name": "test",
-      "command": "npm test -- --maxWorkers=2",
-      "exitCode": 0,
-      "sourceHash": "96ed3e8b012f9fd7155c34994fb07a36a1fcbc36f6cff47e7e34c7a15ff74f17",
-      "afterHash": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
-      "sourceChanged": true,
-      "seconds": 900,
-      "log": "docs\\verification\\premium-design\\test.log"
-    },
-    {
-      "name": "pglite",
-      "command": "npm run check:pglite",
-      "exitCode": 0,
-      "sourceHash": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
-      "afterHash": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
-      "sourceChanged": false,
-      "seconds": 18,
-      "log": "docs\\verification\\premium-design\\pglite.log"
-    },
-    {
-      "name": "lifecycle",
-      "command": "npm run check:lifecycle",
-      "exitCode": 0,
-      "sourceHash": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
-      "afterHash": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
-      "sourceChanged": false,
-      "seconds": 20,
-      "log": "docs\\verification\\premium-design\\lifecycle.log"
-    },
-    {
-      "name": "contrast",
-      "command": "npm run check:contrast",
-      "exitCode": 0,
-      "sourceHash": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
-      "afterHash": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
-      "sourceChanged": false,
-      "seconds": 3,
-      "log": "docs\\verification\\premium-design\\contrast.log"
-    },
-    {
-      "name": "lint",
-      "command": "npm run lint",
-      "exitCode": 0,
-      "sourceHash": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
-      "afterHash": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
-      "sourceChanged": false,
-      "seconds": 51,
-      "log": "docs\\verification\\premium-design\\lint.log"
-    },
-    {
-      "name": "shell",
-      "command": "npm run lint:shell",
-      "exitCode": 0,
-      "sourceHash": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
-      "afterHash": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
-      "sourceChanged": false,
-      "seconds": 3,
-      "log": "docs\\verification\\premium-design\\shell.log"
-    },
-    {
-      "name": "copy",
-      "command": "npm run lint:ui-copy",
-      "exitCode": 0,
-      "sourceHash": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
-      "afterHash": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
-      "sourceChanged": false,
-      "seconds": 10,
-      "log": "docs\\verification\\premium-design\\copy.log"
     }
   ]
 }

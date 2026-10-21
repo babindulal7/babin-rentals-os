@@ -39,4 +39,6 @@ The recorded desktop browser comparison passed with identical rectangles. See `t
 
 At 360 × 800, open **Browse catalogue** without adding an item. Assert the **Add item to booking** dialog's left/right edges fit the viewport and its bottom is above the bottom **Main** navigation. Recorded: dialog bottom 729.79px; navigation top 742px. See `catalogue-fixed-360.jpg`.
 
-Restore viewport overrides and close only temporary verification tabs. If the browser attachment fails, record incomplete cleanup instead of claiming it succeeded. Settled tablet Today layout, physical devices, offline behavior and complete workflows remain separate acceptance work.
+The later clean Today load at 820 × 1180 also passed: one header, stacked pickup/return panels inside the viewport, and visible overdue context. Its saved screenshot was inspected (`today-settled-tablet.jpg`); `fixed-regressions.json` records the measurements.
+
+Restore viewport overrides and close only temporary verification tabs. If the browser attachment fails, record incomplete cleanup instead of claiming it succeeded. The clean tablet-check tab and its viewport reset were confirmed; earlier failed cleanup attempts remain recorded. Physical devices, offline behavior and complete workflows remain separate acceptance work.

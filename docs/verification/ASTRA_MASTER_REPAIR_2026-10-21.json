@@ -1,8 +1,9 @@
 {
-  "at": "2026-10-21T11:54:15.700Z",
+  "at": "2026-10-21T12:06:22.220Z",
   "workspace": "C:\\Users\\use\\Desktop\\babin-rentals-os",
-  "sha": "53ed0ba7329cd5db769e30a6c51d2e2e3b1723b1",
+  "sha": "7931f4c9425e722c91366c4dad592459e2d678b7",
   "sourceHash": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
+  "sourceChangesAgainstHead": [],
   "counts": {
     "verifiedLocal": 6,
     "pendingStaging": 5,
@@ -43,18 +44,18 @@
     },
     {
       "name": "test",
-      "command": "npm run test -- --maxWorkers=1 --reporter=json --outputFile=artifacts/astra-20261021-024418/final-1-tests.json",
-      "sha": "19506f5a40819d783745dfd4f5aa2c857559cad9",
-      "startedAt": "2026-10-21T04:06:22.581Z",
-      "elapsedMs": 1503601,
-      "exitCode": 1,
-      "before": "8b1bc9eb05955482b9374c805050599d1d88b9c75d285c1f8042f47a2d7e9689",
-      "after": "6a5524cc6c75943479b2a6a824ca4436ddbc9908bb5164fe3edc9827196b97ec",
-      "sourceUnchanged": false,
+      "command": "npm run test -- --maxWorkers=2 --reporter=json --outputFile=artifacts/astra-20261021-024418/final-3-tests.json",
+      "sha": "53ed0ba7329cd5db769e30a6c51d2e2e3b1723b1",
+      "startedAt": "2026-10-21T11:51:07.594Z",
+      "elapsedMs": 693937,
+      "exitCode": 0,
+      "before": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
+      "after": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
+      "sourceUnchanged": true,
       "environment": "local disposable fixtures; live-default build, no hosted operations",
       "node": "v24.19.0",
-      "log": "artifacts/astra-20261021-024418/final-1-test.log",
-      "current": false
+      "log": "artifacts/astra-20261021-024418/final-3-test.log",
+      "current": true
     },
     {
       "name": "test:coverage",
@@ -194,13 +195,13 @@
     }
   ],
   "tests": {
-    "total": 5136,
-    "passed": 5134,
-    "failed": 2,
+    "total": 5162,
+    "passed": 5162,
+    "failed": 0,
     "skipped": 0,
-    "files": 405,
-    "success": false,
-    "report": "artifacts/astra-20261021-024418/final-1-tests.json"
+    "files": 410,
+    "success": true,
+    "report": "artifacts/astra-20261021-024418/final-3-tests.json"
   },
   "coverage": {
     "total": 5139,
@@ -312,7 +313,7 @@
     {
       "id": "WF-08",
       "status": "IN PROGRESS",
-      "paths": "src/lib/queries/staffReports.ts; clientReports.ts; productReports.ts; promotionsReports.ts; src/lib/queries/activityReports.ts; src/lib/queries/reportSupport.ts",
+      "paths": "src/lib/queries/staffReports.ts; src/lib/queries/clientReports.ts; src/lib/queries/productReports.ts; src/lib/queries/promotionsReports.ts; src/lib/queries/activityReports.ts; src/lib/queries/reportSupport.ts",
       "correction": "Real empty/error behavior retained; missing datasets refuse. Added complete ordered reads for each family, removing the activity 300-row cap.",
       "evidence": "src/lib/queries/__tests__/reportFamiliesCompleteness.test.ts; src/lib/queries/__tests__/reportQueries.law16.test.ts; src/lib/queries/__tests__/reportQueries.mockStore.test.ts",
       "remaining": "Full source-backed field/role/date/branch cohorts, cross-family card/export reconciliation and authenticated report API acceptance remain open."
@@ -400,8 +401,8 @@
     {
       "id": "PERF-01",
       "status": "BLOCKED",
-      "paths": "vite.config.ts unchanged; production build output measured in current logs",
-      "correction": "No unmeasured bundling, scanner or PWA/font optimization was introduced.",
+      "paths": "vite.config.ts",
+      "correction": "Configuration unchanged: no unmeasured bundling, scanner or PWA/font optimization was introduced. Production build output is recorded in the command logs.",
       "evidence": "Current live-default production build log; historical values kept separate",
       "remaining": "Representative device/network p75 startup/Today/booking/scanner/report measurements, agreed budgets and physical iPad access remain unavailable."
     }
