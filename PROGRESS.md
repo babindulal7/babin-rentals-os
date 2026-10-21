@@ -1,5 +1,51 @@
 # Progress Log
 
+## 2026-10-21 (v) — Smart Workspace Views V1: saved views on the Inventory Equipment list
+
+**Did**
+- Implemented the owner-supplied Smart Workspace Views v1 pack (`BABIN_OS_SMART_WORKSPACE_VIEWS_GLM53_CODE_PACK.zip`): the Inventory Equipment toolbar now carries the SAME `SavedViewsMenu` control Rentals uses — save the current search/chip/facets plus working sort and Table-or-Cards layout under a name, recall it in one click, `All equipment` returns to the unfettered list. No second toolbar, no new backend, no fake views.
+- New pure files from the pack: `src/lib/inventoryViewPresets.ts` (URL codec: persists only `q`, `chip`, `category`, `status`, `condition`, `serialisation` + validated `viewSort`/`viewLayout`; drops `tab`, `action`, `page`, `per`, money and every unknown key; control-char regex built dynamically so `no-control-regex` stays green without a suppression) + its 6-test suite.
+- `Inventory.tsx`: `inventoryViewChoices` allowlist built from the REAL option lists (`EQUIPMENT_CHIPS.map(chipSlug)`, `PRODUCT_CATEGORIES`, `INV_ORDER`, `CONDITIONS`, `TRACKING_MODES`, `SORTS` minus `SORT_UNAVAILABLE`); `captureInventoryView`/`restoreInventoryView` wired; applying a view sets params, sort, layout, resets page to 1, clears multi-selection AND the open record inspector (no stale-record actions across a view switch); menu placed in the toolbar's right-hand control group beside Sort.
+- `SavedViewsMenu.tsx`: copy names the list it serves (`INVENTORY VIEWS` / `All equipment` / `Saved inventory views`; Rentals' strings unchanged); the save dialog no longer promises "visible columns" on a list with no column chooser; added a popover flip — on a wrapped phone toolbar row the right-anchored menu measured left:-151px at 390px, so it now measures on open and slides inside the viewport (measured 16..296 at 390 after).
+- Removed the inert `Save Current View` control from the Inventory rail and the `Saved Views` blocked row from `FILTER_RAIL` (`data/inventory.ts`, with its comment corrected — `saved_views`/0159 is the backing table); `inventoryList.test.ts` rail assertions updated to the 13 remaining groups.
+- **Marker bug fixed (pack §4.6):** `savedViews.ts:migrateLocalViews()` wrote the `:migrated-to-db` marker even when the legacy list was empty — with no DB call made, i.e. certifying a database it never spoke to. Device views saved afterward in fallback mode would then be stranded when the DB arrived. Now an empty legacy list writes no marker; 5 regression tests pin the full stranded-views sequence, no-duplicate/no-resurrect migration, backup retention and retry-on-network-failure.
+
+**Ruled**
+- No product decision invented — the pack is Babin's direction. Two adaptations over its letter, both logged: the menu sits in the toolbar's end group beside Sort (the pack's `extras` slot left the trigger stranded left on the phone band's wrapped row, which its own §2 forbids: "without clipping"); `CONDITIONS`/`TRACKING_MODES` import via the `lib/queries/inventory` re-export the file already uses, not a new `data/inventory` import edge.
+- Migration 0159 remains untouched and unapplied (N-5); mock mode truthfully REFUSES a save (`[mock] rpc("save_view") is not implemented`) rather than fabricating success — verified in the browser.
+
+**Verified**
+- `npm run typecheck` PASS · `npm run lint` PASS (0 warnings) · `npm run check:contrast` 82/82 PASS.
+- Focused: 6 codec + 5 migration-marker + 5 Inventory integration + 2 menu-copy + existing `SavedViewsMenu.test.ts`/`inventoryList.test.ts` — all green (72/72 across the six files, final run 18/18 on the touched four).
+- `npm run test:saved-views` (local PGlite, disposable): **20/20 SAVED VIEWS VERIFIED** — system views, private/team visibility, Manager+ publish gate, Law 6 money-view blindness, retire-never-deletes, retry idempotence all intact and untouched.
+- Real-browser verification (headless Chrome/CDP, mock dev server, real login form): **10/10** — exactly one trigger on the Equipment toolbar (44px, enabled), inventory menu copy, no column-chooser promise, truthful save refusal with no success toast, tablet 1194 trigger in-viewport, phone 390 no document overflow with card list kept, phone menu fully in viewport after the flip, Rentals menu copy unchanged. 7 screenshots (light/dark/two widths + refusal + Rentals regression) in `C:\Users\use\AppData\Local\Temp\opencode\workspace-views-shots\`.
+- Full `npm test` after the final two changes (menu placement + flip): **5,157 / 5,157 passed (410 files), source fingerprint matches** — see Completion below for the receipt of record.
+- `npm run check:pglite` re-run on the final tree: **168/168 applied, 0 failed**; 31/31 views closed to anon, 0 unauthorized RPCs, definer paths pinned (recorded 2026-10-21T06:54:44.588Z). `check:lifecycle` NOT re-run this session — the local Postgres stack is down, no SQL was written by this feature, and the pending full-gate run belongs to the concurrent session; recorded as not measured, never guessed.
+- `npm run build` PASS (exit 0; PWA precache 211 entries).
+
+## Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-21T06:54:44.588Z). Suite: PASS — 5157/5157 passed, 0 failed (recorded 2026-10-21T06:47:18.797Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-21T04:43:33.900Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+No SQL was written by this feature; the stale lifecycle receipt belongs to the concurrent session's pending full-gate run (local Postgres stack not running this session), so it is recorded as not measured rather than guessed.
+
+## Remaining
+
+- Team/private views need 0159 applied to the target database (Babin's N-5 step); until then the menu honestly says "Saved on this device" and saves device-local private views only.
+- The deeper one-way marker sequence (legacy migrated → DB later unavailable → device saves → DB returns) still strands those later saves by design; automatic device-to-team re-sync after a completed migration would be a new decision if wanted.
+- Per-user column selection stays out (pack §8) until a real column registry exists.
+- Owner's eye on the screenshots for final polish.
+
 ## 2026-10-21 — ASTRA master repair continuation (current full gates pending)
 
 **Did**
