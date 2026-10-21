@@ -140,10 +140,13 @@ describe('the fixes that made live reads impossible stay fixed', () => {
       const b = fake.client.from(t) as Record<string, unknown>
       if (t !== 'bookings') return b
       const select = b['select'] as (cols: string) => unknown
-      b['select'] = (cols: string) =>
-        cols.includes('project_type')
-          ? { ...(select(cols) as object), then: (r: (v: unknown) => unknown) => Promise.resolve({ data: null, error: { code: '42501', message: 'permission denied for column project_type' } }).then(r) }
-          : select(cols)
+      b['select'] = (cols: string) => {
+        const result = select(cols)
+        if (cols.includes('project_type')) {
+          b['then'] = (r: (v: unknown) => unknown) => Promise.resolve({ data: null, error: { code: '42501', message: 'permission denied for column project_type' } }).then(r)
+        }
+        return result
+      }
       return b
     }
     state.client = { from }
