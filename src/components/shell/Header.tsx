@@ -821,51 +821,9 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             flexWrap: 'nowrap',
           }}
         >
-          {/* 1. Bulk Selection Mode Bar in Header */}
-          {hData?.bulkSelection && hData.bulkSelection.count > 0 ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 'var(--t-meta, 13px)', fontWeight: 600, color: 'var(--text)' }}>
-                {hData.bulkSelection.count} selected
-              </span>
-              <button
-                type="button"
-                onClick={hData.bulkSelection.onClear}
-                style={{
-                  minHeight: 44,
-                  padding: '0 8px',
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--link, #2563eb)',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  fontSize: 'var(--t-meta, 13px)',
-                }}
-              >
-                Clear
-              </button>
-              {visibleBulkActions.map((act) => {
-                const status = isActionEnabled(act, actionContext)
-                return (
-                  <Button
-                    key={act.id}
-                    variant={act.variant ?? 'secondary'}
-                    icon={act.icon}
-                    onClick={() => handleActionClick(act)}
-                    disabled={!status.enabled}
-                    style={{ height: 38, minHeight: 44, padding: isTablet && act.icon ? '0 8px' : '0 12px' }}
-                    title={status.reason ?? act.label}
-                    aria-label={act.label}
-                  >
-                    {isTablet && act.icon ? null : (act.loading ? act.loadingLabel ?? `${act.label}…` : act.label)}
-                  </Button>
-                )
-              })}
-            </div>
-          ) : (
-            <>
-              {/* Context actions vary by page but never displace Filter or
-                  move a primary CTA past the More button. */}
-              <span className="app-global-header__action-slot app-global-header__action-slot--secondary" data-header-slot="secondary">
+          {/* Context actions vary by page but never displace Filter or
+              move a primary CTA past the More button. */}
+          <span className="app-global-header__action-slot app-global-header__action-slot--secondary" data-header-slot="secondary">
                 <span ref={ws?.setHeaderSecondaryActionsElement} className="workspace-header-secondary-actions" />
                 {!isPhone && !isTablet && visibleLegacySecondary.map((action, idx) => (
                   <span key={isValidElement(action) && action.key != null ? String(action.key) : `hdr-secondary-${idx}`}>{action}</span>
@@ -938,8 +896,6 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                   </Button>
                 )}
               </span>
-            </>
-          )}
 
           <span ref={ws?.setHeaderInformationElement} className="workspace-header-information" data-header-slot="information" />
 
@@ -1158,6 +1114,84 @@ export default function Header({ crumbs, actions }: HeaderProps) {
           </div>
         </div>
       </header>
+
+      {/* Floating Bulk Selection Toolbar */}
+      {hData?.bulkSelection && hData.bulkSelection.count > 0 && (
+        <aside
+          role="region"
+          aria-label="Bulk selection actions"
+          className="bulk-selection-floating-bar"
+          style={{
+            position: 'fixed',
+            bottom: isPhone ? 16 : 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 90,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '8px 16px',
+            borderRadius: 999,
+            background: 'var(--dropdown, var(--card))',
+            border: '1px solid var(--border)',
+            boxShadow: 'var(--shadow-modal), 0 10px 25px -5px rgba(0, 0, 0, 0.25)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span
+              style={{
+                fontSize: 'var(--t-meta, 13px)',
+                fontWeight: 700,
+                padding: '2px 8px',
+                borderRadius: 999,
+                background: 'var(--primary-soft, rgba(37, 99, 235, 0.12))',
+                color: 'var(--primary-text)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {hData.bulkSelection.count} selected
+            </span>
+            <button
+              type="button"
+              onClick={hData.bulkSelection.onClear}
+              style={{
+                minHeight: 44,
+                padding: '0 8px',
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--link, #2563eb)',
+                cursor: 'pointer',
+                fontWeight: 600,
+                fontSize: 'var(--t-meta, 13px)',
+              }}
+            >
+              Clear
+            </button>
+          </div>
+          <div style={{ width: 1, height: 20, background: 'var(--border)', flexShrink: 0 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {visibleBulkActions.map((act) => {
+              const status = isActionEnabled(act, actionContext)
+              return (
+                <Button
+                  key={act.id}
+                  variant={act.variant ?? 'secondary'}
+                  icon={act.icon}
+                  onClick={() => handleActionClick(act)}
+                  disabled={!status.enabled}
+                  style={{ height: 38, minHeight: 44, padding: isTablet && act.icon ? '0 8px' : '0 12px' }}
+                  title={status.reason ?? act.label}
+                  aria-label={act.label}
+                >
+                  {isTablet && act.icon ? null : (act.loading ? act.loadingLabel ?? `${act.label}…` : act.label)}
+                </Button>
+              )
+            })}
+          </div>
+        </aside>
+      )}
 
       {/* Confirmation Dialog for actions requiring confirmation */}
       {activeConfirmAction?.confirm && (
