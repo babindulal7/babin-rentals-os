@@ -1,9 +1,11 @@
 /**
- * Staff Timesheet — full weekly view with per-day bar charts.
+ * Crew timesheet — the week's hours per person, with per-day bar charts, a KPI
+ * strip, the approval state and a CSV export.
  *
- * Replaces the stub at src/archive/Timesheet.tsx. Ported from
- * the standalone's timesheet screen with weekly hours grid,
- * expandable per-staff day charts, KPI strip, and CSV export.
+ * RULING 2026-10-19: the hours come from `crew_shoot_days` (recorded call/wrap
+ * minus break), not the five invented staff this page used to render. Pay is an
+ * hours-based estimate (⭐ unruled — see `lib/queries/timesheet.ts`), and money
+ * is withheld from a money-blind role (Law 6) rather than shown as zero.
  */
 import { useState, useMemo, useCallback, Fragment } from 'react'
 import { Card, KpiStrip, PageHeader } from '../../components/ui/Page'
@@ -15,18 +17,44 @@ import { Badge } from '../../components/ui/Badge'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { PageShell } from '../../components/ui/PageShell'
 import { DataTableShell } from '../../components/ui/DataTable'
+import { PageBody } from '../../components/ui/PageBody'
 import { useToast } from '../../components/ui/Toast'
+import { recordExport } from '../../lib/exportAudit'
 import { formatMoney, rupees } from '../../lib/money'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
 import {
   TIMESHEET_DAYS,
-  getTimesheetRows,
+  STANDARD_DAY_HOURS,
   getTimesheetStats,
-  exportTimesheetCsv,
+  hasOvertime,
+  formatHours,
+  timesheetCsv,
+  downloadTimesheetCsv,
+  type TimesheetApproval,
   type TimesheetWeek,
   type TimesheetRow,
 } from '../../lib/queries/timesheet'
+import { useTimesheetWeek } from '../../lib/queries/useTimesheet'
+
+// ── Small shared pieces ──────────────────────────────────────────────
+
+/** The payout gate, in words — never colour alone. */
+const APPROVAL_TONE: Record<TimesheetApproval, 'in' | 'progress' | 'dim'> = {
+  Approved: 'in',
+  'Awaiting approval': 'progress',
+  'Not submitted': 'dim',
+}
+
+function ApprovalBadge({ approval }: { approval: TimesheetApproval }) {
+  return <Badge tone={APPROVAL_TONE[approval]} label={approval} />
+}
+
+/** Hours the grid cannot show: shoot days up to today with no recorded call/wrap. */
+function unrecordedNote(days: number): string | null {
+  if (days === 0) return null
+  return `${days} shoot day${days === 1 ? '' : 's'} with no recorded call/wrap time`
+}
 
 // ── Styles ───────────────────────────────────────────────────────────
 
@@ -104,8 +132,8 @@ function StaffCard({
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontWeight: 600, fontSize: 'var(--t-body)' }}>{row.totalHrs}h</div>
-              {canViewMoney && (
+              <div style={{ fontWeight: 600, fontSize: 'var(--t-body)' }}>{formatHours(row.totalHrs)}h</div>
+              {canViewMoney && row.pay !== null && (
                 <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text3)' }}>
                   {formatMoney(rupees(row.pay))}
                 </div>
@@ -122,13 +150,20 @@ function StaffCard({
               <span style={{ color: 'var(--text3)' }}>{TIMESHEET_DAYS[i]}</span>
               <span style={{
                 fontWeight: 600,
-                color: h === 0 ? 'var(--text3)' : h > 8 ? 'var(--gold)' : 'var(--text)',
+                color: h === 0 ? 'var(--text3)' : h > STANDARD_DAY_HOURS ? 'var(--gold)' : 'var(--text)',
               }}>
-                {h}h
+                {formatHours(h)}h
               </span>
             </div>
           ))}
         </div>
+
+        <div style={{ marginTop: '8px' }}>
+          <ApprovalBadge approval={row.approval} />
+        </div>
+        {unrecordedNote(row.unrecordedDays) && (
+          <div style={{ marginTop: '6px', fontSize: 'var(--t-meta)', color: 'var(--text3)' }}>{unrecordedNote(row.unrecordedDays)}</div>
+        )}
 
         {/* Expanded bar chart */}
         {isOpen && (
@@ -140,7 +175,7 @@ function StaffCard({
                     width: '100%',
                     height: Math.round((h / 9) * 40),
                     borderRadius: '3px 3px 0 0',
-                    background: h === 0 ? 'var(--border)' : h >= 8 ? 'var(--green)' : 'var(--gold)',
+                    background: h === 0 ? 'var(--border)' : h >= STANDARD_DAY_HOURS ? 'var(--green)' : 'var(--gold)',
                     minHeight: h > 0 ? 4 : 2,
                     transition: 'height 0.2s',
                   }}
@@ -152,7 +187,7 @@ function StaffCard({
         )}
 
         {/* Overtime flag */}
-        {row.hrs.some((h) => h > 8) && (
+        {hasOvertime(row) && (
           <div style={{ marginTop: '6px' }}>
             <Badge tone="warning" label="Overtime" />
           </div>
@@ -174,7 +209,8 @@ export default function TimesheetTab() {
   const [search, setSearch] = useState('')
   const [openIdx, setOpenIdx] = useState<number | null>(null)
 
-  const rows = useMemo(() => getTimesheetRows(week), [week])
+  const sheet = useTimesheetWeek(week)
+  const rows = sheet.rows
   const stats = useMemo(() => getTimesheetStats(rows), [rows])
 
   const filteredRows = useMemo(() => {
@@ -186,20 +222,22 @@ export default function TimesheetTab() {
   }, [rows, search])
 
   const handleExport = useCallback(() => {
-    exportTimesheetCsv(rows, week)
-    showSuccessToast(`Exported payroll CSV for ${week.toLowerCase()}`)
-  }, [rows, week, showSuccessToast])
+    const { columns, text } = timesheetCsv(rows, canViewMoney)
+    downloadTimesheetCsv(text, week)
+    recordExport({ list: 'crew.timesheet', module: 'Operations', rowCount: rows.length, columns, filter: week })
+    showSuccessToast(`Exported timesheet CSV for ${week.toLowerCase()}`)
+  }, [rows, week, canViewMoney, showSuccessToast])
 
   const kpis: Kpi[] = useMemo(() => [
-    { label: 'Total Hours', value: `${stats.totalHours}h`, icon: 'timer', accent: 'primary' },
+    { label: 'Total Hours', value: `${formatHours(stats.totalHours)}h`, icon: 'timer', accent: 'primary' },
     ...(canViewMoney
       ? [
           {
-            label: 'Total Payroll',
-            value: formatMoney(rupees(stats.totalPayroll)),
+            label: 'Estimated Pay',
+            value: formatMoney(rupees(stats.totalPay ?? 0)),
             icon: 'card' as const,
             accent: 'success' as const,
-            definition: 'Sum of (total hours × hourly rate) for all staff this period.',
+            definition: `Sum of hours × day rate ÷ ${STANDARD_DAY_HOURS} across the crew this week. An estimate: crew payouts are days booked × day rate, and the hourly basis is not ruled yet.`,
           },
         ]
       : []),
@@ -212,7 +250,7 @@ export default function TimesheetTab() {
       header={
         <PageHeader
           title="Presence Log & Timesheet"
-          description="Staff hours, payroll calculations, and overtime tracking."
+          description="Hours worked on crew shoot days, from recorded call and wrap times."
           search={{
             value: search,
             onChange: setSearch,
@@ -256,6 +294,17 @@ export default function TimesheetTab() {
         </div>
       </div>
 
+      <PageBody
+        loading={sheet.loading}
+        error={sheet.error}
+        onRetry={sheet.refetch}
+        hasRows={rows.length > 0}
+        empty={sheet.isEmpty}
+        noun="timesheet"
+        skeleton="table"
+        emptyTitle={`No crew shoot days ${week === 'This Week' ? 'this week' : 'last week'}`}
+        emptyMessage="Hours appear here once crew are booked onto shoot days and their call and wrap times are recorded."
+      >
       {/* ── Phone: card layout ─────────────────────────────────────── */}
       {isPhone ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
@@ -288,15 +337,16 @@ export default function TimesheetTab() {
                   ))}
                   <th style={{ padding: '10px 8px', fontWeight: 600, color: 'var(--text2)', textAlign: 'right' }}>Hours</th>
                   {canViewMoney && (
-                    <th style={{ padding: '10px 16px', fontWeight: 600, color: 'var(--text2)', textAlign: 'right' }}>Pay</th>
+                    <th style={{ padding: '10px 16px', fontWeight: 600, color: 'var(--text2)', textAlign: 'right' }}>Est. pay</th>
                   )}
+                  <th style={{ padding: '10px 8px', fontWeight: 600, color: 'var(--text2)' }}>Approval</th>
                   <th style={{ width: 32 }} />
                 </tr>
               </thead>
               <tbody>
                 {filteredRows.length === 0 && (
                   <tr>
-                    <td colSpan={canViewMoney ? 11 : 10} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--text3)' }}>
+                    <td colSpan={canViewMoney ? 12 : 11} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--text3)' }}>
                       No staff matching "{search}"
                     </td>
                   </tr>
@@ -306,7 +356,7 @@ export default function TimesheetTab() {
                   return (
                     /* RULING 2026-10-13: a keyed Fragment, not a nested <tbody> —
                        <tbody> inside <tbody> is invalid HTML (React validateDOMNesting). */
-                    <Fragment key={row.name}>
+                    <Fragment key={row.key}>
                       <tr
                         role="row"
                         tabIndex={0}
@@ -333,19 +383,22 @@ export default function TimesheetTab() {
                             style={{
                               padding: '10px 6px',
                               textAlign: 'center',
-                              fontWeight: h > 8 ? 600 : 400,
-                              color: h === 0 ? 'var(--text3)' : h > 8 ? 'var(--gold)' : 'var(--text)',
+                              fontWeight: h > STANDARD_DAY_HOURS ? 600 : 400,
+                              color: h === 0 ? 'var(--text3)' : h > STANDARD_DAY_HOURS ? 'var(--gold)' : 'var(--text)',
                             }}
                           >
-                            {h > 0 ? `${h}h` : '—'}
+                            {h > 0 ? `${formatHours(h)}h` : '—'}
                           </td>
                         ))}
-                        <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600 }}>{row.totalHrs}h</td>
+                        <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600 }}>{formatHours(row.totalHrs)}h</td>
                         {canViewMoney && (
                           <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 500 }}>
-                            {formatMoney(rupees(row.pay))}
+                            {row.pay === null ? '—' : formatMoney(rupees(row.pay))}
                           </td>
                         )}
+                        <td style={{ padding: '10px 8px' }}>
+                          <ApprovalBadge approval={row.approval} />
+                        </td>
                         <td style={{ padding: '10px 8px', textAlign: 'center' }}>
                           <Icon name={isOpen ? 'chevron_down' : 'chevron_right'} size={12} />
                         </td>
@@ -354,17 +407,17 @@ export default function TimesheetTab() {
                       {/* Expanded row: daily bar chart */}
                       {isOpen && (
                         <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                          <td colSpan={canViewMoney ? 11 : 10} style={{ padding: '0 16px 12px' }}>
+                          <td colSpan={canViewMoney ? 12 : 11} style={{ padding: '0 16px 12px' }}>
                             <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', padding: '8px 0', maxWidth: 400 }}>
                               {row.hrs.map((h, di) => (
                                 <div key={di} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', flex: 1 }}>
-                                  <span style={{ fontSize: '10px', fontWeight: 600, color: h > 0 ? 'var(--text)' : 'var(--text3)' }}>{h}h</span>
+                                  <span style={{ fontSize: '10px', fontWeight: 600, color: h > 0 ? 'var(--text)' : 'var(--text3)' }}>{formatHours(h)}h</span>
                                   <div
                                     style={{
                                       width: '100%',
                                       height: Math.max(Math.round((h / 9) * 40), h > 0 ? 4 : 2),
                                       borderRadius: '3px 3px 0 0',
-                                      background: h === 0 ? 'var(--border)' : h >= 8 ? 'var(--green)' : 'var(--gold)',
+                                      background: h === 0 ? 'var(--border)' : h >= STANDARD_DAY_HOURS ? 'var(--green)' : 'var(--gold)',
                                       transition: 'height 0.2s',
                                     }}
                                   />
@@ -374,15 +427,18 @@ export default function TimesheetTab() {
                             </div>
 
                             {/* Rate & overtime info */}
-                            {(canViewMoney || row.hrs.some((h) => h > 8)) && (
+                            {unrecordedNote(row.unrecordedDays) && (
+                              <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text3)', marginTop: '4px' }}>{unrecordedNote(row.unrecordedDays)}</div>
+                            )}
+                            {((canViewMoney && row.rate !== null) || hasOvertime(row)) && (
                               <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text3)', marginTop: '4px' }}>
-                                {canViewMoney && (
+                                {canViewMoney && row.rate !== null && (
                                   <span>
-                                    Rate: {formatMoney(rupees(row.rate))}/day · {formatMoney(rupees(Math.round(row.rate / 8)))}/hr
+                                    Rate: {formatMoney(rupees(row.rate))}/day · {formatMoney(rupees(Math.round(row.rate / STANDARD_DAY_HOURS)))}/hr
                                   </span>
                                 )}
-                                {row.hrs.some((h) => h > 8) && (
-                                  <span style={{ marginLeft: canViewMoney ? '8px' : 0 }}>
+                                {hasOvertime(row) && (
+                                  <span style={{ marginLeft: canViewMoney && row.rate !== null ? '8px' : 0 }}>
                                     <Badge tone="warning" label="Overtime flagged" />
                                   </span>
                                 )}
@@ -398,6 +454,14 @@ export default function TimesheetTab() {
             </table>
           </DataTableShell>
         </Card>
+      )}
+      </PageBody>
+
+      {canViewMoney && rows.length > 0 && (
+        <p style={{ margin: 'var(--sp-md) 0 0', fontSize: 'var(--t-meta)', color: 'var(--text3)', lineHeight: 1.55 }}>
+          Pay is an estimate: hours × day rate ÷ {STANDARD_DAY_HOURS}. Crew payouts on Crew Assist are days booked × day rate,
+          and an approved timesheet is what releases a payout — so treat this column as a cross-check, not the payout.
+        </p>
       )}
     </PageShell>
   )

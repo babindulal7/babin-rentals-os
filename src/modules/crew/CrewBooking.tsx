@@ -7,6 +7,7 @@ import { ModuleSubHeader, ModuleKpiStrip, ModuleFilterBar, StatusPill } from '..
 import { DataTableShell } from '../../components/ui/DataTable'
 import { thStyle } from '../../components/ui/TableHeaderCell'
 import { FilterButton, FilterDrawer } from '../../components/ui/FilterDrawer'
+import { PageActions } from '../../components/ui/PageActions'
 import { Select } from '../../components/ui/Select'
 import { EmptyState } from '../../components/ui/StateViews'
 import Icon from '../../components/ui/Icon'
@@ -384,11 +385,20 @@ export function CrewBooking() {
           }}
           description="Roster management, shoot-day assignments, and conflict detection."
           actions={
-            canBookCrew ? (
-              <Button variant="primary" icon="plus" onClick={() => setBookCrewOpen(true)}>
-                Assign Crew
-              </Button>
-            ) : undefined
+            <PageActions
+              primary={
+                canBookCrew ? (
+                  <Button variant="primary" icon="plus" onClick={() => setBookCrewOpen(true)}>
+                    Assign Crew
+                  </Button>
+                ) : undefined
+              }
+              /* RULING 2026-10-19: /crew/timesheet had no way in (its rail button
+                 was cut when the page ran on invented rows); it reads
+                 crew_shoot_days now, so Crew Assist links to it. Every staff role
+                 may open it — the page withholds money from a money-blind one. */
+              overflow={[{ label: 'Timesheets', icon: 'timer', onClick: () => navigate('/crew/timesheet') }]}
+            />
           }
         />
         <FilterDrawer id="crew-filters" open={filtersOpen} onClose={() => setFiltersOpen(false)} resultCount={filteredRoster.length} noun="crew members" activeCount={Number(Boolean(selectedRole))} onClearAll={() => setSelectedRole('')} standardFooter onApply={() => setFiltersOpen(false)}>
