@@ -44,25 +44,60 @@ export interface RecordSectionProps {
   collapsible?: boolean
   /** Initial state for a collapsible section. Ignored when `collapsible` is false. */
   defaultOpen?: boolean
+  /** Programmatically force the section to expand (e.g. on validation errors). */
+  forceOpen?: boolean
+  /** Number of validation errors contained within this section. */
+  errorCount?: number
   /** Short hint shown while collapsed, e.g. "Empty" or "3 items". */
   collapsedHint?: string
 }
 
-export function RecordSection({ title, children, id, collapsible = false, defaultOpen = true, collapsedHint }: RecordSectionProps) {
+export function RecordSection({
+  title,
+  children,
+  id,
+  collapsible = false,
+  defaultOpen = true,
+  forceOpen = false,
+  errorCount,
+  collapsedHint,
+}: RecordSectionProps) {
   const [open, setOpen] = useState(collapsible ? defaultOpen : true)
   const bodyId = useId()
+
+  useEffect(() => {
+    if (forceOpen) setOpen(true)
+  }, [forceOpen])
+
   const expanded = !collapsible || open
   const toggle = collapsible ? (
-    <button
-      type="button"
-      className="record-section-toggle"
-      data-record-toggle
-      aria-expanded={expanded}
-      aria-controls={bodyId}
-      onClick={() => setOpen((v) => !v)}
-    >
-      {expanded ? 'Collapse' : collapsedHint ? `Expand · ${collapsedHint}` : 'Expand'}
-    </button>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      {errorCount && errorCount > 0 ? (
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            padding: '2px 7px',
+            borderRadius: 'var(--r-badge, 999px)',
+            background: 'color-mix(in srgb, var(--danger, #ef4444) 15%, var(--card))',
+            color: 'var(--danger-text, #ef4444)',
+            border: '1px solid color-mix(in srgb, var(--danger, #ef4444) 30%, transparent)',
+          }}
+        >
+          {errorCount} {errorCount === 1 ? 'error' : 'errors'}
+        </span>
+      ) : null}
+      <button
+        type="button"
+        className="record-section-toggle"
+        data-record-toggle
+        aria-expanded={expanded}
+        aria-controls={bodyId}
+        onClick={() => setOpen((v) => !v)}
+      >
+        {expanded ? 'Collapse' : collapsedHint ? `Expand · ${collapsedHint}` : 'Expand'}
+      </button>
+    </div>
   ) : undefined
   return (
     <section id={id} className="record-section" data-record-section data-open={expanded ? 'true' : 'false'}>
@@ -81,14 +116,25 @@ export function focusRecordField(fieldId: string): boolean {
   const target = document.getElementById(fieldId)
   if (!target) return false
   const section = target.closest<HTMLElement>('[data-record-section]')
-  if (section?.dataset.open === 'false') section.querySelector<HTMLButtonElement>('[data-record-toggle]')?.click()
+  if (section?.dataset.open === 'false') {
+    section.querySelector<HTMLButtonElement>('[data-record-toggle]')?.click()
+  }
   const move = () => {
     target.scrollIntoView({ block: 'center', behavior: 'smooth' })
-    target.focus({ preventScroll: true })
+    try {
+      target.focus({ preventScroll: true })
+    } catch {
+      target.focus()
+    }
   }
-  // Wait one frame so a just-expanded section is visible before focus lands.
-  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(move)
-  else move()
+  // Wait two animation frames so a just-expanded section is fully rendered before focus lands.
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(move)
+    })
+  } else {
+    move()
+  }
   return true
 }
 

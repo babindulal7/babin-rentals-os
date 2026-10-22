@@ -10,6 +10,7 @@ import { readRecordEditor, recordEditorOptions } from '../../lib/queries/recordE
 import { listInventory } from '../../lib/queries/inventory'
 import { findClientsByPhoneTail } from '../../lib/queries/clients'
 import { Button, Card, PageHeader } from '../ui/Page'
+import Icon from '../ui/Icon'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { RecordWorkspace, RecordSection, RecordActions, RecordErrorSummary, focusRecordField, useUnsavedRecord } from '../ui/RecordWorkspace'
 import { useToast } from '../ui/Toast'
@@ -119,6 +120,7 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
   const sectionId=(section:string)=>`record-section-${section.toLowerCase().replace(/[^a-z]+/g,'-')}`
   const errorList=Object.entries(errors).map(([key,message])=>({id:fieldId(key),message}))
   function sectionHasValue(section:string){return recordFields[kind].some(f=>f.section===section && (f.type==='checkbox'?false:String(values[f.key]??'').trim()!=='' && String(values[f.key])!==String(recordDefaults[kind][f.key]??'')))}
+  const sectionHasError = (section: string) => recordFields[kind].some((f) => f.section === section && Boolean(errors[f.key]))
   // RULING 2026-10-08: new client / equipment only; nothing carries over to the next record (RULINGS-2026-10-08, May briefs #3).
   /** Create & add another (md briefs 17/20, R-39): create-only, client and equipment — a bundle is never entered in a run. */
   const canAddAnother=!recordId && (kind==='client' || kind==='equipment')
@@ -287,15 +289,42 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
         />
       ) : (
         <>
+          {Object.keys(errors).length > 0 && (
+            <div
+              role="alert"
+              className="record-validation-banner"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '10px 14px',
+                marginBottom: 16,
+                borderRadius: 'var(--r-card, 8px)',
+                background: 'color-mix(in srgb, var(--danger, #ef4444) 10%, var(--card))',
+                border: '1px solid color-mix(in srgb, var(--danger, #ef4444) 30%, transparent)',
+                color: 'var(--danger-text, #ef4444)',
+                fontSize: 'var(--t-meta, 13px)',
+                fontWeight: 600,
+              }}
+            >
+              <Icon name="alert_triangle" size={18} style={{ color: 'var(--danger, #ef4444)', flexShrink: 0 }} />
+              <span>
+                {Object.keys(errors).length} {Object.keys(errors).length === 1 ? 'field requires' : 'fields require'} attention before saving.
+              </span>
+            </div>
+          )}
           {sections.map((section) => (
             <RecordSection
               key={section}
               title={section}
               id={sectionId(section)}
               collapsible={optionalSections[kind].includes(section)}
+              forceOpen={sectionHasError(section)}
+              errorCount={recordFields[kind].filter((f) => f.section === section && Boolean(errors[f.key])).length}
               defaultOpen={
                 !optionalSections[kind].includes(section) ||
                 sectionHasValue(section) ||
+                sectionHasError(section) ||
                 (section === 'Notes' && false)
               }
               collapsedHint="Empty"

@@ -1,6 +1,7 @@
 import { useState, useMemo, type Dispatch, type SetStateAction } from 'react'
 import Icon from '../ui/Icon'
 import { Button } from '../ui/Page'
+import { DateField } from '../ui/DateField'
 import { RecordSection } from '../ui/RecordWorkspace'
 import {
   EquipmentSectionLinks,
@@ -9,7 +10,6 @@ import {
   equipmentSectionState,
 } from './equipmentAssist'
 import type { RecordSnapshot, RecordValues, RecordValue } from '../../lib/recordEditor'
-import { toBs, formatBs } from '../../lib/bs'
 import { useToast } from '../ui/Toast'
 
 export interface EquipmentRecordEditorProps {
@@ -78,19 +78,32 @@ export function EquipmentRecordEditor({
     return list
   }, [canViewMoney])
 
-  const bsDateStr = useMemo(() => {
-    if (!values.purchase_date) return null
-    try {
-      const d = new Date(String(values.purchase_date))
-      const bs = toBs(d)
-      return bs ? formatBs(bs) : null
-    } catch {
-      return null
-    }
-  }, [values.purchase_date])
-
   return (
     <div className="equipment-record-editor">
+      {Object.keys(errors).length > 0 && (
+        <div
+          role="alert"
+          className="record-validation-banner"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '10px 14px',
+            marginBottom: 16,
+            borderRadius: 'var(--r-card, 8px)',
+            background: 'color-mix(in srgb, var(--danger, #ef4444) 10%, var(--card))',
+            border: '1px solid color-mix(in srgb, var(--danger, #ef4444) 30%, transparent)',
+            color: 'var(--danger-text, #ef4444)',
+            fontSize: 'var(--t-meta, 13px)',
+            fontWeight: 600,
+          }}
+        >
+          <Icon name="alert_triangle" size={18} style={{ color: 'var(--danger, #ef4444)', flexShrink: 0 }} />
+          <span>
+            {Object.keys(errors).length} {Object.keys(errors).length === 1 ? 'field requires' : 'fields require'} attention before saving.
+          </span>
+        </div>
+      )}
       <EquipmentSectionLinks
         sections={sections}
         stateOf={(sec) => equipmentSectionState(sec, values, rows)}
@@ -712,21 +725,23 @@ export function EquipmentRecordEditor({
           title="Purchase"
           collapsible
           defaultOpen={true}
+          forceOpen={Boolean(errors.purchase_price || errors.replacement_value || errors.purchase_date)}
         >
           <div className="record-fields equipment-form-grid">
-            <label className="record-field" htmlFor="record-purchase_date">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>Purchase date</span>
-                {bsDateStr && <span className="equipment-bs-badge">{bsDateStr}</span>}
-              </div>
-              <input
+            <div className="record-field">
+              <label htmlFor="record-purchase_date" style={{ display: 'block', marginBottom: 4 }}>
+                Purchase date
+              </label>
+              <DateField
                 id="record-purchase_date"
-                type="date"
-                disabled={busy}
                 value={String(values.purchase_date ?? '')}
-                onChange={(e) => set('purchase_date', e.target.value)}
+                onChange={(val) => set('purchase_date', val)}
+                disabled={busy}
+                showBs={true}
+                placeholder="dd/mm/yyyy"
+                ariaLabel="Purchase date"
               />
-            </label>
+            </div>
 
             <label className="record-field" htmlFor="record-purchase_price">
               <span>Purchase price</span>
@@ -773,6 +788,7 @@ export function EquipmentRecordEditor({
           title="Pricing & Rental"
           collapsible
           defaultOpen={true}
+          forceOpen={Boolean(errors.daily_rate)}
         >
           <div className="record-fields equipment-form-grid">
             <label className="record-field" htmlFor="record-daily_rate">
@@ -902,6 +918,7 @@ export function EquipmentRecordEditor({
         title="Maintenance & Documents"
         collapsible
         defaultOpen={false}
+        forceOpen={Boolean(errors.prep_time_minutes || errors.cleaning_time_minutes || errors.notes_internal)}
         collapsedHint="Prep, cleaning & notes"
       >
         <div className="record-fields equipment-form-grid">
