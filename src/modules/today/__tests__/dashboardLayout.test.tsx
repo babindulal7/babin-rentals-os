@@ -5,16 +5,17 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ToastProvider } from '../../../components/ui/Toast'
 import type { ListFilters } from '../../../lib/queries/listQuery'
+import type { ListResult } from '../../../lib/queries/useList'
 
-const queueResults = vi.hoisted(() => ({ counts: [0, 0], calls: 0, refetch: vi.fn(), filters: [] as ListFilters[] }))
+const queueResults = vi.hoisted(() => ({ counts: [0, 0] as (number | null)[], loading: false, error: null as ListResult<never>['error'], calls: 0, refetch: vi.fn(), filters: [] as ListFilters[] }))
 vi.mock('../../../lib/queries/useList', () => ({
   useList: (_fetcher: unknown, filters: ListFilters) => {
     queueResults.filters.push(filters)
-    const total = queueResults.counts[queueResults.calls++ % 2] ?? 0
+    const total = queueResults.counts[queueResults.calls++ % 2] ?? null
     return {
     rows: [],
-    loading: false,
-    error: null,
+    loading: queueResults.loading,
+    error: queueResults.error,
     isEmpty: total === 0,
     isFiltered: false,
     total,
@@ -60,6 +61,8 @@ const buttonByLabel = (label: string) =>
 beforeEach(() => {
   window.sessionStorage.clear()
   queueResults.counts = [0, 0]
+  queueResults.loading = false
+  queueResults.error = null
   queueResults.calls = 0
   queueResults.filters = []
   queueResults.refetch.mockClear()
@@ -150,7 +153,7 @@ describe('focused pickup and return dashboard', () => {
     await act(async () => today.click())
 
     expect(window.sessionStorage.getItem('dashboard.pickupDateFilter')).toContain('Today')
-    expect(container.textContent).toContain('3 coming back')
+    expect(container.querySelector('.dispatch-summary--returns .dispatch-summary__count')?.textContent).toBe('3')
     expect(window.sessionStorage.getItem('dashboard.returnDateFilter')).toContain('Tomorrow')
     expect(layout.className).toBe(initialLayout)
     expect([...layout.querySelectorAll('.movement-panel')]).toEqual(panels)
@@ -164,6 +167,11 @@ describe('focused pickup and return dashboard', () => {
     expect(container.textContent).not.toContain('Quick Actions')
     expect(container.textContent).not.toContain("Today's Timeline")
     expect(container.textContent).not.toContain('Cash due')
+    expect(container.textContent).not.toContain('After the dispatch queues')
+    expect(container.textContent).not.toContain('Currently Out on Set')
+    expect(container.textContent).not.toContain('Prep & Packing Queue')
+    expect(container.textContent).not.toContain('Maintenance & QC Hold')
+    expect(container.querySelector('.dashboard-shift-handover')).toBeNull()
   })
 
   it('keeps each date control a single compact button: "Today", or the English date (15 Oct 2026)', async () => {
@@ -175,11 +183,27 @@ describe('focused pickup and return dashboard', () => {
     expect(control.querySelector('.dashboard-master-date-control__secondary')).toBeNull()
   })
 
-  it('carries no count tiles above the lists (ruled 8 Oct 2026)', async () => {
+  it('summarizes only the two movements from authoritative query totals (23 Oct wireframes)', async () => {
+    queueResults.counts = [125, 62]
     await mount()
+    expect(container.querySelectorAll('.dispatch-summary')).toHaveLength(2)
+    expect(container.querySelector('.dispatch-summary--pickups .dispatch-summary__count')?.textContent).toBe('125')
+    expect(container.querySelector('.dispatch-summary--returns .dispatch-summary__count')?.textContent).toBe('62')
     expect(container.querySelector('.kpi-tile')).toBeNull()
     expect(container.textContent).not.toContain('On rent now')
     expect(container.textContent).not.toContain('Packing due tomorrow')
+  })
+
+  it.each(['loading', 'error', 'unknown'] as const)('does not invent zero totals when counts are %s', async state => {
+    queueResults.loading = state === 'loading'
+    queueResults.error = state === 'error' ? 'Unavailable' : null
+    queueResults.counts = state === 'unknown' ? [null, null] : [10, 20]
+    await mount()
+    expect([...container.querySelectorAll('.dispatch-summary__count')].map(node => node.textContent)).toEqual(['—', '—'])
+    expect(container.querySelector('.dispatch-summaries')?.textContent).toContain(
+      state === 'loading' ? 'Loading movements' : state === 'error' ? 'Movements unavailable' : 'Count unavailable',
+    )
+    if (state === 'error') expect(container.querySelector('[role="alert"]')?.textContent).toContain('Unavailable')
   })
 
   it('gives each panel its own accessible calendar control', async () => {

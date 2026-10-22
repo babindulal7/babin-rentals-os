@@ -23,11 +23,17 @@
  * name that `selfIdOf` cannot resolve — reaches `runFloorVerb` with no `qcBy`
  * at all, which is the defect stated as an assertion.
  */
-import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { loadMockClient } from '../../../lib/supabase'
+import { fetchStaffDirectory, type StaffDirectoryRow } from '../../../lib/queries/staff'
+
+vi.mock('../../../lib/queries/staff', () => ({ fetchStaffDirectory: vi.fn() }))
+beforeEach(() => {
+  vi.mocked(fetchStaffDirectory).mockResolvedValue({ kind: 'ok', rows: [] })
+})
 
 beforeAll(async () => {
   await loadMockClient()
@@ -200,6 +206,59 @@ afterEach(async () => {
   sessionStorage.clear()
   if (root) await act(async () => root.unmount())
   container?.remove()
+})
+
+describe('ResetWorkspace — confirmed cleaner identities only', () => {
+  const cleanerSelect = () => container.querySelector<HTMLSelectElement>('#staff-cleaner-select')!
+  const mountAssignment = async () => {
+    await mount()
+    await click(container.querySelector<HTMLInputElement>('input[aria-label="Select Sony FX3"]')!)
+  }
+  const staff = (id: string, fullName: string, isActive = true): StaffDirectoryRow => ({
+    id, fullName, email: `${id}@example.test`, primaryRole: 'Technician', isActive,
+    employeeCode: null, department: null, branchCode: null, branchName: null,
+    hasPin: false, pinLockedUntil: null, hasAuthAccount: true, lastSignInAt: null,
+  })
+  it('an empty directory never creates staff options or permits assignment', async () => {
+    await mountAssignment()
+    expect(cleanerSelect().options).toHaveLength(1)
+    expect(cleanerSelect().disabled).toBe(true)
+    expect(button('Assign').disabled).toBe(true)
+    expect(text()).toContain('No active staff are available for assignment.')
+  })
+  it.each(['error', 'unavailable'] as const)('%s shows its refusal without sample identities', async (kind) => {
+    vi.mocked(fetchStaffDirectory).mockResolvedValue({ kind, message: 'Staff source cannot answer.' })
+    await mountAssignment()
+    expect(cleanerSelect().options).toHaveLength(1)
+    expect(cleanerSelect().disabled).toBe(true)
+    expect(text()).toContain('Staff source cannot answer.')
+    expect(text()).not.toContain('Ram Thapa')
+  })
+  it('a rejected read stays unavailable and Retry loads only confirmed active staff', async () => {
+    vi.mocked(fetchStaffDirectory).mockRejectedValueOnce(new Error('Directory connection failed.'))
+    await mountAssignment()
+    expect(cleanerSelect().options).toHaveLength(1)
+    expect(text()).toContain('Directory connection failed.')
+    vi.mocked(fetchStaffDirectory).mockResolvedValue({ kind: 'ok', rows: [
+      staff('confirmed-cleaner', 'Recorded Cleaner'), staff('inactive-cleaner', 'Inactive Cleaner', false),
+    ] })
+    await click(button('Retry'))
+    expect([...cleanerSelect().options].map(option => option.value)).toEqual(['', 'confirmed-cleaner'])
+    expect(cleanerSelect().disabled).toBe(false)
+    expect(text()).not.toContain('Inactive Cleaner')
+    cleanerSelect().value = 'confirmed-cleaner'
+    await act(async () => { cleanerSelect().dispatchEvent(new Event('change', { bubbles: true })) })
+    expect(button('Assign').disabled).toBe(false)
+    await click(button('Assign'))
+    expect([...container.querySelectorAll('td')].some(cell => cell.textContent === 'Recorded Cleaner')).toBe(true)
+    // With an unchecked checklist the UI offers its fast-track action instead
+    // of Mark Clean. Assignment must still leave the actual work unverified.
+    for (const task of SHARED_CLEAN_TASKS) {
+      const label = [...container.querySelectorAll('label')].find(node => node.textContent?.includes(task))
+      expect(label?.querySelector<HTMLInputElement>('input[type="checkbox"]')?.checked).toBe(false)
+    }
+    expect(button('Complete Reset').disabled).toBe(true)
+  })
 })
 
 describe('ResetWorkspace — RS-12, the QC identity', () => {

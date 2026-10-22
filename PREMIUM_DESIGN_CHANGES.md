@@ -2,9 +2,9 @@
 
 ## Follow-up verification
 
-The user requested a fresh verification after the earlier pass. New local edits changed the source fingerprint. Fresh evidence is being recorded separately in `docs/verification/premium-design/reverify-20261021-2327`. The earlier command table below is historical until the new run finishes.
+The 22 October source snapshot is fully documented in [docs/verification/premium-design/reverify-20261021-2327/REVERIFICATION.md](docs/verification/premium-design/reverify-20261021-2327/REVERIFICATION.md): 5,186 tests in a full coverage run, 53 browser checks and 156 captures. That snapshot corrected clipped phone KPI labels and an unloaded identifier font. Earlier failed/interrupted attempts remain retained.
 
-Visual review found and corrected two missed defects: phone KPI labels were clipped by the shared layout, and the identifier font tokens named a family different from the installed self-hosted variable font. Phone KPI labels now wrap at the existing secondary text size; decorative KPI icons yield space on phones. Runtime and package font tokens prefer the installed `JetBrains Mono Variable` family, retaining existing fallbacks. No external font was added. The Card browser fixture now discovers versioned React URLs from the running Vite entry rather than assuming a cache directory.
+The user subsequently approved **the newer all-Outfit theme** on 23 October; see RULINGS-2026-10-23.md. The older separate-font result is historical and must not trigger a rollback. Current-source verification is running separately in `docs/verification/premium-design/current-20261023-0225`; the current checkout contains substantial newer feature and primitive edits.
 
 21 October 2026 (NPT). Local implementation and browser evidence; final verification receipts linked below.
 

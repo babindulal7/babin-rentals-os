@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import Icon, { type IconName } from '../ui/Icon'
 import { useAuth } from '../../lib/auth'
 import { useViewport } from '../../lib/device'
+import { useCompactHeader } from '../../lib/headerRoom'
 import { openCommandPalette } from './CommandPalette'
 import { useSync } from '../../lib/syncContext'
 import { useOptionalWorkspace, type PageHeaderSearchConfig } from '../../lib/workspaceContext'
@@ -102,6 +103,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
   const vp = useViewport()
   const isPhone = vp === 'phone'
   const isTablet = vp === 'tablet'
+  const compactHeader = useCompactHeader()
   const isDispatch = crumbs.some((crumb) => crumb.label === 'Today' || crumb.label === 'Dashboard')
   const [profileOpen, setProfileOpen] = useState(false)
   const [showHandover, setShowHandover] = useState(false)
@@ -239,13 +241,13 @@ export default function Header({ crumbs, actions }: HeaderProps) {
     ...looseSecondary,
     ...legacyPrimary.slice(1),
   ]
-  const visibleLegacySecondaryCount = !isPhone && !isTablet ? Math.max(0, 2 - (resolved?.secondary.length ?? 0)) : 0
+  const visibleLegacySecondaryCount = !compactHeader ? Math.max(0, 2 - (resolved?.secondary.length ?? 0)) : 0
   const visibleLegacySecondary = [
-    ...(!isPhone && !isTablet ? legacyContext : []),
+    ...(!compactHeader ? legacyContext : []),
     ...legacySecondary.slice(0, visibleLegacySecondaryCount),
   ]
   const moreLegacySecondary = [
-    ...(isPhone || isTablet ? legacyContext : []),
+    ...(compactHeader ? legacyContext : []),
     ...legacySecondary.slice(visibleLegacySecondaryCount),
   ]
   const legacyOverflowItems = legacyGroups.flatMap((group) =>
@@ -292,8 +294,8 @@ export default function Header({ crumbs, actions }: HeaderProps) {
     if (!resolved) return []
     const items: OverflowMenuItem[] = []
 
-    // On tablet or phone, secondary actions collapse into overflow
-    if (isTablet || isPhone) {
+    // RULING 2026-10-23: registry actions follow the header's available width, including an expanded desktop sidebar.
+    if (compactHeader) {
       resolved.secondary.forEach((sec) => {
         const status = isActionEnabled(sec, actionContext)
         items.push({
@@ -325,7 +327,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
     }
 
     return items
-  }, [resolved, isTablet, isPhone, actionContext])
+  }, [resolved, compactHeader, isPhone, actionContext])
 
   return (
     <>
@@ -825,10 +827,10 @@ export default function Header({ crumbs, actions }: HeaderProps) {
               move a primary CTA past the More button. */}
           <span className="app-global-header__action-slot app-global-header__action-slot--secondary" data-header-slot="secondary">
                 <span ref={ws?.setHeaderSecondaryActionsElement} className="workspace-header-secondary-actions" />
-                {!isPhone && !isTablet && visibleLegacySecondary.map((action, idx) => (
+                {!compactHeader && visibleLegacySecondary.map((action, idx) => (
                   <span key={isValidElement(action) && action.key != null ? String(action.key) : `hdr-secondary-${idx}`}>{action}</span>
                 ))}
-                {!isPhone && !isTablet && resolved?.secondary?.map((sec) => {
+                {!compactHeader && resolved?.secondary?.map((sec) => {
                   const statusCheck = isActionEnabled(sec, actionContext)
                   return (
                     <Button

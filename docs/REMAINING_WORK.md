@@ -1,5 +1,8 @@
 # Babin Rentals OS — Comprehensive Remaining Work Register
 
+> **ASTRA, 2026-10-23 02:49 NPT:** Reset cleaner repair reverified 52/52 after concurrent restoration; current broad suite/coverage/build remain NOT VERIFIED. Status: 6 targeted local / 5 pending staging / 5 blocked / 8 remaining. NOT READY; PRODUCTION LAUNCH HOLD. See docs/verification/ASTRA_MASTER_REPAIR_2026-10-21.md.
+
+
 > **21 October 2026 — confirmation completeness continuation, release HOLD:** the saved `ASTRA_UI_STABLE_CHECKPOINT_2026-10-21.json` records 5,162 passing tests and all required local gates on fingerprint `f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b`. Subsequent local source edits are not certified by that checkpoint. Pre-commit confirmation now reads complete ordered booking-line pages and refuses incomplete/invalid results before any transition; nine new regressions failed against the prior source. Current checks: `docs/verification/ASTRA_CONFIRM_LINES_2026-10-21.json`. Earlier entries below are historical; hosted, physical-device and full offline acceptance remain open.
 
 > **ASTRA master repair continuation, 21 October 2026:** outbox, report completeness and modal/date/Today/Finance repairs are prepared with focused regressions. Full current-source gates are pending; earlier source receipts do not certify these newer edits. See root AUDIT_WORKTREE_PROGRESS.md and artifacts/astra-20261021-024418. Production launch remains HOLD; hosted and device acceptance remain open.

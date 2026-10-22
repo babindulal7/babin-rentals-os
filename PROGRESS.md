@@ -1,5 +1,46 @@
 # Progress Log
 
+## 2026-10-23 02:49 NPT — ASTRA Reset cleaner integrity follow-up
+
+**Did**
+- Removed fabricated cleaner identities from Reset empty/error directory results. Only returned active staff can be selected; loading/empty/error disables assignment, failed reads show an inline error and Retry, and stale picker options clear on identity/retry changes.
+- Preserved shared edits and saved recovery files/patches in artifacts/astra-20261023-0226. After an unrelated restoration removed the tested repair and tests, reapplied only those two source diffs and verified them again. No browser business store was cleared.
+
+**Ruled**
+- A retained intermediate run passed 51/52: a new test expected Mark Clean while the unchecked UI showed its fast-track alternative. The corrected fixture asserts untouched tasks and disabled Complete Reset directly, preserving the actual safety contract.
+- No invented people or successful directory reads; existing signed-in QC identity, self-QC reason and server action gates remain intact. No new permission, migration or business model.
+- All 24 issue dispositions remain 6 targeted VERIFIED LOCAL, 5 PENDING STAGING, 5 BLOCKED and 8 IN PROGRESS. This is a partial delivery; NOT READY; PRODUCTION LAUNCH HOLD.
+
+**Verified**
+- Four new negative regressions failed against the original fallback (8 existing checks passed). Reapplied fix: 52/52 passed, zero failures/skips, two Reset/operations-route files. Evidence: artifacts/astra-20261023-0226/reset-staff-before-v2.json and reset-staff-final.json.
+- The later Reset undefined-role crash had already been corrected in local commit 63d3d89e; existing route/QC assertions now pass. Earlier SearchInput/Kbd prop failure is retained; subsequent typecheck exited 0.
+- Full final-5 batch was stopped after concurrent edits restored the two Reset files. Its typecheck exited 0 but source changed; no full-suite/coverage/build verification for this resulting tree is claimed. Earlier full-suite and coverage evidence remains historical.
+- Extended Phase 0 probe passed all 25 SQL groups locally. Actual metadata is in artifacts/astra-20261021-024418/inactive-current-2-gates.jsonl; this does not verify hosted Storage/JWTs or the later resulting tree.
+- Reporting HEAD 619f3d227173d9b0070d2ff5fdca5d29aed2fb4c; source fingerprint f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d. Completion exit 1; stale/incomplete evidence remains unverified.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 168 files · check:pglite Historical, incomplete or failed receipt (2026-10-22T20:51:47.026Z); current source NOT VERIFIED. Suite: NOT VERIFIED — invalid test receipt.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-22T20:52:51.242Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Complete a full matching-source verification batch after shared edits stabilize; preserve both recovery patches and the historical failures/receipts. Full current test/coverage counts are NOT AVAILABLE.
+- Original offline revision/branch provenance and legacy recovery; full role/branch/active API acceptance and Technician Pack contract; real financial attribution and shared operational backend decisions remain open in OPEN_DECISIONS §§13–17.
+- Hosted JWT/Storage, every route/device including 430px and physical iPad, scanner/signatures/PDF/integrations, real PostgreSQL concurrency, restoration and measured p75 performance acceptance remain open.
+- No GitHub push/PR/merge, live Supabase operation or deployment by this task. Existing project retained.
+
+
+
 ## 2026-10-23 — Repeated information buttons removed (page footer and per-field (i))
 
 **Did**

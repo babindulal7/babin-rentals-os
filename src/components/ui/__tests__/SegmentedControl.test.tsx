@@ -53,6 +53,30 @@ describe('SegmentedControl', () => {
     expect(onChange).toHaveBeenCalledWith('second')
   })
 
+  it('uses one tab stop and associates tabs with their panels', () => {
+    act(() => root.render(<SegmentedControl options={options} value="second" onChange={vi.fn()} idPrefix="movements" />))
+    const tabs = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')]
+    expect(tabs.map(tab => tab.tabIndex)).toEqual([-1, 0, -1])
+    expect(tabs[1]?.id).toBe('movements-tab-second')
+    expect(tabs[1]?.getAttribute('aria-controls')).toBe('movements-panel-second')
+  })
+
+  it.each([
+    ['first', 'ArrowRight', 'second'],
+    ['second', 'ArrowRight', 'first'],
+    ['first', 'ArrowLeft', 'second'],
+    ['second', 'Home', 'first'],
+    ['first', 'End', 'second'],
+  ])('moves from %s using %s, skipping disabled tabs', (value, key, next) => {
+    const onChange = vi.fn()
+    act(() => root.render(<SegmentedControl options={options} value={value} onChange={onChange} idPrefix="movements" />))
+    const current = host.querySelector<HTMLButtonElement>(`#movements-tab-${value}`)!
+    current.focus()
+    act(() => current.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })))
+    expect(onChange).toHaveBeenCalledWith(next)
+    expect(document.activeElement?.id).toBe(`movements-tab-${next}`)
+  })
+
   it('does not trigger onChange when a disabled or currently active tab is clicked', () => {
     const onChange = vi.fn()
     act(() => {
