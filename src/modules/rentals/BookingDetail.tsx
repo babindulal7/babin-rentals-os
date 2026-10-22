@@ -2304,7 +2304,7 @@ function BookingDetailView() {
                     {...stageFace(primaryAction.label)}
                   />
                 ) : primaryAction.disabled ? (
-                  <Unavailable reason={primaryAction.reason || 'Action unavailable'}>
+                  <Unavailable reason={primaryAction.reason || 'Action unavailable'} showHint>
                     <Button icon={primaryAction.icon} variant="primary" disabled {...stageFace(primaryAction.label)} />
                   </Unavailable>
                 ) : (

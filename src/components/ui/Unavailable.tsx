@@ -36,10 +36,12 @@ export function Unavailable({
   reason,
   children,
   style,
+  showHint = false,
 }: {
   reason: string
   children: ReactNode
   style?: CSSProperties
+  showHint?: boolean
 }) {
   const { hasHover } = useCapability()
   const [show, setShow] = useState(false)
@@ -76,8 +78,14 @@ export function Unavailable({
     }, LONG_PRESS_MS)
   }
   const onTouchEnd = () => {
-    if (pressTimer.current !== null) window.clearTimeout(pressTimer.current)
-    pressTimer.current = null
+    if (pressTimer.current !== null) {
+      window.clearTimeout(pressTimer.current)
+      pressTimer.current = null
+      // Immediate tap on touch screen reveals the gate reason
+      if (!hasHover && !suppress.current) {
+        reveal()
+      }
+    }
   }
 
   useEffect(() => clearTimers, [])
@@ -126,11 +134,42 @@ export function Unavailable({
         if (suppress.current) {
           suppress.current = false
           e.stopPropagation()
+          return
+        }
+        if (!hasHover) {
+          e.preventDefault()
+          e.stopPropagation()
+          reveal()
         }
       }}
-      style={{ position: 'relative', display: 'inline-flex', cursor: 'not-allowed', ...style }}
+      style={{
+        position: 'relative',
+        display: showHint ? 'inline-flex' : 'inline-flex',
+        flexDirection: showHint ? 'column' : 'row',
+        alignItems: showHint ? 'flex-start' : 'center',
+        cursor: 'not-allowed',
+        ...style,
+      }}
     >
       {children}
+      {showHint && reason && (
+        <span
+          className="unavailable-gate-hint"
+          style={{
+            display: 'block',
+            fontSize: '11px',
+            color: 'var(--muted)',
+            marginTop: 4,
+            fontWeight: 500,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            maxWidth: 180,
+          }}
+        >
+          {reason}
+        </span>
+      )}
       {show && (
         <span
           role="tooltip"
