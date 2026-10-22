@@ -341,31 +341,8 @@ export function SummaryRows({ rows }: { rows: Array<{ label: string; value: Reac
   )
 }
 
-/* ── footer note bar ───────────────────────────────────────────────────── */
-
-export function FooterNote({ extra }: { extra?: string[] }) {
-  const parts = [...new Set((extra ?? []).map((part) => part.trim()).filter(Boolean))]
-  if (parts.length === 0) return null
-
-  // Extra information rides in ONE (i) tooltip, like KpiStrip and PageHeader —
-  // the page keeps its content, the notes stay one hover/tap away.
-  return (
-    <div
-      className="footer-note"
-      style={{ display: 'flex', justifyContent: 'flex-end', padding: '4px 2px 0', marginTop: 'var(--sp-xs)' }}
-    >
-      <InfoTooltip
-        label="About this page"
-        size={16}
-        content={parts.map((p) => (
-          <p key={p} style={{ margin: 0 }}>
-            {p}
-          </p>
-        ))}
-      />
-    </div>
-  )
-}
+// RULING 2026-10-23: the footer "About this page" (i) is removed — the header (i) already carries
+// the page explanation, so a second copy at the bottom of the page only repeated it.
 
 export { PageActions, type PageActionsProps } from './PageActions'
 export { ScreenHeader, type ScreenHeaderProps } from './ScreenHeader'

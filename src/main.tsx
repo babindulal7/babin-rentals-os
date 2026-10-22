@@ -28,8 +28,11 @@ import { AuthProvider } from './lib/auth'
  * each Hind weight carries 1,146 glyphs, mostly Devanagari conjuncts, and
  * English-only users must never download them. They load on the NE toggle.
  */
+import '@fontsource/outfit/latin-400.css'
+import '@fontsource/outfit/latin-500.css'
 import '@fontsource/outfit/latin-600.css'
 import '@fontsource/outfit/latin-700.css'
+import '@fontsource/outfit/latin-800.css'
 import '@fontsource/source-sans-3/latin-400.css'
 // 7 Oct font clarity ruling: load the actual medium/bold outlines used by UI.
 import '@fontsource/source-sans-3/latin-500.css'

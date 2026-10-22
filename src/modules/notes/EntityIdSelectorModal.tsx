@@ -124,7 +124,7 @@ export default function EntityIdSelectorModal({
               <span style={{ color: 'var(--muted)' }}>Currently linked:</span>
               <span
                 style={{
-                  fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+                  fontFamily: 'var(--font-mono, "Outfit", sans-serif)',
                   fontWeight: 700,
                   color: 'var(--accent)',
                   fontSize: '13px',
@@ -212,7 +212,7 @@ export default function EntityIdSelectorModal({
                   background: 'var(--input-bg)',
                   color: 'var(--text)',
                   fontSize: '14px',
-                  fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+                  fontFamily: 'var(--font-mono, "Outfit", sans-serif)',
                 }}
               />
               <Button
@@ -303,7 +303,7 @@ export default function EntityIdSelectorModal({
                         background: 'var(--surface-2)',
                         color: 'var(--text)',
                         fontSize: '11px',
-                        fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+                        fontFamily: 'var(--font-mono, "Outfit", sans-serif)',
                         fontWeight: 600,
                         cursor: 'pointer',
                         display: 'inline-flex',
@@ -403,7 +403,7 @@ export default function EntityIdSelectorModal({
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                             <span
                               style={{
-                                fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+                                fontFamily: 'var(--font-mono, "Outfit", sans-serif)',
                                 fontWeight: 700,
                                 fontSize: '13px',
                                 color: 'var(--text)',

@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import { Select } from '../../components/ui'
-import { Card, Button, KpiStrip, FooterNote, cardStyle } from '../../components/ui/Page'
+import { Card, Button, KpiStrip, cardStyle } from '../../components/ui/Page'
 import { ScreenHeader } from '../../components/ui/ScreenHeader'
 import { DataTableShell } from '../../components/ui/DataTable'
 import type { Kpi } from '../../components/ui/Page'
@@ -695,7 +695,6 @@ function ClientImportForm({ embedded = false }: ImportCenterProps = {}) {
         </>
       )}
 
-      <FooterNote extra={['Only confirmed saves are counted. Existing clients and memberships are unchanged.']} />
       <UnsavedLeaveDialog />
       <ConfirmDialog isOpen={discardOpen} onClose={() => setDiscardOpen(false)} onConfirm={reset}
         title="Discard local import draft?" confirmLabel="Discard local draft"

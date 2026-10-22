@@ -12,7 +12,7 @@ import { EquipmentRightRail } from './components/EquipmentRightRail'
 import { ErrorBanner } from '../../components/ui/StateViews'
 import { Unavailable } from '../../components/ui/Unavailable'
 import { Modal } from '../../components/ui/Modal'
-import { Button, FooterNote, Rail, cardStyle } from '../../components/ui/Page'
+import { Button, Rail, cardStyle } from '../../components/ui/Page'
 import { ScreenHeader } from '../../components/ui/ScreenHeader'
 import { PageActions } from '../../components/ui/PageActions'
 import { Link, useNavigate } from 'react-router-dom'
@@ -401,7 +401,6 @@ function AddEquipmentLayout({ embedded, onDone }: { embedded?: boolean; onDone?:
           </Rail>
       </div>
 
-      <FooterNote extra={['Assets are retired with a reason, never deleted']} />
 
       <Modal
         isOpen={showDiscard}

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
-import { PageHeader, FooterNote, cardStyle } from '../../components/ui/Page'
+import { PageHeader, cardStyle } from '../../components/ui/Page'
 import { FilterButton, FilterDrawer } from '../../components/ui/FilterDrawer'
 import { Select } from '../../components/ui/Select'
 import { PageShell } from '../../components/ui/PageShell'
@@ -308,7 +308,6 @@ export default function ToolsLanding() {
       {activeTab === 'latefee' && money && <LateFeeCalculator />}
       {activeTab === 'cinematography' && <CineTools embedded />}
 
-      <FooterNote extra={['All calculators run locally within Tools without navigating away']} />
     </PageShell>
   )
 }

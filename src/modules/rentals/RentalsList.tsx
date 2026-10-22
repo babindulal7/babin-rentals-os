@@ -6,7 +6,6 @@ import { recordExport } from '../../lib/exportAudit'
 import { createPortal } from 'react-dom'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
-import { FooterNote } from '../../components/ui/Page'
 import { RentalTimeline } from './RentalTimeline'
 import { RentalSummaryModal } from './modals/RentalSummaryModal'
 import { WorkspaceHeaderSearch, WorkspaceHeaderSecondaryActions, WorkspaceHeaderMoreActions, WorkspaceHeaderPhoneSearchActions, WorkspaceHeaderAddActions } from '../../components/shell/WorkspacePortal'
@@ -61,7 +60,6 @@ import {
   ROWS_PER_PAGE,
   OPTIONAL_COLUMNS,
   CHIP_MEANS,
-  RENTAL_DEPOSIT_NOTE,
   SUB_RENTAL_NOTE,
   SUB_RENTAL_UNANSWERED,
   rentalGlance,
@@ -3090,20 +3088,6 @@ export default function RentalsList() {
         bookingNo={summaryBookingNo ?? ''}
       />
 
-      <FooterNote
-        extra={[
-          'Cancelled bookings are retained, never deleted',
-          /* Resolved as the note is BUILT, not when the module loaded. It was
-             `formatAd(TODAY)` off a module constant, so a tablet left open
-             across midnight printed yesterday's date beside chips whose bounds
-             had already moved on — the footnote contradicted the list it
-             annotated, and the footnote is the part an operator trusts. */
-          `Quick filters are relative to ${formatAd(getBusinessToday())}`,
-          'Date filters use pickup dates.',
-          SUB_RENTAL_NOTE,
-          ...(money ? [RENTAL_DEPOSIT_NOTE] : []),
-        ]}
-      />
     </PageShell>
   )
 }

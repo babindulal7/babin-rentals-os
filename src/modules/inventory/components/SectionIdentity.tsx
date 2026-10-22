@@ -64,7 +64,7 @@ export function SectionIdentity() {
                   style={inputStyle(Boolean(errors.name))}
                 />
               </Field>
-              <Field label="Short Name" hint="Used on labels and packing lists.">
+              <Field label="Short Name">
                 <input
                   value={shortName}
                   onChange={(e) => setShortName(e.target.value)}
@@ -75,7 +75,7 @@ export function SectionIdentity() {
             </div>
 
             <div style={fieldRow}>
-              <Field label="Asset Code" hint={/* Auto, read-only. This is also the SKU — §4. */ "Auto, read-only. This is also the SKU —"}>
+              <Field label="Asset Code">
                 <input value={assetCode} readOnly className="identifier" style={{ ...inputStyle(), background: 'var(--card)', color: 'var(--nav-active-accent)' }} />
               </Field>
               <Field label="Category" required error={errors.category}>

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
-import { Card, KpiStrip, FooterNote } from '../../components/ui/Page'
+import { Card, KpiStrip } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
 import type { Kpi } from '../../components/ui/Page'
 import { PageBody } from '../../components/ui/PageBody'
@@ -18,7 +18,6 @@ import {
   LEDGER_COVERAGE,
   MODEL_DISCLOSURE,
   figuresFor,
-  rangeLabel,
 } from '../../data/pulse'
 import type { PeriodFigures } from '../../data/pulse'
 import { GROUPS, REPORTS, CATALOG_ERRORS, reportsIn, type CatalogReport, type GroupKey } from './catalog'
@@ -204,7 +203,6 @@ export function ReportCatalog({
   const period = PERIODS.find((p) => p.key === periodKey) ?? PERIODS[0]
   const range = period?.range ?? null
   const figures = useMemo(() => (range && money ? figuresFor(range.from, range.to) : null), [range, money])
-  const dates = range ? rangeLabel(range.from, range.to) : null
 
   /**
    * §9.6's `[🔍 find a report]`. Matches the report name and its group name, so
@@ -350,12 +348,6 @@ export function ReportCatalog({
         )}
       </PageBody>
 
-      <FooterNote
-        extra={[
-          dates ? (dates.bs ? `As of ${dates.ad} · BS ${dates.bs}` : `As of ${dates.ad}`) : `Ledger covers ${LEDGER_COVERAGE}`,
-          `${REPORTS.length} reports. Choose a report to open its details.`,
-        ]}
-      />
     </div>
   )
 }

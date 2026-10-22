@@ -140,7 +140,7 @@ export default function ShiftBriefModal({ isOpen, onClose, notes }: ShiftBriefMo
               border: '1px solid var(--border)',
               color: 'var(--text)',
               fontSize: '13px',
-              fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+              fontFamily: 'var(--font-mono, "Outfit", sans-serif)',
               lineHeight: 1.6,
               whiteSpace: 'pre-wrap',
               maxHeight: 340,

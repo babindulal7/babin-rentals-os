@@ -95,7 +95,7 @@
 .delivery-kpi-val {
   font-size: 26px;
   font-weight: 800;
-  font-family: var(--font-mono, "JetBrains Mono", monospace);
+  font-family: var(--font-mono, "Outfit", sans-serif);
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
   margin-top: 6px;

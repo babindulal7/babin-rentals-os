@@ -3,7 +3,6 @@ import Icon from '../../../components/ui/Icon';
 import type { IconName } from '../../../components/ui/Icon';
 import { cardStyle } from '../../../components/ui/Page';
 import { Badge } from '../../../components/ui/Badge';
-import { InfoTooltip } from '../../../components/ui/InfoTooltip';
 import type { StatusKey } from '../../../lib/status';
 import { CONDITION_TONE } from '../../../lib/queries/inventory';
 import { toBs, formatBs, formatAd } from '../../../lib/bs';
@@ -32,7 +31,6 @@ export function Field({
   id: propId,
   required,
   error,
-  hint,
   children,
   span,
 }: {
@@ -40,7 +38,6 @@ export function Field({
   id?: string | undefined
   required?: boolean
   error?: string | null | undefined
-  hint?: string | undefined
   children: ReactNode
   span?: number | undefined
 }) {
@@ -68,12 +65,9 @@ export function Field({
         ...(span ? { gridColumn: `span ${span}` } : {}),
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        <label htmlFor={fieldId} style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text2)' }}>
-          {label} {required && <span style={{ color: 'var(--danger-text)' }}>*</span>}
-        </label>
-        {hint && <InfoTooltip content={hint} />}
-      </div>
+      <label htmlFor={fieldId} style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text2)' }}>
+        {label} {required && <span style={{ color: 'var(--danger-text)' }}>*</span>}
+      </label>
       {content}
       {error ? (
         <span style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--sp-xs)', fontSize: 'var(--t-th)', color: 'var(--danger-text)' }}>
@@ -89,14 +83,12 @@ export function SectionCard({
   id,
   n,
   title,
-  note,
   action,
   children,
 }: {
   id: string
   n: number
   title: string
-  note?: string
   action?: ReactNode
   children: ReactNode
 }) {
@@ -119,10 +111,7 @@ export function SectionCard({
         >
           {n}
         </span>
-        <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <h2 style={{ margin: 0, fontSize: 'var(--t-ui)', fontWeight: 700, color: 'var(--text)' }}>{title}</h2>
-          {note && <InfoTooltip content={note} />}
-        </div>
+        <h2 style={{ margin: 0, minWidth: 0, fontSize: 'var(--t-ui)', fontWeight: 700, color: 'var(--text)' }}>{title}</h2>
         {action && <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>{action}</div>}
       </div>
       <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>{children}</div>

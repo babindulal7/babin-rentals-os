@@ -195,13 +195,13 @@ function UnitEditor({ unit, money, onDone }: { unit: InventoryUnitRow; money: bo
       <EditableRows
         edit={edit}
         rows={[
-          { key: 'assetTag', label: 'Asset tag', value: draft.assetTag, hint: 'The unique unit key — what the QR label encodes.' },
-          { key: 'serialNo', label: 'Manufacturer serial', value: draft.serialNo || '—', hint: 'Optional: a unit can be tagged without one.' },
-          { key: 'state', label: 'Status', value: draft.state, hint: 'Saves together with the location fields.' },
-          { key: 'rack', label: 'Rack', value: draft.rack || '—', hint: 'Saves together with Status.' },
+          { key: 'assetTag', label: 'Asset tag', value: draft.assetTag },
+          { key: 'serialNo', label: 'Manufacturer serial', value: draft.serialNo || '—' },
+          { key: 'state', label: 'Status', value: draft.state },
+          { key: 'rack', label: 'Rack', value: draft.rack || '—' },
           { key: 'shelf', label: 'Shelf', value: draft.shelf || '—' },
           { key: 'bin', label: 'Bin', value: draft.bin || '—' },
-          { key: 'condition', label: 'Condition', value: draft.condition, hint: UNIT_CONDITIONS.join(' · ') },
+          { key: 'condition', label: 'Condition', value: draft.condition },
           /* Law 6 — the replacement row is OMITTED for money-blind roles, not
              disabled or masked. It used to render `formatMoney` unconditionally,
              which was the one ungated rupee figure on this page. */

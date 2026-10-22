@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import Icon from '../../components/ui/Icon'
-import { Card, PageHeader, Button, KpiStrip, ReflowRail, SummaryRows, FooterNote, useRailGridColumns } from '../../components/ui/Page'
+import { Card, PageHeader, Button, KpiStrip, ReflowRail, SummaryRows, useRailGridColumns } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { Donut, Legend, catColor } from '../../components/ui/Charts'
 import { Unavailable } from '../../components/ui/Unavailable'
@@ -808,7 +808,6 @@ export default function AuditSettings() {
         </ReflowRail>
       </div>
 
-      <FooterNote extra={['All audit logs are immutable and tamper-proof']} />
     </div>
   )
 }

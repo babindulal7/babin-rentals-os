@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import Icon from '../../components/ui/Icon'
-import { InfoTooltip } from '../../components/ui/InfoTooltip'
-import { Card, FooterNote, cardStyle } from '../../components/ui/Page'
+import { Card, cardStyle } from '../../components/ui/Page'
 import { ScreenHeader } from '../../components/ui/ScreenHeader'
 import { Unavailable } from '../../components/ui/Unavailable'
 import { LineChart } from '../../components/ui/Charts'
@@ -161,7 +160,7 @@ export default function DepreciationCalculator({ embedded = false }: Depreciatio
         >
           <Card title="Asset">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-              <Field label="Asset" hint="Picking a recorded asset fills its purchase price. Everything else stays yours to enter.">
+              <Field label="Asset">
                 <select
                   aria-label="Asset"
                   value={assetName}
@@ -186,7 +185,6 @@ export default function DepreciationCalculator({ embedded = false }: Depreciatio
               <Field
                 label="Purchase date"
                 required
-                hint="No item in the master carries a purchase date, so this is never prefilled."
               >
                 <DateField
                   ariaLabel="Purchase date"
@@ -243,7 +241,7 @@ export default function DepreciationCalculator({ embedded = false }: Depreciatio
                 </div>
               </Field>
 
-              <Field label="Salvage value" required hint="Zero is a valid answer. It is not the assumed one.">
+              <Field label="Salvage value" required>
                 <input
                   inputMode="decimal"
                   aria-label="Salvage value in rupees"
@@ -359,7 +357,6 @@ export default function DepreciationCalculator({ embedded = false }: Depreciatio
         </div>
       )}
 
-      <FooterNote extra={['Nothing on this page is written to an asset record']} />
     </div>
   )
 }
@@ -474,23 +471,18 @@ function TabButton({
 function Field({
   label,
   required,
-  hint,
   children,
 }: {
   label: string
   required?: boolean
-  hint?: string
   children: React.ReactNode
 }) {
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        <span style={{ fontSize: 'var(--t-th)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--muted)' }}>
-          {label}
-          {required && <span style={{ color: 'var(--danger-text)' }}> *</span>}
-        </span>
-        {hint && <InfoTooltip content={hint} />}
-      </div>
+      <span style={{ fontSize: 'var(--t-th)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+        {label}
+        {required && <span style={{ color: 'var(--danger-text)' }}> *</span>}
+      </span>
       {children}
     </label>
   )

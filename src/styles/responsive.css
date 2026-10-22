@@ -68,19 +68,6 @@
     -webkit-line-clamp: 2;
   }
 
-  .footer-note {
-    align-items: flex-start !important;
-    gap: 6px 10px !important;
-  }
-
-  .footer-note > span {
-    flex-basis: calc(100% - 24px);
-  }
-
-  .footer-note > span:last-child {
-    margin-left: 24px !important;
-  }
-
   .data-table {
     min-width: max(100%, 42rem);
   }

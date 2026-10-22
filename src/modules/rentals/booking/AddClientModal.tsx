@@ -2,7 +2,6 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode, RefObject } from 'react'
 import Icon from '../../../components/ui/Icon'
 import type { IconName } from '../../../components/ui/Icon'
-import { InfoTooltip } from '../../../components/ui/InfoTooltip'
 import { useToast } from '../../../components/ui/Toast'
 import { useCanViewMoney } from '../../../lib/moneyVisibility'
 import { createClient } from '../../../actions/clients/createClient'
@@ -277,7 +276,6 @@ function Field({
   label,
   required,
   error,
-  help,
   group,
   children,
 }: {
@@ -287,7 +285,6 @@ function Field({
   /* `| undefined` is spelled out because tsconfig sets exactOptionalPropertyTypes
      and every call site reads `errors[key]`, which is `string | undefined`. */
   error?: string | undefined
-  help?: ReactNode
   /**
    * The control is a set of buttons, not one labelable element. `htmlFor` on a
    * `<button>` is legal but replaces that button's own accessible name, so the
@@ -311,18 +308,15 @@ function Field({
   const labelStyle: CSSProperties = { fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text2)' }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        {group ? (
-          <span id={`${id}-label`} style={labelStyle}>
-            {labelContent}
-          </span>
-        ) : (
-          <label htmlFor={id} style={labelStyle}>
-            {labelContent}
-          </label>
-        )}
-        {help && <InfoTooltip content={help} />}
-      </div>
+      {group ? (
+        <span id={`${id}-label`} style={labelStyle}>
+          {labelContent}
+        </span>
+      ) : (
+        <label htmlFor={id} style={labelStyle}>
+          {labelContent}
+        </label>
+      )}
       {children}
       {error && (
         <span
@@ -456,7 +450,6 @@ export function AddClientModal({
   const saveKey = useRef<string | null>(null)
 
   const localDigits = phoneLocalDigits(phone)
-  const phoneWillSave = phone.trim() ? canonicalPhone(phone) : ''
 
   /* The name the field was seeded with from the search box. Dirtiness is
      measured against it, not against empty, so Esc immediately after opening
@@ -1053,7 +1046,6 @@ export function AddClientModal({
                   id={`${uid}-orgtype`}
                   label="Organisation Type"
                   required
-                  help="Stored on the client. It decides the identity document, VAT and deposit rules."
                 >
                   <select
                     id={`${uid}-orgtype`}
@@ -1100,7 +1092,6 @@ export function AddClientModal({
                 <Field
                   id={`${uid}-contact`}
                   label="Contact Person"
-                  help="Who to call on the day of pickup. Not saved on the client record yet — add it from the client afterwards."
                 >
                   <input
                     id={`${uid}-contact`}
@@ -1119,21 +1110,6 @@ export function AddClientModal({
                   label="Phone"
                   required
                   error={errors.phone}
-                  help={
-                    <>
-                      Nepali mobile — 10 digits starting <span className="figure">97</span> or{' '}
-                      <span className="figure">98</span>.{' '}
-                      {phoneWillSave && PHONE_LOCAL_RE.test(localDigits) ? (
-                        <>
-                          Saved as <span className="figure">{phoneWillSave}</span>
-                        </>
-                      ) : (
-                        <>
-                          For example <span className="figure">9801234567</span>
-                        </>
-                      )}
-                    </>
-                  }
                 >
                   <div style={{ display: 'flex', gap: 'var(--sp-sm)' }}>
                     <span
@@ -1205,7 +1181,6 @@ export function AddClientModal({
                 <Field
                   id={`${uid}-pan`}
                   label="Government ID / PAN"
-                  help="PAN or VAT — exactly nine digits. Needed before this booking can be confirmed."
                 >
                   <input
                     id={`${uid}-pan`}
@@ -1223,7 +1198,6 @@ export function AddClientModal({
                   <Field
                     id={`${uid}-credit`}
                     label="Credit Limit"
-                    help="Not saved here — a credit limit is set by an approved commercial override."
                   >
                     <input
                       id={`${uid}-credit`}
@@ -1243,7 +1217,6 @@ export function AddClientModal({
                 <Field
                   id={`${uid}-terms`}
                   label="Payment Terms"
-                  help="Not saved here — anything past immediate payment takes the same approval as a credit limit."
                 >
                   <select
                     id={`${uid}-terms`}

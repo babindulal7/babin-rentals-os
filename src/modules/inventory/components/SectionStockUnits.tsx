@@ -37,7 +37,6 @@ export function SectionStockUnits() {
             id="sec-stock"
             n={sectionNumber('sec-stock')}
             title="Stock & Units"
-            note={/* One Tracking field — it replaces Equipment Type, Has Serial Number and Tracking Type (§5.1). */ "One Tracking field — it replaces Equipment Type, Has Serial Number and Tracking Type."}
             action={
               serialised ? (
                 <>
@@ -270,7 +269,7 @@ export function SectionStockUnits() {
                     </button>
                   </div>
                 </Field>
-                <Field label="Reorder Level" error={errors.reorder} hint="Below this, the item is flagged for restock.">
+                <Field label="Reorder Level" error={errors.reorder}>
                   <input
                     type="number"
                     min={0}

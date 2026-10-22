@@ -9,7 +9,6 @@ import { useNavigate, useParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
 import { Select } from '../../components/ui/Select'
-import { InfoTooltip } from '../../components/ui/InfoTooltip'
 import { Card, Button, Rail, SummaryRows, cardStyle } from '../../components/ui/Page'
 import { ScreenHeader } from '../../components/ui/ScreenHeader'
 import { DataTableShell } from '../../components/ui/DataTable'
@@ -183,20 +182,15 @@ const fieldBox: CSSProperties = { display: 'flex', flexDirection: 'column', gap:
 function Field({
   label,
   required,
-  hint,
   children,
 }: {
   label: string
   required?: boolean
-  hint?: string
   children: ReactNode
 }) {
   return (
     <label style={fieldBox}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        <Caption label={label} {...(required ? { required } : {})} />
-        {hint && <InfoTooltip content={hint} />}
-      </div>
+      <Caption label={label} {...(required ? { required } : {})} />
       {children}
     </label>
   )
@@ -210,20 +204,15 @@ function Field({
 function FieldBlock({
   label,
   required,
-  hint,
   children,
 }: {
   label: string
   required?: boolean
-  hint?: string
   children: ReactNode
 }) {
   return (
     <div style={fieldBox} role="group" aria-label={label}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        <Caption label={label} {...(required ? { required } : {})} />
-        {hint && <InfoTooltip content={hint} />}
-      </div>
+      <Caption label={label} {...(required ? { required } : {})} />
       {children}
     </div>
   )
@@ -1388,7 +1377,6 @@ export function AddBundle(props: AddBundleProps = {}) {
                   `FieldBlock`, because there is no control here to label. */}
               <FieldBlock
                 label="Bundle ID"
-                hint={isEditMode ? 'Permanent bundle identifier' : 'Assigned on save, by the database — not by this form'}
               >
                 <span
                   className="identifier"
@@ -1407,7 +1395,6 @@ export function AddBundle(props: AddBundleProps = {}) {
               <Field
                 label="Primary Category"
                 required
-                hint="The categories `inventory_categories` actually holds."
               >
                 <select value={category} onChange={(e) => setCategory(e.target.value as InventoryCategory | '')} style={selectStyle}>
                   <option value="">
@@ -1537,7 +1524,7 @@ export function AddBundle(props: AddBundleProps = {}) {
                 </span>
               </FieldBlock>
 
-              <FieldBlock label="Thumbnail" hint="JPG or PNG, held in this browser only">
+              <FieldBlock label="Thumbnail">
                 <span style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                   <span
                     aria-hidden
@@ -1652,7 +1639,6 @@ export function AddBundle(props: AddBundleProps = {}) {
                   <Field
                     label="Reason for the override"
                     required
-                    hint={`Stored with the bundle and audited. ${overrideReason.trim().length}/10 characters minimum.`}
                   >
                     <input
                       value={overrideReason}

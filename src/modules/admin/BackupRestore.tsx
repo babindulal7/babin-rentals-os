@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import Icon from '../../components/ui/Icon'
-import { Card, PageHeader, Button, KpiStrip, ReflowRail, SummaryRows, FooterNote, useRailGridColumns } from '../../components/ui/Page'
+import { Card, PageHeader, Button, KpiStrip, ReflowRail, SummaryRows, useRailGridColumns } from '../../components/ui/Page'
 import { PageBody } from '../../components/ui/PageBody'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { Donut, Legend, catColor } from '../../components/ui/Charts'
@@ -876,7 +876,6 @@ export default function BackupRestore() {
         tree (Law 3) for the real flow to be rebuilt on.
       */}
 
-      <FooterNote extra={['Backups are encrypted at rest and in transit']} />
     </div>
   )
 }

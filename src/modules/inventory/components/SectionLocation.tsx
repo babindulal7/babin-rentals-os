@@ -38,7 +38,6 @@ export function SectionLocation() {
             id="sec-location"
             n={sectionNumber('sec-location')}
             title="Location"
-            note="Warehouse › Zone › Rack › Shelf › Bin. The container comes from Section 3, never typed here."
           >
             <div style={fieldRow}>
               <Field label="Warehouse" required error={errors.location}>
@@ -68,11 +67,6 @@ export function SectionLocation() {
                 label="Storage bin"
                 required
                 span={2}
-                hint={
-                  warehouseId
-                    ? 'Bin labels are a seed list — storage_zones has no rack, shelf or bin column, so the choice is stored as text on the unit.'
-                    : 'Choose a warehouse first.'
-                }
               >
                 <select
                   value={locationId}
