@@ -61,6 +61,26 @@ describe('AUD-010: Document Storage & PDF Generation', () => {
       expect(text.trimEnd().endsWith('%%EOF')).toBe(true)
     })
 
+    it('normalizes multi-byte unicode and special characters to single-byte ASCII', () => {
+      const bytes = buildPdfByteArray([
+        '### BABIN RENTALS OS — Cinema Gear',
+        'Title: “Special” ‘Package’ • 100% Guaranteed',
+        'Rate: रू 50,000 / ₹ 50,000',
+        'Notes: Cafés & Crème — Kathmandu',
+      ])
+
+      const text = new TextDecoder().decode(bytes)
+      expect(text).toContain('"Special"')
+      expect(text).toContain("'Package'")
+      expect(text).toContain('NPR 50,000')
+      expect(text).toContain('Cafes & Creme')
+      // All bytes in the stream must be valid single-byte ASCII printable characters or newlines
+      for (let i = 0; i < bytes.length; i++) {
+        const b = bytes[i]!
+        expect(b < 128).toBe(true)
+      }
+    })
+
     it('generates a typed PDF blob with correct MIME type', async () => {
       const blob = generateDocumentPdfBlob({
         documentNo: 'INV-2026-0042',

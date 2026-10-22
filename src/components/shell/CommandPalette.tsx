@@ -7,7 +7,7 @@ import { useAuth } from '../../lib/auth'
 import { useTheme } from '../../lib/theme'
 import { toggleScanner } from './ScannerFab'
 import { quickCreateActions } from './QuickCreateMenu'
-import { searchRecords, type GlobalSearchResult } from '../../lib/queries/globalSearch'
+import type { GlobalSearchResult } from '../../lib/queries/globalSearch'
 import { useCurrentLanguage, toggleLanguage } from '../../lib/i18n'
 import { isStaff } from '../../lib/rbac'
 
@@ -144,7 +144,8 @@ export const CommandPalette: React.FC = () => {
     let cancelled = false
     setRecordSearch({ term, role: userRole, status: 'loading', rows: [] })
     const timer = window.setTimeout(() => {
-      void searchRecords({ role: userRole, term, limit: 4 })
+      import('../../lib/queries/globalSearch')
+        .then(({ searchRecords }) => searchRecords({ role: userRole, term, limit: 4 }))
         .then((rows) => {
           if (!cancelled) setRecordSearch({ term, role: userRole, status: 'ready', rows })
         })

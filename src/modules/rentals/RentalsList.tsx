@@ -19,6 +19,7 @@ import { PageShell } from '../../components/ui/PageShell'
 import { PageHeader } from '../../components/ui/header/PageHeader'
 import type { PageHeaderBulkSelection } from '../../lib/workspaceContext'
 import { useOptionalWorkspace } from '../../lib/workspaceContext'
+import { useDisplayDensity } from '../../lib/displayDensity'
 import { ModuleSubHeader, ModuleKpiStrip, ModuleFilterBar, StatusPill } from '../../components/ui/module-shell'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { ContextDrawer } from '../../components/ui/ContextDrawer'
@@ -315,14 +316,15 @@ function stageChipStyle(on: boolean) {
  * and the theme decides what it looks like. The tone is a pure function of
  * `clients.id` (`avatarToneFor`), so one client wears one tone on every screen.
  */
-function Avatar({ row }: { row: RentalListRow }) {
+function Avatar({ row, size = 'normal' }: { row: RentalListRow; size?: 'compact' | 'normal' }) {
   const c = STATUS.neutral
+  const s = size === 'compact' ? 28 : 36
   return (
     <span
       aria-hidden
       style={{
-        width: 36,
-        height: 36,
+        width: s,
+        height: s,
         borderRadius: 'var(--r-badge)',
         background: c.bg,
         color: c.fg,
@@ -331,7 +333,7 @@ function Avatar({ row }: { row: RentalListRow }) {
         placeItems: 'center',
         textAlign: 'center',
         lineHeight: 1.05,
-        fontSize: 'var(--t-meta)',
+        fontSize: size === 'compact' ? '11px' : 'var(--t-meta)',
         fontWeight: 700,
         flexShrink: 0,
       }}
@@ -501,10 +503,12 @@ function RowOperations({
   row,
   onCancel,
   onInspect,
+  compact = false,
 }: {
   row: RentalListRow
   onCancel?: ((row: RentalListRow) => void) | undefined
   onInspect?: ((row: RentalListRow) => void) | undefined
+  compact?: boolean
 }) {
   const { openOperations } = useOperationsWorkspace()
   const navigate = useNavigate()
@@ -555,6 +559,7 @@ function RowOperations({
         <button
           type="button"
           className="module-table__row-cta tap"
+          style={compact ? { height: 34, minHeight: 44, padding: '0 10px', fontSize: 12 } : undefined}
           onClick={() => {
             if (primaryOp.isDraft) {
               navigate(`/rentals?action=new&draft=${row.id}`)
@@ -861,6 +866,8 @@ const rentalInspectorId = (row: RentalListRow) => row.id
 
 export default function RentalsList() {
   const { user } = useAuth()
+  const { density } = useDisplayDensity()
+  const isCompact = density === 'compact'
   const navigate = useNavigate()
   const workspace = useOptionalWorkspace()
   const role: SystemRole = user ? user.role : 'Client'
@@ -875,6 +882,19 @@ export default function RentalsList() {
    * `role`.
    */
   const gctx = useMemo(() => gateContext(role), [role])
+
+  const rowTd = useMemo(() => ({
+    ...td,
+    height: isCompact ? '48px' : 'var(--row-min-h)',
+    padding: isCompact ? '4px 8px' : '6px 8px',
+    lineHeight: 1.25,
+  }), [isCompact])
+
+  const stickyRowTd = useMemo(() => ({
+    ...stickyTd,
+    height: isCompact ? '48px' : 'var(--row-min-h)',
+    padding: isCompact ? '4px 8px' : '6px 8px',
+  }), [isCompact])
 
   const [view, setView] = useState<'Table' | 'Cards' | 'Timeline'>('Table')
   const [hiddenCols, setHiddenCols] = useState<Set<OptionalColumn>>(new Set())
@@ -2568,7 +2588,7 @@ export default function RentalsList() {
                             setInspectingRental(r)
                           }}
                         >
-                          <td style={{ ...td, width: 44, paddingLeft: 12 }}>
+                          <td style={{ ...rowTd, width: 44, paddingLeft: 12 }}>
                             <label style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 32, minHeight: 44, cursor: 'pointer' }}>
                               <input
                                 type="checkbox"
@@ -2580,7 +2600,7 @@ export default function RentalsList() {
                               />
                             </label>
                           </td>
-                          <td style={td}>
+                          <td style={rowTd}>
                             <IntelCard
                               glance={glance}
                               detail={detail}
@@ -2619,7 +2639,7 @@ export default function RentalsList() {
                             </IntelCard>
                           </td>
 
-                          <td style={td}>
+                          <td style={rowTd}>
                             <span
                               className="figure"
                               title={r.createdOn}
@@ -2633,39 +2653,50 @@ export default function RentalsList() {
                             </span>
                           </td>
 
-                          <td style={td}>
-                            {/* RULING 2026-10-15: the client name takes at most two lines and
-                                the project one, ellipsized with the full text on hover, instead
-                                of wrapping the row to six lines. Tight vertical stack with gap-3. */}
+                          <td style={rowTd}>
+                            {/* RULING 2026-10-15 & Smart Compact: client + project are balanced.
+                                In compact mode, both share one single line with ellipsis + tooltip. */}
                             <div
-                              className="flex items-center gap-3"
-                              style={{ display: 'flex', alignItems: 'center', gap: 12 }}
+                              className="flex items-center gap-2"
+                              style={{ display: 'flex', alignItems: 'center', gap: isCompact ? 8 : 12 }}
                             >
-                              <Avatar row={r} />
+                              <Avatar row={r} size={isCompact ? 'compact' : 'normal'} />
                               <div
                                 className="flex flex-col leading-tight min-w-0"
-                                style={{ display: 'flex', flexDirection: 'column', minWidth: 0, lineHeight: 1.25, gap: 2 }}
+                                style={{ display: 'flex', flexDirection: 'column', minWidth: 0, lineHeight: 1.2, gap: isCompact ? 1 : 2 }}
                               >
-                                <ClientIntelFromId clientId={r.clientId} name={r.client} context="rental-list" gateContext={gctx} actionContext={user ? { userId: user.id, role: user.role } : null}>
-                                <Link
-                                  to={`/clients/${r.clientId}`}
-                                  title={r.client}
-                                  style={{
-                                    ...twoLines,
-                                    lineHeight: 1.25,
-                                    fontWeight: 700,
-                                    color: 'var(--text)',
-                                    textDecoration: 'none',
-                                  }}
-                                >
-                                  {r.client}
-                                </Link>
-                                </ClientIntelFromId>
-                                {/* `project` is nullable (0002:28). A null
-                                    renders as an explicit non-value — never
-                                    as a kit name, which is what this cell
-                                    used to invent. */}
-                                {r.project && r.project !== '—' && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
+                                  <ClientIntelFromId clientId={r.clientId} name={r.client} context="rental-list" gateContext={gctx} actionContext={user ? { userId: user.id, role: user.role } : null}>
+                                    <Link
+                                      to={`/clients/${r.clientId}`}
+                                      title={r.client}
+                                      style={{
+                                        ...(isCompact ? oneLine : twoLines),
+                                        lineHeight: 1.2,
+                                        fontWeight: 700,
+                                        color: 'var(--text)',
+                                        textDecoration: 'none',
+                                      }}
+                                    >
+                                      {r.client}
+                                    </Link>
+                                  </ClientIntelFromId>
+                                  {isCompact && r.project && r.project !== '—' && (
+                                    <span
+                                      title={r.project}
+                                      style={{
+                                        ...oneLine,
+                                        lineHeight: 1.2,
+                                        color: 'var(--text2)',
+                                        fontSize: 'var(--t-meta)',
+                                        fontWeight: 400,
+                                      }}
+                                    >
+                                      · {r.project}
+                                    </span>
+                                  )}
+                                </div>
+                                {!isCompact && r.project && r.project !== '—' && (
                                   <span
                                     title={r.project}
                                     style={{
@@ -2682,7 +2713,7 @@ export default function RentalsList() {
                             </div>
                           </td>
 
-                          <td style={{ ...td, minWidth: 130 }}>
+                          <td style={{ ...rowTd, minWidth: 130 }}>
                             {/* Project Type — neutral muted text (§11), never
                                 stronger than a status pill (§3). Constrained
                                 width with ellipsis + native tooltip (§12). */}
@@ -2706,7 +2737,7 @@ export default function RentalsList() {
                           </td>
 
                           {show('Items') && (
-                            <td style={td}>
+                            <td style={rowTd}>
                               <span style={{ ...oneLine, color: 'var(--text)' }}>
                                 {/* Units across live lines — `sum(qty)`, not
                                     a count of rows. */}
@@ -2721,7 +2752,7 @@ export default function RentalsList() {
                               const m = c === 'Pickup' ? r.pickup : r.ret
                               const isOverdueReturn = c === 'Return' && r.isOverdue
                               return (
-                                <td key={c} style={td}>
+                                <td key={c} style={rowTd}>
                                   {isOverdueReturn ? (
                                     <span
                                       style={{
@@ -2761,7 +2792,7 @@ export default function RentalsList() {
                               )
                             })}
 
-                          <td style={td}>
+                          <td style={rowTd}>
                             {/* The table's copy of the same block — see the card
                                 row above. Two hand-rolled chips in one file is
                                 how they came to differ by 2px and a radius. */}
@@ -2800,7 +2831,7 @@ export default function RentalsList() {
 
                           {/* §8.3 — the cell is omitted, not emptied. */}
                           {show('Total Amount') && (
-                            <td style={td}>
+                            <td style={rowTd}>
                               {typeof r.totalAmount === 'number' ? (
                                 <span
                                   className="figure money"
@@ -2834,8 +2865,8 @@ export default function RentalsList() {
                           )}
 
                           {/* §4.1 — stays visible while the table scrolls. */}
-                          <td style={stickyTd}>
-                            <RowOperations row={r} onCancel={canWriteDesk ? setCancellingRental : undefined} onInspect={setInspectingRental} />
+                          <td style={stickyRowTd}>
+                            <RowOperations row={r} onCancel={canWriteDesk ? setCancellingRental : undefined} onInspect={setInspectingRental} compact={isCompact} />
                           </td>
                         </tr>
                       ))}
