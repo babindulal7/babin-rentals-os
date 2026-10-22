@@ -91,3 +91,8 @@ One composition for every record screen, so Add and Edit differ only by prefille
 Section order: Client = Identity > Contact > Addresses > Commercial details > Notes. Equipment = Identity > Units & location > Purchase > Pricing > Maintenance & notes. Bundle = Identity > Components > Rates > Summary. Booking = Client & schedule > Equipment, bundles & services > Crew & delivery > Pricing & terms.
 
 Behaviour contract: entries survive a failed save; one idempotency key per unchanged content (a changed form mints a new one); duplicate submits are blocked while busy; success is shown only after the write is confirmed; a concurrent-change refusal keeps the draft and offers **Reload latest record**; focus moves to the error box after a failed save; return navigation keeps every query parameter except `action` (and `tab=new` on create).
+
+
+## 12. Supplemental right-side information (20 October 2026)
+
+Babin's request supersedes the always-visible supplemental summary rail in §11. `Rail` / `ReflowRail` now open through a dedicated 44px right-header toggle, mirroring the left filter slider. Desktop/tablet slide from the right and reserve workspace width; phone uses the filter sheet presentation. Content remains mounted while closed, preserving unfinished notes. Existing money/permission checks remain at their original sites. Essential floor checklist/completion columns remain in their operation workspaces. See `RULINGS-2026-10-20.md`.

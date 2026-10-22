@@ -40,7 +40,7 @@ function variantStyle(variant: NonNullable<ButtonProps['variant']>): CSSProperti
         background: 'var(--btn-primary-bg)',
         color: 'var(--btn-primary-fg)',
         border: '1.5px solid transparent',
-        boxShadow: 'var(--shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.25)',
+        boxShadow: 'var(--shadow-xs)',
       }
     case 'secondary':
       return {

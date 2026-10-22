@@ -1,0 +1,30 @@
+{
+  "startedAt": "2026-10-21T12:01:54.175Z",
+  "environment": "local; mock browser and in-process PGlite only; no remote writes",
+  "steps": [
+    {
+      "name": "typecheck",
+      "command": "npm run typecheck",
+      "exitCode": 0,
+      "sourceHash": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
+      "afterHash": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
+      "sourceChanged": false,
+      "seconds": 165,
+      "log": "docs\\verification\\premium-design\\typecheck.log"
+    },
+    {
+      "name": "test",
+      "command": "npm test -- --maxWorkers=2",
+      "exitCode": 0,
+      "sourceHash": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
+      "afterHash": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
+      "sourceChanged": false,
+      "seconds": 885,
+      "log": "docs\\verification\\premium-design\\test.log"
+    }
+  ],
+  "finishedAt": "2026-10-21T12:19:26.229Z",
+  "currentHash": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
+  "allPassed": true,
+  "stable": true
+}

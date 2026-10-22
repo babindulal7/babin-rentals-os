@@ -112,11 +112,20 @@ function parseLegacy(raw: string | null): LegacyView[] {
  * First load after G2: this browser's old views become the signed-in user's private views, once.
  * The marker is written only after every save succeeded or was refused, so a network failure retries
  * next load; the old list is left in place as a backup (nothing is deleted).
+ *
+ * ⛔ An EMPTY legacy list must not write the marker either. With nothing to save the loop makes no
+ * database call at all, so writing the marker here would certify a database this method never
+ * spoke to — and when 0159 is missing, the menu is in device-fallback mode, where every newly
+ * saved view lands in the legacy key. A marker written before those saves existed would make a
+ * later database rollout skip them (marker says "done"), stranding real views on one device.
+ * Smart Workspace Views v1 regression: `savedViews.migration.test.ts`, "does not write the marker
+ * before the database has confirmed anything" sequence. Revert = delete the early return.
  */
 export async function migrateLocalViews(listKey: string, legacyStorageKey: string): Promise<number> {
   const marker = `${legacyStorageKey}:migrated-to-db`
   if (readLocal(marker) === 'done') return 0
   const legacy = parseLegacy(readLocal(legacyStorageKey))
+  if (legacy.length === 0) return 0
   let moved = 0
   for (const v of legacy) {
     try {

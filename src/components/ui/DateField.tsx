@@ -183,6 +183,8 @@ export interface CalendarPopoverProps {
   showHeader?: boolean | undefined
   /** Override the calendar's Today action with the caller's operational day. */
   todayDate?: string | undefined
+  /** A filter may restore its Today preset rather than select a literal date. */
+  onToday?: (() => void) | undefined
   /** Keep historical dates visually active when the caller filters past records. */
   shadePastDates?: boolean | undefined
 }
@@ -217,6 +219,7 @@ export function CalendarPopover({
   embedded = false,
   showHeader = true,
   todayDate,
+  onToday,
   shadePastDates = true,
 }: CalendarPopoverProps) {
   const today = todayDate ?? todayIso()
@@ -750,7 +753,7 @@ export function CalendarPopover({
         <button
           type="button"
           className="press"
-          onClick={() => handleSelectDay(today)}
+          onClick={() => onToday ? onToday() : handleSelectDay(today)}
           style={{
             position: 'relative',
             minHeight: 44,

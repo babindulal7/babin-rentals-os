@@ -1,5 +1,5 @@
 import { supabase } from '../supabase'
-import { rupees, type Paisa } from '../money'
+import { parseMoney, rupees, type Paisa } from '../money'
 
 /**
  * **Shared pieces for the report reads (Phase 6 Task 3.4, Law 16 pass).**
@@ -31,16 +31,47 @@ interface ReadResult {
 /**
  * The rows of a read, or a throw naming which read failed.
  *
- * `data: null` with no error is an empty read (PostgREST returns `[]`, but a
- * mock or a head-only read may not) — an honest zero rows, not a failure.
+ * Only an array confirms a dataset. These are row reads, never head-only
+ * counts; null/malformed responses cannot establish zero business activity.
  */
 export function rowsOf<T>(res: ReadResult, what: string): T[] {
   if (res.error) throw new Error(`${what}: ${res.error.message}`)
-  return Array.isArray(res.data) ? (res.data as T[]) : []
+  if (!Array.isArray(res.data)) throw new Error(`${what}: no confirmed dataset`)
+  return res.data as T[]
+}
+
+interface ReportPageQuery {
+  order(column: string, options: { ascending: boolean }): ReportPageQuery
+  range(from: number, to: number): PromiseLike<ReadResult>
+}
+
+/** Complete ordered reads, including servers that impose a smaller page cap.
+ * Every projection must include id. Refuse later-page failure, repeated rows
+ * and excessive datasets rather than presenting a partial business total.
+ */
+export async function completeReportRead(query: ReportPageQuery, what: string): Promise<ReadResult> {
+  const ordered = query.order('id', { ascending: true })
+  const rows: unknown[] = []
+  const seen = new Set<string>()
+  while (true) {
+    const result = await ordered.range(rows.length, rows.length + 499)
+    if (result.error) return { data: null, error: result.error }
+    const page = rowsOf<unknown>(result, what)
+    if (page.length === 0) return { data: rows, error: null }
+    for (const row of page) {
+      const id = row && typeof row === 'object' ? (row as { id?: unknown }).id : undefined
+      if (typeof id !== 'string' || !id) throw new Error(`${what}: missing row identity`)
+      if (seen.has(id)) throw new Error(`${what}: dataset changed or repeated during pagination; retry`)
+      seen.add(id)
+      rows.push(row)
+    }
+    if (rows.length > 50_000) throw new Error(`${what}: narrow the report period to load a complete dataset`)
+  }
 }
 
 /** `booking_lines` columns every money figure in the reports is built from. */
 export interface PricedLine {
+  line_total?: number | string | null
   qty?: number | null
   days?: number | null
   rate?: number | string | null
@@ -49,7 +80,8 @@ export interface PricedLine {
 }
 
 /**
- * One line's value in paisa: qty × days × rate − discount, never negative.
+ * Recorded net line value in paisa; legacy rows without a total retain the
+ * qty × days × rate − discount fallback.
  *
  * `booking_lines.rate` and `discount_amount` are RUPEES (numeric(14,2), see
  * `bookings.ts`). The reports used to compute this in rupees and then pass
@@ -58,6 +90,15 @@ export interface PricedLine {
  */
 export function lineValue(line: PricedLine, fallbackDays = 1): Paisa {
   if (line.voided_at) return 0 as Paisa
+  // 0168 records the net quote price, including structures/rulesets. Never
+  // rebuild it from a daily rate or subtract its discount a second time.
+  if (line.line_total != null) {
+    const recorded = String(line.line_total)
+    if (!/^\d+(?:\.\d+)?$/.test(recorded)) throw new Error('Invalid recorded booking-line total')
+    const amount = parseMoney(recorded)
+    if (amount === null || !Number.isSafeInteger(amount)) throw new Error('Recorded booking-line total exceeds safe paisa range')
+    return amount
+  }
   const qty = Number(line.qty ?? 1) || 1
   const days = Number(line.days ?? fallbackDays) || fallbackDays
   const rate = Number(line.rate ?? 0) || 0
@@ -98,10 +139,10 @@ export interface ReportLine extends PricedLine {
 }
 
 export async function readLineValues(): Promise<Map<string, ReportLine[]>> {
-  const res = await supabase
+  const res = await completeReportRead(supabase
     .from('booking_lines_v')
-    .select('booking_id, product_id, bundle_id, qty, days, rate, discount_amount, voided_at')
-    .is('voided_at', null)
+    .select('id, booking_id, product_id, bundle_id, qty, days, rate, discount_amount, line_total, voided_at')
+    .is('voided_at', null), 'Booking line values read failed')
   const rows = rowsOf<ReportLine>(res, 'Booking line values read failed')
   const out = new Map<string, ReportLine[]>()
   for (const r of rows) {

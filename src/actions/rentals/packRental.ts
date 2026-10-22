@@ -44,7 +44,10 @@ export const packRental = createAction<PackRentalInput, FloorVerbResult>({
   // `checkCapability` can actually resolve; it lands on `rbac.canPerformOperations`.
   // The previous `rental.pack` resolved to nothing, and an unmapped capability
   // is denied, so this action was refused by name before it was ever run.
-  permissions: ['operations.perform'],
+  // P0-B per-operation grant: resolves through canPack (floor + Technician),
+  // exactly the same role set operations.perform admits — naming the specific
+  // operation is what lets the grant diverge later without touching this file.
+  permissions: ['operations.pack'],
   implemented: true,
 
   validate: (input) =>

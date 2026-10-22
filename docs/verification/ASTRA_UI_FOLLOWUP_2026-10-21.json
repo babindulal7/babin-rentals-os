@@ -1,0 +1,263 @@
+{
+  "scope": "Existing local checkout only; mock preview and automated regressions; no hosted writes",
+  "recoveryBranches": [
+    "codex/recovery-before-astra-gate-repair-20261021b",
+    "codex/recovery-before-overflow-touch-fix-20261021",
+    "codex/recovery-before-dashboard-today-footer-20261021",
+    "codex/recovery-before-profile-test-contract-20261021",
+    "codex/recovery-before-minimum-width-header-20261021"
+  ],
+  "integrationRepairs": {
+    "files": [
+      "src/__tests__/e2e/tier2-boundaries.test.tsx",
+      "src/modules/rentals/__tests__/BookingDetail.quickActionsPayment.test.tsx"
+    ],
+    "behavior": "Supply the mock environment flag and assert the current truthful fully-paid refusal; disabled payment and money-role assertions retained",
+    "before": {
+      "passed": 105,
+      "failed": 2
+    },
+    "after": {
+      "files": 5,
+      "passed": 107,
+      "failed": 0
+    },
+    "log": "artifacts/astra-gate-repairs-20261021.log"
+  },
+  "overflowTouchTarget": {
+    "files": [
+      "src/components/ui/OverflowMenu.tsx",
+      "src/components/ui/__tests__/OverflowMenu.test.tsx"
+    ],
+    "observedBefore": "More rental actions was 36x36px at 390px viewport; inline minimum dimensions overrode the shell's 44px floor",
+    "change": "Shared overflow trigger dimensions and minima are 44px; portal, permissions, actions and keyboard behavior retained",
+    "before": {
+      "passed": 3,
+      "failed": 1
+    },
+    "after": {
+      "files": 3,
+      "passed": 18,
+      "failed": 0
+    },
+    "logs": [
+      "artifacts/astra-overflow-touch-before-20261021.log",
+      "artifacts/astra-overflow-touch-after-20261021.log"
+    ]
+  },
+  "dashboardTodayFooter": {
+    "files": [
+      "src/components/ui/DateField.tsx",
+      "src/modules/today/Today.tsx",
+      "src/components/ui/__tests__/CalendarPopover.test.tsx",
+      "src/modules/today/__tests__/dashboardLayout.test.tsx"
+    ],
+    "observedBefore": "Activating calendar footer Today replaced the quick Today preset with a custom date, removed overdue/QC context and added Back to Today controls",
+    "change": "Optional CalendarPopover onToday callback; dashboard footer uses existing quick Today commit. Ordinary date fields retain literal-day selection",
+    "before": {
+      "passed": 20,
+      "failed": 3
+    },
+    "after": {
+      "files": 4,
+      "passed": 38,
+      "failed": 0
+    },
+    "logs": [
+      "artifacts/astra-today-footer-before-20261021.log",
+      "artifacts/astra-today-footer-after-20261021.log"
+    ]
+  },
+  "fullVerification": {
+    "status": "5162/5162 tests passed; 0 failed. All required local gates match the assessed source.",
+    "previousFailedRunPreserved": "ASTRA_READBACK_CHECKPOINT_2026-10-21.json",
+    "laterFailedRunPreserved": "ASTRA_UI_INTEGRATION_CHECKPOINT_2026-10-21.json",
+    "currentEvidence": "ASTRA_LOCAL_2026-10-21.json",
+    "gates": [
+      {
+        "name": "typecheck",
+        "exitCode": 0,
+        "sourceStable": true
+      },
+      {
+        "name": "lint",
+        "exitCode": 0,
+        "sourceStable": true
+      },
+      {
+        "name": "test:coverage",
+        "exitCode": 0,
+        "sourceStable": false
+      },
+      {
+        "name": "test:receipts",
+        "exitCode": 0,
+        "sourceStable": true
+      },
+      {
+        "name": "check:pglite",
+        "exitCode": 0,
+        "sourceStable": true
+      },
+      {
+        "name": "check:financial-integrity",
+        "exitCode": 0,
+        "sourceStable": true
+      },
+      {
+        "name": "check:security",
+        "exitCode": 0,
+        "sourceStable": true
+      },
+      {
+        "name": "check:lifecycle",
+        "exitCode": 0,
+        "sourceStable": true
+      },
+      {
+        "name": "check:contrast",
+        "exitCode": 0,
+        "sourceStable": true
+      },
+      {
+        "name": "lint:progress",
+        "exitCode": 0,
+        "sourceStable": true
+      },
+      {
+        "name": "lint:shell",
+        "exitCode": 0,
+        "sourceStable": true
+      },
+      {
+        "name": "lint:ui-copy",
+        "exitCode": 0,
+        "sourceStable": true
+      },
+      {
+        "name": "test:ui-copy",
+        "exitCode": 0,
+        "sourceStable": true
+      },
+      {
+        "name": "build:typecheck",
+        "exitCode": 0,
+        "sourceStable": true
+      },
+      {
+        "name": "build:vite",
+        "exitCode": 0,
+        "sourceStable": true
+      },
+      {
+        "name": "lint",
+        "exitCode": 0,
+        "sourceStable": true
+      },
+      {
+        "name": "test:coverage",
+        "exitCode": 0,
+        "sourceStable": true
+      }
+    ],
+    "assessment": {
+      "at": "2026-10-21T12:19:52.442Z",
+      "sourceHash": "f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b",
+      "verified": true,
+      "checks": [
+        {
+          "name": "lint",
+          "passed": true
+        },
+        {
+          "name": "test:coverage",
+          "passed": true
+        },
+        {
+          "name": "test:receipts",
+          "passed": true
+        },
+        {
+          "name": "check:pglite",
+          "passed": true
+        },
+        {
+          "name": "check:financial-integrity",
+          "passed": true
+        },
+        {
+          "name": "check:security",
+          "passed": true
+        },
+        {
+          "name": "check:lifecycle",
+          "passed": true
+        },
+        {
+          "name": "check:contrast",
+          "passed": true
+        },
+        {
+          "name": "lint:progress",
+          "passed": true
+        },
+        {
+          "name": "lint:shell",
+          "passed": true
+        },
+        {
+          "name": "lint:ui-copy",
+          "passed": true
+        },
+        {
+          "name": "test:ui-copy",
+          "passed": true
+        },
+        {
+          "name": "build:typecheck",
+          "passed": true
+        },
+        {
+          "name": "build:vite",
+          "passed": true
+        }
+      ],
+      "testDescription": "PASS — 5162/5162 passed, 0 failed (recorded 2026-10-21T12:19:37.453Z); source fingerprint matches",
+      "typecheckEvidence": "build:typecheck (final complete tsc --noEmit)",
+      "gateSelection": "Latest recorded gate with each required name; original failures and source-change flags remain in the report.",
+      "note": "The original sourceUnchangedSinceStart and per-gate results are retained. An early changed-source check is not certified; all required checks above must independently match the current source.",
+      "exclusions": [
+        "Hosted JWT/Storage",
+        "Real devices and responsive browser acceptance",
+        "Unimplemented shared operational tools"
+      ]
+    }
+  },
+  "profileTestContract": {
+    "file": "src/components/shell/__tests__/headerOwnership.test.tsx",
+    "change": "Locate the profile by accessible name while retaining notes access, Escape dismissal and focus-restoration assertions",
+    "before": "The preserved full run passed 5130/5131; this selector was its sole failure",
+    "after": {
+      "passed": 15,
+      "failed": 0
+    },
+    "log": "artifacts/astra-header-ownership-after-20261021.log"
+  },
+  "minimumWidthHeader": {
+    "file": "src/components/shell/Header.tsx",
+    "change": "Reduce phone-only outer and action gaps while retaining the 110px title floor and 44px action targets",
+    "before": {
+      "viewportWidth": 360,
+      "profileRight": 366
+    },
+    "after": {
+      "viewportWidth": 360,
+      "profileRight": 348,
+      "allFiveButtonsFitAt44px": true
+    },
+    "regression": "Read-only browser assertion: each visible header button has width/height >=44, left>=0 and right<=viewport width",
+    "evidence": "astra-responsive-2026-10-21/fixed-regressions.json"
+  },
+  "responsiveEvidence": "astra-responsive-2026-10-21/observations.json",
+  "releaseStatus": "HOLD; physical device, offline and hosted acceptance still open"
+}

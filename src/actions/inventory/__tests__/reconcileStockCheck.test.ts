@@ -225,11 +225,33 @@ describe('reconcileStockCheck', () => {
         expect(insert.row.total_discrepancies).toBe(3);
         expect(insert.row.branch_id).toBe('branch-uuid-1');
         expect(insert.row.warehouse_id).toBe('wh-uuid-1');
+        expect(insert.row.notes).toBe('Ad-hoc floor audit');
+        expect(insert.row.audited_by).toBe('user-floor-123');
 
+        expect(events).toHaveLength(1);
         expect(events![0]!.type).toBe(EVENT_TYPES.STOCK_RECONCILED);
+        expect(events![0]!.payload).toMatchObject({
+          scannedCount: 15,
+          totalCount: 18,
+          discrepanciesCount: 3,
+          userId: 'user-floor-123',
+        });
       } finally {
         db.state.audits[0]!.status = origStatus;
       }
+    });
+
+    it('throws when an explicitly requested auditId does not exist', async () => {
+      await expect(
+        reconcileStockCheckConfig.execute!(
+          {
+            auditId: '99999999-9999-4999-8999-999999999999',
+            scannedCount: 10,
+            totalCount: 10,
+          },
+          context
+        )
+      ).rejects.toThrow(/not found/i);
     });
 
     it('uses custom discrepanciesCount if explicitly provided', async () => {

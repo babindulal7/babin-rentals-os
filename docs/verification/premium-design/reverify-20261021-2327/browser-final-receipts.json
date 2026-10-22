@@ -1,0 +1,39 @@
+[
+  {
+    "name": "browser",
+    "args": [
+      "after",
+      "all"
+    ],
+    "log": "docs/verification/premium-design/reverify-20261021-2327/browser-after-final.log",
+    "startedAt": "2026-10-22T05:38:24.148Z",
+    "exitCode": 1,
+    "sourceHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+    "afterHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+    "sourceChanged": false
+  },
+  {
+    "name": "browser",
+    "args": [
+      "checks"
+    ],
+    "log": "docs/verification/premium-design/reverify-20261021-2327/browser-checks-final.log",
+    "startedAt": "2026-10-22T05:41:52.449Z",
+    "exitCode": 0,
+    "sourceHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+    "afterHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+    "sourceChanged": false
+  },
+  {
+    "name": "additional",
+    "args": [
+      "checks"
+    ],
+    "log": "docs/verification/premium-design/reverify-20261021-2327/additional-checks-final.log",
+    "startedAt": "2026-10-22T05:43:05.082Z",
+    "exitCode": 0,
+    "sourceHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+    "afterHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+    "sourceChanged": false
+  }
+]

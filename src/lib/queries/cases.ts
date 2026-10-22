@@ -145,8 +145,8 @@ export function mapDbRowToCase(row: CaseRowDb): Case {
     absorbedPaisa: rupees(row.absorbed_amount ?? 0),
     openedAd: row.opened_at ? new Date(row.opened_at) : new Date(),
     ...(row.settled_at ? { settledAd: new Date(row.settled_at) } : {}),
-    owner: 'Babin Shrestha',
-    ownerRole: 'Owner',
+    owner: row.owner_id ? 'Assigned Staff' : 'Operations Desk',
+    ownerRole: 'Manager',
     flags: (row.flags as CaseFlag[]) || [],
     linked: {
       linkedRecordKind: 'Booking',

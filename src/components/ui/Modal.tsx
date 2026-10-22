@@ -23,8 +23,11 @@ import { useViewport } from '../../lib/device'
  */
 const modalStack: symbol[] = []
 let scrollLocks = 0
+let originalOverflow = ''
 
 function lockScroll(id: symbol) {
+  if (modalStack.includes(id)) return
+  if (scrollLocks === 0) originalOverflow = document.body.style.overflow
   modalStack.push(id)
   scrollLocks += 1
   document.body.style.overflow = 'hidden'
@@ -32,9 +35,10 @@ function lockScroll(id: symbol) {
 
 function unlockScroll(id: symbol) {
   const i = modalStack.indexOf(id)
-  if (i !== -1) modalStack.splice(i, 1)
-  scrollLocks = Math.max(0, scrollLocks - 1)
-  if (scrollLocks === 0) document.body.style.overflow = ''
+  if (i === -1) return
+  modalStack.splice(i, 1)
+  scrollLocks -= 1
+  if (scrollLocks === 0) document.body.style.overflow = originalOverflow
 }
 
 /* What can take focus inside the dialog, for the Tab trap and initial focus.
@@ -128,24 +132,25 @@ export function Modal({
   const openerRef = useRef<HTMLElement | null>(null)
   const titleId = useId()
   const touchStartY = useRef<number | null>(null)
+  const closeHandlers = useRef({ onClose, onEscape })
+  useEffect(() => { closeHandlers.current = { onClose, onEscape } }, [onClose, onEscape])
 
   useEffect(() => {
+    if (!isOpen) return
     const id = stackId.current!
     const handleKeyDown = (e: KeyboardEvent) => {
       // Only the top of the stack answers Escape — see module comment above.
       if (e.key === 'Escape' && isOpen && modalStack[modalStack.length - 1] === id) {
-        ;(onEscape ?? onClose)()
+        ;(closeHandlers.current.onEscape ?? closeHandlers.current.onClose)()
       }
     }
-    if (isOpen) {
-      lockScroll(id)
-      window.addEventListener('keydown', handleKeyDown)
-    }
+    lockScroll(id)
+    window.addEventListener('keydown', handleKeyDown)
     return () => {
       unlockScroll(id)
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isOpen, onClose, onEscape])
+  }, [isOpen])
 
   /*
    * Focus contract (WCAG 2.4.3 / 2.1.2) — the piece FilterDrawer and MoreSheet

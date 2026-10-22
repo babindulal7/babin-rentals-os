@@ -48,6 +48,8 @@ interface WorkspaceContextType {
   setLeftPanelElement: (el: HTMLElement | null) => void
   rightPanelElement: HTMLElement | null
   setRightPanelElement: (el: HTMLElement | null) => void
+  headerInformationElement: HTMLElement | null
+  setHeaderInformationElement: (el: HTMLElement | null) => void
   headerActionsElement: HTMLElement | null
   setHeaderActionsElement: (el: HTMLElement | null) => void
   /** Opt-in slots: only pages that use these replace the shell's global search. */
@@ -80,6 +82,7 @@ const WorkspaceContext = createContext<WorkspaceContextType | null>(null)
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [leftPanelElement, setLeftPanelElement] = useState<HTMLElement | null>(null)
   const [rightPanelElement, setRightPanelElement] = useState<HTMLElement | null>(null)
+  const [headerInformationElement, setHeaderInformationElement] = useState<HTMLElement | null>(null)
   const [headerActionsElement, setHeaderActionsElement] = useState<HTMLElement | null>(null)
   const [headerSearchElement, setHeaderSearchElement] = useState<HTMLElement | null>(null)
   const [hasPageSearch, setHasPageSearch] = useState(false)
@@ -130,6 +133,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     <WorkspaceContext.Provider value={{
       leftPanelElement, setLeftPanelElement,
       rightPanelElement, setRightPanelElement,
+      headerInformationElement, setHeaderInformationElement,
       headerActionsElement, setHeaderActionsElement,
       headerSearchElement, setHeaderSearchElement, hasPageSearch, setHasPageSearch,
       headerAddActionsElement, setHeaderAddActionsElement, hasPageAddActions, setHasPageAddActions,

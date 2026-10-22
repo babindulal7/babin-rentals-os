@@ -13,11 +13,13 @@ import { Badge } from '../../components/ui/Badge'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { PageShell } from '../../components/ui/PageShell'
 import { DataTableShell } from '../../components/ui/DataTable'
+import { EmptyState } from '../../components/ui/StateViews'
 import { Modal } from '../../components/ui/Modal'
 import { useToast } from '../../components/ui/Toast'
 import { formatMoney, rupees } from '../../lib/money'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
+import { IS_MOCK } from '../../lib/supabase'
 import {
   getWarrantyItems,
   recordWarrantyClaim,
@@ -42,6 +44,18 @@ const chipStyle = (active: boolean): React.CSSProperties => ({
 })
 
 export default function WarrantyTracker() {
+  if (IS_MOCK) return <WarrantyPreview />
+  return (
+    <PageShell header={<PageHeader title="Equipment Warranty" />}>
+      <Card><div role="status" style={{ padding: 'var(--sp-md)' }}>
+        <h2>Warranty claims unavailable</h2>
+        <p>Shared warranty tracking and claims are not available yet. Existing entries on this device have been kept.</p>
+      </div></Card>
+    </PageShell>
+  )
+}
+
+function WarrantyPreview() {
   const { showSuccessToast } = useToast()
   const viewport = useViewport()
   const isPhone = viewport === 'phone'
@@ -169,8 +183,13 @@ export default function WarrantyTracker() {
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={canViewMoney ? 7 : 6} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--text3)' }}>
-                    No warranty records matching "{search}"
+                  <td colSpan={canViewMoney ? 7 : 6} style={{ padding: '24px 16px' }}>
+                    <EmptyState
+                      kind={search.trim() || filter !== 'All' ? 'no-results' : 'nothing-yet'}
+                      title={search.trim() ? `No warranty records matching "${search}"` : 'No warranty records found'}
+                      description={search.trim() ? 'Try checking your search term or clearing the active filter.' : 'Equipment warranties and coverage packages will appear here once recorded.'}
+                      {...(search.trim() || filter !== 'All' ? { actionLabel: 'Clear Filters', onAction: () => { setSearch(''); setFilter('All') } } : {})}
+                    />
                   </td>
                 </tr>
               )}

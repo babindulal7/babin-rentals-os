@@ -1,0 +1,110 @@
+{
+  "at": "2026-10-21T04:03:01.068Z",
+  "environment": "Existing localhost:3000 mock preview; browser viewport emulation only",
+  "measurements": [
+    {
+      "confirmCount": 1,
+      "documentWidth": 1440,
+      "height": 900,
+      "page": "/rentals?action=new",
+      "width": 1440
+    },
+    {
+      "documentWidth": 820,
+      "height": 1180,
+      "page": "/rentals?action=new",
+      "width": 820
+    },
+    {
+      "buttons": [
+        {
+          "height": 36,
+          "name": "More rental actions",
+          "width": 36
+        },
+        {
+          "height": 44,
+          "name": "Confirm Booking",
+          "width": 44
+        },
+        {
+          "height": 44,
+          "name": "Rental summary",
+          "width": 44
+        },
+        {
+          "height": 44,
+          "name": "Search",
+          "width": 44
+        },
+        {
+          "height": 44,
+          "name": "Mock Mode Active",
+          "width": 44
+        },
+        {
+          "height": 44,
+          "name": "BA — user profile",
+          "width": 44
+        },
+        {
+          "height": 44,
+          "name": "Client & dates",
+          "width": 95.0875015258789
+        },
+        {
+          "height": 44,
+          "name": "Equipment",
+          "width": 80.95000457763672
+        },
+        {
+          "height": 44,
+          "name": "Crew & delivery",
+          "width": 104.6125030517578
+        },
+        {
+          "height": 44,
+          "name": "Pricing",
+          "width": 60.26250076293945
+        },
+        {
+          "height": 44,
+          "name": "Review booking, 3 outstanding checks",
+          "width": 142.5500030517578
+        },
+        {
+          "height": 44,
+          "name": "Restore it",
+          "width": 78.73750305175781
+        },
+        {
+          "height": 44,
+          "name": "Discard",
+          "width": 67.375
+        },
+        {
+          "height": 44,
+          "name": "New client",
+          "width": 106.3125
+        }
+      ],
+      "documentWidth": 390,
+      "height": 844,
+      "page": "/rentals?action=new",
+      "width": 390
+    }
+  ],
+  "observations": [
+    "Rentals desktop and New Rental desktop/tablet/phone rendered without document-level horizontal overflow in sampled states.",
+    "Catalogue dialog measured within 390px viewport and above bottom navigation (bottom 774.19px in 844px viewport). Its visible state was observed via screenshot in the tool; snapshot-before-navigation.jpg is a later hot-reload state, not catalogue-open proof.",
+    "Initial 390px profile button extended to x=414. Incoming Header changes combined Mock mode with Profile; subsequent profile right edge was 378.4px at 390px width.",
+    "More rental actions measured 36x36 before the shared OverflowMenu correction. After-fix browser geometry is still pending.",
+    "Today displayed OperationsWorkspaceProvider error during hot reload. Clean-load recovery has not yet been verified."
+  ],
+  "limitations": [
+    "No booking, payment, client or equipment record was submitted. Existing draft was neither restored nor discarded.",
+    "Other source changes arrived during observation; screenshots do not certify one frozen source fingerprint.",
+    "No physical iPad/mobile, offline replay, hosted JWT/Storage or complete workflow acceptance."
+  ],
+  "cleanup": "Temporary viewport override reset; agent-created acceptance tab closed; original equipment form left open."
+}

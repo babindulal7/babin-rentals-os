@@ -1,6 +1,7 @@
 import { localStore, isIndexedDbAvailable } from './localStore'
 import { db as outbox } from './offlineQueue'
 import { captureError } from './monitoring'
+import { clearAllFloorScans } from './floorScanStorage'
 
 /**
  * # Purging the device's READ caches when an identity leaves it
@@ -118,6 +119,13 @@ export async function purgeDeviceReadCaches(): Promise<PurgeReport> {
     } catch (cause) {
       report.failures.push(`outbox count: ${cause instanceof Error ? cause.message : String(cause)}`)
     }
+  }
+
+  /* 4 — clear in-progress floor scans (warehouse shared tablets). */
+  try {
+    clearAllFloorScans()
+  } catch (cause) {
+    report.failures.push(`floor scans: ${cause instanceof Error ? cause.message : String(cause)}`)
   }
 
   if (report.failures.length > 0) {

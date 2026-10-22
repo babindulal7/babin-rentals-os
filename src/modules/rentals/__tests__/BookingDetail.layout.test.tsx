@@ -371,7 +371,8 @@ describe('audit — payments have one action and no obstructing bottom bar', () 
     // formatMoney(13,950,600 paisa) — the invoice's own column, not a figure
     // the screen computed.
     expect(text()).toContain('1,39,506')
-    expect(allButtons().filter((b) => b.textContent?.trim() === 'Record Payment')).toHaveLength(1)
+    // One in Block 4 (Pricing & Payments) and one in InformationDrawer (L1 Quick Actions)
+    expect(allButtons().filter((b) => b.textContent?.trim() === 'Record Payment')).toHaveLength(2)
   })
 
   it('keeps the phone free of an obstructing payment bar', async () => {

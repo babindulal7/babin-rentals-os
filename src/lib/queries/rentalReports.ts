@@ -1,7 +1,7 @@
 import { supabase } from '../supabase'
 import type { Paisa } from '../money'
 import { rentalDaysBetween } from '../rentalDays'
-import { embeddedName, isPermissionDenied, linesValue, percentOf, readLineValues, rowsOf, type ReportFilterOptions } from './reportSupport'
+import { completeReportRead, embeddedName, isPermissionDenied, linesValue, percentOf, readLineValues, rowsOf, type ReportFilterOptions } from './reportSupport'
 
 export type { ReportFilterOptions } from './reportSupport'
 
@@ -110,7 +110,7 @@ export interface CancellationsReportData {
  *   - cancellation is `bookings.cancelled_at` (0015), not `stage = 'Cancelled'`
  *     — Postgres rejects that literal, so the Cancellations tab could only ever
  *     show the mock block;
- *   - "completed" is Returned/Closed (the canonical six have no 'Completed');
+ *   - "completed" is Closed; Returned remains a distinct custody stage;
  *   - money was computed in rupees then divided by 100 again (see `lineValue`);
  *   - line money was read from base `booking_lines`, whose rate columns 0062
  *     revokes — it now comes from `booking_lines_v` (`readLineValues`).
@@ -129,13 +129,20 @@ type BookingRow = {
   clients?: unknown
 }
 
-// Loosely typed on purpose: supabase-js's builder generics recurse past tsc's
-// depth limit when threaded through a helper (TS2589).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyQuery = any
-
-function filtered(q: AnyQuery, options?: ReportFilterOptions): AnyQuery {
-  let out = q
+// Keep the filtering boundary structural: recursively inferring the entire
+// PostgREST embedded-select builder exceeds TS's depth after paginated reads.
+type ReportQuery = Parameters<typeof completeReportRead>[0]
+interface FilteredBookingQuery extends ReportQuery {
+  gte(column: string, value: string): FilteredBookingQuery
+  lte(column: string, value: string): FilteredBookingQuery
+  eq(column: string, value: string): FilteredBookingQuery
+}
+function bookingRead(columns: string): FilteredBookingQuery {
+  // The transport result is unknown until rowsOf validates the response.
+  return supabase.from('bookings').select<string, unknown>(columns) as unknown as FilteredBookingQuery
+}
+function filtered(q: unknown, options?: ReportFilterOptions): FilteredBookingQuery {
+  let out = q as FilteredBookingQuery
   if (options?.from) out = out.gte('pickup_at', options.from)
   if (options?.to) out = out.lte('pickup_at', options.to)
   if (options?.branchId) out = out.eq('branch_id', options.branchId)
@@ -148,11 +155,11 @@ function daysOf(b: Pick<BookingRow, 'pickup_at' | 'return_at'>): number {
 
 export async function getRentalPerformanceReport(options?: ReportFilterOptions): Promise<RentalPerformanceReportData> {
   const [res, typeRes, lineMap] = await Promise.all([
-    filtered(
-      supabase.from('bookings').select('id, booking_no, stage, pickup_at, return_at, project, cancelled_at, clients!client_id(name)'),
+    completeReportRead(filtered(
+      bookingRead('id, booking_no, stage, pickup_at, return_at, project, cancelled_at, clients!client_id(name)'),
       options,
-    ),
-    filtered(supabase.from('bookings').select('id, project_type'), options),
+    ), 'Rental performance read failed'),
+    completeReportRead(filtered(bookingRead('id, project_type'), options), 'Project type read failed'),
     readLineValues(),
   ])
   const rows = rowsOf<BookingRow>(res, 'Rental performance read failed')
@@ -181,17 +188,17 @@ export async function getRentalPerformanceReport(options?: ReportFilterOptions):
     const stage = isCancelled ? 'Cancelled' : b.stage
     if (isCancelled) cancelled++
     else if (b.stage === 'Packed' || b.stage === 'On Rent') active++
-    else if (b.stage === 'Returned' || b.stage === 'Closed') completed++
+    else if (b.stage === 'Closed') completed++
 
     const st = stageMap.get(stage) ?? { count: 0, revenue: 0 }
     st.count++
-    st.revenue += value
+    st.revenue += isCancelled ? 0 : value
     stageMap.set(stage, st)
 
     const type = typeById.get(b.id)?.trim() || 'Not set'
     const pt = typeMap.get(type) ?? { count: 0, revenue: 0 }
     pt.count++
-    pt.revenue += value
+    pt.revenue += isCancelled ? 0 : value
     typeMap.set(type, pt)
 
     if (isCancelled) continue
@@ -246,7 +253,7 @@ const BUCKETS = [
 
 export async function getRentalDurationReport(options?: ReportFilterOptions): Promise<RentalDurationReportData> {
   const [res, lineMap] = await Promise.all([
-    filtered(supabase.from('bookings').select('id, pickup_at, return_at').is('cancelled_at', null), options),
+    completeReportRead(filtered(supabase.from('bookings').select<string, unknown>('id, pickup_at, return_at').is('cancelled_at', null) as unknown as FilteredBookingQuery, options), 'Rental duration read failed'),
     readLineValues(),
   ])
   const rows = rowsOf<Pick<BookingRow, 'id' | 'pickup_at' | 'return_at'>>(res, 'Rental duration read failed')
@@ -288,14 +295,14 @@ export async function getRentalDurationReport(options?: ReportFilterOptions): Pr
 
 export async function getCancellationsReport(options?: ReportFilterOptions): Promise<CancellationsReportData> {
   const [allRes, cancelRes, lineMap] = await Promise.all([
-    filtered(supabase.from('bookings').select('id'), options),
-    filtered(
+    completeReportRead(filtered(bookingRead('id'), options), 'Booking count read failed'),
+    completeReportRead(filtered(
       supabase
         .from('bookings')
-        .select('id, booking_no, pickup_at, return_at, project, cancelled_at, cancellation_reason, clients!client_id(name)')
-        .not('cancelled_at', 'is', null),
+        .select<string, unknown>('id, booking_no, pickup_at, return_at, project, cancelled_at, cancellation_reason, clients!client_id(name)')
+        .not('cancelled_at', 'is', null) as unknown as FilteredBookingQuery,
       options,
-    ),
+    ), 'Cancellations read failed'),
     readLineValues(),
   ])
   const totalAll = rowsOf(allRes, 'Booking count read failed').length

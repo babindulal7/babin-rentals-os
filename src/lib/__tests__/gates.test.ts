@@ -43,6 +43,14 @@ describe('Gate Registry & Error Parser', () => {
     expect(parsed.cleanMessage).toBe('booking is Closed; no further stage transition is accepted.')
   })
 
+  it('preserves apostrophes in gate error messages without truncation', () => {
+    const raw = "ERROR: GATE:gate.handover.units_unhanded|Cannot release client's gear until all items are handed over'"
+    const parsed = parseGateError(raw)
+    expect(parsed.isGate).toBe(true)
+    expect(parsed.gateId).toBe('gate.handover.units_unhanded')
+    expect(parsed.cleanMessage).toBe("Cannot release client's gear until all items are handed over")
+  })
+
   it('returns isGate: false for non-gate errors', () => {
     const plainErr = new Error('Connection refused at 127.0.0.1:5432')
     const parsed = parseGateError(plainErr)

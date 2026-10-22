@@ -5,7 +5,7 @@
  * booking numbers, clients, invoices, quotes, and transport dispatch records.
  */
 
-import { supabase } from '../supabase'
+import { supabase, IS_MOCK } from '../supabase'
 import type { InternalNote } from './internalNotes'
 import { getReferenceKind, type EntityReferenceKind } from './internalNotes'
 
@@ -328,19 +328,21 @@ export async function searchEntityLookup(
     return true
   }
 
-  // 1. Filter local fleet catalog
-  for (const item of FLEET_CATALOG_SEED) {
-    if (!matchesKind(item.kind)) continue
+  // 1. Filter local fleet catalog in mock mode only
+  if (IS_MOCK) {
+    for (const item of FLEET_CATALOG_SEED) {
+      if (!matchesKind(item.kind)) continue
 
-    const matchesQuery =
-      !query ||
-      item.code.toLowerCase().includes(query) ||
-      item.title.toLowerCase().includes(query) ||
-      item.subtitle.toLowerCase().includes(query)
+      const matchesQuery =
+        !query ||
+        item.code.toLowerCase().includes(query) ||
+        item.title.toLowerCase().includes(query) ||
+        item.subtitle.toLowerCase().includes(query)
 
-    if (matchesQuery) {
-      results.push(item)
-      seenCodes.add(item.code.toUpperCase())
+      if (matchesQuery) {
+        results.push(item)
+        seenCodes.add(item.code.toUpperCase())
+      }
     }
   }
 
@@ -350,7 +352,7 @@ export async function searchEntityLookup(
       if (kind === 'all' || kind === 'equipment') {
         const { data: units } = await supabase
           .from('product_units_v')
-          .select('id, asset_tag, serial_no, status, product:products_v(name, category)')
+          .select('id, asset_tag, serial_no, status, product:products_v(name, category_id)')
           .or(`asset_tag.ilike.%${query}%,serial_no.ilike.%${query}%`)
           .limit(limit)
 
@@ -359,13 +361,13 @@ export async function searchEntityLookup(
             const rawTag = (u.asset_tag ?? '').trim().toUpperCase()
             if (rawTag && !seenCodes.has(rawTag)) {
               seenCodes.add(rawTag)
-              const prod = u.product as { name?: string; category?: string } | null
+              const prod = u.product as { name?: string; category_id?: string } | null
               results.push({
                 id: u.id,
                 kind: 'equipment',
                 code: rawTag,
                 title: prod?.name || `Unit ${rawTag}`,
-                subtitle: `${prod?.category || 'Gear'} · Serial: ${u.serial_no || 'None'}`,
+                subtitle: `Serial: ${u.serial_no || 'None'}`,
                 badge: u.status || 'Active',
                 badgeTone: u.status === 'In Stock' ? 'in' : u.status === 'On Rent' ? 'warning' : 'neutral',
               })
@@ -375,22 +377,32 @@ export async function searchEntityLookup(
       }
 
       if (kind === 'all' || kind === 'booking') {
+        interface BookingLookupRow {
+          id: string
+          booking_no: string | null
+          project: string | null
+          stage: string
+          client?: { name?: string | null } | null
+        }
+
         const { data: bookings } = await supabase
           .from('bookings')
-          .select('id, booking_no, project, stage, client_name')
-          .or(`booking_no.ilike.%${query}%,project.ilike.%${query}%,client_name.ilike.%${query}%`)
+          .select('id, booking_no, project, stage, client:clients(name)')
+          .or(`booking_no.ilike.%${query}%,project.ilike.%${query}%`)
           .limit(limit)
 
         if (bookings) {
-          for (const b of bookings) {
-            const code = `BR-${b.booking_no}`.toUpperCase()
+          for (const b of (bookings as unknown as BookingLookupRow[])) {
+            const rawNo = (b.booking_no ?? '').trim().toUpperCase()
+            const code = rawNo.startsWith('BK-') ? rawNo : `BK-${rawNo}`
             if (!seenCodes.has(code)) {
               seenCodes.add(code)
+              const clientName = b.client?.name || 'Booking'
               results.push({
                 id: b.id,
                 kind: 'booking',
                 code,
-                title: `${code} · ${b.client_name || 'Booking'}`,
+                title: `${code} · ${clientName}`,
                 subtitle: b.project || `Stage: ${b.stage}`,
                 badge: b.stage,
                 badgeTone: b.stage === 'On Rent' ? 'warning' : b.stage === 'Packed' ? 'primary' : 'neutral',
@@ -403,21 +415,21 @@ export async function searchEntityLookup(
       if (kind === 'all' || kind === 'client') {
         const { data: clients } = await supabase
           .from('clients')
-          .select('id, name, phone, company')
-          .or(`name.ilike.%${query}%,company.ilike.%${query}%,phone.ilike.%${query}%`)
+          .select('id, client_code, name, phone, org_subtype')
+          .or(`name.ilike.%${query}%,client_code.ilike.%${query}%,phone.ilike.%${query}%`)
           .limit(limit)
 
         if (clients) {
           for (const c of clients) {
-            const code = `CL-${c.id.substring(0, 5).toUpperCase()}`
+            const code = (c.client_code ?? '').trim().toUpperCase() || `CL-${c.id.substring(0, 8).toUpperCase()}`
             if (!seenCodes.has(code)) {
               seenCodes.add(code)
               results.push({
                 id: c.id,
                 kind: 'client',
                 code,
-                title: c.name || c.company || 'Client Record',
-                subtitle: `${c.company ? `${c.company} · ` : ''}${c.phone || 'No phone'}`,
+                title: c.name || 'Client Record',
+                subtitle: `${c.org_subtype ? `${c.org_subtype} · ` : ''}${c.phone || 'No phone'}`,
                 badge: 'Client',
                 badgeTone: 'primary',
               })

@@ -1,0 +1,1 @@
+Initial verification found clipped phone KPI labels and an unloaded identifier font. Command attempts were interrupted before a final suite result; browser Card fixture hit an unversioned Vite dependency URL. These are retained as initial findings, not passing final evidence.

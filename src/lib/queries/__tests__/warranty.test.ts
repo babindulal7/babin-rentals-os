@@ -9,6 +9,11 @@ import {
   type WarrantyItem,
 } from '../warranty'
 
+vi.mock('../../supabase', () => ({
+  IS_MOCK: true,
+  supabase: {},
+}))
+
 describe('warranty queries', () => {
   beforeEach(() => {
     localStorage.clear()

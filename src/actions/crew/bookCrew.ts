@@ -56,40 +56,109 @@ export const bookCrewConfig: ActionConfig<BookCrewInput, BookCrewResult> = {
     const days = input.days ?? rentalDaysBetween(callTime, wrapTime)
     if (days === null) throw new Error('Enter a valid number of crew days.')
     const rootKey = input.clientUuid ?? newClientUuid()
+    const cleanCrewIds = input.crewIds.map((id) => id.trim())
+    const uuidCrewIds = cleanCrewIds.filter((id) => UUID.test(id))
+    const codeCrewIds = cleanCrewIds.filter((id) => !UUID.test(id))
+
+    const lookupPromises = []
+    if (uuidCrewIds.length > 0) {
+      lookupPromises.push(
+        supabase
+          .from('crew_profiles_v2_v')
+          .select('id, crew_code, primary_role, full_name, daily_rate, is_active')
+          .in('id', uuidCrewIds),
+      )
+    }
+    if (codeCrewIds.length > 0) {
+      lookupPromises.push(
+        supabase
+          .from('crew_profiles_v2_v')
+          .select('id, crew_code, primary_role, full_name, daily_rate, is_active')
+          .in('crew_code', codeCrewIds),
+      )
+    }
+
+    const responses = await Promise.all(lookupPromises)
+    for (const res of responses) {
+      if (res.error) throw new Error(`Could not load crew member: ${res.error.message}`)
+    }
+
+    const foundMembers = responses.flatMap((r) => r.data ?? [])
+    const memberMap = new Map<string, (typeof foundMembers)[0]>()
+    for (const m of foundMembers) {
+      if (m?.id) memberMap.set(m.id, m)
+      if (m?.crew_code) memberMap.set(m.crew_code, m)
+    }
+
     const prepared = []
     for (const raw of input.crewIds) {
       const crewId = raw.trim()
-      const { data: member, error } = await supabase.from('crew_profiles_v2_v')
-        .select('id, crew_code, primary_role, full_name, daily_rate, is_active')
-        .eq(UUID.test(crewId) ? 'id' : 'crew_code', crewId).maybeSingle()
-      if (error) throw new Error(`Could not load crew member: ${error.message}`)
+      const member = memberMap.get(crewId)
       if (!member?.id || !member.is_active) throw new Error(`Crew member "${crewId}" is unavailable or inactive.`)
       const dailyRate = input.dailyRate ?? member.daily_rate
       if (dailyRate == null || !Number.isFinite(Number(dailyRate)) || Number(dailyRate) < 0) throw new Error('An available crew rate is required.')
       const lineTotal = Math.round(Number(dailyRate) * 100) * days / 100
       if (!Number.isFinite(lineTotal)) throw new Error('Crew total is outside the supported range.')
       const clientUuid = await assignmentKey(rootKey, member.id, input.crewIds.length === 1)
-      prepared.push({ client_uuid: clientUuid, booking_id: booking.id, crew_id: member.id,
-        role_on_shoot: input.role?.trim() || member.primary_role!, call_time: callTime, wrap_time: wrapTime,
-        daily_rate: Math.round(Number(dailyRate) * 100) / 100, days, line_total: lineTotal, notes: input.notes?.trim() || null,
-        created_by: ctx.userId, updated_by: ctx.userId })
+      prepared.push({
+        client_uuid: clientUuid,
+        booking_id: booking.id,
+        crew_id: member.id,
+        role_on_shoot: input.role?.trim() || member.primary_role!,
+        call_time: callTime,
+        wrap_time: wrapTime,
+        daily_rate: Math.round(Number(dailyRate) * 100) / 100,
+        days,
+        line_total: lineTotal,
+        notes: input.notes?.trim() || null,
+        created_by: ctx.userId,
+        updated_by: ctx.userId,
+      })
     }
-    // Preflight all people before writes. Each row is idempotent so a partial
-    // network failure can be retried with the same request key. Never toast a queued write.
-    const assignmentIds: string[] = []
-    for (const row of prepared) {
-      const { data, error } = await supabase.from('crew_assignments').insert(row).select('id').single()
-      if (error) {
-        if (error.code !== '23505') throw new Error(`Crew assignment was not saved: ${error.message}`)
-        const { data: existing, error: readError } = await supabase.from('crew_assignments_v')
-          .select('id, booking_id, crew_id, role_on_shoot, call_time, wrap_time, daily_rate, days, notes').eq('client_uuid', row.client_uuid).maybeSingle()
-        if (readError || !existing?.id || existing.booking_id !== row.booking_id || existing.crew_id !== row.crew_id) throw new Error('Could not confirm the saved assignment. Retry with the same details.')
-        if (existing.role_on_shoot !== row.role_on_shoot || Date.parse(existing.call_time ?? '') !== Date.parse(row.call_time) || Date.parse(existing.wrap_time ?? '') !== Date.parse(row.wrap_time) || Number(existing.daily_rate) !== row.daily_rate || existing.days !== row.days || existing.notes !== row.notes) throw new Error('This request already saved different assignment details. Reload the booking before adding another assignment.')
-        assignmentIds.push(existing.id)
-      } else {
-        if (!data?.id) throw new Error('Could not confirm the saved assignment. Retry with the same details.')
-        assignmentIds.push(data.id)
+
+    // Atomic insert for the entire batch. Postgres executes multi-row insert in a single
+    // transaction; if any row fails, partial crew assignments cannot be committed.
+    let assignmentIds: string[] = []
+    const { data: insertedRows, error: insertError } = await supabase
+      .from('crew_assignments')
+      .insert(prepared)
+      .select('id')
+
+    if (insertError) {
+      if (insertError.code !== '23505') throw new Error(`Crew assignment was not saved: ${insertError.message}`)
+      const clientUuids = prepared.map((r) => r.client_uuid)
+      const { data: existingRows, error: readError } = await supabase
+        .from('crew_assignments_v')
+        .select('id, client_uuid, booking_id, crew_id, role_on_shoot, call_time, wrap_time, daily_rate, days, notes')
+        .in('client_uuid', clientUuids)
+
+      if (readError || !existingRows || existingRows.length !== prepared.length) {
+        throw new Error('Could not confirm the saved assignment. Retry with the same details.')
       }
+
+      const existingMap = new Map((existingRows as Array<{ client_uuid: string; id: string; booking_id: string; crew_id: string; role_on_shoot: string; call_time: string | null; wrap_time: string | null; daily_rate: number | string | null; days: number; notes: string | null }>).map((e) => [e.client_uuid, e]))
+      for (const row of prepared) {
+        const existing = existingMap.get(row.client_uuid)
+        if (!existing?.id || existing.booking_id !== row.booking_id || existing.crew_id !== row.crew_id) {
+          throw new Error('Could not confirm the saved assignment. Retry with the same details.')
+        }
+        if (
+          existing.role_on_shoot !== row.role_on_shoot ||
+          Date.parse(existing.call_time ?? '') !== Date.parse(row.call_time) ||
+          Date.parse(existing.wrap_time ?? '') !== Date.parse(row.wrap_time) ||
+          Number(existing.daily_rate) !== row.daily_rate ||
+          existing.days !== row.days ||
+          existing.notes !== row.notes
+        ) {
+          throw new Error('This request already saved different assignment details. Reload the booking before adding another assignment.')
+        }
+      }
+      assignmentIds = prepared.map((r) => existingMap.get(r.client_uuid)!.id)
+    } else {
+      if (!insertedRows || insertedRows.length !== prepared.length) {
+        throw new Error('Could not confirm the saved assignment. Retry with the same details.')
+      }
+      assignmentIds = (insertedRows as Array<{ id: string }>).map((d) => d.id)
     }
     return { result: { success: true, count: assignmentIds.length, assignmentIds }, events: [{
       type: EVENT_TYPES.CREW_ASSIGNED,

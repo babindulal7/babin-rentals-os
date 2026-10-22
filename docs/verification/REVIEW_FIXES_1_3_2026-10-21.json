@@ -1,0 +1,60 @@
+{
+  "task": "Fix review findings 1-3: manufactured handover checks, return QC/signatures, invoice financial breakdown",
+  "reportedAtUtc": "2026-10-21T03:47:40.4939703Z",
+  "scope": [
+    "src/modules/rentals/HandoverWorkspace.tsx",
+    "src/modules/rentals/ReturnWorkspace.tsx",
+    "src/modules/finance/Finance.tsx",
+    "src/lib/pdf/invoicePdfData.ts",
+    "src/lib/queries/finance.ts"
+  ],
+  "finalFocused": {
+    "passed": 23,
+    "success": true,
+    "files": [
+      "C:/Users/use/Desktop/babin-rentals-os/src/modules/finance/__tests__/Finance.pdf.test.tsx",
+      "C:/Users/use/Desktop/babin-rentals-os/src/modules/rentals/__tests__/floorWorkspacesPersistence.test.tsx",
+      "C:/Users/use/Desktop/babin-rentals-os/src/modules/rentals/__tests__/handoverWorkspace.test.tsx"
+    ],
+    "failed": 0,
+    "total": 23
+  },
+  "broadRun": {
+    "sourceAfter": "91254277835a69c5beb9950af2c4e3e890968e88c46ac55a0424b52b80421f8f",
+    "total": 5008,
+    "success": false,
+    "failures": [
+      "Tier 2: Boundaries, Corner Cases & Guardrails Boundary 6: Law 15 Touch Target Audit (>= 44x44px) ensures shell interactive controls maintain minimum 44px hit dimensions",
+      "DatePresets selects only the actual billable duration when the calendar-date span differs",
+      "DatePresets 1-day preset produces that many 06:00 rental days at the default times",
+      "DatePresets 2-day preset produces that many 06:00 rental days at the default times",
+      "DatePresets 3-day preset produces that many 06:00 rental days at the default times"
+    ],
+    "sourceBefore": "8a0c5bf39da83324ff8a53de622f3368efedce6932b5a801ac85d3f26da6feeb",
+    "currentSourceCertified": false,
+    "passed": 5003,
+    "failed": 5
+  },
+  "failureRecheck": {
+    "failed": 1,
+    "success": false,
+    "passed": 14,
+    "note": "Date-preset failures cleared after another session changed that code. Shell Supabase mock still lacks IS_MOCK. This is a targeted recheck, not a fresh full-suite pass.",
+    "failures": [
+      "Tier 2: Boundaries, Corner Cases & Guardrails Boundary 6: Law 15 Touch Target Audit (>= 44x44px) ensures shell interactive controls maintain minimum 44px hit dimensions"
+    ],
+    "total": 15
+  },
+  "recordedChecks": {
+    "contrast": "82/82 PASS",
+    "limitation": "Shared source changed during verification. These recorded command results do not certify the entire current checkout or production.",
+    "pglite": "168/168 PASS",
+    "lint": "PASS",
+    "build": "Vite production build and PWA generation completed",
+    "lifecycle": "31/31 PASS",
+    "typecheck": "PASS"
+  },
+  "sourceHashAtReport": "4e70609ae15f0b503e3d8aed3521675a6be1075a22b8fa459e00227870921ce9",
+  "liveDatabaseChanges": false,
+  "migrationsWritten": false
+}

@@ -240,22 +240,23 @@ export function evaluateDiscounts(
         exclusionReason: 'Student bundles do not stack with promotional codes',
       })
     }
-    // Women DoP discount may still apply if approved
+    // Women DoP and manual discounts cannot stack with exclusive student bundle rates
     if (discounts.womenDopEligible) {
       sources.push({
         name: 'Women DoP / Director Initiative',
         discountSource: 'Women-DoP 5%',
         percent: WOMEN_DOP_DISCOUNT_PERCENT,
-        applied: true,
+        applied: false,
+        exclusionReason: 'Student bundles do not stack with Women DoP discount',
       })
     }
-    // Manual discount can override if authorized
     if (discounts.manualDiscountPercent && discounts.manualDiscountPercent > 0) {
       sources.push({
         name: `Manual (${discounts.manualDiscountReason || 'Manual discount'})`,
         discountSource: 'Manual',
         percent: discounts.manualDiscountPercent,
-        applied: true,
+        applied: false,
+        exclusionReason: 'Student bundles do not stack with manual discounts',
       })
     }
   } else {
@@ -366,8 +367,8 @@ export function evaluateDiscounts(
 
 /**
  * Calculates recommended security deposit:
- * Standard recommendation: 25% of equipment subtotal, or baseline NPR 30,000 (3,000,000 paisa)
- * when high-end equipment is booked, floored at 0.
+ * Standard recommendation: 25% of equipment subtotal, or baseline NPR 10,000 (1,000,000 paisa)
+ * minimum when equipment is booked, floored at 0.
  */
 export function calculateRecommendedDeposit(equipmentSubtotalPaisa: Paisa, bundleSubtotalPaisa: Paisa): Paisa {
   const gearPaisa = equipmentSubtotalPaisa + bundleSubtotalPaisa

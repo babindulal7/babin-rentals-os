@@ -327,14 +327,16 @@ export function eachDay(startAd: Date, days: number): Date[] {
  * and a month arrow never has to be disabled.
  */
 
-/** Midnight UTC of the 1st of the AD month `ad` falls in. */
+/** Midnight UTC of the 1st of the AD month `ad` falls in, evaluated in Kathmandu civil time. */
 export function adMonthStart(ad: Date): Date {
-  return new Date(Date.UTC(ad.getUTCFullYear(), ad.getUTCMonth(), 1))
+  const civil = new Date(kathmanduCivil(ad))
+  return new Date(Date.UTC(civil.getUTCFullYear(), civil.getUTCMonth(), 1))
 }
 
 /** Days in the AD month `ad` falls in — day 0 of the next month, never a table. */
 export function adMonthLength(ad: Date): number {
-  return new Date(Date.UTC(ad.getUTCFullYear(), ad.getUTCMonth() + 1, 0)).getUTCDate()
+  const civil = new Date(kathmanduCivil(ad))
+  return new Date(Date.UTC(civil.getUTCFullYear(), civil.getUTCMonth() + 1, 0)).getUTCDate()
 }
 
 /** Every day of that AD month, **generated from a range** (§4.1), never listed. */
@@ -345,13 +347,14 @@ export function adMonthDays(ad: Date): Date[] {
 /**
  * `n` calendar months from `ad`, clamped to the target month's last day so
  * 31 Jan − 1 month is 31 Dec and 31 Mar + 1 month is 30 Apr rather than a date
- * rolling silently into the month after it.
+ * rolling silently into the month after it. Evaluated in Kathmandu civil time.
  */
 export function addAdMonths(ad: Date, months: number): Date {
-  const year = ad.getUTCFullYear()
-  const month = ad.getUTCMonth() + months
+  const civil = new Date(kathmanduCivil(ad))
+  const year = civil.getUTCFullYear()
+  const month = civil.getUTCMonth() + months
   const last = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
-  return new Date(Date.UTC(year, month, Math.min(ad.getUTCDate(), last)))
+  return new Date(Date.UTC(year, month, Math.min(civil.getUTCDate(), last)))
 }
 
 /** "August 2026" — the month heading, rendered in Kathmandu like every other date. */

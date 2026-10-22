@@ -330,7 +330,7 @@ describe('RecordForm - equipment edit', () => {
     updateEquipment.mockResolvedValue({ ...equipment, revision: 'rev-e2' })
     await mount('equipment', 'eq-1', '/inventory/eq-1?action=edit')
     const titles = sectionTitles()
-    expect(titles).toEqual(['Identity', 'Units & location', 'Purchase', 'Pricing', 'Maintenance & notes'])
+    expect(titles).toEqual(['Identity', 'Stock & Units', 'Relationships', 'Location', 'Purchase', 'Pricing & Rental', 'Maintenance & Documents'])
     expect((field('tracking_mode') as HTMLSelectElement).disabled).toBe(true)
     expect(button('Add unit')).toBeUndefined()
     expect(button('Remove unit')).toBeUndefined()
@@ -409,7 +409,15 @@ describe('RecordForm - equipment add assists (Add Equipment v3.0, 8 Oct 2026)', 
     saveRecord.mockResolvedValue({ id: 'eq-9', code: 'EQ-0009' })
     await mount('equipment', undefined, '/inventory?tab=new')
     const links = () => [...container.querySelectorAll('nav[aria-label="Form sections"] a')].map((a) => a.textContent)
-    expect(links()).toEqual(['Identity, needs attention', 'Units & location, needs attention', 'Purchase, optional', 'Pricing, needs attention', 'Maintenance & notes, optional'])
+    expect(links()).toEqual([
+      'Identity, needs attention',
+      'Stock & Units, needs attention',
+      'Relationships, optional',
+      'Location, optional',
+      'Purchase, optional',
+      'Pricing & Rental, needs attention',
+      'Maintenance & Documents, optional',
+    ])
     await fillIdentity()
     expect(links()[0]).toBe('Identity, complete')
     expect(container.textContent).toContain('Daily rate not set')

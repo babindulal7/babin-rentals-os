@@ -1,12 +1,13 @@
 import { useMemo } from 'react'
-import { getBusinessToday, kathmanduCivil } from '../../../lib/bs'
+import { kathmanduCivil } from '../../../lib/bs'
 import { TouchTarget } from '../../../components/ui/TouchTarget'
 import type { Paisa } from '../../../lib/money'
 import { formatMoney } from '../../../lib/money'
+import { rentalPresetReturnDate } from '../../../lib/rentalDatePreset'
 
-/** Today as YYYY-MM-DD in UTC (Kathmandu civil day starts at 06:00, but we use UTC for ISO) */
+/** Today's civil date for the pickup date field; convert the instant only once. */
 function todayIso(): string {
-  return new Date(kathmanduCivil(getBusinessToday())).toISOString().slice(0, 10)
+  return new Date(kathmanduCivil(new Date())).toISOString().slice(0, 10)
 }
 
 /**
@@ -20,7 +21,7 @@ function todayIso(): string {
 
 export interface DatePreset {
   label: string
-  /** Days added to "Out" date for the "Return" date. 0 = same day. */
+  /** Billable 06:00–06:00 rental days, calculated by the existing engine. */
   days: number
   /** Optional: price hint for this duration (display only) */
   priceHint?: Paisa
@@ -41,6 +42,8 @@ export interface DatePresetsProps {
   returnDate?: string
   /** Rental duration in days */
   days?: number
+  pickupTime?: string
+  returnTime?: string
   /** Called when a preset is picked — updates both Out and Return dates */
   onPick: (outDate: string, returnDate: string) => void
   /** Optional: show price hints if pricing engine is available */
@@ -71,6 +74,8 @@ export function DatePresets({
   outDate,
   returnDate,
   days,
+  pickupTime = '09:00',
+  returnTime = '18:00',
   onPick,
   priceHints,
   minReturnDate,
@@ -83,11 +88,11 @@ export function DatePresets({
   const presetButtons = useMemo(() => {
     return presets.map((p) => {
       const out = effectiveOut
-      const ret = addDays(out, p.days)
+      const ret = rentalPresetReturnDate(out, p.days, pickupTime, returnTime)
       const minRet = minReturnDate || out
-      const isValid = ret >= minRet
+      const isValid = ret !== null && ret >= minRet
       const price = priceHints?.[p.days]
-      const isActive = (days !== undefined && days === p.days) || (Boolean(returnDate) && ret === returnDate)
+      const isActive = days !== undefined ? days === p.days : ret !== null && ret === returnDate
 
       return {
         ...p,
@@ -98,7 +103,7 @@ export function DatePresets({
         price,
       }
     })
-  }, [effectiveOut, minReturnDate, priceHints, presets, days, returnDate])
+  }, [effectiveOut, minReturnDate, priceHints, presets, days, returnDate, pickupTime, returnTime])
 
   if (presetButtons.length === 0) return null
 
@@ -107,16 +112,17 @@ export function DatePresets({
       <span style={{ alignSelf: 'center', color: 'var(--muted)', fontSize: 'var(--t-meta)', fontWeight: 500 }}>Start</span>
       {['Today', 'Tomorrow'].map((label, i) => {
         const targetDay = addDays(today, i)
+        const targetReturn = rentalPresetReturnDate(targetDay, days && days > 0 ? days : 1, pickupTime, returnTime)
         const isActive = outDate === targetDay
         return (
           <button
             key={label}
             type="button"
-            disabled={disabled}
+            disabled={disabled || targetReturn === null}
             className={`press${isActive ? ' is-active' : ''}`}
             aria-pressed={isActive}
             style={{
-              minHeight: 40,
+              minHeight: 44,
               padding: '0 14px',
               border: isActive ? '1px solid var(--st-primary-fg, #2563eb)' : '1px solid var(--border)',
               borderRadius: 'var(--r-btn)',
@@ -128,8 +134,7 @@ export function DatePresets({
               transition: 'background 120ms, border-color 120ms, color 120ms',
             }}
             onClick={() => {
-              const currentDays = days && days > 0 ? days : 1
-              onPick(targetDay, addDays(targetDay, currentDays))
+              if (targetReturn) onPick(targetDay, targetReturn)
             }}
           >
             {label}
@@ -156,10 +161,10 @@ export function DatePresets({
           type="button"
           className={`press${p.isActive ? ' is-active' : ''}`}
           disabled={disabled || !p.isValid}
-          onClick={() => onPick(p.out, p.ret)}
+          onClick={() => { if (p.ret) onPick(p.out, p.ret) }}
           style={{
             position: 'relative',
-            minHeight: 40,
+            minHeight: 44,
             padding: '0 14px',
             borderRadius: 'var(--r-badge)',
             border: p.isActive ? '1px solid var(--st-primary-fg, #2563eb)' : '1px solid var(--border)',
@@ -202,7 +207,7 @@ export function DatePresets({
                 opacity: 0.7,
               }}
             >
-              (return too early)
+              (adjust times)
             </span>
           )}
         </button>

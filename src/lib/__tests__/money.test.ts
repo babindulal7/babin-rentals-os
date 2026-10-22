@@ -119,10 +119,14 @@ describe('formatMoney', () => {
 describe('parseMoney', () => {
   it('accepts what the product itself prints', () => {
     expect(parseMoney('Rs 1,39,506')).toBe(13_950_600)
+    expect(parseMoney('Rs. 1,39,506')).toBe(13_950_600)
+    expect(parseMoney('Rs. 1,39,506.50')).toBe(13_950_650)
+    expect(parseMoney('NPR 1,39,506')).toBe(13_950_600)
     expect(parseMoney('1,39,506')).toBe(13_950_600)
     expect(parseMoney('139506')).toBe(13_950_600)
     expect(parseMoney('139506.50')).toBe(13_950_650)
     expect(parseMoney('-500')).toBe(-50_000)
+    expect(parseMoney('-Rs. 500')).toBe(-50_000)
   })
 
   it('returns null rather than a wrong number for junk', () => {

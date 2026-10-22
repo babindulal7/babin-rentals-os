@@ -4,7 +4,10 @@ import pg from 'pg';
 const env = fs.readFileSync('.env.local', 'utf8');
 const match = env.match(/SUPABASE_DB_URL=(.+)/);
 const connStr = match[1].trim();
-const client = new pg.Client({ connectionString: connStr, ssl: { rejectUnauthorized: false } });
+const client = new pg.Client({
+  connectionString: connStr,
+  ssl: { rejectUnauthorized: process.env.SUPABASE_SSL_REJECT_UNAUTHORIZED === 'false' ? false : true }
+});
 
 async function checkAuthMembership() {
   await client.connect();

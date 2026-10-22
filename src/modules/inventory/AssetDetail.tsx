@@ -462,19 +462,19 @@ function AssetDetailView() {
             </span>
           }
           actions={
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: viewport === 'phone' ? 6 : 10, flexWrap: 'wrap' }}>
               {user && ['Owner','Admin','Manager'].includes(user.role) && (
                 <Button variant="secondary" icon="edit" onClick={() => navigate(`${location.pathname}?action=edit`)}>
-                  Edit Equipment
+                  {viewport === 'phone' ? 'Edit' : 'Edit Equipment'}
                 </Button>
               )}
               {units[0] && (
                 <Button variant="secondary" icon="download" onClick={() => setLabelUnit(units[0] ?? null)}>
-                  Print Labels
+                  {viewport === 'phone' ? 'Labels' : 'Print Labels'}
                 </Button>
               )}
               <Button variant="primary" icon="checklist" onClick={() => navigate('/rentals?action=new')}>
-                Book Asset
+                {viewport === 'phone' ? 'Book' : 'Book Asset'}
               </Button>
             </div>
           }
@@ -617,6 +617,7 @@ function AssetDetailView() {
                 <article key={u.id} className="inventory-model-card">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
                     <span className="inventory-asset-code" style={{ fontSize: 'var(--t-meta)' }}>{u.assetTag}</span>
+                    <ServiceDueBadge row={serviceByUnit.get(u.id)} />
                     {statusChip(u.state)}
                     {conditionChip(u.condition)}
                   </div>
@@ -627,8 +628,8 @@ function AssetDetailView() {
                     <span className="figure">{u.runningHours}h</span> run
                   </div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    <Button variant="ghost" size="sm" onClick={() => setLabelUnit(u)}>Label</Button>
-                    <Button variant="ghost" size="sm" onClick={() => navigate(`${location.pathname}?action=edit`)}>
+                    <Button variant="secondary" size="sm" onClick={() => setLabelUnit(u)}>Label</Button>
+                    <Button variant="ghost" size="sm" onClick={() => setEditingUnit((prev) => (prev === u.id ? null : u.id))}>
                       {editingUnit === u.id ? 'Close' : 'Edit'}
                     </Button>
                   </div>
@@ -713,7 +714,7 @@ function AssetDetailView() {
                             <td style={{ padding: '10px 8px', textAlign: 'right' }}>
                               <div style={{ display: 'inline-flex', gap: 6 }}>
                                 <Button variant="ghost" onClick={() => setLabelUnit(u)}>Label</Button>
-                                <Button variant="ghost" onClick={() => navigate(`${location.pathname}?action=edit`)}>
+                                <Button variant="ghost" onClick={() => setEditingUnit((prev) => (prev === u.id ? null : u.id))}>
                                   {editingUnit === u.id ? 'Close' : 'Edit'}
                                 </Button>
                               </div>

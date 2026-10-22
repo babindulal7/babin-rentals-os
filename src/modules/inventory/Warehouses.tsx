@@ -10,7 +10,7 @@ import { Card, PageHeader, Button, Rail, SummaryRows, FooterNote, cardStyle } fr
 import { PageShell } from '../../components/ui/PageShell'
 import { InfoTooltip } from '../../components/ui/InfoTooltip'
 import { DataTableShell } from '../../components/ui/DataTable'
-import { EmptyState, ErrorBanner } from '../../components/ui/StateViews'
+import { EmptyState, ErrorBanner, LoadingSkeleton } from '../../components/ui/StateViews'
 import { Unavailable } from '../../components/ui/Unavailable'
 import { Donut, Legend, HBars, GroupedBars } from '../../components/ui/Charts'
 import WarehouseMap from '../../components/ui/WarehouseMap'
@@ -1874,8 +1874,8 @@ export default function Warehouses() {
                       </div>
                     )}
                     {live.loading && live.rows.length === 0 && (
-                      <div style={{ padding: '14px', fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-                        Loading transfers…
+                      <div style={{ padding: '14px' }}>
+                        <LoadingSkeleton rows={3} type="table" label="Loading warehouse transfers…" />
                       </div>
                     )}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
@@ -1888,9 +1888,15 @@ export default function Warehouses() {
                         </Button>
                       </span>
                     </div>
-                    {profileTransfers.length === 0 ? (
+                    {!live.loading && profileTransfers.length === 0 ? (
                       <div style={{ padding: '20px 14px' }}>
-                        <EmptyState title="No transfers touch this warehouse" description="Nothing has moved in or out of this facility on the seeded ledger." />
+                        <EmptyState
+                          kind="nothing-yet"
+                          title="No transfers touch this warehouse"
+                          description="Nothing has moved in or out of this facility on the recorded ledger."
+                          actionLabel="Create Transfer"
+                          onAction={openTransferModal}
+                        />
                       </div>
                     ) : (
                       <DataTableShell ariaLabel="Warehouse transfers" data-table-scroll style={{ overflowX: 'auto' }}>

@@ -7,6 +7,11 @@ import InternalNotesPage from '../InternalNotesPage'
 
 ;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
 
+vi.mock('../../../lib/supabase', () => ({
+  IS_MOCK: true,
+  supabase: {},
+}))
+
 Object.defineProperty(window, 'matchMedia', {
   configurable: true,
   writable: true,

@@ -38,23 +38,35 @@ function createStaticDistServer(callback) {
     '.wasm': 'application/wasm',
   };
 
-  const server = http.createServer((req, res) => {
-    let reqUrl = req.url ? req.url.split('?')[0] : '/';
-    let safeSuffix = path.normalize(reqUrl).replace(/^(\.\.[/\\])+/, '');
-    if (safeSuffix === '/' || safeSuffix === '\\') safeSuffix = '/index.html';
-    let filePath = path.join(distDir, safeSuffix);
+  const resolvedDist = path.resolve(distDir);
 
-    fs.stat(filePath, (err, stats) => {
+  const server = http.createServer((req, res) => {
+    const rawPath = req.url ? req.url.split('?')[0] : '/';
+    let decodedUrl = '/';
+    try {
+      decodedUrl = decodeURIComponent(rawPath);
+    } catch {
+      res.writeHead(400, { 'Content-Type': 'text/plain' });
+      return res.end('Bad Request');
+    }
+
+    const candidate = path.resolve(resolvedDist, '.' + (decodedUrl === '/' ? '/index.html' : decodedUrl));
+    if (!candidate.startsWith(resolvedDist + path.sep) && candidate !== resolvedDist) {
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      return res.end('Forbidden');
+    }
+
+    fs.stat(candidate, (err, stats) => {
       if (!err && stats.isFile()) {
-        const ext = path.extname(filePath).toLowerCase();
+        const ext = path.extname(candidate).toLowerCase();
         res.writeHead(200, {
           'Content-Type': mimeTypes[ext] || 'application/octet-stream',
           'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=31536000',
         });
-        fs.createReadStream(filePath).pipe(res);
+        fs.createReadStream(candidate).pipe(res);
       } else {
         // SPA Fallback: serve index.html for client-side routing
-        const indexPath = path.join(distDir, 'index.html');
+        const indexPath = path.join(resolvedDist, 'index.html');
         fs.readFile(indexPath, (readErr, content) => {
           if (readErr) {
             res.writeHead(404, { 'Content-Type': 'text/plain' });

@@ -2482,7 +2482,7 @@ export function AddBundle(props: AddBundleProps = {}) {
           )
           /* Rulings §7 — reflow, not hide. The summary sits beside the form at
              desktop and beneath it below 1280, never behind the rail handle. */
-          return desktop ? <Rail width={318} label="Bundle summary">{railContent}</Rail> : railContent
+          return <Rail width={318} label="Bundle summary">{railContent}</Rail>
         })()}
       </div>
 

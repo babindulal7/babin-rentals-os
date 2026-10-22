@@ -14,6 +14,7 @@ import { createInvoice } from '../../../actions/finance/createInvoice'
 import type { CreateInvoiceResult } from '../../../actions/finance/createInvoice'
 import { useAuth } from '../../../lib/auth'
 import { useNetwork } from '../../../lib/network'
+import { useViewport } from '../../../lib/device'
 import { newClientUuid } from '../../../lib/supabase'
 
 /*
@@ -147,6 +148,8 @@ export function CreateInvoiceModal({ isOpen, onClose, bookingNo, onSuccess }: Cr
   const { user } = useAuth()
   const isOnline = useNetwork()
   const { showSuccessToast } = useToast()
+  const viewport = useViewport()
+  const onPhone = viewport === 'phone'
 
   /**
    * What the operator has typed into the booking box, and what the preview is
@@ -473,34 +476,71 @@ export function CreateInvoiceModal({ isOpen, onClose, bookingNo, onSuccess }: Cr
                 What will be billed — {preview.lines.length} line{preview.lines.length === 1 ? '' : 's'} from{' '}
                 {preview.bookingNo}
               </span>
-              <DataTableShell ariaLabel="Invoice lines preview">
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--t-meta)' }}>
-                  <thead>
-                    <tr style={{ textAlign: 'left', color: 'var(--muted)' }}>
-                      <th style={{ padding: '4px 8px 4px 0', fontWeight: 600 }}>Line</th>
-                      <th style={{ padding: '4px 8px', fontWeight: 600 }}>Kind</th>
-                      <th style={{ padding: '4px 8px', fontWeight: 600, textAlign: 'right' }}>Qty</th>
-                      <th style={{ padding: '4px 8px', fontWeight: 600, textAlign: 'right' }}>Days</th>
-                      <th style={{ padding: '4px 8px', fontWeight: 600, textAlign: 'right' }}>Rate</th>
-                      <th style={{ padding: '4px 0 4px 8px', fontWeight: 600, textAlign: 'right' }}>Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {preview.lines.map((line) => (
-                      <tr key={line.key} style={{ borderTop: '1px solid var(--border)' }}>
-                        <td style={{ padding: '6px 8px 6px 0' }}>{line.description}</td>
-                        <td style={{ padding: '6px 8px', color: 'var(--muted)' }}>{line.kind}</td>
-                        <td style={{ padding: '6px 8px', textAlign: 'right' }}>{line.qty}</td>
-                        <td style={{ padding: '6px 8px', textAlign: 'right' }}>{line.days}</td>
-                        <td style={{ padding: '6px 8px', textAlign: 'right' }}>{formatMoney(line.ratePaisa)}</td>
-                        <td style={{ padding: '6px 0 6px 8px', textAlign: 'right', fontWeight: 600 }}>
+              {onPhone ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {preview.lines.map((line) => (
+                    <div
+                      key={line.key}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: 'var(--r-btn, 8px)',
+                        border: '1px solid var(--border)',
+                        background: 'var(--card2)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 6,
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                        <span style={{ fontWeight: 600, color: 'var(--text)', fontSize: 'var(--t-body, 14px)' }}>
+                          {line.description}
+                        </span>
+                        <span style={{ fontWeight: 700, color: 'var(--text)', fontSize: 'var(--t-body, 14px)', whiteSpace: 'nowrap' }}>
                           {formatMoney(line.netPaisa)}
-                        </td>
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', fontSize: 'var(--t-meta, 12px)', color: 'var(--text2)' }}>
+                        <span style={{ color: 'var(--muted)' }}>{line.kind}</span>
+                        <span>·</span>
+                        <span>Qty: <strong style={{ color: 'var(--text)' }}>{line.qty}</strong></span>
+                        <span>·</span>
+                        <span>{line.days} day{line.days === 1 ? '' : 's'}</span>
+                        <span>·</span>
+                        <span>{formatMoney(line.ratePaisa)}/day</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <DataTableShell ariaLabel="Invoice lines preview" data-table-scroll style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--t-meta)' }}>
+                    <thead>
+                      <tr style={{ textAlign: 'left', color: 'var(--muted)' }}>
+                        <th style={{ padding: '4px 8px 4px 0', fontWeight: 600 }}>Line</th>
+                        <th style={{ padding: '4px 8px', fontWeight: 600 }}>Kind</th>
+                        <th style={{ padding: '4px 8px', fontWeight: 600, textAlign: 'right' }}>Qty</th>
+                        <th style={{ padding: '4px 8px', fontWeight: 600, textAlign: 'right' }}>Days</th>
+                        <th style={{ padding: '4px 8px', fontWeight: 600, textAlign: 'right' }}>Rate</th>
+                        <th style={{ padding: '4px 0 4px 8px', fontWeight: 600, textAlign: 'right' }}>Amount</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </DataTableShell>
+                    </thead>
+                    <tbody>
+                      {preview.lines.map((line) => (
+                        <tr key={line.key} style={{ borderTop: '1px solid var(--border)' }}>
+                          <td style={{ padding: '6px 8px 6px 0' }}>{line.description}</td>
+                          <td style={{ padding: '6px 8px', color: 'var(--muted)' }}>{line.kind}</td>
+                          <td style={{ padding: '6px 8px', textAlign: 'right' }}>{line.qty}</td>
+                          <td style={{ padding: '6px 8px', textAlign: 'right' }}>{line.days}</td>
+                          <td style={{ padding: '6px 8px', textAlign: 'right' }}>{formatMoney(line.ratePaisa)}</td>
+                          <td style={{ padding: '6px 0 6px 8px', textAlign: 'right', fontWeight: 600 }}>
+                            {formatMoney(line.netPaisa)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </DataTableShell>
+              )}
               <span style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
                 Read from the booking and copied onto the invoice as a snapshot — a later change to a product’s rate
                 does not re-price this bill. Nothing here is editable from this screen: a charge is added by editing

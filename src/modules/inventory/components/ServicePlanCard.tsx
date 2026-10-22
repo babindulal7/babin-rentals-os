@@ -258,13 +258,13 @@ function Row({
           }}
           style={{
             width: 96,
-            padding: '6px 8px',
+            padding: '0 10px',
             border: '1px solid var(--border)',
-            borderRadius: 'var(--r-sm)',
+            borderRadius: 'var(--r-input, 6px)',
             background: 'var(--surface)',
             color: 'var(--text)',
             fontSize: 'var(--t-meta)',
-            minHeight: 36,
+            minHeight: 44,
           }}
         />
       ) : (

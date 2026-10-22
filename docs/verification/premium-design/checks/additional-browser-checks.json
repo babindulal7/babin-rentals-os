@@ -1,0 +1,94 @@
+{
+  "environment": "local mock; remote requests blocked",
+  "checks": [
+    {
+      "name": "Desktop expanded navigation is 256px",
+      "pass": true,
+      "details": 256
+    },
+    {
+      "name": "Collapsed 64px navigation survives reload",
+      "pass": true,
+      "details": 64
+    },
+    {
+      "name": "Calendar phone: visible Availability and unclipped actions",
+      "pass": true,
+      "details": {
+        "offscreen": [],
+        "search": false,
+        "verb": "Availability"
+      }
+    },
+    {
+      "name": "Calendar Availability opens existing modal",
+      "pass": true
+    },
+    {
+      "name": "Reduced-motion preference removes entrance and row motion",
+      "pass": true,
+      "details": [
+        {
+          "class": "page-shell page-shell--full animate-entrance rental-dashboard",
+          "name": "none",
+          "transition": "0s"
+        },
+        {
+          "class": "movement-card movement-card--outgoing movement-card--overdue",
+          "name": "none",
+          "transition": "0s"
+        },
+        {
+          "class": "movement-card movement-card--outgoing movement-card--overdue",
+          "name": "none",
+          "transition": "0s"
+        },
+        {
+          "class": "movement-card movement-card--outgoing movement-card--overdue",
+          "name": "none",
+          "transition": "0s"
+        },
+        {
+          "class": "movement-card movement-card--outgoing movement-card--overdue",
+          "name": "none",
+          "transition": "0s"
+        },
+        {
+          "class": "movement-card movement-card--outgoing movement-card--overdue",
+          "name": "none",
+          "transition": "0s"
+        },
+        {
+          "class": "movement-card movement-card--outgoing movement-card--overdue",
+          "name": "none",
+          "transition": "0s"
+        },
+        {
+          "class": "movement-card movement-card--outgoing movement-card--overdue",
+          "name": "none",
+          "transition": "0s"
+        },
+        {
+          "class": "movement-card movement-card--outgoing movement-card--overdue",
+          "name": "none",
+          "transition": "0s"
+        },
+        {
+          "class": "movement-card movement-card--outgoing movement-card--overdue",
+          "name": "none",
+          "transition": "0s"
+        },
+        {
+          "class": "movement-card movement-card--outgoing movement-card--overdue",
+          "name": "none",
+          "transition": "0s"
+        },
+        {
+          "class": "movement-card movement-card--outgoing movement-card--overdue",
+          "name": "none",
+          "transition": "0s"
+        }
+      ]
+    }
+  ]
+}

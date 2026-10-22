@@ -24,6 +24,15 @@ export interface InvoicePdfLine {
   totalPaisa: Paisa | number
 }
 
+export interface InvoicePdfCompany {
+  name: string
+  panVat?: string
+  address?: string
+  phone?: string
+  email?: string
+  description?: string
+}
+
 export interface InvoicePdfData {
   invoiceNo?: string | null
   documentTitle?: string
@@ -38,13 +47,7 @@ export interface InvoicePdfData {
     address?: string | null
     panVat?: string | null
   }
-  company?: {
-    name?: string
-    panVat?: string
-    address?: string
-    phone?: string
-    email?: string
-  }
+  company?: InvoicePdfCompany
   lines: InvoicePdfLine[]
   subtotalPaisa: Paisa | number
   discountPercent?: number | null
@@ -103,34 +106,52 @@ class PdfDocumentBuilder {
   }
 
   build(): Uint8Array {
-    let pdf = '%PDF-1.4\n%\xE2\xE3\xCF\xD3\n'
+    const encoder = new TextEncoder()
+    // Standard PDF 1.4 binary header (with 4 binary comment bytes >= 128)
+    const headerStr = '%PDF-1.4\n%\xE2\xE3\xCF\xD3\n'
+    const headerBytes = encoder.encode(headerStr)
+
+    const chunks: Uint8Array[] = [headerBytes]
     this.offsets = []
+    let currentByteOffset = headerBytes.length
 
     for (let i = 0; i < this.objects.length; i++) {
       const objNum = i + 1
-      this.offsets.push(pdf.length)
-      pdf += `${objNum} 0 obj\n${this.objects[i]}\nendobj\n`
+      this.offsets.push(currentByteOffset)
+      const objStr = `${objNum} 0 obj\n${this.objects[i]}\nendobj\n`
+      const objBytes = encoder.encode(objStr)
+      chunks.push(objBytes)
+      currentByteOffset += objBytes.length
     }
 
-    const startxref = pdf.length
+    const startxref = currentByteOffset
     const size = this.objects.length + 1
 
-    pdf += 'xref\n'
-    pdf += `0 ${size}\n`
-    pdf += '0000000000 65535 f \n'
+    let trailerStr = 'xref\n'
+    trailerStr += `0 ${size}\n`
+    trailerStr += '0000000000 65535 f \n'
 
     for (let i = 0; i < this.offsets.length; i++) {
       const offsetStr = String(this.offsets[i]).padStart(10, '0')
-      pdf += `${offsetStr} 00000 n \n`
+      trailerStr += `${offsetStr} 00000 n \n`
     }
 
-    pdf += 'trailer\n'
-    pdf += `<<\n  /Size ${size}\n  /Root 1 0 R\n  /Info ${this.objects.length} 0 R\n>>\n`
-    pdf += 'startxref\n'
-    pdf += `${startxref}\n`
-    pdf += '%%EOF\n'
+    trailerStr += 'trailer\n'
+    trailerStr += `<<\n  /Size ${size}\n  /Root 1 0 R\n  /Info ${this.objects.length} 0 R\n>>\n`
+    trailerStr += 'startxref\n'
+    trailerStr += `${startxref}\n`
+    trailerStr += '%%EOF\n'
 
-    return new TextEncoder().encode(pdf)
+    chunks.push(encoder.encode(trailerStr))
+
+    const totalLength = chunks.reduce((sum, c) => sum + c.length, 0)
+    const result = new Uint8Array(totalLength)
+    let offset = 0
+    for (const c of chunks) {
+      result.set(c, offset)
+      offset += c.length
+    }
+    return result
   }
 }
 
@@ -152,10 +173,18 @@ export function generateInvoicePdf(data: InvoicePdfData): Uint8Array {
   const issueDate = formatAd(data.issueDateAd ? new Date(data.issueDateAd) : new Date())
   const dueDate = data.dueDateAd ? formatAd(new Date(data.dueDateAd)) : 'Due on Receipt'
 
-  const companyName = data.company?.name || 'BABIN RENTALS KATHMANDU'
-  const companyVat = data.company?.panVat || 'VAT: 601234567'
-  const companyAddr = data.company?.address || 'Kathmandu, Nepal'
-  const companyPhone = data.company?.phone || '+977-1-4400000'
+  const companyName = data.company?.name.trim()
+  if (!companyName) throw new Error('Save the organisation name in Settings before exporting an invoice.')
+  const companyVat = data.company?.panVat?.trim()
+  if ((Number(data.vatPaisa) > 0 || companyVat) && !/^\d{9}$/.test(companyVat ?? '')) {
+    throw new Error('Save a valid nine-digit VAT/PAN in Settings before exporting this invoice.')
+  }
+  const companyContact = [
+    companyVat ? `PAN/VAT: ${companyVat}` : '',
+    data.company?.address?.trim(),
+    data.company?.phone?.trim(),
+  ].filter(Boolean).join(' · ')
+  const companyDescription = [data.company?.description?.trim(), data.company?.email?.trim()].filter(Boolean).join(' · ')
 
   const streamOps: string[] = []
 
@@ -166,8 +195,8 @@ export function generateInvoicePdf(data: InvoicePdfData): Uint8Array {
   // Company Name & Info
   streamOps.push(`BT /F2 16 Tf 40 776 Td (${escapePdfText(companyName)}) Tj ET`)
   streamOps.push(`${mutedText} rg`)
-  streamOps.push(`BT /F1 9 Tf 40 762 Td (${escapePdfText(`${companyVat} · ${companyAddr} · ${companyPhone}`)}) Tj ET`)
-  streamOps.push(`BT /F1 9 Tf 40 750 Td (Professional Camera, Lighting & Audio Systems) Tj ET`)
+  if (companyContact) streamOps.push(`BT /F1 9 Tf 40 762 Td (${escapePdfText(companyContact)}) Tj ET`)
+  if (companyDescription) streamOps.push(`BT /F1 9 Tf 40 750 Td (${escapePdfText(companyDescription)}) Tj ET`)
 
   // Document Title (Top Right)
   streamOps.push(`${darkSlate} rg`)
@@ -228,7 +257,8 @@ export function generateInvoicePdf(data: InvoicePdfData): Uint8Array {
 
   // Line items
   let curY = tableTopY - 20
-  const maxRows = Math.min(data.lines.length, 12)
+  const hasOverflow = data.lines.length > 12
+  const maxRows = hasOverflow ? 11 : data.lines.length
 
   for (let i = 0; i < maxRows; i++) {
     const line = data.lines[i]
@@ -257,6 +287,16 @@ export function generateInvoicePdf(data: InvoicePdfData): Uint8Array {
     streamOps.push(`BT /F2 8.5 Tf 475 ${curY + 7} Td (${escapePdfText(formatPaisaOrZero(line.totalPaisa))}) Tj ET`)
   }
 
+  if (hasOverflow) {
+    curY -= 22
+    streamOps.push(`${bgLight} rg`)
+    streamOps.push(`40 ${curY} 515 22 re f`)
+    streamOps.push(`${borderGray} RG 0.5 w`)
+    streamOps.push(`40 ${curY} 515 22 re S`)
+    streamOps.push(`${mutedText} rg`)
+    streamOps.push(`BT /F1 8.5 Tf 75 ${curY + 7} Td (...and ${data.lines.length - 11} more items included in totals) Tj ET`)
+  }
+
   // Financial summary block
   const summaryBoxY = curY - 10
   const sumLeft = 320
@@ -280,7 +320,8 @@ export function generateInvoicePdf(data: InvoicePdfData): Uint8Array {
     addSummaryRow(discLabel, `-${formatPaisaOrZero(data.discountPaisa)}`, 32)
   }
   addSummaryRow('Taxable Amount:', formatPaisaOrZero(data.taxablePaisa), 46)
-  addSummaryRow('VAT (13%):', formatPaisaOrZero(data.vatPaisa), 60)
+  const vatLabel = data.vatPercent !== undefined && data.vatPercent !== null ? `VAT (${data.vatPercent}%):` : 'VAT (13%):'
+  addSummaryRow(vatLabel, formatPaisaOrZero(data.vatPaisa), 60)
 
   // Grand Total highlight bar
   streamOps.push(`${darkSlate} rg`)
@@ -315,7 +356,7 @@ export function generateInvoicePdf(data: InvoicePdfData): Uint8Array {
   streamOps.push(`405 ${footerY - 35} 150 0.5 re S`)
   streamOps.push(`BT /F1 8 Tf 405 ${footerY - 45} Td (Client / Authorized Signatory) Tj ET`)
 
-  streamOps.push(`BT /F1 7.5 Tf 175 25 Td (Thank you for choosing Babin Rentals. Generated by Babin Rentals OS.) Tj ET`)
+  streamOps.push(`BT /F1 7.5 Tf 40 25 Td (${escapePdfText(`Thank you for choosing ${companyName}. Generated by Babin Rentals OS.`)}) Tj ET`)
 
   const contentStream = streamOps.join('\n')
 

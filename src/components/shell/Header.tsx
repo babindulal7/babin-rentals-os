@@ -1,14 +1,12 @@
-import { useRef, useState, useMemo, useEffect, isValidElement, type ReactNode } from 'react'
+import { useRef, useState, useMemo, useEffect, isValidElement, lazy, Suspense, type ReactNode } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import Icon, { type IconName } from '../ui/Icon'
 import { useAuth } from '../../lib/auth'
 import { useViewport } from '../../lib/device'
 import { openCommandPalette } from './CommandPalette'
-import HandoverSheet from '../../modules/auth/HandoverSheet'
 import { useSync } from '../../lib/syncContext'
 import { useOptionalWorkspace, type PageHeaderSearchConfig } from '../../lib/workspaceContext'
 import { InfoTooltip } from '../ui/InfoTooltip'
-import InternalNotesDrawer from '../../modules/notes/InternalNotesDrawer'
 import { Button } from '../ui/Button'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import type { OverflowMenuItem } from '../ui/OverflowMenu'
@@ -24,7 +22,11 @@ import { AddDropdownButton } from '../ui/header/PageHeader'
 import { GlobalAddMenu } from '../ui/creation/GlobalAddMenu'
 import { MobileHeaderSearch } from './MobileHeaderSearch'
 import { UnsavedChangesIndicator } from '../ui/header/UnsavedChangesIndicator'
+import { IS_MOCK } from '../../lib/supabase'
 import './shell.css'
+
+const HandoverSheet = lazy(() => import('../../modules/auth/HandoverSheet'))
+const InternalNotesDrawer = lazy(() => import('../../modules/notes/InternalNotesDrawer'))
 
 export interface Crumb {
   label: string
@@ -104,7 +106,10 @@ export default function Header({ crumbs, actions }: HeaderProps) {
   const [profileOpen, setProfileOpen] = useState(false)
   const [showHandover, setShowHandover] = useState(false)
   const [notesOpen, setNotesOpen] = useState(false)
+  const [notesVisited, setNotesVisited] = useState(false)
+  useEffect(() => { if (notesOpen) setNotesVisited(true) }, [notesOpen])
   const [activeConfirmAction, setActiveConfirmAction] = useState<PageActionItem | null>(null)
+  const [showMockDialog, setShowMockDialog] = useState(false)
   const ws = useOptionalWorkspace()
   const profileBtnRef = useRef<HTMLButtonElement>(null)
 
@@ -325,7 +330,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
           height: 'var(--header-h)',
           maxHeight: 'var(--header-h)',
           padding: isPhone ? '0 12px' : '0 20px',
-          gap: 8,
+          gap: isPhone ? 4 : 8,
           flexShrink: 0,
           borderBottom: '1px solid var(--border)',
           background: 'var(--sidebar)',
@@ -348,12 +353,9 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             display: 'flex',
             alignItems: 'center',
             gap: 6,
-            minWidth: isPhone ? 0 : isTablet ? '140px' : '180px',
-            // RULING 2026-10-13: on a phone the title takes whatever the controls leave, and ends in "…".
-            // RULING 2026-10-15: on desktop a module title (one crumb — "Inventory") does not shrink;
-            // the search beside it yields first. Sharing the squeeze crushed it to "I." at 1280px.
-            // A record title (a crumb trail ending in "902 · Client name") is any length, so it
-            // still ellipsizes rather than taking the search's space.
+            minWidth: isPhone ? '110px' : isTablet ? '140px' : '180px',
+            // On phone, keep at least 110px so module names (Rentals, Today, Finance) and IDs do not truncate to Re... or 71...
+            // On desktop a module title (one crumb — "Inventory") does not shrink; the search beside it yields first.
             flex: isPhone ? '1 1 auto' : isTablet || displayCrumbs.length > 1 ? '0 1 auto' : '0 0 auto',
             maxWidth: isPhone ? undefined : 'min(520px, 45vw)',
             overflow: 'hidden',
@@ -802,7 +804,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 8,
+            gap: isPhone ? 0 : 8,
             flexShrink: 0,
             marginLeft: 'auto',
             minWidth: 0,
@@ -929,6 +931,8 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             </>
           )}
 
+          <span ref={ws?.setHeaderInformationElement} className="workspace-header-information" data-header-slot="information" />
+
           {/* 7. Team Internal Notes Button (Alt+N) */}
           {!isPhone && <button
             type="button"
@@ -965,14 +969,42 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             </span>
           )}
 
+          {/* Mock Mode Icon Indicator (Law 15: >= 44x44px hit area) */}
+          {IS_MOCK && !isPhone && (
+            <button
+              type="button"
+              onClick={() => setShowMockDialog(true)}
+              aria-label="Mock Mode Active"
+              title="Mock Mode — Local test database active (click for options)"
+              style={{
+                ...iconBtn,
+                color: 'var(--brand-mark)',
+                position: 'relative',
+              }}
+            >
+              <Icon name="flask" size={17} />
+              <span
+                style={{
+                  position: 'absolute',
+                  top: 9,
+                  right: 9,
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: 'var(--brand-mark)',
+                }}
+              />
+            </button>
+          )}
+
           {/* 9. User Profile Trigger (Law 15: >= 44x44px hit area) */}
           <div style={{ position: 'relative' }}>
             <button
               ref={profileBtnRef}
               type="button"
               onClick={() => setProfileOpen((v) => !v)}
-              aria-label={`${initials} — user profile`}
-              title="User profile"
+              aria-label={`${initials} — user profile${IS_MOCK ? ' · Mock mode' : ''}`}
+              title={IS_MOCK ? 'User profile · Mock mode' : 'User profile'}
               aria-expanded={profileOpen}
               style={{
                 ...iconBtn,
@@ -994,7 +1026,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                   fontWeight: 700,
                 }}
               >
-                {initials}
+                {IS_MOCK && isPhone ? 'Mock' : initials}
               </span>
             </button>
 
@@ -1050,6 +1082,14 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                     }}>
                       Team internal notes
                     </Button>
+                  )}
+                  {/* RULING 2026-10-21: retain mock options in the phone
+                      profile; a separate 44px control clipped primary actions. */}
+                  {IS_MOCK && isPhone && (
+                    <Button variant="secondary" icon="flask" onClick={() => {
+                      setProfileOpen(false)
+                      setShowMockDialog(true)
+                    }}>Mock Mode Active</Button>
                   )}
                   {hasPin && (
                     <button
@@ -1127,19 +1167,50 @@ export default function Header({ crumbs, actions }: HeaderProps) {
         />
       )}
 
-      {showHandover && (
-        <HandoverSheet
-          isOpen={showHandover}
-          onClose={() => setShowHandover(false)}
-          userName={user?.name}
-          userRole={user?.role}
-        />
-      )}
+      <Suspense fallback={null}>
+        {showHandover && (
+          <HandoverSheet
+            isOpen={showHandover}
+            onClose={() => setShowHandover(false)}
+            userName={user?.name}
+            userRole={user?.role}
+          />
+        )}
 
-      {notesOpen && (
-        <InternalNotesDrawer
-          isOpen={notesOpen}
-          onClose={() => setNotesOpen(false)}
+        {(notesOpen || notesVisited) && <InternalNotesDrawer isOpen={notesOpen} onClose={() => setNotesOpen(false)} />}
+      </Suspense>
+
+      {showMockDialog && (
+        <ConfirmDialog
+          isOpen={true}
+          title="Mock Mode Active"
+          description="You are currently running Babin Rentals OS with a local in-browser mock database. Real database mutations are simulated locally. You can reset all local test data at any time."
+          confirmLabel="Wipe Mock Data & Reload"
+          cancelLabel="Close"
+          variant="danger"
+          onClose={() => setShowMockDialog(false)}
+          onConfirm={() => {
+            setShowMockDialog(false)
+            try {
+              localStorage.setItem('babin_data_wiped', 'true')
+              localStorage.setItem('babin_internal_notes_v1', JSON.stringify([]))
+              const toRemove: string[] = []
+              for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i)
+                if (k && (k.startsWith('babin.mock.') || k.startsWith('sb-') || k.startsWith('babin-active-') || k.startsWith('babin-today-'))) {
+                  toRemove.push(k)
+                }
+              }
+              toRemove.forEach((k) => localStorage.removeItem(k))
+              if (typeof indexedDB !== 'undefined') {
+                try { indexedDB.deleteDatabase('babin.mock.storage.v1') } catch {}
+                try { indexedDB.deleteDatabase('BabinOfflineQueue') } catch {}
+              }
+              window.location.reload()
+            } catch {
+              /* ignore */
+            }
+          }}
         />
       )}
     </>

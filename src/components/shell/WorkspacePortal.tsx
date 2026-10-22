@@ -86,3 +86,10 @@ export function WorkspaceHeaderAddActions({ children }: { children: ReactNode })
   if (!workspace) return <>{children}</>
   return workspace.headerAddActionsElement ? createPortal(children, workspace.headerAddActionsElement) : null
 }
+
+/** The right-hand counterpart of the page filter toggle. */
+export function WorkspaceHeaderInformation({ children }: { children: ReactNode }) {
+  const workspace = useOptionalWorkspace()
+  if (!workspace) return <>{children}</>
+  return workspace.headerInformationElement ? createPortal(children, workspace.headerInformationElement) : null
+}

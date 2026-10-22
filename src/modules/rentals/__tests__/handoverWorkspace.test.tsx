@@ -41,6 +41,8 @@ import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { ToastProvider } from '../../../components/ui/Toast'
 import HandoverWorkspace from '../HandoverWorkspace'
 
+;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
+
 const B901 = '11111111-1111-4111-8111-111111111111'
 const B902 = '22222222-2222-4222-8222-222222222222'
 
@@ -228,6 +230,19 @@ async function passAllGates() {
 /* ── HO-12a ──────────────────────────────────────────────────────────────── */
 
 describe('HO-12 — the bulk control says what it does, and moves only Ready rows', () => {
+  it.each([1440, 390])('bulk pickup at %ipx leaves identity, signatures and evidence unverified', async (width) => {
+    await mount('/rentals/B-901/handover', width)
+    expect(button('Quick Dispatch')).toBeUndefined()
+    expect(button('Quick Dispatch All')).toBeUndefined()
+    await click(button('Mark Ready Picked Up'))
+    expect(checkbox('Government ID Verified')?.checked).toBe(false)
+    expect(checkbox('Booking Authorization Verified')?.checked).toBe(false)
+    expect(text()).toContain('Receiver and warehouse signatures not yet captured')
+    expect(text()).toContain('one photo per booking before completion')
+    expect(button('Complete Handover')?.disabled).toBe(true)
+    expect(settleDispatch).toBeNull()
+  })
+
   it('is named for the act, and Bulk Scan is gone', async () => {
     await mount()
     expect(text()).not.toContain('Bulk Scan')

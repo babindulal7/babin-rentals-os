@@ -96,3 +96,15 @@ production_backup_*.sql.incomplete
 # Scratch pages/configs and mock build bundles saved alongside artifacts — regenerable, not history.
 /tmp/
 artifacts/**/mock-dist/
+
+# Worktrees, audit artifacts, and archives
+.worktrees/
+artifacts/
+*.7z
+*.jsonl
+astra-main-tests-final.json
+.pglite-result.json
+.test-result.json
+.coverage-result.json
+repomix-output.*
+repomix-part*.xml

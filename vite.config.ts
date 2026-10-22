@@ -126,6 +126,8 @@ export default defineConfig({
           'vendor-supabase': ['@supabase/supabase-js'],
           'vendor-icons': ['@tabler/icons-react'],
           'vendor-scanner': ['@zxing/browser', '@zxing/library'],
+          'vendor-dexie': ['dexie'],
+          'vendor-gsap': ['gsap', '@gsap/react'],
         }
       }
     }
@@ -151,7 +153,7 @@ export default defineConfig({
       '.trycloudflare.com',
     ],
     watch: {
-      ignored: ['**/__rar_*', '**/*.rartemp', '**/*.rar', '**/*.zip', '**/*.7z', '**/*.tar*', '**/.tmp-*', '**/.claude/**', '**/artifacts/**', '**/.system_generated/**'],
+      ignored: ['**/tmp/**', '**/__rar_*', '**/*.rartemp', '**/*.rar', '**/*.zip', '**/*.7z', '**/*.tar*', '**/.tmp-*', '**/.claude/**', '**/artifacts/**', '**/.system_generated/**'],
     },
   },
   preview: {

@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Card } from './Page'
+import { Button, Card, Rail } from './Page'
 import { ConfirmDialog } from './ConfirmDialog'
+import { useOptionalWorkspace } from '../../lib/workspaceContext'
+import { useViewport } from '../../lib/device'
+import { WorkspaceHeaderMoreActions, WorkspaceHeaderRightActions } from '../shell/WorkspacePortal'
+import { ActionsOverflowMenu, extractValidActions } from './PageActions'
+import { openCommandPalette } from '../shell/CommandPalette'
 import './record-workspace.css'
 
 /**
@@ -13,7 +18,7 @@ import './record-workspace.css'
  *   RecordWorkspace
  *     RecordErrorSummary      clickable list, opens + focuses the affected field
  *     RecordSection xN        card per section, optional ones may collapse
- *     summary rail            right rail >= 1280px, flows below the sections otherwise
+ *     summary drawer          opens from the right header toggle
  *   RecordActions             one persistent bar: Cancel / Create | Save changes
  */
 
@@ -23,9 +28,7 @@ export function RecordWorkspace({ children, summary, actions }: { children: Reac
       <div className="record-workspace-grid">
         <div className="record-workspace-body">{children}</div>
         {summary && (
-          <aside aria-label="Record summary" className="record-workspace-summary">
-            {summary}
-          </aside>
+          <Rail label="Record summary" width={320}>{summary}</Rail>
         )}
       </div>
       {actions}
@@ -134,17 +137,35 @@ export function RecordActions({
   onCancel: () => void
   extra?: ReactNode
 }) {
+  const workspace = useOptionalWorkspace()
+  const phone = useViewport() === 'phone'
+  const cancel = <Button key="cancel" type="button" variant="secondary" disabled={busy} onClick={onCancel}>Cancel</Button>
+  const primary = (
+    <Button type="button" variant="primary" icon="check" aria-label={label} title={label}
+      loading={busy} disabled={busy || !dirty || disabled} onClick={onSave}>
+      {phone && workspace ? '' : busy ? 'Saving…' : label}
+    </Button>
+  )
+  // RULING 2026-10-21: hosted record saves use the existing global slots;
+  // isolated previews retain the local action bar and the same leave guard.
+  if (workspace) {
+    return <>
+      <UnsavedLeaveDialog />
+      <span role="status" className="sr-only">{busy ? 'Saving…' : statusText ?? (dirty ? 'Unsaved changes' : 'No unsaved changes')}</span>
+      <WorkspaceHeaderMoreActions>
+        <ActionsOverflowMenu ariaLabel="More record actions" actions={[cancel, ...extractValidActions(extra)]}
+          {...(phone ? { overflowItems: [{ label: 'Search', icon: 'search', onClick: openCommandPalette }] } : {})} />
+      </WorkspaceHeaderMoreActions>
+      <WorkspaceHeaderRightActions>{primary}</WorkspaceHeaderRightActions>
+    </>
+  }
   return (
     <div className="record-actions" role="group" aria-label="Record actions">
       <UnsavedLeaveDialog />
-      <Button type="button" variant="secondary" disabled={busy} onClick={onCancel}>
-        Cancel
-      </Button>
+      {cancel}
       <span role="status">{busy ? 'Saving…' : statusText ?? (dirty ? 'Unsaved changes' : 'No unsaved changes')}</span>
       {extra}
-      <Button type="button" variant="primary" disabled={busy || !dirty || disabled} onClick={onSave}>
-        {busy ? 'Saving…' : label}
-      </Button>
+      {primary}
     </div>
   )
 }

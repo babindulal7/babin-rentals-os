@@ -63,6 +63,10 @@ describe('every converted read throws on failure instead of returning seed data'
     useTables({ [table]: DOWN })
     await expect(run()).rejects.toThrow(/permission denied/)
   })
+  it.each(cases)('%s refuses a missing dataset from %s instead of claiming zero activity', async (_name, table, run) => {
+    useTables({ [table]: { unconfirmed: true } })
+    await expect(run()).rejects.toThrow(/confirmed dataset/)
+  })
 })
 
 describe('an empty database is an honest empty, never a seed figure', () => {
@@ -136,10 +140,13 @@ describe('the fixes that made live reads impossible stay fixed', () => {
       const b = fake.client.from(t) as Record<string, unknown>
       if (t !== 'bookings') return b
       const select = b['select'] as (cols: string) => unknown
-      b['select'] = (cols: string) =>
-        cols.includes('project_type')
-          ? { ...(select(cols) as object), then: (r: (v: unknown) => unknown) => Promise.resolve({ data: null, error: { code: '42501', message: 'permission denied for column project_type' } }).then(r) }
-          : select(cols)
+      b['select'] = (cols: string) => {
+        const result = select(cols)
+        if (cols.includes('project_type')) {
+          b['then'] = (r: (v: unknown) => unknown) => Promise.resolve({ data: null, error: { code: '42501', message: 'permission denied for column project_type' } }).then(r)
+        }
+        return result
+      }
       return b
     }
     state.client = { from }
@@ -167,7 +174,10 @@ describe('the fixes that made live reads impossible stay fixed', () => {
     expect(vat.monthlySchedule).toHaveLength(1)
     const select = filtersOn('invoices').find((c) => c.method === 'select')?.args[0] as string
     expect(select).not.toMatch(/grand_total|tax_amount|pan_number/)
-    expect(filtersOn('invoices').filter((c) => c.method === 'neq').map((c) => c.args[1])).toEqual(['Draft', 'Void'])
+    // The final empty page confirms completeness and must retain the same
+    // exclusions as the populated first page.
+    expect(filtersOn('invoices').filter((c) => c.method === 'neq').map((c) => c.args[1])).toEqual(['Draft', 'Void', 'Draft', 'Void'])
+    expect(filtersOn('invoices').filter((c) => c.method === 'range').map((c) => c.args)).toEqual([[0, 499], [1, 500]])
   })
 
   it('Cash Flow counts payments with status "Received" (the enum value), and keeps deposits apart', async () => {

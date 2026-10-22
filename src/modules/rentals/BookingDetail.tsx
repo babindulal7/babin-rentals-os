@@ -28,6 +28,7 @@ import { BOOKING_STATUS, STATUS_ORDER } from '../../lib/workflow'
 import type { BookingStatus } from '../../lib/workflow'
 import { NON_PACKABLE_LINE_TYPES } from '../../lib/bookingLineTypes'
 import BookingOperationsMenu from './BookingOperationsMenu'
+import { bookingPaymentUnavailableReason, chooseBookingPaymentInvoice } from './bookingPaymentGate'
 import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext'
 import { jobForStage } from '../../data/operations'
 import { useDomainEvent } from '../../events/useDomainEvent'
@@ -975,7 +976,7 @@ function BookingDetailView() {
      containers gate on `canBookingMoney`, the payment buttons additionally on
      `rbac.canRecordPayment` (the rule the dispatcher itself resolves
      `payment.create` through). Absent, not disabled. */
-  const canTakePayment = user ? canRecordPayment(user.role) : false
+  const canTakePayment = user && canBookingMoney ? canRecordPayment(user.role) : false
   /*
    * **R-01** — *"Invoice creation … Manual only, from **Finance** and from
    * **Booking Detail**. Nothing generates an invoice at Confirm."* This screen
@@ -1279,17 +1280,10 @@ function BookingDetailView() {
     }
   }, [booking, canBookingMoney, totals.total])
 
-  /* The invoice a Record Payment settles by default: the first still owed,
-     else the newest (the list arrives issue_date desc).
-
-     'Draft' joined that set with MONEY-05. R-02 keeps an invoice in Draft for
-     the whole rental and R-14 leaves it in Draft when a payment lands, so a
-     Draft is the invoice carrying the running balance for most of a booking's
-     life — preferring an issued one over it would only ever apply to a booking
-     past return. */
-  const primaryInvoice =
-    liveInvoices.find((r) => r.status === 'Draft' || r.status === 'Sent' || r.status === 'Partially Paid') ??
-    liveInvoices[0]
+  /* One booking can have several invoices. The picker must default to a
+     LIVE invoice that is still owed, not a fully paid Draft when another
+     invoice is outstanding. The pure selector is regression tested. */
+  const primaryInvoice = chooseBookingPaymentInvoice(liveInvoices)
 
   /*
    * Payment History rows — live `payments` mapped into the display shape the
@@ -1932,10 +1926,15 @@ function BookingDetailView() {
   }
 
   const recordPaymentButton = (label: string) => {
-    /* Three reasons, not one. `NO_INVOICE_PAYMENT_UNAVAILABLE` is a statement
+    /* Four reasons, not one. `NO_INVOICE_PAYMENT_UNAVAILABLE` is a statement
        about this booking; while the read is in flight or after it failed the
        app does not know that yet, and saying it anyway is the Law 12 defect. */
-    const reason = hasInvoice ? null : (invoicesUnknownReason ?? NO_INVOICE_PAYMENT_UNAVAILABLE)
+    const reason = bookingPaymentUnavailableReason({
+      hasInvoice,
+      invoicesUnknownReason,
+      outstandingPaisa: totals.outstanding,
+      noInvoiceReason: NO_INVOICE_PAYMENT_UNAVAILABLE,
+    })
     return reason === null ? (
       <Button icon="dollar" variant="secondary" onClick={() => setShowPaymentModal(true)}>
         {label}
@@ -2018,21 +2017,56 @@ function BookingDetailView() {
         </Card>
       )}
 
-      {/* Same booking-money figures as the Facts strip and Block 4 — gated the
-          same way, omitted rather than masked. On phone this card is the
-          `Money` segment's rail content. */}
+      {/* Payment is a quick action on the existing booking. Reuse the invoice-
+          linked modal and its payment.create RBAC gate; never post money from
+          a row button or route the operator away to the Finance ledger.
+          On phones this rail belongs to the Money segment. */}
       {canBookingMoney && showSegment('Money') && (
-        <Card title="Booking Summary">
-          {!hasInvoice && (
-            <p style={{ margin: '8px 0 0', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-              {invoicesUnknownReason ??
-                'No invoice has been raised for this booking, so there is no Rental Total to state yet.'}
-            </p>
-          )}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)', marginTop: 12 }}>
-            {canRaiseInvoice && createInvoiceButton('Create Invoice')}
+        <Card title="Quick Actions">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
+            {canTakePayment && recordPaymentButton('Record Payment')}
+            {canRaiseInvoice && createInvoiceButton(hasInvoice ? 'View Invoice' : 'Create Invoice')}
           </div>
         </Card>
+      )}
+
+      {/* Live invoice values; never combine the refundable deposit with rental
+          payments or display balances to money-blind warehouse roles. */}
+      {canBookingMoney && showSegment('Money') && (
+        <>
+          <Card title="Quick Actions">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
+              {canTakePayment && recordPaymentButton('Record Payment')}
+              {canRaiseInvoice && !hasInvoice && createInvoiceButton('Create Invoice')}
+              {invoicesList.error && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 }}>
+                  <span style={{ fontSize: 'var(--t-meta)', color: 'var(--danger-text)' }}>Could not read invoices</span>
+                  <Button variant="secondary" size="sm" onClick={() => invoicesList.refetch()}>
+                    Retry
+                  </Button>
+                </div>
+              )}
+            </div>
+          </Card>
+
+          <Card title="Booking Summary">
+            {!hasInvoice && (
+              <p style={{ margin: '8px 0 0', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
+                {invoicesUnknownReason ??
+                  'No invoice has been raised for this booking, so there is no Rental Total to state yet.'}
+              </p>
+            )}
+            {hasInvoice && (
+              <SummaryRows
+                rows={[
+                  { label: 'Rental Total', value: money(totals.total), tone: 'neutral' as BrandKey },
+                  { label: 'Rental Paid', value: money(totals.paid), tone: 'success' as BrandKey },
+                  { label: 'Rental Outstanding', value: money(totals.outstanding), tone: totals.outstanding > 0 ? 'danger' as BrandKey : 'success' as BrandKey },
+                ]}
+              />
+            )}
+          </Card>
+        </>
       )}
 
       {showSegment('Docs') && (
@@ -2459,15 +2493,22 @@ function BookingDetailView() {
                     ? user
                     : null
                 return editorUser ? (
-                  <details><summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center' }}>Edit project type</summary><ProjectTypeEditor
-                    key={`${booking.id}·${booking.projectType ?? ''}·${booking.projectTypeOther ?? ''}`}
-                    bookingId={booking.id}
-                    currentType={booking.projectType}
-                    currentOther={booking.projectTypeOther}
-                    userId={editorUser.id}
-                    role={editorUser.role}
-                    onSaved={() => refreshBookingData()}
-                  /></details>
+                  <details style={{ marginTop: 'var(--sp-xs)' }}>
+                    <summary style={{ cursor: 'pointer', minHeight: 44, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--t-meta, 13px)', color: 'var(--text2)', fontWeight: 600 }}>
+                      Edit project type
+                    </summary>
+                    <div style={{ marginTop: 8 }}>
+                      <ProjectTypeEditor
+                        key={`${booking.id}·${booking.projectType ?? ''}·${booking.projectTypeOther ?? ''}`}
+                        bookingId={booking.id}
+                        currentType={booking.projectType}
+                        currentOther={booking.projectTypeOther}
+                        userId={editorUser.id}
+                        role={editorUser.role}
+                        onSaved={() => refreshBookingData()}
+                      />
+                    </div>
+                  </details>
                 ) : null
               })()}
               {/* BD-08 — inline and persistent, in the block this failure is
@@ -2849,7 +2890,7 @@ function BookingDetailView() {
                         </DataTableShell>
                       </div>
                     )}
-                    {canTakePayment && <div style={{ marginTop: 10 }}>{recordPaymentButton('Record Payment')}</div>}
+                    {onPhone && canTakePayment && <div style={{ marginTop: 10 }}>{recordPaymentButton('Record Payment')}</div>}
                   </div>
                 </div>
               )}
@@ -2909,12 +2950,7 @@ function BookingDetailView() {
           )}
         </div>
 
-        {/* Rulings §7 — rails reflow below 1280, never hide. */}
-        {viewport === 'desktop' ? (
-          <Rail>{railBody}</Rail>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0 }}>{railBody}</div>
-        )}
+        <Rail label="Rental information">{railBody}</Rail>
 
         {/* The close dispatch's own failure. R-07 keeps Close a HARD gate, so a
             refusal here is the normal, expected answer when money is outstanding
@@ -3045,6 +3081,9 @@ function BookingDetailView() {
             outstandingRupees: toRupees(inv.outstandingAmount),
           }))}
           initialInvoiceId={primaryInvoice.id}
+          bookingId={bookingId ?? undefined}
+          invoicesError={invoicesList.error}
+          onRetryInvoices={invoicesList.refetch}
           onSuccess={(p) => {
             paymentsList.refetch()
             invoicesList.refetch()

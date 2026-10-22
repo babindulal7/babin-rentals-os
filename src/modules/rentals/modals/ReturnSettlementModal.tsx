@@ -594,14 +594,14 @@ export function ReturnSettlementModal({
                         placeholder="0"
                         aria-label={`Damage charge for ${item.name}`}
                         style={{
-                          width: 100,
-                          minHeight: 36,
-                          padding: '0 8px',
-                          borderRadius: 'var(--r-input, 4px)',
+                          width: 110,
+                          minHeight: 40,
+                          padding: '0 10px',
+                          borderRadius: 'var(--r-input, 6px)',
                           border: '1px solid var(--input-border)',
                           background: 'var(--input-bg)',
                           color: 'var(--text)',
-                          fontSize: 'var(--t-meta, 12px)',
+                          fontSize: 'var(--t-meta, 13px)',
                           fontFamily: 'inherit',
                           textAlign: 'right',
                           fontWeight: 600,

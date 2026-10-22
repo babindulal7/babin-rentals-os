@@ -19,6 +19,7 @@ import {
 } from '../../lib/damage'
 import { getDamageFindings } from '../../lib/queries/damage'
 import type { DamageFinding } from '../../lib/queries/damage'
+import { generateClientUuid } from '../../lib/dataAccess'
 
 /**
  * # Inventory ▸ Maintenance ▸ Damage
@@ -315,7 +316,8 @@ export function DamageTab() {
                           await resolveDamageFinding({
                             findingId: f.id,
                             disposition: 'Charge Client', // Hardcoded as the standard path for this UI, could be expanded
-                            chargePaisa
+                            chargePaisa,
+                            clientUuid: generateClientUuid(),
                           })
 
                           setFindings((prev) =>

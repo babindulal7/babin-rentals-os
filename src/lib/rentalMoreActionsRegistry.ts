@@ -178,7 +178,7 @@ export function evaluateRentalSecondaryActions(
   const {
     booking,
     selectedCount = booking ? 1 : 0,
-    userRole = 'Owner',
+    userRole = 'Client',
     isOnline = true,
   } = ctx
 

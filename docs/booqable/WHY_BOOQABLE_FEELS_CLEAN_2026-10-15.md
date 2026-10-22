@@ -62,9 +62,9 @@ line. It is not padding and should not be squeezed further.
    **Done:** RULINGS-2026-10-15 rows 11–18 (desktop), then RULINGS-2026-10-16 rows 1–4 (phone). At
    390 on `main` the title went 0 → 98px (873) and 0 → 162px (902).
 2. **Today return cards** say lateness four ways ("86d late", red edge, pink fill, "Overdue · 86
-   days late"), and each card is ~200px. Booqable's dashboard row is one line. **Not landed on
-   `main`:** a one-statement card was built and verified (RULINGS-2026-10-15 rows 19–23), but
-   `main`'s Today card was redesigned again on 17 Oct, and Babin kept that design (19 Oct).
+   days late"), and each card is ~200px. Booqable's dashboard row is one line. **Done, 22 Oct:** a one-statement card (RULINGS-2026-10-15 rows 19–23 and 26),
+   ported onto `main`'s redesigned card with its Window passed status, overflow menu and
+   Awaiting dispatch kept. Lateness is said once.
 3. **Inventory's double search** (header and in-page). **Done on `main`** by its own 15 Oct
    header work. The `/` key that the search placeholder promised was still dead at desktop
    width; it now works (row 24).

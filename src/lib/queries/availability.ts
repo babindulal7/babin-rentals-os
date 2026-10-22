@@ -226,10 +226,17 @@ interface ProductMode {
   readonly totalQuantity: number
 }
 
+interface ProductModeRow {
+  id: string
+  tracking_mode: string | null
+  total_quantity: number | null
+}
+
 /**
  * `tracking_mode` and `total_quantity` for a set of products, read through
- * **`products_v`** and never the base table — 0062 revokes table-level SELECT on
- * `products`, the same reason `readCandidates` reads `product_units_v`.
+ * **`products_v`**. The existing fallback names only `id`, `tracking_mode` and
+ * `total_quantity`, which 0062 explicitly grants on `products`; it never asks
+ * for the table's financial columns. Both reads must finish before planning.
  *
  * Neither column is money. `products_v` returns `null` for its nine money
  * columns to a money-blind session (`queries/inventory.ts` MONEY) and these two
@@ -249,20 +256,14 @@ export async function readProductModes(productIds: readonly string[]): Promise<M
   if (productIds.length === 0) return byId
 
   const uniqueIds = [...new Set(productIds)]
-  const { data, error } = await supabase
+  const rows = await readCompleteAvailability<ProductModeRow>((from, to) => supabase
     .from('products_v')
     .select('id, tracking_mode, total_quantity')
     .in('id', uniqueIds)
+    .order('id', { ascending: true })
+    .range(from, to), 'product tracking and stock')
 
-  if (error) {
-    throw new Error(`Could not read how these products are tracked, so nothing was assigned: ${error.message}`)
-  }
-
-  for (const row of (data ?? []) as unknown as Array<{
-    id: string
-    tracking_mode: string | null
-    total_quantity: number | null
-  }>) {
+  for (const row of rows) {
     byId.set(row.id, {
       /* A null mode is not a mode. Falling back to `Serialised` sends the line
          down the unit path, which can only ever REFUSE a booking — the safe
@@ -276,16 +277,14 @@ export async function readProductModes(productIds: readonly string[]): Promise<M
 
   const missing = uniqueIds.filter((id) => !byId.has(id))
   if (missing.length > 0) {
-    const { data: baseData } = await supabase
+    const baseRows = await readCompleteAvailability<ProductModeRow>((from, to) => supabase
       .from('products')
       .select('id, tracking_mode, total_quantity')
       .in('id', missing)
+      .order('id', { ascending: true })
+      .range(from, to), 'product tracking fallback')
 
-    for (const row of (baseData ?? []) as unknown as Array<{
-      id: string
-      tracking_mode: string | null
-      total_quantity: number | null
-    }>) {
+    for (const row of baseRows) {
       byId.set(row.id, {
         trackingMode: row.tracking_mode ?? 'Serialised',
         totalQuantity: typeof row.total_quantity === 'number' ? row.total_quantity : 0,
@@ -307,21 +306,19 @@ async function readLines(bookingId: string): Promise<{
   assignable: AssignableLine[]
   skipped: AssignmentPlan['skipped']
 }> {
-  const { data, error } = await supabase
-    .from('booking_lines')
-    .select('id, product_id, qty, line_type, description')
-    .eq('booking_id', bookingId)
-    .is('voided_at', null)
-
-  if (error) throw new Error(`Could not read the booking's lines, so nothing was assigned: ${error.message}`)
-
-  const rows = (data ?? []) as unknown as Array<{
+  const rows = await readCompleteAvailability<{
     id: string
     product_id: string | null
     qty: number
     line_type: string
     description: string | null
-  }>
+  }>((from, to) => supabase
+    .from('booking_lines')
+    .select('id, product_id, qty, line_type, description')
+    .eq('booking_id', bookingId)
+    .is('voided_at', null)
+    .order('id', { ascending: true })
+    .range(from, to), "booking's lines")
 
   const modes = await readProductModes(
     rows.map((row) => row.product_id).filter((id): id is string => id !== null),
@@ -386,26 +383,48 @@ async function readLines(bookingId: string): Promise<{
  * is money, but reading the base table would still break the moment that
  * migration lands — see PLAN.md §4.28.
  */
+/** Never certify availability from a truncated PostgREST result. A short page
+ * can be a server-side cap, so continue until an explicitly empty page. */
+async function readCompleteAvailability<Row extends { id: string }>(
+  page: (from: number, to: number) => PromiseLike<{ data: unknown; error: { message: string } | null }>,
+  label: string,
+): Promise<Row[]> {
+  const rows: Row[] = []
+  const seen = new Set<string>()
+  for (;;) {
+    const { data, error } = await page(rows.length, rows.length + 499)
+    if (error) throw new Error(`Could not read ${label}, so availability could not be checked: ${error.message}`)
+    if (!Array.isArray(data)) throw new Error(`The ${label} dataset is missing; availability is incomplete.`)
+    if (data.length === 0) return rows
+    for (const value of data as Row[]) {
+      if (!value || typeof value.id !== 'string' || !value.id || seen.has(value.id)) {
+        throw new Error(`The ${label} result is incomplete or contains duplicate rows; availability could not be checked.`)
+      }
+      seen.add(value.id)
+      rows.push(value)
+    }
+    if (rows.length > 50_000) throw new Error(`The ${label} result exceeds the read limit; availability is incomplete.`)
+  }
+}
+
 export async function readCandidates(productIds: readonly string[]): Promise<Map<string, UnitCandidate[]>> {
   const byProduct = new Map<string, UnitCandidate[]>()
   if (productIds.length === 0) return byProduct
 
-  const { data, error } = await supabase
-    .from('product_units_v')
-    .select('id, asset_tag, serial_no, product_id, status, retired_at')
-    .in('product_id', [...new Set(productIds)])
-    .order('asset_tag', { ascending: true })
-
-  if (error) throw new Error(`Could not read the equipment units, so nothing was assigned: ${error.message}`)
-
-  const units = (data ?? []) as unknown as Array<{
+  const units = await readCompleteAvailability<{
     id: string
     asset_tag: string
     serial_no: string | null
     product_id: string
     status: string
     retired_at: string | null
-  }>
+  }>((from, to) => supabase
+    .from('product_units_v')
+    .select('id, asset_tag, serial_no, product_id, status, retired_at')
+    .in('product_id', [...new Set(productIds)])
+    .order('asset_tag', { ascending: true })
+    .order('id', { ascending: true })
+    .range(from, to), 'equipment units')
 
   const cleaning = await readOpenCleaning(units.map((u) => u.id))
 
@@ -444,24 +463,21 @@ async function readOpenCleaning(unitIds: readonly string[]): Promise<Map<string,
   const out = new Map<string, OpenCleaning>()
   if (unitIds.length === 0) return out
 
-  const { data, error } = await supabase
-    .from('cleaning_queue_entries')
-    .select('unit_id, requires_clean, bookings ( booking_no )')
-    .in('unit_id', [...new Set(unitIds)])
-    .eq('requires_reset', true)
-    .is('reset_completed_at', null)
-
-  if (error) {
-    throw new Error(
-      `Could not read the reset queue, so no unit could be shown as free or busy: ${error.message}`,
-    )
-  }
-
-  for (const row of (data ?? []) as unknown as Array<{
+  const entries = await readCompleteAvailability<{
+    id: string
     unit_id: string
     requires_clean: boolean | null
     bookings: { booking_no: string } | { booking_no: string }[] | null
-  }>) {
+  }>((from, to) => supabase
+    .from('cleaning_queue_entries')
+    .select('id, unit_id, requires_clean, bookings ( booking_no )')
+    .in('unit_id', [...new Set(unitIds)])
+    .eq('requires_reset', true)
+    .is('reset_completed_at', null)
+    .order('id', { ascending: true })
+    .range(from, to), 'reset queue')
+
+  for (const row of entries) {
     const b = Array.isArray(row.bookings) ? row.bookings[0] : row.bookings
     /* One open entry per unit is the shape the queue is meant to hold; if a
        second ever exists, the first read wins and the unit is excluded either
@@ -485,31 +501,32 @@ async function readOpenCleaning(unitIds: readonly string[]): Promise<Map<string,
  * matching the constraint's `asset_id is not null`.
  */
 export async function readHolds(bookingIdToExclude: string | null): Promise<UnitHold[]> {
-  let query = supabase
-    .from('inventory_reservations')
-    .select('asset_id, booking_id, period, bookings ( booking_no )')
-    .is('released_at', null)
-    .not('asset_id', 'is', null)
+  const rows = await readCompleteAvailability<{
+    id: string
+    asset_id: string | null
+    booking_id: string
+    period: string
+    bookings: { booking_no: string } | null
+  }>((from, to) => {
+    let query = supabase
+      .from('inventory_reservations')
+      .select('id, asset_id, booking_id, period, bookings ( booking_no )')
+      .is('released_at', null)
+      .not('asset_id', 'is', null)
 
   /* `null` means "there is no booking of ours to leave out" — the tentative
      plan for a booking that has no row yet. Sending a placeholder uuid to
      `neq` instead would work today and read as a filter nobody can explain
      later; the absence of the filter IS the honest expression of the case. */
-  if (bookingIdToExclude !== null) query = query.neq('booking_id', bookingIdToExclude)
+    if (bookingIdToExclude !== null) query = query.neq('booking_id', bookingIdToExclude)
 
-  const { data, error } = await query
-
-  if (error) throw new Error(`Could not read existing reservations, so nothing was assigned: ${error.message}`)
+    return query.order('id', { ascending: true }).range(from, to)
+  }, 'existing reservations')
 
   const holds: UnitHold[] = []
-  for (const row of (data ?? []) as unknown as Array<{
-    asset_id: string | null
-    booking_id: string
-    period: string
-    bookings: { booking_no: string } | null
-  }>) {
+  for (const row of rows) {
     const window = parseTstzRange(row.period)
-    if (row.asset_id === null || window === null) continue
+    if (row.asset_id === null || window === null) throw new Error('A reservation has an unreadable unit or period; availability could not be checked.')
     holds.push({
       unitId: row.asset_id,
       bookingId: row.booking_id,
@@ -544,30 +561,31 @@ export async function readQuantityHolds(
   const ids = [...new Set(productIds)]
   if (ids.length === 0) return byProduct
 
-  let query = supabase
-    .from('inventory_reservations')
-    .select('product_id, qty, booking_id, period, bookings ( booking_no )')
-    .is('released_at', null)
-    .not('product_id', 'is', null)
-    .in('product_id', ids)
-
-  /* `null` means "there is no booking of ours to leave out" — the same tentative
-     case `readHolds` documents. */
-  if (bookingIdToExclude !== null) query = query.neq('booking_id', bookingIdToExclude)
-
-  const { data, error } = await query
-
-  if (error) throw new Error(`Could not read existing stock holds, so nothing was assigned: ${error.message}`)
-
-  for (const row of (data ?? []) as unknown as Array<{
+  const rows = await readCompleteAvailability<{
+    id: string
     product_id: string | null
     qty: number | null
     booking_id: string
     period: string
     bookings: { booking_no: string } | { booking_no: string }[] | null
-  }>) {
+  }>((from, to) => {
+    let query = supabase
+      .from('inventory_reservations')
+      .select('id, product_id, qty, booking_id, period, bookings ( booking_no )')
+      .is('released_at', null)
+      .not('product_id', 'is', null)
+      .in('product_id', ids)
+
+  /* `null` means "there is no booking of ours to leave out" — the same tentative
+     case `readHolds` documents. */
+    if (bookingIdToExclude !== null) query = query.neq('booking_id', bookingIdToExclude)
+
+    return query.order('id', { ascending: true }).range(from, to)
+  }, 'existing stock holds')
+
+  for (const row of rows) {
     const window = parseTstzRange(row.period)
-    if (row.product_id === null || window === null) continue
+    if (row.product_id === null || window === null) throw new Error('A stock hold has an unreadable product or period; availability could not be checked.')
     const booking = Array.isArray(row.bookings) ? row.bookings[0] : row.bookings
     const list = byProduct.get(row.product_id) ?? []
     list.push({
@@ -592,11 +610,9 @@ export async function readQuantityHolds(
  * uses a space rather than `T` and `+00` rather than `Z`, neither of which
  * `Date.parse` accepts reliably across engines, so both are normalised here.
  *
- * An unbounded or unparseable range returns `null` and the caller drops the
- * hold. That is the **unsafe direction** — a dropped hold is a unit that looks
- * free — so it is deliberately narrow: the app is the only writer of this
- * column and always writes both ends. The GiST constraint remains the actual
- * defence, and it sees the real range whatever this function makes of the text.
+ * An unbounded or unparseable range returns `null`; availability readers refuse
+ * that result rather than showing the held stock as free. GiST remains the
+ * authoritative protection when the booking is committed.
  */
 export function parseTstzRange(text: string): RentalWindow | null {
   const match = /^[[(]"?([^",]+)"?,"?([^",)\]]+)"?[)\]]$/.exec(text.trim())
@@ -1057,34 +1073,41 @@ export interface HeldForBooking {
  *
  * Never throws. A booking that is confirmed is confirmed; failing the whole
  * action because the read-back of a display figure hiccuped would turn a
- * successful confirm into a reported failure, which is the worse error. The
- * zeroes are visible in the result and in the event either way.
+ * successful confirm into a reported failure. `null` means the counts could
+ * not be verified; zero is reserved for a complete read that found no holds.
  */
-export async function readHeldForBooking(bookingId: string): Promise<HeldForBooking> {
-  const { data, error } = await supabase
-    .from('inventory_reservations')
-    .select('asset_id, product_id, qty')
-    .eq('booking_id', bookingId)
-    .is('released_at', null)
+export async function readHeldForBooking(bookingId: string): Promise<HeldForBooking | null> {
+  try {
+    const rows = await readCompleteAvailability<{
+      id: string
+      asset_id: string | null
+      product_id: string | null
+      qty: number
+    }>((from, to) => supabase
+      .from('inventory_reservations')
+      .select('id, asset_id, product_id, qty')
+      .eq('booking_id', bookingId)
+      .is('released_at', null)
+      .order('id', { ascending: true })
+      .range(from, to), 'confirmed reservations')
 
-  if (error) return { units: 0, quantityHolds: 0, quantityReserved: 0 }
-
-  let units = 0
-  let quantityHolds = 0
-  let quantityReserved = 0
-  for (const row of (data ?? []) as unknown as Array<{
-    asset_id: string | null
-    product_id: string | null
-    qty: number
-  }>) {
-    if (row.asset_id !== null) {
-      units += 1
-      continue
+    let units = 0
+    let quantityHolds = 0
+    let quantityReserved = 0
+    for (const row of rows) {
+      if (typeof row.asset_id === 'string' && row.product_id === null) {
+        units += 1
+      } else if (row.asset_id === null && typeof row.product_id === 'string' && Number.isSafeInteger(row.qty) && row.qty > 0) {
+        quantityHolds += 1
+        quantityReserved += row.qty
+        if (!Number.isSafeInteger(quantityReserved)) return null
+      } else {
+        return null
+      }
     }
-    if (row.product_id !== null) {
-      quantityHolds += 1
-      quantityReserved += row.qty
-    }
+    return { units, quantityHolds, quantityReserved }
+  } catch {
+    // The stage has already committed. Failed display reads cannot undo it.
+    return null
   }
-  return { units, quantityHolds, quantityReserved }
 }

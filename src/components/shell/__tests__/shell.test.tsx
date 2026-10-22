@@ -72,13 +72,15 @@ afterEach(async () => {
   container.remove()
 })
 
-describe('Page summaries — always visible', () => {
-  it.each<Viewport>(['desktop', 'tablet', 'phone'])('ignores a stored collapse preference on %s', async (size) => {
+describe('Page summaries — mirrored information drawer', () => {
+  it.each<Viewport>(['desktop', 'tablet', 'phone'])('opens from a labelled toggle on %s', async (size) => {
     viewport = size
-    collapsedPref = true
     await mount(<Rail><p>Booking Summary</p></Rail>)
-    expect(container.querySelector('aside')?.textContent).toContain('Booking Summary')
-    expect(container.querySelector('button')).toBeNull()
+    const toggle = container.querySelector<HTMLButtonElement>('[aria-label="Quick information"]')!
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    await act(async () => toggle.click())
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
+    expect(container.querySelector('[role="dialog"]')?.textContent).toContain('Booking Summary')
   })
 })
 

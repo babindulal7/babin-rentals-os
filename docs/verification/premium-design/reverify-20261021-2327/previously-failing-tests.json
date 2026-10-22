@@ -1,0 +1,20 @@
+{
+  "sourceHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+  "cases": [
+    {
+      "name": "Tier 1: Feature Coverage (Happy Path & Isolations) R6: Core Directories Inventory Equipment directory renders catalogue table and filters",
+      "earlierStatus": "failed",
+      "laterStatus": "passed"
+    },
+    {
+      "name": "BD-08 — a client record that could not be read is not a client with no phone never tells the operator to add a number that may already be on file",
+      "earlierStatus": "failed",
+      "laterStatus": "passed"
+    },
+    {
+      "name": "BD-08 — a client record that could not be read is not a client with no phone keeps the real no-phone reason for a client who genuinely has none",
+      "earlierStatus": "failed",
+      "laterStatus": "passed"
+    }
+  ]
+}

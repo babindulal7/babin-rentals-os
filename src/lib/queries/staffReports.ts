@@ -1,6 +1,6 @@
 import { supabase } from '../supabase'
 import { rupees, type Paisa } from '../money'
-import { linesValue, readLineValues, rowsOf, type ReportFilterOptions } from './reportSupport'
+import { completeReportRead, linesValue, readLineValues, rowsOf, type ReportFilterOptions } from './reportSupport'
 
 /**
  * Staff Performance — per person, from the rows they are recorded against.
@@ -46,10 +46,10 @@ export async function getStaffReportsSummary(options?: ReportFilterOptions): Pro
   let bookingsQ = supabase.from('bookings').select('id, created_by').is('cancelled_at', null)
   let paymentsQ = supabase
     .from('payments')
-    .select('received_by, amount')
+    .select('id, received_by, amount')
     .eq('status', 'Received')
     .eq('payment_type', 'Advance Payment')
-  let sessionsQ = supabase.from('operation_sessions').select('completed_by').eq('state', 'Completed')
+  let sessionsQ = supabase.from('operation_sessions').select('id, completed_by').eq('state', 'Completed')
   if (options?.from) {
     bookingsQ = bookingsQ.gte('created_at', options.from)
     paymentsQ = paymentsQ.gte('payment_date', options.from)
@@ -66,10 +66,10 @@ export async function getStaffReportsSummary(options?: ReportFilterOptions): Pro
   }
 
   const [usersRes, bookingsRes, paymentsRes, sessionsRes, lineMap] = await Promise.all([
-    supabase.from('users').select('id, full_name, primary_role'),
-    bookingsQ,
-    paymentsQ,
-    sessionsQ,
+    completeReportRead(supabase.from('users').select('id, full_name, primary_role'), 'Staff read failed'),
+    completeReportRead(bookingsQ, 'Bookings read failed'),
+    completeReportRead(paymentsQ, 'Payments read failed'),
+    completeReportRead(sessionsQ, 'Sessions read failed'),
     readLineValues(),
   ])
   // `users` is RLS-scoped (0120): a role that sees fewer staff gets '—' names, not a failure.

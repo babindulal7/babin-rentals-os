@@ -7,6 +7,11 @@ import InternalNotesDrawer from '../InternalNotesDrawer'
 
 ;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
 
+vi.mock('../../../lib/supabase', () => ({
+  IS_MOCK: true,
+  supabase: {},
+}))
+
 vi.mock('../../../lib/auth', () => ({
   useAuth: () => ({ user: { id: 'usr-1', name: 'Babin Dulal', role: 'Operations Lead' } }),
 }))
@@ -45,13 +50,14 @@ describe('InternalNotesDrawer', () => {
     document.body.innerHTML = ''
   })
 
-  it('renders nothing when isOpen is false', () => {
+  it('keeps its draft mounted but hidden when isOpen is false', () => {
     const container = render(
       <MemoryRouter>
         <InternalNotesDrawer isOpen={false} onClose={vi.fn()} />
       </MemoryRouter>,
     )
-    expect(container.textContent).toBe('')
+    expect(container.querySelector('[role="dialog"]')).toBeNull()
+    expect(container.querySelector('[hidden]')).not.toBeNull()
   })
 
   it('renders the drawer dialog, header, and notes feed when isOpen is true', () => {
@@ -61,7 +67,7 @@ describe('InternalNotesDrawer', () => {
       </MemoryRouter>,
     )
     expect(container.textContent).toContain('Team Internal Notes')
-    expect(container.textContent).toContain('Full Page')
+    expect(container.textContent).toContain('Open Team Notes page')
     expect(container.textContent).toContain('Shift Handover')
   })
 
@@ -73,7 +79,7 @@ describe('InternalNotesDrawer', () => {
       </MemoryRouter>,
     )
 
-    const closeBtn = container.querySelector('button[aria-label="Close drawer"]') as HTMLButtonElement
+    const closeBtn = container.querySelector('button[aria-label="Close team internal notes"]') as HTMLButtonElement
     expect(closeBtn).toBeDefined()
     act(() => {
       closeBtn.click()

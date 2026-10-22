@@ -212,7 +212,7 @@ export function BarcodeLookupModal({ isOpen, onClose }: BarcodeLookupModalProps)
             style={{
               width: '100%',
               minHeight: 'var(--tap)',
-              padding: '0 44px 0 14px',
+              padding: '0 52px 0 14px',
               borderRadius: 'var(--r-input)',
               border: '1px solid var(--input-border)',
               background: 'var(--input-bg)',
@@ -230,8 +230,10 @@ export function BarcodeLookupModal({ isOpen, onClose }: BarcodeLookupModalProps)
               right: 4,
               top: '50%',
               transform: 'translateY(-50%)',
-              width: 36,
-              height: 36,
+              width: 44,
+              height: 44,
+              minWidth: 44,
+              minHeight: 44,
               display: 'grid',
               placeItems: 'center',
               borderRadius: 'var(--r-btn)',
@@ -242,7 +244,7 @@ export function BarcodeLookupModal({ isOpen, onClose }: BarcodeLookupModalProps)
               opacity: searching || !query.trim() ? 0.6 : 1,
             }}
           >
-            <Icon name="search" size={15} />
+            <Icon name="search" size={16} />
           </button>
         </div>
 
@@ -271,6 +273,7 @@ export function BarcodeLookupModal({ isOpen, onClose }: BarcodeLookupModalProps)
                   display: 'flex',
                   alignItems: 'center',
                   gap: 12,
+                  minHeight: 48,
                   padding: '10px 12px',
                   borderRadius: 'var(--r-sm)',
                   border: '1px solid var(--border)',

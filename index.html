@@ -189,6 +189,22 @@
       })()
     </script>
     <!--
+      Display density: 'compact' (default for desktop/tablet) or 'comfortable' (phone).
+      Applied before first paint to prevent layout reflow.
+    -->
+    <script>
+      (function () {
+        var d = null
+        try {
+          d = localStorage.getItem('br-display-density')
+        } catch (e) {}
+        if (!d) {
+          d = window.innerWidth <= 768 ? 'comfortable' : 'compact'
+        }
+        document.documentElement.setAttribute('data-density', d)
+      })()
+    </script>
+    <!--
       DESIGN_DIRECTION_SPEC_v4.1 §7.7 — the viewport band, before first paint.
 
       Same reasoning as the two scripts above: without this the first frame is

@@ -997,24 +997,34 @@ export default function StockCheck({ embedded = false }: { embedded?: boolean } 
           FAB exists at every width in the shell; this is the screen's own
           in-context entry to the same modal. */}
       {phone && selected && (
-        <div
-          style={{
-            position: 'fixed',
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 5,
-            padding: 'var(--sp-sm) var(--sp-md)',
-            background: 'var(--card)',
-            borderTop: '1px solid var(--border)',
-            display: 'flex',
-            justifyContent: 'center',
-          }}
-        >
-          <Button variant="primary" size="md" icon={<Icon name="camera" size={16} />} onClick={() => setShowScannerModal(true)}>
-            Scan to verify
-          </Button>
-        </div>
+        <>
+          <div style={{ height: 68 }} aria-hidden />
+          <div
+            style={{
+              position: 'fixed',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 5,
+              padding: '10px var(--sp-md) calc(10px + env(safe-area-inset-bottom, 0px))',
+              background: 'var(--card)',
+              borderTop: '1px solid var(--border)',
+              boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.05)',
+              display: 'flex',
+              justifyContent: 'center',
+            }}
+          >
+            <Button
+              variant="primary"
+              size="md"
+              icon={<Icon name="camera" size={16} />}
+              onClick={() => setShowScannerModal(true)}
+              style={{ width: '100%', minHeight: 48, justifyContent: 'center' }}
+            >
+              Scan to verify
+            </Button>
+          </div>
+        </>
       )}
 
       <BarcodeScannerModal

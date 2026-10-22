@@ -1,4 +1,3 @@
-import { supabase } from '../supabase'
 import {
   INVENTORY_CATEGORIES,
   BOX_CATEGORIES,
@@ -92,19 +91,10 @@ export type {
   DuplicateResult,
 }
 
+/**
+ * Active bundle templates query placeholder.
+ * Stored bundles do not yet hold template presets, so this returns empty [].
+ */
 export async function listActiveBundleTemplates(): Promise<typeof TEMPLATE_BUNDLES> {
-  try {
-    const { data, error } = await supabase
-      .from('bundles_v')
-      .select('id, name, bundle_code, daily_rate, is_active')
-      .eq('is_active', true)
-
-    if (error || !data || data.length === 0) {
-      return []
-    }
-
-    return []
-  } catch {
-    return []
-  }
+  return []
 }

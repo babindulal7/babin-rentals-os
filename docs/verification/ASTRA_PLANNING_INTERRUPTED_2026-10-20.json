@@ -1,0 +1,31 @@
+{
+  "startedAt": "2026-10-20T16:49:25.162Z",
+  "sourceHash": "debd1a4ac0bec844b2c35c14201687547a04969f4b56a54146bffaebf476ca95",
+  "scope": "Local only; no hosted access or business-data writes",
+  "gates": [
+    {
+      "name": "typecheck",
+      "exitCode": 0,
+      "sourceHashBefore": "debd1a4ac0bec844b2c35c14201687547a04969f4b56a54146bffaebf476ca95",
+      "sourceHashAfter": "debd1a4ac0bec844b2c35c14201687547a04969f4b56a54146bffaebf476ca95",
+      "sourceStable": true,
+      "at": "2026-10-20T16:50:34.046Z",
+      "outputTail": ""
+    },
+    {
+      "name": "lint",
+      "exitCode": 0,
+      "sourceHashBefore": "debd1a4ac0bec844b2c35c14201687547a04969f4b56a54146bffaebf476ca95",
+      "sourceHashAfter": "debd1a4ac0bec844b2c35c14201687547a04969f4b56a54146bffaebf476ca95",
+      "sourceStable": true,
+      "at": "2026-10-20T16:51:29.939Z",
+      "outputTail": ""
+    }
+  ],
+  "interrupted": {
+    "at": "2026-10-20T16:58:03.2713687Z",
+    "reason": "Unrelated Finance/handover/return source edits arrived while full tests were running",
+    "fullTestRunCompleted": false,
+    "noFullPassClaimed": true
+  }
+}

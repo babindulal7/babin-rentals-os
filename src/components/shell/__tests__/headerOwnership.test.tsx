@@ -233,7 +233,7 @@ describe('page ownership of the application header', () => {
   it('places notes in the phone profile and returns focus on Escape', async () => {
     state.viewport = 'phone'
     await renderPage('plain')
-    const profile = container.querySelector<HTMLButtonElement>('[title="User profile"]')!
+    const profile = container.querySelector<HTMLButtonElement>('button[aria-label*="user profile"]')!
     await act(async () => profile.click())
     const dialog = container.querySelector('[role="dialog"][aria-label="User profile"]')!
     expect(dialog.textContent).toContain('Team internal notes')

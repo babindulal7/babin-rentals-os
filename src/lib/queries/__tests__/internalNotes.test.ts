@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   listInternalNotes,
   saveInternalNotes,
@@ -17,6 +17,11 @@ import {
   INTERNAL_NOTES_SEED,
   type InternalNote,
 } from '../internalNotes'
+
+vi.mock('../../supabase', () => ({
+  IS_MOCK: true,
+  supabase: {},
+}))
 
 describe('internalNotes query engine', () => {
   beforeEach(() => {

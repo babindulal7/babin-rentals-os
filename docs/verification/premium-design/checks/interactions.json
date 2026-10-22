@@ -1,0 +1,337 @@
+{
+  "generatedAt": "2026-10-21T04:11:07.675Z",
+  "environment": "isolated local mock; remote requests blocked",
+  "limitations": [
+    "Technician and Driver have no built-in mock sign-in; covered by role/unit/RLS tests, not impersonated here.",
+    "125% matrix uses viewport/device scale emulation, not browser chrome zoom."
+  ],
+  "results": [
+    {
+      "name": "Add equipment 375: one hosted Create",
+      "pass": true
+    },
+    {
+      "name": "Add equipment 375: seven anchors",
+      "pass": true
+    },
+    {
+      "name": "Add equipment 375: Cancel and alternate create in More",
+      "pass": true
+    },
+    {
+      "name": "Add equipment 375: Escape restores focus",
+      "pass": true
+    },
+    {
+      "name": "Add equipment 375: on-demand summary opens",
+      "pass": true
+    },
+    {
+      "name": "Add equipment 375: drawer closes",
+      "pass": true
+    },
+    {
+      "name": "Add equipment 375: invalid Create shows inline errors",
+      "pass": true
+    },
+    {
+      "name": "Add equipment 375: unit controls at least 44px",
+      "pass": true,
+      "details": [
+        {
+          "label": "record-unit-0-serial_no",
+          "height": 44,
+          "width": 38.34375
+        },
+        {
+          "label": "record-unit-0-condition",
+          "height": 44,
+          "width": 105.6875
+        },
+        {
+          "label": null,
+          "height": 44,
+          "width": 122.3125
+        },
+        {
+          "label": "Remove unit",
+          "height": 44,
+          "width": 44
+        }
+      ]
+    },
+    {
+      "name": "Add equipment 375: status is read-only with words",
+      "pass": true
+    },
+    {
+      "name": "Add equipment 820: one hosted Create",
+      "pass": true
+    },
+    {
+      "name": "Add equipment 820: seven anchors",
+      "pass": true
+    },
+    {
+      "name": "Add equipment 820: Cancel and alternate create in More",
+      "pass": true
+    },
+    {
+      "name": "Add equipment 820: Escape restores focus",
+      "pass": true
+    },
+    {
+      "name": "Add equipment 820: on-demand summary opens",
+      "pass": true
+    },
+    {
+      "name": "Add equipment 820: drawer closes",
+      "pass": true
+    },
+    {
+      "name": "Add equipment 820: invalid Create shows inline errors",
+      "pass": true
+    },
+    {
+      "name": "Add equipment 820: unit controls at least 44px",
+      "pass": true,
+      "details": [
+        {
+          "label": "record-unit-0-serial_no",
+          "height": 44,
+          "width": 38.34375
+        },
+        {
+          "label": "record-unit-0-condition",
+          "height": 44,
+          "width": 105.6875
+        },
+        {
+          "label": null,
+          "height": 44,
+          "width": 122.3125
+        },
+        {
+          "label": "Remove unit",
+          "height": 44,
+          "width": 44
+        }
+      ]
+    },
+    {
+      "name": "Add equipment 820: status is read-only with words",
+      "pass": true
+    },
+    {
+      "name": "Add equipment 1440: one hosted Create",
+      "pass": true
+    },
+    {
+      "name": "Add equipment 1440: seven anchors",
+      "pass": true
+    },
+    {
+      "name": "Add equipment 1440: Cancel and alternate create in More",
+      "pass": true
+    },
+    {
+      "name": "Add equipment 1440: Escape restores focus",
+      "pass": true
+    },
+    {
+      "name": "Add equipment 1440: on-demand summary opens",
+      "pass": true
+    },
+    {
+      "name": "Add equipment 1440: drawer closes",
+      "pass": true
+    },
+    {
+      "name": "Add equipment 1440: invalid Create shows inline errors",
+      "pass": true
+    },
+    {
+      "name": "Add equipment 1440: unit controls at least 44px",
+      "pass": true,
+      "details": [
+        {
+          "label": "record-unit-0-serial_no",
+          "height": 44,
+          "width": 360
+        },
+        {
+          "label": "record-unit-0-condition",
+          "height": 44,
+          "width": 124
+        },
+        {
+          "label": null,
+          "height": 44,
+          "width": 144
+        },
+        {
+          "label": "Remove unit",
+          "height": 44,
+          "width": 44
+        }
+      ]
+    },
+    {
+      "name": "Add equipment 1440: status is read-only with words",
+      "pass": true
+    },
+    {
+      "name": "Edit equipment: prefilled, clean Save disabled, no stock mutation controls",
+      "pass": true,
+      "details": {
+        "name": "Aputure Amaran 200x",
+        "saveDisabled": true,
+        "sections": 7,
+        "units": 6,
+        "unitMutationButtons": 0
+      }
+    },
+    {
+      "name": "Finance 375: single payment action and no clipped header",
+      "pass": true,
+      "details": {
+        "paymentButtons": 1,
+        "headerHeight": 64,
+        "offscreen": []
+      }
+    },
+    {
+      "name": "Finance 375: Payment opens its real modal",
+      "pass": true
+    },
+    {
+      "name": "Finance 820: single payment action and no clipped header",
+      "pass": true,
+      "details": {
+        "paymentButtons": 1,
+        "headerHeight": 64,
+        "offscreen": []
+      }
+    },
+    {
+      "name": "Finance 820: Payment opens its real modal",
+      "pass": true
+    },
+    {
+      "name": "Finance 1440: single payment action and no clipped header",
+      "pass": true,
+      "details": {
+        "paymentButtons": 1,
+        "headerHeight": 64,
+        "offscreen": []
+      }
+    },
+    {
+      "name": "Finance 1440: Payment opens its real modal",
+      "pass": true
+    },
+    {
+      "name": "Inventory: filter drawer opens without changing search URL",
+      "pass": true
+    },
+    {
+      "name": "Keyboard: focus reaches a visible control",
+      "pass": true,
+      "details": {
+        "tag": "BUTTON",
+        "label": "BA — user profile · Mock mode",
+        "outline": "solid"
+      }
+    },
+    {
+      "name": "Tracking selector light: measured text contrast",
+      "pass": true,
+      "details": {
+        "foreground": "rgb(255, 255, 255)",
+        "background": "rgb(30, 41, 59)",
+        "ratio": 14.628718079350334
+      }
+    },
+    {
+      "name": "Tracking selector dark: measured text contrast",
+      "pass": true,
+      "details": {
+        "foreground": "rgb(255, 255, 255)",
+        "background": "rgb(59, 71, 92)",
+        "ratio": 9.367480933771848
+      }
+    },
+    {
+      "name": "Tracking selector high-contrast: measured text contrast",
+      "pass": true,
+      "details": {
+        "foreground": "rgb(0, 0, 0)",
+        "background": "rgb(250, 204, 21)",
+        "ratio": 13.712773555273134
+      }
+    },
+    {
+      "name": "Shared Card variants: CSS ownership, 10px radius, semantic status border",
+      "pass": true,
+      "details": [
+        {
+          "variant": "default",
+          "border": "1px",
+          "leftBorder": "1px",
+          "radius": "10px",
+          "shadow": "rgba(15, 23, 42, 0.08) 0px 1px 3px 0px, rgba(15, 23, 42, 0.04) 0px 1px 2px 0px",
+          "inlineBorder": ""
+        },
+        {
+          "variant": "bordered",
+          "border": "1px",
+          "leftBorder": "1px",
+          "radius": "10px",
+          "shadow": "rgba(15, 23, 42, 0.08) 0px 1px 3px 0px, rgba(15, 23, 42, 0.04) 0px 1px 2px 0px",
+          "inlineBorder": ""
+        },
+        {
+          "variant": "interactive",
+          "border": "1px",
+          "leftBorder": "1px",
+          "radius": "10px",
+          "shadow": "rgba(15, 23, 42, 0.08) 0px 1px 3px 0px, rgba(15, 23, 42, 0.04) 0px 1px 2px 0px",
+          "inlineBorder": ""
+        },
+        {
+          "variant": "status",
+          "border": "1px 1px 1px 3px",
+          "leftBorder": "3px",
+          "radius": "10px",
+          "shadow": "rgba(15, 23, 42, 0.08) 0px 1px 3px 0px, rgba(15, 23, 42, 0.04) 0px 1px 2px 0px",
+          "inlineBorder": ""
+        },
+        {
+          "variant": "disabled",
+          "border": "1px",
+          "leftBorder": "1px",
+          "radius": "10px",
+          "shadow": "none",
+          "inlineBorder": ""
+        }
+      ]
+    },
+    {
+      "name": "Warehouse: real mock role sign-in",
+      "pass": true
+    },
+    {
+      "name": "Warehouse equipment editor: no monetary controls or figures",
+      "pass": true,
+      "details": {
+        "sections": [],
+        "moneyControls": 0,
+        "moneyText": false
+      }
+    },
+    {
+      "name": "Warehouse direct Finance URL: no monetary figures or payment action",
+      "pass": true
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "finding": "WF-06: truncated availability and dropped unreadable holds",
+  "scope": "Mocked PostgREST capped reads only; no hosted access or business-data changes",
+  "files": [
+    "src/lib/queries/availability.ts",
+    "src/lib/queries/__tests__/availability.test.ts",
+    "src/lib/queries/__tests__/availabilityCompleteness.test.ts"
+  ],
+  "before": {
+    "failed": 11,
+    "total": 11
+  },
+  "after": {
+    "typecheckExitCode": 0,
+    "passed": 134,
+    "targetedLintExitCode": 0,
+    "total": 134,
+    "suites": 4
+  },
+  "limitations": [
+    "Preview reads are not a database snapshot; authoritative reservation transaction remains required",
+    "Actual authenticated API and device acceptance pending",
+    "Complete current-source run recorded in ASTRA_LOCAL_2026-10-20.json"
+  ],
+  "currentFullRun": {
+    "sourceHash": "ae78994762597f7fd9df832378ef184b77eed5f5a2cbf7402882c1bbc4adb0f8",
+    "testsPassed": 4931,
+    "testFiles": 387,
+    "allRequiredLocalChecksMatch": true,
+    "reference": "ASTRA_LOCAL_2026-10-20.json"
+  }
+}

@@ -9,8 +9,10 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import { Badge } from '../../components/ui/Badge'
+import { FilterDrawer } from '../../components/ui/FilterDrawer'
 import { Button } from '../../components/ui/Button'
 import { useAuth } from '../../lib/auth'
+import { IS_MOCK } from '../../lib/supabase'
 import { useOptionalToast } from '../../components/ui/Toast'
 import {
   listInternalNotes,
@@ -31,7 +33,20 @@ interface InternalNotesDrawerProps {
   initialReference?: string
 }
 
-export default function InternalNotesDrawer({ isOpen, onClose, initialReference }: InternalNotesDrawerProps) {
+export default function InternalNotesDrawer(props: InternalNotesDrawerProps) {
+  if (IS_MOCK) return <InternalNotesPreview {...props} />
+  return (
+    <FilterDrawer id="team-internal-notes" open={props.isOpen} onClose={props.onClose} side="right" width={360}
+      title="Team Internal Notes" keepMounted>
+      <div role="status" style={{ padding: 'var(--sp-md)' }}>
+        <h2>Shared team notes unavailable</h2>
+        <p>Team notes cannot be shared between staff yet. Existing entries on this device have been kept.</p>
+      </div>
+    </FilterDrawer>
+  )
+}
+
+function InternalNotesPreview({ isOpen, onClose, initialReference }: InternalNotesDrawerProps) {
   const { user } = useAuth()
   const toast = useOptionalToast()
   const navigate = useNavigate()
@@ -55,23 +70,13 @@ export default function InternalNotesDrawer({ isOpen, onClose, initialReference 
   useEffect(() => {
     if (isOpen) {
       reloadNotes()
-      if (initialReference && !draft.includes(initialReference)) {
-        setDraft(prev => prev ? `${initialReference} — ${prev}` : `${initialReference} — `)
+      if (initialReference) {
+        setDraft(prev => prev.includes(initialReference) ? prev : prev ? `${initialReference} — ${prev}` : `${initialReference} — `)
       }
-      setTimeout(() => textareaRef.current?.focus(), 150)
+      const timer = window.setTimeout(() => textareaRef.current?.focus(), 150)
+      return () => window.clearTimeout(timer)
     }
-  }, [isOpen, initialReference, draft])
-
-  // Close on Escape
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
+  }, [isOpen, initialReference])
 
   const detectedRef = useMemo(() => extractReferenceId(draft), [draft])
 
@@ -123,108 +128,10 @@ export default function InternalNotesDrawer({ isOpen, onClose, initialReference 
     })
   }, [notes, filterCategory])
 
-  if (!isOpen) return null
-
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 'var(--z-drawer)',
-        display: 'flex',
-        justifyContent: 'flex-end',
-        background: 'rgba(0, 0, 0, 0.45)',
-        backdropFilter: 'blur(3px)',
-        WebkitBackdropFilter: 'blur(3px)',
-      }}
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Team Internal Notes"
-        onClick={e => e.stopPropagation()}
-        style={{
-          width: '100%',
-          maxWidth: 440,
-          height: '100%',
-          background: 'var(--card)',
-          borderLeft: '1px solid var(--border)',
-          boxShadow: '-12px 0 40px rgba(0, 0, 0, 0.3)',
-          display: 'flex',
-          flexDirection: 'column',
-          animation: 'slideInRight 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-        }}
-      >
-        {/* Header */}
-        <div
-          style={{
-            padding: '16px 20px',
-            borderBottom: '1px solid var(--border)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: 'var(--surface-2)',
-          }}
-        >
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Icon name="checklist" size={18} style={{ color: 'var(--accent)' }} />
-              <h2 style={{ margin: 0, fontSize: 'var(--t-title)', fontWeight: 700 }}>
-                Team Internal Notes
-              </h2>
-            </div>
-            <div style={{ fontSize: 'var(--t-caption)', color: 'var(--muted)', marginTop: 2 }}>
-              Shift handover scratchpad & equipment advisories
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <button
-              type="button"
-              onClick={() => {
-                onClose()
-                navigate('/notes')
-              }}
-              title="Open dedicated Team Notes page"
-              style={{
-                border: '1px solid var(--border)',
-                background: 'var(--card)',
-                color: 'var(--accent)',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-                padding: '0 10px',
-                height: 32,
-                borderRadius: 'var(--r-btn)',
-                fontSize: '11px',
-                fontWeight: 700,
-              }}
-            >
-              <Icon name="external_link" size={13} />
-              Full Page
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close drawer"
-              style={{
-                border: 'none',
-                background: 'transparent',
-                color: 'var(--text2)',
-                cursor: 'pointer',
-                display: 'grid',
-                placeItems: 'center',
-                width: 36,
-                height: 36,
-                borderRadius: 'var(--r-btn)',
-              }}
-            >
-              <Icon name="x" size={18} />
-            </button>
-          </div>
-        </div>
-
+    <FilterDrawer id="team-internal-notes" open={isOpen} onClose={onClose} side="right" width={360}
+      title="Team Internal Notes" description="Shift handover scratchpad & equipment advisories" keepMounted>
+      <Button onClick={() => { onClose(); navigate('/notes') }}>Open Team Notes page</Button>
         {/* Note Composer */}
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'var(--card)' }}>
           <form onSubmit={handlePost} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -529,7 +436,6 @@ export default function InternalNotesDrawer({ isOpen, onClose, initialReference 
             })
           )}
         </div>
-      </div>
-    </div>
+    </FilterDrawer>
   )
 }

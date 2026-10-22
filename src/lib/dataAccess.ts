@@ -9,7 +9,8 @@
 
 import { supabase } from './supabase'
 import type { Database } from '../types/database'
-import { enqueueMutation } from './offlineQueue'
+import { ensureMutationQueued } from './offlineQueue'
+import { getOfflineSession, type OfflineIdentity } from './offlineIdentity'
 import { captureError } from './monitoring'
 import { IS_MOCK } from './supabase'
 
@@ -31,7 +32,7 @@ import { IS_MOCK } from './supabase'
  * enqueues the first and silently drops four. E-P1-2 records that a mutation
  * left in `'syncing'` when a tab closes is never selected by any drain again.
  *
- * Those findings are still open, and this guard does not fix them. It takes the
+ * The Phase 0 outbox regressions cover those failures separately. This guard takes the
  * queue **off the write path entirely** while the store is local, which is
  * cheaper and safer than fixing a mechanism nothing currently needs. When
  * Supabase becomes the writer again, `IS_MOCK` goes false, the queue comes back
@@ -40,6 +41,24 @@ import { IS_MOCK } from './supabase'
 function shouldQueueOffline(): boolean {
   if (IS_MOCK) return false
   return typeof navigator !== 'undefined' && !navigator.onLine
+}
+
+/** Bind a possible fallback before the request can outlive its operator. */
+async function captureQueueIdentity(queueAllowed: boolean): Promise<OfflineIdentity | null> {
+  if (IS_MOCK || !queueAllowed) return null
+  try {
+    const identity = await getOfflineSession()
+    return identity ? { actorId: identity.actorId, environment: identity.environment } : null
+  } catch {
+    // An online write can still be checked by RLS. An unverified submitting
+    // identity must never be replaced with a later login for offline saving.
+    return null
+  }
+}
+
+function requireQueueIdentity(identity: OfflineIdentity | null): OfflineIdentity {
+  if (!identity) throw new Error('OFFLINE_IDENTITY_REQUIRED: The submitting account could not be verified. Nothing was queued. Sign in and retry with the same action key.')
+  return identity
 }
 
 /** Generates standard UUIDv4 in browser/node */
@@ -60,6 +79,9 @@ export function generateClientUuid(): string {
  * errors on PostgREST read-back for floor/money-blind sessions.
  */
 export const NON_MONEY_RETURNING_COLUMNS: Readonly<Record<string, string>> = {
+  // Original-file and signature bearer URLs require the protected document RPC.
+  document_registry:
+    'id, client_uuid, document_no, document_type, booking_id, client_id, lifecycle_status, file_size_bytes, generated_by, signed_at, signed_by_name, voided_at, void_reason, created_at, created_by, updated_at, updated_by',
   bookings:
     'id, client_uuid, booking_no, branch_id, client_id, contact_id, authorized_contact_id, project, project_type, project_type_other, pickup_at, return_at, actual_return_at, delivery_type, pickup_location, return_location, quote_expires_at, cancelled_at, cancelled_by, cancellation_reason, closed_at, locked_by, locked_at, version, created_at, created_by, updated_at, updated_by, stage',
   booking_lines:
@@ -149,6 +171,7 @@ export async function idempotentInsert<
   payload: Omit<TInsert, 'client_uuid'> & { client_uuid?: string },
   options: InsertOptions = {}
 ) {
+  const queueIdentity = await captureQueueIdentity(options.queueOnFailure !== false)
   const returnRow = options.returnRow !== false
   const finalPayload = {
     ...payload,
@@ -166,7 +189,7 @@ export async function idempotentInsert<
       )
     }
     console.warn(`[DataAccess] Device offline. Queuing insert for ${String(table)}.`)
-    await enqueueMutation(String(table), 'insert', finalPayload, finalPayload.client_uuid)
+    await ensureMutationQueued(String(table), 'insert', finalPayload, finalPayload.client_uuid, requireQueueIdentity(queueIdentity))
     return { data: finalPayload, error: null, queued: true as const } // Queued, not written — `queued` says so (Phase 9)
   }
 
@@ -194,7 +217,7 @@ export async function idempotentInsert<
          )
        }
        console.warn(`[DataAccess] Network failure during insert. Queuing ${String(table)}.`)
-       await enqueueMutation(String(table), 'insert', finalPayload, finalPayload.client_uuid)
+       await ensureMutationQueued(String(table), 'insert', finalPayload, finalPayload.client_uuid, requireQueueIdentity(queueIdentity))
        return { data: finalPayload, error: null, queued: true as const }
     }
 
@@ -278,6 +301,8 @@ export async function safeUpdate<
     throw new Error(`[DataAccess] Mutation Law 4 Violation: ${String(table)} is immutable and cannot be updated.`)
   }
 
+  const queueIdentity = await captureQueueIdentity(options.queueOnFailure !== false)
+
   // Resolved ONCE per call, not once per queueing branch: both branches below must
   // enqueue under the caller's stable action key when it supplied one.
   const actionUuid = clientUuid ?? generateClientUuid()
@@ -296,7 +321,7 @@ export async function safeUpdate<
       )
     }
     console.warn(`[DataAccess] Device offline. Queuing update for ${String(table)} id=${id}.`)
-    await enqueueMutation(String(table), 'update', { ...payload, id }, `${actionUuid}:${id}`)
+    await ensureMutationQueued(String(table), 'update', { ...payload, id }, `${actionUuid}:${id}`, requireQueueIdentity(queueIdentity))
     return { data: { ...payload, id }, error: null, queued: true as const } // Queued, not written — `queued` says so (Phase 9)
   }
 
@@ -312,7 +337,7 @@ export async function safeUpdate<
            `[DataAccess] The ${String(table)} update could not be confirmed (${error.message}) and is not queueable. Treat it as NOT written.`,
          )
        }
-       await enqueueMutation(String(table), 'update', { ...payload, id }, `${actionUuid}:${id}`)
+       await ensureMutationQueued(String(table), 'update', { ...payload, id }, `${actionUuid}:${id}`, requireQueueIdentity(queueIdentity))
        return { data: { ...payload, id }, error: null, queued: true as const }
     }
 

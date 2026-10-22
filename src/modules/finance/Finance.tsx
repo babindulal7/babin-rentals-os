@@ -5,6 +5,7 @@ import Icon, { type IconName } from '../../components/ui/Icon'
 import { Card, PageHeader, PageActions, Button, Rail } from '../../components/ui/Page'
 import { ModuleSubHeader, ModuleKpiStrip, ModuleFilterBar, StatusPill } from '../../components/ui/module-shell'
 import { PageShell } from '../../components/ui/PageShell'
+import { openCommandPalette } from '../../components/shell/CommandPalette'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { FilterButton, FilterDrawer } from '../../components/ui/FilterDrawer'
 import { PageBody } from '../../components/ui/PageBody'
@@ -56,6 +57,8 @@ import DailyClosing from './DailyClosing'
 import { ReportCatalog } from '../reports/ReportCatalog'
 import { DateField } from '../../components/ui/DateField'
 import { exportInvoicePdf } from '../../lib/pdf/exportPdf'
+import { invoicePdfData } from '../../lib/pdf/invoicePdfData'
+import { fetchInvoiceCompany } from '../../lib/queries/invoiceCompany'
 import { Pagination } from '../../components/ui/Pagination'
 import './finance.css'
 import { BsAdDate } from '../../components/ui/BsAdDate'
@@ -944,46 +947,21 @@ export default function Finance() {
   }, [refreshAll])
 
   const handleExportPdf = useCallback(async (row: InvoiceListRow) => {
+    setNotPersisted(null)
     try {
-      const dbLines = await fetchInvoiceLines(row.id)
-      const lines =
-        dbLines.length > 0
-          ? dbLines.map((l) => ({
-              description: l.description,
-              quantity: l.quantity,
-              totalPaisa: rupees(l.lineTotal),
-            }))
-          : [
-              {
-                description: 'Equipment Rental & Production Services',
-                quantity: 1,
-                totalPaisa: row.totalAmount,
-              },
-            ]
-
+      const [dbLines, company] = await Promise.all([fetchInvoiceLines(row.id), fetchInvoiceCompany(row.bookingId)])
       await exportInvoicePdf(
-        {
-          invoiceNo: row.invoiceNo,
-          status: row.status,
-          issueDateAd: row.issueDateAd,
-          dueDateAd: row.dueDateAd,
-          bookingNo: row.bookingNo,
-          client: { name: row.clientName },
-          lines,
-          subtotalPaisa: row.totalAmount,
-          taxablePaisa: row.totalAmount,
-          vatPaisa: row.vatAmount,
-          totalPaisa: row.totalAmount,
-          paidPaisa: row.paidAmount,
-          outstandingPaisa: row.outstandingAmount,
-        },
+        invoicePdfData(row, dbLines, company),
         {
           invoiceId: row.id,
           download: true,
         },
       )
     } catch (err) {
-      console.error('Failed to export invoice PDF:', err)
+      setNotPersisted({
+        title: 'Invoice PDF was not exported',
+        message: err instanceof Error ? err.message : 'The invoice could not be exported. Please retry.',
+      })
     }
   }, [])
 
@@ -1186,6 +1164,7 @@ export default function Finance() {
         </Button>,
       ].filter(Boolean)}
       overflow={[
+        ...(phone ? [{ label: 'Search', icon: 'search' as const, onClick: openCommandPalette }] : []),
         ...(compactHeader ? [
           ...(canTakePayment && canIssueInvoice ? [{
             label: 'Create Invoice',
@@ -1350,6 +1329,8 @@ export default function Finance() {
         } : {})}
         icon="card"
         title="Finance"
+        // RULING 2026-10-21: keep Payment and information reachable at 375px.
+        searchInMore={phone && (tab === 'Dashboard' || tab === 'Invoices')}
         module={tab === 'Expenses' ? 'expenses' : 'payments'}
         {...(money && (tab === 'Dashboard' || tab === 'Invoices') ? { actions: headerActions } : phone && ((money && tab === 'Expenses') || tab === 'Documents') ? {
           // RULING 2026-10-14: hosted Finance filters use phone More, matching Invoices and Calendar.
@@ -1442,28 +1423,6 @@ export default function Finance() {
             counter={`${list.total ?? 0} invoices · ${outstanding.total ?? 0} outstanding · ${overdue.total ?? 0} overdue`}
             loadedAt={new Date()}
             loading={list.loading || outstanding.loading}
-            secondaryActions={[
-              { label: 'Export', icon: 'download', onClick: exportCsv },
-              ...(canTakePayment && canIssueInvoice
-                ? [{ label: 'Create Invoice', icon: 'plus' as const, onClick: () => setShowCreateInvoice(true) }]
-                : []),
-            ]}
-            primaryAction={
-              canTakePayment
-                ? {
-                    label: '+ Record Payment',
-                    onClick: () => {
-                      setSelectedInvoiceForRecord('')
-                      setShowRecordPayment(true)
-                    },
-                  }
-                : canIssueInvoice
-                  ? {
-                      label: '+ Create Invoice',
-                      onClick: () => setShowCreateInvoice(true),
-                    }
-                  : undefined
-            }
           />
 
           <ModuleKpiStrip
@@ -1812,6 +1771,13 @@ export default function Finance() {
                           <div
                             key={i.id}
                             className="finance-card-item"
+                            style={{
+                              borderLeft: i.isVoid
+                                ? '4px solid var(--muted)'
+                                : i.outstandingAmount > 0
+                                  ? '4px solid var(--st-warn-fg, #d97706)'
+                                  : '4px solid var(--st-success-fg, #15803d)',
+                            }}
                           >
                             <span style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
                               <IntelCard
@@ -1910,11 +1876,7 @@ export default function Finance() {
               pattern the ruling cites. `CollapsibleAside`'s defaults are NOT
               changed: other pages depend on them.
             */}
-            {viewport === 'desktop' ? (
-              <Rail>{railCards}</Rail>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0 }}>{railCards}</div>
-            )}
+            <Rail>{railCards}</Rail>
           </div>
         </div>
       </PageBody>
@@ -2027,7 +1989,7 @@ function RowActions({
   onVoid: () => void
   onExportPdf?: () => void
 }) {
-  const layout = phone ? { flex: '1 1 88px' } : undefined
+  const layout = phone ? { flex: '1 1 88px', minHeight: 44, justifyContent: 'center' } : undefined
 
   return (
     <>

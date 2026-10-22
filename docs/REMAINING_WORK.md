@@ -1,5 +1,33 @@
 # Babin Rentals OS — Comprehensive Remaining Work Register
 
+> **21 October 2026 — confirmation completeness continuation, release HOLD:** the saved `ASTRA_UI_STABLE_CHECKPOINT_2026-10-21.json` records 5,162 passing tests and all required local gates on fingerprint `f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b`. Subsequent local source edits are not certified by that checkpoint. Pre-commit confirmation now reads complete ordered booking-line pages and refuses incomplete/invalid results before any transition; nine new regressions failed against the prior source. Current checks: `docs/verification/ASTRA_CONFIRM_LINES_2026-10-21.json`. Earlier entries below are historical; hosted, physical-device and full offline acceptance remain open.
+
+> **ASTRA master repair continuation, 21 October 2026:** outbox, report completeness and modal/date/Today/Finance repairs are prepared with focused regressions. Full current-source gates are pending; earlier source receipts do not certify these newer edits. See root AUDIT_WORKTREE_PROGRESS.md and artifacts/astra-20261021-024418. Production launch remains HOLD; hosted and device acceptance remain open.
+
+> **21 October continuation:** the prior 4,948-test run passed commands but changed during verification; the newer single-shell/L1 merge is not certified by it. Post-confirmation counts now load complete pages and report unavailable summaries as unknown while retaining confirmed success. Seven new regressions failed before the fix; fresh gates are underway. See the newest progress entry and `docs/verification/ASTRA_LOCAL_2026-10-21.json`. Pre-commit confirmation-line counts, shared backend workflows, legacy recovery, tax/document/evidence and physical device/hosted acceptance remain open.
+
+> **Later booking-input batch:** booking-line and product metadata/fallback pagination is now corrected; 8 new regressions and 200 focused checks pass. The later completed run changed during verification; it does not certify the current source. The 4,931-test checkpoint below is historical for these edits, preserved in `docs/verification/ASTRA_AVAILABILITY_CHECKPOINT_2026-10-20.json`. Post-confirmation held-summary pagination/unknown counts are corrected; pre-commit confirmation-query completeness remains open, alongside shared workflows/device/hosted acceptance.
+
+> **Final local result, 20 October 2026:** **4,931 tests / 387 files PASS**, with lint, rebuild (168), financial/security (15 groups), lifecycle (31), contrast (82), final typecheck and production build all matching the same current-source fingerprint. Durable historical proof: `docs/verification/ASTRA_AVAILABILITY_CHECKPOINT_2026-10-20.json`. This supersedes “underway” statements in the earlier checkpoint note below. Migration 0170 is locally VERIFIED only. Shared workflows, legacy recovery, VAT/document/evidence acceptance, actual responsive devices and hosted JWT/Storage remain OPEN; no release approval or hosted application is implied.
+
+> **Earlier checkpoint history:** the financial checkpoint passed 4,879 tests on unchanged source; the later 4,899-test run changed during lint/tests. Both are retained for comparison and superseded by the final checkpoint above. Recovery branches and existing local work are preserved. Follow [`AUDIT_WORKTREE_PROGRESS.md`](../AUDIT_WORKTREE_PROGRESS.md) and the source-bound receipts in `docs/verification/`. No hosted database changes are authorized. The older baseline below is historical, not current certification.
+
+## ASTRA acceptance still required on current main
+
+| Finding | Current local work | Remaining acceptance |
+|---|---|---|
+| SEC-01 | Scoped immutable Storage policies, private buckets, fail-closed uploads, session-linked evidence helper; current local migration/security/lifecycle checks pass | Hosted JWT/Storage, legacy object mapping and floor evidence integration |
+| SEC-02–05 | Internal financial RPC restrictions, server-bound audit identity, Admin superior-target protection, assigned Driver trip access; 15 SQL groups and 31 lifecycle steps pass locally | Actual authenticated hosted API acceptance |
+| REL-01/02 | Account/project-scoped outbox, captured submission/replay identity, matching durable receipts and preserved legacy payloads; regressions, full suite and build pass | Device/browser offline acceptance and explicit legacy ownership recovery |
+| Driver custody | Offline queue fallback removed; failed confirmation retains form/retry key; focused/full regressions pass | Operational UI acceptance and actual photo/signature persistence workflow |
+| WF-01–08 | Stored totals, complete Sales/VAT registers, discounts and validated amounts pass recorded local checks. Availability candidates/holds/reset pagination and unreadable-period refusals pass 134 related tests and the full suite | VAT classification provenance (§15 OPEN_DECISIONS); remaining date/report/export/document and authenticated availability acceptance; review pre-commit confirmation line-count completeness; held-summary pagination/unknown counts are corrected |
+| UI-01–03 / Notes | Live prototype reads/writes now refuse before touching storage; unavailable states replace sample business records and actions. Existing local bytes preserved; 13 live-boundary regressions and 44 focused tests pass | Shared authoritative persistence, ownership recovery and role enforcement remain OPEN (§16 OPEN_DECISIONS); unavailable states are a mitigation, not completed shared features |
+| UI-04–06 | Newer shared drawers/header changes preserved under the 20 October ruling | Desktop Today footer, clean 820px Today layout and 360px booking-header/catalogue regressions pass; nested modal, phone Finance and broader physical-device acceptance remain |
+| QA-01/02 | Incomplete/historical receipts cannot certify source; Historical source-matched suite 4,931/4,931 and later receipt regressions are preserved; current full outcome is recorded above; coverage generated | Missing coverage areas and real browser/device acceptance; rerun after future source changes |
+| PERF-01 | Earlier checkpoint measured main 704.47 kB (gzip 199.61 kB), New Rental 278.83 kB, scanner vendor 453.49 kB; large-chunk warning remains | Measure real startup/device performance and optimize measured bottlenecks |
+
+Desktop, iPad and mobile browser verification remain pending. Local SQL verification does not mean a migration was APPLIED or PRODUCTION-VERIFIED.
+
 **Document Version:** 1.0.0  
 **Date:** 15 October 2026 (Asia/Kathmandu)  
 **Governing Authority:** [`docs/00_READ_FIRST.md`](00_READ_FIRST.md) · [`CLAUDE.md`](../CLAUDE.md) · [`AGENTS.md`](../AGENTS.md) · [`docs/PERMISSIONS.md`](PERMISSIONS.md)  

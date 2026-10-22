@@ -74,6 +74,9 @@ jobs:
       # database that accepted a double booking and refused every discounted
       # booking, because both failures live on the far side of the mock seam.
       # A red step blocks merge.
+      - name: Authenticated security regressions (isolated PGlite)
+        run: npm run check:security
+
       - name: Lifecycle
         run: npm run check:lifecycle
 
@@ -81,6 +84,9 @@ jobs:
       # Remaining is logged as unfinished, and this is what says so. One grep.
       - name: PROGRESS.md carries its Completion and Remaining blocks
         run: npm run lint:progress
+
+      - name: Completion receipts cannot certify stale or failed runs
+        run: node --test scripts/test-receipt.test.mjs
 
       # Item 5: Page shell design invariants (PageHeader, single primary CTA, 44px floor, no dev notes)
       - name: Page shell design invariants
@@ -135,6 +141,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage
-          path: coverage/
+          path: |
+            coverage/
+            artifacts/coverage-runs/
           retention-days: 7
           if-no-files-found: ignore

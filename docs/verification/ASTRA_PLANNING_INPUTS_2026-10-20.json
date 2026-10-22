@@ -1,0 +1,31 @@
+{
+  "finding": "WF-06 follow-up: incomplete booking-planning inputs",
+  "scope": "Capped mocked PostgREST reads only; no real business-data writes or hosted access",
+  "recoveryBranch": "codex/recovery-before-planning-reads-20261020",
+  "before": {
+    "priorCasesPassed": 11,
+    "failed": 8,
+    "newCases": 8
+  },
+  "after": {
+    "completenessCasesPassed": 19,
+    "preliminaryTypecheckExitCode": 0,
+    "suites": 5,
+    "confirmationCasesPassed": 58,
+    "focusedTestsPassed": 200
+  },
+  "files": [
+    "src/lib/queries/availability.ts",
+    "src/lib/queries/__tests__/availabilityCompleteness.test.ts"
+  ],
+  "references": [
+    "https://supabase.com/docs/reference/javascript/range",
+    "https://supabase.com/changelog.md"
+  ],
+  "status": "Focused checks passed; full source-bound run pending",
+  "limitations": [
+    "Authoritative reservation transaction still arbitrates concurrent edits",
+    "Post-confirmation display summary requires separate review",
+    "Hosted and responsive/device acceptance remain open"
+  ]
+}

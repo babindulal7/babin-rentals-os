@@ -1200,6 +1200,23 @@ interface CategoryOptionRow {
   code: string | null
 }
 
+/**
+ * The catalogue corpus a CSV import's dry-run checks duplicates against
+ * (BQ-407: "block commit on duplicate keys" — the preview needs the same
+ * identity set the commit re-checks). Names, brands and models only: no money,
+ * no PII, nothing a role gate needs to hide. The catalogue is a rental shop's
+ * price list, not a warehouse log, so one bounded read is both cheaper and
+ * more honest than a name-filtered probe per row.
+ */
+export async function listProductImportCorpus(): Promise<Array<{ id: string; name: string; brand: string; model: string | null }>> {
+  const { data, error } = await supabase
+    .from('products')
+    .select('id, name, brand, model')
+    .limit(5000)
+  if (error) throw new Error(`Could not read the catalogue for duplicate checking: ${error.message}`)
+  return (data ?? []) as unknown as Array<{ id: string; name: string; brand: string; model: string | null }>
+}
+
 export async function listInventoryCategories(): Promise<CategoryOption[]> {
   const { data, error } = await supabase
     .from('inventory_categories')

@@ -1,6 +1,6 @@
 import { supabase } from '../supabase'
 import type { Paisa } from '../money'
-import { lineValue, readLineValues, rowsOf, type ReportFilterOptions } from './reportSupport'
+import { completeReportRead, lineValue, readLineValues, rowsOf, type ReportFilterOptions } from './reportSupport'
 
 /**
  * Product Reports — catalogue, demand and stock, from the catalogue itself.
@@ -73,9 +73,9 @@ export async function getProductReportsSummary(options?: ReportFilterOptions): P
   if (options?.branchId) bookingsQ = bookingsQ.eq('branch_id', options.branchId)
 
   const [productsRes, categoriesRes, bookingsRes, lineMap] = await Promise.all([
-    supabase.from('products').select('id, name, category_id, is_active, total_quantity, reorder_level'),
-    supabase.from('inventory_categories').select('id, name'),
-    bookingsQ,
+    completeReportRead(supabase.from('products').select('id, name, category_id, is_active, total_quantity, reorder_level'), 'Products read failed'),
+    completeReportRead(supabase.from('inventory_categories').select('id, name'), 'Categories read failed'),
+    completeReportRead(bookingsQ, 'Bookings read failed'),
     readLineValues(),
   ])
   const products = rowsOf<ProductRow>(productsRes, 'Products read failed')

@@ -11,6 +11,7 @@ import type { RefObject } from 'react'
  * ancestor of their own.
  */
 export function shouldFlipUp(anchor: DOMRect, menuHeight: number, gap = 8): boolean {
+  if (typeof window === 'undefined') return false
   return anchor.bottom + menuHeight + gap > window.innerHeight && anchor.top - menuHeight - gap > 0
 }
 

@@ -398,12 +398,18 @@ export async function getAuditSettingsSummary() {
       .from('audit_events')
       .select('id', { count: 'exact', head: true })
 
-    return {
-      totalEvents: error || count == null ? 12846 : count,
+    if (error) {
+      console.error('getAuditSettingsSummary query error:', error)
+      return { totalEvents: 0 }
     }
-  } catch {
+
     return {
-      totalEvents: 12846,
+      totalEvents: count ?? 0,
+    }
+  } catch (err) {
+    console.error('getAuditSettingsSummary exception:', err)
+    return {
+      totalEvents: 0,
     }
   }
 }

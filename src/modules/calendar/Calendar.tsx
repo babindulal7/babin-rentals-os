@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
@@ -6,6 +6,7 @@ import type { IconName } from '../../components/ui/Icon'
 import { Select, SearchInput, EmptyState, TouchTarget, PageBody, CheckAvailabilityModal, Modal } from '../../components/ui'
 import { PageShell } from '../../components/ui/PageShell'
 import { Card, PageHeader, PageActions, Button, FooterNote, cardStyle, Rail } from '../../components/ui/Page'
+import { openCommandPalette } from '../../components/shell/CommandPalette'
 import { FilterButton, FilterDrawer } from '../../components/ui/FilterDrawer'
 import { listInventory } from '../../lib/queries/inventory'
 import './calendar.css'
@@ -1010,6 +1011,47 @@ function MonthGrid({
   const cellMin = desktop ? 92 : phone ? 56 : 72
   const maxDots = desktop ? 0 : phone ? 4 : 6
 
+  /*
+   * BQ-CAL-06 (Booqable adoption, "required whenever the calendar ships"):
+   * arrow-key day stepping. The cells are already real <button>s, so Tab and
+   * Enter work natively — what was missing is grid-style movement: arrows walk
+   * the month (±1 day horizontally, ±7 vertically), Home/End jump to the
+   * month's first/last day. A step past an edge stays put rather than
+   * skipping to an unrelated control. PageUp/PageDown (month paging) is
+   * deliberately not wired: the month nav buttons are already labelled and
+   * reachable, and MonthGrid does not own the anchor.
+   *
+   * Focus only moves; selection does not follow focus (Enter on the focused
+   * cell picks it, exactly as a click would — the scrape's "Enter opens the
+   * rental" via the day dialog the cell already opens).
+   */
+  const gridRef = useRef<HTMLDivElement | null>(null)
+  const onGridKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const cell = e.target instanceof Element ? e.target.closest('button[data-day-key]') : null
+    if (!(cell instanceof HTMLButtonElement)) return
+    const focusedKey = Number(cell.getAttribute('data-day-key'))
+    const focused = days.findIndex((d) => d.getTime() === focusedKey)
+    if (focused < 0) return
+    let target: number
+    if (e.key === 'ArrowRight') target = focused + 1
+    else if (e.key === 'ArrowLeft') target = focused - 1
+    else if (e.key === 'ArrowDown') target = focused + 7
+    else if (e.key === 'ArrowUp') target = focused - 7
+    else if (e.key === 'Home') target = 0
+    else if (e.key === 'End') target = days.length - 1
+    else return
+    if (target < 0 || target >= days.length) return
+    e.preventDefault()
+    const next = gridRef.current?.querySelector<HTMLButtonElement>(
+      `button[data-day-key="${days[target]?.getTime()}"]`,
+    )
+    if (next) {
+      next.focus()
+      /* The moved-from cell keeps aria-pressed only while selected; focus
+         rings are visual, so nothing else to reconcile here. */
+    }
+  }, [days])
+
   return (
     <div className="calendar-month-shell" style={{ padding: phone ? 'var(--sp-sm)' : 'var(--sp-md)' }}>
       <div className="calendar-weekday-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0,1fr))', gap: phone ? 3 : 6, marginBottom: 6 }}>
@@ -1019,7 +1061,7 @@ function MonthGrid({
           </div>
         ))}
       </div>
-      <div className="calendar-month-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0,1fr))', gap: phone ? 3 : 6 }}>
+      <div ref={gridRef} className="calendar-month-grid" onKeyDown={onGridKeyDown} style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0,1fr))', gap: phone ? 3 : 6 }}>
         {Array.from({ length: lead }, (_, i) => (
           <div key={`lead-${i}`} aria-hidden className="calendar-day-lead" style={{ minHeight: cellMin, borderRadius: 'var(--r-sm)', background: 'var(--card2)', opacity: 0.4 }} />
         ))}
@@ -1034,6 +1076,7 @@ function MonthGrid({
             <button
               key={d.getTime()}
               type="button"
+              data-day-key={d.getTime()}
               onClick={() => onPickDay(d)}
               aria-current={today ? 'date' : undefined}
               aria-pressed={picked}
@@ -3324,7 +3367,8 @@ export default function Calendar() {
           }}
         >
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>{centre}</div>
-          <Rail width={300} label="Event detail">
+          {/* Full view covers the app header; keep its selected-event workspace reachable. */}
+          <aside aria-label="Event detail" style={{ width: 300, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
             {selected ? (
               <SelectedEventPanel bar={selected.bar} row={selected.row} onClose={() => setSelectedId(null)} />
             ) : (
@@ -3354,7 +3398,7 @@ export default function Calendar() {
               </div>
             </Card>
             {shortcutsCard}
-          </Rail>
+          </aside>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 'var(--sp-md)' }}>
@@ -3437,6 +3481,8 @@ export default function Calendar() {
           leading={!phone ? <FilterButton onClick={() => setShowFilters((open) => !open)} activeCount={activeFilterCount} controls="calendar-filters" expanded={showFilters} /> : undefined}
           icon="calendar"
           title="Calendar"
+          // RULING 2026-10-21: retain the visible Availability verb and drawer at 375px.
+          searchInMore={phone}
           module="calendar"
           search={{
             value: query,
@@ -3448,7 +3494,7 @@ export default function Calendar() {
             <PageActions
               extra={!phone ? navButtons : undefined}
               primary={
-                <Button icon="calendar_event" variant="primary" onClick={() => setShowCheckAvailability(true)} aria-label="Check availability">
+                <Button icon={phone ? undefined : 'calendar_event'} variant="primary" onClick={() => setShowCheckAvailability(true)} aria-label="Check availability">
                   {phone ? 'Availability' : 'Check availability'}
                 </Button>
               }
@@ -3461,6 +3507,7 @@ export default function Calendar() {
               ].filter(Boolean)}
               overflow={[
                 ...(phone ? [
+                  { label: 'Search', icon: 'search' as const, onClick: openCommandPalette },
                   {
                     label: activeFilterCount > 0 ? `Filters (${activeFilterCount})` : 'Filters',
                     icon: 'filter' as const,
@@ -3559,17 +3606,7 @@ export default function Calendar() {
           {/* §5.1 phone — the selected-day agenda sits under the grid, not in a sheet. */}
           {phone && day && <Card bodyStyle={{ padding: 'var(--sp-md)' }}>{dayJobList}</Card>}
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: phone ? 'minmax(0,1fr)' : 'repeat(2, minmax(0,1fr))',
-              gap: 'var(--sp-md)',
-              alignItems: 'start',
-            }}
-          >
-            {railDefault}
-            {shortcutsCard}
-          </div>
+          <Rail width={300} label="Event detail">{railDefault}{shortcutsCard}</Rail>
         </div>
       )}
 

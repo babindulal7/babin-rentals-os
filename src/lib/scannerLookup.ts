@@ -41,6 +41,11 @@ export type ScanLookupResult =
 const ZERO_UUID = '00000000-0000-0000-0000-000000000000'
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+function sanitizePostgrestParam(value: string): string {
+  // Strip characters that break PostgREST .or() filter structure
+  return value.replace(/[\r\n,()"\\]/g, '')
+}
+
 /**
  * Resolves a scanned barcode, QR code, or serial number against the inventory
  * and bookings database with an honest, strict contract (AUD-002).
@@ -52,6 +57,15 @@ export async function resolveScannedCode(rawCode: string): Promise<ScanLookupRes
       status: 'unknown_code',
       code: '',
       message: 'Empty barcode string provided.',
+    }
+  }
+
+  const sanitizedCode = sanitizePostgrestParam(code)
+  if (!sanitizedCode) {
+    return {
+      status: 'unknown_code',
+      code,
+      message: `Invalid or unparseable barcode "${code}".`,
     }
   }
 
@@ -78,12 +92,15 @@ export async function resolveScannedCode(rawCode: string): Promise<ScanLookupRes
           asset_code
         )
       `)
-      .or(`barcode.eq.${code},serial_no.eq.${code},asset_tag.eq.${code},id.eq.${uuidParam}`)
+      .or(`barcode.eq.${sanitizedCode},serial_no.eq.${sanitizedCode},asset_tag.eq.${sanitizedCode},id.eq.${uuidParam}`)
       .maybeSingle()
 
     if (unitError && unitError.code !== 'PGRST116') {
-      // Non-404 error
-      console.warn('[ScannerLookup] product_units_v query error:', unitError.message)
+      return {
+        status: 'query_failed',
+        code,
+        error: unitError.message,
+      }
     }
 
     if (unit) {
@@ -105,11 +122,19 @@ export async function resolveScannedCode(rawCode: string): Promise<ScanLookupRes
     }
 
     // 2. Check catalog products in products_v (bulk or model-level barcode)
-    const { data: prod } = await supabase
+    const { data: prod, error: prodError } = await supabase
       .from('products_v')
       .select('id, name, brand, model, asset_code')
-      .or(`asset_code.eq.${code},id.eq.${uuidParam}`)
+      .or(`asset_code.eq.${sanitizedCode},id.eq.${uuidParam}`)
       .maybeSingle()
+
+    if (prodError && prodError.code !== 'PGRST116') {
+      return {
+        status: 'query_failed',
+        code,
+        error: prodError.message,
+      }
+    }
 
     if (prod) {
       const brandStr = prod.brand ? `${prod.brand} ` : ''
@@ -127,11 +152,19 @@ export async function resolveScannedCode(rawCode: string): Promise<ScanLookupRes
     }
 
     // 3. Check bookings by booking_no or UUID
-    const { data: booking } = await supabase
+    const { data: booking, error: bookingError } = await supabase
       .from('bookings')
       .select('id, booking_no, stage')
-      .or(`booking_no.eq.${code},id.eq.${uuidParam}`)
+      .or(`booking_no.eq.${sanitizedCode},id.eq.${uuidParam}`)
       .maybeSingle()
+
+    if (bookingError && bookingError.code !== 'PGRST116') {
+      return {
+        status: 'query_failed',
+        code,
+        error: bookingError.message,
+      }
+    }
 
     if (booking) {
       return {

@@ -50,6 +50,8 @@ import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist'
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { ALLOWED_ANON_FUNCTIONS } from './allowed-anon-functions.mjs'
+import { beginVerification, finishVerification } from './test-receipt.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, '..')
@@ -60,6 +62,8 @@ const args = process.argv.slice(2)
 const stopFirst = args.includes('--stop')
 const fromIdx = args.indexOf('--from')
 const from = fromIdx === -1 ? null : args[fromIdx + 1]
+const verificationStart = beginVerification(ROOT, `npm run check:pglite${args.length ? ` -- ${args.join(' ')}` : ''}`, 'disposable local PGlite; no network')
+writeFileSync(join(ROOT, '.pglite-result.json'), JSON.stringify(verificationStart, null, 2))
 
 const db = await PGlite.create({ extensions: { pgcrypto, btree_gist } })
 const version = (await db.query('select version()')).rows[0].version.split(',')[0]
@@ -148,8 +152,8 @@ async function auditAnonViewReads(db) {
 // by `anon`.
 // anon may only execute:
 //   - auth_* session/role inspection helpers used by RLS
-//   - portal_claim_by_verified_email
 //   - pure mathematical calculators (invoice_vat_amount, etc.)
+//   - public workflow navigation helpers (next_booking_stage, retired_stage_to_canonical)
 async function auditAnonFunctionExecution(db) {
   const { rows } = await db.query(`
     select
@@ -165,30 +169,7 @@ async function auditAnonFunctionExecution(db) {
     order by p.proname;
   `)
 
-  const ALLOWED_ANON_NON_TRIGGER = new Set([
-    'auth_can_approve_damage',
-    'auth_can_approve_late_fee_waiver',
-    'auth_can_approve_purchase',
-    'auth_can_view_money',
-    'auth_client_id',
-    'auth_is_finance_or_admin',
-    'auth_is_manager_or_above',
-    'auth_is_owner',
-    'auth_is_staff',
-    'auth_user_branch_id',
-    'auth_user_id',
-    'auth_user_role',
-    'intel_field_allowed',
-    'invoice_credit',
-    'invoice_discount_amount',
-    'invoice_outstanding',
-    'invoice_vat_amount',
-    'next_booking_stage',
-    'retired_stage_to_canonical',
-    'set_request_context',
-  ])
-
-  const leaked = rows.filter((r) => !ALLOWED_ANON_NON_TRIGGER.has(r.fn))
+  const leaked = rows.filter((r) => !ALLOWED_ANON_FUNCTIONS.has(r.fn))
   return { leaked: leaked.map((r) => `${r.fn}(${r.args})`), checked: rows.length }
 }
 
@@ -276,6 +257,7 @@ if (definerAudit.unpinned.length) {
   process.exit(1)
 }
 const pgliteResult = {
+  ...finishVerification(verificationStart, ROOT, !from),
   applied,
   total: files.length,
   failed: failures.length,

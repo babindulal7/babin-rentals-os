@@ -22,6 +22,9 @@ import { useOptionalWorkspace } from '../../lib/workspaceContext'
 import { ModuleSubHeader, ModuleKpiStrip, ModuleFilterBar, StatusPill } from '../../components/ui/module-shell'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { ContextDrawer } from '../../components/ui/ContextDrawer'
+import { InspectorFacts } from '../../components/ui/InspectorFacts'
+import { InspectorNavigator } from '../../components/ui/InspectorNavigator'
+import { useInspectorTraversal } from '../../components/ui/useInspectorTraversal'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { ActiveFilterChips, FilterButton } from '../../components/ui/FilterDrawer'
 import { SavedViewsMenu, type SavedListView } from '../../components/ui/SavedViewsMenu'
@@ -849,6 +852,13 @@ function ColumnMenu({
  * money filter groups and the Payment Due chip are removed from their arrays
  * *before* render, so a money-blind session has no masked cell to un-hide.
  */
+
+/**
+ * Premium Workbench v1 — stable ID accessor for record traversal. Module scope
+ * so `useInspectorTraversal`'s memos never churn on function identity.
+ */
+const rentalInspectorId = (row: RentalListRow) => row.id
+
 export default function RentalsList() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -1425,6 +1435,26 @@ export default function RentalsList() {
     [list.rows, subIdSet, gctx],
   )
 
+  /*
+   * Premium Workbench v1 — the inspected record is DERIVED from the live page,
+   * never from the row object captured at click time. `inspectingRental` stays
+   * the user's selection request (so open/close behaves exactly as before), but
+   * everything rendered — drawer facts, actions, row highlight — reads
+   * `activeRental`, so a filter/page/search change that drops the record
+   * clears the inspection instead of showing stale details. Browsing runs no
+   * query: previous/next walk `list.rows`, the already-loaded visible page, in
+   * rendered order, and disable at its boundaries.
+   */
+  const activeRental = inspectingRental
+    ? list.rows.find((row) => row.id === inspectingRental.id) ?? null
+    : null
+  const rentalTraversal = useInspectorTraversal({
+    rows: list.rows,
+    selectedId: activeRental?.id ?? null,
+    getId: rentalInspectorId,
+    onSelect: setInspectingRental,
+  })
+
   /**
    * §4.1's tablet table is `BR# │ client │ dates │ badge │ [prim]⋮` — four
    * columns, not seven. Items and Return are dropped at that width so the
@@ -1890,7 +1920,7 @@ export default function RentalsList() {
       <WorkspaceHeaderAddActions>
           {canWriteDesk && (
             <Button
-              variant="secondary"
+              variant="primary"
               size="sm"
               icon="plus"
               aria-label="New Rental"
@@ -1953,16 +1983,24 @@ export default function RentalsList() {
         onExport={handleBulkExport}
       />
 
-      {/* Zone 1: Sub-Header & Primary Action Bar */}
+      {/* Zone 1: Sub-Header & Primary Action Bar matching wireframe */}
       <ModuleSubHeader
         counter={
-          <span>
-            <strong style={{ color: 'var(--text)' }}>{total ?? list.rows.length}</strong> active bookings ·{' '}
-            <strong style={{ color: 'var(--text)' }}>{getTabCount('Out', ['On Rent']) ?? 0}</strong> on set ·{' '}
-            <strong style={{ color: chip === 'Overdue' ? 'var(--danger-text)' : 'var(--text)' }}>
-              {chip === 'Overdue' ? total ?? 0 : getTabCount('Overdue', []) ?? 0}
-            </strong> overdue
-          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h1 style={{ margin: 0, fontSize: 'var(--t-h3, 18px)', fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                Rentals
+                <span style={{ color: 'var(--muted)', fontWeight: 400 }}>•</span>
+                <span style={{ fontSize: 'var(--t-meta, 14px)', fontWeight: 600, color: 'var(--text2)' }}>Management workspace</span>
+              </h1>
+              <span style={{ color: 'var(--muted)', fontSize: '13px' }}>
+                (<strong style={{ color: 'var(--text)' }}>{total ?? list.rows.length}</strong> active bookings · <strong style={{ color: 'var(--text)' }}>{getTabCount('Out', ['On Rent']) ?? 0}</strong> on set)
+              </span>
+            </div>
+            <p style={{ margin: 0, fontSize: 'var(--t-meta, 13px)', color: 'var(--muted)' }}>
+              A dense table for search, booking status, availability and fast drill-down.
+            </p>
+          </div>
         }
         loadedAt={list.lastFetchedAt ?? new Date()}
         loading={list.loading}
@@ -2474,7 +2512,8 @@ export default function RentalsList() {
                             style={{
                               ...th,
                               whiteSpace: 'nowrap',
-                              ...(h === 'Project Type' ? { minWidth: 130 } : {}),
+                              ...(h === 'Project Type' ? { minWidth: 120 } : {}),
+                              ...(h === 'Pickup' || h === 'Return' ? { minWidth: 140 } : {}),
                             }}
                             className="whitespace-nowrap"
                           >
@@ -2515,10 +2554,18 @@ export default function RentalsList() {
                       {rowsWithIntel.map(({ row: r, glance, detail }) => (
                         <tr
                           key={r.id}
+                          className="data-table-row press"
                           style={{
                             borderBottom: '1px solid var(--border)',
-                            background: selectedIds.has(r.id) ? 'var(--hover-card)' : undefined,
+                            background: activeRental?.id === r.id ? 'color-mix(in srgb, var(--primary) 8%, var(--card))' : selectedIds.has(r.id) ? 'var(--hover-card)' : undefined,
+                            boxShadow: activeRental?.id === r.id ? 'inset 3px 0 0 var(--primary)' : undefined,
+                            cursor: 'pointer',
                             ...externalRowStyle(r.isExternal),
+                          }}
+                          onClick={(e) => {
+                            const target = e.target as HTMLElement
+                            if (target.closest('input, button, a, [role="button"], [data-intel-identifier]')) return
+                            setInspectingRental(r)
                           }}
                         >
                           <td style={{ ...td, width: 44, paddingLeft: 12 }}>
@@ -2818,48 +2865,114 @@ export default function RentalsList() {
 
       <ContextDrawer
         id="rental-quick-view"
-        open={Boolean(inspectingRental)}
+        docked
+        open={activeRental !== null}
         onClose={() => setInspectingRental(null)}
-        title={inspectingRental?.bookingNo ?? 'Rental'}
-        subtitle={inspectingRental ? `${inspectingRental.client}${inspectingRental.project ? ` · ${inspectingRental.project}` : ''}` : undefined}
-        status={inspectingRental ? <Badge status={inspectingRental.status} size="sm" /> : undefined}
-        actions={inspectingRental ? (
+        title={activeRental?.bookingNo ?? 'Rental'}
+        subtitle={activeRental ? `${activeRental.client}${activeRental.project ? ` · ${activeRental.project}` : ''}` : undefined}
+        status={activeRental ? <Badge status={activeRental.status} size="sm" /> : undefined}
+        navigation={
+          <InspectorNavigator
+            active={activeRental !== null}
+            position={rentalTraversal.position}
+            index={rentalTraversal.index}
+            total={rentalTraversal.total}
+            canPrevious={rentalTraversal.canPrevious}
+            canNext={rentalTraversal.canNext}
+            onPrevious={rentalTraversal.previous}
+            onNext={rentalTraversal.next}
+          />
+        }
+        actions={activeRental ? (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <BookingOperationsMenu bookingNo={inspectingRental.bookingNo} bookingStatus={inspectingRental.status} unavailable={inspectingRental.isCancelled ? 'Cancelled rentals cannot run operations.' : null} />
+            <BookingOperationsMenu bookingNo={activeRental.bookingNo} bookingStatus={activeRental.status} unavailable={activeRental.isCancelled ? 'Cancelled rentals cannot run operations.' : null} />
             <Button
-              variant="secondary"
+              variant="primary"
               onClick={() => {
                 setInspectingRental(null)
-                navigate(`/rentals/${inspectingRental.bookingNo}`)
+                navigate(`/rentals/${activeRental.bookingNo}`)
               }}
             >
-              Open rental
+              Open rental →
             </Button>
           </div>
         ) : undefined}
       >
-        {inspectingRental && (
-          <div style={{ display: 'grid', gap: 'var(--space-6)' }}>
-            <section aria-labelledby="rental-quick-view-schedule">
-              <h3 id="rental-quick-view-schedule" style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)', fontWeight: 600 }}>Schedule</h3>
-              <dl style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 'var(--space-2) var(--space-4)', margin: 'var(--space-3) 0 0' }}>
-                <dt style={{ color: 'var(--muted)' }}>Pickup</dt><dd className="figure" style={{ margin: 0 }}>{inspectingRental.pickup.date} · {inspectingRental.pickup.time}</dd>
-                <dt style={{ color: 'var(--muted)' }}>Return</dt><dd className="figure" style={{ margin: 0 }}>{inspectingRental.ret.date} · {inspectingRental.ret.time}</dd>
-                <dt style={{ color: 'var(--muted)' }}>Equipment</dt><dd style={{ margin: 0 }}>{inspectingRental.itemCount} item{inspectingRental.itemCount === 1 ? '' : 's'}</dd>
-              </dl>
-            </section>
-            <section aria-labelledby="rental-quick-view-client">
-              <h3 id="rental-quick-view-client" style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)', fontWeight: 600 }}>Client</h3>
-              <p style={{ margin: 'var(--space-3) 0 0', color: 'var(--text)', fontWeight: 600 }}>{inspectingRental.client}</p>
-              <p style={{ margin: 'var(--space-1) 0 0', color: 'var(--text2)' }}>{inspectingRental.pickupLocation ?? 'Pickup location not set'}</p>
-            </section>
+        {activeRental && (
+          <div style={{ display: 'grid', gap: 'var(--space-4, 16px)' }}>
+            {/* Title / Project Heading matching wireframe */}
+            <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text)' }}>
+                {activeRental.project && activeRental.project !== '—' ? activeRental.project : activeRental.client}
+              </h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                <span className="font-mono font-bold" style={{ fontSize: '13px', color: 'var(--text2)' }}>
+                  {activeRental.bookingNo}
+                </span>
+                <span style={{ color: 'var(--muted)' }}>·</span>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>
+                  {activeRental.status}
+                </span>
+              </div>
+            </div>
+
+            {/* Status notice card matching wireframe */}
+            <div
+              style={{
+                padding: '10px 14px',
+                borderRadius: 'var(--r-btn, 6px)',
+                background: activeRental.status === 'Packed'
+                  ? 'color-mix(in srgb, var(--primary) 12%, var(--card))'
+                  : activeRental.status === 'On Rent'
+                  ? 'color-mix(in srgb, var(--warn) 12%, var(--card))'
+                  : 'var(--surface-2)',
+                border: '1px solid var(--border)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: '13px',
+                fontWeight: 600,
+                color: activeRental.status === 'Packed'
+                  ? 'var(--primary-text)'
+                  : activeRental.status === 'On Rent'
+                  ? 'var(--warn-text)'
+                  : 'var(--text)',
+              }}
+            >
+              <Icon
+                name={activeRental.status === 'Packed' ? 'package' : activeRental.status === 'On Rent' ? 'truck' : 'info'}
+                size={16}
+              />
+              <span>
+                {activeRental.status === 'Packed'
+                  ? 'Pending handover'
+                  : activeRental.status === 'On Rent'
+                  ? 'Currently active on production set'
+                  : activeRental.status === 'Booked'
+                  ? 'Confirmed booking — prep needed'
+                  : activeRental.status === 'Returned'
+                  ? 'Gear returned — inspection complete'
+                  : `${activeRental.status} stage`}
+              </span>
+            </div>
+
+            <InspectorFacts title="Schedule" facts={[
+              { key: 'pickup', label: 'Pickup', value: `${activeRental.pickup.date} · ${activeRental.pickup.time}`, mono: true },
+              { key: 'return', label: 'Return', value: `${activeRental.ret.date} · ${activeRental.ret.time}`, mono: true },
+              { key: 'items', label: 'Items', value: `${activeRental.itemCount} item${activeRental.itemCount === 1 ? '' : 's'}`, strong: true },
+            ]} />
+
+            <InspectorFacts title="Client" facts={[
+              { key: 'client', label: 'Client', value: activeRental.client, strong: true },
+              { key: 'pickup-location', label: 'Pickup location', value: activeRental.pickupLocation ?? 'Lalitpur Warehouse' },
+            ]} />
+
+            {/* Law 6 — the money fact is constructed AND mounted only when the
+                role gate allows it; never hidden with CSS. */}
             {money && (
-              <section aria-labelledby="rental-quick-view-finance">
-                <h3 id="rental-quick-view-finance" style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)', fontWeight: 600 }}>Total Amount</h3>
-                <p className="figure" style={{ margin: 'var(--space-3) 0 0', color: 'var(--text)', fontWeight: 700 }}>
-                  {typeof inspectingRental.totalAmount === 'number' ? formatMoney(inspectingRental.totalAmount) : '—'}
-                </p>
-              </section>
+              <InspectorFacts title="Total Amount" facts={[
+                { key: 'total', label: 'Total', value: typeof activeRental.totalAmount === 'number' ? formatMoney(activeRental.totalAmount) : '—', strong: true, mono: true, wide: true },
+              ]} />
             )}
           </div>
         )}
@@ -2972,10 +3085,10 @@ const RENTAL_COLUMN_SHARES: Record<string, number> = {
   'Booking ID': 0.075, ID: 0.075,
   'Created Date': 0.08, Created: 0.08,
   'Client / Project': 0.17,
-  'Project Type': 0.12,
+  'Project Type': 0.10,
   Items: 0.065,
-  Pickup: 0.125,
-  Return: 0.125,
+  Pickup: 0.135,
+  Return: 0.135,
   Status: 0.11,
   'Total Amount': 0.11,
 }
@@ -3043,12 +3156,12 @@ const th = {
  */
 const td = {
   height: 'var(--row-min-h)',
-  padding: '11px 8px',
+  padding: '6px 8px',
   fontSize: 'var(--t-meta)',
   // RULING 2026-10-15: dense data rows read at 1.35, not the 1.5 body leading.
   lineHeight: 1.35,
   color: 'var(--text)',
-  verticalAlign: 'top' as const,
+  verticalAlign: 'middle' as const,
   whiteSpace: 'normal' as const,
 }
 

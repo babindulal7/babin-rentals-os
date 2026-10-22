@@ -51,6 +51,8 @@ import { useViewport, useCapability } from '../../lib/device'
 
 /** §20 — 180–240ms. `--dur-drawer` is 200ms; this must stay in step with it. */
 const DRAWER_MS = 200
+const phoneScrollLocks = new Set<string>()
+let unlockedBodyOverflow = ''
 
 /**
  * True when the OS asks for less motion.
@@ -82,6 +84,9 @@ export interface FilterDrawerProps {
    * Live match count. Renders in the header so the effect of a change is
    * visible even where the panel covers the list. `null` while loading.
    */
+  title?: string
+  description?: string
+  keepMounted?: boolean
   resultCount?: number | null
   /** What is being counted — "rentals", "assets". Used in the header sentence. */
   noun?: string
@@ -130,6 +135,9 @@ export function FilterDrawer({
   onClose,
   id,
   children,
+  title = 'Filters',
+  description,
+  keepMounted = false,
   resultCount = null,
   noun = 'results',
   activeCount = 0,
@@ -152,6 +160,8 @@ export function FilterDrawer({
   const { reducedMotion } = useCapability()
   const panelRef = useRef<HTMLDivElement | null>(null)
   const restoreFocusTo = useRef<HTMLElement | null>(null)
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
   const [headerBottom, setHeaderBottom] = useState<number | null>(null)
 
   /**
@@ -205,26 +215,61 @@ export function FilterDrawer({
     restoreFocusTo.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
 
     const onKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return
+      if (phone && e.key === 'Tab' && panelRef.current) {
+        const focusable = [...panelRef.current.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, [tabindex]')]
+          .filter((element) => element.tabIndex >= 0 && !element.matches(':disabled') && element.getClientRects().length > 0)
+        const first = focusable[0]
+        const last = focusable[focusable.length - 1]
+        if (!first || !last) {
+          e.preventDefault()
+          panelRef.current.focus()
+        } else if (e.shiftKey && (document.activeElement === first || document.activeElement === panelRef.current)) {
+          e.preventDefault()
+          last.focus()
+        } else if (!e.shiftKey && (document.activeElement === last || document.activeElement === panelRef.current)) {
+          e.preventDefault()
+          first.focus()
+        }
+      }
       if (e.key === 'Escape') {
         e.stopPropagation()
-        onClose()
+        closeRef.current()
       }
     }
     window.addEventListener('keydown', onKeyDown)
 
     // Scroll lock ONLY on phone. On desktop the user must still be able to
     // scroll the list they are filtering while the panel is open.
-    if (phone) document.body.style.overflow = 'hidden'
+    if (phone) {
+      if (phoneScrollLocks.size === 0) unlockedBodyOverflow = document.body.style.overflow
+      phoneScrollLocks.add(id)
+      document.body.style.overflow = 'hidden'
+    }
 
     const raf = window.requestAnimationFrame(() => panelRef.current?.focus())
 
     return () => {
       window.removeEventListener('keydown', onKeyDown)
-      if (phone) document.body.style.overflow = ''
+      if (phone) {
+        phoneScrollLocks.delete(id)
+        if (phoneScrollLocks.size === 0) document.body.style.overflow = unlockedBodyOverflow
+      }
       window.cancelAnimationFrame(raf)
       restoreFocusTo.current?.focus()
     }
-  }, [open, onClose, phone])
+  }, [open, phone, id])
+
+  useEffect(() => {
+    if (!open) return
+    const opened = (event: Event) => {
+      const detail = (event as CustomEvent<{ id: string; side: string }>).detail
+      if ((viewport !== 'desktop' || detail.side === side) && detail.id !== id) closeRef.current()
+    }
+    window.dispatchEvent(new CustomEvent('babin:side-drawer-open', { detail: { id, side } }))
+    window.addEventListener('babin:side-drawer-open', opened)
+    return () => window.removeEventListener('babin:side-drawer-open', opened)
+  }, [open, side, id, viewport])
 
   // Slide, don't cover: while the drawer is open on desktop/tablet the workspace
   // makes room for it (padding transition in ui-v2.css), so nothing hides behind it.
@@ -232,11 +277,19 @@ export function FilterDrawer({
   useEffect(() => {
     if (!pushing) return
     const root = document.documentElement
-    root.style.setProperty('--filter-drawer-w', `${width}px`)
-    return () => { root.style.removeProperty('--filter-drawer-w') }
-  }, [pushing, width])
+    const property = side === 'left' ? '--filter-drawer-w' : '--information-drawer-w'
+    const owner = `data-${side}-drawer-owner`
+    root.setAttribute(owner, id)
+    root.style.setProperty(property, `${width}px`)
+    return () => {
+      if (root.getAttribute(owner) === id) {
+        root.style.removeProperty(property)
+        root.removeAttribute(owner)
+      }
+    }
+  }, [pushing, width, side, id])
 
-  if (!mounted) return null
+  if (!mounted && !keepMounted) return null
 
   const headingId = `${id}-title`
   const enter = phone ? 'drawer-in-up' : side === 'left' ? 'drawer-in-left' : 'drawer-in-right'
@@ -245,6 +298,8 @@ export function FilterDrawer({
   const content = (
     <div
       className={rail ? 'filter-rail' : 'filter-overlay'}
+      hidden={!mounted}
+      aria-hidden={!mounted ? true : undefined}
       style={rail
         ? {
             position: 'sticky',
@@ -270,7 +325,7 @@ export function FilterDrawer({
             right: 0,
             bottom: 0,
             zIndex: 'var(--z-drawer, 1350)' as unknown as number,
-            display: 'flex',
+            display: mounted ? 'flex' : 'none',
             alignItems: phone ? 'flex-end' : 'stretch',
             justifyContent: phone ? 'center' : side === 'left' ? 'flex-start' : 'flex-end',
             pointerEvents: phone ? 'auto' : 'none',
@@ -293,10 +348,10 @@ export function FilterDrawer({
 
       <div
         ref={panelRef}
-        role={rail ? 'region' : 'dialog'}
+        role={!mounted ? undefined : rail ? 'region' : 'dialog'}
         // Not `aria-modal` on desktop: the page behind genuinely stays usable,
         // and claiming otherwise would tell a screen reader the opposite.
-        {...(phone ? { 'aria-modal': true } : {})}
+        {...(phone && mounted ? { 'aria-modal': true } : {})}
         aria-labelledby={headingId}
         id={id}
         tabIndex={-1}
@@ -351,19 +406,19 @@ export function FilterDrawer({
         >
           <div style={{ minWidth: 0 }}>
             <h2 id={headingId} style={{ margin: 0, fontSize: 'var(--t-h3)', fontWeight: 700, color: 'var(--text)' }}>
-              Filters
+              {title}
             </h2>
             {/* The live count. Updates on every change, which is what makes
                 live filtering legible while this panel covers the list. */}
             <p aria-live="polite" style={{ margin: '3px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-              {resultCount === null ? 'Counting…' : `${resultCount} ${noun}`}
+              {description ?? (resultCount === null ? 'Counting…' : `${resultCount} ${noun}`)}
             </p>
           </div>
           <button
             type="button"
             className="press"
             onClick={onClose}
-            aria-label="Close filters"
+            aria-label={`Close ${title.toLowerCase()}`}
             style={{
               border: '1px solid transparent',
               background: 'transparent',

@@ -23,7 +23,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
-  gap: 1.25rem;
+  gap: var(--density-panel-gap, 12px);
   min-width: 0;
 }
 
@@ -42,9 +42,9 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.875rem;
-  min-height: 5rem;
-  padding: 1.15rem 1.25rem;
+  gap: 0.75rem;
+  min-height: 3.5rem;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--w08, var(--border));
   background: var(--card);
   border-top-left-radius: var(--r-card, 14px);
@@ -401,8 +401,8 @@
 }
 
 .movement-panel__row {
-  min-height: 4rem;
-  padding: 0.65rem 1rem;
+  min-height: var(--density-table-row, 3.25rem);
+  padding: 0.5rem 0.85rem;
   border-bottom: 1px solid var(--border);
   background: transparent;
   cursor: pointer;
@@ -1895,13 +1895,16 @@
   }
 }
 
-@media (min-width: 768px) and (max-width: 1279px) {
+@media (max-width: 1279px) {
   .rental-dashboard__panels {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .rental-dashboard__panels .movement-panel {
+  .rental-dashboard__panels .movement-panel,
+  .rental-dashboard__panels .movement-panel--outgoing,
+  .rental-dashboard__panels .movement-panel--incoming {
     grid-column: 1;
+    width: 100%;
   }
 }
 
@@ -2321,7 +2324,7 @@
   flex-wrap: wrap;
 }
 
-.dashboard-workbar__intro span {
+.dashboard-workbar__intro > span {
   display: block;
   margin-bottom: 0.2rem;
   color: var(--primary-text);
@@ -2892,18 +2895,18 @@
    text title, so it is never colour alone. Tokens only — both themes follow.
    Last in the file so it is the layer that wins; earlier rules are unchanged. */
 .rental-dashboard .rental-dashboard__panels .movement-panel {
-  border: 1px solid var(--border);
+  border: var(--surface-outline);
   border-radius: var(--r-card, 14px);
   background: var(--card);
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--elevation-surface);
   overflow: hidden;
 }
 
 .rental-dashboard .rental-dashboard__panels .movement-panel__header {
   min-height: 0;
-  padding: 1rem 1.25rem;
+  padding: var(--section-padding) var(--sp-lg);
   background: transparent;
-  border-bottom: 1px solid var(--border);
+  border-bottom: var(--surface-outline);
 }
 
 .rental-dashboard .rental-dashboard__panels .movement-panel__heading h2 {
@@ -2952,8 +2955,8 @@
 }
 
 .rental-dashboard .movement-card {
-  gap: 0.4rem 0.85rem;
-  padding: 0.65rem 1.15rem;
+  gap: 0.35rem 0.75rem;
+  padding: 0.45rem 0.85rem;
   border: 0;
   border-bottom: 1px solid var(--border);
   border-radius: 0;
@@ -2973,15 +2976,14 @@
   background: color-mix(in srgb, var(--movement-tint) 5%, var(--card));
 }
 
+/* RULING 2026-10-15: an overdue row has no red edge and no pink fill. It says
+   "N days late" once, in danger ink, beside its date — one text statement and
+   one colour cue (Law 11: the words carry it, never the colour alone). */
 .rental-dashboard .movement-card--overdue {
   border-color: var(--border);
   border-left: 0;
-  box-shadow: inset 3px 0 0 var(--danger-text);
-  background: color-mix(in srgb, var(--danger) 3%, var(--card));
-}
-
-.rental-dashboard .movement-card--overdue:hover {
-  background: color-mix(in srgb, var(--danger) 6%, var(--card));
+  box-shadow: none;
+  background: transparent;
 }
 
 .rental-dashboard .movement-card__client {
@@ -3019,20 +3021,24 @@
    of these, and a wall of solid blue would drown the rows themselves. Three
    classes deep to outrank the older `.rental-dashboard__panels … .is-dominant` link style. */
 .rental-dashboard .rental-dashboard__panels .movement-card__cta-btn {
-  min-height: 56px;
-  padding: 0 0.95rem;
-  border: 1px solid var(--select-bg);
+  min-height: 44px;
+  padding: 0 0.85rem;
+  border: 1px solid var(--btn-primary-bg, var(--primary));
   border-radius: var(--r-btn, 8px);
-  background: var(--select-bg);
-  color: var(--select-fg);
+  background: var(--btn-primary-bg, var(--primary));
+  color: var(--btn-primary-fg, var(--on-primary));
   font-size: var(--t-meta);
   font-weight: 650;
   text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
 }
 
 .rental-dashboard .rental-dashboard__panels .movement-card__cta-btn:hover {
-  border-color: var(--primary);
+  filter: brightness(1.08);
+  border-color: var(--primary-hover, var(--primary));
   background: var(--btn-primary-bg, var(--primary));
   color: var(--btn-primary-fg, var(--on-primary));
 }
@@ -3046,51 +3052,173 @@
   filter: brightness(0.96);
 }
 
-/* Meaningful rows (8 Oct 2026): the time column replaces the initials as the
-   row's anchor — WHEN it moves, in the booking-date orange, or how late it is
-   in the danger ink. Tags name readiness and delivery mode with icon + words. */
-.rental-dashboard .movement-card {
-  grid-template-columns: 4.75rem minmax(0, 1.25fr) minmax(0, 0.75fr);
+/* One row per movement (RULING 2026-10-15, RULINGS-2026-10-15.md #11–#15).
+   Booqable's dashboard row is one line; ours was ~204px and said a late return
+   four ways. Each fact once, in five cells:
+     who    — client name over project: one 44px link (Law 13);
+     meta   — booking number (its own 44px link) · units;
+     tags   — a pickup's readiness and mode (returns have none);
+     when   — this movement's date, BS over AD (7 Oct), or the time alone on
+              today's rows, since the day control already names the day; then,
+              if late, "N days late" in danger ink — the one statement of it;
+     action — the 56px floor verb.
+   The other movement's date and the Pickup/Return captions are not shown: the
+   panel title and the verb already say which movement it is, and the booking
+   hover card keeps both dates. A queue of 28rem or more reads as one row
+   (who/meta stacked | when | verb); a narrower one puts the verb beside the
+   booking number, under the date. */
+.rental-dashboard .rental-dashboard__panels .movement-card {
+  grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
-    "when client booking"
-    "when pickup return"
-    "when status status";
+    "who when"
+    "tags tags"
+    "meta action";
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  padding: 0.5rem 1rem;
+  line-height: 1.35;
 }
 
-.rental-dashboard .movement-card__avatar {
-  display: none;
+.rental-dashboard .movement-card__who {
+  grid-area: who;
+  align-self: start;
+  min-width: 0;
 }
 
-.rental-dashboard .movement-card__when {
-  grid-area: when;
-  align-self: stretch;
+/* Both links are real 44px targets (Law 13): the client link holds name +
+   project, and the booking number's own anchor is 44px tall — not a 44px
+   wrapper around a 23px link. */
+.rental-dashboard .rental-dashboard__panels .movement-card__client-link {
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  gap: 0.15rem;
-  padding-top: 0.1rem;
-  padding-right: 0.85rem;
-  border-right: 1px solid var(--border);
+  align-items: stretch;
+  justify-content: center;
+  gap: 0;
+  min-height: 44px;
+  min-width: 0;
+  overflow: hidden;
+  line-height: 1.35;
+  text-align: left;
 }
 
-.rental-dashboard .movement-card__when strong {
-  font-family: var(--font-display);
-  font-size: 1.2rem;
-  font-weight: 650;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-  color: var(--booking-date-text);
+.rental-dashboard .movement-card__client {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.rental-dashboard .movement-card__when span {
-  font-size: var(--t-caption, 11px);
-  font-weight: 500;
+.rental-dashboard .movement-card__project {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rental-dashboard .movement-card__meta {
+  grid-area: meta;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  font-size: var(--t-meta);
   color: var(--muted);
 }
 
-.rental-dashboard .movement-card__when--late strong {
+.rental-dashboard .rental-dashboard__panels .movement-card__booking-link {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0;
+}
+
+.rental-dashboard .rental-dashboard__panels .movement-card__booking-link a {
+  display: inline-flex;
+  align-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  text-decoration: none;
+}
+
+.rental-dashboard .rental-dashboard__panels .movement-card__project,
+.rental-dashboard .rental-dashboard__panels .movement-card__items-count {
+  font-size: var(--t-meta);
+  white-space: nowrap;
+}
+
+.rental-dashboard .movement-card__items-count {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rental-dashboard .movement-card__items-count::before {
+  content: '·' / '';
+  margin-right: 0.4rem;
+}
+
+.rental-dashboard .rental-dashboard__panels .movement-card__badge-wrap {
+  grid-area: tags;
+  min-width: 0;
+}
+
+.rental-dashboard .rental-dashboard__panels .movement-card__schedule {
+  grid-area: when;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  text-align: right;
+}
+
+.rental-dashboard .rental-dashboard__panels .movement-card .movement-card__time {
+  font-size: var(--t-ui);
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Out-ranks the muted caption style older layers give every `schedule > span`. */
+.rental-dashboard .rental-dashboard__panels .movement-card__schedule > .movement-card__status {
+  display: inline-flex;
+  font-size: var(--t-meta);
+  font-weight: 650;
   color: var(--danger-text);
+}
+
+.rental-dashboard .rental-dashboard__panels .movement-card__schedule > .movement-card__status--partial {
+  color: var(--warning-text, var(--text2));
+}
+
+.rental-dashboard .rental-dashboard__panels .movement-card__actions {
+  grid-area: action;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rental-dashboard .rental-dashboard__panels .movement-card .movement-card__cta-btn {
+  width: auto;
+  margin-left: 0;
+  padding-inline: 0.8rem;
+}
+
+@container (min-width: 28rem) {
+  .rental-dashboard .rental-dashboard__panels .movement-card {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "who when action"
+      "tags when action"
+      "meta when action";
+    row-gap: 0;
+  }
+
+  .rental-dashboard .rental-dashboard__panels .movement-card__schedule {
+    align-self: center;
+    align-items: flex-start;
+    text-align: left;
+  }
 }
 
 .rental-dashboard .movement-card__badge-wrap {
@@ -3132,12 +3260,6 @@
   --tag-bg: color-mix(in srgb, var(--success) 12%, var(--card));
   --tag-edge: color-mix(in srgb, var(--success) 35%, transparent);
   --tag-ink: var(--success-text);
-}
-
-.rental-dashboard .movement-card__tag--due {
-  --tag-bg: var(--select-bg);
-  --tag-edge: var(--select-bg);
-  --tag-ink: var(--select-fg);
 }
 
 /* Dispatch date control, smaller (8 Oct 2026): no "Sync dispatch day:" label,
@@ -3207,30 +3329,29 @@
 }
 
 @media (max-width: 1279px) {
-  .rental-dashboard .rental-dashboard__panels .movement-card {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "client booking"
-      "pickup pickup"
-      "return return"
-      "status status";
+  .rental-dashboard .rental-dashboard__panels {
+    grid-template-columns: minmax(0, 1fr);
   }
-  /* The status below already states overdue duration, without duplicating a narrow rail. */
-  .rental-dashboard .movement-card__when { display: none; }
-  .rental-dashboard .movement-card__client { white-space: normal; overflow-wrap: anywhere; }
-  .rental-dashboard .movement-card__schedule {
-    flex-direction: row;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
-    text-align: left;
+  .rental-dashboard .rental-dashboard__panels .movement-panel,
+  .rental-dashboard .movement-panel--outgoing,
+  .rental-dashboard .movement-panel--incoming {
+    grid-column: 1;
+    width: 100%;
   }
-  .rental-dashboard .movement-card__schedule strong { text-align: right; }
-  .rental-dashboard .movement-card__status-action { flex-direction: column; align-items: stretch; gap: 8px; }
-  .rental-dashboard .movement-card__cta-btn { width: 100%; justify-content: center; }
+  .rental-dashboard .dashboard-situational-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  /* RULING 2026-10-15 (#19–#23): the card's own layout (one row, container-query driven) is in
+     the "One row per movement" block above; only the page-level stacking stays here. */
 }
 
 @media (max-width: 767px) {
+  .rental-dashboard .dashboard-situational-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .rental-dashboard .dashboard-mobile-nav {
+    margin-bottom: var(--sp-md, 12px);
+  }
   .rental-dashboard .dashboard-master-date-control__date-btn { padding-inline: 4px; gap: 4px; }
   .rental-dashboard .dashboard-master-date-control__cal { display: none; }
 }
@@ -3280,5 +3401,5 @@
 }
 .rental-dashboard .dashboard-situational-card:hover {
   border-color: var(--border2);
-  box-shadow: var(--shadow-md), var(--specular-rim);
+  box-shadow: var(--elevation-surface);
 }

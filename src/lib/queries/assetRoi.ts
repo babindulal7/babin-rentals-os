@@ -1,6 +1,6 @@
 import { supabase } from '../supabase'
 import { rupees, type Paisa } from '../money'
-import { rowsOf } from './reportSupport'
+import { completeReportRead, rowsOf } from './reportSupport'
 
 /**
  * # Asset ROI & True Cost of Ownership (Pillar 4)
@@ -66,7 +66,8 @@ export function computeFleetSummary(rows: readonly UnitRoiRow[]): FleetRoiSummar
   const totalMaint = rows.reduce((s, r) => s + r.maintenanceCostPaisa, 0)
   const revenueKnown = rows.length > 0 && rows.every((r) => r.lifetimeRevenuePaisa !== null)
   const totalRev = revenueKnown ? rows.reduce((s, r) => s + (r.lifetimeRevenuePaisa ?? 0), 0) : null
-  const netFleet = totalRev === null ? null : totalRev - (totalCap + totalMaint)
+  const costKnown = rows.every(row => row.purchasePricePaisa !== null)
+  const netFleet = totalRev === null || !costKnown ? null : totalRev - (totalCap + totalMaint)
 
   return {
     totalCapitalInvestedPaisa: totalCap as Paisa,
@@ -94,12 +95,12 @@ type UnitRow = {
 /** Throws on a failed read (Error + Retry); an empty fleet is an empty summary. */
 export async function getFleetAssetRoiSummary(now: Date = new Date()): Promise<FleetRoiSummary> {
   const [unitsRes, maintRes, productsRes, categoriesRes] = await Promise.all([
-    supabase
+    completeReportRead(supabase
       .from('product_units_v')
-      .select('id, asset_tag, serial_no, product_id, purchase_price, purchase_date, created_at, retired_at'),
-    supabase.from('maintenance_records_v').select('product_unit_id, cost'),
-    supabase.from('products').select('id, name, category_id'),
-    supabase.from('inventory_categories').select('id, name'),
+      .select('id, asset_tag, serial_no, product_id, purchase_price, purchase_date, created_at, retired_at'), 'Units read failed'),
+    completeReportRead(supabase.from('maintenance_records_v').select('id, product_unit_id, cost'), 'Maintenance read failed'),
+    completeReportRead(supabase.from('products').select('id, name, category_id'), 'Products read failed'),
+    completeReportRead(supabase.from('inventory_categories').select('id, name'), 'Categories read failed'),
   ])
   const units = rowsOf<UnitRow>(unitsRes, 'Units read failed').filter((u) => !u.retired_at)
   const maint = rowsOf<{ product_unit_id: string | null; cost: number | string | null }>(maintRes, 'Maintenance read failed')

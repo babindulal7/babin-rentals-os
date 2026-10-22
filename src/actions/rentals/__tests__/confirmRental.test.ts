@@ -54,6 +54,8 @@ const db = vi.hoisted(() => {
     calls: [] as Call[],
     /** Per table, the row sets to hand back in order. The last one repeats. */
     responses: {} as Record<string, unknown[][]>,
+    linePageSize: Number.POSITIVE_INFINITY,
+    linePageResults: null as Array<{ data: unknown; error: { message: string } | null }> | null,
   }
 
   function nextRows(table: string): unknown[] {
@@ -65,6 +67,7 @@ const db = vi.hoisted(() => {
   function from(table: string) {
     const call: Call = { table, columns: '', ops: [] }
     state.calls.push(call)
+    let range: [number, number] | undefined
 
     const builder: Record<string, unknown> = {
       select(columns: string) {
@@ -79,12 +82,30 @@ const db = vi.hoisted(() => {
         call.ops.push(['is', ...a])
         return builder
       },
+      order(...a: unknown[]) {
+        call.ops.push(['order', ...a])
+        return builder
+      },
+      range(from: number, to: number) {
+        range = [from, to]
+        call.ops.push(['range', from, to])
+        return builder
+      },
       maybeSingle() {
         const rows = nextRows(table)
         return Promise.resolve({ data: rows[0] ?? null, error: null })
       },
       then(onOk: unknown, onErr: unknown) {
-        return Promise.resolve({ data: nextRows(table), error: null }).then(onOk as never, onErr as never)
+        if (table === 'booking_lines' && state.linePageResults) {
+          const pages = state.linePageResults
+          return Promise.resolve(pages.length > 1 ? pages.shift() : pages[0]).then(onOk as never, onErr as never)
+        }
+        let data = nextRows(table)
+        if (table === 'booking_lines') {
+          const [from, to] = range ?? [0, data.length - 1]
+          data = data.slice(from, Math.min(to + 1, from + state.linePageSize))
+        }
+        return Promise.resolve({ data, error: null }).then(onOk as never, onErr as never)
       },
     }
     return builder
@@ -93,6 +114,8 @@ const db = vi.hoisted(() => {
   function reset(): void {
     state.calls = []
     state.responses = {}
+    state.linePageSize = Number.POSITIVE_INFINITY
+    state.linePageResults = null
   }
 
   return { state, from, reset }
@@ -152,7 +175,7 @@ const assign = vi.hoisted(() => {
     /** Live holds the pre-check finds in the way. */
     collisions: [] as Array<{ unitId: string; bookingNo: string }>,
     /** What the database reports holding, read back after the transition. */
-    held: { units: 2, quantityHolds: 0, quantityReserved: 0 },
+    held: { units: 2, quantityHolds: 0, quantityReserved: 0 } as { units: number; quantityHolds: number; quantityReserved: number } | null,
     /** Ordered log of every availability call, for interleaving assertions. */
     calls: [] as string[],
     /** Arguments the pre-check was handed, so the question asked can be asserted. */
@@ -359,6 +382,51 @@ describe('Confirm is reached by a decision, so it opens no session', () => {
 })
 
 /* ── 3 · What it reports, from what it read ─────────────────────────────── */
+
+describe('complete pre-commit line reads', () => {
+  it('counts every live line and unit despite a server cap smaller than the requested page', async () => {
+    setUpConfirmable([{ id: LINE_A, qty: 5 }, { id: LINE_B, qty: 1 }])
+    db.state.linePageSize = 1
+    const { result, events } = await confirm({ id: 'B-715', clientUuid: ACTION_KEY })
+    expect(result).toMatchObject({ lines: 2, units: 6 })
+    expect(events[0]?.payload).toMatchObject({ lines: 2, units: 6 })
+    const reads = db.state.calls.filter(call => call.table === 'booking_lines')
+    expect(reads).toHaveLength(3)
+    for (const read of reads) {
+      expect(read.columns).toBe('id, qty')
+      expect(read.ops).toContainEqual(['eq', 'booking_id', BOOKING_ID])
+      expect(read.ops).toContainEqual(['is', 'voided_at', null])
+      expect(read.ops).toContainEqual(['order', 'id', { ascending: true }])
+    }
+  })
+
+  it.each([
+    ['later-page error', { data: null, error: { message: 'connection lost' } }],
+    ['missing later page', { data: null, error: null }],
+    ['repeated row', { data: [{ id: LINE_A, qty: 2 }], error: null }],
+    ['invalid quantity', { data: [{ id: LINE_B, qty: 0 }], error: null }],
+    ['unsafe quantity', { data: [{ id: LINE_B, qty: Number.MAX_SAFE_INTEGER + 1 }], error: null }],
+    ['unsafe total', { data: [{ id: LINE_B, qty: Number.MAX_SAFE_INTEGER }], error: null }],
+    ['missing row id', { data: [{ qty: 1 }], error: null }],
+  ])('refuses %s before planning or writing a transition', async (_label, secondPage) => {
+    setUpConfirmable()
+    db.state.linePageResults = [
+      { data: [{ id: LINE_A, qty: 2 }], error: null },
+      secondPage,
+      { data: [], error: null },
+    ]
+    await expect(confirm({ id: 'B-715', clientUuid: ACTION_KEY })).rejects.toThrow(/nothing was confirmed/i)
+    expect(assign.state.calls).toEqual([])
+    expect(writes.state.ops).toEqual([])
+  })
+
+  it('distinguishes a missing first page from an actually empty booking', async () => {
+    setUpConfirmable()
+    db.state.linePageResults = [{ data: null, error: null }]
+    await expect(confirm({ id: 'B-715' })).rejects.toThrow(/incomplete.*nothing was confirmed/i)
+    expect(writes.state.ops).toEqual([])
+  })
+})
 
 describe('the result reports what was actually committed to', () => {
   it('counts live lines as rows and units as sum(qty)', async () => {
@@ -778,6 +846,21 @@ describe('reservations are the database\'s to write (R-26)', () => {
 
     expect(result.units).toBe(5)
     expect(result.unitsReserved).toBe(1)
+  })
+
+  it('keeps a confirmed booking successful when reservation counts are unavailable, without inventing zeroes', async () => {
+    assign.state.held = null
+    setUpConfirmable()
+
+    const { result, events } = await confirm({ id: 'B-715', clientUuid: ACTION_KEY })
+
+    expect(result.success).toBe(true)
+    expect(result.stage.to).toBe(CONFIRM_TO)
+    expect(result.unitsReserved).toBeNull()
+    expect(result.quantityReserved).toBeNull()
+    expect(result.quantityHolds).toBeNull()
+    expect(events[0]?.payload).toMatchObject({ unitsReserved: null, quantityReserved: null, quantityHolds: null })
+    expect(writes.state.ops.filter(op => op.kind === 'insert' && op.table === 'booking_stage_transitions')).toHaveLength(1)
   })
 
   /**

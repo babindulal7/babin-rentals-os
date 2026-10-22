@@ -26,6 +26,7 @@ import { applyLanguage } from '../../lib/i18n'
 import { canManageSettings } from '../../lib/rbac'
 import { useAuth } from '../../lib/auth'
 import { useTheme } from '../../lib/theme'
+import { useDisplayDensity } from '../../lib/displayDensity'
 import {
   TABS,
   LEGACY_TAB,
@@ -98,6 +99,7 @@ export default function Settings() {
 
   const { user } = useAuth()
   const { theme, glass, choose } = useTheme()
+  const { density, setDensity } = useDisplayDensity()
   const mayEdit = canManageSettings(user?.role ?? 'Client')
   const [leaveError, setLeaveError] = useState<string | null>(null)
 
@@ -619,6 +621,29 @@ export default function Settings() {
                     >
                       <Icon name="sparkles" size={14} />
                       <span>Glass</span>
+                    </button>
+                  </div>
+
+                  <div className="app-settings-quick-theme" role="group" aria-label="Display density">
+                    <button
+                      type="button"
+                      className={`app-settings-theme-btn tap ${density === 'compact' ? 'is-active' : ''}`}
+                      aria-pressed={density === 'compact'}
+                      onClick={() => setDensity('compact')}
+                      title="Switch to compact density"
+                    >
+                      <Icon name="table" size={14} />
+                      <span>Compact</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`app-settings-theme-btn tap ${density === 'comfortable' ? 'is-active' : ''}`}
+                      aria-pressed={density === 'comfortable'}
+                      onClick={() => setDensity('comfortable')}
+                      title="Switch to comfortable density"
+                    >
+                      <Icon name="layout" size={14} />
+                      <span>Comfortable</span>
                     </button>
                   </div>
                 </div>

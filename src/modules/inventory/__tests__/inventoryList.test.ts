@@ -217,12 +217,15 @@ describe('the facet vocabularies come from the enums, not from eight hand-typed 
 
 /* ── 2. The filter rail ──────────────────────────────────────────────────── */
 
-describe('FILTER_RAIL — four facets reach a column, ten state why they cannot', () => {
+describe('FILTER_RAIL — four facets reach a column, nine state why they cannot', () => {
   const live = FILTER_RAIL.filter((r) => r.kind === 'live')
   const blocked = FILTER_RAIL.filter((r) => r.kind === 'blocked')
 
-  it('keeps all fourteen groups of the mockup, in its order', () => {
-    expect(FILTER_RAIL).toHaveLength(14)
+  it('keeps the mockup groups that remain rail-shaped, in its order', () => {
+    /* Smart Workspace Views v1 (21 Oct 2026): the Saved Views row left the rail —
+       `saved_views` (0159) backs it and the Equipment toolbar's SavedViewsMenu
+       serves it, so a rail row (a facet) is no longer the honest home for it. */
+    expect(FILTER_RAIL).toHaveLength(13)
     expect(FILTER_RAIL.map((r) => r.label)).toEqual([
       'Category',
       'Brand',
@@ -237,7 +240,6 @@ describe('FILTER_RAIL — four facets reach a column, ten state why they cannot'
       'Condition',
       'Serialisation',
       'Tags',
-      'Saved Views',
     ])
   })
 

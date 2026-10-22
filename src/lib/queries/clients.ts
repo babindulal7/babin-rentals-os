@@ -26,7 +26,7 @@
  * WRITES GO THROUGH THE BASE TABLE and carry a `client_uuid` (Law 8) so a
  * retried submit cannot create a second client.
  */
-import { supabase, newClientUuid } from '../supabase'
+import { supabase } from '../supabase'
 import type { Database } from '../../types/supabase'
 import { rupees, type Paisa } from '../money'
 import { formatBsOrAd, formatAd } from '../bs'
@@ -38,7 +38,6 @@ export { clientGlance, clientDetailGroups } from '../../data/clientIntel'
 export { STACK_NOTE } from '../../data/membership'
 
 type ClientView = Database['public']['Views']['clients_v']['Row']
-type ClientInsert = Database['public']['Tables']['clients']['Insert']
 
 /**
  * A directory row, as `client_directory_v` (0052) actually returns it.
@@ -849,70 +848,6 @@ export async function listMembershipPlans(): Promise<MembershipPlanRow[]> {
       individualDiscountPct: r.individual_discount_pct,
       displayOrder: r.display_order ?? 0,
     }))
-}
-
-export interface NewClientInput {
-  name: string
-  phone: string
-  email?: string | null
-  city?: string | null
-  addressLine?: string | null
-}
-
-/**
- * Create a client.
- *
- * `client_code` is NOT generated here — `next_document_number('client')`
- * (0007) is the one allocator, and duplicating its sequence logic in the
- * browser is exactly the drift Law 1 forbids. It is passed as a Postgres
- * expression via an RPC-free insert by letting the database default fill it
- * where a default exists; where it does not, the caller supplies one and the
- * unique constraint is the backstop.
- *
- * Law 8: `client_uuid` is generated once, at the point the user acts, so a
- * replayed submit conflicts instead of creating a duplicate.
- */
-export async function createClient(input: NewClientInput, clientUuid?: string): Promise<ClientListItem> {
-  const payload = {
-    client_uuid: clientUuid ?? newClientUuid(),
-    name: input.name.trim(),
-    phone: input.phone.trim(),
-    email: input.email?.trim() || null,
-    city: input.city?.trim() || null,
-    address_line: input.addressLine?.trim() || null,
-  } as unknown as ClientInsert
-
-  const { data, error } = await supabase
-    .from('clients')
-    .insert(payload)
-    .select('id')
-    .single()
-
-  if (error) {
-    // 23505 on client_uuid means this exact submit already landed — Law 8's
-    // whole point. Return the existing row rather than surfacing an error the
-    // user cannot act on.
-    if (error.code === '23505' && error.message.includes('client_uuid')) {
-      // Resolve the id the first submit created, then re-read through the one
-      // directory query so a replayed create and a fresh create return the
-      // identical shape (Law 2 — one query per entity, not two that can drift).
-      const { data: existing } = await supabase
-        .from('clients_v')
-        .select('id')
-        .eq('client_uuid', payload.client_uuid as string)
-        .maybeSingle()
-      const priorId = (existing as { id: string } | null)?.id
-      if (priorId) {
-        const prior = await getClient(priorId)
-        if (prior) return prior
-      }
-    }
-    throw new Error(`createClient failed: ${error.message}`)
-  }
-
-  const created = await getClient((data as { id: string }).id)
-  if (!created) throw new Error('createClient: row vanished immediately after insert')
-  return created
 }
 
 export {

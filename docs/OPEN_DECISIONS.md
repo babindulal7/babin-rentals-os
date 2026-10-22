@@ -1,5 +1,13 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 20 October 2026: per-operation grant matrix (P0-B) — ACTIVE, one open cell
+
+- The four global operations now carry **one grant each** (Booqable adoption spec P0-B: Booqable's 13 flat grants cover no operational action, so the granularity is net-new). `lib/rbac.ts` exposes `canPack` / `canHandover` / `canReturn` / `canReset` + `canPerformOp(role, op)`; `actions/core.ts` resolves `operations.pack|handover|return|reset`; the four rental actions declare their specific grant instead of the coarse `operations.perform` (kept as a dispatcher case for compatibility).
+- Matrix as shipped: **Pack / Return / Reset** = Owner · Admin · Manager · Warehouse · Technician (identical to the old coarse set — no behaviour change). **Handover** = Owner · Admin · Manager · Warehouse — Technician excluded, matching the committed UI wiring (`BookingOperationsMenu`, `BookingDetail` primary action) that already gates the Handover control per-op.
+- Consequence: a Technician can no longer complete a handover through any path (UI hides it, dispatcher now denies it). This closes the UI-stricter-than-engine divergence but is a real product change.
+- **TODO(decision):** confirm Babin wants Technician excluded from Handover (client-facing handoff). Veto = point `canHandover` at `canPerformOperations` in `src/lib/rbac.ts` — one line, no migration, the dispatcher and UI follow automatically.
+- **Still open (the other half of P0-B):** location scoping — a grant is meaningless without a site. Needs a grant table + RLS (migration under N-5: write, verify `check:pglite` + `check:lifecycle`, Babin applies).
+
 ## 17 October 2026: legacy Storage object mapping — TODO(decision)
 
 - Live `documents`/`evidence` object SELECT/INSERT/UPDATE policies currently test authenticated bucket membership only. Existing PERMISSIONS.md §3/§5 requires client ownership, money omission and identity-document restrictions. Private buckets alone do not enforce that matrix.
@@ -98,7 +106,7 @@ Provisional rulings are in `RULINGS-2026-10-07.md`; these three are the ones tha
 
 ---
 
-## 12. The May page briefs (8 October 2026) — eight product calls, full text in PLAN.md
+## 12. The May page briefs (8 October 2026) — eight product calls, full text in MAY_BRIEF_DECISIONS.md
 
 From checking `D:\proects\md` against `step1-foundation`. Fonepay, the live return countdown and Create & add another were built (PROGRESS.md, 8 Oct). These were not, because each one needs a person to decide.
 - **§4.64 (a)–(e)** (filed as §4.61) — duplicate / re-book a rental · VAT-inclusive rates · rescheduling a delivery (the Delivery workspace also runs on `localStorage` seed rows) · a late/night charge at booking time · per-category useful lives for the Depreciation Reserve.
@@ -119,3 +127,27 @@ The Law 16 report pass (PROGRESS.md, 2026-10-16) replaced invented figures with 
 - **Cancellation fee policy** — the Rentals report showed a 48 h / 24 h / 50 % fee schedule no ruling contains. Removed; is there a policy, and does it charge?
 - **Bank / cash balance** — Cash Flow opening and closing cash, runway, Working Capital and the current ratio need a recorded bank balance; none exists.
 - **Utilization and idle cost** — need unit state history over time (Equipment Performance, Inventory, Damage & Maintenance downtime).
+
+## 14. ASTRA legacy storage and offline identity reconciliation (20 October 2026)
+
+- **TODO(decision): legacy unregistered document/evidence objects.** Migration 0170 retains all bytes but refuses access without an authoritative document or operation-session link. Establish verified ownership and the permitted role before mapping old paths; do not reopen bucket-wide access to recover a link.
+- **TODO(decision): unattributed offline work.** Earlier queue entries lack submitting-account/project identifiers. They remain on the device, including duplicate legacy payloads in the held-work store. A person must establish provenance before an explicit recovery workflow can adopt them; automatic reassignment or deletion is forbidden.
+- Root `PLAN.md` is absent on current main. These questions are recorded here and in the active progress ledger rather than inventing a replacement plan or product policy.
+
+## 15. VAT classification provenance (20 October 2026)
+
+- **TODO(decision): distinguish exempt from zero-rated turnover.** The Sales/VAT report currently groups invoices with zero recorded VAT under a combined category. A zero tax amount alone does not establish an exemption. Identify the authoritative persisted classification and the intended register/export treatment before changing that classification; do not infer legal tax status from an amount. This is separate from the corrected register truncation and recorded-discount arithmetic.
+
+## 16. Shared operational tools and existing local records (20 October 2026)
+
+- **TODO(decision): production model and lifecycle.** Confirm the production-to-booking relationships, record ownership and approved lifecycle before introducing a shared production schema, as required by the audit roadmap's phase 2. The old browser prototype is unavailable in live mode.
+- **TODO(decision): legacy local-record ownership.** Productions, staff shift records, warranties and team notes were not account-scoped. Their existing browser bytes are retained. Establish provenance before any shared import; neither the next login nor a matching name establishes ownership.
+- Engineering work remains for authoritative staff-shift, warranty-claim and team-note persistence with the existing permission matrix enforced in the database. Until that work and its acceptance tests pass, live read/write APIs refuse and pages explain their unavailability. No shared-data model or permission grant is inferred from the old sample records.
+
+## 17. ASTRA current permission-contract verification (21 October 2026)
+
+- **TODO(decision / reconciliation): Technician Pack authority.** `PERMISSIONS.md` §2/§3 says Technician has view-only Packing access, while the 20 October per-operation note at the top of this file and current `rbac.canPack` permit completion. This task did not widen or replace those concurrent grants. Per the supplied authority order, the stricter permission contract governs; a green capability-dispatch test alone cannot certify this conflict. Reconcile the server write paths, UI predicate and role fixture together before release. This is an open authorization acceptance item, not evidence of a production breach.
+- **TODO(decision / provenance): branch attribution for historical report/offline work.** Confirm how original branch/authorization context is captured and verified for held legacy queue entries, and how historical maintenance/damage/report cohorts relate to transfers/current unit location. Do not silently assign legacy work to the next session or present an unscoped aggregate as a branch total.
+- `PLAN.md` remains absent; these questions are recorded here and in the active progress ledger. Existing safe unavailable states and preserved records remain in place.
+
+- **Engineering acceptance: original offline update revision.** Legacy queued updates record device enqueue time, not the server revision originally seen by the form. Replay now refuses unreadable conflict state and compares the replay snapshot atomically, but that alone cannot establish an older edit baseline under clock skew. Capture authoritative observed revisions across supported edit paths and define recoverable review for ambiguous legacy updates; do not infer that baseline from a later read or a device timestamp.

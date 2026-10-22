@@ -12,7 +12,7 @@ import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { useDomainEvent } from '../../events/useDomainEvent'
 import { EVENT_TYPES } from '../../events/eventBus'
 import { formatAd } from '../../lib/bs'
-import { businessDayAd, businessNowAd, overDays, pickupsQuery, timeOf, toMovementRow, type MovementRow } from '../../lib/queries/today'
+import { operationalTodayAd, businessNowAd, overDays, pickupsQuery, timeOf, toMovementRow, type MovementRow } from '../../lib/queries/today'
 import { listBookings, operationQueue, todaysOutgoing } from '../../lib/queries/bookings'
 import type { ListFilters } from '../../lib/queries/listQuery'
 import { useList, type ListQueryResult, type ListResult } from '../../lib/queries/useList'
@@ -276,6 +276,7 @@ function DashboardCalendarContent({
         title={title}
         value={selected.from}
         todayDate={today}
+        onToday={() => commit({ kind: 'quick', period: 'Today' })}
         shadePastDates={false}
         onSelect={(day) => commit({ kind: 'custom', from: day, to: day })}
         onDismiss={onClose}
@@ -402,7 +403,7 @@ export default function Today() {
 
   const [pickupPage, setPickupPage] = useState(0)
   const [returnPage, setReturnPage] = useState(0)
-  const dayAd = businessDayAd()
+  const dayAd = operationalTodayAd()
 
   const syncBothPanels = useCallback((nextFilter: DateFilter) => {
     setPickupPage(0)
@@ -783,19 +784,14 @@ export default function Today() {
         />
       }
     >
-      <div className="dashboard-workbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-          <div className="dashboard-workbar__intro" style={{ margin: 0 }}>
-            <p style={{ margin: 0 }}>
-              {pickupCount === undefined || returnCount === undefined ? (
-                'Movement board'
-              ) : (
-                <>
-                  <span className="font-mono tabular-nums">{pickupCount}</span> going out ·{' '}
-                  <span className="font-mono tabular-nums">{returnCount}</span> coming back
-                </>
-              )}
-            </p>
+      <div className="dashboard-workbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 'var(--density-section-gap, 12px)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h1 style={{ margin: 0, fontSize: 'var(--t-h3, 18px)', fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+              Today
+              <span style={{ color: 'var(--muted)', fontWeight: 400 }}>•</span>
+              <span style={{ fontSize: 'var(--t-meta, 14px)', fontWeight: 600, color: 'var(--text2)' }}>Dispatch board</span>
+            </h1>
             <DataAgeBadge
               loadedAt={pickups.lastFetchedAt && returns.lastFetchedAt
                 ? new Date(Math.min(pickups.lastFetchedAt.getTime(), returns.lastFetchedAt.getTime()))
@@ -806,58 +802,101 @@ export default function Today() {
               compact
             />
           </div>
+          <p style={{ margin: 0, fontSize: 'var(--t-meta, 13px)', color: 'var(--muted)' }}>
+            Staff see the next physical action first. KPIs and reports stay secondary.
+          </p>
         </div>
 
-        {/* Unified Page-Level Date Bar */}
-        <div
-          className="dashboard-page-date-bar"
-          role="group"
-          aria-label="Dispatch day for pickups and returns"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 3,
-            background: 'var(--surface-2)',
-            padding: 3,
-            borderRadius: 'calc(var(--r-btn) + 2px)',
-            border: '1px solid var(--border)',
-          }}
-        >
-          {QUICK_PERIODS.map((period) => {
-            const isActive = pickupDateFilter.kind === 'quick' && pickupDateFilter.period === period && returnDateFilter.kind === 'quick' && returnDateFilter.period === period
-            return (
-              <button
-                key={period}
-                type="button"
-                className="press tap"
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {/* Quick indicators matching wireframe */}
+          {pickupCount !== undefined && returnCount !== undefined && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span
                 style={{
-                  minHeight: 32,
-                  padding: '0 12px',
-                  borderRadius: 'var(--r-btn)',
-                  border: 'none',
-                  background: isActive ? 'var(--card)' : 'transparent',
-                  color: isActive ? 'var(--text)' : 'var(--text2)',
-                  fontWeight: isActive ? 600 : 500,
-                  fontSize: 'var(--t-meta, 13px)',
-                  fontFamily: 'inherit',
-                  boxShadow: isActive ? 'var(--shadow-sm), var(--specular-rim)' : 'none',
-                  cursor: 'pointer',
-                  transition: 'background var(--dur-fast, 120ms) var(--ease), color var(--dur-fast, 120ms) var(--ease), box-shadow var(--dur-fast, 120ms) var(--ease)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  padding: '4px 10px',
+                  borderRadius: 'var(--r-btn, 6px)',
+                  background: 'color-mix(in srgb, var(--primary) 12%, var(--card))',
+                  border: '1px solid color-mix(in srgb, var(--primary) 30%, transparent)',
+                  color: 'var(--primary-text)',
+                  fontSize: '12px',
+                  fontWeight: 600,
                 }}
-                aria-pressed={isActive}
-                onClick={() => syncBothPanels({ kind: 'quick', period })}
               >
-                {QUICK_PERIOD_LABELS[lang][period]}
-              </button>
-            )
-          })}
-          <MasterDispatchDateControl
-            filter={pickupDateFilter}
-            onChange={syncBothPanels}
-            today={dayAd}
-            groupLabel="Master date picker"
-            dialogLabel="Master dispatch date"
-          />
+                <span className="font-mono tabular-nums">{pickupCount}</span> going out
+              </span>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  padding: '4px 10px',
+                  borderRadius: 'var(--r-btn, 6px)',
+                  background: 'color-mix(in srgb, var(--success) 12%, var(--card))',
+                  border: '1px solid color-mix(in srgb, var(--success) 30%, transparent)',
+                  color: 'var(--success-text)',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                }}
+              >
+                <span className="font-mono tabular-nums">{returnCount}</span> coming back
+              </span>
+            </div>
+          )}
+
+          {/* Unified Page-Level Date Bar */}
+          <div
+            className="dashboard-page-date-bar"
+            role="group"
+            aria-label="Dispatch day for pickups and returns"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 3,
+              background: 'var(--surface-2)',
+              padding: 3,
+              borderRadius: 'calc(var(--r-btn) + 2px)',
+              border: '1px solid var(--border)',
+            }}
+          >
+            {QUICK_PERIODS.map((period) => {
+              const isActive = pickupDateFilter.kind === 'quick' && pickupDateFilter.period === period && returnDateFilter.kind === 'quick' && returnDateFilter.period === period
+              return (
+                <button
+                  key={period}
+                  type="button"
+                  className="press tap"
+                  style={{
+                    minHeight: 38,
+                    padding: '0 12px',
+                    borderRadius: 'var(--r-btn)',
+                    border: 'none',
+                    background: isActive ? 'var(--card)' : 'transparent',
+                    color: isActive ? 'var(--text)' : 'var(--text2)',
+                    fontWeight: isActive ? 600 : 500,
+                    fontSize: 'var(--t-meta, 13px)',
+                    fontFamily: 'inherit',
+                    boxShadow: isActive ? 'var(--shadow-sm), var(--specular-rim)' : 'none',
+                    cursor: 'pointer',
+                    transition: 'background var(--dur-fast, 120ms) var(--ease), color var(--dur-fast, 120ms) var(--ease), box-shadow var(--dur-fast, 120ms) var(--ease)',
+                  }}
+                  aria-pressed={isActive}
+                  onClick={() => syncBothPanels({ kind: 'quick', period })}
+                >
+                  {QUICK_PERIOD_LABELS[lang][period]}
+                </button>
+              )
+            })}
+            <MasterDispatchDateControl
+              filter={pickupDateFilter}
+              onChange={syncBothPanels}
+              today={dayAd}
+              groupLabel="Master date picker"
+              dialogLabel="Master dispatch date"
+            />
+          </div>
         </div>
       </div>
 
@@ -993,6 +1032,50 @@ export default function Today() {
         )}
       </div>
 
+      {/* After the dispatch queues section matching wireframe */}
+      <div
+        className="dashboard-after-queues-header"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 12,
+          marginTop: 'var(--density-section-gap, 16px)',
+          marginBottom: 'var(--sp-xs, 8px)',
+        }}
+      >
+        <div>
+          <h3
+            style={{
+              margin: 0,
+              fontSize: '14px',
+              fontWeight: 700,
+              color: 'var(--text)',
+              letterSpacing: '-0.01em',
+            }}
+          >
+            After the dispatch queues
+          </h3>
+          <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--muted)' }}>
+            Shift handover / unresolved exceptions / equipment attention
+          </p>
+        </div>
+        <span
+          style={{
+            fontSize: '11px',
+            fontWeight: 600,
+            padding: '3px 8px',
+            borderRadius: 'var(--r-btn, 4px)',
+            background: 'var(--surface-2)',
+            color: 'var(--muted)',
+            border: '1px solid var(--border)',
+          }}
+        >
+          Secondary, below the daily work
+        </span>
+      </div>
+
       <ShiftHandoverPanel />
 
       {/* Situational Awareness 3-Card Row */}
@@ -1001,8 +1084,8 @@ export default function Today() {
         style={{
           display: 'grid',
           gridTemplateColumns: isPhone ? '1fr' : 'repeat(3, minmax(0, 1fr))',
-          gap: 'var(--sp-md, 12px)',
-          marginTop: 'var(--sp-xl, 24px)',
+          gap: 'var(--density-panel-gap, 12px)',
+          marginTop: 'var(--density-section-gap, 12px)',
         }}
       >
         {/* Card 1: Currently Out on Set */}
@@ -1012,27 +1095,27 @@ export default function Today() {
             background: 'var(--surface-card, var(--card))',
             border: '1px solid var(--border)',
             borderRadius: 'var(--r-card)',
-            padding: '16px 20px',
+            padding: 'var(--density-card-pad, 12px 14px)',
             boxShadow: 'var(--shadow-card), var(--specular-rim)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            gap: 12,
-            minHeight: 140,
+            gap: 10,
+            minHeight: 'var(--density-situational-min-h, 96px)',
           }}
         >
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
               <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Currently Out on Set
               </span>
               <Icon name="truck" size={18} style={{ color: 'var(--primary)' }} />
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, margin: '2px 0 4px' }}>
-              <span className="font-mono tabular-nums" style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-id, sans-serif)' }}>
+              <span className="font-mono tabular-nums" style={{ fontSize: '1.65rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-id, sans-serif)' }}>
                 {activeRentalsCount}
               </span>
-              <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text2)' }}>
+              <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text2)' }}>
                 Active {activeRentalsCount === 1 ? 'Rental' : 'Rentals'}
               </span>
             </div>
@@ -1063,7 +1146,7 @@ export default function Today() {
               fontWeight: 600,
               color: 'var(--primary-text)',
               textDecoration: 'none',
-              marginTop: 4,
+              marginTop: 2,
             }}
           >
             Open Return Queue <Icon name="arrow_right" size={14} />
@@ -1077,17 +1160,17 @@ export default function Today() {
             background: 'var(--surface-card, var(--card))',
             border: '1px solid var(--border)',
             borderRadius: 'var(--r-card)',
-            padding: '16px 20px',
+            padding: 'var(--density-card-pad, 12px 14px)',
             boxShadow: 'var(--shadow-card), var(--specular-rim)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            gap: 12,
-            minHeight: 140,
+            gap: 10,
+            minHeight: 'var(--density-situational-min-h, 96px)',
           }}
         >
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
               <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Prep & Packing Queue
               </span>
@@ -1095,17 +1178,17 @@ export default function Today() {
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, margin: '2px 0 4px', flexWrap: 'wrap' }}>
               <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4 }}>
-                <span className="font-mono tabular-nums" style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-id, sans-serif)' }}>
+                <span className="font-mono tabular-nums" style={{ fontSize: '1.65rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-id, sans-serif)' }}>
                   {prepBookedCount}
                 </span>
-                <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text2)' }}>Booked</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text2)' }}>Booked</span>
               </span>
               <span style={{ color: 'var(--border2)' }}>·</span>
               <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4 }}>
-                <span className="font-mono tabular-nums" style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-id, sans-serif)' }}>
+                <span className="font-mono tabular-nums" style={{ fontSize: '1.65rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-id, sans-serif)' }}>
                   {prepPackedCount}
                 </span>
-                <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text2)' }}>Packed</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text2)' }}>Packed</span>
               </span>
             </div>
             <p style={{ margin: 0, fontSize: 'var(--t-meta, 13px)', color: 'var(--muted)', lineHeight: 1.4 }}>
@@ -1124,7 +1207,7 @@ export default function Today() {
               fontWeight: 600,
               color: 'var(--primary-text)',
               textDecoration: 'none',
-              marginTop: 4,
+              marginTop: 2,
             }}
           >
             Open Packing Queue <Icon name="arrow_right" size={14} />
@@ -1138,27 +1221,27 @@ export default function Today() {
             background: 'var(--surface-card, var(--card))',
             border: '1px solid var(--border)',
             borderRadius: 'var(--r-card)',
-            padding: '16px 20px',
+            padding: 'var(--density-card-pad, 12px 14px)',
             boxShadow: 'var(--shadow-card), var(--specular-rim)',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
-            gap: 12,
-            minHeight: 140,
+            gap: 10,
+            minHeight: 'var(--density-situational-min-h, 96px)',
           }}
         >
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
               <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Maintenance & QC Hold
               </span>
               <Icon name="tool" size={18} style={{ color: 'var(--warn)' }} />
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, margin: '2px 0 4px' }}>
-              <span className="font-mono tabular-nums" style={{ fontSize: '1.75rem', fontWeight: 700, color: openCases > 0 ? 'var(--warn-text)' : 'var(--text)', fontFamily: 'var(--font-id, sans-serif)' }}>
+              <span className="font-mono tabular-nums" style={{ fontSize: '1.65rem', fontWeight: 700, color: openCases > 0 ? 'var(--warn-text)' : 'var(--text)', fontFamily: 'var(--font-id, sans-serif)' }}>
                 {openCases}
               </span>
-              <span style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text2)' }}>
+              <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text2)' }}>
                 Open {openCases === 1 ? 'Case' : 'Cases'} / Holds
               </span>
             </div>
@@ -1178,7 +1261,7 @@ export default function Today() {
               fontWeight: 600,
               color: 'var(--warn-text)',
               textDecoration: 'none',
-              marginTop: 4,
+              marginTop: 2,
             }}
           >
             View Cases & QC <Icon name="arrow_right" size={14} />

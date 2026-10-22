@@ -111,6 +111,29 @@ export function clearFloorScan(verb: FloorVerb, bookingId: string): void {
   removeStorageItem(storageKey(verb, bookingId))
 }
 
+/**
+ * Clears all in-progress floor scan records (for logout / device purge).
+ */
+export function clearAllFloorScans(): void {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const keysToRemove: string[] = []
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const key = window.localStorage.key(i)
+        if (key && key.startsWith(STORAGE_PREFIX)) {
+          keysToRemove.push(key)
+        }
+      }
+      for (const key of keysToRemove) {
+        window.localStorage.removeItem(key)
+      }
+    }
+  } catch {
+    // Storage access blocked
+  }
+  memoryStore.clear()
+}
+
 export interface FloorScanEventParams {
   bookingId: string
   context: 'packing' | 'handover' | 'return' | 'lookup' | 'stock_check'

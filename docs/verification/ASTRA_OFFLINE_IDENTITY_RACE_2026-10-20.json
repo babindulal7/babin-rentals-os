@@ -1,0 +1,37 @@
+{
+  "scope": "Isolated fake IndexedDB and mocked network failures; no live Supabase or browser business-data writes",
+  "finding": "REL-01 follow-up: dataAccess captures outbox identity after a delayed online failure",
+  "sourceHashBeforeFix": "2ce28603ccbdade6f7124a7275a6f84e3226a9bef80d3ba96e17cb33ff1a3d18",
+  "reproduction": {
+    "tests": 3,
+    "passed": 0,
+    "failed": 3,
+    "cases": [
+      {
+        "action": "insert",
+        "expectedQueueActor": "operator-a",
+        "actualQueueActor": "operator-b"
+      },
+      {
+        "action": "update",
+        "expectedQueueActor": "operator-a",
+        "actualQueueActor": "operator-b"
+      },
+      {
+        "action": "insert",
+        "expectedQueueProject": "project-a",
+        "actualQueueProject": "project-b"
+      }
+    ]
+  },
+  "status": "Source corrected; 4 identity cases and 36 focused checks passed; full current-source certification tracked separately",
+  "afterFix": {
+    "identityTests": 4,
+    "focusedTests": 36,
+    "failed": 0,
+    "typecheckExitCode": 0,
+    "fullRunReference": "ASTRA_PRE_AVAILABILITY_CHECKPOINT_2026-10-20.json",
+    "fullRunPassed": 4899,
+    "fullRunSourceChanged": true
+  }
+}

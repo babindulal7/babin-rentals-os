@@ -12,16 +12,11 @@ import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist'
 import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { ALLOWED_ANON_FUNCTIONS } from './allowed-anon-functions.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 // Why each is public: RLS policies call them in the invoking role's name, so anon needs EXECUTE.
-const ALLOWED_FUNCTIONS = new Set([
-  'auth_can_approve_damage', 'auth_can_approve_late_fee_waiver', 'auth_can_approve_purchase', 'auth_can_view_money',
-  'auth_client_id', 'auth_is_finance_or_admin', 'auth_is_manager_or_above', 'auth_is_owner', 'auth_is_staff',
-  'auth_user_branch_id', 'auth_user_id', 'auth_user_role', 'intel_field_allowed',
-  'invoice_credit', 'invoice_discount_amount', 'invoice_outstanding', 'invoice_paid_net', 'invoice_vat_amount',
-  'next_booking_stage', 'retired_stage_to_canonical', 'set_request_context',
-])
+const ALLOWED_FUNCTIONS = ALLOWED_ANON_FUNCTIONS
 const ALLOWED_RELATIONS = new Set([]) // anon reads no table or view
 
 const db = await PGlite.create({ extensions: { pgcrypto, btree_gist } })

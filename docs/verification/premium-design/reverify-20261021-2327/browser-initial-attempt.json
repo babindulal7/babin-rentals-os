@@ -1,0 +1,18 @@
+[
+  {
+    "name": "browser",
+    "startedAt": "2026-10-21T17:46:21.759Z",
+    "exitCode": 1,
+    "sourceHash": "5c83308548ebcc3788d1aa11dc024bab46411488b27374a7a0c3825afe5e842a",
+    "afterHash": "328a1bd9a6aa715a7b1e3220e9a02dccea762d8a3165c4f9cdf1c796205ac098",
+    "sourceChanged": true
+  },
+  {
+    "name": "additional",
+    "startedAt": "2026-10-21T17:48:32.311Z",
+    "exitCode": 1,
+    "sourceHash": "328a1bd9a6aa715a7b1e3220e9a02dccea762d8a3165c4f9cdf1c796205ac098",
+    "afterHash": "f723fef07b34b889267c074274403c93f391a1ae0b6ea70f11e0035b2d19f6b9",
+    "sourceChanged": true
+  }
+]

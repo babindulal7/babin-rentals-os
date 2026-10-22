@@ -101,9 +101,10 @@ export default function Sidebar({ active }: SidebarProps) {
   const { theme, glass, choose } = useTheme()
   const { user } = useAuth()
   const viewport = useViewport()
-  /* Persisted independently of any one rail — this is the app shell, not a
-     page panel, so it gets its own fixed key rather than a route-derived one. */
-  const [collapsed, toggleCollapsed] = useCollapsed('sidebar:main', viewport === 'tablet')
+  const isTablet = viewport === 'tablet'
+  /* Persisted independently per device format — tablet defaults to the compact rail (64px)
+     so the main content receives the full remaining width (756px+), while desktop defaults expanded. */
+  const [collapsed, toggleCollapsed] = useCollapsed(isTablet ? 'sidebar:tablet' : 'sidebar:desktop', isTablet)
 
   /* A resize must not override a deliberate navigation preference. */
   const rail = collapsed

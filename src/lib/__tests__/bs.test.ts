@@ -16,6 +16,9 @@ import {
   formatBookingHoverDateTime,
   eachDay,
   isWeekend,
+  adMonthStart,
+  adMonthLength,
+  addAdMonths,
 } from '../bs'
 
 const ad = (y: number, m: number, d: number, h = 0, min = 0) => new Date(Date.UTC(y, m - 1, d, h, min))
@@ -376,5 +379,21 @@ describe('getBusinessToday', () => {
     /* Not a fixed date: a day chosen years from the frozen 31 Jul 2026 still
        resolves to itself, which `export const TODAY` could never do. */
     expect(getBusinessToday(ad(2031, 3, 9, 12, 0)).toISOString()).toBe('2031-03-09T00:00:00.000Z')
+  })
+})
+
+describe('adMonth helpers — Kathmandu civil month resolution', () => {
+  it('resolves month start in Kathmandu civil calendar even in late UTC hours of the previous month', () => {
+    // 31 Jul 18:30 UTC is 1 Aug 00:15 NPT in Kathmandu
+    const lateUtc = ad(2026, 7, 31, 18, 30)
+    const start = adMonthStart(lateUtc)
+    expect(start.toISOString()).toBe('2026-08-01T00:00:00.000Z')
+    expect(adMonthLength(lateUtc)).toBe(31) // August has 31 days
+  })
+
+  it('addAdMonths advances from the Kathmandu civil month', () => {
+    const lateUtc = ad(2026, 7, 31, 18, 30) // Kathmandu Aug 1
+    const next = addAdMonths(lateUtc, 1)
+    expect(next.toISOString()).toBe('2026-09-01T00:00:00.000Z')
   })
 })

@@ -6,6 +6,8 @@
  * a 4-phase lifecycle: Pre-Production -> Shoot -> Return -> Wrap.
  */
 
+import { IS_MOCK } from '../supabase'
+
 export type ProductionPhase = 'Pre-Production' | 'Shoot' | 'Return' | 'Wrap'
 
 export interface Production {
@@ -141,6 +143,7 @@ export const SEED_PRODUCTIONS: Production[] = [
 ]
 
 export function getProductions(): Production[] {
+  if (!IS_MOCK) throw new Error('Production tracking is unavailable. Existing local entries have been preserved.')
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) {
@@ -154,6 +157,7 @@ export function getProductions(): Production[] {
 }
 
 export function saveProductions(items: Production[]): void {
+  if (!IS_MOCK) throw new Error('Production tracking is unavailable. Existing local entries have been preserved.')
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
 }
 

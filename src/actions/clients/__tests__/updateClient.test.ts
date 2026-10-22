@@ -236,4 +236,31 @@ describe('UPDATE_CLIENT action', () => {
       is_primary: true,
     })
   })
+
+  it('rejects direct edits to commercial override columns (0005:162-164 & 0130)', () => {
+    expect(() =>
+      updateClientConfig.validate({
+        clientId: 'client-uuid-1',
+        patch: { approved_credit_limit: 50000 },
+      })
+    ).toThrow(/Field 'approved_credit_limit' cannot be modified/)
+
+    expect(() =>
+      updateClientConfig.validate({
+        clientId: 'client-uuid-1',
+        patch: { paymentTerms: 'Net 30' },
+      })
+    ).toThrow(/Field 'paymentTerms' cannot be modified/)
+  })
+
+  it('refuses execution when offline so contact/client writes are never half-queued', async () => {
+    await expect(
+      updateClientConfig.execute(
+        { clientId: 'client-uuid-1', patch: { name: 'Offline Edit' } },
+        { userId: 'user-actor-1', role: 'Manager', isOnline: false }
+      )
+    ).rejects.toThrow(/offline/i)
+    expect(access.updates).toHaveLength(0)
+  })
 })
+

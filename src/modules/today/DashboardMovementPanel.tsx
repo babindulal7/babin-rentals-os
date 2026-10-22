@@ -3,9 +3,10 @@ import { useMemo, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Icon, { type IconName } from '../../components/ui/Icon'
 import { ReturnCountdown } from '../../components/ui/ReturnCountdown'
+import { BsAdDate } from '../../components/ui/BsAdDate'
 import { PageBody } from '../../components/ui/PageBody'
 import { OverflowMenu } from '../../components/ui/OverflowMenu'
-import { businessDayAd, has, timeOf, type MovementRow } from '../../lib/queries/today'
+import { businessDayAd, has, movementAtAd, timeOf, type MovementRow } from '../../lib/queries/today'
 import type { ListResult } from '../../lib/queries/useList'
 import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext'
 import { useAuth } from '../../lib/auth'
@@ -56,12 +57,13 @@ export function dashboardAction(row: MovementRow, side: 'outgoing' | 'incoming')
 /*
  * Meaningful rows (ruled 8 Oct 2026, RULINGS-2026-10-08.md). Each visual names a
  * fact staff act on, derived only from fields the row already carries:
- *   · the time column is WHEN it moves — or how late it is, for an overdue return;
+ *   · the date cell is WHEN it moves — and, for an overdue return, how late;
  *   · the readiness tag reads the stage (Booked = not packed yet, Packed = packed);
  *   · the mode tag reads `delivery_type`.
- * Every tag pairs an icon with words, so none of it is colour alone.
+ * Every tag pairs an icon with words, so none of it is colour alone. A return
+ * carries no tag: its date cell already says when it is due (RULINGS-2026-10-15).
  */
-type TagTone = 'todo' | 'ready' | 'due' | 'mode'
+type TagTone = 'todo' | 'ready' | 'mode'
 interface RowTag { tone: TagTone; icon: IconName; label: string }
 
 const MODE_TAG: Record<string, { icon: IconName; label: string }> = {
@@ -71,26 +73,13 @@ const MODE_TAG: Record<string, { icon: IconName; label: string }> = {
   'Third Party': { icon: 'person', label: 'Third party' },
 }
 
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const
-
-/** "Tue 22 Sep" for a Kathmandu calendar day `YYYY-MM-DD`. Fixed names: ICU builds disagree on "Sep"/"Sept". */
-function shortDay(dayAd: string): string {
-  const d = new Date(`${dayAd}T00:00:00Z`)
-  return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`
-}
-
-function rowTags(row: MovementRow, side: 'outgoing' | 'incoming', isTodayRow: boolean, isOverdue: boolean, isPartial: boolean): RowTag[] {
-  const tags: RowTag[] = []
-  if (side === 'outgoing') {
-    tags.push(row.status === 'Packed'
-      ? { tone: 'ready', icon: 'check', label: 'Packed' }
-      : { tone: 'todo', icon: 'package', label: 'Not packed yet' })
-    const mode = row.deliveryType ? MODE_TAG[row.deliveryType] : undefined
-    if (mode) tags.push({ tone: 'mode', ...mode })
-  } else if (!isOverdue && !isPartial) {
-    tags.push({ tone: 'due', icon: 'return_arrow', label: isTodayRow ? 'Due back today' : `Due back ${shortDay(row.atDayAd)}` })
-  }
+function rowTags(row: MovementRow, side: 'outgoing' | 'incoming'): RowTag[] {
+  if (side !== 'outgoing') return []
+  const tags: RowTag[] = [row.status === 'Packed'
+    ? { tone: 'ready', icon: 'check', label: 'Packed' }
+    : { tone: 'todo', icon: 'package', label: 'Not packed yet' }]
+  const mode = row.deliveryType ? MODE_TAG[row.deliveryType] : undefined
+  if (mode) tags.push({ tone: 'mode', ...mode })
   return tags
 }
 
@@ -270,13 +259,6 @@ export default function DashboardMovementPanel({
             </div>
           ) : (
             <div className="movement-cards-list">
-              <div className="movement-cards-list__head" aria-hidden="true">
-                <span>Client / project</span>
-                <span>Booking</span>
-                <span>Pickup</span>
-                <span>Return</span>
-                <span>Status / next step</span>
-              </div>
               {rows.map((row, rowIndex) => {
                 const action = dashboardAction(row, side)
                 const isOverdue = has(row, 'Overdue')
@@ -288,164 +270,153 @@ export default function DashboardMovementPanel({
                   (row.statusNote ?? '').toLowerCase().includes('still with client')
 
                 const isTodayRow = row.atDayAd === today
-                const [clock, meridiem] = timeOf(row).split(' ')
-                const lateDays = isOverdue ? (row.statusNote?.match(/\d+/)?.[0] ?? null) : null
-                const tags = rowTags(row, side, isTodayRow, isOverdue, isPartial)
+                const tags = rowTags(row, side)
+                const project = row.project || 'No project specified'
 
                 const displayTime = side === 'outgoing'
                   ? `${row.atDayAd !== today ? `${formatAd(new Date(`${row.atDayAd}T00:00:00Z`))} · ` : ''}${timeOf(row)}`
                   : row.due.replace(/^Due\s+/i, '')
-                const pickupMoment = side === 'outgoing'
-                  ? displayTime
-                  : (row.duration.split(' → ')[0] ?? '—')
-                const returnMoment = side === 'incoming'
-                  ? displayTime
-                  : row.due.replace(/^Due\s+/i, '')
 
-                    const isWindowExpired = Boolean(
-                      side === 'outgoing' &&
-                      row.returnAtAd &&
-                      new Date(row.returnAtAd).getTime() < Date.now()
-                    )
+                const isWindowExpired = Boolean(
+                  side === 'outgoing' &&
+                  row.returnAtAd &&
+                  new Date(row.returnAtAd).getTime() < Date.now()
+                )
 
-                    return (
-                      <article
-                        key={row.id}
-                        className={`movement-card movement-card--${side} ${
-                          isOverdue ? 'movement-card--overdue' : ''
-                        }`}
-                        aria-label={`${row.bookingNo}, ${row.client}, ${displayTime}`}
-                        style={{ '--row-i': Math.min(rowIndex, 12) } as React.CSSProperties}
-                      >
-                        {/* Visual anchor only — the article's label and the dates below carry the same facts for assistive tech. */}
-                        <div className={`movement-card__when${isOverdue ? ' movement-card__when--late' : ''}`} aria-hidden="true">
-                          {isOverdue
-                            ? <><strong>{lateDays ? `${lateDays}d` : 'Late'}</strong><span>{lateDays ? 'late' : 'overdue'}</span></>
-                            : <><strong>{clock}</strong><span>{meridiem}{isTodayRow ? '' : ` · ${shortDay(row.atDayAd)}`}</span></>}
-                        </div>
-                        <ClientIntelFromId clientId={row.clientId} name={row.client} context="dashboard" gateContext={intelGate} actionContext={user ? { userId: user.id, role: user.role } : null}>
+                /*
+                 * RULING 2026-10-15: one row, each fact once (RULINGS-2026-10-15.md #19–#23).
+                 * The card was ~204px and said a late return four ways ("86d
+                 * late" rail, red edge, pink fill, "Overdue · 86 days late").
+                 * Now: who + which booking | when this movement happens (BS
+                 * over AD, or the time alone on today's rows, since the day
+                 * control already names the day) and, if late, how late, once,
+                 * in danger ink | the 56px verb. The other side's date and the
+                 * Pickup/Return captions the panel title already says are gone
+                 * from view; the booking hover card keeps both dates.
+                 */
+                return (
+                  <article
+                    key={row.id}
+                    className={`movement-card movement-card--${side}${isOverdue ? ' movement-card--overdue' : ''}`}
+                    aria-label={`${row.bookingNo}, ${row.client}, ${displayTime}`}
+                    style={{ '--row-i': Math.min(rowIndex, 12) } as React.CSSProperties}
+                  >
+                    <div className="movement-card__who">
+                      <ClientIntelFromId clientId={row.clientId} name={row.client} context="dashboard" gateContext={intelGate} actionContext={user ? { userId: user.id, role: user.role } : null}>
+                        {/* Name and project share one 44px target (Law 13), as on the Rentals table. */}
                         <Link className="movement-card__client-link" to={`/clients/${row.clientId}`}>
-                          <span className="movement-card__avatar" aria-hidden="true">
-                            {row.monogram || (row.client ? row.client.slice(0, 2).toUpperCase() : 'BK')}
-                          </span>
-                          <span className="movement-card__client-copy">
-                            <strong className="movement-card__client">{row.client}</strong>
-                            <span className="movement-card__project" title={row.project || 'No project specified'}>{row.project || 'No project specified'}</span>
-                            <span className="movement-card__items-count">
-                              {row.itemCount} {row.itemCount === 1 ? 'item' : 'items'}{side === 'incoming' ? ' booked' : ''}
-                            </span>
-                          </span>
+                          <strong className="movement-card__client" title={row.client}>{row.client}</strong>
+                          <span className="movement-card__project" title={project}>{project}</span>
                         </Link>
-                        </ClientIntelFromId>
-
-                        <div className="movement-card__booking-link">
-                          <span className="movement-card__record-label">Booking</span>
-                          <IntelCard
-                            glance={movementGlance(row, side)}
-                            detail={movementDetail(row)}
-                            detailTitle={row.bookingNo}
-                            detailSubtitle={`${row.client} · ${row.status}`}
-                            entityType="rental"
-                            entityId={row.id}
-                            context="dashboard"
-                            gateContext={intelGate}
-                            actionContext={user ? { userId: user.id, role: user.role } : null}
+                      </ClientIntelFromId>
+                    </div>
+                    <div className="movement-card__meta">
+                      <div className="movement-card__booking-link">
+                        <IntelCard
+                          glance={movementGlance(row, side)}
+                          detail={movementDetail(row)}
+                          detailTitle={row.bookingNo}
+                          detailSubtitle={`${row.client} · ${row.status}`}
+                          entityType="rental"
+                          entityId={row.id}
+                          context="dashboard"
+                          gateContext={intelGate}
+                          actionContext={user ? { userId: user.id, role: user.role } : null}
+                        >
+                          <Link to={`/rentals/${row.bookingNo}`}>
+                            <span className="sr-only">Booking </span>
+                            <strong className="movement-card__number identifier">{row.bookingNo}</strong>
+                          </Link>
+                        </IntelCard>
+                      </div>
+                      <span className="movement-card__items-count">
+                        {row.itemCount} {row.itemCount === 1 ? 'item' : 'items'}{side === 'incoming' ? ' booked' : ''}
+                      </span>
+                    </div>
+                    {(tags.length > 0 || isWindowExpired) && (
+                      <div className="movement-card__badge-wrap">
+                        {isWindowExpired && (
+                          <span
+                            className="movement-card__status movement-card__status--expired"
+                            title="Scheduled return window has passed without dispatch"
                           >
-                            <Link to={`/rentals/${row.bookingNo}`}><strong className="movement-card__number identifier">{row.bookingNo}</strong></Link>
-                          </IntelCard>
-                        </div>
+                            <Icon name="alert_triangle" size={14} />
+                            Window passed · Reschedule or Cancel
+                          </span>
+                        )}
+                        {tags.map((tag) => (
+                          <span key={tag.label} className={`movement-card__tag movement-card__tag--${tag.tone}`}>
+                            <Icon name={tag.icon} size={14} />
+                            {tag.label}
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
-                        <div className="movement-card__schedule movement-card__schedule--pickup">
-                          <span>Pickup</span>
-                          <strong className="movement-card__time figure" style={{ color: 'var(--booking-date-text)' }}>{pickupMoment}</strong>
-                        </div>
-                        <div className="movement-card__schedule movement-card__schedule--return">
-                          <span>Return</span>
-                          <strong className="figure" style={{ color: 'var(--booking-date-text)' }}>{returnMoment}</strong>
-                          {/* The live distance to `return_at` for gear still out
-                              (md brief 11). An overdue row already says how late in
-                              its time column and badge, so it is not said twice; a
-                              row that crosses its due time while the screen is open
-                              turns red here until the next refetch flags it. */}
-                          {side === 'incoming' && !isOverdue && !isPartial && row.returnDueAtAd && (
-                            <ReturnCountdown returnAtAd={row.returnDueAtAd} short />
-                          )}
-                        </div>
+                    <div className={`movement-card__schedule movement-card__schedule--${side === 'incoming' ? 'return' : 'pickup'}`}>
+                      {/* The panel title and the verb already say which movement this is. */}
+                      <span className="sr-only">{side === 'incoming' ? 'Return' : 'Pickup'} </span>
+                      {isTodayRow
+                        ? <strong className="movement-card__time figure">{timeOf(row)}</strong>
+                        : <BsAdDate className="movement-card__time" date={movementAtAd(row)} showTime />}
+                      {/* Lateness is said once, here, beside the date it is counted from. A late
+                          pickup says "Awaiting dispatch" (main's wording); a pickup whose whole
+                          window has passed says so in the status row instead, not twice. */}
+                      {isOverdue && !isWindowExpired && (
+                        <span className="movement-card__status movement-card__status--overdue">
+                          {side === 'outgoing' ? 'Awaiting dispatch' : (row.statusNote ?? 'Late')}
+                        </span>
+                      )}
+                      {side === 'incoming' && !isOverdue && isPartial && (
+                        <span className="movement-card__status movement-card__status--partial">Partial return</span>
+                      )}
+                      {/* The live distance to `return_at` for gear still out
+                          (md brief 11). A row that crosses its due time while
+                          the screen is open turns red here until the next
+                          refetch flags it overdue. */}
+                      {side === 'incoming' && !isOverdue && !isPartial && row.returnDueAtAd && (
+                        <ReturnCountdown returnAtAd={row.returnDueAtAd} short />
+                      )}
+                    </div>
 
-                        <div className="movement-card__status-action">
-                          <div className="movement-card__badge-wrap">
-                            {isWindowExpired ? (
-                              <span
-                                className="movement-card__status movement-card__status--expired"
-                                title="Scheduled return window has passed without dispatch"
-                              >
-                                <Icon name="alert_triangle" size={14} />
-                                Window passed · Reschedule or Cancel
-                              </span>
-                            ) : side === 'incoming' && isOverdue ? (
-                              <span className="movement-card__status movement-card__status--overdue">
-                                <Icon name="alert_triangle" size={14} />
-                                {row.statusNote ? `Overdue · ${row.statusNote}` : 'Overdue'}
-                              </span>
-                            ) : side === 'outgoing' && isOverdue ? (
-                              <span className="movement-card__status movement-card__status--overdue">
-                                <Icon name="alert_triangle" size={14} />
-                                Awaiting dispatch
-                              </span>
-                            ) : null}
-                            {side === 'incoming' && !isOverdue && isPartial && (
-                              <span className="movement-card__status movement-card__status--partial">
-                                <Icon name="alert_triangle" size={14} />
-                                Partial return
-                              </span>
-                            )}
-                            {tags.map((tag) => (
-                              <span key={tag.label} className={`movement-card__tag movement-card__tag--${tag.tone}`}>
-                                <Icon name={tag.icon} size={14} />
-                                {tag.label}
-                              </span>
-                            ))}
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <button
-                              type="button"
-                              className={`movement-card__cta-btn ${(side === 'incoming' || isReady) ? 'is-dominant' : 'is-prep'}`}
-                              onClick={() => {
-                                const bookingStatus: BookingStatus = (row.status as BookingStatus) || (side === 'incoming' ? 'On Rent' : 'Booked')
-                                openOperations(row.bookingNo, bookingStatus, action.job)
-                              }}
-                              aria-label={`${actionLabel} for ${row.client}, booking ${row.bookingNo}`}
-                            >
-                              <span>{actionLabel}</span><Icon name="arrow_right" size={15} />
-                            </button>
-                            <OverflowMenu
-                              ariaLabel={`More actions for booking ${row.bookingNo}`}
-                              items={[
-                                {
-                                  label: 'View Booking',
-                                  icon: 'file',
-                                  onClick: () => navigate(`/rentals/${row.bookingNo}`),
-                                },
-                                {
-                                  label: 'Reschedule Dates',
-                                  icon: 'calendar',
-                                  onClick: () => navigate(`/rentals/${row.bookingNo}`),
-                                },
-                                {
-                                  label: 'Cancel No-Show',
-                                  icon: 'close',
-                                  onClick: () => {
-                                    const bookingStatus: BookingStatus = (row.status as BookingStatus) || (side === 'incoming' ? 'On Rent' : 'Booked')
-                                    openOperations(row.bookingNo, bookingStatus, action.job)
-                                  },
-                                },
-                              ]}
-                            />
-                          </div>
-                        </div>
-
-                      </article>
-                    )
+                    <div className="movement-card__actions">
+                      <button
+                        type="button"
+                        className={`movement-card__cta-btn ${(side === 'incoming' || isReady) ? 'is-dominant' : 'is-prep'}`}
+                        onClick={() => {
+                          const bookingStatus: BookingStatus = (row.status as BookingStatus) || (side === 'incoming' ? 'On Rent' : 'Booked')
+                          openOperations(row.bookingNo, bookingStatus, action.job)
+                        }}
+                        aria-label={`${actionLabel} for ${row.client}, booking ${row.bookingNo}`}
+                      >
+                        <span>{actionLabel}</span><Icon name="arrow_right" size={15} />
+                      </button>
+                      <OverflowMenu
+                        ariaLabel={`More actions for booking ${row.bookingNo}`}
+                        items={[
+                          {
+                            label: 'View Booking',
+                            icon: 'file',
+                            onClick: () => navigate(`/rentals/${row.bookingNo}`),
+                          },
+                          {
+                            label: 'Reschedule Dates',
+                            icon: 'calendar',
+                            onClick: () => navigate(`/rentals/${row.bookingNo}`),
+                          },
+                          {
+                            label: 'Cancel No-Show',
+                            icon: 'close',
+                            onClick: () => {
+                              const bookingStatus: BookingStatus = (row.status as BookingStatus) || (side === 'incoming' ? 'On Rent' : 'Booked')
+                              openOperations(row.bookingNo, bookingStatus, action.job)
+                            },
+                          },
+                        ]}
+                      />
+                    </div>
+                  </article>
+              )
             })}
           </div>
           )}
@@ -458,6 +429,15 @@ export default function DashboardMovementPanel({
             </div>
           )}
         </PageBody>
+        {/* ADOPTIONS item 7 (Booqable §4.3): footer link carries the panel's named
+            filter, widened. "View all" is the widen (no separate query). A counted
+            "View late" (overdue) drill-down is deferred — it needs an activity-scoped
+            /rentals route param that is not wired yet, so it is not shipped half-built. */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 12px', borderTop: '1px solid var(--border)' }}>
+          <Link to="/rentals" style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--link)', textDecoration: 'none' }}>
+            View all {side === 'outgoing' ? 'bookings' : 'rentals'} <Icon name="arrow_right" size={14} />
+          </Link>
+        </div>
       </div>}
     </section>
   )

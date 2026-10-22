@@ -40,14 +40,13 @@ import { captureError } from '../../lib/monitoring'
  *    reason; the column is left NULL rather than invented. TODO(decision):
  *    a Reject dialog that collects the ruled reasons.
  *
- * ## Permission — the finance/admin five (0064, applied 23 Aug 2026)
+ * ## Permission — Owner and Manager only (0069, applied 25 Aug 2026)
  *
- * `purchase.approve` → `rbac.canApprovePurchase` — Owner, Admin, Manager,
- * Coordinator, Accounts — mirroring `purchase_requests_approval_rank`
- * (0064, RESTRICTIVE): any UPDATE whose resulting row is Approved or Rejected
- * requires `auth_is_finance_or_admin()`. The §4.29 breadth (Driver/Technician
- * admitted to a spend-authorising verb via `purchase_requests_all`) is closed;
- * raising, editing, submitting, cancelling, and Ordered/Received legwork stay
+ * `purchase.approve` → `rbac.canApprovePurchase` — Owner and Manager only —
+ * mirroring `purchase_requests_approval_rank` (0069, RESTRICTIVE): any UPDATE
+ * whose resulting row is Approved or Rejected requires `auth_can_approve_purchase()`.
+ * (0064 originally admitted finance/admin five; 0069 narrowed it to Owner/Manager).
+ * Raising, editing, submitting, cancelling, and Ordered/Received legwork stay
  * on the broad policy and are not this action's business.
  *
  * ## Offline

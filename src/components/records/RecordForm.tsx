@@ -13,7 +13,9 @@ import { Button, Card, PageHeader } from '../ui/Page'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { RecordWorkspace, RecordSection, RecordActions, RecordErrorSummary, focusRecordField, useUnsavedRecord } from '../ui/RecordWorkspace'
 import { useToast } from '../ui/Toast'
-import { EquipmentSectionLinks, EquipmentSummary, INTAKE_CONDITIONS, PasteSerials, equipmentSectionState, useEquipmentDuplicate } from './equipmentAssist'
+import { EquipmentSummary, useEquipmentDuplicate } from './equipmentAssist'
+import { EquipmentRecordEditor } from './EquipmentRecordEditor'
+import { useCanViewMoney } from '../../lib/moneyVisibility'
 import './equipment-assist.css'
 import { useViewport } from '../../lib/device'
 
@@ -21,7 +23,11 @@ export interface RecordFormProps { kind:RecordKind; recordId?:string; onDone?:()
 const names={client:'Client',equipment:'Equipment',bundle:'Bundle'}
 const routes={client:'/clients',equipment:'/inventory',bundle:'/inventory/bundles'}
 /** Optional sections collapse while empty; essential ones are always open. */
-const optionalSections:Record<RecordKind,string[]>={client:['Addresses','Commercial details','Notes'],equipment:['Purchase','Maintenance & notes'],bundle:[]}
+const optionalSections: Record<RecordKind, string[]> = {
+  client: ['Addresses', 'Commercial details', 'Notes'],
+  equipment: ['Relationships', 'Purchase', 'Maintenance & Documents'],
+  bundle: [],
+}
 /** Roles that may open this form. Creating a client keeps canCreateClient parity (Warehouse); editing does not. */
 function rolesFor(kind:RecordKind,editing:boolean){return kind==='client'?(editing?['Owner','Admin','Manager','Coordinator']:['Owner','Admin','Manager','Coordinator','Warehouse']):['Owner','Admin','Manager']}
 
@@ -70,12 +76,19 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
     return()=>{active=false;clearTimeout(timer)}
   },[kind,values.phone,snapshot?.id,snapshot?.code])
 
-  const sections=useMemo(()=>{
-    const result=[...new Set(recordFields[kind].map(f=>f.section))]
-    if(kind==='bundle')result.splice(1,0,'Components')
-    if(kind==='client')result.splice(result.indexOf('Notes'),0,'Commercial details')
+  const canViewMoney = useCanViewMoney()
+  const sections = useMemo(() => {
+    if (kind === 'equipment') {
+      const list = ['Identity', 'Stock & Units', 'Relationships', 'Location']
+      if (canViewMoney) list.push('Purchase', 'Pricing & Rental')
+      list.push('Maintenance & Documents')
+      return list
+    }
+    const result = [...new Set(recordFields[kind].map((f) => f.section))]
+    if (kind === 'bundle') result.splice(1, 0, 'Components')
+    if (kind === 'client') result.splice(result.indexOf('Notes'), 0, 'Commercial details')
     return result
-  },[kind])
+  }, [kind, canViewMoney])
   const set=(key:string,value:string|boolean)=>{setValues(v=>({...v,[key]:value}));setErrors(e=>{const next={...e};delete next[key];return next})}
   function exit(){if(onDone){onDone();return} if(recordId){const params=new URLSearchParams(location.search);params.delete('action');navigate(`${location.pathname}${params.size?`?${params}`:''}`)}else navigate(kind==='bundle'?'/inventory?tab=bundles':routes[kind])}
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -152,7 +165,7 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
   if(!permitted)return <Card title="Record unavailable">Your role cannot edit this record.</Card>
   if(loading)return <Card title="Loading record">Loading saved values…</Card>
   if(recordId && !snapshot)return <Card title="Record not loaded"><p role="alert">{error}</p><Button onClick={()=>setReload(r=>r+1)}>Retry</Button></Card>
-  return <><PageHeader title={`${recordId?'Edit':'Add'} ${names[kind]}`}/>
+  return <><PageHeader title={`${recordId?'Edit':'Add'} ${names[kind]}`} showAddMenu={false} searchInMore={phone}/>
     {confirmDialog && (
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}
@@ -195,13 +208,180 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
         onConfirm: () => { setConfirmDialog(null); navigate(`/inventory/${equipmentDuplicate.id}`) },
       })
     }}>Open existing equipment</Button></Card>}
-    <RecordWorkspace summary={kind==='equipment'?<EquipmentSummary values={values} rows={rows} categoryName={(options.categories??[]).find(c=>c.id===values.category_id)?.name} editing={Boolean(recordId)}/>:<Card title={`${names[kind]} summary`}><strong>{String(values.name||`New ${kind}`)}</strong><p>{recordId?'Editing the existing record.':'A new record will be created.'}</p>{kind!=='client'&&<p>{rows.length} {kind==='bundle'?'components':'units'}</p>}</Card>} actions={<RecordActions busy={busy} dirty={dirty || !recordId} label={recordId?'Save changes':`Create ${kind}`} onSave={()=>void save()} onCancel={cancel} extra={canAddAnother?<Button type="button" variant="secondary" icon="plus" aria-label="Create & add another" title="Create & add another" disabled={busy} onClick={()=>void save('another')}>{phone?'':'Create & add another'}</Button>:undefined}/> }>
-      {kind==='equipment'&&<EquipmentSectionLinks sections={sections} stateOf={section=>equipmentSectionState(section,values,rows)} idOf={sectionId}/>}
-      {sections.map(section=><RecordSection key={section} title={section} id={sectionId(section)} collapsible={optionalSections[kind].includes(section)} defaultOpen={!optionalSections[kind].includes(section)||sectionHasValue(section)||(section==='Notes'&&false)} collapsedHint="Empty"><div className="record-fields">{recordFields[kind].filter(f=>f.section===section).map(renderField)}</div>
-        {kind==='client'&&section==='Contact'&&<><h3>Primary contact</h3>{rows.map((row,index)=><div className="record-fields" key={String(row.id??index)}>{rowField(row,index,'full_name','Contact name')}{rowField(row,index,'designation','Designation')}{rowField(row,index,'phone','Contact phone')}{rowField(row,index,'email','Contact email')}<Button disabled={busy} onClick={()=>setRows([])}>Remove primary contact</Button></div>)}{!rows.length&&<Button disabled={busy} onClick={()=>setRows([{full_name:'',designation:null,phone:null,email:null}])}>Add primary contact</Button>}</>}
-        {kind==='client'&&section==='Commercial details'&&<p>Membership and credit terms are managed from the client’s dedicated actions.</p>}
-        {kind==='equipment'&&section==='Units & location'&&values.tracking_mode==='Serialised'&&<div id="record-units" tabIndex={-1}>{rows.map((row,index)=><Card key={String(row.id??index)} title={String(row.asset_tag||`Unit ${index+1}`)}><div className="record-fields">{recordId&&rowField(row,index,'asset_tag','Asset tag')}{rowField(row,index,'serial_no','Serial number')}{rowField(row,index,'warehouse_id','Warehouse')}{rowField(row,index,'rack','Rack')}{rowField(row,index,'shelf','Shelf')}{rowField(row,index,'bin','Bin')}{!recordId&&<label className="record-field" htmlFor={`record-unit-${index}-condition`}><span>Condition at intake</span><select id={`record-unit-${index}-condition`} disabled={busy} value={String(row.condition??'Excellent')} onChange={e=>setRows(prev=>prev.map((r,i)=>i===index?{...r,condition:e.target.value}:r))}>{INTAKE_CONDITIONS.map(c=><option key={c} value={c}>{c}</option>)}</select></label>}</div>{recordId?<p>{String(row.status)} · {String(row.condition)}</p>:<Button disabled={busy} onClick={()=>setRows(prev=>prev.filter((_,i)=>i!==index))}>Remove unit</Button>}</Card>)}{!recordId&&<Button disabled={busy} onClick={()=>setRows(prev=>[...prev,{serial_no:null,warehouse_id:prev[prev.length-1]?.warehouse_id??null,rack:null,shelf:null,bin:null,condition:'Excellent'}])}>Add unit</Button>}{!recordId&&<PasteSerials existing={rows.map(r=>r.serial_no)} disabled={busy} onAdd={serials=>setRows(prev=>[...prev,...serials.map(serial=>({serial_no:serial,warehouse_id:prev[prev.length-1]?.warehouse_id??null,rack:null,shelf:null,bin:null,condition:'Excellent'}))])}/>}{recordId&&<p>Use stock adjustments or intake to change unit counts; use operational actions to change condition or custody.</p>}</div>}
-        {kind==='bundle'&&section==='Components'&&<div id="record-components" tabIndex={-1}><label className="record-field"><span>Find equipment</span><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search equipment…"/></label><div>{products.filter(p=>!rows.some(r=>r.product_id===p.id)).map(p=><Button disabled={busy} key={p.id} onClick={()=>setRows(prev=>[...prev,{product_id:p.id,name:p.name,quantity:1,days:1,is_mandatory:true,sort_order:prev.length}])}>Add {p.name}</Button>)}</div>{rows.map((row,index)=><Card key={String(row.id??row.product_id)} title={String(row.name??'Component')}><div className="record-fields">{rowField(row,index,'quantity','Quantity','number')}{rowField(row,index,'days','Days','number')}{rowField(row,index,'is_mandatory','Required component','checkbox')}<Button disabled={busy} onClick={()=>setRows(prev=>prev.filter((_,i)=>i!==index))}>Remove component</Button></div></Card>)}</div>}
-      </RecordSection>)}
+    <RecordWorkspace
+      summary={
+        kind === 'equipment' ? (
+          <EquipmentSummary
+            values={values}
+            rows={rows}
+            categoryName={(options.categories ?? []).find((c) => c.id === values.category_id)?.name}
+            editing={Boolean(recordId)}
+            assetCode={snapshot?.code}
+            userName={user?.name}
+            onGenerateAssetTags={() => {
+              const prefix = snapshot?.code || 'EQ-TAG'
+              setRows((prev) =>
+                prev.map((r, i) => ({
+                  ...r,
+                  asset_tag: `${prefix}-${String(i + 1).padStart(2, '0')}`,
+                }))
+              )
+              showSuccessToast('Asset tags numbered', `${rows.length} units tagged from ${prefix}-01`)
+            }}
+            onCheckDuplicates={() => {
+              if (equipmentDuplicate) {
+                showSuccessToast('Duplicate check complete', `Found existing equipment: ${equipmentDuplicate.name}`)
+              } else {
+                showSuccessToast('No duplicate found', 'Checked equipment name against catalogue')
+              }
+            }}
+          />
+        ) : (
+          <Card title={`${names[kind]} summary`}>
+            <strong>{String(values.name || `New ${kind}`)}</strong>
+            <p>{recordId ? 'Editing the existing record.' : 'A new record will be created.'}</p>
+            {kind !== 'client' && <p>{rows.length} {kind === 'bundle' ? 'components' : 'units'}</p>}
+          </Card>
+        )
+      }
+      actions={
+        <RecordActions
+          busy={busy}
+          dirty={dirty || !recordId}
+          label={recordId ? 'Save changes' : `Create ${kind}`}
+          onSave={() => void save()}
+          onCancel={cancel}
+          extra={
+            canAddAnother ? (
+              <Button
+                type="button"
+                variant="secondary"
+                icon="plus"
+                aria-label="Create & add another"
+                title="Create & add another"
+                disabled={busy}
+                onClick={() => void save('another')}
+              >
+                Create &amp; add another
+              </Button>
+            ) : undefined
+          }
+        />
+      }
+    >
+      {kind === 'equipment' ? (
+        <EquipmentRecordEditor
+          recordId={recordId}
+          snapshot={snapshot}
+          values={values}
+          rows={rows}
+          setValues={setValues}
+          setRows={setRows}
+          errors={errors}
+          setErrors={setErrors}
+          busy={busy}
+          options={options}
+          canViewMoney={canViewMoney}
+          manufacturerDiffers={manufacturerDiffers}
+          setManufacturerDiffers={setManufacturerDiffers}
+        />
+      ) : (
+        <>
+          {sections.map((section) => (
+            <RecordSection
+              key={section}
+              title={section}
+              id={sectionId(section)}
+              collapsible={optionalSections[kind].includes(section)}
+              defaultOpen={
+                !optionalSections[kind].includes(section) ||
+                sectionHasValue(section) ||
+                (section === 'Notes' && false)
+              }
+              collapsedHint="Empty"
+            >
+              <div className="record-fields">
+                {recordFields[kind].filter((f) => f.section === section).map(renderField)}
+              </div>
+              {kind === 'client' && section === 'Contact' && (
+                <>
+                  <h3>Primary contact</h3>
+                  {rows.map((row, index) => (
+                    <div className="record-fields" key={String(row.id ?? index)}>
+                      {rowField(row, index, 'full_name', 'Contact name')}
+                      {rowField(row, index, 'designation', 'Designation')}
+                      {rowField(row, index, 'phone', 'Contact phone')}
+                      {rowField(row, index, 'email', 'Contact email')}
+                      <Button disabled={busy} onClick={() => setRows([])}>
+                        Remove primary contact
+                      </Button>
+                    </div>
+                  ))}
+                  {!rows.length && (
+                    <Button
+                      disabled={busy}
+                      onClick={() => setRows([{ full_name: '', designation: null, phone: null, email: null }])}
+                    >
+                      Add primary contact
+                    </Button>
+                  )}
+                </>
+              )}
+              {kind === 'client' && section === 'Commercial details' && (
+                <p>Membership and credit terms are managed from the client’s dedicated actions.</p>
+              )}
+              {kind === 'bundle' && section === 'Components' && (
+                <div id="record-components" tabIndex={-1}>
+                  <label className="record-field">
+                    <span>Find equipment</span>
+                    <input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search equipment…"
+                    />
+                  </label>
+                  <div>
+                    {products
+                      .filter((p) => !rows.some((r) => r.product_id === p.id))
+                      .map((p) => (
+                        <Button
+                          disabled={busy}
+                          key={p.id}
+                          onClick={() =>
+                            setRows((prev) => [
+                              ...prev,
+                              {
+                                product_id: p.id,
+                                name: p.name,
+                                quantity: 1,
+                                days: 1,
+                                is_mandatory: true,
+                                sort_order: prev.length,
+                              },
+                            ])
+                          }
+                        >
+                          Add {p.name}
+                        </Button>
+                      ))}
+                  </div>
+                  {rows.map((row, index) => (
+                    <Card key={String(row.id ?? row.product_id)} title={String(row.name ?? 'Component')}>
+                      <div className="record-fields">
+                        {rowField(row, index, 'quantity', 'Quantity', 'number')}
+                        {rowField(row, index, 'days', 'Days', 'number')}
+                        {rowField(row, index, 'is_mandatory', 'Required component', 'checkbox')}
+                        <Button disabled={busy} onClick={() => setRows((prev) => prev.filter((_, i) => i !== index))}>
+                          Remove component
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </RecordSection>
+          ))}
+        </>
+      )}
     </RecordWorkspace></>
 }

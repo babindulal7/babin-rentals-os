@@ -121,6 +121,8 @@ export function BookingDatesSection({
           outDate={pickup}
           returnDate={ret}
           days={days}
+          pickupTime={pickupTime}
+          returnTime={returnTime}
           onPick={onPresetDatesPick}
           minReturnDate={pickup}
           {...(pricingHints ? { priceHints: pricingHints } : {})}

@@ -4,10 +4,11 @@ import type { IconName } from './Icon'
 import { InfoTooltip } from './InfoTooltip'
 import { BRAND, BRAND_ON, BRAND_TEXT } from '../../lib/status'
 import type { BrandKey } from '../../lib/status'
+import { InformationDrawer } from './InformationDrawer'
 import { CollapsibleAside } from './CollapsibleAside'
 import { useViewport } from '../../lib/device'
 import { Button as SharedButton, type ButtonProps } from './Button'
-import { Card as SharedCard } from './Card'
+import { Card as SharedCard, surfaceStyle } from './Card'
 
 /**
  * Page furniture shared by every Generation C screen.
@@ -19,13 +20,7 @@ import { Card as SharedCard } from './Card'
 
 /* ── card ──────────────────────────────────────────────────────────────── */
 
-export const cardStyle = {
-  background: 'var(--surface-card, var(--card))',
-  border: '1.5px solid var(--border)',
-  borderRadius: 'var(--r-card)',
-  boxShadow: 'var(--shadow-card), var(--specular-rim)',
-  transition: 'transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background-color var(--dur-theme) var(--ease), border-color var(--dur-theme) var(--ease)',
-} as const
+export const cardStyle = surfaceStyle
 
 export function Card({
   id,
@@ -153,7 +148,7 @@ export function KpiStrip({ items, columns }: { items: Kpi[]; columns?: number })
         // The delta stays inline — it is a figure, not an explanation.
         const info = [k.definition, k.note, isZero ? k.zeroExplanation : undefined].filter((t): t is string => Boolean(t))
         return (
-          <article key={k.label} className="surface-card kpi-tile lift" style={{ ...cardStyle, padding: '13px 14px', minWidth: 0 }}>
+          <article key={k.label} className="surface-card kpi-tile" style={{ padding: 'var(--section-padding)', minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
               <span
                 style={{
@@ -181,10 +176,8 @@ export function KpiStrip({ items, columns }: { items: Kpi[]; columns?: number })
                 <span
                   className="kpi-tile__label"
                   style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.12em',
+                    fontSize: 'var(--t-meta)',
+                    fontWeight: 600,
                     color: 'var(--muted)',
                     minWidth: 0,
                     whiteSpace: 'nowrap',
@@ -221,7 +214,7 @@ export function KpiStrip({ items, columns }: { items: Kpi[]; columns?: number })
                 marginTop: 9,
                 fontSize: k.value.length > 8 ? 'clamp(16px, 1.05vw, var(--t-kpi, 22px))' : 'clamp(16px, 1.5vw, var(--t-kpi, 22px))',
                 fontWeight: 700,
-                fontFamily: 'var(--font-display)',
+                fontFamily: 'var(--font-id)',
                 color: 'var(--text)',
                 lineHeight: 1.15,
                 letterSpacing: '-0.025em',
@@ -270,77 +263,13 @@ export function KpiStrip({ items, columns }: { items: Kpi[]; columns?: number })
 
 /* ── side rails ────────────────────────────────────────────────────────── */
 
-/**
- * User ruling, 7 Oct 2026: right-hand summaries stay visible everywhere;
- * remove the collapse handle and ignore old per-route collapse preferences.
- * Desktop retains its sticky, scrollable rail; smaller screens reflow.
- */
-export function Rail({
-  children,
-  id,
-  width = 288,
-  label = 'Page summary',
-}: {
-  children: ReactNode
-  id?: string
-  width?: number
-  label?: string
-}) {
-  const desktop = useViewport() === 'desktop'
-  return (
-    <aside
-      aria-label={label}
-      {...(id !== undefined ? { id } : {})}
-      style={{ position: desktop ? 'sticky' : 'relative', top: desktop ? 'calc(var(--header-h) + var(--sp-md))' : undefined, alignSelf: 'flex-start', minWidth: 0, width: desktop ? width : '100%', maxWidth: '100%' }}
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0, maxHeight: desktop ? 'calc(100dvh - var(--header-h) - var(--sp-md) * 2)' : undefined, overflowY: desktop ? 'auto' : undefined, overscrollBehavior: desktop ? 'contain' : undefined }}>
-        {children}
-      </div>
-    </aside>
-  )
-}
+/** RULING 2026-10-20 supersedes 7 Oct: right summaries use the mirrored filter slider. */
+export const Rail = InformationDrawer
+export const ReflowRail = InformationDrawer
 
-/**
- * `Rail` at desktop; the same children as a plain column below 1280.
- *
- * Rulings §7: below 1280 means reflow, not hide. The parent grid must
- * drop its rail track too; useRailGridColumns below handles that half.
- */
-export function ReflowRail({
-  children,
-  id,
-  width = 288,
-  label = 'Page summary',
-}: {
-  children: ReactNode
-  id?: string
-  width?: number
-  label?: string
-}) {
-  const viewport = useViewport()
-  if (viewport === 'desktop') {
-    return (
-      <Rail width={width} label={label} {...(id !== undefined ? { id } : {})}>
-        {children}
-      </Rail>
-    )
-  }
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0 }}>{children}</div>
-  )
-}
-
-/**
- * The other half of `ReflowRail`: the `content | rail` grid's own tracks. The
- * rail track has to disappear below 1280, or the reflowed column lands in a
- * second column that is still there and the content is squeezed anyway.
- *
- * A hook rather than a wrapper component because the screens that need it
- * already own their grid `<div>` (with their own margins, gaps and
- * `alignItems`); this changes only the one property that has to change.
- */
+/** Right-hand drawers live outside the page grid, leaving one content track. */
 export function useRailGridColumns(): string {
-  return useViewport() === 'desktop' ? 'minmax(0,1fr) auto' : 'minmax(0,1fr)'
+  return 'minmax(0,1fr)'
 }
 
 /**
@@ -355,7 +284,7 @@ export function useBandColumns(): (n: number) => number {
 
 /**
  * The left-hand filter/navigation rail a handful of list screens carry.
- * Retains its own collapse mechanics; right-hand summaries stay visible.
+ * Retains its own collapse mechanics; right-hand information uses a drawer.
  */
 export function SideRail({
   children,
@@ -376,24 +305,38 @@ export function SideRail({
 }
 
 /** Label/value rows — the shape every "… Summary" card in the renders uses. */
-export function SummaryRows({ rows }: { rows: Array<{ label: string; value: React.ReactNode; tone?: BrandKey }> }) {
+export function SummaryRows({ rows }: { rows: Array<{ label: string; value: React.ReactNode; tone?: BrandKey; mono?: boolean }> }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
-      {rows.map((r) => (
-        <div key={r.label} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 'var(--t-meta)' }}>
-          <span style={{ color: 'var(--text2)', minWidth: 0, flex: 1 }}>{r.label}</span>
-          <span
-            className="figure"
-            style={{
-              fontWeight: 600,
-              color: (typeof r.value === 'number' && r.value === 0) || (typeof r.value === 'string' && /^(?:(?:Rs\.?|NPR)\s*)?0(?:\.0+)?\s*%?$/.test(r.value.trim())) ? 'var(--muted)' : r.tone ? BRAND_TEXT[r.tone] : 'var(--text)',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {r.value}
-          </span>
-        </div>
-      ))}
+      {rows.map((r) => {
+        const isNumeric =
+          typeof r.value === 'number' ||
+          (typeof r.value === 'string' &&
+            (/^(?:(?:Rs\.?|NPR)\s*)?[\d,]+(?:\.\d+)?(?:\s*%)?$/.test(r.value.trim()) ||
+              /^\d{4}-\d{2}-\d{2}/.test(r.value.trim())))
+        const useFigure = r.mono ?? isNumeric
+        return (
+          <div key={r.label} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 'var(--t-meta)' }}>
+            <span style={{ color: 'var(--text2)', minWidth: 0, flex: 1 }}>{r.label}</span>
+            <span
+              className={useFigure ? 'figure' : undefined}
+              style={{
+                fontWeight: 600,
+                color:
+                  (typeof r.value === 'number' && r.value === 0) ||
+                  (typeof r.value === 'string' && /^(?:(?:Rs\.?|NPR)\s*)?0(?:\.0+)?\s*%?$/.test(r.value.trim()))
+                    ? 'var(--muted)'
+                    : r.tone
+                      ? BRAND_TEXT[r.tone]
+                      : 'var(--text)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {r.value}
+            </span>
+          </div>
+        )
+      })}
     </div>
   )
 }

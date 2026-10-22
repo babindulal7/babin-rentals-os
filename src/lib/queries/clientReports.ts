@@ -1,6 +1,6 @@
 import { supabase } from '../supabase'
 import { rupees, type Paisa } from '../money'
-import { rowsOf, type ReportFilterOptions } from './reportSupport'
+import { completeReportRead, rowsOf, type ReportFilterOptions } from './reportSupport'
 
 /**
  * Client Reports — the client base, booking frequency, and receivables.
@@ -72,7 +72,7 @@ export async function getClientReportsSummary(
   options: ReportFilterOptions = {},
   { includeMoney = true, now = new Date() }: { includeMoney?: boolean; now?: Date } = {},
 ): Promise<ClientReportsSummary> {
-  let bookingsQ = supabase.from('bookings').select('client_id').is('cancelled_at', null)
+  let bookingsQ = supabase.from('bookings').select('id, client_id').is('cancelled_at', null)
   if (options.from) bookingsQ = bookingsQ.gte('pickup_at', options.from)
   if (options.to) bookingsQ = bookingsQ.lte('pickup_at', options.to)
   if (options.branchId) bookingsQ = bookingsQ.eq('branch_id', options.branchId)
@@ -81,24 +81,24 @@ export async function getClientReportsSummary(
   const invoiceReads = () => {
     let invoicedQ = supabase
       .from('invoices')
-      .select('client_id, total_amount')
+      .select('id, client_id, total_amount')
       .neq('status', 'Draft')
       .neq('status', 'Void')
       .is('voided_at', null)
     if (options.from) invoicedQ = invoicedQ.gte('issue_date', options.from)
     if (options.to) invoicedQ = invoicedQ.lte('issue_date', options.to)
     if (options.branchId) invoicedQ = invoicedQ.eq('branch_id', options.branchId)
-    let openQ = supabase.from('invoices').select('client_id, outstanding_amount, due_date').in('status', OPEN_STATUSES).is('voided_at', null)
+    let openQ = supabase.from('invoices').select('id, client_id, outstanding_amount, due_date').in('status', OPEN_STATUSES).is('voided_at', null)
     if (options.branchId) openQ = openQ.eq('branch_id', options.branchId)
-    return [invoicedQ, openQ] as const
+    return [completeReportRead(invoicedQ, 'Invoices read failed'), completeReportRead(openQ, 'Open invoices read failed')] as const
   }
   const none = Promise.resolve({ data: [], error: null })
   const [invoicedRead, openRead] = includeMoney ? invoiceReads() : [none, none]
 
   const [clientsRes, membershipsRes, bookingsRes, invoicedRes, openRes] = await Promise.all([
-    supabase.from('clients').select('id, client_code, name, status, created_at, merged_into_client_id'),
-    supabase.from('client_memberships').select('client_id, superseded_at'),
-    bookingsQ,
+    completeReportRead(supabase.from('clients').select('id, client_code, name, status, created_at, merged_into_client_id'), 'Clients read failed'),
+    completeReportRead(supabase.from('client_memberships').select('id, client_id, superseded_at'), 'Memberships read failed'),
+    completeReportRead(bookingsQ, 'Bookings read failed'),
     invoicedRead,
     openRead,
   ])

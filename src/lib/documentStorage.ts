@@ -44,6 +44,8 @@ export interface StoredDocumentResult {
  */
 function escapePdfText(text: string): string {
   return text
+    .replace(/—/g, ' - ')
+    .replace(/·/g, ' | ')
     .replace(/\\/g, '\\\\')
     .replace(/\(/g, '\\(')
     .replace(/\)/g, '\\)')
@@ -144,13 +146,13 @@ export function generateDocumentPdfBlob(options: GeneratePdfOptions): Blob {
   const dateStr = options.dateStr ? (/^\d{4}-\d{2}-\d{2}/.test(options.dateStr) ? formatAd(new Date(options.dateStr)) : options.dateStr) : formatAd(new Date())
   const contentLines: string[] = [
     '============================================================',
-    `                 BABIN RENTALS OS — ${options.docType.toUpperCase()}`,
+    `                 BABIN RENTALS OS - ${options.docType.toUpperCase()}`,
     '============================================================',
     '',
     `Document Number: ${options.documentNo}`,
     `Date of Issue:   ${dateStr}`,
-    options.bookingNo ? `Booking Ref:     ${options.bookingNo}` : '',
-    options.party ? `Party:           ${options.party}` : '',
+    ...(options.bookingNo ? [`Booking Ref:     ${options.bookingNo}`] : []),
+    ...(options.party ? [`Party:           ${options.party}`] : []),
     `Title:           ${options.title}`,
     '',
     '------------------------------------------------------------',
@@ -179,9 +181,9 @@ export function generateDocumentPdfBlob(options: GeneratePdfOptions): Blob {
   contentLines.push('')
   contentLines.push('Authorized Signature: _______________________      Date: _______________')
   contentLines.push('')
-  contentLines.push('Babin Rentals · Kathmandu, Nepal · info@babinrentals.com')
+  contentLines.push('Babin Rentals | Kathmandu, Nepal | info@babinrentals.com')
 
-  const byteArray = buildPdfByteArray(contentLines.filter((l) => l !== undefined))
+  const byteArray = buildPdfByteArray(contentLines)
   return new Blob([byteArray as unknown as BlobPart], { type: 'application/pdf' })
 }
 
@@ -217,9 +219,10 @@ export async function uploadDocumentToStorage(options: {
   content: Blob | ArrayBuffer | string
   mimeType?: string | undefined
 }): Promise<StoredDocumentResult> {
-  const prefix = options.docType.toLowerCase().replace(/[^a-z0-9]+/g, '_')
+  const { data: identity, error: authError } = await supabase.auth.getUser()
+  if (authError || !identity.user) throw new Error('Sign in before uploading a document.')
   const cleanDocNo = options.documentNo.replace(/[^a-zA-Z0-9_-]/g, '_')
-  const storagePath = `${prefix}/${cleanDocNo}.pdf`
+  const storagePath = `staff/${identity.user.id}/${cleanDocNo}_${crypto.randomUUID()}.pdf`
 
   const contentType = options.mimeType || 'application/pdf'
   const storage = getBucketStorageClient()
@@ -229,25 +232,7 @@ export async function uploadDocumentToStorage(options: {
     contentType,
   })
 
-  // If bucket not found, try creating it once
-  if (uploadError && !uploadError.message?.toLowerCase().includes('already exists')) {
-    if (supabase?.storage && 'createBucket' in supabase.storage && typeof supabase.storage.createBucket === 'function') {
-      const { error: createErr } = await supabase.storage.createBucket(DOCUMENTS_STORAGE_BUCKET, { public: false })
-      if (!createErr) {
-        const retry = await storage.upload(storagePath, options.content, { contentType })
-        if (retry.error) {
-          throw new Error(`Failed to upload document to storage: ${retry.error.message}`)
-        }
-      } else {
-        throw new Error(`Failed to upload document to storage: ${createErr.message}`)
-      }
-    } else {
-      throw new Error(`Failed to upload document to storage: ${uploadError.message || 'Unknown upload failure'}`)
-    }
-  }
-
-  // Law 3: If already exists, that is acceptable per immutability
-  if (uploadError && !uploadError.message?.toLowerCase().includes('already exists')) {
+  if (uploadError) {
     throw new Error(`Failed to upload document to storage: ${uploadError.message || 'Unknown upload failure'}`)
   }
 
@@ -257,10 +242,10 @@ export async function uploadDocumentToStorage(options: {
     60 * 60 * 24 * 7,
   )
 
-  const signedUrl = signedData?.signedUrl || `/documents/${cleanDocNo}.pdf`
-  if (signError && !signedData?.signedUrl) {
-    console.warn(`Could not create signed URL for ${storagePath}:`, signError.message)
+  if (signError || !signedData?.signedUrl) {
+    throw new Error('Document upload completed, but secure viewing could not be confirmed. Retry access without replacing the stored file.')
   }
+  const signedUrl = signedData.signedUrl
 
   let fileSizeBytes = 0
   if (options.content instanceof Blob) {
@@ -271,16 +256,12 @@ export async function uploadDocumentToStorage(options: {
     fileSizeBytes = options.content.byteLength
   }
 
-  // 3. Resolve public URL for reference
-  const { data: publicData } = storage.getPublicUrl(storagePath)
-
   return {
     documentNo: options.documentNo,
     docType: options.docType,
     storagePath,
     signedUrl,
     fileSizeBytes,
-    publicUrl: publicData?.publicUrl,
   }
 }
 

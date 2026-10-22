@@ -157,13 +157,13 @@ export default function EntityIdSelectorModal({
                 type="button"
                 onClick={() => setActiveTab(tab.kind)}
                 style={{
-                  minHeight: 36,
-                  padding: '0 12px',
+                  minHeight: 44,
+                  padding: '0 14px',
                   borderRadius: 'var(--r-sm)',
                   border: `1px solid ${isActive ? 'var(--accent)' : 'transparent'}`,
                   background: isActive ? 'var(--accent)' : 'var(--surface-2)',
                   color: isActive ? '#fff' : 'var(--text2)',
-                  fontSize: '12px',
+                  fontSize: 'var(--t-meta, 13px)',
                   fontWeight: 600,
                   cursor: 'pointer',
                   display: 'inline-flex',
@@ -380,10 +380,11 @@ export default function EntityIdSelectorModal({
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         gap: 12,
+                        flexWrap: 'wrap',
                         transition: 'border-color var(--dur-fast)',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 200, flex: 1 }}>
                         <div
                           style={{
                             width: 34,
@@ -449,35 +450,35 @@ export default function EntityIdSelectorModal({
                       </div>
 
                       {/* Action buttons */}
-                      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                      <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'center' }}>
                         <button
                           type="button"
                           onClick={() => handleSelect(item, 'insert')}
                           title={`Insert [${item.code}] into note draft text`}
                           style={{
-                            minHeight: 36,
-                            padding: '0 10px',
+                            minHeight: 44,
+                            padding: '0 12px',
                             borderRadius: 'var(--r-sm)',
                             border: '1px solid var(--border)',
                             background: 'var(--surface-2)',
                             color: 'var(--text2)',
-                            fontSize: '11px',
+                            fontSize: 'var(--t-meta, 12px)',
                             fontWeight: 600,
                             cursor: 'pointer',
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: 4,
+                            gap: 6,
                           }}
                         >
-                          <Icon name="plus" size={12} />
+                          <Icon name="plus" size={14} />
                           Insert in Text
                         </button>
                         <Button
                           variant="primary"
                           onClick={() => handleSelect(item, 'attach')}
-                          style={{ minHeight: 36, padding: '0 12px', fontSize: '11px' }}
+                          style={{ minHeight: 44, padding: '0 14px', fontSize: 'var(--t-meta, 12px)' }}
                         >
-                          <Icon name="check" size={14} />
+                          <Icon name="check" size={16} />
                           Attach ID
                         </Button>
                       </div>

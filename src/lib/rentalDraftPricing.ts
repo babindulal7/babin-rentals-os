@@ -17,7 +17,7 @@ export function calculateDraftTotal(data: RentalDraftData): Paisa {
     total + (types.includes(line.lineType ?? 'Equipment') && (!excludeIncluded || !line.isIncluded)
       ? roundHalfUp(line.qty * line.days * line.ratePaisa * (1 - line.discountPct / 100)) : 0), 0) as Paisa
   return calculatePricingPipeline({
-    equipmentSubtotalPaisa: sum(['Equipment'], true),
+    equipmentSubtotalPaisa: sum(['Equipment', 'Accessory'], true),
     bundleSubtotalPaisa: sum(['Bundle']),
     subRentalSubtotalPaisa: sum(['Sub-rental']),
     servicesSubtotalPaisa: sum(['Service', 'Manual item']),

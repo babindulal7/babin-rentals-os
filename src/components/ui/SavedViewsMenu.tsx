@@ -68,6 +68,36 @@ export function SavedViewsMenu({
      this device's own list, exactly as before G2, and says so. */
   const [deviceMode, setDeviceMode] = useState(false)
   const menuRef = useRef<HTMLSpanElement>(null)
+  const menuDropdownRef = useRef<HTMLDivElement>(null)
+  /*
+   * The dropdown is right-anchored to the trigger (`right: 0`), which is correct
+   * wherever the trigger sits near the screen's right edge — but a wrapped
+   * toolbar row can leave it further left (Inventory's Equipment toolbar at 390px
+   * measured the menu at left: -151px, half off-screen). Standard popover flip:
+   * on open, measure the rendered menu and slide it right by exactly its
+   * overflow, so it enters under the trigger instead of escaping the viewport.
+   * jsdom has no layout, so the real-width behaviour is verified in the browser
+   * driver, not in a unit test.
+   */
+  const [menuShift, setMenuShift] = useState(0)
+  useEffect(() => {
+    if (!menuOpen) {
+      setMenuShift(0)
+      return
+    }
+    const measure = () => {
+      const dropdown = menuDropdownRef.current
+      if (!dropdown) return
+      const overflow = 16 - dropdown.getBoundingClientRect().left
+      setMenuShift(overflow > 0 ? overflow : 0)
+    }
+    const frame = window.requestAnimationFrame(measure)
+    window.addEventListener('resize', measure)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.removeEventListener('resize', measure)
+    }
+  }, [menuOpen])
 
   useEffect(() => {
     let live = true
@@ -222,6 +252,14 @@ export function SavedViewsMenu({
     fontSize: 'var(--t-meta)',
   }
 
+  /* Smart Workspace Views v1 — one shared control serves two lists, so the copy
+     names the list it is on. Rentals' strings are unchanged; nothing here alters
+     save/retire/permission logic. */
+  const isInventory = listKey === 'inventory'
+  const groupTitle = isInventory ? 'INVENTORY VIEWS' : 'RENTAL VIEWS'
+  const allTitle = isInventory ? 'All equipment' : 'All rentals'
+  const menuLabel = `Saved ${isInventory ? 'inventory' : 'rental'} views`
+
   const groupLabel = (text: string) => (
     <div style={{ padding: '7px 10px 5px', color: 'var(--muted)', fontSize: 'var(--t-caption)', fontWeight: 700 }}>
       {text}
@@ -286,8 +324,9 @@ export function SavedViewsMenu({
 
         {menuOpen && (
           <div
+            ref={menuDropdownRef}
             role="menu"
-            aria-label="Saved rental views"
+            aria-label={menuLabel}
             style={{
               position: 'absolute',
               top: 'calc(100% + 8px)',
@@ -302,9 +341,10 @@ export function SavedViewsMenu({
               borderRadius: 'var(--r-card)',
               background: 'var(--card)',
               boxShadow: 'var(--shadow-lg)',
+              ...(menuShift ? { transform: `translateX(${menuShift}px)` } : undefined),
             }}
           >
-            {groupLabel('RENTAL VIEWS')}
+            {groupLabel(groupTitle)}
             <button
               type="button"
               role="menuitem"
@@ -315,7 +355,7 @@ export function SavedViewsMenu({
               style={menuButtonStyle}
             >
               <Icon name="checklist" size={16} />
-              <span style={{ flex: 1 }}>All rentals</span>
+              <span style={{ flex: 1 }}>{allTitle}</span>
               {!normaliseSavedViewQuery(currentQuery) && currentHiddenColumns.length === 0 && (
                 <Icon name="check" size={15} style={{ color: 'var(--primary)' }} />
               )}
@@ -366,7 +406,7 @@ export function SavedViewsMenu({
         isOpen={saveOpen}
         onClose={() => setSaveOpen(false)}
         title={updatingOwn ? 'Update saved view' : 'Save current view'}
-        subtitle="Keep this filter and column setup ready for one-click access."
+        subtitle={isInventory ? 'Keep this filter and layout setup ready for one-click access.' : 'Keep this filter and column setup ready for one-click access.'}
         size="sm"
         footer={
           <>
@@ -413,7 +453,9 @@ export function SavedViewsMenu({
           </label>
         )}
         <div style={{ marginTop: 16, padding: 13, borderRadius: 'var(--r-sm)', background: 'var(--select-bg)', color: 'var(--select-fg)', fontSize: 'var(--t-caption)', lineHeight: 1.5 }}>
-          This saves the active filters, search, sorting and visible columns. Page number and rows per page stay unchanged.
+          {isInventory
+            ? 'This saves the active filters, search, sorting and layout. Page number and rows per page stay unchanged.'
+            : 'This saves the active filters, search, sorting and visible columns. Page number and rows per page stay unchanged.'}
           {deviceMode
             ? ' Saved on this device only for now — shared views arrive with the next database update.'
             : canPublish && shareWithTeam

@@ -184,7 +184,33 @@ export default function MoreSheet({ open, onClose }: { open: boolean; onClose: (
         </div>
 
         <nav aria-label="More" style={{ flex: 1, overflowY: 'auto', padding: '6px 8px 12px' }}>
-          <button type="button" data-scanner onClick={() => { onClose(); toggleScanner() }} style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: ROW_H, width: '100%', padding: '0 10px', border: 'none', borderRadius: 'var(--r-sm)', background: 'transparent', color: 'var(--text)', font: 'inherit', textAlign: 'left', cursor: 'pointer' }}><Icon name="search" size={20} /><span>Scan equipment</span></button>
+          <button
+            type="button"
+            data-scanner
+            onClick={() => {
+              onClose()
+              toggleScanner()
+            }}
+            className="tap press"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              minHeight: ROW_H,
+              width: '100%',
+              padding: '0 10px',
+              border: 'none',
+              borderRadius: 'var(--r-sm)',
+              background: 'transparent',
+              color: 'var(--text)',
+              font: 'inherit',
+              textAlign: 'left',
+              cursor: 'pointer',
+            }}
+          >
+            <Icon name="barcode" size={20} style={{ color: 'var(--primary-text)', flexShrink: 0 }} />
+            <span style={{ fontWeight: 600 }}>Scan equipment</span>
+          </button>
           {items.map((s) => (
             <Link
               key={s.to}

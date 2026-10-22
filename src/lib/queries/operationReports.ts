@@ -1,5 +1,5 @@
 import { supabase } from '../supabase'
-import { embeddedName, percentOf, rowsOf, type ReportFilterOptions } from './reportSupport'
+import { completeReportRead, embeddedName, percentOf, rowsOf, type ReportFilterOptions } from './reportSupport'
 
 export type { ReportFilterOptions } from './reportSupport'
 
@@ -150,16 +150,16 @@ export async function getOperationsReport(options?: ReportFilterOptions, now: Da
   if (options?.branchId) bookingsQuery = bookingsQuery.eq('branch_id', options.branchId)
 
   const [bookingsRes, sessionsRes, linesRes, usersRes] = await Promise.all([
-    bookingsQuery,
-    supabase
+    completeReportRead(bookingsQuery, 'Operations bookings read failed'),
+    completeReportRead(supabase
       .from('operation_sessions')
       .select(
         'id, booking_id, operation, state, started_at, completed_at, cancelled_at, warehouse_staff_id, receiver_name, pickup_person_name, returning_person_name, government_id_verified',
       )
       .in('operation', ['Handover', 'Return'])
-      .order('completed_at', { ascending: false }),
-    supabase.from('return_lines').select('session_id, condition'),
-    supabase.from('users').select('id, full_name'),
+      .order('completed_at', { ascending: false }), 'Operation sessions read failed'),
+    completeReportRead(supabase.from('return_lines').select('id, session_id, condition'), 'Return lines read failed'),
+    completeReportRead(supabase.from('users').select('id, full_name'), 'Staff names read failed'),
   ])
 
   const bookings = rowsOf<BookingRow>(bookingsRes, 'Operations bookings read failed')
@@ -288,9 +288,9 @@ export async function getOperationsReport(options?: ReportFilterOptions, now: Da
     returnConditions: [...condMap.entries()]
       .sort((a, b) => (CONDITION_RANK[a[0]] ?? -1) - (CONDITION_RANK[b[0]] ?? -1))
       .map(([condition, count]) => ({ condition, count, percent: percentOf(count, returns.length) })),
-    pickups: pickups.slice(0, 10),
-    returns: returns.slice(0, 10),
+    pickups,
+    returns,
     overdueList: overdueList.sort((a, b) => b.daysOverdue - a.daysOverdue),
-    packingJobs: packingJobs.sort((a, b) => a.pickupScheduled.localeCompare(b.pickupScheduled)).slice(0, 10),
+    packingJobs: packingJobs.sort((a, b) => a.pickupScheduled.localeCompare(b.pickupScheduled)),
   }
 }
