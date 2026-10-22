@@ -31,11 +31,10 @@ import {
   inferCategoryFromName,
   cleanTasksForCategory,
   resetTasksForCategory,
-  allTasksForCategory,
   type Category,
 } from '../../lib/queries/reset'
 import { queueTimeTone } from '../../data/reset'
-import { fetchStaffDirectory, type StaffDirectoryRow } from '../../lib/queries/staff'
+import { fetchStaffDirectory } from '../../lib/queries/staff'
 
 import type { QueueState, ProblemState } from '../../lib/queries/reset'
 import { CompactButton, TapCheckbox, TouchTarget } from '../../components/ui/TouchTarget'
@@ -241,7 +240,8 @@ function buildRows(floor: FloorBooking): ResetRow[] {
     return src.productName ?? src.description ?? src.lineType
   }
 
-  const waitingMinutes = Math.max(15, Math.floor((Date.now() - new Date(floor.endAt || floor.startAt).getTime()) / 60000) % 360)
+  const refTime = floor.actualReturnAtAd ?? floor.returnAtAd ?? floor.pickupAtAd
+  const waitingMinutes = Math.max(15, Math.floor((Date.now() - new Date(refTime ?? Date.now()).getTime()) / 60000) % 360)
 
   const rows: ResetRow[] = []
   for (const line of floor.lines) {
@@ -2034,7 +2034,7 @@ export default function ResetWorkspace({
                       <div>
                         <div style={{ fontWeight: 600, color: 'var(--text)' }}>Returned &amp; Checked In</div>
                         <div style={{ color: 'var(--muted)', fontSize: '11px' }}>
-                          {floor?.returnedAt ? new Date(floor.returnedAt).toLocaleTimeString() : 'Stage: Returned'}
+                          {(floor?.actualReturnAtAd ?? floor?.returnAtAd) ? new Date(floor.actualReturnAtAd ?? floor.returnAtAd ?? '').toLocaleTimeString() : 'Stage: Returned'}
                         </div>
                       </div>
                     </div>
