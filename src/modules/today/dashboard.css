@@ -716,7 +716,7 @@
   color: var(--text);
   font-size: var(--t-th);
   font-weight: 700;
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
 }
@@ -783,7 +783,7 @@
   font-weight: 700;
   color: var(--text);
   letter-spacing: -0.01em;
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
 }
 
@@ -810,7 +810,7 @@
   border: 1px solid var(--border);
   color: var(--text2);
   font-size: var(--t-th);
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
   font-weight: 500;
 }
@@ -1018,7 +1018,7 @@
 }
 
 .dashboard-header-strip__date {
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
   font-size: var(--t-ui);
   font-weight: 600;
@@ -1506,7 +1506,7 @@
   color: var(--text);
   display: block;
   margin-top: 4px;
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1991,7 +1991,7 @@
   border-radius: 50%;
   font-size: var(--t-th);
   font-weight: 700;
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
 }
@@ -2063,7 +2063,7 @@
   font-size: var(--t-meta);
   font-weight: 750;
   color: var(--primary-text);
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2469,7 +2469,7 @@
 .rental-dashboard__panels .movement-panel--outgoing .movement-panel__heading h2 .figure,
 .rental-dashboard__panels .movement-panel--incoming .movement-panel__heading h2 .figure {
   color: var(--text);
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-size: 1.65rem;
   font-weight: 600;
   letter-spacing: -0.065em;

@@ -1081,7 +1081,7 @@ export default function OperationsQueues() {
                             fontWeight: 700,
                             fontSize: 'var(--t-ui, 15px)',
                             textDecoration: 'none',
-                            fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+                            fontFamily: 'var(--font-mono, "Outfit", sans-serif)',
                           }}
                         >
                           {formatOperationBookingId(job.bookingNo)}
@@ -1190,7 +1190,7 @@ export default function OperationsQueues() {
                                 color: 'var(--link)',
                                 fontWeight: 700,
                                 textDecoration: 'none',
-                                fontFamily: 'var(--font-mono, "JetBrains Mono", monospace)',
+                                fontFamily: 'var(--font-mono, "Outfit", sans-serif)',
                               }}
                             >
                               {formatOperationBookingId(job.bookingNo)}

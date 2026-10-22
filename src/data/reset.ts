@@ -154,25 +154,29 @@ export function inferCategoryFromName(name: string): Category {
     lower.includes('arri') ||
     lower.includes('alexa') ||
     lower.includes('red ') ||
+    lower.includes('blackmagic') ||
+    lower.includes('pocket 6k') ||
+    lower.includes('pocket 4k') ||
+    lower.includes('bmpcc') ||
     lower.includes('body')
   ) {
     return 'Camera'
   }
   if (
-    lower.includes('lens') ||
-    lower.includes('mm') ||
-    lower.includes('prime') ||
-    lower.includes('zoom') ||
-    lower.includes('nisi') ||
-    lower.includes('sigma') ||
-    lower.includes('anamorphic')
+    lower.includes('mic') ||
+    lower.includes('audio') ||
+    lower.includes('lav') ||
+    lower.includes('wireless') ||
+    lower.includes('rode') ||
+    lower.includes('sennheiser') ||
+    lower.includes('shotgun')
   ) {
-    return 'Lens'
+    return 'Audio'
   }
   if (
     lower.includes('battery') ||
-    lower.includes('bat') ||
     lower.includes('v-mount') ||
+    lower.includes('gold mount') ||
     lower.includes('charger') ||
     lower.includes('np-f') ||
     lower.includes('b-mount')
@@ -182,7 +186,6 @@ export function inferCategoryFromName(name: string): Category {
   if (
     lower.includes('card') ||
     lower.includes('cfexpress') ||
-    lower.includes('sd') ||
     lower.includes('cfast') ||
     lower.includes('ssd') ||
     lower.includes('media')
@@ -200,25 +203,30 @@ export function inferCategoryFromName(name: string): Category {
     return 'Monitor'
   }
   if (
+    lower.includes('lens') ||
+    lower.includes('prime') ||
+    lower.includes('zoom') ||
+    lower.includes('nisi') ||
+    lower.includes('sigma') ||
+    lower.includes('anamorphic') ||
+    /\b\d{2,3}mm\b/.test(lower)
+  ) {
+    return 'Lens'
+  }
+  if (
     lower.includes('rig') ||
     lower.includes('cage') ||
     lower.includes('handle') ||
-    lower.includes('arm') ||
-    lower.includes('rod') ||
+    lower.includes('gimbal') ||
+    lower.includes('stabilizer') ||
+    lower.includes('tripod') ||
+    lower.includes('fluid head') ||
+    lower.includes('matte box') ||
     lower.includes('dovetail') ||
-    lower.includes('baseplate')
+    lower.includes('baseplate') ||
+    /\brods?\b/.test(lower)
   ) {
     return 'Rig'
-  }
-  if (
-    lower.includes('mic') ||
-    lower.includes('audio') ||
-    lower.includes('lav') ||
-    lower.includes('wireless') ||
-    lower.includes('rode') ||
-    lower.includes('sennheiser')
-  ) {
-    return 'Audio'
   }
   return 'Accessory'
 }

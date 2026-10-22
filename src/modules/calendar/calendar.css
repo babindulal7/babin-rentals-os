@@ -11,7 +11,7 @@
 
 /* ── Monospace Tabular Numerals ─────────────────────────────────────────── */
 .calendar-mono {
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
 }
@@ -210,7 +210,7 @@
 }
 
 .calendar-day-bs {
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
   font-size: var(--t-ui, 14px);
@@ -228,7 +228,7 @@
 }
 
 .calendar-day-ad {
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
   font-size: var(--t-th, 11px);
@@ -259,7 +259,7 @@
 }
 
 .calendar-more-badge {
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
   font-size: var(--t-th, 11px);
@@ -431,7 +431,7 @@ button.calendar-agenda-item:hover {
   color: var(--text);
   font-size: var(--t-th, 11px);
   font-weight: 500;
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
   cursor: pointer;

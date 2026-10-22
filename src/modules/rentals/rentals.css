@@ -134,7 +134,7 @@
 .new-rental-bento-hero-total-val {
   font-size: 22px;
   font-weight: 800;
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
   color: var(--brand, var(--text));
   letter-spacing: -0.02em;
@@ -307,7 +307,7 @@
   text-align: center;
   font-size: 12px;
   font-weight: 700;
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
   color: var(--text);
   padding: 0 4px;
@@ -366,7 +366,7 @@
   align-items: center;
   font-size: 10px;
   font-weight: 700;
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   color: var(--muted);
   background: color-mix(in srgb, var(--surface) 80%, transparent);
   border: 1px solid var(--border);
@@ -482,7 +482,7 @@
 .floor-summary-sub {
   font-size: var(--t-meta, 12px);
   color: var(--muted);
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-feature-settings: 'tnum' 1;
   margin-top: 2px;
 }
@@ -520,7 +520,7 @@
   border-radius: var(--r-btn, 8px) !important;
   background: var(--surface) !important;
   border: 1px solid var(--border) !important;
-  font-family: var(--font-id, 'Source Sans 3', sans-serif) !important;
+  font-family: var(--font-id, 'Outfit', sans-serif) !important;
   font-size: var(--t-body, 14px) !important;
   font-feature-settings: 'tnum' 1 !important;
   color: var(--text) !important;
@@ -538,7 +538,7 @@
   right: 12px;
   font-size: 11px;
   font-weight: 700;
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
   color: var(--muted);
   background: color-mix(in srgb, var(--card) 80%, transparent);
@@ -574,7 +574,7 @@
   border-radius: var(--r-xs, 4px);
   border: 1px solid var(--border);
   background: var(--surface);
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-size: var(--t-meta, 12px);
   font-weight: 600;
   font-feature-settings: 'tnum' 1;
@@ -639,7 +639,7 @@
 }
 
 .floor-group-item-btn .figure {
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-feature-settings: 'tnum' 1;
 }
 

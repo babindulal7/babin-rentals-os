@@ -408,7 +408,7 @@ export default function ResetWorkspace({
         )
       } else {
         const fallback = [
-          { id: user?.id ?? '00000000-0000-0000-0000-000000000001', name: actor || 'Current Operator', role: role || 'Technician' },
+          { id: user?.id ?? '00000000-0000-0000-0000-000000000001', name: actor || 'Current Operator', role: user?.role || 'Technician' },
           { id: '11111111-1111-1111-1111-111111111111', name: 'Ram Thapa', role: 'Technician' },
           { id: '22222222-2222-2222-2222-222222222222', name: 'Sagar Maharjan', role: 'Warehouse' },
           { id: '33333333-3333-3333-3333-333333333333', name: 'Bikash Thapa', role: 'Technician' },
@@ -419,7 +419,7 @@ export default function ResetWorkspace({
     return () => {
       mounted = false
     }
-  }, [actor, role, user?.id])
+  }, [actor, user?.role, user?.id])
 
   const floorId = floor?.id ?? null
 

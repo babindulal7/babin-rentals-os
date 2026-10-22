@@ -11,7 +11,7 @@
 
 /* ── Monospace Tabular Numerals ─────────────────────────────────────────── */
 .finance-mono {
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
 }
@@ -67,7 +67,7 @@
 
 .finance-kpi-value {
   margin-top: 10px;
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
   font-size: clamp(20px, 2vw, 26px);
@@ -149,7 +149,7 @@
   color: var(--text);
   font-size: var(--t-meta, 12px);
   font-weight: 700;
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
   padding: 0 4px;
@@ -335,7 +335,7 @@
 }
 
 .finance-closing-row-value {
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
   font-size: var(--t-body, 14px);
@@ -353,7 +353,7 @@
   background: var(--surface-2, var(--card2));
   color: var(--text);
   font-size: var(--t-body, 14px);
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
   transition: all var(--dur-fast, 120ms) var(--ease);
@@ -376,7 +376,7 @@
   gap: 6px;
   padding: 4px 10px;
   border-radius: var(--r-pill, 9999px);
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
   font-size: var(--t-meta, 12px);

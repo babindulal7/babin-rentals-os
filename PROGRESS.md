@@ -1,5 +1,69 @@
 # Progress Log
 
+## 2026-10-22 — Phase 4: Cleaning & Reset / Post-Rental QC Expansion (Operations Workflow)
+
+**Did**
+- **Category & Reset Intelligence Layer:**
+  - `src/data/reset.ts` and `src/lib/queries/reset.ts`: Engineered `inferCategoryFromName(name)` to automatically classify returned gear into standard cinema categories (`Camera`, `Lens`, `Battery`, `Media`, `Monitor`, `Rig`, `Audio`, `Accessory`).
+  - Added category-specific cleaning checklists (`cleanTasksForCategory`), technical reset steps (`resetTasksForCategory`), and unified checklists (`allTasksForCategory`).
+- **Reset Workspace Engine & Staff Attribution Upgrade:**
+  - `src/modules/rentals/ResetWorkspace.tsx`:
+    - Added `category` and `waitingMinutes` to `ResetRow` and dynamic row derivation.
+    - Added `cleanedByUserId`, `qcByUserId`, and `notes` to `RowRec`.
+    - Integrated `fetchStaffDirectory()` with truthful fallback roster for mock and local development.
+    - Enforced Rule §10 Self-QC gate: requiring documented reason (≥ 5 characters) when cleaner === QC inspector, while permitting direct 2nd-party verification without justification when cleaned by a colleague.
+    - Dispatched `cleanedBy` and `qcBy` with genuine `users.id` UUIDs (no synthetic placeholders).
+    - Rendered Staff Cleaner selector and "Assign" action in batch aside card.
+    - Rendered category-specific tasks and badges in per-unit batch list.
+    - Rendered Turnaround Timeline Card with all 4 operational milestones (`Returned & Checked In` → `Decontamination & Cleaning` → `Technical QC & Config Reset` → `Restocked to Ready`).
+    - Rendered floating bottom bulk selection bar (`.bulk-selection-floating-bar`) with Quick Pass, Check All Tasks, and Clear Selection actions conforming to Rule §9.3.
+    - Rendered queue age badge with `queueTimeTone` on both desktop table rows and mobile card items.
+    - Gated exceptions routing: ensuring items flagged as Damaged, Missing, or Needs Repair are isolated and can never be marked Ready.
+- **Test Coverage & Verification:**
+  - Added unit test suite `src/modules/rentals/__tests__/ResetWorkspaceExpansion.test.tsx` (14/14 tests PASS).
+  - Verified `src/modules/rentals/__tests__/resetQc.test.tsx` (8/8 tests PASS).
+  - Verified `src/lib/queries/__tests__/reset.test.ts` (2/2 tests PASS).
+  - Verified WCAG AA contrast (82/82 pairs PASS across Light, Dark, High Contrast, and Glass themes).
+  - Verified PGlite migrations (168/168 applied from scratch, 0 failed, 0 leaks, 78 definer search_paths pinned).
+  - Verified booking lifecycle (31/31 stages green through real Postgres + RLS).
+
+**Ruled**
+- Post-rental gear reset absorbs cleaning as a unified operational workflow rather than maintaining disconnected queues or duplicate interfaces (Foundation §1.5).
+- Self-QC verification requires explicit documented justification (≥ 5 chars) whenever an inspector passes items they cleaned themselves, but enables seamless 1-tap approval when verified by a colleague (Rule §10).
+- Returned items flagged with defects (`Damaged`, `Missing Item`, `Needs Repair`) are strictly segregated from active stock and can never transition to Ready without managerial resolution.
+
+**Verified**
+- `npm run typecheck`: PASS (0 errors across repository).
+- `npx vitest run src/modules/rentals/__tests__/ResetWorkspaceExpansion.test.tsx src/modules/rentals/__tests__/resetQc.test.tsx src/lib/queries/__tests__/reset.test.ts`: PASS (24/24 tests green).
+- `npm run check:contrast`: 82/82 PASS (WCAG AA compliant across Light, Dark, High Contrast, and Glass modes).
+- `npm run check:pglite`: 168/168 applied from scratch in PGlite, 0 failed, 0 leaks, 78/78 definer search_paths pinned.
+- `npm run check:lifecycle`: 31/31 green (all 31 booking lifecycle steps validated through real Postgres + RLS).
+- `npm run build`: PASS — production bundle built with 249 PWA precache entries (`main.js` at 472.40 kB / gzip: 132.64 kB).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-22T19:27:40.405Z). Suite: PASS — 5239/5239 passed, 0 failed (recorded 2026-10-22T17:00:32.033Z); source fingerprint matches.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-22T19:29:11.577Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **Phase 5 (Calendar & Resource Timeline):**
+  - Resource timeline and month/week/day views with Bikram Sambat dual-calendar display.
+- **Phase 6 (Membership & Loyalty Management):**
+  - Tiered membership programs, automated rate discounts, and client loyalty benefits.
+- **Phase 7 (Client Portal Self-Service):**
+  - External authenticated booking requests, real-time invoice settlement proof, and extension requests.
+
 ## 2026-10-22 — Phase 3: Inventory & Add Equipment Precision Cinema Wizard (5-Stage Assisted Intake)
 
 **Did**
