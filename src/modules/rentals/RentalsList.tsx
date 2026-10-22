@@ -2577,7 +2577,7 @@ export default function RentalsList() {
                           className="data-table-row press"
                           style={{
                             borderBottom: '1px solid var(--border)',
-                            background: activeRental?.id === r.id ? 'color-mix(in srgb, var(--primary) 8%, var(--card))' : selectedIds.has(r.id) ? 'var(--hover-card)' : undefined,
+                            background: activeRental?.id === r.id ? 'var(--active-row)' : selectedIds.has(r.id) ? 'var(--hover-card)' : undefined,
                             boxShadow: activeRental?.id === r.id ? 'inset 3px 0 0 var(--primary)' : undefined,
                             cursor: 'pointer',
                             ...externalRowStyle(r.isExternal),

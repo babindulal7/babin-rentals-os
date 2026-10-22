@@ -219,6 +219,7 @@
   --hover-sidebar: #eef4fb;
   --hover-button: #1e49b8;
   --hover-row: #eef4fb;
+  --active-row: color-mix(in srgb, var(--primary) 10%, var(--card));
 
   --btn-primary-bg: #2456d6;
   --btn-primary-fg: #ffffff;
@@ -314,7 +315,7 @@
   --surface-card-hover: var(--card2);
   --glass-tint: 0.88;
   --specular-rim: 0 1px 0 rgba(255, 255, 255, 0.08) inset;
-  --bezel-outer-ring: 0 0 0 1px var(--w08);
+  --bezel-outer-ring: 0 0 0 1px var(--w12);
   --bezel-outer-bg: rgba(255, 255, 255, 0.02);
 
   --text: #f1f5f9;
@@ -369,7 +370,8 @@
   --hover-card: #0f1e30;
   --hover-sidebar: #0d1a29;
   --hover-button: #2f5ce0;
-  --hover-row: rgba(255, 255, 255, 0.035);
+  --hover-row: rgba(255, 255, 255, 0.055);
+  --active-row: color-mix(in srgb, var(--primary) 15%, var(--card));
 
   --btn-primary-bg: #386af7;
   --btn-primary-fg: #ffffff;
