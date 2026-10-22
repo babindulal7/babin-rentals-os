@@ -8,14 +8,15 @@
  * - Draft preservation across nested workflows
  */
 
-import { createContext, useContext, useEffect, useState, type ReactNode, type Dispatch, type SetStateAction } from 'react'
+import { createContext, useContext, useEffect, useState, lazy, Suspense, type ReactNode, type Dispatch, type SetStateAction } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   CREATION_ACTIONS,
 } from './CreationActionRegistry'
-import { QuickCreateDialog } from './QuickCreateDialog'
-import { CreationDrawer } from './CreationDrawer'
-import { CreationWizard } from './CreationWizard'
+
+const QuickCreateDialog = lazy(() => import('./QuickCreateDialog').then(m => ({ default: m.QuickCreateDialog })))
+const CreationDrawer = lazy(() => import('./CreationDrawer').then(m => ({ default: m.CreationDrawer })))
+const CreationWizard = lazy(() => import('./CreationWizard').then(m => ({ default: m.CreationWizard })))
 
 export interface CreationContextValue {
   activeModule: string
@@ -107,35 +108,37 @@ export function CreationContextProvider({ children }: { children: ReactNode }) {
       {children}
 
       {/* Single-Active Creation Interface State Machine */}
-      {activeAction && activeAction.openingMode === 'wizard' && (
-        <CreationWizard
-          isOpen={true}
-          actionId={activeAction.id}
-          contextData={mergedContext}
-          onClose={closeCreationAction}
-          onSuccess={() => closeCreationAction()}
-        />
-      )}
+      <Suspense fallback={null}>
+        {activeAction && activeAction.openingMode === 'wizard' && (
+          <CreationWizard
+            isOpen={true}
+            actionId={activeAction.id}
+            contextData={mergedContext}
+            onClose={closeCreationAction}
+            onSuccess={() => closeCreationAction()}
+          />
+        )}
 
-      {activeAction && activeAction.openingMode === 'drawer' && (
-        <CreationDrawer
-          isOpen={true}
-          actionId={activeAction.id}
-          contextData={mergedContext}
-          onClose={closeCreationAction}
-          onSuccess={() => closeCreationAction()}
-        />
-      )}
+        {activeAction && activeAction.openingMode === 'drawer' && (
+          <CreationDrawer
+            isOpen={true}
+            actionId={activeAction.id}
+            contextData={mergedContext}
+            onClose={closeCreationAction}
+            onSuccess={() => closeCreationAction()}
+          />
+        )}
 
-      {activeAction && (activeAction.openingMode === 'dialog' || activeAction.openingMode === 'modal') && (
-        <QuickCreateDialog
-          isOpen={true}
-          actionId={activeAction.id}
-          contextData={mergedContext}
-          onClose={closeCreationAction}
-          onSuccess={() => closeCreationAction()}
-        />
-      )}
+        {activeAction && (activeAction.openingMode === 'dialog' || activeAction.openingMode === 'modal') && (
+          <QuickCreateDialog
+            isOpen={true}
+            actionId={activeAction.id}
+            contextData={mergedContext}
+            onClose={closeCreationAction}
+            onSuccess={() => closeCreationAction()}
+          />
+        )}
+      </Suspense>
     </CreationContext.Provider>
   )
 }

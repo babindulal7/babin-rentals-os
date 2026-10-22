@@ -9,8 +9,6 @@ import type { Crumb } from './components/shell/Header'
 import ScannerFab from './components/shell/ScannerFab'
 import { ErrorBoundary } from './components/shell/ErrorBoundary'
 import { LoadingSkeleton, RestrictedState } from './components/ui/StateViews'
-import NotFound from './pages/NotFound'
-import Placeholder from './modules/Placeholder'
 import { NAV, isMoneySurface, isStaffSurface, FLOOR_ROUTE_SUFFIXES } from './data/nav'
 import { ToastProvider } from './components/ui/Toast'
 import { SyncProvider } from './lib/syncContext'
@@ -26,6 +24,8 @@ import { SchemaGuardBanner } from './components/shell/SchemaGuardBanner'
 import { ConflictNotificationBanner } from './components/ui/ConflictNotificationBanner'
 
 /* ── lazy-loaded route pages (code-splitting) ─────────────────────────── */
+const NotFound          = lazy(() => import('./pages/NotFound'))
+const Placeholder       = lazy(() => import('./modules/Placeholder'))
 const Login             = lazy(() => import('./modules/auth/Login'))
 const ForgotPassword    = lazy(() => import('./modules/auth/ForgotPassword'))
 const ResetPassword     = lazy(() => import('./modules/auth/ResetPassword'))

@@ -1,14 +1,12 @@
-import { useRef, useState, useMemo, useEffect, isValidElement, type ReactNode } from 'react'
+import { useRef, useState, useMemo, useEffect, isValidElement, lazy, Suspense, type ReactNode } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import Icon, { type IconName } from '../ui/Icon'
 import { useAuth } from '../../lib/auth'
 import { useViewport } from '../../lib/device'
 import { openCommandPalette } from './CommandPalette'
-import HandoverSheet from '../../modules/auth/HandoverSheet'
 import { useSync } from '../../lib/syncContext'
 import { useOptionalWorkspace, type PageHeaderSearchConfig } from '../../lib/workspaceContext'
 import { InfoTooltip } from '../ui/InfoTooltip'
-import InternalNotesDrawer from '../../modules/notes/InternalNotesDrawer'
 import { Button } from '../ui/Button'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import type { OverflowMenuItem } from '../ui/OverflowMenu'
@@ -26,6 +24,9 @@ import { MobileHeaderSearch } from './MobileHeaderSearch'
 import { UnsavedChangesIndicator } from '../ui/header/UnsavedChangesIndicator'
 import { IS_MOCK } from '../../lib/supabase'
 import './shell.css'
+
+const HandoverSheet = lazy(() => import('../../modules/auth/HandoverSheet'))
+const InternalNotesDrawer = lazy(() => import('../../modules/notes/InternalNotesDrawer'))
 
 export interface Crumb {
   label: string
@@ -1166,16 +1167,18 @@ export default function Header({ crumbs, actions }: HeaderProps) {
         />
       )}
 
-      {showHandover && (
-        <HandoverSheet
-          isOpen={showHandover}
-          onClose={() => setShowHandover(false)}
-          userName={user?.name}
-          userRole={user?.role}
-        />
-      )}
+      <Suspense fallback={null}>
+        {showHandover && (
+          <HandoverSheet
+            isOpen={showHandover}
+            onClose={() => setShowHandover(false)}
+            userName={user?.name}
+            userRole={user?.role}
+          />
+        )}
 
-      {(notesOpen || notesVisited) && <InternalNotesDrawer isOpen={notesOpen} onClose={() => setNotesOpen(false)} />}
+        {(notesOpen || notesVisited) && <InternalNotesDrawer isOpen={notesOpen} onClose={() => setNotesOpen(false)} />}
+      </Suspense>
 
       {showMockDialog && (
         <ConfirmDialog
