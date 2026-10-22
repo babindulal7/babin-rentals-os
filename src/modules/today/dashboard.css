@@ -2343,6 +2343,18 @@
   line-height: 1.15;
 }
 
+.dashboard-workbar-hint {
+  margin: 0;
+  font-size: var(--t-meta, 13px);
+  color: var(--muted);
+}
+
+@media (min-width: 1280px) {
+  .dashboard-workbar-hint {
+    display: none;
+  }
+}
+
 .dashboard-workbar .dashboard-counter-bar {
   width: 100%;
   max-width: none;

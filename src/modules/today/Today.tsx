@@ -785,7 +785,7 @@ export default function Today() {
       }
     >
       <div className="dashboard-workbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 'var(--density-section-gap, 12px)' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <h1 style={{ margin: 0, fontSize: 'var(--t-h3, 18px)', fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
               Today
@@ -802,12 +802,7 @@ export default function Today() {
               compact
             />
           </div>
-          <p style={{ margin: 0, fontSize: 'var(--t-meta, 13px)', color: 'var(--muted)' }}>
-            Staff see the next physical action first. KPIs and reports stay secondary.
-          </p>
-        </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           {/* Quick indicators matching wireframe */}
           {pickupCount !== undefined && returnCount !== undefined && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -845,6 +840,13 @@ export default function Today() {
               </span>
             </div>
           )}
+
+          <p className="dashboard-workbar-hint" style={{ margin: 0, fontSize: 'var(--t-meta, 13px)', color: 'var(--muted)' }}>
+            Staff see the next physical action first. KPIs and reports stay secondary.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
 
           {/* Unified Page-Level Date Bar */}
           <div
