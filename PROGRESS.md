@@ -1,5 +1,123 @@
 # Progress Log
 
+## 2026-10-22 — Top 10 UI/UX Remediation: Precision Cinema & Single-Shell Compact Density Implementation
+
+**Did**
+- **Issue 1: Mobile Header Overflow & Search Collapse (`55942a65`):**
+  - Protected mobile breadcrumbs width (min 120px) and collapsed internal notes drawer launcher into the phone overflow menu in `src/components/shell/Header.tsx` and `src/components/shell/shell.css`.
+- **Issue 2: Dashboard/Today Workbar & Situational Card Density (`438431e4`):**
+  - Compacted `dashboard-workbar` into a single-line master strip on desktop/tablet, hidden redundant hint labels, and calibrated `--density-situational-min-h: 108px` in `src/modules/today/Today.tsx`, `src/modules/today/dashboard.css`, and `src/styles/theme.css`.
+- **Issue 3: Rentals List Dense Row Spacing & Avatar Hit Areas (`df44ff5c`):**
+  - Integrated `useDisplayDensity()` in `src/modules/rentals/RentalsList.tsx`, constrained compact rows to 48px, combined client + project into a single truncated line, and scaled `Avatar` (28px) & `RowOperations` button while retaining 44px hit targets.
+- **Issue 4: Context Drawer Overlay / Docked Table Squeeze (`52e5c524`):**
+  - Updated `ContextDrawer` docking threshold to 1440px in `src/components/ui/ContextDrawer.tsx` (overlay drawer on 1024px–1439px preserves 100% of 8-column table width) and pinned drawer header/actions in `src/styles/ui-v2.css`.
+- **Issue 5: Record Workspace Hidden Field Validation Errors (`e3059ac0`):**
+  - Added `forceOpen` and `errorCount` props to `RecordSection`, auto-expanded all sections with validation errors, added top error banner, and upgraded `focusRecordField` with two-frame RAF in `src/components/ui/RecordWorkspace.tsx` and `src/components/records/RecordForm.tsx`.
+- **Issue 7: Bikram Sambat (BS) Dual Calendar in Asset Detail Form (`e3059ac0`):**
+  - Replaced bare `<input type="date">` in `src/components/records/EquipmentRecordEditor.tsx` with shared `<DateField>` component supporting Bikram Sambat dual-calendar display.
+- **Issue 6: Unavailable/Disabled Actions Immediate Micro-Feedback (`36aed4e1`):**
+  - Upgraded `src/components/ui/Unavailable.tsx` to reveal reasons immediately on short tap for touchscreens (`!hasHover`), added `showHint` micro-caption support, and wired it into disabled primary actions in `src/modules/rentals/BookingDetail.tsx`.
+- **Issue 8: Floating Bulk Selection Toolbar (`ccca1f8e`):**
+  - Decoupled bulk selection in `src/components/shell/Header.tsx` into a floating bottom pill toolbar (`.bulk-selection-floating-bar`), keeping top header search, Add menu, and primary actions visible and functional at all times.
+- **Issue 9: Dark Mode Active Row Highlight & Card Contrast (`7a8535f6`):**
+  - Enhanced dark mode active row highlight (`--active-row: color-mix(in srgb, var(--primary) 15%, var(--card))`), card bezel ring (`--bezel-outer-ring: 0 0 0 1px var(--w12)`), and hover tint in `src/styles/theme.css` and `src/modules/rentals/RentalsList.tsx`. Verified 82/82 WCAG AA contrast pairs pass with 0 failures (`npm run check:contrast`).
+- **Issue 10: Virtual Keyboard Occlusion Prevention on Mobile Modals (`d9cfcd99`):**
+  - Added `.app-modal__content` and `.app-modal__footer` classes to `src/components/ui/Modal.tsx` with sticky footer docking, moved `src/modules/operations/DriverHandoverModal.tsx` buttons to modal `footer`, and updated `src/modules/finance/modals/RecordPaymentModal.tsx` footer to responsive flex layout.
+
+**Ruled**
+- Mobile breadcrumbs must never shrink below 120px; auxiliary tools collapse into the phone overflow menu.
+- Context drawers must dock only on viewports ≥1440px; viewport widths 1024px–1439px receive an overlay sheet to protect the 8-column data grid.
+- Collapsed record workspace sections containing invalid fields must automatically expand on submit with focus moved to the first error.
+- Disabled operational buttons on touch devices must reveal gate requirements on short tap; primary buttons carry inline micro-captions.
+- Bulk selection actions must float as a bottom pill toolbar without destroying global header search or navigation controls.
+- Modal dialog footers must be sticky and docked above the on-screen virtual keyboard fold.
+
+**Verified**
+- `npm run typecheck`: PASS (0 errors across entire repository).
+- `npm run check:contrast`: 82/82 PASS (WCAG AA compliant across Light, Dark, High Contrast, Glass modes).
+- `npm run check:pglite`: 168/168 migrations applied from scratch in PGlite, 0 failed, 0 leaks, 78/78 definer paths pinned.
+- `npm run check:lifecycle`: 31/31 green (all 31 lifecycle steps validated through real Postgres + RLS).
+- `npm test`: 413/413 test files passed, 5,229/5,229 tests green.
+- `npm run build`: PASS — production build built in 25.82s with 244 PWA precache entries.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-22T15:38:40.620Z). Suite: PASS — 5229/5229 passed, 0 failed (recorded 2026-10-22T15:38:13.349Z); source fingerprint matches.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-22T15:39:06.701Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **Pillar 2 (Operational Data & Offline Persistence):**
+  - Verify and wire `DeliveryWorkspace.tsx` and warehouse check-in/out workflows through live Supabase queries and Dexie offline fallback with idempotency keys.
+- **Pillar 4 (Nepali Localization & Accessibility Polishing):**
+  - Audit Bikram Sambat (BS) date picker edge cases around Chaitra/Baisakh boundaries.
+  - Review screen reader ARIA roles and labels on all newly code-split modals and drawers.
+
+
+
+## 2026-10-22 — Performance & Bundle Optimization (Pillar 3): Code-Splitting, Vendor Isolation & Critical Path Reduction
+
+**Did**
+- **Critical Path Entrypoint Slashed by 34%:**
+  - Slashed initial `main.js` from 711.19 kB (gzip: 201.65 kB) down to 468.22 kB (gzip: 131.33 kB) — a reduction of 242.97 kB uncompressed (70.32 kB gzipped), clearing the 500 kB Vite chunk warning completely.
+- **Vendor Chunk Isolation in `vite.config.ts`:**
+  - Separated `vendor-dexie` (`dexie` - 96.36 kB / gzip: 32.43 kB) and `vendor-gsap` (`gsap`, `@gsap/react` - 71.50 kB / gzip: 28.26 kB) into dedicated manual vendor chunks.
+- **Route & Shell Code-Splitting in `src/App.tsx`:**
+  - Dynamically code-split non-critical and auth routes (`Login`, `ForgotPassword`, `ResetPassword`, `ScreenLock`, `WelcomeOnboarding`, `NotFound`, `Placeholder`) via `lazy(() => import(...))` wrapped in resilient `<Suspense>` boundaries.
+- **Heavy Creation Interface Deferral:**
+  - In `src/components/ui/creation/CreationContextProvider.tsx`, deferred 2,247 lines of heavyweight creation UI (`CreationWizard`, `CreationDrawer`, `QuickCreateDialog`) into dynamic chunks behind `<Suspense fallback={null}>`, removing them from the application initial mount path.
+- **Header Auxiliary Panels Code-Split:**
+  - In `src/components/shell/Header.tsx`, deferred `HandoverSheet` and `InternalNotesDrawer` behind dynamic imports and `<Suspense>`.
+- **Command Palette Query Deferral:**
+  - In `src/components/shell/CommandPalette.tsx`, dynamically imported `searchRecords` (`import('../../lib/queries/globalSearch')`) only on user input (>1 char), removing eager imports of bookings, clients, inventory, and finance query modules from the shell bundle.
+- **Hardened Regex in `src/lib/documentStorage.ts`:**
+  - Resolved `no-misleading-character-class` ESLint violation on combining Nepali rupee character `रू` in `escapePdfText`.
+
+**Ruled**
+- Critical path chunks must remain strictly below 500 kB uncompressed to avoid browser thread stalls on cold boot.
+- All non-initial auth routes, overlay modals, and auxiliary tool drawers must be dynamically imported via React `lazy()` and wrapped in `<Suspense>`.
+- Heavy creation wizards and forms must not bundle into `main.js`; they mount on-demand when invoked from the global creation registry.
+
+**Verified**
+- `npm run typecheck`: PASS (0 errors across entire repository).
+- `npm run lint`: PASS (0 warnings, 0 errors).
+- `npm run check:contrast`: 82/82 PASS (WCAG AA compliant across Light, Dark, High Contrast, Glass modes).
+- `npm run check:pglite`: 168/168 migrations applied from scratch in PGlite, 0 failed, 0 leaks, 78/78 definer paths pinned.
+- `npm run check:lifecycle`: 31/31 green (all 31 lifecycle steps validated through real Postgres + RLS).
+- `npm run build`: PASS — `main.js` built at 468.22 kB (gzip: 131.33 kB) with 0 chunk warnings and 244 PWA precache entries.
+- `npm test`: 413/413 test files passed, 5,229/5,229 tests green.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-22T15:15:27.464Z).
+Gates read from .lifecycle-result.json, written 2026-10-22T15:15:36.605Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **Pillar 2 (Operational Data & Offline Persistence):**
+  - Verify and wire `DeliveryWorkspace.tsx` and warehouse check-in/out workflows through live Supabase queries and Dexie offline fallback with idempotency keys.
+- **Pillar 4 (Nepali Localization & Accessibility Polishing):**
+  - Audit Bikram Sambat (BS) date picker edge cases around Chaitra/Baisakh boundaries.
+  - Review screen reader ARIA roles and labels on all newly code-split modals and drawers.
+
+
 ## 2026-10-22 — "Fix all": the crew timesheet reads real data; the hard-coded Membership matrix is gone
 
 **Did**
