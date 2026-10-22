@@ -2,8 +2,6 @@ import { Field, SectionCard, inputStyle, fieldRow, BsAbove } from './EquipmentSh
 import { useEquipmentContext } from './AddEquipmentContext'
 import { Unavailable } from '../../../components/ui/Unavailable'
 import { DEPRECIATION_UNAVAILABLE_REASON } from '../../../lib/queries/addEquipment'
-import { formatMoney, parseMoney } from '../../../lib/money'
-import type { Paisa } from '../../../lib/money'
 import { DateField } from '../../../components/ui/DateField'
 
 export function SectionPurchase() {
@@ -18,7 +16,6 @@ export function SectionPurchase() {
     setPurchasePrice,
     replacementValue,
     setReplacementValue,
-    replacementPaisa,
     warrantyMonths,
     setWarrantyMonths,
     insurancePolicy,
@@ -34,7 +31,6 @@ export function SectionPurchase() {
               id="sec-purchase"
               n={sectionNumber('sec-purchase')}
               title="Purchase"
-              note="Replacement value is what damage charges and insurance claims are computed from."
             >
               <div style={fieldRow}>
                 <Field label="Purchase date">
@@ -53,7 +49,6 @@ export function SectionPurchase() {
                 <Field
                   label="Purchase price (NPR)"
                   error={errors.purchasePrice}
-                  hint={parseMoney(purchasePrice) ? formatMoney(parseMoney(purchasePrice) as Paisa) : undefined}
                 >
                   <input
                     value={purchasePrice}
@@ -68,7 +63,6 @@ export function SectionPurchase() {
                 <Field
                   label="Replacement value (NPR)"
                   error={errors.replacementValue}
-                  hint={replacementPaisa ? formatMoney(replacementPaisa) : 'Needed before the item can be rented.'}
                 >
                   <input
                     value={replacementValue}

@@ -1,7 +1,7 @@
 import { supabase } from './supabase'
 import { drainQueue, getOfflineQueueSummary } from './offlineQueue'
 import { localStore, isIndexedDbAvailable } from './localStore'
-import type { CachedClient, CachedProduct } from './localStore'
+import type { CachedClient, CachedProduct, CachedBooking } from './localStore'
 import { captureError } from './monitoring'
 import { rupees } from './money'
 
@@ -90,17 +90,17 @@ class SyncEngine {
   }
 
   public startBackgroundSync(intervalMs = 25000) {
-    if (this.intervalTimer) window.clearInterval(this.intervalTimer)
-    this.intervalTimer = window.setInterval(() => {
+    if (this.intervalTimer) globalThis.clearInterval(this.intervalTimer)
+    this.intervalTimer = globalThis.setInterval(() => {
       if (typeof navigator !== 'undefined' && navigator.onLine) {
         this.syncAll().catch(() => {})
       }
-    }, intervalMs)
+    }, intervalMs) as unknown as number
   }
 
   public stopBackgroundSync() {
     if (this.intervalTimer) {
-      window.clearInterval(this.intervalTimer)
+      globalThis.clearInterval(this.intervalTimer)
       this.intervalTimer = null
     }
   }
@@ -218,6 +218,31 @@ class SyncEngine {
             is_blocked: c.is_blocked === true,
             updated_at: c.created_at || new Date().toISOString(),
           }))
+        )
+      }
+
+      // Pull recent operational bookings for offline warehouse verification
+      const { data: bookings } = await supabase
+        .from('bookings')
+        .select('id, booking_no, stage, client_id, project, pickup_at, return_at, actual_return_at, delivery_type, updated_at')
+        .order('updated_at', { ascending: false })
+        .limit(200)
+      if (bookings && bookings.length > 0) {
+        await localStore.bookings.bulkPut(
+          bookings.map((b: { id: string; booking_no: string; stage: string; client_id: string; project?: string | null; pickup_at?: string | null; return_at?: string | null; actual_return_at?: string | null; delivery_type?: string | null; updated_at?: string | null }) =>
+            withoutUndefined<CachedBooking>({
+              id: b.id,
+              booking_no: b.booking_no,
+              stage: b.stage,
+              client_id: b.client_id,
+              project: b.project ?? undefined,
+              pickup_at: b.pickup_at ?? undefined,
+              return_at: b.return_at ?? undefined,
+              actual_return_at: b.actual_return_at ?? undefined,
+              delivery_type: b.delivery_type ?? undefined,
+              updated_at: b.updated_at ?? undefined,
+            })
+          )
         )
       }
     } catch (e) {

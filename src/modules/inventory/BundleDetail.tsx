@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import type { CSSProperties } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
-import { Card, PageHeader, Button, KpiStrip, FooterNote } from '../../components/ui/Page'
+import { Card, PageHeader, Button, KpiStrip } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { PageShell } from '../../components/ui/PageShell'
 import EditBundle from './EditBundle'
@@ -49,8 +49,8 @@ import './inventory.css'
  * There is no spec and no approved render for a bundle detail page — the spec
  * library holds `Bundles.md` (the list) and `Add Bundle.md` (the create form) and
  * nothing else. So the *layout* follows `ClientDetail.tsx`, the closest sibling
- * that uses the shared furniture (`PageHeader` → `KpiStrip` → `Card`s →
- * `FooterNote`), and the *content* is `bundleDetailGroups` — which is not
+ * that uses the shared furniture (`PageHeader` → `KpiStrip` → `Card`s),
+ * and the *content* is `bundleDetailGroups` — which is not
  * invention: it is the field set the intel layer already decided this bundle
  * has, cited to `Bundles.md` §4, §7, §8 and §10 in its own comments.
  *
@@ -473,12 +473,6 @@ export function BundleDetail() {
         ))}
       </div>
 
-      <FooterNote
-        extra={[
-          `Availability measured for ${formatAd(new Date(fromAd))} → ${formatAd(new Date(toAd))}`,
-          'A bundle stores models, never serials — units are assigned at packing',
-        ]}
-      />
     </PageShell>
   )
 }

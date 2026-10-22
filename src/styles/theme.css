@@ -48,11 +48,11 @@
   --app-panel-width: 320px;
 
   /* Density Tokens (Default / Fallback) */
-  --density-card-pad: 12px;
-  --density-panel-gap: 12px;
-  --density-section-gap: 12px;
-  --density-table-row: 44px;
-  --density-situational-min-h: 96px;
+  --density-card-pad: 14px;
+  --density-panel-gap: 16px;
+  --density-section-gap: 16px;
+  --density-table-row: 48px;
+  --density-situational-min-h: 108px;
 }
 
 :root[data-density='compact'],
@@ -864,13 +864,12 @@ body,
 
 :root {
   --font-display: 'Outfit', system-ui, sans-serif;
-  --font-body: 'Source Sans 3', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
-  --font-id: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
-  --font-num: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
-  /* Declared, not loaded — §4.3.7 keeps Devanagari off the English path. */
-  --font-ne-display: 'Asar', serif;
-  --font-ne-body: 'Hind', system-ui, sans-serif;
+  --font-body: 'Outfit', system-ui, sans-serif;
+  --font-mono: 'Outfit', system-ui, sans-serif;
+  --font-id: 'Outfit', system-ui, sans-serif;
+  --font-num: 'Outfit', system-ui, sans-serif;
+  --font-ne-display: 'Outfit', system-ui, sans-serif;
+  --font-ne-body: 'Outfit', system-ui, sans-serif;
 
   /*
     §4.3.6 — **fluid, not fixed.** Every value is `rem`, so the whole scale
@@ -1146,7 +1145,7 @@ h3,
 
 /*
   §4.3.4 — identifiers & numbers: serials, booking IDs, QR payloads, PAN.
-  Source Sans 3 with tabular figures gives a clean, modern look while aligning numbers perfectly.
+  Outfit with tabular figures gives a clean, modern look while aligning numbers perfectly.
 */
 .identifier,
 .serial,

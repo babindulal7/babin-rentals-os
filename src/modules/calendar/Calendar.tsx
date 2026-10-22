@@ -5,7 +5,7 @@ import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
 import { Select, SearchInput, EmptyState, TouchTarget, PageBody, CheckAvailabilityModal, Modal } from '../../components/ui'
 import { PageShell } from '../../components/ui/PageShell'
-import { Card, PageHeader, PageActions, Button, FooterNote, cardStyle, Rail } from '../../components/ui/Page'
+import { Card, PageHeader, PageActions, Button, cardStyle, Rail } from '../../components/ui/Page'
 import { openCommandPalette } from '../../components/shell/CommandPalette'
 import { FilterButton, FilterDrawer } from '../../components/ui/FilterDrawer'
 import { listInventory } from '../../lib/queries/inventory'
@@ -3624,7 +3624,6 @@ export default function Calendar() {
         </div>
       )}
 
-      <FooterNote extra={['Bookings are cancelled, never deleted']} />
 
       {checkAvailabilityModal}
 

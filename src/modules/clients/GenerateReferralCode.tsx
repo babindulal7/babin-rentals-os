@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
-import { Input, Select, InfoTooltip } from '../../components/ui'
+import { Input, Select } from '../../components/ui'
 import { Card, Button } from '../../components/ui/Page'
 import { ScreenHeader } from '../../components/ui/ScreenHeader'
 import { PageActions } from '../../components/ui/PageActions'
@@ -84,12 +84,11 @@ function suggestCode(clientName: string): string {
   return `${base}-${suffix}`
 }
 
-function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label style={{ display: 'block', minWidth: 0 }}>
       <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--muted)', marginBottom: 4 }}>
         {label}
-        {hint && <InfoTooltip content={hint} />}
       </span>
       {children}
     </label>
@@ -223,7 +222,7 @@ export default function GenerateReferralCode({ embedded = false, onDone }: Gener
             {referrers.error && (
               <ErrorBanner title="Could not load clients" message={referrers.error} onRetry={referrers.refetch} />
             )}
-            <Field label="Referrer" hint="Only existing clients can issue a referral code — this list is the client directory.">
+            <Field label="Referrer">
               <Select
                 value={referrerId}
                 onChange={(e) => onReferrerChange(e.target.value)}
@@ -298,7 +297,7 @@ export default function GenerateReferralCode({ embedded = false, onDone }: Gener
             </Field>
 
             {money && (
-              <Field label="Credit Reward" hint="Paid once the referral converts and completes its first return.">
+              <Field label="Credit Reward">
                 <Input
                   value={reward}
                   onChange={(e) => setReward(e.target.value)}

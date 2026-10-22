@@ -5,7 +5,7 @@ import { PageShell } from '../../components/ui/PageShell'
 import { PageBody } from '../../components/ui/PageBody'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { SearchInput } from '../../components/ui/SearchInput'
-import { EmptyState } from '../../components/ui/StateViews'
+import { EmptyState, LoadingSkeleton } from '../../components/ui/StateViews'
 import Icon from '../../components/ui/Icon'
 import { useViewport } from '../../lib/device'
 import { useAuth } from '../../lib/auth'
@@ -192,18 +192,17 @@ export default function LiveTransportPlans() {
         )}
 
         {!refusal && !error && loading && !data && (
-          <div role="status" style={{ ...cardStyle, padding: 24, textAlign: 'center', color: 'var(--muted)' }}>
-            Loading live transport plans from database…
+          <div style={{ ...cardStyle, padding: 24 }}>
+            <LoadingSkeleton rows={4} type="table" label="Loading live transport plans from database…" />
           </div>
         )}
 
         {!refusal && !error && data && data.length === 0 && (
-          <div role="status" style={{ ...cardStyle, padding: 32, textAlign: 'center' }}>
-            <strong style={{ display: 'block', fontSize: 'var(--t-h3, 16px)', marginBottom: 6 }}>No transport plans found</strong>
-            <p style={{ color: 'var(--text2)', margin: 0 }}>
-              Confirmed bookings requiring Babin Delivery or Courier transport will appear here.
-            </p>
-          </div>
+          <EmptyState
+            kind="nothing-yet"
+            title="No transport plans found"
+            description="Confirmed bookings requiring Babin Delivery or Courier transport will appear here."
+          />
         )}
 
         {!refusal && !error && data && data.length > 0 && filteredData.length === 0 && (

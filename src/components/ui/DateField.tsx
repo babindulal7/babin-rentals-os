@@ -5,6 +5,7 @@ import Icon from './Icon'
 import { TouchTarget } from './TouchTarget'
 import { floatingLayer } from './floatingLayer'
 import { toBs, formatBs, formatAd, BS_MONTHS } from '../../lib/bs'
+import type { BsDate } from '../../lib/bs'
 
 /**
  * # The one date picker
@@ -272,13 +273,26 @@ export function CalendarPopover({
     gridRef.current?.querySelector<HTMLButtonElement>('button[tabindex="0"]')?.focus()
   }, [cursor])
 
-  const monthBs = useMemo(() => {
+  const monthBsSubtitle = useMemo(() => {
+    let firstBs: BsDate | null = null
+    let lastBs: BsDate | null = null
     for (const c of cells) {
       if (!c) continue
       const bs = toBs(c.ad)
-      if (bs) return bs
+      if (!bs) continue
+      if (!firstBs) firstBs = bs
+      lastBs = bs
     }
-    return null
+    if (!firstBs || !lastBs) return null
+    const firstMonth = BS_MONTHS[firstBs.month - 1]
+    const lastMonth = BS_MONTHS[lastBs.month - 1]
+    if (firstBs.year === lastBs.year && firstBs.month === lastBs.month) {
+      return `${firstMonth} ${firstBs.year} BS`
+    }
+    if (firstBs.year === lastBs.year) {
+      return `${firstMonth} / ${lastMonth} ${firstBs.year} BS`
+    }
+    return `${firstMonth} ${firstBs.year} / ${lastMonth} ${lastBs.year} BS`
   }, [cells])
 
   const monthLabel = new Date(Date.UTC(viewYear, viewMonth, 1)).toLocaleDateString('en-GB', {
@@ -543,7 +557,7 @@ export function CalendarPopover({
           >
             {monthLabel}
           </span>
-          {monthBs && (
+          {monthBsSubtitle && (
             <span
               style={{
                 display: 'block',
@@ -553,7 +567,7 @@ export function CalendarPopover({
                 marginTop: 1,
               }}
             >
-              {`${BS_MONTHS[monthBs.month - 1]} ${monthBs.year} BS`}
+              {monthBsSubtitle}
             </span>
           )}
         </div>
@@ -686,7 +700,7 @@ export function CalendarPopover({
                 tabIndex={isCursor ? 0 : -1}
                 aria-selected={isSelected}
                 {...(isToday ? { 'aria-current': 'date' as const } : {})}
-                aria-label={`${formatAd(c.ad)}${hasAvail ? ` (${availCount} available)` : ''}`}
+                aria-label={`${bs ? `${bs.day} ${BS_MONTHS[bs.month - 1]} ${bs.year} BS, ` : ''}${formatAd(c.ad)}${hasAvail ? ` (${availCount} available)` : ''}`}
                 onClick={() => handleSelectDay(iso)}
                 style={{
                   width: 36,

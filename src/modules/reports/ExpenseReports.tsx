@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
-import { Card, PageHeader, Button, ReflowRail, FooterNote, cardStyle, useRailGridColumns, useBandColumns } from '../../components/ui/Page'
+import { Card, PageHeader, Button, ReflowRail, cardStyle, useRailGridColumns, useBandColumns } from '../../components/ui/Page'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { Donut, Legend } from '../../components/ui/Charts'
@@ -319,7 +319,6 @@ export default function ExpenseReports() {
         >
           {null}
         </PageBody>
-        <FooterNote />
       </div>
     )
   }
@@ -714,7 +713,6 @@ export default function ExpenseReports() {
       </div>
       </PageBody>
 
-      <FooterNote extra={['Capital purchases become assets in Inventory, never expenses']} />
     </div>
   )
 }

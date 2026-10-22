@@ -133,7 +133,7 @@ export function PrintLabelModal({ isOpen, onClose, labelData }: PrintLabelModalP
                 <span style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '0.5px' }}>
                   {labelData.orgName || 'BABIN RENTALS OS'}
                 </span>
-                <span style={{ fontFamily: 'var(--font-id, "Source Sans 3", sans-serif)', fontVariantNumeric: 'tabular-nums', fontSize: '10px', fontWeight: 900 }}>
+                <span style={{ fontFamily: 'var(--font-id, "Outfit", sans-serif)', fontVariantNumeric: 'tabular-nums', fontSize: '10px', fontWeight: 900 }}>
                   {labelData.assetCode}
                 </span>
               </div>
@@ -155,7 +155,7 @@ export function PrintLabelModal({ isOpen, onClose, labelData }: PrintLabelModalP
                   dangerouslySetInnerHTML={{ __html: barcodeSvg }}
                   style={{ width: '100%', display: 'center', justifyContent: 'center' }}
                 />
-                <span style={{ fontFamily: 'var(--font-id, "Source Sans 3", sans-serif)', fontVariantNumeric: 'tabular-nums', fontSize: '9px', fontWeight: 700, letterSpacing: '1px' }}>
+                <span style={{ fontFamily: 'var(--font-id, "Outfit", sans-serif)', fontVariantNumeric: 'tabular-nums', fontSize: '9px', fontWeight: 700, letterSpacing: '1px' }}>
                   {labelData.barcodeValue}
                 </span>
               </div>

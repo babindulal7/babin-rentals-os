@@ -139,6 +139,110 @@ export function allTasksFor(u: Unit): string[] {
   return [...cleanTasksFor(u), ...resetTasksFor(u)]
 }
 
+/**
+ * Infers an equipment category from an item's product or line description.
+ */
+export function inferCategoryFromName(name: string): Category {
+  const lower = name.toLowerCase()
+  if (
+    lower.includes('camera') ||
+    lower.includes('fx3') ||
+    lower.includes('fx6') ||
+    lower.includes('fx9') ||
+    lower.includes('komodo') ||
+    lower.includes('raptor') ||
+    lower.includes('arri') ||
+    lower.includes('alexa') ||
+    lower.includes('red ') ||
+    lower.includes('blackmagic') ||
+    lower.includes('pocket 6k') ||
+    lower.includes('pocket 4k') ||
+    lower.includes('bmpcc') ||
+    lower.includes('body')
+  ) {
+    return 'Camera'
+  }
+  if (
+    lower.includes('mic') ||
+    lower.includes('audio') ||
+    lower.includes('lav') ||
+    lower.includes('wireless') ||
+    lower.includes('rode') ||
+    lower.includes('sennheiser') ||
+    lower.includes('shotgun')
+  ) {
+    return 'Audio'
+  }
+  if (
+    lower.includes('battery') ||
+    lower.includes('v-mount') ||
+    lower.includes('gold mount') ||
+    lower.includes('charger') ||
+    lower.includes('np-f') ||
+    lower.includes('b-mount')
+  ) {
+    return 'Battery'
+  }
+  if (
+    lower.includes('card') ||
+    lower.includes('cfexpress') ||
+    lower.includes('cfast') ||
+    lower.includes('ssd') ||
+    lower.includes('media')
+  ) {
+    return 'Media'
+  }
+  if (
+    lower.includes('monitor') ||
+    lower.includes('screen') ||
+    lower.includes('portkeys') ||
+    lower.includes('smallhd') ||
+    lower.includes('ninja') ||
+    lower.includes('atomos')
+  ) {
+    return 'Monitor'
+  }
+  if (
+    lower.includes('lens') ||
+    lower.includes('prime') ||
+    lower.includes('zoom') ||
+    lower.includes('nisi') ||
+    lower.includes('sigma') ||
+    lower.includes('anamorphic') ||
+    /\b\d{2,3}mm\b/.test(lower)
+  ) {
+    return 'Lens'
+  }
+  if (
+    lower.includes('rig') ||
+    lower.includes('cage') ||
+    lower.includes('handle') ||
+    lower.includes('gimbal') ||
+    lower.includes('stabilizer') ||
+    lower.includes('tripod') ||
+    lower.includes('fluid head') ||
+    lower.includes('matte box') ||
+    lower.includes('dovetail') ||
+    lower.includes('baseplate') ||
+    /\brods?\b/.test(lower)
+  ) {
+    return 'Rig'
+  }
+  return 'Accessory'
+}
+
+export function cleanTasksForCategory(category: Category): readonly string[] {
+  return [...SHARED_CLEAN_TASKS, ...CATEGORY_CLEAN_EXTRA[category]]
+}
+
+export function resetTasksForCategory(category: Category): readonly string[] {
+  return [...(CATEGORY_RESET_EXTRA[category] ?? ['Reset configuration — settings to house defaults'])]
+}
+
+export function allTasksForCategory(category: Category): readonly string[] {
+  return [...cleanTasksForCategory(category), ...resetTasksForCategory(category)]
+}
+
 /* ── §4 priority — REMOVED 16 Aug 2026, PLAN.md §4.31(3) ──────────────────────
  *
  * `PriorityTier`, `priorityTier` and `isPriority` used to live here. All three

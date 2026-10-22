@@ -32,7 +32,6 @@ export function SectionMaintenance() {
             id="sec-maintenance"
             n={sectionNumber('sec-maintenance')}
             title="Maintenance & Documents"
-            note="Due dates feed the Maintenance queue. Internal notes never print."
           >
             <div style={fieldRow}>
               <Field label="Inspection interval (days)">
@@ -134,7 +133,7 @@ export function SectionMaintenance() {
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', paddingTop: 'var(--sp-md)', borderTop: '1px solid var(--border)' }}>
-              <Field label="Warehouse notes" hint="Printed on packing lists.">
+              <Field label="Warehouse notes">
                 <textarea
                   value={warehouseNotes}
                   onChange={(e) => setWarehouseNotes(e.target.value)}
@@ -143,7 +142,7 @@ export function SectionMaintenance() {
                   style={{ ...inputStyle(), height: 'auto', padding: 10, resize: 'vertical' }}
                 />
               </Field>
-              <Field label="Internal notes" hint="Never printed, never shown to a client.">
+              <Field label="Internal notes">
                 <textarea
                   value={internalNotes}
                   onChange={(e) => setInternalNotes(e.target.value)}

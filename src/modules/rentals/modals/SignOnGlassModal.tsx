@@ -214,7 +214,7 @@ export function SignOnGlassModal({
           offCtx.strokeStyle = '#38bdf8'
           offCtx.stroke()
 
-          offCtx.font = '10px "Source Sans 3", sans-serif'
+          offCtx.font = '10px "Outfit", sans-serif'
           offCtx.fillStyle = '#94a3b8'
           offCtx.fillText(`DIGITALLY ATTESTED · ${bookingNo} · ${formatAdDateTime(nowIso)}`, 40, 118)
           dataUrl = offCanvas.toDataURL('image/png')

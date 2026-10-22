@@ -2,6 +2,7 @@ import React, { useId } from 'react'
 import type { Role } from '../../lib/rbac'
 import { canViewMoney } from '../../lib/rbac'
 import { toRupees, rupees, type Paisa } from '../../lib/money'
+import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from './InputGroup'
 
 export interface MoneyFieldProps {
   label?: string
@@ -59,22 +60,11 @@ export const MoneyField: React.FC<MoneyFieldProps> = ({
         </label>
       )}
 
-      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-        <span
-          style={{
-            position: 'absolute',
-            left: 14,
-            fontSize: 'var(--t-ui)',
-            fontWeight: 600,
-            color: 'var(--muted)',
-            userSelect: 'none',
-            pointerEvents: 'none',
-          }}
-        >
-          Rs
-        </span>
-
-        <input
+      <InputGroup invalid={Boolean(error)} disabled={disabled}>
+        <InputGroupAddon align="inline-start">
+          <InputGroupText>Rs.</InputGroupText>
+        </InputGroupAddon>
+        <InputGroupInput
           id={fieldId}
           aria-label={label || 'Amount in Rupees'}
           type="number"
@@ -86,38 +76,26 @@ export const MoneyField: React.FC<MoneyFieldProps> = ({
           onChange={handleInputChange}
           disabled={disabled}
           style={{
-            width: '100%',
-            minHeight: 44,
-            paddingLeft: 42,
-            paddingRight: 14,
-            paddingTop: 8,
-            paddingBottom: 8,
-            fontSize: 'var(--t-ui)',
             fontFamily: 'var(--font-id, sans-serif)',
             fontVariantNumeric: 'tabular-nums',
-            borderRadius: 'var(--r-sm)',
-            background: 'var(--card2)',
-            border: error ? '1px solid var(--danger-border)' : '1px solid var(--border)',
-            color: 'var(--text)',
-            outline: 'none',
-            transition: 'border-color var(--dur) var(--ease)',
-            cursor: disabled ? 'not-allowed' : 'text',
-            opacity: disabled ? 0.6 : 1,
-          }}
-          onFocus={(e) => {
-            if (!error) e.currentTarget.style.borderColor = 'var(--nav-active-accent)'
-          }}
-          onBlur={(e) => {
-            if (!error) e.currentTarget.style.borderColor = 'var(--border)'
           }}
         />
-      </div>
+        <InputGroupAddon align="inline-end">
+          <span style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600, userSelect: 'none' }}>NPR</span>
+        </InputGroupAddon>
+      </InputGroup>
 
-      {error ? (
-        <span style={{ fontSize: 'var(--t-meta)', color: 'var(--danger-text)' }}>{error}</span>
-      ) : helperText ? (
-        <span style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>{helperText}</span>
-      ) : null}
+      {error && (
+        <span style={{ fontSize: 'var(--t-meta)', color: 'var(--danger-text)', fontWeight: 600 }}>
+          {error}
+        </span>
+      )}
+
+      {!error && helperText && (
+        <span style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
+          {helperText}
+        </span>
+      )}
     </div>
   )
 }

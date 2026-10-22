@@ -369,11 +369,11 @@ export const space = {
 
 export const fontFamilies = {
   display: ['Outfit', 'system-ui', 'sans-serif'],
-  body: ['Source Sans 3', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
-  mono: ['JetBrains Mono Variable', 'JetBrains Mono', 'ui-monospace', 'monospace'],
-  id: ['JetBrains Mono Variable', 'JetBrains Mono', 'ui-monospace', 'monospace'],
-  neDisplay: ['Asar', 'serif'],
-  neBody: ['Hind', 'system-ui', 'sans-serif'],
+  body: ['Outfit', 'system-ui', 'sans-serif'],
+  mono: ['Outfit', 'system-ui', 'sans-serif'],
+  id: ['Outfit', 'system-ui', 'sans-serif'],
+  neDisplay: ['Outfit', 'system-ui', 'sans-serif'],
+  neBody: ['Outfit', 'system-ui', 'sans-serif'],
 } as const;
 
 export const fontSizes = {

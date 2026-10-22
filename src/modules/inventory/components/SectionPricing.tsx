@@ -1,12 +1,10 @@
 import { Field, SectionCard, inputStyle, fieldRow } from './EquipmentShared'
 import { useEquipmentContext } from './AddEquipmentContext'
-import { formatMoney } from '../../../lib/money'
 
 export function SectionPricing() {
   const {
     dailyRate,
     setDailyRate,
-    dailyPaisa,
     weeklyRate,
     setWeeklyRate,
     monthlyRate,
@@ -23,7 +21,6 @@ export function SectionPricing() {
     setDepositPercent,
     depositFixed,
     setDepositFixed,
-    depositPaisa,
     prepMinutes,
     setPrepMinutes,
     cleaningMinutes,
@@ -43,10 +40,9 @@ export function SectionPricing() {
               id="sec-pricing"
               n={sectionNumber('sec-pricing')}
               title="Pricing & Rental"
-              note={/* Base rates only. Membership, student, bundle and custom discounts and the late fee are owned elsewhere (§10.3). */ "Base rates only. Membership, student, bundle and custom discounts and the late fee are owned elsewhere."}
             >
               <div style={fieldRow}>
-                <Field label="Daily rate (NPR)" error={errors.dailyRate} hint={dailyPaisa ? formatMoney(dailyPaisa) : undefined}>
+                <Field label="Daily rate (NPR)" error={errors.dailyRate}>
                   <input
                     value={dailyRate}
                     onChange={(e) => {
@@ -127,7 +123,6 @@ export function SectionPricing() {
                     <Field
                       label="Deposit (%)"
                       error={errors.deposit}
-                      hint={depositPaisa ? `${formatMoney(depositPaisa)} of the replacement value` : 'Needs a replacement value above.'}
                     >
                       <input
                         type="number"
@@ -144,7 +139,7 @@ export function SectionPricing() {
                       />
                     </Field>
                   ) : (
-                    <Field label="Deposit (NPR)" error={errors.deposit} hint={depositPaisa ? formatMoney(depositPaisa) : undefined}>
+                    <Field label="Deposit (NPR)" error={errors.deposit}>
                       <input
                         value={depositFixed}
                         onChange={(e) => {

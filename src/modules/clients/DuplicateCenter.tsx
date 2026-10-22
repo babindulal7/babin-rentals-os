@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
-import { Card, Button, FooterNote, SummaryRows } from '../../components/ui/Page'
+import { Card, Button, SummaryRows } from '../../components/ui/Page'
 import { ScreenHeader } from '../../components/ui/ScreenHeader'
 import { Modal } from '../../components/ui/Modal'
 import { PageBody } from '../../components/ui/PageBody'
@@ -438,7 +438,6 @@ export default function DuplicateCenter({ embedded = false }: DuplicateCenterPro
         </div>
       </PageBody>
 
-      <FooterNote extra={[/* Merging closes a record — Law 3: nothing is deleted, every entity has a named terminal action */ "Merging closes the duplicate record and preserves its history."]} />
 
       <Modal
         isOpen={!!pendingMerge}

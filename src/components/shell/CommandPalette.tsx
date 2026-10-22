@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useId } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Icon from '../ui/Icon'
 import type { IconName } from '../ui/Icon'
+import { Kbd } from '../ui/Kbd'
 import * as nav from '../../data/nav'
 import { useAuth } from '../../lib/auth'
 import { useTheme } from '../../lib/theme'
@@ -515,21 +516,14 @@ export const CommandPalette: React.FC = () => {
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, marginLeft: 'var(--sp-md)' }}>
                     {item.shortcut && (
-                      <kbd
-                        className="figure"
+                      <Kbd
                         style={{
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          color: isSelected ? 'var(--select-fg)' : 'var(--muted)',
-                          padding: '2px 7px',
-                          borderRadius: 4,
-                          background: isSelected ? 'var(--select-bg)' : 'var(--card)',
-                          border: '1px solid var(--border)',
-                          fontFamily: 'var(--font-id)',
+                          color: isSelected ? 'var(--select-fg)' : undefined,
+                          background: isSelected ? 'var(--select-bg)' : undefined,
                         }}
                       >
                         {item.shortcut}
-                      </kbd>
+                      </Kbd>
                     )}
                     {isSelected && (
                       <span
@@ -563,13 +557,15 @@ export const CommandPalette: React.FC = () => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-md)', flexWrap: 'wrap' }}>
-            <span>↑↓ Navigate</span>
-            <span>↵ Select</span>
-            <span>ESC Close</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><Kbd>↑</Kbd><Kbd>↓</Kbd> Navigate</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><Kbd>↵</Kbd> Select</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><Kbd>ESC</Kbd> Close</span>
             <span style={{ color: 'var(--border)' }}>|</span>
             <span style={{ color: 'var(--text2)' }}>Codes: <strong>nr</strong> · <strong>sc</strong> · <strong>today</strong> · <strong>lang</strong></span>
           </div>
-          <span>Babin Rentals OS ⌘K</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            Babin Rentals OS <Kbd>⌘K</Kbd>
+          </span>
         </div>
       </div>
     </div>

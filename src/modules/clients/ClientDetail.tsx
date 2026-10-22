@@ -4,7 +4,7 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
-import { Card, PageHeader, PageActions, Button, KpiStrip, FooterNote, SummaryRows } from '../../components/ui/Page'
+import { Card, PageHeader, PageActions, Button, KpiStrip, SummaryRows } from '../../components/ui/Page'
 import type { OverflowMenuItem } from '../../components/ui/OverflowMenu'
 import type { Kpi } from '../../components/ui/Page'
 import { PageShell } from '../../components/ui/PageShell'
@@ -827,7 +827,7 @@ function ClientDetailView() {
                    before a booking can be confirmed"); it does not any more.
                    New Rental's own Government ID / PAN box is a separate,
                    page-level gate, so it is named as one. */
-                { key: 'pan', label: 'PAN', value: client.pan ?? 'Not on file', hint: 'Optional — a client without a PAN can still rent. New Rental asks for a PAN or citizenship number in its own box before Confirm.' },
+                { key: 'pan', label: 'PAN', value: client.pan ?? 'Not on file' },
                 { label: 'KYC', value: client.kycStatus },
                 { key: 'id', label: 'Client number', value: client.id },
               ]}
@@ -842,9 +842,9 @@ function ClientDetailView() {
               <EditableRows
                 edit={edit}
                 rows={[
-                  { key: 'phone', label: 'Phone', value: client.phone, as: 'tel', hint: 'Required — duplicate detection and the merge tool match on it.' },
+                  { key: 'phone', label: 'Phone', value: client.phone, as: 'tel' },
                   { key: 'email', label: 'Email', value: client.email || '—', as: 'email' },
-                  { key: 'address', label: 'Address', value: client.address, hint: 'The single line the rest of the app reads.' },
+                  { key: 'address', label: 'Address', value: client.address },
                   { key: 'city', label: 'City', value: client.city ?? '—' },
                   { key: 'district', label: 'District', value: client.district ?? '—' },
                   { key: 'postalCode', label: 'Postal code', value: client.postalCode ?? '—' },
@@ -917,9 +917,8 @@ function ClientDetailView() {
                         label: 'Standing discount',
                         value: client.standingDiscountPercent !== undefined ? `${client.standingDiscountPercent}%` : '—',
                         as: 'number',
-                        hint: /* Saves together with Discount source. Any percent 0–100 — Law 10 carries no approval ceremony. */ "Save the discount and its source together.",
                       },
-                      { key: 'discountSource', label: 'Discount source', value: client.discountSource ?? '—', hint: 'Type Rule · Membership · Named Client' },
+                      { key: 'discountSource', label: 'Discount source', value: client.discountSource ?? '—' },
                       // Open ⭐ #1 (HIS v2.1) — no per-category deposit-% table is ruled yet.
                       { label: 'Deposit override', value: /* Not set (Open ⭐ #1) */ "Not set" },
                       { key: 'creditLimitPaisa', label: 'Credit limit', value: formatMoney(client.creditLimitPaisa) },
@@ -1403,7 +1402,6 @@ function ClientDetailView() {
       )}
       </div>
 
-      <FooterNote extra={['Clients are never deleted — a closed account is retained and marked']} />
 
       {client && (
         <>

@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
 import { Input, Select, DateField } from '../../components/ui'
-import { Card, Button, Rail, SummaryRows, FooterNote, cardStyle } from '../../components/ui/Page'
+import { Card, Button, Rail, SummaryRows, cardStyle } from '../../components/ui/Page'
 import { ScreenHeader } from '../../components/ui/ScreenHeader'
 import { PageActions } from '../../components/ui/PageActions'
 import { Modal } from '../../components/ui/Modal'
@@ -1311,7 +1311,6 @@ export default function AddClient({ embedded = false, onDone }: AddClientProps =
 
       {/* What Save does NOT keep. On the page, above the fold of the footer, and
           permanent — see NOT_SAVED_YET for why each line is there. */}
-      <FooterNote />
       <div
         style={{
           border: '1px solid var(--border)',

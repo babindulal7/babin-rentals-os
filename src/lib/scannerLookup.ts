@@ -46,6 +46,56 @@ function sanitizePostgrestParam(value: string): string {
   return value.replace(/[\r\n,()"\\]/g, '')
 }
 
+async function lookupLocalStore(code: string): Promise<ScanLookupResult | null> {
+  if (typeof window === 'undefined' || typeof indexedDB === 'undefined') return null
+  try {
+    const { localStore } = await import('./localStore')
+    // 1. Check products in local Dexie store (by asset_tag, serial_no, or id)
+    const localProd = await localStore.products
+      .where('asset_tag')
+      .equalsIgnoreCase(code)
+      .or('serial_no')
+      .equalsIgnoreCase(code)
+      .or('id')
+      .equals(code)
+      .first()
+
+    if (localProd) {
+      return {
+        status: 'product_matched',
+        code,
+        label: `${localProd.name}${localProd.asset_tag ? ` · ${localProd.asset_tag}` : ''}`,
+        productId: localProd.id,
+        assetCode: localProd.asset_tag ?? localProd.id,
+        productName: localProd.name,
+      }
+    }
+
+    // 2. Check bookings in local Dexie store (by booking_no or id)
+    const localBooking = await localStore.bookings
+      .where('booking_no')
+      .equalsIgnoreCase(code)
+      .or('id')
+      .equals(code)
+      .first()
+
+    if (localBooking) {
+      return {
+        status: 'booking_matched',
+        code,
+        label: `Booking ${localBooking.booking_no} (${localBooking.stage})`,
+        bookingId: localBooking.id,
+        bookingNo: localBooking.booking_no,
+        stage: localBooking.stage,
+      }
+    }
+
+    return null
+  } catch {
+    return null
+  }
+}
+
 /**
  * Resolves a scanned barcode, QR code, or serial number against the inventory
  * and bookings database with an honest, strict contract (AUD-002).
@@ -55,7 +105,7 @@ export async function resolveScannedCode(rawCode: string): Promise<ScanLookupRes
   if (!code) {
     return {
       status: 'unknown_code',
-      code: '',
+      code,
       message: 'Empty barcode string provided.',
     }
   }
@@ -66,6 +116,16 @@ export async function resolveScannedCode(rawCode: string): Promise<ScanLookupRes
       status: 'unknown_code',
       code,
       message: `Invalid or unparseable barcode "${code}".`,
+    }
+  }
+
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    const localMatch = await lookupLocalStore(code)
+    if (localMatch) return localMatch
+    return {
+      status: 'unknown_code',
+      code,
+      message: `Unknown code "${code}" — offline, and no cached equipment or booking matches.`,
     }
   }
 
@@ -184,6 +244,9 @@ export async function resolveScannedCode(rawCode: string): Promise<ScanLookupRes
       message: `Unknown code "${code}" — no unit or booking matches.`,
     }
   } catch (err: unknown) {
+    const localMatch = await lookupLocalStore(code)
+    if (localMatch) return localMatch
+
     const errorMsg = err instanceof Error ? err.message : String(err)
     return {
       status: 'query_failed',

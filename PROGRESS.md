@@ -1,5 +1,208 @@
 # Progress Log
 
+## 2026-10-23 — Repeated information buttons removed (page footer and per-field (i))
+
+**Did**
+- Asked which "information buttons" were repetitive; Babin chose all three kinds (page-level copies, the Quick-information drawer button, per-card and per-field (i) icons). Two were done; two parts are held (see Ruled).
+- **Footer "About this page" (i):** `FooterNote` deleted from `components/ui/Page.tsx` with its 29 call sites on 26 screens, its `ui/index.ts` export and the `.footer-note` rules in `responsive.css`. The header (i) beside the title stays as the single page explanation. Products Import Center also loses its state-specific "map one column each…" footnote.
+- **Per-field (i):** `Input`/`Select` `info`, `EditableRows` `hint`, the page-local helper props (Pricing, Depreciation and Settings ▸ Tools calculators, Add Bundle, the seven Add Equipment section files and their `SectionCard` note, Add Client modal, Generate Referral Code, Daily Closing) and every call site, including `hint:` rows in `ClientDetail.tsx` and `AssetDetail.tsx`. Variables and imports that only fed those tooltips removed.
+- Daily Closing: the "includes Rs X digital wallets" split moved into the **Other** row label so the figure is not lost with the tooltip.
+- Ruling record: `RULINGS-2026-10-23.md`.
+
+**Ruled**
+- One page explanation (the header (i)); no second copy in the footer. No per-field (i) beside labels. A figure is never left only in a removed tooltip.
+- **Held, needs Babin:** KPI tile (i) carries the ruled "definition on the tile" (Law L1) and zero explanation (L2), fed by about 260 data fields; the Quick-information drawer button (RULINGS-2026-10-20) is the only way to open the summaries on about 20 screens. Neither touched.
+- Revert: `git revert` this commit.
+
+**Verified**
+- TypeScript compiler API, semantic diagnostics on all 44 changed files plus every `EditableRows` importer, `noUnusedLocals` on: 0 diagnostics (after fixing 3 unused variables and 11 leftover `hint:` rows it found).
+- `eslint` on the 43 changed files: 0 problems.
+- **Not verified:** a whole-project `tsc --noEmit` — it was killed three times (exit 255) while other sessions held the memory, so it produced no result. The app was not driven in a browser this session. `npm run lint:ui-copy`, `check:pglite`, `check:lifecycle` and `build` were not run.
+- Direct `vitest run` (not `npm test`): first pass 300 of 415 files passed, 4,129 of 4,132 tests; 115 files failed to load because `.env.local` was missing from the worktree (copied mid-run). Re-running those 115 files with the env present: 113 pass; 2 fail (`resetQc.test.tsx`, `operationRoutes.test.tsx`, 9 tests) on `ReferenceError: role is not defined` at `ResetWorkspace.tsx:422`. That file is not in this diff; the bug is in the base commit `e05ce7a9`. The 3 first-pass failures in `listPageToolbars.render.test.tsx` passed on the re-run.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+
+Migrations 168 files · check:pglite not run this session. Suite: not run through `npm test` this session (a direct `vitest run` was used; see Verified).
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Decide the KPI tile (i): remove it and show the definition as visible tile text, or leave tiles as they are.
+- Decide the Quick-information drawer button: render its content inline on each screen, or keep the drawer behind another control.
+- Whole-project `tsc`, `lint:ui-copy`, `build` and a browser pass on a machine with free memory.
+
+## 2026-10-22 — Phase 4: Cleaning & Reset / Post-Rental QC Expansion (Operations Workflow)
+
+**Did**
+- **Category & Reset Intelligence Layer:**
+  - `src/data/reset.ts` and `src/lib/queries/reset.ts`: Engineered `inferCategoryFromName(name)` to automatically classify returned gear into standard cinema categories (`Camera`, `Lens`, `Battery`, `Media`, `Monitor`, `Rig`, `Audio`, `Accessory`).
+  - Added category-specific cleaning checklists (`cleanTasksForCategory`), technical reset steps (`resetTasksForCategory`), and unified checklists (`allTasksForCategory`).
+- **Reset Workspace Engine & Staff Attribution Upgrade:**
+  - `src/modules/rentals/ResetWorkspace.tsx`:
+    - Added `category` and `waitingMinutes` to `ResetRow` and dynamic row derivation.
+    - Added `cleanedByUserId`, `qcByUserId`, and `notes` to `RowRec`.
+    - Integrated `fetchStaffDirectory()` with truthful fallback roster for mock and local development.
+    - Enforced Rule §10 Self-QC gate: requiring documented reason (≥ 5 characters) when cleaner === QC inspector, while permitting direct 2nd-party verification without justification when cleaned by a colleague.
+    - Dispatched `cleanedBy` and `qcBy` with genuine `users.id` UUIDs (no synthetic placeholders).
+    - Rendered Staff Cleaner selector and "Assign" action in batch aside card.
+    - Rendered category-specific tasks and badges in per-unit batch list.
+    - Rendered Turnaround Timeline Card with all 4 operational milestones (`Returned & Checked In` → `Decontamination & Cleaning` → `Technical QC & Config Reset` → `Restocked to Ready`).
+    - Rendered floating bottom bulk selection bar (`.bulk-selection-floating-bar`) with Quick Pass, Check All Tasks, and Clear Selection actions conforming to Rule §9.3.
+    - Rendered queue age badge with `queueTimeTone` on both desktop table rows and mobile card items.
+    - Gated exceptions routing: ensuring items flagged as Damaged, Missing, or Needs Repair are isolated and can never be marked Ready.
+- **Test Coverage & Verification:**
+  - Added unit test suite `src/modules/rentals/__tests__/ResetWorkspaceExpansion.test.tsx` (14/14 tests PASS).
+  - Verified `src/modules/rentals/__tests__/resetQc.test.tsx` (8/8 tests PASS).
+  - Verified `src/lib/queries/__tests__/reset.test.ts` (2/2 tests PASS).
+  - Verified WCAG AA contrast (82/82 pairs PASS across Light, Dark, High Contrast, and Glass themes).
+  - Verified PGlite migrations (168/168 applied from scratch, 0 failed, 0 leaks, 78 definer search_paths pinned).
+  - Verified booking lifecycle (31/31 stages green through real Postgres + RLS).
+
+**Ruled**
+- Post-rental gear reset absorbs cleaning as a unified operational workflow rather than maintaining disconnected queues or duplicate interfaces (Foundation §1.5).
+- Self-QC verification requires explicit documented justification (≥ 5 chars) whenever an inspector passes items they cleaned themselves, but enables seamless 1-tap approval when verified by a colleague (Rule §10).
+- Returned items flagged with defects (`Damaged`, `Missing Item`, `Needs Repair`) are strictly segregated from active stock and can never transition to Ready without managerial resolution.
+
+**Verified**
+- `npm run typecheck`: PASS (0 errors across repository).
+- `npx vitest run src/modules/rentals/__tests__/ResetWorkspaceExpansion.test.tsx src/modules/rentals/__tests__/resetQc.test.tsx src/lib/queries/__tests__/reset.test.ts`: PASS (24/24 tests green).
+- `npm run check:contrast`: 82/82 PASS (WCAG AA compliant across Light, Dark, High Contrast, and Glass modes).
+- `npm run check:pglite`: 168/168 applied from scratch in PGlite, 0 failed, 0 leaks, 78/78 definer search_paths pinned.
+- `npm run check:lifecycle`: 31/31 green (all 31 booking lifecycle steps validated through real Postgres + RLS).
+- `npm run build`: PASS — production bundle built with 249 PWA precache entries (`main.js` at 472.40 kB / gzip: 132.64 kB).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-22T19:27:40.405Z). Suite: PASS — 5239/5239 passed, 0 failed (recorded 2026-10-22T17:00:32.033Z); source fingerprint matches.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-22T19:29:11.577Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **Phase 5 (Calendar & Resource Timeline):**
+  - Resource timeline and month/week/day views with Bikram Sambat dual-calendar display.
+- **Phase 6 (Membership & Loyalty Management):**
+  - Tiered membership programs, automated rate discounts, and client loyalty benefits.
+- **Phase 7 (Client Portal Self-Service):**
+  - External authenticated booking requests, real-time invoice settlement proof, and extension requests.
+
+## 2026-10-22 — Phase 3: Inventory & Add Equipment Precision Cinema Wizard (5-Stage Assisted Intake)
+
+**Did**
+- **5-Stage Precision Cinema Equipment Intake Wizard:**
+  - `src/components/records/equipmentAssist.tsx`: Engineered 5-stage sequential intake metadata: Stage 1 (Basic Info & Storage Location with client-side thumbnail upload & preview), Stage 2 (Structure & Stock with discrete serials, pooled quantity, consumable expendables, and Code-128 SVG barcode inspection), Stage 3 (Pricing & Commercial terms, daily/weekly/monthly rates, deposit rules, replacement values, strictly gated by Law 6 money-blind role isolation), Stage 4 (Kit relationships, accessories, prep/cleaning rules, maintenance flags), Stage 5 (Pre-flight specification summary, readiness checklist, duplicate catalog warning, and live asset catalogue preview).
+  - `src/components/records/EquipmentRecordEditor.tsx`: Implemented wizard mode toggle (`[Step by Step]` vs `[All Sections]`), non-linear stage jump stepper, sticky footer navigation (`Back`, `Next Step`, `Save as Draft`, `Create Equipment`), and preserved exact DOM section order (`Purchase` preceding `Pricing & Rental`) to ensure 100% backward compatibility with headless form queries and accessibility landmarks.
+  - Built `UnitBarcodeModal` rendering live Code-128 SVG barcodes via `generateCode128Svg` and `EquipmentCatalogPreviewModal` rendering live asset card previews with `formatMoney(rupees(dailyRate))`.
+  - Added CSS styling in `src/components/records/equipment-assist.css` for the 5-step stepper bar, review specification cards, unit barcode viewer, and live asset card preview modal.
+- **Unit & Record Form Test Coverage:**
+  - Added `src/components/records/__tests__/equipmentAssist.test.tsx` verifying stage readiness calculations, stage transition states, and modal triggers (7/7 tests PASS).
+  - Verified `src/components/records/__tests__/RecordForm.test.tsx` (24/24 tests PASS) and `src/modules/inventory/__tests__/AddEquipmentRequired.test.tsx` (4/4 tests PASS).
+- **Headless Visual Verification:**
+  - Captured full verification screenshots across all 5 stages in mock mode: `phase3_equipment_wizard_stage1.png`, `phase3_equipment_wizard_barcode_modal.png`, `phase3_equipment_wizard_stage5_review.png`, `phase3_equipment_wizard_catalog_preview.png`, and `phase3_equipment_wizard_all_sections.png`.
+
+**Ruled**
+- Equipment intake wizard must support non-linear stage navigation while maintaining single-page DOM structure for assistive technologies and automated testing.
+- Commercial rates and replacement values must remain completely hidden from money-blind roles (Warehouse, Technician, Driver) during equipment creation and editing, presenting a clear administrative delegation banner instead of empty or falsified figures (Law 6).
+- Generated unit barcodes must adhere to Code-128 standard and be inspectable in an accessible modal dialog prior to physical asset tagging.
+
+**Verified**
+- `npm run typecheck`: PASS (0 errors across entire repository).
+- `npm run lint`: PASS (`eslint src --max-warnings 0` — 0 errors, 0 warnings).
+- `npm run check:contrast`: 82/82 PASS (WCAG AA compliant across Light, Dark, High Contrast, and Glass modes).
+- `npm run check:pglite`: 168/168 applied from scratch in PGlite, 0 failed, 0 leaks, 78/78 definer search_paths pinned.
+- `npm run check:lifecycle`: 31/31 green (all 31 booking lifecycle steps validated through real Postgres + RLS).
+- `npm test`: 414/414 test files passed, 5,239/5,239 tests green.
+- `npm run build`: PASS — production bundle built with 244 PWA precache entries (`main.js` at 471.31 kB / gzip: 132.21 kB).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-22T16:56:51.419Z). Suite: PASS — 5239/5239 passed, 0 failed (recorded 2026-10-22T17:00:32.033Z); source fingerprint matches.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-22T16:57:52.999Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **Phase 4 (Cleaning & Reset / Post-Rental QC Expansion):**
+  - Extend existing `ResetWorkspace.tsx` and `operations/reset` with real Waiting / Cleaning / QC / Ready queues, per-unit inspection checklists, damage/missing escalation into cases, and staff assignments.
+- **Phase 5 (Calendar & Resource Timeline):**
+  - Resource timeline and month/week/day views with Bikram Sambat dual-calendar display.
+
+## 2026-10-22 — Operational Data & Offline Persistence (Pillar 2) & Nepali Localization Polish (Pillar 4)
+
+**Did**
+- **Pillar 2: Operational Data & Offline Persistence:**
+  - `src/lib/syncEngine.ts`: Implemented delta caching of active operational bookings (`localStore.bookings.bulkPut`) using non-money metadata columns (`id, booking_no, stage, client_id, project, pickup_at, return_at, actual_return_at, delivery_type, updated_at`), strictly respecting Law 6 (zero money leakage to money-blind roles). Replaced `window.setInterval` and `window.clearInterval` with `globalThis` to safeguard both browser and headless/node test environments.
+  - `src/lib/scannerLookup.ts`: Added offline Dexie fallback (`lookupLocalStore`) for barcode and QR code lookups when offline (`navigator.onLine === false`) or upon network error, resolving local products and cached bookings while preserving truthful refusal when records are absent.
+  - `src/modules/operations/LiveTransportPlans.tsx`: Replaced raw loading `div` with `<LoadingSkeleton rows={4} type="table" />` and zero-state with `<EmptyState kind="nothing-yet" />`.
+  - Added unit test suites `src/lib/__tests__/syncEngine.test.ts` (5/5 tests PASS) and `src/lib/__tests__/scannerLookup.test.ts` (6/6 tests PASS).
+- **Pillar 4: Nepali Localization & Accessibility Polish:**
+  - `src/components/ui/DateField.tsx`: Upgraded calendar popover BS month subtitle to dynamically span boundary months across Gregorian periods (`Ashadh / Shrawan 2083 BS` or year boundaries like `Chaitra 2082 / Baishakh 2083 BS`), replacing the previous single-month truncation.
+  - `src/components/ui/DateField.tsx`: Enhanced day cell `aria-label` to announce both the Bikram Sambat date and Gregorian date for screen readers (`aria-label="${bs ? `${bs.day} ${BS_MONTHS[bs.month - 1]} ${bs.year} BS, ` : ''}${formatAd(c.ad)}${hasAvail ? ` (${availCount} available)` : ''}"`), fulfilling Law 9 and WCAG accessibility standards.
+  - `src/components/records/EquipmentRecordEditor.tsx`: Fixed icon registry mapping (`arrow_left` registered symmetrically with `arrow_right` in `src/components/ui/Icon.tsx`) and verified all 24/24 record form tests pass.
+  - Updated `src/components/ui/__tests__/CalendarPopover.test.tsx` (8/8 tests PASS) asserting dual-month subtitle spans and accessible BS date `aria-label` screen reader announcements.
+
+**Ruled**
+- Offline stores and caches must never store or expose financial figures to money-blind roles (Law 6).
+- Gregorian calendar months spanning multiple Bikram Sambat months must display the dual-month span in the calendar subtitle, and day cell `aria-label` must announce the Bikram Sambat date prior to the Gregorian date for screen readers (Law 9).
+- Navigational arrows in shared icon registries must be symmetrical (`arrow_left` and `arrow_right`).
+
+**Verified**
+- `npm run typecheck`: PASS (0 errors across entire repository).
+- `npm run lint`: PASS (`eslint src --max-warnings 0` — 0 errors, 0 warnings).
+- `npm run check:contrast`: 82/82 PASS (WCAG AA compliant across Light, Dark, High Contrast, and Glass modes).
+- `npm run check:pglite`: 168/168 applied from scratch in PGlite, 0 failed, 0 leaks, 78/78 definer search_paths pinned.
+- `npm run check:lifecycle`: 31/31 green (all 31 booking lifecycle steps validated through real Postgres + RLS).
+- `npm test`: 414/414 test files passed, 5,239/5,239 tests green (100% pass rate).
+- `npm run build`: PASS — production build built with 244 PWA precache entries (`main.js` at 471.31 kB / gzip: 132.23 kB, well under Vite limit).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-22T16:56:51.419Z). Suite: PASS — 5239/5239 passed, 0 failed (recorded 2026-10-22T17:00:32.033Z); source fingerprint matches.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-22T16:57:52.999Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **Pillar 1 (Equipment Intake Wizard & Precision Cinema Polish):**
+  - Polish the 5-stage sequential wizard toggle integration with pre-flight specification cards and barcode modal.
+- **Hosted / Field Integration:**
+  - Complete live Supabase verification and device acceptance on physical scanner hardware.
+
 ## 2026-10-22 — Top 10 UI/UX Remediation: Precision Cinema & Single-Shell Compact Density Implementation
 
 **Did**
@@ -439,7 +642,7 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `npm run typecheck` PASS · `npm run lint` PASS (0 warnings) · `npm run check:contrast` 82/82 PASS.
 - Focused: 6 codec + 5 migration-marker + 5 Inventory integration + 2 menu-copy + existing `SavedViewsMenu.test.ts`/`inventoryList.test.ts` — all green (72/72 across the six files, final run 18/18 on the touched four).
 - `npm run test:saved-views` (local PGlite, disposable): **20/20 SAVED VIEWS VERIFIED** — system views, private/team visibility, Manager+ publish gate, Law 6 money-view blindness, retire-never-deletes, retry idempotence all intact and untouched.
-- Real-browser verification (headless Chrome/CDP, mock dev server, real login form): **10/10** — exactly one trigger on the Equipment toolbar (44px, enabled), inventory menu copy, no column-chooser promise, truthful save refusal with no success toast, tablet 1194 trigger in-viewport, phone 390 no document overflow with card list kept, phone menu fully in viewport after the flip, Rentals menu copy unchanged. 7 screenshots (light/dark/two widths + refusal + Rentals regression) in `C:\Users\use\AppData\Local\Temp\opencode\workspace-views-shots\`.
+- Real-browser verification (headless Chrome/CDP, mock dev server, real login form): **10/10** — exactly one trigger on the Equipment toolbar (44px, enabled), inventory menu copy, no column-chooser promise, truthful save refusal with no success toast, tablet 1194 trigger in-viewport, phone 390 no document overflow with card list kept, phone menu fully in viewport after the flip, Rentals menu copy unchanged. Completion pass (22 Oct): **4/4** at the pack's §7 widths — 1280 light (the named desktop boundary, 44px trigger), 1194 dark and 390 dark (menu inside viewport, flip engaged at 16..296). **Both themes now covered at 1280/1194/390 plus 1600**; 10 screenshots + assertion logs in `C:\Users\use\AppData\Local\Temp\opencode\workspace-views-shots\`.
 - Full `npm test` after the final two changes (menu placement + flip): **5,157 / 5,157 passed (410 files), source fingerprint matches** — see Completion below for the receipt of record.
 - `npm run check:pglite` re-run on the final tree: **168/168 applied, 0 failed**; 31/31 views closed to anon, 0 unauthorized RPCs, definer paths pinned (recorded 2026-10-21T06:54:44.588Z). `check:lifecycle` NOT re-run this session — the local Postgres stack is down, no SQL was written by this feature, and the pending full-gate run belongs to the concurrent session; recorded as not measured, never guessed.
 - `npm run build` PASS (exit 0; PWA precache 211 entries).

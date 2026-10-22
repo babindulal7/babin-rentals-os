@@ -2,7 +2,7 @@ import { formatAd } from '../../lib/bs'
 import { useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import Icon from '../../components/ui/Icon'
-import { PageHeader, KpiStrip, FooterNote, cardStyle } from '../../components/ui/Page'
+import { PageHeader, KpiStrip, cardStyle } from '../../components/ui/Page'
 import type { Kpi } from '../../components/ui/Page'
 import { EmptyState } from '../../components/ui/StateViews'
 import { PageBody } from '../../components/ui/PageBody'
@@ -192,7 +192,6 @@ export default function ActivityLog() {
 
       <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.6 }}>{RETENTION_NOTE}</p>
 
-      <FooterNote />
     </div>
   )
 }

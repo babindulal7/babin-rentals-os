@@ -5,8 +5,13 @@ import {
   SEVERITIES,
   PROBLEM_ROUTE,
   QUEUE_FILTERS,
+  inferCategoryFromName,
+  cleanTasksForCategory,
+  resetTasksForCategory,
+  allTasksForCategory,
   type QueueState,
   type ProblemState,
+  type Category,
 } from '../../data/reset'
 
 export {
@@ -15,9 +20,13 @@ export {
   SEVERITIES,
   PROBLEM_ROUTE,
   QUEUE_FILTERS,
+  inferCategoryFromName,
+  cleanTasksForCategory,
+  resetTasksForCategory,
+  allTasksForCategory,
 }
 
-export type { QueueState, ProblemState }
+export type { QueueState, ProblemState, Category }
 
 export interface CleaningQueueSummary {
   total: number

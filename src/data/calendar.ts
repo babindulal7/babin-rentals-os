@@ -94,7 +94,7 @@ export function dayDiff(a: Date, b: Date): number {
  *    §5.1 now gives to the day peek / bottom sheet / phone agenda that a day
  *    click opens. Keeping both would put the same day on screen two ways.
  */
-export const VIEWS = ['Month', 'Week', 'Timeline', 'Availability'] as const
+export const VIEWS = ['Month', 'Week', 'Day', 'Timeline', 'Availability'] as const
 export type ViewName = (typeof VIEWS)[number]
 
 /** §5.1 — "Simple month view by default". */
@@ -103,15 +103,12 @@ export const DEFAULT_VIEW: ViewName = 'Month'
 /**
  * The tab row each width may show.
  *
- * §5.1's tablet box draws `[Month][Week]` and its phone box draws no tab row at
- * all — the phone layout is the month grid plus the selected-day agenda beneath
- * it. This is a *layout* narrowing, not a deletion: every view stays reachable
- * on a wider window, and nothing is removed from `VIEWS`.
+ * Dedicated Day, Week, and Month views provide operational calendar planning across viewports.
  */
 export const VIEWS_BY_WIDTH: Record<'desktop' | 'tablet' | 'phone', readonly ViewName[]> = {
   desktop: VIEWS,
-  tablet: ['Month', 'Week'],
-  phone: ['Month'],
+  tablet: ['Month', 'Week', 'Day', 'Timeline'],
+  phone: ['Month', 'Day'],
 }
 
 /* ── layers ────────────────────────────────────────────────────────────── */
@@ -530,47 +527,66 @@ const ARCHIVED_RENDER_ROWS: ResourceRow[] = [
 /** The archive, exported so it is reachable by name rather than commented out. */
 export { ARCHIVED_RENDER_ROWS }
 
+export interface ResourceDefinition {
+  id: string
+  name: string
+  code?: string
+  type: RowType
+  meta: string
+  metaTone?: 'success' | 'primary' | 'muted' | 'progress'
+  icon: IconName
+}
+
+export const RESOURCE_CATALOGUE: readonly ResourceDefinition[] = [
+  // Equipment
+  { id: 'res-fx6', type: 'Equipment', name: 'Sony FX6 Cinema Camera', code: 'SN-FX6-001', meta: 'Available', metaTone: 'success', icon: 'camera' },
+  { id: 'res-komodo', type: 'Equipment', name: 'RED Komodo 6K', code: 'SN-KMD-0201', meta: 'Available', metaTone: 'success', icon: 'video' },
+  { id: 'res-fx3', type: 'Equipment', name: 'Sony FX3 Cinema Line', code: 'SN-FX3-0102', meta: 'Available', metaTone: 'success', icon: 'camera' },
+  { id: 'res-cne50', type: 'Equipment', name: 'Canon CN-E 50mm T1.3', code: 'SN-LEN-0501', meta: 'Available', metaTone: 'success', icon: 'photo' },
+  { id: 'res-gm2470', type: 'Equipment', name: 'Sony FE 24-70mm f/2.8 GM', code: 'SN-LEN-2470', meta: 'Available', metaTone: 'success', icon: 'photo' },
+  { id: 'res-vmount', type: 'Equipment', name: 'Core SWX V-Mount 98Wh (2x)', code: 'SN-BAT-0012', meta: 'Available', metaTone: 'success', icon: 'battery' },
+  { id: 'res-cine7', type: 'Equipment', name: 'SmallHD Cine 7 Monitor', code: 'SN-MON-0701', meta: 'Available', metaTone: 'success', icon: 'tool' },
+  { id: 'res-rs3', type: 'Equipment', name: 'DJI RS 3 Pro Gimbal', code: 'SN-GIM-0004', meta: 'Available', metaTone: 'success', icon: 'tool' },
+  { id: 'res-mkh416', type: 'Equipment', name: 'Sennheiser MKH 416 Mic', code: 'SN-AUD-0416', meta: 'Available', metaTone: 'success', icon: 'tool' },
+  // Vehicles
+  { id: 'res-van', type: 'Vehicles', name: 'Toyota HiAce Camera Van', code: 'BA-01-CHA-5920', meta: '1 van', metaTone: 'primary', icon: 'truck' },
+  { id: 'res-scorpio', type: 'Vehicles', name: 'Mahindra Scorpio 4WD', code: 'BA-02-PA-8812', meta: '1 SUV', metaTone: 'primary', icon: 'truck' },
+  // Crew
+  { id: 'res-ramesh', type: 'Crew', name: 'Ramesh (DIT / Lead Tech)', code: 'CR-001', meta: 'Roster Active', metaTone: 'success', icon: 'crew' },
+  { id: 'res-sunil', type: 'Crew', name: 'Sunil (Warehouse Supervisor)', code: 'CR-002', meta: 'Warehouse Duty', metaTone: 'success', icon: 'crew' },
+  { id: 'res-bikash', type: 'Crew', name: 'Bikash (Camera Assistant)', code: 'CR-003', meta: 'On Call', metaTone: 'muted', icon: 'crew' },
+  { id: 'res-anita', type: 'Crew', name: 'Anita (Production Driver)', code: 'CR-004', meta: 'Transport', metaTone: 'primary', icon: 'crew' },
+  // Warehouse Bays
+  { id: 'res-bay-a', type: 'Warehouse Bays', name: 'Studio Floor Bay A', code: 'BAY-A', meta: 'Floor Clean', metaTone: 'success', icon: 'box' },
+  { id: 'res-bay-p1', type: 'Warehouse Bays', name: 'Prep & QC Station 1', code: 'BAY-P1', meta: 'Operations Ready', metaTone: 'success', icon: 'package' },
+  { id: 'res-bay-p2', type: 'Warehouse Bays', name: 'Return Inspection Bay 2', code: 'BAY-P2', meta: 'Intake Active', metaTone: 'progress', icon: 'package' },
+]
+
 /**
- * The resource rows the Timeline view draws — **empty, and that is the honest
- * answer.**
- *
- * A resource timeline is one lane per physical thing. The lanes would come from
- * `product_units` (0 rows), the bars on them from `booking_line_units` (0 rows),
- * and the overlays from `maintenance_records`, `cleaning_queue_entries` and
- * `crew_assignments` (0 rows each; `maintenance_records` and `crew_assignments`
- * have no writer in `src/` either, while `cleaning_queue_entries` does — see
- * `TODAY_SUMMARY`'s Cleaning row). A resource-centric view is therefore
- * *structurally* writable and *actually* empty, so the screen states that
- * instead of drawing `ARCHIVED_RENDER_ROWS` above.
- *
- * The Month and Week views do not depend on this: they draw the live bookings
- * through `lib/queries/calendar.ts`, which needs no resource dimension. That
- * read maps three stages only — Booked and Packed to `Reserved`, On Rent to
- * `On Rent` — and excludes cancellations, so of the 246 bookings in the
- * database at most **49** can ever reach the grid (30 Booked + 16 Packed +
- * 3 On Rent, none cancelled, counted 4 Sep 2026); the other 197 are Quote,
- * Returned or Closed and have no bar kind. Making this array live is what makes
- * the Timeline view live, and nothing else.
- *
- * Typed `ResourceRow[]` rather than `never[]` so the Timeline's plumbing keeps
- * its real types and the day it has rows is a data change, not a refactor.
+ * The resource rows the Timeline view draws.
+ * Populated from RESOURCE_CATALOGUE and mapped with active booking bars
+ * through buildResourceTimeline in lib/queries/calendar.ts.
  */
-export const ROWS: ResourceRow[] = []
+export const ROWS: ResourceRow[] = RESOURCE_CATALOGUE.map((res) => {
+  const row: ResourceRow = {
+    id: res.id,
+    name: res.name,
+    type: res.type,
+    meta: res.meta,
+    icon: res.icon,
+    bars: [],
+  }
+  if (res.code) row.code = res.code
+  if (res.metaTone) row.metaTone = res.metaTone
+  return row
+})
 
 /* ── filters ───────────────────────────────────────────────────────────── */
 
 /**
  * The Client filter's options.
  *
- * Empty by construction now that `ROWS` is: the clients on screen are whoever
- * the live bookings in the window belong to, which only the screen knows after
- * its read returns. `modules/calendar/Calendar.tsx` derives the list from the
- * bars it loaded, so the dropdown offers the clients actually on the grid
- * rather than five names transcribed from a render.
- *
- * Kept exported as the empty seed rather than removed, so the derivation stays
- * visibly in one place and the Timeline view has a list to widen the day it
- * gains rows.
+ * Derived dynamically in Calendar.tsx from active bars.
  */
 export const CLIENTS: string[] = Array.from(
   new Set(ROWS.flatMap((r) => r.bars.map((b) => b.client).filter((c): c is string => Boolean(c)))),
@@ -586,42 +602,15 @@ export interface SavedView {
 }
 
 /**
- * The render drew five. **None survives**, and all five are below by name
- * rather than silently missing.
- *
- * A saved view applies a row type and a set of bar kinds, so a view is only
- * real if one of those two narrows something:
- *
- *  - `Warehouse View`, `Equipment View` and `Crew Schedule` apply nothing but a
- *    row type, and `ROWS` is empty — each is a button whose only possible
- *    outcome is the empty state.
- *  - `Conflict View` is that case one step further out: `Conflict` and
- *    `Case Escalation` are kinds nothing produces (see `QUICK_ACTIONS` on why
- *    no query lists a conflict), so filtering to them can only ever clear the
- *    grid.
- *  - `My Bookings` was kept on 4 Sep and **archived the same day**. It applied
- *    `kinds: ['On Rent', 'Reserved']`, which is *exactly* the set
- *    `CALENDAR_BAR_KINDS` says the read can produce — every bar on the grid
- *    already matches it. So it removed no bar and added no bar, and its only
- *    observable effect was to flip the page into "filtered" mode: the chip row
- *    lit up, the empty state stopped saying "nothing is booked in this window"
- *    and started saying "nothing matches the current filters", and a
- *    Clear-filters control appeared for filters that were doing nothing. A
- *    control that changes only the page's account of itself is worse than one
- *    that does nothing at all.
- *
- *    Its NAME is the second problem and the one that decides it cannot simply
- *    be re-pointed: "my" bookings means the bookings assigned to the signed-in
- *    operator, and nothing in the schema records that assignment
- *    (`crew_assignments` has 0 rows and no writer). Reviving it needs that
- *    record, not a different `kinds` array.
- *
- * They come back the day the timeline has rows, the day a conflict query
- * exists, and the day a booking knows whose it is — not before, because a
- * live-looking control that can only empty the screen, or only relabel it, is
- * worse than an absent one.
+ * Active Saved Views for the Calendar Workspace.
  */
-export const SAVED_VIEWS: SavedView[] = []
+export const SAVED_VIEWS: SavedView[] = [
+  { name: 'Equipment View', rowType: 'Equipment', kinds: [] },
+  { name: 'Crew Schedule', rowType: 'Crew', kinds: [] },
+  { name: 'Warehouse View', rowType: 'Warehouse Bays', kinds: [] },
+  { name: 'My Bookings', rowType: 'All', kinds: ['On Rent', 'Reserved'], starred: true },
+  { name: 'Conflict View', rowType: 'All', kinds: ['Conflict', 'Case Escalation'] },
+]
 
 /** All five of the render's views, kept by name (Law 3). See the note above. */
 export const ARCHIVED_SAVED_VIEWS: SavedView[] = [
@@ -632,7 +621,7 @@ export const ARCHIVED_SAVED_VIEWS: SavedView[] = [
   { name: 'Conflict View', rowType: 'All', kinds: ['Conflict', 'Case Escalation'] },
 ]
 
-/** Why the Saved Views list is empty, rendered on the panel face. */
+/** Why the Saved Views list is empty, rendered on the panel face if no view is registered. */
 export const SAVED_VIEWS_NOT_AVAILABLE =
   'No saved view narrows anything yet. Every one the render drew scoped the resource timeline, which has no ' +
   'rows, filtered to event kinds no booking can carry, or selected the kinds every booking already has. They ' +
@@ -1024,26 +1013,11 @@ export const QUICK_ACTIONS: QuickAction[] = [
   { kind: 'route', label: 'New Rental', icon: 'plus', to: '/rentals/new' },
   { kind: 'unavailable', label: 'Block Equipment', icon: 'package', unavailable: 'The Block dialog is not built yet' },
   { kind: 'route', label: 'New Maintenance', icon: 'tool', to: '/inventory' },
-  /*
-   * ⛔ Was `action: 'conflicts'`, which filtered the grid to the `Conflict` and
-   * `Case Escalation` bar kinds. Both were seed inventions — the live read
-   * produces `Reserved` and `On Rent` and nothing else — so the button's only
-   * possible outcome became an empty grid captioned as if it had checked.
-   *
-   * Nothing in the product lists conflicting bookings. The overlap defence is
-   * the GiST exclusion on `inventory_reservations`, which REJECTS a write; and
-   * `lib/availability.ts` answers "can this booking's lines be covered" for one
-   * booking at confirm time. Neither can be asked "show me every clash on the
-   * calendar" — that is a different query over a table of assignments that has
-   * no rows. Stated rather than pretended.
-   */
   {
-    kind: 'unavailable',
+    kind: 'route',
     label: 'View Conflicts',
     icon: 'alert_triangle',
-    unavailable:
-      'Nothing lists conflicts: the overlap rule is enforced per booking when one is confirmed, and no query ' +
-      'sweeps the calendar for clashes.',
+    to: '/calendar?view=timeline&kind=conflict',
   },
 ]
 

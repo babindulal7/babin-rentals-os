@@ -11,7 +11,7 @@
 
 /* ── Monospace Tabular Numerals ─────────────────────────────────────────── */
 .crew-mono {
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
 }
@@ -68,7 +68,7 @@
 
 .crew-kpi-value {
   margin-top: 8px;
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
   font-size: clamp(18px, 1.8vw, 24px);
@@ -151,7 +151,7 @@
   color: var(--text);
   font-size: var(--t-meta, 12px);
   font-weight: 700;
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
   padding: 0 4px;
@@ -172,7 +172,7 @@
 
 .crew-calendar-day-header {
   padding: 8px 10px;
-  font-family: var(--font-id, 'Source Sans 3', sans-serif);
+  font-family: var(--font-id, 'Outfit', sans-serif);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
   font-size: var(--t-meta, 13px);

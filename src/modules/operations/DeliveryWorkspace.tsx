@@ -1367,7 +1367,7 @@ function MockDeliveryWorkspace() {
                   padding: '24px',
                   borderRadius: 'var(--r-md)',
                   border: '1px solid var(--border)',
-                  fontFamily: 'var(--font-id, "Source Sans 3", sans-serif)',
+                  fontFamily: 'var(--font-id, "Outfit", sans-serif)',
                   fontSize: '13px',
                   lineHeight: 1.6,
                 }}

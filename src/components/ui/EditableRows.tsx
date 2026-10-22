@@ -1,5 +1,4 @@
 import Icon from './Icon'
-import { InfoTooltip } from './InfoTooltip'
 import { Button } from './Button'
 import { BRAND_TEXT } from '../../lib/status'
 import type { BrandKey } from '../../lib/status'
@@ -40,8 +39,6 @@ export interface EditableRowDef {
   tone?: BrandKey
   /** `number` and `tel` change the keypad on a phone; `textarea` grows. */
   as?: 'text' | 'number' | 'email' | 'tel' | 'textarea'
-  /** Shown under the input in edit mode — units, formats, why a rule exists. */
-  hint?: string
 }
 
 /* Law 15 — the law is the hit area, not the paint, and `--tap` in theme.css is
@@ -111,12 +108,9 @@ export function EditableRows({
 
         return (
           <div key={r.label} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <label style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }} htmlFor={`edit-${key}`}>
-                {r.label}
-              </label>
-              {r.hint && <InfoTooltip content={r.hint} />}
-            </div>
+            <label style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }} htmlFor={`edit-${key}`}>
+              {r.label}
+            </label>
 
             {r.as === 'textarea' ? (
               <textarea

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
-import { Card, Button, FooterNote } from '../../components/ui/Page'
+import { Card, Button } from '../../components/ui/Page'
 import { PageShell } from '../../components/ui/PageShell'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { ReportToolbar, reportDateRange } from '../../components/ui/ReportToolbar'
@@ -363,13 +363,6 @@ export function ReportTemplate({ report, onBackToCatalog }: ReportTemplateProps)
       )}
 
       {/* 4 — the footnote: as-of BS / AD. */}
-      <FooterNote
-        extra={
-          dates
-            ? [dates.bs ? `As of ${dates.ad} · BS ${dates.bs}` : `As of ${dates.ad}`, ...(dates.bsNote ? [dates.bsNote] : [])]
-            : ['Period not resolved — no as-of date can be stated.']
-        }
-      />
     </PageShell>
   )
 }
