@@ -151,3 +151,9 @@ The Law 16 report pass (PROGRESS.md, 2026-10-16) replaced invented figures with 
 - `PLAN.md` remains absent; these questions are recorded here and in the active progress ledger. Existing safe unavailable states and preserved records remain in place.
 
 - **Engineering acceptance: original offline update revision.** Legacy queued updates record device enqueue time, not the server revision originally seen by the form. Replay now refuses unreadable conflict state and compares the replay snapshot atomically, but that alone cannot establish an older edit baseline under clock skew. Capture authoritative observed revisions across supported edit paths and define recoverable review for ambiguous legacy updates; do not infer that baseline from a later read or a device timestamp.
+
+## 18. Crew timesheet: overtime and hourly pay (20 October 2026) — open
+
+The Crew timesheet page now reads recorded call/wrap times from `crew_shoot_days` (RULINGS-2026-10-20). It keeps two figures from the old standalone, both unruled, in one constant (`STANDARD_DAY_HOURS = 8` in `src/lib/queries/timesheet.ts`, `TODO(decision)`):
+- **The overtime threshold** — hours in a day past which the page flags overtime. `crew_shoot_days.overtime_approved_by` exists, so overtime is a real concept; its threshold has never been ruled.
+- **How a day rate becomes an hourly figure** — the page estimates pay as hours × day rate ÷ 8. Crew payouts on Crew Assist are days booked × day rate. Is crew pay by the day or by the hour, and does overtime pay differently? Until ruled, the page labels its figure "Estimated pay" and says so on screen.

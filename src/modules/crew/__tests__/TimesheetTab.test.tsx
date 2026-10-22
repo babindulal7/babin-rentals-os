@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 /**
- * RULING 2026-10-19: the Timesheet page renders what `useTimesheetWeek` returns
+ * RULING 2026-10-20: the Timesheet page renders what `useTimesheetWeek` returns
  * and nothing it invents. Pinned here: every data state (loading, error, empty,
  * rows), Law 6 for a money-blind role, the audited CSV export, and that the five
  * staff this page used to fabricate are gone for good.

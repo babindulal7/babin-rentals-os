@@ -614,7 +614,7 @@ export const BRANCH_ACTIVITY: ActivityEntry[] = [
 
 /* ── §11.4 Financial ───────────────────────────────────────────────────── */
 
-/* RULING 2026-10-19: `MEMBERSHIP_MATRIX` / `MembershipMatrixRow` removed. They
+/* RULING 2026-10-20: `MEMBERSHIP_MATRIX` / `MembershipMatrixRow` removed. They
    were a projection of the hard-coded `data/membership.ts:PLANS`, with a
    Priority column read from marketing copy no table holds; 0005 says no plan
    value may be hardcoded in application code. Settings ▸ Business now shows

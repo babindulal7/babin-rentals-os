@@ -393,7 +393,7 @@ export function CrewBooking() {
                   </Button>
                 ) : undefined
               }
-              /* RULING 2026-10-19: /crew/timesheet had no way in (its rail button
+              /* RULING 2026-10-20: /crew/timesheet had no way in (its rail button
                  was cut when the page ran on invented rows); it reads
                  crew_shoot_days now, so Crew Assist links to it. Every staff role
                  may open it — the page withholds money from a money-blind one. */

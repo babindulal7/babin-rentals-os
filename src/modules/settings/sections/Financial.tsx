@@ -172,7 +172,7 @@ export function FinancialPane() {
         <NotTrackedYet title="Deposit % of replacement value, per gear category" why={DEPOSIT_BY_CATEGORY_UNAVAILABLE} />
       </Card>
 
-      {/* RULING 2026-10-19: the hard-coded "Membership matrix" that stood here
+      {/* RULING 2026-10-20: the hard-coded "Membership matrix" that stood here
           (projected from data/membership.ts PLANS, with a Priority column taken
           from marketing copy) is gone. 0005: "no plan value may be hardcoded in
           application code" — the live credit-policy card below carries the same

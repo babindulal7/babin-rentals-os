@@ -2,7 +2,7 @@
  * Crew timesheet — the week's hours per person, with per-day bar charts, a KPI
  * strip, the approval state and a CSV export.
  *
- * RULING 2026-10-19: the hours come from `crew_shoot_days` (recorded call/wrap
+ * RULING 2026-10-20: the hours come from `crew_shoot_days` (recorded call/wrap
  * minus break), not the five invented staff this page used to render. Pay is an
  * hours-based estimate (⭐ unruled — see `lib/queries/timesheet.ts`), and money
  * is withheld from a money-blind role (Law 6) rather than shown as zero.

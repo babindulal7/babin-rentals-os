@@ -4,7 +4,7 @@
  * recorded start/end (`actual_start`, `actual_end`), the unpaid break and the
  * submission / approval state.
  *
- * RULING 2026-10-19: this replaced `TIMESHEET_DATA`, five invented staff with
+ * RULING 2026-10-20: this replaced `TIMESHEET_DATA`, five invented staff with
  * hand-typed hours that the page rendered as real (and a "Last Week" that was
  * this week × 0.9). Nothing here is seeded: an empty week is an empty week.
  *

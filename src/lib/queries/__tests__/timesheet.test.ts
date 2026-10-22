@@ -1,5 +1,5 @@
 /**
- * RULING 2026-10-19: the crew timesheet reads `crew_shoot_days`; it no longer
+ * RULING 2026-10-20: the crew timesheet reads `crew_shoot_days`; it no longer
  * renders five invented staff. These pin the arithmetic (hours from recorded
  * call/wrap minus break), the week boundaries in the business day, and Law 6
  * (a money-blind session gets `null` rate and pay — withheld, never zero — and a

@@ -224,7 +224,7 @@ describe('§11.4 Financial — one fee definition, no invented figures', () => {
   })
 
   it('carries no hard-coded membership matrix — plan figures come from membership_plans', () => {
-    /* RULING 2026-10-19: the old matrix projected `PLANS` (a hand-typed price
+    /* RULING 2026-10-20: the old matrix projected `PLANS` (a hand-typed price
        list) into Settings; 0005 forbids hard-coding plan values. The live card
        is covered by `financialCreditPolicy.test.tsx`. */
     expect('MEMBERSHIP_MATRIX' in settings).toBe(false)

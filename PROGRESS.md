@@ -1,5 +1,45 @@
 # Progress Log
 
+## 2026-10-22 — "Fix all": the crew timesheet reads real data; the hard-coded Membership matrix is gone
+
+**Did**
+- **Membership matrix.** Removed the "Membership matrix" card from Settings ▸ Business and its constant (`MEMBERSHIP_MATRIX`). It was projected from the hand-typed `data/membership.ts` `PLANS`, with a Priority column read from marketing copy no table holds; 0005 says no plan value may be hardcoded. The live `CreditPolicyCard` (from `membership_plans`) already showed the same tiers, credit and discount. The ruled sentence "Discounts may be between 0% and 100%." moved into that card.
+- **Crew timesheet.** `/crew/timesheet` rendered `TIMESHEET_DATA` (five invented people, "Last Week" = this week × 0.9). It now reads `crew_shoot_days` joined to `crew_bookings_v` and `crew_members_v`: hours = recorded call → wrap minus break, Monday–Sunday in the Kathmandu business day, per-person approval state, a count of shoot days with no recorded times, an audited and properly quoted CSV. An empty week is an empty week, even in mock. Pay is an hours-based estimate (hours × day rate ÷ 8, the old page's formula), labelled as one.
+- **Way in.** Crew Assist's header More has "Timesheets".
+- **Merge with `main`** (97 commits): one conflict, `TimesheetTab.tsx`, where another session had swapped the empty-search text for the shared `EmptyState`; kept both imports and `main`'s `EmptyState`, with this page's new column count.
+
+**Ruled**
+- `RULINGS-2026-10-20.md` § "Fix all" pass, rows 1–7, each with its revert; `RULING 2026-10-20` comments at the code sites. One new open question in `docs/OPEN_DECISIONS.md` §18: the overtime threshold and how a day rate becomes an hourly figure (`STANDARD_DAY_HOURS = 8` is unruled and named in one place). No permission cell, engine, migration or database write changed; both fixes read existing tables.
+
+**Verified**
+- **Gates on the merged branch:** `tsc --noEmit` 0; `npm run lint` 0; `lint:shell` pass; `lint:ui-copy` pass; `check:contrast` 82/82; `check:fixtures` 690 files, 0 fixture imports; `check:security` 15 Phase 0 SQL regressions pass; `vite build` 0; `check:lifecycle` 31/31 (PGlite, nothing live); `npx vitest run` 413 files / 5,228 tests passed (same engine as `npm test`; no receipt written, so the counter below reports the suite as not run).
+- **New tests:** `timesheet.test.ts` (23: week arithmetic in the Kathmandu day, hours minus break, per-day columns, two bookings at two rates, masked rate stays `null`, open roles ignored, past-vs-future unrecorded days, approval summary, overtime, CSV with and without money columns, the three reads) and `TimesheetTab.test.tsx` (11: loading, error with retry, empty, rows, week chip, money-blind view, audited export, and a guard that the five invented names never return). Settings tests changed to assert the constant is gone and the live card carries the ruled sentence.
+- **Mutation checks** (each broke the tests, then restored): ignoring the break (6 failed), masking as 0 instead of `null` (2), showing the pay header to a money-blind role (1), dropping the export audit row (1).
+- **Browser** (mock, production bundle via `vite preview` because the dev server stalled on the shared `.vite` cache; rows seeded through the mock's own insert log). As Owner: 3 people, 32.5h, Rs 14,375 estimated, 1 overtime flag, approval pills, "1 shoot day with no recorded call/wrap time"; numbers re-derived by hand (Suman 8h + 10.5h = 18.5h, Rs 9,250). Last Week shows only its one seeded day. Row expand shows rate and overtime. Crew Assist ▸ More ▸ Timesheets lands on the page. As Warehouse: names, hours and approval only; no rupees, no pay column, no footnote, no Export. Settings ▸ Business: matrix and Priority gone, live card and sentence present.
+- **Not verified:** the browser checks ran on this branch before `main`'s 97 commits were merged; after the merge the gates above were re-run but the screens were not re-opened. The mock does not mask `day_rate` the way `crew_bookings_v` does, so the `null`-means-withheld path is covered by unit tests and page gating, not by a live role. Nothing was read from the hosted database as any role.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 168 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-10-22T14:54:44.757Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Re-check the timesheet and Settings ▸ Business on screen on the merged `main`, and read from the hosted database of `crew_shoot_days` / `crew_bookings_v` as Owner, Coordinator and Warehouse (the money mask and RLS). This session could do neither.
+- Rule the two figures in `docs/OPEN_DECISIONS.md` §18 (overtime threshold; whether crew pay is by day or by hour). Until then the page says "Estimated Pay" and states its basis.
+- The Crew Assist rail row "Timesheets outstanding: —" is unchanged: "outstanding" has no ruled definition.
+- Clients ▸ Membership still renders the hard-coded `PLANS` catalogue and comparison table; the same 0005 rule applies. A separate, larger change.
+- The mock has no mapping for `crew_bookings_v` / `crew_members_v`, so mock mode shows an empty timesheet unless those rows are seeded.
+
 ## 2026-10-22 — Today: one-statement card ported onto main's redesigned card
 
 **Did**

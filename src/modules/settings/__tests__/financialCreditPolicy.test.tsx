@@ -51,7 +51,7 @@ describe('Settings ▸ Business — credit policy by tier', () => {
     expect(text).toContain('Creator')
     // Elite's limit and discount are null in the table: never shown as a number.
     expect(text).toContain('Negotiated')
-    // 19 Oct: the hard-coded matrix (and its Priority column) is gone; the ruled
+    // 20 Oct: the hard-coded matrix (and its Priority column) is gone; the ruled
     // discount-range sentence it carried now lives with the live card.
     expect(text).not.toContain('Membership matrix')
     expect(text).not.toContain('Priority')
