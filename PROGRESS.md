@@ -1,5 +1,55 @@
 # Progress Log
 
+## 2026-10-22 — Phase 3: Inventory & Add Equipment Precision Cinema Wizard (5-Stage Assisted Intake)
+
+**Did**
+- **5-Stage Precision Cinema Equipment Intake Wizard:**
+  - `src/components/records/equipmentAssist.tsx`: Engineered 5-stage sequential intake metadata: Stage 1 (Basic Info & Storage Location with client-side thumbnail upload & preview), Stage 2 (Structure & Stock with discrete serials, pooled quantity, consumable expendables, and Code-128 SVG barcode inspection), Stage 3 (Pricing & Commercial terms, daily/weekly/monthly rates, deposit rules, replacement values, strictly gated by Law 6 money-blind role isolation), Stage 4 (Kit relationships, accessories, prep/cleaning rules, maintenance flags), Stage 5 (Pre-flight specification summary, readiness checklist, duplicate catalog warning, and live asset catalogue preview).
+  - `src/components/records/EquipmentRecordEditor.tsx`: Implemented wizard mode toggle (`[Step by Step]` vs `[All Sections]`), non-linear stage jump stepper, sticky footer navigation (`Back`, `Next Step`, `Save as Draft`, `Create Equipment`), and preserved exact DOM section order (`Purchase` preceding `Pricing & Rental`) to ensure 100% backward compatibility with headless form queries and accessibility landmarks.
+  - Built `UnitBarcodeModal` rendering live Code-128 SVG barcodes via `generateCode128Svg` and `EquipmentCatalogPreviewModal` rendering live asset card previews with `formatMoney(rupees(dailyRate))`.
+  - Added CSS styling in `src/components/records/equipment-assist.css` for the 5-step stepper bar, review specification cards, unit barcode viewer, and live asset card preview modal.
+- **Unit & Record Form Test Coverage:**
+  - Added `src/components/records/__tests__/equipmentAssist.test.tsx` verifying stage readiness calculations, stage transition states, and modal triggers (7/7 tests PASS).
+  - Verified `src/components/records/__tests__/RecordForm.test.tsx` (24/24 tests PASS) and `src/modules/inventory/__tests__/AddEquipmentRequired.test.tsx` (4/4 tests PASS).
+- **Headless Visual Verification:**
+  - Captured full verification screenshots across all 5 stages in mock mode: `phase3_equipment_wizard_stage1.png`, `phase3_equipment_wizard_barcode_modal.png`, `phase3_equipment_wizard_stage5_review.png`, `phase3_equipment_wizard_catalog_preview.png`, and `phase3_equipment_wizard_all_sections.png`.
+
+**Ruled**
+- Equipment intake wizard must support non-linear stage navigation while maintaining single-page DOM structure for assistive technologies and automated testing.
+- Commercial rates and replacement values must remain completely hidden from money-blind roles (Warehouse, Technician, Driver) during equipment creation and editing, presenting a clear administrative delegation banner instead of empty or falsified figures (Law 6).
+- Generated unit barcodes must adhere to Code-128 standard and be inspectable in an accessible modal dialog prior to physical asset tagging.
+
+**Verified**
+- `npm run typecheck`: PASS (0 errors across entire repository).
+- `npm run lint`: PASS (`eslint src --max-warnings 0` — 0 errors, 0 warnings).
+- `npm run check:contrast`: 82/82 PASS (WCAG AA compliant across Light, Dark, High Contrast, and Glass modes).
+- `npm run check:pglite`: 168/168 applied from scratch in PGlite, 0 failed, 0 leaks, 78/78 definer search_paths pinned.
+- `npm run check:lifecycle`: 31/31 green (all 31 booking lifecycle steps validated through real Postgres + RLS).
+- `npm test`: 414/414 test files passed, 5,239/5,239 tests green.
+- `npm run build`: PASS — production bundle built with 244 PWA precache entries (`main.js` at 471.31 kB / gzip: 132.21 kB).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-22T16:56:51.419Z). Suite: PASS — 5239/5239 passed, 0 failed (recorded 2026-10-22T17:00:32.033Z); source fingerprint matches.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-22T16:57:52.999Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **Phase 4 (Cleaning & Reset / Post-Rental QC Expansion):**
+  - Extend existing `ResetWorkspace.tsx` and `operations/reset` with real Waiting / Cleaning / QC / Ready queues, per-unit inspection checklists, damage/missing escalation into cases, and staff assignments.
+- **Phase 5 (Calendar & Resource Timeline):**
+  - Resource timeline and month/week/day views with Bikram Sambat dual-calendar display.
+
 ## 2026-10-22 — Operational Data & Offline Persistence (Pillar 2) & Nepali Localization Polish (Pillar 4)
 
 **Did**
