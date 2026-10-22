@@ -12,6 +12,7 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), selec
  * panel and the space the list yields can never disagree.
  */
 const DOCK_WIDTH = 'clamp(320px, 27vw, 420px)'
+const DOCK_MIN_WIDTH = 1440
 
 export interface ContextDrawerProps {
   id: string
@@ -57,6 +58,7 @@ export function ContextDrawer({
   const onCloseRef = useRef(onClose)
   const [phone, setPhone] = useState(() => typeof window !== 'undefined' && window.innerWidth < BP.phone)
   const [desktop, setDesktop] = useState(() => typeof window !== 'undefined' && window.innerWidth >= BP.desktop)
+  const [canDock, setCanDock] = useState(() => typeof window !== 'undefined' && window.innerWidth >= DOCK_MIN_WIDTH)
   const [reducedMotion, setReducedMotion] = useState(() =>
     typeof window !== 'undefined' && typeof window.matchMedia === 'function'
       ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -71,6 +73,7 @@ export function ContextDrawer({
     const update = () => {
       setPhone(window.innerWidth < BP.phone)
       setDesktop(window.innerWidth >= BP.desktop)
+      setCanDock(window.innerWidth >= DOCK_MIN_WIDTH)
     }
     window.addEventListener('resize', update)
     return () => window.removeEventListener('resize', update)
@@ -99,11 +102,12 @@ export function ContextDrawer({
     return () => window.clearTimeout(timer)
   }, [mounted, open, reducedMotion])
 
-  /* Only a desktop (>= BP.desktop) dock-enabled drawer docks. The class stays
-     applied through the exit animation so the panel does not snap to overlay
+  /* Only a desktop >= 1440px dock-enabled drawer docks. Between 1024px and 1439px,
+     it renders as an overlay drawer so the 8-column table preserves 100% of its width.
+     The class stays applied through the exit animation so the panel does not snap to overlay
      width mid-close; the reserved strip is released immediately below, exactly
      as FilterDrawer releases its own. */
-  const dockedActive = docked && !phone && desktop
+  const dockedActive = docked && !phone && canDock
 
   /* Slide, don't cover, at desktop — mirrors FilterDrawer's `pushing` effect:
      while the docked inspector is open, `.app-workspace` (ui-v2.css) animates
