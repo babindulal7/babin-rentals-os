@@ -166,6 +166,23 @@ export function canBlockClient(role: SystemRole): boolean {
 }
 
 /**
+ * Check if role can put a client on a membership plan, or move them to another.
+ *
+ * RULING 2026-10-22, by mirroring the database like the two rules above.
+ * `changeMembership` writes `client_memberships`, whose policy
+ * `client_memberships_all` (0037) admits Owner, Admin, Manager and Coordinator,
+ * and PERMISSIONS C5 says the same ("create and edit clients incl.
+ * membership"). Warehouse and Accounts are NOT in it (A5: "no membership
+ * edits"), which is why this is not `client.update`: that capability is
+ * `canWriteBookingDesk`, whose set admits Warehouse (the walk-in desk).
+ * `change_client_membership` (0171) repeats this list because SECURITY DEFINER
+ * bypasses RLS — the two must change together, and never widen.
+ */
+export function canChangeMembership(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+}
+
+/**
  * Check if role can create a bundle.
  *
  * **Ruled 15 Aug 2026 by mirroring the database**, closing the fourth gap —

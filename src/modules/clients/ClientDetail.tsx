@@ -34,7 +34,7 @@ import { formatMoney } from '../../lib/money'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useAuth } from '../../lib/auth'
 import { useNetwork } from '../../lib/network'
-import { canBlockClient } from '../../lib/rbac'
+import { canBlockClient, canChangeMembership } from '../../lib/rbac'
 import { newClientUuid } from '../../lib/supabase'
 import { gateContext, canViewPII, canViewOnStopReason, moneyScope } from '../../lib/fieldGating'
 import { STATUS } from '../../lib/status'
@@ -289,6 +289,13 @@ function ClientDetailView() {
    * is a role the dispatcher would refuse.
    */
   const canBlock = canBlockClient(role)
+  /**
+   * RULING 2026-10-22 — `client.change_membership`, Owner · Admin · Manager ·
+   * Coordinator (`client_memberships_all`). Not `money`: a money-sighted Accounts
+   * user must not see it (PERMISSIONS A5), and the rule is the table's, not the
+   * money gate's.
+   */
+  const canChangeTier = canChangeMembership(role)
   /*
     Spec 8.2 draws three layouts and this file had no width read at all — both
     of its tables fell back to a horizontal scrollbar on a phone, which the
@@ -312,6 +319,9 @@ function ClientDetailView() {
    */
   const profile = useClientProfile(id)
   const loaded = profile.rows[0] ?? null
+  /** The truth: `client.membership` carries a placeholder tier when there is no live membership row. */
+  const hasMembership = loaded?.membershipKnown ?? false
+  const tierActionLabel = hasMembership ? 'Change Membership Plan' : 'Activate Membership'
 
   /**
    * Edits live here, over the fetched record, and are lost on reload — see
@@ -642,12 +652,10 @@ function ClientDetailView() {
             icon: 'card' as const,
             onClick: () => setIsAdjustCreditOpen(true),
           },
-          {
-            label: 'Upgrade Tier',
-            icon: 'sparkles' as const,
-            onClick: () => setIsUpgradeTierOpen(true),
-          },
         ]
+      : []),
+    ...(canChangeTier
+      ? [{ label: tierActionLabel, icon: 'sparkles' as const, onClick: () => setIsUpgradeTierOpen(true) }]
       : []),
   ]
 
@@ -872,9 +880,11 @@ function ClientDetailView() {
             title="Membership & Credit"
             action={
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                <Button variant="secondary" icon="activity" onClick={() => setIsUpgradeTierOpen(true)}>
-                  Change Tier
-                </Button>
+                {canChangeTier && (
+                  <Button variant="secondary" icon="activity" onClick={() => setIsUpgradeTierOpen(true)}>
+                    {tierActionLabel}
+                  </Button>
+                )}
                 {moneyScope(gctx) === 'full' && (
                   <Button variant="secondary" icon="dollar" onClick={() => setIsAdjustCreditOpen(true)}>
                     Adjust Credit
@@ -886,7 +896,12 @@ function ClientDetailView() {
             <EditableRows
               edit={edit}
               rows={[
-                { label: 'Membership Tier', value: client.membership, ...(TIER_TONE[client.membership] === 'danger' ? { tone: 'danger' as const } : {}) },
+                /* RULING 2026-10-22: the truth, not the placeholder. A client with no live membership row carries
+                   `UNJOINED_MEMBERSHIP_PLACEHOLDER` ('Academy') on `client.membership`; showing it here, beside an
+                   "Activate Membership" button, said they were an Academy member. */
+                hasMembership
+                  ? { label: 'Membership Tier', value: client.membership, ...(TIER_TONE[client.membership] === 'danger' ? { tone: 'danger' as const } : {}) }
+                  : { label: 'Membership Tier', value: 'No membership yet' },
                 // `lastRentalBs` carries its own " BS" suffix when it is a BS date and none
                 // when the query fell back to the AD date — nothing is appended here.
                 { label: 'Last Rental', value: client.lastRentalBs === '—' ? 'No rental yet' : `${client.lastRentalBs} · ${client.lastRentalAd}` },
@@ -1404,8 +1419,11 @@ function ClientDetailView() {
             isOpen={isUpgradeTierOpen}
             onClose={() => setIsUpgradeTierOpen(false)}
             client={client}
+            hasMembership={hasMembership}
             onSuccess={(newTier: MembershipTier) => {
               setDraft((d) => (d ? { ...d, membership: newTier } : d))
+              // Re-read: the screen shows what the database now holds, not what this tab remembers.
+              profile.refetch()
             }}
           />
           <VerifyKycModal

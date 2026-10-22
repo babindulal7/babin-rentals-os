@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createAction, ActionNotImplementedError, ActionPermissionError, ActionOfflineError } from '../core'
+import type { SystemRole } from '../../types/database'
 
 /**
  * The dispatcher's whole job now is to refuse. These assert the refusals,
@@ -90,7 +91,7 @@ describe('createAction — fails closed', () => {
    * "anyone who asks".
    */
   describe('the four capabilities ruled 15 Aug 2026', () => {
-    const reach = (capability: string, role: 'Owner' | 'Coordinator' | 'Warehouse' | 'Technician') => {
+    const reach = (capability: string, role: SystemRole) => {
       const execute = vi.fn(async () => ({ result: { ok: true }, events: [] }))
       const action = createAction({
         name: `PROBE_${capability}`,
@@ -129,6 +130,31 @@ describe('createAction — fails closed', () => {
       const blocked = reach('client.block', 'Coordinator')
       await expect(blocked.run()).rejects.toBeInstanceOf(ActionPermissionError)
       expect(blocked.execute).not.toHaveBeenCalled()
+    })
+
+    /*
+     * RULING 2026-10-22: client.change_membership mirrors client_memberships_all (0037).
+     * It is a capability of its own because client.update is the booking-desk set, which admits
+     * Warehouse (the walk-in desk), and client_memberships_all does not. Accounts have "no
+     * membership edits" either (PERMISSIONS A5).
+     */
+    it.each(['Owner', 'Admin', 'Manager', 'Coordinator'] as const)('admits %s to client.change_membership', async (role) => {
+      const { run, execute } = reach('client.change_membership', role)
+      await expect(run()).resolves.toEqual({ ok: true })
+      expect(execute).toHaveBeenCalled()
+    })
+
+    it.each(['Accounts', 'Warehouse', 'Technician', 'Driver', 'Client'] as const)('denies client.change_membership to %s', async (role) => {
+      const { run, execute } = reach('client.change_membership', role)
+      await expect(run()).rejects.toBeInstanceOf(ActionPermissionError)
+      expect(execute).not.toHaveBeenCalled()
+    })
+
+    it('is narrower than client.update, which admits Warehouse', async () => {
+      const updated = reach('client.update', 'Warehouse')
+      await expect(updated.run()).resolves.toEqual({ ok: true })
+      const changed = reach('client.change_membership', 'Warehouse')
+      await expect(changed.run()).rejects.toBeInstanceOf(ActionPermissionError)
     })
 
     it('denies inventory.create to Warehouse — bundles_manage, not bundle_items_all', async () => {

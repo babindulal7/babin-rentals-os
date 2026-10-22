@@ -411,3 +411,16 @@
 .credit-policy-card:hover {
   border-color: var(--border2, var(--border));
 }
+
+/* RULING 2026-10-22: card header actions wrap UNDER the title instead of overlapping it.
+   `.surface-card__action` is flex-shrink:0 and the shared header only wraps at the small-screen
+   breakpoint, so in the narrow three-column cards of a client page two buttons ("Activate
+   Membership", "Adjust Credit") ran over the heading. Scoped to this page; revert = delete this block. */
+.client-detail-shell .surface-card__header {
+  flex-wrap: wrap;
+}
+.client-detail-shell .surface-card__action {
+  flex-shrink: 1;
+  flex-wrap: wrap;
+  min-width: 0;
+}

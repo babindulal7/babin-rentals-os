@@ -1114,6 +1114,76 @@ function createInvoiceRpc(payload: Record<string, unknown>): { data: Row | null;
   return { data: answer(header, resolvedNo, false), error: null }
 }
 
+/* ── change_client_membership (0171) ─────────────────────────────────────
+ * RULING 2026-10-22. Mirrors the SQL function rule for rule — the same role
+ * list, the same refusals, the same one-live-row invariant and the same
+ * idempotency receipt in `audit_events` — so dev:mock behaves like the database
+ * will. The mock has NO plans of its own: with none on file it answers "that
+ * plan does not exist", the same as an empty `membership_plans` would. */
+const MEMBERSHIP_WRITERS = new Set(['Owner', 'Admin', 'Manager', 'Coordinator'])
+
+function changeClientMembership(payload: Record<string, unknown>): { data: Row | null; error: PgError | null } {
+  const fail = (code: string, message: string) => ({ data: null, error: { code, message, details: '', hint: '' } as PgError })
+  const actor = readSession()?.user.id
+  const role = (store['users'] ?? []).find((u) => u['id'] === actor)?.['primary_role']
+  if (!actor || !MEMBERSHIP_WRITERS.has(String(role))) return fail('42501', 'Only Coordinator or above can change a client membership.')
+
+  const clientId = String(payload['client_id'] ?? '')
+  const key = String(payload['client_uuid'] ?? '')
+  const level = String(payload['plan_level'] ?? '').trim()
+  const note = String(payload['note'] ?? '').trim() || null
+  if (!clientId || !key || !level) return fail('P0001', 'Client, request key and membership plan are required.')
+  if (note !== null && note.length > 500) return fail('P0001', 'A note can be at most 500 characters.')
+
+  const client = (store['clients'] ?? []).find((c) => c['id'] === clientId)
+  if (!client) return fail('P0001', 'Client was not found.')
+
+  const receipt = (store['audit_events'] ?? []).find((a) => a['client_uuid'] === key)
+  if (receipt) {
+    const kept = receipt['new_values'] as Row | undefined
+    if (receipt['actor_id'] === actor && kept?.['client_id'] === clientId && kept['plan_level'] === level && (receipt['reason'] ?? null) === note) {
+      return { data: kept, error: null }
+    }
+    return fail('P0001', 'Request key already belongs to another action.')
+  }
+
+  if (String(client['status']) === 'Deactivated') return fail('P0001', 'A deactivated client cannot take a membership.')
+  const plans = store['membership_plans'] ?? []
+  const plan = plans.find((p) => String(p['level']) === level)
+  if (!plan) return fail('P0001', 'That membership plan does not exist.')
+  if (String(plan['status'] ?? 'Active') !== 'Active') return fail('P0001', 'That membership plan is retired and cannot be assigned.')
+
+  const old = (store['client_memberships'] ?? []).find((m) => m['client_id'] === clientId && m['superseded_at'] == null)
+  let previous: string | null = null
+  if (old) {
+    previous = String(plans.find((p) => p['id'] === old['plan_id'])?.['level'] ?? '') || null
+    if (old['plan_id'] === plan['id']) return fail('P0001', `This client is already on the ${level} plan.`)
+  }
+
+  const now = new Date().toISOString()
+  const newId = crypto.randomUUID()
+  // The business day is Nepal's (UTC+5:45), not the browser's — the same day the SQL function uses.
+  const joinedOn = new Date(Date.now() + (5 * 60 + 45) * 60_000).toISOString().slice(0, 10)
+  if (old) hooks.update('client_memberships', { superseded_at: now, superseded_by_id: newId }, (r) => r['id'] === old['id'])
+  commitInsert('client_memberships', {
+    id: newId, client_uuid: key, client_id: clientId, plan_id: plan['id'], join_date: joinedOn,
+    fee_paid: null, superseded_by_id: null, superseded_at: null, created_at: now, created_by: actor,
+  }, now)
+  const result: Row = {
+    client_id: clientId, plan_level: level, previous_level: previous,
+    membership_id: newId, superseded_membership_id: old ? old['id'] : null, joined_on: joinedOn,
+  }
+  commitInsert('audit_events', {
+    id: crypto.randomUUID(), client_uuid: key, event_class: 'status change', category: 'Administration', module: 'Clients',
+    action: 'Update', severity: 'Informational', status: 'Success', table_name: 'client_memberships', record_id: newId,
+    actor_id: actor, actor_role: role,
+    old_values: { plan_level: previous, membership_id: old ? old['id'] : null, joined_on: old ? old['join_date'] : null },
+    new_values: result, reason: note, created_at: now,
+  }, now)
+  saveOverlay(overlay)
+  return { data: result, error: null }
+}
+
 /* ── The client ────────────────────────────────────────────────────────── */
 
 export const mockSupabase = {
@@ -1153,6 +1223,10 @@ export const mockSupabase = {
     if (name === 'create_booking') {
       const payload = (args?.['p_payload'] ?? {}) as Record<string, unknown>
       return Promise.resolve(createBooking(payload))
+    }
+    if (name === 'change_client_membership') {
+      const payload = (args?.['p_payload'] ?? {}) as Record<string, unknown>
+      return Promise.resolve(changeClientMembership(payload))
     }
     if (name === 'create_invoice') {
       const payload = (args?.['p_payload'] ?? {}) as Record<string, unknown>

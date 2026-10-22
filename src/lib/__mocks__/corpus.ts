@@ -789,6 +789,16 @@ export function clientDirectory(store: Store): Row[] {
   const deposits = store['security_deposits'] ?? []
   const bookings = store['bookings'] ?? []
 
+  /* A client's plan is their ONE live (not superseded) client_memberships row —
+     0005's `client_memberships_one_live_per_client`. RULING 2026-10-22: derived,
+     not hard-coded null, so a membership written by `change_client_membership`
+     shows up on the next read exactly as it would from the real view. */
+  const planLevelById = new Map((store['membership_plans'] ?? []).map((p) => [p['id'], p['level']]))
+  const liveLevelByClient = new Map<unknown, unknown>()
+  for (const m of store['client_memberships'] ?? []) {
+    if (m['superseded_at'] == null) liveLevelByClient.set(m['client_id'], planLevelById.get(m['plan_id']) ?? null)
+  }
+
   const sum = (rows: Row[], key: string, clientId: unknown) =>
     rows.reduce((n, r) => (r['client_id'] === clientId ? n + Number(r[key] ?? 0) : n), 0)
 
@@ -828,13 +838,13 @@ export function clientDirectory(store: Store): Row[] {
       active_bookings_count: active.length,
       total_bookings_count: mine.length,
       last_pickup_at: pickups.length ? pickups[pickups.length - 1] : null,
-      // No corpus rows exist for contacts, memberships or KYC documents, so
-      // these are null/0 in mock mode exactly as they would be in a live DB
-      // whose child tables are empty — not a mock artefact.
+      // No corpus rows exist for contacts or KYC documents, so these are
+      // null/0 in mock mode exactly as they would be in a live DB whose child
+      // tables are empty — not a mock artefact. Membership is derived above.
       contact_name: null,
       contact_designation: null,
       contact_phone: null,
-      membership_level: null,
+      membership_level: liveLevelByClient.get(cid) ?? null,
       kyc_docs_count: 0,
       kyc_verified_count: 0,
       is_blocked: false,

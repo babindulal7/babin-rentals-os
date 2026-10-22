@@ -2363,6 +2363,109 @@ STEPS.push({
   },
 })
 
+// 22 Oct (Babin: "activate membership"): a membership is put on a plan, or moved to another, in ONE transaction.
+STEPS.push({
+  id: 'L32', title: 'A membership is activated or changed atomically, audited and idempotent; Coordinator and above only (0171)', expect: 'green',
+  async run() {
+    const parse = (v) => (typeof v === 'string' ? JSON.parse(v) : v)
+    const change = (role, payload) => asJwt(role, async () => {
+      await q('savepoint membership_write')
+      try { return parse(await one('select change_client_membership($1::jsonb)', [JSON.stringify(payload)])) }
+      catch (error) { await q('rollback to savepoint membership_write'); throw error }
+      finally { await q('release savepoint membership_write') }
+    })
+    const reject = (role, what, payload, matcher) => asJwt(role, async () => {
+      await q('savepoint membership_guard')
+      try { await refuses(what, 'select change_client_membership($1::jsonb)', [JSON.stringify(payload)], matcher) }
+      finally { await q('rollback to savepoint membership_guard'); await q('release savepoint membership_guard') }
+    })
+    const liveRows = (clientId) => asOwnerOfTheDatabase(() =>
+      q(`select m.id, p.level::text as level, m.fee_paid, m.join_date::text as join_date
+           from client_memberships m join membership_plans p on p.id = m.plan_id
+          where m.client_id = $1 and m.superseded_at is null`, [clientId]).then((r) => r.rows))
+    const allRows = (clientId) => asOwnerOfTheDatabase(() =>
+      one('select count(*) from client_memberships where client_id = $1', [clientId]).then(Number))
+    const auditFor = (key) => asOwnerOfTheDatabase(() =>
+      q('select actor_id, actor_role::text as role, reason, module::text as module from audit_events where client_uuid = $1', [key]).then((r) => r.rows))
+
+    await undone(async () => {
+      await asOwnerOfTheDatabase(() => q(
+        `insert into membership_plans (client_uuid, level, label, default_credit_limit, display_order, status, retired_at) values
+           (gen_random_uuid(), 'Academy', 'Access Member', 100000, 1, 'Active', null),
+           (gen_random_uuid(), 'Creator', 'Partner', 250000, 2, 'Active', null),
+           (gen_random_uuid(), 'Elite', 'Elite Member', 0, 3, 'Retired', now())`))
+
+      // 1 · Activate: a client with no live membership gets one. Coordinator is allowed (PERMISSIONS C5).
+      const k1 = crypto.randomUUID()
+      const request = { client_id: CLIENT, client_uuid: k1, plan_level: 'Academy', note: 'Joined at the counter' }
+      assertEq((await liveRows(CLIENT)).length, 0, 'the fixture client starts with no membership')
+      const first = await change('Coordinator', request)
+      assertEq(first.plan_level, 'Academy', 'activated onto Academy')
+      assert(first.previous_level === null, 'nothing was replaced')
+      const live1 = await liveRows(CLIENT)
+      assertEq(live1.length, 1, 'exactly one live membership')
+      assert(live1[0].fee_paid === null, 'no fee is recorded (fee_paid stays NULL)')
+      assertEq(live1[0].id, first.membership_id, 'the live row is the one the function reported')
+      const audit1 = await auditFor(k1)
+      assertEq(audit1.length, 1, 'one audit row')
+      assertEq(audit1[0].actor_id, U.Coordinator, 'the audit row names the real actor')
+      assertEq(audit1[0].role, 'Coordinator', 'and their role')
+      assertEq(audit1[0].module, 'Clients', 'filed under Clients')
+      assertEq(audit1[0].reason, 'Joined at the counter', 'the note is the audit reason')
+
+      // 2 · Retry with the same key: the first answer, no second row, no second audit.
+      const again = await change('Coordinator', request)
+      assertEq(again.membership_id, first.membership_id, 'a retry returns the first answer')
+      assertEq(await allRows(CLIENT), 1, 'a retry writes no second membership')
+      assertEq((await auditFor(k1)).length, 1, 'a retry writes no second audit row')
+      await reject('Coordinator', 'the same key with a different plan', { ...request, plan_level: 'Creator' }, /another action/i)
+      await reject('Coordinator', 'the same key with a different note', { ...request, note: 'Something else' }, /another action/i)
+
+      // 3 · Change: Manager moves them up. The old row is superseded and retained, never deleted.
+      const k2 = crypto.randomUUID()
+      const up = await change('Manager', { client_id: CLIENT, client_uuid: k2, plan_level: 'Creator' })
+      assertEq(up.previous_level, 'Academy', 'reports the plan it replaced')
+      const live2 = await liveRows(CLIENT)
+      assertEq(live2.length, 1, 'still exactly one live membership')
+      assertEq(live2[0].level, 'Creator', 'now Creator')
+      assertEq(await allRows(CLIENT), 2, 'the old row is retained')
+      const old = await asOwnerOfTheDatabase(() => q('select superseded_by_id, superseded_at from client_memberships where id = $1', [first.membership_id]).then((r) => r.rows[0]))
+      assertEq(old.superseded_by_id, up.membership_id, 'the old row points at the new one')
+      assert(old.superseded_at !== null, 'and is stamped superseded')
+
+      // 4 · Refusals leave the live membership exactly as it was.
+      const before = (await liveRows(CLIENT))[0].id
+      await reject('Manager', 'the plan they are already on', { client_id: CLIENT, client_uuid: crypto.randomUUID(), plan_level: 'Creator' }, /already on the Creator plan/i)
+      await reject('Manager', 'a retired plan', { client_id: CLIENT, client_uuid: crypto.randomUUID(), plan_level: 'Elite' }, /retired/i)
+      await reject('Manager', 'a plan that does not exist', { client_id: CLIENT, client_uuid: crypto.randomUUID(), plan_level: 'Platinum' }, /does not exist/i)
+      await reject('Manager', 'a client that does not exist', { client_id: crypto.randomUUID(), client_uuid: crypto.randomUUID(), plan_level: 'Academy' }, /Client was not found/i)
+      await reject('Manager', 'an over-long note', { client_id: CLIENT, client_uuid: crypto.randomUUID(), plan_level: 'Academy', note: 'x'.repeat(501) }, /at most 500/i)
+      await reject('Manager', 'a missing key', { client_id: CLIENT, plan_level: 'Academy' }, /required/i)
+      assertEq((await liveRows(CLIENT))[0].id, before, 'no refusal disturbed the live membership')
+      assertEq(await allRows(CLIENT), 2, 'and none wrote a row')
+
+      // 5 · Who may: Owner and Admin can (a downgrade is allowed); nobody else.
+      const k3 = crypto.randomUUID()
+      const down = await change('Admin', { client_id: CLIENT, client_uuid: k3, plan_level: 'Academy' })
+      assertEq(down.previous_level, 'Creator', 'Admin moved them down')
+      await change('Owner', { client_id: CLIENT, client_uuid: crypto.randomUUID(), plan_level: 'Creator' })
+      assertEq((await liveRows(CLIENT)).length, 1, 'four changes later there is still exactly one live membership')
+      assertEq(await allRows(CLIENT), 4, 'and all four rows are retained')
+      for (const role of ['Accounts', 'Warehouse', 'Technician', 'Driver', 'Client']) {
+        await reject(role, `${role} changing a membership`, { client_id: OTHER_CLIENT, client_uuid: crypto.randomUUID(), plan_level: 'Academy' }, /Coordinator or above/i)
+      }
+      assertEq(await allRows(OTHER_CLIENT), 0, 'no refused role wrote anything')
+
+      // 6 · A deactivated client cannot take a membership.
+      await asOwnerOfTheDatabase(() => q(
+        `update clients set status = 'Deactivated', deactivated_at = now(), deactivated_by = $2, deactivation_reason = 'L32 fixture' where id = $1`,
+        [OTHER_CLIENT, U.Owner]))
+      await reject('Manager', 'a deactivated client', { client_id: OTHER_CLIENT, client_uuid: crypto.randomUUID(), plan_level: 'Academy' }, /deactivated/i)
+      assertEq(await allRows(OTHER_CLIENT), 0, 'a deactivated client got no membership')
+    })
+  },
+})
+
 /* ── Run ──────────────────────────────────────────────────────────────────── */
 
 await seed()

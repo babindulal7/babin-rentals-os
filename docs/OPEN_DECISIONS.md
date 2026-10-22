@@ -157,3 +157,10 @@ The Law 16 report pass (PROGRESS.md, 2026-10-16) replaced invented figures with 
 The Crew timesheet page now reads recorded call/wrap times from `crew_shoot_days` (RULINGS-2026-10-20). It keeps two figures from the old standalone, both unruled, in one constant (`STANDARD_DAY_HOURS = 8` in `src/lib/queries/timesheet.ts`, `TODO(decision)`):
 - **The overtime threshold** — hours in a day past which the page flags overtime. `crew_shoot_days.overtime_approved_by` exists, so overtime is a real concept; its threshold has never been ruled.
 - **How a day rate becomes an hourly figure** — the page estimates pay as hours × day rate ÷ 8. Crew payouts on Crew Assist are days booked × day rate. Is crew pay by the day or by the hour, and does overtime pay differently? Until ruled, the page labels its figure "Estimated pay" and says so on screen.
+
+## 19. Membership change: does it restart the term, and what about renewal? (22 October 2026) — open
+
+"Activate membership" is built (RULINGS-2026-10-22; migration 0171 written, not applied). A client with no live membership is put on a plan; a client with one is moved, by adding a new `client_memberships` row and superseding the old one. Two things it deliberately does not decide:
+- **Does a change restart the term?** 0005 derives the renewal date from `join_date` plus the plan's `term_months`. The new row's `join_date` is today's Kathmandu day, so a change restarts the term. Alternatives: carry the original join date over, or let the person choose. Which is right when a member upgrades mid-year?
+- **Renewing a lapsed membership.** The function refuses "already on this plan", so a lapsed member cannot be renewed here. Renewal needs a ruling on the fee, the new term dates, and who approves.
+- **Plans themselves.** The mock has no plans, and there is no screen to create or retire one; `membership_plans` is data only an Owner, Admin or Manager can write. Until someone sets them up, "Activate Membership" says no plan is on file.

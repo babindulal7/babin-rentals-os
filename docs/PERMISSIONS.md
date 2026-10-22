@@ -279,6 +279,7 @@ model**. Nothing is stored: `product_units_service_v` derives it at read time.
 | `client.update` | C+ · Accounts (payment terms, VAT profile only) | | ✓ |
 | `client.block` / `client.unblock` | **Owner · Admin · Manager** | reason from list, audited; existing bookings continue | ✓ |
 | `client.merge` | M+ | redirect record, sums balances, reversible 30 days, blocked with open booking/case | ✓ |
+| `client.change_membership` | **Owner · Admin · Manager · Coordinator** | puts a client on a membership plan, or moves them to another (one atomic, audited, idempotent write — `change_client_membership`, 0171); mirrors `client_memberships_all` (0037); **Accounts (A5: "no membership edits") and Warehouse are refused**, which is why this is not `client.update`; records no fee; 22 Oct ruling | ✓ |
 | `credit.override` (limit above membership default, terms beyond Immediate) | M+ | reason ≥10 | ✓ |
 | `client.view_pii` (phone, email, address, PAN/ID docs) | C+ · Accounts always · **Driver inside assigned trip only** | HIS v2.1 gate | ○ |
 | `client.view_as` (open portal as this client, read-only) | C+ | audited | ○ |
