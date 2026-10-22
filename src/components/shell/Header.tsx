@@ -315,6 +315,15 @@ export default function Header({ crumbs, actions }: HeaderProps) {
       })
     })
 
+    // On phone, team internal notes collapses into the overflow menu so it remains accessible without occupying a slot
+    if (isPhone) {
+      items.push({
+        label: 'Team Internal Notes',
+        icon: 'message' as IconName,
+        onClick: () => setNotesOpen(true),
+      })
+    }
+
     return items
   }, [resolved, isTablet, isPhone, actionContext])
 
@@ -353,8 +362,8 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             display: 'flex',
             alignItems: 'center',
             gap: 6,
-            minWidth: isPhone ? '110px' : isTablet ? '140px' : '180px',
-            // On phone, keep at least 110px so module names (Rentals, Today, Finance) and IDs do not truncate to Re... or 71...
+            minWidth: isPhone ? '120px' : isTablet ? '140px' : '180px',
+            // On phone, keep at least 120px so module names (Rentals, Today, Finance) and IDs do not truncate to Re... or 71...
             // On desktop a module title (one crumb — "Inventory") does not shrink; the search beside it yields first.
             flex: isPhone ? '1 1 auto' : isTablet || displayCrumbs.length > 1 ? '0 1 auto' : '0 0 auto',
             maxWidth: isPhone ? undefined : 'min(520px, 45vw)',
@@ -445,6 +454,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                 const labelEl = (
                   <span
                     aria-current={last ? 'page' : undefined}
+                    title={labelText}
                     style={{
                       fontSize: last ? 'clamp(1.05rem, 0.95rem + 0.4vw, 1.3rem)' : 'var(--t-ui)',
                       fontFamily: last ? 'var(--font-display, inherit)' : undefined,

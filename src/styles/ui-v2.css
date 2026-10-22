@@ -363,7 +363,7 @@ input[type='search']::-webkit-search-results-decoration {
 .context-drawer__panel { width: min(var(--context-drawer-width), 100vw); height: 100%; display: flex; flex-direction: column; pointer-events: auto; background: var(--surface); border-left: 1px solid var(--border); box-shadow: var(--shadow-modal); outline: none; animation: drawer-in-right var(--dur-drawer) ease-out both; }
 .context-drawer--closing { pointer-events: none; }
 .context-drawer--closing .context-drawer__panel { animation-name: drawer-out-right; }
-.context-drawer__header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); padding: var(--space-4); border-bottom: 1px solid var(--border); }
+.context-drawer__header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); padding: var(--space-4); border-bottom: 1px solid var(--border); flex-shrink: 0; position: sticky; top: 0; background: var(--surface); z-index: 2; }
 .context-drawer__identity { min-width: 0; }
 .context-drawer__title-row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
 .context-drawer__title-row h2 { margin: 0; color: var(--text); font-size: var(--t-h3); font-weight: 600; letter-spacing: -0.01em; }
@@ -372,7 +372,7 @@ input[type='search']::-webkit-search-results-decoration {
 .context-drawer__close:hover { background: var(--hover-row); color: var(--text); }
 .context-drawer__close:focus-visible { outline: 2px solid var(--input-focus); outline-offset: 2px; }
 .context-drawer__body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: var(--space-4); }
-.context-drawer__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border); background: var(--surface); }
+.context-drawer__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border); background: var(--surface); flex-shrink: 0; position: sticky; bottom: 0; z-index: 2; }
 /* Phone band: the drawer becomes a bottom sheet. */
 @media (max-width: 767px) {
   .context-drawer { inset: 0; align-items: flex-end; pointer-events: auto; }

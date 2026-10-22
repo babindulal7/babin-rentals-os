@@ -41,15 +41,24 @@ export interface StoredDocumentResult {
 
 /**
  * Escapes characters for PDF literal strings `( ... )`.
+ * Normalizes multi-byte unicode to clean single-byte printable ASCII (32..126)
+ * to prevent character-code mojibake in standard Type1 Helvetica.
  */
 function escapePdfText(text: string): string {
-  return text
-    .replace(/—/g, ' - ')
-    .replace(/·/g, ' | ')
+  const normalized = text
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[—–]/g, ' - ')
+    .replace(/[·•]/g, ' | ')
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/(?:₹|रू)/g, 'NPR')
     .replace(/\\/g, '\\\\')
     .replace(/\(/g, '\\(')
     .replace(/\)/g, '\\)')
     .replace(/[\r\n]+/g, ' ')
+
+  return normalized.replace(/[^\x20-\x7E]/g, ' ')
 }
 
 /**
