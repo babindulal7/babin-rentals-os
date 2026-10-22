@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react'
 import Icon from '../../components/ui/Icon'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
-import { Card, PageHeader, Button, KpiStrip, FooterNote } from '../../components/ui/Page'
+import { Card, PageHeader, Button, KpiStrip } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
 import type { Kpi } from '../../components/ui/Page'
 import { PageBody } from '../../components/ui/PageBody'
@@ -805,12 +805,6 @@ export default function NumberingSequences() {
         )}
       </PageBody>
 
-      <FooterNote
-        extra={[
-          'Sequence counters are append-only and never reused',
-          'Numbers are minted only by next_document_number() — no control here writes a counter',
-        ]}
-      />
     </div>
   )
 }

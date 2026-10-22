@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
 import { Input, Select, SearchInput } from '../../components/ui'
-import { Card, PageHeader, Button, Rail, SummaryRows, FooterNote, cardStyle } from '../../components/ui/Page'
+import { Card, PageHeader, Button, Rail, SummaryRows, cardStyle } from '../../components/ui/Page'
 import { PageShell } from '../../components/ui/PageShell'
 import { InfoTooltip } from '../../components/ui/InfoTooltip'
 import { DataTableShell } from '../../components/ui/DataTable'
@@ -2185,7 +2185,6 @@ export default function Warehouses() {
         </Rail>
       </div>
 
-      <FooterNote extra={['Warehouses are closed, never deleted']} />
 
       {/* ── create transfer ───────────────────────────────────────────── */}
       {modalOpen && (

@@ -4,7 +4,7 @@ import { canExportClientPii } from '../../lib/rbac'
 import { useAuth } from '../../lib/auth'
 import { Link, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
-import { Card, PageHeader, PageActions, Button, KpiStrip, FooterNote } from '../../components/ui/Page'
+import { Card, PageHeader, PageActions, Button, KpiStrip } from '../../components/ui/Page'
 import { GlobalAddMenu } from '../../components/ui/creation/GlobalAddMenu'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { PageShell } from '../../components/ui/PageShell'
@@ -300,7 +300,6 @@ export default function Clients() {
         <CreditView clients={clients} loading={clientsLoading} error={clientsError} onRetry={refresh} />
       )}
 
-      <FooterNote extra={['Clients are never deleted — a closed account is retained and marked']} />
     </PageShell>
   )
 }

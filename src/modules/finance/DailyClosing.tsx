@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Card, Button, cardStyle } from '../../components/ui/Page'
 import Icon from '../../components/ui/Icon'
-import { InfoTooltip } from '../../components/ui/InfoTooltip'
 import { PageShell } from '../../components/ui/PageShell'
 import { ScreenHeader } from './TabHeader'
 import { PageBody } from '../../components/ui/PageBody'
@@ -228,14 +227,13 @@ export default function DailyClosing({ embedded = false }: { embedded?: boolean 
     return <PageShell width="full">{restrictedContent}</PageShell>
   }
 
-  const row = (label: string, value: string, hint?: string, badge?: ReactNode) => (
+  const row = (label: string, value: string, badge?: ReactNode) => (
     <div
       key={label}
       className="finance-closing-row"
     >
       <span className="finance-closing-row-label">
         {label}
-        {hint && <InfoTooltip content={hint} />}
       </span>
       {badge ? (
         badge
@@ -266,13 +264,12 @@ export default function DailyClosing({ embedded = false }: { embedded?: boolean 
               {row('Bank', formatMoney(figures.collected.bank))}
               {row('Cards', formatMoney(figures.collected.card))}
               {row(
-                'Other',
-                formatMoney(figures.collected.other),
                 /* The digest has four buckets and no wallet line, so the split
                    it cannot carry is shown here instead of being lost. */
                 figures.collected.digitalWallets > 0
-                  ? `includes ${formatMoney(figures.collected.digitalWallets)} digital wallets`
-                  : undefined,
+                  ? `Other (includes ${formatMoney(figures.collected.digitalWallets)} digital wallets)`
+                  : 'Other',
+                formatMoney(figures.collected.other),
               )}
               {row('Total taken', formatMoney(figures.collected.total))}
               {figures.collected.unclassified > 0 && (
@@ -284,8 +281,9 @@ export default function DailyClosing({ embedded = false }: { embedded?: boolean 
             </Card>
 
             <Card title="Standing position">
-              {row('Outstanding', formatMoney(figures.receivablesTotal), 'every live invoice still owed, not only today')}
-              {row('Deposits held', formatMoney(figures.depositsHeld), /* a liability — never revenue (Law 5) */ "a liability — never revenue")}
+              {row('Outstanding', formatMoney(figures.receivablesTotal))}
+              {/* A liability — never revenue (Law 5). */}
+              {row('Deposits held', formatMoney(figures.depositsHeld))}
             </Card>
 
             <Card title="Count the drawer">
@@ -311,11 +309,10 @@ export default function DailyClosing({ embedded = false }: { embedded?: boolean 
               )}
 
               <div style={{ marginTop: 12 }}>
-                {row('Expected in the drawer', formatMoney(figures.collected.cash), 'cash takings only')}
+                {row('Expected in the drawer', formatMoney(figures.collected.cash))}
                 {row(
                   'Variance',
                   variance,
-                  undefined,
                   <span className={`finance-variance-pill ${varianceTone}`}>{variance}</span>,
                 )}
               </div>

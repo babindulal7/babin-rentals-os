@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { Select } from '../../components/ui'
-import { Card, Button, KpiStrip, FooterNote, type Kpi } from '../../components/ui/Page'
+import { Card, Button, KpiStrip, type Kpi } from '../../components/ui/Page'
 import { ScreenHeader } from '../../components/ui/ScreenHeader'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { RestrictedState } from '../../components/ui/StateViews'
@@ -460,14 +460,6 @@ function ProductImportForm({ embedded = false, onDone }: ProductsImportCenterPro
               The category list could not be read: {categoriesError}
             </p>
           )}
-          {categories !== null && !readyToPreview && (
-            <FooterNote
-              extra={[
-                'Map one column each to Product Name, Category, Brand and Tracking Mode to see the preview.',
-                'Every mapped column is a commitment — an unmapped column is skipped, not guessed.',
-              ]}
-            />
-          )}
         </Card>
       )}
 
@@ -658,13 +650,6 @@ function ProductImportForm({ embedded = false, onDone }: ProductsImportCenterPro
               </Button>
             )}
           </div>
-          <FooterNote
-            extra={[
-              'Imported products land as Drafts — the Ready-to-Rent gate is reviewed per product, never bulk-cleared.',
-              `${savedCount > 0 ? `${savedCount} row${savedCount === 1 ? '' : 's'} saved this session. ` : ''}A failed or timed-out row is retried with the same save key, so a retry never creates a second product.`,
-              'Every imported row is audited by the products write it goes through.',
-            ]}
-          />
         </Card>
       )}
     </div>

@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import Icon from '../../components/ui/Icon'
-import { InfoTooltip } from '../../components/ui/InfoTooltip'
-import { Card, FooterNote, cardStyle } from '../../components/ui/Page'
+import { Card, cardStyle } from '../../components/ui/Page'
 import { ScreenHeader } from '../../components/ui/ScreenHeader'
 import { Unavailable } from '../../components/ui/Unavailable'
 import { useViewport } from '../../lib/device'
@@ -316,7 +315,6 @@ export default function PricingCalculator({ embedded = false }: PricingCalculato
                 <span style={{ fontSize: 'var(--t-ui)', fontWeight: 600, color: 'var(--text)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                   {/* Never a literal. Rate comes from Settings ▸ Financial. */}
                   VAT <span className="figure">{vatRatePercent}%</span>
-                  <InfoTooltip content="Read from Settings, never hardcoded" />
                 </span>
               </label>
 
@@ -326,7 +324,6 @@ export default function PricingCalculator({ embedded = false }: PricingCalculato
                 onChange={setAdvance}
                 numeric
                 placeholder="Rs"
-                hint="Entered, not derived — no advance percentage is configured anywhere in this build."
               />
               <LabelledInput
                 label="Security deposit"
@@ -334,7 +331,6 @@ export default function PricingCalculator({ embedded = false }: PricingCalculato
                 onChange={setDeposit}
                 numeric
                 placeholder="Rs"
-                hint={/* Law 5 — a liability. It is shown separately below and never enters the rental total. */ "— a liability. It is shown separately below and never enters the rental total."}
               />
             </div>
           </Card>
@@ -426,7 +422,6 @@ export default function PricingCalculator({ embedded = false }: PricingCalculato
         </div>
       </div>
 
-      <FooterNote extra={['Quote sandbox — nothing here is booked, invoiced or stored']} />
     </div>
   )
 }
@@ -460,23 +455,18 @@ function LabelledInput({
   onChange,
   placeholder,
   numeric,
-  hint,
 }: {
   label: string
   value: string
   onChange: (v: string) => void
   placeholder?: string
   numeric?: boolean
-  hint?: string
 }): ReactNode {
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        <span style={{ fontSize: 'var(--t-th)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--muted)' }}>
-          {label}
-        </span>
-        {hint && <InfoTooltip content={hint} />}
-      </div>
+      <span style={{ fontSize: 'var(--t-th)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--muted)' }}>
+        {label}
+      </span>
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}

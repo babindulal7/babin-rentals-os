@@ -1,5 +1,44 @@
 # Progress Log
 
+## 2026-10-23 — Repeated information buttons removed (page footer and per-field (i))
+
+**Did**
+- Asked which "information buttons" were repetitive; Babin chose all three kinds (page-level copies, the Quick-information drawer button, per-card and per-field (i) icons). Two were done; two parts are held (see Ruled).
+- **Footer "About this page" (i):** `FooterNote` deleted from `components/ui/Page.tsx` with its 29 call sites on 26 screens, its `ui/index.ts` export and the `.footer-note` rules in `responsive.css`. The header (i) beside the title stays as the single page explanation. Products Import Center also loses its state-specific "map one column each…" footnote.
+- **Per-field (i):** `Input`/`Select` `info`, `EditableRows` `hint`, the page-local helper props (Pricing, Depreciation and Settings ▸ Tools calculators, Add Bundle, the seven Add Equipment section files and their `SectionCard` note, Add Client modal, Generate Referral Code, Daily Closing) and every call site, including `hint:` rows in `ClientDetail.tsx` and `AssetDetail.tsx`. Variables and imports that only fed those tooltips removed.
+- Daily Closing: the "includes Rs X digital wallets" split moved into the **Other** row label so the figure is not lost with the tooltip.
+- Ruling record: `RULINGS-2026-10-23.md`.
+
+**Ruled**
+- One page explanation (the header (i)); no second copy in the footer. No per-field (i) beside labels. A figure is never left only in a removed tooltip.
+- **Held, needs Babin:** KPI tile (i) carries the ruled "definition on the tile" (Law L1) and zero explanation (L2), fed by about 260 data fields; the Quick-information drawer button (RULINGS-2026-10-20) is the only way to open the summaries on about 20 screens. Neither touched.
+- Revert: `git revert` this commit.
+
+**Verified**
+- TypeScript compiler API, semantic diagnostics on all 44 changed files plus every `EditableRows` importer, `noUnusedLocals` on: 0 diagnostics (after fixing 3 unused variables and 11 leftover `hint:` rows it found).
+- `eslint` on the 43 changed files: 0 problems.
+- **Not verified:** a whole-project `tsc --noEmit` — it was killed three times (exit 255) while other sessions held the memory, so it produced no result. The app was not driven in a browser this session. `npm run lint:ui-copy`, `check:pglite`, `check:lifecycle` and `build` were not run.
+- Direct `vitest run` (not `npm test`): first pass 300 of 415 files passed, 4,129 of 4,132 tests; 115 files failed to load because `.env.local` was missing from the worktree (copied mid-run). Re-running those 115 files with the env present: 113 pass; 2 fail (`resetQc.test.tsx`, `operationRoutes.test.tsx`, 9 tests) on `ReferenceError: role is not defined` at `ResetWorkspace.tsx:422`. That file is not in this diff; the bug is in the base commit `e05ce7a9`. The 3 first-pass failures in `listPageToolbars.render.test.tsx` passed on the re-run.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+
+Migrations 168 files · check:pglite not run this session. Suite: not run through `npm test` this session (a direct `vitest run` was used; see Verified).
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Decide the KPI tile (i): remove it and show the definition as visible tile text, or leave tiles as they are.
+- Decide the Quick-information drawer button: render its content inline on each screen, or keep the drawer behind another control.
+- Whole-project `tsc`, `lint:ui-copy`, `build` and a browser pass on a machine with free memory.
+
 ## 2026-10-22 — Phase 4: Cleaning & Reset / Post-Rental QC Expansion (Operations Workflow)
 
 **Did**

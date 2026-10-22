@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import './settings.css'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
-import { Card, PageHeader, Button, FooterNote, SummaryRows } from '../../components/ui/Page'
+import { Card, PageHeader, Button, SummaryRows } from '../../components/ui/Page'
 import { PageShell } from '../../components/ui/PageShell'
 import { PageActions } from '../../components/ui/PageActions'
 import { EmptyState, ErrorBanner, LoadingSkeleton } from '../../components/ui/StateViews'
@@ -689,7 +689,6 @@ export default function Settings() {
 
               {body}
 
-              <FooterNote extra={[`Data as of ${asOf}`]} />
             </div>
           </PageShell>
         </EditCtx.Provider>

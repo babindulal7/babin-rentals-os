@@ -1,7 +1,6 @@
 import React, { forwardRef, useState, useRef, useEffect, useId, useCallback, ReactNode, useImperativeHandle } from 'react'
 import { createPortal } from 'react-dom'
 import Icon from './Icon'
-import { InfoTooltip } from './InfoTooltip'
 import { floatingLayer } from './floatingLayer'
 
 export interface SelectOption {
@@ -14,14 +13,13 @@ export interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectE
   label?: string
   error?: string | null
   helperText?: string
-  info?: ReactNode
   options?: SelectOption[]
   icon?: React.ReactNode
   placeholder?: string
 }
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, error, helperText, info, options, icon, children, className, style, id, value, defaultValue, onChange, ...props }, ref) => {
+  ({ label, error, helperText, options, icon, children, className, style, id, value, defaultValue, onChange, ...props }, ref) => {
     const selectId = id || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined)
     const reactId = useId()
     /* Stable ids for the ARIA wiring. The native select keeps `selectId`
@@ -261,25 +259,22 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     return (
       <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 6 }}>
         {label && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <label
-              id={labelId}
-              /* Points at the TRIGGER now, not the invisible native select —
-                 clicking the label focuses the control a user can actually see. */
-              htmlFor={triggerId}
-              style={{
-                fontSize: 'var(--t-th)',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-                color: 'var(--muted)',
-              }}
-            >
-              {label}
-              {props.required && <span style={{ color: 'var(--danger-text)', marginLeft: 'var(--sp-xs)' }}>*</span>}
-            </label>
-            {info && <InfoTooltip content={info} />}
-          </div>
+          <label
+            id={labelId}
+            /* Points at the TRIGGER now, not the invisible native select —
+               clicking the label focuses the control a user can actually see. */
+            htmlFor={triggerId}
+            style={{
+              fontSize: 'var(--t-th)',
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              color: 'var(--muted)',
+            }}
+          >
+            {label}
+            {props.required && <span style={{ color: 'var(--danger-text)', marginLeft: 'var(--sp-xs)' }}>*</span>}
+          </label>
         )}
 
         <div ref={containerRef} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>

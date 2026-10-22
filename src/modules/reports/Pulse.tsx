@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
-import { PageHeader, Card, ReflowRail, FooterNote, Button, cardStyle, useRailGridColumns } from '../../components/ui/Page'
+import { PageHeader, Card, ReflowRail, Button, cardStyle, useRailGridColumns } from '../../components/ui/Page'
 import { PageShell } from '../../components/ui/PageShell'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { LineChart, GroupedBars } from '../../components/ui/Charts'
@@ -641,7 +641,6 @@ function DemoPulse({ states }: { states: PulseStates }) {
             />
           </>,
         )}
-        <FooterNote />
       </div>
     )
   }
@@ -1341,12 +1340,6 @@ function DemoPulse({ states }: { states: PulseStates }) {
       </>,
       )}
 
-      <FooterNote
-        extra={[
-          /* Every amount is integer paisa — see lib/money.ts */ "Amounts shown in rupees",
-          'Reports reads its figures from the owning engine; it never defines a metric',
-        ]}
-      />
     </PageShell>
   )
 }

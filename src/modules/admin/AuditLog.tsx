@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { AUDIT_LOG_PATH } from '../../lib/routeTargets'
 import type { CSSProperties } from 'react'
 import Icon from '../../components/ui/Icon'
-import { PageHeader, KpiStrip, FooterNote, cardStyle } from '../../components/ui/Page'
+import { PageHeader, KpiStrip, cardStyle } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
 import type { Kpi } from '../../components/ui/Page'
 import { PageBody } from '../../components/ui/PageBody'
@@ -389,7 +389,6 @@ export default function AuditLog({ recordId = null }: { recordId?: string | null
         specification. {RETENTION_NOTE}
       </p>
 
-      <FooterNote />
     </div>
   )
 }

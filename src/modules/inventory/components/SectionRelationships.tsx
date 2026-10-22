@@ -34,7 +34,6 @@ export function SectionRelationships() {
             id="sec-relationships"
             n={sectionNumber('sec-relationships')}
             title="Relationships"
-            note="Three classes, three cardinalities — containment is one, membership is many, compatibility is many-to-many."
           >
             {errors.relationships && (
               <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--t-th)', color: 'var(--danger-text)' }}>
@@ -47,7 +46,7 @@ export function SectionRelationships() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <strong style={{ fontSize: 'var(--t-meta)', color: 'var(--text)' }}>Containment — one container at a time</strong>
               <div style={fieldRow}>
-                <Field label="Stored In" hint="Moving the container moves everything inside it.">
+                <Field label="Stored In">
                   <select
                     value={storedIn}
                     onChange={(e) => {
@@ -63,7 +62,7 @@ export function SectionRelationships() {
                     ))}
                   </select>
                 </Field>
-                <Field label="Contains" hint="Existing inventory is attached, never duplicated.">
+                <Field label="Contains">
                   <div style={{ display: 'flex', gap: 6 }}>
                     <select value={containPick} onChange={(e) => setContainPick(e.target.value)} style={inputStyle()}>
                       <option value="">Select an item to attach</option>
@@ -212,7 +211,7 @@ export function SectionRelationships() {
                     </Button>
                   </div>
                 </Field>
-                <Field label="Requires" hint="Powers the missing-accessory warning at packing.">
+                <Field label="Requires">
                   <div style={{ display: 'flex', gap: 6 }}>
                     <select value={requiresPick} onChange={(e) => setRequiresPick(e.target.value)} style={inputStyle()}>
                       <option value="">Select an item</option>

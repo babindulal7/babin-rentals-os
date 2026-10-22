@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback, type CSSProperties } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import Icon, { type IconName } from '../../components/ui/Icon'
-import { Card, PageHeader, PageActions, Button, FooterNote, cardStyle } from '../../components/ui/Page'
+import { Card, PageHeader, PageActions, Button, cardStyle } from '../../components/ui/Page'
 import { SearchInput } from '../../components/ui'
 import { PageShell } from '../../components/ui/PageShell'
 import { PageBody } from '../../components/ui/PageBody'
@@ -1391,7 +1391,6 @@ export default function OperationsQueues() {
         </div>
       </FilterDrawer>
       <div style={{ gridColumn: '1 / -1' }}>
-        <FooterNote extra={['Queues show current floor work.']} />
       </div>
     </div>
     </PageShell>

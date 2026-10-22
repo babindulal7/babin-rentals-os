@@ -4,8 +4,7 @@ import type { CSSProperties, ReactNode } from 'react'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
 import { TouchTarget } from '../../components/ui/TouchTarget'
-import { InfoTooltip } from '../../components/ui/InfoTooltip'
-import { Card, Button, Rail, KpiStrip, FooterNote, cardStyle } from '../../components/ui/Page'
+import { Card, Button, Rail, KpiStrip, cardStyle } from '../../components/ui/Page'
 import { ScreenHeader } from '../../components/ui/ScreenHeader'
 import { DataTableShell } from '../../components/ui/DataTable'
 import type { Kpi } from '../../components/ui/Page'
@@ -114,13 +113,10 @@ const controlStyle: CSSProperties = {
   fontFamily: 'inherit',
 }
 
-function FieldShell({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+function FieldShell({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text2)' }}>{label}</span>
-        {hint && <InfoTooltip content={hint} />}
-      </div>
+      <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text2)' }}>{label}</span>
       {children}
     </label>
   )
@@ -132,7 +128,6 @@ function NumField({
   onChange,
   suffix,
   placeholder,
-  hint,
   step,
 }: {
   label: string
@@ -140,11 +135,10 @@ function NumField({
   onChange: (v: string) => void
   suffix?: string
   placeholder?: string
-  hint?: string
   step?: string
 }) {
   return (
-    <FieldShell label={label} {...(hint ? { hint } : {})}>
+    <FieldShell label={label}>
       <span style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
         <input
           type="number"
@@ -171,16 +165,14 @@ function SelectField({
   value,
   onChange,
   options,
-  hint,
 }: {
   label: string
   value: string
   onChange: (v: string) => void
   options: ReadonlyArray<{ value: string; label: string }>
-  hint?: string
 }) {
   return (
-    <FieldShell label={label} {...(hint ? { hint } : {})}>
+    <FieldShell label={label}>
       <select value={value} onChange={(e) => onChange(e.target.value)} style={controlStyle}>
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -338,7 +330,6 @@ function CropCalculator() {
   const w = num(width)
   const h = num(height)
   const crop = cropFactor(w, h)
-  const custom = w !== sensorFormat(format).width || h !== sensorFormat(format).height
 
   return (
     <>
@@ -351,7 +342,6 @@ equivalent T/f = aperture × crop        (depth-of-field equivalence only)`}</Fo
           value={format}
           onChange={pickFormat}
           options={FORMAT_OPTIONS}
-          {...(custom ? { hint: 'Dimensions edited — the result uses the typed values, not the format.' } : {})}
         />
         <NumField label="Sensor width" value={width} onChange={setWidth} suffix="mm" />
         <NumField label="Sensor height" value={height} onChange={setHeight} suffix="mm" />
@@ -434,7 +424,6 @@ far          = (H × s) ÷ (H − (s − focal))     — infinite when s ≥ H`}
           value={format}
           onChange={setFormat}
           options={FORMAT_OPTIONS}
-          hint={`Circle of confusion ${f.coc} mm`}
         />
         <NumField label="Focal length" value={focal} onChange={setFocal} suffix="mm" />
         <NumField label="Aperture" value={aperture} onChange={setAperture} suffix="T/f" />
@@ -486,7 +475,6 @@ EV       = log₂(aperture² ÷ shutter) + log₂(100 ÷ ISO)`}</Formula>
             { value: 'factor', label: 'Filter factor — ND8' },
             { value: 'density', label: 'Optical density — ND1.2' },
           ]}
-          hint="Nepali productions use whichever the filter is labelled with."
         />
         <NumField label={notation === 'factor' ? 'ND number' : 'Optical density'} value={ndValue} onChange={setNdValue} />
       </div>
@@ -585,7 +573,6 @@ drop-frame, at 29.97 and 59.94 only:
           value={rateKey}
           onChange={setRateKey}
           options={RATE_OPTIONS}
-          {...(rate.dropCapable ? {} : { hint: 'Drop-frame exists at 29.97 and 59.94 only.' })}
         />
         <NumField label="Hours" value={hh} onChange={setHh} step="1" />
         <NumField label="Minutes" value={mm} onChange={setMm} step="1" />
@@ -650,7 +637,6 @@ function StorageCalculator() {
           onChange={setBitrate}
           suffix="Mbps"
           placeholder="Read off the codec"
-          hint="Typed or selected from presets above."
         />
         <NumField label="Running time — hours" value={hours} onChange={setHours} step="1" />
         <NumField label="…and minutes" value={minutes} onChange={setMinutes} step="1" />
@@ -763,14 +749,13 @@ Each step rounds half-up to the whole rupee. Nothing is recomputed here. */ "Pri
         <NumField label="Sub-rental" value={subRental} onChange={setSubRental} suffix="Rs" />
         <NumField label="Services" value={services} onChange={setServices} suffix="Rs" />
         <NumField label="Crew" value={crew} onChange={setCrew} suffix="Rs" />
-        <NumField label="Transport" value={transport} onChange={setTransport} suffix="Rs" hint="Rs 0 on client pickup." />
+        <NumField label="Transport" value={transport} onChange={setTransport} suffix="Rs" />
         <NumField label="Discount" value={discountPercent} onChange={setDiscountPercent} suffix="%" />
         <NumField
           label="VAT"
           value={vatPercent}
           onChange={setVatPercent}
           suffix="%"
-          hint={/* §2.1 reads this from Settings ▸ Finance. No settings store exists, so it is an input. */ "Enter the VAT rate."}
         />
         <NumField label="Paid so far" value={payments} onChange={setPayments} suffix="Rs" />
       </div>
@@ -1579,7 +1564,6 @@ export default function Tools({ embedded = false }: ToolsProps = {}) {
         </Rail>
       </div>
 
-      <FooterNote extra={[/* Tools lives inside Settings — Foundation §5.1 keeps it out of the sidebar */ "Tools"]} />
     </div>
   )
 }
