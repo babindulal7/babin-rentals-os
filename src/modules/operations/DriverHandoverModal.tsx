@@ -264,6 +264,31 @@ export function DriverHandoverModal({
       title="Driver Field Delivery Handover"
       subtitle={`Booking #${bookingNo} · ${itemCount} ${itemCount === 1 ? 'item' : 'items'}`}
       size="md"
+      footer={
+        <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+          <Button
+            variant="secondary"
+            onClick={onClose}
+            disabled={submitting}
+            style={{ flex: 1, minHeight: 48 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleSubmit}
+            disabled={submitting || !isOnline}
+            style={{
+              flex: 2,
+              minHeight: 48,
+              fontSize: 'var(--t-body)',
+              fontWeight: 600,
+            }}
+          >
+            {submitting ? 'Confirming...' : !isOnline ? 'Reconnect to Confirm' : 'Confirm Delivery Handover'}
+          </Button>
+        </div>
+      }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
         {/* Network status indicator */}
@@ -534,31 +559,6 @@ export function DriverHandoverModal({
               resize: 'vertical',
             }}
           />
-        </div>
-
-        {/* Action Controls */}
-        <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-          <Button
-            variant="secondary"
-            onClick={onClose}
-            disabled={submitting}
-            style={{ flex: 1, minHeight: 52 }}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleSubmit}
-            disabled={submitting || !isOnline}
-            style={{
-              flex: 2,
-              minHeight: 52,
-              fontSize: 'var(--t-body)',
-              fontWeight: 600,
-            }}
-          >
-            {submitting ? 'Confirming...' : !isOnline ? 'Reconnect to Confirm' : 'Confirm Delivery Handover'}
-          </Button>
         </div>
       </div>
     </Modal>

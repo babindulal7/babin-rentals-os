@@ -523,14 +523,14 @@ export function RecordPaymentModal({
       subtitle={SUBTITLE}
       size="md"
       footer={
-        <>
-          <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>
+        <div style={{ display: 'flex', gap: 'var(--sp-sm)', width: '100%', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <Button variant="secondary" onClick={onClose} disabled={isSubmitting} style={{ minHeight: 44, flex: '1 1 120px' }}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={() => handleSubmit()} disabled={isSubmitting || isFullySettled}>
+          <Button variant="primary" onClick={() => handleSubmit()} disabled={isSubmitting || isFullySettled} style={{ minHeight: 44, flex: '2 1 160px' }}>
             {isSubmitting ? 'Recording...' : 'Record Payment'}
           </Button>
-        </>
+        </div>
       }
     >
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>

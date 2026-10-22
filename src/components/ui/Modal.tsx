@@ -263,6 +263,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
         tabIndex={-1}
+        data-fill={fillScreen ? 'true' : undefined}
         style={{
           outline: 'none',
           position: 'relative',
@@ -285,6 +286,7 @@ export function Modal({
       >
         {/* Header */}
         <div
+          className="app-modal__header"
           onTouchStart={swipeDismiss ? (event) => { touchStartY.current = event.touches[0]?.clientY ?? null } : undefined}
           onTouchEnd={swipeDismiss ? (event) => {
             const endY = event.changedTouches[0]?.clientY
@@ -356,11 +358,17 @@ export function Modal({
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: fillScreen ? 16 : 20 }}>{children}</div>
+        <div
+          className="app-modal__content"
+          style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: fillScreen ? 16 : 20 }}
+        >
+          {children}
+        </div>
 
         {/* Footer */}
         {footer && (
           <div
+            className="app-modal__footer"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -371,6 +379,9 @@ export function Modal({
               borderTop: '1px solid var(--border)',
               background: 'var(--card2)',
               flexShrink: 0,
+              position: 'sticky',
+              bottom: 0,
+              zIndex: 2,
             }}
           >
             {footer}
