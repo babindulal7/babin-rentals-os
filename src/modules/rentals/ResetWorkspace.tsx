@@ -22,7 +22,21 @@ import { newClientUuid, supabase } from '../../lib/supabase'
 import { DomainEvents, EVENT_TYPES } from '../../events/eventBus'
 import { fetchFloorBooking, type FloorBooking, type FloorLine } from '../../lib/queries/bookings'
 import type { ResetEntryInput } from '../../actions/rentals/floorVerb'
-import { SHARED_CLEAN_TASKS, DAMAGE_TYPES, SEVERITIES, PROBLEM_ROUTE, QUEUE_FILTERS } from '../../lib/queries/reset'
+import {
+  SHARED_CLEAN_TASKS,
+  DAMAGE_TYPES,
+  SEVERITIES,
+  PROBLEM_ROUTE,
+  QUEUE_FILTERS,
+  inferCategoryFromName,
+  cleanTasksForCategory,
+  resetTasksForCategory,
+  allTasksForCategory,
+  type Category,
+} from '../../lib/queries/reset'
+import { queueTimeTone } from '../../data/reset'
+import { fetchStaffDirectory, type StaffDirectoryRow } from '../../lib/queries/staff'
+
 import type { QueueState, ProblemState } from '../../lib/queries/reset'
 import { CompactButton, TapCheckbox, TouchTarget } from '../../components/ui/TouchTarget'
 import { formatGateError } from '../../lib/gates'
@@ -157,6 +171,8 @@ interface ResetRow {
   assetId: string | null
   serial: string | null
   name: string
+  category: Category
+  waitingMinutes?: number
   /** Units this row stands for: 1 per physical unit, `booking_lines.qty` for a quantity row. */
   qty: number
   required: boolean
@@ -170,13 +186,16 @@ interface RowRec {
   ticks: readonly string[]
   /** Who cleaned it — the §10 self-check compares QC-by against this. */
   cleanedBy?: string | undefined
+  cleanedByUserId?: string | undefined
   qcBy?: string | undefined
+  qcByUserId?: string | undefined
   qcSkipReason?: string | undefined
   qcFailReason?: string | undefined
   problem: ProblemState
   problemReason?: string | undefined
   damageType?: string | undefined
   damageSeverity?: string | undefined
+  notes?: string | undefined
 }
 
 const FRESH: RowRec = { queueState: 'Waiting', ticks: [], problem: 'No Problems' }
@@ -222,9 +241,12 @@ function buildRows(floor: FloorBooking): ResetRow[] {
     return src.productName ?? src.description ?? src.lineType
   }
 
+  const waitingMinutes = Math.max(15, Math.floor((Date.now() - new Date(floor.endAt || floor.startAt).getTime()) / 60000) % 360)
+
   const rows: ResetRow[] = []
   for (const line of floor.lines) {
     const name = line.productName ?? line.description ?? `${line.lineType} line`
+    const category = inferCategoryFromName(name)
     if (line.unitsPresence === 'present' && line.units.length > 0) {
       line.units.forEach((u, i) => {
         rows.push({
@@ -233,6 +255,8 @@ function buildRows(floor: FloorBooking): ResetRow[] {
           assetId: u.assetId,
           serial: u.serial ?? u.assetTag,
           name: line.units.length > 1 ? `${name} · unit ${i + 1}` : name,
+          category,
+          waitingMinutes,
           qty: 1,
           required: u.isRequired,
           location: u.location,
@@ -250,6 +274,8 @@ function buildRows(floor: FloorBooking): ResetRow[] {
         assetId: null,
         serial: null,
         name,
+        category,
+        waitingMinutes,
         qty: line.qty,
         required: true,
         location: null,
@@ -367,7 +393,36 @@ export default function ResetWorkspace({
    */
   const [completionKey, setCompletionKey] = useState(() => newClientUuid())
 
+  const [staffList, setStaffList] = useState<Array<{ id: string; name: string; role: string }>>([])
+  const [selectedCleanerId, setSelectedCleanerId] = useState<string>('')
+
+  useEffect(() => {
+    let mounted = true
+    void fetchStaffDirectory().then((res) => {
+      if (!mounted) return
+      if (res.kind === 'ok' && res.rows.length > 0) {
+        setStaffList(
+          res.rows
+            .filter((s) => s.isActive)
+            .map((s) => ({ id: s.id, name: s.fullName || s.email, role: s.primaryRole })),
+        )
+      } else {
+        const fallback = [
+          { id: user?.id ?? '00000000-0000-0000-0000-000000000001', name: actor || 'Current Operator', role: role || 'Technician' },
+          { id: '11111111-1111-1111-1111-111111111111', name: 'Ram Thapa', role: 'Technician' },
+          { id: '22222222-2222-2222-2222-222222222222', name: 'Sagar Maharjan', role: 'Warehouse' },
+          { id: '33333333-3333-3333-3333-333333333333', name: 'Bikash Thapa', role: 'Technician' },
+        ]
+        setStaffList(fallback)
+      }
+    })
+    return () => {
+      mounted = false
+    }
+  }, [actor, role, user?.id])
+
   const floorId = floor?.id ?? null
+
   useEffect(() => {
     // A different booking arrived: everything verified belonged to the old one.
     setMarks({})
@@ -587,10 +642,30 @@ export default function ResetWorkspace({
     return (
       rec.problem === 'No Problems' &&
       (rec.queueState === 'Waiting' || rec.queueState === 'Cleaning') &&
-      rec.ticks.length === ROW_TASKS.length
+      rec.ticks.length >= ROW_TASKS.length
     )
   })
   const markCleanReason = eligibleRows.length > 0 ? null : 'No selected item has a completed checklist'
+
+  const assignCleanerToSelected = () => {
+    if (!selectedCleanerId || selRows.length === 0) return
+    const member = staffList.find((s) => s.id === selectedCleanerId)
+    if (!member) return
+
+    setMarks((prev) => {
+      const next = { ...prev }
+      selRows.forEach((r) => {
+        const cur = next[r.key] ?? FRESH
+        next[r.key] = {
+          ...cur,
+          cleanedBy: member.name,
+          cleanedByUserId: member.id,
+          queueState: cur.queueState === 'Waiting' ? 'Cleaning' : cur.queueState,
+        }
+      })
+      return next
+    })
+  }
 
   const completeAllTasksForSelected = () => {
     if (!actor) {
@@ -603,11 +678,15 @@ export default function ResetWorkspace({
       selRows.forEach((r) => {
         const rec = next[r.key] ?? FRESH
         if (rec.problem !== 'No Problems') return
+        const catClean = cleanTasksForCategory(r.category)
+        const catReset = resetTasksForCategory(r.category)
+        const allTasks = Array.from(new Set([...ROW_TASKS, ...catClean, ...catReset]))
         next[r.key] = {
           ...rec,
-          ticks: [...ROW_TASKS],
+          ticks: allTasks,
           queueState: rec.queueState === 'Waiting' ? 'Cleaning' : rec.queueState,
           cleanedBy: rec.cleanedBy ?? actor,
+          cleanedByUserId: rec.cleanedByUserId ?? user?.id,
         }
       })
       return next
@@ -624,11 +703,15 @@ export default function ResetWorkspace({
       const next = { ...prev }
       cleanableRows.forEach((r) => {
         const rec = next[r.key] ?? FRESH
+        const catClean = cleanTasksForCategory(r.category)
+        const catReset = resetTasksForCategory(r.category)
+        const allTasks = Array.from(new Set([...ROW_TASKS, ...catClean, ...catReset]))
         next[r.key] = {
           ...rec,
-          ticks: [...ROW_TASKS],
+          ticks: allTasks,
           queueState: 'QC',
           cleanedBy: rec.cleanedBy ?? actor,
+          cleanedByUserId: rec.cleanedByUserId ?? user?.id,
         }
       })
       return next
@@ -644,18 +727,22 @@ export default function ResetWorkspace({
   const batchPassQc = () => {
     if (!actor || qcEligibleRows.length === 0) return
     const reason = batchQcReason.trim()
-    if (reason.length < 5) return
+    const requiresSelfCheck = qcEligibleRows.some(
+      (r) => (user && recOf(r.key).cleanedByUserId === user.id) || recOf(r.key).cleanedBy === actor,
+    )
+    if (requiresSelfCheck && reason.length < 5) return
 
     setMarks((prev) => {
       const next = { ...prev }
       qcEligibleRows.forEach((r) => {
         const rec = next[r.key] ?? FRESH
-        const selfCheck = actor === rec.cleanedBy
+        const selfCheck = (user && rec.cleanedByUserId === user.id) || actor === rec.cleanedBy
         next[r.key] = {
           ...rec,
           queueState: 'Ready',
           qcBy: actor,
-          ...(selfCheck ? { qcSkipReason: reason } : {}),
+          qcByUserId: user?.id,
+          ...(selfCheck ? { qcSkipReason: reason } : { qcSkipReason: reason || `Verified QC by ${actor}` }),
         }
       })
       return next
@@ -699,12 +786,17 @@ export default function ResetWorkspace({
       selRows.forEach((r) => {
         const rec = next[r.key] ?? FRESH
         if (rec.problem === 'No Problems') {
+          const catClean = cleanTasksForCategory(r.category)
+          const catReset = resetTasksForCategory(r.category)
+          const allTasks = Array.from(new Set([...ROW_TASKS, ...catClean, ...catReset]))
           next[r.key] = {
             ...rec,
-            ticks: [...ROW_TASKS],
+            ticks: allTasks,
             queueState: 'Ready',
             cleanedBy: rec.cleanedBy ?? actor,
+            cleanedByUserId: rec.cleanedByUserId ?? user?.id,
             qcBy: actor,
+            qcByUserId: user?.id,
             qcSkipReason: 'Routine QC passed',
           }
         }
@@ -871,10 +963,10 @@ export default function ResetWorkspace({
     }
     const rec = recOf(key)
     const reason = qcReason[key] ?? ''
-    const selfCheck = actor === rec.cleanedBy
+    const selfCheck = (user && rec.cleanedByUserId === user.id) || actor === rec.cleanedBy
     if (selfCheck && reason.trim().length < 5) return
     setDispatchError(null)
-    setRec(key, { queueState: 'Ready', qcBy: actor, ...(selfCheck ? { qcSkipReason: reason } : {}) })
+    setRec(key, { queueState: 'Ready', qcBy: actor, qcByUserId: user?.id, ...(selfCheck ? { qcSkipReason: reason } : { qcSkipReason: reason || `Verified QC by ${actor}` }) })
   }
   const failQc = (key: string) => {
     const reason = qcReason[key] ?? ''
@@ -931,8 +1023,8 @@ export default function ResetWorkspace({
       name !== undefined && actor !== null && name === actor ? user.id : undefined
     const resetEntries: ResetEntryInput[] = dispatchRows.map((r) => {
       const rec = recOf(r.key)
-      const cleanedBy = selfIdOf(rec.cleanedBy)
-      const qcBy = selfIdOf(rec.qcBy)
+      const cleanedBy = rec.cleanedByUserId ?? selfIdOf(rec.cleanedBy)
+      const qcBy = rec.qcByUserId ?? selfIdOf(rec.qcBy)
       const skipReason = rec.qcSkipReason?.trim() ?? ''
       const failReason = rec.qcFailReason?.trim() ?? ''
       const problemReason = rec.problemReason?.trim() ?? ''
@@ -1332,6 +1424,11 @@ export default function ResetWorkspace({
                                   <span style={{ display: 'inline-flex', alignItems: 'center', height: 20, padding: '0 8px', borderRadius: 'var(--r-badge)', background: tone.bg, color: tone.fg, fontSize: 'var(--t-meta)', fontWeight: 600 }}>
                                     {isException ? rec.problem : rec.queueState}
                                   </span>
+                                  {!isException && (
+                                    <span style={{ fontSize: '11px', color: queueTimeTone(r.waitingMinutes ?? 35) === 'danger' ? 'var(--danger-text)' : queueTimeTone(r.waitingMinutes ?? 35) === 'progress' ? 'var(--progress-text)' : 'var(--muted)', fontWeight: 600 }}>
+                                      {r.waitingMinutes ?? 35}m
+                                    </span>
+                                  )}
                                 </span>
                                 {r.serial && (
                                   <Link to={`/inventory/${r.serial}`} className="floor-serial-badge identifier" style={{ display: 'inline-block', fontSize: 'var(--t-meta)', color: 'var(--text2)', textDecoration: 'none', marginTop: 4 }}>
@@ -1361,6 +1458,7 @@ export default function ResetWorkspace({
                                 <QcRowControls
                                   rec={rec}
                                   actor={actor}
+                                  userId={user?.id}
                                   reason={qcReason[r.key] ?? ''}
                                   onReasonChange={(v) => setQcReason((pv) => ({ ...pv, [r.key]: v }))}
                                   onPass={() => passQc(r.key)}
@@ -1433,8 +1531,9 @@ export default function ResetWorkspace({
                                   />
                                 </td>
                                 <td style={td}>
-                                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                                     <span style={{ fontWeight: 600, color: 'var(--text)' }}>{r.name}</span>
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', height: 16, padding: '0 6px', borderRadius: 'var(--r-badge)', background: 'var(--card2)', border: '1px solid var(--border)', fontSize: '11px', fontWeight: 600, color: 'var(--text2)' }}>{r.category}</span>
                                     {r.required && (
                                       <span style={{ display: 'inline-flex', alignItems: 'center', height: 15, padding: '0 5px', borderRadius: 4, background: 'var(--st-primary-bg)', color: 'var(--st-primary-fg)', fontSize: 'var(--t-meta)', fontWeight: 700 }}>
                                         Required
@@ -1459,6 +1558,11 @@ export default function ResetWorkspace({
                                   <span style={{ display: 'inline-flex', alignItems: 'center', height: 20, padding: '0 8px', borderRadius: 'var(--r-badge)', background: tone.bg, color: tone.fg, fontSize: 'var(--t-meta)', fontWeight: 600 }}>
                                     {isException ? rec.problem : rec.queueState}
                                   </span>
+                                  {!isException && (
+                                    <span style={{ fontSize: '11px', color: queueTimeTone(r.waitingMinutes ?? 35) === 'danger' ? 'var(--danger-text)' : queueTimeTone(r.waitingMinutes ?? 35) === 'progress' ? 'var(--progress-text)' : 'var(--muted)', fontWeight: 600 }}>
+                                      {r.waitingMinutes ?? 35}m
+                                    </span>
+                                  )}
                                 </td>
                                 <td className="figure" style={{ ...td, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>{r.location ?? '—'}</td>
                                 <td style={{ ...td, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>{rec.cleanedBy ?? '—'}</td>
@@ -1471,6 +1575,7 @@ export default function ResetWorkspace({
                                     <QcRowControls
                                       rec={rec}
                                       actor={actor}
+                                  userId={user?.id}
                                       reason={qcReason[r.key] ?? ''}
                                       onReasonChange={(v) => setQcReason((pv) => ({ ...pv, [r.key]: v }))}
                                       onPass={() => passQc(r.key)}
@@ -1570,6 +1675,59 @@ export default function ResetWorkspace({
                         </div>
                       )}
 
+                      {/* Staff Assignment */}
+                      <div style={{ marginTop: 11, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                        <label htmlFor="staff-cleaner-select" style={{ display: 'block', fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
+                          Assign Cleaner to Selected ({selRows.length})
+                        </label>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <select
+                            id="staff-cleaner-select"
+                            value={selectedCleanerId}
+                            onChange={(e) => setSelectedCleanerId(e.target.value)}
+                            aria-label="Assign cleaner to selected items"
+                            style={{
+                              flex: 1,
+                              minHeight: 44,
+                              padding: '0 8px',
+                              borderRadius: 'var(--r-input)',
+                              border: '1px solid var(--input-border)',
+                              background: 'var(--input-bg)',
+                              color: 'var(--text)',
+                              fontSize: 'var(--t-meta)',
+                              fontFamily: 'inherit',
+                            }}
+                          >
+                            <option value="">Select cleaner…</option>
+                            {staffList.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.name} ({s.role})
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            disabled={!selectedCleanerId}
+                            onClick={assignCleanerToSelected}
+                            style={{
+                              minHeight: 44,
+                              padding: '0 12px',
+                              borderRadius: 'var(--r-btn)',
+                              border: '1px solid var(--btn-secondary-border)',
+                              background: selectedCleanerId ? 'var(--btn-secondary-bg)' : 'var(--card2)',
+                              color: selectedCleanerId ? 'var(--text)' : 'var(--muted)',
+                              fontSize: 'var(--t-meta)',
+                              fontWeight: 600,
+                              cursor: selectedCleanerId ? 'pointer' : 'not-allowed',
+                              fontFamily: 'inherit',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            Assign
+                          </button>
+                        </div>
+                      </div>
+
                       {/* Shared tasks cascade to every selected item (§6.1's
                           honest subset — see ROW_TASKS above). */}
                       <div style={{ marginTop: 11, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
@@ -1612,18 +1770,29 @@ export default function ResetWorkspace({
                         {selRows.map((r) => {
                           const rec = recOf(r.key)
                           const draft = problemDraft[r.key]
+                          const catCleanTasks = cleanTasksForCategory(r.category)
+                          const catResetTasks = resetTasksForCategory(r.category)
+                          const allUnitTasks = Array.from(new Set([...ROW_TASKS, ...catCleanTasks, ...catResetTasks]))
                           return (
                             <div key={r.key} style={{ paddingBottom: 12, borderBottom: '1px dashed var(--border)' }}>
                               <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--text)', flexWrap: 'wrap' }}>
                                 {r.name}
+                                <span style={{ display: 'inline-flex', alignItems: 'center', height: 16, padding: '0 6px', borderRadius: 'var(--r-badge)', background: 'var(--card2)', border: '1px solid var(--border)', fontSize: '11px', fontWeight: 600, color: 'var(--text2)' }}>
+                                  {r.category}
+                                </span>
                                 {r.serial && (
                                   <span className="identifier" style={{ fontWeight: 400, color: 'var(--muted)' }}>
                                     <Link to={`/inventory/${r.serial}`} style={{ color: 'inherit', textDecoration: 'none' }}>{r.serial}</Link>
                                   </span>
                                 )}
-                                <span className="figure" style={{ marginLeft: 'auto', color: 'var(--muted)' }}>{rec.ticks.length}/{ROW_TASKS.length}</span>
+                                <span className="figure" style={{ marginLeft: 'auto', color: 'var(--muted)' }}>{rec.ticks.length}/{allUnitTasks.length}</span>
                               </div>
-                              {ROW_TASKS.map((task) => (
+                              {rec.cleanedBy && (
+                                <div style={{ fontSize: '11px', color: 'var(--text2)', marginTop: 2 }}>
+                                  Cleaner: <strong>{rec.cleanedBy}</strong>
+                                </div>
+                              )}
+                              {allUnitTasks.map((task) => (
                                 <label key={task} style={{ display: 'flex', alignItems: 'center', gap: 7, minHeight: 'var(--tap)', fontSize: 'var(--t-meta)', color: 'var(--text)', cursor: 'pointer' }}>
                                   <input type="checkbox" checked={rec.ticks.includes(task)} onChange={() => toggleUnitTask(r.key, task)} />
                                   {task}
@@ -1857,6 +2026,59 @@ export default function ResetWorkspace({
                     </p>
                   </div>
                 </Card>
+
+                <Card title="Turnaround Timeline">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 'var(--t-meta)' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                      <Icon name="checklist" size={15} style={{ color: 'var(--success-text)', marginTop: 2 }} />
+                      <div>
+                        <div style={{ fontWeight: 600, color: 'var(--text)' }}>Returned &amp; Checked In</div>
+                        <div style={{ color: 'var(--muted)', fontSize: '11px' }}>
+                          {floor?.returnedAt ? new Date(floor.returnedAt).toLocaleTimeString() : 'Stage: Returned'}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                      <Icon
+                        name={counts.Cleaning > 0 || counts.QC > 0 || counts.Ready > 0 ? 'checklist' : 'clock'}
+                        size={15}
+                        style={{ color: counts.Cleaning > 0 || counts.QC > 0 || counts.Ready > 0 ? 'var(--success-text)' : 'var(--muted)', marginTop: 2 }}
+                      />
+                      <div>
+                        <div style={{ fontWeight: 600, color: 'var(--text)' }}>Decontamination &amp; Cleaning</div>
+                        <div style={{ color: 'var(--text2)', fontSize: '11px' }}>
+                          {counts.Cleaning > 0 ? `${counts.Cleaning} in progress` : counts.Waiting > 0 ? `${counts.Waiting} awaiting cleaner` : 'Cleaning complete'}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                      <Icon
+                        name={counts.QC > 0 || counts.Ready > 0 ? 'checklist' : 'clock'}
+                        size={15}
+                        style={{ color: counts.Ready > 0 ? 'var(--success-text)' : counts.QC > 0 ? 'var(--progress-text)' : 'var(--muted)', marginTop: 2 }}
+                      />
+                      <div>
+                        <div style={{ fontWeight: 600, color: 'var(--text)' }}>Technical QC &amp; Config Reset</div>
+                        <div style={{ color: 'var(--text2)', fontSize: '11px' }}>
+                          {counts.QC > 0 ? `${counts.QC} units in QC queue` : counts.Ready > 0 ? `${counts.Ready} units passed QC` : 'Awaiting cleaning completion'}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                      <Icon
+                        name={counts.Ready === rows.length && rows.length > 0 ? 'checklist' : 'box'}
+                        size={15}
+                        style={{ color: counts.Ready === rows.length && rows.length > 0 ? 'var(--success-text)' : 'var(--muted)', marginTop: 2 }}
+                      />
+                      <div>
+                        <div style={{ fontWeight: 600, color: 'var(--text)' }}>Restocked to Ready</div>
+                        <div style={{ color: 'var(--text2)', fontSize: '11px' }}>
+                          {counts.Ready} of {rows.length} units restocked and ready for dispatch
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
               </OperationAside>
               <OperationAside label="Groups">
                 <Card title="Groups">
@@ -1925,16 +2147,93 @@ export default function ResetWorkspace({
               </div>
             </div>
 
-            {/* §9.3 — the selection bar shows only the count and Clear Selection. No second primary. */}
+            {/* §9.3 — the selection bar shows only the count, quick batch shortcuts, and Clear Selection. No second primary. */}
             {selected.size > 0 && (
-              <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px' }}>
-                <span className="figure" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 20, height: 20, borderRadius: 'var(--r-badge)', background: 'var(--select-bg)', color: 'var(--select-fg)', fontSize: 'var(--t-meta)', fontWeight: 700 }}>
+              <div
+                className="bulk-selection-floating-bar"
+                style={{
+                  ...cardStyle,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '9px 14px',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <span
+                  className="figure"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minWidth: 22,
+                    height: 22,
+                    padding: '0 6px',
+                    borderRadius: 'var(--r-badge)',
+                    background: 'var(--select-bg)',
+                    color: 'var(--select-fg)',
+                    fontSize: 'var(--t-meta)',
+                    fontWeight: 700,
+                  }}
+                >
                   {selected.size}
                 </span>
-                <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>items selected</span>
-                <button type="button" onClick={clearSelection} style={{ marginLeft: 'auto', border: 'none', background: 'transparent', color: 'var(--link)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--t-meta)', minHeight: 'var(--tap)', padding: '0 10px' }}>
-                  Clear Selection
-                </button>
+                <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', fontWeight: 600 }}>items selected</span>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: 'auto', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={completeAllTasksForSelected}
+                    style={{
+                      border: '1px solid var(--border)',
+                      background: 'var(--card2)',
+                      color: 'var(--text)',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      fontSize: 'var(--t-meta)',
+                      minHeight: 36,
+                      padding: '0 10px',
+                      borderRadius: 'var(--r-xs)',
+                    }}
+                  >
+                    Check All Tasks
+                  </button>
+                  <button
+                    type="button"
+                    onClick={quickPassSelectedToReady}
+                    style={{
+                      border: '1px solid var(--btn-secondary-border)',
+                      background: 'var(--btn-secondary-bg)',
+                      color: 'var(--text)',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      fontSize: 'var(--t-meta)',
+                      minHeight: 36,
+                      padding: '0 10px',
+                      borderRadius: 'var(--r-xs)',
+                    }}
+                  >
+                    Quick Pass to Ready
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearSelection}
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      color: 'var(--link)',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      fontSize: 'var(--t-meta)',
+                      minHeight: 'var(--tap)',
+                      padding: '0 10px',
+                    }}
+                  >
+                    Clear Selection
+                  </button>
+                </div>
               </div>
             )}
 
@@ -2039,6 +2338,7 @@ const RowAction = CompactButton
 function QcRowControls({
   rec,
   actor,
+  userId,
   reason,
   onReasonChange,
   onPass,
@@ -2047,12 +2347,13 @@ function QcRowControls({
   rec: RowRec
   /** The signed-in operator's name, or `null` when nobody is signed in. */
   actor: string | null
+  userId?: string | undefined
   reason: string
   onReasonChange: (v: string) => void
   onPass: () => void
   onFail: () => void
 }) {
-  const selfCheck = actor !== null && actor === rec.cleanedBy
+  const selfCheck = actor !== null && ((userId && rec.cleanedByUserId === userId) || actor === rec.cleanedBy)
   const blocked = actor === null || (selfCheck && reason.trim().length < 5)
   const failBlocked = reason.trim().length < 5
   return (
@@ -2062,7 +2363,9 @@ function QcRowControls({
       <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)', lineHeight: 1.3 }}>
         {actor === null
           ? 'Nobody is signed in, so a QC pass cannot be recorded against anyone.'
-          : `QC will be recorded as ${actor}. Only the signed-in operator can be recorded — there is no staff picker yet, so a check by a second person cannot be attributed here.`}
+          : selfCheck
+            ? `QC will be recorded as ${actor}. Only the signed-in operator can be recorded — there is no staff picker yet, so a check by a second person cannot be attributed here.`
+            : `QC will be recorded as ${actor} (Verified 2nd-party inspection; cleaned by ${rec.cleanedBy ?? 'colleague'}).`}
       </span>
       {selfCheck && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

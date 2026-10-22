@@ -48,11 +48,11 @@
   --app-panel-width: 320px;
 
   /* Density Tokens (Default / Fallback) */
-  --density-card-pad: 12px;
-  --density-panel-gap: 12px;
-  --density-section-gap: 12px;
-  --density-table-row: 44px;
-  --density-situational-min-h: 96px;
+  --density-card-pad: 14px;
+  --density-panel-gap: 16px;
+  --density-section-gap: 16px;
+  --density-table-row: 48px;
+  --density-situational-min-h: 108px;
 }
 
 :root[data-density='compact'],

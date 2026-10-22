@@ -139,6 +139,102 @@ export function allTasksFor(u: Unit): string[] {
   return [...cleanTasksFor(u), ...resetTasksFor(u)]
 }
 
+/**
+ * Infers an equipment category from an item's product or line description.
+ */
+export function inferCategoryFromName(name: string): Category {
+  const lower = name.toLowerCase()
+  if (
+    lower.includes('camera') ||
+    lower.includes('fx3') ||
+    lower.includes('fx6') ||
+    lower.includes('fx9') ||
+    lower.includes('komodo') ||
+    lower.includes('raptor') ||
+    lower.includes('arri') ||
+    lower.includes('alexa') ||
+    lower.includes('red ') ||
+    lower.includes('body')
+  ) {
+    return 'Camera'
+  }
+  if (
+    lower.includes('lens') ||
+    lower.includes('mm') ||
+    lower.includes('prime') ||
+    lower.includes('zoom') ||
+    lower.includes('nisi') ||
+    lower.includes('sigma') ||
+    lower.includes('anamorphic')
+  ) {
+    return 'Lens'
+  }
+  if (
+    lower.includes('battery') ||
+    lower.includes('bat') ||
+    lower.includes('v-mount') ||
+    lower.includes('charger') ||
+    lower.includes('np-f') ||
+    lower.includes('b-mount')
+  ) {
+    return 'Battery'
+  }
+  if (
+    lower.includes('card') ||
+    lower.includes('cfexpress') ||
+    lower.includes('sd') ||
+    lower.includes('cfast') ||
+    lower.includes('ssd') ||
+    lower.includes('media')
+  ) {
+    return 'Media'
+  }
+  if (
+    lower.includes('monitor') ||
+    lower.includes('screen') ||
+    lower.includes('portkeys') ||
+    lower.includes('smallhd') ||
+    lower.includes('ninja') ||
+    lower.includes('atomos')
+  ) {
+    return 'Monitor'
+  }
+  if (
+    lower.includes('rig') ||
+    lower.includes('cage') ||
+    lower.includes('handle') ||
+    lower.includes('arm') ||
+    lower.includes('rod') ||
+    lower.includes('dovetail') ||
+    lower.includes('baseplate')
+  ) {
+    return 'Rig'
+  }
+  if (
+    lower.includes('mic') ||
+    lower.includes('audio') ||
+    lower.includes('lav') ||
+    lower.includes('wireless') ||
+    lower.includes('rode') ||
+    lower.includes('sennheiser')
+  ) {
+    return 'Audio'
+  }
+  return 'Accessory'
+}
+
+export function cleanTasksForCategory(category: Category): readonly string[] {
+  return [...SHARED_CLEAN_TASKS, ...CATEGORY_CLEAN_EXTRA[category]]
+}
+
+export function resetTasksForCategory(category: Category): readonly string[] {
+  return [...(CATEGORY_RESET_EXTRA[category] ?? ['Reset configuration — settings to house defaults'])]
+}
+
+export function allTasksForCategory(category: Category): readonly string[] {
+  return [...cleanTasksForCategory(category), ...resetTasksForCategory(category)]
+}
+
 /* ── §4 priority — REMOVED 16 Aug 2026, PLAN.md §4.31(3) ──────────────────────
  *
  * `PriorityTier`, `priorityTier` and `isPriority` used to live here. All three

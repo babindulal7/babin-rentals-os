@@ -50,6 +50,7 @@
     "check:security": "node scripts/check-astra-phase0.mjs"
   },
   "dependencies": {
+    "@base-ui/react": "^1.9.0",
     "@fontsource-variable/jetbrains-mono": "^5.3.0",
     "@fontsource/asar": "^5.3.0",
     "@fontsource/hind": "^5.3.0",

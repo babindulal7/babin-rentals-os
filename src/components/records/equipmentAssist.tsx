@@ -7,6 +7,8 @@ import { toBs, formatBs, formatAd } from '../../lib/bs'
 import { generateCode128Svg } from '../../lib/labelPrinter'
 import { useToast } from '../ui/Toast'
 import { rupees, formatMoney } from '../../lib/money'
+import { InputGroup, InputGroupTextarea, InputGroupAddon } from '../ui/InputGroup'
+import { Kbd } from '../ui/Kbd'
 
 /*
  * Add Equipment assists (8 Oct 2026, RULINGS-2026-10-08.md; Add Equipment v3.0
@@ -796,7 +798,22 @@ export function PasteSerials({ existing, disabled, onAdd }: { existing: readonly
     <div className="record-paste-serials">
       <label className="record-field" htmlFor="record-paste-serials">
         <span>Paste serials — one per line</span>
-        <textarea id="record-paste-serials" value={draft} disabled={disabled} rows={3} placeholder={'SN1023\nSN1024\nSN1025'} onChange={(e) => { setDraft(e.target.value); setNote('') }} />
+        <InputGroup className="mt-1" disabled={disabled}>
+          <InputGroupTextarea
+            id="record-paste-serials"
+            value={draft}
+            disabled={disabled}
+            rows={3}
+            placeholder={'SN1023\nSN1024\nSN1025'}
+            onChange={(e) => { setDraft(e.target.value); setNote('') }}
+          />
+          <InputGroupAddon align="block-end">
+            <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
+              {preview.serials.length > 0 ? `${preview.serials.length} serials detected` : 'Line-delimited list'}
+            </span>
+            <Kbd>Enter ↵</Kbd>
+          </InputGroupAddon>
+        </InputGroup>
       </label>
       <Button
         disabled={disabled || preview.serials.length === 0}
