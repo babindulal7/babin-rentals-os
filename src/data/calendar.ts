@@ -94,7 +94,7 @@ export function dayDiff(a: Date, b: Date): number {
  *    §5.1 now gives to the day peek / bottom sheet / phone agenda that a day
  *    click opens. Keeping both would put the same day on screen two ways.
  */
-export const VIEWS = ['Month', 'Week', 'Timeline', 'Availability'] as const
+export const VIEWS = ['Month', 'Week', 'Day', 'Timeline', 'Availability'] as const
 export type ViewName = (typeof VIEWS)[number]
 
 /** §5.1 — "Simple month view by default". */
@@ -103,15 +103,12 @@ export const DEFAULT_VIEW: ViewName = 'Month'
 /**
  * The tab row each width may show.
  *
- * §5.1's tablet box draws `[Month][Week]` and its phone box draws no tab row at
- * all — the phone layout is the month grid plus the selected-day agenda beneath
- * it. This is a *layout* narrowing, not a deletion: every view stays reachable
- * on a wider window, and nothing is removed from `VIEWS`.
+ * Month, Week, and Day views provide intuitive calendar planning across viewports.
  */
 export const VIEWS_BY_WIDTH: Record<'desktop' | 'tablet' | 'phone', readonly ViewName[]> = {
   desktop: VIEWS,
-  tablet: ['Month', 'Week'],
-  phone: ['Month'],
+  tablet: ['Month', 'Week', 'Day'],
+  phone: ['Month', 'Day'],
 }
 
 /* ── layers ────────────────────────────────────────────────────────────── */
