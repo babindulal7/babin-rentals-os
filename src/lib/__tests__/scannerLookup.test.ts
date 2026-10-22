@@ -51,4 +51,18 @@ describe('AUD-002: Barcode Scanner Truthfulness', () => {
       expect(res.message).toContain('Invalid or unparseable barcode')
     }
   })
+
+  it('falls back to local offline store when offline', async () => {
+    const originalOnLine = navigator.onLine
+    try {
+      Object.defineProperty(navigator, 'onLine', { value: false, configurable: true })
+      const res = await resolveScannedCode('TEST-OFFLINE-BARCODE')
+      expect(res.status).toBe('unknown_code')
+      if (res.status === 'unknown_code') {
+        expect(res.message).toContain('offline, and no cached equipment or booking matches')
+      }
+    } finally {
+      Object.defineProperty(navigator, 'onLine', { value: originalOnLine, configurable: true })
+    }
+  })
 })

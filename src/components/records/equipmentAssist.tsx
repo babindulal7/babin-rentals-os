@@ -6,6 +6,7 @@ import type { RecordValues } from '../../lib/recordEditor'
 import { toBs, formatBs, formatAd } from '../../lib/bs'
 import { generateCode128Svg } from '../../lib/labelPrinter'
 import { useToast } from '../ui/Toast'
+import { rupees, formatMoney } from '../../lib/money'
 
 /*
  * Add Equipment assists (8 Oct 2026, RULINGS-2026-10-08.md; Add Equipment v3.0
@@ -77,6 +78,428 @@ export function equipmentSectionState(section: string, values: RecordValues, row
     case 'Maintenance & notes': return 'optional'
     default: return 'optional'
   }
+}
+
+export interface EquipmentStage {
+  id: number
+  key: 'basic' | 'structure' | 'pricing' | 'relationships' | 'review'
+  name: string
+  shortName: string
+  description: string
+  sections: string[]
+}
+
+/** 5-Stage Precision Cinema Equipment Intake (Phase 3 Spec). */
+export const EQUIPMENT_STAGES: readonly EquipmentStage[] = [
+  {
+    id: 1,
+    key: 'basic',
+    name: 'Basic Information',
+    shortName: 'Basic Info',
+    description: 'Identity, classification, and primary storage location',
+    sections: ['Identity', 'Location'],
+  },
+  {
+    id: 2,
+    key: 'structure',
+    name: 'Inventory Structure',
+    shortName: 'Structure',
+    description: 'Tracking mode, serialized units, and barcode generation',
+    sections: ['Stock & Units'],
+  },
+  {
+    id: 3,
+    key: 'pricing',
+    name: 'Pricing & Terms',
+    shortName: 'Pricing & Terms',
+    description: 'Rental rates, purchase price, and security deposit',
+    sections: ['Pricing & Rental', 'Purchase'],
+  },
+  {
+    id: 4,
+    key: 'relationships',
+    name: 'Relationships & Maintenance',
+    shortName: 'Relationships',
+    description: 'Bundles, compatibility, prep & cleaning rules',
+    sections: ['Relationships', 'Maintenance & Documents'],
+  },
+  {
+    id: 5,
+    key: 'review',
+    name: 'Review & Save',
+    shortName: 'Review & Save',
+    description: 'Pre-flight specification card & live catalogue preview',
+    sections: ['Review'],
+  },
+] as const
+
+export function getEquipmentStageState(
+  stageId: number,
+  values: RecordValues,
+  rows: readonly RecordValues[],
+  canViewMoney: boolean,
+  errors: Record<string, string>
+): { state: 'complete' | 'todo' | 'optional'; label: string } {
+  const ready = equipmentReadiness(values, rows)
+
+  if (stageId === 1) {
+    const identityOk = ready[0]?.ok ?? false
+    const locationOk = ready[4] ? ready[4].ok : true
+    const hasErr = Boolean(errors.name || errors.category_id || errors.brand)
+    if (identityOk && locationOk && !hasErr) {
+      return { state: 'complete', label: 'Complete' }
+    }
+    return { state: 'todo', label: 'Required' }
+  }
+
+  if (stageId === 2) {
+    const stockOk = ready[1]?.ok ?? false
+    const hasErr = Boolean(errors.units || errors.total_quantity)
+    if (stockOk && !hasErr) {
+      return { state: 'complete', label: 'Complete' }
+    }
+    return { state: 'todo', label: 'Required' }
+  }
+
+  if (stageId === 3) {
+    if (!canViewMoney) {
+      return { state: 'complete', label: 'RBAC Blind' }
+    }
+    const pricingOk = ready[2]?.ok ?? false
+    const hasErr = Boolean(errors.daily_rate || errors.purchase_price || errors.replacement_value)
+    if (pricingOk && !hasErr) {
+      return { state: 'complete', label: 'Complete' }
+    }
+    return { state: 'todo', label: 'Daily Rate' }
+  }
+
+  if (stageId === 4) {
+    const hasMaintenance = filled(values.prep_time_minutes) || filled(values.notes_internal) || filled(values.notes_warehouse)
+    return { state: hasMaintenance ? 'complete' : 'optional', label: hasMaintenance ? 'Configured' : 'Optional' }
+  }
+
+  if (stageId === 5) {
+    const s1 = getEquipmentStageState(1, values, rows, canViewMoney, errors).state
+    const s2 = getEquipmentStageState(2, values, rows, canViewMoney, errors).state
+    const s3 = getEquipmentStageState(3, values, rows, canViewMoney, errors).state
+    const allGood = s1 === 'complete' && s2 === 'complete' && (s3 === 'complete' || !canViewMoney)
+    return { state: allGood ? 'complete' : 'todo', label: allGood ? 'Ready' : 'Pending' }
+  }
+
+  return { state: 'optional', label: 'Optional' }
+}
+
+/** 5-Stage Stepper Header with Step Indicators & Mode Toggle. */
+export function EquipmentWizardStepper({
+  currentStage,
+  onSelectStage,
+  wizardMode,
+  onToggleWizardMode,
+  values,
+  rows,
+  canViewMoney,
+  errors,
+}: {
+  currentStage: number
+  onSelectStage: (stageId: number) => void
+  wizardMode: boolean
+  onToggleWizardMode: (mode: boolean) => void
+  values: RecordValues
+  rows: readonly RecordValues[]
+  canViewMoney: boolean
+  errors: Record<string, string>
+}) {
+  return (
+    <div className="equipment-wizard-stepper-wrap">
+      <nav aria-label="Add Equipment 5 Stages" className="equipment-wizard-stepper">
+        {EQUIPMENT_STAGES.map((stage) => {
+          const active = currentStage === stage.id
+          const { state, label } = getEquipmentStageState(stage.id, values, rows, canViewMoney, errors)
+          const isComplete = state === 'complete'
+          const isTodo = state === 'todo'
+
+          return (
+            <button
+              key={stage.id}
+              type="button"
+              className={`equipment-wizard-step ${active ? 'is-active' : ''} is-${state}`}
+              aria-current={active ? 'step' : undefined}
+              onClick={() => onSelectStage(stage.id)}
+            >
+              <div className="equipment-wizard-step__num">
+                {isComplete ? <Icon name="check" size={14} /> : stage.id}
+              </div>
+              <div className="equipment-wizard-step__content">
+                <span className="equipment-wizard-step__title">{stage.shortName}</span>
+                <span className={`equipment-wizard-step__badge is-${state}`}>
+                  {isComplete && <Icon name="check" size={11} />}
+                  {isTodo && <Icon name="alert_circle" size={11} />}
+                  <span>{label}</span>
+                </span>
+              </div>
+            </button>
+          )
+        })}
+      </nav>
+
+      <div className="equipment-mode-toggle" role="group" aria-label="Form navigation mode">
+        <button
+          type="button"
+          className={`equipment-mode-btn ${wizardMode ? 'is-active' : ''}`}
+          onClick={() => onToggleWizardMode(true)}
+          title="Guided 5-stage sequential wizard"
+        >
+          <Icon name="queues" size={14} />
+          <span>Step by Step</span>
+        </button>
+        <button
+          type="button"
+          className={`equipment-mode-btn ${!wizardMode ? 'is-active' : ''}`}
+          onClick={() => onToggleWizardMode(false)}
+          title="Classic all sections vertical view"
+        >
+          <Icon name="checklist" size={14} />
+          <span>All Sections</span>
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/** Unit Barcode & Tag Inspection Modal. */
+export function UnitBarcodeModal({
+  isOpen,
+  unit,
+  index,
+  assetCode,
+  equipmentName,
+  onClose,
+}: {
+  isOpen: boolean
+  unit: RecordValues | null
+  index: number
+  assetCode: string
+  equipmentName: string
+  onClose: () => void
+}) {
+  const { showSuccessToast } = useToast()
+  if (!isOpen || !unit) return null
+
+  const serial = String(unit.serial_no || 'NO-SERIAL')
+  const tag = String(unit.asset_tag || `${assetCode}-${String(index + 1).padStart(2, '0')}`)
+  const condition = String(unit.condition || 'Excellent')
+
+  const copyTag = () => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      void navigator.clipboard.writeText(tag).then(() => {
+        showSuccessToast('Asset tag copied', tag)
+      })
+    }
+  }
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="barcode-modal-title"
+      className="equipment-modal-backdrop"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      <div className="equipment-modal-card">
+        <div className="equipment-modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Icon name="barcode" size={20} style={{ color: 'var(--link)' }} />
+            <h3 id="barcode-modal-title" style={{ margin: 0, fontSize: 'var(--t-ui)' }}>
+              Unit Barcode &amp; Tag
+            </h3>
+          </div>
+          <button
+            type="button"
+            className="equipment-icon-button"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            <Icon name="x" size={18} />
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 'var(--t-meta)' }}>
+            <div>
+              <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>Equipment</span>
+              <strong>{equipmentName || 'New Equipment'}</strong>
+            </div>
+            <div>
+              <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>Unit Index</span>
+              <span>Unit #{index + 1}</span>
+            </div>
+            <div>
+              <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>Serial Number</span>
+              <span className="identifier" style={{ fontWeight: 600 }}>{serial}</span>
+            </div>
+            <div>
+              <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>Condition</span>
+              <span className="equipment-badge-condition">{condition}</span>
+            </div>
+          </div>
+
+          <div className="equipment-barcode-card" style={{ padding: '16px 20px', border: '1px solid var(--border)' }}>
+            <div
+              className="equipment-barcode-svg"
+              dangerouslySetInnerHTML={{ __html: generateCode128Svg(tag, 44) }}
+            />
+            <span className="equipment-barcode-text identifier" style={{ fontSize: 13, marginTop: 4 }}>
+              {tag}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+            <Button type="button" variant="secondary" icon="copy" onClick={copyTag}>
+              Copy Tag ({tag})
+            </Button>
+            <Button type="button" variant="primary" onClick={onClose}>
+              Done
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Operational Catalogue Live Asset Card Preview Modal. */
+export function EquipmentCatalogPreviewModal({
+  isOpen,
+  values,
+  rows,
+  categoryName,
+  assetCode,
+  canViewMoney,
+  imagePreviewUrl,
+  onClose,
+}: {
+  isOpen: boolean
+  values: RecordValues
+  rows: readonly RecordValues[]
+  categoryName?: string | undefined
+  assetCode?: string | undefined
+  canViewMoney: boolean
+  imagePreviewUrl?: string | null
+  onClose: () => void
+}) {
+  if (!isOpen) return null
+
+  const code = assetCode || (values.asset_code ? String(values.asset_code) : 'EQ000234')
+  const trackingMode = String(values.tracking_mode || 'Serialised')
+  const stockCount = trackingMode === 'Serialised' ? rows.length : Number(values.total_quantity || 0)
+  const name = text(values.name) || 'Untitled Equipment'
+  const brand = text(values.brand) || 'Generic'
+  const model = text(values.model)
+  const dailyRate = Number(values.daily_rate || 0)
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="catalog-preview-title"
+      className="equipment-modal-backdrop"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+    >
+      <div className="equipment-modal-card equipment-modal-card--wide">
+        <div className="equipment-modal-header">
+          <div>
+            <h3 id="catalog-preview-title" style={{ margin: 0, fontSize: 'var(--t-ui)' }}>
+              Operational Catalogue Preview
+            </h3>
+            <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
+              Live rendering of this asset card across Inventory, Rental Quotes, and Booking pickers.
+            </span>
+          </div>
+          <button
+            type="button"
+            className="equipment-icon-button"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            <Icon name="x" size={18} />
+          </button>
+        </div>
+
+        <div className="equipment-catalog-card-preview">
+          <div className="equipment-preview-asset-tile">
+            <div className="equipment-preview-asset-media">
+              {imagePreviewUrl ? (
+                <img
+                  src={imagePreviewUrl}
+                  alt={name}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, color: 'var(--muted)' }}>
+                  <Icon name="camera" size={32} />
+                  <span style={{ fontSize: 'var(--t-th)' }}>No Image</span>
+                </div>
+              )}
+              <span className="equipment-preview-code-tag identifier">{code}</span>
+            </div>
+
+            <div className="equipment-preview-asset-info">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <span className="equipment-preview-badge">{categoryName || 'Uncategorized'}</span>
+                <span className="equipment-preview-badge equipment-preview-badge--mode">{trackingMode}</span>
+                <span className="equipment-preview-badge equipment-preview-badge--status">Active Catalogue</span>
+              </div>
+
+              <h4 style={{ margin: '6px 0 2px', fontSize: 'var(--t-ui)', color: 'var(--text)' }}>{name}</h4>
+              <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+                {brand}{model ? ` · ${model}` : ''}
+              </div>
+
+              {text(values.description) && (
+                <p style={{ margin: '8px 0 0', fontSize: 'var(--t-th)', color: 'var(--muted)', lineClamp: 2, WebkitLineClamp: 2, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  {text(values.description)}
+                </p>
+              )}
+
+              <div className="equipment-preview-divider" />
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <div>
+                  <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>Available Stock</span>
+                  <strong style={{ fontSize: 'var(--t-ui)', color: 'var(--text)' }}>
+                    {stockCount} {stockCount === 1 ? 'unit' : 'units'}
+                  </strong>
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>Rental Rate</span>
+                  {canViewMoney ? (
+                    <strong style={{ fontSize: 'var(--t-ui)', color: 'var(--link)' }}>
+                      {dailyRate > 0 ? `${formatMoney(rupees(dailyRate))} / day` : 'Not set'}
+                    </strong>
+                  ) : (
+                    <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)', fontStyle: 'italic' }}>
+                      Restricted (Law 1)
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+          <Button type="button" variant="primary" onClick={onClose}>
+            Close Preview
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 const STATE_COPY: Record<SectionState, { icon: 'check' | 'alert_circle' | 'dot'; word: string }> = {

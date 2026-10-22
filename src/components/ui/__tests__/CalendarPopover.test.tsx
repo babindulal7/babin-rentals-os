@@ -117,14 +117,17 @@ describe('CalendarPopover & Date Selection UI (Booqable Availability & Range Spe
     const cell26 = host!.querySelector('button[aria-label*="26/7/2026"]') as HTMLButtonElement
 
     expect(cell22).not.toBeNull()
+    expect(cell22.getAttribute('aria-label')).toBe('6 Shrawan 2083 BS, 22/7/2026 (9 available)')
     expect(cell22.style.background).toBe('rgb(72, 187, 120)') // #48BB78 Green
     expect(cell22.textContent).toContain('9')
 
     expect(cell25).not.toBeNull()
+    expect(cell25.getAttribute('aria-label')).toBe('9 Shrawan 2083 BS, 25/7/2026 (1 available)')
     expect(cell25.style.background).toBe('rgb(246, 173, 85)') // #F6AD55 Amber
     expect(cell25.textContent).toContain('1')
 
     expect(cell26).not.toBeNull()
+    expect(cell26.getAttribute('aria-label')).toBe('10 Shrawan 2083 BS, 26/7/2026 (0 available)')
     expect(cell26.style.background).toBe('rgb(245, 101, 101)') // #F56565 Red
     expect(cell26.textContent).toContain('0')
   })
@@ -169,6 +172,7 @@ describe('CalendarPopover & Date Selection UI (Booqable Availability & Range Spe
     })
 
     expect(host!.textContent).toContain('July 2026')
+    expect(host!.textContent).toContain('Ashadh / Shrawan 2083 BS')
 
     const nextBtn = host!.querySelector('button[aria-label="Next month"]') as HTMLButtonElement
     act(() => {
@@ -176,6 +180,7 @@ describe('CalendarPopover & Date Selection UI (Booqable Availability & Range Spe
     })
 
     expect(host!.textContent).toContain('August 2026')
+    expect(host!.textContent).toContain('Shrawan / Bhadra 2083 BS')
 
     const prevBtn = host!.querySelector('button[aria-label="Previous month"]') as HTMLButtonElement
     act(() => {
@@ -183,6 +188,7 @@ describe('CalendarPopover & Date Selection UI (Booqable Availability & Range Spe
     })
 
     expect(host!.textContent).toContain('July 2026')
+    expect(host!.textContent).toContain('Ashadh / Shrawan 2083 BS')
   })
 
   it('renders CheckAvailabilityModal with product details and calendar', () => {

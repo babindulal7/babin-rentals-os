@@ -1,5 +1,55 @@
 # Progress Log
 
+## 2026-10-22 — Operational Data & Offline Persistence (Pillar 2) & Nepali Localization Polish (Pillar 4)
+
+**Did**
+- **Pillar 2: Operational Data & Offline Persistence:**
+  - `src/lib/syncEngine.ts`: Implemented delta caching of active operational bookings (`localStore.bookings.bulkPut`) using non-money metadata columns (`id, booking_no, stage, client_id, project, pickup_at, return_at, actual_return_at, delivery_type, updated_at`), strictly respecting Law 6 (zero money leakage to money-blind roles). Replaced `window.setInterval` and `window.clearInterval` with `globalThis` to safeguard both browser and headless/node test environments.
+  - `src/lib/scannerLookup.ts`: Added offline Dexie fallback (`lookupLocalStore`) for barcode and QR code lookups when offline (`navigator.onLine === false`) or upon network error, resolving local products and cached bookings while preserving truthful refusal when records are absent.
+  - `src/modules/operations/LiveTransportPlans.tsx`: Replaced raw loading `div` with `<LoadingSkeleton rows={4} type="table" />` and zero-state with `<EmptyState kind="nothing-yet" />`.
+  - Added unit test suites `src/lib/__tests__/syncEngine.test.ts` (5/5 tests PASS) and `src/lib/__tests__/scannerLookup.test.ts` (6/6 tests PASS).
+- **Pillar 4: Nepali Localization & Accessibility Polish:**
+  - `src/components/ui/DateField.tsx`: Upgraded calendar popover BS month subtitle to dynamically span boundary months across Gregorian periods (`Ashadh / Shrawan 2083 BS` or year boundaries like `Chaitra 2082 / Baishakh 2083 BS`), replacing the previous single-month truncation.
+  - `src/components/ui/DateField.tsx`: Enhanced day cell `aria-label` to announce both the Bikram Sambat date and Gregorian date for screen readers (`aria-label="${bs ? `${bs.day} ${BS_MONTHS[bs.month - 1]} ${bs.year} BS, ` : ''}${formatAd(c.ad)}${hasAvail ? ` (${availCount} available)` : ''}"`), fulfilling Law 9 and WCAG accessibility standards.
+  - `src/components/records/EquipmentRecordEditor.tsx`: Fixed icon registry mapping (`arrow_left` registered symmetrically with `arrow_right` in `src/components/ui/Icon.tsx`) and verified all 24/24 record form tests pass.
+  - Updated `src/components/ui/__tests__/CalendarPopover.test.tsx` (8/8 tests PASS) asserting dual-month subtitle spans and accessible BS date `aria-label` screen reader announcements.
+
+**Ruled**
+- Offline stores and caches must never store or expose financial figures to money-blind roles (Law 6).
+- Gregorian calendar months spanning multiple Bikram Sambat months must display the dual-month span in the calendar subtitle, and day cell `aria-label` must announce the Bikram Sambat date prior to the Gregorian date for screen readers (Law 9).
+- Navigational arrows in shared icon registries must be symmetrical (`arrow_left` and `arrow_right`).
+
+**Verified**
+- `npm run typecheck`: PASS (0 errors across entire repository).
+- `npm run lint`: PASS (`eslint src --max-warnings 0` — 0 errors, 0 warnings).
+- `npm run check:contrast`: 82/82 PASS (WCAG AA compliant across Light, Dark, High Contrast, and Glass modes).
+- `npm run check:pglite`: 168/168 applied from scratch in PGlite, 0 failed, 0 leaks, 78/78 definer search_paths pinned.
+- `npm run check:lifecycle`: 31/31 green (all 31 booking lifecycle steps validated through real Postgres + RLS).
+- `npm test`: 414/414 test files passed, 5,239/5,239 tests green (100% pass rate).
+- `npm run build`: PASS — production build built with 244 PWA precache entries (`main.js` at 471.31 kB / gzip: 132.23 kB, well under Vite limit).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-22T16:56:51.419Z). Suite: PASS — 5239/5239 passed, 0 failed (recorded 2026-10-22T17:00:32.033Z); source fingerprint matches.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-22T16:57:52.999Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **Pillar 1 (Equipment Intake Wizard & Precision Cinema Polish):**
+  - Polish the 5-stage sequential wizard toggle integration with pre-flight specification cards and barcode modal.
+- **Hosted / Field Integration:**
+  - Complete live Supabase verification and device acceptance on physical scanner hardware.
+
 ## 2026-10-22 — Top 10 UI/UX Remediation: Precision Cinema & Single-Shell Compact Density Implementation
 
 **Did**
@@ -439,7 +489,7 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `npm run typecheck` PASS · `npm run lint` PASS (0 warnings) · `npm run check:contrast` 82/82 PASS.
 - Focused: 6 codec + 5 migration-marker + 5 Inventory integration + 2 menu-copy + existing `SavedViewsMenu.test.ts`/`inventoryList.test.ts` — all green (72/72 across the six files, final run 18/18 on the touched four).
 - `npm run test:saved-views` (local PGlite, disposable): **20/20 SAVED VIEWS VERIFIED** — system views, private/team visibility, Manager+ publish gate, Law 6 money-view blindness, retire-never-deletes, retry idempotence all intact and untouched.
-- Real-browser verification (headless Chrome/CDP, mock dev server, real login form): **10/10** — exactly one trigger on the Equipment toolbar (44px, enabled), inventory menu copy, no column-chooser promise, truthful save refusal with no success toast, tablet 1194 trigger in-viewport, phone 390 no document overflow with card list kept, phone menu fully in viewport after the flip, Rentals menu copy unchanged. 7 screenshots (light/dark/two widths + refusal + Rentals regression) in `C:\Users\use\AppData\Local\Temp\opencode\workspace-views-shots\`.
+- Real-browser verification (headless Chrome/CDP, mock dev server, real login form): **10/10** — exactly one trigger on the Equipment toolbar (44px, enabled), inventory menu copy, no column-chooser promise, truthful save refusal with no success toast, tablet 1194 trigger in-viewport, phone 390 no document overflow with card list kept, phone menu fully in viewport after the flip, Rentals menu copy unchanged. Completion pass (22 Oct): **4/4** at the pack's §7 widths — 1280 light (the named desktop boundary, 44px trigger), 1194 dark and 390 dark (menu inside viewport, flip engaged at 16..296). **Both themes now covered at 1280/1194/390 plus 1600**; 10 screenshots + assertion logs in `C:\Users\use\AppData\Local\Temp\opencode\workspace-views-shots\`.
 - Full `npm test` after the final two changes (menu placement + flip): **5,157 / 5,157 passed (410 files), source fingerprint matches** — see Completion below for the receipt of record.
 - `npm run check:pglite` re-run on the final tree: **168/168 applied, 0 failed**; 31/31 views closed to anon, 0 unauthorized RPCs, definer paths pinned (recorded 2026-10-21T06:54:44.588Z). `check:lifecycle` NOT re-run this session — the local Postgres stack is down, no SQL was written by this feature, and the pending full-gate run belongs to the concurrent session; recorded as not measured, never guessed.
 - `npm run build` PASS (exit 0; PWA precache 211 entries).
