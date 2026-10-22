@@ -1,0 +1,122 @@
+{
+  "environment": "local; mock browser and in-process PGlite only; no remote writes",
+  "finishedAt": "2026-10-22T05:44:28.624Z",
+  "steps": [
+    {
+      "name": "typecheck",
+      "command": "npm run typecheck",
+      "exitCode": 0,
+      "sourceHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "afterHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "sourceChanged": false,
+      "seconds": 249,
+      "log": "docs\\verification\\premium-design\\reverify-20261021-2327\\typecheck.log"
+    },
+    {
+      "name": "test",
+      "command": "npm run test:coverage -- --coverage --maxWorkers=4 --reporter=json --outputFile=artifacts/astra-20261021-024418/final-4-coverage-tests.json",
+      "exitCode": 0,
+      "sourceHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "afterHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "sourceChanged": false,
+      "seconds": 1236,
+      "log": "docs/verification/premium-design/reverify-20261021-2327/current-coverage-report.json",
+      "receipt": "docs/verification/premium-design/reverify-20261021-2327/current-coverage-receipt.json",
+      "evidence": "Later full-suite coverage run from the shared local checkout; structured report validated against receipt and current source"
+    },
+    {
+      "name": "pglite",
+      "command": "npm run check:pglite",
+      "exitCode": 0,
+      "sourceHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "afterHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "sourceChanged": false,
+      "seconds": 14,
+      "log": "docs\\verification\\premium-design\\reverify-20261021-2327\\pglite.log"
+    },
+    {
+      "name": "lifecycle",
+      "command": "npm run check:lifecycle",
+      "exitCode": 0,
+      "sourceHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "afterHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "sourceChanged": false,
+      "seconds": 14,
+      "log": "docs\\verification\\premium-design\\reverify-20261021-2327\\lifecycle.log"
+    },
+    {
+      "name": "contrast",
+      "command": "npm run check:contrast",
+      "exitCode": 0,
+      "sourceHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "afterHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "sourceChanged": false,
+      "seconds": 1,
+      "log": "docs\\verification\\premium-design\\reverify-20261021-2327\\contrast.log"
+    },
+    {
+      "name": "lint",
+      "command": "npm run lint",
+      "exitCode": 0,
+      "sourceHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "afterHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "sourceChanged": false,
+      "seconds": 28,
+      "log": "docs\\verification\\premium-design\\reverify-20261021-2327\\lint.log"
+    },
+    {
+      "name": "shell",
+      "command": "npm run lint:shell",
+      "exitCode": 0,
+      "sourceHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "afterHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "sourceChanged": false,
+      "seconds": 2,
+      "log": "docs\\verification\\premium-design\\reverify-20261021-2327\\shell.log"
+    },
+    {
+      "name": "copy",
+      "command": "npm run lint:ui-copy",
+      "exitCode": 0,
+      "sourceHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "afterHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "sourceChanged": false,
+      "seconds": 4,
+      "log": "docs\\verification\\premium-design\\reverify-20261021-2327\\copy.log"
+    },
+    {
+      "name": "build",
+      "command": "npm run build",
+      "exitCode": 0,
+      "sourceHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "afterHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "sourceChanged": false,
+      "seconds": 119,
+      "log": "docs\\verification\\premium-design\\reverify-20261021-2327\\build.log"
+    }
+  ],
+  "currentHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+  "allPassed": true,
+  "stable": true,
+  "historicalTestAttempt": {
+    "name": "test",
+    "command": "npm test -- --maxWorkers=2",
+    "exitCode": 1,
+    "sourceHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+    "afterHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+    "sourceChanged": false,
+    "seconds": 1827,
+    "log": "docs\\verification\\premium-design\\reverify-20261021-2327\\test.log",
+    "receipt": "docs/verification/premium-design/reverify-20261021-2327/verification-contended-run.json",
+    "note": "3 failures (two timeouts and one following assertion) retained; all 3 passed in later full coverage. Both affected files also passed plain retry, 35/35."
+  },
+  "focusedRetry": {
+    "command": "node node_modules/vitest/vitest.mjs run src/__tests__/e2e/tier1-features.test.tsx src/modules/rentals/__tests__/BookingDetail.honesty.test.tsx --maxWorkers=1",
+    "passed": 35,
+    "failed": 0,
+    "skipped": 0,
+    "log": "docs/verification/premium-design/reverify-20261021-2327/plain-failure-retry.log",
+    "report": "docs/verification/premium-design/reverify-20261021-2327/plain-failure-retry.json"
+  },
+  "browserStatus": "pending final measurements and supplemental checks"
+}

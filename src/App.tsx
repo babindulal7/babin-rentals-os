@@ -11,15 +11,10 @@ import { ErrorBoundary } from './components/shell/ErrorBoundary'
 import { LoadingSkeleton, RestrictedState } from './components/ui/StateViews'
 import NotFound from './pages/NotFound'
 import Placeholder from './modules/Placeholder'
-import { WelcomeOnboarding } from './lib/WelcomeOnboarding'
 import { NAV, isMoneySurface, isStaffSurface, FLOOR_ROUTE_SUFFIXES } from './data/nav'
 import { ToastProvider } from './components/ui/Toast'
 import { SyncProvider } from './lib/syncContext'
 import { CommandPalette } from './components/shell/CommandPalette'
-import Login from './modules/auth/Login'
-import ForgotPassword from './modules/auth/ForgotPassword'
-import ResetPassword from './modules/auth/ResetPassword'
-import ScreenLock from './modules/auth/ScreenLock'
 import { useAuth } from './lib/auth'
 import { useViewport } from './lib/device'
 import { canViewMoney, isStaff } from './lib/rbac'
@@ -31,6 +26,11 @@ import { SchemaGuardBanner } from './components/shell/SchemaGuardBanner'
 import { ConflictNotificationBanner } from './components/ui/ConflictNotificationBanner'
 
 /* ── lazy-loaded route pages (code-splitting) ─────────────────────────── */
+const Login             = lazy(() => import('./modules/auth/Login'))
+const ForgotPassword    = lazy(() => import('./modules/auth/ForgotPassword'))
+const ResetPassword     = lazy(() => import('./modules/auth/ResetPassword'))
+const ScreenLock        = lazy(() => import('./modules/auth/ScreenLock'))
+const WelcomeOnboarding = lazy(() => import('./lib/WelcomeOnboarding').then(m => ({ default: m.WelcomeOnboarding })))
 const Today             = lazy(() => import('./modules/today/Today'))
 const RentalsList       = lazy(() => import('./modules/rentals/RentalsList'))
 const BookingDetail     = lazy(() => import('./modules/rentals/BookingDetail'))
@@ -98,6 +98,12 @@ function RentalsNewRedirect() {
   return <Navigate to={`/rentals?${params.toString()}`} replace />
 }
 
+const AuthFallback = (
+  <div style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', background: 'var(--app)' }}>
+    <LoadingSkeleton type="card" label="Loading…" />
+  </div>
+)
+
 export default function App() {
   const location = useLocation()
   const queryRentalCreation = () => new URLSearchParams(location.search).get('action') === 'new'
@@ -119,9 +125,13 @@ export default function App() {
           <WorkspaceProvider>
             <CreationContextProvider>
               <CommandPalette />
-              {showOnboarding && <WelcomeOnboarding onClose={() => setShowOnboarding(false)} />}
+              {showOnboarding && (
+                <Suspense fallback={null}>
+                  <WelcomeOnboarding onClose={() => setShowOnboarding(false)} />
+                </Suspense>
+              )}
               <Routes>
-          <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<Suspense fallback={AuthFallback}><Login /></Suspense>} />
         {/*
           Password reset, built 15 Aug 2026. Mounted beside /login and outside
           <Shell> for the same reason: a locked-out operator has no session, so
@@ -133,8 +143,8 @@ export default function App() {
           NOTE — these two are NOT part of the administrative cut. They post-date
           the cut package and were re-added by hand when it was applied.
         */}
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/forgot-password" element={<Suspense fallback={AuthFallback}><ForgotPassword /></Suspense>} />
+        <Route path="/reset-password" element={<Suspense fallback={AuthFallback}><ResetPassword /></Suspense>} />
         <Route path="/" element={<Navigate to={user ? "/today" : "/login"} replace />} />
 
         {/*
@@ -1131,7 +1141,11 @@ function Shell({
       <ScannerFab />
 
       {/* Screen Lock Overlay */}
-      {isLocked && <ScreenLock onUnlock={() => setLocked(false)} />}
+      {isLocked && (
+        <Suspense fallback={null}>
+          <ScreenLock onUnlock={() => setLocked(false)} />
+        </Suspense>
+      )}
     </div>
   )
 }

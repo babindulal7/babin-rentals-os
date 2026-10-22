@@ -125,8 +125,9 @@ try {
       fs.writeFileSync(path.join(out, `${name}.png`), Buffer.from(shot.data,'base64'))
       results.push({screen,route,config,screenshot:`docs/verification/premium-design/reverify-20261021-2327/${phase}/${name}.png`,...measurement})
     }
-    fs.writeFileSync(path.join(out,'measurements.json'),JSON.stringify(results,null,2))
+    fs.writeFileSync(path.join(out,'measurements-'+screen+'-retry.json'),JSON.stringify(results,null,2))
     console.log(`${screen}: ${results.filter(r=>r.screen===screen).length} captures`)
   }
+  if (phase !== 'checks') fs.writeFileSync(path.join(out,'measurements-final.json'),JSON.stringify(results,null,2));
   if (phase === 'checks') await runInteractions({command,evaluate,navigate,out,asset})
 } finally { socket?.close(); chrome.kill() }

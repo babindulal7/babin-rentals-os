@@ -132,19 +132,25 @@ export default function QrGenerator() {
 
           <div style={{ marginTop: '10px' }}>
             <span style={{ fontSize: '11px', color: 'var(--text3)' }}>Quick Presets:</span>
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '6px' }}>
               {PRESET_ITEMS.map((item) => (
                 <button
                   key={item.serial}
                   type="button"
                   onClick={() => setTagText(item.serial)}
                   style={{
-                    padding: '4px 8px',
-                    borderRadius: '6px',
-                    fontSize: '11px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: 44,
+                    minWidth: 44,
+                    padding: '8px 12px',
+                    borderRadius: 'var(--r-btn, 8px)',
+                    fontSize: 'var(--t-meta, 12px)',
+                    fontFamily: 'var(--font-id, inherit)',
                     background: 'var(--surface)',
                     border: '1px solid var(--border)',
-                    color: 'var(--text2)',
+                    color: 'var(--text)',
                     cursor: 'pointer',
                   }}
                 >
@@ -156,24 +162,28 @@ export default function QrGenerator() {
         </div>
 
         <div>
-          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: '4px' }}>
+          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>
             Label Format
           </label>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             {(['QR', 'Barcode'] as const).map((fmt) => (
               <button
                 key={fmt}
                 type="button"
                 onClick={() => setFormat(fmt)}
                 style={{
-                  padding: '8px 14px',
-                  borderRadius: '8px',
-                  fontSize: '12px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: 44,
+                  padding: '8px 16px',
+                  borderRadius: 'var(--r-btn, 8px)',
+                  fontSize: 'var(--t-ui, 13px)',
                   fontWeight: 600,
                   cursor: 'pointer',
                   border: format === fmt ? '1px solid var(--info)' : '1px solid var(--border)',
                   background: format === fmt ? 'rgba(47, 125, 255, 0.14)' : 'var(--surface)',
-                  color: format === fmt ? 'var(--info)' : 'var(--text3)',
+                  color: format === fmt ? 'var(--info)' : 'var(--text2)',
                 }}
               >
                 {fmt === 'QR' ? '2D QR Code' : '1D Barcode'}

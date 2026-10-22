@@ -1,6 +1,6 @@
 {
   "reference": "7af2870a",
-  "generatedAt": "2026-10-21T11:46:18.391Z",
+  "generatedAt": "2026-10-22T05:41:56.504Z",
   "scope": "Added presentation declarations in src only; not a palette replacement or automatic fixer.",
   "findings": [
     {
@@ -29,6 +29,13 @@
       "line": 18,
       "property": "box-shadow",
       "value": "')",
+      "review": "Review context; use a semantic token or document an existing geometry exception."
+    },
+    {
+      "file": "src/components/ui/module-shell/module-shell.css",
+      "line": 248,
+      "property": "font-size",
+      "value": "1.15rem",
       "review": "Review context; use a semantic token or document an existing geometry exception."
     }
   ]

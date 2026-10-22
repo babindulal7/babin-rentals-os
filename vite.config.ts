@@ -126,6 +126,8 @@ export default defineConfig({
           'vendor-supabase': ['@supabase/supabase-js'],
           'vendor-icons': ['@tabler/icons-react'],
           'vendor-scanner': ['@zxing/browser', '@zxing/library'],
+          'vendor-dexie': ['dexie'],
+          'vendor-gsap': ['gsap', '@gsap/react'],
         }
       }
     }

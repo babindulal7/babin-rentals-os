@@ -13,6 +13,7 @@ import { Badge } from '../../components/ui/Badge'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { PageShell } from '../../components/ui/PageShell'
 import { DataTableShell } from '../../components/ui/DataTable'
+import { EmptyState } from '../../components/ui/StateViews'
 import { Modal } from '../../components/ui/Modal'
 import { useToast } from '../../components/ui/Toast'
 import { formatMoney, rupees } from '../../lib/money'
@@ -182,8 +183,13 @@ function WarrantyPreview() {
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={canViewMoney ? 7 : 6} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--text3)' }}>
-                    No warranty records matching "{search}"
+                  <td colSpan={canViewMoney ? 7 : 6} style={{ padding: '24px 16px' }}>
+                    <EmptyState
+                      kind={search.trim() || filter !== 'All' ? 'no-results' : 'nothing-yet'}
+                      title={search.trim() ? `No warranty records matching "${search}"` : 'No warranty records found'}
+                      description={search.trim() ? 'Try checking your search term or clearing the active filter.' : 'Equipment warranties and coverage packages will appear here once recorded.'}
+                      {...(search.trim() || filter !== 'All' ? { actionLabel: 'Clear Filters', onAction: () => { setSearch(''); setFilter('All') } } : {})}
+                    />
                   </td>
                 </tr>
               )}

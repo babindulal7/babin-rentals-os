@@ -2,32 +2,32 @@
 
 **NOT READY. PRODUCTION LAUNCH HOLD.** Local repairs and targeted evidence do not close the remaining acceptance work.
 
-Workspace: C:\Users\use\Desktop\babin-rentals-os. Initial SHA: 5d26cf8d8a420c07400b1124a0fafb1b6e7b3710. Report HEAD: c4138d5aeacae682c501c28f8d0853d34c039528. Current source fingerprint: f723fef07b34b889267c074274403c93f391a1ae0b6ea70f11e0035b2d19f6b9. Generated 2026-10-21T17:51:46.414Z. Automatic/shared commits are retained; each command records its actual SHA, so a changing HEAD is not presented as one tested commit.
+Workspace: C:\Users\use\Desktop\babin-rentals-os. Initial SHA: 5d26cf8d8a420c07400b1124a0fafb1b6e7b3710. Report HEAD: ce7e1e5da638b70ad073450ce9012361e18cf23a. Current source fingerprint: 418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2. Generated 2026-10-22T05:39:54.516Z. Automatic/shared commits are retained; each command records its actual SHA, so a changing HEAD is not presented as one tested commit.
 
 24 issues: 6 verified local; 5 pending staging; 5 blocked; 8 remaining/in progress. Verified local refers to the targeted correction, with broader acceptance explicitly stated per row.
 
 ## Verification
 
-Full suite: 5162/5162 passed, 0 failed, 0 skipped, 410 files. Coverage suite: PENDING. All required gates match the current fingerprint: false.
+Full suite: 5186/5186 passed, 0 failed, 0 skipped, 411 files. Coverage suite: 5186/5186 passed, 0 failed, 0 skipped, 411 files. All required gates match the current fingerprint: false.
 
 | Command | Exit | Source status | Actual SHA | Evidence log |
 |---|---:|---|---|---|
-| typecheck | 0 | NOT VERIFIED for current source | d870bf2aa930052f130156f9cf73f8e0356e94de | artifacts/astra-20261021-024418/final-4-typecheck.log |
-| lint | 0 | NOT VERIFIED for current source | c4138d5aeacae682c501c28f8d0853d34c039528 | artifacts/astra-20261021-024418/final-4-lint.log |
-| test | 0 | NOT VERIFIED for current source | 53ed0ba7329cd5db769e30a6c51d2e2e3b1723b1 | artifacts/astra-20261021-024418/final-3-test.log |
-| test:coverage | 1 | NOT VERIFIED for current source | 7931f4c9425e722c91366c4dad592459e2d678b7 | artifacts/astra-20261021-024418/final-3-test-coverage.log |
-| check:pglite | 0 | NOT VERIFIED for current source | 2c21ec5d05a96ee42e0b9582a7982aa5fe8dbcb9 | artifacts/astra-20261021-024418/final-3-check-pglite.log |
-| check:security | 0 | NOT VERIFIED for current source | 2c21ec5d05a96ee42e0b9582a7982aa5fe8dbcb9 | artifacts/astra-20261021-024418/final-3-check-security.log |
-| node scripts/test-booking-financial-integrity.mjs | 0 | NOT VERIFIED for current source | 2c21ec5d05a96ee42e0b9582a7982aa5fe8dbcb9 | artifacts/astra-20261021-024418/final-3-financial-integrity.log |
-| check:lifecycle | 0 | NOT VERIFIED for current source | 2c21ec5d05a96ee42e0b9582a7982aa5fe8dbcb9 | artifacts/astra-20261021-024418/final-3-check-lifecycle.log |
-| check:contrast | 0 | NOT VERIFIED for current source | 2c21ec5d05a96ee42e0b9582a7982aa5fe8dbcb9 | artifacts/astra-20261021-024418/final-3-check-contrast.log |
-| lint:shell | 0 | NOT VERIFIED for current source | 2c21ec5d05a96ee42e0b9582a7982aa5fe8dbcb9 | artifacts/astra-20261021-024418/final-3-lint-shell.log |
-| lint:ui-copy | 0 | NOT VERIFIED for current source | 2c21ec5d05a96ee42e0b9582a7982aa5fe8dbcb9 | artifacts/astra-20261021-024418/final-3-lint-ui-copy.log |
-| node --test scripts/test-receipt.test.mjs | 0 | NOT VERIFIED for current source | 2c21ec5d05a96ee42e0b9582a7982aa5fe8dbcb9 | artifacts/astra-20261021-024418/final-3-receipt-tests.log |
-| lint:progress | 0 | NOT VERIFIED for current source | 2c21ec5d05a96ee42e0b9582a7982aa5fe8dbcb9 | artifacts/astra-20261021-024418/final-3-lint-progress.log |
-| build | 0 | NOT VERIFIED for current source | 2c21ec5d05a96ee42e0b9582a7982aa5fe8dbcb9 | artifacts/astra-20261021-024418/final-3-build.log |
-| completion | 0 | NOT VERIFIED for current source | 2c21ec5d05a96ee42e0b9582a7982aa5fe8dbcb9 | artifacts/astra-20261021-024418/final-3-completion.log |
-| node artifacts/astra-20261021-024418/inactive-identity-probe.mjs | 0 | NOT VERIFIED for current source | 2c21ec5d05a96ee42e0b9582a7982aa5fe8dbcb9 | artifacts/astra-20261021-024418/inactive-local-inactive-identity.log |
+| typecheck | 0 | MATCHES current source | d5a2e6e6b316ab7829323491169a4ebf351e31b7 | artifacts/astra-20261021-024418/current-head-typecheck.log |
+| lint | 0 | MATCHES current source | d5a2e6e6b316ab7829323491169a4ebf351e31b7 | artifacts/astra-20261021-024418/current-head-lint.log |
+| test | 0 | NOT VERIFIED for current source | c4138d5aeacae682c501c28f8d0853d34c039528 | artifacts/astra-20261021-024418/final-4-test.log |
+| test:coverage | 0 | MATCHES current source | d5a2e6e6b316ab7829323491169a4ebf351e31b7 | artifacts/astra-20261021-024418/final-4-test-coverage.log |
+| check:pglite | 0 | MATCHES current source | ce7e1e5da638b70ad073450ce9012361e18cf23a | artifacts/astra-20261021-024418/final-4-check-pglite.log |
+| check:security | 0 | MATCHES current source | ce7e1e5da638b70ad073450ce9012361e18cf23a | artifacts/astra-20261021-024418/final-4-check-security.log |
+| node scripts/test-booking-financial-integrity.mjs | 0 | MATCHES current source | ce7e1e5da638b70ad073450ce9012361e18cf23a | artifacts/astra-20261021-024418/final-4-financial-integrity.log |
+| check:lifecycle | 0 | MATCHES current source | ce7e1e5da638b70ad073450ce9012361e18cf23a | artifacts/astra-20261021-024418/final-4-check-lifecycle.log |
+| check:contrast | 0 | MATCHES current source | ce7e1e5da638b70ad073450ce9012361e18cf23a | artifacts/astra-20261021-024418/final-4-check-contrast.log |
+| lint:shell | 0 | MATCHES current source | ce7e1e5da638b70ad073450ce9012361e18cf23a | artifacts/astra-20261021-024418/final-4-lint-shell.log |
+| lint:ui-copy | 0 | MATCHES current source | ce7e1e5da638b70ad073450ce9012361e18cf23a | artifacts/astra-20261021-024418/final-4-lint-ui-copy.log |
+| node --test scripts/test-receipt.test.mjs | 0 | MATCHES current source | ce7e1e5da638b70ad073450ce9012361e18cf23a | artifacts/astra-20261021-024418/final-4-receipt-tests.log |
+| lint:progress | 0 | MATCHES current source | ce7e1e5da638b70ad073450ce9012361e18cf23a | artifacts/astra-20261021-024418/final-4-lint-progress.log |
+| build | 0 | MATCHES current source | ce7e1e5da638b70ad073450ce9012361e18cf23a | artifacts/astra-20261021-024418/final-4-build.log |
+| completion | 0 | MATCHES current source | ce7e1e5da638b70ad073450ce9012361e18cf23a | artifacts/astra-20261021-024418/final-4-completion.log |
+| node artifacts/astra-20261021-024418/inactive-identity-probe.mjs | 0 | MATCHES current source | ce7e1e5da638b70ad073450ce9012361e18cf23a | artifacts/astra-20261021-024418/inactive-current-inactive-identity.log |
 
 Earlier failed/interrupted/source-changed attempts remain in artifacts/astra-20261021-024418; they are not silently upgraded to verified. The initial full baseline did not complete and supplies no count. Tests use isolated/mock fixtures; the production build uses the live-default bundle without connecting to a hosted database.
 
@@ -93,6 +93,12 @@ The parallel design pass retained screenshots and DOM measurements under docs/ve
 - Producer's limitations: REMAINING_UI_ISSUES.md and docs/verification/premium-design/verification.json
 
 
+## Actual coverage and bundle measurements
+
+The successful full coverage command reports statements 66.06%, branches 74.26%, functions 50.94% and lines 65.99%. Scope: Configured src/lib, src/actions, and src/modules TypeScript/TSX; this is broader than the historical lib-only instruction. No coverage threshold was relaxed by this task.
+
+The production build reports main JavaScript 711.19 kB minified / 201.65 kB gzip, scanner 453.49 kB / 117.44 kB gzip, and a >500 kB chunk warning. These are build measurements, not device p75 latency measurements; PERF-01 remains open.
+
 ## Working-tree identity
 
-The tested tree includes uncommitted source edits. HEAD alone does not identify these fixes; the matching source fingerprint and per-command receipts identify the tested files. Current source differences from HEAD: `scripts/premium-browser-interactions.mjs`, `scripts/run-tests.mjs`, `scripts/test-receipt.mjs`, `scripts/test-receipt.test.mjs`, `src/components/ui/module-shell/module-shell.css`, `src/lib/queries/__tests__/invoiceCompany.test.ts`.
+No tracked source differences from the report HEAD were present when this ledger was generated; each command still retains its actual SHA and source fingerprint.

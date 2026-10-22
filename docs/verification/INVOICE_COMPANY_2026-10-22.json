@@ -1,0 +1,415 @@
+{
+  "task": "Review finding 4: saved company identity on invoice PDFs",
+  "recordedDate": "2026-10-22",
+  "sourceHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+  "result": "Implemented and locally verified; no migration or live Supabase mutation",
+  "behavior": [
+    "Shared organisation settings supply name, VAT/PAN, phone and description.",
+    "The invoice booking branch supplies its saved address, email and fallback phone.",
+    "No hard-coded business identity or service tagline is substituted.",
+    "Missing organisation name, invalid required VAT/PAN, or failed reads stop export with the existing inline error."
+  ],
+  "before": {
+    "passed": 6,
+    "failed": 6,
+    "total": 12
+  },
+  "focused": {
+    "success": true,
+    "passed": 31,
+    "failed": 0,
+    "total": 31
+  },
+  "initialFullRun": {
+    "receipt": {
+      "schemaVersion": 1,
+      "valid": true,
+      "success": false,
+      "runId": "c3fd0886-7777-4a56-9649-3928e7f00908",
+      "sha": "c4138d5aeacae682c501c28f8d0853d34c039528",
+      "command": "npm run test -- --maxWorkers=2 --reporter=dot --reporter=json --outputFile=C:/Users/use/AppData/Local/Temp/babin-invoice-company-full.json",
+      "environment": "local Vitest; data source=default",
+      "node": "v24.19.0",
+      "platform": "win32",
+      "at": "2026-10-21T18:25:15.823Z",
+      "startedMs": 1792605144528,
+      "sourceHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "kind": "test",
+      "scope": "full-suite",
+      "elapsedMs": 1971295,
+      "sourceChanged": false,
+      "total": 5181,
+      "passed": 5180,
+      "failed": 1,
+      "skipped": 0
+    },
+    "failedSuites": [
+      {
+        "file": "C:/Users/use/Desktop/babin-rentals-os/src/modules/documents/__tests__/Documents.render.test.tsx",
+        "message": "[vitest-worker]: Timeout calling \"resolveId\" with \"[\"../../../lib/supabase\",\"C:/Users/use/Desktop/babin-rentals-os/src/modules/documents/__tests__/Documents.render.test.tsx\",\"web\"]\"",
+        "failedTests": []
+      },
+      {
+        "file": "C:/Users/use/Desktop/babin-rentals-os/src/modules/rentals/__tests__/evidenceWorkspace.test.tsx",
+        "message": "",
+        "failedTests": [
+          {
+            "fullName": "HO-10 — the controls state what they do actually removes the card from the gallery — including when the note is left blank",
+            "failureMessages": [
+              "Error: STACK_TRACE_ERROR\n    at task (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:638:27)\n    at Object.<anonymous> (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:662:16)\n    at Object.<anonymous> (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:458:28)\n    at Module.chain (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:369:14)\n    at C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\rentals\\__tests__\\evidenceWorkspace.test.tsx:266:3\n    at file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:734:40\n    at runWithSuite (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:1849:8)\n    at Object.collect (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:734:10)\n    at Object.collect (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:738:54)\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at collectTests (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:1179:25)\n    at startTests (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:1817:17)\n    at file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/vitest/dist/chunks/runBaseTests.9Ij9_de-.js:117:26\n    at withEnv (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/vitest/dist/chunks/runBaseTests.9Ij9_de-.js:84:3)\n    at run (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/vitest/dist/chunks/runBaseTests.9Ij9_de-.js:109:2)"
+            ]
+          }
+        ]
+      }
+    ],
+    "logSummary": "Documents.render: worker resolveId timeout; evidenceWorkspace: test timed out at 120000ms; worker onTaskUpdate timeout. Preserved as a failed run."
+  },
+  "targetedRecheck": {
+    "command": "npx vitest run invoiceCompany.test.ts Finance.pdf.test.tsx generatePdf.test.ts exportPdf.test.ts evidenceWorkspace.test.tsx Documents.render.test.tsx --maxWorkers=2",
+    "success": true,
+    "passed": 48,
+    "failed": 0,
+    "total": 48,
+    "files": [
+      "src/lib/pdf/__tests__/exportPdf.test.ts",
+      "src/lib/pdf/__tests__/generatePdf.test.ts",
+      "src/lib/queries/__tests__/invoiceCompany.test.ts",
+      "src/modules/finance/__tests__/Finance.pdf.test.tsx",
+      "src/modules/documents/__tests__/Documents.render.test.tsx",
+      "src/modules/rentals/__tests__/evidenceWorkspace.test.tsx"
+    ]
+  },
+  "separateConcurrentCoverageRun": {
+    "note": "Completed by concurrent workspace work; inspected receipt and independently confirmed current-source fingerprint matches. Does not replace or erase initial failed run.",
+    "receipt": {
+      "schemaVersion": 1,
+      "valid": true,
+      "success": true,
+      "runId": "05300e2d-4f09-4172-b814-a2f3af253c05",
+      "sha": "d5a2e6e6b316ab7829323491169a4ebf351e31b7",
+      "command": "npm run test:coverage -- --coverage --maxWorkers=4 --reporter=json --outputFile=artifacts/astra-20261021-024418/final-4-coverage-tests.json",
+      "environment": "local Vitest; data source=mock",
+      "node": "v24.19.0",
+      "platform": "win32",
+      "at": "2026-10-21T18:25:20.548Z",
+      "startedMs": 1792605884483,
+      "sourceHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "kind": "coverage",
+      "coverageDirectory": "C:\\Users\\use\\Desktop\\babin-rentals-os\\artifacts\\coverage-runs\\05300e2d-4f09-4172-b814-a2f3af253c05",
+      "scope": "full-suite",
+      "elapsedMs": 1236065,
+      "sourceChanged": false,
+      "total": 5186,
+      "passed": 5186,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "otherChecks": {
+    "typecheck": "PASS, exit 0",
+    "lint": "PASS, exit 0",
+    "contrast": "82/82 PASS",
+    "pglite": {
+      "schemaVersion": 1,
+      "valid": true,
+      "success": true,
+      "runId": "b9992782-491f-4062-9c84-151fea294b02",
+      "sha": "ce7e1e5da638b70ad073450ce9012361e18cf23a",
+      "command": "npm run check:pglite",
+      "environment": "disposable local PGlite; no network",
+      "node": "v24.19.0",
+      "platform": "win32",
+      "at": "2026-10-21T18:26:49.918Z",
+      "startedMs": 1792607197278,
+      "sourceHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "elapsedMs": 12283,
+      "sourceChanged": false,
+      "applied": 168,
+      "total": 168,
+      "failed": 0,
+      "views_checked": 31,
+      "views_leaked": 0
+    },
+    "lifecycle": {
+      "schemaVersion": 1,
+      "valid": true,
+      "success": true,
+      "runId": "674c075a-a898-4a13-a2c7-35905c1ecf9e",
+      "sha": "ce7e1e5da638b70ad073450ce9012361e18cf23a",
+      "command": "npm run check:lifecycle",
+      "environment": "disposable local PGlite with RLS; no hosted JWT/PostgREST",
+      "node": "v24.19.0",
+      "platform": "win32",
+      "at": "2026-10-21T18:27:04.447Z",
+      "startedMs": 1792607212029,
+      "sourceHash": "418c025f674edd13c2bc19cad7680338bbe08e371e29d5ff813225bcf74fd8e2",
+      "elapsedMs": 12418,
+      "sourceChanged": false,
+      "green": 31,
+      "red": 0,
+      "total": 31,
+      "results": [
+        {
+          "id": "L1",
+          "title": "Coordinator creates a booking: 1 unit, 2 days, 10% discount",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L2",
+          "title": "Quote → Booked writes exactly one reservation (R-26)",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L3",
+          "title": "A conflicting booking — same unit, overlapping dates — is REFUSED",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L4",
+          "title": "A same-day turnaround is ACCEPTED (half-open bounds)",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L5",
+          "title": "A quantity line beyond stock on hand is REFUSED by the capacity ceiling (0045)",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L6",
+          "title": "Booked → Packed → On Rent as Warehouse requires the session rows each stage needs",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L7",
+          "title": "A partial return: one unit back, one missing",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L8",
+          "title": "Accounts raises and issues the invoice: figures snapshot and become immutable (R-15, Law 4)",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L9",
+          "title": "Four payments that must all be refused",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L10",
+          "title": "Two payments settle the invoice: 3,000 then 4,119",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L11",
+          "title": "Closed needs a settled invoice",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L12",
+          "title": "Money-blind roles read no money and write none",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L13",
+          "title": "Even the Owner cannot rewrite the audit log or delete a payment",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L14",
+          "title": "Client portal user sees only their own rows, never another client's",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L15",
+          "title": "Unit status is owned by the engine; direct write is refused (S1-5)",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L16",
+          "title": "Invoice void discipline: role check, reason, credit note requirement (S1-3)",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L17",
+          "title": "Server-side prices for money-blind callers, line guard, role ceiling & user immutability (S1-6, S1-7)",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L18",
+          "title": "Booking schedule changes cannot desynchronise reservations",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L19",
+          "title": "A payment reversal cannot exceed the receipt across partial corrections",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L20",
+          "title": "Bulk stock adjustment is atomic, idempotent, reasoned, and Manager-only",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L21",
+          "title": "A consumable line deducts stock at Handover and needs no return receipt (0141/0142)",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L22",
+          "title": "Smart Intel note visibility and classified values are filtered by RLS for every role",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L23",
+          "title": "extend_booking RPC extends return dates, increments line days, and updates reservations (AUD D5)",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L24",
+          "title": "void_invoice RPC atomically issues credit note for paid amounts and voids invoice (AUD D6)",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L25",
+          "title": "Client Save changes is one atomic, idempotent, revision-locked write; contact removal keeps history (0146)",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L26",
+          "title": "Equipment Save changes edits catalogue, rates and unit location only; stock, custody and identity are refused (0146)",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L27",
+          "title": "Bundle Save changes preserves component identity and soft-deactivates removed components (0146)",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L28",
+          "title": "Quote Save changes is atomic, revision-locked, quote-only and invoice-safe; it makes no reservations (0147)",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L29",
+          "title": "update_bundle applies patch, line edits, adds and soft-deactivations in ONE transaction (0153)",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L30",
+          "title": "Close skips a held deposit only with a reason from Manager+, audited, moving no money (0155)",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        },
+        {
+          "id": "L31",
+          "title": "Pre-handover reversal and terminal archive are audited, idempotent and Manager-only (0167)",
+          "expect": "green",
+          "outcome": "pass",
+          "detail": ""
+        }
+      ]
+    },
+    "build": "PASS, exit 0; Vite built in 40.35s; PWA generated"
+  },
+  "visualQA": {
+    "image": "docs/verification/INVOICE_COMPANY_2026-10-21.png",
+    "method": "Generated synthetic QA invoice, rendered with Poppler and inspected; saved company header and totals visible without clipping or overlap."
+  },
+  "limitations": [
+    "No hosted JWT/PostgREST, production business settings, or physical-device acceptance claimed.",
+    "Original review findings 5-10 are outside this fix, including long invoices and Nepali PDF text."
+  ],
+  "fileHashes": [
+    {
+      "path": "src/lib/queries/invoiceCompany.ts",
+      "sha256": "dedc3553cb813e072914c34b686c340ed6859c53110eab8ee6e796048692753d"
+    },
+    {
+      "path": "src/lib/pdf/invoicePdfData.ts",
+      "sha256": "ba511351b6bd05bfcd0208589cf2f0b2c25ddc6d357cf84e831668e62254dccc"
+    },
+    {
+      "path": "src/lib/pdf/generatePdf.ts",
+      "sha256": "e56318829dd5f2962d44350bcdb318c313ddbfcd1c4758235d1ea5b7c27add9e"
+    },
+    {
+      "path": "src/modules/finance/Finance.tsx",
+      "sha256": "5dc56aca082cf74d1f6601481c6bd2c5a0b53447b449c2900b6ab0a20c9f92af"
+    },
+    {
+      "path": "src/lib/queries/__tests__/invoiceCompany.test.ts",
+      "sha256": "a3562e27409f856492e2e06b2fb43a75e70d273f5edaeebf33e5f56728b60c06"
+    },
+    {
+      "path": "src/modules/finance/__tests__/Finance.pdf.test.tsx",
+      "sha256": "98bb48614eef8f2c3559f3d498c8d1f7556d090835e17033055d03ad0a4ae940"
+    },
+    {
+      "path": "src/lib/pdf/__tests__/generatePdf.test.ts",
+      "sha256": "acb42ed3c31bfe4590dd01ec13e4e3abc47e9cf5a44c227bfb528098aecd3601"
+    },
+    {
+      "path": "src/lib/pdf/__tests__/exportPdf.test.ts",
+      "sha256": "39789941d2c297147056b3d93ba74a27062b0306a8f4ca252d4a7eecf852ed9e"
+    }
+  ]
+}

@@ -15,6 +15,7 @@ import { Badge } from '../../components/ui/Badge'
 import { SearchInput } from '../../components/ui/SearchInput'
 import { PageShell } from '../../components/ui/PageShell'
 import { DataTableShell } from '../../components/ui/DataTable'
+import { EmptyState } from '../../components/ui/StateViews'
 import { useToast } from '../../components/ui/Toast'
 import { formatMoney, rupees } from '../../lib/money'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
@@ -260,9 +261,12 @@ export default function TimesheetTab() {
       {isPhone ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
           {filteredRows.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text3)' }}>
-              No staff matching "{search}"
-            </div>
+            <EmptyState
+              kind={search.trim() ? 'no-results' : 'nothing-yet'}
+              title={search.trim() ? `No staff matching "${search}"` : 'No timesheet entries this period'}
+              description={search.trim() ? 'Try searching for a different staff member or role.' : 'No staff hours have been recorded for this period.'}
+              {...(search.trim() ? { actionLabel: 'Clear Search', onAction: () => setSearch('') } : {})}
+            />
           )}
           {filteredRows.map((row, i) => (
             <StaffCard
@@ -296,8 +300,13 @@ export default function TimesheetTab() {
               <tbody>
                 {filteredRows.length === 0 && (
                   <tr>
-                    <td colSpan={canViewMoney ? 11 : 10} style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--text3)' }}>
-                      No staff matching "{search}"
+                    <td colSpan={canViewMoney ? 11 : 10} style={{ padding: '24px 16px' }}>
+                      <EmptyState
+                        kind={search.trim() ? 'no-results' : 'nothing-yet'}
+                        title={search.trim() ? `No staff matching "${search}"` : 'No timesheet entries this period'}
+                        description={search.trim() ? 'Try searching for a different staff member or role.' : 'No staff hours have been recorded for this period.'}
+                        {...(search.trim() ? { actionLabel: 'Clear Search', onAction: () => setSearch('') } : {})}
+                      />
                     </td>
                   </tr>
                 )}

@@ -1,5 +1,85 @@
 # Progress Log
 
+## 2026-10-22 — Mobile & Touch UI polish: secondary view states and touch target enforcement
+
+**Did**
+- Enforced Law 15 (≥44px minimum touch targets) on QR & Barcode generator modal controls (preset serial chips and format selectors).
+- Enforced mobile stepper dimensions in New Rental: elevated stepper buttons and pill to 44px touch targets on mobile viewports (≤767px), with comfortable 32px desktop floor.
+- Standardized canonical 5-state drawing across secondary inventory and crew modules:
+  - Warehouses: replaced raw text loading indicator with LoadingSkeleton table and prevented premature EmptyState rendering during active fetches.
+  - Warranty Tracker: integrated EmptyState component with search and filter clearing actions instead of raw table cells.
+  - Timesheet: replaced raw unstyled empty text blocks on both mobile card layout and desktop table with standard EmptyState component.
+
+**Ruled**
+- Applied existing design token laws (Law 15: ≥44px touch floor), WCAG AA contrast rules, and standard PageBody/StateViews patterns. No new business or pricing decisions, schema changes, or live mutations.
+
+**Verified**
+- Typecheck (`tsc --noEmit`): PASS (0 errors with strict exactOptionalPropertyTypes).
+- Lint (`eslint src --max-warnings 0`): PASS (0 errors, 0 warnings).
+- Shell Lint (`scripts/check-page-shell-lint.mjs`): PASS (701/701 files).
+- Contrast Verification (`scripts/check-contrast.cjs`): PASS (82/82 WCAG AA pairs).
+- PGlite Migrations Rebuild (`scripts/check-pglite.mjs`): PASS (168/168 applied, 0 view leaks, 0 unauthorized RPCs).
+- Lifecycle Suite (`scripts/e2e-lifecycle.mjs`): PASS (31/31 stages green).
+- Targeted boundary tests (`src/__tests__/e2e/tier2-boundaries.test.tsx`): PASS (9/9).
+- Production Build (`npm run build`): PASS (0 errors, clean bundle, 211 PWA precache assets).
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 98% | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-22T13:12:09.767Z). Suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-22T05:47:56.162Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-22T13:12:35.809Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+
+- Complete remaining secondary report and tools state drawings where applicable.
+- Proceed to Pillar 2 (Delivery Workspace & Dexie outbox persistence) or Pillar 3 (bundle optimization & code-splitting).
+- Physical device testing (budget 360px Android, 820px iPad) and live Supabase migration cutover remain pending under Rule N-5.
+
+
+## 2026-10-22 — Review finding 4: saved invoice company identity
+
+**Did**
+- Replaced hard-coded invoice company name, VAT/PAN, address, phone and service tagline with confirmed shared organisation settings and the invoice booking branch. Finance loads this identity with the stored invoice lines; optional blank contacts are omitted.
+- Export refuses missing organisation name, invalid required VAT/PAN or failed reads through the existing inline error. Device/default settings cannot silently supply a business identity.
+- Added query, PDF and Finance regressions; rendered and inspected a synthetic QA invoice. Evidence: docs/verification/INVOICE_COMPANY_2026-10-22.json and INVOICE_COMPANY_2026-10-21.png.
+
+**Ruled**
+- Applied existing organisation settings, booking branch association and VAT/PAN validation. No new product decision, migration, live Supabase write, deployment or production verification.
+
+**Verified**
+- Six new assertions failed before implementation. Afterward: 31/31 focused tests PASS; typecheck and lint PASS; contrast 82/82 PASS; local PGlite 168/168 PASS; lifecycle 31/31 PASS; production build including PWA PASS.
+- Initial broad run: 5180/5181 tests passed, two failed files and one worker error (Documents module resolution timeout; evidence removal timeout). Preserved that failed receipt. A later targeted recheck passed all 48 tests across those two files and the four invoice suites.
+- A separate concurrent coverage run completed 5186/5186 PASS. Inspected its receipt and independently confirmed its source fingerprint, PGlite receipt and lifecycle receipt match current source. The generated counter below uses that newer completed run.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 53 | 50 · 0 · 0 · 3 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 98% | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-21T18:26:49.918Z). Suite: PASS — 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); source fingerprint matches.
+Coverage suite: PASS — 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-10-21T18:27:04.447Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+
+- Finding 4 has no remaining implementation work. Original findings 5-10 remain outside this requested step, including invoice pagination and Nepali PDF text.
+- Hosted production settings/JWT behavior and physical-device acceptance remain unverified. Structural completion does not certify those workflows.
+
 ## 2026-10-21 — Calendar Today semantics, touch targets and integration verification
 
 **Did**
