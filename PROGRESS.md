@@ -1,5 +1,61 @@
 # Progress Log
 
+## 2026-10-22 — PDF ASCII Normalization, Global Search Code-Splitting & Rentals Compact Layout
+
+**Did**
+- Hardened PDF 1.4 binary byte stream generation in `src/lib/documentStorage.ts`:
+  - Implemented printable ASCII normalization in `escapePdfText`: mapped common unicode punctuation (em-dashes `—`, en-dashes `–`, bullets `•`, middle dots `·`, curly quotes `“”‘’`, and Nepali currency marks `रू`/`₹`) to safe ASCII equivalents, stripped diacritics via `NFKD`, and sanitized remaining non-ASCII characters to prevent multi-byte mojibake in Type1 Helvetica.
+  - Added unit test in `src/lib/__tests__/documentStorage.test.ts` verifying all bytes in the rendered PDF stream remain strictly < 128.
+- Code-split `searchRecords` query in `src/components/shell/CommandPalette.tsx` via dynamic `import('../../lib/queries/globalSearch')` to prevent eager bundling of search query logic on initial shell mount.
+- Added compact display density integration to `src/modules/rentals/RentalsList.tsx`:
+  - Integrated `useDisplayDensity()`, compacting table row height (48px), client avatar size (28px), and row operation action buttons when `density === 'compact'`.
+  - Strictly preserved Law 15 minimum 44px touch targets on interactive table cells (row operations, bulk checkbox touch labels).
+- Canonical breakpoint compliance in `src/modules/today/dashboard.css`:
+  - Updated media query on `.dashboard-workbar-hint` to canonical `min-width: 1280px` (replacing non-standard 1024px), satisfying `uiPhase1.contract.test.tsx` assertions.
+- Verified existing engines:
+  - Confirmed `src/lib/clientImportRecovery.ts` correctly enforces privacy isolation (purging contact data across different staff actor IDs on shared tablets).
+  - Confirmed `src/lib/kitBuildVerification.ts` word boundary check (`/\bmic(rophone)?\b/i`) eliminates false positive audio kit alerts.
+  - Confirmed `src/lib/kpiEngine.ts` computes KPIs using Kathmandu civil time (`kathmanduCivil`) and integer Paisa summation.
+
+**Ruled**
+- Raw binary PDF 1.4 byte streams using Helvetica Type1 fonts must strictly output single-byte printable ASCII to ensure universal document rendering across viewers without font CMap tables.
+- All media queries in `dashboard.css` must strictly conform to canonical breakpoint boundaries (767, 768, 1279, 1280).
+- Display density compaction must never compress interactive touch targets below 44px.
+
+**Verified**
+- `npm run typecheck`: **PASS (0 errors across entire repository)**.
+- `npm run lint`: **PASS (0 warnings)**.
+- `npm run check:contrast`: **82/82 PASS**.
+- `npm run check:pglite`: **168/168 applied from scratch, 0 failed, 0 leaks, 78/78 definer paths pinned**.
+- `npm run check:lifecycle`: **31/31 green, 0 known-red, 0 failed**.
+- `npm run lint:shell`: **701 files checked, 0 violations**.
+- `npm run lint:ui-copy`: **PASS, 0 developer-text violations**.
+- Focused Vitest:
+  - `documentStorage.test.ts`: **9/9 PASS**.
+  - `kitBuildVerification.test.ts`: **13/13 PASS**.
+  - `kpiEngine.test.ts`: **4/4 PASS**.
+  - `uiPhase1.contract.test.tsx`: **8/8 PASS**.
+  - `rentalsList.test.ts` & `rentalsList.render.test.tsx`: **133/133 PASS**.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-22T14:55:30.041Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-22T14:55:33.886Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Babin to confirm or flip RULINGS-2026-10-15 rows 19–23 and 26.
+- Remote cutover / Supabase deployment: unblocked locally; awaiting Babin backup & cutover protocol per N-5.
+
 ## 2026-10-22 — Today: one-statement card ported onto main's redesigned card
 
 **Did**
