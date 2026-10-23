@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { Modal } from './Modal'
 import { Button } from './Page'
+import { InputGroup, InputGroupTextarea, InputGroupAddon, InputGroupText } from './InputGroup'
 
 /**
  * Shared confirm/destructive-action dialog, built on Modal (size="sm").
@@ -86,24 +87,28 @@ export function ConfirmDialog({
         {requireReason && (
           <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 'var(--t-meta)' }}>
             <span style={{ fontWeight: 600, color: 'var(--text2)' }}>{requireReason.label}</span>
-            <textarea
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              rows={3}
-              style={{
-                padding: 10,
-                borderRadius: 'var(--r-input)',
-                border: '1px solid var(--border)',
-                background: 'var(--card2)',
-                color: 'var(--text)',
-                fontSize: 'var(--t-meta)',
-                fontFamily: 'inherit',
-                resize: 'vertical',
-              }}
-            />
-            <span style={{ color: reasonSatisfied ? 'var(--muted)' : 'var(--danger)' }}>
-              {trimmedLength} / {requireReason.minLength} characters minimum
-            </span>
+            <InputGroup>
+              <InputGroupTextarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                rows={3}
+                placeholder="Enter required operational reason…"
+                style={{
+                  resize: 'vertical',
+                }}
+              />
+              <InputGroupAddon align="block-end">
+                <InputGroupText
+                  style={{
+                    color: reasonSatisfied ? 'var(--muted)' : 'var(--danger)',
+                    fontSize: 'var(--t-th, 11px)',
+                    fontWeight: 600,
+                  }}
+                >
+                  {trimmedLength} / {requireReason.minLength} characters minimum
+                </InputGroupText>
+              </InputGroupAddon>
+            </InputGroup>
           </label>
         )}
       </div>
