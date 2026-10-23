@@ -1852,18 +1852,26 @@ const OPERATIONAL_SLOTS: readonly OperationalSlot[] = [
   },
 ]
 
-interface RescheduleModalProps {
+export interface RescheduleModalProps {
   bar: Bar | null
   allBars: readonly Bar[]
   onClose: () => void
   onSuccess: (bookingNo: string, newFrom: Date, newTo: Date) => void
+  onPersistCommand?: (bookingNo: string, newFrom: Date, newTo: Date, reason?: string) => Promise<void>
 }
 
-function RescheduleModal({ bar, allBars, onClose, onSuccess }: RescheduleModalProps) {
-  const [fromStr, setFromStr] = useState(() => (bar ? formatAd(bar.from) : ''))
-  const [toStr, setToStr] = useState(() => (bar ? formatAd(bar.to) : ''))
+function toIsoDate(d: Date): string {
+  if (!d || Number.isNaN(d.getTime())) return ''
+  return d.toISOString().slice(0, 10)
+}
+
+export function RescheduleModal({ bar, allBars, onClose, onSuccess, onPersistCommand }: RescheduleModalProps) {
+  const navigate = useNavigate()
+  const [fromStr, setFromStr] = useState(() => (bar ? toIsoDate(bar.from) : ''))
+  const [toStr, setToStr] = useState(() => (bar ? toIsoDate(bar.to) : ''))
   const [reason, setReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [persistError, setPersistError] = useState<string | null>(null)
 
   if (!bar) return null
 
@@ -1876,7 +1884,7 @@ function RescheduleModal({ bar, allBars, onClose, onSuccess }: RescheduleModalPr
     Number.isFinite(parsedTo.getTime()) &&
     parsedFrom.getTime() <= parsedTo.getTime()
 
-  // Find concurrent bookings during proposed dates
+  // Find concurrent bookings during proposed dates using strict half-open interval <
   const conflicts = isValidDates
     ? allBars.filter(
         (b) =>
@@ -1884,19 +1892,27 @@ function RescheduleModal({ bar, allBars, onClose, onSuccess }: RescheduleModalPr
           b.bookingNo !== bar.bookingNo &&
           b.kind !== 'Completed' &&
           b.kind !== 'Draft' &&
-          b.from.getTime() <= parsedTo.getTime() &&
-          parsedFrom.getTime() <= b.to.getTime(),
+          b.from.getTime() < parsedTo.getTime() &&
+          parsedFrom.getTime() < b.to.getTime(),
       )
     : []
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!isValidDates || !bar.bookingNo || !parsedFrom || !parsedTo) return
+    if (!onPersistCommand) return
+
     setIsSubmitting(true)
-    setTimeout(() => {
+    setPersistError(null)
+    try {
+      await onPersistCommand(bar.bookingNo, parsedFrom, parsedTo, reason)
       setIsSubmitting(false)
-      onSuccess(bar.bookingNo ?? '', parsedFrom, parsedTo)
+      onSuccess(bar.bookingNo, parsedFrom, parsedTo)
       onClose()
-    }, 200)
+    } catch (err: unknown) {
+      setIsSubmitting(false)
+      const msg = err instanceof Error ? err.message : String(err)
+      setPersistError(msg)
+    }
   }
 
   return (
@@ -1907,22 +1923,80 @@ function RescheduleModal({ bar, allBars, onClose, onSuccess }: RescheduleModalPr
       subtitle={bar.client ? `Client: ${bar.client}` : undefined}
       size="md"
       footer={
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--sp-sm)', width: '100%' }}>
-          <Button variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            icon="calendar_event"
-            disabled={!isValidDates || isSubmitting}
-            onClick={handleConfirm}
-          >
-            {isSubmitting ? 'Updating...' : 'Confirm Date Adjustment'}
-          </Button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 'var(--sp-sm)', flexWrap: 'wrap' }}>
+          {bar.bookingNo && (
+            <Button
+              variant="secondary"
+              icon="file"
+              onClick={() => {
+                navigate(`/rentals/${bar.bookingNo}`)
+                onClose()
+              }}
+            >
+              Open in Rentals Hub
+            </Button>
+          )}
+          <div style={{ display: 'flex', gap: 'var(--sp-sm)', marginLeft: 'auto' }}>
+            <Button variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              icon="calendar_event"
+              disabled={!onPersistCommand || !isValidDates || isSubmitting}
+              title={
+                !onPersistCommand
+                  ? 'In-calendar date adjustment disabled pending authorized lifecycle command'
+                  : undefined
+              }
+              onClick={handleConfirm}
+            >
+              {isSubmitting ? 'Updating...' : 'Confirm Date Adjustment'}
+            </Button>
+          </div>
         </div>
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+        <div
+          role="alert"
+          style={{
+            padding: '10px 12px',
+            background: 'var(--st-primary-bg)',
+            color: 'var(--st-primary-fg)',
+            borderRadius: 'var(--r-card)',
+            border: '1px solid var(--border)',
+            display: 'flex',
+            gap: 8,
+            alignItems: 'flex-start',
+          }}
+        >
+          <Icon name="info" size={18} />
+          <div style={{ fontSize: 'var(--t-meta)', lineHeight: 1.45 }}>
+            <strong>Lifecycle Guard:</strong> In-calendar direct rescheduling is disabled. Date adjustments require authoritative availability validation, line price recalculation, and stage gate transitions in Rentals Hub.
+          </div>
+        </div>
+
+        {persistError && (
+          <div
+            role="alert"
+            style={{
+              padding: '10px 12px',
+              background: 'var(--st-danger-bg)',
+              color: 'var(--st-danger-fg)',
+              borderRadius: 'var(--r-card)',
+              border: '1px solid var(--danger)',
+              display: 'flex',
+              gap: 8,
+              alignItems: 'flex-start',
+            }}
+          >
+            <Icon name="alert_triangle" size={18} />
+            <div style={{ fontSize: 'var(--t-meta)', lineHeight: 1.45 }}>
+              <strong>Reschedule Failed:</strong> {persistError}
+            </div>
+          </div>
+        )}
         <div
           style={{
             padding: '10px 12px',
