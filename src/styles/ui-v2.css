@@ -231,13 +231,12 @@ input[type='search']::-webkit-search-results-decoration {
   animation: livePulse 2s ease-in-out infinite;
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .surface-card.lift:hover, .card.interactive:hover,
-  .card[data-interactive='true']:hover,
-  .surface-card[data-interactive='true']:not([aria-disabled='true']):hover {
-    background: var(--hover-card);
-    transition: background-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
-  }
+.surface-card.lift:hover, .card.interactive:hover,
+.card[data-interactive='true']:hover,
+.surface-card[data-interactive='true']:not([aria-disabled='true']):hover {
+  background: var(--hover-card);
+  transition: background-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+  transition-delay: 300ms;
 }
 @media (prefers-reduced-motion: reduce) {
   .app-modal,

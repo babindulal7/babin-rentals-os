@@ -1,5 +1,93 @@
 # Progress Log
 
+## 2026-10-23 16:10 NPT — Intentional 300ms Global Hover Delay Everywhere
+
+**Did**
+- Applied intentional 300ms hover delay / latency across interactive surfaces throughout the application.
+- Configured CSS transition-delay of 300ms on `:hover` across `button`, `a.btn`, `[role="button"]`, `.ui-button`, `.card`, `.surface-card`, `.card-interactive`, `.lift`, `.movement-card`, `.data-table tbody tr`, `.operations-table tbody tr`, `.calendar-timeline-bar-btn`, `.calendar-chip`, `.calendar-day-cell`, `.calendar-tab-btn`, `.overflow-menu__item`, `.filter-bar__option`, and `.app-navigation a`.
+- Added base transitions with `transition-delay: 0s` on non-hover states so elements immediately exit hover when the pointer leaves without lingering lag.
+- Removed restrictive `(hover: hover) and (pointer: fine)` gate in `IntelCard.tsx` and CSS so that mouse pointer events on touch-enabled Windows laptops reliably register the intentional 300ms delay.
+- Updated `InfoTooltip` with 300ms delay and authored comprehensive fake-timer unit tests.
+
+**Ruled**
+- Hover latency everywhere: 300ms intentional delay applies consistently across buttons, interactive cards, table rows, navigation links, and popover previews.
+- Pointer exit: mouse leave resets instantly (`transition-delay: 0s`), avoiding sluggish un-hover transitions.
+- Cross-platform input fidelity: touch-capable Windows devices with mice must honor hover latency without being blocked by coarse pointer heuristics.
+
+**Verified**
+- `npm run typecheck`: clean pass with 0 errors across entire codebase.
+- `npm run check:contrast`: 82/82 pairs pass WCAG AA across Light, Dark, High-contrast, and Glass modes.
+- `npx vitest run src/components/ui/__tests__/InfoTooltip.test.tsx src/components/ui/__tests__/IntelCard.direct.test.tsx`: 6/6 tests passed.
+- `npm run lint:progress`: clean pass.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 168 files · check:pglite Historical, incomplete or failed receipt (2026-10-23T10:15:08.031Z); current source NOT VERIFIED. Suite: Historical suite: 5280/5280 passed, 0 failed (recorded 2026-10-23T06:49:59.083Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-23T10:15:34.293Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Hardware / scanner physical device testing.
+- Hosted production verification after Babin runs migration backup protocol.
+
+## 2026-10-23 15:35 NPT — Global Shell Phase 1: Shared Application Chrome & Page Frame
+
+**Did**
+- Implemented the universal Shell Layout Contract (`src/components/shell/shellLayoutContract.ts`) formalizing 64px header height (`--header-h`), 256px expanded / 64px rail navigation (`--app-sidebar-width` / `--app-sidebar-collapsed-width`), 58px bottom bar + safe area (`BAR_BOX`), and >= 44px touch targets (Law 15).
+- Enforced single-owner search resolution precedence in `Header.tsx` across Zone 2 (Center) and Zone 3 (Phone search) via `resolveSearchOwner` and `resolvePhoneSearchKind`:
+  1. Page Portal Search (`WorkspaceHeaderSearch`, e.g., `/rentals`)
+  2. Page Config Search (`PageHeaderSearchConfig`, e.g., `/today`, `/calendar`, `/inventory`, `/operations`)
+  3. Fallback Global Command Palette Search trigger (`Ctrl+K / ⌘K`, `/` hotkey)
+- Guaranteed zero horizontal wrapping on header rows (`flex-wrap: nowrap`, fixed 64px height) and right-anchored slot ordering: Secondary actions -> Add dropdown / `GlobalAddMenu` -> More overflow -> Primary action / CTA.
+- Normalized phone vs tablet boundary in `src/lib/displayDensity.tsx` from `<= 768` to `< BP.phone` (768px), making 768px consistently tablet/compact while strictly preserving user preferences from `localStorage`.
+- Authored test suites `src/components/shell/__tests__/shellLayoutContract.test.ts` (10/10 tests passed), `src/lib/__tests__/displayDensity.test.tsx` (5/5 tests passed), and end-to-end pilot suite `src/__tests__/e2e/globalShellPilotRoutes.test.tsx` (5/5 tests passed).
+- Created detailed documentation deliverables: `SHELL_PHASE1_CHANGELOG.md`, `SHELL_PHASE1_TEST_RESULTS.md`, and `SHELL_PHASE1_VISUAL_REVIEW.md`.
+
+**Ruled**
+- Header invariant: Exactly ONE visible horizontal header row (64px fixed) across all screens.
+- Search invariant: Exactly ONE search control rendered in Zone 2 on tablet/desktop, and exactly ONE search trigger/input in Zone 3 on phone; no competing or dual search boxes.
+- Action slot hierarchy: Primary action / CTA occupies the rightmost page slot; Add dropdowns occupy the canonical Add slot; secondary actions fold into More when constrained or on tablet (`useCompactHeader`).
+- Law 6 money-blindness: Non-financial roles (`Warehouse`, `Technician`, `Driver`, `Client`) view zero monetary amounts across all header slots and views.
+- Execution boundary: Local feature branch `feat/global-shell-phase1` only. Zero git push/merge/deploy, zero Supabase schema mutations, zero AGPL package imports.
+
+**Verified**
+- `npm run typecheck`: clean pass with 0 errors across entire TypeScript 5.7 strict codebase.
+- `npm run lint:shell`: 708/708 files satisfy PageHeader, single primary CTA, 44px floor, and no dev notes.
+- `npm run check:contrast`: 82/82 pairs pass WCAG AA across Light, Dark, High-contrast, Glass themes.
+- Shell & Pilot test suites: 17 test files, 149 tests passed with 0 failures (`vitest run src/components/shell ...`).
+- `npm run check:pglite`: 168/168 migrations applied, all gates green.
+- `npm run check:lifecycle`: 31/31 lifecycle steps green.
+- `npm run build`: clean production build for both `index.html` and `marketing.html` (7,405 modules transformed, PWA service worker generated).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-23T09:49:05.860Z). Suite: Historical suite: 5280/5280 passed, 0 failed (recorded 2026-10-23T06:49:59.083Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-23T09:49:20.568Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Phase 2: Page-specific internal workbar alignments (e.g. Today dispatch queue cards, Operations tab refinements) without modifying the global shell frame.
+- Reconcile seven-anchor-only navigation versus optional five-stage mode when Babin answers.
+- Physical device, barcode scanner hardware testing, and hosted acceptance testing.
+
 ## 2026-10-23 13:05 NPT — Phase 5: Calendar & Resource Timeline Expansion
 
 **Did**

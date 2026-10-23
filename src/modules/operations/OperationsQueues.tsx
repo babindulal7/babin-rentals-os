@@ -464,7 +464,14 @@ function QueueChip({ queue, active, total, loading, error, onToggle }: QueueChip
     total === null ? `${queue.title}: no count available` : `${queue.title}: ${total} ${total === 1 ? 'job' : 'jobs'}`
 
   return (
-    <button type="button" onClick={onToggle} aria-pressed={active} style={chipStyle(active)} {...(error ? { title: error } : {})}>
+    <button
+      type="button"
+      className="operations-v2__queue"
+      onClick={onToggle}
+      aria-pressed={active}
+      style={chipStyle(active)}
+      {...(error ? { title: error } : {})}
+    >
       {/* Law 11 — the queue's stage tone never carries the meaning alone; the icon and the word are both present. */}
       <Icon name={queue.icon} size={15} style={{ color: active ? 'var(--select-fg)' : 'var(--text2)', flexShrink: 0 }} />
       {queue.title}
@@ -916,8 +923,10 @@ export default function OperationsQueues() {
       <div className="operations-v2__queues" role="group" aria-label="Operational queues">
         <button
           type="button"
+          className="operations-v2__queue"
           onClick={() => setActive(null)}
           aria-pressed={selected === null && group === null && exception === null}
+          aria-label={list.loading && list.total === null ? 'All Active: loading count' : list.error ? 'All Active: count unavailable' : `All Active: ${list.total ?? jobs.length} jobs`}
           style={chipStyle(selected === null && group === null && exception === null)}
         >
           <Icon name="checklist" size={15} style={{ color: (selected === null && group === null && exception === null) ? 'var(--select-fg)' : 'var(--text2)', flexShrink: 0 }} />
@@ -938,7 +947,7 @@ export default function OperationsQueues() {
               fontWeight: 700,
             }}
           >
-            {list.total ?? jobs.length}
+            {list.loading && list.total === null ? '…' : list.error ? '—' : String(list.total ?? jobs.length)}
           </span>
         </button>
         {CHIPS.map((q) => <QueueChip key={q.job} queue={q} active={selected === q.job} total={counts[q.job].total} loading={counts[q.job].loading} error={counts[q.job].error} onToggle={() => setActive(selected === q.job ? null : q.job)} />)}
@@ -954,6 +963,7 @@ export default function OperationsQueues() {
           <span
             className="figure"
             title={casesList.error ?? undefined}
+            aria-label={casesList.loading && openCases === null ? 'Cases: loading count' : casesList.error ? 'Cases: count unavailable' : `Cases: ${openCases ?? 0} open cases`}
             style={{
               minWidth: 22,
               height: 20,
@@ -969,7 +979,7 @@ export default function OperationsQueues() {
               fontWeight: 700,
             }}
           >
-            {openCases ?? '—'}
+            {casesList.loading && openCases === null ? '…' : casesList.error ? '—' : (openCases ?? '—')}
           </span>
         </Link>
       </div>
@@ -1120,7 +1130,9 @@ export default function OperationsQueues() {
                       <Button
                         size="sm"
                         variant="secondary"
-                        style={{ ...jobBtn.style, width: '100%', minHeight: 44, marginTop: 2 }}
+                        data-primary-verb="true"
+                        className="btn-floor-primary"
+                        style={{ ...jobBtn.style, width: '100%', minHeight: 56, marginTop: 4 }}
                         onClick={() => navigate(jobRoute(job.bookingNo, job.job))}
                       >
                         <Icon name={jobBtn.icon} size={15} />

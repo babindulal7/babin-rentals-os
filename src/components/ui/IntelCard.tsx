@@ -188,12 +188,8 @@ export function IntelCard({ children, glance, detailTitle, detailSubtitle, detai
   const scheduleOpen = () => {
     clearCloseTimer()
     if (open || pinned || sheetOpen) return
-    const delay = isIntelSessionActive() ? INTEL_ADJACENT_DELAY_MS : INTEL_OPEN_DELAY_MS
-    if (delay <= 0) {
-      doOpen()
-      return
-    }
     clearOpenTimer()
+    const delay = isIntelSessionActive() ? INTEL_ADJACENT_DELAY_MS : INTEL_OPEN_DELAY_MS
     openTimer.current = window.setTimeout(doOpen, delay)
   }
 
@@ -364,13 +360,11 @@ export function IntelCard({ children, glance, detailTitle, detailSubtitle, detai
       aria-describedby={open ? cardId : undefined}
       style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', minHeight: 44, minWidth: 44, maxWidth: '100%' }}
       onMouseEnter={(e) => {
-        if (!hasHover) return
         leavePoint.current = null
         hoverOnIdentifier.current = pointerAtIdentifier(e.target)
         if (hoverOnIdentifier.current) scheduleOpen()
       }}
       onMouseMove={(e) => {
-        if (!hasHover) return
         if (e.target instanceof Element && e.target.closest('[data-intel-overlay]')) return
         const atIdentifier = pointerAtIdentifier(e.target)
         if (atIdentifier !== hoverOnIdentifier.current) {
@@ -381,7 +375,7 @@ export function IntelCard({ children, glance, detailTitle, detailSubtitle, detai
         if (atIdentifier && open) leavePoint.current = null
       }}
       onMouseLeave={(e) => {
-        if (!hasHover || pinned) return
+        if (pinned) return
         hoverOnIdentifier.current = false
         leavePoint.current = { x: e.clientX, y: e.clientY }
         scheduleClose()
