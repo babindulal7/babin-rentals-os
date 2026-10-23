@@ -57,6 +57,8 @@ const db = vi.hoisted(() => {
     calls: [] as Call[],
     /** Per table, the row sets to hand back in order. The last one repeats. */
     responses: {} as Record<string, unknown[][]>,
+    grants: [] as Array<{ name: string; args: Record<string, unknown> }>,
+    grantError: null as { message: string } | null,
   }
 
   function nextRows(table: string): unknown[] {
@@ -113,6 +115,8 @@ const db = vi.hoisted(() => {
   function reset(): void {
     state.calls = []
     state.responses = {}
+    state.grants = []
+    state.grantError = null
   }
 
   return { state, from, reset }
@@ -121,14 +125,11 @@ const db = vi.hoisted(() => {
 vi.mock('../../../lib/supabase', () => ({
   supabase: {
     from: db.from,
-    /* RULING 2026-10-23 (0171): runFloorVerb's step 1b asks the database about
-       the actor's branch grant before any write. At this layer the DB is
-       mocked, so the assert answers "pristine staff — allowed", which is the
-       migration's own empty-table default. The grant's real behaviour is
-       proven end-to-end in scripts/test-operations-grants.mjs (PGlite). */
-    rpc: async () => ({ data: null, error: null }),
+    rpc: async (name: string, args: Record<string, unknown>) => {
+      db.state.grants.push({ name, args })
+      return { data: null, error: db.state.grantError }
+    },
   },
-  IS_MOCK: false,
   newClientUuid: () => 'test-action-key',
 }))
 
@@ -225,6 +226,30 @@ beforeEach(() => {
 })
 
 /* ── 1 · The stage guard, read off JOBS ─────────────────────────────────── */
+
+describe('branch authorization precedes every floor write', () => {
+  const call: Record<JobName, () => Promise<unknown>> = {
+    Pack: () => packRental({ id: 'B-715', lines: [{ bookingLineId: LINE_A }] }, OWNER),
+    Handover: () => handoverRental({ bookingId: 'B-715', lines: [{ bookingLineId: LINE_A }] }, OWNER),
+    Return: () => completeReturn({ rentalId: 'B-715', lines: [{ bookingLineId: LINE_A }] }, OWNER),
+    Reset: () => completeReset({ id: 'B-715', unitIds: ['unit-1'] }, OWNER),
+  }
+  for (const job of JOB_ORDER) {
+    for (const message of ['GATE:operations.grant|Wrong branch', 'RPC unavailable', 'Failed to fetch']) {
+      it(`${job} refuses ${message} with no writes`, async () => {
+        db.state.responses['bookings'] = [[bookingAt(JOBS[job].runsAt)]]
+        db.state.grantError = { message }
+        await expect(call[job]()).rejects.toThrow('Nothing was written')
+        expect(db.state.grants).toEqual([{
+          name: 'assert_operation_branch_grant',
+          args: { p_operation: job.toLowerCase(), p_booking_id: BOOKING_ID },
+        }])
+        expect(writes.state.ops).toEqual([])
+        expect(db.state.calls.map(c => c.table)).toEqual(['bookings'])
+      })
+    }
+  }
+})
 
 describe('each verb runs at exactly one stage — JOBS[j].runsAt, not a re-typed literal', () => {
   const call: Record<JobName, (ref: string) => Promise<unknown>> = {

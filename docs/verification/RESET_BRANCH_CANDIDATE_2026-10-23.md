@@ -1,5 +1,7 @@
 # Reset branch boundary — local candidate, 23 October 2026
 
+> **24 October follow-up:** Babin approved integrating the guarded pair. It is now integrated into shared source with permanent security/CI wiring; fresh verification is separate. This report retains the 23 October isolated candidate evidence, not current shared-source certification. See [the integration report](OPERATIONS_BRANCH_INTEGRATION_2026-10-24.md).
+
 Status: migration WRITTEN + VERIFIED locally (PGlite and lifecycle green together); NOT APPLIED and NOT PRODUCTION-VERIFIED. All 16 fixed-source pipeline steps, separate coverage and live-mode build pass. Production unchanged; launch HOLD.
 
 ## Decision and implementation

@@ -187,9 +187,21 @@ set search_path = public, pg_temp
 as $$
 declare
   v_id uuid;
+  v_target_role text;
 begin
   if auth_user_role() not in ('Owner', 'Admin') then
     raise exception 'GATE:operations.grant.issue_role|Only Owner or Admin can issue an operations grant.' using errcode = 'P0001';
+  end if;
+
+  -- RULING 2026-10-24: integrate the guarded pair. Admin cannot restrict
+  -- Owner/Admin, including self. Hold the target role stable until commit.
+  if auth_user_role() = 'Admin' then
+    select u.primary_role::text into v_target_role
+    from users u where u.id = p_user_id
+    for share of u;
+    if v_target_role in ('Owner', 'Admin') then
+      raise exception 'Admin cannot modify Owner or Admin operation grants' using errcode = '42501';
+    end if;
   end if;
 
   if p_operation not in ('pack', 'handover', 'return', 'reset') then
@@ -233,9 +245,22 @@ language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
+declare
+  v_target_role text;
 begin
   if auth_user_role() not in ('Owner', 'Admin') then
     raise exception 'GATE:operations.grant.revoke_role|Only Owner or Admin can revoke an operations grant.' using errcode = 'P0001';
+  end if;
+
+  -- Same superior/self-target boundary on revocation, before any write.
+  if auth_user_role() = 'Admin' then
+    select u.primary_role::text into v_target_role
+    from operations_grants g join users u on u.id = g.user_id
+    where g.id = p_grant_id
+    for share of u;
+    if v_target_role in ('Owner', 'Admin') then
+      raise exception 'Admin cannot modify Owner or Admin operation grants' using errcode = '42501';
+    end if;
   end if;
 
   update operations_grants

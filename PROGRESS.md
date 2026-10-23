@@ -1,5 +1,26 @@
 # Progress Log
 
+## 2026-10-24 — Approved guarded branch-grant integration
+
+**Did**
+- Integrated guarded 0171 + 0172 into shared source while retaining the newer direct-table privilege revocation and unrelated UI changes. Restored Admin superior/self-target protections, restrictive Reset queue/task scope, early action checks in live/mock paths and explicit mock grant behavior.
+- Wired Admin, branch-grant and Reset regressions into `npm run check:security`, already required by CI. Added an explicit Return-only denial / paired Return+Reset positive-control regression. Recorded iPhone 17 Pro and M4 iPad Pro availability without claiming hardware acceptance.
+
+**Ruled**
+- Babin explicitly approved integrating the guarded pair and its described default/history/revoke/admin model. Unbooked Reset follows the unit's current warehouse branch. RULINGS-2026-10-24, PERMISSIONS and migration/action comments carry the approval. No hosted application, role widening, deletion or deployment is authorized.
+
+**Verified**
+- Fresh shared-source verification is pending; isolated 23 October receipts do not certify this integration. Migration status: WRITTEN, awaiting current-source PGlite + lifecycle verification; NOT APPLIED, NOT PRODUCTION-VERIFIED.
+
+## Completion
+
+Pending generated `npm run completion` after matching shared-source gates; no percentage inferred.
+
+## Remaining
+
+- Finish full source-matched tests, DB/security/lifecycle gates, coverage and build. Preserve concurrent unrelated edits; any source change invalidates the run.
+- Execute camera/scanner, touch/rotation, signatures/evidence, offline/reconnect acceptance on the confirmed devices. Isolated staging identity/role fixtures and owner-controlled backup/restore/cutover remain outstanding. Production launch HOLD.
+
 ## 2026-10-23 22:05 NPT — coss audit: restyle live InputGroup/Kbd off dead Tailwind classes
 
 **Did**

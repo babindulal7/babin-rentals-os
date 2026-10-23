@@ -1121,6 +1121,21 @@ export const mockSupabase = {
     return createBuilder(table, hooks)
   },
   rpc(name: string, args?: Record<string, unknown>) {
+    if (name === 'assert_operation_branch_grant') {
+      const actor = readSession()?.user.id
+      const user = store['users']?.find(row => row['id'] === actor)
+      const booking = store['bookings']?.find(row => row['id'] === args?.['p_booking_id'])
+      const operation = args?.['p_operation']
+      const history = (store['operations_grants'] ?? []).filter(row =>
+        row['user_id'] === actor && row['operation'] === operation,
+      )
+      const allowed = actor && user?.['is_active'] === true && booking?.['branch_id'] &&
+        ['pack', 'handover', 'return', 'reset'].includes(String(operation)) &&
+        (history.length === 0 || history.some(row =>
+          row['revoked_at'] == null && row['branch_id'] === booking['branch_id'],
+        ))
+      return Promise.resolve({ data: null, error: allowed ? null : pgErr('P0001', 'GATE:operations.grant|Operation branch authorization refused.') })
+    }
     if (name === 'read_record_editor' || name === 'save_record_editor') {
       try {
         const actor=readSession()?.user.id

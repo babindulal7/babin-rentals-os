@@ -1,4 +1,4 @@
-import { supabase, IS_MOCK } from '../../lib/supabase'
+import { supabase } from '../../lib/supabase'
 import { generateClientUuid, idempotentInsert, safeUpdate } from '../../lib/dataAccess'
 import { operationSessionId } from '../../lib/deterministicId'
 import { applyBookingTransition } from '../../lib/bookingTransition'
@@ -1024,24 +1024,15 @@ export async function runFloorVerb(
     )
   }
 
-  /* 1b — RULING 2026-10-23 (P0-B second half): the branch grant, asked of the
-   * database before any write. Pristine staff (no grant rows) pass unchanged;
-   * a scoped staff member is refused here, truthfully, with the gate message
-   * the database wrote — instead of half-way through the verb's writes. All
-   * four verbs ask, because Reset changes no stage and has no session, so
-   * this assert is its only branch gate; the three custody verbs are also
-   * enforced fail-closed inside apply_booking_stage_transition, which refuses
-   * cross-branch custody even if this call were ever removed.
-   *
-   * Mock mode has no operations_grants and no RPCs — its gates are simulated
-   * client-side — so the assert is skipped there, exactly like every other
-   * DB-enforced gate this verb passes through. */
-  if (!IS_MOCK) {
-    const { error: grantError } = await supabase.rpc('assert_operation_branch_grant', {
-      p_operation: GRANT_SLUG[job],
-      p_booking_id: booking.id,
-    })
-    if (grantError) throw new Error(grantError.message)
+  // RULING 2026-10-24: integrate guarded preflight in live AND mock paths.
+  // Reset's queue/task policies (0172) also enforce scope inside Postgres;
+  // this assertion gives early feedback before any write, not sole authority.
+  const { error: grantError } = await supabase.rpc('assert_operation_branch_grant', {
+    p_operation: GRANT_SLUG[job],
+    p_booking_id: booking.id,
+  })
+  if (grantError) {
+    throw new Error(`${job} authorization could not be confirmed: ${grantError.message}. Nothing was written.`)
   }
 
   /* 2 — Reset has no session. It is the queue, per item. */

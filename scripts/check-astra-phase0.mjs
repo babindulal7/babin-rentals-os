@@ -62,6 +62,33 @@ try {
     await denied("update users set id=gen_random_uuid() where id=$1",[admin])
     await db.query("update users set full_name='Admin own profile' where id=$1",[admin])
   })
+  await test('SEC-04: Admin cannot issue operation restrictions for Owner or Admin targets',async()=>{
+    await actor(admin)
+    for (const target of [owner,otherOwner,admin]) {
+      await denied('select issue_operations_grant(gen_random_uuid(),$1,$2,$3)',[target,booking.branch_id,'pack'])
+    }
+  })
+  await test('SEC-04: Admin cannot revoke Owner or Admin operation grants; Owner can',async()=>{
+    for (const target of [owner,admin]) {
+      await actor(owner)
+      const grant=(await rows('select issue_operations_grant(gen_random_uuid(),$1,$2,$3) id',[target,booking.branch_id,'reset']))[0].id
+      await actor(admin)
+      await denied('select revoke_operations_grant(gen_random_uuid(),$1)',[grant])
+      assert.equal((await rows('select revoked_at from operations_grants where id=$1',[grant]))[0].revoked_at,null)
+      await actor(owner)
+      await db.query('select revoke_operations_grant(gen_random_uuid(),$1)',[grant])
+      assert.equal((await rows('select revoked_by from operations_grants where id=$1',[grant]))[0].revoked_by,owner)
+    }
+  })
+  await test('SEC-04: Admin can still issue and revoke a subordinate operation grant',async()=>{
+    await actor(admin)
+    const key=(await rows('select gen_random_uuid() id'))[0].id
+    const grant=(await rows('select issue_operations_grant($1,$2,$3,$4) id',[key,operator,booking.branch_id,'pack']))[0].id
+    assert.equal((await rows('select issue_operations_grant($1,$2,$3,$4) id',[key,operator,booking.branch_id,'pack']))[0].id,grant)
+    assert.equal((await rows('select granted_by from operations_grants where id=$1',[grant]))[0].granted_by,admin)
+    await db.query('select revoke_operations_grant(gen_random_uuid(),$1)',[grant])
+    assert.equal((await rows('select revoked_by from operations_grants where id=$1',[grant]))[0].revoked_by,admin)
+  })
   await test('SEC-04: Owner retains ordinary staff administration',async()=>{
     await actor(owner); await db.query("update users set full_name='Phase0 Operator' where id=$1",[operator])
   })

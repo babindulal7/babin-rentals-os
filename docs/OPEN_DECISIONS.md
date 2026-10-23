@@ -1,6 +1,12 @@
 # Babin Rentals OS — Open Decisions Register
 
-## 23 October 2026: pending 0171 / canonical checkout — TODO(decision)
+## 24 October 2026: guarded 0171 + 0172 integration — APPROVED
+
+Babin explicitly chose **“Integrate the guarded pair”**, including the explained pristine/global, history/scoped, revoke-last/deny-all and Owner/Admin superior/self-target rules. Shared-source integration and permanent security/CI wiring are authorized and being verified. This resolves the model/canonical-source choice below, not N-5 hosted application or production readiness. Unbooked Reset uses the unit's current warehouse branch, as already selected. New current evidence will be recorded in `verification/OPERATIONS_BRANCH_INTEGRATION_2026-10-24.md`.
+
+Available physical devices are iPhone 17 Pro and M4 iPad Pro. Device acceptance has not yet run; no external scanner model/interface was identified. Isolated staging credentials/role fixtures and owner-controlled backup/cutover remain required. The unrelated Technician/Handover and legacy Storage decisions below are not changed by this approval.
+
+## 23 October 2026: pending 0171 / canonical checkout — HISTORICAL, resolved above
 
 - A draft operations-branch migration appeared locally and was repeatedly removed by external checkout/cleanup activity. Its guarded recovery candidate closes the existing Admin superior/self-target bypass and passes 169 migration / 31 lifecycle / 18 security-group local checks. Candidate and original are preserved at C:/Users/use/AppData/Local/Temp/babin-current-main-20261023-173608; this is not approval of the draft's location model or administration policy.
 - Active migration present at reconciliation: false. Current application verification remains incomplete. User choice is pending between pausing other writers and restoring pending fixes, or keeping current main with the draft in recovery. No answer or product ruling is inferred from file changes or source comments.
