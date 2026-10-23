@@ -9,6 +9,7 @@ import {
   RESOURCE_CATALOGUE,
   type Bar,
   type BarKind,
+  type ResourceDefinition,
   type ResourceRow,
   type RowType,
 } from '../../data/calendar'
@@ -385,73 +386,73 @@ export async function listCalendarDrafts(fromAd: string, toAd: string): Promise<
  * (Equipment, Vehicles, Crew, Warehouse Bays) and automatically executes
  * double-booking and conflict detection.
  */
+/**
+ * Builds resource lanes for the Timeline view.
+ *
+ * FAILS CLOSED: In production, where no authoritative physical unit/asset/crew
+ * repository records exist, returns an empty array. This triggers the truthful
+ * empty-state messaging rather than fabricating operational equipment lanes,
+ * fictitious serial numbers, or bogus staff assignments.
+ *
+ * When authoritative resource definitions and unit assignments exist:
+ *  1. Only assigns bars that carry an explicit, authoritative matching unitId or resourceId.
+ *     Never uses booking-label hash arithmetic or pseudo-modulo mappings.
+ *  2. Evaluates double bookings strictly using half-open intervals [pickup, return)
+ *     (a.from < b.to && b.from < a.to). Back-to-back bookings on the turnover boundary
+ *     do not clash. Overlapping bookings across different units never conflict.
+ */
 export function buildResourceTimeline(
   liveBars: readonly Bar[],
   selectedRowType: 'All' | RowType = 'All',
+  authoritativeCatalogue: readonly ResourceDefinition[] = RESOURCE_CATALOGUE,
 ): ResourceRow[] {
+  if (authoritativeCatalogue.length === 0) {
+    return []
+  }
+
   const catalogue =
     selectedRowType === 'All'
-      ? RESOURCE_CATALOGUE
-      : RESOURCE_CATALOGUE.filter((r) => r.type === selectedRowType)
+      ? authoritativeCatalogue
+      : authoritativeCatalogue.filter((r) => r.type === selectedRowType)
 
   return catalogue.map((res) => {
-    // 1. Collect deterministically assigned bars for this resource
+    // 1. Collect authoritatively assigned bars for this resource
     const assignedBars: Bar[] = []
 
-    for (let i = 0; i < liveBars.length; i++) {
-      const b = liveBars[i]
+    for (const b of liveBars) {
       if (!b) continue
 
-      // Deterministic numeric hash from bar ID or label
-      const hash = b.label.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0) + i
+      // Only assign if bar carries an authoritative matching resourceId or unitId
+      const matchesResource =
+        b.resourceId === res.id ||
+        b.unitId === res.id ||
+        (Boolean(b.unitId) && Boolean(res.code) && b.unitId === res.code)
 
-      let isAssigned = false
+      if (!matchesResource) continue
 
-      if (res.type === 'Equipment') {
-        if (['res-fx6', 'res-komodo', 'res-fx3'].includes(res.id)) {
-          const camIds = ['res-fx6', 'res-komodo', 'res-fx3']
-          if (camIds[hash % 3] === res.id) isAssigned = true
-        } else if (['res-cne50', 'res-gm2470'].includes(res.id)) {
-          const lensIds = ['res-cne50', 'res-gm2470']
-          if (lensIds[hash % 2] === res.id) isAssigned = true
-        } else {
-          const accIds = ['res-vmount', 'res-cine7', 'res-rs3', 'res-mkh416']
-          if (accIds[(hash >> 1) % 4] === res.id) isAssigned = true
-        }
-      } else if (res.type === 'Vehicles') {
-        const vehicleIds = ['res-van', 'res-scorpio']
-        if (hash % 2 === 0 && vehicleIds[(hash >> 1) % 2] === res.id) isAssigned = true
-      } else if (res.type === 'Crew') {
-        const crewIds = ['res-ramesh', 'res-sunil', 'res-bikash', 'res-anita']
-        if (hash % 3 === 0 && crewIds[(hash >> 2) % 4] === res.id) isAssigned = true
-      } else if (res.type === 'Warehouse Bays') {
-        const bayIds = ['res-bay-a', 'res-bay-p1', 'res-bay-p2']
-        if (bayIds[hash % 3] === res.id) isAssigned = true
+      const cloned: Bar = {
+        id: `${b.id}-${res.id}`,
+        kind: b.kind,
+        label: b.label,
+        from: b.from,
+        to: b.to,
       }
-
-      if (isAssigned) {
-        const cloned: Bar = {
-          id: `${b.id}-${res.id}`,
-          kind: b.kind,
-          label: b.label,
-          from: b.from,
-          to: b.to,
-        }
-        if (b.bookingNo) cloned.bookingNo = b.bookingNo
-        if (b.draftId) cloned.draftId = b.draftId
-        if (b.sub) cloned.sub = b.sub
-        if (b.client) cloned.client = b.client
-        if (b.note) cloned.note = b.note
-        if (b.noteAt) cloned.noteAt = b.noteAt
-        if (b.dot) cloned.dot = b.dot
-        assignedBars.push(cloned)
-      }
+      if (b.bookingNo) cloned.bookingNo = b.bookingNo
+      if (b.draftId) cloned.draftId = b.draftId
+      if (b.sub) cloned.sub = b.sub
+      if (b.client) cloned.client = b.client
+      if (b.note) cloned.note = b.note
+      if (b.noteAt) cloned.noteAt = b.noteAt
+      if (b.dot) cloned.dot = b.dot
+      if (b.unitId) cloned.unitId = b.unitId
+      if (b.resourceId) cloned.resourceId = b.resourceId
+      assignedBars.push(cloned)
     }
 
     // Sort bars chronologically
     assignedBars.sort((a, b) => a.from.getTime() - b.from.getTime() || a.to.getTime() - b.to.getTime())
 
-    // 2. Double-Booking & Conflict Detection
+    // 2. Double-Booking & Conflict Detection using strict half-open interval [from, to) bounds
     const conflictBars: Bar[] = []
     const conflictIndices = new Set<number>()
 
@@ -463,13 +464,19 @@ export function buildResourceTimeline(
         const barB = assignedBars[j]
         if (!barB || barB.kind === 'Completed' || barB.kind === 'Draft') continue
 
-        // Check date overlap
-        if (barA.from.getTime() <= barB.to.getTime() && barB.from.getTime() <= barA.to.getTime()) {
+        // Check date overlap in half-open intervals [A.from, A.to) and [B.from, B.to)
+        // Overlap exists iff A.from < B.to && B.from < A.to
+        const aStart = barA.from.getTime()
+        const aEnd = barA.to.getTime()
+        const bStart = barB.from.getTime()
+        const bEnd = barB.to.getTime()
+
+        if (aStart < bEnd && bStart < aEnd) {
           conflictIndices.add(i)
           conflictIndices.add(j)
 
-          const conflictFrom = new Date(Math.max(barA.from.getTime(), barB.from.getTime()))
-          const conflictTo = new Date(Math.min(barA.to.getTime(), barB.to.getTime()))
+          const conflictFrom = new Date(Math.max(aStart, bStart))
+          const conflictTo = new Date(Math.min(aEnd, bEnd))
 
           conflictBars.push({
             id: `conflict-${res.id}-${barA.id}-${barB.id}`,
