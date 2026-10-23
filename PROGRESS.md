@@ -1,5 +1,48 @@
 # Progress Log
 
+## 2026-10-23 17:55 NPT — Global Shell Phase 2: Calendar Workbar & View Alignment
+
+**Did**
+- Standardized Calendar (`/calendar`) view tabs and workbar controls per Global Shell Phase 2 specifications.
+- Implemented WAI-ARIA 1.2 roving tabindex pattern on `.calendar-view-tabs`: active tab retains `tabIndex={0}`, inactive tabs receive `tabIndex={-1}`, and cyclic keyboard navigation via `ArrowLeft` / `ArrowUp`, `ArrowRight` / `ArrowDown`, `Home`, and `End` moves focus and activates views cleanly.
+- Replaced non-conforming 34px height on date range pill (`.calendar-range-pill`) with `minHeight: 'var(--tap)'` and `height: 'var(--tap)'` (44px) to satisfy Law 15 ergonomic touch floors and align with surrounding steppers and action buttons.
+- Added mobile touch containment and smooth momentum scrolling to `.calendar-view-tabs` in `calendar.css` (`-webkit-overflow-scrolling: touch; scrollbar-width: none; overflow-x: auto;`) with hidden scrollbar.
+- Authored unit test suite `src/modules/calendar/__tests__/CalendarViewTabs.test.tsx` verifying roving focus, keyboard navigation, and 44px touch target compliance (3/3 passed).
+
+**Ruled**
+- WAI-ARIA roving tab pattern: view selector tabs maintain a single sequential tab stop (`tabIndex={0}` on active tab, `tabIndex={-1}` on inactive tabs) with cyclic arrow and Home/End roving navigation.
+- Law 15 touch target floors: all calendar header and workbar controls, including date range pills and view buttons, strictly honor `>=44px` (`var(--tap)`) touch boundaries.
+- Law 6 money-blindness preserved: no financial figures or pricing logic introduced to calendar surfaces.
+
+**Verified**
+- `npm run typecheck`: clean pass with 0 errors across TypeScript 5.7 strict.
+- `npm run lint:shell`: 708/708 files checked, 0 violations.
+- `npm run check:contrast`: 82/82 pairs pass WCAG AA across Light, Dark, High-contrast, and Glass modes.
+- `npm run check:pglite`: 169/169 migrations applied from scratch in PGlite, 0 failed (recorded 2026-10-23T12:11:25.963Z).
+- `npm run check:lifecycle`: 31/31 steps green across real Postgres + RLS (recorded 2026-10-23T12:10:37.227Z).
+- `npm run build`: 7,406 modules transformed, production artifacts and PWA service worker generated cleanly.
+- `npx vitest run src/modules/calendar/__tests__/CalendarViewTabs.test.tsx src/modules/calendar/__tests__/CalendarResourceTimeline.test.tsx src/modules/calendar/__tests__/CalendarHeader.test.tsx src/modules/calendar/__tests__/CalendarAvailability.test.tsx src/modules/calendar/__tests__/CalendarDayView.test.tsx src/modules/calendar/__tests__/CalendarKeyboardNav.test.tsx`: 25/25 tests passed across 6 test files.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | — |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 169 files · check:pglite 169/169 applied, 0 failed (recorded 2026-10-23T12:11:25.963Z). Suite: NOT VERIFIED — invalid test receipt.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-23T12:10:37.227Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Hardware / scanner physical device testing.
+- Inventory Hub (`/inventory`) workbar, category filters, and queue alignments for Global Shell Phase 2.
+- Hosted production verification after Babin runs migration backup protocol.
+
 ## 2026-10-23 — Global shell wireframes: review, comparison and local handoff
 
 **Did**
