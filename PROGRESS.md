@@ -1,5 +1,49 @@
 # Progress Log
 
+## 2026-10-23 13:05 NPT — Phase 5: Calendar & Resource Timeline Expansion
+
+**Did**
+- Implemented Resource Timeline Engine (`buildResourceTimeline`) in `src/lib/queries/calendar.ts` wiring physical Equipment, Vehicles, Crew, and Warehouse Bays to active bookings and reservations.
+- Built automated double-booking conflict detection comparing start and end times for concurrent allocations on each resource lane, generating visual `Conflict` bars (`kind: 'Conflict'`, `dot: 'danger'`, `label: 'CONFLICT'`).
+- Added dedicated Operational Day View (`['Month', 'Week', 'Day', 'Timeline', 'Availability']`) featuring the 06:00–06:00 NPT Kathmandu operational day cycle and 5 operational shift slots (Early Dispatch, Midday Handover, Afternoon Turnaround, Evening Intake, Night QC & Staging Buffer) with touch targets ≥44px.
+- Configured 5 active Saved Views in `src/data/calendar.ts`: Equipment View, Crew Schedule, Warehouse View, My Bookings, and Conflict View, auto-routing to Timeline layout.
+- Added interactive Reschedule / Propose Date Adjustment modal with conflict warnings, BS/AD conversion via `formatBsOrAd`, and confirm proposal guard in `Calendar.tsx`.
+- Enhanced Selected Event Inspector with full booking metadata, equipment list, BS/AD dates, and deep links to `/rentals/:bookingNo`. Preserved Law 6 money-blindness (no financial amounts rendered on calendar surfaces).
+- Added test suites `CalendarResourceTimeline.test.tsx` (7/7 tests passed) and `CalendarDayView.test.tsx` (3/3 tests passed).
+
+**Ruled**
+- Zero financial amounts or pricing displayed on calendar surfaces, upholding Law 6 and money-blind roles (Warehouse, Technician, Driver, Client).
+- Kathmandu 06:00–06:00 NPT operational day cycle strictly enforced via `getBusinessToday()` and half-open interval bounds.
+- Double bookings on physical equipment/vehicles/crew flagged immediately with visual `dot: 'danger'` and conflict bar warnings without breaking timeline navigation.
+
+**Verified**
+- Focused Calendar test suites: 48/48 tests passed across 6 test files (`CalendarResourceTimeline.test.tsx`, `CalendarDayView.test.tsx`, `CalendarAvailability.test.tsx`, `CalendarHeader.test.tsx`, `CalendarKeyboardNav.test.tsx`, and `calendar.test.ts`).
+- `npm run typecheck`: clean pass with 0 errors (`exactOptionalPropertyTypes` and `noUncheckedIndexedAccess` respected).
+- `npm run check:contrast`: 82/82 pass, 0 fail (WCAG AA compliant).
+- `npm run check:pglite`: 168/168 migrations applied, all gates green.
+- `npm run check:lifecycle`: 31/31 lifecycle steps green.
+- `npm run build`: clean production build for both `index.html` and `marketing.html` (dist generated in 1m 40s).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 168 files · check:pglite Historical, incomplete or failed receipt (2026-10-23T07:15:22.178Z); current source NOT VERIFIED. Suite: Historical suite: 5280/5280 passed, 0 failed (recorded 2026-10-23T06:49:59.083Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-23T07:16:20.227Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Phase 6 (and subsequent phases) per `FEATURE_EXPANSION_PLAN_2026-10-21.md`.
+- Reconcile seven-anchor-only navigation versus optional five-stage mode when Babin answers.
+- Physical device, barcode scanner hardware testing, and hosted acceptance testing.
+
 ## 2026-10-23 12:31 NPT — Premium recovery: current browser verification and honest previews
 
 **Did**

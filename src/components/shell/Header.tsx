@@ -24,6 +24,7 @@ import { GlobalAddMenu } from '../ui/creation/GlobalAddMenu'
 import { MobileHeaderSearch } from './MobileHeaderSearch'
 import { UnsavedChangesIndicator } from '../ui/header/UnsavedChangesIndicator'
 import { IS_MOCK } from '../../lib/supabase'
+import { resolveSearchOwner, resolvePhoneSearchKind } from './shellLayoutContract'
 import './shell.css'
 
 const HandoverSheet = lazy(() => import('../../modules/auth/HandoverSheet'))
@@ -266,13 +267,28 @@ export default function Header({ crumbs, actions }: HeaderProps) {
   )
   const searchConfig = isSearchConfig ? (hData?.search as PageHeaderSearchConfig) : null
 
+  const searchOwner = resolveSearchOwner({
+    isPhone,
+    hasPortalSearch: Boolean(ws?.hasPageSearch),
+    hasConfigSearch: Boolean(searchConfig),
+    isDispatch,
+  })
+
+  const phoneSearchKind = resolvePhoneSearchKind({
+    isPhone,
+    searchInMore: hData?.searchInMore,
+    hasPortalSearch: Boolean(ws?.hasPageSearch),
+    hasConfigSearch: Boolean(searchConfig),
+    isDispatch,
+  })
+
   // RULING 2026-10-15 (row 24): the header search is the page's one search, and its placeholder
   // says "(press /)". On a phone MobileHeaderSearch answers the key; at tablet and desktop
   // nothing did, so `/` focused nothing. A page that wires its own `/` (Today, Rentals,
   // Queues, Notes) still wins: it prevents default first, or refocuses after this runs.
   // Revert = delete this effect and `searchWrapRef`.
   const searchWrapRef = useRef<HTMLLabelElement>(null)
-  const hasHeaderSearch = !isPhone && searchConfig !== null
+  const hasHeaderSearch = !isPhone && searchOwner === 'config' && searchConfig !== null
   useEffect(() => {
     if (!hasHeaderSearch) return
     const handleSlash = (e: KeyboardEvent) => {
@@ -547,7 +563,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             }}
           >
             {/* If the active page provided a search configuration, render the unified search input */}
-            {searchConfig ? (
+            {searchOwner === 'config' && searchConfig ? (
               /* RULING 2026-10-15 (zoom audit): a label, so the whole 44px box focuses the
                  field. The input alone measured 22px tall on every page (Law 15). */
               <label
@@ -616,7 +632,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                   </button>
                 )}
               </label>
-            ) : !isDispatch && !ws?.hasPageSearch ? (
+            ) : searchOwner === 'command-palette' ? (
               <button
                 type="button"
                 onClick={() => openCommandPalette()}
@@ -688,7 +704,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
               ref={ws?.setHeaderSearchElement}
               className="workspace-header-search"
               style={{
-                display: ws?.hasPageSearch ? 'flex' : 'none',
+                display: searchOwner === 'portal' ? 'flex' : 'none',
                 width: '100%',
                 minWidth: 0,
               }}
@@ -914,16 +930,12 @@ export default function Header({ crumbs, actions }: HeaderProps) {
 
           {/* Phone search is always in the same slot, whether a page has its
               own search or uses the global command palette. */}
-          {/* RULING 2026-10-16: a page whose own More carries Search (Booking Detail) gives the
-              whole 44px slot to its title; at 375px the title had 0px. The slot is left out
-              rather than emptied, because its fixed width (shell.css) would still be reserved.
-              Revert = drop `!hData?.searchInMore` from the condition below. */}
-          {isPhone && !hData?.searchInMore && (
+          {phoneSearchKind !== 'none' && (
             <span className="app-global-header__phone-search" data-header-slot="search">
               <span ref={ws?.setHeaderPhoneSearchActionsElement} className="workspace-header-phone-search-actions" />
-              {searchConfig && !ws?.hasPageSearch ? (
+              {phoneSearchKind === 'panel' && searchConfig ? (
                 <MobileHeaderSearch key={hData?.title ?? activeCrumb} config={searchConfig} title={hData?.title ?? activeCrumb} />
-              ) : !searchConfig && !isDispatch && !ws?.hasPageSearch ? (
+              ) : phoneSearchKind === 'trigger' ? (
                 <button
                   type="button"
                   onClick={() => openCommandPalette()}

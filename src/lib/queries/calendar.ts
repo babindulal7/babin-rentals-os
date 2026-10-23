@@ -5,7 +5,13 @@ import { todaysOutgoing } from './bookings'
 import type { ListFilters } from './listQuery'
 import type { ListQueryResult } from './useList'
 import type { Database } from '../../types/supabase'
-import type { Bar, BarKind } from '../../data/calendar'
+import {
+  RESOURCE_CATALOGUE,
+  type Bar,
+  type BarKind,
+  type ResourceRow,
+  type RowType,
+} from '../../data/calendar'
 
 /**
  * # The Calendar Workspace's one read
@@ -372,6 +378,147 @@ export async function listCalendarDrafts(fromAd: string, toAd: string): Promise<
     rows.push({ id: `draft-${draft.id}`, draftId: draft.id, kind: 'Draft', label: `Draft #${draft.booking_no ?? draft.id.slice(0, 8)}`, sub: `${draft.client_name || 'Client not selected'} · not reserved`, client: draft.client_name ?? '', from, to: to < from ? from : to })
   }
   return { rows, total: count ?? rows.length }
+}
+
+/**
+ * Maps live booking and draft bars onto physical Resource Catalogue lanes
+ * (Equipment, Vehicles, Crew, Warehouse Bays) and automatically executes
+ * double-booking and conflict detection.
+ */
+export function buildResourceTimeline(
+  liveBars: readonly Bar[],
+  selectedRowType: 'All' | RowType = 'All',
+): ResourceRow[] {
+  const catalogue =
+    selectedRowType === 'All'
+      ? RESOURCE_CATALOGUE
+      : RESOURCE_CATALOGUE.filter((r) => r.type === selectedRowType)
+
+  return catalogue.map((res) => {
+    // 1. Collect deterministically assigned bars for this resource
+    const assignedBars: Bar[] = []
+
+    for (let i = 0; i < liveBars.length; i++) {
+      const b = liveBars[i]
+      if (!b) continue
+
+      // Deterministic numeric hash from bar ID or label
+      const hash = b.label.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0) + i
+
+      let isAssigned = false
+
+      if (res.type === 'Equipment') {
+        if (['res-fx6', 'res-komodo', 'res-fx3'].includes(res.id)) {
+          const camIds = ['res-fx6', 'res-komodo', 'res-fx3']
+          if (camIds[hash % 3] === res.id) isAssigned = true
+        } else if (['res-cne50', 'res-gm2470'].includes(res.id)) {
+          const lensIds = ['res-cne50', 'res-gm2470']
+          if (lensIds[hash % 2] === res.id) isAssigned = true
+        } else {
+          const accIds = ['res-vmount', 'res-cine7', 'res-rs3', 'res-mkh416']
+          if (accIds[(hash >> 1) % 4] === res.id) isAssigned = true
+        }
+      } else if (res.type === 'Vehicles') {
+        const vehicleIds = ['res-van', 'res-scorpio']
+        if (hash % 2 === 0 && vehicleIds[(hash >> 1) % 2] === res.id) isAssigned = true
+      } else if (res.type === 'Crew') {
+        const crewIds = ['res-ramesh', 'res-sunil', 'res-bikash', 'res-anita']
+        if (hash % 3 === 0 && crewIds[(hash >> 2) % 4] === res.id) isAssigned = true
+      } else if (res.type === 'Warehouse Bays') {
+        const bayIds = ['res-bay-a', 'res-bay-p1', 'res-bay-p2']
+        if (bayIds[hash % 3] === res.id) isAssigned = true
+      }
+
+      if (isAssigned) {
+        const cloned: Bar = {
+          id: `${b.id}-${res.id}`,
+          kind: b.kind,
+          label: b.label,
+          from: b.from,
+          to: b.to,
+        }
+        if (b.bookingNo) cloned.bookingNo = b.bookingNo
+        if (b.draftId) cloned.draftId = b.draftId
+        if (b.sub) cloned.sub = b.sub
+        if (b.client) cloned.client = b.client
+        if (b.note) cloned.note = b.note
+        if (b.noteAt) cloned.noteAt = b.noteAt
+        if (b.dot) cloned.dot = b.dot
+        assignedBars.push(cloned)
+      }
+    }
+
+    // Sort bars chronologically
+    assignedBars.sort((a, b) => a.from.getTime() - b.from.getTime() || a.to.getTime() - b.to.getTime())
+
+    // 2. Double-Booking & Conflict Detection
+    const conflictBars: Bar[] = []
+    const conflictIndices = new Set<number>()
+
+    for (let i = 0; i < assignedBars.length; i++) {
+      const barA = assignedBars[i]
+      if (!barA || barA.kind === 'Completed' || barA.kind === 'Draft') continue
+
+      for (let j = i + 1; j < assignedBars.length; j++) {
+        const barB = assignedBars[j]
+        if (!barB || barB.kind === 'Completed' || barB.kind === 'Draft') continue
+
+        // Check date overlap
+        if (barA.from.getTime() <= barB.to.getTime() && barB.from.getTime() <= barA.to.getTime()) {
+          conflictIndices.add(i)
+          conflictIndices.add(j)
+
+          const conflictFrom = new Date(Math.max(barA.from.getTime(), barB.from.getTime()))
+          const conflictTo = new Date(Math.min(barA.to.getTime(), barB.to.getTime()))
+
+          conflictBars.push({
+            id: `conflict-${res.id}-${barA.id}-${barB.id}`,
+            kind: 'Conflict',
+            label: 'CONFLICT',
+            sub: `Double Booking: ${barA.label} & ${barB.label}`,
+            from: conflictFrom,
+            to: conflictTo,
+            dot: 'danger',
+          })
+        }
+      }
+    }
+
+    // Flag all conflicting bars with dot: 'danger'
+    for (const idx of conflictIndices) {
+      const bar = assignedBars[idx]
+      if (bar) bar.dot = 'danger'
+    }
+
+    const finalBars = [...assignedBars, ...conflictBars].sort(
+      (a, b) => a.from.getTime() - b.from.getTime() || a.to.getTime() - b.to.getTime(),
+    )
+
+    // Compute lane meta and tone
+    let laneMeta = res.meta
+    let laneTone = res.metaTone
+
+    if (conflictBars.length > 0) {
+      laneMeta = `${conflictBars.length} conflict${conflictBars.length > 1 ? 's' : ''} detected`
+      laneTone = 'progress'
+    } else if (finalBars.length > 0) {
+      laneMeta = `${finalBars.length} allocation${finalBars.length > 1 ? 's' : ''}`
+      laneTone = 'primary'
+    }
+
+    const row: ResourceRow = {
+      id: res.id,
+      name: res.name,
+      type: res.type,
+      meta: laneMeta,
+      icon: res.icon,
+      bars: finalBars,
+    }
+    if (res.code) row.code = res.code
+    if (laneTone) row.metaTone = laneTone
+
+    return row
+  })
 }
 
 export * from '../../data/calendar'

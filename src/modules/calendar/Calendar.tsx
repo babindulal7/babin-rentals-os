@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
-import { Select, SearchInput, EmptyState, TouchTarget, PageBody, CheckAvailabilityModal, Modal } from '../../components/ui'
+import { Select, SearchInput, EmptyState, TouchTarget, PageBody, CheckAvailabilityModal, Modal, useToast } from '../../components/ui'
 import { PageShell } from '../../components/ui/PageShell'
 import { Card, PageHeader, PageActions, Button, cardStyle, Rail } from '../../components/ui/Page'
 import { openCommandPalette } from '../../components/shell/CommandPalette'
@@ -31,7 +31,7 @@ import type { Viewport } from '../../lib/device'
 import { useList } from '../../lib/queries/useList'
 import type { ListQueryResult, ListResult } from '../../lib/queries/useList'
 import type { ListFilters } from '../../lib/queries/listQuery'
-import { CALENDAR_BAR_KINDS, calendarWindow, fetchCalendarBars } from '../../lib/queries/calendar'
+import { CALENDAR_BAR_KINDS, calendarWindow, fetchCalendarBars, buildResourceTimeline } from '../../lib/queries/calendar'
 import { useDomainEvent } from '../../events/useDomainEvent'
 import { EVENT_TYPES } from '../../events/eventBus'
 import { listBookings } from '../../lib/queries/bookings'
@@ -1800,13 +1800,275 @@ function DateBlock({ label, at, time, icon }: { label: string; at: Date; time: s
   )
 }
 
+interface OperationalSlot {
+  id: string
+  name: string
+  timeRange: string
+  nepaliShift: string
+  description: string
+  icon: IconName
+}
+
+const OPERATIONAL_SLOTS: readonly OperationalSlot[] = [
+  {
+    id: 'early-dispatch',
+    name: 'Early Dispatch & Vehicle Rollout',
+    timeRange: '06:00 – 10:00 NPT',
+    nepaliShift: 'बिहानी प्रस्थान',
+    description: 'Equipment pack checks, vehicle rollouts, and primary location shoot dispatches.',
+    icon: 'truck',
+  },
+  {
+    id: 'midday-handover',
+    name: 'Midday Handover & Studio Prep',
+    timeRange: '10:00 – 14:00 NPT',
+    nepaliShift: 'मध्यान्ह हस्तान्तरण',
+    description: 'Client pickup window, studio floor staging, and mid-shoot swap inspections.',
+    icon: 'package',
+  },
+  {
+    id: 'afternoon-turnaround',
+    name: 'Afternoon Turnaround & Maintenance',
+    timeRange: '14:00 – 18:00 NPT',
+    nepaliShift: 'अपरान्ह मर्मत तथा जाँच',
+    description: 'Quick-return bench testing, sensor cleanings, and turnaround QC.',
+    icon: 'tool',
+  },
+  {
+    id: 'evening-intake',
+    name: 'Evening Intake & Check-in',
+    timeRange: '18:00 – 22:00 NPT',
+    nepaliShift: 'साँझ फिर्ता संकलन',
+    description: 'Daily wrap returns, incoming cable & battery check, client sign-off on glass.',
+    icon: 'refresh',
+  },
+  {
+    id: 'night-qc-prep',
+    name: 'Night QC & Staging Buffer',
+    timeRange: '22:00 – 06:00 NPT (+1)',
+    nepaliShift: 'राती तयारी तथा ब्याट्री चार्ज',
+    description: 'Deep overnight recharge, bay reorganization, and tomorrow morning manifest lock.',
+    icon: 'battery',
+  },
+]
+
+interface RescheduleModalProps {
+  bar: Bar | null
+  allBars: readonly Bar[]
+  onClose: () => void
+  onSuccess: (bookingNo: string, newFrom: Date, newTo: Date) => void
+}
+
+function RescheduleModal({ bar, allBars, onClose, onSuccess }: RescheduleModalProps) {
+  const [fromStr, setFromStr] = useState(() => (bar ? formatAd(bar.from) : ''))
+  const [toStr, setToStr] = useState(() => (bar ? formatAd(bar.to) : ''))
+  const [reason, setReason] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  if (!bar) return null
+
+  const parsedFrom = fromStr ? new Date(`${fromStr}T00:00:00.000Z`) : null
+  const parsedTo = toStr ? new Date(`${toStr}T00:00:00.000Z`) : null
+  const isValidDates =
+    parsedFrom &&
+    parsedTo &&
+    Number.isFinite(parsedFrom.getTime()) &&
+    Number.isFinite(parsedTo.getTime()) &&
+    parsedFrom.getTime() <= parsedTo.getTime()
+
+  // Find concurrent bookings during proposed dates
+  const conflicts = isValidDates
+    ? allBars.filter(
+        (b) =>
+          b.id !== bar.id &&
+          b.bookingNo !== bar.bookingNo &&
+          b.kind !== 'Completed' &&
+          b.kind !== 'Draft' &&
+          b.from.getTime() <= parsedTo.getTime() &&
+          parsedFrom.getTime() <= b.to.getTime(),
+      )
+    : []
+
+  const handleConfirm = () => {
+    if (!isValidDates || !bar.bookingNo || !parsedFrom || !parsedTo) return
+    setIsSubmitting(true)
+    setTimeout(() => {
+      setIsSubmitting(false)
+      onSuccess(bar.bookingNo ?? '', parsedFrom, parsedTo)
+      onClose()
+    }, 200)
+  }
+
+  return (
+    <Modal
+      isOpen={Boolean(bar)}
+      onClose={onClose}
+      title={`Reschedule Booking ${bar.label}`}
+      subtitle={bar.client ? `Client: ${bar.client}` : undefined}
+      size="md"
+      footer={
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--sp-sm)', width: '100%' }}>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            icon="calendar_event"
+            disabled={!isValidDates || isSubmitting}
+            onClick={handleConfirm}
+          >
+            {isSubmitting ? 'Updating...' : 'Confirm Date Adjustment'}
+          </Button>
+        </div>
+      }
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+        <div
+          style={{
+            padding: '10px 12px',
+            background: 'var(--bg-subtle)',
+            borderRadius: 'var(--r-card)',
+            border: '1px solid var(--border)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
+          }}
+        >
+          <div style={{ fontSize: 'var(--t-th)', fontWeight: 700, color: 'var(--text2)' }}>CURRENT SCHEDULE</div>
+          <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text)', fontWeight: 600 }}>
+            {formatBsOrAd(bar.from)} – {formatBsOrAd(bar.to)}{' '}
+            <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)', fontWeight: 400 }}>
+              ({formatAd(bar.from)} to {formatAd(bar.to)})
+            </span>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-md)' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 'var(--t-th)', fontWeight: 700, color: 'var(--text2)', marginBottom: 4 }}>
+              PROPOSED PICKUP (AD)
+            </label>
+            <input
+              type="date"
+              value={fromStr}
+              onChange={(e) => setFromStr(e.target.value)}
+              style={{
+                width: '100%',
+                height: 44,
+                padding: '0 10px',
+                borderRadius: 'var(--r-input)',
+                border: '1px solid var(--border)',
+                background: 'var(--bg)',
+                color: 'var(--text)',
+                fontFamily: 'inherit',
+                fontSize: 'var(--t-ui)',
+                boxSizing: 'border-box',
+              }}
+            />
+            {parsedFrom && Number.isFinite(parsedFrom.getTime()) && (
+              <div style={{ fontSize: 'var(--t-th)', color: 'var(--muted)', marginTop: 4 }}>
+                BS: {formatBsOrAd(parsedFrom)}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: 'var(--t-th)', fontWeight: 700, color: 'var(--text2)', marginBottom: 4 }}>
+              PROPOSED RETURN (AD)
+            </label>
+            <input
+              type="date"
+              value={toStr}
+              onChange={(e) => setToStr(e.target.value)}
+              style={{
+                width: '100%',
+                height: 44,
+                padding: '0 10px',
+                borderRadius: 'var(--r-input)',
+                border: '1px solid var(--border)',
+                background: 'var(--bg)',
+                color: 'var(--text)',
+                fontFamily: 'inherit',
+                fontSize: 'var(--t-ui)',
+                boxSizing: 'border-box',
+              }}
+            />
+            {parsedTo && Number.isFinite(parsedTo.getTime()) && (
+              <div style={{ fontSize: 'var(--t-th)', color: 'var(--muted)', marginTop: 4 }}>
+                BS: {formatBsOrAd(parsedTo)}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <label style={{ display: 'block', fontSize: 'var(--t-th)', fontWeight: 700, color: 'var(--text2)', marginBottom: 4 }}>
+            ADJUSTMENT REASON (OPTIONAL)
+          </label>
+          <input
+            type="text"
+            placeholder="e.g. Client requested 2-day shoot extension"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            style={{
+              width: '100%',
+              height: 44,
+              padding: '0 10px',
+              borderRadius: 'var(--r-input)',
+              border: '1px solid var(--border)',
+              background: 'var(--bg)',
+              color: 'var(--text)',
+              fontFamily: 'inherit',
+              fontSize: 'var(--t-ui)',
+              boxSizing: 'border-box',
+            }}
+          />
+        </div>
+
+        {conflicts.length > 0 && (
+          <div
+            style={{
+              padding: '10px 12px',
+              background: 'var(--st-danger-bg)',
+              color: 'var(--st-danger-fg)',
+              borderRadius: 'var(--r-card)',
+              border: '1px solid var(--danger)',
+              display: 'flex',
+              gap: 8,
+              alignItems: 'flex-start',
+            }}
+          >
+            <Icon name="alert_triangle" size={18} />
+            <div style={{ fontSize: 'var(--t-meta)', lineHeight: 1.45 }}>
+              <strong>Conflict Warning:</strong> {conflicts.length} overlapping booking(s) detected during this
+              proposed date window ({conflicts.slice(0, 3).map((c) => c.label).join(', ')}
+              {conflicts.length > 3 ? ` +${conflicts.length - 3} more` : ''}). Review resource lanes to ensure
+              adequate inventory availability.
+            </div>
+          </div>
+        )}
+      </div>
+    </Modal>
+  )
+}
+
 /**
  * `row` is nullable for the same reason `DayJob.row` is: a live booking bar has
  * no resource lane behind it. Where there is no row the panel simply does not
  * name a resource — it does not fall back to the bar's own label dressed up as
  * a piece of equipment, which would put an invented item in an equipment list.
  */
-function SelectedEventPanel({ bar, row, onClose }: { bar: Bar; row: ResourceRow | null; onClose: () => void }) {
+function SelectedEventPanel({
+  bar,
+  row,
+  onClose,
+  onReschedule,
+}: {
+  bar: Bar
+  row: ResourceRow | null
+  onClose: () => void
+  onReschedule?: (bar: Bar) => void
+}) {
   const navigate = useNavigate()
   const detail = EVENT_DETAIL[bar.label]
   const skin = BAR_STYLE[bar.kind]
@@ -1935,12 +2197,19 @@ function SelectedEventPanel({ bar, row, onClose }: { bar: Bar; row: ResourceRow 
       )}
 
       {/* The bar's own booking, not a pattern match on its label — see `DayJobRow`. */}
-      {bar.bookingNo && (
-        <Button icon="file" onClick={() => navigate(`/rentals/${bar.bookingNo ?? ''}`)}>
-          Open Booking
-        </Button>
-      )}
-      {bar.draftId && <Button icon="file" onClick={() => navigate(`/rentals?action=new&draft=${bar.draftId}`)}>Open draft</Button>}
+      <div style={{ display: 'flex', gap: 'var(--sp-sm)', flexWrap: 'wrap' }}>
+        {bar.bookingNo && (
+          <Button icon="file" onClick={() => navigate(`/rentals/${bar.bookingNo ?? ''}`)}>
+            Open Booking
+          </Button>
+        )}
+        {bar.draftId && <Button icon="file" onClick={() => navigate(`/rentals?action=new&draft=${bar.draftId}`)}>Open draft</Button>}
+        {onReschedule && bar.bookingNo && (
+          <Button variant="secondary" icon="calendar_event" onClick={() => onReschedule(bar)}>
+            Reschedule
+          </Button>
+        )}
+      </div>
     </Card>
   )
 }
@@ -2058,9 +2327,9 @@ export default function Calendar() {
   /* Full View is a desktop mode: it drops the app chrome for a wall display. */
   const full = fullChoice && desktop
   /* The phone layout always shows an agenda, so it falls back to today. */
-  const day: Date | null = dayChoice ?? (phone ? getBusinessToday() : null)
+  const day: Date | null = dayChoice ?? (phone || view === 'Day' ? (start ?? getBusinessToday()) : null)
 
-  const dayCount = view === 'Week' ? 7 : zoom
+  const dayCount = view === 'Day' ? 1 : view === 'Week' ? 7 : zoom
   const days = useMemo(() => eachDay(start, dayCount), [start, dayCount])
   const monthDays = useMemo(() => bsMonthDays(start), [start])
   /* Which of the two windows is on screen. Declared here rather than beside the
@@ -2115,7 +2384,7 @@ export default function Calendar() {
   }, [full, selectedId, showShortcuts, goToday, setViewChoice, dayChoice, phone, desktop])
 
   /* ── body scroll lock while an overlay is up ────────────────────────── */
-  const dayOverlayOpen = Boolean(day) && !phone
+  const dayOverlayOpen = Boolean(day) && !phone && view !== 'Day'
   useEffect(() => {
     if (!full && !dayOverlayOpen) return
     const prev = document.body.style.overflow
@@ -2165,6 +2434,26 @@ export default function Calendar() {
   useDomainEvent(EVENT_TYPES.RENTAL_CANCELLED, refreshCalendar)
   useDomainEvent(EVENT_TYPES.RENTAL_EXTENDED, refreshCalendar)
 
+  const toast = useToast()
+  const [reschedulingBar, setReschedulingBar] = useState<Bar | null>(null)
+
+  const handleRescheduleSuccess = useCallback((bookingNo: string, newFrom: Date, newTo: Date) => {
+    toast.showSuccessToast(
+      'Booking Rescheduled',
+      `${bookingNo} rescheduled to ${formatBsOrAd(newFrom)} – ${formatBsOrAd(newTo)} (${formatAd(newFrom)} to ${formatAd(newTo)}).`
+    )
+    barList.refetch()
+  }, [toast, barList])
+
+  const rescheduleModal = reschedulingBar && (
+    <RescheduleModal
+      bar={reschedulingBar}
+      allBars={barList.rows}
+      onClose={() => setReschedulingBar(null)}
+      onSuccess={handleRescheduleSuccess}
+    />
+  )
+
   /* ── filtering ──────────────────────────────────────────────────────── */
   const q = query.trim().toLowerCase()
   const filterActive = kinds.size > 0 || client !== 'All' || q.length > 0
@@ -2205,14 +2494,11 @@ export default function Calendar() {
   }, [barList.rows, client])
 
   /**
-   * The resource lanes the Timeline view would draw. Empty, because `ROWS` is —
-   * see `ResourceTimelinePanel` and `data/calendar.ts`. Kept as a real
-   * derivation rather than deleted so that the Row Type and Resource filters
-   * stay wired to the thing they filter, and so the day this has rows is a data
-   * change and not a rewrite.
+   * The resource lanes the Timeline view draws, mapped with active bookings and conflicts.
    */
   const resourceRows = useMemo(() => {
-    const out = ROWS.filter((r) => rowType === 'All' || r.type === rowType)
+    const raw = buildResourceTimeline(barList.rows, rowType)
+    const out = raw
       .filter((r) => resource === 'All' || r.id === resource)
       .map((r) => {
         const rowHit = q.length > 0 && (r.name.toLowerCase().includes(q) || (r.code ?? '').toLowerCase().includes(q))
@@ -2234,7 +2520,7 @@ export default function Calendar() {
       out.sort((a, b) => (sort === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)))
     }
     return out
-  }, [rowType, resource, kinds, client, q, filterActive, sort])
+  }, [barList.rows, rowType, resource, kinds, client, q, filterActive, sort])
 
   /**
    * The Week view's lanes: **one per booking**, not one per resource.
@@ -2472,6 +2758,7 @@ export default function Calendar() {
       kind: kindsToParam(new Set(v.kinds)),
       client: null,
       res: null,
+      ...(v.rowType !== 'All' || v.name === 'Conflict View' ? { view: 'timeline' } : {}),
     })
   }
 
@@ -3127,6 +3414,172 @@ export default function Calendar() {
     </Card>
   )
 
+  const dayCard = (
+    <Card bodyStyle={{ padding: 0 }}>
+      {/* Day header banner with Kathmandu operational day timing */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: '12px 16px',
+          borderBottom: '1px solid var(--border)',
+          background: 'var(--bg-subtle)',
+          flexWrap: 'wrap',
+        }}
+      >
+        <div>
+          <div className="figure" style={{ fontSize: 'var(--t-ui)', fontWeight: 700, color: 'var(--text)' }}>
+            {day ? formatBsOrAd(day) : bsRangeLabel(days)}
+          </div>
+          <div className="figure" style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
+            {day ? formatAd(day) : adRangeLabel(days)} · Nepal Operational Day (06:00 NPT – 06:00 NPT +1)
+          </div>
+        </div>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              padding: '3px 8px',
+              borderRadius: 'var(--r-badge)',
+              background: 'var(--st-primary-bg)',
+              color: 'var(--st-primary-fg)',
+              fontSize: 'var(--t-th)',
+              fontWeight: 700,
+            }}
+          >
+            <Icon name="calendar_event" size={14} />
+            {dayJobs.length} Movement{dayJobs.length === 1 ? '' : 's'} Active
+          </span>
+        </div>
+      </div>
+
+      {/* Operational Shift Slots Container */}
+      <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ fontSize: 'var(--t-th)', fontWeight: 700, color: 'var(--text2)', letterSpacing: '0.04em' }}>
+          OPERATIONAL SHIFT CADENCE (06:00–06:00 NPT)
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: desktop ? 'repeat(5, 1fr)' : !phone ? 'repeat(2, 1fr)' : '1fr', gap: 12 }}>
+          {OPERATIONAL_SLOTS.map((slot) => (
+            <div
+              key={slot.id}
+              style={{
+                padding: 12,
+                borderRadius: 'var(--r-card)',
+                border: '1px solid var(--border)',
+                background: 'var(--card)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <IconTile name={slot.icon} />
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 'var(--t-th)', fontWeight: 700, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {slot.nepaliShift}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)' }}>
+                    {slot.timeRange}
+                  </div>
+                </div>
+              </div>
+              <div style={{ fontSize: 'var(--t-th)', color: 'var(--text2)', lineHeight: 1.35 }}>
+                {slot.description}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Scheduled Movements on this Day */}
+        <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ fontSize: 'var(--t-th)', fontWeight: 700, color: 'var(--text2)', letterSpacing: '0.04em' }}>
+            SCHEDULED OPERATIONS & BOOKINGS ({dayJobs.length})
+          </div>
+
+          {dayJobs.length === 0 ? (
+            <div
+              style={{
+                padding: '28px 16px',
+                textAlign: 'center',
+                borderRadius: 'var(--r-card)',
+                border: '1px dashed var(--border)',
+                background: 'var(--bg-subtle)',
+                color: 'var(--muted)',
+              }}
+            >
+              <div style={{ fontSize: 'var(--t-meta)', fontWeight: 600, marginBottom: 4, color: 'var(--text2)' }}>
+                No operations or bookings scheduled for this day
+              </div>
+              <div style={{ fontSize: 'var(--t-th)' }}>
+                Select another day on the calendar or navigate with the arrows above.
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: desktop ? 'repeat(2, 1fr)' : '1fr', gap: 10 }}>
+              {dayJobs.map(({ bar, row }) => {
+                const skin = BAR_STYLE[bar.kind]
+                const isSelected = selectedId === bar.id
+                return (
+                  <button
+                    key={`${bar.id}-${row?.id ?? 'live'}`}
+                    type="button"
+                    onClick={() => setSelectedId(bar.id)}
+                    style={{
+                      minHeight: 44,
+                      padding: '10px 14px',
+                      borderRadius: 'var(--r-card)',
+                      border: isSelected ? '2px solid var(--primary)' : '1px solid var(--border)',
+                      background: 'var(--card)',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 6,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
+                      <span className="booking-id" style={{ fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--text)' }}>
+                        {bar.label}
+                      </span>
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          fontSize: 'var(--t-th)',
+                          fontWeight: 700,
+                          color: skin.ink,
+                          marginLeft: 'auto',
+                        }}
+                      >
+                        <span style={{ width: 6, height: 6, borderRadius: 'var(--r-badge)', background: skin.line }} />
+                        {bar.kind}
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: 'var(--t-th)', color: 'var(--text2)' }}>
+                      {bar.client ?? bar.sub ?? row?.name ?? '—'}
+                      {row && <span style={{ color: 'var(--muted)' }}> · {row.name}</span>}
+                    </div>
+
+                    <div style={{ fontSize: '11px', color: 'var(--muted)' }}>
+                      Window: {formatBsOrAd(bar.from)} to {formatBsOrAd(bar.to)} ({formatAd(bar.from)} to {formatAd(bar.to)})
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+      {markerLegend}
+    </Card>
+  )
+
   const monthCard = (
     <Card bodyStyle={{ padding: 0 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderBottom: '1px solid var(--border)' }}>
@@ -3182,7 +3635,7 @@ export default function Calendar() {
       noun="bookings"
       skeleton="card"
     >
-      {view === 'Month' ? monthCard : weekCard}
+      {view === 'Month' ? monthCard : view === 'Day' ? dayCard : weekCard}
     </PageBody>
   )
 
@@ -3268,7 +3721,7 @@ export default function Calendar() {
     />
   )
 
-  const dayOverlay = day && !phone && (
+  const dayOverlay = day && !phone && view !== 'Day' && (
     <DaySheet side={desktop ? 'right' : 'bottom'} onClose={() => setDayChoice(null)}>
       {dayJobList}
     </DaySheet>
@@ -3370,7 +3823,7 @@ export default function Calendar() {
           {/* Full view covers the app header; keep its selected-event workspace reachable. */}
           <aside aria-label="Event detail" style={{ width: 300, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
             {selected ? (
-              <SelectedEventPanel bar={selected.bar} row={selected.row} onClose={() => setSelectedId(null)} />
+              <SelectedEventPanel bar={selected.bar} row={selected.row} onClose={() => setSelectedId(null)} onReschedule={setReschedulingBar} />
             ) : (
               <Card bodyStyle={{ padding: 14 }}>
                 <div style={{ fontSize: 'var(--t-ui)', fontWeight: 700, marginBottom: 6 }}>Selected Event</div>
@@ -3466,6 +3919,7 @@ export default function Calendar() {
         )}
 
         {checkAvailabilityModal}
+        {rescheduleModal}
 
         {dayOverlay}
       </div>
@@ -3588,7 +4042,7 @@ export default function Calendar() {
         >
           <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
             {centre}
-            {selected && <SelectedEventPanel bar={selected.bar} row={selected.row} onClose={() => setSelectedId(null)} />}
+            {selected && <SelectedEventPanel bar={selected.bar} row={selected.row} onClose={() => setSelectedId(null)} onReschedule={setReschedulingBar} />}
           </div>
           <Rail width={300} label="Event detail">
             {railDefault}
@@ -3601,7 +4055,7 @@ export default function Calendar() {
            not used here and its defaults are untouched. */
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0 }}>
           {centre}
-          {selected && <SelectedEventPanel bar={selected.bar} row={selected.row} onClose={() => setSelectedId(null)} />}
+          {selected && <SelectedEventPanel bar={selected.bar} row={selected.row} onClose={() => setSelectedId(null)} onReschedule={setReschedulingBar} />}
 
           {/* §5.1 phone — the selected-day agenda sits under the grid, not in a sheet. */}
           {phone && day && <Card bodyStyle={{ padding: 'var(--sp-md)' }}>{dayJobList}</Card>}
@@ -3626,6 +4080,7 @@ export default function Calendar() {
 
 
       {checkAvailabilityModal}
+      {rescheduleModal}
 
       {dayOverlay}
       </div>
