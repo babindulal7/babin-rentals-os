@@ -37,7 +37,7 @@
 | Overall | structural mean of five | ≈ 96% | — |
 Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-23T11:04:10.345Z). Suite: Historical suite: 5280/5280 passed, 0 failed (recorded 2026-10-23T06:49:59.083Z); current source NOT VERIFIED.
 Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
-Gates read from .lifecycle-result.json, written 2026-10-23T11:04:37.660Z.
+Gates read from .lifecycle-result.json, written 2026-10-23T11:08:15.531Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
