@@ -5,9 +5,9 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { IntelCard } from '../IntelCard'
 
-const capability = vi.hoisted(() => ({ hasHover: true }))
+const capability = vi.hoisted(() => ({ hasHover: true, reducedMotion: true }))
 vi.mock('../../../lib/device', () => ({
-  useCapability: () => ({ hasHover: capability.hasHover, coarsePointer: !capability.hasHover, reducedMotion: true, standalone: false }),
+  useCapability: () => ({ hasHover: capability.hasHover, coarsePointer: !capability.hasHover, reducedMotion: capability.reducedMotion, standalone: false }),
   useViewport: () => 'desktop',
 }))
 
@@ -15,6 +15,7 @@ vi.mock('../../../lib/device', () => ({
 
 afterEach(() => {
   capability.hasHover = true
+  capability.reducedMotion = true
   vi.useRealTimers()
   document.body.innerHTML = ''
 })
@@ -93,6 +94,32 @@ describe('direct Intel card', () => {
     await act(async () => vi.advanceTimersByTime(500))
     expect(document.body.querySelector('[role="dialog"]')?.textContent).toContain('Packed')
     expect(document.body.textContent).not.toContain('Detail Peek')
+    await act(async () => root.unmount())
+    host.remove()
+  })
+
+  it('renders intel-card-overlay and placement for entrance animation, and respects reduced motion', async () => {
+    capability.reducedMotion = false
+    vi.useFakeTimers()
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const root = createRoot(host)
+    await act(async () => root.render(
+      <MemoryRouter>
+        <IntelCard glance={{ avatarLabel: 'EQ', title: 'Sony FX3' }} detailTitle="Sony FX3" detail={[]}>
+          <span data-intel-identifier>Sony FX3</span>
+        </IntelCard>
+      </MemoryRouter>,
+    ))
+    const identifier = host.querySelector('[data-intel-identifier]') as HTMLElement
+    await act(async () => identifier.dispatchEvent(new MouseEvent('mouseover', { bubbles: true })))
+    await act(async () => vi.advanceTimersByTime(300))
+    const card = document.body.querySelector('[data-intel-overlay]') as HTMLElement
+    expect(card).not.toBeNull()
+    expect(card.classList.contains('intel-card-overlay')).toBe(true)
+    expect(card.getAttribute('data-placement')).toBe('bottom')
+    expect(card.style.animation).not.toBe('none')
+
     await act(async () => root.unmount())
     host.remove()
   })
