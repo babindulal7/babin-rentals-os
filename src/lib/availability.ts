@@ -57,11 +57,10 @@
  * `return_at` are `not null` on the live table, so a window with an open end is
  * not a state the database can produce.
  *
- * ⚠ `actual_return_at` is deliberately not part of this type. Whether gear back
- * early frees its unit early — and whether that should be visible to a booking
- * being confirmed now — is a product question nobody has asked. A caller that
- * wants that behaviour passes the shorter window explicitly and owns the
- * decision at the call site, where it is legible.
+ * Return receipt is not inferred from this planned window. RULING 2026-10-24:
+ * usable physically returned units may be rented again after the committed
+ * Return releases their actual reservation. Readers must use those persisted
+ * holds, never manufacture an early release from a date or a pending task.
  */
 export interface RentalWindow {
   /** `bookings.pickup_at` — full ISO instant carrying an offset. */
@@ -118,10 +117,9 @@ export const RENTAL_WINDOW_BOUNDS: BoundConvention = 'half-open'
  * other side: *"an item reserved for Thursday is not available on Thursday"* —
  * on Thursday, not forever.
  *
- * **`Inspection` and `Cleaning` are the soft edge.** They stay assignable on the
- * stated assumption that those queues clear before a future pickup. That is the
- * part of this ruling most likely to need revisiting; revisiting it is one entry
- * in this set.
+ * RULING 2026-10-24: Inspection, Cleaning and Reset are follow-up task facts.
+ * Their pending state alone never excludes a usable returned unit. Actual
+ * Damaged/Lost condition, Maintenance, Missing, retirement and holds still do.
  *
  * `Retired` is listed for completeness and is belt-and-braces: `isRetired`
  * already refuses on the `retired_at` column, which is the authority.
@@ -149,29 +147,22 @@ export const DISQUALIFYING_UNIT_STATES: ReadonlySet<string> = new Set(['Maintena
  * ruled, kept in that form so the setting reads as a decision rather than as
  * ten tick-boxes over an enum:
  *
- *  - **Condition only** (ruled default) — a unit is out only if it is broken,
- *    lost or retired. Inspection and Cleaning stay assignable, on the stated
- *    assumption those queues clear before a future pickup.
- *  - **Condition and turnaround** — also holds back units in Inspection or
- *    Cleaning. For a floor where those queues genuinely run long.
- *  - **Only In Stock** — the strictest reading. Note it double-counts the
- *    date-overlap check: a unit On Rent *today* becomes unassignable for a
- *    booking three months out, so utilisation drops sharply. Offered because it
- *    is a defensible choice, not because it is recommended.
+ * RULING 2026-10-24 supersedes the queue exclusions in older presets. Stored
+ * labels remain readable, but neither Inspection nor Cleaning can be a hold.
+ * The strict preset retains its pre-existing custody-state restrictions; it
+ * does not turn a pending cleanup/QC task into an availability restriction.
  *
  * ⚠ No preset contains `Reserved`, `Packed`, `On Rent` or `Returning` except
  * the strict one, and that is the whole design — see `DISQUALIFYING_UNIT_STATES`.
  */
 export const UNIT_AVAILABILITY_PRESETS: Readonly<Record<string, ReadonlySet<string>>> = {
   'Condition only': DISQUALIFYING_UNIT_STATES,
-  'Condition and turnaround': new Set(['Maintenance', 'Missing', 'Retired', 'Inspection', 'Cleaning']),
+  'Condition and turnaround': DISQUALIFYING_UNIT_STATES,
   'Only In Stock': new Set([
     'Reserved',
     'Packed',
     'On Rent',
     'Returning',
-    'Inspection',
-    'Cleaning',
     'Maintenance',
     'Missing',
     'Retired',
@@ -230,25 +221,22 @@ export interface UnitCandidate {
   readonly productId: string
   /** `product_units.status`, an `inventory_state`. */
   readonly state: string
+  /** Actual physical condition; IO callers must supply a validated value. */
+  readonly condition?: string
   /** `product_units.retired_at`. Non-null means retired — see `isRetired`. */
   readonly retiredAt: string | null
   /**
    * An OPEN `cleaning_queue_entries` row for this unit — `requires_reset` with
    * no `reset_completed_at` — or `null` when the unit is off the queue.
    *
-   * **Why the queue and not `product_units.status`.** The obvious answer would
-   * be an `inventory_state` of `'Cleaning'`, but `product_units` is
-   * Booqable-mastered (`dataAccess.ts`'s `BOOQABLE_READ_ONLY_TABLES`) and the OS
-   * may not write that column at all. `cleaning_queue_entries` is the OS's own
-   * table, it is what Return fills and Reset stamps, and until this field
-   * existed nothing read `reset_completed_at` — so completing a reset had no
-   * consequence anywhere and unreset gear stayed bookable
-   * (BUG_AUDIT_LIFECYCLE RS-02).
+   * RULING 2026-10-24: this is task metadata, never an availability veto.
+   * Return creates the queue and Reset completes it independently of the
+   * reservation and genuine physical-condition restrictions checked below.
    */
   readonly openCleaning?: OpenCleaning | null
 }
 
-/** The queue entry holding a unit off the shelf, as the picker should say it. */
+/** Pending cleanup/reset task metadata; this does not hold a usable unit. */
 export interface OpenCleaning {
   /** The booking the gear came back from, for the sentence the picker prints. */
   readonly bookingNo: string | null
@@ -260,8 +248,8 @@ export interface OpenCleaning {
 export type RejectionReason =
   | { readonly kind: 'retired'; readonly retiredAt: string }
   | { readonly kind: 'state'; readonly state: string }
+  | { readonly kind: 'condition'; readonly condition: string }
   | { readonly kind: 'held'; readonly by: UnitHold }
-  | { readonly kind: 'cleaning'; readonly by: OpenCleaning }
 
 export interface RejectedCandidate {
   readonly unitId: string
@@ -491,23 +479,9 @@ export function selectUnitsForLine(input: SelectUnitsInput): AssignmentOutcome {
       continue
     }
 
-    /*
-     * The gear is physically on the reset bench, so it is not assignable —
-     * regardless of the window, and that is the part still to rule.
-     *
-     * `TODO(decision)`: an open queue entry is a fact about TODAY, and §4.30(c)
-     * settled that facts about today belong to the date-overlap check rather
-     * than to a hard exclusion (which is why the four booking-lifecycle states
-     * are not in `DISQUALIFYING_UNIT_STATES`). A reset has no expected
-     * completion date anywhere in the schema, so there is no honest horizon to
-     * compare a future window against — inventing one ("clean within a day")
-     * would be inventing the rule. Until it is ruled this excludes the unit
-     * outright, which is the direction that can only ever refuse a legal
-     * booking; the other direction puts unreset gear on a shoot.
-     */
-    const cleaning = unit.openCleaning
-    if (cleaning !== undefined && cleaning !== null) {
-      rejected.push({ unitId: unit.unitId, assetTag: unit.assetTag, reason: { kind: 'cleaning', by: cleaning } })
+    // RULING 2026-10-24: queue tasks do not block; real damage/loss still does.
+    if (unit.condition === 'Damaged' || unit.condition === 'Lost') {
+      rejected.push({ unitId: unit.unitId, assetTag: unit.assetTag, reason: { kind: 'condition', condition: unit.condition } })
       continue
     }
 
@@ -551,13 +525,7 @@ export function explainShortfall(outcome: AssignmentOutcome, productName: string
   for (const rejection of unavailable) {
     if (rejection.reason.kind === 'retired') parts.push(`${rejection.assetTag} is retired.`)
     else if (rejection.reason.kind === 'state') parts.push(`${rejection.assetTag} is ${rejection.reason.state}.`)
-    else if (rejection.reason.kind === 'cleaning') {
-      const from = rejection.reason.by.bookingNo
-      parts.push(
-        `${rejection.assetTag} is on the reset bench${from === null ? '' : ` after ${from}`} and has not been ` +
-          `${rejection.reason.by.requiresClean ? 'cleaned or ' : ''}reset yet.`,
-      )
-    }
+    else if (rejection.reason.kind === 'condition') parts.push(`${rejection.assetTag} condition is ${rejection.reason.condition}.`)
   }
 
   return parts.join(' ')
