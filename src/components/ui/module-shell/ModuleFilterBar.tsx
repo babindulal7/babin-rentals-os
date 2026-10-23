@@ -55,8 +55,26 @@ export const ModuleFilterBar: React.FC<ModuleFilterBarProps> = ({
               aria-label={tab.label}
               aria-selected={isActive}
               aria-pressed={isActive}
+              tabIndex={isActive ? 0 : -1}
               className={`module-filter-bar__tab press ${isActive ? 'is-active' : ''}`.trim()}
               onClick={() => onTabChange(tab.id)}
+              onKeyDown={(event) => {
+                const backwards = event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+                const forwards = event.key === 'ArrowRight' || event.key === 'ArrowDown'
+                if (!backwards && !forwards && event.key !== 'Home' && event.key !== 'End') return
+                const index = tabs.findIndex((t) => t.id === tab.id)
+                const next =
+                  event.key === 'Home'
+                    ? tabs[0]
+                    : event.key === 'End'
+                      ? tabs[tabs.length - 1]
+                      : tabs[(index + (backwards ? -1 : 1) + tabs.length) % tabs.length]
+                if (!next) return
+                event.preventDefault()
+                onTabChange(next.id)
+                const buttons = event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
+                buttons?.[tabs.findIndex((t) => t.id === next.id)]?.focus()
+              }}
             >
               {tab.icon && <Icon name={tab.icon} size={14} />}
               <span data-view-label>{tab.label}</span>

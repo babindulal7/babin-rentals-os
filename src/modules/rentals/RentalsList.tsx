@@ -1672,25 +1672,47 @@ export default function RentalsList() {
   const singleSelectedId = selectedIds.size === 1 ? Array.from(selectedIds)[0] : null
   const selectedHeaderRental = singleSelectedId ? list.rows.find((r) => r.id === singleSelectedId) ?? null : null
 
-  const getTabCount = (viewId: string, stages: readonly string[]): number | null => {
+  const getTabCount = (viewId: string, stages: readonly string[]): number | string | null => {
     const fromApi = viewCounts.rows.find((row) => row.id === viewId)?.count
     if (typeof fromApi === 'number' && !Number.isNaN(fromApi)) return fromApi
 
     // Fallback when viewCounts is loading, errored or unpopulated
+    if (viewCounts.error && list.error) return '—'
+    if (viewCounts.loading && list.loading && list.rows.length === 0) return '…'
+
     if (viewId === 'All') {
       if (typeof total === 'number') return total
+      if (list.loading) return '…'
+      if (list.error) return '—'
       return list.rows.length
     }
     if (viewId === 'Draft') {
+      if (list.loading && list.rows.length === 0) return '…'
+      if (list.error) return '—'
       return list.rows.filter((r) => (r.status as string) === 'Draft').length
     }
     if (viewId === 'Cancelled') {
+      if (list.loading && list.rows.length === 0) return '…'
+      if (list.error) return '—'
       return list.rows.filter((r) => r.isCancelled).length
+    }
+    if (viewId === 'Overdue') {
+      if (chip === 'Overdue') {
+        if (typeof total === 'number') return total
+        if (list.loading) return '…'
+        if (list.error) return '—'
+        return list.rows.length
+      }
+      if (list.loading && list.rows.length === 0) return '…'
+      if (list.error) return '—'
+      return list.rows.filter((r) => r.isOverdue).length
     }
     if (stages.length === 1 && stages[0]) {
       const stageName = stages[0]
       const facetCount = stageFacet.counts[stageName]
       if (typeof facetCount === 'number') return facetCount
+      if (list.loading && list.rows.length === 0) return '…'
+      if (list.error) return '—'
       return list.rows.filter((r) => (r.status as string) === stageName).length
     }
     if (stages.length > 1) {
@@ -1704,8 +1726,12 @@ export default function RentalsList() {
         }
       }
       if (hasAny) return sum
+      if (list.loading && list.rows.length === 0) return '…'
+      if (list.error) return '—'
       return list.rows.filter((r) => stages.includes(r.status as string)).length
     }
+    if (viewCounts.loading) return '…'
+    if (viewCounts.error) return '—'
     return null
   }
 
@@ -2004,15 +2030,15 @@ export default function RentalsList() {
       {/* Zone 1: Sub-Header & Primary Action Bar matching wireframe */}
       <ModuleSubHeader
         counter={
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <h1 style={{ margin: 0, fontSize: 'var(--t-h3, 18px)', fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <h1 style={{ margin: 0, fontSize: 'var(--t-h3, 18px)', fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 Rentals
                 <span style={{ color: 'var(--muted)', fontWeight: 400 }}>•</span>
                 <span style={{ fontSize: 'var(--t-meta, 14px)', fontWeight: 600, color: 'var(--text2)' }}>Management workspace</span>
               </h1>
-              <span style={{ color: 'var(--muted)', fontSize: '13px' }}>
-                (<strong style={{ color: 'var(--text)' }}>{total ?? list.rows.length}</strong> active bookings · <strong style={{ color: 'var(--text)' }}>{getTabCount('Out', ['On Rent']) ?? 0}</strong> on set)
+              <span style={{ color: 'var(--muted)', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                (<strong style={{ color: 'var(--text)' }}>{list.loading && total === null ? '…' : list.error && total === null ? '—' : (total ?? list.rows.length)}</strong> active bookings · <strong style={{ color: 'var(--text)' }}>{getTabCount('Out', ['On Rent']) ?? (list.loading ? '…' : list.error ? '—' : 0)}</strong> on set)
               </span>
             </div>
             <p style={{ margin: 0, fontSize: 'var(--t-meta, 13px)', color: 'var(--muted)' }}>
@@ -2031,7 +2057,7 @@ export default function RentalsList() {
           {
             id: 'out-on-set',
             label: 'Out on Set',
-            count: getTabCount('Out', ['On Rent']) ?? 0,
+            count: getTabCount('Out', ['On Rent']) ?? (list.loading ? '…' : list.error ? '—' : 0),
             subtitle: 'Active on production sets',
             icon: 'truck',
             tone: 'success',
@@ -2044,7 +2070,7 @@ export default function RentalsList() {
           {
             id: 'prep-packing',
             label: 'Prep & Packing',
-            count: getTabCount('Upcoming', ['Quote', 'Booked', 'Packed']) ?? 0,
+            count: getTabCount('Upcoming', ['Quote', 'Booked', 'Packed']) ?? (list.loading ? '…' : list.error ? '—' : 0),
             subtitle: 'Upcoming & booked kits',
             icon: 'package',
             tone: 'warn',
@@ -2057,7 +2083,7 @@ export default function RentalsList() {
           {
             id: 'overdue-returns',
             label: 'Overdue Returns',
-            count: chip === 'Overdue' ? total ?? 0 : getTabCount('Overdue', []) ?? 0,
+            count: getTabCount('Overdue', []) ?? (list.loading ? '…' : list.error ? '—' : 0),
             subtitle: 'Requires immediate return',
             icon: 'alert_triangle',
             tone: 'danger',

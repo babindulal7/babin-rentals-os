@@ -224,6 +224,14 @@
 /* Phone overrides follow the shared rules so compact spacing actually applies.
    Keep the full KPI name readable; its icon is supplementary at this width. */
 @media (max-width: 767px) {
+  .module-sub-header {
+    gap: var(--sp-sm, 12px);
+  }
+
+  .module-sub-header__counter {
+    white-space: normal;
+  }
+
   .module-kpi-grid {
     gap: var(--sp-sm);
     margin-top: 0;
@@ -275,6 +283,12 @@
   border: 1px solid var(--border);
   overflow-x: auto;
   max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.module-filter-bar__left::-webkit-scrollbar {
+  display: none;
 }
 
 .module-filter-bar__tab {

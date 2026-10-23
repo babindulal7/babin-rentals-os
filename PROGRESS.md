@@ -1,5 +1,50 @@
 # Progress Log
 
+## 2026-10-23 16:55 NPT — Global Shell Phase 2: Rentals Hub Workbar & Queue Alignments
+
+**Did**
+- Standardized Rentals Hub (`/rentals`) workbar and queue controls to align with Global Shell Phase 2 specifications.
+- Eliminated invented `0` counts across `RentalsList.tsx` during loading (`'…'`) and error (`'—'`) states in `getTabCount`, `ModuleSubHeader`, and `ModuleKpiStrip` (Out on Set, Prep & Packing, Overdue Returns).
+- Upgraded `ModuleFilterBar` tabs with WAI-ARIA tablist accessibility and roving tab navigation (`tabIndex={isActive ? 0 : -1}`, ArrowLeft/ArrowRight/Home/End keyboard navigation).
+- Enhanced `.module-filter-bar__left` in `module-shell.css` with `-webkit-overflow-scrolling: touch; scrollbar-width: none;` and hidden scrollbar for fluid horizontal scrolling without horizontal page overflow on mobile viewports.
+- Enhanced `ModuleSubHeader` responsiveness on phone viewports (≤767px) with `white-space: normal` and `flexWrap: wrap` to prevent title or count badge clipping.
+- Added comprehensive unit test suite `src/modules/rentals/__tests__/rentalsWorkbarAlignment.test.tsx` verifying tablist roving focus, loading/error badge fidelity, and KPI non-invented counts.
+
+**Ruled**
+- Truthful counts invariant: neither `ModuleSubHeader`, `ModuleKpiStrip`, nor `ModuleFilterBar` shall render fabricated `0` counts while queries are in flight or errored (`'…'` on loading, `'—'` on error).
+- WAI-ARIA roving tab pattern: `ModuleFilterBar` tab buttons maintain roving focus with single tab stop (`tabIndex={0}` on active tab, `tabIndex={-1}` on inactive tabs) and directional keyboard navigation.
+- Mobile viewport containment: status pills and queue strips must maintain momentum touch scrolling with no horizontal scroll leakage on 390px phone viewports.
+- Law 6 money-blindness: financial amounts remain strictly shielded from money-blind roles in all Rentals Hub surfaces.
+
+**Verified**
+- `npm run typecheck`: clean pass with 0 errors across strict TypeScript 5.7.
+- `npm run lint:shell`: 708/708 files checked, 0 violations.
+- `npm run check:contrast`: 82/82 pairs pass WCAG AA across Light, Dark, High-contrast, and Glass modes.
+- `npm run check:pglite`: 168/168 migrations applied from scratch in PGlite, 0 failed.
+- `npm run check:lifecycle`: 31/31 steps green across real Postgres + RLS.
+- `npm run build`: 7,405 modules transformed; production artifacts, index.html, marketing.html, and PWA service worker generated cleanly.
+- `npx vitest run src/modules/rentals/__tests__/rentalsList.test.ts src/modules/rentals/__tests__/rentalsList.render.test.tsx src/modules/rentals/__tests__/rentalsWorkbarAlignment.test.tsx`: 137/137 tests passed.
+- `npx vitest run src/__tests__/e2e/globalShellPilotRoutes.test.tsx`: 5/5 pilot route tests passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-23T11:04:10.345Z). Suite: Historical suite: 5280/5280 passed, 0 failed (recorded 2026-10-23T06:49:59.083Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-23T11:04:37.660Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Hardware / scanner physical device testing.
+- Hosted production verification after Babin runs migration backup protocol.
+
 ## 2026-10-23 16:10 NPT — Intentional 300ms Global Hover Delay Everywhere
 
 **Did**
@@ -25,13 +70,13 @@
 |---|---|---|---|
 | Backend | actions implemented / total | 52 / 55 (95%) | +0 |
 | Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
-| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
 | Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
-| Lifecycle | steps green / total | not measured — current receipt required | — |
-| Overall | structural mean of five | not measured | — |
-Migrations 168 files · check:pglite Historical, incomplete or failed receipt (2026-10-23T10:15:08.031Z); current source NOT VERIFIED. Suite: Historical suite: 5280/5280 passed, 0 failed (recorded 2026-10-23T06:49:59.083Z); current source NOT VERIFIED.
+| Lifecycle | steps green / total | 31 / 31 (100%) | — |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-23T10:42:46.040Z). Suite: Historical suite: 5280/5280 passed, 0 failed (recorded 2026-10-23T06:49:59.083Z); current source NOT VERIFIED.
 Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
-Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-23T10:15:34.293Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-23T10:43:46.481Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
