@@ -119,7 +119,16 @@ const db = vi.hoisted(() => {
 })
 
 vi.mock('../../../lib/supabase', () => ({
-  supabase: { from: db.from },
+  supabase: {
+    from: db.from,
+    /* RULING 2026-10-23 (0171): runFloorVerb's step 1b asks the database about
+       the actor's branch grant before any write. At this layer the DB is
+       mocked, so the assert answers "pristine staff — allowed", which is the
+       migration's own empty-table default. The grant's real behaviour is
+       proven end-to-end in scripts/test-operations-grants.mjs (PGlite). */
+    rpc: async () => ({ data: null, error: null }),
+  },
+  IS_MOCK: false,
   newClientUuid: () => 'test-action-key',
 }))
 

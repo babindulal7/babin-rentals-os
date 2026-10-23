@@ -1,5 +1,7 @@
 # Current continuation — 21 October 2026, integrated local fixes
 
+> **23 October 18:23 NPT — current checkout NOT VERIFIED:** a tested 0171 superior-target security repair is preserved in recovery, but the draft migration is currently absent from the active checkout after repeated external changes. Candidate database proof: 169 migrations / 31 lifecycle / 18 security groups passed. Owned full suite 5316/5320, 4 failed, 0 skipped, source changed; Calendar recheck 7/7 passed. Latest global receipts and current-source gaps are in the newest PROGRESS.md entry and docs/verification/ASTRA_CURRENT_MAIN_2026-10-23.json. Canonical checkout choice pending; production launch remains HOLD.
+
 > **21 October 2026 — confirmation completeness continuation, release HOLD:** the saved `ASTRA_UI_STABLE_CHECKPOINT_2026-10-21.json` records 5,162 passing tests and all required local gates on fingerprint `f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b`. Subsequent local source edits are not certified by that checkpoint. Pre-commit confirmation now reads complete ordered booking-line pages and refuses incomplete/invalid results before any transition; nine new regressions failed against the prior source. Current checks: `docs/verification/ASTRA_CONFIRM_LINES_2026-10-21.json`. Earlier entries below are historical; hosted, physical-device and full offline acceptance remain open.
 
 ## Latest integration checkpoint

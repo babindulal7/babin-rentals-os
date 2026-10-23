@@ -467,11 +467,15 @@ export type OperationName = 'pack' | 'handover' | 'return' | 'reset'
  *   - **Reset** (QC / cleaning) — floor + Technician. Reset absorbs Cleaning,
  *     which is floor work technicians perform.
  *
- * ⚠ **Location scoping is not expressed here.** A grant is meaningless
- * without a site (P0-B rule 3); the session carries `branchId`/`warehouseId`
- * (see `UserSession`), but per-grant site binding needs a DB-level grant
- * table + RLS and is tracked as the remaining half of P0-B. These functions
- * answer "may this role" only; "may this role at this site" is the DB's job.
+ * ⚠ **Location scoping is now expressed — in the database (0171, RULING
+ * 2026-10-23).** The session carries `branchId`/`warehouseId` (see
+ * `UserSession`), and migration 0171's `operations_grants` table +
+ * `auth_may_perform_operation()` narrow the four grants per branch, enforced
+ * fail-closed inside `apply_booking_stage_transition()` and asked early by
+ * `runFloorVerb` step 1b (`assert_operation_branch_grant`) — Reset's only
+ * branch gate. These functions still answer "may this role"; "may this role
+ * at this site" is the DB's, and an empty grants table keeps this file's
+ * matrix exactly as it was (narrowing-only).
  *
  * Offline: all four are pure role checks and do not depend on connectivity,
  * matching `canPerformOperations` (the floor works offline). Money gates are

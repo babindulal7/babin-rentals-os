@@ -228,6 +228,18 @@ Ladder shorthand: `M+` = Owner · Admin · Manager. `C+` = M+ · Coordinator. `F
 | `evidence.review` (accept/reject match, archive with reason) | M+ | soft-delete only | ✓ |
 | `scan` | all staff | identity by PIN (P8) | ○ |
 
+**Branch scoping — RULING 2026-10-23 (P0-B second half, migration 0171).** The four
+floor grants above carry a **site dimension** in the database, on top of the role
+matrix this table states: `operations_grants` rows narrow `pack · handover · return ·
+reset` per user, per branch. **Narrowing-only** — a staff member with no grant rows
+keeps exactly the roles above at every branch, so an empty table is a no-op and
+applying 0171 changes nothing until an Owner/Admin issues a first grant. A user with
+any grant history is scoped: only an ACTIVE grant for the booking's branch passes,
+fail-closed inside `apply_booking_stage_transition()` for the three custody verbs and
+asked early by `runFloorVerb` step 1b for all four (Reset's only gate). Revoking the
+last active grant scopes a user to nothing — never back to global. No §3 cell and no
+role set above changed.
+
 ### 4.3 Cases, Maintenance, Purchase
 
 **Preventive maintenance — R-28 (8 Sep 2026).** A unit is due for service when

@@ -1,5 +1,18 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 23 October 2026: pending 0171 / canonical checkout — TODO(decision)
+
+- A draft operations-branch migration appeared locally and was repeatedly removed by external checkout/cleanup activity. Its guarded recovery candidate closes the existing Admin superior/self-target bypass and passes 169 migration / 31 lifecycle / 18 security-group local checks. Candidate and original are preserved at C:/Users/use/AppData/Local/Temp/babin-current-main-20261023-173608; this is not approval of the draft's location model or administration policy.
+- Active migration present at reconciliation: false. Current application verification remains incomplete. User choice is pending between pausing other writers and restoring pending fixes, or keeping current main with the draft in recovery. No answer or product ruling is inferred from file changes or source comments.
+- The pre-existing P0-B location-scoping decision remains OPEN. Confirm the authoritative site model, permitted grant administration and Reset enforcement/integration before treating the feature as delivered. No live migration, role expansion or deletion is proposed by this record.
+
+### Pinned verification follow-up — Reset branch enforcement
+
+- Commit `14dbbe3a` contains 0171 and 169 migration files. A disposable PGlite probe allowed a synthetic Warehouse actor only on branch A and correctly refused the explicit Reset assertion for branch B, yet that actor still updated one branch B `cleaning_queue_entries` assignment through the API role. `floorVerb.ts` does not invoke the early assertion described in 0171. This is a locally reproduced enforcement gap, not a hosted test or a completed feature. Evidence: `artifacts/release-checkpoint/checkpoint-14dbbe3a/reset-branch-probe.json`.
+- **RESOLVED / RESET-BRANCH-0171, Babin 23 October:** “Use the unit’s current warehouse branch.” Unbooked items resolve `product_units.warehouse_id → warehouses.branch_id`; linked items retain booking branch. No fallback to the actor's or unit's separate branch. The broader P0-B model/admin approval above remains open.
+- Candidate engineering is isolated in the attached `verified-release-checkpoint` worktree: 0172 restrictive queue/task policies cover old and new scope; floor actions call the early assertion; positive/negative tests cover revoke, transfer, reparenting, unknown/inactive identities and existing role limits. Its fixed-source pipeline, full suite/coverage (5,339/5,339), 170 migrations and 31 lifecycle steps pass. Candidate integration and permanent CI wiring remain pending; no production application is authorized.
+- Contributor governance gap: `AGENTS.md` and `CLAUDE.md` reference root `PLAN.md`, which is absent in this checkout. This decision is logged here instead of inventing a replacement roadmap.
+
 ## 20 October 2026: per-operation grant matrix (P0-B) — ACTIVE, one open cell
 
 - The four global operations now carry **one grant each** (Booqable adoption spec P0-B: Booqable's 13 flat grants cover no operational action, so the granularity is net-new). `lib/rbac.ts` exposes `canPack` / `canHandover` / `canReturn` / `canReset` + `canPerformOp(role, op)`; `actions/core.ts` resolves `operations.pack|handover|return|reset`; the four rental actions declare their specific grant instead of the coarse `operations.perform` (kept as a dispatcher case for compatibility).

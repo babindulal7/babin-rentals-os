@@ -1,5 +1,120 @@
 # Progress Log
 
+## 2026-10-23 22:05 NPT — coss audit: restyle live InputGroup/Kbd off dead Tailwind classes
+
+**Did**
+- Audited the merged `feat/coss-ui-modernization` work against the coss skill references. Found four components styled entirely with Tailwind utility classes that compile to nothing in the ops bundle (no ops CSS entry imports `tailwindcss`; only `marketing.css` does — the exact failure Button/Modal/Toast already document).
+- Live defects: `InputGroup.tsx` (MoneyField money entry, ConfirmDialog reason gate, equipmentAssist) and `Kbd.tsx` (SearchInput shortcut hints, CommandPalette legend, equipmentAssist) rendered as unstyled native elements.
+- Rewrote `InputGroup.tsx` + `Kbd.tsx` to the app's real inline-style + CSS-variable system, API unchanged (`invalid`, `disabled`, `align`, data-slot attributes, addon focus-transfer all keep their contracts). Block-layout detection moved from dead `has-*` utility classes to an explicit React direct-children scan.
+- Added minimal `ui-v2.css` rules for `:focus-within` / `[data-invalid]` rings only — interaction states inline styles cannot express; same outline treatment as operations-table rows.
+- `cossDialog.tsx` / `cossDrawer.tsx` carried the same defect but were fixed concurrently by the owner's session (commits `5694b285`, `9460479e`, with responsive bottom-stick tests). Those versions were left untouched; no wholesale migration of Select/Toast/OverflowMenu/ConfirmDialog was performed (hundreds of call sites + e2e assertions make single-pass replacement unsafe).
+
+**Ruled**
+- coss adoption in this codebase means Base UI composition + app token styling. Verbatim Tailwind-class copies render unstyled in the ops app; the Button/Modal/Toast rewrite precedent now also covers cossDialog/cossDrawer/InputGroup/Kbd.
+- New primitives (alert-dialog, menu, tooltip, context-menu, command) are only to be added when real call sites exist — no dead-code exports.
+- Resting layout/appearance lives inline in components; ui-v2.css gets only pseudo-state rules that read tokens.
+
+**Verified**
+- `npm run typecheck`: clean pass.
+- Full suite: 5,339/5,339 tests across 427 files, 0 failures (includes the owner's new cossDialogResponsive 4/4, cossDrawer 2/2, QuantityStepper 9/9 suites).
+- `npm run build`: clean production build for both `index.html` and `marketing.html`; PWA 247 precache entries; zero source maps.
+- `npm run check:contrast`: 82/82 pairs pass WCAG AA (light, dark, high-contrast, glass).
+- Focused suites re-run after the final CSS fix: cossPrimitives 5/5, uiV2 6/6, SearchInput 9/9, touchTarget 16/16.
+
+## Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | — |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 | — |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | — |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 169 files · check:pglite Historical, incomplete or failed receipt (2026-10-23T13:04:16.739Z); current source NOT VERIFIED. Suite: Historical suite: 5339/5339 passed, 0 failed (recorded 2026-10-23T14:24:14.884Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-23T13:04:31.224Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+`npm run completion` exited 1 and correctly reports current source NOT VERIFIED — the DB-gate receipts predate migration 0171 (owner's in-flight work) and this session's UI changes. The suite receipt (5,339/5,339) is from this session's full run against the changed source. No readiness percentage was inferred.
+
+## Remaining
+
+- `cossDialog`/`cossDrawer` have no enter/exit animation (deliberate simplification — wire via controlled state like Modal when a live call site needs it).
+- Stash `coss-safety-wip` (`stash@{0}`) holds the owner's QuantityStepper/cossDialog/responsive.css snapshot from the concurrent session — left in place for the owner to manage.
+- Physical device, scanner, hosted/production acceptance unchanged (owner's release HOLD stands).
+
+## 2026-10-23 — Unbooked Reset site ruling and isolated boundary repair
+
+**Did**
+- Implemented the user-selected warehouse-branch rule as candidate migration 0172 in the attached `verified-release-checkpoint` worktree, based on guarded 0171 / commit `14dbbe3a`. Added restrictive queue/task write policies with old/new scope checks, an invoker-only site helper, all-four-verb preflight, explicit mock behavior and positive/negative tests. Shared application source was not overwritten.
+- Published `docs/verification/RESET_BRANCH_CANDIDATE_2026-10-23.md`; retained source-matched logs under `artifacts/release-checkpoint/reset-candidate-0172/`. Kept original failed-probe and checkpoint evidence intact.
+- Re-checked connected projects/branches, saved references, staging variable names and local hosted-ref matches without printing credentials. Only production was identified; staging harness safety tests pass 2/2, actual staging verifier remains INCOMPLETE. Asked for device-model clarification and explicit candidate integration choice.
+
+**Ruled**
+- Babin explicitly selected **the unit's current warehouse branch** for an unbooked cleaning/reset item. Linked entries retain booking branch; no actor-home/stale-unit-branch fallback. Logged in RULINGS, candidate permission note and migration comment. Broader 0171 defaults/admin model and release-source choice remain pending.
+
+**Verified**
+- Candidate fingerprint `4dce451962c91bf1bfe0e86840fe760b06d81a18d30f7ff881e8ece1e603ef19`: typecheck, 5,339/5,339 tests in 426 files, 170/170 PGlite migrations, 31/31 lifecycle, eight financial-integrity assertions, 18 existing security groups, 14 new Reset groups, 11 receipt regressions, lint/shell/copy/contrast (82/82)/progress and mock/live-mode builds all green. Separate coverage also passes 5,339/5,339 with zero failed/skipped tests; all 16 pipeline steps retain matching unchanged-source hashes.
+- The new SQL regression fails without 0172 and passes with it. Focused action/mock suites pass 90/90, including 12 preflight-denial cases with zero writes. Live-mode bundle: zero mock-store markers, zero source maps, 21 self-hosted font files.
+- Migration status: **WRITTEN + VERIFIED locally**, **NOT APPLIED**, **NOT PRODUCTION-VERIFIED**. Newer primary source is not certified by candidate receipts. No hosted mutation, deployment, production backup or hardware certification occurred.
+
+## Completion
+
+- Shared `npm run completion` returned exit 1 and correctly reports current source NOT VERIFIED; its structural overall is not measured. No readiness percentage was inferred.
+- Candidate `npm run completion` returns exit 0 with matching full-suite/coverage/migration/lifecycle receipts; generated output is retained at `artifacts/release-checkpoint/reset-candidate-0172/completion.stdout.log`. Its structural counter is not a hosted/integration/device readiness claim.
+
+## Remaining
+
+- Confirm whether the guarded 0171+0172 pair should remain isolated or be integrated; review broader grant defaults/admin rules and split Return/Reset automatic queue creation before integration. Approved integration must wire the new SQL regression into permanent security/CI gates, then verify the actual release source. The candidate's isolated wrapper already requires it; shared-primary CI is unchanged.
+- Identify isolated staging and securely supply genuine role sessions/fixtures for Auth/PostgREST/Storage acceptance. Clarify real phone/iPad/scanner access and complete hardware/offline acceptance. Owner-controlled backup/restore and cutover remain separate. Production launch **HOLD**.
+
+## 2026-10-23 — Fixed-source release checks and acceptance blockers
+
+**Did**
+- Created an attached isolated worktree pinned to `14dbbe3aab08391583802fdd9a49c0a42400066e`, reusing installed dependencies. Ran the complete standard local gate and coverage pipeline with a source hash before/after every command; no application source was changed by this verification task.
+- Added reproducible local verification/browser/security-probe harnesses and retained logs under `artifacts/release-checkpoint/`. Published `docs/verification/RELEASE_CHECKPOINT_2026-10-23.md` with results, limitations and the remaining acceptance checklist.
+- Exercised nine synthetic mock roles over six workspaces and three viewport widths; checked phone packing draft recovery through offline reload and reconnect. Preserved failed mock-configuration/fixture/selector attempts instead of counting them as successful data acceptance.
+- Probed candidate migration 0171's Reset branch restriction in disposable PGlite and recorded a real cross-branch write gap. Logged `RESET-BRANCH-0171` in OPEN_DECISIONS and asked for the site rule for unbooked Reset items. No answer, site model or restored migration was invented.
+- Discovered staging/device/backup prerequisites without accessing production business data. No migration was WRITTEN, APPLIED or PRODUCTION-VERIFIED by this task; no production backup, restore, cutover, deployment, push or PR was performed.
+
+**Ruled**
+- The immutable checkpoint and the changing primary checkout are different sources. Never transfer a passing receipt to a different fingerprint. The primary tree advanced and no longer contains draft 0171; existing unrelated edits remain untouched.
+- Standard gate success is not release approval: the additional Reset probe fails, and the existing location/admin model remains unapproved. RLS/database enforcement remains authoritative; no permission was widened.
+- Browser mock fixtures and viewport emulation cannot certify real JWTs, Storage, physical scanners/cameras/signatures, assigned-trip isolation or full two-device offline replay. The existing release HOLD remains.
+
+**Verified**
+- Pinned source fingerprint `878b229b72e1094d0b9bc894fb9d42ccb66a04cf8ed74babf30eac470d1f9b72`: all 15 standard command steps exited 0 without source changes. Full tests and a separate coverage run each passed 5,320/5,320 tests across 425 files.
+- The same snapshot passed TypeScript; 169/169 migrations; 8 financial assertions; 18 standard security SQL groups; 31/31 lifecycle steps; 11 receipt regressions; lint; 708 shell files; 5 UI-copy checker tests; 82/82 contrast pairs; progress lint, mock-environment build and completion.
+- A separate live-mode build also exited 0 on the unchanged fingerprint: 247 PWA entries, zero mock-store markers, zero source maps and 21 packaged woff2 files. No live credentials or deployment were required.
+- Nine role/layout groups passed across 162 captures, with populated positive controls where required, no measured header/page overflow, one 64px header and header targets at least 44px. No visible rupee amounts on money-blind mock screens; no uncaught browser errors. Client coverage here is restricted staff routes, not positive portal ownership.
+- The successful offline packing retry retained one checked mark before/after offline reload and reconnect. Custody commit, real evidence/signatures and two-device replay remain NOT VERIFIED.
+- Additional Reset probe: branch A positive permission and branch B assertion refusal passed; a direct branch B queue assignment still changed one row, and the promised action-layer assertion caller was absent. This is a FAIL for the candidate's scope acceptance, not a hosted test.
+- Staging harness safety tests 2/2 passed; actual staging verifier returned INCOMPLETE with no staging configuration. Only the production project/default branch was discoverable. No physical-device tools were available; pg_dump is not on PATH.
+- Isolated `npm run completion` exited 0 with matching test/coverage fingerprints. Primary `npm run completion` exited 1 because its newer, different source is not certified. The block below is the PRIMARY checkout's generated counter, not the passing isolated checkpoint's score.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 168 files · check:pglite Historical, incomplete or failed receipt (2026-10-23T12:26:58.903Z); current source NOT VERIFIED. Suite: Historical suite: 5313/5314 passed, 1 failed (recorded 2026-10-23T12:31:49.135Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-23T12:27:38.925Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Obtain the site/grant decision (including unbooked Reset items), implement database/action enforcement and mandatory negative tests, then re-run local gates. The 0171 candidate is not security-approved or applied live.
+- Settle concurrent shared edits and choose the actual release source; newer primary edits are not certified by this checkpoint. Root PLAN.md is absent; the governance/decision gap is recorded in OPEN_DECISIONS.
+- Supply a separately identified isolated staging project, secure nine-role JWT/fixture configuration and complete migration/Auth/PostgREST/Storage rehearsal. No production substitute is allowed.
+- Complete physical iPad/phone/scanner, real signature/photo, offline identity/replay, zoom and glyph acceptance. Owner-controlled backup tooling/backup and cutover approval remain prerequisites; production launch HOLD.
+
 ## 2026-10-23 18:40 NPT — Calendar P0 Correctness, Coss Component Hardening & Hover Latency Polish
 
 **Did**

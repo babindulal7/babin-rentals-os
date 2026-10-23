@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase'
+import { supabase, IS_MOCK } from '../../lib/supabase'
 import { generateClientUuid, idempotentInsert, safeUpdate } from '../../lib/dataAccess'
 import { operationSessionId } from '../../lib/deterministicId'
 import { applyBookingTransition } from '../../lib/bookingTransition'
@@ -477,6 +477,19 @@ const LINE_TABLE = {
   Handover: 'handover_lines',
   Return: 'return_lines',
 } as const
+
+/**
+ * RULING 2026-10-23 (P0-B second half, migration 0171): the floor-verb slug the
+ * operations_grants table keys on. The three custody verbs are ALSO gated
+ * fail-closed inside apply_booking_stage_transition, so this mapping only
+ * decides what the early, truthful assert below asks about.
+ */
+const GRANT_SLUG: Record<JobName, 'pack' | 'handover' | 'return' | 'reset'> = {
+  Pack: 'pack',
+  Handover: 'handover',
+  Return: 'return',
+  Reset: 'reset',
+}
 
 /**
  * The line states that satisfy this verb. A line short of one of these is why a
@@ -1009,6 +1022,26 @@ export async function runFloorVerb(
       `${job} runs at stage ${meta.runsAt}; ${booking.booking_no} is at ${booking.stage}. ` +
         'Nothing was written. If this is a repeat submit, the first one already landed.',
     )
+  }
+
+  /* 1b — RULING 2026-10-23 (P0-B second half): the branch grant, asked of the
+   * database before any write. Pristine staff (no grant rows) pass unchanged;
+   * a scoped staff member is refused here, truthfully, with the gate message
+   * the database wrote — instead of half-way through the verb's writes. All
+   * four verbs ask, because Reset changes no stage and has no session, so
+   * this assert is its only branch gate; the three custody verbs are also
+   * enforced fail-closed inside apply_booking_stage_transition, which refuses
+   * cross-branch custody even if this call were ever removed.
+   *
+   * Mock mode has no operations_grants and no RPCs — its gates are simulated
+   * client-side — so the assert is skipped there, exactly like every other
+   * DB-enforced gate this verb passes through. */
+  if (!IS_MOCK) {
+    const { error: grantError } = await supabase.rpc('assert_operation_branch_grant', {
+      p_operation: GRANT_SLUG[job],
+      p_booking_id: booking.id,
+    })
+    if (grantError) throw new Error(grantError.message)
   }
 
   /* 2 — Reset has no session. It is the queue, per item. */
