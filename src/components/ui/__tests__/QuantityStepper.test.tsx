@@ -114,4 +114,144 @@ describe('QuantityStepper Primitive', () => {
     expect(incBtn.className).toContain('min-w-[44px]')
     expect(incBtn.className).toContain('min-h-[44px]')
   })
+
+  it('supports clearing and typing a replacement value (e.g. replacing 5 with 12)', () => {
+    let currentVal = 5
+    const onChange = vi.fn((next: number) => {
+      currentVal = next
+    })
+
+    const setInputValue = (el: HTMLInputElement, val: string) => {
+      const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')
+      descriptor?.set?.call(el, val)
+      el.dispatchEvent(new Event('input', { bubbles: true }))
+      el.dispatchEvent(new Event('change', { bubbles: true }))
+    }
+
+    act(() => {
+      root!.render(<QuantityStepper value={currentVal} onChange={onChange} min={1} max={20} />)
+    })
+
+    const input = host!.querySelector('input') as HTMLInputElement
+    expect(input.value).toBe('5')
+
+    // 1. User clears the input
+    act(() => {
+      input.focus()
+      setInputValue(input, '')
+    })
+    expect(input.value).toBe('')
+
+    // 2. User types '1'
+    act(() => {
+      setInputValue(input, '1')
+    })
+    expect(input.value).toBe('1')
+
+    // 3. User types '2' -> '12'
+    act(() => {
+      setInputValue(input, '12')
+    })
+    expect(input.value).toBe('12')
+
+    // 4. User blurs the input to commit
+    act(() => {
+      input.dispatchEvent(new FocusEvent('blur', { bubbles: true }))
+      input.dispatchEvent(new FocusEvent('focusout', { bubbles: true }))
+    })
+    expect(onChange).toHaveBeenCalledWith(12)
+  })
+
+  it('clamps to max bound when typed value exceeds max on blur or Enter', () => {
+    const onChange = vi.fn()
+    const setInputValue = (el: HTMLInputElement, val: string) => {
+      const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')
+      descriptor?.set?.call(el, val)
+      el.dispatchEvent(new Event('input', { bubbles: true }))
+      el.dispatchEvent(new Event('change', { bubbles: true }))
+    }
+
+    act(() => {
+      root!.render(<QuantityStepper value={5} onChange={onChange} min={1} max={10} />)
+    })
+
+    const input = host!.querySelector('input') as HTMLInputElement
+
+    act(() => {
+      input.focus()
+      setInputValue(input, '99')
+    })
+    expect(input.value).toBe('99')
+
+    act(() => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    })
+    expect(onChange).toHaveBeenCalledWith(10)
+  })
+
+  it('falls back to min bound when input is cleared and blurred', () => {
+    const onChange = vi.fn()
+    const setInputValue = (el: HTMLInputElement, val: string) => {
+      const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')
+      descriptor?.set?.call(el, val)
+      el.dispatchEvent(new Event('input', { bubbles: true }))
+      el.dispatchEvent(new Event('change', { bubbles: true }))
+    }
+
+    act(() => {
+      root!.render(<QuantityStepper value={5} onChange={onChange} min={2} max={10} />)
+    })
+
+    const input = host!.querySelector('input') as HTMLInputElement
+
+    act(() => {
+      input.focus()
+      setInputValue(input, '')
+    })
+
+    act(() => {
+      input.dispatchEvent(new FocusEvent('blur', { bubbles: true }))
+      input.dispatchEvent(new FocusEvent('focusout', { bubbles: true }))
+    })
+    expect(onChange).toHaveBeenCalledWith(2)
+  })
+
+  it('supports fractional step and decimal numbers without truncation', () => {
+    let currentVal = 1.5
+    const onChange = vi.fn((next: number) => {
+      currentVal = next
+      root!.render(<QuantityStepper value={currentVal} onChange={onChange} step={0.5} min={0} max={5} />)
+    })
+
+    const setInputValue = (el: HTMLInputElement, val: string) => {
+      const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')
+      descriptor?.set?.call(el, val)
+      el.dispatchEvent(new Event('input', { bubbles: true }))
+      el.dispatchEvent(new Event('change', { bubbles: true }))
+    }
+
+    act(() => {
+      root!.render(<QuantityStepper value={currentVal} onChange={onChange} step={0.5} min={0} max={5} />)
+    })
+
+    const input = host!.querySelector('input') as HTMLInputElement
+    expect(input.value).toBe('1.5')
+
+    act(() => {
+      input.focus()
+      setInputValue(input, '2.5')
+    })
+
+    act(() => {
+      input.dispatchEvent(new FocusEvent('blur', { bubbles: true }))
+      input.dispatchEvent(new FocusEvent('focusout', { bubbles: true }))
+    })
+    expect(onChange).toHaveBeenCalledWith(2.5)
+
+    const incBtn = host!.querySelector('button[aria-label="Increase Quantity"]') as HTMLButtonElement
+    act(() => {
+      incBtn.click()
+    })
+    expect(onChange).toHaveBeenCalledWith(3)
+  })
 })

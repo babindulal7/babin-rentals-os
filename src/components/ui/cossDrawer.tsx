@@ -126,7 +126,7 @@ export const DrawerPopup = forwardRef<HTMLDivElement, DrawerPopupProps>(function
   return (
     <DrawerPortal container={container}>
       <DrawerBackdrop />
-      <div
+      <DrawerPrimitive.Viewport
         style={{
           position: 'fixed',
           inset: 0,
@@ -189,7 +189,7 @@ export const DrawerPopup = forwardRef<HTMLDivElement, DrawerPopupProps>(function
             </DrawerPrimitive.Close>
           )}
         </DrawerPrimitive.Popup>
-      </div>
+      </DrawerPrimitive.Viewport>
     </DrawerPortal>
   )
 })

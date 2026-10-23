@@ -1,4 +1,4 @@
-import { forwardRef, useId } from 'react'
+import { forwardRef, useId, useState } from 'react'
 import type { ComponentProps } from 'react'
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from './InputGroup'
 import Icon from './Icon'
@@ -18,6 +18,12 @@ export interface QuantityStepperProps extends Omit<ComponentProps<'input'>, 'val
 /**
  * Coss-styled Quantity Stepper built on InputGroup.
  * Complies with Law 15 (touch targets >= 44px) and provides keyboard increment/decrement.
+ *
+ * ## Typed Input Ergonomics
+ * - Supports clearing the field to type a replacement (e.g. replacing 5 with 12).
+ * - Separates internal editing text from committed numeric value while focused.
+ * - Validates and clamps to [min, max] on blur, Enter, or stepper button clicks.
+ * - Supports integer and fractional step contracts without truncation.
  */
 export const QuantityStepper = forwardRef<HTMLInputElement, QuantityStepperProps>(function QuantityStepper(
   {
@@ -31,36 +37,119 @@ export const QuantityStepper = forwardRef<HTMLInputElement, QuantityStepperProps
     disabled = false,
     className,
     id,
+    onBlur,
+    onKeyDown,
     ...props
   },
   ref
 ) {
   const generatedId = useId()
   const inputId = id ?? generatedId
+  const [editingText, setEditingText] = useState<string | null>(null)
+
+  const isDecimal = step !== undefined && step % 1 !== 0
 
   const canDecrease = !disabled && (min === undefined || value > min)
   const canIncrease = !disabled && (max === undefined || value < max)
 
-  const handleDecrease = () => {
-    if (!canDecrease) return
-    const next = Math.max(min ?? -Infinity, value - step)
+  const parseAndClamp = (raw: string): number => {
+    const trimmed = raw.trim()
+    if (trimmed === '') {
+      return min !== undefined ? min : (Number.isFinite(value) ? value : 0)
+    }
+    const num = isDecimal || trimmed.includes('.')
+      ? Number.parseFloat(trimmed)
+      : Number.parseInt(trimmed, 10)
+
+    if (Number.isNaN(num) || !Number.isFinite(num)) {
+      return value
+    }
+
+    let clamped = num
+    if (min !== undefined && clamped < min) clamped = min
+    if (max !== undefined && clamped > max) clamped = max
+
+    if (isDecimal && step > 0) {
+      const precision = (String(step).split('.')[1] || '').length
+      clamped = Number(clamped.toFixed(precision))
+    }
+    return clamped
+  }
+
+  const commitValue = (raw: string) => {
+    const next = parseAndClamp(raw)
     onChange(next)
+    setEditingText(null)
+    return next
+  }
+
+  const handleDecrease = () => {
+    if (disabled) return
+    const current = editingText !== null ? parseAndClamp(editingText) : value
+    const next = Math.max(min ?? -Infinity, current - step)
+    const finalVal = isDecimal && step > 0
+      ? Number(next.toFixed((String(step).split('.')[1] || '').length))
+      : next
+    onChange(finalVal)
+    setEditingText(null)
   }
 
   const handleIncrease = () => {
-    if (!canIncrease) return
-    const next = max !== undefined ? Math.min(max, value + step) : value + step
-    onChange(next)
+    if (disabled) return
+    const current = editingText !== null ? parseAndClamp(editingText) : value
+    const next = max !== undefined ? Math.min(max, current + step) : current + step
+    const finalVal = isDecimal && step > 0
+      ? Number(next.toFixed((String(step).split('.')[1] || '').length))
+      : next
+    onChange(finalVal)
+    setEditingText(null)
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value
-    if (raw === '') return
-    const num = Number.parseInt(raw, 10)
-    if (Number.isNaN(num)) return
-    const clamped = Math.max(min ?? -Infinity, max !== undefined ? Math.min(max, num) : num)
-    onChange(clamped)
+    // Allow intermediate typing (empty string, minus sign, decimal point)
+    setEditingText(raw)
+
+    // If it is already a valid finite number, inform parent live if within bounds,
+    // but without prematurely clamping characters while the user is actively typing.
+    const num = isDecimal || raw.includes('.')
+      ? Number.parseFloat(raw)
+      : Number.parseInt(raw, 10)
+
+    if (!Number.isNaN(num) && Number.isFinite(num)) {
+      const withinMin = min === undefined || num >= min
+      const withinMax = max === undefined || num <= max
+      if (withinMin && withinMax) {
+        onChange(num)
+      }
+    }
   }
+
+  const handleInputBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    if (editingText !== null) {
+      commitValue(editingText)
+    }
+    onBlur?.(e)
+  }
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      if (editingText !== null) {
+        commitValue(editingText)
+      }
+    } else if (e.key === 'Escape') {
+      setEditingText(null)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      handleIncrease()
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      handleDecrease()
+    }
+    onKeyDown?.(e)
+  }
+
+  const displayValue = editingText !== null ? editingText : String(value)
 
   return (
     <InputGroup className={cn('w-full max-w-[200px]', className)} disabled={disabled}>
@@ -83,20 +172,17 @@ export const QuantityStepper = forwardRef<HTMLInputElement, QuantityStepperProps
       <InputGroupInput
         ref={ref}
         id={inputId}
-        type="number"
-        inputMode="numeric"
+        type="text"
+        inputMode={isDecimal ? 'decimal' : 'numeric'}
+        role="spinbutton"
+        aria-valuenow={value}
+        aria-valuemin={min}
+        aria-valuemax={max}
         aria-label={ariaLabel}
-        value={value}
+        value={displayValue}
         onChange={handleInputChange}
-        onKeyDown={(e) => {
-          if (e.key === 'ArrowUp') {
-            e.preventDefault()
-            handleIncrease()
-          } else if (e.key === 'ArrowDown') {
-            e.preventDefault()
-            handleDecrease()
-          }
-        }}
+        onBlur={handleInputBlur}
+        onKeyDown={handleInputKeyDown}
         disabled={disabled}
         className="text-center font-mono font-semibold tabular-nums px-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         {...props}

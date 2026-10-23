@@ -2,6 +2,7 @@ import { forwardRef } from 'react'
 import type { ComponentProps, ReactNode } from 'react'
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { cn } from '../../lib/cn'
+import { useViewport } from '../../lib/device'
 import Icon from './Icon'
 
 type ClassProp<T> = string | ((state: T) => string | undefined) | undefined
@@ -58,36 +59,47 @@ export const DialogPopup = forwardRef<HTMLDivElement, DialogPopupProps>(function
   { className, children, showCloseButton = true, bottomStickOnMobile = true, container, style, ...props },
   ref
 ) {
-  void bottomStickOnMobile
+  const viewport = useViewport()
+  const isMobileSheet = bottomStickOnMobile && viewport === 'phone'
+
   return (
     <DialogPortal container={container}>
       <DialogBackdrop />
       <div
+        className={cn(
+          'coss-dialog__wrapper',
+          bottomStickOnMobile && 'coss-dialog__wrapper--bottom-stick'
+        )}
         style={{
           position: 'fixed',
           inset: 0,
           zIndex: 'var(--z-modal)' as unknown as number,
           display: 'flex',
-          alignItems: 'center',
+          alignItems: isMobileSheet ? 'flex-end' : 'center',
           justifyContent: 'center',
-          padding: 'var(--sp-md)',
+          padding: isMobileSheet ? 0 : 'var(--sp-md)',
           pointerEvents: 'none',
         }}
       >
         <DialogPrimitive.Popup
           ref={ref}
           data-slot="dialog-popup"
-          className={resolveBaseUiClass(className)}
+          className={resolveBaseUiClass(
+            className,
+            'coss-dialog__popup',
+            bottomStickOnMobile && 'coss-dialog__popup--bottom-stick'
+          )}
           style={{
             pointerEvents: 'auto',
             position: 'relative',
             display: 'flex',
             flexDirection: 'column',
             width: '100%',
-            maxWidth: 520,
+            maxWidth: isMobileSheet ? '100%' : 520,
             maxHeight: '85dvh',
-            borderRadius: 'var(--r-card, 12px)',
-            border: '1px solid var(--border2)',
+            borderRadius: isMobileSheet ? '16px 16px 0 0' : 'var(--r-card, 12px)',
+            border: isMobileSheet ? 'none' : '1px solid var(--border2)',
+            borderTop: '1px solid var(--border2)',
             background: 'var(--card)',
             color: 'var(--text)',
             boxShadow: 'var(--shadow-modal)',
@@ -231,18 +243,24 @@ export const DialogFooter = forwardRef<HTMLDivElement, DialogFooterProps>(functi
   { className, variant = 'default', style, ...props },
   ref
 ) {
+  const viewport = useViewport()
+  const isPhone = viewport === 'phone'
+
   return (
     <div
       ref={ref}
       data-slot="dialog-footer"
-      className={cn(className)}
+      className={cn('coss-dialog__footer', className)}
       style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'flex-end',
         flexWrap: 'wrap',
         gap: 'var(--sp-md)',
-        padding: '16px 20px',
+        paddingTop: 16,
+        paddingLeft: 20,
+        paddingRight: 20,
+        paddingBottom: isPhone ? 'calc(16px + env(safe-area-inset-bottom, 0px))' : 16,
         ...(variant === 'default'
           ? {
               borderTop: '1px solid var(--border)',

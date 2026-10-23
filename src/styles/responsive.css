@@ -134,6 +134,24 @@
   .rsp-chip-scroll::-webkit-scrollbar {
     display: none;
   }
+
+  /* Coss Dialog responsive bottom-sheet behavior */
+  .coss-dialog__wrapper--bottom-stick {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+  .coss-dialog__popup--bottom-stick {
+    max-width: 100% !important;
+    max-height: 85dvh !important;
+    border-radius: 16px 16px 0 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+    border-top: 1px solid var(--border2) !important;
+  }
+  .coss-dialog__popup--bottom-stick .coss-dialog__footer {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+  }
 }
 
 /* ══ TABLET — 768 to 1279 ══════════════════════════════════════════════════

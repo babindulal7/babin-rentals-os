@@ -1361,49 +1361,6 @@ section[id] {
   filter: brightness(0.96);
 }
 
-/* ── Base transitions for interactive surfaces so hover delay is universally observable ── */
-.data-table tbody tr,
-.operations-table tbody tr,
-.data-table__row,
-.movement-card,
-.calendar-timeline-bar-btn,
-.calendar-chip,
-.calendar-day-cell,
-.calendar-tab-btn,
-.overflow-menu__item,
-.filter-bar__option,
-.app-navigation a,
-.app-nav__new-rental {
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
-  transition-delay: 0s;
-}
-
-/* ── 300ms Intentional Hover Delay / Latency Across Interactive Elements ──
-   Directly targeted so it functions reliably on touch-enabled Windows laptops
-   with a mouse as well as standard desktop environments. */
-button:hover,
-a.btn:hover,
-[role="button"]:hover,
-.ui-button:hover,
-.card:hover,
-.surface-card:hover,
-.card-interactive:hover,
-.lift:hover,
-.movement-card:hover,
-.data-table tbody tr:hover,
-.operations-table tbody tr:hover,
-.data-table__row--interactive:hover,
-.calendar-timeline-bar-btn:hover,
-.calendar-chip:hover,
-.calendar-day-cell:hover,
-.calendar-tab-btn:hover,
-.overflow-menu__item:hover,
-.filter-bar__option:hover,
-.app-navigation a:hover,
-.app-nav__new-rental:hover {
-  transition-delay: 300ms !important;
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   .lift,

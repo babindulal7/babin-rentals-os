@@ -1,5 +1,103 @@
 # Progress Log
 
+## 2026-10-23 18:40 NPT — Calendar P0 Correctness, Coss Component Hardening & Hover Latency Polish
+
+**Did**
+- Integrated all P0 Calendar correctness fixes from branch `fix/calendar-p0-resource-reschedule` into `main`:
+  - `src/data/calendar.ts`: Empty production `RESOURCE_CATALOGUE` to prevent fabricated equipment/crew/vehicles in live UI; preserved historical mockup items in `ARCHIVED_RESOURCE_CATALOGUE`. Added authoritative `unitId` and `resourceId` fields to `Bar`.
+  - `src/lib/queries/calendar.ts`: `buildResourceTimeline` fails closed (returns `[]`) when no authoritative physical resources are provided, triggering the truthful empty state ("No resources to lay out yet"). Maps bars ONLY when matching authoritative unit/resource IDs exist. Evaluates double-booking conflicts strictly under half-open intervals `[from, to)` matching `RENTAL_WINDOW_BOUNDS` (back-to-back bookings do not conflict).
+  - `src/modules/calendar/Calendar.tsx`: Removed fake `setTimeout` reschedule success callback; Confirm Date Adjustment button remains disabled when there is no backend `onPersistCommand`, routing staff directly to the canonical Rentals Hub lifecycle (`/rentals/:bookingNo`).
+  - Authored comprehensive negative regression test suite `src/modules/calendar/__tests__/CalendarP0NegativeRegressions.test.tsx` (10 tests, all passing).
+- Fixed P1-A in `src/components/ui/cossDialog.tsx` & `src/styles/responsive.css`:
+  - Restored responsive mobile bottom-sheet behavior when `bottomStickOnMobile = true` (default). On phone viewports (< 768px), aligns as a bottom sheet pinned to bottom with rounded top corners, full-width, 85dvh cap, and safe-area padding for mobile home indicators/keyboards (`calc(16px + env(safe-area-inset-bottom, 0px))`).
+  - Preserved centered card modal on desktop (>= 1280px) and tablet (768-1279px) with max-width 520px and token-based styling.
+  - Added unit test suite `src/components/ui/__tests__/cossDialogResponsive.test.tsx` (4 tests, all passing).
+- Fixed P1-B in `src/components/ui/QuantityStepper.tsx`:
+  - Separated internal text representation from committed numerical value.
+  - Supported clearing the input to type a new value (e.g. replacing 5 with 12) without fighting the control.
+  - Added intermediate typing tolerance (empty string, minus, decimal), clamping and validating on blur / Enter key to `[min, max]`.
+  - Supported integer and fractional step contracts (e.g. step=0.5) without premature truncation.
+  - Added comprehensive regression tests in `src/components/ui/__tests__/QuantityStepper.test.tsx` (9 tests, all passing).
+- Fixed P1-C in `src/styles/theme.css`, `src/styles/ui-v2.css`, and `src/modules/today/dashboard.css`:
+  - Removed artificial 300ms hover delay on basic buttons, table rows, cards, and nav links so interactive feedback is immediate, crisp, and responsive.
+  - Preserved intentional 250–300ms hover delay ONLY for rich informational popovers / hover cards / tooltips (`IntelCard.tsx`, `InfoTooltip.tsx`, `MovementList.tsx`).
+- Enhanced `cossDrawer.tsx` to wrap popup in `DrawerPrimitive.Viewport` for native swipe handling and scroll locking, with test suite `src/components/ui/__tests__/cossDrawer.test.tsx` (2 tests, all passing).
+
+**Ruled**
+- No fake resource allocations: Production calendar lanes must be backed by authoritative database assets/crew/vehicles; fail closed with truthful empty notice if unassigned.
+- Fail-closed date reschedule: Reschedule confirmation disabled without an authoritative mutation command; staff are guided to the canonical Rentals Hub booking detail workflow.
+- Mobile Dialogs: Default to bottom sheet on phones (< 768px) with safe-area spacing; center modals on tablet and desktop.
+- Responsive hover feedback: Basic controls (buttons, links, rows) respond immediately to hover/focus/active; intentional 300ms delay reserved for preview cards and tooltips.
+
+**Verified**
+- `npm run typecheck`: clean pass with 0 errors across entire TypeScript 5.7 strict codebase.
+- `npm run check:contrast`: 82/82 pairs pass WCAG AA across Light, Dark, High-contrast, and Glass modes.
+- `npm run lint:shell`: 709/709 files satisfy PageHeader, single primary CTA, 44px floor, and no dev notes.
+- Feature unit test suites: 43/43 tests passed across `CalendarP0NegativeRegressions`, `CalendarResourceTimeline`, `CalendarDayView`, `QuantityStepper`, `cossDialogResponsive`, `cossDrawer`, `cossPrimitives`, `IntelCard.direct`, and `InfoTooltip`.
+- `npm run build`: clean production build for both `index.html` and `marketing.html` (7,406 modules transformed, PWA service worker generated).
+- `npm run lint:progress`: clean pass.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 168 files · check:pglite Historical, incomplete or failed receipt (2026-10-23T12:26:58.903Z); current source NOT VERIFIED. Suite: Historical suite: 5313/5314 passed, 1 failed (recorded 2026-10-23T12:31:49.135Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-23T12:27:38.925Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Hardware / scanner physical device testing.
+- Hosted production verification after Babin runs migration backup protocol.
+
+## 2026-10-23 18:23 NPT — SEC-04 candidate verification and checkout reconciliation
+
+**Did**
+- Reproduced a superior-target bypass in pending migration 0171: Admin could issue and revoke Owner/Admin operation restrictions. Prepared guards in both RPCs, locking the target role through authorization, with Owner and subordinate-Admin positive controls retained. Candidate files: C:/Users/use/AppData/Local/Temp/babin-current-main-20261023-173608/0171-guarded.sql and check-astra-phase0-guarded.mjs.
+- Added three SQL regression groups to the candidate Phase 0 checker. The guarded migration and tests were removed by subsequent external checkout/cleanup events; active migration present now: false; active added regression groups present: false. This is NOT recorded as a completed active-app fix.
+- Preserved original pending work at recovery branch codex/recovery-before-current-main-20261023-173608 and C:/Users/use/AppData/Local/Temp/babin-current-main-20261023-173608. Recovered the original 0171 and applied the pre-existing Calendar.tsx/calendar.css patch after a clean git-apply check earlier; later external changes replaced those states again. No main reset, merge reversal, push, PR, live mutation, database reset, business-store seed or offline-work deletion by this task.
+
+**Ruled**
+- No new product decision or permission widening. The candidate superior/self-target guard follows existing SEC-04 / PERMISSIONS AD2. P0-B location-model, administration and Reset integration decisions remain OPEN; a draft SQL comment is not approval.
+- A stable canonical checkout is now required. The user has been asked whether to pause other writers and restore pending fixes, or retain present main and keep candidates in recovery. No answer is assumed and no further dependent restoration is performed while that choice is pending.
+- Release remains HOLD. Candidate migration: WRITTEN and VERIFIED LOCALLY in its recorded database scope; NOT PRESENT in the observed active checkout unless the presence field above says otherwise; NOT APPLIED and NOT PRODUCTION-VERIFIED.
+
+**Verified**
+- Original single-case probe failed with Missing expected rejection. The first multi-case attempt overlapped the missing migration and failed on absent RPCs; this setup failure is retained separately. Restored candidate before repair: 16 passing SQL groups, 2 failing rejection groups. Guarded candidate afterward: 18/18 passed. Logs: artifacts/astra-operation-grants-before-20261023.log, astra-operation-grants-regressions-before-20261023.log, astra-operation-grants-restored-before-20261023.log and astra-operation-grants-after-20261023.log.
+- Stable candidate database-only run: 169 migrations, 31 lifecycle steps and 18 security groups all exit 0 on unchanged database inputs. Proof: docs/verification/ASTRA_OPERATION_GRANTS_2026-10-23.json and the protected verified-database-receipt.json. UI sources are separately fingerprinted; this proves the candidate, not the current changing application.
+- Owned full run: 5316/5320, 4 failed, 0 skipped; source changed. Its four Calendar failures were rerun against later current source: 7/7 passed, without test/assertion edits by this task. The latest global receipt is separately Historical suite: 5313/5314 passed, 1 failed (recorded 2026-10-23T12:31:49.135Z); current source NOT VERIFIED. No old pass or focused recheck is substituted for a current clean full suite.
+- The latest owned batch ran typecheck, focused/full tests, local rebuild/lifecycle/security/financial integrity, lint, receipts, contrast, progress/shell/UI-copy checks and production/PWA builds. Raw per-gate results and changed-source flags remain in docs/verification/ASTRA_CURRENT_MAIN_2026-10-23.json; current source hash 6c496d909c953f2590d60a9ffc6088610f07920211088ba039476aa264b0396a, HEAD 279de0e37b3c79ca81c7f7afb25861fe0bc60fd0. Commands passing on prior epochs do not certify later edits.
+- A temporary additional branch-grants script failed fixture setup because it supplied null for required branches.pan_vat_no; it was later removed from the shared checkout. No assertion pass or active-app defect is inferred from that draft helper's result (artifacts/astra-operation-grants-feature-20261023.log).
+- Read-only mock-browser samples at 1440×900, 820×1180 and 360×800 show no document-width overflow for Today/New Rental, 44×44 phone booking-header actions, catalogue bottom 730 above bottom-nav top 742, and identical pickup/return rectangles plus overdue context after footer Today. Evidence: docs/verification/astra-guard-responsive-2026-10-23/results.json. Their source epoch predates further external changes; physical devices, every role/route and full offline/hosted acceptance remain open. Screenshots/report are also preserved outside the checkout.
+- Literal npm run completion exit 1. Its counter below is structural; it does not declare the app ready.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 168 files · check:pglite Historical, incomplete or failed receipt (2026-10-23T12:26:58.903Z); current source NOT VERIFIED. Suite: Historical suite: 5313/5314 passed, 1 failed (recorded 2026-10-23T12:31:49.135Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-23T12:27:38.925Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Resolve the pending canonical-checkout choice. If pending fixes are restored, apply the guarded candidate and regression delta to a stable current tree, then rerun full matching-source checks. If current main is retained, keep the draft in recovery and avoid tests that assume absent RPCs.
+- Obtain a clean complete current-source suite and current coverage; the Calendar recheck alone does not certify all app changes. Recheck all gates affected by later source changes and verify current layouts across broader routes/roles and actual desktop/iPad/mobile hardware.
+- Hosted JWT/Storage acceptance, legacy outbox ownership/recovery, shared operational backends, VAT/document/evidence decisions, restoration and measured performance remain open in docs/OPEN_DECISIONS.md and docs/REMAINING_WORK.md. No publication or hosted application is authorized.
+
+
 ## 2026-10-23 16:10 NPT — Intentional 300ms Global Hover Delay Everywhere
 
 **Did**

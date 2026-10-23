@@ -805,7 +805,6 @@
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
   border-color: var(--w20, var(--border2));
   background: color-mix(in srgb, var(--card2) 80%, var(--bgglow));
-  transition-delay: 300ms;
 }
 
 .movement-card:last-child { border-bottom: 1px solid var(--w08, var(--border)); }
@@ -2748,7 +2747,6 @@
   background: var(--hover-row);
   box-shadow: none;
   transform: none;
-  transition-delay: 300ms;
 }
 
 .rental-dashboard__panels .movement-card--overdue {
