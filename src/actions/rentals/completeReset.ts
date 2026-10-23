@@ -6,8 +6,9 @@ import { runFloorVerb, validateFloorVerb, type FloorVerbResult, type ResetEntryI
  * **Reset — the fourth floor verb, and the one that changes no stage.**
  *
  * `JOBS.Reset` is `{ runsAt: 'Returned', sets: null, blocksBooking: false }`, and
- * §1.5 says why: "Reset blocks the *item* returning to Available, never the
- * booking." `runFloorVerb` reads `sets: null` and makes no transition, so this
+ * RULING 2026-10-24: Reset completes cleaning/QC tasks; committed Return of
+ * usable gear starts availability independently. `runFloorVerb` reads
+ * `sets: null` and makes no transition, so this
  * file needs no special case — the difference is data, not a branch.
  *
  * It is also the only verb with **no session**. `0003:855-857`: "Reset and

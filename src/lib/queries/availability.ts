@@ -417,10 +417,11 @@ export async function readCandidates(productIds: readonly string[]): Promise<Map
     serial_no: string | null
     product_id: string
     status: string
+    condition: string
     retired_at: string | null
   }>((from, to) => supabase
     .from('product_units_v')
-    .select('id, asset_tag, serial_no, product_id, status, retired_at')
+    .select('id, asset_tag, serial_no, product_id, status, condition, retired_at')
     .in('product_id', [...new Set(productIds)])
     .order('asset_tag', { ascending: true })
     .order('id', { ascending: true })
@@ -429,6 +430,9 @@ export async function readCandidates(productIds: readonly string[]): Promise<Map
   const cleaning = await readOpenCleaning(units.map((u) => u.id))
 
   for (const row of units) {
+    if (!['Excellent', 'Good', 'Fair', 'Damaged', 'Lost'].includes(row.condition)) {
+      throw new Error(`Equipment unit ${row.asset_tag} has an unreadable condition; availability is incomplete.`)
+    }
     const list = byProduct.get(row.product_id) ?? []
     list.push({
       unitId: row.id,
@@ -436,6 +440,7 @@ export async function readCandidates(productIds: readonly string[]): Promise<Map
       serialNo: row.serial_no,
       productId: row.product_id,
       state: row.status,
+      condition: row.condition,
       retiredAt: row.retired_at,
       openCleaning: cleaning.get(row.id) ?? null,
     })
@@ -446,14 +451,9 @@ export async function readCandidates(productIds: readonly string[]): Promise<Map
 }
 
 /**
- * The units sitting on the reset bench right now.
- *
- * An entry counts as OPEN when the booking still wants a reset from it and no
- * `reset_completed_at` has been stamped — which is exactly the row `Return`
- * raises and `completeResetQueue` closes. Reading it here is what finally gives
- * `reset_completed_at` a consequence: before this, completing a reset changed a
- * tile and nothing else, and unreset gear stayed assignable
- * (BUG_AUDIT_LIFECYCLE RS-02).
+ * Pending task metadata for candidate units. RULING 2026-10-24: an open queue
+ * row alone must not prevent a usable returned unit being assigned. Actual
+ * condition and live reservations are checked independently of these tasks.
  *
  * Deliberately NOT read from `product_units.status`: that column is
  * Booqable-mastered and the OS may not write it, so an OS-owned fact has to
@@ -479,9 +479,8 @@ async function readOpenCleaning(unitIds: readonly string[]): Promise<Map<string,
 
   for (const row of entries) {
     const b = Array.isArray(row.bookings) ? row.bookings[0] : row.bookings
-    /* One open entry per unit is the shape the queue is meant to hold; if a
-       second ever exists, the first read wins and the unit is excluded either
-       way, so the answer does not change. */
+    /* The first pending task supplies the supplementary booking reference.
+       This metadata neither releases a reservation nor disqualifies a unit. */
     if (!out.has(row.unit_id)) {
       out.set(row.unit_id, { bookingNo: b?.booking_no ?? null, requiresClean: row.requires_clean === true })
     }

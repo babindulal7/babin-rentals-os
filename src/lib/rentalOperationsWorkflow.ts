@@ -266,7 +266,7 @@ export function getRentalHeaderOperations(
       break
     case 'reset_completed':
       displayStatus = 'Reset Completed'
-      stageHint = 'Reset completed · All gear available'
+      stageHint = 'Cleaning, QC and reset completed'
       break
     case 'overdue':
       displayStatus = 'Overdue'

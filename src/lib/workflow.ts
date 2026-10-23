@@ -93,7 +93,7 @@ export interface JobMeta {
   sets: BookingStatus | null
   /** Handover and Return are session-based; Pack and Reset are not. */
   sessions: boolean
-  /** §1.5 — Reset blocks the *item* returning to Available, never the booking. */
+  /** RULING 2026-10-24: Reset tracks follow-up work, not unit availability. */
   blocksBooking: boolean
 }
 

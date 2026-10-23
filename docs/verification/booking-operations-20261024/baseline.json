@@ -1,0 +1,6 @@
+{
+  "at": "2026-10-23T19:38:25.188Z",
+  "head": "acecb0dbd8711f7f7f2892ce18cf3ba4979e068b",
+  "status": " M src/actions/rentals/completeReset.ts\n M src/lib/availability.ts\n M src/lib/queries/availability.ts\n M src/lib/rentalOperationsWorkflow.ts\n M src/lib/workflow.ts\n?? docs/verification/booking-operations-20261024/\n",
+  "boundaries": "local only; no Git writes, migration creation/application, remote database, deployment or publication"
+}
