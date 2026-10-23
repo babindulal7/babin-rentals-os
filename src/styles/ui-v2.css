@@ -782,3 +782,13 @@ div:not(.equipment-record-grid):has(> .information-drawer-anchor) { grid-templat
   }
 }
 
+/* coss InputGroup (data-slot contract from InputGroup.tsx) - interaction
+   states inline styles cannot express. Same focus-within treatment as
+   operations-table rows; an invalid group focused keeps the danger ring so a
+   failing money field reads the same as an invalid focused row. Resting
+   border/background/height stay inline in the component; these rules only
+   add rings. */
+[data-slot='input-group'] { transition: border-color var(--dur-fast) var(--ease); }
+[data-slot='input-group']:focus-within { outline: 2px solid var(--input-focus); outline-offset: -2px; }
+[data-slot='input-group'][data-invalid]:focus-within { outline-color: var(--danger); }
+
