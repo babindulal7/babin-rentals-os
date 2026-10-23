@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import Icon from '../../components/ui/Icon'
 import { CalendarPopover } from '../../components/ui/DateField'
-import { PageHeader } from '../../components/ui/Page'
-import { OverflowMenu } from '../../components/ui/OverflowMenu'
+import { PageHeader, PageActions } from '../../components/ui/Page'
 import { GlobalAddMenu } from '../../components/ui/creation/GlobalAddMenu'
 import { DataAgeBadge } from '../../components/ui/DataAgeBadge'
 import { PageShell } from '../../components/ui/PageShell'
@@ -416,12 +415,12 @@ export default function Today() {
 
   const fetchPickups = useCallback(async (filters: ListFilters): Promise<ListQueryResult<MovementRow>> => {
     if (pickupSet.impossible) return { rows: [], total: 0 }
-    const result = await listBookings(filters)
+    const result = await listBookings({ ...filters, withCount: true })
     const now = businessNowAd()
     return { rows: result.rows.map((row) => toMovementRow(row, 'outgoing', now)), total: result.total ?? null }
   }, [pickupSet.impossible])
   const fetchReturns = useCallback(async (filters: ListFilters): Promise<ListQueryResult<MovementRow>> => {
-    const result = await listBookings(filters)
+    const result = await listBookings({ ...filters, withCount: true })
     const now = businessNowAd()
     return { rows: result.rows.map((row) => toMovementRow(row, 'incoming', now)), total: result.total ?? null }
   }, [])
@@ -554,15 +553,15 @@ export default function Today() {
             inputRef: counterInputRef,
           }}
           actions={
-            // RULING 2026-10-13: one compact action cluster; date filtering sits with its queues.
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap' }}>
-              <GlobalAddMenu module="today" />
-              <OverflowMenu ariaLabel="More Today actions" items={[
+            // RULING 2026-10-23: Add and More use their canonical shared header slots.
+            <PageActions
+              primary={<GlobalAddMenu module="today" />}
+              overflow={[
                 { label: 'Operations', icon: 'queues', onClick: () => navigate('/operations') },
                 { label: 'Refresh movements', icon: 'refresh', onClick: refetchMovement,
                   ...(pickups.loading || returns.loading ? { unavailable: 'Movements are refreshing' } : {}) },
-              ]} />
-            </div>
+              ]}
+            />
           }
         />
       }
@@ -623,63 +622,13 @@ export default function Today() {
                 <span className="dispatch-summary__period">{filterLabel(filter, lang)}</span>
               </div>
               <p>{list.loading ? 'Loading movements…' : list.error ? 'Movements unavailable' : list.total === null ? 'Count unavailable · see loaded movements below' : detail}</p>
+              {key === 'pickups' && isDispatchToday && overduePickups.length > 0 && (
+                <p className="dispatch-summary__warning"><Icon name="alert_triangle" size={14} /> Includes overdue pickups</p>
+              )}
             </div>
           </div>
         ))}
       </section>
-
-      {/* Unresolved / Overdue Pickups Alert Banner */}
-      {isDispatchToday && overduePickups.length > 0 && (
-        <div
-          className="dashboard-alert-banner"
-          role="alert"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12,
-            padding: '10px 16px',
-            marginBottom: 'var(--sp-md, 12px)',
-            borderRadius: 'var(--r-card)',
-            background: 'color-mix(in srgb, var(--warn) 12%, var(--card))',
-            border: '1px solid color-mix(in srgb, var(--warn) 35%, transparent)',
-            color: 'var(--warn-text)',
-            fontSize: 'var(--t-meta, 13px)',
-            boxShadow: 'var(--shadow-xs)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Icon name="alert_triangle" size={18} style={{ color: 'var(--warn)', flexShrink: 0 }} />
-            <span>
-              <strong>Unresolved / Overdue Pickups <span className="font-mono tabular-nums">({overduePickups.length})</span></strong>
-              {' — '}
-              {overduePickups.length === 1 ? (
-                <>
-                  <span className="font-mono tabular-nums">1</span> booking is
-                </>
-              ) : (
-                <>
-                  <span className="font-mono tabular-nums">{overduePickups.length}</span> bookings are
-                </>
-              )}{' '}
-              past scheduled pickup time awaiting dispatch.
-            </span>
-          </div>
-          <button
-            type="button"
-            className="ui-button ui-button--sm ui-button--outline press tap"
-            style={{
-              borderColor: 'color-mix(in srgb, var(--warn) 40%, transparent)',
-              color: 'var(--warn-text)',
-              flexShrink: 0,
-              gap: 6,
-            }}
-            onClick={() => navigate('/operations?queue=pack')}
-          >
-            Resolve in Operations <Icon name="arrow_right" size={14} />
-          </button>
-        </div>
-      )}
 
       {/* Spec §31: Mobile Segmented Control */}
       {isPhone && (

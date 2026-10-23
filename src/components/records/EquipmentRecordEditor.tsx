@@ -550,7 +550,7 @@ export function EquipmentRecordEditor({
                       </td>
                       <td>
                         <span className="identifier" style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-                          {String(row.asset_tag || (snapshot?.code ? `${snapshot.code}-${String(index + 1).padStart(2, '0')}` : '(Assigned on save)'))}
+                          {String(row.asset_tag || (editing ? 'Not assigned' : '(Assigned on save)'))}
                         </span>
                       </td>
                       <td>
@@ -558,7 +558,8 @@ export function EquipmentRecordEditor({
                           type="button"
                           className="equipment-badge-subtle"
                           style={{ cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--card2)', padding: '3px 8px' }}
-                          title="Inspect Barcode & Tag"
+                          title={editing && row.asset_tag ? 'Inspect Barcode & Tag' : 'Save equipment and assign its unit tag before inspecting the barcode'}
+                          disabled={!editing || !row.asset_tag}
                           aria-label={`Inspect barcode for unit ${index + 1}`}
                           onClick={() => setBarcodeModalUnit({ unit: row, index })}
                         >
@@ -569,7 +570,7 @@ export function EquipmentRecordEditor({
                       <td>
                         <span className="equipment-badge-status">
                           <Icon name="lock" size={12} />
-                          {String(row.status || 'In Stock')}
+                          {String(row.status || (editing ? 'Not available' : 'Not saved'))}
                         </span>
                       </td>
                       <td>
@@ -1136,7 +1137,7 @@ export function EquipmentRecordEditor({
         <h4 style={{ margin: 0, fontSize: 'var(--t-ui)' }}>Commercial Terms Managed by Accounts</h4>
       </div>
       <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.5 }}>
-        Under Law 1 and RBAC security rules, financial and rental pricing fields are hidden for your role. Daily rates, purchase records, and replacement values are maintained directly by Accounts and Operations Management.
+        Financial and rental pricing fields are hidden for your role. Daily rates, purchase records, and replacement values are maintained directly by Accounts and Operations Management.
       </p>
     </div>
   )
@@ -1442,7 +1443,7 @@ export function EquipmentRecordEditor({
         isOpen={Boolean(barcodeModalUnit)}
         unit={barcodeModalUnit?.unit ?? null}
         index={barcodeModalUnit?.index ?? 0}
-        assetCode={snapshot?.code || String(values.asset_code || 'EQ-001')}
+        assetCode={snapshot?.code || ''}
         equipmentName={String(values.name || 'Equipment')}
         onClose={() => setBarcodeModalUnit(null)}
       />

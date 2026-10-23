@@ -6,11 +6,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ToastProvider } from '../../../components/ui/Toast'
 import type { ListFilters } from '../../../lib/queries/listQuery'
 import type { ListResult } from '../../../lib/queries/useList'
+import * as bookingQueries from '../../../lib/queries/bookings'
 
-const queueResults = vi.hoisted(() => ({ counts: [0, 0] as (number | null)[], loading: false, error: null as ListResult<never>['error'], calls: 0, refetch: vi.fn(), filters: [] as ListFilters[] }))
+const queueResults = vi.hoisted(() => ({ counts: [0, 0] as (number | null)[], loading: false, error: null as ListResult<never>['error'], calls: 0, refetch: vi.fn(), filters: [] as ListFilters[], fetchers: [] as ((filters: ListFilters) => Promise<unknown>)[] }))
 vi.mock('../../../lib/queries/useList', () => ({
-  useList: (_fetcher: unknown, filters: ListFilters) => {
+  useList: (fetcher: (filters: ListFilters) => Promise<unknown>, filters: ListFilters) => {
     queueResults.filters.push(filters)
+    queueResults.fetchers.push(fetcher)
     const total = queueResults.counts[queueResults.calls++ % 2] ?? null
     return {
     rows: [],
@@ -65,15 +67,27 @@ beforeEach(() => {
   queueResults.error = null
   queueResults.calls = 0
   queueResults.filters = []
+  queueResults.fetchers = []
   queueResults.refetch.mockClear()
 })
 afterEach(async () => {
   await act(async () => root.unmount())
   container.remove()
   vi.useRealTimers()
+  vi.restoreAllMocks()
 })
 
 describe('focused pickup and return dashboard', () => {
+  it('asks both movement queries for exact totals while preserving their filters and pagination', async () => {
+    const read = vi.spyOn(bookingQueries, 'listBookings').mockResolvedValue({ rows: [], total: 125 })
+    await mount()
+    const filters: ListFilters = { search: 'production', page: { index: 0, size: 50 } }
+    await queueResults.fetchers[0]!(filters)
+    await queueResults.fetchers[1]!(filters)
+    expect(read).toHaveBeenCalledTimes(2)
+    expect(read).toHaveBeenNthCalledWith(1, { ...filters, withCount: true })
+    expect(read).toHaveBeenNthCalledWith(2, { ...filters, withCount: true })
+  })
   it.each([
     ['master dispatch', ['pickup', 'return']],
     ['pickups', ['pickup']],
@@ -128,14 +142,14 @@ describe('focused pickup and return dashboard', () => {
     await mount()
     expect(container.querySelector('[aria-label="Date filter for pickups"]')).not.toBeNull()
     expect(container.querySelector('[aria-label="Date filter for returns"]')).not.toBeNull()
-    expect(buttonByLabel('More Today actions')).toBeDefined()
-    await act(async () => buttonByLabel('More Today actions')!.click())
-    const menu = document.querySelector('[role="menu"][aria-label="More Today actions"]')!
+    expect(buttonByLabel('More actions')).toBeDefined()
+    await act(async () => buttonByLabel('More actions')!.click())
+    const menu = document.querySelector('[role="menu"][aria-label="More actions"]')!
     expect(menu.textContent).toContain('Operations')
     const refresh = [...menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find((button) => button.textContent?.includes('Refresh movements'))!
     await act(async () => refresh.click())
     expect(queueResults.refetch).toHaveBeenCalledTimes(2)
-    expect(document.querySelector('[role="menu"][aria-label="More Today actions"]')).toBeNull()
+    expect(document.querySelector('[role="menu"][aria-label="More actions"]')).toBeNull()
   })
 
   it('keeps the same queue layout when Today has returns and another date is empty', async () => {

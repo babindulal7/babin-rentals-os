@@ -6,7 +6,6 @@ import { PageHeader } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { PageShell } from '../../components/ui/PageShell'
 import { Button } from '../../components/ui/Button'
-import { SearchInput } from '../../components/ui/SearchInput'
 import { PageBody } from '../../components/ui/PageBody'
 import { Unavailable } from '../../components/ui/Unavailable'
 import { Badge } from '../../components/ui/Badge'
@@ -155,7 +154,10 @@ function statusFromParam(value: string | null): FilterKey {
   return 'All'
 }
 
-export function CasesWorkspace({ embedded = false }: { embedded?: boolean } = {}) {
+export function CasesWorkspace({ embedded = false, searchControl }: {
+  embedded?: boolean
+  searchControl?: { value: string; onChange: (value: string) => void }
+} = {}) {
   const navigate = useNavigate()
   const money = useCanViewMoney()
   const viewport = useViewport()
@@ -255,11 +257,13 @@ export function CasesWorkspace({ embedded = false }: { embedded?: boolean } = {}
 
   const setActiveFilter = (f: FilterKey) => patch({ status: f === 'All' ? null : STATUS_URL_KEY[f] })
 
-  const [searchInput, setSearchInput] = useState(searchQuery)
+  const [localSearchInput, setLocalSearchInput] = useState(searchQuery)
+  const searchInput = searchControl?.value ?? localSearchInput
+  const setSearchInput = searchControl?.onChange ?? setLocalSearchInput
 
   useEffect(() => {
     setSearchInput(searchQuery)
-  }, [searchQuery])
+  }, [searchQuery, setSearchInput])
 
   useEffect(() => {
     if (searchInput === searchQuery) return
@@ -360,6 +364,7 @@ export function CasesWorkspace({ embedded = false }: { embedded?: boolean } = {}
             },
             placeholder: 'Search ID, title, client… (press /)',
             ariaLabel: 'Search cases by ID, title, or client',
+            onKeyDown: event => { if (event.key === 'Enter') patch({ q: searchInput || null }) },
           }}
         />
       )}
@@ -494,18 +499,6 @@ export function CasesWorkspace({ embedded = false }: { embedded?: boolean } = {}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: phone ? 'wrap' : 'nowrap', width: phone ? '100%' : 'auto', flexShrink: 0 }}>
-          <div style={{ flex: phone ? '1 1 100%' : '1 1 360px', width: phone ? '100%' : 360, minWidth: phone ? '100%' : 280, maxWidth: 520 }}>
-            <SearchInput
-              placeholder="Search ID, title, client…"
-              value={searchInput}
-              onChange={setSearchInput}
-              onClear={() => {
-                setSearchInput('')
-                patch({ q: null })
-              }}
-              onSearchSubmit={(val) => patch({ q: val || null })}
-            />
-          </div>
           {/* Both were success-toasts for work that never happened — the exact
               fabrication src/actions/core.ts §1 names. Unbuilt renders as
               Unavailable with the honest sentence, never as a fake success. */}

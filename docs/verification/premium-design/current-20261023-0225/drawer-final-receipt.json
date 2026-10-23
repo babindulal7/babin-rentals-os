@@ -1,0 +1,14 @@
+[
+  {
+    "name": "additional",
+    "args": [
+      "checks"
+    ],
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/additional-checks-final.log",
+    "startedAt": "2026-10-23T06:42:03.041Z",
+    "exitCode": 0,
+    "sourceHash": "4a2cb841d83e5679c2e25f4756847a6196baccfb1fd22f825870c5e7a20c00fc",
+    "afterHash": "4a2cb841d83e5679c2e25f4756847a6196baccfb1fd22f825870c5e7a20c00fc",
+    "sourceChanged": false
+  }
+]

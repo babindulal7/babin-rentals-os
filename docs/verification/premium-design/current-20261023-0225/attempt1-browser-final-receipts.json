@@ -1,0 +1,39 @@
+[
+  {
+    "name": "browser",
+    "args": [
+      "after",
+      "all"
+    ],
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/browser-after-final.log",
+    "startedAt": "2026-10-22T21:07:38.378Z",
+    "exitCode": 1,
+    "sourceHash": "f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d",
+    "afterHash": "f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d",
+    "sourceChanged": false
+  },
+  {
+    "name": "browser",
+    "args": [
+      "checks"
+    ],
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/browser-checks-final.log",
+    "startedAt": "2026-10-22T21:09:15.818Z",
+    "exitCode": 1,
+    "sourceHash": "f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d",
+    "afterHash": "f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d",
+    "sourceChanged": false
+  },
+  {
+    "name": "additional",
+    "args": [
+      "checks"
+    ],
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/additional-checks-final.log",
+    "startedAt": "2026-10-22T21:11:54.740Z",
+    "exitCode": 0,
+    "sourceHash": "f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d",
+    "afterHash": "f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d",
+    "sourceChanged": false
+  }
+]

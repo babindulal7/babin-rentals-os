@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, useRef, useCallback, type CSSProperties }
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import Icon, { type IconName } from '../../components/ui/Icon'
 import { Card, PageHeader, PageActions, Button, cardStyle } from '../../components/ui/Page'
-import { SearchInput } from '../../components/ui'
 import { PageShell } from '../../components/ui/PageShell'
 import { PageBody } from '../../components/ui/PageBody'
 import { DataAgeBadge } from '../../components/ui/DataAgeBadge'
@@ -545,6 +544,7 @@ export default function OperationsQueues() {
   const [fastReturnOpen, setFastReturnOpen] = useState(false)
   const [barcodeModalOpen, setBarcodeModalOpen] = useState(false)
   const [searchInput, setSearchInput] = useState('')
+  const [caseSearchInput, setCaseSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [clientFilter, setClientFilter] = useState('all')
   const [projectFilter, setProjectFilter] = useState('all')
@@ -553,7 +553,6 @@ export default function OperationsQueues() {
   const [selectedBookingNos, setSelectedBookingNos] = useState<Set<string>>(() => new Set())
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(25)
-  const queueSearchRef = useRef<HTMLInputElement | null>(null)
   const dateMenuRef = useRef<HTMLDivElement | null>(null)
   /* Law 13/14 — width decides, at v4.1 §7.7's 768 / 1280. */
   const viewport = useViewport()
@@ -620,10 +619,6 @@ export default function OperationsQueues() {
       if (event.key === 'Escape') {
         setShowDateMenu(false)
         setShowMoreFilters(false)
-      }
-      if (event.key === '/' && !(event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLSelectElement)) {
-        event.preventDefault()
-        queueSearchRef.current?.focus()
       }
     }
     window.addEventListener('keydown', onKeyDown)
@@ -839,9 +834,24 @@ export default function OperationsQueues() {
         />
       )}
       <div style={{ gridColumn: '1 / -1' }}>
+        {/* RULING 2026-10-23: the active queue owns the shell's single search. */}
         <PageHeader
           title="Operations"
           module="operations"
+          search={selected === 'Cases' ? {
+            value: caseSearchInput,
+            onChange: setCaseSearchInput,
+            onClear: () => { setCaseSearchInput(''); patch({ q: null }) },
+            onKeyDown: event => { if (event.key === 'Enter') patch({ q: caseSearchInput || null }) },
+            placeholder: 'Search cases by ID, title, client… (press /)',
+            ariaLabel: 'Search cases by ID, title, or client',
+          } : {
+            value: searchInput,
+            onChange: setSearchInput,
+            onClear: () => setSearchInput(''),
+            placeholder: 'Filter current queue… (press /)',
+            ariaLabel: 'Search ID, client, project',
+          }}
           status={
             selected && !phone ? (
               <span
@@ -1017,16 +1027,6 @@ export default function OperationsQueues() {
             {overdueCount} Overdue
           </span>
         )}
-        <div style={{ flex: '1 1 240px', minWidth: 180 }}>
-          <SearchInput
-            ref={queueSearchRef}
-            value={searchInput}
-            onChange={setSearchInput}
-            onClear={() => setSearchInput('')}
-            placeholder="Filter current queue… (press /)"
-            aria-label="Search ID, client, project"
-          />
-        </div>
         {(isFiltered || search || clientFilter !== 'all' || projectFilter !== 'all') && <Button variant="ghost" onClick={clearOperationFilters}>Clear filters</Button>}
       </div>
 
@@ -1035,7 +1035,7 @@ export default function OperationsQueues() {
       />
       </>}
 
-      {selected === 'Cases' ? <CasesWorkspace embedded /> : (
+      {selected === 'Cases' ? <CasesWorkspace embedded searchControl={{ value: caseSearchInput, onChange: setCaseSearchInput }} /> : (
         <div className={`operations-v2__split${dockOpen ? ' operations-v2__split--open' : ''}`}>
         <Card style={{ overflow: 'hidden' }} bodyStyle={{ padding: 0 }}>
           <PageBody

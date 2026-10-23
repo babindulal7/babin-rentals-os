@@ -112,6 +112,7 @@
 .dispatch-summary h2 { margin: 0; font-size: var(--t-ui); font-weight: 600; color: var(--text); }
 .dispatch-summary__period { margin-left: auto; font-size: var(--t-meta); color: var(--text2); }
 .dispatch-summary p { margin: 4px 0 0; font-size: var(--t-meta); color: var(--text2); }
+.dispatch-summary .dispatch-summary__warning { display: flex; align-items: center; gap: 4px; color: var(--warn-text); }
 
 @media (max-width: 767px) {
   .dispatch-toolbar__intro h1 {
@@ -3333,7 +3334,9 @@
   padding-inline: 0.8rem;
 }
 
-@container (min-width: 28rem) {
+/* Queue width, rather than a new viewport breakpoint: retain two columns until
+   the client, full date and 56px floor action have enough room together. */
+@container (min-width: 36rem) {
   .rental-dashboard .rental-dashboard__panels .movement-card {
     grid-template-columns: minmax(0, 1fr) auto auto;
     grid-template-areas:
@@ -3358,6 +3361,9 @@
 }
 
 .rental-dashboard .movement-card__status--expired {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
   color: var(--danger-text);
   background: color-mix(in srgb, var(--danger) 12%, var(--card));
   border: 1px solid color-mix(in srgb, var(--danger) 32%, transparent);
@@ -3531,4 +3537,16 @@
 .rental-dashboard .dashboard-situational-card:hover {
   border-color: var(--border2);
   box-shadow: var(--elevation-surface);
+}
+
+.rental-dashboard .rental-dashboard__panels .movement-card .movement-card__cta-btn {
+  min-height: 56px;
+}
+@media (max-width: 767px) {
+  .rental-dashboard .dispatch-toolbar .dashboard-master-date-control { width: auto; flex: 0 0 auto; }
+  .rental-dashboard .dispatch-toolbar .dashboard-master-date-control__date-btn {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 100px;
+  }
 }

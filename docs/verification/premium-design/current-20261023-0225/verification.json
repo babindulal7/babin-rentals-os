@@ -11,6 +11,90 @@
       "sourceChanged": true,
       "seconds": 416,
       "log": "docs\\verification\\premium-design\\current-20261023-0225\\typecheck.log"
+    },
+    {
+      "name": "test",
+      "command": "npm test -- --maxWorkers=1",
+      "exitCode": 1,
+      "sourceHash": "4e9ff5f8042ed84c7c318c34cc1333b8886222f5bd3301b440105ccd11c58632",
+      "afterHash": "f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d",
+      "sourceChanged": true,
+      "seconds": 1654,
+      "log": "docs\\verification\\premium-design\\current-20261023-0225\\test.log"
+    },
+    {
+      "name": "pglite",
+      "command": "npm run check:pglite",
+      "exitCode": 0,
+      "sourceHash": "f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d",
+      "afterHash": "f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d",
+      "sourceChanged": false,
+      "seconds": 12,
+      "log": "docs\\verification\\premium-design\\current-20261023-0225\\pglite.log"
+    },
+    {
+      "name": "lifecycle",
+      "command": "npm run check:lifecycle",
+      "exitCode": 0,
+      "sourceHash": "f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d",
+      "afterHash": "f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d",
+      "sourceChanged": false,
+      "seconds": 10,
+      "log": "docs\\verification\\premium-design\\current-20261023-0225\\lifecycle.log"
+    },
+    {
+      "name": "contrast",
+      "command": "npm run check:contrast",
+      "exitCode": 0,
+      "sourceHash": "f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d",
+      "afterHash": "f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d",
+      "sourceChanged": false,
+      "seconds": 1,
+      "log": "docs\\verification\\premium-design\\current-20261023-0225\\contrast.log"
+    },
+    {
+      "name": "lint",
+      "command": "npm run lint",
+      "exitCode": 0,
+      "sourceHash": "f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d",
+      "afterHash": "f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d",
+      "sourceChanged": false,
+      "seconds": 23,
+      "log": "docs\\verification\\premium-design\\current-20261023-0225\\lint.log"
+    },
+    {
+      "name": "shell",
+      "command": "npm run lint:shell",
+      "exitCode": 0,
+      "sourceHash": "f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d",
+      "afterHash": "f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d",
+      "sourceChanged": false,
+      "seconds": 1,
+      "log": "docs\\verification\\premium-design\\current-20261023-0225\\shell.log"
+    },
+    {
+      "name": "copy",
+      "command": "npm run lint:ui-copy",
+      "exitCode": 1,
+      "sourceHash": "f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d",
+      "afterHash": "f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d",
+      "sourceChanged": false,
+      "seconds": 4,
+      "log": "docs\\verification\\premium-design\\current-20261023-0225\\copy.log"
+    },
+    {
+      "name": "build",
+      "command": "npm run build",
+      "exitCode": 0,
+      "sourceHash": "f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d",
+      "afterHash": "f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d",
+      "sourceChanged": false,
+      "seconds": 96,
+      "log": "docs\\verification\\premium-design\\current-20261023-0225\\build.log"
     }
-  ]
+  ],
+  "finishedAt": "2026-10-22T21:27:41.164Z",
+  "currentHash": "f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d",
+  "allPassed": false,
+  "stable": false
 }

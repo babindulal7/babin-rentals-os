@@ -1,5 +1,68 @@
 # Progress Log
 
+## 2026-10-23 12:31 NPT — Premium recovery: current browser verification and honest previews
+
+**Did**
+- Retained Babin’s explicit newer all-Outfit choice and recorded it in RULINGS-2026-10-23.md. Preserved independent shared-tree edits.
+- Corrected misleading equipment summary/catalogue assumptions: no sample asset code, assumed Active/Draft, fake creation date or relationship facts; missing assigned codes/tags cannot be copied or barcoded. Save, revision, custody, permission and query engines remain unchanged.
+- Added shared 44px Inventory/Rentals selection labels; real edge clicks verify the expanded target. Kept unit-table and drawer Copy controls at 44px. Today expired-window labels wrap within their grid region. Calendar tablet Availability text frees search width without changing its accessible name or callback.
+- Created only LOCAL evidence files: BEFORE_AFTER_VISUAL_MATRIX.md, PREMIUM_DESIGN_CHANGES.md, REMAINING_UI_ISSUES.md and docs/verification/premium-design/current-20261023-0225/gallery.html. Historical 418c025f proof is separate. No Git commit/branch/push/PR, hosted operation, deployment or migration by this task.
+
+**Ruled**
+- Explicit user answer: keep the newer all-Outfit theme. No typography rollback.
+- TODO(decision / reconciliation) in OPEN_DECISIONS §19: newer optional five-stage mode conflicts with the supplied seven-anchor brief; specific user preference question is pending. No response is inferred.
+
+**Verified**
+- 156/156 scoped capture geometries: one 64px header, header targets at least 44px, controls in bounds, no horizontal page overflow. 63/63 real mock browser assertions, including current loaded Outfit, Finance labels, filters, money-blind denial, Card variants, on-demand drawer, real selection edge clicks and unavailable-preview behavior.
+- Focused tests 23/23; Calendar header 4/4. Nine latest command steps exited 0: typecheck, focused UI tests, PGlite 168/168, lifecycle 31/31, contrast 82/82, lint, shell/copy checks and build. Their individual source hashes/changes are retained; all-command snapshot stability is not asserted. The build CSS reconciliation proves the final Copy target is included in emitted CSS.
+- Earlier current full suite: 5271/5272 passed with one New Rental 90-second timeout; all 14 tests in that file passed on retry. The full run changed source. Further independent full-suite runs are pending; no matching-source whole-suite green is claimed.
+- Completion exit 1: the generated counter explicitly says suite NOT VERIFIED. Physical device/scanner/screen reader, actual browser-chrome 125% zoom, offline Nepali glyph fallback and missing external design references remain unverified.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | — |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | — |
+| Lifecycle | steps green / total | 31 / 31 (100%) | — |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-23T06:42:46.217Z). Suite: NOT VERIFIED — invalid test receipt.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-23T06:43:22.877Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Reconcile seven-anchor-only navigation versus the newer optional five-stage mode after Babin answers. Preserve the existing shared data/write engine.
+- Obtain a whole matching-source test receipt after shared edits settle; keep the failed timeout/retry and historical coverage receipts. No current full-suite or coverage completion claim.
+- Complete physical-device, assistive-technology/dialog-focus, actual browser zoom and offline glyph acceptance; external concept/spec attachments remain absent. See REMAINING_UI_ISSUES.md.
+
+## 2026-10-23 — Global shell wireframes: review, comparison and implementation
+
+**Did**
+- Reviewed the supplied ZIP against the existing shell and current repository rulings; recorded the comparison in `docs/GLOBAL_SHELL_WIREFRAME_REVIEW_2026-10-23.md`.
+- Today now contains Pickups and Returns only, with exact counts from the same paginated movement queries, compact shared/independent date controls, truthful unavailable states and existing Operations actions/subscriptions. Removed its unrelated situational reads and dashboard cards; retained their source components.
+- Applied the existing available-header-width rule to shared secondary actions; placed Today Add/More into canonical slots; retained independent desktop/tablet navigation preferences on resize. Added keyboard/panel associations for phone movement tabs, readable narrow queue rows and 56px movement actions.
+- Consolidated Operations and standalone/embedded Cases search into the shared header, preserving queue debounce and Cases URL/clear/Enter behavior. Reused existing controls and theme tokens; no dependency or theme replacement.
+- Saved before/after mock screenshots and a source-only implementation patch under `artifacts/global-shell-wireframes/`. Existing unrelated checkout changes were preserved. No migration was WRITTEN, APPLIED or PRODUCTION-VERIFIED by this UI task.
+
+**Ruled**
+- `RULINGS-2026-10-23.md` records the presentation decisions and reverts. The existing permission/money/custody rules and 20 October supplemental-drawer behavior remain authoritative.
+
+**Verified**
+- Focused regression run: 44/44 tests across Today, Cases and the real-shell one-search-per-page checks; typecheck passed before this run.
+- Browser matrix: 50 updated captures across five workspaces, five requested widths and both themes; zero measured page/header overflow, 64px headers and 256/64px navigation. Seven interaction checks passed, including compiled-preview Operations filtering, embedded Cases query restoration and a populated Warehouse board with no rupee amounts. Additional Warehouse/Cases phone captures are retained.
+- Final ordered full-suite/database/lifecycle/lint/contrast/build run is in progress; its result is not claimed yet.
+
+### Completion
+Pending the final `npm run completion` output after verification; no current percentage is claimed here.
+
+### Remaining
+- Finish the final ordered gates and refreshed Operations/Cases browser evidence, then replace this pending verification/counter block with executed results.
+- Physical-device and hosted acceptance remain outside these local mock checks; the repository's existing release HOLD remains governed by `docs/CURRENT_STATE.md`.
+
+
 ## 2026-10-23 02:49 NPT — ASTRA Reset cleaner integrity follow-up
 
 **Did**

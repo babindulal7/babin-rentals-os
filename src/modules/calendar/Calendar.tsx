@@ -3495,7 +3495,7 @@ export default function Calendar() {
               extra={!phone ? navButtons : undefined}
               primary={
                 <Button icon={phone ? undefined : 'calendar_event'} variant="primary" onClick={() => setShowCheckAvailability(true)} aria-label="Check availability">
-                  {phone ? 'Availability' : 'Check availability'}
+                  {desktop ? 'Check availability' : 'Availability'}
                 </Button>
               }
               secondary={[

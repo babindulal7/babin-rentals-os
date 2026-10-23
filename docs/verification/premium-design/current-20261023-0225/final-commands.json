@@ -1,0 +1,92 @@
+[
+  {
+    "name": "typecheck",
+    "command": "npm run typecheck",
+    "exitCode": 0,
+    "sourceHash": "44ae29705be2a51af27d56f58e8fd5551800a98bac26ba3760f1550ea0692864",
+    "afterHash": "9f4d7cb4555fe4e92e914f7dc0a7e3d5e630f56728235f056e3a46a7e48dcf0a",
+    "sourceChanged": true,
+    "seconds": 208.641,
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/final-typecheck.log"
+  },
+  {
+    "name": "retry",
+    "command": "node node_modules/vitest/vitest.mjs run src/__tests__/e2e/tier1-features.test.tsx --maxWorkers=1 --reporter=default --reporter=json --outputFile=C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/tier1-retry.json",
+    "exitCode": 0,
+    "sourceHash": "9f4d7cb4555fe4e92e914f7dc0a7e3d5e630f56728235f056e3a46a7e48dcf0a",
+    "afterHash": "d8be21f0db480e44f3c3e75c882b7a8cf6b091c425b994aba52a8d19a9f0748f",
+    "sourceChanged": true,
+    "seconds": 65.087,
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/final-retry.log"
+  },
+  {
+    "name": "pglite",
+    "command": "npm run check:pglite",
+    "exitCode": 0,
+    "sourceHash": "d8be21f0db480e44f3c3e75c882b7a8cf6b091c425b994aba52a8d19a9f0748f",
+    "afterHash": "d8be21f0db480e44f3c3e75c882b7a8cf6b091c425b994aba52a8d19a9f0748f",
+    "sourceChanged": false,
+    "seconds": 24.341,
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/final-pglite.log"
+  },
+  {
+    "name": "lifecycle",
+    "command": "npm run check:lifecycle",
+    "exitCode": 0,
+    "sourceHash": "d8be21f0db480e44f3c3e75c882b7a8cf6b091c425b994aba52a8d19a9f0748f",
+    "afterHash": "d8be21f0db480e44f3c3e75c882b7a8cf6b091c425b994aba52a8d19a9f0748f",
+    "sourceChanged": false,
+    "seconds": 39.167,
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/final-lifecycle.log"
+  },
+  {
+    "name": "contrast",
+    "command": "npm run check:contrast",
+    "exitCode": 0,
+    "sourceHash": "d8be21f0db480e44f3c3e75c882b7a8cf6b091c425b994aba52a8d19a9f0748f",
+    "afterHash": "d8be21f0db480e44f3c3e75c882b7a8cf6b091c425b994aba52a8d19a9f0748f",
+    "sourceChanged": false,
+    "seconds": 1.902,
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/final-contrast.log"
+  },
+  {
+    "name": "lint",
+    "command": "npm run lint",
+    "exitCode": 0,
+    "sourceHash": "d8be21f0db480e44f3c3e75c882b7a8cf6b091c425b994aba52a8d19a9f0748f",
+    "afterHash": "d8be21f0db480e44f3c3e75c882b7a8cf6b091c425b994aba52a8d19a9f0748f",
+    "sourceChanged": false,
+    "seconds": 112.004,
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/final-lint.log"
+  },
+  {
+    "name": "shell",
+    "command": "npm run lint:shell",
+    "exitCode": 0,
+    "sourceHash": "d8be21f0db480e44f3c3e75c882b7a8cf6b091c425b994aba52a8d19a9f0748f",
+    "afterHash": "d8be21f0db480e44f3c3e75c882b7a8cf6b091c425b994aba52a8d19a9f0748f",
+    "sourceChanged": false,
+    "seconds": 4.182,
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/final-shell.log"
+  },
+  {
+    "name": "copy",
+    "command": "npm run lint:ui-copy",
+    "exitCode": 0,
+    "sourceHash": "d8be21f0db480e44f3c3e75c882b7a8cf6b091c425b994aba52a8d19a9f0748f",
+    "afterHash": "d8be21f0db480e44f3c3e75c882b7a8cf6b091c425b994aba52a8d19a9f0748f",
+    "sourceChanged": false,
+    "seconds": 13.463,
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/final-copy.log"
+  },
+  {
+    "name": "build",
+    "command": "npm run build",
+    "exitCode": 0,
+    "sourceHash": "d8be21f0db480e44f3c3e75c882b7a8cf6b091c425b994aba52a8d19a9f0748f",
+    "afterHash": "99710bab967851e2f523b598174dbc0612f5ade3423fdec430ac9a21d1882e7c",
+    "sourceChanged": true,
+    "seconds": 447.733,
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/final-build.log"
+  }
+]

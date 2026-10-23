@@ -122,18 +122,19 @@ import { WorkspaceProvider } from '../../lib/workspaceContext'
 let container: HTMLDivElement
 let root: Root
 
-async function mountInShell(page: 'inventory' | 'clients') {
+async function mountInShell(page: 'inventory' | 'clients' | 'operations', query = '') {
   const Page = page === 'inventory'
     ? (await import('../../modules/inventory/Inventory')).default
-    : (await import('../../modules/clients/Clients')).default
+    : page === 'clients' ? (await import('../../modules/clients/Clients')).default
+    : (await import('../../modules/operations/OperationsQueues')).default
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
   await act(async () => {
     root.render(
-      <MemoryRouter initialEntries={[`/${page}`]}>
+      <MemoryRouter initialEntries={[`/${page}${query}`]}>
         <WorkspaceProvider>
-          <Header crumbs={[{ label: page === 'inventory' ? 'Inventory' : 'Clients' }]} />
+          <Header crumbs={[{ label: page === 'inventory' ? 'Inventory' : page === 'clients' ? 'Clients' : 'Operations' }]} />
           <Page />
         </WorkspaceProvider>
       </MemoryRouter>,
@@ -153,14 +154,14 @@ afterEach(async () => {
 })
 
 describe('RULING 2026-10-15 — one search per list page, one toolbar line', { timeout: 90_000 }, () => {
-  it.each(['inventory', 'clients'] as const)('%s renders exactly one search box, the header one', async (page) => {
+  it.each(['inventory', 'clients', 'operations'] as const)('%s renders exactly one search box, the header one', async (page) => {
     await mountInShell(page)
     const boxes = searchBoxes()
     expect(boxes.map((b) => b.placeholder)).toHaveLength(1)
     expect(boxes[0]!.closest('.app-global-header')).not.toBeNull()
   })
 
-  it.each(['inventory', 'clients'] as const)('%s: "/" focuses the header search at desktop width', async (page) => {
+  it.each(['inventory', 'clients', 'operations'] as const)('%s: "/" focuses the header search at desktop width', async (page) => {
     await mountInShell(page)
     const header = container.querySelector<HTMLInputElement>('.app-global-header input[type="search"]')!
     expect(header.placeholder).toContain('(press /)')
@@ -169,6 +170,14 @@ describe('RULING 2026-10-15 — one search per list page, one toolbar line', { t
     expect(document.activeElement).toBe(header)
     // Prevented, so the "/" is not typed into the box it just focused.
     expect(event.defaultPrevented).toBe(true)
+  })
+
+  it('keeps one header search for embedded Cases and restores its URL query', async () => {
+    await mountInShell('operations', '?queue=cases&q=lamp')
+    const boxes = searchBoxes()
+    expect(boxes).toHaveLength(1)
+    expect(boxes[0]!.closest('.app-global-header')).not.toBeNull()
+    expect(boxes[0]!.value).toBe('lamp')
   })
 
   it('Inventory keeps every status chip in the one toolbar', async () => {

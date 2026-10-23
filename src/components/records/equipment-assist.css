@@ -57,6 +57,7 @@
 .equipment-unit-table { width: 100%; min-width: 720px; border-collapse: collapse; font-size: var(--t-meta); }
 .equipment-unit-table th { background: var(--card2); padding: 10px 8px; text-align: left; font-size: var(--t-th); font-weight: 700; color: var(--muted); border-bottom: 1.5px solid var(--border); }
 .equipment-unit-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.equipment-unit-table button { min-width: var(--control-height); min-height: var(--control-height); }
 .equipment-unit-table tbody tr:last-child td { border-bottom: none; }
 .equipment-cell-input { width: 100%; min-height: var(--control-height); padding: var(--sp-xs) var(--sp-sm); font: inherit; font-size: var(--t-meta); border: 1px solid var(--input-border); border-radius: var(--r-input); background: var(--input-bg); color: var(--text); box-sizing: border-box; }
 .equipment-cell-select { width: 100%; min-height: var(--control-height); padding: var(--sp-xs) var(--sp-sm); font: inherit; font-size: var(--t-meta); border: 1px solid var(--input-border); border-radius: var(--r-input); background: var(--input-bg); color: var(--text); box-sizing: border-box; }
@@ -96,7 +97,7 @@
 .equipment-code-header { display: flex; justify-content: space-between; align-items: center; }
 .equipment-code-label { display: block; font-size: var(--t-th); color: var(--text2); }
 .equipment-code-val { font-size: var(--t-ui); color: var(--link); }
-.equipment-copy-btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; min-height: 28px; border: 1px solid var(--border); border-radius: var(--r-btn); background: var(--card2); color: var(--text); font-size: var(--t-th); font-family: inherit; cursor: pointer; }
+.equipment-copy-btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; min-width: var(--control-height); min-height: var(--control-height); border: 1px solid var(--border); border-radius: var(--r-btn); background: var(--card2); color: var(--text); font-size: var(--t-th); font-family: inherit; cursor: pointer; }
 .equipment-copy-btn:hover { border-color: var(--primary); }
 .equipment-barcode-card { background: #ffffff; border-radius: var(--r-sm); padding: 8px 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .equipment-barcode-svg { width: 100%; display: flex; justify-content: center; }

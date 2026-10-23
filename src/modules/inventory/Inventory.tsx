@@ -622,7 +622,8 @@ function ParentRowView({
           checked ? 'is-selected' : '',
         ].filter(Boolean).join(' ')}
       >
-        <td style={{ ...td, width: 26 }} onClick={(e) => e.stopPropagation()}>
+        <td style={{ ...td, width: 44 }} onClick={(e) => e.stopPropagation()}>
+          <label className="data-table-selection-hit">
           <input
             type="checkbox"
             aria-label={`Select ${row.name}`}
@@ -630,6 +631,7 @@ function ParentRowView({
             onChange={onToggle}
             style={{ accentColor: 'var(--nav-active-accent)' }}
           />
+          </label>
         </td>
         <td style={{ ...td, width: 34 }} onClick={(e) => e.stopPropagation()}>
           {serialised ? (
@@ -2214,7 +2216,8 @@ export default function Inventory() {
                     <table className="inventory-table operations-table" aria-label="Equipment inventory" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 0 }}>
                       <thead>
                         <tr style={{ background: 'var(--th-bg)' }}>
-                          <th style={{ ...th, width: 26 }}>
+                          <th style={{ ...th, width: 44 }}>
+                            <label className="data-table-selection-hit">
                             <input
                               type="checkbox"
                               aria-label="Select every model on this page"
@@ -2222,6 +2225,7 @@ export default function Inventory() {
                               onChange={toggleAllOnPage}
                               style={{ accentColor: 'var(--nav-active-accent)' }}
                             />
+                            </label>
                           </th>
                           <th style={{ ...th, width: 26 }} />
                           <th style={th}>

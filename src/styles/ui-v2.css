@@ -282,6 +282,15 @@ input[type='search']::-webkit-search-results-decoration {
 .data-table tbody tr:hover, .operations-table tbody tr:hover, .operations-v2__table tbody tr:hover, .data-table__row--interactive:hover {
   background: color-mix(in srgb, var(--nav-active-bg) 36%, transparent);
 }
+.data-table-selection-hit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--control-height);
+  min-height: var(--control-height);
+  cursor: pointer;
+}
+
 .data-table input[type='checkbox'],
 .operations-table input[type='checkbox'] {
   appearance: none;

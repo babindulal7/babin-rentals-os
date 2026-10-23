@@ -1,0 +1,92 @@
+[
+  {
+    "name": "typecheck",
+    "command": "npm run typecheck",
+    "exitCode": 0,
+    "sourceHash": "fb4dc8f2adc04ea18950e20e70e2ad133f3a540fa17adcc9451b7cc16014ae62",
+    "afterHash": "b4d6352e7d4cf3964b3194b77de2a1eefe24b6a2a9c40981e153fa059d17076c",
+    "sourceChanged": true,
+    "seconds": 192.776,
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/latest-typecheck.log"
+  },
+  {
+    "name": "focused",
+    "command": "node node_modules/vitest/vitest.mjs run src/components/records/__tests__/equipmentAssist.test.tsx src/components/ui/__tests__/RecordActions.header.test.tsx src/components/ui/__tests__/PageShell.optional.test.tsx src/components/shell/__tests__/headerButtonPositions.test.tsx --maxWorkers=1 --reporter=default --reporter=json --outputFile=C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/focused-final.json",
+    "exitCode": 0,
+    "sourceHash": "b4d6352e7d4cf3964b3194b77de2a1eefe24b6a2a9c40981e153fa059d17076c",
+    "afterHash": "b4d6352e7d4cf3964b3194b77de2a1eefe24b6a2a9c40981e153fa059d17076c",
+    "sourceChanged": false,
+    "seconds": 37.906,
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/latest-focused.log"
+  },
+  {
+    "name": "pglite",
+    "command": "npm run check:pglite",
+    "exitCode": 0,
+    "sourceHash": "b4d6352e7d4cf3964b3194b77de2a1eefe24b6a2a9c40981e153fa059d17076c",
+    "afterHash": "b4d6352e7d4cf3964b3194b77de2a1eefe24b6a2a9c40981e153fa059d17076c",
+    "sourceChanged": false,
+    "seconds": 31.891,
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/latest-pglite.log"
+  },
+  {
+    "name": "lifecycle",
+    "command": "npm run check:lifecycle",
+    "exitCode": 0,
+    "sourceHash": "b4d6352e7d4cf3964b3194b77de2a1eefe24b6a2a9c40981e153fa059d17076c",
+    "afterHash": "b4d6352e7d4cf3964b3194b77de2a1eefe24b6a2a9c40981e153fa059d17076c",
+    "sourceChanged": false,
+    "seconds": 35.306,
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/latest-lifecycle.log"
+  },
+  {
+    "name": "contrast",
+    "command": "npm run check:contrast",
+    "exitCode": 0,
+    "sourceHash": "b4d6352e7d4cf3964b3194b77de2a1eefe24b6a2a9c40981e153fa059d17076c",
+    "afterHash": "b4d6352e7d4cf3964b3194b77de2a1eefe24b6a2a9c40981e153fa059d17076c",
+    "sourceChanged": false,
+    "seconds": 3.213,
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/latest-contrast.log"
+  },
+  {
+    "name": "lint",
+    "command": "npm run lint",
+    "exitCode": 0,
+    "sourceHash": "b4d6352e7d4cf3964b3194b77de2a1eefe24b6a2a9c40981e153fa059d17076c",
+    "afterHash": "9abe07abe0f35dd156ac2700190a2ab025abaa113c6ae7d45644b652d9554866",
+    "sourceChanged": true,
+    "seconds": 114.519,
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/latest-lint.log"
+  },
+  {
+    "name": "shell",
+    "command": "npm run lint:shell",
+    "exitCode": 0,
+    "sourceHash": "9abe07abe0f35dd156ac2700190a2ab025abaa113c6ae7d45644b652d9554866",
+    "afterHash": "9abe07abe0f35dd156ac2700190a2ab025abaa113c6ae7d45644b652d9554866",
+    "sourceChanged": false,
+    "seconds": 2.327,
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/latest-shell.log"
+  },
+  {
+    "name": "copy",
+    "command": "npm run lint:ui-copy",
+    "exitCode": 0,
+    "sourceHash": "9abe07abe0f35dd156ac2700190a2ab025abaa113c6ae7d45644b652d9554866",
+    "afterHash": "9abe07abe0f35dd156ac2700190a2ab025abaa113c6ae7d45644b652d9554866",
+    "sourceChanged": false,
+    "seconds": 9.19,
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/latest-copy.log"
+  },
+  {
+    "name": "build",
+    "command": "npm run build",
+    "exitCode": 0,
+    "sourceHash": "9abe07abe0f35dd156ac2700190a2ab025abaa113c6ae7d45644b652d9554866",
+    "afterHash": "4a2cb841d83e5679c2e25f4756847a6196baccfb1fd22f825870c5e7a20c00fc",
+    "sourceChanged": true,
+    "seconds": 333.568,
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/latest-build.log"
+  }
+]

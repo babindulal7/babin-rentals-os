@@ -14,6 +14,9 @@ export function copyViolations(file, source) {
       let parent = node.parent
       let rendered = false
       while (parent) {
+        // CSS hooks and comparison operands are implementation, not staff copy.
+        if (ts.isJsxAttribute(parent) && /^(className|id|key)$/.test(parent.name.getText(tree))) break
+        if (ts.isBinaryExpression(parent) && [ts.SyntaxKind.EqualsEqualsToken, ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken].includes(parent.operatorToken.kind)) break
         if (ts.isImportTypeNode(parent) || (ts.isCallExpression(parent) && parent.expression.kind === ts.SyntaxKind.ImportKeyword)) break
         if (ts.isJsxElement(parent) || ts.isJsxSelfClosingElement(parent) || ts.isJsxFragment(parent)) { rendered = true; break }
         if (ts.isPropertyAssignment(parent) && copyKeys.test(parent.name.getText(tree).replace(/['"]/g, ''))) { rendered = true; break }

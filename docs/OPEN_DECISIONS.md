@@ -157,3 +157,8 @@ The Law 16 report pass (PROGRESS.md, 2026-10-16) replaced invented figures with 
 The Crew timesheet page now reads recorded call/wrap times from `crew_shoot_days` (RULINGS-2026-10-20). It keeps two figures from the old standalone, both unruled, in one constant (`STANDARD_DAY_HOURS = 8` in `src/lib/queries/timesheet.ts`, `TODO(decision)`):
 - **The overtime threshold** — hours in a day past which the page flags overtime. `crew_shoot_days.overtime_approved_by` exists, so overtime is a real concept; its threshold has never been ruled.
 - **How a day rate becomes an hourly figure** — the page estimates pay as hours × day rate ÷ 8. Crew payouts on Crew Assist are days booked × day rate. Is crew pay by the day or by the hour, and does overtime pay differently? Until ruled, the page labels its figure "Estimated pay" and says so on screen.
+
+
+## 19. Premium recovery: equipment navigation conflict (23 October 2026)
+
+**TODO(decision / reconciliation):** the supplied recovery brief explicitly requires seven section anchors, without a five-step wizard. The newer local EquipmentRecordEditor retains seven anchors and also renders an optional five-stage mode. Babin has been asked which direction should govern this newer code; no response or reversal is inferred. Preserve existing data/write engines and record this acceptance conflict until reconciled. The all-Outfit theme is separately resolved by Babin’s explicit answer and is not pending.

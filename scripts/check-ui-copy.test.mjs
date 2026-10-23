@@ -20,3 +20,9 @@ test('permits ordinary staff copy and technical strings outside UI', () => {
 test('rejects developer text in exported staff-note constants', () => {
   assert.equal(copyViolations('copy.ts', "export const SUB_RENTAL_NOTE = 'booking_lines.line_type'").length, 1)
 })
+
+test('permits CSS hooks and comparison operands without permitting visible developer text', () => {
+  assert.equal(copyViolations('sample.tsx', '<p className={ready ? "is-ok" : "is-todo"}>Ready</p>').length, 0)
+  assert.equal(copyViolations('sample.tsx', '<div>{items.map(item => { const pending = item.state === "todo"; return <p>{pending ? "Required" : "Ready"}</p> })}</div>').length, 0)
+  assert.equal(copyViolations('sample.tsx', '<p>{ready ? "Ready" : "TODO"}</p>').length, 1)
+})

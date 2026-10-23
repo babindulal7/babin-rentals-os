@@ -2587,7 +2587,7 @@ export default function RentalsList() {
                           }}
                         >
                           <td style={{ ...rowTd, width: 44, paddingLeft: 12 }}>
-                            <label style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 32, minHeight: 44, cursor: 'pointer' }}>
+                            <label className="data-table-selection-hit">
                               <input
                                 type="checkbox"
                                 checked={selectedIds.has(r.id)}
