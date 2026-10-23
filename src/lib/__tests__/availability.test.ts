@@ -276,21 +276,22 @@ describe('selectUnitsForLine', () => {
     expect(out.shortfall).toBe(1)
   })
 
-  /* ── RS-02 · the reset bench takes a unit out of the pool ─────────────── */
+  /* RULING 2026-10-24: Return releases usable gear; reset remains a task. */
 
-  it('will not assign a unit whose reset is still outstanding', () => {
+  it('assigns a usable unit while cleaning and reset remain outstanding', () => {
     const candidates = [
       unit({ unitId: 'u-1', openCleaning: { bookingNo: 'B-715', requiresClean: true } }),
       unit({ unitId: 'u-2' }),
     ]
     const out = selectUnitsForLine({ ...base, needed: 2, candidates })
 
-    expect(out.assigned.map((u) => u.unitId)).toEqual(['u-2'])
-    expect(out.rejected[0]?.reason).toMatchObject({ kind: 'cleaning', by: { bookingNo: 'B-715' } })
-    expect(out.shortfall).toBe(1)
+    expect(out.assigned.map((u) => u.unitId)).toEqual(['u-1', 'u-2'])
+    expect(out.rejected).toEqual([])
+    expect(out.shortfall).toBe(0)
+    expect(candidates[0]?.openCleaning).toEqual({ bookingNo: 'B-715', requiresClean: true })
   })
 
-  it('assigns a unit again once its reset has been completed', () => {
+  it('reset completion does not create a second availability event', () => {
     /* `null` is what `readOpenCleaning` yields for a unit with no open entry —
        which is exactly what stamping `reset_completed_at` produces. */
     const out = selectUnitsForLine({ ...base, needed: 1, candidates: [unit({ unitId: 'u-1', openCleaning: null })] })
@@ -298,16 +299,36 @@ describe('selectUnitsForLine', () => {
     expect(out.rejected).toEqual([])
   })
 
-  it('says which booking the gear is still on the bench from', () => {
+  it('pending QC or reset alone is not reported as an availability refusal', () => {
     const out = selectUnitsForLine({
       ...base,
       needed: 1,
       candidates: [unit({ unitId: 'u-1', openCleaning: { bookingNo: 'B-715', requiresClean: false } })],
     })
     const why = explainShortfall(out, 'Sony FX9')
-    expect(why).toContain('on the reset bench after B-715')
-    expect(why).toContain('has not been reset yet')
-    expect(why).not.toContain('cleaned or')
+    expect(why).toBeNull()
+  })
+
+  it.each(['Damaged', 'Lost'])('still refuses a real %s condition while reset is pending', condition => {
+    const out = selectUnitsForLine({
+      ...base,
+      needed: 1,
+      candidates: [unit({ unitId: 'u-1', condition, openCleaning: { bookingNo: 'B-715', requiresClean: false } })],
+    })
+    expect(out.assigned).toEqual([])
+    expect(out.rejected[0]?.reason).toEqual({ kind: 'condition', condition })
+    expect(explainShortfall(out, 'Sony FX9')).toContain(condition)
+  })
+
+  it('preserves an overlapping hold when reset is pending', () => {
+    const out = selectUnitsForLine({
+      ...base,
+      needed: 1,
+      candidates: [unit({ unitId: 'u-1', openCleaning: { bookingNo: 'B-715', requiresClean: true } })],
+      holds: [hold('u-1', WINDOW, 'B-901')],
+    })
+    expect(out.shortfall).toBe(1)
+    expect(out.rejected[0]?.reason).toMatchObject({ kind: 'held', by: { bookingNo: 'B-901' } })
   })
 
   it('checks retirement before state, so a retired unit reads as retired', () => {
@@ -377,21 +398,23 @@ describe('settings-driven availability rules', () => {
       expect([...unitStatesForRule('Condition only')].sort()).toEqual(['Maintenance', 'Missing', 'Retired'])
     })
 
-    it('adds the turnaround queues on the middle preset, and nothing else', () => {
+    it('does not reintroduce cleaning/QC task holds through a stored legacy preset', () => {
       const states = unitStatesForRule('Condition and turnaround')
-      expect(states.has('Inspection')).toBe(true)
-      expect(states.has('Cleaning')).toBe(true)
+      expect(states.has('Inspection')).toBe(false)
+      expect(states.has('Cleaning')).toBe(false)
       /* Still not the lifecycle four — that is the strict preset's job. */
       expect(states.has('On Rent')).toBe(false)
       expect(states.has('Reserved')).toBe(false)
     })
 
-    it('disqualifies everything but In Stock on the strict preset', () => {
+    it('preserves strict custody exclusions without excluding cleaning or inspection tasks', () => {
       const states = unitStatesForRule('Only In Stock')
-      for (const state of ['Reserved', 'Packed', 'On Rent', 'Returning', 'Inspection', 'Cleaning', 'Maintenance', 'Missing', 'Retired']) {
+      for (const state of ['Reserved', 'Packed', 'On Rent', 'Returning', 'Maintenance', 'Missing', 'Retired']) {
         expect(states.has(state)).toBe(true)
       }
       expect(states.has('In Stock')).toBe(false)
+      expect(states.has('Inspection')).toBe(false)
+      expect(states.has('Cleaning')).toBe(false)
     })
 
     /*
