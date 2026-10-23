@@ -1462,6 +1462,60 @@ section[id] {
 }
 .pinpad-invalid { animation: pinpad-shake 200ms ease-in-out }
 
+/* ── Intel Card Entrance Animations (§33 Hover Intel) ───────────────────── */
+@keyframes intel-card-in-bottom {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes intel-card-in-top {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes intel-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.intel-card-overlay {
+  animation: intel-card-in-bottom 160ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: top center;
+  will-change: transform, opacity;
+}
+
+.intel-card-overlay[data-placement="top"] {
+  animation-name: intel-card-in-top;
+  transform-origin: bottom center;
+}
+
+.intel-card-overlay[data-placement="bottom"] {
+  animation-name: intel-card-in-bottom;
+  transform-origin: top center;
+}
+
+.intel-detail-groups {
+  animation: intel-panel-in 140ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 /* ============================================================================
    OPERATIONS UI PRIMITIVES — shared modernization layer
 
