@@ -1,0 +1,163 @@
+{
+  "startedAt": "2026-10-23T11:51:39.030Z",
+  "sourceHash": "d5dd4192b92e1ee4a0d1e0fd7588259ec1ca3d911c16bea3f6b876f2728e033e",
+  "scope": "Local only. No hosted connection, business data or repository dist writes.",
+  "priorCheckpoint": "ASTRA_CURRENT_FINAL_2026-10-23.json",
+  "regression": {
+    "latestRecorded": "Earlier full run 5280/5280 passed with source changes. New current-main run includes pending 0171 migration and Calendar edits; earlier receipts are historical.",
+    "log": "artifacts/astra-reset-staff-tests-after-20261023.log"
+  },
+  "gates": [
+    {
+      "name": "typecheck",
+      "exitCode": 0,
+      "sourceHashBefore": "d5dd4192b92e1ee4a0d1e0fd7588259ec1ca3d911c16bea3f6b876f2728e033e",
+      "sourceHashAfter": "d5dd4192b92e1ee4a0d1e0fd7588259ec1ca3d911c16bea3f6b876f2728e033e",
+      "sourceStable": true,
+      "log": "artifacts/astra-current-main-typecheck-20261023.log",
+      "at": "2026-10-23T11:54:42.571Z",
+      "outputTail": ""
+    },
+    {
+      "name": "test:focused",
+      "exitCode": 0,
+      "sourceHashBefore": "d5dd4192b92e1ee4a0d1e0fd7588259ec1ca3d911c16bea3f6b876f2728e033e",
+      "sourceHashAfter": "f7226767c8789678bfe35bf7f7831b4b5ff08fbb767580378ec6e60d1f8233e2",
+      "sourceStable": false,
+      "log": "artifacts/astra-current-main-test-focused-20261023.log",
+      "at": "2026-10-23T11:55:02.497Z",
+      "outputTail": "\n RUN  v3.2.7 C:/Users/use/Desktop/babin-rentals-os\n\n ✓ src/lib/queries/__tests__/availability.test.ts (33 tests) 47ms\n ✓ src/lib/queries/__tests__/availabilityCompleteness.test.ts (25 tests) 46ms\n ✓ src/actions/rentals/__tests__/confirmRental.test.ts (68 tests) 191ms\n\n Test Files  3 passed (3)\n      Tests  126 passed (126)\n   Start at  17:39:46\n   Duration  13.80s (transform 5.83s, setup 0ms, collect 13.67s, tests 285ms, environment 2ms, prepare 1.20s)\n\n"
+    },
+    {
+      "name": "test:full",
+      "exitCode": 1,
+      "sourceHashBefore": "f7226767c8789678bfe35bf7f7831b4b5ff08fbb767580378ec6e60d1f8233e2",
+      "sourceHashAfter": "ab2f4f7bd12fdfad0ec0fe2160d7b5b3579d9f9552694f7cc63a602b9551d13b",
+      "sourceStable": false,
+      "log": "artifacts/astra-current-main-test-full-20261023.log",
+      "at": "2026-10-23T12:01:11.120Z",
+      "outputTail": "oryRouter (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:6952:3)\n\nstderr | src/modules/rentals/__tests__/newRentalSimplification.test.tsx > NewRental simplification (Part A - D) > keeps the full booking available on a phone without remounting fields\nWarning: The current testing environment is not configured to support act(...)\n\nstderr | src/modules/rentals/__tests__/newRentalSimplification.test.tsx > NewRental simplification (Part A - D) > renders a consolidated Booking Summary card and removed legacy rail cards\nWarning: The current testing environment is not configured to support act(...)\n\nstderr | src/modules/rentals/__tests__/newRentalSimplification.test.tsx > NewRental simplification (Part A - D) > renders a consolidated Booking Summary card and removed legacy rail cards\nWarning: The current testing environment is not configured to support act(...)\n    at NewRental (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\rentals\\NewRental.tsx:80:42)\n    at Router (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:7036:13)\n    at MemoryRouter (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:6952:3)\nWarning: The current testing environment is not configured to support act(...)\n    at NewRental (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\rentals\\NewRental.tsx:80:42)\n    at Router (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:7036:13)\n    at MemoryRouter (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:6952:3)\nWarning: The current testing environment is not configured to support act(...)\n    at NewRental (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\rentals\\NewRental.tsx:80:42)\n    at Router (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:7036:13)\n    at MemoryRouter (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:6952:3)\nWarning: The current testing environment is not configured to support act(...)\n    at NewRental (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\rentals\\NewRental.tsx:80:42)\n    at Router (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:7036:13)\n    at MemoryRouter (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:6952:3)\nWarning: The current testing environment is not configured to support act(...)\n    at NewRental (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\rentals\\NewRental.tsx:80:42)\n    at Router (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:7036:13)\n    at MemoryRouter (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:6952:3)\nWarning: The current testing environment is not configured to support act(...)\n    at NewRental (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\rentals\\NewRental.tsx:80:42)\n    at Router (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:7036:13)\n    at MemoryRouter (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:6952:3)\n\nstderr | src/modules/rentals/__tests__/newRentalSimplification.test.tsx > NewRental simplification (Part A - D) > renders a consolidated Booking Summary card and removed legacy rail cards\nWarning: The current testing environment is not configured to support act(...)\nWarning: The current testing environment is not configured to support act(...)\nWarning: The current testing environment is not configured to support act(...)\n\nstderr | src/modules/rentals/__tests__/newRentalSimplification.test.tsx > NewRental simplification (Part A - D) > renders a consolidated Booking Summary card and removed legacy rail cards\nWarning: The current testing environment is not configured to support act(...)\n    at NewRental (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\rentals\\NewRental.tsx:80:42)\n    at Router (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:7036:13)\n    at MemoryRouter (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:6952:3)\n\nstderr | src/modules/rentals/__tests__/newRentalSimplification.test.tsx > NewRental simplification (Part A - D) > renders a consolidated Booking Summary card and removed legacy rail cards\nWarning: The current testing environment is not configured to support act(...)\n\nstderr | src/modules/rentals/__tests__/newRentalSimplification.test.tsx > NewRental simplification (Part A - D) > renders a consolidated Booking Summary card and removed legacy rail cards\nWarning: The current testing environment is not configured to support act(...)\n\nstderr | src/modules/rentals/__tests__/newRentalSimplification.test.tsx > NewRental simplification (Part A - D) > renders a consolidated Booking Summary card and removed legacy rail cards\nWarning: The current testing environment is not configured to support act(...)\n\n ✓ src/modules/rentals/__tests__/newRentalSimplification.test.tsx (3 tests) 8694ms\n   ✓ NewRental simplification (Part A - D) > keeps one save and confirm action on a tablet  4214ms\n   ✓ NewRental simplification (Part A - D) > keeps the full booking available on a phone without remounting fields  1542ms\n   ✓ NewRental simplification (Part A - D) > renders a consolidated Booking Summary card and removed legacy rail cards  2933ms\nstderr | src/modules/rentals/__tests__/floorWorkspacesPersistence.test.tsx > Floor Workspaces State Persistence (AUD-018) > PackingWorkspace > restores persisted packing scan state on mount and displays restored banner\nWarning: validateDOMNesting(...): <div> cannot appear as a descendant of <p>.\n    at div\n    at IntelCard (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\components\\ui\\IntelCard.tsx:28:22)\n    at RentalIntelFromFloor (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\components\\intel\\RentalIntelFromFloor.tsx:9:33)\n    at p\n    at div\n    at div\n    at div\n    at PageBody (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\components\\ui\\PageBody.tsx:6:3)\n    at div\n    at PackingWorkspace (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\rentals\\PackingWorkspace.tsx:244:53)\n    at RenderedRoute (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:6218:26)\n    at Routes (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:7097:3)\n    at ToastProvider (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\components\\ui\\Toast.tsx:169:26)\n    at Router (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:7036:13)\n    at MemoryRouter (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:6952:3)\n\nstderr | src/modules/rentals/__tests__/floorWorkspacesPersistence.test.tsx > Floor Workspaces State Persistence (AUD-018) > PackingWorkspace > restores persisted packing scan state on mount and displays restored banner\n[mock] no rows for table \"product_units_service_v\" — returning []\n\nstderr | src/modules/rentals/__tests__/floorWorkspacesPersistence.test.tsx > Floor Workspaces State Persistence (AUD-018) > ReturnWorkspace > restores persisted return triage state on mount and displays restored banner\nWarning: Removing a style property during rerender (borderColor) when a conflicting property is set (border) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values.\n    at button\n    at div\n    at SigRow (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\rentals\\ReturnWorkspace.tsx:2694:3)\n    at div\n    at section\n    at Card (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\components\\ui\\Card.tsx:17:3)\n    at Card (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\components\\ui\\Page.tsx:22:3)\n    at aside\n    at OperationAside (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\operations\\FloorAside.tsx:7:27)\n    at div\n    at div\n    at PageBody (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\components\\ui\\PageBody.tsx:6:3)\n    at div\n    at ReturnWorkspace (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\rentals\\ReturnWorkspace.tsx:256:42)\n    at RenderedRoute (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:6218:26)\n    at Routes (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:7097:3)\n    at ToastProvider (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\components\\ui\\Toast.tsx:169:26)\n    at Router (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:7036:13)\n    at MemoryRouter (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:6952:3)\n\n ✓ src/modules/rentals/__tests__/floorWorkspacesPersistence.test.tsx (4 tests) 5964ms\n   ✓ Floor Workspaces State Persistence (AUD-018) > PackingWorkspace > restores persisted packing scan state on mount and displays restored banner  3042ms\n   ✓ Floor Workspaces State Persistence (AUD-018) > ReturnWorkspace > bulk receipt at 1440px leaves QC and signatures for explicit capture  928ms\n   ✓ Floor Workspaces State Persistence (AUD-018) > ReturnWorkspace > bulk receipt at 390px leaves QC and signatures for explicit capture  585ms\n   ✓ Floor Workspaces State Persistence (AUD-018) > ReturnWorkspace > restores persisted return triage state on mount and displays restored banner  673ms\n",
+      "receiptError": "Error: Missing or invalid structured test result"
+    },
+    {
+      "name": "check:pglite",
+      "exitCode": 0,
+      "sourceHashBefore": "ab2f4f7bd12fdfad0ec0fe2160d7b5b3579d9f9552694f7cc63a602b9551d13b",
+      "sourceHashAfter": "9a90dc44e4be33a34c2868bb8380300e6c9d35f4101106b1982a0fc0b81b7d90",
+      "sourceStable": false,
+      "log": "artifacts/astra-current-main-check-pglite-20261023.log",
+      "at": "2026-10-23T12:02:02.773Z",
+      "outputTail": "PostgreSQL 18.3 (PGlite 0.5.8) on wasm32-unknown-emscripten\n\n169/169 applied, 0 failed\n\nview-leak gate: 31 public view(s) checked, 0 readable by anon\nfunction-leak gate: 20 public function(s) executable by anon, 0 unauthorized\ndefiner-hygiene gate: 82 definer function(s) checked, 0 without pinned search_path\nThe chain builds from scratch, no view is readable by anon, no unauthorized RPC is executable by anon, and all definer search_paths are pinned.\n"
+    },
+    {
+      "name": "check:lifecycle",
+      "exitCode": 0,
+      "sourceHashBefore": "9a90dc44e4be33a34c2868bb8380300e6c9d35f4101106b1982a0fc0b81b7d90",
+      "sourceHashAfter": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceStable": false,
+      "log": "artifacts/astra-current-main-check-lifecycle-20261023.log",
+      "at": "2026-10-23T12:02:51.503Z",
+      "outputTail": "PostgreSQL 18.3 (PGlite 0.5.8) on wasm32-unknown-emscripten\n  ok   L1  Coordinator creates a booking: 1 unit, 2 days, 10% discount\n  ok   L2  Quote → Booked writes exactly one reservation (R-26)\n  ok   L3  A conflicting booking — same unit, overlapping dates — is REFUSED\n  ok   L4  A same-day turnaround is ACCEPTED (half-open bounds)\n  ok   L5  A quantity line beyond stock on hand is REFUSED by the capacity ceiling (0045)\n  ok   L6  Booked → Packed → On Rent as Warehouse requires the session rows each stage needs\n  ok   L7  A partial return: one unit back, one missing\n  ok   L8  Accounts raises and issues the invoice: figures snapshot and become immutable (R-15, Law 4)\n  ok   L9  Four payments that must all be refused\n  ok   L10  Two payments settle the invoice: 3,000 then 4,119\n  ok   L11  Closed needs a settled invoice\n  ok   L12  Money-blind roles read no money and write none\n  ok   L13  Even the Owner cannot rewrite the audit log or delete a payment\n  ok   L14  Client portal user sees only their own rows, never another client's\n  ok   L15  Unit status is owned by the engine; direct write is refused (S1-5)\n  ok   L16  Invoice void discipline: role check, reason, credit note requirement (S1-3)\n  ok   L17  Server-side prices for money-blind callers, line guard, role ceiling & user immutability (S1-6, S1-7)\n  ok   L18  Booking schedule changes cannot desynchronise reservations\n  ok   L19  A payment reversal cannot exceed the receipt across partial corrections\n  ok   L20  Bulk stock adjustment is atomic, idempotent, reasoned, and Manager-only\n  ok   L21  A consumable line deducts stock at Handover and needs no return receipt (0141/0142)\n  ok   L22  Smart Intel note visibility and classified values are filtered by RLS for every role\n  ok   L23  extend_booking RPC extends return dates, increments line days, and updates reservations (AUD D5)\n  ok   L24  void_invoice RPC atomically issues credit note for paid amounts and voids invoice (AUD D6)\n  ok   L25  Client Save changes is one atomic, idempotent, revision-locked write; contact removal keeps history (0146)\n  ok   L26  Equipment Save changes edits catalogue, rates and unit location only; stock, custody and identity are refused (0146)\n  ok   L27  Bundle Save changes preserves component identity and soft-deactivates removed components (0146)\n  ok   L28  Quote Save changes is atomic, revision-locked, quote-only and invoice-safe; it makes no reservations (0147)\n  ok   L29  update_bundle applies patch, line edits, adds and soft-deactivations in ONE transaction (0153)\n  ok   L30  Close skips a held deposit only with a reason from Manager+, audited, moving no money (0155)\n  ok   L31  Pre-handover reversal and terminal archive are audited, idempotent and Manager-only (0167)\n\n31/31 green, 0 known-red, 0 failed\nThe lifecycle holds. (PGlite, not Supabase — no JWT and no PostgREST. See this file’s header.)\n"
+    },
+    {
+      "name": "check:security",
+      "exitCode": 0,
+      "sourceHashBefore": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceHashAfter": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceStable": true,
+      "log": "artifacts/astra-current-main-check-security-20261023.log",
+      "at": "2026-10-23T12:03:20.166Z",
+      "outputTail": "PASS SEC-02: every API role is denied the internal estimate helper\nPASS SEC-03: Client cannot forge Owner audit\nPASS SEC-03: staff direct audit identity is server-bound\nPASS SEC-04: Admin cannot modify superior targets or its own privilege/identity fields\nPASS SEC-04: Admin cannot issue operation restrictions for Owner or Admin targets\nPASS SEC-04: Admin cannot revoke Owner or Admin operation grants; Owner can\nPASS SEC-04: Admin can still issue and revoke a subordinate operation grant\nPASS SEC-04: Owner retains ordinary staff administration\nPASS SEC-05: unassigned Driver gets no client/bookings/lines\nPASS SEC-05: assigned open trip grants only that booking and client; completion revokes\nPASS SEC-01: orphan documents unreadable and immutable for authenticated Client\nPASS SEC-01: Client cannot read unredacted originals even with an own registry link\nPASS SEC-01: commercial staff upload only own namespace; cannot replace another file\nPASS SEC-01: operational metadata cannot expose original PDF or signature bearer links\nPASS SEC-01: financial staff can read an invoice-linked PDF but not an unregistered peer file\nPASS SEC-01: unassigned Warehouse cannot read/upload another session evidence or commercial document\nPASS SEC-01: assigned floor session can upload evidence; completed session cannot\nPASS SEC-01: business buckets private and anonymous legacy policy cannot reopen objects\n18 Phase 0 SQL regressions passed; hosted Storage/JWT remains separately required.\n"
+    },
+    {
+      "name": "check:financial-integrity",
+      "exitCode": 0,
+      "sourceHashBefore": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceHashAfter": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceStable": true,
+      "log": "artifacts/astra-current-main-check-financial-integrity-20261023.log",
+      "at": "2026-10-23T12:03:37.225Z",
+      "outputTail": "PASS: Membership 20 + Women DoP 5 => NPR 8,475 with VAT\nPASS: database refuses a 30% stacked discount\nPASS: standalone 30% manual and pinned zero VAT => NPR 7,000\nPASS: null legacy VAT retains historical 13% behavior\nPASS: multiple discount rows produce one correctly totaled invoice\nPASS: overpayment rejected by booking-only payment ceiling\nPASS: zero-VAT quote survives invoice creation unchanged\nPASS: money-blind direct booking INSERT cannot select zero VAT\nFINANCIAL INTEGRITY VERIFIED IN ISOLATED PGLITE\n"
+    },
+    {
+      "name": "lint",
+      "exitCode": 0,
+      "sourceHashBefore": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceHashAfter": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceStable": true,
+      "log": "artifacts/astra-current-main-lint-20261023.log",
+      "at": "2026-10-23T12:04:55.526Z",
+      "outputTail": ""
+    },
+    {
+      "name": "test:receipts",
+      "exitCode": 0,
+      "sourceHashBefore": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceHashAfter": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceStable": true,
+      "log": "artifacts/astra-current-main-test-receipts-20261023.log",
+      "at": "2026-10-23T12:04:57.635Z",
+      "outputTail": "✔ old receipts cannot certify current source (1.8369ms)\n✔ matching successful structured receipt certifies only its source (0.4191ms)\n✔ source changes during tests invalidate a green run (0.1933ms)\n✔ failure and process exit cannot be overwritten by old success (1.5574ms)\n✔ missing, malformed and empty output never prove success (0.902ms)\n✔ an incomplete test count cannot certify a suite (0.3078ms)\n✔ source-bound evidence still requires command, commit, elapsed time and environment (0.3426ms)\n✔ a focused passing run does not certify the full suite (0.3501ms)\n✔ an older run finishing green cannot hide a newer failed attempt (76.6675ms)\n✔ concurrent coverage runs have separate cleanup and temporary directories (1.1887ms)\n✔ a later plain test success cannot hide an incomplete or failed coverage run (134.1694ms)\nℹ tests 11\nℹ suites 0\nℹ pass 11\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 512.1973\n"
+    },
+    {
+      "name": "check:contrast",
+      "exitCode": 0,
+      "sourceHashBefore": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceHashAfter": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceStable": true,
+      "log": "artifacts/astra-current-main-check-contrast-20261023.log",
+      "at": "2026-10-23T12:04:59.083Z",
+      "outputTail": "PASS   4.59:1 (>=4.5)  DARK  on-primary / primary         #ffffff on #386af7\nPASS   4.60:1 (>=4.5)  DARK  on-success / success         #ffffff on #1e864a\nPASS   5.13:1 (>=4.5)  DARK  on-danger / danger           #ffffff on #c73a3a\nPASS   5.46:1 (>=4.5)  DARK  on-warn / warn               #1c1005 on #d47026\nPASS   8.18:1 (>=4.5)  DARK  on-ready / ready             #1c1405 on #d4a824\nPASS   6.61:1 (>=4.5)  DARK  on-neutral / neutral         #c9cbd1 on #3a3e47\nPASS   4.61:1 (>=4.5)  DARK  on-dim / dim                 #8b8e96 on #24262c\nPASS   7.37:1 (>=4.5)  DARK  muted(text-2) / surface      #9eaabb on #0f1b2a\nPASS  15.84:1 (>=4.5)  DARK  text / surface               #f1f5f9 on #0f1b2a\nPASS   9.81:1 (>=4.5)  DARK  text2 / surface              #b8c4d3 on #0f1b2a\nPASS   6.71:1 (>=4.5)  DARK  muted / surface-2 (tinted)   #9eaabb on #13233a\nPASS   6.71:1 (>=4.5)  DARK  muted / card2 (tinted)       #9eaabb on #13233a\nPASS   8.53:1 (>=4.5)  DARK  muted / bg (canvas)          #9eaabb on #04080d\nPASS   7.39:1 (>=4.5)  DARK  muted / inset2 (darkest)     #9eaabb on #0b1b2c\nPASS   6.90:1 (>=4.5)  DARK  nav-active-accent / sidebar  #6b95fc on #050b12\nPASS   5.02:1 (>=4.5)  DARK  nav-active-accent / nav-bg   #6b95fc on #102b48\nPASS   6.06:1 (>=4.5)  DARK  nav-active-accent / surface  #6b95fc on #0f1b2a\nPASS   8.10:1 (>=4.5)  DARK  ext-fg / surface             #85b2ff on #0f1b2a\nPASS   9.38:1 (>=4.5)  DARK  ext-fg / bg                  #85b2ff on #04080d\nPASS   3.78:1 (>=3)  DARK  ext-line / surface (3:1)     #386af7 on #0f1b2a\nPASS   4.37:1 (>=3)  DARK  ext-line / bg-gradient-1 (3:1) #386af7 on #04080d\nPASS   7.02:1 (>=4.5)  DARK  primary-text / surface       #7ea2ff on #0f1b2a\nPASS   9.96:1 (>=4.5)  DARK  success-text / surface       #4ade80 on #0f1b2a\nPASS   7.19:1 (>=4.5)  DARK  danger-text / surface        #f08a8a on #0f1b2a\nPASS   8.00:1 (>=4.5)  DARK  warn-text / surface          #e8a06e on #0f1b2a\nPASS   7.79:1 (>=4.5)  DARK  ready-text / surface         #d4a824 on #0f1b2a\nPASS   4.59:1 (>=4.5)  DARK  btn-primary fg/bg            #ffffff on #386af7\nPASS   5.63:1 (>=4.5)  DARK  btn-primary fg/hover         #ffffff on #2f5ce0\nPASS  15.84:1 (>=4.5)  DARK  WhatsApp ink / card          #f1f5f9 on #0f1b2a\nPASS  15.35:1 (>=4.5)  DARK  WhatsApp ink / hover         #f1f5f9 on #0f1e30\n\nPASS   6.22:1 (>=4.5)  LIGHT on-primary / primary         #ffffff on #2456d6\nPASS   4.60:1 (>=4.5)  LIGHT on-success / success         #ffffff on #1e864a\nPASS   5.13:1 (>=4.5)  LIGHT on-danger / danger           #ffffff on #c73a3a\nPASS   4.55:1 (>=4.5)  LIGHT on-warn / warn               #231a05 on #d46218\nPASS   7.41:1 (>=4.5)  LIGHT on-ready / ready             #231a05 on #d4a315\nPASS   4.60:1 (>=4.5)  LIGHT on-neutral / neutral         #ffffff on #72757e\nPASS   4.80:1 (>=4.5)  LIGHT on-dim / dim                 #5a5d63 on #dddcd6\nPASS   6.39:1 (>=4.5)  LIGHT muted(text-2) / surface      #526075 on #ffffff\nPASS  17.85:1 (>=4.5)  LIGHT text / surface               #0f172a on #ffffff\nPASS  10.35:1 (>=4.5)  LIGHT text2 / surface              #334155 on #ffffff\nPASS   5.72:1 (>=4.5)  LIGHT muted / surface-2 (tinted)   #526075 on #edf3fa\nPASS   5.72:1 (>=4.5)  LIGHT muted / card2 (tinted)       #526075 on #edf3fa\nPASS   5.52:1 (>=4.5)  LIGHT muted / bg (canvas)          #526075 on #eaeff5\nPASS   5.18:1 (>=4.5)  LIGHT muted / inset2 (darkest)     #526075 on #e2e8f0\nPASS   6.22:1 (>=4.5)  LIGHT nav-active-accent / sidebar  #2456d6 on #ffffff\nPASS   5.39:1 (>=4.5)  LIGHT nav-active-accent / nav-bg   #2456d6 on #e7efff\nPASS   6.22:1 (>=4.5)  LIGHT nav-active-accent / surface  #2456d6 on #ffffff\nPASS   7.78:1 (>=4.5)  LIGHT ext-fg / surface             #1e49b8 on #ffffff\nPASS   6.73:1 (>=4.5)  LIGHT ext-fg / bg                  #1e49b8 on #eaeff5\nPASS   6.22:1 (>=3)  LIGHT ext-line / surface (3:1)     #2456d6 on #ffffff\nPASS   5.38:1 (>=3)  LIGHT ext-line / bg-gradient-1 (3:1) #2456d6 on #eaeff5\nPASS   7.78:1 (>=4.5)  LIGHT primary-text / surface       #1e49b8 on #ffffff\nPASS   6.83:1 (>=4.5)  LIGHT success-text / surface       #15683a on #ffffff\nPASS   6.75:1 (>=4.5)  LIGHT danger-text / surface        #a82f2f on #ffffff\nPASS   5.75:1 (>=4.5)  LIGHT warn-text / surface          #9a5417 on #ffffff\nPASS   5.75:1 (>=4.5)  LIGHT ready-text / surface         #7f620a on #ffffff\nPASS   6.22:1 (>=4.5)  LIGHT btn-primary fg/bg            #ffffff on #2456d6\nPASS   7.78:1 (>=4.5)  LIGHT btn-primary fg/hover         #ffffff on #1e49b8\nPASS  17.85:1 (>=4.5)  LIGHT WhatsApp ink / card          #0f172a on #ffffff\nPASS  16.13:1 (>=4.5)  LIGHT WhatsApp ink / hover         #0f172a on #eef4fb\n\nPASS  13.71:1 (>=4.5)  HIGH  btn-primary fg/bg            #000000 on #facc15\nPASS  10.95:1 (>=4.5)  HIGH  btn-primary fg/hover         #000000 on #eab308\nPASS  19.80:1 (>=4.5)  HIGH  WhatsApp ink / card          #ffffff on #0a0a0a\nPASS  17.93:1 (>=4.5)  HIGH  WhatsApp ink / hover         #ffffff on #171717\nPASS  15.40:1 (>=4.5)  GLASS-D text / glass card            #f1f5f9 on #131d2f (worst of 4)\nPASS   9.54:1 (>=4.5)  GLASS-D text2 / glass card           #b8c4d3 on #131d2f (worst of 4)\nPASS   7.17:1 (>=4.5)  GLASS-D muted / glass card           #9eaabb on #131d2f (worst of 4)\nPASS   6.83:1 (>=4.5)  GLASS-D primary-text / glass card    #7ea2ff on #131d2f (worst of 4)\nPASS  15.40:1 (>=4.5)  GLASS-D booking-date / glass card    #f1f5f9 on #131d2f (worst of 4)\nPASS   4.94:1 (>=4.5)  GLASS-D muted / bare canvas + glow   #9eaabb on #16376e (worst of 4)\nPASS   6.58:1 (>=4.5)  GLASS-D text2 / bare canvas + glow   #b8c4d3 on #16376e (worst of 4)\nPASS   6.54:1 (>=4.5)  GLASS-D nav-active / glass sidebar   #6b95fc on #0a1221 (worst of 4)\nPASS  10.59:1 (>=4.5)  GLASS-D text2 / glass sidebar        #b8c4d3 on #0a1221 (worst of 4)\n\nPASS  17.08:1 (>=4.5)  GLASS-L text / glass card            #0f172a on #f8fafe (worst of 4)\nPASS   9.91:1 (>=4.5)  GLASS-L text2 / glass card           #334155 on #f8fafe (worst of 4)\nPASS   6.11:1 (>=4.5)  GLASS-L muted / glass card           #526075 on #f8fafe (worst of 4)\nPASS   7.44:1 (>=4.5)  GLASS-L primary-text / glass card    #1e49b8 on #f8fafe (worst of 4)\nPASS  17.08:1 (>=4.5)  GLASS-L booking-date / glass card    #0f172a on #f8fafe (worst of 4)\nPASS   4.66:1 (>=4.5)  GLASS-L muted / bare canvas + glow   #526075 on #ceddf7 (worst of 4)\nPASS   7.55:1 (>=4.5)  GLASS-L text2 / bare canvas + glow   #334155 on #ceddf7 (worst of 4)\nPASS   5.95:1 (>=4.5)  GLASS-L nav-active / glass sidebar   #2456d6 on #f8fafe (worst of 4)\nPASS   9.91:1 (>=4.5)  GLASS-L text2 / glass sidebar        #334155 on #f8fafe (worst of 4)\n\n82/82 pass, 0 FAIL\n"
+    },
+    {
+      "name": "lint:progress",
+      "exitCode": 0,
+      "sourceHashBefore": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceHashAfter": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceStable": true,
+      "log": "artifacts/astra-current-main-lint-progress-20261023.log",
+      "at": "2026-10-23T12:05:00.477Z",
+      "outputTail": "PROGRESS.md newest entry carries Completion and Remaining — 2026-10-23 16:10 NPT — Intentional 300ms Global Hover Delay Everywhere\n"
+    },
+    {
+      "name": "lint:shell",
+      "exitCode": 0,
+      "sourceHashBefore": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceHashAfter": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceStable": true,
+      "log": "artifacts/astra-current-main-lint-shell-20261023.log",
+      "at": "2026-10-23T12:05:03.349Z",
+      "outputTail": "Page Shell Lint: 709 files checked.\n✓ All pages satisfy PageHeader, single primary CTA, 44px floor, and no dev notes.\n"
+    },
+    {
+      "name": "lint:ui-copy",
+      "exitCode": 0,
+      "sourceHashBefore": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceHashAfter": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceStable": true,
+      "log": "artifacts/astra-current-main-lint-ui-copy-20261023.log",
+      "at": "2026-10-23T12:05:07.927Z",
+      "outputTail": "UI copy: 0 developer-text violations\n"
+    },
+    {
+      "name": "test:ui-copy",
+      "exitCode": 0,
+      "sourceHashBefore": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceHashAfter": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceStable": true,
+      "log": "artifacts/astra-current-main-test-ui-copy-20261023.log",
+      "at": "2026-10-23T12:05:10.588Z",
+      "outputTail": "✔ rejects developer text in JSX, attributes, templates, and copy metadata (20.1632ms)\n✔ permits imports, import types, and comments (5.3561ms)\n✔ permits ordinary staff copy and technical strings outside UI (1.7351ms)\n✔ rejects developer text in exported staff-note constants (1.1955ms)\n✔ permits CSS hooks and comparison operands without permitting visible developer text (5.3241ms)\nℹ tests 5\nℹ suites 0\nℹ pass 5\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 943.6615\n"
+    },
+    {
+      "name": "build:typecheck",
+      "exitCode": 0,
+      "sourceHashBefore": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceHashAfter": "2b53a1a45e807881b5d6775c6841f1ad1034bac64013d8aa3d225b19149e1819",
+      "sourceStable": false,
+      "log": "artifacts/astra-current-main-build-typecheck-20261023.log",
+      "at": "2026-10-23T12:08:07.832Z",
+      "outputTail": ""
+    }
+  ]
+}

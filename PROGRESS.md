@@ -1,5 +1,44 @@
 # Progress Log
 
+## 2026-10-23 — Global shell wireframes: review, comparison and local handoff
+
+**Did**
+- Reviewed the supplied ZIP against the existing shell and current repository rulings; recorded the comparison in `docs/GLOBAL_SHELL_WIREFRAME_REVIEW_2026-10-23.md`.
+- Today now contains Pickups and Returns only, with exact counts from the same paginated movement queries, compact shared/independent date controls, truthful unavailable states and existing Operations actions/subscriptions. Removed its unrelated situational reads and dashboard cards; retained their source components.
+- Applied the existing available-header-width rule to shared secondary actions; placed Today Add/More into canonical slots; retained independent desktop/tablet navigation preferences on resize. Added keyboard/panel associations for phone movement tabs, readable narrow queue rows and 56px movement actions.
+- Consolidated Operations and standalone/embedded Cases search into the shared header, preserving queue debounce and Cases URL/clear/Enter behavior. Reused existing controls and theme tokens; no dependency or theme replacement.
+- Saved before/after mock screenshots and a source-only implementation patch under `artifacts/global-shell-wireframes/`. Existing unrelated checkout changes were preserved. No migration was WRITTEN, APPLIED or PRODUCTION-VERIFIED by this UI task.
+
+**Ruled**
+- `RULINGS-2026-10-23.md` records the presentation decisions and reverts. Existing permission/money/custody rules and the 20 October supplemental-drawer behavior remain authoritative.
+- Verification is snapshot-scoped: preserve concurrent shared-checkout changes and report actual receipts, not a matching-source whole-tree certificate.
+
+**Verified**
+- Resumed regression run: 60/60 tests across six files (Today, Cases, real-shell list search, header actions, segmented tabs and navigation preferences). TypeScript exited 0.
+- Earlier full run: 5,280/5,280 tests across 417 files passed. Its receipt records `sourceChanged: true`; this is historical evidence, not a current-source full-suite pass. Report: `artifacts/test-run-43e9094d-0743-499b-9ede-0dbb72f67bb7.json`.
+- Captured mock matrix: 50 screenshots across five workspaces, five widths and both themes; zero measured page/header overflow, 64px headers and 256/64px navigation. Seven browser interaction checks passed, including Operations filtering, embedded Cases query restoration and a populated money-blind Warehouse board. Additional Warehouse/Cases phone captures are retained.
+- Resumed local command results: PGlite 168/168 migrations, lifecycle 31/31, lint, shell checks (709 files), contrast 82/82 and production build all passed. Build transformed 7,406 modules and generated the PWA (247 precache entries). These are individual-run results; shared source changed between checks.
+- `npm run completion` exited 1 and correctly leaves the current whole tree unverified. Later shared edits include another migration; the earlier 168-migration run does not certify it. No verification receipt was edited or fabricated.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 169 files · check:pglite Historical, incomplete or failed receipt (2026-10-23T12:06:00.873Z); current source NOT VERIFIED. Suite: NOT VERIFIED — invalid test receipt.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-23T12:02:49.068Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- No further local presentation change is identified within this wireframe integration. Refresh matching-source full-suite/database receipts after concurrent shared edits settle; do not infer current-tree verification from these snapshot results.
+- Physical-device and hosted acceptance remain outside the local mock checks. The existing release HOLD remains governed by `docs/CURRENT_STATE.md`; no deployment or hosted migration was performed by this task.
+
 ## 2026-10-23 16:55 NPT — Global Shell Phase 2: Rentals Hub Workbar & Queue Alignments
 
 **Did**
@@ -215,29 +254,6 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - Obtain a whole matching-source test receipt after shared edits settle; keep the failed timeout/retry and historical coverage receipts. No current full-suite or coverage completion claim.
 - Complete physical-device, assistive-technology/dialog-focus, actual browser zoom and offline glyph acceptance; external concept/spec attachments remain absent. See REMAINING_UI_ISSUES.md.
 
-## 2026-10-23 — Global shell wireframes: review, comparison and implementation
-
-**Did**
-- Reviewed the supplied ZIP against the existing shell and current repository rulings; recorded the comparison in `docs/GLOBAL_SHELL_WIREFRAME_REVIEW_2026-10-23.md`.
-- Today now contains Pickups and Returns only, with exact counts from the same paginated movement queries, compact shared/independent date controls, truthful unavailable states and existing Operations actions/subscriptions. Removed its unrelated situational reads and dashboard cards; retained their source components.
-- Applied the existing available-header-width rule to shared secondary actions; placed Today Add/More into canonical slots; retained independent desktop/tablet navigation preferences on resize. Added keyboard/panel associations for phone movement tabs, readable narrow queue rows and 56px movement actions.
-- Consolidated Operations and standalone/embedded Cases search into the shared header, preserving queue debounce and Cases URL/clear/Enter behavior. Reused existing controls and theme tokens; no dependency or theme replacement.
-- Saved before/after mock screenshots and a source-only implementation patch under `artifacts/global-shell-wireframes/`. Existing unrelated checkout changes were preserved. No migration was WRITTEN, APPLIED or PRODUCTION-VERIFIED by this UI task.
-
-**Ruled**
-- `RULINGS-2026-10-23.md` records the presentation decisions and reverts. The existing permission/money/custody rules and 20 October supplemental-drawer behavior remain authoritative.
-
-**Verified**
-- Focused regression run: 44/44 tests across Today, Cases and the real-shell one-search-per-page checks; typecheck passed before this run.
-- Browser matrix: 50 updated captures across five workspaces, five requested widths and both themes; zero measured page/header overflow, 64px headers and 256/64px navigation. Seven interaction checks passed, including compiled-preview Operations filtering, embedded Cases query restoration and a populated Warehouse board with no rupee amounts. Additional Warehouse/Cases phone captures are retained.
-- Final ordered full-suite/database/lifecycle/lint/contrast/build run is in progress; its result is not claimed yet.
-
-### Completion
-Pending the final `npm run completion` output after verification; no current percentage is claimed here.
-
-### Remaining
-- Finish the final ordered gates and refreshed Operations/Cases browser evidence, then replace this pending verification/counter block with executed results.
-- Physical-device and hosted acceptance remain outside these local mock checks; the repository's existing release HOLD remains governed by `docs/CURRENT_STATE.md`.
 
 
 ## 2026-10-23 02:49 NPT — ASTRA Reset cleaner integrity follow-up

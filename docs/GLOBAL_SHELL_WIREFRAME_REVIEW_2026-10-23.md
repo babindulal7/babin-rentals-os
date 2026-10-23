@@ -31,4 +31,6 @@ Representative results: [desktop Today](../artifacts/global-shell-wireframes/aft
 
 The [implementation patch](../artifacts/global-shell-wireframes/implementation.patch) contains only the task's source/test files relative to checkpoint `619f3d22`; it excludes unrelated checkout changes and production data.
 
+Verification is snapshot-scoped. The earlier full run passed 5,280/5,280 tests across 417 files, but its receipt records concurrent source changes. The resumed UI regression run passed 60/60 tests across six files; TypeScript, lint, shell checks, contrast and the production/PWA build also passed. The separate local database run rebuilt 168 migrations and passed all 31 lifecycle checks. A later migration and other shared-checkout edits are not certified by those earlier receipts. The generated completion counter therefore remains explicitly unverified for the current whole tree; no receipt was edited to hide this limitation. See `PROGRESS.md` for the generated block and remaining acceptance work.
+
 The screenshots exercise Chromium viewport sizes. They do not certify physical iPad/iPhone behavior, hosted authentication or production deployment. Existing release holds remain governed by `docs/CURRENT_STATE.md`.
