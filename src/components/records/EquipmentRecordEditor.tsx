@@ -31,6 +31,7 @@ export interface EquipmentRecordEditorProps {
   canViewMoney: boolean
   manufacturerDiffers: boolean
   setManufacturerDiffers: (differs: boolean) => void
+  sectionManager?: ReturnType<typeof useSectionSaveManager> | undefined
 }
 
 export function EquipmentRecordEditor({
@@ -47,6 +48,7 @@ export function EquipmentRecordEditor({
   canViewMoney,
   manufacturerDiffers,
   setManufacturerDiffers,
+  sectionManager,
 }: EquipmentRecordEditorProps) {
   const { showSuccessToast } = useToast()
   const editing = Boolean(recordId)

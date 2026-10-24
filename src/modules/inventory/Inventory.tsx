@@ -1921,7 +1921,10 @@ export default function Inventory() {
                     tabIndex={on ? 0 : -1}
                     onClick={() => { setChip(c); setPage(1) }}
                     className={`inventory-filter-chip ${on ? 'is-active' : ''}`}
-                    style={!on && tone ? { color: tone } : undefined}
+                    style={{
+                      minHeight: 'var(--tap)',
+                      ...(!on && tone ? { color: tone } : {}),
+                    }}
                     onKeyDown={(event) => {
                       const backwards = event.key === 'ArrowLeft' || event.key === 'ArrowUp'
                       const forwards = event.key === 'ArrowRight' || event.key === 'ArrowDown'
