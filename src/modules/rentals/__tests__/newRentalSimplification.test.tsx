@@ -91,10 +91,12 @@ describe('NewRental simplification (Part A - D)', () => {
       await act(async () => (crewSection.querySelector('[aria-label="Expand Crew"]') as HTMLButtonElement).click())
       expect(crewSection.querySelector('input')).toBe(crewInput)
       expect(container.querySelector('#section-0 input')).toBe(clientInput)
+      const scroll = vi.fn()
+      const oldScroll = Element.prototype.scrollIntoView
+      Element.prototype.scrollIntoView = scroll
       await act(async () => (actions.querySelector('[aria-label="Review rental summary"]') as HTMLButtonElement).click())
-      expect(container.querySelector('[aria-label="Rental summary"][aria-controls]')?.getAttribute('aria-expanded')).toBe('true')
-      expect(container.querySelector('[role="dialog"] #rail-booking-summary')).not.toBeNull()
-      expect(container.querySelector('#section-0 input')).toBe(clientInput)
+      expect(scroll).toHaveBeenCalled()
+      Element.prototype.scrollIntoView = oldScroll
     } finally {
       await act(async () => root.unmount())
       container.remove()

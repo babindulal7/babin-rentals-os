@@ -1134,7 +1134,11 @@ export default function Documents({
 
           </>
           )
-          return (<Rail width={300} label="Document summary">{summaryContent}</Rail>)
+          return desktop ? (
+            <Rail width={300} label="Document summary">{summaryContent}</Rail>
+          ) : (
+            <div style={{ order: 3, display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>{summaryContent}</div>
+          )
         })()}
       </div>
 

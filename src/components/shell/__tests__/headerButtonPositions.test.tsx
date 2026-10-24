@@ -75,7 +75,7 @@ describe('Babin Rentals OS — fixed button locations', () => {
       />
     </WorkspaceProvider></MemoryRouter>))
     expect(container.querySelectorAll('header')).toHaveLength(1)
-    expect(displayedSlots()).toEqual(['filters', 'secondary', 'add', 'more', 'primary', 'information'])
+    expect(displayedSlots()).toEqual(['filters', 'secondary', 'add', 'more', 'primary'])
     expect(slot('filters')?.querySelector('button[aria-controls="rental-filters"]')).not.toBeNull()
     expect(slot('secondary')?.textContent).toContain('Export CSV')
     expect(slot('more')?.querySelector('button[aria-label="More actions"]')).not.toBeNull()
@@ -126,6 +126,6 @@ describe('Babin Rentals OS — fixed button locations', () => {
     const search = slot('search')
     expect(search).not.toBeNull()
     expect(search?.querySelector('button[aria-label="Search Today"]')).not.toBeNull()
-    expect(displayedSlots()).toEqual(['filters', 'secondary', 'add', 'more', 'primary', 'information', 'search'])
+    expect(displayedSlots()).toEqual(['filters', 'secondary', 'add', 'more', 'primary', 'search'])
   })
 })

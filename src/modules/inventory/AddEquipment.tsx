@@ -353,10 +353,9 @@ function AddEquipmentLayout({ embedded, onDone }: { embedded?: boolean; onDone?:
       )}
 
       <div
-        className="equipment-record-grid"
         style={{
           display: 'grid',
-          gridTemplateColumns: viewport === 'desktop' ? 'auto minmax(0, 1fr)' : '1fr',
+          gridTemplateColumns: viewport === 'desktop' ? 'auto minmax(0, 1fr) auto' : '1fr',
           gap: 'var(--sp-md)',
           alignItems: 'start',
         }}
@@ -396,9 +395,13 @@ function AddEquipmentLayout({ embedded, onDone }: { embedded?: boolean; onDone?:
           <SectionMaintenance />
         </div>
 
-        <Rail width={324} label="Record summary">
+        {viewport === 'desktop' ? (
+          <Rail width={324} label="Record summary">
             {railContent}
           </Rail>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>{railContent}</div>
+        )}
       </div>
 
 

@@ -917,8 +917,6 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                 )}
               </span>
 
-          <span ref={ws?.setHeaderInformationElement} className="workspace-header-information" data-header-slot="information" />
-
           {/* 7. Team Internal Notes Button (Alt+N) */}
           {!isPhone && <button
             type="button"

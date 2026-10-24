@@ -745,16 +745,6 @@ input[type='search']::-webkit-search-results-decoration {
 .filter-section > div:first-child > button:first-child span:first-child { color: var(--text); }
 .filter-section { min-width: 0; }
 
-/* RULING 2026-10-20: supplemental right rails mirror the left filter drawer.
-   The marker costs no track; pages with a left section nav retain that nav. */
-.information-drawer-anchor { display: none; }
-div:not(.equipment-record-grid):has(> .information-drawer-anchor) { grid-template-columns: minmax(0, 1fr) !important; }
-.workspace-header-information { display: inline-flex; flex-shrink: 0; }
-.workspace-header-information:empty { display: none; }
-.information-drawer-toggle { width: 44px; min-width: 44px; height: 44px; padding: 0; display: grid; place-items: center; border: 1px solid var(--btn-secondary-border); border-radius: var(--r-btn); background: transparent; color: var(--text); cursor: pointer; }
-.information-drawer-toggle[aria-expanded='true'] { background: var(--select-bg); color: var(--select-fg); border-color: var(--primary); }
-.information-drawer-toggle:focus-visible { outline: 2px solid var(--input-focus); outline-offset: 2px; }
-
 /* RULING 2026-10-22: Modal Virtual Keyboard & Viewport Resilience (Issue 10) */
 .app-modal {
   min-height: 100dvh;

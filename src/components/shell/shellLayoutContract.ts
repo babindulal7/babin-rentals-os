@@ -48,7 +48,6 @@ export type HeaderZone3Slot =
   | 'add'
   | 'more'
   | 'primary'
-  | 'information'
   | 'notes'
   | 'phone-search'
   | 'mock'
@@ -65,7 +64,6 @@ export const ZONE3_SLOT_SEQUENCE: readonly HeaderZone3Slot[] = [
   'add',
   'more',
   'primary',
-  'information',
   'notes',
   'phone-search',
   'mock',

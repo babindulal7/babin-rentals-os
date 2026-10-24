@@ -93,6 +93,6 @@ Section order: Client = Identity > Contact > Addresses > Commercial details > No
 Behaviour contract: entries survive a failed save; one idempotency key per unchanged content (a changed form mints a new one); duplicate submits are blocked while busy; success is shown only after the write is confirmed; a concurrent-change refusal keeps the draft and offers **Reload latest record**; focus moves to the error box after a failed save; return navigation keeps every query parameter except `action` (and `tab=new` on create).
 
 
-## 12. Supplemental right-side information (20 October 2026)
+## 12. Supplemental right-side information (20 October 2026; superseded 23 October 2026)
 
-Babin's request supersedes the always-visible supplemental summary rail in §11. `Rail` / `ReflowRail` now open through a dedicated 44px right-header toggle, mirroring the left filter slider. Desktop/tablet slide from the right and reserve workspace width; phone uses the filter sheet presentation. Content remains mounted while closed, preserving unfinished notes. Existing money/permission checks remain at their original sites. Essential floor checklist/completion columns remain in their operation workspaces. See `RULINGS-2026-10-20.md`.
+Babin's 23 October request removes the drawer button. `Rail` / `ReflowRail` are inline again, as in §11: a sticky right column on desktop (1280px and up), and a plain block below the content on tablet and phone. There is no header toggle, no drawer and no `babin:show-information` event; the 20 October mirrored-slider ruling is retired. Team Internal Notes keeps its own drawer. Existing money/permission checks remain at their original sites. See `RULINGS-2026-10-23.md`.

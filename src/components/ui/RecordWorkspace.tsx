@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Card, Rail } from './Page'
+import { Button, Card } from './Page'
 import { ConfirmDialog } from './ConfirmDialog'
 import { useOptionalWorkspace } from '../../lib/workspaceContext'
 import { useViewport } from '../../lib/device'
@@ -18,7 +18,7 @@ import './record-workspace.css'
  *   RecordWorkspace
  *     RecordErrorSummary      clickable list, opens + focuses the affected field
  *     RecordSection xN        card per section, optional ones may collapse
- *     summary drawer          opens from the right header toggle
+ *     summary rail            right rail >= 1280px, flows below the sections otherwise
  *   RecordActions             one persistent bar: Cancel / Create | Save changes
  */
 
@@ -28,7 +28,9 @@ export function RecordWorkspace({ children, summary, actions }: { children: Reac
       <div className="record-workspace-grid">
         <div className="record-workspace-body">{children}</div>
         {summary && (
-          <Rail label="Record summary" width={320}>{summary}</Rail>
+          <aside aria-label="Record summary" className="record-workspace-summary">
+            {summary}
+          </aside>
         )}
       </div>
       {actions}

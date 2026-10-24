@@ -1304,9 +1304,13 @@ export default function AddClient({ embedded = false, onDone }: AddClientProps =
           </section>
         </div>
 
-        <Rail width={330} label="Client summary">
+        {viewport === 'desktop' ? (
+          <Rail width={330} label="Client summary">
             {rightRailContent}
           </Rail>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>{rightRailContent}</div>
+        )}
       </div>
 
       {/* What Save does NOT keep. On the page, above the fold of the footer, and

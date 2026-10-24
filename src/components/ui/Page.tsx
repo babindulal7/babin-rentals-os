@@ -3,7 +3,6 @@ import Icon from './Icon'
 import type { IconName } from './Icon'
 import { BRAND, BRAND_ON, BRAND_TEXT } from '../../lib/status'
 import type { BrandKey } from '../../lib/status'
-import { InformationDrawer } from './InformationDrawer'
 import { CollapsibleAside } from './CollapsibleAside'
 import { useViewport } from '../../lib/device'
 import { Button as SharedButton, type ButtonProps } from './Button'
@@ -241,13 +240,77 @@ export function KpiStrip({ items, columns }: { items: Kpi[]; columns?: number })
 
 /* ── side rails ────────────────────────────────────────────────────────── */
 
-/** RULING 2026-10-20 supersedes 7 Oct: right summaries use the mirrored filter slider. */
-export const Rail = InformationDrawer
-export const ReflowRail = InformationDrawer
+/**
+ * User ruling, 7 Oct 2026: right-hand summaries stay visible everywhere;
+ * remove the collapse handle and ignore old per-route collapse preferences.
+ * Desktop retains its sticky, scrollable rail; smaller screens reflow.
+ */
+export function Rail({
+  children,
+  id,
+  width = 288,
+  label = 'Page summary',
+}: {
+  children: ReactNode
+  id?: string
+  width?: number
+  label?: string
+}) {
+  const desktop = useViewport() === 'desktop'
+  return (
+    <aside
+      aria-label={label}
+      {...(id !== undefined ? { id } : {})}
+      style={{ position: desktop ? 'sticky' : 'relative', top: desktop ? 'calc(var(--header-h) + var(--sp-md))' : undefined, alignSelf: 'flex-start', minWidth: 0, width: desktop ? width : '100%', maxWidth: '100%' }}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0, maxHeight: desktop ? 'calc(100dvh - var(--header-h) - var(--sp-md) * 2)' : undefined, overflowY: desktop ? 'auto' : undefined, overscrollBehavior: desktop ? 'contain' : undefined }}>
+        {children}
+      </div>
+    </aside>
+  )
+}
 
-/** Right-hand drawers live outside the page grid, leaving one content track. */
+/**
+ * `Rail` at desktop; the same children as a plain column below 1280.
+ *
+ * Rulings §7: below 1280 means reflow, not hide. The parent grid must
+ * drop its rail track too; useRailGridColumns below handles that half.
+ */
+export function ReflowRail({
+  children,
+  id,
+  width = 288,
+  label = 'Page summary',
+}: {
+  children: ReactNode
+  id?: string
+  width?: number
+  label?: string
+}) {
+  const viewport = useViewport()
+  if (viewport === 'desktop') {
+    return (
+      <Rail width={width} label={label} {...(id !== undefined ? { id } : {})}>
+        {children}
+      </Rail>
+    )
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0 }}>{children}</div>
+  )
+}
+
+/**
+ * The other half of `ReflowRail`: the `content | rail` grid's own tracks. The
+ * rail track has to disappear below 1280, or the reflowed column lands in a
+ * second column that is still there and the content is squeezed anyway.
+ *
+ * A hook rather than a wrapper component because the screens that need it
+ * already own their grid `<div>` (with their own margins, gaps and
+ * `alignItems`); this changes only the one property that has to change.
+ */
 export function useRailGridColumns(): string {
-  return 'minmax(0,1fr)'
+  return useViewport() === 'desktop' ? 'minmax(0,1fr) auto' : 'minmax(0,1fr)'
 }
 
 /**
@@ -262,7 +325,7 @@ export function useBandColumns(): (n: number) => number {
 
 /**
  * The left-hand filter/navigation rail a handful of list screens carry.
- * Retains its own collapse mechanics; right-hand information uses a drawer.
+ * Retains its own collapse mechanics; right-hand summaries stay visible.
  */
 export function SideRail({
   children,

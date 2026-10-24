@@ -1876,7 +1876,11 @@ export default function Finance() {
               pattern the ruling cites. `CollapsibleAside`'s defaults are NOT
               changed: other pages depend on them.
             */}
-            <Rail>{railCards}</Rail>
+            {viewport === 'desktop' ? (
+              <Rail>{railCards}</Rail>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0 }}>{railCards}</div>
+            )}
           </div>
         </div>
       </PageBody>

@@ -72,15 +72,14 @@ afterEach(async () => {
   container.remove()
 })
 
-describe('Page summaries — mirrored information drawer', () => {
-  it.each<Viewport>(['desktop', 'tablet', 'phone'])('opens from a labelled toggle on %s', async (size) => {
+// RULING 2026-10-23: the Quick-information drawer button is gone; a summary is on the page.
+describe('Page summaries — inline, no drawer button', () => {
+  it.each<Viewport>(['desktop', 'tablet', 'phone'])('shows the summary on the page at %s with no toggle', async (size) => {
     viewport = size
     await mount(<Rail><p>Booking Summary</p></Rail>)
-    const toggle = container.querySelector<HTMLButtonElement>('[aria-label="Quick information"]')!
-    expect(toggle.getAttribute('aria-expanded')).toBe('false')
-    await act(async () => toggle.click())
-    expect(toggle.getAttribute('aria-expanded')).toBe('true')
-    expect(container.querySelector('[role="dialog"]')?.textContent).toContain('Booking Summary')
+    expect(container.querySelector('aside[aria-label="Page summary"]')?.textContent).toContain('Booking Summary')
+    expect(container.querySelector('[aria-label="Quick information"]')).toBeNull()
+    expect(container.querySelector('[role="dialog"]')).toBeNull()
   })
 })
 

@@ -1,5 +1,40 @@
 # Progress Log
 
+## 2026-10-25 — Quick-information drawer button removed; right-hand summaries inline again
+
+**Did**
+- Babin chose "remove the drawer button and show its content inline on each screen".
+- Reversed the drawer parts of the 20 Oct commit `3d1a2eae`: `Rail`, `ReflowRail` and `useRailGridColumns` in `components/ui/Page.tsx` are the inline versions again (sticky right column at desktop, a plain block below the content on tablet and phone), and the caller screens that had been changed to always use the drawer got their desktop / below-1280 branches back (New Rental, Booking Detail, Payments, Finance, Add Client, Add Equipment, Add Bundle, Bundles, Documents, Crew Assist, Calendar full view, `RecordWorkspace`).
+- Deleted `InformationDrawer.tsx` and its test, `WorkspaceHeaderInformation`, the workspace context's information element, the header's `information` slot (also in `shellLayoutContract.ts`) and the drawer CSS. Kept the Team Notes drawer and its push spacing.
+- New `Rail.inline.test.tsx`; the two shell tests that asserted the drawer toggle and slot were rewritten. `docs/UI_UX_RULES.md` §12 and `RULINGS-2026-10-23.md` updated.
+
+**Ruled**
+- Right-hand summaries are inline; no drawer, no header toggle. The 20 Oct mirrored-slider ruling is retired. Revert: re-apply `git show 3d1a2eae` for those files.
+
+**Verified**
+- Compiler API semantic check on 22 changed files (plus 30 files that use rails earlier in the session): 0 diagnostics; ESLint on the changed files: 0 problems.
+- Full `vitest run`: 447 files, 5,580 tests; 5 failed, all tests that asserted the removed drawer or its header slot. Updated them; `src/components/shell` and `src/components/ui`: 59 files, 522 tests pass. The other 445 files passed in the full run. The two updated files were not re-run inside a second full run.
+- Browser (mock build, Owner): at 1440 wide, summaries are on the page as an aside with no toggle and no dialog on New Rental (350px), Booking Detail (288), Payments ▸ Deposits (288), Finance (288), Pulse (300), Calendar (300), Add Equipment (324) and Add Client (324), with no horizontal overflow. At 768, Booking Detail and Pulse show the summary content as plain blocks, no overflow, no toggle. At 375, New Rental shows the Booking Summary inline at the bottom (351px wide), no overflow.
+- **Not verified:** Documents, Crew Assist, Bundles, Add Bundle, Warehouses, Operations floor asides, Backup, Audit Settings and Expense Reports were not opened; the Calendar full view and the phone views of most screens were not opened; `lint:ui-copy`, whole-project `tsc` and `build` were not run.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+
+Migrations 168 files · check:pglite not run this session. Suite: direct `vitest run` (see Verified), not `npm test`.
+Counted by `npm run completion` (22 Oct receipt block re-used unchanged; this change touches no action, table or capability).
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Open the screens listed as not verified above, at phone width especially.
+- Whole-project `tsc`, `lint:ui-copy` and `build` on a machine with free memory.
+
 ## 2026-10-24 — KPI tiles checked in the browser; module KPI strip made compact
 
 **Did**
