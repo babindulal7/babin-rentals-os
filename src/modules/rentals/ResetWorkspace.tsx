@@ -503,16 +503,15 @@ export default function ResetWorkspace({
   )
   const remainingCount = counts.Waiting + counts.Cleaning + counts.QC
 
-  const filterCounts = useMemo<Record<'Needs action' | (typeof QUEUE_FILTERS)[number], number>>(
+  const filterCounts = useMemo<Record<(typeof QUEUE_FILTERS)[number], number>>(
     () => ({
-      'Needs action': remainingCount,
       All: rows.length,
       Waiting: counts.Waiting,
       Cleaning: counts.Cleaning,
       QC: counts.QC,
       Ready: counts.Ready,
     }),
-    [remainingCount, rows.length, counts.Waiting, counts.Cleaning, counts.QC, counts.Ready],
+    [rows.length, counts.Waiting, counts.Cleaning, counts.QC, counts.Ready],
   )
 
   const totalUnits = rows.reduce((n, r) => n + r.qty, 0)
@@ -583,8 +582,7 @@ export default function ResetWorkspace({
     () =>
       rows.filter((r) => {
         const rec = marks[r.key] ?? FRESH
-        if (filter === 'Needs action' && (rec.problem !== 'No Problems' || rec.queueState === 'Ready')) return false
-        if (filter !== 'All' && filter !== 'Needs action' && (rec.problem !== 'No Problems' || rec.queueState !== filter)) return false
+        if (filter !== 'All' && (rec.problem !== 'No Problems' || rec.queueState !== filter)) return false
         if (query && !`${r.name} ${r.serial ?? ''}`.toLowerCase().includes(query.toLowerCase())) return false
         return true
       }),
@@ -1328,13 +1326,13 @@ export default function ResetWorkspace({
               <SegmentedControl
                 ariaLabel="Filter reset queue"
                 size="sm"
-                options={(['Needs action', ...QUEUE_FILTERS] as const).map((f) => ({
+                options={QUEUE_FILTERS.map((f) => ({
                   id: f,
                   label: f,
                   badge: filterCounts[f],
                 }))}
                 value={filter}
-                onChange={(val) => setFilter(val as 'Needs action' | (typeof QUEUE_FILTERS)[number])}
+                onChange={(val) => setFilter(val as (typeof QUEUE_FILTERS)[number])}
               />
             </div>
 
