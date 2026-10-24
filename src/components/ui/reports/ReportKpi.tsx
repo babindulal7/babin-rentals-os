@@ -1,4 +1,4 @@
-import React from 'react'
+import type { ReactNode } from 'react'
 import Icon, { type IconName } from '../Icon'
 
 export interface ReportKpiCardProps {
@@ -85,7 +85,7 @@ export function ReportKpiCard({
 }
 
 export interface ReportKpiStripProps {
-  children: React.ReactNode
+  children: ReactNode
   ariaLabel?: string | undefined
 }
 

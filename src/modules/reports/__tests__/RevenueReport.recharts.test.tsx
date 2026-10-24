@@ -16,6 +16,8 @@ vi.mock('../../../lib/auth', () => ({
 }))
 
 const MOCK_REVENUE_REPORT: IssuedRevenueReport = {
+  fromAd: '2026-07-27',
+  toAd: '2026-10-24',
   totalPaisa: 52500000 as Paisa, // Rs 5,25,000
   issuedCount: 13,
   creditReconciliation: {
@@ -177,7 +179,7 @@ describe('RevenueReport — shadcn/ui composition & Recharts AreaChart', () => {
     })
 
     const text = container.textContent ?? ''
-    expect(text).toContain('Financial reports are restricted')
+    expect(text).toContain('Access restricted')
     expect(text).not.toContain('Rs 5,25,000')
     expect(text).not.toContain('Monthly issued invoice revenue')
   })

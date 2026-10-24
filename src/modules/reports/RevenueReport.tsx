@@ -53,13 +53,11 @@ export default function RevenueReport() {
       new Date(from + 'T00:00:00Z').getUTCMonth() <
       24
 
-  const load = useLoad<IssuedRevenueReport>(
-    async () => {
-      if (!permitted) return null
-      return getIssuedRevenueTrend({ fromAd: from, toAd: to })
-    },
-    [permitted, from, to],
-  )
+  const filtered = Boolean(filters.dateRange?.fromAd || filters.dateRange?.toAd)
+  const load = useLoad<IssuedRevenueReport>(() => getIssuedRevenueTrend(from, to), {
+    key: `${from}|${to}`,
+    enabled: permitted && windowIsValid,
+  })
 
   const report = load.data
 
@@ -109,13 +107,11 @@ export default function RevenueReport() {
       <ReportFamiliesNav current="Revenue" />
       {!permitted ? (
         <PageBody
-          loading={false}
-          error={null}
-          empty={true}
-          emptyTitle="Financial reports are restricted"
-          emptyMessage="Revenue and sales figures are limited to management and accounts roles."
+          restricted
+          restrictedReason="Revenue and sales figures are limited to management and accounts roles."
+          restrictedRequiredRole="Owner, Admin, Manager or Accounts"
         >
-          <div />
+          {null}
         </PageBody>
       ) : (
         <>
@@ -142,13 +138,21 @@ export default function RevenueReport() {
             </div>
           ) : (
             <PageBody
+              noun="revenue"
               loading={load.loading}
               error={load.error}
+              onRetry={load.reload}
+              hasRows={report !== null}
               skeleton="table"
-              onRetry={load.retry}
-              empty={!load.loading && !load.error && (!report || report.issuedCount === 0)}
-              emptyTitle="No revenue recorded"
-              emptyMessage="No taxable issued invoices were found in this date window."
+              empty={report !== null && report.issuedCount === 0}
+              emptyIsFiltered={filtered}
+              onClearFilters={() => setFilters({})}
+              emptyTitle={filtered ? 'No revenue recorded in this period' : 'No invoices issued in the last 90 days'}
+              emptyMessage={
+                filtered
+                  ? 'No taxable nonvoid invoices were issued in the selected date window. Clear the filters to see the default 90-day window.'
+                  : 'Revenue figures appear here once invoices are issued to clients in Finance.'
+              }
             >
               {report && (
                 <>

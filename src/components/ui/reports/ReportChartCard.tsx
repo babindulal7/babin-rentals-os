@@ -1,4 +1,4 @@
-import React from 'react'
+import type { ReactNode } from 'react'
 import Icon from '../Icon'
 
 export interface ReportChartCardProps {
@@ -7,10 +7,10 @@ export interface ReportChartCardProps {
   dateWindow?: string | undefined
   source?: string | undefined
   description?: string | undefined
-  children: React.ReactNode
-  reconciliation?: React.ReactNode | undefined
+  children: ReactNode
+  reconciliation?: ReactNode | undefined
   ariaLabel?: string | undefined
-  action?: React.ReactNode | undefined
+  action?: ReactNode | undefined
 }
 
 export function ReportChartCard({

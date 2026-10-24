@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { PageHeader, KpiStrip, cardStyle } from '../../components/ui/Page'
+import { useState, useMemo } from 'react'
+import { PageHeader, cardStyle } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { PageBody } from '../../components/ui/PageBody'
 import { ReportToolbar } from '../../components/ui/ReportToolbar'
@@ -11,10 +11,15 @@ import {
 } from '../../lib/queries/equipmentPerformance'
 import { formatMoney } from '../../lib/money'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
-import { useViewport } from '../../lib/device'
 import { useLoad } from '../../lib/queries/useLoad'
 import { NOT_TRACKED } from '../../lib/queries/reportSupport'
 import { reportFilterOptions, hasReportFilters, NoMatchRow } from './reportStates'
+import {
+  ReportKpiCard,
+  ReportKpiStrip,
+  ReportChartCard,
+} from '../../components/ui/reports'
+import '../../styles/reportChartTokens.css'
 
 const cell = { padding: 'var(--sp-sm) var(--sp-md)' } as const
 const perUnit = (r: EquipmentPerformanceRow) => (r.revenuePerUnit === null ? '—' : formatMoney(r.revenuePerUnit))
@@ -70,6 +75,73 @@ function PerformerTable({ label, rows }: { label: string; rows: EquipmentPerform
   )
 }
 
+function PerformerRankingBars({ rows }: { rows: EquipmentPerformanceRow[] }) {
+  const maxRevenue = useMemo(() => {
+    return Math.max(...rows.map((r) => r.revenue as number), 1)
+  }, [rows])
+
+  if (rows.length === 0) return null
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {rows.map((r, idx) => {
+        const pct = Math.max(Math.round(((r.revenue as number) / maxRevenue) * 100), 2)
+        return (
+          <div key={r.productId} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span
+              style={{
+                width: 140,
+                flexShrink: 0,
+                fontSize: 'var(--t-meta, 12px)',
+                fontWeight: 600,
+                color: 'var(--text)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+              title={r.name}
+            >
+              {idx + 1}. {r.name}
+            </span>
+            <div
+              style={{
+                flex: 1,
+                minWidth: 0,
+                height: 18,
+                background: 'var(--card2)',
+                borderRadius: 4,
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  width: `${pct}%`,
+                  height: '100%',
+                  background: 'var(--chart-1, #0284c7)',
+                  borderRadius: 4,
+                  transition: 'width 0.3s ease',
+                }}
+              />
+            </div>
+            <span
+              className="figure"
+              style={{
+                width: 90,
+                flexShrink: 0,
+                textAlign: 'right',
+                fontSize: 'var(--t-meta, 12px)',
+                fontWeight: 700,
+              }}
+            >
+              {formatMoney(r.revenue)}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 /**
  * Equipment Performance.
  *
@@ -79,7 +151,6 @@ function PerformerTable({ label, rows }: { label: string; rows: EquipmentPerform
  */
 export default function EquipmentPerformance() {
   const money = useCanViewMoney()
-  const viewport = useViewport()
   const [filters, setFilters] = useState<ReportFilters>({})
   const filtered = hasReportFilters(filters)
   // Law 6 — a money-blind role never sends the read.
@@ -91,7 +162,7 @@ export default function EquipmentPerformance() {
 
   if (!money) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+      <div className="babin-report" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
         <PageHeader icon="activity" title="Equipment Performance" description="Revenue per product and per unit in service." />
         <PageBody
           restricted
@@ -105,7 +176,7 @@ export default function EquipmentPerformance() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+    <div className="babin-report" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
       <PageHeader icon="activity" title="Equipment Performance" description="Revenue per product and per unit in service." />
 
       <ReportToolbar
@@ -135,15 +206,44 @@ export default function EquipmentPerformance() {
       >
         {summary && (
           <>
-            <KpiStrip
-              columns={viewport === 'phone' ? 1 : viewport === 'tablet' ? 2 : 4}
-              items={[
-                { label: 'Equipment Revenue', value: formatMoney(summary.revenue), icon: 'dollar', accent: 'primary', note: 'Priced lines on bookings, not cancelled' },
-                { label: 'Products Rented', value: String(summary.productsRented), icon: 'box', accent: 'neutral', note: `of ${summary.rows.length} with units or revenue` },
-                { label: 'Utilization', value: NOT_TRACKED, icon: 'chart', accent: 'neutral', note: 'Needs unit state history over time' },
-                { label: 'Idle Cost', value: NOT_TRACKED, icon: 'alert_triangle', accent: 'neutral', note: 'Needs unit state history over time' },
-              ]}
-            />
+            <ReportKpiStrip ariaLabel="Equipment performance metrics">
+              <ReportKpiCard
+                label="Equipment Revenue"
+                value={formatMoney(summary.revenue)}
+                icon="dollar"
+                note="Priced lines on bookings, not cancelled"
+              />
+              <ReportKpiCard
+                label="Products Rented"
+                value={String(summary.productsRented)}
+                icon="box"
+                note={`of ${summary.rows.length} with units or revenue`}
+              />
+              <ReportKpiCard
+                label="Utilization"
+                value={NOT_TRACKED}
+                icon="chart"
+                note="Needs unit state history over time"
+              />
+              <ReportKpiCard
+                label="Idle Cost"
+                value={NOT_TRACKED}
+                icon="alert_triangle"
+                note="Needs unit state history over time"
+              />
+            </ReportKpiStrip>
+
+            {summary.topPerformers.length > 0 && (
+              <ReportChartCard
+                title="Top Performing Models by Revenue"
+                basis="Ranked by total rental invoice revenue"
+                source="Bookings · Line item attribution"
+                description="Relative comparison of top revenue-generating products in the selected period."
+              >
+                <PerformerRankingBars rows={summary.topPerformers.slice(0, 6)} />
+              </ReportChartCard>
+            )}
+
             <PerformerTable label="Top Performing Equipment" rows={summary.topPerformers} />
             <PerformerTable label="Lowest Revenue per Unit" rows={summary.worstPerformers} />
           </>

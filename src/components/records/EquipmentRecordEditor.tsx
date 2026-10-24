@@ -841,15 +841,6 @@ export function EquipmentRecordEditor({
       collapsible
       defaultOpen={true}
       forceOpen={Boolean(errors.purchase_price || errors.replacement_value || errors.purchase_date)}
-      statusBadge={
-        sectionManager ? (
-          <SectionSaveStatusBadge
-            status={sectionManager.getSectionStatus('purchase', Boolean(errors.purchase_price || errors.replacement_value || errors.purchase_date))}
-            savedAtTime={sectionManager.savedSections['purchase']?.savedAt}
-            errorMessage={sectionManager.sectionErrors['purchase']}
-          />
-        ) : undefined
-      }
     >
       <div className="record-fields equipment-form-grid">
         <div className="record-field">
@@ -902,28 +893,6 @@ export function EquipmentRecordEditor({
           {errors.replacement_value && <span id="record-replacement_value-error" role="alert">{errors.replacement_value}</span>}
         </label>
       </div>
-
-      {sectionManager && (
-        <SectionSaveBar
-          sectionName="Purchase"
-          status={sectionManager.getSectionStatus('purchase', Boolean(errors.purchase_price || errors.replacement_value || errors.purchase_date))}
-          isSaving={sectionManager.savingSection === 'purchase'}
-          canSave={Boolean(recordId || snapshot?.id) && !errors.purchase_price && !errors.replacement_value && !errors.purchase_date}
-          saveDisabledReason={!recordId && !snapshot?.id ? 'Save Identity first' : null}
-          onSave={async () => {
-            await sectionManager.saveSection('purchase', {
-              purchase_date: values.purchase_date ?? null,
-              purchase_price: values.purchase_price ?? null,
-              replacement_value: values.replacement_value ?? null,
-            })
-          }}
-          onNext={() => {
-            document.getElementById(sectionId('Pricing & Rental'))?.scrollIntoView({ behavior: 'smooth' })
-          }}
-          nextLabel="Pricing & Rental"
-          errorMessage={sectionManager.sectionErrors['purchase']}
-        />
-      )}
     </RecordSection>
   )
 
@@ -935,16 +904,6 @@ export function EquipmentRecordEditor({
       collapsible
       defaultOpen={true}
       forceOpen={Boolean(errors.daily_rate)}
-      statusBadge={
-        sectionManager ? (
-          <SectionSaveStatusBadge
-            status={sectionManager.getSectionStatus('pricing & rental', Boolean(errors.daily_rate))}
-            savedAtTime={sectionManager.savedSections['pricing & rental']?.savedAt}
-            errorCount={errors.daily_rate ? 1 : 0}
-            errorMessage={sectionManager.sectionErrors['pricing & rental']}
-          />
-        ) : undefined
-      }
     >
       <div className="record-fields equipment-form-grid">
         <label className="record-field" htmlFor="record-daily_rate">
@@ -1065,31 +1024,6 @@ export function EquipmentRecordEditor({
           <span>Available for rental (item can be picked and booked in rental quotes)</span>
         </label>
       </div>
-
-      {sectionManager && (
-        <SectionSaveBar
-          sectionName="Pricing & Rental"
-          status={sectionManager.getSectionStatus('pricing & rental', Boolean(errors.daily_rate))}
-          isSaving={sectionManager.savingSection === 'pricing & rental'}
-          canSave={Boolean(recordId || snapshot?.id) && !errors.daily_rate}
-          saveDisabledReason={!recordId && !snapshot?.id ? 'Save Identity first' : null}
-          onSave={async () => {
-            await sectionManager.saveSection('pricing & rental', {
-              daily_rate: values.daily_rate ?? null,
-              weekly_rate: values.weekly_rate ?? null,
-              monthly_rate: values.monthly_rate ?? null,
-              deposit_percentage: values.deposit_percent ?? null,
-              deposit_fixed: values.deposit_fixed ?? null,
-              rental_enabled: values.rental_enabled ?? true,
-            })
-          }}
-          onNext={() => {
-            document.getElementById(sectionId('Maintenance & Documents'))?.scrollIntoView({ behavior: 'smooth' })
-          }}
-          nextLabel="Maintenance & Documents"
-          errorMessage={sectionManager.sectionErrors['pricing & rental']}
-        />
-      )}
     </RecordSection>
   )
 
@@ -1102,15 +1036,6 @@ export function EquipmentRecordEditor({
       defaultOpen={false}
       forceOpen={Boolean(errors.prep_time_minutes || errors.cleaning_time_minutes || errors.notes_internal)}
       collapsedHint="Prep, cleaning & notes"
-      statusBadge={
-        sectionManager ? (
-          <SectionSaveStatusBadge
-            status={sectionManager.getSectionStatus('maintenance & documents', Boolean(errors.prep_time_minutes || errors.cleaning_time_minutes || errors.notes_internal))}
-            savedAtTime={sectionManager.savedSections['maintenance & documents']?.savedAt}
-            errorMessage={sectionManager.sectionErrors['maintenance & documents']}
-          />
-        ) : undefined
-      }
     >
       <div className="record-fields equipment-form-grid">
         <label className="record-field" htmlFor="record-prep_time_minutes">
@@ -1189,27 +1114,6 @@ export function EquipmentRecordEditor({
           </p>
         </div>
       </div>
-
-      {sectionManager && (
-        <SectionSaveBar
-          sectionName="Maintenance & Documents"
-          status={sectionManager.getSectionStatus('maintenance & documents', Boolean(errors.prep_time_minutes || errors.cleaning_time_minutes || errors.notes_internal))}
-          isSaving={sectionManager.savingSection === 'maintenance & documents'}
-          canSave={Boolean(recordId || snapshot?.id)}
-          saveDisabledReason={!recordId && !snapshot?.id ? 'Save Identity first' : null}
-          onSave={async () => {
-            await sectionManager.saveSection('maintenance & documents', {
-              prep_time_minutes: values.prep_time_minutes ?? 0,
-              cleaning_time_minutes: values.cleaning_time_minutes ?? 0,
-              inspection_required: values.inspection_required ?? true,
-              packing_required: values.packing_required ?? true,
-              notes_internal: values.notes_internal ?? null,
-              notes_warehouse: values.notes_warehouse ?? null,
-            })
-          }}
-          errorMessage={sectionManager.sectionErrors['maintenance & documents']}
-        />
-      )}
     </RecordSection>
   )
 

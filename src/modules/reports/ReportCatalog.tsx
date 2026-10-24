@@ -12,6 +12,7 @@ import { useViewport } from '../../lib/device'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { financeRestriction } from '../../lib/queries/finance'
 import { catColor } from '../../components/ui/Charts'
+import { IS_MOCK } from '../../lib/supabase'
 import {
   PERIODS,
   DEFAULT_PERIOD,
@@ -202,7 +203,7 @@ export function ReportCatalog({
 
   const period = PERIODS.find((p) => p.key === periodKey) ?? PERIODS[0]
   const range = period?.range ?? null
-  const figures = useMemo(() => (range && money ? figuresFor(range.from, range.to) : null), [range, money])
+  const figures = useMemo(() => (range && money && IS_MOCK ? figuresFor(range.from, range.to) : null), [range, money])
 
   /**
    * §9.6's `[🔍 find a report]`. Matches the report name and its group name, so
