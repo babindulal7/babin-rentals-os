@@ -1,5 +1,51 @@
 # Progress Log
 
+## 2026-10-24 — Activate membership: the client page's tier change is real (`change_client_membership`, 0174)
+
+**Did**
+- Babin asked to "activate membership". Asked what that meant, he chose *make the tier change real* (not renewal of a lapsed membership) and *leave the fee blank*. The client page's Upgrade / Change Tier dialog had its save deliberately blocked because nothing wrote a tier. It now does, end to end:
+  - **Database** — `supabase/migrations/0174_change_client_membership.sql`: one `SECURITY DEFINER` function, pinned `search_path`, `audit_events` row as the idempotency receipt, tight grants. A client with no live membership is activated; one with a live membership is moved (new `client_memberships` row, old one superseded and kept, one transaction). Refuses: a role below Coordinator, the plan the client is already on, a retired or unknown plan, a deactivated client, a note over 500 characters. Records no fee.
+  - **Capability** — new `client.change_membership` (Owner, Admin, Manager, Coordinator) in `rbac.ts` / `actions/core.ts` / `docs/PERMISSIONS.md` §4. Not `client.update`, whose set admits Warehouse.
+  - **Action** — `src/actions/clients/changeMembership.ts`: offline refusal, missing-function message when the server has no 0174 yet, server confirmation required, `MEMBERSHIP_TIER_CHANGED` emitted only after confirmation.
+  - **Dialog and page** — `UpgradeTierModal.tsx` rewritten on live plans (`useMembershipPlans`, credit/discount from the database, `null` shown as "—" / "Negotiated"), inline errors, a stable request key per choice; `ClientDetail.tsx` gates both buttons by the capability (Accounts used to be offered them through the money gate), says "Activate Membership" / "Change Plan", and shows "No membership yet" instead of the placeholder 'Academy' tier. Header buttons wrap under the title (`clients.css`).
+  - **Mock** — `change_client_membership` in `__mocks__/client.ts` mirrors the SQL; the mock client directory derives `membership_level` from live rows.
+- **Merged with main mid-task.** Main had landed a second writer, `enroll_client_membership` (0173, Membership page "+ Add Membership"), and migrations 0171–0173. This branch's migration was renumbered 0171 → 0174, its `UpgradeTierModal` kept on the client page (main's called `enroll_client_membership` through `client.update`), the open-decision entry renumbered to §20. Both writers stay, each on its own screen; whether they should be one function is `docs/OPEN_DECISIONS.md` §20.
+- **Found, not changed:** 0173's `enroll_client_membership` audits with `'Clients'::audit_category`, which is not a value of that enum (0001). Once 0173 is applied, "+ Add Membership" fails and rolls back. No lifecycle step calls the function, so every gate is green over it. Handed to a separate task; 0173 is another session's unapplied file.
+
+**Ruled** (`RULINGS-2026-10-22.md` rows 1–10, house format there)
+- One atomic function; new narrower capability; no fee recorded; a change restarts the term (⭐ unruled, OPEN_DECISIONS §20); refusals not recorded; dialog on live plans; honest "No membership yet" row and capability-gated buttons; header wrap; two writers coexist (row 10).
+
+**Verified**
+- `L32` in `scripts/e2e-lifecycle.mjs` drives 0174 as every role through real Postgres + RLS: activation by Coordinator, retry returns the same response, a changed payload with the same key is refused, Manager move leaves the old row superseded and retained, refusals leave the live row untouched, Admin/Owner downgrade, Accounts / Warehouse / Technician / Driver / Client refused, deactivated client refused. Four deliberate SQL mutations (Accounts allowed; old row not closed; old row not pointed at the new one; fee written as 0) each made L32 fail.
+- Driven in the browser on `dev:mock` as Owner: Activate → "Academy", Change Plan → "Creator", audit trail none → Academy → Creator, old row superseded and kept; as Accounts: no button and no header menu item. Those drives ran before main's later commits were merged; the merge changed no file they touch except `UpgradeTierModal.tsx`, which resolved to this branch's version.
+- On the merged source: `tsc --noEmit` 0 errors; `npm run lint` 0 warnings; `npm run check:pglite` 172/172 applied, 0 failed, 87 definer functions with pinned search_path; `npm run check:lifecycle` 32/32 green (L32 included); `npm test` (full suite, `--maxWorkers=3`) 446 files, 5,577/5,577 passed, receipt valid and source fingerprint matching at the time; the coverage suite was not run (its receipt reads NOT VERIFIED). The final merge of `main` (KPI tile, shadcn preset CSS, `vitest.config.ts`; no file this work touches) happened after that run and was checked with `tsc` and the membership/clients/actions tests, not the whole suite again.
+- **Not verified:** a hosted Supabase project (0174 is not applied there; live RLS and the masked `fee_paid` column are only exercised in PGlite); the mock cannot show a role refusal that RLS would give differently.
+- **Not applied.** 0174 is written and verified locally only. The live app, without it, answers "Membership changes are not available on this server yet. Nothing was changed." (CLAUDE.md N-5: Babin applies after the backup step.)
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 55 / 58 (95%) | +1 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +1 |
+| Lifecycle | steps green / total | 32 / 32 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 172 files · check:pglite 172/172 applied, 0 failed (recorded 2026-10-24T16:00:08.415Z). Suite: PASS — 5577/5577 passed, 0 failed (recorded 2026-10-24T16:17:13.592Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-10-24T16:00:47.682Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+
+- Apply 0174 (and 0171–0173) to the live project only with Babin's go-ahead and the backup step. Until then the dialog says it is unavailable and changes nothing.
+- `docs/OPEN_DECISIONS.md` §20: does a change restart the term; renewing a lapsed membership; no screen to create or retire a plan; whether `enroll_client_membership` and `change_client_membership` should be one function.
+- `enroll_client_membership` (0173) writes an invalid `audit_category`; fix and add a lifecycle step (task handed off, not done here).
+- Clients ▸ Membership still reads a hard-coded `PLANS` list for its plan cards.
+- `docs/PERMISSIONS.md` §4 says `client.update` is "C+ · Accounts"; the code maps it to the booking-desk set including Warehouse. Pre-existing disagreement, stricter reading governs.
+- Hosted role/JWT/PostgREST/Storage, physical-device and offline/reconnect acceptance remain separate; production release HOLD remains.
+
 ## 2026-10-24 — Ultra-Fast App Loading: Vendor Chunking, Route Warming & Workbox Preloading
 
 **Did**
