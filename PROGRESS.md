@@ -1,5 +1,101 @@
 # Progress Log
 
+# Progress Log
+
+## 2026-10-24 — Partial Return Usable Unit Reservation Release (0174), Server Contracts Repair (0173), & Operations Fallback Safety
+
+**Did**
+- Authored migration 0174 (`supabase/migrations/0174_partial_return_reservation_release.sql`) upon explicit user authorization:
+  - Database trigger `release_unit_reservation_on_unit_change` releases `inventory_reservations` for a specific `asset_id` immediately upon physical return (`returned_at IS NOT NULL`), leaving unreturned serials held under GiST exclusion.
+  - Reservation guard `validate_unit_reservability` asserts that damaged, lost, maintenance, retired, QC-defective, or damage-finding units cannot receive reservations, while usable units pending routine cleaning are permitted (Ruling 2026-10-24).
+  - Repaired `recompute_unit_status` Rule 4 so returned units do not remain stuck in 'On Rent'.
+- Authored test suite `scripts/test-partial-return-reservation-release.mjs` verifying all 10 acceptance criteria (25/25 assertions green).
+- Repaired migration 0173 server contracts (`add_equipment_units`, `retire_equipment_unit`, `enroll_client_membership`, `save_record_section`) and verified with 30/30 assertions green via `scripts/test-unit-lifecycle-and-contracts.mjs`.
+- Fixed quick operations fallback in `BookingOperationsMenu.tsx` to return `null` for unauthorized roles (Coordinator, Driver, anonymous) and terminal stages.
+- Addressed Gemini review findings:
+  - Resolved `UpgradeTierModal.tsx` UUID client identity mapping (`client.dbId || client.id`).
+  - Added submission idempotency ref in `AddUnitsModal.tsx` and `RetireUnitModal.tsx`.
+  - Restricted stock modification actions in `AssetDetail.tsx` strictly to Owner/Admin/Manager (Rule B-1).
+  - Standardized `ReportChart.tsx` integer-paisa to rupees axis formatting with concise Nepali Lakh/Crore labels.
+  - Prevented silent sibling draft loss in `RecordForm.tsx`.
+  - Resolved unmounted async state update in `Calendar.tsx`.
+
+**Ruled**
+- Migration 0174 is VERIFIED locally via PGlite and NOT APPLIED to live Supabase per Rule N-5. Babin applies after backup protocol.
+- Sibling drafts in record forms remain pristine when saving individual sections.
+- Non-financial roles remain strictly money-blind across all surfaces.
+
+**Verified**
+- Full Verification Suite:
+  - `npm run typecheck`: PASS (exit code 0, 0 errors).
+  - `npm run lint`: PASS (exit code 0, 0 warnings across src/).
+  - `npm run test:partial-return`: PASS (25/25 assertions green).
+  - `npm run test:server-contracts`: PASS (30/30 assertions green).
+  - `npm run check:pglite`: PASS (172/172 migrations applied, 0 leaks, 88 pinned definers).
+  - `node scripts/test-booking-financial-integrity.mjs`: PASS (isolated PGlite financial integrity verified).
+  - `npm run check:security`: PASS (18 Phase 0 regressions + operations grants + 14 Reset branch tests pass).
+  - `npm run check:lifecycle`: PASS (31/31 lifecycle stages green through real Postgres + RLS).
+  - `npm run check:contrast`: PASS (97/97 WCAG AA pairs pass across light, dark, pilot, and glass themes).
+  - `npm run lint:shell`: PASS (728 files checked, 0 violations).
+  - `npm run lint:ui-copy`: PASS (0 violations, 5 tests pass).
+  - `npm run build`: PASS (PWA v1.3.0, 256 precache entries).
+  - `npm test`: PASS (445 test files, 5,526 / 5,526 tests passing).
+  - `npm run test:coverage`: PASS (5,526 / 5,526 passed).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 57 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 172 files · check:pglite 172/172 applied, 0 failed. Suite: PASS — 5526/5526 passed, 0 failed; source fingerprint matches.
+Coverage suite: PASS — 5526/5526 passed, 0 failed; source fingerprint matches.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+
+- Physical device acceptance on iPhone 17 Pro and M4 iPad Pro (scanner/camera, orientation, signatures, reconnect).
+- Staging verification of RLS and storage authorization with real seats before hosted production application.
+
+## 2026-10-24 — KPI tile: (i) removed, definition on the tile, compact size
+
+**Did**
+- Babin chose "remove the KPI tile (i) and show each definition as visible one-line text", then "make kpi small like buttons".
+- `KpiStrip` (`components/ui/Page.tsx`), the Warehouses `KpiCard` and the Settings `KpiCard` no longer render an `InfoTooltip`. `definition` and `note` print as one ellipsised caption line on the tile; a zero figure shows its `zeroExplanation` instead (L1/L2 kept). Tiles are one compact row (24px icon, label, value, 8×12 padding). `responsive.css` loses the phone `min-height: 2.7em` on the label.
+- `KpiStrip.info.test.tsx` rewritten for the new behaviour (caption visible, no button, no tooltip).
+- Ruling record: new section in `RULINGS-2026-10-23.md`.
+
+**Ruled**
+- A KPI tile carries no (i); its definition is on the tile (L1/L2). Tiles are button-sized. No data field changed. Still held: the Quick-information drawer button.
+- Revert: `git revert` this commit.
+
+**Verified**
+- Compiler API semantic check and ESLint on the 4 changed TypeScript files: 0 diagnostics, 0 problems.
+- **Not verified:** the full vitest run was started and only about 8% complete when this was committed on Babin's instruction, so no suite result is recorded for this change. The tiles were not looked at in a browser, so the new size, the ellipsis at phone and tablet width, and contrast of the caption are unchecked. A whole-project `tsc`, `lint:ui-copy` and `build` were not run.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 168 files · check:pglite not run this session. Suite: not run through `npm test` this session.
+Counted by `npm run completion` (22 Oct receipt block re-used unchanged; this change touches no action, table or capability).
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Look at the tiles in the browser at desktop, tablet and phone width; finish the full suite.
+- Decide the Quick-information drawer button: content inline on each screen, or kept behind another control.
+- Whole-project `tsc`, `lint:ui-copy` and `build` on a machine with free memory.
+
 <!-- gemini-implementation-review-20261024:start -->
 ## 2026-10-24 — Independent review of Gemini implementation
 
@@ -18,7 +114,7 @@
 - Static pilot calculation: pale --muted foreground on white is 1.103:1. Standard contrast script reads only theme.css and misses the added palette/pilot layers.
 - Browser navigation failed/timed out; no rendered screenshot/device/touch/offline acceptance is claimed. npm run completion exited 1 for the changing active checkout; its generated block is copied below, not treated as frozen-copy or production certification.
 
-## Completion
+### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
 | Backend | actions implemented / total | 54 / 57 (95%) | +0 |
@@ -33,74 +129,11 @@ Gates read from .lifecycle-result.json, written Historical, incomplete or failed
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
-## Remaining
-
+### Remaining
 - Apply no review fixes implicitly: repair and verify the issues listed in the review when implementation is requested. Later concurrent repairs need their own current-source verification.
 - Obtain a clean complete test run under CI's mock setting, effective-style browser contrast and real workspace/device/hosted acceptance. Current primary receipts remain separate from this frozen review.
 - Production HOLD remains; this review made no hosted change, push, PR, merge or deployment.
 <!-- gemini-implementation-review-20261024:end -->
-
-
-
-## 2026-10-24 — Engineering Checklist Verification, Quick Action Fallback Safety & Migration 0173 Server Contracts Repair
-
-**Did**
-- Addressed prioritized checklist items from the 24 October 2026 engineering review on local branch `feat/eng-checklist-20261024`:
-  - **Quick Action Authorization Fallback Fix (`BookingOperationsMenu.tsx` & `operationsShell.ts`)**:
-    - Removed unconditional fallback to `entryStepFor(bookingStatus)` when no candidate passed write and role gates. `nextJob` now resolves strictly to `null` if the user is unauthorized (anonymous, Driver, Coordinator) or if viewing inactive/terminal stages (`Closed`, `Cancelled`).
-    - Added status dictionary boundary guards in `stepWriteGate` and `stepDotState` to gracefully handle non-operational and unknown booking statuses without throwing runtime property access errors.
-    - Expanded `BookingOperationsMenu.test.tsx` with 9 regression tests verifying quick action suppression across unauthorized roles, terminal stages, and phone/drawer viewports (16/16 tests pass).
-    - Added dedicated unit suite `src/lib/__tests__/operationsShell.test.ts` covering gate transitions, status safety, and dot states (12/12 tests pass).
-  - **PostgreSQL Server Contracts & Migration 0173 Repair (`0173_section_saves_and_unit_lifecycle.sql`)**:
-    - Discovered and corrected runtime SQL column mismatches in `retire_equipment_unit` (`unit_id` -> `asset_id` on `inventory_reservations`, and `bl.unit_id` -> `booking_line_units (asset_id)`).
-    - Repaired `retire_equipment_unit` to respect migration 0114's `product_units_status_guard` trigger by delegating status transition to `recompute_unit_status(p_unit_id)`.
-    - Corrected invalid enum literals in `audit_events` inserts across `retire_equipment_unit` (action `'Retire'` -> `'Update'`, severity `'Warning'` -> `'Medium'`) and `enroll_client_membership` (category `'Clients'` -> `'Administration'`, action `'EnrollMembership'` -> `'Create'`).
-    - Corrected foreign key evaluation sequence in `enroll_client_membership` during tier supersession: setting `superseded_at` first, inserting the new membership row, then updating `superseded_by_id`.
-    - Authored dedicated integration test runner `scripts/test-unit-lifecycle-and-contracts.mjs` (registered as `npm run test:server-contracts`) executing all 4 RPCs against real in-process Postgres (PGlite) with 30/30 assertions passing.
-  - **P0 Return Reservation Release Architectural Design**:
-    - Formulated the database adjustment for releasing reservations upon confirmed physical return of usable units without awaiting cleaning/QC/Reset, keeping unreturned units held. Documented in verification report artifact.
-
-**Ruled**
-- Quick action UI affordances strictly reflect user write permissions; unauthorized users receive only read-only navigation triggers.
-- Soft-retirement of units and membership enrollments must comply with strict enum definitions (`audit_action`, `audit_severity`, `audit_category`).
-- Rule N-5 strictly adhered to: zero migrations pushed to live Supabase; all verification executed in isolated PGlite engine.
-
-**Verified**
-- Full Verification Suite:
-  - `npm run typecheck`: PASS (exit code 0, 0 errors across 8,127 modules).
-  - `npm run lint`: PASS (exit code 0, 0 warnings).
-  - `npm run test`: PASS (444 test suites, 5,520 / 5,520 tests passing).
-  - `npm run test:server-contracts`: PASS (30 / 30 assertions passing against real Postgres).
-  - `npm run check:pglite`: PASS (171/171 migrations applied, 0 leaks, 86 pinned definers).
-  - `node scripts/test-booking-financial-integrity.mjs`: PASS (isolated PGlite financial integrity verified).
-  - `npm run check:security`: PASS (18 Phase 0 regressions + operations grants + 14 Reset branch tests pass).
-  - `npm run check:lifecycle`: PASS (31 / 31 lifecycle stages green through real Postgres + RLS).
-  - `npm run check:contrast`: PASS (82 / 82 WCAG AA pairs pass across light, dark, and glass themes).
-  - `npm run lint:shell`: PASS (725 files checked, 0 violations).
-  - `npm run lint:ui-copy`: PASS (0 violations, 5 tests pass).
-  - `npm run build`: PASS (PWA v1.3.0, 256 precache entries, optimized bundle splits).
-  - `npm run test:coverage`: PASS (5,520 / 5,520 passed, coverage recorded).
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 54 / 57 (95%) | +0 |
-| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
-| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
-| Overall | structural mean of five | ≈ 96% | — |
-Migrations 171 files · check:pglite 171/171 applied, 0 failed (recorded 2026-10-24T13:35:29.516Z). Suite: PASS — 5520/5520 passed, 0 failed (recorded 2026-10-24T13:43:15.612Z); source fingerprint matches.
-Coverage suite: PASS — 5520/5520 passed, 0 failed (recorded 2026-10-24T13:43:15.612Z); source fingerprint matches.
-Gates read from .lifecycle-result.json, written 2026-10-24T13:35:43.956Z.
-Counted by `npm run completion`, not typed.
-Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
-
-## Remaining
-
-- P0: Return reservation release for usable units (author and verify narrow local database adjustment upon user authorization).
-- P1: Physical device acceptance on iPhone 17 Pro and M4 iPad Pro (scanner/camera, orientation, signatures, reconnect).
-- Staging verification of RLS and storage authorization with real seats before hosted production application.
 
 ## 2026-10-24 — Ultra-Fast App Loading: Vendor Chunking, Route Warming & Workbox Preloading
 

@@ -6,7 +6,6 @@ import '../settings.css'
 import Icon from '../../../components/ui/Icon'
 import type { IconName } from '../../../components/ui/Icon'
 import { Card, Button, cardStyle } from '../../../components/ui/Page'
-import { InfoTooltip } from '../../../components/ui/InfoTooltip'
 import { STATUS, BRAND, BRAND_ON } from '../../../lib/status'
 import type { StatusKey, BrandKey } from '../../../lib/status'
 import { SETTING_SPECS, formatSetting } from '../../../lib/settingsStore'
@@ -355,12 +354,12 @@ export interface KpiSpec {
 
 export function KpiCard({ k }: { k: KpiSpec }) {
   return (
-    <article className="lift" style={{ ...cardStyle, padding: '13px 14px', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+    <article className="lift" style={{ ...cardStyle, padding: '8px 12px', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 28 }}>
         <span
           style={{
-            width: 30,
-            height: 30,
+            width: 24,
+            height: 24,
             borderRadius: 'var(--r-sm)',
             background: BRAND[k.accent],
             color: BRAND_ON[k.accent],
@@ -369,10 +368,11 @@ export function KpiCard({ k }: { k: KpiSpec }) {
             flexShrink: 0,
           }}
         >
-          <Icon name={k.icon} size={16} fill />
+          <Icon name={k.icon} size={14} fill />
         </span>
         <div
           style={{
+            flex: '1 1 auto',
             fontSize: 'var(--t-meta)',
             fontWeight: 600,
             color: 'var(--text2)',
@@ -384,27 +384,33 @@ export function KpiCard({ k }: { k: KpiSpec }) {
         >
           {k.label}
         </div>
-        {k.note && <InfoTooltip content={k.note} label={`About ${k.label}`} size={16} style={{ marginLeft: 'auto', flexShrink: 0 }} />}
+        <div
+          className="kpi-value"
+          style={{
+            flex: '0 1 auto',
+            maxWidth: '60%',
+            fontSize: 'clamp(14px, 1.1vw, 17px)',
+            fontWeight: 700,
+            color: 'var(--text)',
+            lineHeight: 1.2,
+            letterSpacing: '-0.02em',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {k.value}
+        </div>
       </div>
 
-      <div
-        className="kpi-value"
-        style={{
-          marginTop: 9,
-          fontSize: k.value.length > 8 ? 'clamp(15px, 1.0vw, 19px)' : 'clamp(16px, 1.4vw, 22px)',
-          fontWeight: 700,
-          color: 'var(--text)',
-          lineHeight: 1.15,
-          letterSpacing: '-0.02em',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-        }}
-      >
-        {k.value}
-      </div>
+      {/* RULING 2026-10-23: the note is printed on the tile, not hidden behind an (i). */}
+      {k.note && (
+        <div title={k.note} style={{ marginTop: 2, fontSize: 'var(--t-th)', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {k.note}
+        </div>
+      )}
 
-      <div style={{ marginTop: 6, fontSize: 'var(--t-th)', display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+      <div style={{ marginTop: 4, fontSize: 'var(--t-th)', display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
         {k.delta && (
           <span
             style={{
