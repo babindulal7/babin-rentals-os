@@ -1,4 +1,4 @@
-import { readEditor, saveEditor } from './recordEditor'
+import { readEditor, saveEditor, saveSectionEditor, addUnitsEditor, retireUnitEditor, enrollMembershipEditor } from './recordEditor'
 import type { RecordKind } from '../recordEditor'
 /**
  * **Mock Supabase client — the drop-in.**
@@ -1136,7 +1136,7 @@ export const mockSupabase = {
         ))
       return Promise.resolve({ data: null, error: allowed ? null : pgErr('P0001', 'GATE:operations.grant|Operation branch authorization refused.') })
     }
-    if (name === 'read_record_editor' || name === 'save_record_editor') {
+    if (name === 'read_record_editor' || name === 'save_record_editor' || name === 'save_record_section') {
       try {
         const actor=readSession()?.user.id
         // `users.primary_role` (0007:110) — `role` is not a column, so every record-editor save in mock mode was refused as 'Permission denied'.
@@ -1146,7 +1146,9 @@ export const mockSupabase = {
         if(!actor || !allowed.includes(String(role))) throw new Error('Permission denied for this record.')
         if(name==='read_record_editor')return Promise.resolve({data:readEditor(store,kind,String(args?.['p_id'])),error:null})
         const staged=structuredClone(store)
-        const response=saveEditor(staged,args??{},actor,nextDocumentNumber)
+        const response=name==='save_record_section'
+          ? saveSectionEditor(staged,args??{},actor)
+          : saveEditor(staged,args??{},actor,nextDocumentNumber)
         const now=new Date().toISOString()
         for(const [table,rows] of Object.entries(staged)) {
           for(const row of rows) {
@@ -1159,6 +1161,114 @@ export const mockSupabase = {
         saveOverlay(overlay)
         return Promise.resolve({data:response,error:null})
       } catch(error) {return Promise.resolve({data:null,error:{code:'P0001',message:error instanceof Error?error.message:String(error),details:'',hint:''} as PgError})}
+    }
+
+    if (name === 'add_equipment_units') {
+      try {
+        const actor = readSession()?.user.id
+        const role = store['users']?.find(row => row['id'] === actor)?.['primary_role']
+        if (!actor || !['Owner', 'Admin', 'Manager'].includes(String(role))) throw new Error('Permission denied to add equipment units.')
+        const staged = structuredClone(store)
+        const response = addUnitsEditor(staged, args ?? {}, actor)
+        const now = new Date().toISOString()
+        for (const [table, rows] of Object.entries(staged)) {
+          for (const row of rows) {
+            const old = store[table]?.find(r => r['id'] === row['id'])
+            if (!old) overlay.inserts.push({ table, row: withColumnDefaults(table, row, now) })
+            else if (JSON.stringify(old) !== JSON.stringify(row)) overlay.updates.push({ table, id: row['id'], patch: row })
+          }
+          store[table] = rows
+        }
+        saveOverlay(overlay)
+        return Promise.resolve({ data: response, error: null })
+      } catch (error) {
+        return Promise.resolve({ data: null, error: { code: 'P0001', message: error instanceof Error ? error.message : String(error), details: '', hint: '' } as PgError })
+      }
+    }
+
+    if (name === 'retire_equipment_unit') {
+      try {
+        const actor = readSession()?.user.id
+        const role = store['users']?.find(row => row['id'] === actor)?.['primary_role']
+        if (!actor || !['Owner', 'Admin', 'Manager'].includes(String(role))) throw new Error('Permission denied to retire equipment units.')
+        const staged = structuredClone(store)
+        const response = retireUnitEditor(staged, args ?? {}, actor)
+        const now = new Date().toISOString()
+        for (const [table, rows] of Object.entries(staged)) {
+          for (const row of rows) {
+            const old = store[table]?.find(r => r['id'] === row['id'])
+            if (!old) overlay.inserts.push({ table, row: withColumnDefaults(table, row, now) })
+            else if (JSON.stringify(old) !== JSON.stringify(row)) overlay.updates.push({ table, id: row['id'], patch: row })
+          }
+          store[table] = rows
+        }
+        saveOverlay(overlay)
+        return Promise.resolve({ data: response, error: null })
+      } catch (error) {
+        return Promise.resolve({ data: null, error: { code: 'P0001', message: error instanceof Error ? error.message : String(error), details: '', hint: '' } as PgError })
+      }
+    }
+
+    if (name === 'enroll_client_membership') {
+      try {
+        const actor = readSession()?.user.id
+        const role = store['users']?.find(row => row['id'] === actor)?.['primary_role']
+        if (!actor || !['Owner', 'Admin', 'Manager', 'Coordinator'].includes(String(role))) throw new Error('Permission denied to enroll membership.')
+        const staged = structuredClone(store)
+        const response = enrollMembershipEditor(staged, args ?? {}, actor)
+        const now = new Date().toISOString()
+        for (const [table, rows] of Object.entries(staged)) {
+          for (const row of rows) {
+            const old = store[table]?.find(r => r['id'] === row['id'])
+            if (!old) overlay.inserts.push({ table, row: withColumnDefaults(table, row, now) })
+            else if (JSON.stringify(old) !== JSON.stringify(row)) overlay.updates.push({ table, id: row['id'], patch: row })
+          }
+          store[table] = rows
+        }
+        saveOverlay(overlay)
+        return Promise.resolve({ data: response, error: null })
+      } catch (error) {
+        return Promise.resolve({ data: null, error: { code: 'P0001', message: error instanceof Error ? error.message : String(error), details: '', hint: '' } as PgError })
+      }
+    }
+
+    if (name === 'adjust_stock') {
+      try {
+        const actor = readSession()?.user.id
+        const role = store['users']?.find(row => row['id'] === actor)?.['primary_role']
+        if (!actor || !['Owner', 'Admin', 'Manager'].includes(String(role))) {
+          throw new Error('GATE:gate.stock_adjust.role|Only Owner, Admin, or Manager may adjust stock.')
+        }
+        const productId = String(args?.['p_product_id'])
+        const delta = Number(args?.['p_delta'])
+        const reason = String(args?.['p_reason'] ?? '').trim()
+        const clientUuid = String(args?.['p_client_uuid'])
+        if (!delta || !Number.isSafeInteger(delta)) throw new Error('GATE:gate.stock_adjust.delta_zero|Adjustment must be a non-zero whole number.')
+        if (reason.length < 10) throw new Error('GATE:gate.stock_adjust.reason_missing|Stock adjustment requires a reason of at least 10 characters.')
+        const prod = store.products?.find(p => p.id === productId)
+        if (!prod) throw new Error('GATE:gate.stock_adjust.product_not_found|Product not found.')
+        if (prod.tracking_mode === 'Serialised') throw new Error('GATE:gate.stock_adjust.wrong_tracking_mode|Serialised products are corrected by adding or retiring individual units.')
+        const before = Number(prod.total_quantity ?? 0)
+        const after = before + delta
+        if (after < 0) throw new Error('GATE:gate.stock_adjust.negative_result|Adjustment would take stock below zero.')
+        prod.total_quantity = after
+        prod.updated_at = new Date().toISOString()
+        const adjustmentRecord: Row = {
+          id: crypto.randomUUID(),
+          client_uuid: clientUuid,
+          product_id: productId,
+          delta,
+          quantity_before: before,
+          quantity_after: after,
+          reason,
+          created_by: actor,
+          created_at: new Date().toISOString(),
+        }
+        store.stock_adjustments = [...(store.stock_adjustments ?? []), adjustmentRecord]
+        return Promise.resolve({ data: [{ product_id: productId, quantity_before: before, quantity_after: after }], error: null })
+      } catch (error) {
+        return Promise.resolve({ data: null, error: { code: 'P0001', message: error instanceof Error ? error.message : String(error), details: '', hint: '' } as PgError })
+      }
     }
 
     if (name === 'next_document_number') {

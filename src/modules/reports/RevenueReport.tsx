@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { PageHeader, cardStyle } from '../../components/ui/Page'
+import { PageHeader } from '../../components/ui/Page'
 import { ReportFamiliesNav } from '../../components/ui/ReportFamiliesNav'
 import { ReportToolbar } from '../../components/ui/ReportToolbar'
 import type { ReportCsvRow, ReportFilters } from '../../components/ui/ReportToolbar'
@@ -11,6 +11,15 @@ import { formatMoney } from '../../lib/money'
 import { businessDayAd } from '../../lib/bs'
 import { useAuth } from '../../lib/auth'
 import { getIssuedRevenueTrend, type IssuedRevenueReport } from '../../lib/queries/reportRevenueTrend'
+import {
+  RheaCard,
+  RheaCardHeader,
+  RheaCardTitle,
+  RheaCardDescription,
+  RheaCardContent,
+  RheaKpiCard,
+  RheaChartContainer,
+} from '../../components/shadcn'
 
 /**
  * This report displays ONLY successfully fetched taxable issued-invoice values.
@@ -91,14 +100,7 @@ export default function RevenueReport() {
           <ReportToolbar title="Revenue Reports" value={filters} onChange={setFilters} dateColumn="issue_date"
             {...(!load.loading && !load.error && report ? { csv: { filename:'revenue-issued-monthly', build: () => rows } } : {})}
           />
-          <section style={{...cardStyle,padding:'var(--sp-md)'}} aria-label="Issued invoice revenue trend">
-            <h3 style={{margin:'0 0 8px',color:'var(--text)'}}>Monthly issued invoice revenue</h3>
-            <p style={{color:'var(--text2)',fontSize:'var(--t-meta)',margin:'0 0 14px'}}>
-              Actual taxable invoice amounts before VAT · AD calendar months · {from} to {to}.
-              Current nonvoid invoice snapshot grouped by issue month: later voids may restate older months.
-              Draft and void invoices excluded. Credit notes record paid amounts, not taxable sales deductions.
-              Credit notes are checked separately; this is not a full audited net-sales statement.
-            </p>
+          <div className="br-preset-pilot" data-ui-preset="rhea" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
             {!windowIsValid ? (
               <p role="alert">Choose a valid report window of no more than 24 calendar months.</p>
             ) : (
@@ -122,38 +124,85 @@ export default function RevenueReport() {
               >
               {report && (
               <>
-                <div style={{display:'flex',flexWrap:'wrap',gap:26,marginBottom:20}}>
-                  <div><small>Taxable amount (before VAT)</small><strong style={{display:'block',fontSize:23}}>{formatMoney(report.totalPaisa)}</strong></div>
-                  <div><small>Issued invoices</small><strong style={{display:'block',fontSize:23}}>{report.issuedCount}</strong></div>
+                <div className="rhea-kpi-grid">
+                  <RheaKpiCard
+                    label="Taxable Revenue (Before VAT)"
+                    value={formatMoney(report.totalPaisa)}
+                    meta="Actual taxable invoice amount"
+                    badge={{ text: 'Actual', variant: 'primary' }}
+                  />
+                  <RheaKpiCard
+                    label="Issued Invoices"
+                    value={report.issuedCount}
+                    meta="Active nonvoid invoices in window"
+                  />
+                  <RheaKpiCard
+                    label="Voided Invoice Excluded"
+                    value={formatMoney(report.creditReconciliation.voidedTaxablePaisa)}
+                    meta={`${report.creditReconciliation.voidedInvoiceCount} invoice(s)`}
+                  />
+                  <RheaKpiCard
+                    label="Credit-Note Corrections"
+                    value={formatMoney(report.creditReconciliation.creditNoteAmountPaisa)}
+                    meta={`${report.creditReconciliation.creditNoteCount} note(s)`}
+                  />
                 </div>
-                <InteractiveRevenueTrend months={report.months} />
-                <section aria-label="Credit-note reconciliation for selected invoice dates" style={{marginTop:20,paddingTop:14,borderTop:'1px solid var(--border)'}}>
-                  <h4 style={{margin:'0 0 8px'}}>Credit-note reconciliation</h4>
-                  <p style={{color:'var(--text2)',fontSize:'var(--t-meta)'}}>
-                    For invoices issued {from} to {to}, including voided invoices omitted from the chart.
-                    Credit-note amounts reflect paid-value corrections, not taxable sales credits;
-                    notes issued for invoices outside this period are not in this check.
-                  </p>
-                  <dl style={{display:'flex',flexWrap:'wrap',gap:24}}>
-                    <div><dt>Voided invoice taxable amount excluded</dt><dd>{formatMoney(report.creditReconciliation.voidedTaxablePaisa)} ({report.creditReconciliation.voidedInvoiceCount} invoices)</dd></div>
-                    <div><dt>Credit-note amount (settlement basis)</dt><dd>{formatMoney(report.creditReconciliation.creditNoteAmountPaisa)} ({report.creditReconciliation.creditNoteCount} notes)</dd></div>
-                  </dl>
-                  {report.creditReconciliation.paidVoidMismatchCount > 0 || report.creditReconciliation.activeInvoiceCreditNoteCount > 0 ? (
-                    <p role="alert">
-                      Manual ledger review needed: {report.creditReconciliation.paidVoidMismatchCount} paid voided invoice(s)
-                      with credit-note amounts not matching paid amounts, and {report.creditReconciliation.activeInvoiceCreditNoteCount}
-                      credit note(s) on nonvoid invoices. Do not treat this as audited net sales.
-                    </p>
-                  ) : (
-                    <p role="status">No paid-void credit mismatches found in this invoice-date window. This is not an audited net-sales statement.</p>
-                  )}
+
+                <section aria-label="Issued invoice revenue trend">
+                  <RheaChartContainer
+                    title="Monthly issued invoice revenue"
+                    description={`Actual taxable invoice amounts before VAT · AD calendar months · ${from} to ${to}. Current nonvoid invoice snapshot grouped by issue month: later voids may restate older months. Draft and void invoices excluded. Credit notes record paid amounts, not taxable sales deductions. Credit notes are checked separately; this is not a full audited net-sales statement.`}
+                  >
+                    <InteractiveRevenueTrend months={report.months} />
+                  </RheaChartContainer>
                 </section>
-                {report.issuedCount===0 && <p>No issued invoices recorded for the selected period.</p>}
+
+                <RheaCard size="sm" aria-label="Credit-note reconciliation for selected invoice dates" style={{ marginTop: 8 }}>
+                  <RheaCardHeader>
+                    <div>
+                      <RheaCardTitle>Credit-note reconciliation</RheaCardTitle>
+                      <RheaCardDescription>
+                        For invoices issued {from} to {to}, including voided invoices omitted from the chart.
+                        Credit-note amounts reflect paid-value corrections, not taxable sales credits;
+                        notes issued for invoices outside this period are not in this check.
+                      </RheaCardDescription>
+                    </div>
+                  </RheaCardHeader>
+                  <RheaCardContent>
+                    <dl style={{ display: 'flex', flexWrap: 'wrap', gap: 24, margin: 0 }}>
+                      <div>
+                        <dt style={{ color: 'var(--rhea-muted-fg)', fontSize: '0.825rem' }}>Voided invoice taxable amount excluded</dt>
+                        <dd style={{ margin: 0, fontWeight: 600, fontSize: '1rem', color: 'var(--rhea-card-fg)' }}>
+                          {formatMoney(report.creditReconciliation.voidedTaxablePaisa)} ({report.creditReconciliation.voidedInvoiceCount} invoices)
+                        </dd>
+                      </div>
+                      <div>
+                        <dt style={{ color: 'var(--rhea-muted-fg)', fontSize: '0.825rem' }}>Credit-note amount (settlement basis)</dt>
+                        <dd style={{ margin: 0, fontWeight: 600, fontSize: '1rem', color: 'var(--rhea-card-fg)' }}>
+                          {formatMoney(report.creditReconciliation.creditNoteAmountPaisa)} ({report.creditReconciliation.creditNoteCount} notes)
+                        </dd>
+                      </div>
+                    </dl>
+                    {report.creditReconciliation.paidVoidMismatchCount > 0 || report.creditReconciliation.activeInvoiceCreditNoteCount > 0 ? (
+                      <p role="alert" style={{ margin: '8px 0 0', padding: '10px 14px', borderRadius: 'var(--rhea-radius-sm)', background: 'var(--danger-bg, #fee2e2)', color: 'var(--danger-fg, #991b1b)' }}>
+                        Manual ledger review needed: {report.creditReconciliation.paidVoidMismatchCount} paid voided invoice(s)
+                        with credit-note amounts not matching paid amounts, and {report.creditReconciliation.activeInvoiceCreditNoteCount}
+                        credit note(s) on nonvoid invoices. Do not treat this as audited net sales.
+                      </p>
+                    ) : (
+                      <p role="status" style={{ margin: '8px 0 0', color: 'var(--rhea-muted-fg)', fontSize: 'var(--t-meta)' }}>
+                        No paid-void credit mismatches found in this invoice-date window. This is not an audited net-sales statement.
+                      </p>
+                    )}
+                  </RheaCardContent>
+                </RheaCard>
+
+                {report.issuedCount === 0 && <p>No issued invoices recorded for the selected period.</p>}
               </>
               )}
               </PageBody>
             )}
-          </section>
+          </div>
           <p style={{fontSize:'var(--t-meta)',color:'var(--text2)'}}>
             Detailed invoice records and settlement corrections remain available in <Link to="/finance?tab=invoices">Finance invoices</Link>.
             Previously hardcoded category and project-revenue figures are withheld until their attribution can be verified.

@@ -1,5 +1,110 @@
 # Progress Log
 
+## 2026-10-24 — shadcn/ui Preset b1avaxO6a Safe Local Integration Pilot (Revenue Report)
+
+**Did**
+- Inspected and decoded shadcn preset `b1avaxO6a` in isolated sandbox (`c:\Users\use\Desktop\babin-shadcn-preset-lab`): confirmed style `base-rhea` (Base UI `@base-ui/react`), base color `olive` (neutral hue 106°–107°), theme `emerald`, 5-step analytical blue chart ladder (`chart-1`–`chart-5`), and `medium` radius (`0.625rem` / 10px; `rounded-[min(var(--radius-4xl),24px)]`).
+- Authored `PRESET_MANIFEST.md` in repository root documenting decoded properties, CSS custom properties for `:root` and `.dark`, inspected component structures, and contrast invariants.
+- Created scoped preset styles in `src/styles/shadcn-preset-pilot.css` strictly namespaced under `.br-preset-pilot` and `[data-ui-preset="rhea"]`. No global `:root`, `body`, or theme token overrides; explicit support for `light`, `dark`, `high-contrast`, and `glass` modes.
+- Built reusable pilot components in `src/components/shadcn/`:
+  - `RheaCard.tsx` (`RheaCard`, `RheaCardHeader`, `RheaCardTitle`, `RheaCardDescription`, `RheaCardAction`, `RheaCardContent`, `RheaCardFooter`) with container query headers and soft Rhea card styling.
+  - `RheaKpiCard.tsx` with uppercase label, JetBrains Mono tabular figures, badge, and meta rows.
+  - `RheaChartContainer.tsx` wrapping charts with Rhea card boundaries, titles, and descriptions.
+  - Exported all components from `src/components/shadcn/index.ts`.
+- Integrated preset pilot into `src/modules/reports/RevenueReport.tsx` under `.br-preset-pilot` and `data-ui-preset="rhea"`:
+  - Replaced the metric strip with `.rhea-kpi-grid` containing 4 `RheaKpiCard` elements: Taxable Revenue (Before VAT), Issued Invoices, Voided Invoice Excluded, and Credit-Note Corrections.
+  - Wrapped `InteractiveRevenueTrend` in `RheaChartContainer`.
+  - Refactored credit-note reconciliation into `RheaCard size="sm"`.
+  - Preserved all contracts: `EXECUTIVE_ROLES` money gate, `ReportToolbar`, Nepal AD/BS dates, integer paisa arithmetic, and CSV export.
+- Authored test suite `src/modules/reports/__tests__/RevenueReport.rhea.test.tsx` verifying pilot container presence, KPI cards, chart container, and credit-note card (4/4 passed).
+
+**Ruled**
+- Rhea preset tokens must never leak outside `.br-preset-pilot` / `[data-ui-preset="rhea"]`; global `theme.css` remains authoritative for the rest of the application.
+- Self-hosted fonts (`Outfit`, `Source Sans 3`, `JetBrains Mono`) and Tabler icons (`@tabler/icons-react`) are strictly preserved; preset Inter and Lucide fonts/icons are excluded.
+- Foundation Spec §2 integer-paisa financial arithmetic and Law 6 money-blindness govern without exception.
+- Strict local boundary: zero remote git operations, zero remote migration pushes, zero production modifications.
+
+**Verified**
+- `npm run typecheck`: exit 0, zero TypeScript errors across the repository (`tsc --noEmit`).
+- `npm run lint`: exit 0, zero warnings and zero errors across `src/` (`eslint src --max-warnings 0`).
+- `npm run check:contrast`: exit 0, 82/82 pairs pass (0 FAIL) across dark, light, high-contrast, and glass themes.
+- `npm run check:pglite`: exit 0, 170/170 migrations applied from scratch in PGlite, 0 leaks, 0 failures.
+- `npm run check:lifecycle`: exit 0, 31/31 green lifecycle steps through real Postgres + RLS.
+- `npm run build`: exit 0, Vite production bundle compiled cleanly into `dist/` (7544 modules transformed, PWA precache 249 entries).
+- Vitest suites:
+  - `src/modules/reports/__tests__/RevenueReport.rhea.test.tsx` (4/4 passed).
+  - `src/modules/reports/__tests__/Reports.law16.states.test.tsx` (40/40 passed).
+  - `src/modules/reports/__tests__/` (13 test files, 118/118 passed).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 170 files · check:pglite 170/170 applied, 0 failed (recorded 2026-10-24T09:16:17.130Z). Suite: Historical suite: 5400/5406 passed, 6 failed (recorded 2026-10-24T09:12:43.696Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-24T09:17:15.728Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+
+- Review operator feedback on Revenue Report visual hierarchy under light and dark modes.
+- Extend Rhea preset pilot components selectively to adjacent report surfaces (`RentalReports.tsx`, `OperationsReports.tsx`, `ExpenseReports.tsx`) following the established scoped model.
+
+
+
+<!-- booking-operations-20261024:delivery-start -->
+## 2026-10-24 — Booking Operations v1.1 local recovery and verification
+
+**Did**
+- Preserved the Operations frame/menu, canonical provider guards, persisted status reconciliation, real cleanup facts, genuine availability exclusions, and Return-only queued-success refusal in local checkpoint 9dc90588 and a review patch against7245f5a0. No application checkout was overwritten or Git mutation performed by this pass.
+- Saved source, patch, baseline/after screenshots, command outputs and recovery manifest outside the changing checkout. Delivery index: docs/verification/booking-operations-20261024/README.md. Protected recovery: C:/Users/use/.codex/visualizations/2026/10/20/01a15b1d-f368-7cd3-81e2-a7affbb30349/booking-operations-recovery-1792829573642.
+- Re-audited the actual SQL contract. Partial Return receipt still leaves its unit reservation live; the active0100 trigger releases at parent stage. No migration was authored or applied.
+
+**Ruled**
+- Owner v1.1 Return availability ruling governs; pending Cleaning/QC/Reset alone is not a hold or fake completion. Genuine defects and reservation exclusions remain.
+- Local migration-authoring clarification remains pending under the brief's explicit no-migration boundary. Financial disposition does not establish physical repair clearance.
+- Preserve newer local work. External checkout changes invalidated active-copy checks; checkpoint results below are not current/full/hosted certification.
+
+**Verified**
+- Fixed checkpoint source: TypeScript exit0; 333/333 focused tests across 14 files, 0 failed and 0 skipped. Snapshot source fingerprint stayed 34d968ba962ca548138c6a3af47c04d0ae5b46781481f9b7ad15246b7f52c70f.
+- Fixed checkpoint: npm run lint exit0; npm run check:contrast exit0; npm run build exit0. Build is mock-mode local output; existing CSS/chunk warnings are retained in its log.
+- Saved browser matrix:8 before/after pairs, four requested sizes in light/dark, no page overflow, one footer and adequate stage/confirm geometry at capture. Historical interaction evidence covers scanner nesting, shortcut suppression, Escape/focus return and desktop dock. Fresh active-copy attempts completed0 checks because the checkout changed.
+- Final frozen-checkpoint browser proof:16/16 checks,0 page errors,unchanged source fingerprint. The12 captured cases cover1440x900,1024x768,768x1024,390x844 in light/dark,320px phone,forced colors and explicitly labelled200%-equivalent layouts. Main/content overflow0,one footer and56px Confirm; nested scanner/shortcut/Escape/focus return, dirty dock resize/keep/discard and Warehouse money-blind DOM passed. No scans, signatures or Return confirmations submitted. Gallery:protected recovery/frozen-browser/run-20261024-085857/gallery.html.
+- Current SQL is byte-identical to the saved disposable diagnostic:170 files, SHA2563b357d86b8ad49e796c0a4d23cc52c582d792c891613fca9f65704c33b94e54c. Its13/13 assertions confirm current defects/protections, not implementation of partial-return release.
+- Review patch reverse-check passed against its exported checkpoint. At the recorded scope observation, all24 affected source files matched the active933d596d content after line-ending normalization; this is an instantaneous scope comparison only.
+- npm run completion exited1 because current full/lifecycle/coverage receipts are historical or incomplete. npm ci was not run over the active shared dependency installation. No production data, push, PR, merge or deployment was used.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 170 files · check:pglite 170/170 applied, 0 failed (recorded 2026-10-24T08:28:45.862Z). Suite: Historical suite: 5405/5414 passed, 9 failed (recorded 2026-10-24T07:34:53.928Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-24T08:20:50.771Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+
+- Implement atomic partial serial/quantity Return reservation adjustment and matching unit-status derivation after explicit local migration-scope clarification; retain unreturned and unrelated holds, genuine safety blocks, pending tasks and Close gates.
+- Complete current-working-copy full-suite/database/build verification once checkout activity stabilizes. Historical full-suite failures/source drift are not relabelled as green.
+- Complete native200% zoom/screen-reader and real-device/hosted/offline acceptance. Frozen browser proof is complete for the preserved checkpoint; it does not certify these remaining checks or newer shared-checkout edits.
+
+<!-- booking-operations-20261024:delivery-end -->
+
+
 <!-- coss-booking-search-20261024:start -->
 ## 2026-10-24 — New Rental coss search and Operations status readback
 
