@@ -541,10 +541,15 @@ export default function OperationsQueues() {
   const [pendingDock, setPendingDock] = useState<Dock | null>(null)
   const [cursorNo, setCursorNo] = useState<string | null>(null)
   const dockDirty = useRef(false)
-  const onDockDirty = useCallback((dirty: boolean) => { dockDirty.current = dirty }, [])
+  const dockBusy = useRef(false)
+  const [dockProtected, setDockProtected] = useState(false)
+  const [dockNotice, setDockNotice] = useState<string | null>(null)
+  const onDockDirty = useCallback((dirty: boolean) => { dockDirty.current = dirty; setDockProtected(dirty || dockBusy.current) }, [])
+  const onDockBusy = useCallback((busy: boolean) => { dockBusy.current = busy; setDockProtected(busy || dockDirty.current); if (!busy) setDockNotice(null) }, [])
   /* RULING 2026-10-14 (R14-3): swapping the docked booking would drop unsaved packing work, so ask first. */
   const requestDock = (next: Dock) => {
-    if (dock && dock.bookingNo !== next.bookingNo && dockDirty.current) setPendingDock(next)
+    if (dockBusy.current) { setDockNotice('An operation is being saved. Wait for its result before changing bookings.'); return }
+    if (dock && (dock.bookingNo !== next.bookingNo || dock.job !== next.job) && dockDirty.current) setPendingDock(next)
     else setDock(next)
   }
   const [params, setParams] = useSearchParams()
@@ -565,7 +570,13 @@ export default function OperationsQueues() {
   const viewport = useViewport()
   const phone = viewport === 'phone'
   const tabular = !phone
-  const dockOpen = dock !== null && viewport === 'desktop'
+  // Keep the SAME workspace mounted when rotation/zoom crosses a breakpoint
+  // with unsaved marks or an in-flight write. New narrow-screen jobs still use
+  // the global modal; this existing dock becomes a focused inline workspace.
+  const dockOpen = dock !== null && (viewport === 'desktop' || dockProtected)
+  useEffect(() => {
+    if (dockOpen && dockProtected && viewport !== 'desktop') document.querySelector('.operations-shell__panel')?.scrollIntoView({ block: 'start' })
+  }, [dockOpen, dockProtected, viewport])
   /* RULING 2026-10-15: below desktop the two workspace links live in More and a fresh
      data badge takes no width, so the page title keeps the header (BLOCKER-02: at 375px
      the header overflowed by 207px; at 768px the title measured 0px). Revert = set this
@@ -1046,7 +1057,9 @@ export default function OperationsQueues() {
       </>}
 
       {selected === 'Cases' ? <CasesWorkspace embedded searchControl={{ value: caseSearchInput, onChange: setCaseSearchInput }} /> : (
-        <div className={`operations-v2__split${dockOpen ? ' operations-v2__split--open' : ''}`}>
+        <>
+        {dockNotice && <p role="status">{dockNotice}</p>}
+        <div className={`operations-v2__split${dockOpen ? ' operations-v2__split--open' : ''}`} data-dock-focused={dockProtected && viewport !== 'desktop' ? 'true' : undefined}>
         <Card style={{ overflow: 'hidden' }} bodyStyle={{ padding: 0 }}>
           <PageBody
             loading={list.loading}
@@ -1308,16 +1321,18 @@ export default function OperationsQueues() {
             initialJob={dock.job}
             onClose={() => setDock(null)}
             onDirtyChange={onDockDirty}
+            onBusyChange={onDockBusy}
           />
         )}
         </div>
+        </>
       )}
       </div>
 
       <ConfirmDialog
         isOpen={pendingDock !== null}
         onClose={() => setPendingDock(null)}
-        onConfirm={() => { const next = pendingDock; setPendingDock(null); if (next) setDock(next) }}
+        onConfirm={() => { if (dockBusy.current) return; const next = pendingDock; setPendingDock(null); if (next) setDock(next) }}
         title="You have unsaved changes."
         description={`Discard them and open ${pendingDock?.bookingNo ?? 'the next job'}?`}
         cancelLabel="Stay Here"

@@ -37,6 +37,14 @@ const slot = (name: string) => container.querySelector<HTMLElement>(`[data-heade
 const displayedSlots = () => Array.from(container.querySelectorAll('[data-header-slot]')).map((node) => node.getAttribute('data-header-slot'))
 
 describe('Babin Rentals OS — fixed button locations', () => {
+  it.each(['phone', 'tablet', 'desktop'])('keeps a contextual popup trigger outside More at %s width', async viewport => {
+    mock.viewport = viewport
+    mock.narrow = true
+    await act(async () => root.render(<MemoryRouter><WorkspaceProvider><Header crumbs={[{label:'Rentals'}]} /><PageHeader title="Rentals" actions={<PageActions persistent={<button aria-label="Operations">Operations</button>} primary={<button>Confirm</button>} />} /></WorkspaceProvider></MemoryRouter>))
+    expect(slot('secondary')?.querySelector('[aria-label="Operations"]')).not.toBeNull()
+    expect(slot('more')?.querySelector('[aria-label="Operations"]')).toBeNull()
+    expect(container.querySelectorAll('header')).toHaveLength(1)
+  })
   it('moves secondary actions into More when an expanded desktop sidebar leaves a narrow header', async () => {
     mock.narrow = true
     const exportRows = vi.fn()

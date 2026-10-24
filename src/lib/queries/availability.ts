@@ -428,6 +428,19 @@ export async function readCandidates(productIds: readonly string[]): Promise<Map
     .range(from, to), 'equipment units')
 
   const cleaning = await readOpenCleaning(units.map((u) => u.id))
+  // Return/QC can persist a finding before product_units.condition changes.
+  // Read only money-safe physical facts; financial disposition is not repair.
+  const findings = units.length === 0 ? [] : await readCompleteAvailability<{ id: string; unit_id: string }>((from, to) => supabase
+    .from('damage_findings')
+    .select('id, unit_id')
+    .in('unit_id', units.map(unit => unit.id))
+    .is('voided_at', null)
+    .order('id', { ascending: true })
+    .range(from, to), 'damage findings')
+  const damaged = new Set(findings.map(finding => {
+    if (typeof finding.unit_id !== 'string' || !units.some(unit => unit.id === finding.unit_id)) throw new Error('Damage findings are incomplete; availability could not be checked.')
+    return finding.unit_id
+  }))
 
   for (const row of units) {
     if (!['Excellent', 'Good', 'Fair', 'Damaged', 'Lost'].includes(row.condition)) {
@@ -441,6 +454,7 @@ export async function readCandidates(productIds: readonly string[]): Promise<Map
       productId: row.product_id,
       state: row.status,
       condition: row.condition,
+      safetyHold: damaged.has(row.id) ? 'Damage finding requires physical clearance' : cleaning.get(row.id)?.safetyHold ?? null,
       retiredAt: row.retired_at,
       openCleaning: cleaning.get(row.id) ?? null,
     })
@@ -467,10 +481,12 @@ async function readOpenCleaning(unitIds: readonly string[]): Promise<Map<string,
     id: string
     unit_id: string
     requires_clean: boolean | null
+    problem_state?: string
+    qc_fail_reason?: string | null
     bookings: { booking_no: string } | { booking_no: string }[] | null
   }>((from, to) => supabase
     .from('cleaning_queue_entries')
-    .select('id, unit_id, requires_clean, bookings ( booking_no )')
+    .select('id, unit_id, requires_clean, problem_state, qc_fail_reason, bookings ( booking_no )')
     .in('unit_id', [...new Set(unitIds)])
     .eq('requires_reset', true)
     .is('reset_completed_at', null)
@@ -478,11 +494,15 @@ async function readOpenCleaning(unitIds: readonly string[]): Promise<Map<string,
     .range(from, to), 'reset queue')
 
   for (const row of entries) {
+    const problem = row.problem_state && row.problem_state !== 'No Problems' ? row.problem_state : row.qc_fail_reason?.trim() ? 'QC failed' : null
     const b = Array.isArray(row.bookings) ? row.bookings[0] : row.bookings
     /* The first pending task supplies the supplementary booking reference.
        This metadata neither releases a reservation nor disqualifies a unit. */
     if (!out.has(row.unit_id)) {
-      out.set(row.unit_id, { bookingNo: b?.booking_no ?? null, requiresClean: row.requires_clean === true })
+      out.set(row.unit_id, { bookingNo: b?.booking_no ?? null, requiresClean: row.requires_clean === true, ...(problem ? { safetyHold: problem } : {}) })
+    } else if (problem) {
+      const previous = out.get(row.unit_id)!
+      out.set(row.unit_id, { ...previous, safetyHold: problem })
     }
   }
 

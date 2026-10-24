@@ -223,6 +223,8 @@ export interface UnitCandidate {
   readonly state: string
   /** Actual physical condition; IO callers must supply a validated value. */
   readonly condition?: string
+  /** A real unresolved physical-safety fact, never a pending-cleaning proxy. */
+  readonly safetyHold?: string | null
   /** `product_units.retired_at`. Non-null means retired — see `isRetired`. */
   readonly retiredAt: string | null
   /**
@@ -238,6 +240,8 @@ export interface UnitCandidate {
 
 /** Pending cleanup/reset task metadata; this does not hold a usable unit. */
 export interface OpenCleaning {
+  /** An actual recorded defect/QC failure; pending tasks alone never set this. */
+  readonly safetyHold?: string | null
   /** The booking the gear came back from, for the sentence the picker prints. */
   readonly bookingNo: string | null
   /** True when the entry also still wants a clean — reported, not judged. */
@@ -480,8 +484,8 @@ export function selectUnitsForLine(input: SelectUnitsInput): AssignmentOutcome {
     }
 
     // RULING 2026-10-24: queue tasks do not block; real damage/loss still does.
-    if (unit.condition === 'Damaged' || unit.condition === 'Lost') {
-      rejected.push({ unitId: unit.unitId, assetTag: unit.assetTag, reason: { kind: 'condition', condition: unit.condition } })
+    if (unit.safetyHold || unit.condition === 'Damaged' || unit.condition === 'Lost') {
+      rejected.push({ unitId: unit.unitId, assetTag: unit.assetTag, reason: { kind: 'condition', condition: unit.safetyHold ?? unit.condition! } })
       continue
     }
 

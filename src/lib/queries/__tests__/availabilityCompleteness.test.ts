@@ -63,6 +63,21 @@ describe('availability reads must be complete before reporting stock', () => {
     db.failure = ''; db.nullPage = false; db.nullTable = ''; db.networkThrows = false; db.repeat = false; db.calls = []; db.cap = 2
   })
 
+  it('retains an actual damage finding even when product condition still says Good', async () => {
+    db.tables.damage_findings = [{ id: 'df-1', unit_id: 'u-0', voided_at: null }]
+    expect((await readCandidates(['p-1'])).get('p-1')?.[0]?.safetyHold).toContain('Damage finding')
+  })
+
+  it('refuses unavailable safety evidence instead of certifying stock', async () => {
+    db.nullTable = 'damage_findings'
+    await expect(readCandidates(['p-1'])).rejects.toThrow(/damage findings.*missing|incomplete/i)
+  })
+
+  it.each(['Missing Item', 'Needs Repair', 'Damaged'])('retains a genuine %s reset exception without using a pending queue as the hold', async problem => {
+    db.tables.cleaning_queue_entries = [{ id:'q-1',unit_id:'u-0',requires_clean:true,requires_reset:true,reset_completed_at:null,problem_state:problem,qc_fail_reason:null }]
+    expect((await readCandidates(['p-1'])).get('p-1')?.[0]?.safetyHold).toBe(problem)
+  })
+
   it('includes serial holds beyond a server cap smaller than the requested page', async () => {
     expect((await readHolds(null)).map(hold => hold.unitId)).toEqual(['u-0', 'u-1', 'u-2'])
     expect(db.calls.map(call => call.start)).toEqual([0, 2, 3])

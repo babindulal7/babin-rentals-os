@@ -1,0 +1,151 @@
+Skip to content
+BR
+Babin
+Rentals OS
+New Rental
+Today
+Operations
+Rentals
+Calendar
+Crew Assist
+Inventory
+Clients
+Finance
+Tools
+Settings
+Light
+Dark
+Glass
+Rentals
+864 · Gandaki Weddings Pvt. Ltd.
+Updated Just now
+Search or scan…
+Ctrl+K / ⌘K
+Receive Overdue Return
+BA
+Quote
+— done
+Booked
+— done
+Packed
+— done
+On Rent
+— current stage
+Returned
+— not reached
+Closed
+— not reached
+PICKUP
+3 Shrawan
+19/7/2026, 06:00 AM
+RETURN
+5 Shrawan
+21/7/2026, 06:00 AM
+Overdue by 95d 5h
+RENTAL DAYS
+2Days
+Client & Schedule
+Client
+Gandaki Weddings Pvt. Ltd.
+Phone
++9779811207946
+Project
+Ncell Brand Campaign
+Project Type
+—
+Pickup Location
+Kathmandu Main
+Return Location
+Kathmandu Main
+Edit
+Edit project type
+Equipment, Bundles & Services
+All Lines
+Flight Cases (0)
+Loose Equipment (2)
+Loose Equipment & Floor Accessories (2)
+Stand-alone cables, grip, stands & modifiers
+ITEM	SERIAL / BARCODE TAG	QTY	AVAILABILITY	LOCATION
+NISI Athena 25mm	
+No serial required
+	2	
+●
+Availability not checked
+	Not recorded
+Nanlite Forza 500B II	
+No serial required
+	2	
+●
+Availability not checked
+	Not recorded
+4
+Total Items
+Not recorded
+Packed
+Not recorded
+Missing
+Not recorded
+Returned
+Not recorded
+Damaged
+Crew & Transport
+Add Member
+
+No crew assigned to this booking yet.
+
+Transport & Delivery
+Delivery Type
+Pickup
+Pickup Location
+Kathmandu Main
+Return Location
+Kathmandu Main
+
+Delivery details are not available yet.
+
+Pricing & Payments
+Rental Charges
+Subtotal
+25,200
+Discount
+-0
+Taxable Amount
+25,200
+VAT
+3,276
+Rental Total
+Rs 28,476
+
+From invoice INV-67.
+
+Deposit
+Deposit Required
+Not recorded
+
+Deposit movements are not available yet.
+
+The deposit is held separately and never reduces Outstanding.
+
+Payments (Rental Only)
+Rental Paid
+Rs 0
+Rental Outstanding
+Rs 28,476
+Late Return Assessment
+Returned 95d 5h late
+Suggested late fee
+Rs 13,66,848
+Rule: 2 hours or more = full day, plus each further day. 96 days charged.
+Day rate basis: Derived from rental total (Rs 28,476) over 2 rental day(s)
+Apply Rs 13,66,848
+Waive…
+Deposit Reconciliation & Return Settlement
+Payments and deposit movements are immutable. Correct one with a reversal row or a credit note — never by editing the figure.
+Payment History (Rental)
+
+No payments have been recorded against this booking.
+
+Documents
+Add Document
+
+No documents available for this rental yet.

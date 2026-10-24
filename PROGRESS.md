@@ -1,5 +1,52 @@
 # Progress Log
 
+<!-- coss-booking-search-20261024:start -->
+## 2026-10-24 — New Rental coss search and Operations status readback
+
+**Did**
+- Saved the clean starting HEAD/status and original affected files under the local temporary recovery folder `babin-coss-search-20261024-010101` before editing. Preserved concurrent security/migration changes in the shared checkout.
+- Adapted the existing coss InputGroup to `ClientCombobox.tsx` and both `AddItemPanel.tsx` search presentations. Added a labelled client-list toggle and query-only clear action; kept the history action embedded in the client field. Equipment clear buttons now have 44px touch targets and keep filters/focus.
+- Added scoped `booking-search-field.css` for one group focus outline and aligned the client popup to the full field. Added four behavioral regressions in `booking/__tests__/bookingSearchControls.test.tsx`.
+- After the other editor finished, repaired the five pending Operations regressions in actual `OperationsShell.tsx`: use only persisted status, retain partial Return at On Rent, show read errors/retry, block confirmation during missing/failed/pending reads, ignore stage shortcuts in nested dialogs and rebuild a committed session from fresh data. Corrected the test helper call signature; added absent/unsupported-stage cases and verified retry does not repeat the floor write. Preserved the initial red report and saved a second recovery snapshot before editing.
+- Saved existing-mock-corpus screenshots and geometry for 360px phone, 820px iPad and 1440px desktop under `docs/verification/coss-booking-search-2026-10-24/`. No booking was created/confirmed, no live database was changed and no push/PR was made.
+
+**Ruled**
+- Presentation change only: existing matching, ranking, client-health, money visibility, catalogue filters, booking callbacks and rental rules remain at their existing owners. No new product decision or component dependency.
+
+**Verified**
+- Focused checks: 14/14 pass across four suites, including the four new behavioral cases. Typecheck passes. Initial missing-import/test-fixture failures were corrected; earlier logs are retained separately from final checks.
+- Browser mock preview: keyboard client selection; clearing/restoring the query without changing the selected client; existing history dialog opens; equipment clear retains focus; no horizontal overflow at all three widths; measured embedded actions are 44x44px. Light and dark styles inspected. These are emulated viewports, not physical-device or hosted acceptance.
+- Operations/search focused follow-up: 29/29 pass, including all five formerly failing Operations cases plus missing/invalid status and retry checks. The earlier follow-up typecheck passed on source `349b842fe944c41ae23ec73adc4375a2522c861e9081c384a8944cb4bd4a3f73`.
+- Existing-mock Return workspace opens normally at all three widths; Return is current and Reset stays disabled, stage controls remain at least 64px high, and page scroll width equals viewport width. Screenshots and `operations-layouts.json` are retained beside the search evidence. No browser custody commit occurred.
+- Earlier attempts are retained: a 5,372-test green run changed source; five later Operations failures and a helper type error were repaired; the next full run passed 5,377/5,379, exposing two route fixtures whose persisted stage contradicted their scenario. Aligned those fixtures without weakening their assertions and added a stale-launcher regression. The superseded build was interrupted when the final run began.
+- Final focused follow-up: **70/70 pass** across search, OperationsShell and operation routes.
+- Final unchanged-source verification: **5380/5380 tests in 429 files**, typecheck, 170/170 migration rebuilds, 18 Phase 0 SQL groups, operations-grant/14 Reset security groups, 31/31 lifecycle checks, lint, 82/82 contrast pairs and production build all pass. Every command retains fingerprint `a758bf1f03509acdd318dcb36d3aacad423de8465808bbc15ded0506b49e97f9`. Raw logs: `artifacts/coss-search-final/`; durable receipt: `docs/verification/coss-booking-search-2026-10-24/current-gates.json`.
+- No migrations WRITTEN by this UI pass. The existing approved chain is **VERIFIED locally**, with no hosted application or PRODUCTION-VERIFIED claim.
+
+## Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | — |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | — |
+| Lifecycle | steps green / total | 31 / 31 (100%) | — |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 170 files · check:pglite 170/170 applied, 0 failed (recorded 2026-10-24T02:54:33.191Z). Suite: PASS — 5380/5380 passed, 0 failed (recorded 2026-10-24T02:54:20.057Z); source fingerprint matches.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-24T02:55:25.833Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+`npm run completion` exited 1 because the coverage receipt is historical; the current full-suite and database receipts match source. Coverage was not rerun in this UI pass.
+
+## Remaining
+
+- Run fresh current-source coverage before a release claim. Hosted role/JWT/PostgREST/Storage, physical iPhone/iPad/scanner, evidence/signature and offline/reconnect acceptance remain open; production release HOLD remains.
+- Follow-up UI work: shared drawer and action-menu consistency across the app. Existing hosted/physical-device/release acceptance remains separate.
+<!-- coss-booking-search-20261024:end -->
+
 ## 2026-10-24 — Approved guarded branch-grant integration
 
 **Did**

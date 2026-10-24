@@ -1,11 +1,14 @@
-import { useEffect, useId, useRef, useState } from 'react'
-import Icon from '../../components/ui/Icon'
-import type { IconName } from '../../components/ui/Icon'
+import { useRef, useState } from 'react'
+import { Menu } from '@base-ui/react/menu'
+import Icon, { type IconName } from '../../components/ui/Icon'
+import { Drawer, DrawerTrigger, DrawerPopup, DrawerHeader, DrawerTitle, DrawerDescription, DrawerPanel } from '../../components/ui/cossDrawer'
 import { stepWriteGate } from '../../lib/operationsShell'
+import { useViewport } from '../../lib/device'
 import type { BookingStatus, JobName } from '../../lib/workflow'
 import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext'
 import { useAuth } from '../../lib/auth'
 import { canPerformOp, type OperationName } from '../../lib/rbac'
+import './booking-operations-menu.css'
 
 const OPERATIONS: ReadonlyArray<{ job: JobName; label: string; icon: IconName }> = [
   { job: 'Pack', label: 'Packing', icon: 'box' },
@@ -13,170 +16,63 @@ const OPERATIONS: ReadonlyArray<{ job: JobName; label: string; icon: IconName }>
   { job: 'Return', label: 'Return & Inspection', icon: 'return_arrow' },
   { job: 'Reset', label: 'Cleaning & Reset', icon: 'refresh' },
 ]
-
 export interface BookingOperationsMenuProps {
-  /** Omitted while the booking is still being created. */
   bookingNo?: string
-  /** Omitted while the booking is still being created. */
   bookingStatus?: BookingStatus
-  /** A booking-level refusal, such as cancellation. */
   unavailable?: string | null
   primary?: boolean
-  /** Icon-only 44px trigger for a crowded phone header; the accessible name stays "Operations". */
   compact?: boolean
 }
-
-/**
- * The one booking-scoped Operations control used by new and existing rentals.
- * It only links to the four canonical operation routes and never mounts a
- * workspace over the current page.
- */
-export default function BookingOperationsMenu({
-  bookingNo,
-  bookingStatus,
-  unavailable = null,
-  primary = false,
-  compact = false,
-}: BookingOperationsMenuProps) {
+/** Responsive actions composition; the canonical provider and workspaces own execution. */
+export default function BookingOperationsMenu({ bookingNo, bookingStatus, unavailable = null, primary = false, compact = false }: BookingOperationsMenuProps) {
   const [open, setOpen] = useState(false)
-  const rootRef = useRef<HTMLDivElement | null>(null)
-  const menuId = useId()
+  const phone = useViewport() === 'phone'
+  const triggerRef = useRef<HTMLButtonElement | null>(null)
+  const selected = useRef<JobName | null>(null)
   const { openOperations } = useOperationsWorkspace()
   const { user } = useAuth()
-
-  useEffect(() => {
-    if (!open) return
-
-    const onPointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node | null)) setOpen(false)
-    }
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false)
-    }
-
-    document.addEventListener('pointerdown', onPointerDown)
-    window.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown)
-      window.removeEventListener('keydown', onKeyDown)
-    }
-  }, [open])
-
-  const triggerSkin = primary
-    ? {
-        background: 'var(--btn-primary-bg)',
-        color: 'var(--btn-primary-fg)',
-        border: '1px solid transparent',
-      }
-    : {
-        background: 'var(--btn-secondary-bg)',
-        color: 'var(--text)',
-        border: '1px solid var(--btn-secondary-border)',
-      }
-
-  return (
-    <div ref={rootRef} style={{ position: 'relative', display: 'inline-flex' }}>
-      <button
-        type="button"
-        className="press"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={open ? menuId : undefined}
-        {...(compact ? { 'aria-label': 'Operations', title: 'Operations' } : {})}
-        onClick={() => setOpen((value) => !value)}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 6,
-          minHeight: 44,
-          minWidth: 44,
-          padding: compact ? 0 : '0 12px',
-          borderRadius: 'var(--r-btn)',
-          fontFamily: 'inherit',
-          fontSize: 'var(--t-meta)',
-          fontWeight: 600,
-          whiteSpace: 'nowrap',
-          cursor: 'pointer',
-          ...triggerSkin,
-        }}
-      >
-        {compact ? <Icon name="checklist" size={17} /> : <>Operations<Icon name="chevron_down" size={14} /></>}
-      </button>
-
-      {open && (
-        <div
-          id={menuId}
-          role="menu"
-          aria-label="Operations"
-          style={{
-            position: 'absolute',
-            zIndex: 'var(--z-dropdown)',
-            top: 'calc(100% + 6px)',
-            right: 0,
-            minWidth: 220,
-            padding: 5,
-            background: 'var(--dropdown)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--r-card)',
-            boxShadow: 'var(--shadow-modal)',
-          }}
-        >
-          {OPERATIONS.map(({ job, label, icon }) => {
-            const opName = job.toLowerCase() as OperationName
-            const roleAllowed = user ? canPerformOp(user.role, opName) : true
-            const gate = bookingStatus ? stepWriteGate(job, bookingStatus) : null
-            const reason =
-              unavailable ??
-              (!bookingNo
-                ? 'Save and confirm this booking before starting operations.'
-                : !roleAllowed
-                  ? `Your role (${user?.role}) does not have permission to perform ${label}.`
-                  : gate && !gate.allowed
-                    ? gate.reason
-                    : null)
-            const disabled = reason !== null
-
-            return (
-              <button
-                key={job}
-                type="button"
-                role="menuitem"
-                aria-disabled={disabled}
-                aria-label={disabled && reason ? `${label}. Unavailable: ${reason}` : label}
-                title={disabled && reason ? reason : undefined}
-                className="press"
-                onClick={() => {
-                  if (disabled || !bookingNo) return
-                  setOpen(false)
-                  openOperations(bookingNo, bookingStatus!, job)
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--sp-sm)',
-                  width: '100%',
-                  minHeight: 44,
-                  padding: '0 10px',
-                  borderRadius: 'var(--r-btn)',
-                  border: 'none',
-                  background: 'transparent',
-                  color: disabled ? 'var(--muted)' : 'var(--text)',
-                  fontFamily: 'inherit',
-                  fontSize: 'var(--t-meta)',
-                  fontWeight: 600,
-                  textAlign: 'left',
-                  cursor: disabled ? 'not-allowed' : 'pointer',
-                  opacity: disabled ? 0.62 : 1,
-                }}
-              >
-                <Icon name={icon} size={15} style={{ color: disabled ? 'var(--muted)' : 'var(--text2)' }} />
-                {label}
-              </button>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
+  const choices = OPERATIONS.map(operation => {
+    const roleAllowed = user ? canPerformOp(user.role, operation.job.toLowerCase() as OperationName) : false
+    const gate = bookingStatus ? stepWriteGate(operation.job, bookingStatus) : null
+    const reason = unavailable ?? (!bookingNo ? 'Save and confirm this booking before starting operations.'
+      : !bookingStatus ? 'Booking status is still loading. Retry before starting operations.'
+      : !roleAllowed ? `Your role (${user?.role ?? 'not signed in'}) does not have permission to perform ${operation.label}.`
+      : gate && !gate.allowed ? gate.reason : null)
+    return { ...operation, reason }
+  })
+  const select = (job: JobName, reason: string | null) => {
+    if (reason || !bookingNo || !bookingStatus) return
+    selected.current = job
+    setOpen(false)
+  }
+  const afterOpenChange = (isOpen: boolean) => {
+    if (isOpen || !selected.current || !bookingNo || !bookingStatus) return
+    const job = selected.current
+    selected.current = null
+    // The next modal must remember the real opener, not a removed menu item.
+    triggerRef.current?.focus({ preventScroll: true })
+    openOperations(bookingNo, bookingStatus, job)
+  }
+  const trigger = <button ref={triggerRef} type="button" className={`booking-operations__trigger${primary ? ' booking-operations__trigger--primary' : ''}`} aria-label="Operations" title={compact ? 'Operations' : undefined}>
+    {compact ? <Icon name="checklist" size={18} /> : <>Operations<Icon name="chevron_down" size={15} /></>}
+  </button>
+  const content = (label: string, icon: IconName, reason: string | null) => <>
+    <Icon name={icon} size={19} />
+    <span className="booking-operations__copy"><span className="booking-operations__name">{label}</span>{reason && <span className="booking-operations__reason">{reason}</span>}</span>
+  </>
+  if (phone) return <Drawer position="bottom" open={open} onOpenChange={setOpen} onOpenChangeComplete={afterOpenChange}>
+    <DrawerTrigger render={trigger} />
+    <DrawerPopup finalFocus={() => selected.current ? false : triggerRef.current}>
+      <DrawerHeader><DrawerTitle>Operations</DrawerTitle><DrawerDescription>{bookingNo ? `Choose an operation for ${bookingNo}.` : 'Save the booking to start operations.'}</DrawerDescription></DrawerHeader>
+      <DrawerPanel>{choices.map(({ job, label, icon, reason }) => <button type="button" key={job} className="booking-operations__item" aria-disabled={reason !== null} title={reason ?? undefined} onClick={() => select(job, reason)}>{content(label, icon, reason)}</button>)}</DrawerPanel>
+    </DrawerPopup>
+  </Drawer>
+  return <Menu.Root open={open} onOpenChange={setOpen} onOpenChangeComplete={afterOpenChange}>
+    <Menu.Trigger render={trigger} />
+    <Menu.Portal><Menu.Positioner sideOffset={6} align="end" className="booking-operations__positioner">
+      <Menu.Popup aria-label="Operations" className="booking-operations__popup" finalFocus={() => selected.current ? false : triggerRef.current}>
+        {choices.map(({ job, label, icon, reason }) => <Menu.Item key={job} className="booking-operations__item" disabled={reason !== null} aria-label={reason ? `${label}. Unavailable: ${reason}` : label} title={reason ?? undefined} onClick={() => select(job, reason)}>{content(label, icon, reason)}</Menu.Item>)}
+      </Menu.Popup>
+    </Menu.Positioner></Menu.Portal>
+  </Menu.Root>
 }

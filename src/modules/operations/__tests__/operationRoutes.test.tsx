@@ -85,6 +85,7 @@ window.matchMedia = ((query: string) =>
  * every other number resolves to `null`, which is the honest "no such
  * booking" answer the live query gives.
  */
+let persistedStage = 'Booked'
 const FLOOR_B715 = {
   id: '11111111-1111-4111-8111-111111111111',
   bookingNo: 'B-715',
@@ -129,7 +130,7 @@ const FLOOR_B715 = {
 
 vi.mock('../../../lib/queries/bookings', async (orig) => ({
   ...(await orig<typeof import('../../../lib/queries/bookings')>()),
-  fetchFloorBooking: async (ref: string) => (ref === 'B-715' ? FLOOR_B715 : null),
+  fetchFloorBooking: async (ref: string) => (ref === 'B-715' ? { ...FLOOR_B715, stage: persistedStage } : null),
 }))
 
 /*
@@ -226,6 +227,7 @@ const filledPrimaries = () =>
   buttons().filter((b) => (b.getAttribute('style') ?? '').includes('background: var(--btn-primary-bg)'))
 
 beforeEach(() => {
+  persistedStage = 'Booked'
   viewport = 'desktop'
   path = ''
 })
@@ -499,7 +501,7 @@ describe('OperationsShell is the unified modal host', () => {
 
   it('keeps the parent route while resolving another booking in-place', async () => {
     await mount(<OperationsShell bookingNo="B-9001" bookingStatus="Booked" isOpen onClose={() => {}} />)
-    const pack = buttons().find((b) => (b.textContent ?? '').includes('Packing'))
+    const pack = buttons().find((b) => b.getAttribute('aria-label')?.startsWith('Packing'))
     await act(async () => {
       pack?.click()
     })
@@ -509,12 +511,21 @@ describe('OperationsShell is the unified modal host', () => {
 
   it('keeps a step that is not open yet visible and unclickable, with its reason', async () => {
     // Pack runs at Booked, so at Quote every step is still ahead of the booking.
+    persistedStage = 'Quote'
     await mount(<OperationsShell bookingNo="B-715" bookingStatus="Quote" isOpen onClose={() => {}} />)
-    const pack = buttons().find((b) => (b.textContent ?? '').includes('Packing'))
+    const pack = buttons().find((b) => b.getAttribute('aria-label')?.startsWith('Packing'))
     expect(pack).toBeTruthy()
     expect(pack?.disabled).toBe(true)
     // Law 12 — the reason is on the page, not in a toast.
     expect(text()).toContain('opens once this booking reaches Booked')
+  })
+
+  it('uses persisted status when the launcher still reports a later stage', async () => {
+    persistedStage = 'Quote'
+    await mount(<OperationsShell bookingNo="B-715" bookingStatus="Packed" isOpen onClose={() => {}} />)
+    const pack = container.querySelector<HTMLButtonElement>('nav[aria-label="Operation stage"] button[aria-label^="Packing"]')
+    expect(pack?.disabled).toBe(true)
+    expect(text()).toContain('Status: Quote')
   })
 
   it('keeps Evidence out of the four-stage workflow', async () => {
@@ -534,7 +545,7 @@ describe('OperationsShell is the unified modal host', () => {
  * fabricated fact.
  */
 describe('PK-12 — the entry step reports progress it was given, and nothing more', () => {
-  const packRow = () => buttons().find((b) => (b.textContent ?? '').includes('Packing'))
+  const packRow = () => buttons().find((b) => b.getAttribute('aria-label')?.startsWith('Packing'))
 
   it('says the step is Open, not Not started, when no progress was supplied', async () => {
     await mount(<OperationsShell bookingNo="B-715" bookingStatus="Booked" isOpen onClose={() => {}} />)
@@ -571,6 +582,7 @@ describe('PK-12 — the entry step reports progress it was given, and nothing mo
   it('leaves the blocked and already-past rows alone — neither answer reads a count', async () => {
     // At Packed: Pack is behind the booking (done), Return is ahead of it
     // (blocked). Neither is affected by the absence of a progress map.
+    persistedStage = 'Packed'
     await mount(<OperationsShell bookingNo="B-715" bookingStatus="Packed" isOpen onClose={() => {}} />)
     expect(packRow()?.textContent).toContain('Done')
     const ret = container.querySelector<HTMLButtonElement>('nav[aria-label="Operation stage"] button[aria-label^="Return & Inspection"]')

@@ -1,5 +1,12 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 24 October 2026: Return reservation contract — engineering scope pending
+
+- Owner availability policy is settled by Booking Operations v1.1 and `RULINGS-2026-10-24.md`: pending cleanup alone is not a hold. This is not an open product-policy question.
+- `TODO(decision)`: the brief also says no migration. A disposable PGlite probe confirms that partial Return leaves A's original reservation active while B remains out; GiST rejects A's new overlapping reservation (`23P01`). Clarification is pending on authoring/verifying a narrow local-only database correction. No hosted apply, release-by-query workaround or migration is authorized by this entry.
+- `TODO(decision)`: identify the authoritative physical-clearance record for a genuine damage/QC finding after repair. Financial approval/disposition is not proof of physical repair. Current availability remains conservative on non-voided findings and recorded defects; do not auto-clear them based on Reset, payment or case finance.
+- Probe and UI evidence are under `artifacts/booking-operations-20261024/` and `docs/verification/booking-operations-20261024/`.
+
 ## 24 October 2026: guarded 0171 + 0172 integration — APPROVED
 
 Babin explicitly chose **“Integrate the guarded pair”**, including the explained pristine/global, history/scoped, revoke-last/deny-all and Owner/Admin superior/self-target rules. Shared-source integration and permanent security/CI wiring are authorized and being verified. This resolves the model/canonical-source choice below, not N-5 hosted application or production readiness. Unbooked Reset uses the unit's current warehouse branch, as already selected. New current evidence will be recorded in `verification/OPERATIONS_BRANCH_INTEGRATION_2026-10-24.md`.

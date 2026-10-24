@@ -2210,19 +2210,18 @@ function BookingDetailView() {
           }
           actions={
             <PageActions
-            secondary={[
+            persistent={
               /* The 44px icon at every width (its name stays "Operations"): the labelled
                  trigger cost 64px more of the record title at 1280. Cleaning & Reset is
                  its fourth row, so it has no button of its own. */
               <BookingOperationsMenu
-                key="ops"
                 bookingNo={id}
                 bookingStatus={stage}
                 unavailable={operationsUnavailable}
                 primary={false}
                 compact
-              />,
-            ]}
+              />
+            }
             overflow={
               /* The one More. WhatsApp choices are its "Message client" row, built from the
                  business settings; the old header button duplicated them with a placeholder
@@ -2253,7 +2252,7 @@ function BookingDetailView() {
               />
             }
             primary={
-              primaryAction.isOperable && (!booking.isCancelled || stage === 'Quote') && !booking.isClosed ? (
+              primaryAction.isOperable && !(onPhone && primaryAction.job) && (!booking.isCancelled || stage === 'Quote') && !booking.isClosed ? (
                 primaryAction.actionType === 'confirm' ? (
                   cancelledReason ? (
                     <Unavailable reason={`${booking.bookingNo} is cancelled — a cancelled booking is not confirmed.`}>

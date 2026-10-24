@@ -237,6 +237,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
   // and record badges. These are NOT secondary commands. Keep their own
   // desktop positions visible even when secondary slots fill up.
   const legacyContext = legacyGroups.flatMap((group) => extractValidActions(group.extra))
+  const persistentActions = legacyGroups.flatMap((group) => extractValidActions(group.persistent))
   const legacySecondary = [
     ...legacyGroups.flatMap((group) => extractValidActions(group.secondary)),
     ...looseSecondary,
@@ -843,6 +844,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
               move a primary CTA past the More button. */}
           <span className="app-global-header__action-slot app-global-header__action-slot--secondary" data-header-slot="secondary">
                 <span ref={ws?.setHeaderSecondaryActionsElement} className="workspace-header-secondary-actions" />
+                {persistentActions.map((action, idx) => <span key={isValidElement(action) && action.key != null ? String(action.key) : `persistent-${idx}`}>{action}</span>)}
                 {!compactHeader && visibleLegacySecondary.map((action, idx) => (
                   <span key={isValidElement(action) && action.key != null ? String(action.key) : `hdr-secondary-${idx}`}>{action}</span>
                 ))}

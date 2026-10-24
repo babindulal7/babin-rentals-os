@@ -11,6 +11,7 @@ import { useFloorViewport } from '../floorPanelContext'
 let dirty = false
 let mockError: string | null = null
 let mockBlocked: string | null = null
+const completionCalls = vi.fn()
 
 type MockProps = {
   bookingNo?: string
@@ -26,7 +27,7 @@ function MockWorkspace({ bookingNo, onConfirmSuccess, onRegisterActions }: MockP
       dispatching: false,
       isDirty: dirty,
       label: 'Confirm Action',
-      complete: () => onConfirmSuccess?.(),
+      complete: () => { completionCalls(); onConfirmSuccess?.() },
       error: mockError,
     })
   }, [onConfirmSuccess, onRegisterActions])
@@ -73,15 +74,19 @@ vi.mock('../../../lib/device', async (orig) => ({
   ...(await orig<typeof import('../../../lib/device')>()),
   useViewport: () => 'tablet' as const,
 }))
+vi.mock('../../../lib/queries/operationTaskFacts', () => ({ fetchOperationTaskFacts: vi.fn(async () => ({ total: 2, resetDone: 0, cleaningPending: 2, qcPending: 2, problems: 0 })) }))
 
 const { default: OperationsShell } = await import('../OperationsShell')
+const { fetchFloorBooking } = await import('../../../lib/queries/bookings')
+const fetchFloor = vi.mocked(fetchFloorBooking)
+const originalFetch = fetchFloor.getMockImplementation()!
 
 let container: HTMLDivElement
 let root: Root
 
 async function mount(
   onClose = vi.fn(),
-  status: 'Quote' | 'Booked' | 'Packed' | 'On Rent' | 'Returned' = 'Booked',
+  status: 'Quote' | 'Booked' | 'Packed' | 'On Rent' | 'Returned' | 'Closed' = 'Booked',
   initialJob: 'Pack' | 'Handover' | 'Return' | 'Reset' = 'Pack',
 ) {
   mockStage = status
@@ -113,6 +118,8 @@ beforeEach(() => {
   dirty = false
   mockError = null
   mockBlocked = null
+  completionCalls.mockClear()
+  fetchFloor.mockReset().mockImplementation(originalFetch)
 })
 
 afterEach(async () => {
@@ -190,6 +197,92 @@ describe('panel layout', () => {
 })
 
 describe('Task 5 — Operations popup navigation and state', () => {
+  it('does not invent Reset completion from a Closed booking', async () => {
+    await mount(vi.fn(), 'Closed', 'Reset')
+    expect(container.querySelector('button[aria-current="step"]')?.getAttribute('aria-label')).toContain('Read only')
+    expect(container.textContent).toContain('Cleaning pending: 2')
+    expect(container.textContent).not.toContain('Completed ✓')
+  })
+
+  it('ignores a late status read for the previously selected booking', async () => {
+    let resolve!: (value: Awaited<ReturnType<typeof fetchFloorBooking>>) => void
+    fetchFloor.mockReturnValueOnce(new Promise(r => { resolve = r }))
+    await mount(vi.fn(), 'Booked', 'Pack')
+    const next = { ...(await originalFetch('B-715'))!, id:'b-716', bookingNo:'B-716', stage:'Booked' }
+    fetchFloor.mockResolvedValueOnce(next)
+    await act(async () => root.render(<MemoryRouter><OperationsShell bookingNo="B-716" bookingStatus="Booked" initialJob="Pack" isOpen onClose={vi.fn()} /></MemoryRouter>))
+    await act(async () => { resolve({ ...next, id:'b-715', bookingNo:'B-715', stage:'Returned' }); await Promise.resolve() })
+    expect(container.textContent).toContain('Operations · B-716')
+    expect(container.textContent).toContain('Status: Booked')
+    expect(container.querySelector('button[aria-label^="Cleaning & Reset"]')?.hasAttribute('disabled')).toBe(true)
+  })
+  it('keeps a committed partial Return On Rent and does not unlock Reset', async () => {
+    await mount(vi.fn(), 'On Rent', 'Return')
+    const confirm = [...container.querySelectorAll('button')].find(b => b.textContent?.trim() === 'Confirm Return session')
+    await act(async () => confirm?.click())
+    expect(container.textContent).toContain('Return & Inspection · Status: On Rent')
+    expect(container.querySelector('button[aria-label^="Cleaning & Reset"]')?.hasAttribute('disabled')).toBe(true)
+    expect(container.querySelector('button[aria-current="step"]')?.getAttribute('aria-label')).toContain('Return & Inspection')
+  })
+
+  it('does not advance after a committed session if authoritative refresh fails', async () => {
+    await mount(vi.fn(), 'On Rent', 'Return')
+    fetchFloor.mockRejectedValueOnce(new Error('Booking could not be read'))
+    const confirm = [...container.querySelectorAll('button')].find(b => b.textContent?.trim() === 'Confirm Return session')
+    await act(async () => confirm?.click())
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain('Booking could not be read')
+    expect(container.querySelector('button[aria-label^="Cleaning & Reset"]')?.hasAttribute('disabled')).toBe(true)
+    expect([...container.querySelectorAll('button')].find(b => b.textContent === 'Retry booking status')).toBeDefined()
+    mockStage = 'Returned'
+    await act(async () => [...container.querySelectorAll('button')].find(b => b.textContent === 'Retry booking status')?.click())
+    expect(container.textContent).toContain('Cleaning & Reset · Status: Returned')
+    expect(completionCalls).toHaveBeenCalledTimes(1)
+  })
+
+  it('blocks confirmation when the initial booking read fails, with a visible retry', async () => {
+    fetchFloor.mockRejectedValueOnce(new Error('Network unavailable'))
+    await mount(vi.fn(), 'Booked', 'Pack')
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain('Network unavailable')
+    const confirm = [...container.querySelectorAll('button')].find(b => b.textContent?.trim() === 'Confirm Packing & Next')
+    expect(confirm?.disabled).toBe(true)
+    expect(completionCalls).not.toHaveBeenCalled()
+  })
+
+  it('accepts only one completion while its persisted status read is pending', async () => {
+    await mount(vi.fn(), 'Booked', 'Pack')
+    let resolve!: (value: Awaited<ReturnType<typeof fetchFloorBooking>>) => void
+    const pendingRead = new Promise<Awaited<ReturnType<typeof fetchFloorBooking>>>(r => { resolve = r })
+    fetchFloor.mockReturnValueOnce(pendingRead)
+    const confirm = [...container.querySelectorAll('button')].find(b => b.textContent?.trim() === 'Confirm Packing & Next')
+    await act(async () => { confirm?.click(); confirm?.click() })
+    expect(completionCalls).toHaveBeenCalledTimes(1)
+    mockStage = 'Packed'
+    await act(async () => { resolve(await originalFetch('B-715')); await pendingRead })
+  })
+
+  it.each([null, 'Ready'])('refuses an absent or unsupported persisted stage (%s)', async (stage) => {
+    const booking = await originalFetch('B-715')
+    fetchFloor.mockResolvedValueOnce(stage === null ? null : { ...booking!, stage })
+    await mount(vi.fn(), 'Booked', 'Pack')
+    expect(container.querySelector('[role="alert"]')).not.toBeNull()
+    const confirm = [...container.querySelectorAll('button')].find(b => b.textContent?.trim() === 'Confirm Packing & Next')
+    expect(confirm?.disabled).toBe(true)
+    expect(completionCalls).not.toHaveBeenCalled()
+  })
+
+  it('does not consume stage shortcuts from a nested dialog', async () => {
+    await mount(vi.fn(), 'On Rent', 'Return')
+    const nested = document.createElement('div')
+    nested.setAttribute('role', 'dialog')
+    nested.setAttribute('aria-modal', 'true')
+    const button = document.createElement('button')
+    nested.append(button)
+    container.append(nested)
+    await act(async () => button.dispatchEvent(new KeyboardEvent('keydown', { key: '1', bubbles: true })))
+    expect(container.querySelector('button[aria-current="step"]')?.getAttribute('aria-label')).toContain('Return & Inspection')
+    nested.remove()
+  })
+
   it('shows a workspace error once, without repeating it in the modal footer', async () => {
     mockError = 'Handover could not be recorded'
     await mount(vi.fn(), 'Packed', 'Handover')
@@ -265,11 +358,11 @@ describe('Task 5 — Operations popup navigation and state', () => {
     expect(container.textContent).toContain('Packing · Status: Packed')
   })
 
-  it('Return & Inspection shows ← Handover and Confirm Return & Next', async () => {
+  it('Return & Inspection shows ← Handover and Confirm Return session', async () => {
     await mount(vi.fn(), 'On Rent', 'Return')
     const buttons = [...container.querySelectorAll('button')]
     const leftBtn = buttons.find((b) => b.textContent?.trim() === '← Handover')
-    const confirmBtn = buttons.find((b) => b.textContent?.trim() === 'Confirm Return & Next')
+    const confirmBtn = buttons.find((b) => b.textContent?.trim() === 'Confirm Return session')
 
     expect(leftBtn).toBeDefined()
     expect(confirmBtn).toBeDefined()
@@ -314,7 +407,7 @@ describe('Task 5 — Operations popup navigation and state', () => {
     // When booking is On Rent, Packing is already completed
     await mount(vi.fn(), 'On Rent', 'Return')
     const packTab = [...container.querySelectorAll<HTMLButtonElement>('nav[aria-label="Operation stage"] button')].find(
-      (b) => b.textContent?.includes('Packing'),
+      (b) => b.getAttribute('aria-label')?.startsWith('Packing'),
     )
     expect(packTab).toBeDefined()
     expect(packTab?.hasAttribute('disabled')).toBe(false)
@@ -349,9 +442,10 @@ describe('Task 5 — Operations popup navigation and state', () => {
   it('renders booking context summary details', async () => {
     await mount(vi.fn(), 'Booked', 'Pack')
     expect(container.textContent).toContain('Himalayan Films')
-    expect(container.textContent).toContain('Booking:')
+    expect(container.querySelector('summary')?.textContent).toBe('Booking details')
     expect(container.textContent).toContain('B-715')
-    expect(container.textContent).toContain('Pickup:')
+    expect(container.textContent).toContain('Pickup')
+    expect(container.textContent?.match(/Himalayan Films/g)).toHaveLength(1)
     expect(container.textContent).toContain('20/9/2026')
   })
 
