@@ -420,7 +420,7 @@ function KpiCard({
 }) {
   return (
     <article className="lift" style={{ ...cardStyle, padding: '8px 12px', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 28 }}>
+      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 8, rowGap: 2, minHeight: 28 }}>
         <span
           style={{
             width: 24,
@@ -442,7 +442,7 @@ function KpiCard({
             fontSize: 'var(--t-meta)',
             fontWeight: 600,
             color: 'var(--text2)',
-            minWidth: 0,
+            minWidth: 'min(100%, min-content)',
             lineHeight: 1.25,
           }}
         >
@@ -450,7 +450,7 @@ function KpiCard({
         </div>
         <div
           className="figure"
-          style={{ flex: '0 0 auto', fontSize: 'clamp(14px, 1.1vw, 17px)', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}
+          style={{ flex: '0 0 auto', marginLeft: 'auto', fontSize: 'clamp(14px, 1.1vw, 17px)', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}
         >
           {value}
         </div>

@@ -131,9 +131,9 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 10px;
-  padding: var(--section-padding) var(--sp-lg);
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 12px;
   border: var(--surface-outline);
   border-radius: var(--r-card, 14px);
   background: var(--surface-card, var(--card));
@@ -159,15 +159,23 @@
   box-shadow: 0 0 0 1.5px var(--primary);
 }
 
-.module-kpi-card__top {
+/* RULING 2026-10-23: one button-height row — icon, label, count — then the subtitle. */
+.module-kpi-card__head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  flex-wrap: wrap;
+  column-gap: 8px;
+  row-gap: 2px;
+  min-height: 28px;
+}
+
+.module-kpi-card__top {
+  display: contents;
 }
 
 .module-kpi-card__label {
-  min-width: 0;
+  flex: 1 1 auto;
+  min-width: min(100%, min-content);
   font-size: var(--t-meta, 13px);
   font-weight: 600;
   color: var(--muted);
@@ -179,8 +187,9 @@
 .module-kpi-card__icon {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  order: -1;
+  width: 24px;
+  height: 24px;
   border-radius: var(--r-xs, 4px);
   flex-shrink: 0;
 }
@@ -202,18 +211,19 @@
 }
 
 .module-kpi-card__count {
+  flex: 0 0 auto;
+  margin-left: auto;
   font-family: var(--font-id);
-  font-size: 1.5rem;
+  font-size: clamp(1rem, 1.1vw, 1.15rem);
   font-weight: 700;
   line-height: 1.2;
   color: var(--text);
   letter-spacing: -0.02em;
-  margin-top: 2px;
 }
 
 .module-kpi-card__subtitle {
   margin: 0;
-  font-size: var(--t-meta, 13px);
+  font-size: var(--t-th, 12px);
   color: var(--text2);
   line-height: 1.35;
   overflow: hidden;
@@ -239,22 +249,27 @@
   }
 
   .module-kpi-card {
-    padding: var(--sp-sm);
-    gap: var(--sp-xs);
-  }
-
-  .module-kpi-card__top {
-    min-height: 2.6em;
-    align-items: flex-start;
+    padding: 8px var(--sp-sm);
   }
 
   .module-kpi-card__icon {
     display: none;
   }
 
+  /* Three tiles share ~110px each on a phone: stack label over count in every tile so they
+     line up, instead of one tile fitting on a row while its neighbours wrap. */
+  .module-kpi-card__head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .module-kpi-card__label {
+    flex: 0 1 auto;
+  }
+
   .module-kpi-card__count {
-    font-size: 1.15rem;
-    margin-top: var(--sp-xs);
+    margin-left: 0;
+    font-size: 1rem;
   }
 
   .module-kpi-card__subtitle {

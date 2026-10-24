@@ -24,7 +24,7 @@ export interface ModuleKpiStripProps {
  * Zone 2: 3-Card KPI Strip
  * Reuses the exact card styling from the bottom of Today screen:
  * - UPPERCASE LABEL + top-right subtle icon
- * - Large Bold Count (Outfit/font-display, 1.5rem, 700)
+ * - Compact one-row card (icon, label, count) with the subtitle on a thin line below
  * - Muted subtitle
  * - Clicking a card filters the table below
  */
@@ -58,11 +58,11 @@ export const ModuleKpiStrip: React.FC<ModuleKpiStripProps> = ({
             aria-pressed={isInteractive ? item.active : undefined}
             aria-label={`${item.label}: ${displayCount}, ${item.subtitle}`}
           >
-            <div>
+            <div className="module-kpi-card__head">
               <div className="module-kpi-card__top">
                 <span className="module-kpi-card__label">{item.label}</span>
                 <span className={`module-kpi-card__icon module-kpi-card__icon--${tone}`}>
-                  <Icon name={item.icon} size={18} />
+                  <Icon name={item.icon} size={16} />
                 </span>
               </div>
               <div className="module-kpi-card__count font-mono tabular-nums">{displayCount}</div>
