@@ -1,6 +1,6 @@
 # Progress Log
 
-## 2026-10-24 — Partial Return Usable Unit Reservation Release (0174), Server Contracts Repair (0173), & Operations Fallback Safety
+## 2026-10-24 — Partial Return Reservation Release (0174), Server Contracts Repair (0173), Daily Closing Permission Alignment (L32), & Operations Fallback Safety
 
 **Did**
 - Authored migration 0174 (`supabase/migrations/0174_partial_return_reservation_release.sql`) upon explicit user authorization:
@@ -10,6 +10,12 @@
 - Authored test suite `scripts/test-partial-return-reservation-release.mjs` verifying all 10 acceptance criteria (25/25 assertions green).
 - Repaired migration 0173 server contracts (`add_equipment_units`, `retire_equipment_unit`, `enroll_client_membership`, `save_record_section`) and verified with 30/30 assertions green via `scripts/test-unit-lifecycle-and-contracts.mjs`.
 - Fixed quick operations fallback in `BookingOperationsMenu.tsx` to return `null` for unauthorized roles (Coordinator, Driver, anonymous) and terminal stages.
+- Integrated daily closing sign-off permission correction (unmerged PR #24 / RULING 2026-10-18):
+  - Fixed `canApproveDailyClosing` in `src/lib/rbac.ts` to admit `Owner, Admin, Manager, Accounts` and exclude `Coordinator`, perfectly aligning client gating with Postgres RLS policy `daily_closings_finance_insert` (0078) and `auth_is_finance_or_admin()` (0117).
+  - Documented `closing.approve` capability in `docs/PERMISSIONS.md` §4.6 and updated action comments in `approveDailyClosing.ts`.
+  - Added step L32 to `scripts/e2e-lifecycle.mjs` verifying that `daily_closings_finance_insert` strictly admits `Owner, Admin, Manager, Accounts` and refuses `Coordinator` (32/32 lifecycle steps green).
+  - Added unit test `src/modules/finance/__tests__/DailyClosing.approve.test.tsx` verifying `Coordinator` sees daily closing figures without the approve control, while permitted roles are offered sign-off.
+  - Added action permission test in `src/actions/finance/__tests__/approveDailyClosing.test.ts` verifying `ActionPermissionError` rejection for Coordinator.
 - Addressed Gemini review findings:
   - Resolved `UpgradeTierModal.tsx` UUID client identity mapping (`client.dbId || client.id`).
   - Added submission idempotency ref in `AddUnitsModal.tsx` and `RetireUnitModal.tsx`.
@@ -20,6 +26,7 @@
 
 **Ruled**
 - Migration 0174 is VERIFIED locally via PGlite and NOT APPLIED to live Supabase per Rule N-5. Babin applies after backup protocol.
+- `closing.approve` is strictly `Owner, Admin, Manager, Accounts`. Coordinator can view money figures but cannot sign daily closings (Rule B-1: stricter wins; PERMISSIONS §15.2 N-3: no offered button fails on RLS).
 - Sibling drafts in record forms remain pristine when saving individual sections.
 - Non-financial roles remain strictly money-blind across all surfaces.
 
@@ -32,13 +39,13 @@
   - `npm run check:pglite`: PASS (172/172 migrations applied, 0 leaks, 88 pinned definers).
   - `node scripts/test-booking-financial-integrity.mjs`: PASS (isolated PGlite financial integrity verified).
   - `npm run check:security`: PASS (18 Phase 0 regressions + operations grants + 14 Reset branch tests pass).
-  - `npm run check:lifecycle`: PASS (31/31 lifecycle stages green through real Postgres + RLS).
+  - `npm run check:lifecycle`: PASS (32/32 lifecycle stages green through real Postgres + RLS).
   - `npm run check:contrast`: PASS (97/97 WCAG AA pairs pass across light, dark, pilot, and glass themes).
   - `npm run lint:shell`: PASS (728 files checked, 0 violations).
   - `npm run lint:ui-copy`: PASS (0 violations, 5 tests pass).
   - `npm run build`: PASS (PWA v1.3.0, 256 precache entries).
-  - `npm test`: PASS (445 test files, 5,527 / 5,527 tests passing).
-  - `npm run test:coverage`: PASS (5,527 / 5,527 passed).
+  - `npm test`: PASS (446 test files, 5,540 / 5,540 tests passing).
+  - `npm run test:coverage`: PASS (5,540 / 5,540 passed).
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -47,11 +54,11 @@
 | Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
 | DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
 | Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
-| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Lifecycle | steps green / total | 32 / 32 (100%) | +1 |
 | Overall | structural mean of five | ≈ 96% | — |
-Migrations 172 files · check:pglite 172/172 applied, 0 failed (recorded 2026-10-24T16:36:02.429Z). Suite: PASS — 5527/5527 passed, 0 failed (recorded 2026-10-24T16:35:33.695Z); source fingerprint matches.
-Coverage suite: PASS — 5527/5527 passed, 0 failed (recorded 2026-10-24T16:35:33.695Z); source fingerprint matches.
-Gates read from .lifecycle-result.json, written 2026-10-24T16:36:13.882Z.
+Migrations 172 files · check:pglite 172/172 applied, 0 failed (recorded 2026-10-24T16:43:07.440Z). Suite: PASS — 5540/5540 passed, 0 failed (recorded 2026-10-24T16:50:30.502Z); source fingerprint matches.
+Coverage suite: PASS — 5540/5540 passed, 0 failed (recorded 2026-10-24T16:50:30.502Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-10-24T16:43:17.721Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
