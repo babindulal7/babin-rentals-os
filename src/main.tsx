@@ -49,6 +49,8 @@ import '@fontsource-variable/jetbrains-mono/wght.css'
  * Replaces the capsule-era index.css.
  */
 import './styles/theme.css'
+// Black/light shadcn b1avaxO6a palette; leave business/status contracts in theme.css.
+import './styles/preset-black-light.css'
 import './styles/ui-v2.css'
 /*
  * v4.1 §7.7 — the shared responsive layer. AFTER theme.css so its layout
