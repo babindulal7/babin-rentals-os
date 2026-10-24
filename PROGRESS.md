@@ -1,7 +1,5 @@
 # Progress Log
 
-# Progress Log
-
 ## 2026-10-24 — Partial Return Usable Unit Reservation Release (0174), Server Contracts Repair (0173), & Operations Fallback Safety
 
 **Did**
@@ -39,8 +37,8 @@
   - `npm run lint:shell`: PASS (728 files checked, 0 violations).
   - `npm run lint:ui-copy`: PASS (0 violations, 5 tests pass).
   - `npm run build`: PASS (PWA v1.3.0, 256 precache entries).
-  - `npm test`: PASS (445 test files, 5,526 / 5,526 tests passing).
-  - `npm run test:coverage`: PASS (5,526 / 5,526 passed).
+  - `npm test`: PASS (445 test files, 5,527 / 5,527 tests passing).
+  - `npm run test:coverage`: PASS (5,527 / 5,527 passed).
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -51,9 +49,9 @@
 | Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
 | Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
 | Overall | structural mean of five | ≈ 96% | — |
-Migrations 172 files · check:pglite 172/172 applied, 0 failed. Suite: PASS — 5526/5526 passed, 0 failed; source fingerprint matches.
-Coverage suite: PASS — 5526/5526 passed, 0 failed; source fingerprint matches.
-Gates read from .lifecycle-result.json.
+Migrations 172 files · check:pglite 172/172 applied, 0 failed (recorded 2026-10-24T16:36:02.429Z). Suite: PASS — 5527/5527 passed, 0 failed (recorded 2026-10-24T16:35:33.695Z); source fingerprint matches.
+Coverage suite: PASS — 5527/5527 passed, 0 failed (recorded 2026-10-24T16:35:33.695Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-10-24T16:36:13.882Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
