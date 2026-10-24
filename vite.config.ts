@@ -74,9 +74,10 @@ export default defineConfig({
           '**/*-vietnamese-*',
           '**/*-latin-ext-*',
         ],
+        navigationPreload: true,
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/[^/]+\.supabase\.co\/rest\/v1\/(equipment|clients|bundles)/,
+            urlPattern: /^https:\/\/[^/]+\.supabase\.co\/rest\/v1\/(equipment|clients|bundles|categories|warehouses|settings)/,
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'supabase-reference-data',
@@ -128,6 +129,8 @@ export default defineConfig({
           'vendor-scanner': ['@zxing/browser', '@zxing/library'],
           'vendor-dexie': ['dexie'],
           'vendor-gsap': ['gsap', '@gsap/react'],
+          'vendor-charts': ['recharts'],
+          'vendor-base-ui': ['@base-ui/react'],
         }
       }
     }

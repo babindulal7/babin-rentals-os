@@ -1,5 +1,54 @@
 # Progress Log
 
+## 2026-10-24 — Ultra-Fast App Loading: Vendor Chunking, Route Warming & Workbox Preloading
+
+**Did**
+- Optimized application entry point, asset delivery, and routing latency for ultra-fast startup (FCP, LCP, TTI):
+  - Preconnect & DNS-Prefetch: Injected `<link rel="dns-prefetch" href="//sxguwvgoserhdolewibb.supabase.co" />` and `<link rel="preconnect" href="https://sxguwvgoserhdolewibb.supabase.co" crossorigin />` into `index.html` to eliminate DNS and TLS handshake latency before first API query.
+  - Granular Vendor Code-Splitting: Isolated heavy third-party dependencies in `vite.config.ts`:
+    - `vendor-charts`: `recharts` (363 kB / 106 kB gzip) isolated into on-demand shared chunk for analytics and reporting modules.
+    - `vendor-base-ui`: `@base-ui/react` (178 kB / 61 kB gzip) isolated into dedicated vendor chunk.
+  - Workbox PWA & Navigation Preload:
+    - Enabled `navigationPreload: true` in Workbox PWA configuration so network navigation requests start in parallel with service worker boot.
+    - Expanded runtime caching with `StaleWhileRevalidate` strategy across all Supabase reference tables (`equipment`, `clients`, `bundles`, `categories`, `warehouses`, `settings`).
+  - Predictive Route Preloading & Idle Core Warming:
+    - Added `/` and `/today` to canonical route preload table (`src/lib/routePreload.ts`) for instant response on navigation intent.
+    - Added `warmCoreHubs()` using `requestIdleCallback` (with 1.5s fallback) to prewarm core hub code chunks (`/rentals`, `/operations`, `/inventory`) during browser idle time without competing with initial load bandwidth or violating Data Saver mode.
+
+**Ruled**
+- Fast-load optimizations strictly preserve architectural invariants: no changes to money math (integer paisa), role gating, or custody transition safety.
+- Prewarming respects user connection preferences: `saveData` bypasses speculative background warmup.
+- All 442 test files and 5,494 unit/integration tests remain 100% green.
+
+**Verified**
+- TypeScript: `npm run typecheck` passes with 0 errors (`tsc --noEmit`).
+- ESLint: `npm run lint` passes with 0 warnings (`eslint src --max-warnings 0`).
+- Postgres Migrations (PGlite): `npm run check:pglite` passes with 171/171 migrations applied from scratch, 0 leaks, 0 failures.
+- Postgres Lifecycle Suite: `npm run check:lifecycle` passes 31/31 stages green through real Postgres + RLS.
+- Accessibility Contrast: `npm run check:contrast` passes 82/82 WCAG AA pairs across light, dark, and glass themes.
+- Test Suite: 442 test files, 5,494/5,494 tests passing (`npm test`).
+- Production Build: `npm run build` succeeds cleanly, producing 256 precache entries and optimized vendor splits.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 57 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 171 files · check:pglite 171/171 applied, 0 failed (recorded 2026-10-24T11:20:30.512Z). Suite: PASS — 5494/5494 passed, 0 failed (recorded 2026-10-24T11:20:03.474Z); source fingerprint matches.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-24T11:20:54.097Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+
+- Proceed with Phase 3 reporting tables and remaining report modules (Operations, Sales VAT, Expense reports).
+- Hosted role/JWT/PostgREST/Storage, physical scanner/device, and offline/reconnect acceptance tests remain separate; production release HOLD remains.
+
 ## 2026-10-24 — Integration: Workbar Alignments, Unified Record Workspace & Manage Stock
 
 **Did**
