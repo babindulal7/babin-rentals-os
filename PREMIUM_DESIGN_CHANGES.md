@@ -2,9 +2,9 @@
 
 ## Follow-up verification
 
-The user requested a fresh verification after the earlier pass. New local edits changed the source fingerprint. Fresh evidence is being recorded separately in `docs/verification/premium-design/reverify-20261021-2327`. The earlier command table below is historical until the new run finishes.
+The 22 October source snapshot is fully documented in [docs/verification/premium-design/reverify-20261021-2327/REVERIFICATION.md](docs/verification/premium-design/reverify-20261021-2327/REVERIFICATION.md): 5,186 tests in a full coverage run, 53 browser checks and 156 captures. That snapshot corrected clipped phone KPI labels and an unloaded identifier font. Earlier failed/interrupted attempts remain retained.
 
-Visual review found and corrected two missed defects: phone KPI labels were clipped by the shared layout, and the identifier font tokens named a family different from the installed self-hosted variable font. Phone KPI labels now wrap at the existing secondary text size; decorative KPI icons yield space on phones. Runtime and package font tokens prefer the installed `JetBrains Mono Variable` family, retaining existing fallbacks. No external font was added. The Card browser fixture now discovers versioned React URLs from the running Vite entry rather than assuming a cache directory.
+The user subsequently approved **the newer all-Outfit theme** on 23 October; see RULINGS-2026-10-23.md. The older separate-font result is historical and must not trigger a rollback. Current-source verification is running separately in `docs/verification/premium-design/current-20261023-0225`; the current checkout contains substantial newer feature and primitive edits.
 
 21 October 2026 (NPT). Local implementation and browser evidence; final verification receipts linked below.
 
@@ -25,7 +25,7 @@ Evidence: `docs/verification/premium-design/{before,after}/measurements.json`. S
 | Files | Change / preserved behavior |
 |---|---|
 | `src/styles/theme.css`, `src/styles/ui-v2.css`, `packages/design-tokens/src/index.ts` | Semantic surface/inset/overlay/divider/elevation and section/table tokens within the existing palettes. One shared card treatment; retain explicit glass, high contrast, reduced-motion preferences and theme selection. Expanded/collapsed navigation uses requested 256/64px; header token remains 64px. |
-| `src/components/ui/Card.tsx`, `Page.tsx`, `Button.tsx` | CSS owns Card appearance; legacy consumers share one `surfaceStyle` recipe. Standard header/body/footer spacing, status border and disabled treatment. Quieter primary hover shadow. Numeric KPI type uses JetBrains Mono. |
+| `src/components/ui/Card.tsx`, `Page.tsx`, `Button.tsx` | CSS owns Card appearance; legacy consumers share one `surfaceStyle` recipe. Standard header/body/footer spacing, status border and disabled treatment. Quieter primary hover shadow. KPI type initially used the separate numeric font; Babin’s subsequent 23 October choice retains the newer all-Outfit tokens. |
 | `PageShell.tsx`, `module-shell/ModulePageShell.tsx`, `ModuleSubHeader.tsx`, `module-shell.css` | Empty toolbars/subheaders reserve no space; optional module zones remain optional. Shared sentence-case table headers, row spacing and KPI typography. No compulsory new KPI strip. |
 | `RecordWorkspace.tsx`, `record-workspace.css`, `records/RecordForm.tsx` | Hosted Create/Save in the global primary slot; Cancel and alternate create in More. Same callbacks, dirty/busy guards, inline errors and leave dialog. Isolated previews retain the footer. Summary drawer is on demand, 320px. No equipment draft button. |
 | `records/equipment-assist.css`, `EquipmentRecordEditor.tsx` | Seven anchors in one scrollable strip; full-width description/gallery groups at tablet widths; serial/select/icon targets at least 44px; active tracking text uses selected foreground. Status gets a read-only lock icon; its stored text and write ownership are unchanged. Add/Edit still share the same editor. |
@@ -74,3 +74,25 @@ All nine command checks passed on one unchanged source fingerprint (`f25235ddda9
 Full suite: **5,162 tests across 410 files**, no skipped tests reported. Local PGlite: **168 migrations, zero failed**. Lifecycle: **31/31**. Contrast: **82/82**. Browser: **48/48 interactions**, **156 final captures**, zero measured page/header geometry failures. All **329** gallery/matrix links resolve.
 
 `npm run completion` regenerated the repository structural counter; its raw output is `docs/verification/premium-design/completion.log`. It is not a visual or device-completion percentage. Final command provenance is `verification.json`, assembled from the integration-pass and final-test-pass receipts; per-command raw logs are in that directory. Historical typecheck/test log filenames were superseded by the final rerun; historical test JSON remains under `artifacts/`.
+
+
+## 23 October verification follow-up
+
+Babin explicitly selected the newer all-Outfit theme. No typography rollback or external font download. The current run is recorded separately in docs/verification/premium-design/current-20261023-0225. The newer equipment editor’s optional five-stage navigation conflicts with this brief; the governing preference has been requested, and no choice is inferred from silence.
+
+This continuation first changed two equipment policy messages (removed internal Law/RBAC references), the copy checker and its regression, and max-width/wrapping for Today’s expired-window label. CSS class hooks/comparison operands are not visible copy; visible policy text remains checked. Other Today/header/primitive/Reset changes in this shared checkout belong to ongoing local work and are preserved.
+
+The full run retained one 90-second New Rental timeout (5271/5272 passed), with all 14 tests in that file passing on retry. That full run changed source during execution, so it is not matching-source certification. Fresh receipts, screenshots and remaining limitations are linked from CURRENT_VERIFICATION.md.
+
+The current HEAD-based token audit found one 4px icon/text gap in the independently changed Today summary warning. It is an intra-label geometry exception, not another spacing palette; no automatic mass replacement was applied. Earlier full visual-pass audit findings remain historical.
+
+
+### Additional defects found in actual current screens
+
+- Inventory table selection had a small naked checkbox and Rentals row labels were only 32px wide. Both now use a shared 44px selection label, retaining checkbox visuals and handlers. Real browser edge clicks are recorded.
+- Today expired-window labels wrap inside their grid region. This tiny scoped rule accommodates the independently changed queue geometry.
+- The equipment summary used a sample asset code, assumed persisted Active/Draft state, today as a creation date, generated missing unit tags and invented relationship facts. It now uses the recorded code/status where supplied, otherwise explicit unavailable/unsaved states. Unsaved codes cannot be copied or barcoded; missing tags are not synthesized in the barcode inspector. Unknown creator/date/relationship facts remain unavailable. Catalogue rendering is explicitly a local preview. Existing save/RPC/revision/custody/permission engines are untouched.
+- Equipment unit-table buttons retain 44px targets. Added negative regressions cover unavailable new-record previews, missing unit tags and an existing inactive equipment record.
+
+
+Current evidence: **156/156** scoped header/overflow measurements, **63/63** browser assertions, **23/23** focused tests and **4/4** Calendar header tests. All nine final command steps exited zero; source-change flags are retained. The earlier full suite retains one timeout with its separate 14/14 retry. No complete matching-source green suite is claimed. Calendar now uses its existing shorter Availability label on tablets, preserving the accessible name and handler; the measured search target grows from 40.77 to 79.03px at 768px. See docs/verification/premium-design/current-20261023-0225/CURRENT_VERIFICATION.md.

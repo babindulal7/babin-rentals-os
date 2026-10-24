@@ -1,0 +1,323 @@
+/**
+ * Scoped integration layer for shadcn preset `b1avaxO6a` (Style: base-rhea, Base: olive, Theme: emerald).
+ *
+ * SAFETY INVARIANT:
+ * This file NEVER overrides :root, body, or existing design tokens globally.
+ * All declarations are strictly scoped under `.br-preset-pilot` and `[data-ui-preset="rhea"]`.
+ */
+
+.br-preset-pilot,
+[data-ui-preset="rhea"] {
+  /* Radius scale (Medium preset: 0.625rem / 10px) */
+  --rhea-radius: 0.625rem;
+  --rhea-radius-sm: calc(var(--rhea-radius) * 0.6);
+  --rhea-radius-md: calc(var(--rhea-radius) * 0.8);
+  --rhea-radius-lg: var(--rhea-radius);
+  --rhea-radius-xl: calc(var(--rhea-radius) * 1.4);
+  --rhea-radius-2xl: calc(var(--rhea-radius) * 1.8);
+  --rhea-radius-3xl: calc(var(--rhea-radius) * 2.2);
+  --rhea-radius-4xl: calc(var(--rhea-radius) * 2.6);
+  --rhea-radius-card: min(var(--rhea-radius-4xl), 24px);
+
+  /* Card and section spacing */
+  --card-spacing: 20px;
+  --card-spacing-sm: 16px;
+
+  /* Typography mapping: respect Babin self-hosted font rules */
+  --font-heading: 'Outfit', sans-serif;
+  --font-sans: 'Source Sans 3', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Chart palette: Analytical 5-step Blue ladder */
+  --chart-1: oklch(0.809 0.105 251.813);
+  --chart-2: oklch(0.623 0.214 259.815);
+  --chart-3: oklch(0.546 0.245 262.881);
+  --chart-4: oklch(0.488 0.243 264.376);
+  --chart-5: oklch(0.424 0.199 265.638);
+  --rhea-chart-1: var(--chart-1);
+  --rhea-chart-2: var(--chart-2);
+  --rhea-chart-3: var(--chart-3);
+  --rhea-chart-4: var(--chart-4);
+  --rhea-chart-5: var(--chart-5);
+
+  /* Default Light Mode Tokens (Olive base + Emerald primary) */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.153 0.006 107.1);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.153 0.006 107.1);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.153 0.006 107.1);
+  --primary: oklch(0.508 0.118 165.612);
+  --primary-foreground: oklch(0.979 0.021 166.113);
+  --secondary: oklch(0.967 0.001 286.375);
+  --secondary-foreground: oklch(0.21 0.006 285.885);
+  --muted: oklch(0.966 0.005 106.5);
+  --muted-foreground: oklch(0.58 0.031 107.3);
+  --accent: oklch(0.966 0.005 106.5);
+  --accent-foreground: oklch(0.228 0.013 107.4);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.93 0.007 106.5);
+  --input: oklch(0.93 0.007 106.5);
+  --ring: oklch(0.737 0.021 106.9);
+  --ring-hairline: rgba(0, 0, 0, 0.06);
+  --shadow-rhea-card: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+
+  /* Namespaced aliases */
+  --rhea-bg: var(--background);
+  --rhea-fg: var(--foreground);
+  --rhea-card: var(--card);
+  --rhea-card-fg: var(--card-foreground);
+  --rhea-primary: var(--primary);
+  --rhea-primary-fg: var(--primary-foreground);
+  --rhea-secondary: var(--secondary);
+  --rhea-secondary-fg: var(--secondary-foreground);
+  --rhea-muted: var(--muted);
+  --rhea-muted-fg: var(--muted-foreground);
+  --rhea-accent: var(--accent);
+  --rhea-accent-fg: var(--accent-foreground);
+  --rhea-border: var(--border);
+  --rhea-ring: var(--ring);
+  --rhea-ring-hairline: var(--ring-hairline);
+}
+
+/* Explicit Dark Mode inside the pilot scope */
+:root[data-theme='dark'] .br-preset-pilot,
+:root[data-theme='dark'] [data-ui-preset="rhea"],
+.dark .br-preset-pilot,
+.dark [data-ui-preset="rhea"] {
+  --background: oklch(0.153 0.006 107.1);
+  --foreground: oklch(0.988 0.003 106.5);
+  --card: oklch(0.228 0.013 107.4);
+  --card-foreground: oklch(0.988 0.003 106.5);
+  --popover: oklch(0.228 0.013 107.4);
+  --popover-foreground: oklch(0.988 0.003 106.5);
+  --primary: oklch(0.432 0.095 166.913);
+  --primary-foreground: oklch(0.979 0.021 166.113);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.286 0.016 107.4);
+  --muted-foreground: oklch(0.737 0.021 106.9);
+  --accent: oklch(0.286 0.016 107.4);
+  --accent-foreground: oklch(0.988 0.003 106.5);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.58 0.031 107.3);
+  --ring-hairline: rgba(255, 255, 255, 0.12);
+  --shadow-rhea-card: 0 2px 6px 0 rgba(0, 0, 0, 0.35);
+
+  --rhea-bg: var(--background);
+  --rhea-fg: var(--foreground);
+  --rhea-card: var(--card);
+  --rhea-card-fg: var(--card-foreground);
+  --rhea-primary: var(--primary);
+  --rhea-primary-fg: var(--primary-foreground);
+  --rhea-secondary: var(--secondary);
+  --rhea-secondary-fg: var(--secondary-foreground);
+  --rhea-muted: var(--muted);
+  --rhea-muted-fg: var(--muted-foreground);
+  --rhea-accent: var(--accent);
+  --rhea-accent-fg: var(--accent-foreground);
+  --rhea-border: var(--border);
+  --rhea-ring: var(--ring);
+  --rhea-ring-hairline: var(--ring-hairline);
+}
+
+/* High Contrast theme adaptation */
+:root[data-theme='high-contrast'] .br-preset-pilot,
+:root[data-theme='high-contrast'] [data-ui-preset="rhea"] {
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: #0a0a0a;
+  --card-foreground: #ffffff;
+  --primary: #facc15;
+  --primary-foreground: #000000;
+  --secondary: #1f1f1f;
+  --secondary-foreground: #ffffff;
+  --muted: #171717;
+  --muted-foreground: #e5e5e5;
+  --border: #ffffff;
+  --ring-hairline: #ffffff;
+  --shadow-rhea-card: none;
+
+  --rhea-bg: var(--background);
+  --rhea-fg: var(--foreground);
+  --rhea-card: var(--card);
+  --rhea-card-fg: var(--card-foreground);
+  --rhea-primary: var(--primary);
+  --rhea-primary-fg: var(--primary-foreground);
+  --rhea-secondary: var(--secondary);
+  --rhea-secondary-fg: var(--secondary-foreground);
+  --rhea-muted: var(--muted);
+  --rhea-muted-fg: var(--muted-foreground);
+  --rhea-border: var(--border);
+  --rhea-ring-hairline: var(--ring-hairline);
+}
+
+/* Glass theme adaptation (Frosted translucency without compromising text legibility) */
+:root[data-theme='dark'][data-style='glass'] .br-preset-pilot,
+:root[data-theme='dark'][data-style='glass'] [data-ui-preset="rhea"] {
+  --card: rgba(28, 32, 28, 0.82);
+  --card-foreground: #f1f5f9;
+  --border: rgba(255, 255, 255, 0.16);
+  --ring-hairline: rgba(255, 255, 255, 0.18);
+  --shadow-rhea-card: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --rhea-card: var(--card);
+  --rhea-card-fg: var(--card-foreground);
+  --rhea-border: var(--border);
+  --rhea-ring-hairline: var(--ring-hairline);
+}
+
+:root[data-theme='light'][data-style='glass'] .br-preset-pilot,
+:root[data-theme='light'][data-style='glass'] [data-ui-preset="rhea"] {
+  --card: rgba(255, 255, 255, 0.88);
+  --card-foreground: #0f172a;
+  --border: rgba(0, 0, 0, 0.12);
+  --ring-hairline: rgba(0, 0, 0, 0.14);
+  --shadow-rhea-card: 0 8px 32px 0 rgba(31, 38, 135, 0.08);
+  --rhea-card: var(--card);
+  --rhea-card-fg: var(--card-foreground);
+  --rhea-border: var(--border);
+  --rhea-ring-hairline: var(--ring-hairline);
+}
+
+/* Base Rhea component utility classes */
+.rhea-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--card-spacing);
+  overflow: hidden;
+  border-radius: var(--rhea-radius-card);
+  background-color: var(--rhea-card);
+  color: var(--rhea-card-fg);
+  padding: var(--card-spacing);
+  border: 1px solid var(--rhea-border);
+  box-shadow: var(--shadow-rhea-card);
+  outline: 1px solid var(--rhea-ring-hairline);
+  outline-offset: -1px;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.rhea-card[data-size="sm"] {
+  --card-spacing: var(--card-spacing-sm);
+  padding: var(--card-spacing-sm);
+  gap: var(--card-spacing-sm);
+}
+
+.rhea-card-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: 6px;
+}
+
+.rhea-card-title {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--rhea-card-fg);
+  margin: 0;
+}
+
+.rhea-card-description {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  color: var(--rhea-muted-fg);
+  line-height: 1.45;
+  margin: 0;
+  grid-column: 1 / -1;
+}
+
+.rhea-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rhea-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid var(--rhea-border);
+  font-size: 0.825rem;
+  color: var(--rhea-muted-fg);
+}
+
+/* Rhea KPI Card styling */
+.rhea-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.rhea-kpi-card {
+  position: relative;
+  border-radius: var(--rhea-radius-card);
+  background-color: var(--rhea-card);
+  border: 1px solid var(--rhea-border);
+  outline: 1px solid var(--rhea-ring-hairline);
+  outline-offset: -1px;
+  padding: 16px 20px;
+  box-shadow: var(--shadow-rhea-card);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.rhea-kpi-label {
+  font-family: var(--font-sans);
+  font-size: 0.825rem;
+  font-weight: 500;
+  color: var(--rhea-muted-fg);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.rhea-kpi-value {
+  font-family: var(--font-mono);
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: var(--rhea-card-fg);
+  line-height: 1.2;
+}
+
+.rhea-kpi-meta {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  color: var(--rhea-muted-fg);
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rhea-kpi-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--rhea-radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  background-color: var(--rhea-muted);
+  color: var(--rhea-fg);
+}
+
+.rhea-kpi-badge--primary {
+  background-color: var(--rhea-primary);
+  color: var(--rhea-primary-fg);
+}
+
+/* Rhea chart container */
+.rhea-chart-container {
+  border-radius: var(--rhea-radius-card);
+  background-color: var(--rhea-card);
+  border: 1px solid var(--rhea-border);
+  outline: 1px solid var(--rhea-ring-hairline);
+  outline-offset: -1px;
+  padding: 24px;
+  box-shadow: var(--shadow-rhea-card);
+}

@@ -32,7 +32,7 @@ export interface UpgradeTierModalProps {
  *  - the plans offered are the LIVE ones from `membership_plans_v` — 0005: "no plan
  *    value may be hardcoded in application code" — with their credit and discount
  *    read from there, `null` meaning withheld or negotiated, never zero;
- *  - Apply calls `changeMembership` (one atomic RPC, 0171). The dialog emits no
+ *  - Apply calls `changeMembership` (one atomic RPC, 0174). The dialog emits no
  *    event and flips no state of its own: the action emits after the server
  *    confirms, and `onSuccess` is called only then;
  *  - a failure is shown inline and nothing is claimed; a success is a toast.

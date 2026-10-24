@@ -57,6 +57,8 @@ const db = vi.hoisted(() => {
     calls: [] as Call[],
     /** Per table, the row sets to hand back in order. The last one repeats. */
     responses: {} as Record<string, unknown[][]>,
+    grants: [] as Array<{ name: string; args: Record<string, unknown> }>,
+    grantError: null as { message: string } | null,
   }
 
   function nextRows(table: string): unknown[] {
@@ -113,13 +115,21 @@ const db = vi.hoisted(() => {
   function reset(): void {
     state.calls = []
     state.responses = {}
+    state.grants = []
+    state.grantError = null
   }
 
   return { state, from, reset }
 })
 
 vi.mock('../../../lib/supabase', () => ({
-  supabase: { from: db.from },
+  supabase: {
+    from: db.from,
+    rpc: async (name: string, args: Record<string, unknown>) => {
+      db.state.grants.push({ name, args })
+      return { data: null, error: db.state.grantError }
+    },
+  },
   newClientUuid: () => 'test-action-key',
 }))
 
@@ -141,6 +151,8 @@ const writes = vi.hoisted(() => {
     refuseInsertOn: null as string | null,
     legacyPickupEnum: false,
     rejectedPickupInserts: 0,
+    queueOptions: [] as Array<{table:string; queueOnFailure?:boolean}>,
+    networkFailureOn: null as string | null,
   }
   function reset(): void {
     state.ops = []
@@ -148,13 +160,20 @@ const writes = vi.hoisted(() => {
     state.refuseInsertOn = null
     state.legacyPickupEnum = false
     state.rejectedPickupInserts = 0
+    state.queueOptions = []
+    state.networkFailureOn = null
   }
   return { state, reset }
 })
 
 vi.mock('../../../lib/dataAccess', () => ({
   generateClientUuid: () => `gen-${String(++writes.state.seq).padStart(4, '0')}`,
-  idempotentInsert: async (table: string, payload: Record<string, unknown>) => {
+  idempotentInsert: async (table: string, payload: Record<string, unknown>, options?: {queueOnFailure?:boolean}) => {
+    writes.state.queueOptions.push({table,...options})
+    if (writes.state.networkFailureOn === table) {
+      if (options?.queueOnFailure === false) throw new Error('Offline Return receipt refused')
+      return {data:null,error:null,queued:true}
+    }
     if (table === 'operation_sessions' && writes.state.legacyPickupEnum && payload['delivery_method'] === 'Client Pickup') {
       writes.state.rejectedPickupInserts += 1
       throw new Error('[DataAccess] Insert failed on operation_sessions: invalid input value for enum delivery_method: "Client Pickup"')
@@ -165,7 +184,8 @@ vi.mock('../../../lib/dataAccess', () => ({
     writes.state.ops.push({ kind: 'insert', table, id: null, payload })
     return { data: { id: payload['id'] ?? `${table}-row`, ...payload }, error: null }
   },
-  safeUpdate: async (table: string, id: string, payload: Record<string, unknown>, clientUuid?: string) => {
+  safeUpdate: async (table: string, id: string, payload: Record<string, unknown>, clientUuid?: string, options?: {queueOnFailure?:boolean}) => {
+    writes.state.queueOptions.push({table,...options})
     writes.state.ops.push({ kind: 'update', table, id, payload, ...(clientUuid === undefined ? {} : { clientUuid }) })
     return { data: { ...payload, id }, error: null }
   },
@@ -216,6 +236,30 @@ beforeEach(() => {
 })
 
 /* ── 1 · The stage guard, read off JOBS ─────────────────────────────────── */
+
+describe('branch authorization precedes every floor write', () => {
+  const call: Record<JobName, () => Promise<unknown>> = {
+    Pack: () => packRental({ id: 'B-715', lines: [{ bookingLineId: LINE_A }] }, OWNER),
+    Handover: () => handoverRental({ bookingId: 'B-715', lines: [{ bookingLineId: LINE_A }] }, OWNER),
+    Return: () => completeReturn({ rentalId: 'B-715', lines: [{ bookingLineId: LINE_A }] }, OWNER),
+    Reset: () => completeReset({ id: 'B-715', unitIds: ['unit-1'] }, OWNER),
+  }
+  for (const job of JOB_ORDER) {
+    for (const message of ['GATE:operations.grant|Wrong branch', 'RPC unavailable', 'Failed to fetch']) {
+      it(`${job} refuses ${message} with no writes`, async () => {
+        db.state.responses['bookings'] = [[bookingAt(JOBS[job].runsAt)]]
+        db.state.grantError = { message }
+        await expect(call[job]()).rejects.toThrow('Nothing was written')
+        expect(db.state.grants).toEqual([{
+          name: 'assert_operation_branch_grant',
+          args: { p_operation: job.toLowerCase(), p_booking_id: BOOKING_ID },
+        }])
+        expect(writes.state.ops).toEqual([])
+        expect(db.state.calls.map(c => c.table)).toEqual(['bookings'])
+      })
+    }
+  }
+})
 
 describe('each verb runs at exactly one stage — JOBS[j].runsAt, not a re-typed literal', () => {
   const call: Record<JobName, (ref: string) => Promise<unknown>> = {
@@ -923,6 +967,22 @@ describe('Return', () => {
     db.state.responses['bookings'] = [[bookingAt('On Rent')], [bookingAt('Returned')]]
     db.state.responses['booking_lines'] = [[{ id: LINE_A, qty: 1 }]]
     db.state.responses['operation_sessions'] = [[]]
+  })
+
+  it('refuses an offline receipt instead of sealing a partial session as saved', async () => {
+    db.state.responses.return_lines = [[]]
+    writes.state.networkFailureOn = 'return_lines'
+    await expect(completeReturn({rentalId:'B-715',lines:[{bookingLineId:LINE_A,unitIds:['u1'],condition:'Good'}]},OWNER)).rejects.toThrow('Offline Return receipt refused')
+    expect(opsOn('operation_sessions').some(op => op.payload.state === 'Completed')).toBe(false)
+    expect(insertsOn('booking_stage_transitions')).toHaveLength(0)
+  })
+
+  it('keeps Return custody writes online while retaining separate scan/note queuing', async () => {
+    db.state.responses.return_lines = [[],[{id:'rl-1',booking_line_id:LINE_A,state:'Returned'}]]
+    await completeReturn({rentalId:'B-715',lines:[{bookingLineId:LINE_A,unitIds:['u1'],condition:'Good'}]},OWNER)
+    const critical = writes.state.queueOptions.filter(op => ['operation_sessions','return_lines','booking_line_units','session_line_movements','cleaning_queue_entries'].includes(op.table))
+    expect(critical.length).toBeGreaterThan(2)
+    expect(critical.every(op => op.queueOnFailure === false)).toBe(true)
   })
 
   it('sets condition, inspector and time together — CHECK 0003:382 takes all three or none', async () => {

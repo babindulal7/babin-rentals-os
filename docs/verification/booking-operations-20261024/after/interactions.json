@@ -1,0 +1,10 @@
+{
+  "sourceHash": "3b430ee4c70aede65ef5192a30341d37bb36a0e59dcc156035086837d3acdbae",
+  "sourceChanged": false,
+  "checks": [
+    "Nested scanner opens above Operations; number shortcut ignored; Escape closes scanner only",
+    "Operations Escape restores focus to its trigger",
+    "Desktop queue dock retains its table and one footer"
+  ],
+  "environment": "existing local mock corpus; no floor confirmation or scan performed; remote requests blocked"
+}

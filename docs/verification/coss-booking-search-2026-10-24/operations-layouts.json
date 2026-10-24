@@ -1,0 +1,105 @@
+[
+  {
+    "scrollWidth": 1440,
+    "stages": [
+      {
+        "current": null,
+        "disabled": false,
+        "height": 91,
+        "label": "Packing · Done",
+        "width": 103.671875
+      },
+      {
+        "current": null,
+        "disabled": false,
+        "height": 91,
+        "label": "Handover · Done",
+        "width": 103.6875
+      },
+      {
+        "current": "step",
+        "disabled": false,
+        "height": 91,
+        "label": "Return & Inspection · Open",
+        "width": 103.671875
+      },
+      {
+        "current": null,
+        "disabled": true,
+        "height": 91,
+        "label": "Cleaning & Reset · Not open yet",
+        "width": 103.6875
+      }
+    ],
+    "status": "Return & Inspection · Status: On Rent",
+    "width": 1440
+  },
+  {
+    "scrollWidth": 360,
+    "stages": [
+      {
+        "current": null,
+        "disabled": false,
+        "height": 64.28125,
+        "label": "Packing · Done",
+        "width": 73
+      },
+      {
+        "current": null,
+        "disabled": false,
+        "height": 64.28125,
+        "label": "Handover · Done",
+        "width": 73
+      },
+      {
+        "current": "step",
+        "disabled": false,
+        "height": 64.28125,
+        "label": "Return & Inspection · Open",
+        "width": 73
+      },
+      {
+        "current": null,
+        "disabled": true,
+        "height": 64.28125,
+        "label": "Cleaning & Reset · Not open yet",
+        "width": 73
+      }
+    ],
+    "width": 360
+  },
+  {
+    "scrollWidth": 820,
+    "stages": [
+      {
+        "current": null,
+        "disabled": false,
+        "height": 64,
+        "label": "Packing · Done",
+        "width": 184
+      },
+      {
+        "current": null,
+        "disabled": false,
+        "height": 64,
+        "label": "Handover · Done",
+        "width": 184
+      },
+      {
+        "current": "step",
+        "disabled": false,
+        "height": 64,
+        "label": "Return & Inspection · Open",
+        "width": 184
+      },
+      {
+        "current": null,
+        "disabled": true,
+        "height": 64,
+        "label": "Cleaning & Reset · Not open yet",
+        "width": 184
+      }
+    ],
+    "width": 820
+  }
+]

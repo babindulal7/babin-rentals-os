@@ -1,0 +1,104 @@
+[
+  {
+    "buttons": [
+      {
+        "height": 44,
+        "label": "Show clients",
+        "width": 44
+      },
+      {
+        "height": 44,
+        "label": "Client History",
+        "width": 44
+      },
+      {
+        "height": 44,
+        "label": "Clear search query",
+        "width": 44
+      }
+    ],
+    "fields": [
+      {
+        "right": 322.8000011444092,
+        "width": 296,
+        "x": 26.80000114440918
+      },
+      {
+        "right": 322.8000011444092,
+        "width": 296,
+        "x": 26.80000114440918
+      }
+    ],
+    "inputFocusShadow": "none",
+    "scrollWidth": 360,
+    "width": 360
+  },
+  {
+    "buttons": [
+      {
+        "height": 44,
+        "label": "Show clients",
+        "width": 44
+      },
+      {
+        "height": 44,
+        "label": "Client History",
+        "width": 44
+      },
+      {
+        "height": 44,
+        "label": "Clear search query",
+        "width": 44
+      }
+    ],
+    "fields": [
+      {
+        "right": 778.8000030517578,
+        "width": 684,
+        "x": 94.8000030517578
+      },
+      {
+        "right": 611.5625152587891,
+        "width": 516.7625122070312,
+        "x": 94.8000030517578
+      }
+    ],
+    "inputFocusShadow": "none",
+    "scrollWidth": 820,
+    "width": 820
+  },
+  {
+    "buttons": [
+      {
+        "height": 44,
+        "label": "Show clients",
+        "width": 44
+      },
+      {
+        "height": 44,
+        "label": "Client History",
+        "width": 44
+      },
+      {
+        "height": 44,
+        "label": "Clear search query",
+        "width": 44
+      }
+    ],
+    "fields": [
+      {
+        "right": 1392.8000183105469,
+        "width": 1100,
+        "x": 292.8000183105469
+      },
+      {
+        "right": 1225.562530517578,
+        "width": 932.7625122070312,
+        "x": 292.8000183105469
+      }
+    ],
+    "inputFocusShadow": "none",
+    "scrollWidth": 1440,
+    "width": 1440
+  }
+]

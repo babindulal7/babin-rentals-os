@@ -315,6 +315,10 @@ export interface Bar {
   noteAt?: Date
   /** Right-edge dot — a flag needing attention on this bar. */
   dot?: 'danger' | 'progress' | 'primary' | 'success'
+  /** Authoritative physical unit ID assigned to this bar, when one exists. */
+  unitId?: string
+  /** Authoritative physical resource ID assigned to this bar, when one exists. */
+  resourceId?: string
 }
 
 /**
@@ -537,7 +541,11 @@ export interface ResourceDefinition {
   icon: IconName
 }
 
-export const RESOURCE_CATALOGUE: readonly ResourceDefinition[] = [
+/**
+ * Archived historical resource catalogue kept for reference and non-operational testing (Law 3).
+ * Must NOT be used to invent operational equipment, vehicles, crew, or bays in live views.
+ */
+export const ARCHIVED_RESOURCE_CATALOGUE: readonly ResourceDefinition[] = [
   // Equipment
   { id: 'res-fx6', type: 'Equipment', name: 'Sony FX6 Cinema Camera', code: 'SN-FX6-001', meta: 'Available', metaTone: 'success', icon: 'camera' },
   { id: 'res-komodo', type: 'Equipment', name: 'RED Komodo 6K', code: 'SN-KMD-0201', meta: 'Available', metaTone: 'success', icon: 'video' },
@@ -563,23 +571,18 @@ export const RESOURCE_CATALOGUE: readonly ResourceDefinition[] = [
 ]
 
 /**
- * The resource rows the Timeline view draws.
- * Populated from RESOURCE_CATALOGUE and mapped with active booking bars
- * through buildResourceTimeline in lib/queries/calendar.ts.
+ * Production physical resource catalogue.
+ * Empty until authoritative physical unit / asset / crew / bay repository records exist.
+ * Failing closed prevents presenting fabricated equipment serial numbers or staff assignments.
  */
-export const ROWS: ResourceRow[] = RESOURCE_CATALOGUE.map((res) => {
-  const row: ResourceRow = {
-    id: res.id,
-    name: res.name,
-    type: res.type,
-    meta: res.meta,
-    icon: res.icon,
-    bars: [],
-  }
-  if (res.code) row.code = res.code
-  if (res.metaTone) row.metaTone = res.metaTone
-  return row
-})
+export const RESOURCE_CATALOGUE: readonly ResourceDefinition[] = []
+
+/**
+ * The resource rows the Timeline view draws.
+ * Populated from authoritative physical records; empty in production so truthful
+ * empty-state messaging renders instead of fabricated lanes.
+ */
+export const ROWS: ResourceRow[] = []
 
 /* ── filters ───────────────────────────────────────────────────────────── */
 

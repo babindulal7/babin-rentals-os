@@ -16,6 +16,11 @@ import {
 import type { RecordSnapshot, RecordValues, RecordValue } from '../../lib/recordEditor'
 import { useToast } from '../ui/Toast'
 import { rupees, formatMoney } from '../../lib/money'
+import {
+  SectionSaveStatusBadge,
+  SectionSaveBar,
+  useSectionSaveManager,
+} from './RecordSectionSaveStatus'
 
 export interface EquipmentRecordEditorProps {
   recordId?: string | undefined
@@ -31,6 +36,7 @@ export interface EquipmentRecordEditorProps {
   canViewMoney: boolean
   manufacturerDiffers: boolean
   setManufacturerDiffers: (differs: boolean) => void
+  sectionManager?: ReturnType<typeof useSectionSaveManager> | undefined
 }
 
 export function EquipmentRecordEditor({
@@ -47,6 +53,7 @@ export function EquipmentRecordEditor({
   canViewMoney,
   manufacturerDiffers,
   setManufacturerDiffers,
+  sectionManager,
 }: EquipmentRecordEditorProps) {
   const { showSuccessToast } = useToast()
   const editing = Boolean(recordId)
@@ -145,6 +152,16 @@ export function EquipmentRecordEditor({
       id={sectionId('Identity')}
       title="Identity"
       collapsible={false}
+      statusBadge={
+        sectionManager ? (
+          <SectionSaveStatusBadge
+            status={sectionManager.getSectionStatus('identity', Boolean(errors.name))}
+            savedAtTime={sectionManager.savedSections['identity']?.savedAt}
+            errorCount={errors.name ? 1 : 0}
+            errorMessage={sectionManager.sectionErrors['identity']}
+          />
+        ) : undefined
+      }
     >
       <div className="record-fields equipment-form-grid">
         <label className="record-field equipment-form-span-2" htmlFor="record-name">
@@ -373,6 +390,32 @@ export function EquipmentRecordEditor({
           </p>
         </div>
       </div>
+
+      {sectionManager && (
+        <SectionSaveBar
+          sectionName="Identity"
+          status={sectionManager.getSectionStatus('identity', Boolean(errors.name))}
+          isSaving={sectionManager.savingSection === 'identity'}
+          canSave={!errors.name && Boolean(values.name)}
+          saveDisabledReason={!values.name ? 'Equipment name is required' : null}
+          onSave={async () => {
+            await sectionManager.saveSection('identity', {
+              name: (values.name ?? '') as RecordValue,
+              short_name: (values.short_name ?? null) as RecordValue,
+              category_id: (values.category_id ?? null) as RecordValue,
+              brand: (values.brand ?? null) as RecordValue,
+              model: (values.model ?? null) as RecordValue,
+              manufacturer: (values.manufacturer ?? null) as RecordValue,
+              description: (values.description ?? null) as RecordValue,
+            })
+          }}
+          onNext={() => {
+            document.getElementById(sectionId('Stock & Units'))?.scrollIntoView({ behavior: 'smooth' })
+          }}
+          nextLabel="Stock & Units"
+          errorMessage={sectionManager.sectionErrors['identity']}
+        />
+      )}
     </RecordSection>
   )
 
@@ -383,6 +426,41 @@ export function EquipmentRecordEditor({
       title="Stock & Units"
       collapsible={false}
     >
+      {editing && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '14px 18px',
+            borderRadius: 'var(--r-card, 8px)',
+            background: 'var(--card2)',
+            border: '1px solid var(--border)',
+            gap: 12,
+            flexWrap: 'wrap',
+            marginBottom: 16,
+          }}
+        >
+          <div>
+            <strong style={{ fontSize: 'var(--t-ui, 14px)', display: 'block', color: 'var(--text)' }}>
+              Manage Stock &amp; Units
+            </strong>
+            <span style={{ fontSize: 'var(--t-meta, 13px)', color: 'var(--muted)' }}>
+              Physical units, serial numbers, intake batches, and retirements are managed directly in the inventory fleet view.
+            </span>
+          </div>
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => {
+              window.location.href = `/inventory/${recordId}?tab=Units`
+            }}
+            style={{ minHeight: 44, padding: '0 16px' }}
+          >
+            Manage Stock &amp; Units →
+          </Button>
+        </div>
+      )}
       <div style={{ marginBottom: 'var(--sp-md)' }}>
         <label style={{ display: 'block', fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text2)', marginBottom: 8 }}>
           Tracking mode *
@@ -550,7 +628,7 @@ export function EquipmentRecordEditor({
                       </td>
                       <td>
                         <span className="identifier" style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-                          {String(row.asset_tag || (snapshot?.code ? `${snapshot.code}-${String(index + 1).padStart(2, '0')}` : '(Assigned on save)'))}
+                          {String(row.asset_tag || (editing ? 'Not assigned' : '(Assigned on save)'))}
                         </span>
                       </td>
                       <td>
@@ -558,7 +636,8 @@ export function EquipmentRecordEditor({
                           type="button"
                           className="equipment-badge-subtle"
                           style={{ cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--card2)', padding: '3px 8px' }}
-                          title="Inspect Barcode & Tag"
+                          title={editing && row.asset_tag ? 'Inspect Barcode & Tag' : 'Save equipment and assign its unit tag before inspecting the barcode'}
+                          disabled={!editing || !row.asset_tag}
                           aria-label={`Inspect barcode for unit ${index + 1}`}
                           onClick={() => setBarcodeModalUnit({ unit: row, index })}
                         >
@@ -569,7 +648,7 @@ export function EquipmentRecordEditor({
                       <td>
                         <span className="equipment-badge-status">
                           <Icon name="lock" size={12} />
-                          {String(row.status || 'In Stock')}
+                          {String(row.status || (editing ? 'Not available' : 'Not saved'))}
                         </span>
                       </td>
                       <td>
@@ -693,6 +772,15 @@ export function EquipmentRecordEditor({
       collapsible
       defaultOpen={false}
       collapsedHint="Physical containment & bundles"
+      statusBadge={
+        sectionManager ? (
+          <SectionSaveStatusBadge
+            status={sectionManager.getSectionStatus('relationships', false)}
+            savedAtTime={sectionManager.savedSections['relationships']?.savedAt}
+            errorMessage={sectionManager.sectionErrors['relationships']}
+          />
+        ) : undefined
+      }
     >
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--sp-md)' }}>
         <div className="equipment-rel-card">
@@ -737,6 +825,27 @@ export function EquipmentRecordEditor({
       <p style={{ marginTop: 'var(--sp-sm)', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
         Relationship persistence pending API integration — inventory relationships will attach here.
       </p>
+
+      {sectionManager && (
+        <SectionSaveBar
+          sectionName="Relationships"
+          status={sectionManager.getSectionStatus('relationships', false)}
+          isSaving={sectionManager.savingSection === 'relationships'}
+          canSave={Boolean(recordId || snapshot?.id)}
+          saveDisabledReason={!recordId && !snapshot?.id ? 'Save Identity first' : null}
+          onSave={async () => {
+            await sectionManager.saveSection('relationships', {
+              parent_id: values.parent_id ?? null,
+              kit_role: values.kit_role ?? null,
+            })
+          }}
+          onNext={() => {
+            document.getElementById(sectionId('Location'))?.scrollIntoView({ behavior: 'smooth' })
+          }}
+          nextLabel="Location"
+          errorMessage={sectionManager.sectionErrors['relationships']}
+        />
+      )}
     </RecordSection>
   )
 
@@ -747,6 +856,15 @@ export function EquipmentRecordEditor({
       title="Location"
       collapsible
       defaultOpen={true}
+      statusBadge={
+        sectionManager ? (
+          <SectionSaveStatusBadge
+            status={sectionManager.getSectionStatus('location', false)}
+            savedAtTime={sectionManager.savedSections['location']?.savedAt}
+            errorMessage={sectionManager.sectionErrors['location']}
+          />
+        ) : undefined
+      }
     >
       <div className="record-fields equipment-form-grid">
         <label className="record-field" htmlFor="record-default-warehouse">
@@ -829,6 +947,29 @@ export function EquipmentRecordEditor({
           </div>
         )}
       </div>
+
+      {sectionManager && (
+        <SectionSaveBar
+          sectionName="Location"
+          status={sectionManager.getSectionStatus('location', false)}
+          isSaving={sectionManager.savingSection === 'location'}
+          canSave={Boolean(recordId || snapshot?.id)}
+          saveDisabledReason={!recordId && !snapshot?.id ? 'Save Identity first' : null}
+          onSave={async () => {
+            await sectionManager.saveSection('location', {
+              rack: defaultRack || values.rack || null,
+              shelf: defaultShelf || values.shelf || null,
+              bin: defaultBin || values.bin || null,
+            })
+          }}
+          onNext={() => {
+            const nextSec = canViewMoney ? 'Purchase' : 'Maintenance & Documents'
+            document.getElementById(sectionId(nextSec))?.scrollIntoView({ behavior: 'smooth' })
+          }}
+          nextLabel={canViewMoney ? 'Purchase' : 'Maintenance & Documents'}
+          errorMessage={sectionManager.sectionErrors['location']}
+        />
+      )}
     </RecordSection>
   )
 
@@ -1136,7 +1277,7 @@ export function EquipmentRecordEditor({
         <h4 style={{ margin: 0, fontSize: 'var(--t-ui)' }}>Commercial Terms Managed by Accounts</h4>
       </div>
       <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.5 }}>
-        Under Law 1 and RBAC security rules, financial and rental pricing fields are hidden for your role. Daily rates, purchase records, and replacement values are maintained directly by Accounts and Operations Management.
+        Financial and rental pricing fields are hidden for your role. Daily rates, purchase records, and replacement values are maintained directly by Accounts and Operations Management.
       </p>
     </div>
   )
@@ -1442,7 +1583,7 @@ export function EquipmentRecordEditor({
         isOpen={Boolean(barcodeModalUnit)}
         unit={barcodeModalUnit?.unit ?? null}
         index={barcodeModalUnit?.index ?? 0}
-        assetCode={snapshot?.code || String(values.asset_code || 'EQ-001')}
+        assetCode={snapshot?.code || ''}
         equipmentName={String(values.name || 'Equipment')}
         onClose={() => setBarcodeModalUnit(null)}
       />

@@ -1,5 +1,727 @@
 # Progress Log
 
+## 2026-10-24 — Ultra-Fast App Loading: Vendor Chunking, Route Warming & Workbox Preloading
+
+**Did**
+- Optimized application entry point, asset delivery, and routing latency for ultra-fast startup (FCP, LCP, TTI):
+  - Preconnect & DNS-Prefetch: Injected `<link rel="dns-prefetch" href="//sxguwvgoserhdolewibb.supabase.co" />` and `<link rel="preconnect" href="https://sxguwvgoserhdolewibb.supabase.co" crossorigin />` into `index.html` to eliminate DNS and TLS handshake latency before first API query.
+  - Granular Vendor Code-Splitting: Isolated heavy third-party dependencies in `vite.config.ts`:
+    - `vendor-charts`: `recharts` (363 kB / 106 kB gzip) isolated into on-demand shared chunk for analytics and reporting modules.
+    - `vendor-base-ui`: `@base-ui/react` (178 kB / 61 kB gzip) isolated into dedicated vendor chunk.
+  - Workbox PWA & Navigation Preload:
+    - Enabled `navigationPreload: true` in Workbox PWA configuration so network navigation requests start in parallel with service worker boot.
+    - Expanded runtime caching with `StaleWhileRevalidate` strategy across all Supabase reference tables (`equipment`, `clients`, `bundles`, `categories`, `warehouses`, `settings`).
+  - Predictive Route Preloading & Idle Core Warming:
+    - Added `/` and `/today` to canonical route preload table (`src/lib/routePreload.ts`) for instant response on navigation intent.
+    - Added `warmCoreHubs()` using `requestIdleCallback` (with 1.5s fallback) to prewarm core hub code chunks (`/rentals`, `/operations`, `/inventory`) during browser idle time without competing with initial load bandwidth or violating Data Saver mode.
+
+**Ruled**
+- Fast-load optimizations strictly preserve architectural invariants: no changes to money math (integer paisa), role gating, or custody transition safety.
+- Prewarming respects user connection preferences: `saveData` bypasses speculative background warmup.
+- All 442 test files and 5,494 unit/integration tests remain 100% green.
+
+**Verified**
+- TypeScript: `npm run typecheck` passes with 0 errors (`tsc --noEmit`).
+- ESLint: `npm run lint` passes with 0 warnings (`eslint src --max-warnings 0`).
+- Postgres Migrations (PGlite): `npm run check:pglite` passes with 171/171 migrations applied from scratch, 0 leaks, 0 failures.
+- Postgres Lifecycle Suite: `npm run check:lifecycle` passes 31/31 stages green through real Postgres + RLS.
+- Accessibility Contrast: `npm run check:contrast` passes 82/82 WCAG AA pairs across light, dark, and glass themes.
+- Test Suite: 442 test files, 5,494/5,494 tests passing (`npm test`).
+- Production Build: `npm run build` succeeds cleanly, producing 256 precache entries and optimized vendor splits.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 57 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 171 files · check:pglite 171/171 applied, 0 failed (recorded 2026-10-24T11:20:30.512Z). Suite: PASS — 5494/5494 passed, 0 failed (recorded 2026-10-24T11:20:03.474Z); source fingerprint matches.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-24T11:20:54.097Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+
+- Proceed with Phase 3 reporting tables and remaining report modules (Operations, Sales VAT, Expense reports).
+- Hosted role/JWT/PostgREST/Storage, physical scanner/device, and offline/reconnect acceptance tests remain separate; production release HOLD remains.
+
+## 2026-10-24 — Integration: Workbar Alignments, Unified Record Workspace & Manage Stock
+
+**Did**
+- Integrated `feat/operations-workbar-alignment` into `main`:
+  - Aligned WAI-ARIA roving tabindex (tabIndex 0 on active, -1 on inactive, ArrowLeft/ArrowRight/Home/End keyboard navigation) across:
+    - Today dispatch presets (`src/modules/today/Today.tsx` & `TodayWorkbarAlignment.test.tsx`).
+    - Operations queues chips (`src/modules/operations/OperationsQueues.tsx` & `OperationsWorkbarAlignment.test.tsx`).
+    - Calendar view tabs & range pill (`src/modules/calendar/Calendar.tsx`, `calendar.css`, & `CalendarViewTabs.test.tsx`).
+    - Rentals Hub status tabs with loading/error safe counters (`src/modules/rentals/RentalsList.tsx`, `ModuleFilterBar.tsx`, `module-shell.css`, & `rentalsWorkbarAlignment.test.tsx`).
+- Integrated `feat/unified-record-workspace-manage-stock` into `main`:
+  - Authored Migration `0173_section_saves_and_unit_lifecycle.sql` providing `save_record_section`, `add_equipment_units`, `retire_equipment_unit`, and `enroll_client_membership` transactional RPCs.
+  - Implemented typed server-backed actions:
+    - `src/actions/inventory/manageStock.ts` (`addEquipmentUnits`, `retireEquipmentUnit`) with role enforcement, input validation, and offline fail-closed refusal.
+    - `src/actions/clients/enrollMembership.ts` (`enrollClientMembership`) with transactional active membership supersession.
+  - Implemented frontend management modal flows:
+    - Serial intake (`AddUnitsModal.tsx`) with single and batch intake, warehouse assignment, and barcode generation.
+    - Soft retirement (`RetireUnitModal.tsx`) with >= 10-char reason requirement, active reservation block, and Law 3 history preservation.
+    - Stock adjustment (`AdjustStockModal.tsx`) and Asset Detail fleet operations hookup (`AssetDetail.tsx`).
+    - Client membership enrollment (`EnrollMembershipModal.tsx`), tier upgrade (`UpgradeTierModal.tsx`), and Membership status management (`Membership.tsx`).
+  - Added 1-click next actionable operation split button in `BookingOperationsMenu.tsx` while preserving compact mobile layouts and `BookingDetail.tsx` contract.
+  - Added comprehensive tests (80 new tests, 5,494/5,494 suite total passing).
+
+**Ruled**
+- Law 3 (Nothing is deleted): equipment units transition to 'Retired' status with recorded reason and timestamp; records, relations, and audit trails remain permanently immutable.
+- Law 15: All interactive workbar chips, tabs, and action triggers maintain minHeight >= 44px touch floor (`var(--tap, 44px)`).
+- Law 16 (Honest data): Missing or loading queue counts display non-numeric indicators ('…' / '—'), never false zeros.
+- Custody, fleet modification, and membership transactions require active online connection and fail closed offline.
+
+**Verified**
+- TypeScript: `npm run typecheck` passes with 0 errors (`tsc --noEmit`).
+- ESLint: `npm run lint` passes with 0 warnings (`eslint src --max-warnings 0`).
+- Postgres Migrations (PGlite): `npm run check:pglite` passes with 171/171 migrations applied from scratch, 0 leaks, 0 failures.
+- Postgres Lifecycle Suite: `npm run check:lifecycle` passes 31/31 stages green through real Postgres + RLS.
+- Accessibility Contrast: `npm run check:contrast` passes 82/82 WCAG AA pairs across light, dark, and glass themes.
+- Test Suite: 442 test files, 5,494/5,494 tests passing (`npm test`).
+- Production Build: `npm run build` succeeds cleanly producing verified bundle and PWA service worker.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 57 (95%) | +2 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 171 files · check:pglite 171/171 applied, 0 failed (recorded 2026-10-24T10:28:08.450Z). Suite: PASS — 5494/5494 passed, 0 failed (recorded 2026-10-24T10:35:28.184Z); source fingerprint matches.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-24T10:28:21.273Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+
+- Proceed with Phase 3 reporting tables and remaining report modules (Operations, Sales VAT, Expense reports).
+- Hosted role/JWT/PostgREST/Storage, physical scanner/device, and offline/reconnect acceptance tests remain separate; production release HOLD remains.
+
+## 2026-10-24 — Reports shadcn/ui Adoption Blueprint v1.4 (Phases 0, 1, 2) & Preset Pilot
+
+**Did**
+- Implemented `BABIN RENTALS OS — shadcn/ui Reports & UX Adoption Blueprint v1.4` on isolated feature branch `feat/reports-shadcn-modernization`.
+- Created scoped design token layer `src/styles/reportChartTokens.css` mapping `--chart-1` to `--chart-6` to Babin's canonical categorical `--cat-1` to `--cat-6` across Light, Dark, and High-Contrast modes.
+- Built reusable reporting UI primitives in `src/components/ui/reports/`:
+  - `ReportKpiCard` & `ReportKpiStrip`: Standardized KPI strip with primary value, unit badge, change pill vs preceding period, and definition tooltip.
+  - `ReportEmpty`: Law 16 truthful empty state specifying reason, remedy, filter clear action, and missing backend source indicator.
+  - `ReportChartCard`: Header card with title, metric basis explanation, date range, verified source badge, and audit reconciliation footer.
+  - `ReportChart`: Recharts AreaChart wrapper with gradient fills, accessible fallback HTML data table toggle ("View as table") with 44px hit area, live ARIA status for selected points, and mobile tap tooltip dismissal.
+- Phase 0 Mock Gating: Enforced truthful mock gating (Law 16) in `CustomReport.tsx`, `ReportCatalog.tsx`, and `ReportTemplate.tsx` so un-wired queries or fixture-backed projections from `data/pulse.ts` render "Not tracked yet" in production (`!IS_MOCK`).
+- Phase 1 Revenue Report Pilot: Modernized `RevenueReport.tsx` with Recharts AreaChart, `ReportKpiStrip` (Taxable revenue, Issued invoices, Average invoice, Excluded voids), and credit-note settlement reconciliation.
+- Phase 2 Family Polish: Modernized `RentalReports.tsx`, `InventoryReports.tsx`, and `EquipmentPerformance.tsx` with `ReportKpiStrip`, `ReportChartCard`, and status distribution / performer ranking visualizations while strictly preserving `PageBody` state ladders and money-blind role restrictions.
+- Integrated Rhea preset pilot definitions in `PRESET_MANIFEST.md`, `src/styles/shadcn-preset-pilot.css`, and `src/components/shadcn/` under scoped container queries and tokens.
+- Restored unified record workspace safety components (`RecordSectionSaveStatus.tsx`, `RecordWorkspace.tsx`, `RecordForm.tsx`, and `EquipmentRecordEditor.tsx`), eliminating strict TS2322 index access errors.
+
+**Ruled**
+- Preserved existing `PageShell`, `PageHeader`, `PageBody`, `ReportToolbar`, and `DataTableShell`. No duplicate sidebars, routing, or drawer systems.
+- Zero fabrication law (Law 16): No fixture numbers or hardcoded zeros in production reports. Missing metrics explicitly display "Not tracked yet".
+- Preserved integer paisa (`src/lib/money.ts`), Nepal BS/AD dates, and financial access control (`useCanViewMoney` / `auth_can_view_money`).
+- Scoped tokens: Rhea preset styles strictly namespaced under `.br-preset-pilot`; global `theme.css` remains authoritative.
+
+**Verified**
+- Tests: 13/13 test files passed (118/118 tests in `src/modules/reports/__tests__/`), including `RevenueReport.recharts.test.tsx`, `Reports.law16.states.test.tsx`, and `InventoryReports.csv.test.ts`.
+- TypeScript: `npm run typecheck` passes with zero errors (`tsc --noEmit`).
+- Lint: `npm run lint` passes with zero warnings (`eslint src --max-warnings 0`).
+- Color contrast: `npm run check:contrast` passes 82/82 contrast pairs (WCAG AA).
+- DB migrations: `npm run check:pglite` passes with 170/170 migrations applied, 0 leaks, 0 failures.
+- DB lifecycle: `npm run check:lifecycle` passes 31/31 steps through real Postgres + RLS.
+- Production build: `npm run build` succeeds cleanly producing verified chunks and PWA service worker.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | — |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 170 files · check:pglite 170/170 applied, 0 failed (recorded 2026-10-24T09:16:17.130Z). Suite: Historical suite: 5400/5406 passed, 6 failed (recorded 2026-10-24T09:12:43.696Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-24T09:17:15.728Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+
+- Proceed with Phase 3 (Data Table sorting & filter enhancements) and remaining report modules (Operations, Sales VAT, Expense reports).
+- Hosted role/JWT/PostgREST/Storage, physical device and offline/reconnect acceptance tests remain separate.
+
+
+
+<!-- booking-operations-20261024:delivery-start -->
+## 2026-10-24 — Booking Operations v1.1 local recovery and verification
+
+**Did**
+- Preserved the Operations frame/menu, canonical provider guards, persisted status reconciliation, real cleanup facts, genuine availability exclusions, and Return-only queued-success refusal in local checkpoint 9dc90588 and a review patch against7245f5a0. No application checkout was overwritten or Git mutation performed by this pass.
+- Saved source, patch, baseline/after screenshots, command outputs and recovery manifest outside the changing checkout. Delivery index: docs/verification/booking-operations-20261024/README.md. Protected recovery: C:/Users/use/.codex/visualizations/2026/10/20/01a15b1d-f368-7cd3-81e2-a7affbb30349/booking-operations-recovery-1792829573642.
+- Re-audited the actual SQL contract. Partial Return receipt still leaves its unit reservation live; the active0100 trigger releases at parent stage. No migration was authored or applied.
+
+**Ruled**
+- Owner v1.1 Return availability ruling governs; pending Cleaning/QC/Reset alone is not a hold or fake completion. Genuine defects and reservation exclusions remain.
+- Local migration-authoring clarification remains pending under the brief's explicit no-migration boundary. Financial disposition does not establish physical repair clearance.
+- Preserve newer local work. External checkout changes invalidated active-copy checks; checkpoint results below are not current/full/hosted certification.
+
+**Verified**
+- Fixed checkpoint source: TypeScript exit0; 333/333 focused tests across 14 files, 0 failed and 0 skipped. Snapshot source fingerprint stayed 34d968ba962ca548138c6a3af47c04d0ae5b46781481f9b7ad15246b7f52c70f.
+- Fixed checkpoint: npm run lint exit0; npm run check:contrast exit0; npm run build exit0. Build is mock-mode local output; existing CSS/chunk warnings are retained in its log.
+- Saved browser matrix:8 before/after pairs, four requested sizes in light/dark, no page overflow, one footer and adequate stage/confirm geometry at capture. Historical interaction evidence covers scanner nesting, shortcut suppression, Escape/focus return and desktop dock. Fresh active-copy attempts completed0 checks because the checkout changed.
+- Final frozen-checkpoint browser proof:16/16 checks,0 page errors,unchanged source fingerprint. The12 captured cases cover1440x900,1024x768,768x1024,390x844 in light/dark,320px phone,forced colors and explicitly labelled200%-equivalent layouts. Main/content overflow0,one footer and56px Confirm; nested scanner/shortcut/Escape/focus return, dirty dock resize/keep/discard and Warehouse money-blind DOM passed. No scans, signatures or Return confirmations submitted. Gallery:protected recovery/frozen-browser/run-20261024-085857/gallery.html.
+- Current SQL is byte-identical to the saved disposable diagnostic:170 files, SHA2563b357d86b8ad49e796c0a4d23cc52c582d792c891613fca9f65704c33b94e54c. Its13/13 assertions confirm current defects/protections, not implementation of partial-return release.
+- Review patch reverse-check passed against its exported checkpoint. At the recorded scope observation, all24 affected source files matched the active933d596d content after line-ending normalization; this is an instantaneous scope comparison only.
+- npm run completion exited1 because current full/lifecycle/coverage receipts are historical or incomplete. npm ci was not run over the active shared dependency installation. No production data, push, PR, merge or deployment was used.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 170 files · check:pglite 170/170 applied, 0 failed (recorded 2026-10-24T08:28:45.862Z). Suite: Historical suite: 5405/5414 passed, 9 failed (recorded 2026-10-24T07:34:53.928Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-24T08:20:50.771Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+
+- Implement atomic partial serial/quantity Return reservation adjustment and matching unit-status derivation after explicit local migration-scope clarification; retain unreturned and unrelated holds, genuine safety blocks, pending tasks and Close gates.
+- Complete current-working-copy full-suite/database/build verification once checkout activity stabilizes. Historical full-suite failures/source drift are not relabelled as green.
+- Complete native200% zoom/screen-reader and real-device/hosted/offline acceptance. Frozen browser proof is complete for the preserved checkpoint; it does not certify these remaining checks or newer shared-checkout edits.
+
+<!-- booking-operations-20261024:delivery-end -->
+
+<!-- coss-booking-search-20261024:start -->
+## 2026-10-24 — New Rental coss search and Operations status readback
+
+**Did**
+- Saved the clean starting HEAD/status and original affected files under the local temporary recovery folder `babin-coss-search-20261024-010101` before editing. Preserved concurrent security/migration changes in the shared checkout.
+- Adapted the existing coss InputGroup to `ClientCombobox.tsx` and both `AddItemPanel.tsx` search presentations. Added a labelled client-list toggle and query-only clear action; kept the history action embedded in the client field. Equipment clear buttons now have 44px touch targets and keep filters/focus.
+- Added scoped `booking-search-field.css` for one group focus outline and aligned the client popup to the full field. Added four behavioral regressions in `booking/__tests__/bookingSearchControls.test.tsx`.
+- After the other editor finished, repaired the five pending Operations regressions in actual `OperationsShell.tsx`: use only persisted status, retain partial Return at On Rent, show read errors/retry, block confirmation during missing/failed/pending reads, ignore stage shortcuts in nested dialogs and rebuild a committed session from fresh data. Corrected the test helper call signature; added absent/unsupported-stage cases and verified retry does not repeat the floor write. Preserved the initial red report and saved a second recovery snapshot before editing.
+- Saved existing-mock-corpus screenshots and geometry for 360px phone, 820px iPad and 1440px desktop under `docs/verification/coss-booking-search-2026-10-24/`. No booking was created/confirmed, no live database was changed and no push/PR was made.
+
+**Ruled**
+- Presentation change only: existing matching, ranking, client-health, money visibility, catalogue filters, booking callbacks and rental rules remain at their existing owners. No new product decision or component dependency.
+
+**Verified**
+- Focused checks: 14/14 pass across four suites, including the four new behavioral cases. Typecheck passes. Initial missing-import/test-fixture failures were corrected; earlier logs are retained separately from final checks.
+- Browser mock preview: keyboard client selection; clearing/restoring the query without changing the selected client; existing history dialog opens; equipment clear retains focus; no horizontal overflow at all three widths; measured embedded actions are 44x44px. Light and dark styles inspected. These are emulated viewports, not physical-device or hosted acceptance.
+- Operations/search focused follow-up: 29/29 pass, including all five formerly failing Operations cases plus missing/invalid status and retry checks. The earlier follow-up typecheck passed on source `349b842fe944c41ae23ec73adc4375a2522c861e9081c384a8944cb4bd4a3f73`.
+- Existing-mock Return workspace opens normally at all three widths; Return is current and Reset stays disabled, stage controls remain at least 64px high, and page scroll width equals viewport width. Screenshots and `operations-layouts.json` are retained beside the search evidence. No browser custody commit occurred.
+- Earlier attempts are retained: a 5,372-test green run changed source; five later Operations failures and a helper type error were repaired; the next full run passed 5,377/5,379, exposing two route fixtures whose persisted stage contradicted their scenario. Aligned those fixtures without weakening their assertions and added a stale-launcher regression. The superseded build was interrupted when the final run began.
+- Final focused follow-up: **70/70 pass** across search, OperationsShell and operation routes.
+- Final unchanged-source verification: **5380/5380 tests in 429 files**, typecheck, 170/170 migration rebuilds, 18 Phase 0 SQL groups, operations-grant/14 Reset security groups, 31/31 lifecycle checks, lint, 82/82 contrast pairs and production build all pass. Every command retains fingerprint `a758bf1f03509acdd318dcb36d3aacad423de8465808bbc15ded0506b49e97f9`. Raw logs: `artifacts/coss-search-final/`; durable receipt: `docs/verification/coss-booking-search-2026-10-24/current-gates.json`.
+- No migrations WRITTEN by this UI pass. The existing approved chain is **VERIFIED locally**, with no hosted application or PRODUCTION-VERIFIED claim.
+
+## Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | — |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | — |
+| Lifecycle | steps green / total | 31 / 31 (100%) | — |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 170 files · check:pglite 170/170 applied, 0 failed (recorded 2026-10-24T02:54:33.191Z). Suite: PASS — 5380/5380 passed, 0 failed (recorded 2026-10-24T02:54:20.057Z); source fingerprint matches.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-24T02:55:25.833Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+`npm run completion` exited 1 because the coverage receipt is historical; the current full-suite and database receipts match source. Coverage was not rerun in this UI pass.
+
+## Remaining
+
+- Run fresh current-source coverage before a release claim. Hosted role/JWT/PostgREST/Storage, physical iPhone/iPad/scanner, evidence/signature and offline/reconnect acceptance remain open; production release HOLD remains.
+- Follow-up UI work: shared drawer and action-menu consistency across the app. Existing hosted/physical-device/release acceptance remains separate.
+<!-- coss-booking-search-20261024:end -->
+
+## 2026-10-24 — Approved guarded branch-grant integration
+
+**Did**
+- Integrated guarded 0171 + 0172 into shared source while retaining the newer direct-table privilege revocation and unrelated UI changes. Restored Admin superior/self-target protections, restrictive Reset queue/task scope, early action checks in live/mock paths and explicit mock grant behavior.
+- Wired Admin, branch-grant and Reset regressions into `npm run check:security`, already required by CI. Added an explicit Return-only denial / paired Return+Reset positive-control regression. Recorded iPhone 17 Pro and M4 iPad Pro availability without claiming hardware acceptance.
+
+**Ruled**
+- Babin explicitly approved integrating the guarded pair and its described default/history/revoke/admin model. Unbooked Reset follows the unit's current warehouse branch. RULINGS-2026-10-24, PERMISSIONS and migration/action comments carry the approval. No hosted application, role widening, deletion or deployment is authorized.
+
+**Verified**
+- Fresh shared-source verification is pending; isolated 23 October receipts do not certify this integration. Migration status: WRITTEN, awaiting current-source PGlite + lifecycle verification; NOT APPLIED, NOT PRODUCTION-VERIFIED.
+
+## Completion
+
+Pending generated `npm run completion` after matching shared-source gates; no percentage inferred.
+
+## Remaining
+
+- Finish full source-matched tests, DB/security/lifecycle gates, coverage and build. Preserve concurrent unrelated edits; any source change invalidates the run.
+- Execute camera/scanner, touch/rotation, signatures/evidence, offline/reconnect acceptance on the confirmed devices. Isolated staging identity/role fixtures and owner-controlled backup/restore/cutover remain outstanding. Production launch HOLD.
+
+## 2026-10-23 22:05 NPT — coss audit: restyle live InputGroup/Kbd off dead Tailwind classes
+
+**Did**
+- Audited the merged `feat/coss-ui-modernization` work against the coss skill references. Found four components styled entirely with Tailwind utility classes that compile to nothing in the ops bundle (no ops CSS entry imports `tailwindcss`; only `marketing.css` does — the exact failure Button/Modal/Toast already document).
+- Live defects: `InputGroup.tsx` (MoneyField money entry, ConfirmDialog reason gate, equipmentAssist) and `Kbd.tsx` (SearchInput shortcut hints, CommandPalette legend, equipmentAssist) rendered as unstyled native elements.
+- Rewrote `InputGroup.tsx` + `Kbd.tsx` to the app's real inline-style + CSS-variable system, API unchanged (`invalid`, `disabled`, `align`, data-slot attributes, addon focus-transfer all keep their contracts). Block-layout detection moved from dead `has-*` utility classes to an explicit React direct-children scan.
+- Added minimal `ui-v2.css` rules for `:focus-within` / `[data-invalid]` rings only — interaction states inline styles cannot express; same outline treatment as operations-table rows.
+- `cossDialog.tsx` / `cossDrawer.tsx` carried the same defect but were fixed concurrently by the owner's session (commits `5694b285`, `9460479e`, with responsive bottom-stick tests). Those versions were left untouched; no wholesale migration of Select/Toast/OverflowMenu/ConfirmDialog was performed (hundreds of call sites + e2e assertions make single-pass replacement unsafe).
+
+**Ruled**
+- coss adoption in this codebase means Base UI composition + app token styling. Verbatim Tailwind-class copies render unstyled in the ops app; the Button/Modal/Toast rewrite precedent now also covers cossDialog/cossDrawer/InputGroup/Kbd.
+- New primitives (alert-dialog, menu, tooltip, context-menu, command) are only to be added when real call sites exist — no dead-code exports.
+- Resting layout/appearance lives inline in components; ui-v2.css gets only pseudo-state rules that read tokens.
+
+**Verified**
+- `npm run typecheck`: clean pass.
+- Full suite: 5,339/5,339 tests across 427 files, 0 failures (includes the owner's new cossDialogResponsive 4/4, cossDrawer 2/2, QuantityStepper 9/9 suites).
+- `npm run build`: clean production build for both `index.html` and `marketing.html`; PWA 247 precache entries; zero source maps.
+- `npm run check:contrast`: 82/82 pairs pass WCAG AA (light, dark, high-contrast, glass).
+- Focused suites re-run after the final CSS fix: cossPrimitives 5/5, uiV2 6/6, SearchInput 9/9, touchTarget 16/16.
+
+## Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | — |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 | — |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | — |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 169 files · check:pglite Historical, incomplete or failed receipt (2026-10-23T13:04:16.739Z); current source NOT VERIFIED. Suite: Historical suite: 5339/5339 passed, 0 failed (recorded 2026-10-23T14:24:14.884Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-23T13:04:31.224Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+`npm run completion` exited 1 and correctly reports current source NOT VERIFIED — the DB-gate receipts predate migration 0171 (owner's in-flight work) and this session's UI changes. The suite receipt (5,339/5,339) is from this session's full run against the changed source. No readiness percentage was inferred.
+
+## Remaining
+
+- `cossDialog`/`cossDrawer` have no enter/exit animation (deliberate simplification — wire via controlled state like Modal when a live call site needs it).
+- Stash `coss-safety-wip` (`stash@{0}`) holds the owner's QuantityStepper/cossDialog/responsive.css snapshot from the concurrent session — left in place for the owner to manage.
+- Physical device, scanner, hosted/production acceptance unchanged (owner's release HOLD stands).
+
+## 2026-10-23 — Unbooked Reset site ruling and isolated boundary repair
+
+**Did**
+- Implemented the user-selected warehouse-branch rule as candidate migration 0172 in the attached `verified-release-checkpoint` worktree, based on guarded 0171 / commit `14dbbe3a`. Added restrictive queue/task write policies with old/new scope checks, an invoker-only site helper, all-four-verb preflight, explicit mock behavior and positive/negative tests. Shared application source was not overwritten.
+- Published `docs/verification/RESET_BRANCH_CANDIDATE_2026-10-23.md`; retained source-matched logs under `artifacts/release-checkpoint/reset-candidate-0172/`. Kept original failed-probe and checkpoint evidence intact.
+- Re-checked connected projects/branches, saved references, staging variable names and local hosted-ref matches without printing credentials. Only production was identified; staging harness safety tests pass 2/2, actual staging verifier remains INCOMPLETE. Asked for device-model clarification and explicit candidate integration choice.
+
+**Ruled**
+- Babin explicitly selected **the unit's current warehouse branch** for an unbooked cleaning/reset item. Linked entries retain booking branch; no actor-home/stale-unit-branch fallback. Logged in RULINGS, candidate permission note and migration comment. Broader 0171 defaults/admin model and release-source choice remain pending.
+
+**Verified**
+- Candidate fingerprint `4dce451962c91bf1bfe0e86840fe760b06d81a18d30f7ff881e8ece1e603ef19`: typecheck, 5,339/5,339 tests in 426 files, 170/170 PGlite migrations, 31/31 lifecycle, eight financial-integrity assertions, 18 existing security groups, 14 new Reset groups, 11 receipt regressions, lint/shell/copy/contrast (82/82)/progress and mock/live-mode builds all green. Separate coverage also passes 5,339/5,339 with zero failed/skipped tests; all 16 pipeline steps retain matching unchanged-source hashes.
+- The new SQL regression fails without 0172 and passes with it. Focused action/mock suites pass 90/90, including 12 preflight-denial cases with zero writes. Live-mode bundle: zero mock-store markers, zero source maps, 21 self-hosted font files.
+- Migration status: **WRITTEN + VERIFIED locally**, **NOT APPLIED**, **NOT PRODUCTION-VERIFIED**. Newer primary source is not certified by candidate receipts. No hosted mutation, deployment, production backup or hardware certification occurred.
+
+## Completion
+
+- Shared `npm run completion` returned exit 1 and correctly reports current source NOT VERIFIED; its structural overall is not measured. No readiness percentage was inferred.
+- Candidate `npm run completion` returns exit 0 with matching full-suite/coverage/migration/lifecycle receipts; generated output is retained at `artifacts/release-checkpoint/reset-candidate-0172/completion.stdout.log`. Its structural counter is not a hosted/integration/device readiness claim.
+
+## Remaining
+
+- Confirm whether the guarded 0171+0172 pair should remain isolated or be integrated; review broader grant defaults/admin rules and split Return/Reset automatic queue creation before integration. Approved integration must wire the new SQL regression into permanent security/CI gates, then verify the actual release source. The candidate's isolated wrapper already requires it; shared-primary CI is unchanged.
+- Identify isolated staging and securely supply genuine role sessions/fixtures for Auth/PostgREST/Storage acceptance. Clarify real phone/iPad/scanner access and complete hardware/offline acceptance. Owner-controlled backup/restore and cutover remain separate. Production launch **HOLD**.
+
+## 2026-10-23 — Fixed-source release checks and acceptance blockers
+
+**Did**
+- Created an attached isolated worktree pinned to `14dbbe3aab08391583802fdd9a49c0a42400066e`, reusing installed dependencies. Ran the complete standard local gate and coverage pipeline with a source hash before/after every command; no application source was changed by this verification task.
+- Added reproducible local verification/browser/security-probe harnesses and retained logs under `artifacts/release-checkpoint/`. Published `docs/verification/RELEASE_CHECKPOINT_2026-10-23.md` with results, limitations and the remaining acceptance checklist.
+- Exercised nine synthetic mock roles over six workspaces and three viewport widths; checked phone packing draft recovery through offline reload and reconnect. Preserved failed mock-configuration/fixture/selector attempts instead of counting them as successful data acceptance.
+- Probed candidate migration 0171's Reset branch restriction in disposable PGlite and recorded a real cross-branch write gap. Logged `RESET-BRANCH-0171` in OPEN_DECISIONS and asked for the site rule for unbooked Reset items. No answer, site model or restored migration was invented.
+- Discovered staging/device/backup prerequisites without accessing production business data. No migration was WRITTEN, APPLIED or PRODUCTION-VERIFIED by this task; no production backup, restore, cutover, deployment, push or PR was performed.
+
+**Ruled**
+- The immutable checkpoint and the changing primary checkout are different sources. Never transfer a passing receipt to a different fingerprint. The primary tree advanced and no longer contains draft 0171; existing unrelated edits remain untouched.
+- Standard gate success is not release approval: the additional Reset probe fails, and the existing location/admin model remains unapproved. RLS/database enforcement remains authoritative; no permission was widened.
+- Browser mock fixtures and viewport emulation cannot certify real JWTs, Storage, physical scanners/cameras/signatures, assigned-trip isolation or full two-device offline replay. The existing release HOLD remains.
+
+**Verified**
+- Pinned source fingerprint `878b229b72e1094d0b9bc894fb9d42ccb66a04cf8ed74babf30eac470d1f9b72`: all 15 standard command steps exited 0 without source changes. Full tests and a separate coverage run each passed 5,320/5,320 tests across 425 files.
+- The same snapshot passed TypeScript; 169/169 migrations; 8 financial assertions; 18 standard security SQL groups; 31/31 lifecycle steps; 11 receipt regressions; lint; 708 shell files; 5 UI-copy checker tests; 82/82 contrast pairs; progress lint, mock-environment build and completion.
+- A separate live-mode build also exited 0 on the unchanged fingerprint: 247 PWA entries, zero mock-store markers, zero source maps and 21 packaged woff2 files. No live credentials or deployment were required.
+- Nine role/layout groups passed across 162 captures, with populated positive controls where required, no measured header/page overflow, one 64px header and header targets at least 44px. No visible rupee amounts on money-blind mock screens; no uncaught browser errors. Client coverage here is restricted staff routes, not positive portal ownership.
+- The successful offline packing retry retained one checked mark before/after offline reload and reconnect. Custody commit, real evidence/signatures and two-device replay remain NOT VERIFIED.
+- Additional Reset probe: branch A positive permission and branch B assertion refusal passed; a direct branch B queue assignment still changed one row, and the promised action-layer assertion caller was absent. This is a FAIL for the candidate's scope acceptance, not a hosted test.
+- Staging harness safety tests 2/2 passed; actual staging verifier returned INCOMPLETE with no staging configuration. Only the production project/default branch was discoverable. No physical-device tools were available; pg_dump is not on PATH.
+- Isolated `npm run completion` exited 0 with matching test/coverage fingerprints. Primary `npm run completion` exited 1 because its newer, different source is not certified. The block below is the PRIMARY checkout's generated counter, not the passing isolated checkpoint's score.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 168 files · check:pglite Historical, incomplete or failed receipt (2026-10-23T12:26:58.903Z); current source NOT VERIFIED. Suite: Historical suite: 5313/5314 passed, 1 failed (recorded 2026-10-23T12:31:49.135Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-23T12:27:38.925Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Obtain the site/grant decision (including unbooked Reset items), implement database/action enforcement and mandatory negative tests, then re-run local gates. The 0171 candidate is not security-approved or applied live.
+- Settle concurrent shared edits and choose the actual release source; newer primary edits are not certified by this checkpoint. Root PLAN.md is absent; the governance/decision gap is recorded in OPEN_DECISIONS.
+- Supply a separately identified isolated staging project, secure nine-role JWT/fixture configuration and complete migration/Auth/PostgREST/Storage rehearsal. No production substitute is allowed.
+- Complete physical iPad/phone/scanner, real signature/photo, offline identity/replay, zoom and glyph acceptance. Owner-controlled backup tooling/backup and cutover approval remain prerequisites; production launch HOLD.
+
+## 2026-10-23 18:40 NPT — Calendar P0 Correctness, Coss Component Hardening & Hover Latency Polish
+
+**Did**
+- Integrated all P0 Calendar correctness fixes from branch `fix/calendar-p0-resource-reschedule` into `main`:
+  - `src/data/calendar.ts`: Empty production `RESOURCE_CATALOGUE` to prevent fabricated equipment/crew/vehicles in live UI; preserved historical mockup items in `ARCHIVED_RESOURCE_CATALOGUE`. Added authoritative `unitId` and `resourceId` fields to `Bar`.
+  - `src/lib/queries/calendar.ts`: `buildResourceTimeline` fails closed (returns `[]`) when no authoritative physical resources are provided, triggering the truthful empty state ("No resources to lay out yet"). Maps bars ONLY when matching authoritative unit/resource IDs exist. Evaluates double-booking conflicts strictly under half-open intervals `[from, to)` matching `RENTAL_WINDOW_BOUNDS` (back-to-back bookings do not conflict).
+  - `src/modules/calendar/Calendar.tsx`: Removed fake `setTimeout` reschedule success callback; Confirm Date Adjustment button remains disabled when there is no backend `onPersistCommand`, routing staff directly to the canonical Rentals Hub lifecycle (`/rentals/:bookingNo`).
+  - Authored comprehensive negative regression test suite `src/modules/calendar/__tests__/CalendarP0NegativeRegressions.test.tsx` (10 tests, all passing).
+- Fixed P1-A in `src/components/ui/cossDialog.tsx` & `src/styles/responsive.css`:
+  - Restored responsive mobile bottom-sheet behavior when `bottomStickOnMobile = true` (default). On phone viewports (< 768px), aligns as a bottom sheet pinned to bottom with rounded top corners, full-width, 85dvh cap, and safe-area padding for mobile home indicators/keyboards (`calc(16px + env(safe-area-inset-bottom, 0px))`).
+  - Preserved centered card modal on desktop (>= 1280px) and tablet (768-1279px) with max-width 520px and token-based styling.
+  - Added unit test suite `src/components/ui/__tests__/cossDialogResponsive.test.tsx` (4 tests, all passing).
+- Fixed P1-B in `src/components/ui/QuantityStepper.tsx`:
+  - Separated internal text representation from committed numerical value.
+  - Supported clearing the input to type a new value (e.g. replacing 5 with 12) without fighting the control.
+  - Added intermediate typing tolerance (empty string, minus, decimal), clamping and validating on blur / Enter key to `[min, max]`.
+  - Supported integer and fractional step contracts (e.g. step=0.5) without premature truncation.
+  - Added comprehensive regression tests in `src/components/ui/__tests__/QuantityStepper.test.tsx` (9 tests, all passing).
+- Fixed P1-C in `src/styles/theme.css`, `src/styles/ui-v2.css`, and `src/modules/today/dashboard.css`:
+  - Removed artificial 300ms hover delay on basic buttons, table rows, cards, and nav links so interactive feedback is immediate, crisp, and responsive.
+  - Preserved intentional 250–300ms hover delay ONLY for rich informational popovers / hover cards / tooltips (`IntelCard.tsx`, `InfoTooltip.tsx`, `MovementList.tsx`).
+- Enhanced `cossDrawer.tsx` to wrap popup in `DrawerPrimitive.Viewport` for native swipe handling and scroll locking, with test suite `src/components/ui/__tests__/cossDrawer.test.tsx` (2 tests, all passing).
+
+**Ruled**
+- No fake resource allocations: Production calendar lanes must be backed by authoritative database assets/crew/vehicles; fail closed with truthful empty notice if unassigned.
+- Fail-closed date reschedule: Reschedule confirmation disabled without an authoritative mutation command; staff are guided to the canonical Rentals Hub booking detail workflow.
+- Mobile Dialogs: Default to bottom sheet on phones (< 768px) with safe-area spacing; center modals on tablet and desktop.
+- Responsive hover feedback: Basic controls (buttons, links, rows) respond immediately to hover/focus/active; intentional 300ms delay reserved for preview cards and tooltips.
+
+**Verified**
+- `npm run typecheck`: clean pass with 0 errors across entire TypeScript 5.7 strict codebase.
+- `npm run check:contrast`: 82/82 pairs pass WCAG AA across Light, Dark, High-contrast, and Glass modes.
+- `npm run lint:shell`: 709/709 files satisfy PageHeader, single primary CTA, 44px floor, and no dev notes.
+- Feature unit test suites: 43/43 tests passed across `CalendarP0NegativeRegressions`, `CalendarResourceTimeline`, `CalendarDayView`, `QuantityStepper`, `cossDialogResponsive`, `cossDrawer`, `cossPrimitives`, `IntelCard.direct`, and `InfoTooltip`.
+- `npm run build`: clean production build for both `index.html` and `marketing.html` (7,406 modules transformed, PWA service worker generated).
+- `npm run lint:progress`: clean pass.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 168 files · check:pglite Historical, incomplete or failed receipt (2026-10-23T12:26:58.903Z); current source NOT VERIFIED. Suite: Historical suite: 5313/5314 passed, 1 failed (recorded 2026-10-23T12:31:49.135Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-23T12:27:38.925Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Hardware / scanner physical device testing.
+- Hosted production verification after Babin runs migration backup protocol.
+
+## 2026-10-23 18:23 NPT — SEC-04 candidate verification and checkout reconciliation
+
+**Did**
+- Reproduced a superior-target bypass in pending migration 0171: Admin could issue and revoke Owner/Admin operation restrictions. Prepared guards in both RPCs, locking the target role through authorization, with Owner and subordinate-Admin positive controls retained. Candidate files: C:/Users/use/AppData/Local/Temp/babin-current-main-20261023-173608/0171-guarded.sql and check-astra-phase0-guarded.mjs.
+- Added three SQL regression groups to the candidate Phase 0 checker. The guarded migration and tests were removed by subsequent external checkout/cleanup events; active migration present now: false; active added regression groups present: false. This is NOT recorded as a completed active-app fix.
+- Preserved original pending work at recovery branch codex/recovery-before-current-main-20261023-173608 and C:/Users/use/AppData/Local/Temp/babin-current-main-20261023-173608. Recovered the original 0171 and applied the pre-existing Calendar.tsx/calendar.css patch after a clean git-apply check earlier; later external changes replaced those states again. No main reset, merge reversal, push, PR, live mutation, database reset, business-store seed or offline-work deletion by this task.
+
+**Ruled**
+- No new product decision or permission widening. The candidate superior/self-target guard follows existing SEC-04 / PERMISSIONS AD2. P0-B location-model, administration and Reset integration decisions remain OPEN; a draft SQL comment is not approval.
+- A stable canonical checkout is now required. The user has been asked whether to pause other writers and restore pending fixes, or retain present main and keep candidates in recovery. No answer is assumed and no further dependent restoration is performed while that choice is pending.
+- Release remains HOLD. Candidate migration: WRITTEN and VERIFIED LOCALLY in its recorded database scope; NOT PRESENT in the observed active checkout unless the presence field above says otherwise; NOT APPLIED and NOT PRODUCTION-VERIFIED.
+
+**Verified**
+- Original single-case probe failed with Missing expected rejection. The first multi-case attempt overlapped the missing migration and failed on absent RPCs; this setup failure is retained separately. Restored candidate before repair: 16 passing SQL groups, 2 failing rejection groups. Guarded candidate afterward: 18/18 passed. Logs: artifacts/astra-operation-grants-before-20261023.log, astra-operation-grants-regressions-before-20261023.log, astra-operation-grants-restored-before-20261023.log and astra-operation-grants-after-20261023.log.
+- Stable candidate database-only run: 169 migrations, 31 lifecycle steps and 18 security groups all exit 0 on unchanged database inputs. Proof: docs/verification/ASTRA_OPERATION_GRANTS_2026-10-23.json and the protected verified-database-receipt.json. UI sources are separately fingerprinted; this proves the candidate, not the current changing application.
+- Owned full run: 5316/5320, 4 failed, 0 skipped; source changed. Its four Calendar failures were rerun against later current source: 7/7 passed, without test/assertion edits by this task. The latest global receipt is separately Historical suite: 5313/5314 passed, 1 failed (recorded 2026-10-23T12:31:49.135Z); current source NOT VERIFIED. No old pass or focused recheck is substituted for a current clean full suite.
+- The latest owned batch ran typecheck, focused/full tests, local rebuild/lifecycle/security/financial integrity, lint, receipts, contrast, progress/shell/UI-copy checks and production/PWA builds. Raw per-gate results and changed-source flags remain in docs/verification/ASTRA_CURRENT_MAIN_2026-10-23.json; current source hash 6c496d909c953f2590d60a9ffc6088610f07920211088ba039476aa264b0396a, HEAD 279de0e37b3c79ca81c7f7afb25861fe0bc60fd0. Commands passing on prior epochs do not certify later edits.
+- A temporary additional branch-grants script failed fixture setup because it supplied null for required branches.pan_vat_no; it was later removed from the shared checkout. No assertion pass or active-app defect is inferred from that draft helper's result (artifacts/astra-operation-grants-feature-20261023.log).
+- Read-only mock-browser samples at 1440×900, 820×1180 and 360×800 show no document-width overflow for Today/New Rental, 44×44 phone booking-header actions, catalogue bottom 730 above bottom-nav top 742, and identical pickup/return rectangles plus overdue context after footer Today. Evidence: docs/verification/astra-guard-responsive-2026-10-23/results.json. Their source epoch predates further external changes; physical devices, every role/route and full offline/hosted acceptance remain open. Screenshots/report are also preserved outside the checkout.
+- Literal npm run completion exit 1. Its counter below is structural; it does not declare the app ready.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 168 files · check:pglite Historical, incomplete or failed receipt (2026-10-23T12:26:58.903Z); current source NOT VERIFIED. Suite: Historical suite: 5313/5314 passed, 1 failed (recorded 2026-10-23T12:31:49.135Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-23T12:27:38.925Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Resolve the pending canonical-checkout choice. If pending fixes are restored, apply the guarded candidate and regression delta to a stable current tree, then rerun full matching-source checks. If current main is retained, keep the draft in recovery and avoid tests that assume absent RPCs.
+- Obtain a clean complete current-source suite and current coverage; the Calendar recheck alone does not certify all app changes. Recheck all gates affected by later source changes and verify current layouts across broader routes/roles and actual desktop/iPad/mobile hardware.
+- Hosted JWT/Storage acceptance, legacy outbox ownership/recovery, shared operational backends, VAT/document/evidence decisions, restoration and measured performance remain open in docs/OPEN_DECISIONS.md and docs/REMAINING_WORK.md. No publication or hosted application is authorized.
+
+
+## 2026-10-23 16:10 NPT — Intentional 300ms Global Hover Delay Everywhere
+
+**Did**
+- Applied intentional 300ms hover delay / latency across interactive surfaces throughout the application.
+- Configured CSS transition-delay of 300ms on `:hover` across `button`, `a.btn`, `[role="button"]`, `.ui-button`, `.card`, `.surface-card`, `.card-interactive`, `.lift`, `.movement-card`, `.data-table tbody tr`, `.operations-table tbody tr`, `.calendar-timeline-bar-btn`, `.calendar-chip`, `.calendar-day-cell`, `.calendar-tab-btn`, `.overflow-menu__item`, `.filter-bar__option`, and `.app-navigation a`.
+- Added base transitions with `transition-delay: 0s` on non-hover states so elements immediately exit hover when the pointer leaves without lingering lag.
+- Removed restrictive `(hover: hover) and (pointer: fine)` gate in `IntelCard.tsx` and CSS so that mouse pointer events on touch-enabled Windows laptops reliably register the intentional 300ms delay.
+- Updated `InfoTooltip` with 300ms delay and authored comprehensive fake-timer unit tests.
+
+**Ruled**
+- Hover latency everywhere: 300ms intentional delay applies consistently across buttons, interactive cards, table rows, navigation links, and popover previews.
+- Pointer exit: mouse leave resets instantly (`transition-delay: 0s`), avoiding sluggish un-hover transitions.
+- Cross-platform input fidelity: touch-capable Windows devices with mice must honor hover latency without being blocked by coarse pointer heuristics.
+
+**Verified**
+- `npm run typecheck`: clean pass with 0 errors across entire codebase.
+- `npm run check:contrast`: 82/82 pairs pass WCAG AA across Light, Dark, High-contrast, and Glass modes.
+- `npx vitest run src/components/ui/__tests__/InfoTooltip.test.tsx src/components/ui/__tests__/IntelCard.direct.test.tsx`: 6/6 tests passed.
+- `npm run lint:progress`: clean pass.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 168 files · check:pglite Historical, incomplete or failed receipt (2026-10-23T10:15:08.031Z); current source NOT VERIFIED. Suite: Historical suite: 5280/5280 passed, 0 failed (recorded 2026-10-23T06:49:59.083Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-23T10:15:34.293Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Hardware / scanner physical device testing.
+- Hosted production verification after Babin runs migration backup protocol.
+
+## 2026-10-23 15:35 NPT — Global Shell Phase 1: Shared Application Chrome & Page Frame
+
+**Did**
+- Implemented the universal Shell Layout Contract (`src/components/shell/shellLayoutContract.ts`) formalizing 64px header height (`--header-h`), 256px expanded / 64px rail navigation (`--app-sidebar-width` / `--app-sidebar-collapsed-width`), 58px bottom bar + safe area (`BAR_BOX`), and >= 44px touch targets (Law 15).
+- Enforced single-owner search resolution precedence in `Header.tsx` across Zone 2 (Center) and Zone 3 (Phone search) via `resolveSearchOwner` and `resolvePhoneSearchKind`:
+  1. Page Portal Search (`WorkspaceHeaderSearch`, e.g., `/rentals`)
+  2. Page Config Search (`PageHeaderSearchConfig`, e.g., `/today`, `/calendar`, `/inventory`, `/operations`)
+  3. Fallback Global Command Palette Search trigger (`Ctrl+K / ⌘K`, `/` hotkey)
+- Guaranteed zero horizontal wrapping on header rows (`flex-wrap: nowrap`, fixed 64px height) and right-anchored slot ordering: Secondary actions -> Add dropdown / `GlobalAddMenu` -> More overflow -> Primary action / CTA.
+- Normalized phone vs tablet boundary in `src/lib/displayDensity.tsx` from `<= 768` to `< BP.phone` (768px), making 768px consistently tablet/compact while strictly preserving user preferences from `localStorage`.
+- Authored test suites `src/components/shell/__tests__/shellLayoutContract.test.ts` (10/10 tests passed), `src/lib/__tests__/displayDensity.test.tsx` (5/5 tests passed), and end-to-end pilot suite `src/__tests__/e2e/globalShellPilotRoutes.test.tsx` (5/5 tests passed).
+- Created detailed documentation deliverables: `SHELL_PHASE1_CHANGELOG.md`, `SHELL_PHASE1_TEST_RESULTS.md`, and `SHELL_PHASE1_VISUAL_REVIEW.md`.
+
+**Ruled**
+- Header invariant: Exactly ONE visible horizontal header row (64px fixed) across all screens.
+- Search invariant: Exactly ONE search control rendered in Zone 2 on tablet/desktop, and exactly ONE search trigger/input in Zone 3 on phone; no competing or dual search boxes.
+- Action slot hierarchy: Primary action / CTA occupies the rightmost page slot; Add dropdowns occupy the canonical Add slot; secondary actions fold into More when constrained or on tablet (`useCompactHeader`).
+- Law 6 money-blindness: Non-financial roles (`Warehouse`, `Technician`, `Driver`, `Client`) view zero monetary amounts across all header slots and views.
+- Execution boundary: Local feature branch `feat/global-shell-phase1` only. Zero git push/merge/deploy, zero Supabase schema mutations, zero AGPL package imports.
+
+**Verified**
+- `npm run typecheck`: clean pass with 0 errors across entire TypeScript 5.7 strict codebase.
+- `npm run lint:shell`: 708/708 files satisfy PageHeader, single primary CTA, 44px floor, and no dev notes.
+- `npm run check:contrast`: 82/82 pairs pass WCAG AA across Light, Dark, High-contrast, Glass themes.
+- Shell & Pilot test suites: 17 test files, 149 tests passed with 0 failures (`vitest run src/components/shell ...`).
+- `npm run check:pglite`: 168/168 migrations applied, all gates green.
+- `npm run check:lifecycle`: 31/31 lifecycle steps green.
+- `npm run build`: clean production build for both `index.html` and `marketing.html` (7,405 modules transformed, PWA service worker generated).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-23T09:49:05.860Z). Suite: Historical suite: 5280/5280 passed, 0 failed (recorded 2026-10-23T06:49:59.083Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-23T09:49:20.568Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Phase 2: Page-specific internal workbar alignments (e.g. Today dispatch queue cards, Operations tab refinements) without modifying the global shell frame.
+- Reconcile seven-anchor-only navigation versus optional five-stage mode when Babin answers.
+- Physical device, barcode scanner hardware testing, and hosted acceptance testing.
+
+## 2026-10-23 13:05 NPT — Phase 5: Calendar & Resource Timeline Expansion
+
+**Did**
+- Implemented Resource Timeline Engine (`buildResourceTimeline`) in `src/lib/queries/calendar.ts` wiring physical Equipment, Vehicles, Crew, and Warehouse Bays to active bookings and reservations.
+- Built automated double-booking conflict detection comparing start and end times for concurrent allocations on each resource lane, generating visual `Conflict` bars (`kind: 'Conflict'`, `dot: 'danger'`, `label: 'CONFLICT'`).
+- Added dedicated Operational Day View (`['Month', 'Week', 'Day', 'Timeline', 'Availability']`) featuring the 06:00–06:00 NPT Kathmandu operational day cycle and 5 operational shift slots (Early Dispatch, Midday Handover, Afternoon Turnaround, Evening Intake, Night QC & Staging Buffer) with touch targets ≥44px.
+- Configured 5 active Saved Views in `src/data/calendar.ts`: Equipment View, Crew Schedule, Warehouse View, My Bookings, and Conflict View, auto-routing to Timeline layout.
+- Added interactive Reschedule / Propose Date Adjustment modal with conflict warnings, BS/AD conversion via `formatBsOrAd`, and confirm proposal guard in `Calendar.tsx`.
+- Enhanced Selected Event Inspector with full booking metadata, equipment list, BS/AD dates, and deep links to `/rentals/:bookingNo`. Preserved Law 6 money-blindness (no financial amounts rendered on calendar surfaces).
+- Added test suites `CalendarResourceTimeline.test.tsx` (7/7 tests passed) and `CalendarDayView.test.tsx` (3/3 tests passed).
+
+**Ruled**
+- Zero financial amounts or pricing displayed on calendar surfaces, upholding Law 6 and money-blind roles (Warehouse, Technician, Driver, Client).
+- Kathmandu 06:00–06:00 NPT operational day cycle strictly enforced via `getBusinessToday()` and half-open interval bounds.
+- Double bookings on physical equipment/vehicles/crew flagged immediately with visual `dot: 'danger'` and conflict bar warnings without breaking timeline navigation.
+
+**Verified**
+- Focused Calendar test suites: 48/48 tests passed across 6 test files (`CalendarResourceTimeline.test.tsx`, `CalendarDayView.test.tsx`, `CalendarAvailability.test.tsx`, `CalendarHeader.test.tsx`, `CalendarKeyboardNav.test.tsx`, and `calendar.test.ts`).
+- `npm run typecheck`: clean pass with 0 errors (`exactOptionalPropertyTypes` and `noUncheckedIndexedAccess` respected).
+- `npm run check:contrast`: 82/82 pass, 0 fail (WCAG AA compliant).
+- `npm run check:pglite`: 168/168 migrations applied, all gates green.
+- `npm run check:lifecycle`: 31/31 lifecycle steps green.
+- `npm run build`: clean production build for both `index.html` and `marketing.html` (dist generated in 1m 40s).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 168 files · check:pglite Historical, incomplete or failed receipt (2026-10-23T07:15:22.178Z); current source NOT VERIFIED. Suite: Historical suite: 5280/5280 passed, 0 failed (recorded 2026-10-23T06:49:59.083Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-23T07:16:20.227Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Phase 6 (and subsequent phases) per `FEATURE_EXPANSION_PLAN_2026-10-21.md`.
+- Reconcile seven-anchor-only navigation versus optional five-stage mode when Babin answers.
+- Physical device, barcode scanner hardware testing, and hosted acceptance testing.
+
+## 2026-10-23 12:31 NPT — Premium recovery: current browser verification and honest previews
+
+**Did**
+- Retained Babin’s explicit newer all-Outfit choice and recorded it in RULINGS-2026-10-23.md. Preserved independent shared-tree edits.
+- Corrected misleading equipment summary/catalogue assumptions: no sample asset code, assumed Active/Draft, fake creation date or relationship facts; missing assigned codes/tags cannot be copied or barcoded. Save, revision, custody, permission and query engines remain unchanged.
+- Added shared 44px Inventory/Rentals selection labels; real edge clicks verify the expanded target. Kept unit-table and drawer Copy controls at 44px. Today expired-window labels wrap within their grid region. Calendar tablet Availability text frees search width without changing its accessible name or callback.
+- Created only LOCAL evidence files: BEFORE_AFTER_VISUAL_MATRIX.md, PREMIUM_DESIGN_CHANGES.md, REMAINING_UI_ISSUES.md and docs/verification/premium-design/current-20261023-0225/gallery.html. Historical 418c025f proof is separate. No Git commit/branch/push/PR, hosted operation, deployment or migration by this task.
+
+**Ruled**
+- Explicit user answer: keep the newer all-Outfit theme. No typography rollback.
+- TODO(decision / reconciliation) in OPEN_DECISIONS §19: newer optional five-stage mode conflicts with the supplied seven-anchor brief; specific user preference question is pending. No response is inferred.
+
+**Verified**
+- 156/156 scoped capture geometries: one 64px header, header targets at least 44px, controls in bounds, no horizontal page overflow. 63/63 real mock browser assertions, including current loaded Outfit, Finance labels, filters, money-blind denial, Card variants, on-demand drawer, real selection edge clicks and unavailable-preview behavior.
+- Focused tests 23/23; Calendar header 4/4. Nine latest command steps exited 0: typecheck, focused UI tests, PGlite 168/168, lifecycle 31/31, contrast 82/82, lint, shell/copy checks and build. Their individual source hashes/changes are retained; all-command snapshot stability is not asserted. The build CSS reconciliation proves the final Copy target is included in emitted CSS.
+- Earlier current full suite: 5271/5272 passed with one New Rental 90-second timeout; all 14 tests in that file passed on retry. The full run changed source. Further independent full-suite runs are pending; no matching-source whole-suite green is claimed.
+- Completion exit 1: the generated counter explicitly says suite NOT VERIFIED. Physical device/scanner/screen reader, actual browser-chrome 125% zoom, offline Nepali glyph fallback and missing external design references remain unverified.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | — |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | — |
+| Lifecycle | steps green / total | 31 / 31 (100%) | — |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 168 files · check:pglite 168/168 applied, 0 failed (recorded 2026-10-23T06:42:46.217Z). Suite: NOT VERIFIED — invalid test receipt.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-23T06:43:22.877Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Reconcile seven-anchor-only navigation versus the newer optional five-stage mode after Babin answers. Preserve the existing shared data/write engine.
+- Obtain a whole matching-source test receipt after shared edits settle; keep the failed timeout/retry and historical coverage receipts. No current full-suite or coverage completion claim.
+- Complete physical-device, assistive-technology/dialog-focus, actual browser zoom and offline glyph acceptance; external concept/spec attachments remain absent. See REMAINING_UI_ISSUES.md.
+
+## 2026-10-23 — Global shell wireframes: review, comparison and implementation
+
+**Did**
+- Reviewed the supplied ZIP against the existing shell and current repository rulings; recorded the comparison in `docs/GLOBAL_SHELL_WIREFRAME_REVIEW_2026-10-23.md`.
+- Today now contains Pickups and Returns only, with exact counts from the same paginated movement queries, compact shared/independent date controls, truthful unavailable states and existing Operations actions/subscriptions. Removed its unrelated situational reads and dashboard cards; retained their source components.
+- Applied the existing available-header-width rule to shared secondary actions; placed Today Add/More into canonical slots; retained independent desktop/tablet navigation preferences on resize. Added keyboard/panel associations for phone movement tabs, readable narrow queue rows and 56px movement actions.
+- Consolidated Operations and standalone/embedded Cases search into the shared header, preserving queue debounce and Cases URL/clear/Enter behavior. Reused existing controls and theme tokens; no dependency or theme replacement.
+- Saved before/after mock screenshots and a source-only implementation patch under `artifacts/global-shell-wireframes/`. Existing unrelated checkout changes were preserved. No migration was WRITTEN, APPLIED or PRODUCTION-VERIFIED by this UI task.
+
+**Ruled**
+- `RULINGS-2026-10-23.md` records the presentation decisions and reverts. The existing permission/money/custody rules and 20 October supplemental-drawer behavior remain authoritative.
+
+**Verified**
+- Focused regression run: 44/44 tests across Today, Cases and the real-shell one-search-per-page checks; typecheck passed before this run.
+- Browser matrix: 50 updated captures across five workspaces, five requested widths and both themes; zero measured page/header overflow, 64px headers and 256/64px navigation. Seven interaction checks passed, including compiled-preview Operations filtering, embedded Cases query restoration and a populated Warehouse board with no rupee amounts. Additional Warehouse/Cases phone captures are retained.
+- Final ordered full-suite/database/lifecycle/lint/contrast/build run is in progress; its result is not claimed yet.
+
+### Completion
+Pending the final `npm run completion` output after verification; no current percentage is claimed here.
+
+### Remaining
+- Finish the final ordered gates and refreshed Operations/Cases browser evidence, then replace this pending verification/counter block with executed results.
+- Physical-device and hosted acceptance remain outside these local mock checks; the repository's existing release HOLD remains governed by `docs/CURRENT_STATE.md`.
+
+
+## 2026-10-23 02:49 NPT — ASTRA Reset cleaner integrity follow-up
+
+**Did**
+- Removed fabricated cleaner identities from Reset empty/error directory results. Only returned active staff can be selected; loading/empty/error disables assignment, failed reads show an inline error and Retry, and stale picker options clear on identity/retry changes.
+- Preserved shared edits and saved recovery files/patches in artifacts/astra-20261023-0226. After an unrelated restoration removed the tested repair and tests, reapplied only those two source diffs and verified them again. No browser business store was cleared.
+
+**Ruled**
+- A retained intermediate run passed 51/52: a new test expected Mark Clean while the unchecked UI showed its fast-track alternative. The corrected fixture asserts untouched tasks and disabled Complete Reset directly, preserving the actual safety contract.
+- No invented people or successful directory reads; existing signed-in QC identity, self-QC reason and server action gates remain intact. No new permission, migration or business model.
+- All 24 issue dispositions remain 6 targeted VERIFIED LOCAL, 5 PENDING STAGING, 5 BLOCKED and 8 IN PROGRESS. This is a partial delivery; NOT READY; PRODUCTION LAUNCH HOLD.
+
+**Verified**
+- Four new negative regressions failed against the original fallback (8 existing checks passed). Reapplied fix: 52/52 passed, zero failures/skips, two Reset/operations-route files. Evidence: artifacts/astra-20261023-0226/reset-staff-before-v2.json and reset-staff-final.json.
+- The later Reset undefined-role crash had already been corrected in local commit 63d3d89e; existing route/QC assertions now pass. Earlier SearchInput/Kbd prop failure is retained; subsequent typecheck exited 0.
+- Full final-5 batch was stopped after concurrent edits restored the two Reset files. Its typecheck exited 0 but source changed; no full-suite/coverage/build verification for this resulting tree is claimed. Earlier full-suite and coverage evidence remains historical.
+- Extended Phase 0 probe passed all 25 SQL groups locally. Actual metadata is in artifacts/astra-20261021-024418/inactive-current-2-gates.jsonl; this does not verify hosted Storage/JWTs or the later resulting tree.
+- Reporting HEAD 619f3d227173d9b0070d2ff5fdca5d29aed2fb4c; source fingerprint f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d. Completion exit 1; stale/incomplete evidence remains unverified.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 168 files · check:pglite Historical, incomplete or failed receipt (2026-10-22T20:51:47.026Z); current source NOT VERIFIED. Suite: NOT VERIFIED — invalid test receipt.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-22T20:52:51.242Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Complete a full matching-source verification batch after shared edits stabilize; preserve both recovery patches and the historical failures/receipts. Full current test/coverage counts are NOT AVAILABLE.
+- Original offline revision/branch provenance and legacy recovery; full role/branch/active API acceptance and Technician Pack contract; real financial attribution and shared operational backend decisions remain open in OPEN_DECISIONS §§13–17.
+- Hosted JWT/Storage, every route/device including 430px and physical iPad, scanner/signatures/PDF/integrations, real PostgreSQL concurrency, restoration and measured p75 performance acceptance remain open.
+- No GitHub push/PR/merge, live Supabase operation or deployment by this task. Existing project retained.
+
+
+
 ## 2026-10-23 — Repeated information buttons removed (page footer and per-field (i))
 
 **Did**

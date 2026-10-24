@@ -1,0 +1,1977 @@
+{
+  "environment": "local mock; remote requests blocked",
+  "checks": [
+    {
+      "name": "Desktop expanded navigation is 256px",
+      "pass": true,
+      "details": 256
+    },
+    {
+      "name": "Today 1280: expired-window labels stay inside their grid region",
+      "pass": true,
+      "details": [
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 289.265625,
+          "right": 518.140625,
+          "parentLeft": 289.265625,
+          "parentRight": 738.5625,
+          "width": 228.875,
+          "scrollWidth": 227,
+          "clientWidth": 227
+        }
+      ]
+    },
+    {
+      "name": "Today 1440: expired-window labels stay inside their grid region",
+      "pass": true,
+      "details": [
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 513.921875,
+          "parentLeft": 290.5,
+          "parentRight": 513.921875,
+          "width": 223.421875,
+          "scrollWidth": 221,
+          "clientWidth": 221
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 513.921875,
+          "parentLeft": 290.5,
+          "parentRight": 513.921875,
+          "width": 223.421875,
+          "scrollWidth": 221,
+          "clientWidth": 221
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 513.921875,
+          "parentLeft": 290.5,
+          "parentRight": 513.921875,
+          "width": 223.421875,
+          "scrollWidth": 221,
+          "clientWidth": 221
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 513.921875,
+          "parentLeft": 290.5,
+          "parentRight": 513.921875,
+          "width": 223.421875,
+          "scrollWidth": 221,
+          "clientWidth": 221
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 513.921875,
+          "parentLeft": 290.5,
+          "parentRight": 513.921875,
+          "width": 223.421875,
+          "scrollWidth": 221,
+          "clientWidth": 221
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 513.921875,
+          "parentLeft": 290.5,
+          "parentRight": 513.921875,
+          "width": 223.421875,
+          "scrollWidth": 221,
+          "clientWidth": 221
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 513.921875,
+          "parentLeft": 290.5,
+          "parentRight": 513.921875,
+          "width": 223.421875,
+          "scrollWidth": 221,
+          "clientWidth": 221
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 514.75,
+          "parentLeft": 290.5,
+          "parentRight": 514.75,
+          "width": 224.25,
+          "scrollWidth": 222,
+          "clientWidth": 222
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 514.75,
+          "parentLeft": 290.5,
+          "parentRight": 514.75,
+          "width": 224.25,
+          "scrollWidth": 222,
+          "clientWidth": 222
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 514.75,
+          "parentLeft": 290.5,
+          "parentRight": 514.75,
+          "width": 224.25,
+          "scrollWidth": 222,
+          "clientWidth": 222
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 514.75,
+          "parentLeft": 290.5,
+          "parentRight": 514.75,
+          "width": 224.25,
+          "scrollWidth": 222,
+          "clientWidth": 222
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 514.75,
+          "parentLeft": 290.5,
+          "parentRight": 514.75,
+          "width": 224.25,
+          "scrollWidth": 222,
+          "clientWidth": 222
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 493.15625,
+          "parentLeft": 290.5,
+          "parentRight": 493.15625,
+          "width": 202.65625,
+          "scrollWidth": 201,
+          "clientWidth": 201
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 493.15625,
+          "parentLeft": 290.5,
+          "parentRight": 493.15625,
+          "width": 202.65625,
+          "scrollWidth": 201,
+          "clientWidth": 201
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 493.15625,
+          "parentLeft": 290.5,
+          "parentRight": 493.15625,
+          "width": 202.65625,
+          "scrollWidth": 201,
+          "clientWidth": 201
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 514.75,
+          "parentLeft": 290.5,
+          "parentRight": 514.75,
+          "width": 224.25,
+          "scrollWidth": 222,
+          "clientWidth": 222
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 514.75,
+          "parentLeft": 290.5,
+          "parentRight": 514.75,
+          "width": 224.25,
+          "scrollWidth": 222,
+          "clientWidth": 222
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 493.15625,
+          "parentLeft": 290.5,
+          "parentRight": 493.15625,
+          "width": 202.65625,
+          "scrollWidth": 201,
+          "clientWidth": 201
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 514.75,
+          "parentLeft": 290.5,
+          "parentRight": 514.75,
+          "width": 224.25,
+          "scrollWidth": 222,
+          "clientWidth": 222
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 514.75,
+          "parentLeft": 290.5,
+          "parentRight": 514.75,
+          "width": 224.25,
+          "scrollWidth": 222,
+          "clientWidth": 222
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 514.75,
+          "parentLeft": 290.5,
+          "parentRight": 514.75,
+          "width": 224.25,
+          "scrollWidth": 222,
+          "clientWidth": 222
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 493.15625,
+          "parentLeft": 290.5,
+          "parentRight": 493.15625,
+          "width": 202.65625,
+          "scrollWidth": 201,
+          "clientWidth": 201
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 493.15625,
+          "parentLeft": 290.5,
+          "parentRight": 493.15625,
+          "width": 202.65625,
+          "scrollWidth": 201,
+          "clientWidth": 201
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 493.15625,
+          "parentLeft": 290.5,
+          "parentRight": 493.15625,
+          "width": 202.65625,
+          "scrollWidth": 201,
+          "clientWidth": 201
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 493.15625,
+          "parentLeft": 290.5,
+          "parentRight": 493.15625,
+          "width": 202.65625,
+          "scrollWidth": 201,
+          "clientWidth": 201
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 493.15625,
+          "parentLeft": 290.5,
+          "parentRight": 493.15625,
+          "width": 202.65625,
+          "scrollWidth": 201,
+          "clientWidth": 201
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 493.15625,
+          "parentLeft": 290.5,
+          "parentRight": 493.15625,
+          "width": 202.65625,
+          "scrollWidth": 201,
+          "clientWidth": 201
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 493.15625,
+          "parentLeft": 290.5,
+          "parentRight": 493.15625,
+          "width": 202.65625,
+          "scrollWidth": 201,
+          "clientWidth": 201
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 493.15625,
+          "parentLeft": 290.5,
+          "parentRight": 493.15625,
+          "width": 202.65625,
+          "scrollWidth": 201,
+          "clientWidth": 201
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 493.15625,
+          "parentLeft": 290.5,
+          "parentRight": 493.15625,
+          "width": 202.65625,
+          "scrollWidth": 201,
+          "clientWidth": 201
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 485.625,
+          "parentLeft": 290.5,
+          "parentRight": 485.625,
+          "width": 195.125,
+          "scrollWidth": 193,
+          "clientWidth": 193
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 485.625,
+          "parentLeft": 290.5,
+          "parentRight": 485.625,
+          "width": 195.125,
+          "scrollWidth": 193,
+          "clientWidth": 193
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 485.625,
+          "parentLeft": 290.5,
+          "parentRight": 485.625,
+          "width": 195.125,
+          "scrollWidth": 193,
+          "clientWidth": 193
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 485.625,
+          "parentLeft": 290.5,
+          "parentRight": 485.625,
+          "width": 195.125,
+          "scrollWidth": 193,
+          "clientWidth": 193
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 485.625,
+          "parentLeft": 290.5,
+          "parentRight": 485.625,
+          "width": 195.125,
+          "scrollWidth": 193,
+          "clientWidth": 193
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 485.625,
+          "parentLeft": 290.5,
+          "parentRight": 485.625,
+          "width": 195.125,
+          "scrollWidth": 193,
+          "clientWidth": 193
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 485.625,
+          "parentLeft": 290.5,
+          "parentRight": 485.625,
+          "width": 195.125,
+          "scrollWidth": 193,
+          "clientWidth": 193
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 485.625,
+          "parentLeft": 290.5,
+          "parentRight": 485.625,
+          "width": 195.125,
+          "scrollWidth": 193,
+          "clientWidth": 193
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 485.625,
+          "parentLeft": 290.5,
+          "parentRight": 485.625,
+          "width": 195.125,
+          "scrollWidth": 193,
+          "clientWidth": 193
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 485.625,
+          "parentLeft": 290.5,
+          "parentRight": 485.625,
+          "width": 195.125,
+          "scrollWidth": 193,
+          "clientWidth": 193
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 485.625,
+          "parentLeft": 290.5,
+          "parentRight": 485.625,
+          "width": 195.125,
+          "scrollWidth": 193,
+          "clientWidth": 193
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 485.625,
+          "parentLeft": 290.5,
+          "parentRight": 485.625,
+          "width": 195.125,
+          "scrollWidth": 193,
+          "clientWidth": 193
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 485.625,
+          "parentLeft": 290.5,
+          "parentRight": 485.625,
+          "width": 195.125,
+          "scrollWidth": 193,
+          "clientWidth": 193
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 485.625,
+          "parentLeft": 290.5,
+          "parentRight": 485.625,
+          "width": 195.125,
+          "scrollWidth": 193,
+          "clientWidth": 193
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 485.625,
+          "parentLeft": 290.5,
+          "parentRight": 485.625,
+          "width": 195.125,
+          "scrollWidth": 193,
+          "clientWidth": 193
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 485.625,
+          "parentLeft": 290.5,
+          "parentRight": 485.625,
+          "width": 195.125,
+          "scrollWidth": 193,
+          "clientWidth": 193
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 485.625,
+          "parentLeft": 290.5,
+          "parentRight": 485.625,
+          "width": 195.125,
+          "scrollWidth": 193,
+          "clientWidth": 193
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 290.5,
+          "right": 485.625,
+          "parentLeft": 290.5,
+          "parentRight": 485.625,
+          "width": 195.125,
+          "scrollWidth": 193,
+          "clientWidth": 193
+        }
+      ]
+    },
+    {
+      "name": "Today 1920: expired-window labels stay inside their grid region",
+      "pass": true,
+      "details": [
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 732.484375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 732.484375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 732.484375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 732.484375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 732.484375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 732.484375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 732.484375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 733.359375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 733.359375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 733.359375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 733.359375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 733.359375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 710.109375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 710.109375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 710.109375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 733.359375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 733.359375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 710.109375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 733.359375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 733.359375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 733.359375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 710.109375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 710.109375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 710.109375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 710.109375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 710.109375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 710.109375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 710.109375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 710.109375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 710.109375,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 702.015625,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 702.015625,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 702.015625,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 702.015625,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 702.015625,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 702.015625,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 702.015625,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 702.015625,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 702.015625,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 702.015625,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 702.015625,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 702.015625,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 702.015625,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 702.015625,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 702.015625,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 702.015625,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 702.015625,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        },
+        {
+          "text": "Window passed · Reschedule or Cancel",
+          "left": 292,
+          "right": 558.59375,
+          "parentLeft": 292,
+          "parentRight": 702.015625,
+          "width": 266.59375,
+          "scrollWidth": 265,
+          "clientWidth": 265
+        }
+      ]
+    },
+    {
+      "name": "Collapsed 64px navigation survives reload",
+      "pass": true,
+      "details": 64
+    },
+    {
+      "name": "Calendar phone: visible Availability and unclipped actions",
+      "pass": true,
+      "details": {
+        "offscreen": [],
+        "search": false,
+        "verb": "Availability"
+      }
+    },
+    {
+      "name": "Calendar Availability opens existing modal",
+      "pass": true
+    },
+    {
+      "name": "Reduced-motion preference removes entrance and row motion",
+      "pass": true,
+      "details": [
+        {
+          "class": "page-shell page-shell--full animate-entrance rental-dashboard",
+          "name": "none",
+          "transition": "0s"
+        },
+        {
+          "class": "movement-card movement-card--outgoing movement-card--overdue",
+          "name": "none",
+          "transition": "0s"
+        },
+        {
+          "class": "movement-card movement-card--outgoing movement-card--overdue",
+          "name": "none",
+          "transition": "0s"
+        },
+        {
+          "class": "movement-card movement-card--outgoing movement-card--overdue",
+          "name": "none",
+          "transition": "0s"
+        },
+        {
+          "class": "movement-card movement-card--outgoing movement-card--overdue",
+          "name": "none",
+          "transition": "0s"
+        },
+        {
+          "class": "movement-card movement-card--outgoing movement-card--overdue",
+          "name": "none",
+          "transition": "0s"
+        },
+        {
+          "class": "movement-card movement-card--outgoing movement-card--overdue",
+          "name": "none",
+          "transition": "0s"
+        },
+        {
+          "class": "movement-card movement-card--outgoing movement-card--overdue",
+          "name": "none",
+          "transition": "0s"
+        },
+        {
+          "class": "movement-card movement-card--outgoing movement-card--overdue",
+          "name": "none",
+          "transition": "0s"
+        },
+        {
+          "class": "movement-card movement-card--outgoing movement-card--overdue",
+          "name": "none",
+          "transition": "0s"
+        },
+        {
+          "class": "movement-card movement-card--outgoing movement-card--overdue",
+          "name": "none",
+          "transition": "0s"
+        },
+        {
+          "class": "movement-card movement-card--outgoing movement-card--overdue",
+          "name": "none",
+          "transition": "0s"
+        }
+      ]
+    },
+    {
+      "name": "Operations 375: real floor completion target is at least 56px",
+      "pass": true,
+      "details": [
+        {
+          "label": "Confirm Handover & Next",
+          "height": 56,
+          "width": 343,
+          "disabled": true
+        }
+      ]
+    },
+    {
+      "name": "Operations 820: real floor completion target is at least 56px",
+      "pass": true,
+      "details": [
+        {
+          "label": "Confirm Handover & Next",
+          "height": 56,
+          "width": 176.453125,
+          "disabled": true
+        }
+      ]
+    },
+    {
+      "name": "Operations 1440: real floor completion target is at least 56px",
+      "pass": true,
+      "details": [
+        {
+          "label": "Confirm Handover & Next",
+          "height": 56,
+          "width": 176.453125,
+          "disabled": true
+        }
+      ]
+    },
+    {
+      "name": "Typography follows the user-approved loaded all-Outfit theme",
+      "pass": true,
+      "details": {
+        "body": "Outfit, system-ui, sans-serif",
+        "heading": "Outfit, system-ui, sans-serif",
+        "number": "Outfit, system-ui, sans-serif",
+        "loaded": [
+          "Outfit",
+          "Outfit",
+          "Outfit",
+          "Outfit",
+          "Outfit"
+        ]
+      }
+    },
+    {
+      "name": "Finance phone KPI labels are fully readable at secondary text size",
+      "pass": true,
+      "details": [
+        {
+          "text": "Outstanding Invoices",
+          "width": 90,
+          "scrollWidth": 90,
+          "height": 39,
+          "scrollHeight": 39,
+          "font": 13,
+          "overflow": "visible",
+          "whiteSpace": "normal"
+        },
+        {
+          "text": "Overdue Invoices",
+          "width": 90,
+          "scrollWidth": 90,
+          "height": 39,
+          "scrollHeight": 39,
+          "font": 13,
+          "overflow": "visible",
+          "whiteSpace": "normal"
+        },
+        {
+          "text": "Received",
+          "width": 53,
+          "scrollWidth": 53,
+          "height": 20,
+          "scrollHeight": 20,
+          "font": 13,
+          "overflow": "visible",
+          "whiteSpace": "normal"
+        }
+      ]
+    },
+    {
+      "name": "/inventory: table selection targets are at least 44px",
+      "pass": true,
+      "details": [
+        {
+          "label": "Select every model on this page",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select Aputure Amaran 200x",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select Aputure LS 300x",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select Aputure LS 600d Pro",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select Aputure MC Pro 4-Light Kit",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select Aputure Nova P300c",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select Astera Titan Tube 8-Pack",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select Avenger Wind-Up Stand",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select Blackmagic Pocket 6K Pro",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select Blackmagic URSA Mini Pro 12K",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select Boom Pole Carbon 3m",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select Butterfly Frame 6x6",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select Canon C70 Cinema Camera",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select Canon CN-E 24mm",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select Canon CN-E 50mm",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select Canon R5 C",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select DJI RS 3 Pro Gimbal",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select DJI RS 4 Gimbal",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select DJI Ronin 4D-6K",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select DZOFilm Vespid 35mm",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select Dana Dolly Kit",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select Easyrig Vario 5",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select Godox SL200 III",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select Jib Arm 3m",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select Kupo Grip Head 4in",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select Laowa 12mm Zero-D",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "name": "/inventory: outer label edge toggles real row selection",
+      "pass": true,
+      "details": {
+        "first": {
+          "x": 96,
+          "y": 336.890625,
+          "checked": false
+        },
+        "changed": true
+      }
+    },
+    {
+      "name": "/rentals: table selection targets are at least 44px",
+      "pass": true,
+      "details": [
+        {
+          "label": "Select all bookings on this page",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select booking 902",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select booking 908",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select booking 914",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select booking 903",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select booking 909",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select booking 915",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select booking 904",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select booking 910",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select booking 916",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select booking 905",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select booking 911",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select booking 917",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select booking 906",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select booking 912",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select booking 888",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select booking 898",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select booking 895",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select booking 907",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select booking 892",
+          "width": 44,
+          "height": 44
+        },
+        {
+          "label": "Select booking 913",
+          "width": 44,
+          "height": 44
+        }
+      ]
+    },
+    {
+      "name": "/rentals: outer label edge toggles real row selection",
+      "pass": true,
+      "details": {
+        "first": {
+          "x": 98,
+          "y": 562.65625,
+          "checked": false
+        },
+        "changed": true
+      }
+    },
+    {
+      "name": "Unsaved equipment drawer has no invented asset code, persisted status or barcode",
+      "pass": true,
+      "details": {
+        "text": "Quick Info\nCreated by\nBabin Dulal\nCreated date\nNot saved\nLast updated\nNever saved\nStatus\nNot saved\nCodes\nAsset Code\nAssigned on save\nCopy\n\nA barcode is available after equipment is saved.\n\nOne Asset Code drives barcode and QR labels. Serials match manufacturer labels on hardware.\n\nEquipment Preview\nNew equipment\n0 items · Serialised\n0 units listed in this form.\nRelationship Summary\nParent / Container\nNot available\nContained items\nNot available\nTotal Stock\n0\nSerialized\nYes ✓\nBundle eligible\nNot available\nReady to Rent\nReady to rent? 4 to finish\nName, category, brand and tracking needed\nNo units added\nDaily rate not set\nReplacement value not set — needed for damage charges\nSaving is never blocked by this list.\nQuick Actions\nGenerate Tags\nCheck Duplicates\nCopy Code",
+        "barcode": false,
+        "copyDisabled": true
+      }
+    },
+    {
+      "name": "Saved equipment drawer uses its actual code and does not invent relationship or custody facts",
+      "pass": true,
+      "details": {
+        "code": "EQ000267",
+        "status": "Not available",
+        "text": "Quick Info\nCreated by\nNot available\nCreated date\nNot available\nLast updated\nNot available\nStatus\nNot available\nCodes\nAsset Code\nEQ000267\nCopy\nEQ000267\n\nOne Asset Code drives barcode and QR labels. Serials match manufacturer labels on hardware.\n\nEquipment Preview\nAputure Amaran 200x\n6 items · Serialised · Lighting\nSN-LIT-2800\nEQ000267-U01\nIn Stock\nSN-LIT-2801\nEQ000267-U02\nIn Stock\nSN-LIT-2802\nEQ000267-U03\nIn Stock\nSN-LIT-2803\nEQ000267-U04\nIn Stock\nSN-LIT-2804\nEQ000267-U05\nIn Stock\nSN-LIT-2805\nEQ000267-U06\nIn Stock\n6 units listed in this form.\nRelationship Summary\nParent / Container\nNot available\nContained items\nNot available\nTotal Stock\n6\nSerialized\nYes ✓\nBundle eligible\nNot available\nReady to Rent\nReady to rent\nName, category, brand and tracking\n6 units with serials\nDaily rate set\nReplacement value set\nEvery unit has a warehouse\nSaving is never blocked by this list.\nQuick Actions\nGenerate Tags\nCheck Duplicates\nCopy Code",
+        "controls": [
+          {
+            "text": "Copy",
+            "width": 63.796875,
+            "height": 44
+          },
+          {
+            "text": "Generate Tags",
+            "width": 125.5,
+            "height": 59
+          },
+          {
+            "text": "Check Duplicates",
+            "width": 125.5,
+            "height": 59
+          },
+          {
+            "text": "Copy Code",
+            "width": 125.5,
+            "height": 59
+          }
+        ]
+      }
+    },
+    {
+      "name": "Equipment drawer controls retain at least 44px targets",
+      "pass": true,
+      "details": [
+        {
+          "text": "Copy",
+          "width": 63.796875,
+          "height": 44
+        },
+        {
+          "text": "Generate Tags",
+          "width": 125.5,
+          "height": 59
+        },
+        {
+          "text": "Check Duplicates",
+          "width": 125.5,
+          "height": 59
+        },
+        {
+          "text": "Copy Code",
+          "width": 125.5,
+          "height": 59
+        }
+      ]
+    }
+  ]
+}

@@ -11,8 +11,9 @@ import { FilterButton } from '../../ui/FilterDrawer'
 import { WorkspaceHeaderAddActions, WorkspaceHeaderMoreActions, WorkspaceHeaderRightActions, WorkspaceHeaderSecondaryActions } from '../WorkspacePortal'
 import Header from '../Header'
 
-const mock = vi.hoisted(() => ({ viewport: 'desktop' }))
+const mock = vi.hoisted(() => ({ viewport: 'desktop', narrow: false }))
 vi.mock('../../../lib/device', () => ({ useViewport: () => mock.viewport }))
+vi.mock('../../../lib/headerRoom', () => ({ useCompactHeader: () => mock.viewport !== 'desktop' || mock.narrow }))
 vi.mock('../../../lib/auth', () => ({ useAuth: () => ({ user: { name: 'Operator', role: 'Owner' }, logout: vi.fn(), lockNow: vi.fn(), hasPin: false }) }))
 vi.mock('../../../lib/syncContext', () => ({ useSync: () => ({ status: 'synced', pendingCount: 0 }) }))
 vi.mock('../../ui/creation/GlobalAddMenu', () => ({ GlobalAddMenu: () => <button>Global Add</button> }))
@@ -22,6 +23,7 @@ let container: HTMLDivElement
 let root: Root
 beforeEach(() => {
   mock.viewport = 'desktop'
+  mock.narrow = false
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
@@ -35,6 +37,31 @@ const slot = (name: string) => container.querySelector<HTMLElement>(`[data-heade
 const displayedSlots = () => Array.from(container.querySelectorAll('[data-header-slot]')).map((node) => node.getAttribute('data-header-slot'))
 
 describe('Babin Rentals OS — fixed button locations', () => {
+  it.each(['phone', 'tablet', 'desktop'])('keeps a contextual popup trigger outside More at %s width', async viewport => {
+    mock.viewport = viewport
+    mock.narrow = true
+    await act(async () => root.render(<MemoryRouter><WorkspaceProvider><Header crumbs={[{label:'Rentals'}]} /><PageHeader title="Rentals" actions={<PageActions persistent={<button aria-label="Operations">Operations</button>} primary={<button>Confirm</button>} />} /></WorkspaceProvider></MemoryRouter>))
+    expect(slot('secondary')?.querySelector('[aria-label="Operations"]')).not.toBeNull()
+    expect(slot('more')?.querySelector('[aria-label="Operations"]')).toBeNull()
+    expect(container.querySelectorAll('header')).toHaveLength(1)
+  })
+  it('moves secondary actions into More when an expanded desktop sidebar leaves a narrow header', async () => {
+    mock.narrow = true
+    const exportRows = vi.fn()
+    await act(async () => root.render(<MemoryRouter><WorkspaceProvider>
+      <Header crumbs={[{ label: 'Rentals' }]} />
+      <PageHeader title="Rentals" actions={<PageActions primary={<button>Confirm booking</button>}
+        secondary={[<button key="export" onClick={exportRows}>Export CSV</button>]} />} />
+    </WorkspaceProvider></MemoryRouter>))
+    expect(slot('secondary')?.textContent).not.toContain('Export CSV')
+    expect(slot('primary')?.textContent).toContain('Confirm booking')
+    await act(async () => slot('more')!.querySelector<HTMLButtonElement>('button')!.click())
+    const exportButton = [...document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
+      .find(button => button.textContent?.includes('Export CSV'))!
+    expect(exportButton).toBeDefined()
+    await act(async () => exportButton.click())
+    expect(exportRows).toHaveBeenCalledOnce()
+  })
   it('places Filters, Add, More and legacy Save in one canonical row rather than beside the title', async () => {
     await act(async () => root.render(<MemoryRouter><WorkspaceProvider>
       <Header crumbs={[{ label: 'Rentals' }]} />

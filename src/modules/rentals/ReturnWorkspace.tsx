@@ -1183,7 +1183,7 @@ export default function ReturnWorkspace({
       )
       .then(() => {
         clearFloorScan('return', floor.id)
-        showSuccessToast('Return Completed', `Rental ${floor.bookingNo} returned successfully`)
+        showSuccessToast('Return session saved', `Received items recorded for ${floor.bookingNo}. Cleaning and QC tasks remain tracked separately.`)
         if (onConfirmSuccess) {
           onConfirmSuccess()
         } else {
@@ -1206,7 +1206,7 @@ export default function ReturnWorkspace({
       dispatching,
       complete: completeSession,
       isDirty,
-      label: 'Confirm & Next →',
+      label: 'Confirm Return session',
       error: dispatchError,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps

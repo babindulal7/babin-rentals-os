@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useId, useRef } from 'react'
 import type { InputHTMLAttributes, CSSProperties } from 'react'
 import Icon from './Icon'
+import { Kbd } from './Kbd'
 
 export interface SearchInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value' | 'type'> {
   value: string
@@ -199,20 +200,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(functi
             zIndex: 1,
           }}
         >
-          <kbd
-            className="figure"
-            style={{
-              fontSize: '11px',
-              fontWeight: 600,
-              color: 'var(--muted)',
-              padding: '2px 6px',
-              borderRadius: 'var(--r-xs)',
-              background: 'var(--card2)',
-              border: '1px solid var(--border)',
-            }}
-          >
-            {shortcutHint}
-          </kbd>
+          <Kbd size="sm">{shortcutHint}</Kbd>
         </span>
       ) : null}
     </div>

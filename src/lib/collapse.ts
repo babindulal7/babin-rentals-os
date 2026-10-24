@@ -26,14 +26,16 @@ function readCollapsed(key: string, defaultValue: boolean): boolean {
  * persists the text-size setting.
  */
 export function useCollapsed(key: string, defaultValue = false): [boolean, () => void] {
-  const [collapsed, setCollapsed] = useState(() => readCollapsed(key, defaultValue))
+  const [values, setValues] = useState<Record<string, boolean>>(() => ({ [key]: readCollapsed(key, defaultValue) }))
+  // RULING 2026-10-23: tablet and desktop each retain their own navigation preference across resizes.
+  const collapsed = values[key] ?? readCollapsed(key, defaultValue)
   const toggle = useCallback(() => {
-    setCollapsed((prev) => {
-      const next = !prev
+    setValues((prev) => {
+      const next = !(prev[key] ?? readCollapsed(key, defaultValue))
       /* The panel still collapses on a device that cannot remember it. */
       writeLocal(PREFIX + key, next ? '1' : '0')
-      return next
+      return { ...prev, [key]: next }
     })
-  }, [key])
+  }, [key, defaultValue])
   return [collapsed, toggle]
 }

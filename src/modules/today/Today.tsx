@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { createPortal } from 'react-dom'
 import Icon from '../../components/ui/Icon'
 import { CalendarPopover } from '../../components/ui/DateField'
-import { PageHeader } from '../../components/ui/Page'
-import { OverflowMenu } from '../../components/ui/OverflowMenu'
+import { PageHeader, PageActions } from '../../components/ui/Page'
 import { GlobalAddMenu } from '../../components/ui/creation/GlobalAddMenu'
 import { DataAgeBadge } from '../../components/ui/DataAgeBadge'
 import { PageShell } from '../../components/ui/PageShell'
@@ -12,19 +11,14 @@ import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { useDomainEvent } from '../../events/useDomainEvent'
 import { EVENT_TYPES } from '../../events/eventBus'
 import { formatAd } from '../../lib/bs'
-import { operationalTodayAd, businessNowAd, overDays, pickupsQuery, timeOf, toMovementRow, type MovementRow } from '../../lib/queries/today'
+import { operationalTodayAd, businessNowAd, overDays, pickupsQuery, toMovementRow, type MovementRow } from '../../lib/queries/today'
 import { listBookings, operationQueue, todaysOutgoing } from '../../lib/queries/bookings'
 import type { ListFilters } from '../../lib/queries/listQuery'
 import { useList, type ListQueryResult, type ListResult } from '../../lib/queries/useList'
 import { useViewport } from '../../lib/device'
-import { useAuth } from '../../lib/auth'
-import { canViewMoney } from '../../lib/rbac'
-import { formatMoney, type Paisa } from '../../lib/money'
-import { CASES, isOpenStatus, openCasesCount } from '../../data/cases'
 import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext'
 import type { BookingStatus } from '../../lib/workflow'
 import RawDashboardMovementPanel from './DashboardMovementPanel'
-import ShiftHandoverPanel from './ShiftHandoverPanel'
 import './dashboard.css'
 
 const DashboardMovementPanel = RawDashboardMovementPanel as React.ComponentType<
@@ -380,11 +374,10 @@ export default function Today() {
   const lang = useCurrentLanguage()
   const viewport = useViewport()
   const isPhone = viewport === 'phone'
+  const queueTabsId = useId()
   const [mobileTab, setMobileTab] = useState<'pickups' | 'returns'>('pickups')
   const mobileTabChosenRef = useRef(false)
   const { openOperations } = useOperationsWorkspace()
-  const { user } = useAuth()
-  const canSeeMoney = user ? canViewMoney(user.role) : false
   const [globalSearch, setGlobalSearch] = useState('')
   const counterInputRef = useRef<HTMLInputElement>(null)
 
@@ -422,12 +415,12 @@ export default function Today() {
 
   const fetchPickups = useCallback(async (filters: ListFilters): Promise<ListQueryResult<MovementRow>> => {
     if (pickupSet.impossible) return { rows: [], total: 0 }
-    const result = await listBookings(filters)
+    const result = await listBookings({ ...filters, withCount: true })
     const now = businessNowAd()
     return { rows: result.rows.map((row) => toMovementRow(row, 'outgoing', now)), total: result.total ?? null }
   }, [pickupSet.impossible])
   const fetchReturns = useCallback(async (filters: ListFilters): Promise<ListQueryResult<MovementRow>> => {
-    const result = await listBookings(filters)
+    const result = await listBookings({ ...filters, withCount: true })
     const now = businessNowAd()
     return { rows: result.rows.map((row) => toMovementRow(row, 'incoming', now)), total: result.total ?? null }
   }, [])
@@ -454,56 +447,12 @@ export default function Today() {
 
   const isDispatchToday = pickupDateFilter.kind === 'quick' && pickupDateFilter.period === 'Today'
   const isReturnToday = returnDateFilter.kind === 'quick' && returnDateFilter.period === 'Today'
-  const pickupCount = pickups.loading || pickups.error ? undefined : pickups.total ?? pickups.rows.length
-  const returnCount = returns.loading || returns.error ? undefined : returns.total ?? returns.rows.length
+  const pickupCount = pickups.loading || pickups.error ? undefined : pickups.total ?? undefined
+  const returnCount = returns.loading || returns.error ? undefined : returns.total ?? undefined
 
   const overduePickups = useMemo(() => {
     return pickups.rows.filter((r) => r.flags.includes('Overdue'))
   }, [pickups.rows])
-
-  const [activeRentalsCount, setActiveRentalsCount] = useState<number>(0)
-  const [activeRentalsItems, setActiveRentalsItems] = useState<number>(0)
-  const [activeRentalsPaisa, setActiveRentalsPaisa] = useState<number>(0)
-  const [prepBookedCount, setPrepBookedCount] = useState<number>(0)
-  const [prepPackedCount, setPrepPackedCount] = useState<number>(0)
-  const [tomorrowReturns, setTomorrowReturns] = useState<MovementRow[]>([])
-  const openCases = useMemo(() => openCasesCount(), [])
-  const topOpenCases = useMemo(() => {
-    return CASES.filter((c) => isOpenStatus(c.status)).slice(0, 4)
-  }, [])
-
-  useEffect(() => {
-    let active = true
-    async function loadSituationalMetrics() {
-      try {
-        const onRentRes = await listBookings({ chips: { stage: ['On Rent'] }, presence: { cancelled_at: false } })
-        if (!active) return
-        setActiveRentalsCount(onRentRes.total ?? onRentRes.rows.length)
-        const totalItems = onRentRes.rows.reduce((sum, r) => sum + (r.itemCount || 0), 0)
-        setActiveRentalsItems(totalItems)
-        const totalPaisa = onRentRes.rows.reduce((sum, r) => sum + (r.totalAmount ? Number(r.totalAmount) : 0), 0)
-        setActiveRentalsPaisa(totalPaisa)
-
-        const prepRes = await listBookings({ chips: { stage: ['Booked', 'Packed'] }, presence: { cancelled_at: false } })
-        if (!active) return
-        const booked = prepRes.rows.filter((r) => r.stage === 'Booked').length
-        const packed = prepRes.rows.filter((r) => r.stage === 'Packed').length
-        setPrepBookedCount(booked)
-        setPrepPackedCount(packed)
-
-        const tomorrow = shiftDay(dayAd, 1)
-        const tomorrowFilters = operationQueue('return', tomorrow, tomorrow)
-        const tomorrowRes = await listBookings(tomorrowFilters)
-        if (!active) return
-        const now = businessNowAd()
-        setTomorrowReturns(tomorrowRes.rows.map((row) => toMovementRow(row, 'incoming', now)))
-      } catch {
-        // Non-critical background telemetry
-      }
-    }
-    void loadSituationalMetrics()
-    return () => { active = false }
-  }, [dayAd, pickups.lastFetchedAt, returns.lastFetchedAt])
 
   useEffect(() => {
     if (isPhone && !mobileTabChosenRef.current && pickupCount === 0 && (returnCount ?? 0) > 0) {
@@ -586,174 +535,43 @@ export default function Today() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [goToToday, stepDay, isPhone])
 
-  const navigate = useNavigate()
+  const onPresetKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    const currentPeriod =
+      pickupDateFilter.kind === 'quick' &&
+      returnDateFilter.kind === 'quick' &&
+      pickupDateFilter.period === returnDateFilter.period
+        ? pickupDateFilter.period
+        : 'Today'
+    const currentIdx = QUICK_PERIODS.indexOf(currentPeriod)
+    if (currentIdx === -1) return
 
-  const returnsEmptyFooter = useMemo(() => {
-    if (!isReturnToday) return null
-    if (tomorrowReturns.length === 0 && openCases === 0) return null
+    let nextIdx = currentIdx
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      nextIdx = (currentIdx + 1) % QUICK_PERIODS.length
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      nextIdx = (currentIdx - 1 + QUICK_PERIODS.length) % QUICK_PERIODS.length
+    } else if (e.key === 'Home') {
+      nextIdx = 0
+    } else if (e.key === 'End') {
+      nextIdx = QUICK_PERIODS.length - 1
+    } else {
+      return
+    }
 
-    return (
-      <div className="returns-empty-footer" style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
-        {tomorrowReturns.length > 0 && (
-          <div
-            className="dashboard-situational-card"
-            style={{
-              background: 'var(--surface-card, var(--card))',
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--r-card, 12px)',
-              padding: '14px 16px',
-              boxShadow: 'var(--shadow-card)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '12px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                <Icon name="calendar" size={15} style={{ color: 'var(--primary)' }} />
-                Returning Tomorrow ({tomorrowReturns.length})
-              </span>
-              <button
-                type="button"
-                className="press tap"
-                onClick={() => setReturnFilter({ kind: 'quick', period: 'Tomorrow' })}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--primary-text)',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  padding: '4px 0',
-                  minHeight: 'var(--tap, 44px)',
-                }}
-              >
-                View All ({tomorrowReturns.length}) <Icon name="arrow_right" size={13} />
-              </button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {tomorrowReturns.slice(0, 3).map((ret) => (
-                <div
-                  key={ret.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 10px',
-                    borderRadius: 'var(--r-card-inner, 8px)',
-                    background: 'var(--surface-muted, color-mix(in srgb, var(--border) 25%, transparent))',
-                    fontSize: '13px',
-                  }}
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <Link to={`/rentals/${ret.bookingNo}`} style={{ fontWeight: 600, color: 'var(--text)', textDecoration: 'none' }} className="font-mono">
-                        {ret.bookingNo}
-                      </Link>
-                      <span style={{ color: 'var(--border2)' }}>·</span>
-                      <span style={{ fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {ret.client}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: '11px', color: 'var(--muted)' }}>
-                      {ret.itemCount} {ret.itemCount === 1 ? 'item' : 'items'}
-                    </span>
-                  </div>
-                  <span className="font-mono tabular-nums" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)', whiteSpace: 'nowrap' }}>
-                    {ret.due ? ret.due.replace(/^Due\s+/i, '') : timeOf(ret)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+    e.preventDefault()
+    const nextPeriod = QUICK_PERIODS[nextIdx]
+    if (!nextPeriod) return
+    syncBothPanels({ kind: 'quick', period: nextPeriod })
 
-        {openCases > 0 && (
-          <div
-            className="dashboard-situational-card"
-            style={{
-              background: 'var(--surface-card, var(--card))',
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--r-card, 12px)',
-              padding: '14px 16px',
-              boxShadow: 'var(--shadow-card)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '12px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                <Icon name="tool" size={15} style={{ color: 'var(--warn)' }} />
-                Floor Attention: QC & Maintenance Holds ({openCases})
-              </span>
-              <Link
-                to="/inventory/cases"
-                className="press tap"
-                style={{
-                  color: 'var(--primary-text)',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  padding: '4px 0',
-                  minHeight: 'var(--tap, 44px)',
-                }}
-              >
-                Resolve →
-              </Link>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {topOpenCases.map((c) => {
-                const eqName = Array.isArray(c.equipment) ? c.equipment.map((e) => e.name).join(', ') : c.equipment
-                return (
-                  <div
-                    key={c.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '8px 10px',
-                      borderRadius: 'var(--r-card-inner, 8px)',
-                      background: 'var(--surface-muted, color-mix(in srgb, var(--border) 25%, transparent))',
-                      fontSize: '13px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, paddingRight: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span className="font-mono tabular-nums" style={{ fontWeight: 600, fontSize: '12px', color: 'var(--muted)' }}>
-                          {c.id}
-                        </span>
-                        <span style={{ fontWeight: 600, color: 'var(--text)' }}>
-                          {c.title}
-                        </span>
-                      </div>
-                      <span style={{ fontSize: '11px', color: 'var(--text2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {eqName} · {c.counterpartyName}
-                      </span>
-                    </div>
-                    <span
-                      style={{
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        padding: '2px 6px',
-                        borderRadius: 'var(--r-btn, 4px)',
-                        whiteSpace: 'nowrap',
-                        background: c.priority === 'Critical' || c.priority === 'High' ? 'color-mix(in srgb, var(--danger) 12%, var(--card))' : 'color-mix(in srgb, var(--warn) 15%, var(--card))',
-                        color: c.priority === 'Critical' || c.priority === 'High' ? 'var(--danger-text)' : 'var(--warn-text)',
-                        border: `1px solid color-mix(in srgb, ${c.priority === 'Critical' || c.priority === 'High' ? 'var(--danger)' : 'var(--warn)'} 30%, transparent)`,
-                      }}
-                    >
-                      {c.priority} · {c.status}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-      </div>
+    const nextEl = document.getElementById(
+      `dispatch-preset-tab-${nextPeriod.replace(/\s+/g, '-').toLowerCase()}`,
     )
-  }, [isReturnToday, tomorrowReturns, openCases, topOpenCases, setReturnFilter])
+    if (nextEl) {
+      nextEl.focus()
+    }
+  }
+
+  const navigate = useNavigate()
 
   return (
     <PageShell
@@ -771,195 +589,105 @@ export default function Today() {
             inputRef: counterInputRef,
           }}
           actions={
-            // RULING 2026-10-13: one compact action cluster; date filtering sits with its queues.
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap' }}>
-              <GlobalAddMenu module="today" />
-              <OverflowMenu ariaLabel="More Today actions" items={[
+            // RULING 2026-10-23: Add and More use their canonical shared header slots.
+            <PageActions
+              primary={<GlobalAddMenu module="today" />}
+              overflow={[
                 { label: 'Operations', icon: 'queues', onClick: () => navigate('/operations') },
                 { label: 'Refresh movements', icon: 'refresh', onClick: refetchMovement,
                   ...(pickups.loading || returns.loading ? { unavailable: 'Movements are refreshing' } : {}) },
-              ]} />
-            </div>
+              ]}
+            />
           }
         />
       }
     >
-      <div className="dashboard-workbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 'var(--density-section-gap, 12px)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <h1 style={{ margin: 0, fontSize: 'var(--t-h3, 18px)', fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
-              Today
-              <span style={{ color: 'var(--muted)', fontWeight: 400 }}>•</span>
-              <span style={{ fontSize: 'var(--t-meta, 14px)', fontWeight: 600, color: 'var(--text2)' }}>Dispatch board</span>
-            </h1>
-            <DataAgeBadge
-              loadedAt={pickups.lastFetchedAt && returns.lastFetchedAt
-                ? new Date(Math.min(pickups.lastFetchedAt.getTime(), returns.lastFetchedAt.getTime()))
-                : null}
-              loading={pickups.loading || returns.loading}
-              onRefresh={refetchMovement}
-              variant="muted"
-              compact
-            />
-          </div>
-
-          {/* Quick indicators matching wireframe */}
-          {pickupCount !== undefined && returnCount !== undefined && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 5,
-                  padding: '4px 10px',
-                  borderRadius: 'var(--r-btn, 6px)',
-                  background: 'color-mix(in srgb, var(--primary) 12%, var(--card))',
-                  border: '1px solid color-mix(in srgb, var(--primary) 30%, transparent)',
-                  color: 'var(--primary-text)',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                }}
-              >
-                <span className="font-mono tabular-nums">{pickupCount}</span> going out
-              </span>
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 5,
-                  padding: '4px 10px',
-                  borderRadius: 'var(--r-btn, 6px)',
-                  background: 'color-mix(in srgb, var(--success) 12%, var(--card))',
-                  border: '1px solid color-mix(in srgb, var(--success) 30%, transparent)',
-                  color: 'var(--success-text)',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                }}
-              >
-                <span className="font-mono tabular-nums">{returnCount}</span> coming back
-              </span>
-            </div>
-          )}
-
-          <p className="dashboard-workbar-hint" style={{ margin: 0, fontSize: 'var(--t-meta, 13px)', color: 'var(--muted)' }}>
-            Staff see the next physical action first. KPIs and reports stay secondary.
-          </p>
+      <div className="dispatch-toolbar" role="group" aria-label="Dispatch controls">
+        <div className="dispatch-toolbar__intro">
+          <h1>Pickup &amp; return board</h1>
+          <DataAgeBadge
+            loadedAt={pickups.lastFetchedAt && returns.lastFetchedAt
+              ? new Date(Math.min(pickups.lastFetchedAt.getTime(), returns.lastFetchedAt.getTime()))
+              : null}
+            loading={pickups.loading || returns.loading}
+            onRefresh={refetchMovement}
+            variant="muted"
+            compact
+          />
         </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-
-          {/* Unified Page-Level Date Bar */}
+        <div className="dispatch-toolbar__dates" role="group" aria-label="Dispatch day for pickups and returns">
           <div
-            className="dashboard-page-date-bar"
-            role="group"
-            aria-label="Dispatch day for pickups and returns"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 3,
-              background: 'var(--surface-2)',
-              padding: 3,
-              borderRadius: 'calc(var(--r-btn) + 2px)',
-              border: '1px solid var(--border)',
-            }}
+            className="dispatch-toolbar__presets"
+            role="tablist"
+            aria-label="Preset dispatch periods"
+            onKeyDown={onPresetKeyDown}
           >
             {QUICK_PERIODS.map((period) => {
-              const isActive = pickupDateFilter.kind === 'quick' && pickupDateFilter.period === period && returnDateFilter.kind === 'quick' && returnDateFilter.period === period
+              const isActive =
+                pickupDateFilter.kind === 'quick' &&
+                pickupDateFilter.period === period &&
+                returnDateFilter.kind === 'quick' &&
+                returnDateFilter.period === period
               return (
                 <button
                   key={period}
+                  id={`dispatch-preset-tab-${period.replace(/\s+/g, '-').toLowerCase()}`}
+                  role="tab"
                   type="button"
-                  className="press tap"
-                  style={{
-                    minHeight: 38,
-                    padding: '0 12px',
-                    borderRadius: 'var(--r-btn)',
-                    border: 'none',
-                    background: isActive ? 'var(--card)' : 'transparent',
-                    color: isActive ? 'var(--text)' : 'var(--text2)',
-                    fontWeight: isActive ? 600 : 500,
-                    fontSize: 'var(--t-meta, 13px)',
-                    fontFamily: 'inherit',
-                    boxShadow: isActive ? 'var(--shadow-sm), var(--specular-rim)' : 'none',
-                    cursor: 'pointer',
-                    transition: 'background var(--dur-fast, 120ms) var(--ease), color var(--dur-fast, 120ms) var(--ease), box-shadow var(--dur-fast, 120ms) var(--ease)',
-                  }}
+                  tabIndex={isActive ? 0 : -1}
+                  aria-selected={isActive}
                   aria-pressed={isActive}
+                  style={{ minHeight: 'var(--tap, 44px)' }}
                   onClick={() => syncBothPanels({ kind: 'quick', period })}
                 >
                   {QUICK_PERIOD_LABELS[lang][period]}
                 </button>
               )
             })}
-            <MasterDispatchDateControl
-              filter={pickupDateFilter}
-              onChange={syncBothPanels}
-              today={dayAd}
-              groupLabel="Master date picker"
-              dialogLabel="Master dispatch date"
-            />
           </div>
+          <MasterDispatchDateControl
+            filter={pickupDateFilter}
+            onChange={syncBothPanels}
+            today={dayAd}
+            groupLabel="Master date picker"
+            dialogLabel="Master dispatch date"
+          />
         </div>
       </div>
 
-      {/* Unresolved / Overdue Pickups Alert Banner */}
-      {isDispatchToday && overduePickups.length > 0 && (
-        <div
-          className="dashboard-alert-banner"
-          role="alert"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12,
-            padding: '10px 16px',
-            marginBottom: 'var(--sp-md, 12px)',
-            borderRadius: 'var(--r-card)',
-            background: 'color-mix(in srgb, var(--warn) 12%, var(--card))',
-            border: '1px solid color-mix(in srgb, var(--warn) 35%, transparent)',
-            color: 'var(--warn-text)',
-            fontSize: 'var(--t-meta, 13px)',
-            boxShadow: 'var(--shadow-xs)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Icon name="alert_triangle" size={18} style={{ color: 'var(--warn)', flexShrink: 0 }} />
-            <span>
-              <strong>Unresolved / Overdue Pickups <span className="font-mono tabular-nums">({overduePickups.length})</span></strong>
-              {' — '}
-              {overduePickups.length === 1 ? (
-                <>
-                  <span className="font-mono tabular-nums">1</span> booking is
-                </>
-              ) : (
-                <>
-                  <span className="font-mono tabular-nums">{overduePickups.length}</span> bookings are
-                </>
-              )}{' '}
-              past scheduled pickup time awaiting dispatch.
-            </span>
+      {/* RULING 2026-10-23: Today contains movement queues only; totals come from the same queries. */}
+      <section className="dispatch-summaries" aria-label="Movement totals">
+        {([
+          { key: 'pickups', title: 'Pickups', icon: 'truck', list: pickups, filter: pickupDateFilter,
+            detail: isDispatchToday ? 'Scheduled and unfulfilled departures' : 'Scheduled departures' },
+          { key: 'returns', title: 'Returns', icon: 'return_arrow', list: returns, filter: returnDateFilter,
+            detail: isReturnToday ? 'Due today, including overdue returns' : 'Scheduled returns' },
+        ] as const).map(({ key, title, icon, list, filter, detail }) => (
+          <div key={key} className={`dispatch-summary dispatch-summary--${key}`} aria-label={title} aria-busy={list.loading}>
+            <span className="dispatch-summary__icon" aria-hidden="true"><Icon name={icon} size={22} /></span>
+            <div className="dispatch-summary__body">
+              <div className="dispatch-summary__heading">
+                <strong className="dispatch-summary__count font-mono tabular-nums" aria-live="polite">
+                  {list.loading || list.error ? '—' : list.total ?? '—'}
+                </strong>
+                <h2>{title}</h2>
+                <span className="dispatch-summary__period">{filterLabel(filter, lang)}</span>
+              </div>
+              <p>{list.loading ? 'Loading movements…' : list.error ? 'Movements unavailable' : list.total === null ? 'Count unavailable · see loaded movements below' : detail}</p>
+              {key === 'pickups' && isDispatchToday && overduePickups.length > 0 && (
+                <p className="dispatch-summary__warning"><Icon name="alert_triangle" size={14} /> Includes overdue pickups</p>
+              )}
+            </div>
           </div>
-          <button
-            type="button"
-            className="ui-button ui-button--sm ui-button--outline press tap"
-            style={{
-              borderColor: 'color-mix(in srgb, var(--warn) 40%, transparent)',
-              color: 'var(--warn-text)',
-              flexShrink: 0,
-              gap: 6,
-            }}
-            onClick={() => navigate('/operations?queue=pack')}
-          >
-            Resolve in Operations <Icon name="arrow_right" size={14} />
-          </button>
-        </div>
-      )}
+        ))}
+      </section>
 
       {/* Spec §31: Mobile Segmented Control */}
       {isPhone && (
         <div className="dashboard-mobile-nav">
           <SegmentedControl
             fullWidth
+            idPrefix={queueTabsId}
             ariaLabel="Dashboard Movements"
             options={[
               { id: 'pickups', label: 'Pickups', badge: pickupCount },
@@ -979,6 +707,8 @@ export default function Today() {
         {(!isPhone || mobileTab === 'pickups') && (
           <DashboardMovementPanel
             side="outgoing"
+            panelId={isPhone ? `${queueTabsId}-panel-pickups` : undefined}
+            tabId={isPhone ? `${queueTabsId}-tab-pickups` : undefined}
             noun="pickup"
             date={dispatchDate}
             title="Pickups"
@@ -1007,6 +737,8 @@ export default function Today() {
         {(!isPhone || mobileTab === 'returns') && (
           <DashboardMovementPanel
             side="incoming"
+            panelId={isPhone ? `${queueTabsId}-panel-returns` : undefined}
+            tabId={isPhone ? `${queueTabsId}-tab-returns` : undefined}
             noun="return"
             date={dispatchDate}
             title="Returns"
@@ -1029,247 +761,10 @@ export default function Today() {
             onClearFilters={() => setReturnFilter({ kind: 'quick', period: 'Today' })}
             onLoadMore={() => setReturnPage((page) => page + 1)}
             hasMore={returns.total !== null && returns.rows.length < returns.total}
-            emptyFooter={returnsEmptyFooter}
           />
         )}
       </div>
 
-      {/* After the dispatch queues section matching wireframe */}
-      <div
-        className="dashboard-after-queues-header"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: 12,
-          marginTop: 'var(--density-section-gap, 16px)',
-          marginBottom: 'var(--sp-xs, 8px)',
-        }}
-      >
-        <div>
-          <h3
-            style={{
-              margin: 0,
-              fontSize: '14px',
-              fontWeight: 700,
-              color: 'var(--text)',
-              letterSpacing: '-0.01em',
-            }}
-          >
-            After the dispatch queues
-          </h3>
-          <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--muted)' }}>
-            Shift handover / unresolved exceptions / equipment attention
-          </p>
-        </div>
-        <span
-          style={{
-            fontSize: '11px',
-            fontWeight: 600,
-            padding: '3px 8px',
-            borderRadius: 'var(--r-btn, 4px)',
-            background: 'var(--surface-2)',
-            color: 'var(--muted)',
-            border: '1px solid var(--border)',
-          }}
-        >
-          Secondary, below the daily work
-        </span>
-      </div>
-
-      <ShiftHandoverPanel />
-
-      {/* Situational Awareness 3-Card Row */}
-      <div
-        className="dashboard-situational-grid"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: isPhone ? '1fr' : 'repeat(3, minmax(0, 1fr))',
-          gap: 'var(--density-panel-gap, 12px)',
-          marginTop: 'var(--density-section-gap, 12px)',
-        }}
-      >
-        {/* Card 1: Currently Out on Set */}
-        <div
-          className="dashboard-situational-card lift"
-          style={{
-            background: 'var(--surface-card, var(--card))',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--r-card)',
-            padding: 'var(--density-card-pad, 12px 14px)',
-            boxShadow: 'var(--shadow-card), var(--specular-rim)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            gap: 10,
-            minHeight: 'var(--density-situational-min-h, 96px)',
-          }}
-        >
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Currently Out on Set
-              </span>
-              <Icon name="truck" size={18} style={{ color: 'var(--primary)' }} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, margin: '2px 0 4px' }}>
-              <span className="font-mono tabular-nums" style={{ fontSize: '1.65rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-id, sans-serif)' }}>
-                {activeRentalsCount}
-              </span>
-              <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text2)' }}>
-                Active {activeRentalsCount === 1 ? 'Rental' : 'Rentals'}
-              </span>
-            </div>
-            <p style={{ margin: 0, fontSize: 'var(--t-meta, 13px)', color: 'var(--muted)', lineHeight: 1.4 }}>
-              {canSeeMoney && activeRentalsPaisa > 0 ? (
-                <>
-                  <span className="money font-mono tabular-nums" style={{ fontWeight: 600, color: 'var(--text)' }}>
-                    {formatMoney(activeRentalsPaisa as Paisa)}
-                  </span>{' '}
-                  active value · <span className="font-mono tabular-nums">{activeRentalsItems}</span> items on set
-                </>
-              ) : (
-                <>
-                  <span className="font-mono tabular-nums" style={{ fontWeight: 600, color: 'var(--text)' }}>{activeRentalsItems}</span> equipment units currently with clients
-                </>
-              )}
-            </p>
-          </div>
-          <Link
-            to="/operations?queue=return"
-            className="press tap"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              minHeight: 'var(--tap, 44px)',
-              fontSize: 'var(--t-meta, 13px)',
-              fontWeight: 600,
-              color: 'var(--primary-text)',
-              textDecoration: 'none',
-              marginTop: 2,
-            }}
-          >
-            Open Return Queue <Icon name="arrow_right" size={14} />
-          </Link>
-        </div>
-
-        {/* Card 2: Prep / Packing Queue */}
-        <div
-          className="dashboard-situational-card lift"
-          style={{
-            background: 'var(--surface-card, var(--card))',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--r-card)',
-            padding: 'var(--density-card-pad, 12px 14px)',
-            boxShadow: 'var(--shadow-card), var(--specular-rim)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            gap: 10,
-            minHeight: 'var(--density-situational-min-h, 96px)',
-          }}
-        >
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Prep & Packing Queue
-              </span>
-              <Icon name="package" size={18} style={{ color: 'var(--primary)' }} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, margin: '2px 0 4px', flexWrap: 'wrap' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4 }}>
-                <span className="font-mono tabular-nums" style={{ fontSize: '1.65rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-id, sans-serif)' }}>
-                  {prepBookedCount}
-                </span>
-                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text2)' }}>Booked</span>
-              </span>
-              <span style={{ color: 'var(--border2)' }}>·</span>
-              <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4 }}>
-                <span className="font-mono tabular-nums" style={{ fontSize: '1.65rem', fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--font-id, sans-serif)' }}>
-                  {prepPackedCount}
-                </span>
-                <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text2)' }}>Packed</span>
-              </span>
-            </div>
-            <p style={{ margin: 0, fontSize: 'var(--t-meta, 13px)', color: 'var(--muted)', lineHeight: 1.4 }}>
-              Orders staged or awaiting warehouse preparation
-            </p>
-          </div>
-          <Link
-            to="/operations?queue=pack"
-            className="press tap"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              minHeight: 'var(--tap, 44px)',
-              fontSize: 'var(--t-meta, 13px)',
-              fontWeight: 600,
-              color: 'var(--primary-text)',
-              textDecoration: 'none',
-              marginTop: 2,
-            }}
-          >
-            Open Packing Queue <Icon name="arrow_right" size={14} />
-          </Link>
-        </div>
-
-        {/* Card 3: Maintenance / QC Hold */}
-        <div
-          className="dashboard-situational-card lift"
-          style={{
-            background: 'var(--surface-card, var(--card))',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--r-card)',
-            padding: 'var(--density-card-pad, 12px 14px)',
-            boxShadow: 'var(--shadow-card), var(--specular-rim)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            gap: 10,
-            minHeight: 'var(--density-situational-min-h, 96px)',
-          }}
-        >
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Maintenance & QC Hold
-              </span>
-              <Icon name="tool" size={18} style={{ color: 'var(--warn)' }} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, margin: '2px 0 4px' }}>
-              <span className="font-mono tabular-nums" style={{ fontSize: '1.65rem', fontWeight: 700, color: openCases > 0 ? 'var(--warn-text)' : 'var(--text)', fontFamily: 'var(--font-id, sans-serif)' }}>
-                {openCases}
-              </span>
-              <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text2)' }}>
-                Open {openCases === 1 ? 'Case' : 'Cases'} / Holds
-              </span>
-            </div>
-            <p style={{ margin: 0, fontSize: 'var(--t-meta, 13px)', color: 'var(--muted)', lineHeight: 1.4 }}>
-              Equipment flagged for repair, inspection, or missing
-            </p>
-          </div>
-          <Link
-            to="/inventory/cases"
-            className="press tap"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              minHeight: 'var(--tap, 44px)',
-              fontSize: 'var(--t-meta, 13px)',
-              fontWeight: 600,
-              color: 'var(--warn-text)',
-              textDecoration: 'none',
-              marginTop: 2,
-            }}
-          >
-            View Cases & QC <Icon name="arrow_right" size={14} />
-          </Link>
-        </div>
-      </div>
     </PageShell>
   )
 }

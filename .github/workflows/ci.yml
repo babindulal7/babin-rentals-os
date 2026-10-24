@@ -74,7 +74,9 @@ jobs:
       # database that accepted a double booking and refused every discounted
       # booking, because both failures live on the far side of the mock seam.
       # A red step blocks merge.
-      - name: Authenticated security regressions (isolated PGlite)
+      # Includes Admin superior/self-target guards, operations grant history,
+      # and direct Reset queue/task writes/reparenting (0171 + 0172).
+      - name: Authenticated security and branch-Reset regressions (isolated PGlite)
         run: npm run check:security
 
       - name: Lifecycle

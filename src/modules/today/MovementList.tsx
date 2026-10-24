@@ -464,8 +464,25 @@ export default function MovementList({
   const phone = useViewport() === 'phone'
   const [hover, setHover] = useState<string | null>(null)
   const [menu, setMenu] = useState<{ id: string; up: boolean } | null>(null)
+  const hoverTimer = useRef<number | null>(null)
   const press = useRef<number | null>(null)
   const suppress = useRef(false)
+
+  const scheduleHover = (id: string) => {
+    if (hoverTimer.current) window.clearTimeout(hoverTimer.current)
+    hoverTimer.current = window.setTimeout(() => {
+      setHover(id)
+      hoverTimer.current = null
+    }, 300)
+  }
+
+  const cancelHover = () => {
+    if (hoverTimer.current) {
+      window.clearTimeout(hoverTimer.current)
+      hoverTimer.current = null
+    }
+    setHover(null)
+  }
 
   const shown = list.rows.slice(0, ROWS_PER_COLUMN)
   const rest = list.rows.length - shown.length
@@ -491,6 +508,13 @@ export default function MovementList({
     if (press.current) window.clearTimeout(press.current)
     press.current = null
   }
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimer.current) window.clearTimeout(hoverTimer.current)
+      if (press.current) window.clearTimeout(press.current)
+    }
+  }, [])
 
   useEffect(() => {
     if (!hover && !menu) return
@@ -771,8 +795,8 @@ export default function MovementList({
                   }
                   navigate(`/rentals/${r.bookingNo}`)
                 }}
-                onMouseEnter={() => setHover(r.id)}
-                onMouseLeave={() => setHover((h) => (h === r.id ? null : h))}
+                onMouseEnter={() => scheduleHover(r.id)}
+                onMouseLeave={cancelHover}
                 onTouchStart={() => holdStart(r.id)}
                 onTouchMove={holdEnd}
                 onTouchEnd={holdEnd}

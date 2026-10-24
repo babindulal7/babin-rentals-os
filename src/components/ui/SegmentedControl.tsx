@@ -15,6 +15,8 @@ export interface SegmentedControlProps<T extends string = string> {
   value: T
   onChange: (value: T) => void
   ariaLabel?: string
+  /** Associates tab buttons with panels using `${idPrefix}-panel-${option.id}`. */
+  idPrefix?: string
   fullWidth?: boolean
   size?: 'sm' | 'md'
   className?: string
@@ -36,6 +38,7 @@ export function SegmentedControl<T extends string = string>({
   value,
   onChange,
   ariaLabel = 'Navigation options',
+  idPrefix,
   fullWidth = false,
   size = 'md',
   className = '',
@@ -71,13 +74,31 @@ export function SegmentedControl<T extends string = string>({
             key={opt.id}
             type="button"
             role="tab"
+            id={idPrefix ? `${idPrefix}-tab-${opt.id}` : undefined}
+            aria-controls={idPrefix ? `${idPrefix}-panel-${opt.id}` : undefined}
             aria-selected={isSelected}
+            tabIndex={!opt.disabled && (isSelected || (!options.some(option => option.id === value && !option.disabled) && opt === options.find(option => !option.disabled))) ? 0 : -1}
             disabled={opt.disabled}
             title={opt.title}
             onClick={() => {
               if (!opt.disabled && opt.id !== value) {
                 onChange(opt.id)
               }
+            }}
+            onKeyDown={(event) => {
+              const backwards = event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+              const forwards = event.key === 'ArrowRight' || event.key === 'ArrowDown'
+              if (!backwards && !forwards && event.key !== 'Home' && event.key !== 'End') return
+              const enabled = options.filter(option => !option.disabled)
+              const index = enabled.findIndex(option => option.id === opt.id)
+              const next = event.key === 'Home' ? enabled[0]
+                : event.key === 'End' ? enabled[enabled.length - 1]
+                : enabled[(index + (backwards ? -1 : 1) + enabled.length) % enabled.length]
+              if (!next) return
+              event.preventDefault()
+              const tabs = event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
+              tabs?.[options.findIndex(option => option.id === next.id)]?.focus()
+              if (next.id !== value) onChange(next.id)
             }}
             style={{
               minHeight,

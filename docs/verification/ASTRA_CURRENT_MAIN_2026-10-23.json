@@ -1,0 +1,384 @@
+{
+  "startedAt": "2026-10-23T11:51:39.030Z",
+  "sourceHash": "d5dd4192b92e1ee4a0d1e0fd7588259ec1ca3d911c16bea3f6b876f2728e033e",
+  "scope": "Local only. No hosted connection, business data or repository dist writes.",
+  "priorCheckpoint": "ASTRA_CURRENT_FINAL_2026-10-23.json",
+  "regression": {
+    "latestRecorded": "Earlier full run 5280/5280 passed with source changes. New current-main run includes pending 0171 migration and Calendar edits; earlier receipts are historical.",
+    "log": "artifacts/astra-reset-staff-tests-after-20261023.log"
+  },
+  "gates": [
+    {
+      "name": "typecheck",
+      "exitCode": 0,
+      "sourceHashBefore": "d5dd4192b92e1ee4a0d1e0fd7588259ec1ca3d911c16bea3f6b876f2728e033e",
+      "sourceHashAfter": "d5dd4192b92e1ee4a0d1e0fd7588259ec1ca3d911c16bea3f6b876f2728e033e",
+      "sourceStable": true,
+      "log": "artifacts/astra-current-main-typecheck-20261023.log",
+      "at": "2026-10-23T11:54:42.571Z",
+      "outputTail": ""
+    },
+    {
+      "name": "test:focused",
+      "exitCode": 0,
+      "sourceHashBefore": "d5dd4192b92e1ee4a0d1e0fd7588259ec1ca3d911c16bea3f6b876f2728e033e",
+      "sourceHashAfter": "f7226767c8789678bfe35bf7f7831b4b5ff08fbb767580378ec6e60d1f8233e2",
+      "sourceStable": false,
+      "log": "artifacts/astra-current-main-test-focused-20261023.log",
+      "at": "2026-10-23T11:55:02.497Z",
+      "outputTail": "\n RUN  v3.2.7 C:/Users/use/Desktop/babin-rentals-os\n\n ✓ src/lib/queries/__tests__/availability.test.ts (33 tests) 47ms\n ✓ src/lib/queries/__tests__/availabilityCompleteness.test.ts (25 tests) 46ms\n ✓ src/actions/rentals/__tests__/confirmRental.test.ts (68 tests) 191ms\n\n Test Files  3 passed (3)\n      Tests  126 passed (126)\n   Start at  17:39:46\n   Duration  13.80s (transform 5.83s, setup 0ms, collect 13.67s, tests 285ms, environment 2ms, prepare 1.20s)\n\n"
+    },
+    {
+      "name": "test:full",
+      "exitCode": 1,
+      "sourceHashBefore": "f7226767c8789678bfe35bf7f7831b4b5ff08fbb767580378ec6e60d1f8233e2",
+      "sourceHashAfter": "ab2f4f7bd12fdfad0ec0fe2160d7b5b3579d9f9552694f7cc63a602b9551d13b",
+      "sourceStable": false,
+      "log": "artifacts/astra-current-main-test-full-20261023.log",
+      "at": "2026-10-23T12:01:11.120Z",
+      "outputTail": "oryRouter (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:6952:3)\n\nstderr | src/modules/rentals/__tests__/newRentalSimplification.test.tsx > NewRental simplification (Part A - D) > keeps the full booking available on a phone without remounting fields\nWarning: The current testing environment is not configured to support act(...)\n\nstderr | src/modules/rentals/__tests__/newRentalSimplification.test.tsx > NewRental simplification (Part A - D) > renders a consolidated Booking Summary card and removed legacy rail cards\nWarning: The current testing environment is not configured to support act(...)\n\nstderr | src/modules/rentals/__tests__/newRentalSimplification.test.tsx > NewRental simplification (Part A - D) > renders a consolidated Booking Summary card and removed legacy rail cards\nWarning: The current testing environment is not configured to support act(...)\n    at NewRental (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\rentals\\NewRental.tsx:80:42)\n    at Router (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:7036:13)\n    at MemoryRouter (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:6952:3)\nWarning: The current testing environment is not configured to support act(...)\n    at NewRental (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\rentals\\NewRental.tsx:80:42)\n    at Router (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:7036:13)\n    at MemoryRouter (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:6952:3)\nWarning: The current testing environment is not configured to support act(...)\n    at NewRental (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\rentals\\NewRental.tsx:80:42)\n    at Router (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:7036:13)\n    at MemoryRouter (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:6952:3)\nWarning: The current testing environment is not configured to support act(...)\n    at NewRental (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\rentals\\NewRental.tsx:80:42)\n    at Router (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:7036:13)\n    at MemoryRouter (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:6952:3)\nWarning: The current testing environment is not configured to support act(...)\n    at NewRental (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\rentals\\NewRental.tsx:80:42)\n    at Router (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:7036:13)\n    at MemoryRouter (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:6952:3)\nWarning: The current testing environment is not configured to support act(...)\n    at NewRental (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\rentals\\NewRental.tsx:80:42)\n    at Router (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:7036:13)\n    at MemoryRouter (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:6952:3)\n\nstderr | src/modules/rentals/__tests__/newRentalSimplification.test.tsx > NewRental simplification (Part A - D) > renders a consolidated Booking Summary card and removed legacy rail cards\nWarning: The current testing environment is not configured to support act(...)\nWarning: The current testing environment is not configured to support act(...)\nWarning: The current testing environment is not configured to support act(...)\n\nstderr | src/modules/rentals/__tests__/newRentalSimplification.test.tsx > NewRental simplification (Part A - D) > renders a consolidated Booking Summary card and removed legacy rail cards\nWarning: The current testing environment is not configured to support act(...)\n    at NewRental (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\rentals\\NewRental.tsx:80:42)\n    at Router (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:7036:13)\n    at MemoryRouter (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:6952:3)\n\nstderr | src/modules/rentals/__tests__/newRentalSimplification.test.tsx > NewRental simplification (Part A - D) > renders a consolidated Booking Summary card and removed legacy rail cards\nWarning: The current testing environment is not configured to support act(...)\n\nstderr | src/modules/rentals/__tests__/newRentalSimplification.test.tsx > NewRental simplification (Part A - D) > renders a consolidated Booking Summary card and removed legacy rail cards\nWarning: The current testing environment is not configured to support act(...)\n\nstderr | src/modules/rentals/__tests__/newRentalSimplification.test.tsx > NewRental simplification (Part A - D) > renders a consolidated Booking Summary card and removed legacy rail cards\nWarning: The current testing environment is not configured to support act(...)\n\n ✓ src/modules/rentals/__tests__/newRentalSimplification.test.tsx (3 tests) 8694ms\n   ✓ NewRental simplification (Part A - D) > keeps one save and confirm action on a tablet  4214ms\n   ✓ NewRental simplification (Part A - D) > keeps the full booking available on a phone without remounting fields  1542ms\n   ✓ NewRental simplification (Part A - D) > renders a consolidated Booking Summary card and removed legacy rail cards  2933ms\nstderr | src/modules/rentals/__tests__/floorWorkspacesPersistence.test.tsx > Floor Workspaces State Persistence (AUD-018) > PackingWorkspace > restores persisted packing scan state on mount and displays restored banner\nWarning: validateDOMNesting(...): <div> cannot appear as a descendant of <p>.\n    at div\n    at IntelCard (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\components\\ui\\IntelCard.tsx:28:22)\n    at RentalIntelFromFloor (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\components\\intel\\RentalIntelFromFloor.tsx:9:33)\n    at p\n    at div\n    at div\n    at div\n    at PageBody (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\components\\ui\\PageBody.tsx:6:3)\n    at div\n    at PackingWorkspace (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\rentals\\PackingWorkspace.tsx:244:53)\n    at RenderedRoute (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:6218:26)\n    at Routes (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:7097:3)\n    at ToastProvider (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\components\\ui\\Toast.tsx:169:26)\n    at Router (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:7036:13)\n    at MemoryRouter (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:6952:3)\n\nstderr | src/modules/rentals/__tests__/floorWorkspacesPersistence.test.tsx > Floor Workspaces State Persistence (AUD-018) > PackingWorkspace > restores persisted packing scan state on mount and displays restored banner\n[mock] no rows for table \"product_units_service_v\" — returning []\n\nstderr | src/modules/rentals/__tests__/floorWorkspacesPersistence.test.tsx > Floor Workspaces State Persistence (AUD-018) > ReturnWorkspace > restores persisted return triage state on mount and displays restored banner\nWarning: Removing a style property during rerender (borderColor) when a conflicting property is set (border) can lead to styling bugs. To avoid this, don't mix shorthand and non-shorthand properties for the same value; instead, replace the shorthand with separate values.\n    at button\n    at div\n    at SigRow (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\rentals\\ReturnWorkspace.tsx:2694:3)\n    at div\n    at section\n    at Card (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\components\\ui\\Card.tsx:17:3)\n    at Card (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\components\\ui\\Page.tsx:22:3)\n    at aside\n    at OperationAside (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\operations\\FloorAside.tsx:7:27)\n    at div\n    at div\n    at PageBody (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\components\\ui\\PageBody.tsx:6:3)\n    at div\n    at ReturnWorkspace (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\rentals\\ReturnWorkspace.tsx:256:42)\n    at RenderedRoute (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:6218:26)\n    at Routes (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:7097:3)\n    at ToastProvider (C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\components\\ui\\Toast.tsx:169:26)\n    at Router (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:7036:13)\n    at MemoryRouter (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/react-router/dist/development/chunk-62JRHF6Z.mjs:6952:3)\n\n ✓ src/modules/rentals/__tests__/floorWorkspacesPersistence.test.tsx (4 tests) 5964ms\n   ✓ Floor Workspaces State Persistence (AUD-018) > PackingWorkspace > restores persisted packing scan state on mount and displays restored banner  3042ms\n   ✓ Floor Workspaces State Persistence (AUD-018) > ReturnWorkspace > bulk receipt at 1440px leaves QC and signatures for explicit capture  928ms\n   ✓ Floor Workspaces State Persistence (AUD-018) > ReturnWorkspace > bulk receipt at 390px leaves QC and signatures for explicit capture  585ms\n   ✓ Floor Workspaces State Persistence (AUD-018) > ReturnWorkspace > restores persisted return triage state on mount and displays restored banner  673ms\n",
+      "receiptError": "Error: Missing or invalid structured test result"
+    },
+    {
+      "name": "check:pglite",
+      "exitCode": 0,
+      "sourceHashBefore": "ab2f4f7bd12fdfad0ec0fe2160d7b5b3579d9f9552694f7cc63a602b9551d13b",
+      "sourceHashAfter": "9a90dc44e4be33a34c2868bb8380300e6c9d35f4101106b1982a0fc0b81b7d90",
+      "sourceStable": false,
+      "log": "artifacts/astra-current-main-check-pglite-20261023.log",
+      "at": "2026-10-23T12:02:02.773Z",
+      "outputTail": "PostgreSQL 18.3 (PGlite 0.5.8) on wasm32-unknown-emscripten\n\n169/169 applied, 0 failed\n\nview-leak gate: 31 public view(s) checked, 0 readable by anon\nfunction-leak gate: 20 public function(s) executable by anon, 0 unauthorized\ndefiner-hygiene gate: 82 definer function(s) checked, 0 without pinned search_path\nThe chain builds from scratch, no view is readable by anon, no unauthorized RPC is executable by anon, and all definer search_paths are pinned.\n"
+    },
+    {
+      "name": "check:lifecycle",
+      "exitCode": 0,
+      "sourceHashBefore": "9a90dc44e4be33a34c2868bb8380300e6c9d35f4101106b1982a0fc0b81b7d90",
+      "sourceHashAfter": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceStable": false,
+      "log": "artifacts/astra-current-main-check-lifecycle-20261023.log",
+      "at": "2026-10-23T12:02:51.503Z",
+      "outputTail": "PostgreSQL 18.3 (PGlite 0.5.8) on wasm32-unknown-emscripten\n  ok   L1  Coordinator creates a booking: 1 unit, 2 days, 10% discount\n  ok   L2  Quote → Booked writes exactly one reservation (R-26)\n  ok   L3  A conflicting booking — same unit, overlapping dates — is REFUSED\n  ok   L4  A same-day turnaround is ACCEPTED (half-open bounds)\n  ok   L5  A quantity line beyond stock on hand is REFUSED by the capacity ceiling (0045)\n  ok   L6  Booked → Packed → On Rent as Warehouse requires the session rows each stage needs\n  ok   L7  A partial return: one unit back, one missing\n  ok   L8  Accounts raises and issues the invoice: figures snapshot and become immutable (R-15, Law 4)\n  ok   L9  Four payments that must all be refused\n  ok   L10  Two payments settle the invoice: 3,000 then 4,119\n  ok   L11  Closed needs a settled invoice\n  ok   L12  Money-blind roles read no money and write none\n  ok   L13  Even the Owner cannot rewrite the audit log or delete a payment\n  ok   L14  Client portal user sees only their own rows, never another client's\n  ok   L15  Unit status is owned by the engine; direct write is refused (S1-5)\n  ok   L16  Invoice void discipline: role check, reason, credit note requirement (S1-3)\n  ok   L17  Server-side prices for money-blind callers, line guard, role ceiling & user immutability (S1-6, S1-7)\n  ok   L18  Booking schedule changes cannot desynchronise reservations\n  ok   L19  A payment reversal cannot exceed the receipt across partial corrections\n  ok   L20  Bulk stock adjustment is atomic, idempotent, reasoned, and Manager-only\n  ok   L21  A consumable line deducts stock at Handover and needs no return receipt (0141/0142)\n  ok   L22  Smart Intel note visibility and classified values are filtered by RLS for every role\n  ok   L23  extend_booking RPC extends return dates, increments line days, and updates reservations (AUD D5)\n  ok   L24  void_invoice RPC atomically issues credit note for paid amounts and voids invoice (AUD D6)\n  ok   L25  Client Save changes is one atomic, idempotent, revision-locked write; contact removal keeps history (0146)\n  ok   L26  Equipment Save changes edits catalogue, rates and unit location only; stock, custody and identity are refused (0146)\n  ok   L27  Bundle Save changes preserves component identity and soft-deactivates removed components (0146)\n  ok   L28  Quote Save changes is atomic, revision-locked, quote-only and invoice-safe; it makes no reservations (0147)\n  ok   L29  update_bundle applies patch, line edits, adds and soft-deactivations in ONE transaction (0153)\n  ok   L30  Close skips a held deposit only with a reason from Manager+, audited, moving no money (0155)\n  ok   L31  Pre-handover reversal and terminal archive are audited, idempotent and Manager-only (0167)\n\n31/31 green, 0 known-red, 0 failed\nThe lifecycle holds. (PGlite, not Supabase — no JWT and no PostgREST. See this file’s header.)\n"
+    },
+    {
+      "name": "check:security",
+      "exitCode": 0,
+      "sourceHashBefore": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceHashAfter": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceStable": true,
+      "log": "artifacts/astra-current-main-check-security-20261023.log",
+      "at": "2026-10-23T12:03:20.166Z",
+      "outputTail": "PASS SEC-02: every API role is denied the internal estimate helper\nPASS SEC-03: Client cannot forge Owner audit\nPASS SEC-03: staff direct audit identity is server-bound\nPASS SEC-04: Admin cannot modify superior targets or its own privilege/identity fields\nPASS SEC-04: Admin cannot issue operation restrictions for Owner or Admin targets\nPASS SEC-04: Admin cannot revoke Owner or Admin operation grants; Owner can\nPASS SEC-04: Admin can still issue and revoke a subordinate operation grant\nPASS SEC-04: Owner retains ordinary staff administration\nPASS SEC-05: unassigned Driver gets no client/bookings/lines\nPASS SEC-05: assigned open trip grants only that booking and client; completion revokes\nPASS SEC-01: orphan documents unreadable and immutable for authenticated Client\nPASS SEC-01: Client cannot read unredacted originals even with an own registry link\nPASS SEC-01: commercial staff upload only own namespace; cannot replace another file\nPASS SEC-01: operational metadata cannot expose original PDF or signature bearer links\nPASS SEC-01: financial staff can read an invoice-linked PDF but not an unregistered peer file\nPASS SEC-01: unassigned Warehouse cannot read/upload another session evidence or commercial document\nPASS SEC-01: assigned floor session can upload evidence; completed session cannot\nPASS SEC-01: business buckets private and anonymous legacy policy cannot reopen objects\n18 Phase 0 SQL regressions passed; hosted Storage/JWT remains separately required.\n"
+    },
+    {
+      "name": "check:financial-integrity",
+      "exitCode": 0,
+      "sourceHashBefore": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceHashAfter": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceStable": true,
+      "log": "artifacts/astra-current-main-check-financial-integrity-20261023.log",
+      "at": "2026-10-23T12:03:37.225Z",
+      "outputTail": "PASS: Membership 20 + Women DoP 5 => NPR 8,475 with VAT\nPASS: database refuses a 30% stacked discount\nPASS: standalone 30% manual and pinned zero VAT => NPR 7,000\nPASS: null legacy VAT retains historical 13% behavior\nPASS: multiple discount rows produce one correctly totaled invoice\nPASS: overpayment rejected by booking-only payment ceiling\nPASS: zero-VAT quote survives invoice creation unchanged\nPASS: money-blind direct booking INSERT cannot select zero VAT\nFINANCIAL INTEGRITY VERIFIED IN ISOLATED PGLITE\n"
+    },
+    {
+      "name": "lint",
+      "exitCode": 0,
+      "sourceHashBefore": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceHashAfter": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceStable": true,
+      "log": "artifacts/astra-current-main-lint-20261023.log",
+      "at": "2026-10-23T12:04:55.526Z",
+      "outputTail": ""
+    },
+    {
+      "name": "test:receipts",
+      "exitCode": 0,
+      "sourceHashBefore": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceHashAfter": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceStable": true,
+      "log": "artifacts/astra-current-main-test-receipts-20261023.log",
+      "at": "2026-10-23T12:04:57.635Z",
+      "outputTail": "✔ old receipts cannot certify current source (1.8369ms)\n✔ matching successful structured receipt certifies only its source (0.4191ms)\n✔ source changes during tests invalidate a green run (0.1933ms)\n✔ failure and process exit cannot be overwritten by old success (1.5574ms)\n✔ missing, malformed and empty output never prove success (0.902ms)\n✔ an incomplete test count cannot certify a suite (0.3078ms)\n✔ source-bound evidence still requires command, commit, elapsed time and environment (0.3426ms)\n✔ a focused passing run does not certify the full suite (0.3501ms)\n✔ an older run finishing green cannot hide a newer failed attempt (76.6675ms)\n✔ concurrent coverage runs have separate cleanup and temporary directories (1.1887ms)\n✔ a later plain test success cannot hide an incomplete or failed coverage run (134.1694ms)\nℹ tests 11\nℹ suites 0\nℹ pass 11\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 512.1973\n"
+    },
+    {
+      "name": "check:contrast",
+      "exitCode": 0,
+      "sourceHashBefore": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceHashAfter": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceStable": true,
+      "log": "artifacts/astra-current-main-check-contrast-20261023.log",
+      "at": "2026-10-23T12:04:59.083Z",
+      "outputTail": "PASS   4.59:1 (>=4.5)  DARK  on-primary / primary         #ffffff on #386af7\nPASS   4.60:1 (>=4.5)  DARK  on-success / success         #ffffff on #1e864a\nPASS   5.13:1 (>=4.5)  DARK  on-danger / danger           #ffffff on #c73a3a\nPASS   5.46:1 (>=4.5)  DARK  on-warn / warn               #1c1005 on #d47026\nPASS   8.18:1 (>=4.5)  DARK  on-ready / ready             #1c1405 on #d4a824\nPASS   6.61:1 (>=4.5)  DARK  on-neutral / neutral         #c9cbd1 on #3a3e47\nPASS   4.61:1 (>=4.5)  DARK  on-dim / dim                 #8b8e96 on #24262c\nPASS   7.37:1 (>=4.5)  DARK  muted(text-2) / surface      #9eaabb on #0f1b2a\nPASS  15.84:1 (>=4.5)  DARK  text / surface               #f1f5f9 on #0f1b2a\nPASS   9.81:1 (>=4.5)  DARK  text2 / surface              #b8c4d3 on #0f1b2a\nPASS   6.71:1 (>=4.5)  DARK  muted / surface-2 (tinted)   #9eaabb on #13233a\nPASS   6.71:1 (>=4.5)  DARK  muted / card2 (tinted)       #9eaabb on #13233a\nPASS   8.53:1 (>=4.5)  DARK  muted / bg (canvas)          #9eaabb on #04080d\nPASS   7.39:1 (>=4.5)  DARK  muted / inset2 (darkest)     #9eaabb on #0b1b2c\nPASS   6.90:1 (>=4.5)  DARK  nav-active-accent / sidebar  #6b95fc on #050b12\nPASS   5.02:1 (>=4.5)  DARK  nav-active-accent / nav-bg   #6b95fc on #102b48\nPASS   6.06:1 (>=4.5)  DARK  nav-active-accent / surface  #6b95fc on #0f1b2a\nPASS   8.10:1 (>=4.5)  DARK  ext-fg / surface             #85b2ff on #0f1b2a\nPASS   9.38:1 (>=4.5)  DARK  ext-fg / bg                  #85b2ff on #04080d\nPASS   3.78:1 (>=3)  DARK  ext-line / surface (3:1)     #386af7 on #0f1b2a\nPASS   4.37:1 (>=3)  DARK  ext-line / bg-gradient-1 (3:1) #386af7 on #04080d\nPASS   7.02:1 (>=4.5)  DARK  primary-text / surface       #7ea2ff on #0f1b2a\nPASS   9.96:1 (>=4.5)  DARK  success-text / surface       #4ade80 on #0f1b2a\nPASS   7.19:1 (>=4.5)  DARK  danger-text / surface        #f08a8a on #0f1b2a\nPASS   8.00:1 (>=4.5)  DARK  warn-text / surface          #e8a06e on #0f1b2a\nPASS   7.79:1 (>=4.5)  DARK  ready-text / surface         #d4a824 on #0f1b2a\nPASS   4.59:1 (>=4.5)  DARK  btn-primary fg/bg            #ffffff on #386af7\nPASS   5.63:1 (>=4.5)  DARK  btn-primary fg/hover         #ffffff on #2f5ce0\nPASS  15.84:1 (>=4.5)  DARK  WhatsApp ink / card          #f1f5f9 on #0f1b2a\nPASS  15.35:1 (>=4.5)  DARK  WhatsApp ink / hover         #f1f5f9 on #0f1e30\n\nPASS   6.22:1 (>=4.5)  LIGHT on-primary / primary         #ffffff on #2456d6\nPASS   4.60:1 (>=4.5)  LIGHT on-success / success         #ffffff on #1e864a\nPASS   5.13:1 (>=4.5)  LIGHT on-danger / danger           #ffffff on #c73a3a\nPASS   4.55:1 (>=4.5)  LIGHT on-warn / warn               #231a05 on #d46218\nPASS   7.41:1 (>=4.5)  LIGHT on-ready / ready             #231a05 on #d4a315\nPASS   4.60:1 (>=4.5)  LIGHT on-neutral / neutral         #ffffff on #72757e\nPASS   4.80:1 (>=4.5)  LIGHT on-dim / dim                 #5a5d63 on #dddcd6\nPASS   6.39:1 (>=4.5)  LIGHT muted(text-2) / surface      #526075 on #ffffff\nPASS  17.85:1 (>=4.5)  LIGHT text / surface               #0f172a on #ffffff\nPASS  10.35:1 (>=4.5)  LIGHT text2 / surface              #334155 on #ffffff\nPASS   5.72:1 (>=4.5)  LIGHT muted / surface-2 (tinted)   #526075 on #edf3fa\nPASS   5.72:1 (>=4.5)  LIGHT muted / card2 (tinted)       #526075 on #edf3fa\nPASS   5.52:1 (>=4.5)  LIGHT muted / bg (canvas)          #526075 on #eaeff5\nPASS   5.18:1 (>=4.5)  LIGHT muted / inset2 (darkest)     #526075 on #e2e8f0\nPASS   6.22:1 (>=4.5)  LIGHT nav-active-accent / sidebar  #2456d6 on #ffffff\nPASS   5.39:1 (>=4.5)  LIGHT nav-active-accent / nav-bg   #2456d6 on #e7efff\nPASS   6.22:1 (>=4.5)  LIGHT nav-active-accent / surface  #2456d6 on #ffffff\nPASS   7.78:1 (>=4.5)  LIGHT ext-fg / surface             #1e49b8 on #ffffff\nPASS   6.73:1 (>=4.5)  LIGHT ext-fg / bg                  #1e49b8 on #eaeff5\nPASS   6.22:1 (>=3)  LIGHT ext-line / surface (3:1)     #2456d6 on #ffffff\nPASS   5.38:1 (>=3)  LIGHT ext-line / bg-gradient-1 (3:1) #2456d6 on #eaeff5\nPASS   7.78:1 (>=4.5)  LIGHT primary-text / surface       #1e49b8 on #ffffff\nPASS   6.83:1 (>=4.5)  LIGHT success-text / surface       #15683a on #ffffff\nPASS   6.75:1 (>=4.5)  LIGHT danger-text / surface        #a82f2f on #ffffff\nPASS   5.75:1 (>=4.5)  LIGHT warn-text / surface          #9a5417 on #ffffff\nPASS   5.75:1 (>=4.5)  LIGHT ready-text / surface         #7f620a on #ffffff\nPASS   6.22:1 (>=4.5)  LIGHT btn-primary fg/bg            #ffffff on #2456d6\nPASS   7.78:1 (>=4.5)  LIGHT btn-primary fg/hover         #ffffff on #1e49b8\nPASS  17.85:1 (>=4.5)  LIGHT WhatsApp ink / card          #0f172a on #ffffff\nPASS  16.13:1 (>=4.5)  LIGHT WhatsApp ink / hover         #0f172a on #eef4fb\n\nPASS  13.71:1 (>=4.5)  HIGH  btn-primary fg/bg            #000000 on #facc15\nPASS  10.95:1 (>=4.5)  HIGH  btn-primary fg/hover         #000000 on #eab308\nPASS  19.80:1 (>=4.5)  HIGH  WhatsApp ink / card          #ffffff on #0a0a0a\nPASS  17.93:1 (>=4.5)  HIGH  WhatsApp ink / hover         #ffffff on #171717\nPASS  15.40:1 (>=4.5)  GLASS-D text / glass card            #f1f5f9 on #131d2f (worst of 4)\nPASS   9.54:1 (>=4.5)  GLASS-D text2 / glass card           #b8c4d3 on #131d2f (worst of 4)\nPASS   7.17:1 (>=4.5)  GLASS-D muted / glass card           #9eaabb on #131d2f (worst of 4)\nPASS   6.83:1 (>=4.5)  GLASS-D primary-text / glass card    #7ea2ff on #131d2f (worst of 4)\nPASS  15.40:1 (>=4.5)  GLASS-D booking-date / glass card    #f1f5f9 on #131d2f (worst of 4)\nPASS   4.94:1 (>=4.5)  GLASS-D muted / bare canvas + glow   #9eaabb on #16376e (worst of 4)\nPASS   6.58:1 (>=4.5)  GLASS-D text2 / bare canvas + glow   #b8c4d3 on #16376e (worst of 4)\nPASS   6.54:1 (>=4.5)  GLASS-D nav-active / glass sidebar   #6b95fc on #0a1221 (worst of 4)\nPASS  10.59:1 (>=4.5)  GLASS-D text2 / glass sidebar        #b8c4d3 on #0a1221 (worst of 4)\n\nPASS  17.08:1 (>=4.5)  GLASS-L text / glass card            #0f172a on #f8fafe (worst of 4)\nPASS   9.91:1 (>=4.5)  GLASS-L text2 / glass card           #334155 on #f8fafe (worst of 4)\nPASS   6.11:1 (>=4.5)  GLASS-L muted / glass card           #526075 on #f8fafe (worst of 4)\nPASS   7.44:1 (>=4.5)  GLASS-L primary-text / glass card    #1e49b8 on #f8fafe (worst of 4)\nPASS  17.08:1 (>=4.5)  GLASS-L booking-date / glass card    #0f172a on #f8fafe (worst of 4)\nPASS   4.66:1 (>=4.5)  GLASS-L muted / bare canvas + glow   #526075 on #ceddf7 (worst of 4)\nPASS   7.55:1 (>=4.5)  GLASS-L text2 / bare canvas + glow   #334155 on #ceddf7 (worst of 4)\nPASS   5.95:1 (>=4.5)  GLASS-L nav-active / glass sidebar   #2456d6 on #f8fafe (worst of 4)\nPASS   9.91:1 (>=4.5)  GLASS-L text2 / glass sidebar        #334155 on #f8fafe (worst of 4)\n\n82/82 pass, 0 FAIL\n"
+    },
+    {
+      "name": "lint:progress",
+      "exitCode": 0,
+      "sourceHashBefore": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceHashAfter": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceStable": true,
+      "log": "artifacts/astra-current-main-lint-progress-20261023.log",
+      "at": "2026-10-23T12:05:00.477Z",
+      "outputTail": "PROGRESS.md newest entry carries Completion and Remaining — 2026-10-23 16:10 NPT — Intentional 300ms Global Hover Delay Everywhere\n"
+    },
+    {
+      "name": "lint:shell",
+      "exitCode": 0,
+      "sourceHashBefore": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceHashAfter": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceStable": true,
+      "log": "artifacts/astra-current-main-lint-shell-20261023.log",
+      "at": "2026-10-23T12:05:03.349Z",
+      "outputTail": "Page Shell Lint: 709 files checked.\n✓ All pages satisfy PageHeader, single primary CTA, 44px floor, and no dev notes.\n"
+    },
+    {
+      "name": "lint:ui-copy",
+      "exitCode": 0,
+      "sourceHashBefore": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceHashAfter": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceStable": true,
+      "log": "artifacts/astra-current-main-lint-ui-copy-20261023.log",
+      "at": "2026-10-23T12:05:07.927Z",
+      "outputTail": "UI copy: 0 developer-text violations\n"
+    },
+    {
+      "name": "test:ui-copy",
+      "exitCode": 0,
+      "sourceHashBefore": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceHashAfter": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceStable": true,
+      "log": "artifacts/astra-current-main-test-ui-copy-20261023.log",
+      "at": "2026-10-23T12:05:10.588Z",
+      "outputTail": "✔ rejects developer text in JSX, attributes, templates, and copy metadata (20.1632ms)\n✔ permits imports, import types, and comments (5.3561ms)\n✔ permits ordinary staff copy and technical strings outside UI (1.7351ms)\n✔ rejects developer text in exported staff-note constants (1.1955ms)\n✔ permits CSS hooks and comparison operands without permitting visible developer text (5.3241ms)\nℹ tests 5\nℹ suites 0\nℹ pass 5\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 943.6615\n"
+    },
+    {
+      "name": "build:typecheck",
+      "exitCode": 0,
+      "sourceHashBefore": "9322f2a414ab4a3799bf2cb9673a3dbca898e238ff7ba535e78d6f88532223ff",
+      "sourceHashAfter": "2b53a1a45e807881b5d6775c6841f1ad1034bac64013d8aa3d225b19149e1819",
+      "sourceStable": false,
+      "log": "artifacts/astra-current-main-build-typecheck-20261023.log",
+      "at": "2026-10-23T12:08:07.832Z",
+      "outputTail": ""
+    },
+    {
+      "name": "build:vite",
+      "exitCode": 0,
+      "sourceHashBefore": "2b53a1a45e807881b5d6775c6841f1ad1034bac64013d8aa3d225b19149e1819",
+      "sourceHashAfter": "2b53a1a45e807881b5d6775c6841f1ad1034bac64013d8aa3d225b19149e1819",
+      "sourceStable": true,
+      "log": "artifacts/astra-current-main-build-vite-20261023.log",
+      "at": "2026-10-23T12:10:17.664Z",
+      "outputTail": "p:   5.46 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/SignOnGlassModal-CtmPRkyK.js                           15.90 kB │ gzip:   5.01 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/ActivityReports-dFRyVoo0.js                            15.91 kB │ gzip:   4.60 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/CreationDrawer-DBa4io_r.js                             15.93 kB │ gzip:   3.64 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/availability-tm-6JHZy.js                               15.96 kB │ gzip:   5.55 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/DateField-BYbeD1lr.js                                  16.61 kB │ gzip:   5.42 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/QuickActionPanel-Dn1z9BQ6.js                           16.73 kB │ gzip:   6.11 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/cases-Ccqf-car.js                                      16.80 kB │ gzip:   4.12 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/NumberingSequences-CigXMAi6.js                         17.02 kB │ gzip:   5.33 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/gates-Cu_y1GKr.js                                      18.17 kB │ gzip:   6.65 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/SalesVatReports-Ba96Vx3i.js                            18.63 kB │ gzip:   5.54 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/ProductsImportCenter-Ba-cMuhA.js                       19.07 kB │ gzip:   7.11 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/RentalReports-CEx5jilK.js                              21.31 kB │ gzip:   6.16 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/floorVerb-0vWIRc_y.js                                  21.35 kB │ gzip:   7.21 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/SubRental-CVbQnOMn.js                                  22.56 kB │ gzip:   6.64 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/OperationsReports-BLvKW6Rj.js                          22.93 kB │ gzip:   5.86 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/clients-LZjHIGql.js                                    23.68 kB │ gzip:   5.84 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/DamageMaintenanceReports-CJyu7YuQ.js                   24.18 kB │ gzip:   6.36 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/PurchaseRequests-DJRfSaWT.js                           24.81 kB │ gzip:   6.88 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/AuditSettings-B1fNhWXt.js                              25.16 kB │ gzip:   6.26 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/Today-BbTq5fFp.js                                      25.22 kB │ gzip:   8.60 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/BackupRestore-BBUun3Sl.js                              25.75 kB │ gzip:   7.40 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/CrewBooking-Bo6RpnaO.js                                28.47 kB │ gzip:   8.97 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/EvidenceWorkspace-D5yWTJ7Z.js                          28.93 kB │ gzip:   8.48 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/CasesWorkspace-Vhbdux5o.js                             29.53 kB │ gzip:   8.23 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/OperationsQueues-BeN0MeGU.js                           32.27 kB │ gzip:  10.45 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/ExpenseReports-DqdeNtIk.js                             32.52 kB │ gzip:   9.42 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/bundleRecords-DU3s10Jp.js                              34.09 kB │ gzip:   9.22 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/AssetDetail-BbUQIztZ.js                                36.14 kB │ gzip:   9.37 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/ClientDetail-3wZdp-Jx.js                               41.31 kB │ gzip:  10.81 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/vendor-icons-DIXsnJBm.js                               41.94 kB │ gzip:   6.57 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/cossDrawer-C3dCmEUA.js                                 45.31 kB │ gzip:  15.52 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/PackingWorkspace-CflBpCb1.js                           49.61 kB │ gzip:  14.22 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/HandoverWorkspace-C8VzJ6dz.js                          52.22 kB │ gzip:  14.49 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/ReturnWorkspace-DaUb98hr.js                            53.23 kB │ gzip:  14.69 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/ResetWorkspace-Du5vUmTn.js                             60.73 kB │ gzip:  14.98 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/AddBundle-D5_FzGbW.js                                  66.05 kB │ gzip:  17.85 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/AddEquipment-5_sRR05U.js                               67.79 kB │ gzip:  18.60 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/vendor-gsap-CbSjrsRK.js                                71.50 kB │ gzip:  28.26 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/ToolsLanding-UTWJy_VZ.js                               72.34 kB │ gzip:  20.43 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/RecordForm-yNjQUuwW.js                                 77.85 kB │ gzip:  19.66 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/marketing-yePaWzJa.js                                  78.70 kB │ gzip:  27.23 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/IntelCard-BLCGOIZi.js                                  80.94 kB │ gzip:  21.88 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/RentalsList-BqVtIPI0.js                                85.76 kB │ gzip:  24.93 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/Calendar-DKw9DmLT.js                                   91.56 kB │ gzip:  24.39 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/vendor-dexie-CdQP7YOf.js                               96.36 kB │ gzip:  32.43 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/BookingDetail-DXHa5iam.js                             113.27 kB │ gzip:  29.68 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/Clients-DoOEq5IM.js                                   122.35 kB │ gzip:  35.63 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/Finance-C31iGced.js                                   143.94 kB │ gzip:  39.79 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/Settings-BREZUuzt.js                                  155.57 kB │ gzip:  41.27 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/Inventory-C-Xi6Oc9.js                                 159.13 kB │ gzip:  43.88 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/vendor-react-CvnRlKCu.js                              180.07 kB │ gzip:  59.20 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/vendor-supabase-CahnRKrb.js                           218.41 kB │ gzip:  57.01 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/NewRental-C9gIY8GY.js                                 278.84 kB │ gzip:  76.86 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/vendor-scanner-C8jRveWp.js                            453.49 kB │ gzip: 117.44 kB\n../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/assets/main-C0xGzF3R.js                                      477.05 kB │ gzip: 134.27 kB\n✓ built in 1m 11s\n\nPWA v1.3.0\nmode      generateSW\nprecache  247 entries (6507.65 KiB)\nfiles generated\n  ../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/sw.js\n  ../../AppData/Local/Temp/babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac/dist/workbox-9e0cfdd6.js\n",
+      "outputDirectory": "C:\\Users\\use\\AppData\\Local\\Temp\\babin-confirm-lines-39606492-b1bc-415f-99bd-0fc5a8db9bac\\dist"
+    },
+    {
+      "name": "build:typecheck",
+      "quietFollowUp": true,
+      "exitCode": 0,
+      "sourceHashBefore": "2b53a1a45e807881b5d6775c6841f1ad1034bac64013d8aa3d225b19149e1819",
+      "sourceHashAfter": "2b53a1a45e807881b5d6775c6841f1ad1034bac64013d8aa3d225b19149e1819",
+      "sourceStable": true,
+      "at": "2026-10-23T12:12:41.230Z",
+      "log": "artifacts/astra-guard-quiet-build-typecheck-20261023.log",
+      "outputTail": ""
+    },
+    {
+      "name": "test:full",
+      "quietFollowUp": true,
+      "exitCode": 1,
+      "sourceHashBefore": "2b53a1a45e807881b5d6775c6841f1ad1034bac64013d8aa3d225b19149e1819",
+      "sourceHashAfter": "0366488e9cf31f30e0815565cd23eb0989c01d287d5846dbd11b704f3d4434d2",
+      "sourceStable": false,
+      "at": "2026-10-23T12:26:27.764Z",
+      "log": "artifacts/astra-guard-quiet-test-full-20261023.log",
+      "outputTail": "tests__/rentalDays.test.ts (17 tests) 13ms\n ✓ src/lib/queries/__tests__/operations.test.ts (4 tests) 10ms\n ✓ src/lib/queries/__tests__/couponLookup.test.ts (5 tests) 8ms\n ✓ src/lib/__tests__/bookingLineTypes.test.ts (3 tests) 10ms\n ✓ src/lib/queries/__tests__/clientPreviewProjection.test.ts (2 tests) 12ms\n ✓ src/components/ui/__tests__/SavedViewsMenu.test.ts (3 tests) 11ms\n ✓ src/lib/__tests__/deliveryDispatchWorkflow.test.ts (8 tests) 11ms\n ✓ src/modules/rentals/bookingPaymentGate.test.ts (8 tests) 11ms\n ✓ src/lib/queries/__tests__/activity.test.ts (1 test) 12ms\n ✓ src/modules/operations/__tests__/nextRequirement.test.ts (3 tests) 8ms\n ✓ src/lib/queries/__tests__/today.test.ts (3 tests) 9ms\n ✓ src/modules/reports/__tests__/InventoryReports.csv.test.ts (3 tests) 8ms\n\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  src/modules/calendar/__tests__/CalendarResourceTimeline.test.tsx > Calendar Resource Timeline & Conflict Detection Engine (Phase 5 Correctness Fix) > fails closed in production: returns [] when RESOURCE_CATALOGUE is empty (no fabricated lanes)\nAssertionError: expected [ { id: 'res-fx6', …(6) }, …(17) ] to deeply equal []\n\n- Expected\n+ Received\n\n- []\n+ [\n+   {\n+     \"code\": \"SN-FX6-001\",\n+     \"icon\": \"camera\",\n+     \"id\": \"res-fx6\",\n+     \"meta\": \"Available\",\n+     \"metaTone\": \"success\",\n+     \"name\": \"Sony FX6 Cinema Camera\",\n+     \"type\": \"Equipment\",\n+   },\n+   {\n+     \"code\": \"SN-KMD-0201\",\n+     \"icon\": \"video\",\n+     \"id\": \"res-komodo\",\n+     \"meta\": \"Available\",\n+     \"metaTone\": \"success\",\n+     \"name\": \"RED Komodo 6K\",\n+     \"type\": \"Equipment\",\n+   },\n+   {\n+     \"code\": \"SN-FX3-0102\",\n+     \"icon\": \"camera\",\n+     \"id\": \"res-fx3\",\n+     \"meta\": \"Available\",\n+     \"metaTone\": \"success\",\n+     \"name\": \"Sony FX3 Cinema Line\",\n+     \"type\": \"Equipment\",\n+   },\n+   {\n+     \"code\": \"SN-LEN-0501\",\n+     \"icon\": \"photo\",\n+     \"id\": \"res-cne50\",\n+     \"meta\": \"Available\",\n+     \"metaTone\": \"success\",\n+     \"name\": \"Canon CN-E 50mm T1.3\",\n+     \"type\": \"Equipment\",\n+   },\n+   {\n+     \"code\": \"SN-LEN-2470\",\n+     \"icon\": \"photo\",\n+     \"id\": \"res-gm2470\",\n+     \"meta\": \"Available\",\n+     \"metaTone\": \"success\",\n+     \"name\": \"Sony FE 24-70mm f/2.8 GM\",\n+     \"type\": \"Equipment\",\n+   },\n+   {\n+     \"code\": \"SN-BAT-0012\",\n+     \"icon\": \"battery\",\n+     \"id\": \"res-vmount\",\n+     \"meta\": \"Available\",\n+     \"metaTone\": \"success\",\n+     \"name\": \"Core SWX V-Mount 98Wh (2x)\",\n+     \"type\": \"Equipment\",\n+   },\n+   {\n+     \"code\": \"SN-MON-0701\",\n+     \"icon\": \"tool\",\n+     \"id\": \"res-cine7\",\n+     \"meta\": \"Available\",\n+     \"metaTone\": \"success\",\n+     \"name\": \"SmallHD Cine 7 Monitor\",\n+     \"type\": \"Equipment\",\n+   },\n+   {\n+     \"code\": \"SN-GIM-0004\",\n+     \"icon\": \"tool\",\n+     \"id\": \"res-rs3\",\n+     \"meta\": \"Available\",\n+     \"metaTone\": \"success\",\n+     \"name\": \"DJI RS 3 Pro Gimbal\",\n+     \"type\": \"Equipment\",\n+   },\n+   {\n+     \"code\": \"SN-AUD-0416\",\n+     \"icon\": \"tool\",\n+     \"id\": \"res-mkh416\",\n+     \"meta\": \"Available\",\n+     \"metaTone\": \"success\",\n+     \"name\": \"Sennheiser MKH 416 Mic\",\n+     \"type\": \"Equipment\",\n+   },\n+   {\n+     \"code\": \"BA-01-CHA-5920\",\n+     \"icon\": \"truck\",\n+     \"id\": \"res-van\",\n+     \"meta\": \"1 van\",\n+     \"metaTone\": \"primary\",\n+     \"name\": \"Toyota HiAce Camera Van\",\n+     \"type\": \"Vehicles\",\n+   },\n+   {\n+     \"code\": \"BA-02-PA-8812\",\n+     \"icon\": \"truck\",\n+     \"id\": \"res-scorpio\",\n+     \"meta\": \"1 SUV\",\n+     \"metaTone\": \"primary\",\n+     \"name\": \"Mahindra Scorpio 4WD\",\n+     \"type\": \"Vehicles\",\n+   },\n+   {\n+     \"code\": \"CR-001\",\n+     \"icon\": \"crew\",\n+     \"id\": \"res-ramesh\",\n+     \"meta\": \"Roster Active\",\n+     \"metaTone\": \"success\",\n+     \"name\": \"Ramesh (DIT / Lead Tech)\",\n+     \"type\": \"Crew\",\n+   },\n+   {\n+     \"code\": \"CR-002\",\n+     \"icon\": \"crew\",\n+     \"id\": \"res-sunil\",\n+     \"meta\": \"Warehouse Duty\",\n+     \"metaTone\": \"success\",\n+     \"name\": \"Sunil (Warehouse Supervisor)\",\n+     \"type\": \"Crew\",\n+   },\n+   {\n+     \"code\": \"CR-003\",\n+     \"icon\": \"crew\",\n+     \"id\": \"res-bikash\",\n+     \"meta\": \"On Call\",\n+     \"metaTone\": \"muted\",\n+     \"name\": \"Bikash (Camera Assistant)\",\n+     \"type\": \"Crew\",\n+   },\n+   {\n+     \"code\": \"CR-004\",\n+     \"icon\": \"crew\",\n+     \"id\": \"res-anita\",\n+     \"meta\": \"Transport\",\n+     \"metaTone\": \"primary\",\n+     \"name\": \"Anita (Production Driver)\",\n+     \"type\": \"Crew\",\n+   },\n+   {\n+     \"code\": \"BAY-A\",\n+     \"icon\": \"box\",\n+     \"id\": \"res-bay-a\",\n+     \"meta\": \"Floor Clean\",\n+     \"metaTone\": \"success\",\n+     \"name\": \"Studio Floor Bay A\",\n+     \"type\": \"Warehouse Bays\",\n+   },\n+   {\n+     \"code\": \"BAY-P1\",\n+     \"icon\": \"package\",\n+     \"id\": \"res-bay-p1\",\n+     \"meta\": \"Operations Ready\",\n+     \"metaTone\": \"success\",\n+     \"name\": \"Prep & QC Station 1\",\n+     \"type\": \"Warehouse Bays\",\n+   },\n+   {\n+     \"code\": \"BAY-P2\",\n+     \"icon\": \"package\",\n+     \"id\": \"res-bay-p2\",\n+     \"meta\": \"Intake Active\",\n+     \"metaTone\": \"progress\",\n+     \"name\": \"Return Inspection Bay 2\",\n+     \"type\": \"Warehouse Bays\",\n+   },\n+ ]\n\n ❯ src/modules/calendar/__tests__/CalendarResourceTimeline.test.tsx:15:32\n     13| \n     14|   it('fails closed in production: returns [] when RESOURCE_CATALOGUE i…\n     15|     expect(RESOURCE_CATALOGUE).toEqual([])\n       |                                ^\n     16|     const lanes = buildResourceTimeline([])\n     17|     expect(lanes).toEqual([])\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯\n\n FAIL  src/modules/calendar/__tests__/CalendarResourceTimeline.test.tsx > Calendar Resource Timeline & Conflict Detection Engine (Phase 5 Correctness Fix) > assigns bars strictly by authoritative matching unitId or resourceId, not label hash\nAssertionError: expected +0 to be 2 // Object.is equality\n\n- Expected\n+ Received\n\n- 2\n+ 0\n\n ❯ src/modules/calendar/__tests__/CalendarResourceTimeline.test.tsx:78:34\n     76|     const fx6Lane = lanes.find((l) => l.id === 'res-fx6')\n     77|     expect(fx6Lane).toBeDefined()\n     78|     expect(fx6Lane?.bars.length).toBe(2)\n       |                                  ^\n     79|     expect(fx6Lane?.meta).toContain('2 allocations')\n     80|     expect(fx6Lane?.metaTone).toBe('primary')\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯\n\n FAIL  src/modules/calendar/__tests__/CalendarResourceTimeline.test.tsx > Calendar Resource Timeline & Conflict Detection Engine (Phase 5 Correctness Fix) > detects concurrent double-booking conflicts and generates Conflict bars with dot: danger for overlapping half-open intervals\nAssertionError: expected +0 to be 1 // Object.is equality\n\n- Expected\n+ Received\n\n- 1\n+ 0\n\n ❯ src/modules/calendar/__tests__/CalendarResourceTimeline.test.tsx:119:33\n    117| \n    118|     const conflictBars = fx6Lane?.bars.filter((b) => b.kind === 'Confl…\n    119|     expect(conflictBars.length).toBe(1)\n       |                                 ^\n    120|     expect(conflictBars[0]?.dot).toBe('danger')\n    121|     expect(conflictBars[0]?.label).toBe('CONFLICT')\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯\n\n FAIL  src/modules/calendar/__tests__/CalendarResourceTimeline.test.tsx > Calendar Resource Timeline & Conflict Detection Engine (Phase 5 Correctness Fix) > does not flag conflicts for sequential back-to-back bookings on the turnover boundary [from, to)\nAssertionError: expected '1 allocation' to be '2 allocations' // Object.is equality\n\nExpected: \"2 allocations\"\nReceived: \"1 allocation\"\n\n ❯ src/modules/calendar/__tests__/CalendarResourceTimeline.test.tsx:160:27\n    158|     const conflictBars = fx6Lane?.bars.filter((b) => b.kind === 'Confl…\n    159|     expect(conflictBars.length).toBe(0)\n    160|     expect(fx6Lane?.meta).toBe('2 allocations')\n       |                           ^\n    161|   })\n    162| \n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯\n\n\n Test Files  1 failed | 424 passed (425)\n      Tests  4 failed | 5316 passed (5320)\n   Start at  17:57:45\n   Duration  817.90s (transform 103.34s, setup 0ms, collect 399.75s, tests 237.02s, environment 575.99s, prepare 143.97s)\n\nJSON report written to C:/Users/use/Desktop/babin-rentals-os/artifacts/astra-guard-quiet-full-tests-20261023.json\n",
+      "receipt": {
+        "schemaVersion": 1,
+        "valid": true,
+        "success": false,
+        "runId": "528da945-3087-4a51-9deb-f55666f0c4f9",
+        "sha": "3e975d0403581e96ec30e8ff44644eb23fa19002",
+        "command": "node scripts/run-tests.mjs --maxWorkers=2 --reporter=default --reporter=json --outputFile=artifacts/astra-guard-quiet-full-tests-20261023.json",
+        "environment": "local only; mock tests / live-mode build",
+        "node": "v24.19.0",
+        "platform": "win32",
+        "at": "2026-10-23T12:26:27.764Z",
+        "startedMs": 1792757561524,
+        "sourceHash": "2b53a1a45e807881b5d6775c6841f1ad1034bac64013d8aa3d225b19149e1819",
+        "scope": "full-suite",
+        "elapsedMs": 826240,
+        "sourceChanged": true,
+        "total": 5320,
+        "passed": 5316,
+        "failed": 4,
+        "skipped": 0
+      },
+      "counts": {
+        "total": 5320,
+        "passed": 5316,
+        "failed": 4,
+        "skipped": 0
+      },
+      "failures": [
+        {
+          "file": "C:/Users/use/Desktop/babin-rentals-os/src/modules/calendar/__tests__/CalendarResourceTimeline.test.tsx",
+          "test": "Calendar Resource Timeline & Conflict Detection Engine (Phase 5 Correctness Fix) fails closed in production: returns [] when RESOURCE_CATALOGUE is empty (no fabricated lanes)",
+          "errors": [
+            "AssertionError: expected [ { id: 'res-fx6', …(6) }, …(17) ] to deeply equal []\n    at C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\calendar\\__tests__\\CalendarResourceTimeline.test.tsx:15:32\n    at file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at runSuite (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)"
+          ]
+        },
+        {
+          "file": "C:/Users/use/Desktop/babin-rentals-os/src/modules/calendar/__tests__/CalendarResourceTimeline.test.tsx",
+          "test": "Calendar Resource Timeline & Conflict Detection Engine (Phase 5 Correctness Fix) assigns bars strictly by authoritative matching unitId or resourceId, not label hash",
+          "errors": [
+            "AssertionError: expected +0 to be 2 // Object.is equality\n    at C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\calendar\\__tests__\\CalendarResourceTimeline.test.tsx:78:34\n    at file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at runSuite (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)"
+          ]
+        },
+        {
+          "file": "C:/Users/use/Desktop/babin-rentals-os/src/modules/calendar/__tests__/CalendarResourceTimeline.test.tsx",
+          "test": "Calendar Resource Timeline & Conflict Detection Engine (Phase 5 Correctness Fix) detects concurrent double-booking conflicts and generates Conflict bars with dot: danger for overlapping half-open intervals",
+          "errors": [
+            "AssertionError: expected +0 to be 1 // Object.is equality\n    at C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\calendar\\__tests__\\CalendarResourceTimeline.test.tsx:119:33\n    at file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at runSuite (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)"
+          ]
+        },
+        {
+          "file": "C:/Users/use/Desktop/babin-rentals-os/src/modules/calendar/__tests__/CalendarResourceTimeline.test.tsx",
+          "test": "Calendar Resource Timeline & Conflict Detection Engine (Phase 5 Correctness Fix) does not flag conflicts for sequential back-to-back bookings on the turnover boundary [from, to)",
+          "errors": [
+            "AssertionError: expected '1 allocation' to be '2 allocations' // Object.is equality\n    at C:\\Users\\use\\Desktop\\babin-rentals-os\\src\\modules\\calendar\\__tests__\\CalendarResourceTimeline.test.tsx:160:27\n    at file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at runSuite (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)\n    at runSuite (file:///C:/Users/use/Desktop/babin-rentals-os/node_modules/@vitest/runner/dist/chunk-hooks.js:1729:8)"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "check:pglite",
+      "quietFollowUp": true,
+      "exitCode": 0,
+      "sourceHashBefore": "0366488e9cf31f30e0815565cd23eb0989c01d287d5846dbd11b704f3d4434d2",
+      "sourceHashAfter": "0366488e9cf31f30e0815565cd23eb0989c01d287d5846dbd11b704f3d4434d2",
+      "sourceStable": true,
+      "at": "2026-10-23T12:26:59.980Z",
+      "log": "artifacts/astra-guard-quiet-check-pglite-20261023.log",
+      "outputTail": "PostgreSQL 18.3 (PGlite 0.5.8) on wasm32-unknown-emscripten\n\n168/168 applied, 0 failed\n\nview-leak gate: 31 public view(s) checked, 0 readable by anon\nfunction-leak gate: 20 public function(s) executable by anon, 0 unauthorized\ndefiner-hygiene gate: 78 definer function(s) checked, 0 without pinned search_path\nThe chain builds from scratch, no view is readable by anon, no unauthorized RPC is executable by anon, and all definer search_paths are pinned.\n"
+    },
+    {
+      "name": "check:lifecycle",
+      "quietFollowUp": true,
+      "exitCode": 0,
+      "sourceHashBefore": "0366488e9cf31f30e0815565cd23eb0989c01d287d5846dbd11b704f3d4434d2",
+      "sourceHashAfter": "0366488e9cf31f30e0815565cd23eb0989c01d287d5846dbd11b704f3d4434d2",
+      "sourceStable": true,
+      "at": "2026-10-23T12:27:42.701Z",
+      "log": "artifacts/astra-guard-quiet-check-lifecycle-20261023.log",
+      "outputTail": "PostgreSQL 18.3 (PGlite 0.5.8) on wasm32-unknown-emscripten\n  ok   L1  Coordinator creates a booking: 1 unit, 2 days, 10% discount\n  ok   L2  Quote → Booked writes exactly one reservation (R-26)\n  ok   L3  A conflicting booking — same unit, overlapping dates — is REFUSED\n  ok   L4  A same-day turnaround is ACCEPTED (half-open bounds)\n  ok   L5  A quantity line beyond stock on hand is REFUSED by the capacity ceiling (0045)\n  ok   L6  Booked → Packed → On Rent as Warehouse requires the session rows each stage needs\n  ok   L7  A partial return: one unit back, one missing\n  ok   L8  Accounts raises and issues the invoice: figures snapshot and become immutable (R-15, Law 4)\n  ok   L9  Four payments that must all be refused\n  ok   L10  Two payments settle the invoice: 3,000 then 4,119\n  ok   L11  Closed needs a settled invoice\n  ok   L12  Money-blind roles read no money and write none\n  ok   L13  Even the Owner cannot rewrite the audit log or delete a payment\n  ok   L14  Client portal user sees only their own rows, never another client's\n  ok   L15  Unit status is owned by the engine; direct write is refused (S1-5)\n  ok   L16  Invoice void discipline: role check, reason, credit note requirement (S1-3)\n  ok   L17  Server-side prices for money-blind callers, line guard, role ceiling & user immutability (S1-6, S1-7)\n  ok   L18  Booking schedule changes cannot desynchronise reservations\n  ok   L19  A payment reversal cannot exceed the receipt across partial corrections\n  ok   L20  Bulk stock adjustment is atomic, idempotent, reasoned, and Manager-only\n  ok   L21  A consumable line deducts stock at Handover and needs no return receipt (0141/0142)\n  ok   L22  Smart Intel note visibility and classified values are filtered by RLS for every role\n  ok   L23  extend_booking RPC extends return dates, increments line days, and updates reservations (AUD D5)\n  ok   L24  void_invoice RPC atomically issues credit note for paid amounts and voids invoice (AUD D6)\n  ok   L25  Client Save changes is one atomic, idempotent, revision-locked write; contact removal keeps history (0146)\n  ok   L26  Equipment Save changes edits catalogue, rates and unit location only; stock, custody and identity are refused (0146)\n  ok   L27  Bundle Save changes preserves component identity and soft-deactivates removed components (0146)\n  ok   L28  Quote Save changes is atomic, revision-locked, quote-only and invoice-safe; it makes no reservations (0147)\n  ok   L29  update_bundle applies patch, line edits, adds and soft-deactivations in ONE transaction (0153)\n  ok   L30  Close skips a held deposit only with a reason from Manager+, audited, moving no money (0155)\n  ok   L31  Pre-handover reversal and terminal archive are audited, idempotent and Manager-only (0167)\n\n31/31 green, 0 known-red, 0 failed\nThe lifecycle holds. (PGlite, not Supabase — no JWT and no PostgREST. See this file’s header.)\n"
+    },
+    {
+      "name": "check:security",
+      "quietFollowUp": true,
+      "exitCode": 0,
+      "sourceHashBefore": "0366488e9cf31f30e0815565cd23eb0989c01d287d5846dbd11b704f3d4434d2",
+      "sourceHashAfter": "0366488e9cf31f30e0815565cd23eb0989c01d287d5846dbd11b704f3d4434d2",
+      "sourceStable": true,
+      "at": "2026-10-23T12:28:18.827Z",
+      "log": "artifacts/astra-guard-quiet-check-security-20261023.log",
+      "outputTail": "PASS SEC-02: every API role is denied the internal estimate helper\nPASS SEC-03: Client cannot forge Owner audit\nPASS SEC-03: staff direct audit identity is server-bound\nPASS SEC-04: Admin cannot modify superior targets or its own privilege/identity fields\nPASS SEC-04: Owner retains ordinary staff administration\nPASS SEC-05: unassigned Driver gets no client/bookings/lines\nPASS SEC-05: assigned open trip grants only that booking and client; completion revokes\nPASS SEC-01: orphan documents unreadable and immutable for authenticated Client\nPASS SEC-01: Client cannot read unredacted originals even with an own registry link\nPASS SEC-01: commercial staff upload only own namespace; cannot replace another file\nPASS SEC-01: operational metadata cannot expose original PDF or signature bearer links\nPASS SEC-01: financial staff can read an invoice-linked PDF but not an unregistered peer file\nPASS SEC-01: unassigned Warehouse cannot read/upload another session evidence or commercial document\nPASS SEC-01: assigned floor session can upload evidence; completed session cannot\nPASS SEC-01: business buckets private and anonymous legacy policy cannot reopen objects\n15 Phase 0 SQL regressions passed; hosted Storage/JWT remains separately required.\n"
+    },
+    {
+      "name": "build:vite",
+      "quietFollowUp": true,
+      "exitCode": 0,
+      "sourceHashBefore": "0366488e9cf31f30e0815565cd23eb0989c01d287d5846dbd11b704f3d4434d2",
+      "sourceHashAfter": "109c0bcfa90b9019797abbbd44f70346ba6fc3f0277ed69d4aafc8722e08c4a5",
+      "sourceStable": false,
+      "at": "2026-10-23T12:31:41.583Z",
+      "log": "artifacts/astra-guard-quiet-build-vite-20261023.log",
+      "outputTail": "              19.07 kB │ gzip:   7.11 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/RentalReports-BlVaGh-_.js                              21.31 kB │ gzip:   6.16 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/floorVerb-CNC52feG.js                                  21.35 kB │ gzip:   7.21 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/SubRental-BQ86aFQq.js                                  22.56 kB │ gzip:   6.63 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/OperationsReports-NEyFutsp.js                          22.93 kB │ gzip:   5.86 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/clients-BXkEKn_Q.js                                    23.68 kB │ gzip:   5.84 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/DamageMaintenanceReports-CyJBAjyQ.js                   24.18 kB │ gzip:   6.36 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/PurchaseRequests-DEv4kcFg.js                           24.81 kB │ gzip:   6.87 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/AuditSettings-By190xnK.js                              25.16 kB │ gzip:   6.26 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/Today-BPozxALX.js                                      25.22 kB │ gzip:   8.60 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/BackupRestore-BbICuIAe.js                              25.75 kB │ gzip:   7.40 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/CrewBooking-ie8rj6g3.js                                28.47 kB │ gzip:   8.96 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/EvidenceWorkspace-EoBOBohw.js                          28.93 kB │ gzip:   8.47 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/CasesWorkspace-Bm_jJLn5.js                             29.53 kB │ gzip:   8.23 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/OperationsQueues-B19hdvuF.js                           32.27 kB │ gzip:  10.44 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/ExpenseReports-mNDsDiAs.js                             32.52 kB │ gzip:   9.42 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/bundleRecords-BQuQOI33.js                              34.09 kB │ gzip:   9.22 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/AssetDetail-Cd87s6jo.js                                36.14 kB │ gzip:   9.36 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/ClientDetail-BFyiBLue.js                               41.31 kB │ gzip:  10.80 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/vendor-icons-DIXsnJBm.js                               41.94 kB │ gzip:   6.57 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/QuantityStepper-CZEutVZL.js                            48.22 kB │ gzip:  16.29 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/PackingWorkspace-BHq1JQdz.js                           49.61 kB │ gzip:  14.21 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/HandoverWorkspace-DhsmcV4y.js                          52.22 kB │ gzip:  14.48 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/ReturnWorkspace-BBRG_Eeu.js                            53.23 kB │ gzip:  14.68 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/ResetWorkspace-CaxbxByU.js                             60.73 kB │ gzip:  14.98 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/AddBundle-C7bpnAdT.js                                  66.05 kB │ gzip:  17.85 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/AddEquipment-lUxOrE2H.js                               67.79 kB │ gzip:  18.60 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/vendor-gsap-CbSjrsRK.js                                71.50 kB │ gzip:  28.26 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/ToolsLanding-C1ODnzAA.js                               72.34 kB │ gzip:  20.43 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/RecordForm-Dl7YrgaU.js                                 76.80 kB │ gzip:  19.56 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/marketing-D7TIETkS.js                                  78.70 kB │ gzip:  27.23 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/IntelCard-Mw8cvPYt.js                                  81.10 kB │ gzip:  21.92 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/RentalsList-hRJwBBaQ.js                                85.07 kB │ gzip:  24.82 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/Calendar-BmVLYmzq.js                                   89.55 kB │ gzip:  23.59 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/vendor-dexie-CdQP7YOf.js                               96.36 kB │ gzip:  32.43 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/BookingDetail-BNdFQiru.js                             113.27 kB │ gzip:  29.68 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/Clients-BV58JAaE.js                                   122.36 kB │ gzip:  35.64 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/Finance-BuR5fHAG.js                                   143.94 kB │ gzip:  39.79 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/Settings-DfT2A6i-.js                                  155.58 kB │ gzip:  41.28 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/Inventory-CpWJvx72.js                                 159.13 kB │ gzip:  43.88 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/vendor-react-CvnRlKCu.js                              180.07 kB │ gzip:  59.20 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/vendor-supabase-CahnRKrb.js                           218.41 kB │ gzip:  57.01 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/NewRental-DoHsZ8IW.js                                 278.84 kB │ gzip:  76.87 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/vendor-scanner-C8jRveWp.js                            453.49 kB │ gzip: 117.44 kB\n../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/assets/main-CVhaJkee.js                                      477.07 kB │ gzip: 134.28 kB\n✓ built in 2m 53s\n\nPWA v1.3.0\nmode      generateSW\nprecache  247 entries (6503.14 KiB)\nfiles generated\n  ../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/sw.js\n  ../../AppData/Local/Temp/babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad/dist/workbox-9e0cfdd6.js\n",
+      "outputDirectory": "C:\\Users\\use\\AppData\\Local\\Temp\\babin-guard-quiet-eac0a4ca-dbb3-4594-83c9-7d24ae42c6ad\\dist"
+    }
+  ],
+  "finishedAt": "2026-10-23T12:10:17.953Z",
+  "currentSourceHash": "2b53a1a45e807881b5d6775c6841f1ad1034bac64013d8aa3d225b19149e1819",
+  "verified": false,
+  "quietFollowUp": {
+    "startedAt": "2026-10-23T12:11:29.107Z",
+    "sourceHash": "2b53a1a45e807881b5d6775c6841f1ad1034bac64013d8aa3d225b19149e1819",
+    "reason": "Fresh full suite after restored pending work and confirmed SEC-04 grant RPC repair. Earlier source-changing/interrupted runs remain intact.",
+    "finishedAt": "2026-10-23T12:31:42.454Z",
+    "sourceUnchanged": false
+  },
+  "finalAssessment": {
+    "at": "2026-10-23T12:38:39.070Z",
+    "head": "279de0e37b3c79ca81c7f7afb25861fe0bc60fd0",
+    "currentHash": "6c496d909c953f2590d60a9ffc6088610f07920211088ba039476aa264b0396a",
+    "verified": false,
+    "checks": [
+      {
+        "name": "test:full",
+        "passed": false
+      },
+      {
+        "name": "check:pglite",
+        "passed": false
+      },
+      {
+        "name": "check:lifecycle",
+        "passed": false
+      },
+      {
+        "name": "check:security",
+        "passed": false
+      },
+      {
+        "name": "check:financial-integrity",
+        "passed": false
+      },
+      {
+        "name": "lint",
+        "passed": false
+      },
+      {
+        "name": "test:receipts",
+        "passed": false
+      },
+      {
+        "name": "check:contrast",
+        "passed": false
+      },
+      {
+        "name": "lint:progress",
+        "passed": false
+      },
+      {
+        "name": "lint:shell",
+        "passed": false
+      },
+      {
+        "name": "lint:ui-copy",
+        "passed": false
+      },
+      {
+        "name": "test:ui-copy",
+        "passed": false
+      },
+      {
+        "name": "build:typecheck",
+        "passed": false
+      },
+      {
+        "name": "build:vite",
+        "passed": false
+      }
+    ],
+    "latestGlobalSuite": "Historical suite: 5313/5314 passed, 1 failed (recorded 2026-10-23T12:31:49.135Z); current source NOT VERIFIED",
+    "activeMigrationPresent": false,
+    "activeRegressionGroupsPresent": false,
+    "pendingUserChoice": true,
+    "note": "Repeated external checkout/cleanup events removed the pending migration and source/evidence files. The tested guard remains a recovery candidate unless present in this checkout. No overall completion or active-app fix is claimed.",
+    "calendarRecheck": {
+      "passed": 7,
+      "total": 7,
+      "failed": 0,
+      "log": "artifacts/astra-calendar-current-recheck-20261023.log"
+    },
+    "interruption": "artifacts/astra-current-main-interrupted-20261023.json"
+  }
+}

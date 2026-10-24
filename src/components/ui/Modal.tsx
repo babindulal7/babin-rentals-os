@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react'
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import Icon from './Icon'
 import { TouchTarget } from './TouchTarget'
@@ -83,6 +83,11 @@ export interface ModalProps {
    */
   fill?: boolean
   portal?: boolean
+  /** Scoped workspace chrome; overlay/focus/stack behavior remains shared. */
+  className?: string
+  surfaceStyle?: CSSProperties | undefined
+  contentStyle?: CSSProperties
+  headerActions?: ReactNode
 }
 
 const SIZE_MAX_WIDTH: Record<NonNullable<ModalProps['size']>, number> = {
@@ -108,6 +113,10 @@ export function Modal({
   peekHeight = false,
   fill = false,
   portal,
+  className,
+  surfaceStyle,
+  contentStyle,
+  headerActions,
 }: ModalProps) {
   // Keeps the modal mounted for a beat after isOpen flips to false so the
   // CSS fade/scale-out below can actually play instead of vanishing instantly.
@@ -172,7 +181,13 @@ export function Modal({
         const first = surface.querySelector<HTMLElement>(FOCUSABLE)
         ;(first ?? surface).focus()
       })
-      return () => window.cancelAnimationFrame(raf)
+      return () => {
+        window.cancelAnimationFrame(raf)
+        // Providers may remove the dialog immediately rather than render one
+        // closed frame. Return focus on that unmount path as well.
+        if (openerRef.current?.isConnected) openerRef.current.focus()
+        openerRef.current = null
+      }
     }
     openerRef.current?.focus()
     openerRef.current = null
@@ -258,7 +273,7 @@ export function Modal({
 
       <div
         ref={surfaceRef}
-        className="app-modal__surface"
+        className={['app-modal__surface', className].filter(Boolean).join(' ')}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
@@ -282,6 +297,7 @@ export function Modal({
           opacity: isOpen ? 1 : 0,
           transform: isOpen ? 'translate(0, 0)' : sidePeek ? 'translateX(12px)' : 'translateY(8px)',
           transition: 'opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+          ...surfaceStyle,
         }}
       >
         {/* Header */}
@@ -330,6 +346,7 @@ export function Modal({
               </p>
             )}
           </div>
+          {headerActions}
           <button
             type="button"
             onClick={onClose}
@@ -360,7 +377,7 @@ export function Modal({
         {/* Content */}
         <div
           className="app-modal__content"
-          style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: fillScreen ? 16 : 20 }}
+          style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: fillScreen ? 16 : 20, ...contentStyle }}
         >
           {children}
         </div>

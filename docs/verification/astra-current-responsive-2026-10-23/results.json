@@ -1,0 +1,316 @@
+{
+  "at": "2026-10-23T06:27:02.166Z",
+  "scope": "Read-only mock browser samples on local Vite. No booking/client/payment/equipment submitted. Not physical-device, hosted or complete workflow acceptance.",
+  "today": {
+    "desktop": {
+      "width": 1440,
+      "height": 900,
+      "documentWidth": 1440
+    },
+    "tablet": {
+      "documentWidth": 820,
+      "width": 820
+    },
+    "phone": {
+      "documentWidth": 360,
+      "headerButtons": [
+        {
+          "label": "Today info",
+          "rect": {
+            "bottom": 0,
+            "height": 0,
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "width": 0,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "label": "Create new record",
+          "rect": {
+            "bottom": 53.5,
+            "height": 44,
+            "left": 174,
+            "right": 218,
+            "top": 9.5,
+            "width": 44,
+            "x": 174,
+            "y": 9.5
+          }
+        },
+        {
+          "label": "More actions",
+          "rect": {
+            "bottom": 53.5,
+            "height": 44,
+            "left": 218,
+            "right": 262,
+            "top": 9.5,
+            "width": 44,
+            "x": 218,
+            "y": 9.5
+          }
+        },
+        {
+          "label": "Search Today",
+          "rect": {
+            "bottom": 53.5,
+            "height": 44,
+            "left": 262,
+            "right": 306,
+            "top": 9.5,
+            "width": 44,
+            "x": 262,
+            "y": 9.5
+          }
+        },
+        {
+          "label": "BA — user profile · Mock mode",
+          "rect": {
+            "bottom": 53.5,
+            "height": 44,
+            "left": 306,
+            "right": 350,
+            "top": 9.5,
+            "width": 44,
+            "x": 306,
+            "y": 9.5
+          }
+        },
+        {
+          "label": "View all pickups in Rentals list",
+          "rect": {
+            "bottom": 467.78125,
+            "height": 36,
+            "left": 39.25,
+            "right": 160.953125,
+            "top": 431.78125,
+            "width": 121.703125,
+            "x": 39.25,
+            "y": 431.78125
+          }
+        },
+        {
+          "label": "Today — choose pickups date filter",
+          "rect": {
+            "bottom": 471.78125,
+            "height": 44,
+            "left": 168.953125,
+            "right": 194.953125,
+            "top": 427.78125,
+            "width": 26,
+            "x": 168.953125,
+            "y": 427.78125
+          }
+        }
+      ],
+      "width": 360
+    },
+    "dateFooter": {
+      "before": {
+        "overdue": true,
+        "regions": [
+          {
+            "label": "Dispatch controls",
+            "rect": {
+              "bottom": 134,
+              "height": 52,
+              "left": 274,
+              "right": 1412,
+              "top": 82,
+              "width": 1138,
+              "x": 274,
+              "y": 82
+            }
+          },
+          {
+            "label": "Movement totals",
+            "rect": {
+              "bottom": 264.59375,
+              "height": 114.59375,
+              "left": 274,
+              "right": 1412,
+              "top": 150,
+              "width": 1138,
+              "x": 274,
+              "y": 150
+            }
+          }
+        ]
+      },
+      "after": {
+        "overdue": true,
+        "regions": [
+          {
+            "label": "Dispatch controls",
+            "rect": {
+              "bottom": 134,
+              "height": 52,
+              "left": 274,
+              "right": 1412,
+              "top": 82,
+              "width": 1138,
+              "x": 274,
+              "y": 82
+            }
+          },
+          {
+            "label": "Movement totals",
+            "rect": {
+              "bottom": 264.59375,
+              "height": 114.59375,
+              "left": 274,
+              "right": 1412,
+              "top": 150,
+              "width": 1138,
+              "x": 274,
+              "y": 150
+            }
+          }
+        ]
+      },
+      "measuredGeometryUnchanged": true
+    }
+  },
+  "newRental": {
+    "phone": {
+      "buttons": [
+        {
+          "name": "New Rental info",
+          "rect": {
+            "bottom": 0,
+            "height": 0,
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "width": 0,
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "name": "More rental actions",
+          "rect": {
+            "bottom": 53.5,
+            "height": 44,
+            "left": 134,
+            "right": 178,
+            "top": 9.5,
+            "width": 44,
+            "x": 134,
+            "y": 9.5
+          }
+        },
+        {
+          "name": "Confirm Booking",
+          "rect": {
+            "bottom": 53.5,
+            "height": 44,
+            "left": 178,
+            "right": 222,
+            "top": 9.5,
+            "width": 44,
+            "x": 178,
+            "y": 9.5
+          }
+        },
+        {
+          "name": "Rental summary",
+          "rect": {
+            "bottom": 53.5,
+            "height": 44,
+            "left": 222,
+            "right": 266,
+            "top": 9.5,
+            "width": 44,
+            "x": 222,
+            "y": 9.5
+          }
+        },
+        {
+          "name": "Search",
+          "rect": {
+            "bottom": 53.5,
+            "height": 44,
+            "left": 266,
+            "right": 310,
+            "top": 9.5,
+            "width": 44,
+            "x": 266,
+            "y": 9.5
+          }
+        },
+        {
+          "name": "BA — user profile · Mock mode",
+          "rect": {
+            "bottom": 53.5,
+            "height": 44,
+            "left": 310,
+            "right": 354,
+            "top": 9.5,
+            "width": 44,
+            "x": 310,
+            "y": 9.5
+          }
+        }
+      ],
+      "documentWidth": 360,
+      "header": {
+        "bottom": 64,
+        "height": 64,
+        "left": 0,
+        "right": 360,
+        "top": 0,
+        "width": 360,
+        "x": 0,
+        "y": 0
+      },
+      "width": 360
+    },
+    "tablet": {
+      "documentWidth": 820,
+      "width": 820
+    },
+    "desktop": {
+      "documentWidth": 1440,
+      "width": 1440
+    },
+    "catalogue": {
+      "bottomNav": {
+        "bottom": 800,
+        "height": 58,
+        "left": 0,
+        "right": 360,
+        "top": 742,
+        "width": 360,
+        "x": 0,
+        "y": 742
+      },
+      "dialog": {
+        "bottom": 730,
+        "height": 419,
+        "left": 27,
+        "right": 323,
+        "top": 311,
+        "width": 296,
+        "x": 27,
+        "y": 311
+      },
+      "documentWidth": 360,
+      "width": 360
+    }
+  },
+  "notes": [
+    "Initial navigation timed out; subsequent DOM inspection confirmed /rentals?action=new and the form.",
+    "Two screenshots taken immediately after viewport changes captured transient clipped frames; settled replacements are separately saved.",
+    "Phone visible booking-header buttons measure 44 by 44 and rightmost edge 354 at width 360. Catalogue bottom 730 is above navigation top 742.",
+    "Source changed concurrently during full verification. These samples do not certify the entire checkout."
+  ],
+  "sourceObservation": {
+    "during": "85024300ad31820baec2ebfa5387dc9e48768d5f4f0ea0bcf14b079bd9734971",
+    "after": "a100aa8edbb0d7c8b0c70a86a7fc96c68c8f2a95bf2646c92676c74b43d85515",
+    "note": "Source fingerprint observed during and after samples, not an immutable built-preview certificate."
+  }
+}

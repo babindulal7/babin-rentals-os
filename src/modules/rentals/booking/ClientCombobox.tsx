@@ -41,6 +41,8 @@ import type {
   ReactNode,
 } from 'react'
 import Icon from '../../../components/ui/Icon'
+import { Button } from '../../../components/ui/Button'
+import { InputGroup, InputGroupAddon, InputGroupInput } from '../../../components/ui/InputGroup'
 import { formatMoney } from '../../../lib/money'
 import { CLIENTS_DATA } from '../../../lib/queries/clients'
 import type { ClientRecord } from '../../../lib/queries/clients'
@@ -48,6 +50,7 @@ import { clientHealth, healthAccessibleName } from './clientHealth'
 import type { ClientHealthVerdict } from './clientHealth'
 import { ClientHealthChip, TOUCH } from './ClientHealthChip'
 import { floatingLayer } from '../../../components/ui/floatingLayer'
+import './booking-search-field.css'
 
 /* ── Search ────────────────────────────────────────────────────────────── */
 
@@ -387,8 +390,11 @@ export function ClientCombobox({
     // up `Input.tsx`'s own `minHeight: 44` for free. Set directly here instead
     // of relying on whatever `inputStyle` the calling page passed in.
     minHeight: 44,
-    paddingRight: inputAction ? 82 : 34,
-    ...(error ? { borderColor: 'var(--danger)' } : {}),
+    minWidth: 0,
+    padding: '8px 10px',
+    border: 'none',
+    background: 'transparent',
+    boxShadow: 'none',
   }
 
   return (
@@ -409,7 +415,8 @@ export function ClientCombobox({
       }}
     >
       <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
-        <input
+        <InputGroup className="booking-search-field" invalid={Boolean(error)} disabled={disabled}>
+        <InputGroupInput
           ref={inputRef}
           id={inputId}
           type="text"
@@ -448,25 +455,22 @@ export function ClientCombobox({
           onKeyDown={onKeyDown}
           style={fieldStyle}
         />
-        <span
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            right: inputAction ? 58 : 10,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            display: 'inline-flex',
-            color: 'var(--muted)',
-            pointerEvents: 'none',
-          }}
-        >
-          <Icon name={open ? 'chevron_up' : 'search'} size={15} />
-        </span>
-        {inputAction && (
-          <div style={{ position: 'absolute', right: 4, top: 0, bottom: 0, display: 'flex', alignItems: 'center' }}>
-            {inputAction}
-          </div>
-        )}
+        <InputGroupAddon aria-hidden="true"><Icon name="search" size={16} /></InputGroupAddon>
+        <InputGroupAddon align="inline-end" style={{ gap: 0, padding: 0 }}>
+          {typed && query ? (
+            <Button type="button" variant="ghost" aria-label="Clear client search" disabled={disabled}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => { setQuery(''); setTyped(true); openList(); inputRef.current?.focus() }}
+              style={{ width: 44, minWidth: 44, padding: 0 }} icon="close" />
+          ) : (
+            <Button type="button" variant="ghost" aria-label={open ? 'Hide clients' : 'Show clients'} disabled={disabled}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => { if (open) revert(); else { inputRef.current?.focus(); openList() } }}
+              style={{ width: 44, minWidth: 44, padding: 0 }} icon={open ? 'chevron_up' : 'chevron_down'} />
+          )}
+          {inputAction}
+        </InputGroupAddon>
+        </InputGroup>
 
         {open && (
           <ClientListbox
@@ -584,7 +588,8 @@ function ClientListbox({
       if (navigation && getComputedStyle(navigation).position === 'fixed') {
         bottom = Math.min(bottom, navigation.getBoundingClientRect().top - 8)
       }
-      const rect = input.getBoundingClientRect()
+      const groupRect = input.closest<HTMLElement>('[data-slot="input-group"]')?.getBoundingClientRect()
+      const rect = groupRect && groupRect.width > 0 ? groupRect : input.getBoundingClientRect()
       const spaceBelow = Math.max(0, bottom - rect.bottom - 4)
       const spaceAbove = Math.max(0, rect.top - top - 4)
       const openUpward = spaceBelow < 240 && spaceAbove > spaceBelow

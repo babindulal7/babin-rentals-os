@@ -395,31 +395,37 @@ export default function ResetWorkspace({
 
   const [staffList, setStaffList] = useState<Array<{ id: string; name: string; role: string }>>([])
   const [selectedCleanerId, setSelectedCleanerId] = useState<string>('')
+  const [staffLoading, setStaffLoading] = useState(true)
+  const [staffError, setStaffError] = useState<string | null>(null)
+  const [staffReload, setStaffReload] = useState(0)
 
   useEffect(() => {
     let mounted = true
+    setStaffList([])
+    setSelectedCleanerId('')
+    setStaffLoading(true)
+    setStaffError(null)
     void fetchStaffDirectory().then((res) => {
       if (!mounted) return
-      if (res.kind === 'ok' && res.rows.length > 0) {
+      if (res.kind === 'ok') {
         setStaffList(
           res.rows
             .filter((s) => s.isActive)
             .map((s) => ({ id: s.id, name: s.fullName || s.email, role: s.primaryRole })),
         )
       } else {
-        const fallback = [
-          { id: user?.id ?? '00000000-0000-0000-0000-000000000001', name: actor || 'Current Operator', role: user?.role || 'Technician' },
-          { id: '11111111-1111-1111-1111-111111111111', name: 'Ram Thapa', role: 'Technician' },
-          { id: '22222222-2222-2222-2222-222222222222', name: 'Sagar Maharjan', role: 'Warehouse' },
-          { id: '33333333-3333-3333-3333-333333333333', name: 'Bikash Thapa', role: 'Technician' },
-        ]
-        setStaffList(fallback)
+        setStaffError(res.message)
       }
+      setStaffLoading(false)
+    }).catch((error: unknown) => {
+      if (!mounted) return
+      setStaffError(error instanceof Error ? error.message : 'The staff directory could not be read.')
+      setStaffLoading(false)
     })
     return () => {
       mounted = false
     }
-  }, [actor, user?.role, user?.id])
+  }, [user?.role, user?.id, staffReload])
 
   const floorId = floor?.id ?? null
 
@@ -648,7 +654,7 @@ export default function ResetWorkspace({
   const markCleanReason = eligibleRows.length > 0 ? null : 'No selected item has a completed checklist'
 
   const assignCleanerToSelected = () => {
-    if (!selectedCleanerId || selRows.length === 0) return
+    if (staffLoading || staffError || !selectedCleanerId || selRows.length === 0) return
     const member = staffList.find((s) => s.id === selectedCleanerId)
     if (!member) return
 
@@ -1684,6 +1690,7 @@ export default function ResetWorkspace({
                           <select
                             id="staff-cleaner-select"
                             value={selectedCleanerId}
+                            disabled={staffLoading || staffError !== null || staffList.length === 0}
                             onChange={(e) => setSelectedCleanerId(e.target.value)}
                             aria-label="Assign cleaner to selected items"
                             style={{
@@ -1707,7 +1714,7 @@ export default function ResetWorkspace({
                           </select>
                           <button
                             type="button"
-                            disabled={!selectedCleanerId}
+                            disabled={staffLoading || staffError !== null || !selectedCleanerId || selRows.length === 0}
                             onClick={assignCleanerToSelected}
                             style={{
                               minHeight: 44,
@@ -1726,6 +1733,14 @@ export default function ResetWorkspace({
                             Assign
                           </button>
                         </div>
+                        {staffLoading && <p role="status">Loading active staff…</p>}
+                        {staffError && (
+                          <ErrorBanner title="Cleaner assignment unavailable" message={staffError}
+                            onRetry={() => setStaffReload((value) => value + 1)} />
+                        )}
+                        {!staffLoading && !staffError && staffList.length === 0 && (
+                          <p role="status">No active staff are available for assignment.</p>
+                        )}
                       </div>
 
                       {/* Shared tasks cascade to every selected item (§6.1's

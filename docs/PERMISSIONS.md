@@ -216,6 +216,8 @@ Ladder shorthand: `M+` = Owner · Admin · Manager. `C+` = M+ · Coordinator. `F
 
 ### 4.2 Floor (Operations)
 
+**24 October 2026 — approved guarded-pair integration:** the site boundary below applies in addition to every existing §3/§4 role restriction; no role cell is widened. Regression fixtures for the boundary live in `check-astra-phase0.mjs`, `test-operations-grants.mjs` and `test-reset-branch-boundary.mjs`, all required by the CI security gate.
+
 | Capability | Roles | Notes | Code |
 |---|---|---|---|
 | `rental.pack` | C+ · Warehouse | Technician **view-only** (22 Jul) | ○ (packRental) |
@@ -227,6 +229,28 @@ Ladder shorthand: `M+` = Owner · Admin · Manager. `C+` = M+ · Coordinator. `F
 | `evidence.capture` | all staff on the job | mandatory on Damaged/Lost lines | ○ |
 | `evidence.review` (accept/reject match, archive with reason) | M+ | soft-delete only | ✓ |
 | `scan` | all staff | identity by PIN (P8) | ○ |
+
+**Branch scoping — RULING 2026-10-23 (P0-B second half, migration 0171).** The four
+floor grants above carry a **site dimension** in the database, on top of the role
+matrix this table states: `operations_grants` rows narrow `pack · handover · return ·
+reset` per user, per branch. **Narrowing-only** — a staff member with no grant rows
+keeps exactly the roles above at every branch, so an empty table is a no-op and
+applying 0171 changes nothing until an Owner/Admin issues a first grant. A user with
+any grant history is scoped: only an ACTIVE grant for the booking's branch passes,
+fail-closed inside `apply_booking_stage_transition()` for the three custody verbs and
+asked early by `runFloorVerb` step 1b for all four. Migration 0172 additionally
+enforces Reset queue/task writes through restrictive RLS, checking old and new
+scope on reassignment. Linked items use booking branch; unbooked items use the
+unit's current warehouse branch (`warehouse_id → warehouses.branch_id`), not the
+actor's home branch or unit's separate branch. Unknown identity/site denies.
+Queue insertion, including Return's automatic cleaning enqueue, requires Reset
+scope too; a Return grant alone cannot authorize it. Revoking the
+last active grant scopes a user to nothing — never back to global. No §3 cell and no
+role set above changed.
+
+Grant administration is Owner/Admin only; Admin cannot issue/revoke grants for
+Owner/Admin targets (including self). Direct table writes remain revoked from
+authenticated roles. Approval is local source integration only; N-5 still applies.
 
 ### 4.3 Cases, Maintenance, Purchase
 
@@ -279,7 +303,7 @@ model**. Nothing is stored: `product_units_service_v` derives it at read time.
 | `client.update` | C+ · Accounts (payment terms, VAT profile only) | | ✓ |
 | `client.block` / `client.unblock` | **Owner · Admin · Manager** | reason from list, audited; existing bookings continue | ✓ |
 | `client.merge` | M+ | redirect record, sums balances, reversible 30 days, blocked with open booking/case | ✓ |
-| `client.change_membership` | **Owner · Admin · Manager · Coordinator** | puts a client on a membership plan, or moves them to another (one atomic, audited, idempotent write — `change_client_membership`, 0171); mirrors `client_memberships_all` (0037); **Accounts (A5: "no membership edits") and Warehouse are refused**, which is why this is not `client.update`; records no fee; 22 Oct ruling | ✓ |
+| `client.change_membership` | **Owner · Admin · Manager · Coordinator** | puts a client on a membership plan, or moves them to another (one atomic, audited, idempotent write — `change_client_membership`, 0174); mirrors `client_memberships_all` (0037); **Accounts (A5: "no membership edits") and Warehouse are refused**, which is why this is not `client.update`; records no fee; 22 Oct ruling | ✓ |
 | `credit.override` (limit above membership default, terms beyond Immediate) | M+ | reason ≥10 | ✓ |
 | `client.view_pii` (phone, email, address, PAN/ID docs) | C+ · Accounts always · **Driver inside assigned trip only** | HIS v2.1 gate | ○ |
 | `client.view_as` (open portal as this client, read-only) | C+ | audited | ○ |
@@ -395,6 +419,8 @@ Known hole to keep closed: **`security_deposits` was readable by money-blind ses
 
 | id | Gate | Who may pass it | Reason | Audit | Source |
 |---|---|---|---|---|---|
+| `operations.grant` | Floor verb on a branch; Reset queue/task writes include old/new scope | Existing role policy **and** branch scope; pristine operation keeps existing role policy, history requires active branch grant | none | Existing domain receipts retained; grants carry issuer/revoker identity/time | 0171 + 0172; RULINGS-2026-10-24 |
+| `operations.grant.issue_role` / `operations.grant.revoke_role` | Issue/revoke operation grants | Owner/Admin; Admin cannot target Owner/Admin, including self | none | grant actor/time; no deletion | Guarded 0171; RULINGS-2026-10-24 |
 | `gate.handover.payment_outstanding` | Release gear with **payment outstanding** (advance tier not met) | **Any staff** — warning shown, release allowed | none | yes, per session | his ruling 7 Sep; 21 Jul soft gate |
 | `gate.handover.payment_outstanding` | Release gear with **deposit outstanding** | same as above | none | yes | same rule — the gate is one gate |
 | `gate.handover.receiver_unverified` | Receiver not verified at handover | M+ override | ≥10 chars | yes | Handover v1.1 |

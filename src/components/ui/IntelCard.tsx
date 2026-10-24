@@ -7,7 +7,7 @@ import type { IconName } from './Icon'
 import { Modal } from './Modal'
 import type { StatusKey } from '../../lib/status'
 import { useCapability } from '../../lib/device'
-import { INTEL_ADJACENT_DELAY_MS, INTEL_CARD_IN_MS, INTEL_CLOSE_DELAY_MS, INTEL_LONG_PRESS_MS, INTEL_OPEN_DELAY_MS } from '../../lib/intel/timing'
+import { INTEL_ADJACENT_DELAY_MS, INTEL_CLOSE_DELAY_MS, INTEL_LONG_PRESS_MS, INTEL_OPEN_DELAY_MS } from '../../lib/intel/timing'
 import { inTravelTriangle } from '../../lib/intel/safeTriangle'
 import { intelClosed, intelNavigateBack, intelOpened, intelReplaced, isIntelSessionActive, useIntelSession } from '../../lib/intel/store'
 import type { IntelNavigationEntry } from '../../lib/intel/store'
@@ -113,7 +113,7 @@ export function IntelCard({ children, glance, detailTitle, detailSubtitle, detai
   const [linkLoading, setLinkLoading] = useState(false)
   const linkRequest = useRef(0)
   /* Fixed viewport position for the portaled card. */
-  const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null)
+  const [anchor, setAnchor] = useState<{ x: number; y: number; placement: 'top' | 'bottom' } | null>(null)
   const press = useRef<number | null>(null)
   const openTimer = useRef<number | null>(null)
   const closeTimer = useRef<number | null>(null)
@@ -188,12 +188,8 @@ export function IntelCard({ children, glance, detailTitle, detailSubtitle, detai
   const scheduleOpen = () => {
     clearCloseTimer()
     if (open || pinned || sheetOpen) return
-    const delay = isIntelSessionActive() ? INTEL_ADJACENT_DELAY_MS : INTEL_OPEN_DELAY_MS
-    if (delay <= 0) {
-      doOpen()
-      return
-    }
     clearOpenTimer()
+    const delay = isIntelSessionActive() ? INTEL_ADJACENT_DELAY_MS : INTEL_OPEN_DELAY_MS
     openTimer.current = window.setTimeout(doOpen, delay)
   }
 
@@ -221,10 +217,12 @@ export function IntelCard({ children, glance, detailTitle, detailSubtitle, detai
     const height = cardRef.current?.getBoundingClientRect().height ?? Math.min(560, window.innerHeight - 24)
     const below = window.innerHeight - r.bottom
     const above = r.top
-    const y = below >= height + 6 || below >= above ? r.bottom + 6 : r.top - height - 6
+    const isBelow = below >= height + 6 || below >= above
+    const y = isBelow ? r.bottom + 6 : r.top - height - 6
     setAnchor({
       x: Math.max(12, Math.min(r.left, window.innerWidth - width - 12)),
       y: Math.max(12, Math.min(y, window.innerHeight - height - 12)),
+      placement: isBelow ? 'bottom' : 'top',
     })
   }
 
@@ -364,13 +362,11 @@ export function IntelCard({ children, glance, detailTitle, detailSubtitle, detai
       aria-describedby={open ? cardId : undefined}
       style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', minHeight: 44, minWidth: 44, maxWidth: '100%' }}
       onMouseEnter={(e) => {
-        if (!hasHover) return
         leavePoint.current = null
         hoverOnIdentifier.current = pointerAtIdentifier(e.target)
         if (hoverOnIdentifier.current) scheduleOpen()
       }}
       onMouseMove={(e) => {
-        if (!hasHover) return
         if (e.target instanceof Element && e.target.closest('[data-intel-overlay]')) return
         const atIdentifier = pointerAtIdentifier(e.target)
         if (atIdentifier !== hoverOnIdentifier.current) {
@@ -381,7 +377,7 @@ export function IntelCard({ children, glance, detailTitle, detailSubtitle, detai
         if (atIdentifier && open) leavePoint.current = null
       }}
       onMouseLeave={(e) => {
-        if (!hasHover || pinned) return
+        if (pinned) return
         hoverOnIdentifier.current = false
         leavePoint.current = { x: e.clientX, y: e.clientY }
         scheduleClose()
@@ -475,6 +471,7 @@ export function IntelCard({ children, glance, detailTitle, detailSubtitle, detai
           } : glance}
           reducedMotion={reducedMotion}
           cardRef={cardRef}
+          placement={anchor.placement}
           onFocus={() => setPinned(true)}
           onEnter={() => {
             clearCloseTimer()
@@ -561,7 +558,7 @@ export function IntelCard({ children, glance, detailTitle, detailSubtitle, detai
   )
 }
 
-function DirectIntelCard({ id, glance, content, reducedMotion, cardRef, onFocus, onEnter, onLeave, onClose }: {
+function DirectIntelCard({ id, glance, content, reducedMotion, cardRef, onFocus, onEnter, onLeave, onClose, placement = 'bottom' }: {
   id: string
   glance: IntelGlance
   content: ReactNode
@@ -571,6 +568,7 @@ function DirectIntelCard({ id, glance, content, reducedMotion, cardRef, onFocus,
   onEnter: () => void
   onLeave: (e: React.MouseEvent) => void
   onClose: () => void
+  placement?: 'top' | 'bottom'
 }) {
   return (
     <div
@@ -579,6 +577,8 @@ function DirectIntelCard({ id, glance, content, reducedMotion, cardRef, onFocus,
       role="dialog"
       aria-label={`${glance.title} Intel`}
       data-intel-overlay
+      data-placement={placement}
+      className="intel-card-overlay"
       onFocusCapture={onFocus}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
@@ -597,7 +597,7 @@ function DirectIntelCard({ id, glance, content, reducedMotion, cardRef, onFocus,
         boxShadow: 'var(--shadow-modal)',
         color: 'var(--text)',
         textAlign: 'left',
-        transition: reducedMotion ? 'none' : `opacity ${INTEL_CARD_IN_MS}ms ease`,
+        ...(reducedMotion ? { animation: 'none', transition: 'none' } : {}),
       }}
     >
       <div style={{ display: 'flex', flex: '0 0 auto', alignItems: 'center', gap: 8, padding: '8px 10px', borderBottom: '1px solid var(--border)' }}>
@@ -614,7 +614,7 @@ function DetailGroups({ groups, onFollow }: { groups: IntelGroup[]; onFollow?: (
     return <div style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>Nothing to show for this role.</div>
   }
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }} className="intel-detail-groups">
       {groups.map((g) => (
         <div key={g.title}>
           <div

@@ -9,7 +9,7 @@ import { MEMBERSHIP_TIERS, type MembershipTier } from '../../lib/queries/clients
  * RULING 2026-10-22 (Babin: "activate membership"). Before this, the Change
  * Tier dialog's save was deliberately blocked — "no tier-change action exists" —
  * because a tier lives in `client_memberships`, not `clients`, and nothing wrote
- * it. This is that action. It is one RPC, `change_client_membership` (0171),
+ * it. This is that action. It is one RPC, `change_client_membership` (0174),
  * because 0005 allows exactly one LIVE membership per client and a level change
  * must supersede the old row and add the new one atomically; three separate
  * writes from here could strand a client with none, which reads as Lapsed and

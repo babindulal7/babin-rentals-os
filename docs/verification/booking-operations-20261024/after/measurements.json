@@ -1,0 +1,634 @@
+[
+  {
+    "width": 1440,
+    "height": 900,
+    "theme": "light",
+    "shot": "operations-1440-light.png",
+    "sourceHash": "3b430ee4c70aede65ef5192a30341d37bb36a0e59dcc156035086837d3acdbae",
+    "zoom": "100%",
+    "forcedColors": false,
+    "source": "current working source",
+    "title": "Operations · 864 · Gandaki Weddings Pvt. Ltd.",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "pageOverflow": 0,
+    "dialog": {
+      "x": 60,
+      "y": 27,
+      "width": 1320,
+      "height": 846,
+      "bottom": 873,
+      "right": 1380
+    },
+    "stages": [
+      {
+        "label": "Packing · Done",
+        "disabled": false,
+        "x": 73,
+        "y": 124.390625,
+        "width": 317.5,
+        "height": 64,
+        "bottom": 188.390625,
+        "right": 390.5
+      },
+      {
+        "label": "Handover · Done",
+        "disabled": false,
+        "x": 398.5,
+        "y": 124.390625,
+        "width": 317.5,
+        "height": 64,
+        "bottom": 188.390625,
+        "right": 716
+      },
+      {
+        "label": "Return & Inspection · Open",
+        "disabled": false,
+        "x": 724,
+        "y": 124.390625,
+        "width": 317.5,
+        "height": 64,
+        "bottom": 188.390625,
+        "right": 1041.5
+      },
+      {
+        "label": "Cleaning & Reset · Not open yet",
+        "disabled": true,
+        "x": 1049.5,
+        "y": 124.390625,
+        "width": 317.5,
+        "height": 64,
+        "bottom": 188.390625,
+        "right": 1367
+      }
+    ],
+    "footers": 1,
+    "confirm": [
+      {
+        "label": "Confirm Return session",
+        "x": 1198.125,
+        "y": 800,
+        "width": 160.875,
+        "height": 56,
+        "bottom": 856,
+        "right": 1359
+      }
+    ],
+    "alerts": []
+  },
+  {
+    "width": 1440,
+    "height": 900,
+    "theme": "dark",
+    "shot": "operations-1440-dark.png",
+    "sourceHash": "3b430ee4c70aede65ef5192a30341d37bb36a0e59dcc156035086837d3acdbae",
+    "zoom": "100%",
+    "forcedColors": false,
+    "source": "current working source",
+    "title": "Operations · 864 · Gandaki Weddings Pvt. Ltd.",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "pageOverflow": 0,
+    "dialog": {
+      "x": 60,
+      "y": 27,
+      "width": 1320,
+      "height": 846,
+      "bottom": 873,
+      "right": 1380
+    },
+    "stages": [
+      {
+        "label": "Packing · Done",
+        "disabled": false,
+        "x": 73,
+        "y": 124.390625,
+        "width": 317.5,
+        "height": 64,
+        "bottom": 188.390625,
+        "right": 390.5
+      },
+      {
+        "label": "Handover · Done",
+        "disabled": false,
+        "x": 398.5,
+        "y": 124.390625,
+        "width": 317.5,
+        "height": 64,
+        "bottom": 188.390625,
+        "right": 716
+      },
+      {
+        "label": "Return & Inspection · Open",
+        "disabled": false,
+        "x": 724,
+        "y": 124.390625,
+        "width": 317.5,
+        "height": 64,
+        "bottom": 188.390625,
+        "right": 1041.5
+      },
+      {
+        "label": "Cleaning & Reset · Not open yet",
+        "disabled": true,
+        "x": 1049.5,
+        "y": 124.390625,
+        "width": 317.5,
+        "height": 64,
+        "bottom": 188.390625,
+        "right": 1367
+      }
+    ],
+    "footers": 1,
+    "confirm": [
+      {
+        "label": "Confirm Return session",
+        "x": 1198.125,
+        "y": 800,
+        "width": 160.875,
+        "height": 56,
+        "bottom": 856,
+        "right": 1359
+      }
+    ],
+    "alerts": []
+  },
+  {
+    "width": 1024,
+    "height": 768,
+    "theme": "light",
+    "shot": "operations-1024-light.png",
+    "sourceHash": "3b430ee4c70aede65ef5192a30341d37bb36a0e59dcc156035086837d3acdbae",
+    "zoom": "100%",
+    "forcedColors": false,
+    "source": "current working source",
+    "title": "Operations · 864 · Gandaki Weddings Pvt. Ltd.",
+    "viewport": {
+      "width": 1024,
+      "height": 768
+    },
+    "pageOverflow": 0,
+    "dialog": {
+      "x": 0,
+      "y": 0,
+      "width": 1024,
+      "height": 768,
+      "bottom": 768,
+      "right": 1024
+    },
+    "stages": [
+      {
+        "label": "Packing · Done",
+        "disabled": false,
+        "x": 12,
+        "y": 87.5,
+        "width": 244,
+        "height": 64,
+        "bottom": 151.5,
+        "right": 256
+      },
+      {
+        "label": "Handover · Done",
+        "disabled": false,
+        "x": 264,
+        "y": 87.5,
+        "width": 244,
+        "height": 64,
+        "bottom": 151.5,
+        "right": 508
+      },
+      {
+        "label": "Return & Inspection · Open",
+        "disabled": false,
+        "x": 516,
+        "y": 87.5,
+        "width": 244,
+        "height": 64,
+        "bottom": 151.5,
+        "right": 760
+      },
+      {
+        "label": "Cleaning & Reset · Not open yet",
+        "disabled": true,
+        "x": 768,
+        "y": 87.5,
+        "width": 244,
+        "height": 64,
+        "bottom": 151.5,
+        "right": 1012
+      }
+    ],
+    "footers": 1,
+    "confirm": [
+      {
+        "label": "Confirm Return session",
+        "x": 847.125,
+        "y": 700,
+        "width": 160.875,
+        "height": 56,
+        "bottom": 756,
+        "right": 1008
+      }
+    ],
+    "alerts": []
+  },
+  {
+    "width": 1024,
+    "height": 768,
+    "theme": "dark",
+    "shot": "operations-1024-dark.png",
+    "sourceHash": "3b430ee4c70aede65ef5192a30341d37bb36a0e59dcc156035086837d3acdbae",
+    "zoom": "100%",
+    "forcedColors": false,
+    "source": "current working source",
+    "title": "Operations · 864 · Gandaki Weddings Pvt. Ltd.",
+    "viewport": {
+      "width": 1024,
+      "height": 768
+    },
+    "pageOverflow": 0,
+    "dialog": {
+      "x": 0,
+      "y": 0,
+      "width": 1024,
+      "height": 768,
+      "bottom": 768,
+      "right": 1024
+    },
+    "stages": [
+      {
+        "label": "Packing · Done",
+        "disabled": false,
+        "x": 12,
+        "y": 87.5,
+        "width": 244,
+        "height": 64,
+        "bottom": 151.5,
+        "right": 256
+      },
+      {
+        "label": "Handover · Done",
+        "disabled": false,
+        "x": 264,
+        "y": 87.5,
+        "width": 244,
+        "height": 64,
+        "bottom": 151.5,
+        "right": 508
+      },
+      {
+        "label": "Return & Inspection · Open",
+        "disabled": false,
+        "x": 516,
+        "y": 87.5,
+        "width": 244,
+        "height": 64,
+        "bottom": 151.5,
+        "right": 760
+      },
+      {
+        "label": "Cleaning & Reset · Not open yet",
+        "disabled": true,
+        "x": 768,
+        "y": 87.5,
+        "width": 244,
+        "height": 64,
+        "bottom": 151.5,
+        "right": 1012
+      }
+    ],
+    "footers": 1,
+    "confirm": [
+      {
+        "label": "Confirm Return session",
+        "x": 847.125,
+        "y": 700,
+        "width": 160.875,
+        "height": 56,
+        "bottom": 756,
+        "right": 1008
+      }
+    ],
+    "alerts": []
+  },
+  {
+    "width": 768,
+    "height": 1024,
+    "theme": "light",
+    "shot": "operations-768-light.png",
+    "sourceHash": "3b430ee4c70aede65ef5192a30341d37bb36a0e59dcc156035086837d3acdbae",
+    "zoom": "100%",
+    "forcedColors": false,
+    "source": "current working source",
+    "title": "Operations · 864 · Gandaki Weddings Pvt. Ltd.",
+    "viewport": {
+      "width": 768,
+      "height": 1024
+    },
+    "pageOverflow": 0,
+    "dialog": {
+      "x": 0,
+      "y": 0,
+      "width": 768,
+      "height": 1024,
+      "bottom": 1024,
+      "right": 768
+    },
+    "stages": [
+      {
+        "label": "Packing · Done",
+        "disabled": false,
+        "x": 12,
+        "y": 87.5,
+        "width": 180,
+        "height": 64,
+        "bottom": 151.5,
+        "right": 192
+      },
+      {
+        "label": "Handover · Done",
+        "disabled": false,
+        "x": 200,
+        "y": 87.5,
+        "width": 180,
+        "height": 64,
+        "bottom": 151.5,
+        "right": 380
+      },
+      {
+        "label": "Return & Inspection · Open",
+        "disabled": false,
+        "x": 388,
+        "y": 87.5,
+        "width": 180,
+        "height": 64,
+        "bottom": 151.5,
+        "right": 568
+      },
+      {
+        "label": "Cleaning & Reset · Not open yet",
+        "disabled": true,
+        "x": 576,
+        "y": 87.5,
+        "width": 180,
+        "height": 64,
+        "bottom": 151.5,
+        "right": 756
+      }
+    ],
+    "footers": 1,
+    "confirm": [
+      {
+        "label": "Confirm Return session",
+        "x": 591.125,
+        "y": 956,
+        "width": 160.875,
+        "height": 56,
+        "bottom": 1012,
+        "right": 752
+      }
+    ],
+    "alerts": []
+  },
+  {
+    "width": 768,
+    "height": 1024,
+    "theme": "dark",
+    "shot": "operations-768-dark.png",
+    "sourceHash": "3b430ee4c70aede65ef5192a30341d37bb36a0e59dcc156035086837d3acdbae",
+    "zoom": "100%",
+    "forcedColors": false,
+    "source": "current working source",
+    "title": "Operations · 864 · Gandaki Weddings Pvt. Ltd.",
+    "viewport": {
+      "width": 768,
+      "height": 1024
+    },
+    "pageOverflow": 0,
+    "dialog": {
+      "x": 0,
+      "y": 0,
+      "width": 768,
+      "height": 1024,
+      "bottom": 1024,
+      "right": 768
+    },
+    "stages": [
+      {
+        "label": "Packing · Done",
+        "disabled": false,
+        "x": 12,
+        "y": 87.5,
+        "width": 180,
+        "height": 64,
+        "bottom": 151.5,
+        "right": 192
+      },
+      {
+        "label": "Handover · Done",
+        "disabled": false,
+        "x": 200,
+        "y": 87.5,
+        "width": 180,
+        "height": 64,
+        "bottom": 151.5,
+        "right": 380
+      },
+      {
+        "label": "Return & Inspection · Open",
+        "disabled": false,
+        "x": 388,
+        "y": 87.5,
+        "width": 180,
+        "height": 64,
+        "bottom": 151.5,
+        "right": 568
+      },
+      {
+        "label": "Cleaning & Reset · Not open yet",
+        "disabled": true,
+        "x": 576,
+        "y": 87.5,
+        "width": 180,
+        "height": 64,
+        "bottom": 151.5,
+        "right": 756
+      }
+    ],
+    "footers": 1,
+    "confirm": [
+      {
+        "label": "Confirm Return session",
+        "x": 591.125,
+        "y": 956,
+        "width": 160.875,
+        "height": 56,
+        "bottom": 1012,
+        "right": 752
+      }
+    ],
+    "alerts": []
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "theme": "light",
+    "shot": "operations-390-light.png",
+    "sourceHash": "3b430ee4c70aede65ef5192a30341d37bb36a0e59dcc156035086837d3acdbae",
+    "zoom": "100%",
+    "forcedColors": false,
+    "source": "current working source",
+    "title": "Operations · 864 · Gandaki Weddings Pvt. Ltd.",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "pageOverflow": 0,
+    "dialog": {
+      "x": 0,
+      "y": 0,
+      "width": 390,
+      "height": 844,
+      "bottom": 844,
+      "right": 390
+    },
+    "stages": [
+      {
+        "label": "Packing · Done",
+        "disabled": false,
+        "x": 12,
+        "y": 114.5,
+        "width": 88.5,
+        "height": 74,
+        "bottom": 188.5,
+        "right": 100.5
+      },
+      {
+        "label": "Handover · Done",
+        "disabled": false,
+        "x": 104.5,
+        "y": 114.5,
+        "width": 88.5,
+        "height": 74,
+        "bottom": 188.5,
+        "right": 193
+      },
+      {
+        "label": "Return & Inspection · Open",
+        "disabled": false,
+        "x": 197,
+        "y": 114.5,
+        "width": 88.5,
+        "height": 74,
+        "bottom": 188.5,
+        "right": 285.5
+      },
+      {
+        "label": "Cleaning & Reset · Not open yet",
+        "disabled": true,
+        "x": 289.5,
+        "y": 114.5,
+        "width": 88.5,
+        "height": 74,
+        "bottom": 188.5,
+        "right": 378
+      }
+    ],
+    "footers": 1,
+    "confirm": [
+      {
+        "label": "Confirm Return session",
+        "x": 16,
+        "y": 724,
+        "width": 358,
+        "height": 56,
+        "bottom": 780,
+        "right": 374
+      }
+    ],
+    "alerts": []
+  },
+  {
+    "width": 390,
+    "height": 844,
+    "theme": "dark",
+    "shot": "operations-390-dark.png",
+    "sourceHash": "3b430ee4c70aede65ef5192a30341d37bb36a0e59dcc156035086837d3acdbae",
+    "zoom": "100%",
+    "forcedColors": false,
+    "source": "current working source",
+    "title": "Operations · 864 · Gandaki Weddings Pvt. Ltd.",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "pageOverflow": 0,
+    "dialog": {
+      "x": 0,
+      "y": 0,
+      "width": 390,
+      "height": 844,
+      "bottom": 844,
+      "right": 390
+    },
+    "stages": [
+      {
+        "label": "Packing · Done",
+        "disabled": false,
+        "x": 12,
+        "y": 114.5,
+        "width": 88.5,
+        "height": 74,
+        "bottom": 188.5,
+        "right": 100.5
+      },
+      {
+        "label": "Handover · Done",
+        "disabled": false,
+        "x": 104.5,
+        "y": 114.5,
+        "width": 88.5,
+        "height": 74,
+        "bottom": 188.5,
+        "right": 193
+      },
+      {
+        "label": "Return & Inspection · Open",
+        "disabled": false,
+        "x": 197,
+        "y": 114.5,
+        "width": 88.5,
+        "height": 74,
+        "bottom": 188.5,
+        "right": 285.5
+      },
+      {
+        "label": "Cleaning & Reset · Not open yet",
+        "disabled": true,
+        "x": 289.5,
+        "y": 114.5,
+        "width": 88.5,
+        "height": 74,
+        "bottom": 188.5,
+        "right": 378
+      }
+    ],
+    "footers": 1,
+    "confirm": [
+      {
+        "label": "Confirm Return session",
+        "x": 16,
+        "y": 724,
+        "width": 358,
+        "height": 56,
+        "bottom": 780,
+        "right": 374
+      }
+    ],
+    "alerts": []
+  }
+]

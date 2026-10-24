@@ -47,6 +47,9 @@
  * keyboard.
  */
 
+import { InputGroup, InputGroupAddon, InputGroupInput } from '../../../components/ui/InputGroup'
+import { Button } from '../../../components/ui/Button'
+import './booking-search-field.css'
 import { useCallback, useEffect, useLayoutEffect, useId, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useViewport } from '../../../lib/device'
@@ -718,9 +721,10 @@ export function AddItemPanel({
 
       {inline && (
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
-          <div style={{ position: 'relative', flex: 1 }}>
-            <input
+          <InputGroup className="booking-search-field" style={{ flex: 1 }} disabled={disabled}>
+            <InputGroupInput
               ref={inputRef}
+              disabled={disabled}
               id={inputId}
               type="text"
               role="combobox"
@@ -732,6 +736,7 @@ export function AddItemPanel({
               aria-haspopup="listbox"
               aria-describedby={hintId}
               {...(activeId ? { 'aria-activedescendant': activeId } : {})}
+              aria-label="Search equipment and bundles"
               placeholder="Search equipment, bundles, SKU, or serial…"
               value={query}
               onFocus={() => {
@@ -754,58 +759,22 @@ export function AddItemPanel({
               }}
               onKeyDown={onKeyDown}
               style={{
-                ...inputStyle,
                 width: '100%',
                 minHeight: 44,
-                paddingLeft: 34,
-                paddingRight: query ? 40 : 12,
+                padding: '8px 10px',
                 borderRadius: 'var(--r-btn)',
               }}
             />
-            <span
-              aria-hidden="true"
-              style={{
-                position: 'absolute',
-                left: 10,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                display: 'inline-flex',
-                color: 'var(--muted)',
-                pointerEvents: 'none',
-              }}
-            >
-              <Icon name="search" size={16} />
-            </span>
+            <InputGroupAddon aria-hidden="true"><Icon name="search" size={16} /></InputGroupAddon>
             {query && (
-              <button
-                type="button"
-                className="press"
-                aria-label="Clear search query"
-                onClick={() => {
-                  setQuery('')
-                  setActiveIndex(0)
-                  inputRef.current?.focus()
-                }}
-                style={{
-                  position: 'absolute',
-                  right: 8,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--muted)',
-                  cursor: 'pointer',
-                  padding: 4,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: 4,
-                }}
-              >
-                <Icon name="close" size={14} />
-              </button>
+              <InputGroupAddon align="inline-end" style={{ padding: 0 }}>
+                <Button type="button" variant="ghost" aria-label="Clear search query"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => { setQuery(''); setActiveIndex(0); inputRef.current?.focus() }}
+                  style={{ width: 44, minWidth: 44, padding: 0 }} icon="close" />
+              </InputGroupAddon>
             )}
-          </div>
+          </InputGroup>
 
           {onScan && (
             <button
@@ -915,9 +884,10 @@ export function AddItemPanel({
             {/* ── Search field (popover mode only) ─────────────────────── */}
           {!inline && (
             <div style={{ padding: 10, borderBottom: '1px solid var(--border)' }}>
-              <div style={{ position: 'relative' }}>
-                <input
+              <InputGroup className="booking-search-field" disabled={disabled}>
+                <InputGroupInput
                   ref={inputRef}
+                  disabled={disabled}
                   id={inputId}
                   type="text"
                   role="combobox"
@@ -929,6 +899,7 @@ export function AddItemPanel({
                   aria-haspopup="listbox"
                   aria-describedby={hintId}
                   {...(activeId ? { 'aria-activedescendant': activeId } : {})}
+                  aria-label="Search equipment and bundles"
                   placeholder="Search equipment, bundles, SKU, or serial…"
                   value={query}
                   onFocus={() => setFiltersExpanded(false)}
@@ -939,28 +910,21 @@ export function AddItemPanel({
                   }}
                   onKeyDown={onKeyDown}
                   style={{
-                    ...inputStyle,
                     width: '100%',
-                    height: 36,
-                    paddingLeft: 32,
-                    paddingRight: 10,
+                    minHeight: 44,
+                    padding: '8px 10px',
                   }}
                 />
-                <span
-                  aria-hidden="true"
-                  style={{
-                    position: 'absolute',
-                    left: 10,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    display: 'inline-flex',
-                    color: 'var(--muted)',
-                    pointerEvents: 'none',
-                  }}
-                >
-                  <Icon name="search" size={15} />
-                </span>
-              </div>
+            <InputGroupAddon aria-hidden="true"><Icon name="search" size={16} /></InputGroupAddon>
+            {query && (
+              <InputGroupAddon align="inline-end" style={{ padding: 0 }}>
+                <Button type="button" variant="ghost" aria-label="Clear search query"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => { setQuery(''); setActiveIndex(0); inputRef.current?.focus() }}
+                  style={{ width: 44, minWidth: 44, padding: 0 }} icon="close" />
+              </InputGroupAddon>
+            )}
+              </InputGroup>
             </div>
           )}
 

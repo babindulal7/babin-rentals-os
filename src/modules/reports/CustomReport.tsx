@@ -10,6 +10,8 @@ import Icon from '../../components/ui/Icon'
 import { formatMoney, rupees } from '../../lib/money'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
+import { IS_MOCK } from '../../lib/supabase'
+import { ReportEmpty } from '../../components/ui/reports'
 import { ROWS } from '../../data/rentals'
 import { CLIENTS_DATA } from '../../data/clients'
 import { CASES } from '../../data/cases'
@@ -282,8 +284,18 @@ export default function CustomReport() {
 
       <ReportFamiliesNav current="Custom" />
 
-      {/* Domain Selection & Toolbar */}
-      <ReportToolbar
+      {!IS_MOCK ? (
+        <ReportEmpty
+          icon="tool"
+          title="Custom Query Builder not connected to live database"
+          description="The ad-hoc custom query builder is currently available only in mock/demo mode. Production reporting requires authorized aggregations and row-level access controls."
+          remedy="Please use dedicated verified reports (Revenue, Rentals, Inventory, Clients) for production queries."
+          sourceMissing={true}
+        />
+      ) : (
+        <>
+          {/* Domain Selection & Toolbar */}
+          <ReportToolbar
         title="Custom Report Builder"
         value={filters}
         onChange={setFilters}
@@ -438,6 +450,8 @@ export default function CustomReport() {
           </table>
         )}
       </DataTableShell>
+        </>
+      )}
     </div>
   )
 }

@@ -39,23 +39,74 @@ export function InfoTooltip({ content, label = 'More info', size = 14, style }: 
     setCoords({ top, left, placeAbove })
   }, [])
 
-  const handleOpen = () => {
+  const openTimer = useRef<number | null>(null)
+
+  const clearOpenTimer = useCallback(() => {
+    if (openTimer.current !== null) {
+      window.clearTimeout(openTimer.current)
+      openTimer.current = null
+    }
+  }, [])
+
+  const handleOpen = useCallback(() => {
     updatePosition()
     setIsOpen(true)
-  }
+  }, [updatePosition])
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setIsOpen(false)
-  }
+  }, [])
+
+  const handleMouseEnter = useCallback(() => {
+    clearOpenTimer()
+    openTimer.current = window.setTimeout(() => {
+      handleOpen()
+      openTimer.current = null
+    }, 300)
+  }, [clearOpenTimer, handleOpen])
+
+  const handleMouseLeave = useCallback(() => {
+    clearOpenTimer()
+    handleClose()
+  }, [clearOpenTimer, handleClose])
+
+  const handleFocus = useCallback(() => {
+    clearOpenTimer()
+    handleOpen()
+  }, [clearOpenTimer, handleOpen])
+
+  const handleBlur = useCallback(() => {
+    clearOpenTimer()
+    handleClose()
+  }, [clearOpenTimer, handleClose])
 
   const handleToggle = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    clearOpenTimer()
     if (!isOpen) {
       updatePosition()
     }
     setIsOpen((prev) => !prev)
   }
+
+  // Clear pending timers on unmount and ensure direct focus/blur events trigger immediate open/close
+  useEffect(() => {
+    const el = triggerRef.current
+    if (el) {
+      el.addEventListener('focus', handleFocus)
+      el.addEventListener('blur', handleBlur)
+    }
+    return () => {
+      if (el) {
+        el.removeEventListener('focus', handleFocus)
+        el.removeEventListener('blur', handleBlur)
+      }
+      if (openTimer.current !== null) {
+        window.clearTimeout(openTimer.current)
+      }
+    }
+  }, [handleFocus, handleBlur])
 
   // Handle click outside and Escape key
   useEffect(() => {
@@ -117,10 +168,10 @@ export function InfoTooltip({ content, label = 'More info', size = 14, style }: 
         aria-label={label}
         aria-expanded={isOpen}
         onClick={handleToggle}
-        onMouseEnter={handleOpen}
-        onMouseLeave={handleClose}
-        onFocus={handleOpen}
-        onBlur={handleClose}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         style={{
           display: 'inline-flex',
           alignItems: 'center',

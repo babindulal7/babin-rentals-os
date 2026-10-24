@@ -231,13 +231,11 @@ input[type='search']::-webkit-search-results-decoration {
   animation: livePulse 2s ease-in-out infinite;
 }
 
-@media (hover: hover) and (pointer: fine) {
-  .surface-card.lift:hover, .card.interactive:hover,
-  .card[data-interactive='true']:hover,
-  .surface-card[data-interactive='true']:not([aria-disabled='true']):hover {
-    background: var(--hover-card);
-    transition: background-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
-  }
+.surface-card.lift:hover, .card.interactive:hover,
+.card[data-interactive='true']:hover,
+.surface-card[data-interactive='true']:not([aria-disabled='true']):hover {
+  background: var(--hover-card);
+  transition: background-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
 @media (prefers-reduced-motion: reduce) {
   .app-modal,
@@ -282,6 +280,15 @@ input[type='search']::-webkit-search-results-decoration {
 .data-table tbody tr:hover, .operations-table tbody tr:hover, .operations-v2__table tbody tr:hover, .data-table__row--interactive:hover {
   background: color-mix(in srgb, var(--nav-active-bg) 36%, transparent);
 }
+.data-table-selection-hit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--control-height);
+  min-height: var(--control-height);
+  cursor: pointer;
+}
+
 .data-table input[type='checkbox'],
 .operations-table input[type='checkbox'] {
   appearance: none;
@@ -774,4 +781,14 @@ div:not(.equipment-record-grid):has(> .information-drawer-anchor) { grid-templat
     padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
   }
 }
+
+/* coss InputGroup (data-slot contract from InputGroup.tsx) - interaction
+   states inline styles cannot express. Same focus-within treatment as
+   operations-table rows; an invalid group focused keeps the danger ring so a
+   failing money field reads the same as an invalid focused row. Resting
+   border/background/height stay inline in the component; these rules only
+   add rings. */
+[data-slot='input-group'] { transition: border-color var(--dur-fast) var(--ease); }
+[data-slot='input-group']:focus-within { outline: 2px solid var(--input-focus); outline-offset: -2px; }
+[data-slot='input-group'][data-invalid]:focus-within { outline-color: var(--danger); }
 

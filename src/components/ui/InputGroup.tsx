@@ -1,5 +1,5 @@
-import { forwardRef } from 'react'
-import type { ComponentProps, MouseEvent } from 'react'
+import { Children, forwardRef, isValidElement } from 'react'
+import type { ComponentProps, MouseEvent, ReactNode } from 'react'
 import { cn } from '../../lib/cn'
 
 export type InputGroupAddonAlign = 'inline-start' | 'inline-end' | 'block-start' | 'block-end'
@@ -12,11 +12,43 @@ export interface InputGroupProps extends ComponentProps<'div'> {
 /**
  * coss-compliant InputGroup container.
  * Groups inline/block addons, prefix/suffix text, and inputs with unified border, focus, and state styling.
+ *
+ * Rewritten from Tailwind utility classes — `relative inline-flex w-full ... border
+ * ...` — to the app's real inline-style + CSS-variable system, following the same
+ * precedent as Button/Modal/Toast/cossDialog: Tailwind's Vite plugin is
+ * registered but no CSS file in the ops bundle imports `tailwindcss`, so those
+ * classes compiled to nothing and every live InputGroup (MoneyField,
+ * ConfirmDialog's reason gate, equipmentAssist) rendered as a borderless
+ * block. Component API is unchanged: `invalid`, `disabled`, `align`,
+ * data-slot attributes, and the addon focus-transfer behavior all keep their
+ * contracts. Only the `:focus-within`/`[data-invalid]` rings live in
+ * ui-v2.css — inline styles cannot express them, and the operations-table
+ * focus-within pattern is the established token-reading home for exactly this.
  */
+
+/** True when a direct child is the textarea part (or a bare <textarea>). */
+function childIsTextarea(child: ReactNode): boolean {
+  return isValidElement(child) && (child.type === InputGroupTextarea || child.type === 'textarea')
+}
+
+/** True when a direct child is an addon pinned to a block edge. */
+function childIsBlockAddon(child: ReactNode): boolean {
+  if (!isValidElement(child)) return false
+  const align = (child.props as { align?: InputGroupAddonAlign }).align
+  return align === 'block-start' || align === 'block-end'
+}
+
 export const InputGroup = forwardRef<HTMLDivElement, InputGroupProps>(function InputGroup(
-  { className, invalid = false, disabled = false, children, ...props },
+  { className, invalid = false, disabled = false, children, style, ...props },
   ref
 ) {
+  const childrenArray = Children.toArray(children)
+  /* The dead utility classes expressed this with `has-[textarea]:flex-col` /
+     `has-[[data-align=block-*]]:flex-col`; a direct-children scan says the
+     same thing without depending on CSS :has() support. */
+  const isBlockLayout =
+    childrenArray.some(childIsTextarea) || childrenArray.some(childIsBlockAddon)
+
   return (
     <div
       ref={ref}
@@ -24,20 +56,22 @@ export const InputGroup = forwardRef<HTMLDivElement, InputGroupProps>(function I
       data-slot="input-group"
       data-invalid={invalid ? '' : undefined}
       data-disabled={disabled ? '' : undefined}
-      className={cn(
-        'relative inline-flex w-full min-w-0 items-center rounded-[var(--r-input,8px)] border transition-all duration-150',
-        invalid
-          ? 'border-[var(--danger,#ef4444)] ring-1 ring-[var(--danger,#ef4444)]'
-          : 'border-[var(--input-border,var(--border))] focus-within:border-[var(--primary,#386af7)] focus-within:ring-2 focus-within:ring-[var(--primary,#386af7)]/20',
-        disabled
-          ? 'opacity-60 pointer-events-none bg-[var(--card2,#13233a)]'
-          : 'bg-[var(--input-bg,var(--card))]',
-        'has-[textarea]:h-auto has-[textarea]:flex-col has-[[data-align=block-start]]:flex-col has-[[data-align=block-end]]:flex-col',
-        className
-      )}
+      className={cn(className)}
       style={{
+        position: 'relative',
+        display: 'flex',
+        flexDirection: isBlockLayout ? 'column' : 'row',
+        alignItems: isBlockLayout ? 'stretch' : 'center',
+        width: '100%',
+        minWidth: 0,
         minHeight: 'var(--tap, 44px)',
+        borderRadius: 'var(--r-input, 8px)',
+        border: `1px solid ${invalid ? 'var(--danger)' : 'var(--input-border, var(--border))'}`,
+        background: disabled ? 'var(--surface-inset, var(--card2))' : 'var(--input-bg, var(--card))',
+        opacity: disabled ? 0.6 : 1,
+        pointerEvents: disabled ? 'none' : undefined,
         boxShadow: 'var(--shadow-inset, 0 1px 2px rgba(0, 0, 0, 0.05))',
+        ...style,
       }}
       {...props}
     >
@@ -55,7 +89,7 @@ export interface InputGroupAddonProps extends ComponentProps<'div'> {
  * Clicking a non-interactive addon transfers focus to the child input.
  */
 export const InputGroupAddon = forwardRef<HTMLDivElement, InputGroupAddonProps>(function InputGroupAddon(
-  { className, align = 'inline-start', onMouseDown, children, ...props },
+  { className, align = 'inline-start', onMouseDown, children, style, ...props },
   ref
 ) {
   const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
@@ -73,20 +107,46 @@ export const InputGroupAddon = forwardRef<HTMLDivElement, InputGroupAddonProps>(
     }
   }
 
+  /* Base padding/order per alignment; the visual position comes from flex
+     order, matching the dead `order-first`/`order-last` utility intent. The
+     input itself carries order 0, so -1 lands before it and 10 after. */
+  const alignStyle: Record<InputGroupAddonAlign, ComponentProps<'div'>['style']> = {
+    'inline-start': { order: -1, paddingInlineStart: 12, paddingInlineEnd: 4 },
+    'inline-end': { order: 10, paddingInlineStart: 4, paddingInlineEnd: 12 },
+    'block-start': {
+      order: -1,
+      width: '100%',
+      justifyContent: 'flex-start',
+      padding: '8px 12px 6px',
+      borderBottom: '1px solid var(--border)',
+    },
+    'block-end': {
+      order: 10,
+      width: '100%',
+      justifyContent: 'space-between',
+      padding: '8px 12px',
+      borderTop: '1px solid var(--border)',
+      background: 'var(--surface-inset, var(--card2))',
+    },
+  }
+
   return (
     <div
       ref={ref}
       data-slot="input-group-addon"
       data-align={align}
       onMouseDown={handleMouseDown}
-      className={cn(
-        'flex select-none items-center justify-center gap-1.5 text-[var(--muted,#9eaabb)] shrink-0',
-        align === 'inline-start' && 'order-first ps-3 pe-1',
-        align === 'inline-end' && 'order-last pe-3 ps-1',
-        align === 'block-start' && 'order-first w-full justify-start px-3 pt-2 pb-1 border-b border-[var(--border)]',
-        align === 'block-end' && 'order-last w-full justify-between items-center px-3 py-2 border-t border-[var(--border)] bg-[var(--card2)]/50',
-        className
-      )}
+      className={cn(className)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        flexShrink: 0,
+        gap: 6,
+        userSelect: 'none',
+        color: 'var(--muted)',
+        ...alignStyle[align],
+        ...style,
+      }}
       {...props}
     >
       {children}
@@ -100,17 +160,24 @@ export type InputGroupTextProps = ComponentProps<'span'>
  * Text addon (e.g. "Rs.", "NPR", ".com", etc.).
  */
 export const InputGroupText = forwardRef<HTMLSpanElement, InputGroupTextProps>(function InputGroupText(
-  { className, children, ...props },
+  { className, children, style, ...props },
   ref
 ) {
   return (
     <span
       ref={ref}
       data-slot="input-group-text"
-      className={cn(
-        'flex items-center text-[var(--t-meta,13px)] font-medium text-[var(--text2,#b8c4d3)] pointer-events-none font-mono',
-        className
-      )}
+      className={cn(className)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        fontSize: 'var(--t-meta, 13px)',
+        fontWeight: 500,
+        color: 'var(--text2)',
+        pointerEvents: 'none',
+        fontFamily: 'var(--font-num, monospace)',
+        ...style,
+      }}
       {...props}
     >
       {children}
@@ -124,21 +191,27 @@ export type InputGroupInputProps = ComponentProps<'input'>
  * Unstyled input control designed to seamlessly expand within an InputGroup.
  */
 export const InputGroupInput = forwardRef<HTMLInputElement, InputGroupInputProps>(function InputGroupInput(
-  { className, ...props },
+  { className, style, ...props },
   ref
 ) {
   return (
     <input
       ref={ref}
       data-slot="input-group-input"
-      className={cn(
-        'flex-1 min-w-0 bg-transparent px-3 py-2 text-[var(--t-ui,15px)] text-[var(--text,#f1f5f9)] placeholder:text-[var(--muted,#9eaabb)] outline-none border-none focus:ring-0',
-        'disabled:cursor-not-allowed',
-        className
-      )}
+      className={cn(className)}
       style={{
+        flex: 1,
+        minWidth: 0,
         height: '100%',
         minHeight: 'var(--tap, 44px)',
+        background: 'transparent',
+        border: 'none',
+        outline: 'none',
+        padding: '8px 12px',
+        fontSize: 'var(--t-ui, 15px)',
+        color: 'var(--text)',
+        fontFamily: 'inherit',
+        ...style,
       }}
       {...props}
     />
@@ -151,7 +224,7 @@ export type InputGroupTextareaProps = ComponentProps<'textarea'>
  * Unstyled textarea control designed for InputGroup block layouts.
  */
 export const InputGroupTextarea = forwardRef<HTMLTextAreaElement, InputGroupTextareaProps>(function InputGroupTextarea(
-  { className, rows = 3, ...props },
+  { className, rows = 3, style, ...props },
   ref
 ) {
   return (
@@ -159,11 +232,21 @@ export const InputGroupTextarea = forwardRef<HTMLTextAreaElement, InputGroupText
       ref={ref}
       rows={rows}
       data-slot="input-group-textarea"
-      className={cn(
-        'w-full min-w-0 bg-transparent px-3 py-2 text-[var(--t-ui,15px)] text-[var(--text,#f1f5f9)] placeholder:text-[var(--muted,#9eaabb)] outline-none border-none focus:ring-0 resize-y',
-        'disabled:cursor-not-allowed font-mono text-sm leading-relaxed',
-        className
-      )}
+      className={cn(className)}
+      style={{
+        width: '100%',
+        minWidth: 0,
+        background: 'transparent',
+        border: 'none',
+        outline: 'none',
+        padding: '10px 12px',
+        fontSize: 'var(--t-ui, 15px)',
+        color: 'var(--text)',
+        fontFamily: 'inherit',
+        lineHeight: 1.6,
+        resize: 'vertical',
+        ...style,
+      }}
       {...props}
     />
   )

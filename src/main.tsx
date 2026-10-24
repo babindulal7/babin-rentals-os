@@ -56,6 +56,7 @@ import './styles/ui-v2.css'
  * a screen so no screen can forget it.
  */
 import './styles/responsive.css'
+import './styles/shadcn-preset-pilot.css'
 import { REFERENCE_CASE_ERROR } from './lib/money'
 import { startAuditLogging } from './events/auditLogger'
 import { installGlobalErrorHandlers } from './lib/monitoring'

@@ -1,6 +1,6 @@
 /**
  * RULING 2026-10-22 (Babin: "activate membership"): the tier change is one RPC,
- * `change_client_membership` (0171). These pin what the action promises around
+ * `change_client_membership` (0174). These pin what the action promises around
  * it: who may call it, what it sends, that it believes only a confirmed answer,
  * that a server that does not have the function yet says so honestly, and that
  * the domain event fires only after the write is confirmed.

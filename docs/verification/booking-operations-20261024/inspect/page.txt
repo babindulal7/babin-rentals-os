@@ -1,0 +1,293 @@
+Skip to content
+BR
+Babin
+Rentals OS
+New Rental
+Today
+Operations
+Rentals
+Calendar
+Crew Assist
+Inventory
+Clients
+Finance
+Tools
+Settings
+Light
+Dark
+Glass
+Operations
+BA
+All Active
+86
+Pack
+31
+Handover
+17
+Return
+24
+Reset
+14
+Cases
+0
+Today & Overdue (86)
+86 Overdue
+	Booking	Client	Items	Stage	Time	Action	
+	#0888	Dhaulagiri Weddings Pvt. Ltd.
+Sagarmatha Music Video
+	
+3 items
+Quick pull
+	
+Returned	3/7/2026 · 06:00	
+Reset
+	
+
+	#0898	Deepak Lama
+F1Soft Corporate Profile
+	
+8 items
+Standard kit
+	
+Returned	8/7/2026 · 06:00	
+Reset
+	
+
+	#0895	Bagmati Rentals Pvt. Ltd.
+Daraz 11.11 Campaign
+	
+10 items
+Heavy pull
+	
+Returned	7/7/2026 · 06:00	
+Reset
+	
+
+	#0892	Chitwan Creatives Pvt. Ltd.
+Dashain Family Campaign
+	
+2 items
+Quick pull
+	
+Returned	12/7/2026 · 06:00	
+Reset
+	
+
+	#0889	Everest Studios Pvt. Ltd.
+Lumbini Heritage Short
+	
+6 items
+Standard kit
+	
+Returned	11/7/2026 · 06:00	
+Reset
+	
+
+	#0899	Rara Films Pvt. Ltd.
+Thamel After Dark
+	
+7 items
+Standard kit
+	
+Returned	16/7/2026 · 06:00	
+Reset
+	
+
+	#0896	Kirat Weddings Pvt. Ltd.
+Nepal Cricket Highlights
+	
+3 items
+Quick pull
+	
+Returned	15/7/2026 · 06:00	
+Reset
+	
+
+	#0893	Machhapuchhre Foundation Pvt. Ltd.
+Annapurna Trek Series
+	
+5 items
+Standard kit
+	
+Returned	20/7/2026 · 06:00	
+Reset
+	
+
+	#0890	Phewa College of Media
+Nepal Investment Bank AGM
+	
+8 items
+Standard kit
+	
+Returned	19/7/2026 · 06:00	
+Reset
+	
+
+	#0900	Kailash Creatives Pvt. Ltd.
+Everest Base Camp Documentary
+	
+5 items
+Standard kit
+	
+Returned	18/7/2026 · 06:00	
+Reset
+	
+
+	#0715	Sagarmatha Pictures Pvt. Ltd.
+Annapurna Circuit — documentary shoot
+	
+18 items
+Heavy pull
+	
+Packed	16/7/2026 · 06:00	
+Handover
+	
+
+	#0897	Manaslu Studios Pvt. Ltd.
+Rara Lake Travel Film
+	
+5 items
+Standard kit
+	
+Returned	23/7/2026 · 06:00	
+Reset
+	
+
+	#0864	Gandaki Weddings Pvt. Ltd.
+Ncell Brand Campaign
+	
+4 items
+Standard kit
+	
+On Rent	21/7/2026 · 06:00	
+Return
+	
+
+	#0876	Prakash Rai
+Nepal Cricket Highlights
+	
+4 items
+Standard kit
+	
+On Rent	21/7/2026 · 06:00	
+Return
+	
+
+	#0883	Sunita Gurung
+Himalayan Airlines Safety Film
+	
+10 items
+Heavy pull
+	
+On Rent	23/7/2026 · 06:00	
+Return
+	
+
+	#0894	Bikash Shrestha
+Kathmandu Jazz Festival
+	
+8 items
+Standard kit
+	
+Returned	22/7/2026 · 06:00	
+Reset
+	
+
+	#0871	Himalaya Rentals Pvt. Ltd.
+Pokhara Paragliding Promo
+	
+10 items
+Heavy pull
+	
+On Rent	23/7/2026 · 06:00	
+Return
+	
+
+	#0878	Sherpa Media Pvt. Ltd.
+F1Soft Corporate Profile
+	
+5 items
+Standard kit
+	
+On Rent	25/7/2026 · 06:00	
+Return
+	
+
+	#0866	Langtang College of Media
+Wedding — Shrestha / Rai
+	
+6 items
+Standard kit
+	
+On Rent	25/7/2026 · 06:00	
+Return
+	
+
+	#0891	Himalaya Films Pvt. Ltd.
+Pokhara Paragliding Promo
+	
+10 items
+Heavy pull
+	
+Returned	27/7/2026 · 06:00	
+Reset
+	
+
+	#0885	Newa Foundation Pvt. Ltd.
+Chitwan Wildlife Feature
+	
+4 items
+Standard kit
+	
+On Rent	27/7/2026 · 06:00	
+Return
+	
+
+	#0873	Machhapuchhre Studios Pvt. Ltd.
+Annapurna Trek Series
+	
+6 items
+Standard kit
+	
+On Rent	27/7/2026 · 06:00	
+Return
+	
+
+	#0880	Sagarmatha Pictures Pvt. Ltd.
+Everest Base Camp Documentary
+	
+4 items
+Standard kit
+	
+On Rent	29/7/2026 · 06:00	
+Return
+	
+
+	#0901	Gosaikunda Foundation Pvt. Ltd.
+Nepal Tourism Board TVC
+	
+4 items
+Standard kit
+	
+Returned	26/7/2026 · 06:00	
+Reset
+	
+
+	#0868	Dhaulagiri Creatives Pvt. Ltd.
+Sagarmatha Music Video
+	
+5 items
+Standard kit
+	
+On Rent	29/7/2026 · 06:00	
+Return
+	
+Showing 1–25 of 86
+1
+2
+3
+4
+Rows per page
+25 / page
+50 / page
+100 / page

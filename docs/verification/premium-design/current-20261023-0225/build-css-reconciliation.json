@@ -1,0 +1,12 @@
+{
+  "generatedAt": "2026-10-23T06:44:01.666Z",
+  "currentHash": "4a2cb841d83e5679c2e25f4756847a6196baccfb1fd22f825870c5e7a20c00fc",
+  "hashWithOnlyCopyTargetReverted": "9abe07abe0f35dd156ac2700190a2ab025abaa113c6ae7d45644b652d9554866",
+  "buildInputHash": "9abe07abe0f35dd156ac2700190a2ab025abaa113c6ae7d45644b652d9554866",
+  "builtCopyRule": [
+    {
+      "file": "dist/assets/RecordForm-CWnX7kS3.css",
+      "rule": ".equipment-copy-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;min-width:var(--control-height);min-height:var(--control-height);border:1px solid var(--border);border-radius:var(--r-btn);background:var(--card2);color:var(--text);font-size:var(--t-th);font-family:inherit;cursor:pointer}"
+    }
+  ]
+}

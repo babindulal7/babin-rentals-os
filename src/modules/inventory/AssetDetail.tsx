@@ -38,6 +38,9 @@ import { Badge } from '../../components/ui/Badge'
 import { ServiceDueBadge } from '../../components/ui/ServiceDueBadge'
 import { ServicePlanCard } from './components/ServicePlanCard'
 import { AdjustStockModal } from './AdjustStockModal'
+import { AddUnitsModal } from './modals/AddUnitsModal'
+import { RetireUnitModal } from './modals/RetireUnitModal'
+import { recordEditorOptions } from '../../lib/queries/recordEditor'
 import { readServiceDue } from '../../lib/queries/serviceDue'
 import type { ServiceRow } from '../../lib/serviceDue'
 import './inventory.css'
@@ -325,6 +328,26 @@ function AssetDetailView() {
   /** Id of the unit whose inline editor is open, or null. One at a time. */
   const [editingUnit, setEditingUnit] = useState<string | null>(null)
 
+  const [addUnitsOpen, setAddUnitsOpen] = useState(false)
+  const [retiringUnit, setRetiringUnit] = useState<InventoryUnitRow | null>(null)
+  const [warehouses, setWarehouses] = useState<Array<{ id: string; name: string }>>([])
+  const [unitSearch, setUnitSearch] = useState('')
+  const [unitStateFilter, setUnitStateFilter] = useState<string>('ALL')
+
+  useEffect(() => {
+    let active = true
+    void recordEditorOptions('warehouses')
+      .then((res) => {
+        if (active && res && res.length > 0) setWarehouses(res)
+      })
+      .catch(() => {
+        // Fallback handled in AddUnitsModal
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
   /* The record, from `products_v`/`product_units_v` keyed on the ref in the
      URL. `rows[0]` rather than a bespoke one-record hook: `useList` underneath
      means "no such asset" arrives as `isEmpty` — a successful query that
@@ -345,6 +368,26 @@ function AssetDetailView() {
   const record = detail.rows[0] ?? null
   const product = record?.product ?? null
   const units = useMemo(() => record?.units ?? [], [record])
+
+  const filteredUnits = useMemo(() => {
+    return units.filter((u) => {
+      if (unitStateFilter !== 'ALL') {
+        if (unitStateFilter === 'Active' && u.state === 'Retired') return false
+        if (unitStateFilter !== 'Active' && u.state !== unitStateFilter) return false
+      }
+      if (!unitSearch.trim()) return true
+      const q = unitSearch.toLowerCase().trim()
+      return (
+        u.assetTag.toLowerCase().includes(q) ||
+        (u.serialNo && u.serialNo.toLowerCase().includes(q)) ||
+        (u.state && u.state.toLowerCase().includes(q)) ||
+        (u.rack && u.rack.toLowerCase().includes(q)) ||
+        (u.shelf && u.shelf.toLowerCase().includes(q)) ||
+        (u.bin && u.bin.toLowerCase().includes(q)) ||
+        (u.condition && u.condition.toLowerCase().includes(q))
+      )
+    })
+  }, [units, unitStateFilter, unitSearch])
 
   /* When the link carried a serial or tag, open on the unit it meant. */
   const matchedUnitId = record?.matchedUnitId ?? null
@@ -595,12 +638,84 @@ function AssetDetailView() {
       {/* Tab 1: Units */}
       {activeTab === 'Units' && (
         <Card title="Fleet Units & Serial Records">
-          {!serialised && (
+          {!serialised ? (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
               <span>Recorded bulk quantity: <strong className="figure">{product.totalQuantity}</strong></span>
               {user && canAdjustStock(user.role) && (
                 <Button variant="secondary" onClick={() => setAdjustingStock(true)}>Adjust Stock</Button>
               )}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  {[
+                    { id: 'ALL', label: `All (${units.length})` },
+                    { id: 'Active', label: `Active (${liveUnitCount})` },
+                    { id: 'In Stock', label: `In Stock (${inStockCount})` },
+                    { id: 'On Rent', label: `On Rent (${product.unitsByState['On Rent'] ?? 0})` },
+                    { id: 'Maintenance', label: `Maintenance (${product.unitsByState.Maintenance ?? 0})` },
+                    { id: 'Retired', label: `Retired (${retiredCount})` },
+                  ].map((chip) => {
+                    const active = unitStateFilter === chip.id
+                    return (
+                      <button
+                        key={chip.id}
+                        type="button"
+                        onClick={() => setUnitStateFilter(chip.id)}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: 'var(--r-badge, 999px)',
+                          fontSize: 'var(--t-th, 12px)',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          border: active ? '1px solid var(--btn-primary-bg, #2563eb)' : '1px solid var(--border)',
+                          background: active ? 'var(--btn-primary-bg, #2563eb)' : 'var(--card2)',
+                          color: active ? '#ffffff' : 'var(--text2)',
+                          transition: 'all var(--dur-fast) var(--ease)',
+                        }}
+                      >
+                        {chip.label}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {user && ['Owner', 'Admin', 'Manager', 'Warehouse'].includes(user.role) && (
+                  <Button
+                    variant="primary"
+                    icon="plus"
+                    onClick={() => setAddUnitsOpen(true)}
+                    style={{ minHeight: 44, padding: '0 16px' }}
+                  >
+                    + Add Units
+                  </Button>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <input
+                  type="search"
+                  placeholder="Filter by tag, serial, shelf location, condition…"
+                  value={unitSearch}
+                  onChange={(e) => setUnitSearch(e.target.value)}
+                  style={{
+                    flex: 1,
+                    maxWidth: 420,
+                    padding: '8px 12px',
+                    borderRadius: 'var(--r-btn, 8px)',
+                    border: '1px solid var(--border)',
+                    background: 'var(--card)',
+                    color: 'var(--text)',
+                    fontSize: 'var(--t-meta, 13px)',
+                  }}
+                />
+                {unitSearch && (
+                  <Button variant="ghost" size="sm" onClick={() => setUnitSearch('')}>
+                    Clear
+                  </Button>
+                )}
+              </div>
             </div>
           )}
           {units.length === 0 ? (
@@ -609,11 +724,15 @@ function AssetDetailView() {
                 ? 'No unit rows exist for this product yet.'
                 : `A ${product.trackingMode.toLowerCase()}-tracked SKU has no per-serial unit rows — its stock is the quantity above.`}
             </div>
+          ) : filteredUnits.length === 0 ? (
+            <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--muted)', fontSize: 'var(--t-meta)' }}>
+              No units match the filter &ldquo;{unitSearch || unitStateFilter}&rdquo;.
+            </div>
           ) : viewport === 'phone' ? (
             /* Shell rule: "Tables become card rows below 768." Each unit becomes
-               one card carrying the same facts and the same two actions. */
+               one card carrying the same facts and the same actions. */
             <div className="inventory-card-grid">
-              {units.map((u) => (
+              {filteredUnits.map((u) => (
                 <article key={u.id} className="inventory-model-card">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
                     <span className="inventory-asset-code" style={{ fontSize: 'var(--t-meta)' }}>{u.assetTag}</span>
@@ -627,11 +746,21 @@ function AssetDetailView() {
                     {' · '}
                     <span className="figure">{u.runningHours}h</span> run
                   </div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                     <Button variant="secondary" size="sm" onClick={() => setLabelUnit(u)}>Label</Button>
                     <Button variant="ghost" size="sm" onClick={() => setEditingUnit((prev) => (prev === u.id ? null : u.id))}>
                       {editingUnit === u.id ? 'Close' : 'Edit'}
                     </Button>
+                    {u.state !== 'Retired' && user && ['Owner', 'Admin', 'Manager', 'Warehouse'].includes(user.role) && (
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => setRetiringUnit(u)}
+                        style={{ minHeight: 36 }}
+                      >
+                        Retire
+                      </Button>
+                    )}
                   </div>
                   {editingUnit === u.id && <UnitEditor unit={u} money={money} onDone={() => setEditingUnit(null)} />}
                 </article>
@@ -655,7 +784,7 @@ function AssetDetailView() {
                     </tr>
                   </thead>
                   <tbody>
-                    {units.map(u => {
+                    {filteredUnits.map(u => {
                       const expanded = expandedUnits.has(u.id)
                       return (
                         <Fragment key={u.id}>
@@ -712,11 +841,21 @@ function AssetDetailView() {
                               {adDate(u.nextMaintenanceAtAd)}
                             </td>
                             <td style={{ padding: '10px 8px', textAlign: 'right' }}>
-                              <div style={{ display: 'inline-flex', gap: 6 }}>
+                              <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
                                 <Button variant="ghost" onClick={() => setLabelUnit(u)}>Label</Button>
                                 <Button variant="ghost" onClick={() => setEditingUnit((prev) => (prev === u.id ? null : u.id))}>
                                   {editingUnit === u.id ? 'Close' : 'Edit'}
                                 </Button>
+                                {u.state !== 'Retired' && user && ['Owner', 'Admin', 'Manager', 'Warehouse'].includes(user.role) && (
+                                  <Button
+                                    variant="danger"
+                                    size="sm"
+                                    onClick={() => setRetiringUnit(u)}
+                                    style={{ minHeight: 36 }}
+                                  >
+                                    Retire
+                                  </Button>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -1046,6 +1185,32 @@ function AssetDetailView() {
           currentQuantity={product.totalQuantity}
           onClose={() => setAdjustingStock(false)}
           onAdjusted={detail.refetch}
+        />
+      )}
+      {addUnitsOpen && serialised && (
+        <AddUnitsModal
+          isOpen={addUnitsOpen}
+          productId={product.id}
+          productName={product.name}
+          assetCode={product.assetCode}
+          warehouses={warehouses.length > 0 ? warehouses : [{ id: '00000000-0000-0000-0000-000000000011', name: 'Central Camera Vault' }]}
+          onClose={() => setAddUnitsOpen(false)}
+          onUnitsAdded={() => {
+            setAddUnitsOpen(false)
+            detail.refetch()
+          }}
+        />
+      )}
+      {retiringUnit && (
+        <RetireUnitModal
+          isOpen={Boolean(retiringUnit)}
+          unit={retiringUnit}
+          productName={product.name}
+          onClose={() => setRetiringUnit(null)}
+          onRetired={() => {
+            setRetiringUnit(null)
+            detail.refetch()
+          }}
         />
       )}
       </div>

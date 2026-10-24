@@ -18,6 +18,124 @@
   --dashboard-accent-soft: var(--ext-bg);
 }
 
+/* Global-shell wireframes: a compact movement workspace, using shared tokens. */
+.dispatch-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  min-width: 0;
+}
+.dispatch-toolbar__intro,
+.dispatch-toolbar__dates {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.dispatch-toolbar__intro h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--t-h3, 18px);
+  font-weight: 600;
+  color: var(--text);
+}
+.dispatch-toolbar__dates { flex-wrap: wrap; }
+.dispatch-toolbar__presets {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-btn);
+  background: var(--surface-2);
+}
+.dispatch-toolbar__presets button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--r-btn);
+  background: transparent;
+  color: var(--text2);
+  font: inherit;
+  font-size: var(--t-meta);
+  font-weight: 600;
+  cursor: pointer;
+}
+.dispatch-toolbar__presets button[aria-pressed='true'] {
+  background: var(--card);
+  color: var(--text);
+  box-shadow: var(--shadow-xs);
+}
+.dispatch-toolbar__presets button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.dispatch-summaries {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--density-panel-gap, 12px);
+}
+.dispatch-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+}
+.dispatch-summary__icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-btn);
+  background: var(--ext-bg);
+  color: var(--primary-text);
+}
+.dispatch-summary--returns .dispatch-summary__icon {
+  background: var(--success-bg);
+  color: var(--success-text);
+}
+.dispatch-summary__body { min-width: 0; flex: 1; }
+.dispatch-summary__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+.dispatch-summary__count { font-size: 28px; line-height: 1.2; color: var(--text); }
+.dispatch-summary h2 { margin: 0; font-size: var(--t-ui); font-weight: 600; color: var(--text); }
+.dispatch-summary__period { margin-left: auto; font-size: var(--t-meta); color: var(--text2); }
+.dispatch-summary p { margin: 4px 0 0; font-size: var(--t-meta); color: var(--text2); }
+.dispatch-summary .dispatch-summary__warning { display: flex; align-items: center; gap: 4px; color: var(--warn-text); }
+
+@media (max-width: 767px) {
+  .dispatch-toolbar__intro h1 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  /* The same presets remain in the date picker on phones. */
+  .dispatch-toolbar__presets { display: none; }
+  .dispatch-toolbar__dates { margin-left: auto; }
+  .dispatch-summary { padding: 12px; gap: 8px; align-items: flex-start; }
+  .dispatch-summary__icon { width: 28px; height: 36px; background: transparent; }
+  .dispatch-summary--returns .dispatch-summary__icon { background: transparent; }
+  .dispatch-summary__heading { gap: 2px 6px; }
+  .dispatch-summary__count { font-size: 24px; }
+  .dispatch-summary h2 { font-size: 14px; }
+  .dispatch-summary__period { width: 100%; margin-left: 0; font-size: 12px; }
+  .dispatch-summary p { font-size: 12px; line-height: 1.4; }
+}
+
 /* Center viewport on dispatch operations: Pickups and Returns columns side-by-side */
 .rental-dashboard__panels {
   display: grid;
@@ -684,7 +802,6 @@
 
 .movement-card:hover {
   filter: brightness(1.03);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
   border-color: var(--w20, var(--border2));
   background: color-mix(in srgb, var(--card2) 80%, var(--bgglow));
@@ -3216,7 +3333,9 @@
   padding-inline: 0.8rem;
 }
 
-@container (min-width: 28rem) {
+/* Queue width, rather than a new viewport breakpoint: retain two columns until
+   the client, full date and 56px floor action have enough room together. */
+@container (min-width: 36rem) {
   .rental-dashboard .rental-dashboard__panels .movement-card {
     grid-template-columns: minmax(0, 1fr) auto auto;
     grid-template-areas:
@@ -3241,6 +3360,9 @@
 }
 
 .rental-dashboard .movement-card__status--expired {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
   color: var(--danger-text);
   background: color-mix(in srgb, var(--danger) 12%, var(--card));
   border: 1px solid color-mix(in srgb, var(--danger) 32%, transparent);
@@ -3414,4 +3536,16 @@
 .rental-dashboard .dashboard-situational-card:hover {
   border-color: var(--border2);
   box-shadow: var(--elevation-surface);
+}
+
+.rental-dashboard .rental-dashboard__panels .movement-card .movement-card__cta-btn {
+  min-height: 56px;
+}
+@media (max-width: 767px) {
+  .rental-dashboard .dispatch-toolbar .dashboard-master-date-control { width: auto; flex: 0 0 auto; }
+  .rental-dashboard .dispatch-toolbar .dashboard-master-date-control__date-btn {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 100px;
+  }
 }

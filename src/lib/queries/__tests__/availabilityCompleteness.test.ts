@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { planAssignment, readCandidates, readHeldForBooking, readHolds, readProductModes, readQuantityHolds } from '../availability'
+import { readProductAvailability } from '../productAvailability'
 
 const db = vi.hoisted(() => ({
   tables: {} as Record<string, Array<Record<string, unknown>>>,
@@ -53,13 +54,28 @@ const reservations = () => Array.from({ length: 3 }, (_, n) => ({
   booking_id: `booking-${n}`, bookings: { booking_no: `BK-${n}` }, period, released_at: null,
 }))
 const units = () => Array.from({ length: 3 }, (_, n) => ({
-  id: `u-${n}`, product_id: 'p-1', asset_tag: `EQ-${n}`, serial_no: null, status: 'In Stock', retired_at: null,
+  id: `u-${n}`, product_id: 'p-1', asset_tag: `EQ-${n}`, serial_no: null, status: 'In Stock', condition: 'Good', retired_at: null,
 }))
 
 describe('availability reads must be complete before reporting stock', () => {
   beforeEach(() => {
     db.tables = { inventory_reservations: reservations(), product_units_v: units() }
     db.failure = ''; db.nullPage = false; db.nullTable = ''; db.networkThrows = false; db.repeat = false; db.calls = []; db.cap = 2
+  })
+
+  it('retains an actual damage finding even when product condition still says Good', async () => {
+    db.tables.damage_findings = [{ id: 'df-1', unit_id: 'u-0', voided_at: null }]
+    expect((await readCandidates(['p-1'])).get('p-1')?.[0]?.safetyHold).toContain('Damage finding')
+  })
+
+  it('refuses unavailable safety evidence instead of certifying stock', async () => {
+    db.nullTable = 'damage_findings'
+    await expect(readCandidates(['p-1'])).rejects.toThrow(/damage findings.*missing|incomplete/i)
+  })
+
+  it.each(['Missing Item', 'Needs Repair', 'Damaged'])('retains a genuine %s reset exception without using a pending queue as the hold', async problem => {
+    db.tables.cleaning_queue_entries = [{ id:'q-1',unit_id:'u-0',requires_clean:true,requires_reset:true,reset_completed_at:null,problem_state:problem,qc_fail_reason:null }]
+    expect((await readCandidates(['p-1'])).get('p-1')?.[0]?.safetyHold).toBe(problem)
   })
 
   it('includes serial holds beyond a server cap smaller than the requested page', async () => {
@@ -81,6 +97,30 @@ describe('availability reads must be complete before reporting stock', () => {
     const candidates = (await readCandidates(['p-1'])).get('p-1')
     expect(candidates).toHaveLength(3)
     expect(candidates?.every(candidate => candidate.openCleaning !== null)).toBe(true)
+  })
+
+  it('reads actual unit condition instead of using pending cleaning as a damage proxy', async () => {
+    db.tables.product_units_v = [{ ...units()[0], condition: 'Damaged' }]
+    const candidates = (await readCandidates(['p-1'])).get('p-1')
+    expect(candidates?.[0]?.condition).toBe('Damaged')
+  })
+
+  it.each([undefined, null, 'unknown'])('refuses an unreadable unit condition (%s)', async condition => {
+    db.tables.product_units_v = [{ ...units()[0], condition }]
+    await expect(readCandidates(['p-1'])).rejects.toThrow(/condition|incomplete/i)
+  })
+
+  it('reports pending-reset unit stock for a free window while retaining other unit holds', async () => {
+    db.tables.products_v = [{ id: 'p-1', tracking_mode: 'Serialised', total_quantity: 3 }]
+    db.tables.inventory_reservations = [reservations()[1]] as Array<Record<string, unknown>>
+    db.tables.cleaning_queue_entries = [{
+      id: 'reset-0', unit_id: 'u-0', requires_clean: true, requires_reset: true,
+      reset_completed_at: null, bookings: { booking_no: 'BK-0' },
+    }]
+    const answer = await readProductAvailability({ fromAd: '2026-10-21T00:00:00Z', toAd: '2026-10-22T00:00:00Z' }, ['p-1'])
+    expect(answer.get('p-1')?.unitsFree).toBe(2)
+    expect(answer.get('p-1')?.unitsHeld).toBe(1)
+    expect(db.tables.cleaning_queue_entries[0]?.reset_completed_at).toBeNull()
   })
 
   it.each(['serial', 'quantity', 'units', 'reset'])('refuses a failed later %s page rather than returning partial availability', async kind => {

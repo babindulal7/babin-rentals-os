@@ -44,6 +44,7 @@ vi.mock('../../../lib/queries/calendar', () => ({
   CALENDAR_BAR_KINDS: ['Reserved', 'On Rent'],
   calendarWindow: vi.fn().mockReturnValue({ dateRange: { column: 'pickup_at', fromAd: '2026-07-01', toAd: '2026-07-31' } }),
   fetchCalendarBars: vi.fn().mockResolvedValue({ rows: [], total: 0 }),
+  buildResourceTimeline: vi.fn().mockReturnValue([]),
   VIEWS: ['Month', 'Week', 'Timeline', 'Availability'],
   VIEWS_BY_WIDTH: {
     desktop: ['Month', 'Week', 'Timeline', 'Availability'],

@@ -365,6 +365,7 @@ function seed(options: { lines: LineSpec[]; serialUnits?: number; quantityTotal?
       serial_no: `SN-00${n}`,
       product_id: P_SERIAL,
       status: 'In Stock',
+      condition: 'Good',
       retired_at: null,
     })
   }

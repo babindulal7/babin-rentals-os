@@ -1,252 +1,179 @@
 # Before / after visual matrix
 
-Follow-up verification evidence: `docs/verification/premium-design/reverify-20261021-2327`. This later pass found clipped phone KPI labels and an identifier-font registration mismatch; corrected captures are kept separately from the original matrix below.
+23 October 2026. Current mock captures, with original 21 October baseline. **Keep the newer all-Outfit theme**, per Babin’s explicit answer. PASS below covers only header height, header hit targets/bounds and horizontal page overflow; no whole-workflow certification.
 
-Local mock only · 21 October 2026 NPT. The tables measure page overflow, header height and header control bounds/targets; PASS is scoped to those measurements, not an entire workflow certification.
+[Current verification](docs/verification/premium-design/current-20261023-0225/CURRENT_VERIFICATION.md) · [Gallery](docs/verification/premium-design/current-20261023-0225/gallery.html). Original before high-contrast data used an invalid theme name and is excluded from before comparisons.
 
-Before screenshots: `docs/verification/premium-design/before/`. After screenshots: `after/`. Raw computed values are in each folder’s `measurements.json`. [Side-by-side gallery](docs/verification/premium-design/gallery.html).
+## Observed issues
 
-## Verified issue register
+| Issue | Files/classes | Observation / result |
+|---|---|---|
+| Surface ownership | Card.tsx, theme.css, ui-v2.css | CSS-owned shared treatment; default, bordered, interactive, status and disabled assertions are recorded. |
+| Equipment save hierarchy | RecordWorkspace / RecordForm | One global Create/Save checked at 375/820/1440, alternate actions in More. |
+| Phone KPI clipping | module-shell.css / .module-kpi-strip | Historical clipping corrected; current complete Finance labels tested. |
+| Font roles | theme.css / token package | Newer all-Outfit choice retained; current loaded Outfit assertion recorded. |
+| Selection hit areas | ui-v2.css / .data-table-selection-hit, Inventory, RentalsList | 44px targets and real outer-edge selection clicks checked; small checkbox visuals retained. |
+| Preview honesty | equipmentAssist / EquipmentRecordEditor | No sample asset code, invented Active/Draft, generated unit-tag fallback or assumed relationship facts; missing persisted values are unavailable. |
+| Equipment navigation | EquipmentRecordEditor / equipment-wizard-stepper | Seven anchors retained, but a competing five-stage toggle exists in newer local code. OPEN against supplied brief. |
+| Today queue status | dashboard.css / .movement-card__badge-wrap | Long labels now wrap within their grid region; actual bounds checked at 1280/1440/1920. |
 
-| Issue | Owner | Before | After / evidence |
-|---|---|---|---|
-| Conflicting Card border/elevation | Card.tsx, theme.css, ui-v2.css | Inline 1.5px border competed with global CSS | CSS-owned 1px semantic outline, 10px radius; actual default/bordered/interactive/status/disabled Card variants checked in `checks/interactions.json` |
-| Equipment save hierarchy | RecordWorkspace, RecordForm | Header New Equipment plus bottom Create strip | One hosted Create/Save in header; alternate creation and Cancel in More; 375/820/1440 real clicks pass |
-| Small unit controls | equipment-assist.css, Inventory.tsx | 38px serial fields, 36px row icons, 28px inventory expand, 32px quick view | 44px minimums; computed unit sizes retained in interaction evidence |
-| Tablet form columns | equipment-assist.css | Description/gallery could occupy narrow grid tracks | Full-width groups at every width; Add/Edit use the same grid |
-| Tracking text contrast | equipment-assist.css | Dark text on dark selected fill | Existing selected foreground token; measured light/dark/high-contrast ratios in interaction evidence |
-| Phone Add reservation | shell.css | 106px tablet minimum survived into a 44px phone slot | Phone minimum reset to 44px, retaining targets and action order |
-| Finance / Calendar phone clipping | Finance.tsx, Calendar.tsx | Payment/Availability competed with Search and information | Search remains in More; primary and information remain reachable; final bounds below |
-| Mock indicator crowding | Header.tsx | Separate 44px phone button pushed profile off screen | Visible Mock profile face, same options in menu; desktop/tablet keep dedicated indicator |
-| Heavy local table shadow | rentals.css | Independent 20px table shadow | Shared DataTableShell elevation |
-| Today queue furniture | dashboard.css | Already-flat rows; larger local queue header | Shared outline/elevation and smaller header padding; custody/status/urgent facts retained |
+## Measured screen / viewport evidence
 
-## Scope and limitations
-
-- 125% rows emulate effective CSS viewport and DPR; actual browser-chrome zoom and physical iPad/scanner behavior remain unverified.
-- The invalid initial `hc` before theme is excluded from high-contrast comparisons. Final high-contrast captures use the real `high-contrast` theme.
-- Internal wide-table/anchor scrolling is intentional; page-level overflow must remain zero.
-- Money checks use the real built-in Warehouse sign-in; its direct editor route is restricted. Technician/Driver are covered by automated permissions/RLS tests, not invented mock identities.
-- UI interaction details and screenshots: `checks/interactions.json` and `checks/additional-browser-checks.json`.
-
-## Per-screen viewport matrix
-
-### today
-
-| Width / scale | Theme | Page overflow before → after | Header | Off-screen / small controls | Evidence | Result |
-|---|---|---|---|---|---|---|
-| 375 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/today-375-light-100.png) · [after](docs/verification/premium-design/after/today-375-light-100.png) | PASS |
-| 768 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/today-768-light-100.png) · [after](docs/verification/premium-design/after/today-768-light-100.png) | PASS |
-| 820 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/today-820-light-100.png) · [after](docs/verification/premium-design/after/today-820-light-100.png) | PASS |
-| 1024 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/today-1024-light-100.png) · [after](docs/verification/premium-design/after/today-1024-light-100.png) | PASS |
-| 1280 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/today-1280-light-100.png) · [after](docs/verification/premium-design/after/today-1280-light-100.png) | PASS |
-| 1440 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/today-1440-light-100.png) · [after](docs/verification/premium-design/after/today-1440-light-100.png) | PASS |
-| 1920 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/today-1920-light-100.png) · [after](docs/verification/premium-design/after/today-1920-light-100.png) | PASS |
-| 820 / 100% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/today-820-dark-100.png) · [after](docs/verification/premium-design/after/today-820-dark-100.png) | PASS |
-| 1440 / 100% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/today-1440-dark-100.png) · [after](docs/verification/premium-design/after/today-1440-dark-100.png) | PASS |
-| 820 / 125% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/today-820-light-125.png) · [after](docs/verification/premium-design/after/today-820-light-125.png) | PASS |
-| 1440 / 125% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/today-1440-dark-125.png) · [after](docs/verification/premium-design/after/today-1440-dark-125.png) | PASS |
-| 1440 / 100% | high-contrast | no valid baseline → 0px | 64px | 0 / 0 | [after](docs/verification/premium-design/after/today-1440-high-contrast-100.png) | PASS |
-| 375 / 100% reduced motion | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/today-375-light-100-reduced.png) · [after](docs/verification/premium-design/after/today-375-light-100-reduced.png) | PASS |
-
-### rentals
-
-| Width / scale | Theme | Page overflow before → after | Header | Off-screen / small controls | Evidence | Result |
-|---|---|---|---|---|---|---|
-| 375 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/rentals-375-light-100.png) · [after](docs/verification/premium-design/after/rentals-375-light-100.png) | PASS |
-| 768 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/rentals-768-light-100.png) · [after](docs/verification/premium-design/after/rentals-768-light-100.png) | PASS |
-| 820 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/rentals-820-light-100.png) · [after](docs/verification/premium-design/after/rentals-820-light-100.png) | PASS |
-| 1024 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/rentals-1024-light-100.png) · [after](docs/verification/premium-design/after/rentals-1024-light-100.png) | PASS |
-| 1280 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/rentals-1280-light-100.png) · [after](docs/verification/premium-design/after/rentals-1280-light-100.png) | PASS |
-| 1440 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/rentals-1440-light-100.png) · [after](docs/verification/premium-design/after/rentals-1440-light-100.png) | PASS |
-| 1920 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/rentals-1920-light-100.png) · [after](docs/verification/premium-design/after/rentals-1920-light-100.png) | PASS |
-| 820 / 100% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/rentals-820-dark-100.png) · [after](docs/verification/premium-design/after/rentals-820-dark-100.png) | PASS |
-| 1440 / 100% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/rentals-1440-dark-100.png) · [after](docs/verification/premium-design/after/rentals-1440-dark-100.png) | PASS |
-| 820 / 125% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/rentals-820-light-125.png) · [after](docs/verification/premium-design/after/rentals-820-light-125.png) | PASS |
-| 1440 / 125% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/rentals-1440-dark-125.png) · [after](docs/verification/premium-design/after/rentals-1440-dark-125.png) | PASS |
-| 1440 / 100% | high-contrast | no valid baseline → 0px | 64px | 0 / 0 | [after](docs/verification/premium-design/after/rentals-1440-high-contrast-100.png) | PASS |
-| 375 / 100% reduced motion | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/rentals-375-light-100-reduced.png) · [after](docs/verification/premium-design/after/rentals-375-light-100-reduced.png) | PASS |
-
-### new-rental
-
-| Width / scale | Theme | Page overflow before → after | Header | Off-screen / small controls | Evidence | Result |
-|---|---|---|---|---|---|---|
-| 375 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/new-rental-375-light-100.png) · [after](docs/verification/premium-design/after/new-rental-375-light-100.png) | PASS |
-| 768 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/new-rental-768-light-100.png) · [after](docs/verification/premium-design/after/new-rental-768-light-100.png) | PASS |
-| 820 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/new-rental-820-light-100.png) · [after](docs/verification/premium-design/after/new-rental-820-light-100.png) | PASS |
-| 1024 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/new-rental-1024-light-100.png) · [after](docs/verification/premium-design/after/new-rental-1024-light-100.png) | PASS |
-| 1280 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/new-rental-1280-light-100.png) · [after](docs/verification/premium-design/after/new-rental-1280-light-100.png) | PASS |
-| 1440 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/new-rental-1440-light-100.png) · [after](docs/verification/premium-design/after/new-rental-1440-light-100.png) | PASS |
-| 1920 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/new-rental-1920-light-100.png) · [after](docs/verification/premium-design/after/new-rental-1920-light-100.png) | PASS |
-| 820 / 100% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/new-rental-820-dark-100.png) · [after](docs/verification/premium-design/after/new-rental-820-dark-100.png) | PASS |
-| 1440 / 100% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/new-rental-1440-dark-100.png) · [after](docs/verification/premium-design/after/new-rental-1440-dark-100.png) | PASS |
-| 820 / 125% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/new-rental-820-light-125.png) · [after](docs/verification/premium-design/after/new-rental-820-light-125.png) | PASS |
-| 1440 / 125% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/new-rental-1440-dark-125.png) · [after](docs/verification/premium-design/after/new-rental-1440-dark-125.png) | PASS |
-| 1440 / 100% | high-contrast | no valid baseline → 0px | 64px | 0 / 0 | [after](docs/verification/premium-design/after/new-rental-1440-high-contrast-100.png) | PASS |
-| 375 / 100% reduced motion | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/new-rental-375-light-100-reduced.png) · [after](docs/verification/premium-design/after/new-rental-375-light-100-reduced.png) | PASS |
-
-### booking
-
-| Width / scale | Theme | Page overflow before → after | Header | Off-screen / small controls | Evidence | Result |
-|---|---|---|---|---|---|---|
-| 375 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/booking-375-light-100.png) · [after](docs/verification/premium-design/after/booking-375-light-100.png) | PASS |
-| 768 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/booking-768-light-100.png) · [after](docs/verification/premium-design/after/booking-768-light-100.png) | PASS |
-| 820 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/booking-820-light-100.png) · [after](docs/verification/premium-design/after/booking-820-light-100.png) | PASS |
-| 1024 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/booking-1024-light-100.png) · [after](docs/verification/premium-design/after/booking-1024-light-100.png) | PASS |
-| 1280 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/booking-1280-light-100.png) · [after](docs/verification/premium-design/after/booking-1280-light-100.png) | PASS |
-| 1440 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/booking-1440-light-100.png) · [after](docs/verification/premium-design/after/booking-1440-light-100.png) | PASS |
-| 1920 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/booking-1920-light-100.png) · [after](docs/verification/premium-design/after/booking-1920-light-100.png) | PASS |
-| 820 / 100% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/booking-820-dark-100.png) · [after](docs/verification/premium-design/after/booking-820-dark-100.png) | PASS |
-| 1440 / 100% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/booking-1440-dark-100.png) · [after](docs/verification/premium-design/after/booking-1440-dark-100.png) | PASS |
-| 820 / 125% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/booking-820-light-125.png) · [after](docs/verification/premium-design/after/booking-820-light-125.png) | PASS |
-| 1440 / 125% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/booking-1440-dark-125.png) · [after](docs/verification/premium-design/after/booking-1440-dark-125.png) | PASS |
-| 1440 / 100% | high-contrast | no valid baseline → 0px | 64px | 0 / 0 | [after](docs/verification/premium-design/after/booking-1440-high-contrast-100.png) | PASS |
-| 375 / 100% reduced motion | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/booking-375-light-100-reduced.png) · [after](docs/verification/premium-design/after/booking-375-light-100-reduced.png) | PASS |
-
-### inventory
-
-| Width / scale | Theme | Page overflow before → after | Header | Off-screen / small controls | Evidence | Result |
-|---|---|---|---|---|---|---|
-| 375 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/inventory-375-light-100.png) · [after](docs/verification/premium-design/after/inventory-375-light-100.png) | PASS |
-| 768 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/inventory-768-light-100.png) · [after](docs/verification/premium-design/after/inventory-768-light-100.png) | PASS |
-| 820 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/inventory-820-light-100.png) · [after](docs/verification/premium-design/after/inventory-820-light-100.png) | PASS |
-| 1024 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/inventory-1024-light-100.png) · [after](docs/verification/premium-design/after/inventory-1024-light-100.png) | PASS |
-| 1280 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/inventory-1280-light-100.png) · [after](docs/verification/premium-design/after/inventory-1280-light-100.png) | PASS |
-| 1440 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/inventory-1440-light-100.png) · [after](docs/verification/premium-design/after/inventory-1440-light-100.png) | PASS |
-| 1920 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/inventory-1920-light-100.png) · [after](docs/verification/premium-design/after/inventory-1920-light-100.png) | PASS |
-| 820 / 100% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/inventory-820-dark-100.png) · [after](docs/verification/premium-design/after/inventory-820-dark-100.png) | PASS |
-| 1440 / 100% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/inventory-1440-dark-100.png) · [after](docs/verification/premium-design/after/inventory-1440-dark-100.png) | PASS |
-| 820 / 125% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/inventory-820-light-125.png) · [after](docs/verification/premium-design/after/inventory-820-light-125.png) | PASS |
-| 1440 / 125% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/inventory-1440-dark-125.png) · [after](docs/verification/premium-design/after/inventory-1440-dark-125.png) | PASS |
-| 1440 / 100% | high-contrast | no valid baseline → 0px | 64px | 0 / 0 | [after](docs/verification/premium-design/after/inventory-1440-high-contrast-100.png) | PASS |
-| 375 / 100% reduced motion | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/inventory-375-light-100-reduced.png) · [after](docs/verification/premium-design/after/inventory-375-light-100-reduced.png) | PASS |
-
-### add-equipment
-
-| Width / scale | Theme | Page overflow before → after | Header | Off-screen / small controls | Evidence | Result |
-|---|---|---|---|---|---|---|
-| 375 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/add-equipment-375-light-100.png) · [after](docs/verification/premium-design/after/add-equipment-375-light-100.png) | PASS |
-| 768 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/add-equipment-768-light-100.png) · [after](docs/verification/premium-design/after/add-equipment-768-light-100.png) | PASS |
-| 820 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/add-equipment-820-light-100.png) · [after](docs/verification/premium-design/after/add-equipment-820-light-100.png) | PASS |
-| 1024 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/add-equipment-1024-light-100.png) · [after](docs/verification/premium-design/after/add-equipment-1024-light-100.png) | PASS |
-| 1280 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/add-equipment-1280-light-100.png) · [after](docs/verification/premium-design/after/add-equipment-1280-light-100.png) | PASS |
-| 1440 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/add-equipment-1440-light-100.png) · [after](docs/verification/premium-design/after/add-equipment-1440-light-100.png) | PASS |
-| 1920 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/add-equipment-1920-light-100.png) · [after](docs/verification/premium-design/after/add-equipment-1920-light-100.png) | PASS |
-| 820 / 100% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/add-equipment-820-dark-100.png) · [after](docs/verification/premium-design/after/add-equipment-820-dark-100.png) | PASS |
-| 1440 / 100% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/add-equipment-1440-dark-100.png) · [after](docs/verification/premium-design/after/add-equipment-1440-dark-100.png) | PASS |
-| 820 / 125% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/add-equipment-820-light-125.png) · [after](docs/verification/premium-design/after/add-equipment-820-light-125.png) | PASS |
-| 1440 / 125% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/add-equipment-1440-dark-125.png) · [after](docs/verification/premium-design/after/add-equipment-1440-dark-125.png) | PASS |
-| 1440 / 100% | high-contrast | no valid baseline → 0px | 64px | 0 / 0 | [after](docs/verification/premium-design/after/add-equipment-1440-high-contrast-100.png) | PASS |
-| 375 / 100% reduced motion | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/add-equipment-375-light-100-reduced.png) · [after](docs/verification/premium-design/after/add-equipment-375-light-100-reduced.png) | PASS |
-
-### edit-equipment
-
-| Width / scale | Theme | Page overflow before → after | Header | Off-screen / small controls | Evidence | Result |
-|---|---|---|---|---|---|---|
-| 375 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/edit-equipment-375-light-100.png) · [after](docs/verification/premium-design/after/edit-equipment-375-light-100.png) | PASS |
-| 768 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/edit-equipment-768-light-100.png) · [after](docs/verification/premium-design/after/edit-equipment-768-light-100.png) | PASS |
-| 820 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/edit-equipment-820-light-100.png) · [after](docs/verification/premium-design/after/edit-equipment-820-light-100.png) | PASS |
-| 1024 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/edit-equipment-1024-light-100.png) · [after](docs/verification/premium-design/after/edit-equipment-1024-light-100.png) | PASS |
-| 1280 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/edit-equipment-1280-light-100.png) · [after](docs/verification/premium-design/after/edit-equipment-1280-light-100.png) | PASS |
-| 1440 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/edit-equipment-1440-light-100.png) · [after](docs/verification/premium-design/after/edit-equipment-1440-light-100.png) | PASS |
-| 1920 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/edit-equipment-1920-light-100.png) · [after](docs/verification/premium-design/after/edit-equipment-1920-light-100.png) | PASS |
-| 820 / 100% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/edit-equipment-820-dark-100.png) · [after](docs/verification/premium-design/after/edit-equipment-820-dark-100.png) | PASS |
-| 1440 / 100% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/edit-equipment-1440-dark-100.png) · [after](docs/verification/premium-design/after/edit-equipment-1440-dark-100.png) | PASS |
-| 820 / 125% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/edit-equipment-820-light-125.png) · [after](docs/verification/premium-design/after/edit-equipment-820-light-125.png) | PASS |
-| 1440 / 125% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/edit-equipment-1440-dark-125.png) · [after](docs/verification/premium-design/after/edit-equipment-1440-dark-125.png) | PASS |
-| 1440 / 100% | high-contrast | no valid baseline → 0px | 64px | 0 / 0 | [after](docs/verification/premium-design/after/edit-equipment-1440-high-contrast-100.png) | PASS |
-| 375 / 100% reduced motion | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/edit-equipment-375-light-100-reduced.png) · [after](docs/verification/premium-design/after/edit-equipment-375-light-100-reduced.png) | PASS |
-
-### clients
-
-| Width / scale | Theme | Page overflow before → after | Header | Off-screen / small controls | Evidence | Result |
-|---|---|---|---|---|---|---|
-| 375 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/clients-375-light-100.png) · [after](docs/verification/premium-design/after/clients-375-light-100.png) | PASS |
-| 768 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/clients-768-light-100.png) · [after](docs/verification/premium-design/after/clients-768-light-100.png) | PASS |
-| 820 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/clients-820-light-100.png) · [after](docs/verification/premium-design/after/clients-820-light-100.png) | PASS |
-| 1024 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/clients-1024-light-100.png) · [after](docs/verification/premium-design/after/clients-1024-light-100.png) | PASS |
-| 1280 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/clients-1280-light-100.png) · [after](docs/verification/premium-design/after/clients-1280-light-100.png) | PASS |
-| 1440 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/clients-1440-light-100.png) · [after](docs/verification/premium-design/after/clients-1440-light-100.png) | PASS |
-| 1920 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/clients-1920-light-100.png) · [after](docs/verification/premium-design/after/clients-1920-light-100.png) | PASS |
-| 820 / 100% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/clients-820-dark-100.png) · [after](docs/verification/premium-design/after/clients-820-dark-100.png) | PASS |
-| 1440 / 100% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/clients-1440-dark-100.png) · [after](docs/verification/premium-design/after/clients-1440-dark-100.png) | PASS |
-| 820 / 125% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/clients-820-light-125.png) · [after](docs/verification/premium-design/after/clients-820-light-125.png) | PASS |
-| 1440 / 125% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/clients-1440-dark-125.png) · [after](docs/verification/premium-design/after/clients-1440-dark-125.png) | PASS |
-| 1440 / 100% | high-contrast | no valid baseline → 0px | 64px | 0 / 0 | [after](docs/verification/premium-design/after/clients-1440-high-contrast-100.png) | PASS |
-| 375 / 100% reduced motion | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/clients-375-light-100-reduced.png) · [after](docs/verification/premium-design/after/clients-375-light-100-reduced.png) | PASS |
-
-### finance
-
-| Width / scale | Theme | Page overflow before → after | Header | Off-screen / small controls | Evidence | Result |
-|---|---|---|---|---|---|---|
-| 375 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/finance-375-light-100.png) · [after](docs/verification/premium-design/after/finance-375-light-100.png) | PASS |
-| 768 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/finance-768-light-100.png) · [after](docs/verification/premium-design/after/finance-768-light-100.png) | PASS |
-| 820 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/finance-820-light-100.png) · [after](docs/verification/premium-design/after/finance-820-light-100.png) | PASS |
-| 1024 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/finance-1024-light-100.png) · [after](docs/verification/premium-design/after/finance-1024-light-100.png) | PASS |
-| 1280 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/finance-1280-light-100.png) · [after](docs/verification/premium-design/after/finance-1280-light-100.png) | PASS |
-| 1440 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/finance-1440-light-100.png) · [after](docs/verification/premium-design/after/finance-1440-light-100.png) | PASS |
-| 1920 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/finance-1920-light-100.png) · [after](docs/verification/premium-design/after/finance-1920-light-100.png) | PASS |
-| 820 / 100% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/finance-820-dark-100.png) · [after](docs/verification/premium-design/after/finance-820-dark-100.png) | PASS |
-| 1440 / 100% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/finance-1440-dark-100.png) · [after](docs/verification/premium-design/after/finance-1440-dark-100.png) | PASS |
-| 820 / 125% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/finance-820-light-125.png) · [after](docs/verification/premium-design/after/finance-820-light-125.png) | PASS |
-| 1440 / 125% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/finance-1440-dark-125.png) · [after](docs/verification/premium-design/after/finance-1440-dark-125.png) | PASS |
-| 1440 / 100% | high-contrast | no valid baseline → 0px | 64px | 0 / 0 | [after](docs/verification/premium-design/after/finance-1440-high-contrast-100.png) | PASS |
-| 375 / 100% reduced motion | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/finance-375-light-100-reduced.png) · [after](docs/verification/premium-design/after/finance-375-light-100-reduced.png) | PASS |
-
-### operations
-
-| Width / scale | Theme | Page overflow before → after | Header | Off-screen / small controls | Evidence | Result |
-|---|---|---|---|---|---|---|
-| 375 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/operations-375-light-100.png) · [after](docs/verification/premium-design/after/operations-375-light-100.png) | PASS |
-| 768 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/operations-768-light-100.png) · [after](docs/verification/premium-design/after/operations-768-light-100.png) | PASS |
-| 820 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/operations-820-light-100.png) · [after](docs/verification/premium-design/after/operations-820-light-100.png) | PASS |
-| 1024 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/operations-1024-light-100.png) · [after](docs/verification/premium-design/after/operations-1024-light-100.png) | PASS |
-| 1280 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/operations-1280-light-100.png) · [after](docs/verification/premium-design/after/operations-1280-light-100.png) | PASS |
-| 1440 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/operations-1440-light-100.png) · [after](docs/verification/premium-design/after/operations-1440-light-100.png) | PASS |
-| 1920 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/operations-1920-light-100.png) · [after](docs/verification/premium-design/after/operations-1920-light-100.png) | PASS |
-| 820 / 100% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/operations-820-dark-100.png) · [after](docs/verification/premium-design/after/operations-820-dark-100.png) | PASS |
-| 1440 / 100% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/operations-1440-dark-100.png) · [after](docs/verification/premium-design/after/operations-1440-dark-100.png) | PASS |
-| 820 / 125% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/operations-820-light-125.png) · [after](docs/verification/premium-design/after/operations-820-light-125.png) | PASS |
-| 1440 / 125% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/operations-1440-dark-125.png) · [after](docs/verification/premium-design/after/operations-1440-dark-125.png) | PASS |
-| 1440 / 100% | high-contrast | no valid baseline → 0px | 64px | 0 / 0 | [after](docs/verification/premium-design/after/operations-1440-high-contrast-100.png) | PASS |
-| 375 / 100% reduced motion | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/operations-375-light-100-reduced.png) · [after](docs/verification/premium-design/after/operations-375-light-100-reduced.png) | PASS |
-
-### reports
-
-| Width / scale | Theme | Page overflow before → after | Header | Off-screen / small controls | Evidence | Result |
-|---|---|---|---|---|---|---|
-| 375 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/reports-375-light-100.png) · [after](docs/verification/premium-design/after/reports-375-light-100.png) | PASS |
-| 768 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/reports-768-light-100.png) · [after](docs/verification/premium-design/after/reports-768-light-100.png) | PASS |
-| 820 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/reports-820-light-100.png) · [after](docs/verification/premium-design/after/reports-820-light-100.png) | PASS |
-| 1024 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/reports-1024-light-100.png) · [after](docs/verification/premium-design/after/reports-1024-light-100.png) | PASS |
-| 1280 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/reports-1280-light-100.png) · [after](docs/verification/premium-design/after/reports-1280-light-100.png) | PASS |
-| 1440 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/reports-1440-light-100.png) · [after](docs/verification/premium-design/after/reports-1440-light-100.png) | PASS |
-| 1920 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/reports-1920-light-100.png) · [after](docs/verification/premium-design/after/reports-1920-light-100.png) | PASS |
-| 820 / 100% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/reports-820-dark-100.png) · [after](docs/verification/premium-design/after/reports-820-dark-100.png) | PASS |
-| 1440 / 100% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/reports-1440-dark-100.png) · [after](docs/verification/premium-design/after/reports-1440-dark-100.png) | PASS |
-| 820 / 125% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/reports-820-light-125.png) · [after](docs/verification/premium-design/after/reports-820-light-125.png) | PASS |
-| 1440 / 125% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/reports-1440-dark-125.png) · [after](docs/verification/premium-design/after/reports-1440-dark-125.png) | PASS |
-| 1440 / 100% | high-contrast | no valid baseline → 0px | 64px | 0 / 0 | [after](docs/verification/premium-design/after/reports-1440-high-contrast-100.png) | PASS |
-| 375 / 100% reduced motion | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/reports-375-light-100-reduced.png) · [after](docs/verification/premium-design/after/reports-375-light-100-reduced.png) | PASS |
-
-### calendar
-
-| Width / scale | Theme | Page overflow before → after | Header | Off-screen / small controls | Evidence | Result |
-|---|---|---|---|---|---|---|
-| 375 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/calendar-375-light-100.png) · [after](docs/verification/premium-design/after/calendar-375-light-100.png) | PASS |
-| 768 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/calendar-768-light-100.png) · [after](docs/verification/premium-design/after/calendar-768-light-100.png) | PASS |
-| 820 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/calendar-820-light-100.png) · [after](docs/verification/premium-design/after/calendar-820-light-100.png) | PASS |
-| 1024 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/calendar-1024-light-100.png) · [after](docs/verification/premium-design/after/calendar-1024-light-100.png) | PASS |
-| 1280 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/calendar-1280-light-100.png) · [after](docs/verification/premium-design/after/calendar-1280-light-100.png) | PASS |
-| 1440 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/calendar-1440-light-100.png) · [after](docs/verification/premium-design/after/calendar-1440-light-100.png) | PASS |
-| 1920 / 100% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/calendar-1920-light-100.png) · [after](docs/verification/premium-design/after/calendar-1920-light-100.png) | PASS |
-| 820 / 100% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/calendar-820-dark-100.png) · [after](docs/verification/premium-design/after/calendar-820-dark-100.png) | PASS |
-| 1440 / 100% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/calendar-1440-dark-100.png) · [after](docs/verification/premium-design/after/calendar-1440-dark-100.png) | PASS |
-| 820 / 125% | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/calendar-820-light-125.png) · [after](docs/verification/premium-design/after/calendar-820-light-125.png) | PASS |
-| 1440 / 125% | dark | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/calendar-1440-dark-125.png) · [after](docs/verification/premium-design/after/calendar-1440-dark-125.png) | PASS |
-| 1440 / 100% | high-contrast | no valid baseline → 0px | 64px | 0 / 0 | [after](docs/verification/premium-design/after/calendar-1440-high-contrast-100.png) | PASS |
-| 375 / 100% reduced motion | light | 0 → 0px | 64px | 0 / 0 | [before](docs/verification/premium-design/before/calendar-375-light-100-reduced.png) · [after](docs/verification/premium-design/after/calendar-375-light-100-reduced.png) | PASS |
-
-## Result
-
-156 captures; 0 geometry failures. No subjective improvement percentage is assigned.
+| Screen / width / theme / scale | Affected owner | Before | Current | Header / overflow / min target | Result |
+|---|---|---|---|---|---|
+| today / 375 / light / 1 | src/modules/today/dashboard.css | [Before](docs/verification/premium-design/before/today-375-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/today-375-light-100.png) | 64px / 0px / 44px | PASS |
+| today / 768 / light / 1 | src/modules/today/dashboard.css | [Before](docs/verification/premium-design/before/today-768-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/today-768-light-100.png) | 64px / 0px / 44px | PASS |
+| today / 820 / light / 1 | src/modules/today/dashboard.css | [Before](docs/verification/premium-design/before/today-820-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/today-820-light-100.png) | 64px / 0px / 44px | PASS |
+| today / 1024 / light / 1 | src/modules/today/dashboard.css | [Before](docs/verification/premium-design/before/today-1024-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/today-1024-light-100.png) | 64px / 0px / 44px | PASS |
+| today / 1280 / light / 1 | src/modules/today/dashboard.css | [Before](docs/verification/premium-design/before/today-1280-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/today-1280-light-100.png) | 64px / 0px / 44px | PASS |
+| today / 1440 / light / 1 | src/modules/today/dashboard.css | [Before](docs/verification/premium-design/before/today-1440-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/today-1440-light-100.png) | 64px / 0px / 44px | PASS |
+| today / 1920 / light / 1 | src/modules/today/dashboard.css | [Before](docs/verification/premium-design/before/today-1920-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/today-1920-light-100.png) | 64px / 0px / 44px | PASS |
+| today / 820 / dark / 1 | src/modules/today/dashboard.css | [Before](docs/verification/premium-design/before/today-820-dark-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/today-820-dark-100.png) | 64px / 0px / 44px | PASS |
+| today / 1440 / dark / 1 | src/modules/today/dashboard.css | [Before](docs/verification/premium-design/before/today-1440-dark-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/today-1440-dark-100.png) | 64px / 0px / 44px | PASS |
+| today / 820 / light / 1.25 | src/modules/today/dashboard.css | [Before](docs/verification/premium-design/before/today-820-light-125.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/today-820-light-125.png) | 64px / 0px / 44px | PASS |
+| today / 1440 / dark / 1.25 | src/modules/today/dashboard.css | [Before](docs/verification/premium-design/before/today-1440-dark-125.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/today-1440-dark-125.png) | 64px / 0px / 44px | PASS |
+| today / 1440 / high-contrast / 1 | src/modules/today/dashboard.css | No valid baseline | [Current](docs/verification/premium-design/current-20261023-0225/after/today-1440-high-contrast-100.png) | 64px / 0px / 44px | PASS |
+| today / 375 / light / 1 / reduced motion | src/modules/today/dashboard.css | [Before](docs/verification/premium-design/before/today-375-light-100-reduced.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/today-375-light-100-reduced.png) | 64px / 0px / 44px | PASS |
+| rentals / 375 / light / 1 | src/modules/rentals/rentals.css | [Before](docs/verification/premium-design/before/rentals-375-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/rentals-375-light-100.png) | 64px / 0px / 44px | PASS |
+| rentals / 768 / light / 1 | src/modules/rentals/rentals.css | [Before](docs/verification/premium-design/before/rentals-768-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/rentals-768-light-100.png) | 64px / 0px / 44px | PASS |
+| rentals / 820 / light / 1 | src/modules/rentals/rentals.css | [Before](docs/verification/premium-design/before/rentals-820-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/rentals-820-light-100.png) | 64px / 0px / 44px | PASS |
+| rentals / 1024 / light / 1 | src/modules/rentals/rentals.css | [Before](docs/verification/premium-design/before/rentals-1024-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/rentals-1024-light-100.png) | 64px / 0px / 44px | PASS |
+| rentals / 1280 / light / 1 | src/modules/rentals/rentals.css | [Before](docs/verification/premium-design/before/rentals-1280-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/rentals-1280-light-100.png) | 64px / 0px / 44px | PASS |
+| rentals / 1440 / light / 1 | src/modules/rentals/rentals.css | [Before](docs/verification/premium-design/before/rentals-1440-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/rentals-1440-light-100.png) | 64px / 0px / 44px | PASS |
+| rentals / 1920 / light / 1 | src/modules/rentals/rentals.css | [Before](docs/verification/premium-design/before/rentals-1920-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/rentals-1920-light-100.png) | 64px / 0px / 44px | PASS |
+| rentals / 820 / dark / 1 | src/modules/rentals/rentals.css | [Before](docs/verification/premium-design/before/rentals-820-dark-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/rentals-820-dark-100.png) | 64px / 0px / 44px | PASS |
+| rentals / 1440 / dark / 1 | src/modules/rentals/rentals.css | [Before](docs/verification/premium-design/before/rentals-1440-dark-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/rentals-1440-dark-100.png) | 64px / 0px / 44px | PASS |
+| rentals / 820 / light / 1.25 | src/modules/rentals/rentals.css | [Before](docs/verification/premium-design/before/rentals-820-light-125.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/rentals-820-light-125.png) | 64px / 0px / 44px | PASS |
+| rentals / 1440 / dark / 1.25 | src/modules/rentals/rentals.css | [Before](docs/verification/premium-design/before/rentals-1440-dark-125.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/rentals-1440-dark-125.png) | 64px / 0px / 44px | PASS |
+| rentals / 1440 / high-contrast / 1 | src/modules/rentals/rentals.css | No valid baseline | [Current](docs/verification/premium-design/current-20261023-0225/after/rentals-1440-high-contrast-100.png) | 64px / 0px / 44px | PASS |
+| rentals / 375 / light / 1 / reduced motion | src/modules/rentals/rentals.css | [Before](docs/verification/premium-design/before/rentals-375-light-100-reduced.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/rentals-375-light-100-reduced.png) | 64px / 0px / 44px | PASS |
+| new-rental / 375 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/new-rental-375-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/new-rental-375-light-100.png) | 64px / 0px / 44px | PASS |
+| new-rental / 768 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/new-rental-768-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/new-rental-768-light-100.png) | 64px / 0px / 44px | PASS |
+| new-rental / 820 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/new-rental-820-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/new-rental-820-light-100.png) | 64px / 0px / 44px | PASS |
+| new-rental / 1024 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/new-rental-1024-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/new-rental-1024-light-100.png) | 64px / 0px / 44px | PASS |
+| new-rental / 1280 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/new-rental-1280-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/new-rental-1280-light-100.png) | 64px / 0px / 44px | PASS |
+| new-rental / 1440 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/new-rental-1440-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/new-rental-1440-light-100.png) | 64px / 0px / 44px | PASS |
+| new-rental / 1920 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/new-rental-1920-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/new-rental-1920-light-100.png) | 64px / 0px / 44px | PASS |
+| new-rental / 820 / dark / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/new-rental-820-dark-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/new-rental-820-dark-100.png) | 64px / 0px / 44px | PASS |
+| new-rental / 1440 / dark / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/new-rental-1440-dark-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/new-rental-1440-dark-100.png) | 64px / 0px / 44px | PASS |
+| new-rental / 820 / light / 1.25 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/new-rental-820-light-125.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/new-rental-820-light-125.png) | 64px / 0px / 44px | PASS |
+| new-rental / 1440 / dark / 1.25 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/new-rental-1440-dark-125.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/new-rental-1440-dark-125.png) | 64px / 0px / 44px | PASS |
+| new-rental / 1440 / high-contrast / 1 | src/components/shell/shell.css + module | No valid baseline | [Current](docs/verification/premium-design/current-20261023-0225/after/new-rental-1440-high-contrast-100.png) | 64px / 0px / 44px | PASS |
+| new-rental / 375 / light / 1 / reduced motion | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/new-rental-375-light-100-reduced.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/new-rental-375-light-100-reduced.png) | 64px / 0px / 44px | PASS |
+| booking / 375 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/booking-375-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/booking-375-light-100.png) | 64px / 0px / 44px | PASS |
+| booking / 768 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/booking-768-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/booking-768-light-100.png) | 64px / 0px / 44px | PASS |
+| booking / 820 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/booking-820-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/booking-820-light-100.png) | 64px / 0px / 44px | PASS |
+| booking / 1024 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/booking-1024-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/booking-1024-light-100.png) | 64px / 0px / 44px | PASS |
+| booking / 1280 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/booking-1280-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/booking-1280-light-100.png) | 64px / 0px / 44px | PASS |
+| booking / 1440 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/booking-1440-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/booking-1440-light-100.png) | 64px / 0px / 44px | PASS |
+| booking / 1920 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/booking-1920-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/booking-1920-light-100.png) | 64px / 0px / 44px | PASS |
+| booking / 820 / dark / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/booking-820-dark-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/booking-820-dark-100.png) | 64px / 0px / 44px | PASS |
+| booking / 1440 / dark / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/booking-1440-dark-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/booking-1440-dark-100.png) | 64px / 0px / 44px | PASS |
+| booking / 820 / light / 1.25 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/booking-820-light-125.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/booking-820-light-125.png) | 64px / 0px / 44px | PASS |
+| booking / 1440 / dark / 1.25 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/booking-1440-dark-125.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/booking-1440-dark-125.png) | 64px / 0px / 44px | PASS |
+| booking / 1440 / high-contrast / 1 | src/components/shell/shell.css + module | No valid baseline | [Current](docs/verification/premium-design/current-20261023-0225/after/booking-1440-high-contrast-100.png) | 64px / 0px / 44px | PASS |
+| booking / 375 / light / 1 / reduced motion | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/booking-375-light-100-reduced.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/booking-375-light-100-reduced.png) | 64px / 0px / 44px | PASS |
+| inventory / 375 / light / 1 | src/modules/inventory/inventory.css | [Before](docs/verification/premium-design/before/inventory-375-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/inventory-375-light-100.png) | 64px / 0px / 44px | PASS |
+| inventory / 768 / light / 1 | src/modules/inventory/inventory.css | [Before](docs/verification/premium-design/before/inventory-768-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/inventory-768-light-100.png) | 64px / 0px / 44px | PASS |
+| inventory / 820 / light / 1 | src/modules/inventory/inventory.css | [Before](docs/verification/premium-design/before/inventory-820-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/inventory-820-light-100.png) | 64px / 0px / 44px | PASS |
+| inventory / 1024 / light / 1 | src/modules/inventory/inventory.css | [Before](docs/verification/premium-design/before/inventory-1024-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/inventory-1024-light-100.png) | 64px / 0px / 44px | PASS |
+| inventory / 1280 / light / 1 | src/modules/inventory/inventory.css | [Before](docs/verification/premium-design/before/inventory-1280-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/inventory-1280-light-100.png) | 64px / 0px / 44px | PASS |
+| inventory / 1440 / light / 1 | src/modules/inventory/inventory.css | [Before](docs/verification/premium-design/before/inventory-1440-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/inventory-1440-light-100.png) | 64px / 0px / 44px | PASS |
+| inventory / 1920 / light / 1 | src/modules/inventory/inventory.css | [Before](docs/verification/premium-design/before/inventory-1920-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/inventory-1920-light-100.png) | 64px / 0px / 44px | PASS |
+| inventory / 820 / dark / 1 | src/modules/inventory/inventory.css | [Before](docs/verification/premium-design/before/inventory-820-dark-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/inventory-820-dark-100.png) | 64px / 0px / 44px | PASS |
+| inventory / 1440 / dark / 1 | src/modules/inventory/inventory.css | [Before](docs/verification/premium-design/before/inventory-1440-dark-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/inventory-1440-dark-100.png) | 64px / 0px / 44px | PASS |
+| inventory / 820 / light / 1.25 | src/modules/inventory/inventory.css | [Before](docs/verification/premium-design/before/inventory-820-light-125.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/inventory-820-light-125.png) | 64px / 0px / 44px | PASS |
+| inventory / 1440 / dark / 1.25 | src/modules/inventory/inventory.css | [Before](docs/verification/premium-design/before/inventory-1440-dark-125.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/inventory-1440-dark-125.png) | 64px / 0px / 44px | PASS |
+| inventory / 1440 / high-contrast / 1 | src/modules/inventory/inventory.css | No valid baseline | [Current](docs/verification/premium-design/current-20261023-0225/after/inventory-1440-high-contrast-100.png) | 64px / 0px / 44px | PASS |
+| inventory / 375 / light / 1 / reduced motion | src/modules/inventory/inventory.css | [Before](docs/verification/premium-design/before/inventory-375-light-100-reduced.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/inventory-375-light-100-reduced.png) | 64px / 0px / 44px | PASS |
+| add-equipment / 375 / light / 1 | src/components/records/equipment-assist.css | [Before](docs/verification/premium-design/before/add-equipment-375-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/add-equipment-375-light-100.png) | 64px / 0px / 44px | PASS |
+| add-equipment / 768 / light / 1 | src/components/records/equipment-assist.css | [Before](docs/verification/premium-design/before/add-equipment-768-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/add-equipment-768-light-100.png) | 64px / 0px / 44px | PASS |
+| add-equipment / 820 / light / 1 | src/components/records/equipment-assist.css | [Before](docs/verification/premium-design/before/add-equipment-820-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/add-equipment-820-light-100.png) | 64px / 0px / 44px | PASS |
+| add-equipment / 1024 / light / 1 | src/components/records/equipment-assist.css | [Before](docs/verification/premium-design/before/add-equipment-1024-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/add-equipment-1024-light-100.png) | 64px / 0px / 44px | PASS |
+| add-equipment / 1280 / light / 1 | src/components/records/equipment-assist.css | [Before](docs/verification/premium-design/before/add-equipment-1280-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/add-equipment-1280-light-100.png) | 64px / 0px / 44px | PASS |
+| add-equipment / 1440 / light / 1 | src/components/records/equipment-assist.css | [Before](docs/verification/premium-design/before/add-equipment-1440-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/add-equipment-1440-light-100.png) | 64px / 0px / 44px | PASS |
+| add-equipment / 1920 / light / 1 | src/components/records/equipment-assist.css | [Before](docs/verification/premium-design/before/add-equipment-1920-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/add-equipment-1920-light-100.png) | 64px / 0px / 44px | PASS |
+| add-equipment / 820 / dark / 1 | src/components/records/equipment-assist.css | [Before](docs/verification/premium-design/before/add-equipment-820-dark-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/add-equipment-820-dark-100.png) | 64px / 0px / 44px | PASS |
+| add-equipment / 1440 / dark / 1 | src/components/records/equipment-assist.css | [Before](docs/verification/premium-design/before/add-equipment-1440-dark-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/add-equipment-1440-dark-100.png) | 64px / 0px / 44px | PASS |
+| add-equipment / 820 / light / 1.25 | src/components/records/equipment-assist.css | [Before](docs/verification/premium-design/before/add-equipment-820-light-125.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/add-equipment-820-light-125.png) | 64px / 0px / 44px | PASS |
+| add-equipment / 1440 / dark / 1.25 | src/components/records/equipment-assist.css | [Before](docs/verification/premium-design/before/add-equipment-1440-dark-125.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/add-equipment-1440-dark-125.png) | 64px / 0px / 44px | PASS |
+| add-equipment / 1440 / high-contrast / 1 | src/components/records/equipment-assist.css | No valid baseline | [Current](docs/verification/premium-design/current-20261023-0225/after/add-equipment-1440-high-contrast-100.png) | 64px / 0px / 44px | PASS |
+| add-equipment / 375 / light / 1 / reduced motion | src/components/records/equipment-assist.css | [Before](docs/verification/premium-design/before/add-equipment-375-light-100-reduced.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/add-equipment-375-light-100-reduced.png) | 64px / 0px / 44px | PASS |
+| edit-equipment / 375 / light / 1 | src/components/records/equipment-assist.css | [Before](docs/verification/premium-design/before/edit-equipment-375-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/edit-equipment-375-light-100.png) | 64px / 0px / 44px | PASS |
+| edit-equipment / 768 / light / 1 | src/components/records/equipment-assist.css | [Before](docs/verification/premium-design/before/edit-equipment-768-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/edit-equipment-768-light-100.png) | 64px / 0px / 44px | PASS |
+| edit-equipment / 820 / light / 1 | src/components/records/equipment-assist.css | [Before](docs/verification/premium-design/before/edit-equipment-820-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/edit-equipment-820-light-100.png) | 64px / 0px / 44px | PASS |
+| edit-equipment / 1024 / light / 1 | src/components/records/equipment-assist.css | [Before](docs/verification/premium-design/before/edit-equipment-1024-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/edit-equipment-1024-light-100.png) | 64px / 0px / 44px | PASS |
+| edit-equipment / 1280 / light / 1 | src/components/records/equipment-assist.css | [Before](docs/verification/premium-design/before/edit-equipment-1280-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/edit-equipment-1280-light-100.png) | 64px / 0px / 44px | PASS |
+| edit-equipment / 1440 / light / 1 | src/components/records/equipment-assist.css | [Before](docs/verification/premium-design/before/edit-equipment-1440-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/edit-equipment-1440-light-100.png) | 64px / 0px / 44px | PASS |
+| edit-equipment / 1920 / light / 1 | src/components/records/equipment-assist.css | [Before](docs/verification/premium-design/before/edit-equipment-1920-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/edit-equipment-1920-light-100.png) | 64px / 0px / 44px | PASS |
+| edit-equipment / 820 / dark / 1 | src/components/records/equipment-assist.css | [Before](docs/verification/premium-design/before/edit-equipment-820-dark-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/edit-equipment-820-dark-100.png) | 64px / 0px / 44px | PASS |
+| edit-equipment / 1440 / dark / 1 | src/components/records/equipment-assist.css | [Before](docs/verification/premium-design/before/edit-equipment-1440-dark-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/edit-equipment-1440-dark-100.png) | 64px / 0px / 44px | PASS |
+| edit-equipment / 820 / light / 1.25 | src/components/records/equipment-assist.css | [Before](docs/verification/premium-design/before/edit-equipment-820-light-125.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/edit-equipment-820-light-125.png) | 64px / 0px / 44px | PASS |
+| edit-equipment / 1440 / dark / 1.25 | src/components/records/equipment-assist.css | [Before](docs/verification/premium-design/before/edit-equipment-1440-dark-125.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/edit-equipment-1440-dark-125.png) | 64px / 0px / 44px | PASS |
+| edit-equipment / 1440 / high-contrast / 1 | src/components/records/equipment-assist.css | No valid baseline | [Current](docs/verification/premium-design/current-20261023-0225/after/edit-equipment-1440-high-contrast-100.png) | 64px / 0px / 44px | PASS |
+| edit-equipment / 375 / light / 1 / reduced motion | src/components/records/equipment-assist.css | [Before](docs/verification/premium-design/before/edit-equipment-375-light-100-reduced.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/edit-equipment-375-light-100-reduced.png) | 64px / 0px / 44px | PASS |
+| clients / 375 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/clients-375-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/clients-375-light-100.png) | 64px / 0px / 44px | PASS |
+| clients / 768 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/clients-768-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/clients-768-light-100.png) | 64px / 0px / 44px | PASS |
+| clients / 820 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/clients-820-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/clients-820-light-100.png) | 64px / 0px / 44px | PASS |
+| clients / 1024 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/clients-1024-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/clients-1024-light-100.png) | 64px / 0px / 44px | PASS |
+| clients / 1280 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/clients-1280-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/clients-1280-light-100.png) | 64px / 0px / 44px | PASS |
+| clients / 1440 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/clients-1440-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/clients-1440-light-100.png) | 64px / 0px / 44px | PASS |
+| clients / 1920 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/clients-1920-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/clients-1920-light-100.png) | 64px / 0px / 44px | PASS |
+| clients / 820 / dark / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/clients-820-dark-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/clients-820-dark-100.png) | 64px / 0px / 44px | PASS |
+| clients / 1440 / dark / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/clients-1440-dark-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/clients-1440-dark-100.png) | 64px / 0px / 44px | PASS |
+| clients / 820 / light / 1.25 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/clients-820-light-125.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/clients-820-light-125.png) | 64px / 0px / 44px | PASS |
+| clients / 1440 / dark / 1.25 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/clients-1440-dark-125.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/clients-1440-dark-125.png) | 64px / 0px / 44px | PASS |
+| clients / 1440 / high-contrast / 1 | src/components/shell/shell.css + module | No valid baseline | [Current](docs/verification/premium-design/current-20261023-0225/after/clients-1440-high-contrast-100.png) | 64px / 0px / 44px | PASS |
+| clients / 375 / light / 1 / reduced motion | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/clients-375-light-100-reduced.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/clients-375-light-100-reduced.png) | 64px / 0px / 44px | PASS |
+| finance / 375 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/finance-375-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/finance-375-light-100.png) | 64px / 0px / 44px | PASS |
+| finance / 768 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/finance-768-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/finance-768-light-100.png) | 64px / 0px / 44px | PASS |
+| finance / 820 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/finance-820-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/finance-820-light-100.png) | 64px / 0px / 44px | PASS |
+| finance / 1024 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/finance-1024-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/finance-1024-light-100.png) | 64px / 0px / 44px | PASS |
+| finance / 1280 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/finance-1280-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/finance-1280-light-100.png) | 64px / 0px / 44px | PASS |
+| finance / 1440 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/finance-1440-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/finance-1440-light-100.png) | 64px / 0px / 44px | PASS |
+| finance / 1920 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/finance-1920-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/finance-1920-light-100.png) | 64px / 0px / 44px | PASS |
+| finance / 820 / dark / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/finance-820-dark-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/finance-820-dark-100.png) | 64px / 0px / 44px | PASS |
+| finance / 1440 / dark / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/finance-1440-dark-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/finance-1440-dark-100.png) | 64px / 0px / 44px | PASS |
+| finance / 820 / light / 1.25 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/finance-820-light-125.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/finance-820-light-125.png) | 64px / 0px / 44px | PASS |
+| finance / 1440 / dark / 1.25 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/finance-1440-dark-125.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/finance-1440-dark-125.png) | 64px / 0px / 44px | PASS |
+| finance / 1440 / high-contrast / 1 | src/components/shell/shell.css + module | No valid baseline | [Current](docs/verification/premium-design/current-20261023-0225/after/finance-1440-high-contrast-100.png) | 64px / 0px / 44px | PASS |
+| finance / 375 / light / 1 / reduced motion | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/finance-375-light-100-reduced.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/finance-375-light-100-reduced.png) | 64px / 0px / 44px | PASS |
+| operations / 375 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/operations-375-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/operations-375-light-100.png) | 64px / 0px / 44px | PASS |
+| operations / 768 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/operations-768-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/operations-768-light-100.png) | 64px / 0px / 44px | PASS |
+| operations / 820 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/operations-820-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/operations-820-light-100.png) | 64px / 0px / 44px | PASS |
+| operations / 1024 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/operations-1024-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/operations-1024-light-100.png) | 64px / 0px / 44px | PASS |
+| operations / 1280 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/operations-1280-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/operations-1280-light-100.png) | 64px / 0px / 44px | PASS |
+| operations / 1440 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/operations-1440-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/operations-1440-light-100.png) | 64px / 0px / 44px | PASS |
+| operations / 1920 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/operations-1920-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/operations-1920-light-100.png) | 64px / 0px / 44px | PASS |
+| operations / 820 / dark / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/operations-820-dark-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/operations-820-dark-100.png) | 64px / 0px / 44px | PASS |
+| operations / 1440 / dark / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/operations-1440-dark-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/operations-1440-dark-100.png) | 64px / 0px / 44px | PASS |
+| operations / 820 / light / 1.25 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/operations-820-light-125.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/operations-820-light-125.png) | 64px / 0px / 44px | PASS |
+| operations / 1440 / dark / 1.25 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/operations-1440-dark-125.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/operations-1440-dark-125.png) | 64px / 0px / 44px | PASS |
+| operations / 1440 / high-contrast / 1 | src/components/shell/shell.css + module | No valid baseline | [Current](docs/verification/premium-design/current-20261023-0225/after/operations-1440-high-contrast-100.png) | 64px / 0px / 44px | PASS |
+| operations / 375 / light / 1 / reduced motion | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/operations-375-light-100-reduced.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/operations-375-light-100-reduced.png) | 64px / 0px / 44px | PASS |
+| reports / 375 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/reports-375-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/reports-375-light-100.png) | 64px / 0px / 44px | PASS |
+| reports / 768 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/reports-768-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/reports-768-light-100.png) | 64px / 0px / 44px | PASS |
+| reports / 820 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/reports-820-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/reports-820-light-100.png) | 64px / 0px / 44px | PASS |
+| reports / 1024 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/reports-1024-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/reports-1024-light-100.png) | 64px / 0px / 44px | PASS |
+| reports / 1280 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/reports-1280-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/reports-1280-light-100.png) | 64px / 0px / 44px | PASS |
+| reports / 1440 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/reports-1440-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/reports-1440-light-100.png) | 64px / 0px / 44px | PASS |
+| reports / 1920 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/reports-1920-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/reports-1920-light-100.png) | 64px / 0px / 44px | PASS |
+| reports / 820 / dark / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/reports-820-dark-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/reports-820-dark-100.png) | 64px / 0px / 44px | PASS |
+| reports / 1440 / dark / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/reports-1440-dark-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/reports-1440-dark-100.png) | 64px / 0px / 44px | PASS |
+| reports / 820 / light / 1.25 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/reports-820-light-125.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/reports-820-light-125.png) | 64px / 0px / 44px | PASS |
+| reports / 1440 / dark / 1.25 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/reports-1440-dark-125.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/reports-1440-dark-125.png) | 64px / 0px / 44px | PASS |
+| reports / 1440 / high-contrast / 1 | src/components/shell/shell.css + module | No valid baseline | [Current](docs/verification/premium-design/current-20261023-0225/after/reports-1440-high-contrast-100.png) | 64px / 0px / 44px | PASS |
+| reports / 375 / light / 1 / reduced motion | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/reports-375-light-100-reduced.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/reports-375-light-100-reduced.png) | 64px / 0px / 44px | PASS |
+| calendar / 375 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/calendar-375-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/calendar-375-light-100.png) | 64px / 0px / 44px | PASS |
+| calendar / 768 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/calendar-768-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/calendar-768-light-100.png) | 64px / 0px / 44px | PASS |
+| calendar / 820 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/calendar-820-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/calendar-820-light-100.png) | 64px / 0px / 44px | PASS |
+| calendar / 1024 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/calendar-1024-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/calendar-1024-light-100.png) | 64px / 0px / 44px | PASS |
+| calendar / 1280 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/calendar-1280-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/calendar-1280-light-100.png) | 64px / 0px / 44px | PASS |
+| calendar / 1440 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/calendar-1440-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/calendar-1440-light-100.png) | 64px / 0px / 44px | PASS |
+| calendar / 1920 / light / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/calendar-1920-light-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/calendar-1920-light-100.png) | 64px / 0px / 44px | PASS |
+| calendar / 820 / dark / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/calendar-820-dark-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/calendar-820-dark-100.png) | 64px / 0px / 44px | PASS |
+| calendar / 1440 / dark / 1 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/calendar-1440-dark-100.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/calendar-1440-dark-100.png) | 64px / 0px / 44px | PASS |
+| calendar / 820 / light / 1.25 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/calendar-820-light-125.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/calendar-820-light-125.png) | 64px / 0px / 44px | PASS |
+| calendar / 1440 / dark / 1.25 | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/calendar-1440-dark-125.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/calendar-1440-dark-125.png) | 64px / 0px / 44px | PASS |
+| calendar / 1440 / high-contrast / 1 | src/components/shell/shell.css + module | No valid baseline | [Current](docs/verification/premium-design/current-20261023-0225/after/calendar-1440-high-contrast-100.png) | 64px / 0px / 44px | PASS |
+| calendar / 375 / light / 1 / reduced motion | src/components/shell/shell.css + module | [Before](docs/verification/premium-design/before/calendar-375-light-100-reduced.png) | [Current](docs/verification/premium-design/current-20261023-0225/after/calendar-375-light-100-reduced.png) | 64px / 0px / 44px | PASS |

@@ -1,0 +1,27 @@
+[
+  {
+    "name": "browser",
+    "args": [
+      "after",
+      "all"
+    ],
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/browser-after-final.log",
+    "startedAt": "2026-10-23T06:12:55.662Z",
+    "exitCode": 0,
+    "sourceHash": "44ae29705be2a51af27d56f58e8fd5551800a98bac26ba3760f1550ea0692864",
+    "afterHash": "44ae29705be2a51af27d56f58e8fd5551800a98bac26ba3760f1550ea0692864",
+    "sourceChanged": false
+  },
+  {
+    "name": "browser",
+    "args": [
+      "checks"
+    ],
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/browser-checks-final.log",
+    "startedAt": "2026-10-23T06:15:16.918Z",
+    "exitCode": 0,
+    "sourceHash": "44ae29705be2a51af27d56f58e8fd5551800a98bac26ba3760f1550ea0692864",
+    "afterHash": "d8be21f0db480e44f3c3e75c882b7a8cf6b091c425b994aba52a8d19a9f0748f",
+    "sourceChanged": true
+  }
+]

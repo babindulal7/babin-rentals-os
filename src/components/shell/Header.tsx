@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import Icon, { type IconName } from '../ui/Icon'
 import { useAuth } from '../../lib/auth'
 import { useViewport } from '../../lib/device'
+import { useCompactHeader } from '../../lib/headerRoom'
 import { openCommandPalette } from './CommandPalette'
 import { useSync } from '../../lib/syncContext'
 import { useOptionalWorkspace, type PageHeaderSearchConfig } from '../../lib/workspaceContext'
@@ -23,6 +24,7 @@ import { GlobalAddMenu } from '../ui/creation/GlobalAddMenu'
 import { MobileHeaderSearch } from './MobileHeaderSearch'
 import { UnsavedChangesIndicator } from '../ui/header/UnsavedChangesIndicator'
 import { IS_MOCK } from '../../lib/supabase'
+import { resolveSearchOwner, resolvePhoneSearchKind } from './shellLayoutContract'
 import './shell.css'
 
 const HandoverSheet = lazy(() => import('../../modules/auth/HandoverSheet'))
@@ -102,6 +104,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
   const vp = useViewport()
   const isPhone = vp === 'phone'
   const isTablet = vp === 'tablet'
+  const compactHeader = useCompactHeader()
   const isDispatch = crumbs.some((crumb) => crumb.label === 'Today' || crumb.label === 'Dashboard')
   const [profileOpen, setProfileOpen] = useState(false)
   const [showHandover, setShowHandover] = useState(false)
@@ -234,18 +237,19 @@ export default function Header({ crumbs, actions }: HeaderProps) {
   // and record badges. These are NOT secondary commands. Keep their own
   // desktop positions visible even when secondary slots fill up.
   const legacyContext = legacyGroups.flatMap((group) => extractValidActions(group.extra))
+  const persistentActions = legacyGroups.flatMap((group) => extractValidActions(group.persistent))
   const legacySecondary = [
     ...legacyGroups.flatMap((group) => extractValidActions(group.secondary)),
     ...looseSecondary,
     ...legacyPrimary.slice(1),
   ]
-  const visibleLegacySecondaryCount = !isPhone && !isTablet ? Math.max(0, 2 - (resolved?.secondary.length ?? 0)) : 0
+  const visibleLegacySecondaryCount = !compactHeader ? Math.max(0, 2 - (resolved?.secondary.length ?? 0)) : 0
   const visibleLegacySecondary = [
-    ...(!isPhone && !isTablet ? legacyContext : []),
+    ...(!compactHeader ? legacyContext : []),
     ...legacySecondary.slice(0, visibleLegacySecondaryCount),
   ]
   const moreLegacySecondary = [
-    ...(isPhone || isTablet ? legacyContext : []),
+    ...(compactHeader ? legacyContext : []),
     ...legacySecondary.slice(visibleLegacySecondaryCount),
   ]
   const legacyOverflowItems = legacyGroups.flatMap((group) =>
@@ -264,13 +268,28 @@ export default function Header({ crumbs, actions }: HeaderProps) {
   )
   const searchConfig = isSearchConfig ? (hData?.search as PageHeaderSearchConfig) : null
 
+  const searchOwner = resolveSearchOwner({
+    isPhone,
+    hasPortalSearch: Boolean(ws?.hasPageSearch),
+    hasConfigSearch: Boolean(searchConfig),
+    isDispatch,
+  })
+
+  const phoneSearchKind = resolvePhoneSearchKind({
+    isPhone,
+    searchInMore: hData?.searchInMore,
+    hasPortalSearch: Boolean(ws?.hasPageSearch),
+    hasConfigSearch: Boolean(searchConfig),
+    isDispatch,
+  })
+
   // RULING 2026-10-15 (row 24): the header search is the page's one search, and its placeholder
   // says "(press /)". On a phone MobileHeaderSearch answers the key; at tablet and desktop
   // nothing did, so `/` focused nothing. A page that wires its own `/` (Today, Rentals,
   // Queues, Notes) still wins: it prevents default first, or refocuses after this runs.
   // Revert = delete this effect and `searchWrapRef`.
   const searchWrapRef = useRef<HTMLLabelElement>(null)
-  const hasHeaderSearch = !isPhone && searchConfig !== null
+  const hasHeaderSearch = !isPhone && searchOwner === 'config' && searchConfig !== null
   useEffect(() => {
     if (!hasHeaderSearch) return
     const handleSlash = (e: KeyboardEvent) => {
@@ -292,8 +311,8 @@ export default function Header({ crumbs, actions }: HeaderProps) {
     if (!resolved) return []
     const items: OverflowMenuItem[] = []
 
-    // On tablet or phone, secondary actions collapse into overflow
-    if (isTablet || isPhone) {
+    // RULING 2026-10-23: registry actions follow the header's available width, including an expanded desktop sidebar.
+    if (compactHeader) {
       resolved.secondary.forEach((sec) => {
         const status = isActionEnabled(sec, actionContext)
         items.push({
@@ -325,7 +344,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
     }
 
     return items
-  }, [resolved, isTablet, isPhone, actionContext])
+  }, [resolved, compactHeader, isPhone, actionContext])
 
   return (
     <>
@@ -545,7 +564,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             }}
           >
             {/* If the active page provided a search configuration, render the unified search input */}
-            {searchConfig ? (
+            {searchOwner === 'config' && searchConfig ? (
               /* RULING 2026-10-15 (zoom audit): a label, so the whole 44px box focuses the
                  field. The input alone measured 22px tall on every page (Law 15). */
               <label
@@ -614,7 +633,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                   </button>
                 )}
               </label>
-            ) : !isDispatch && !ws?.hasPageSearch ? (
+            ) : searchOwner === 'command-palette' ? (
               <button
                 type="button"
                 onClick={() => openCommandPalette()}
@@ -686,7 +705,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
               ref={ws?.setHeaderSearchElement}
               className="workspace-header-search"
               style={{
-                display: ws?.hasPageSearch ? 'flex' : 'none',
+                display: searchOwner === 'portal' ? 'flex' : 'none',
                 width: '100%',
                 minWidth: 0,
               }}
@@ -825,10 +844,11 @@ export default function Header({ crumbs, actions }: HeaderProps) {
               move a primary CTA past the More button. */}
           <span className="app-global-header__action-slot app-global-header__action-slot--secondary" data-header-slot="secondary">
                 <span ref={ws?.setHeaderSecondaryActionsElement} className="workspace-header-secondary-actions" />
-                {!isPhone && !isTablet && visibleLegacySecondary.map((action, idx) => (
+                {persistentActions.map((action, idx) => <span key={isValidElement(action) && action.key != null ? String(action.key) : `persistent-${idx}`}>{action}</span>)}
+                {!compactHeader && visibleLegacySecondary.map((action, idx) => (
                   <span key={isValidElement(action) && action.key != null ? String(action.key) : `hdr-secondary-${idx}`}>{action}</span>
                 ))}
-                {!isPhone && !isTablet && resolved?.secondary?.map((sec) => {
+                {!compactHeader && resolved?.secondary?.map((sec) => {
                   const statusCheck = isActionEnabled(sec, actionContext)
                   return (
                     <Button
@@ -912,16 +932,12 @@ export default function Header({ crumbs, actions }: HeaderProps) {
 
           {/* Phone search is always in the same slot, whether a page has its
               own search or uses the global command palette. */}
-          {/* RULING 2026-10-16: a page whose own More carries Search (Booking Detail) gives the
-              whole 44px slot to its title; at 375px the title had 0px. The slot is left out
-              rather than emptied, because its fixed width (shell.css) would still be reserved.
-              Revert = drop `!hData?.searchInMore` from the condition below. */}
-          {isPhone && !hData?.searchInMore && (
+          {phoneSearchKind !== 'none' && (
             <span className="app-global-header__phone-search" data-header-slot="search">
               <span ref={ws?.setHeaderPhoneSearchActionsElement} className="workspace-header-phone-search-actions" />
-              {searchConfig && !ws?.hasPageSearch ? (
+              {phoneSearchKind === 'panel' && searchConfig ? (
                 <MobileHeaderSearch key={hData?.title ?? activeCrumb} config={searchConfig} title={hData?.title ?? activeCrumb} />
-              ) : !searchConfig && !isDispatch && !ws?.hasPageSearch ? (
+              ) : phoneSearchKind === 'trigger' ? (
                 <button
                   type="button"
                   onClick={() => openCommandPalette()}

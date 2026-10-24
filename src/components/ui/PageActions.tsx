@@ -12,6 +12,8 @@ export interface PageActionsProps {
   primary?: ReactNode
   /** Normal alternate actions (secondary buttons, export, import) */
   secondary?: ReactNode[] | ReactNode
+  /** Compact contextual launcher that owns its own popup; keep out of another menu. */
+  persistent?: ReactNode
   /** Overflow menu items or custom overflow menu node */
   overflow?: OverflowMenuItem[] | ReactNode
   /** Additional items (badges, share buttons, info pills) */
@@ -345,6 +347,7 @@ export function ActionsOverflowMenu({
 export function PageActions({
   primary,
   secondary,
+  persistent,
   overflow,
   extra,
   className = '',
@@ -383,6 +386,8 @@ export function PageActions({
           {item}
         </span>
       ))}
+
+      {persistent}
 
       {visibleSecondary.map((action, idx) => (
         <span key={isValidElement(action) && action.key != null ? String(action.key) : `sec-${idx}`} style={{ display: 'inline-flex' }}>

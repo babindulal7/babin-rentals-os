@@ -1,5 +1,31 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 24 October 2026: Return reservation contract — engineering scope pending
+
+- Owner availability policy is settled by Booking Operations v1.1 and `RULINGS-2026-10-24.md`: pending cleanup alone is not a hold. This is not an open product-policy question.
+- `TODO(decision)`: the brief also says no migration. A disposable PGlite probe confirms that partial Return leaves A's original reservation active while B remains out; GiST rejects A's new overlapping reservation (`23P01`). Clarification is pending on authoring/verifying a narrow local-only database correction. No hosted apply, release-by-query workaround or migration is authorized by this entry.
+- `TODO(decision)`: identify the authoritative physical-clearance record for a genuine damage/QC finding after repair. Financial approval/disposition is not proof of physical repair. Current availability remains conservative on non-voided findings and recorded defects; do not auto-clear them based on Reset, payment or case finance.
+- Probe and UI evidence are under `artifacts/booking-operations-20261024/` and `docs/verification/booking-operations-20261024/`.
+
+## 24 October 2026: guarded 0171 + 0172 integration — APPROVED
+
+Babin explicitly chose **“Integrate the guarded pair”**, including the explained pristine/global, history/scoped, revoke-last/deny-all and Owner/Admin superior/self-target rules. Shared-source integration and permanent security/CI wiring are authorized and being verified. This resolves the model/canonical-source choice below, not N-5 hosted application or production readiness. Unbooked Reset uses the unit's current warehouse branch, as already selected. New current evidence will be recorded in `verification/OPERATIONS_BRANCH_INTEGRATION_2026-10-24.md`.
+
+Available physical devices are iPhone 17 Pro and M4 iPad Pro. Device acceptance has not yet run; no external scanner model/interface was identified. Isolated staging credentials/role fixtures and owner-controlled backup/cutover remain required. The unrelated Technician/Handover and legacy Storage decisions below are not changed by this approval.
+
+## 23 October 2026: pending 0171 / canonical checkout — HISTORICAL, resolved above
+
+- A draft operations-branch migration appeared locally and was repeatedly removed by external checkout/cleanup activity. Its guarded recovery candidate closes the existing Admin superior/self-target bypass and passes 169 migration / 31 lifecycle / 18 security-group local checks. Candidate and original are preserved at C:/Users/use/AppData/Local/Temp/babin-current-main-20261023-173608; this is not approval of the draft's location model or administration policy.
+- Active migration present at reconciliation: false. Current application verification remains incomplete. User choice is pending between pausing other writers and restoring pending fixes, or keeping current main with the draft in recovery. No answer or product ruling is inferred from file changes or source comments.
+- The pre-existing P0-B location-scoping decision remains OPEN. Confirm the authoritative site model, permitted grant administration and Reset enforcement/integration before treating the feature as delivered. No live migration, role expansion or deletion is proposed by this record.
+
+### Pinned verification follow-up — Reset branch enforcement
+
+- Commit `14dbbe3a` contains 0171 and 169 migration files. A disposable PGlite probe allowed a synthetic Warehouse actor only on branch A and correctly refused the explicit Reset assertion for branch B, yet that actor still updated one branch B `cleaning_queue_entries` assignment through the API role. `floorVerb.ts` does not invoke the early assertion described in 0171. This is a locally reproduced enforcement gap, not a hosted test or a completed feature. Evidence: `artifacts/release-checkpoint/checkpoint-14dbbe3a/reset-branch-probe.json`.
+- **RESOLVED / RESET-BRANCH-0171, Babin 23 October:** “Use the unit’s current warehouse branch.” Unbooked items resolve `product_units.warehouse_id → warehouses.branch_id`; linked items retain booking branch. No fallback to the actor's or unit's separate branch. The broader P0-B model/admin approval above remains open.
+- Candidate engineering is isolated in the attached `verified-release-checkpoint` worktree: 0172 restrictive queue/task policies cover old and new scope; floor actions call the early assertion; positive/negative tests cover revoke, transfer, reparenting, unknown/inactive identities and existing role limits. Its fixed-source pipeline, full suite/coverage (5,339/5,339), 170 migrations and 31 lifecycle steps pass. Candidate integration and permanent CI wiring remain pending; no production application is authorized.
+- Contributor governance gap: `AGENTS.md` and `CLAUDE.md` reference root `PLAN.md`, which is absent in this checkout. This decision is logged here instead of inventing a replacement roadmap.
+
 ## 20 October 2026: per-operation grant matrix (P0-B) — ACTIVE, one open cell
 
 - The four global operations now carry **one grant each** (Booqable adoption spec P0-B: Booqable's 13 flat grants cover no operational action, so the granularity is net-new). `lib/rbac.ts` exposes `canPack` / `canHandover` / `canReturn` / `canReset` + `canPerformOp(role, op)`; `actions/core.ts` resolves `operations.pack|handover|return|reset`; the four rental actions declare their specific grant instead of the coarse `operations.perform` (kept as a dispatcher case for compatibility).
@@ -158,9 +184,14 @@ The Crew timesheet page now reads recorded call/wrap times from `crew_shoot_days
 - **The overtime threshold** — hours in a day past which the page flags overtime. `crew_shoot_days.overtime_approved_by` exists, so overtime is a real concept; its threshold has never been ruled.
 - **How a day rate becomes an hourly figure** — the page estimates pay as hours × day rate ÷ 8. Crew payouts on Crew Assist are days booked × day rate. Is crew pay by the day or by the hour, and does overtime pay differently? Until ruled, the page labels its figure "Estimated pay" and says so on screen.
 
-## 19. Membership change: does it restart the term, and what about renewal? (22 October 2026) — open
+## 19. Premium recovery: equipment navigation conflict (23 October 2026)
 
-"Activate membership" is built (RULINGS-2026-10-22; migration 0171 written, not applied). A client with no live membership is put on a plan; a client with one is moved, by adding a new `client_memberships` row and superseding the old one. Two things it deliberately does not decide:
+**TODO(decision / reconciliation):** the supplied recovery brief explicitly requires seven section anchors, without a five-step wizard. The newer local EquipmentRecordEditor retains seven anchors and also renders an optional five-stage mode. Babin has been asked which direction should govern this newer code; no response or reversal is inferred. Preserve existing data/write engines and record this acceptance conflict until reconciled. The all-Outfit theme is separately resolved by Babin’s explicit answer and is not pending.
+
+## 20. Membership change: does it restart the term, and what about renewal? (22 October 2026) — open
+
+"Activate membership" is built (RULINGS-2026-10-22; migration 0174 written, not applied). A client with no live membership is put on a plan; a client with one is moved, by adding a new `client_memberships` row and superseding the old one. Two things it deliberately does not decide:
 - **Does a change restart the term?** 0005 derives the renewal date from `join_date` plus the plan's `term_months`. The new row's `join_date` is today's Kathmandu day, so a change restarts the term. Alternatives: carry the original join date over, or let the person choose. Which is right when a member upgrades mid-year?
 - **Renewing a lapsed membership.** The function refuses "already on this plan", so a lapsed member cannot be renewed here. Renewal needs a ruling on the fee, the new term dates, and who approves.
 - **Plans themselves.** The mock has no plans, and there is no screen to create or retire one; `membership_plans` is data only an Owner, Admin or Manager can write. Until someone sets them up, "Activate Membership" says no plan is on file.
+- **Two write paths.** `enroll_client_membership` (0173, the Membership page's "+ Add Membership") and `change_client_membership` (0174, the client page's Activate / Change Plan) both insert a `client_memberships` row and supersede the live one. They differ: 0174 refuses a retired plan, a deactivated client and a move to the plan the client is already on, and takes no fee; 0173 refuses none of those and accepts a fee and join date. Should there be one function? Until ruled both stay, and RULINGS-2026-10-22 row 10 says which screen uses which.

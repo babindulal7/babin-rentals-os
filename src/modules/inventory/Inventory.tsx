@@ -263,7 +263,9 @@ export const INVENTORY_KPI_FILTERS = {
  * act on. Same helper, same reasoning, as `RentalsList.tsx` and `Today.tsx`.
  */
 function countOf(list: { loading: boolean; error: string | null }, value: number | null): string {
-  return list.loading || list.error !== null || value === null ? '—' : grouped(value)
+  if (list.loading) return '…'
+  if (list.error !== null || value === null) return '—'
+  return grouped(value)
 }
 
 /**
@@ -622,7 +624,8 @@ function ParentRowView({
           checked ? 'is-selected' : '',
         ].filter(Boolean).join(' ')}
       >
-        <td style={{ ...td, width: 26 }} onClick={(e) => e.stopPropagation()}>
+        <td style={{ ...td, width: 44 }} onClick={(e) => e.stopPropagation()}>
+          <label className="data-table-selection-hit">
           <input
             type="checkbox"
             aria-label={`Select ${row.name}`}
@@ -630,6 +633,7 @@ function ParentRowView({
             onChange={onToggle}
             style={{ accentColor: 'var(--nav-active-accent)' }}
           />
+          </label>
         </td>
         <td style={{ ...td, width: 34 }} onClick={(e) => e.stopPropagation()}>
           {serialised ? (
@@ -1819,8 +1823,9 @@ export default function Inventory() {
         see `data/inventory.ts`'s `TABS` note and the header of
         `Warehouses.tsx` / `PurchaseRequests.tsx`.
       */}
-      <div style={{ overflowX: 'auto', paddingBottom: 2, maxWidth: '100%' }}>
+      <div style={{ overflowX: 'auto', paddingBottom: 2, maxWidth: '100%', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
         <SegmentedControl
+          idPrefix="inventory-sections"
           ariaLabel="Inventory sections"
           size={phone ? 'sm' : 'md'}
           options={[
@@ -1901,7 +1906,7 @@ export default function Inventory() {
             chip track back above the table card with its own padding and bottom border.
           */}
           <div className="inventory-list-toolbar" style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <div className="inventory-chip-track" role="group" aria-label="Equipment status" style={{ flex: '0 1 auto' }}>
+            <div className="inventory-chip-track" role="tablist" aria-label="Equipment status" style={{ flex: '0 1 auto' }}>
               {PRIMARY_EQUIPMENT_CHIPS.map((c) => {
                 const key = chipKey(c)
                 const on = chipKey(chip) === key
@@ -1910,15 +1915,44 @@ export default function Inventory() {
                   <button
                     key={key}
                     type="button"
+                    role="tab"
+                    id={`inventory-chip-tab-${chipSlug(c)}`}
+                    aria-selected={on}
+                    tabIndex={on ? 0 : -1}
                     onClick={() => { setChip(c); setPage(1) }}
-                    aria-pressed={on}
                     className={`inventory-filter-chip ${on ? 'is-active' : ''}`}
-                    style={!on && tone ? { color: tone } : undefined}
+                    style={{
+                      minHeight: 'var(--tap)',
+                      ...(!on && tone ? { color: tone } : {}),
+                    }}
+                    onKeyDown={(event) => {
+                      const backwards = event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+                      const forwards = event.key === 'ArrowRight' || event.key === 'ArrowDown'
+                      if (!backwards && !forwards && event.key !== 'Home' && event.key !== 'End') return
+                      const index = PRIMARY_EQUIPMENT_CHIPS.findIndex((item) => chipKey(item) === key)
+                      const next =
+                        event.key === 'Home'
+                          ? PRIMARY_EQUIPMENT_CHIPS[0]
+                          : event.key === 'End'
+                            ? PRIMARY_EQUIPMENT_CHIPS[PRIMARY_EQUIPMENT_CHIPS.length - 1]
+                            : PRIMARY_EQUIPMENT_CHIPS[
+                                (index + (backwards ? -1 : 1) + PRIMARY_EQUIPMENT_CHIPS.length) %
+                                  PRIMARY_EQUIPMENT_CHIPS.length
+                              ]
+                      if (!next) return
+                      event.preventDefault()
+                      setChip(next)
+                      setPage(1)
+                      const buttons = event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
+                      buttons?.[PRIMARY_EQUIPMENT_CHIPS.indexOf(next)]?.focus()
+                    }}
                   >
                     {c.kind === 'status' && <Icon name={INV_STYLE[c.status].icon} size={12} />}
                     {c.kind === 'condition' && <Icon name="eye" size={12} />}
                     {c.label}
-                    <span className="figure" style={{ color: 'var(--muted)' }}>{chipCounts.loading || chipCounts.error ? '—' : chipCounts.rows.find(row => row.id === chipSlug(c))?.count ?? '—'}</span>
+                    <span className="figure" style={{ color: 'var(--muted)' }}>
+                      {chipCounts.loading ? '…' : chipCounts.error ? '—' : (chipCounts.rows.find(row => row.id === chipSlug(c))?.count ?? '—')}
+                    </span>
                   </button>
                 )
               })}
@@ -2214,7 +2248,8 @@ export default function Inventory() {
                     <table className="inventory-table operations-table" aria-label="Equipment inventory" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 0 }}>
                       <thead>
                         <tr style={{ background: 'var(--th-bg)' }}>
-                          <th style={{ ...th, width: 26 }}>
+                          <th style={{ ...th, width: 44 }}>
+                            <label className="data-table-selection-hit">
                             <input
                               type="checkbox"
                               aria-label="Select every model on this page"
@@ -2222,6 +2257,7 @@ export default function Inventory() {
                               onChange={toggleAllOnPage}
                               style={{ accentColor: 'var(--nav-active-accent)' }}
                             />
+                            </label>
                           </th>
                           <th style={{ ...th, width: 26 }} />
                           <th style={th}>

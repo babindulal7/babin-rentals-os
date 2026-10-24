@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, useRef, useCallback, type CSSProperties }
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import Icon, { type IconName } from '../../components/ui/Icon'
 import { Card, PageHeader, PageActions, Button, cardStyle } from '../../components/ui/Page'
-import { SearchInput } from '../../components/ui'
 import { PageShell } from '../../components/ui/PageShell'
 import { PageBody } from '../../components/ui/PageBody'
 import { DataAgeBadge } from '../../components/ui/DataAgeBadge'
@@ -338,12 +337,15 @@ export function exceptionFilters(facet: ExceptionFacet, nowAd: string, todayAd: 
 
 /* ── Chips ─────────────────────────────────────────────────────────────── */
 
-function chipStyle(on: boolean) {
+const QUEUE_TAB_KEYS = ['all', 'Pack', 'Handover', 'Return', 'Reset', 'Cases'] as const
+type QueueTabKey = (typeof QUEUE_TAB_KEYS)[number]
+
+function chipStyle(on: boolean): CSSProperties {
   return {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 'var(--sp-sm)',
-    minHeight: 44,
+    minHeight: 'var(--tap, 44px)',
     padding: '0 14px',
     borderRadius: 'var(--r-btn)',
     border: `1.5px solid ${on ? 'var(--primary, #2456d6)' : 'var(--border)'}`,
@@ -443,15 +445,17 @@ function getJobButtonProps(job: JobName): {
 }
 
 interface QueueChipProps {
+  id?: string
   queue: VerbQueue
   active: boolean
+  tabIndex?: number
   total: number | null
   loading: boolean
   error: string | null
   onToggle: () => void
 }
 
-function QueueChip({ queue, active, total, loading, error, onToggle }: QueueChipProps) {
+function QueueChip({ id, queue, active, tabIndex, total, loading, error, onToggle }: QueueChipProps) {
   const tok = total === 0 ? STATUS.neutral : queue.job === 'Reset' ? STATUS.progress : STATUS[statusToken(JOBS_META[queue.job].runsAt)]
 
   /*
@@ -465,7 +469,18 @@ function QueueChip({ queue, active, total, loading, error, onToggle }: QueueChip
     total === null ? `${queue.title}: no count available` : `${queue.title}: ${total} ${total === 1 ? 'job' : 'jobs'}`
 
   return (
-    <button type="button" onClick={onToggle} aria-pressed={active} style={chipStyle(active)} {...(error ? { title: error } : {})}>
+    <button
+      id={id}
+      role="tab"
+      type="button"
+      className="operations-v2__queue"
+      onClick={onToggle}
+      aria-selected={active}
+      aria-pressed={active}
+      tabIndex={tabIndex ?? (active ? 0 : -1)}
+      style={chipStyle(active)}
+      {...(error ? { title: error } : {})}
+    >
       {/* Law 11 — the queue's stage tone never carries the meaning alone; the icon and the word are both present. */}
       <Icon name={queue.icon} size={15} style={{ color: active ? 'var(--select-fg)' : 'var(--text2)', flexShrink: 0 }} />
       {queue.title}
@@ -535,16 +550,22 @@ export default function OperationsQueues() {
   const [pendingDock, setPendingDock] = useState<Dock | null>(null)
   const [cursorNo, setCursorNo] = useState<string | null>(null)
   const dockDirty = useRef(false)
-  const onDockDirty = useCallback((dirty: boolean) => { dockDirty.current = dirty }, [])
+  const dockBusy = useRef(false)
+  const [dockProtected, setDockProtected] = useState(false)
+  const [dockNotice, setDockNotice] = useState<string | null>(null)
+  const onDockDirty = useCallback((dirty: boolean) => { dockDirty.current = dirty; setDockProtected(dirty || dockBusy.current) }, [])
+  const onDockBusy = useCallback((busy: boolean) => { dockBusy.current = busy; setDockProtected(busy || dockDirty.current); if (!busy) setDockNotice(null) }, [])
   /* RULING 2026-10-14 (R14-3): swapping the docked booking would drop unsaved packing work, so ask first. */
   const requestDock = (next: Dock) => {
-    if (dock && dock.bookingNo !== next.bookingNo && dockDirty.current) setPendingDock(next)
+    if (dockBusy.current) { setDockNotice('An operation is being saved. Wait for its result before changing bookings.'); return }
+    if (dock && (dock.bookingNo !== next.bookingNo || dock.job !== next.job) && dockDirty.current) setPendingDock(next)
     else setDock(next)
   }
   const [params, setParams] = useSearchParams()
   const [fastReturnOpen, setFastReturnOpen] = useState(false)
   const [barcodeModalOpen, setBarcodeModalOpen] = useState(false)
   const [searchInput, setSearchInput] = useState('')
+  const [caseSearchInput, setCaseSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [clientFilter, setClientFilter] = useState('all')
   const [projectFilter, setProjectFilter] = useState('all')
@@ -553,13 +574,18 @@ export default function OperationsQueues() {
   const [selectedBookingNos, setSelectedBookingNos] = useState<Set<string>>(() => new Set())
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(25)
-  const queueSearchRef = useRef<HTMLInputElement | null>(null)
   const dateMenuRef = useRef<HTMLDivElement | null>(null)
   /* Law 13/14 — width decides, at v4.1 §7.7's 768 / 1280. */
   const viewport = useViewport()
   const phone = viewport === 'phone'
   const tabular = !phone
-  const dockOpen = dock !== null && viewport === 'desktop'
+  // Keep the SAME workspace mounted when rotation/zoom crosses a breakpoint
+  // with unsaved marks or an in-flight write. New narrow-screen jobs still use
+  // the global modal; this existing dock becomes a focused inline workspace.
+  const dockOpen = dock !== null && (viewport === 'desktop' || dockProtected)
+  useEffect(() => {
+    if (dockOpen && dockProtected && viewport !== 'desktop') document.querySelector('.operations-shell__panel')?.scrollIntoView({ block: 'start' })
+  }, [dockOpen, dockProtected, viewport])
   /* RULING 2026-10-15: below desktop the two workspace links live in More and a fresh
      data badge takes no width, so the page title keeps the header (BLOCKER-02: at 375px
      the header overflowed by 207px; at 768px the title measured 0px). Revert = set this
@@ -607,6 +633,47 @@ export default function OperationsQueues() {
     setSelectedBookingNos(new Set())
   }
 
+  const activeQueueTabKey: QueueTabKey = useMemo(() => {
+    if (selected === 'Cases') return 'Cases'
+    if (selected !== null) return selected
+    return 'all'
+  }, [selected])
+
+  const onQueueKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const currentIdx = QUEUE_TAB_KEYS.indexOf(activeQueueTabKey)
+    if (currentIdx === -1) return
+
+    let nextIdx = currentIdx
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      nextIdx = (currentIdx + 1) % QUEUE_TAB_KEYS.length
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      nextIdx = (currentIdx - 1 + QUEUE_TAB_KEYS.length) % QUEUE_TAB_KEYS.length
+    } else if (e.key === 'Home') {
+      nextIdx = 0
+    } else if (e.key === 'End') {
+      nextIdx = QUEUE_TAB_KEYS.length - 1
+    } else {
+      return
+    }
+
+    e.preventDefault()
+    const nextKey = QUEUE_TAB_KEYS[nextIdx]
+    if (!nextKey) return
+
+    if (nextKey === 'all') {
+      setActive(null)
+    } else if (nextKey === 'Cases') {
+      patch({ queue: 'cases', quick: null })
+    } else {
+      setActive(nextKey)
+    }
+
+    const nextEl = document.getElementById(`operations-queue-tab-${nextKey}`)
+    if (nextEl) {
+      nextEl.focus()
+    }
+  }
+
   /* Queue search stays local to the already server-filtered operation set and
      waits briefly between keystrokes, so scanning a booking number does not
      cause a render for every physical key press. */
@@ -620,10 +687,6 @@ export default function OperationsQueues() {
       if (event.key === 'Escape') {
         setShowDateMenu(false)
         setShowMoreFilters(false)
-      }
-      if (event.key === '/' && !(event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLSelectElement)) {
-        event.preventDefault()
-        queueSearchRef.current?.focus()
       }
     }
     window.addEventListener('keydown', onKeyDown)
@@ -839,9 +902,24 @@ export default function OperationsQueues() {
         />
       )}
       <div style={{ gridColumn: '1 / -1' }}>
+        {/* RULING 2026-10-23: the active queue owns the shell's single search. */}
         <PageHeader
           title="Operations"
           module="operations"
+          search={selected === 'Cases' ? {
+            value: caseSearchInput,
+            onChange: setCaseSearchInput,
+            onClear: () => { setCaseSearchInput(''); patch({ q: null }) },
+            onKeyDown: event => { if (event.key === 'Enter') patch({ q: caseSearchInput || null }) },
+            placeholder: 'Search cases by ID, title, client… (press /)',
+            ariaLabel: 'Search cases by ID, title, or client',
+          } : {
+            value: searchInput,
+            onChange: setSearchInput,
+            onClear: () => setSearchInput(''),
+            placeholder: 'Filter current queue… (press /)',
+            ariaLabel: 'Search ID, client, project',
+          }}
           status={
             selected && !phone ? (
               <span
@@ -903,11 +981,22 @@ export default function OperationsQueues() {
         }}
       >
 
-      <div className="operations-v2__queues" role="group" aria-label="Operational queues">
+      <div
+        className="operations-v2__queues"
+        role="tablist"
+        aria-label="Operational queues"
+        onKeyDown={onQueueKeyDown}
+      >
         <button
+          id="operations-queue-tab-all"
+          role="tab"
           type="button"
+          className="operations-v2__queue"
           onClick={() => setActive(null)}
+          aria-selected={selected === null && group === null && exception === null}
           aria-pressed={selected === null && group === null && exception === null}
+          tabIndex={(selected === null && group === null && exception === null) ? 0 : -1}
+          aria-label={list.loading && list.total === null ? 'All Active: loading count' : list.error ? 'All Active: count unavailable' : `All Active: ${list.total ?? jobs.length} jobs`}
           style={chipStyle(selected === null && group === null && exception === null)}
         >
           <Icon name="checklist" size={15} style={{ color: (selected === null && group === null && exception === null) ? 'var(--select-fg)' : 'var(--text2)', flexShrink: 0 }} />
@@ -928,14 +1017,30 @@ export default function OperationsQueues() {
               fontWeight: 700,
             }}
           >
-            {list.total ?? jobs.length}
+            {list.loading && list.total === null ? '…' : list.error ? '—' : String(list.total ?? jobs.length)}
           </span>
         </button>
-        {CHIPS.map((q) => <QueueChip key={q.job} queue={q} active={selected === q.job} total={counts[q.job].total} loading={counts[q.job].loading} error={counts[q.job].error} onToggle={() => setActive(selected === q.job ? null : q.job)} />)}
+        {CHIPS.map((q) => (
+          <QueueChip
+            key={q.job}
+            id={`operations-queue-tab-${q.job}`}
+            queue={q}
+            active={selected === q.job}
+            tabIndex={selected === q.job ? 0 : -1}
+            total={counts[q.job].total}
+            loading={counts[q.job].loading}
+            error={counts[q.job].error}
+            onToggle={() => setActive(selected === q.job ? null : q.job)}
+          />
+        ))}
         <Link
+          id="operations-queue-tab-Cases"
+          role="tab"
           to="/inventory/cases"
           onClick={(event) => { event.preventDefault(); patch({ queue: selected === 'Cases' ? null : 'cases', quick: null }) }}
+          aria-selected={selected === 'Cases'}
           aria-pressed={selected === 'Cases'}
+          tabIndex={selected === 'Cases' ? 0 : -1}
           className="operations-v2__queue"
           style={{ ...chipStyle(selected === 'Cases'), textDecoration: 'none' }}
         >
@@ -944,6 +1049,7 @@ export default function OperationsQueues() {
           <span
             className="figure"
             title={casesList.error ?? undefined}
+            aria-label={casesList.loading && openCases === null ? 'Cases: loading count' : casesList.error ? 'Cases: count unavailable' : `Cases: ${openCases ?? 0} open cases`}
             style={{
               minWidth: 22,
               height: 20,
@@ -959,7 +1065,7 @@ export default function OperationsQueues() {
               fontWeight: 700,
             }}
           >
-            {openCases ?? '—'}
+            {casesList.loading && openCases === null ? '…' : casesList.error ? '—' : (openCases ?? '—')}
           </span>
         </Link>
       </div>
@@ -1017,16 +1123,6 @@ export default function OperationsQueues() {
             {overdueCount} Overdue
           </span>
         )}
-        <div style={{ flex: '1 1 240px', minWidth: 180 }}>
-          <SearchInput
-            ref={queueSearchRef}
-            value={searchInput}
-            onChange={setSearchInput}
-            onClear={() => setSearchInput('')}
-            placeholder="Filter current queue… (press /)"
-            aria-label="Search ID, client, project"
-          />
-        </div>
         {(isFiltered || search || clientFilter !== 'all' || projectFilter !== 'all') && <Button variant="ghost" onClick={clearOperationFilters}>Clear filters</Button>}
       </div>
 
@@ -1035,8 +1131,10 @@ export default function OperationsQueues() {
       />
       </>}
 
-      {selected === 'Cases' ? <CasesWorkspace embedded /> : (
-        <div className={`operations-v2__split${dockOpen ? ' operations-v2__split--open' : ''}`}>
+      {selected === 'Cases' ? <CasesWorkspace embedded searchControl={{ value: caseSearchInput, onChange: setCaseSearchInput }} /> : (
+        <>
+        {dockNotice && <p role="status">{dockNotice}</p>}
+        <div className={`operations-v2__split${dockOpen ? ' operations-v2__split--open' : ''}`} data-dock-focused={dockProtected && viewport !== 'desktop' ? 'true' : undefined}>
         <Card style={{ overflow: 'hidden' }} bodyStyle={{ padding: 0 }}>
           <PageBody
             loading={list.loading}
@@ -1120,7 +1218,9 @@ export default function OperationsQueues() {
                       <Button
                         size="sm"
                         variant="secondary"
-                        style={{ ...jobBtn.style, width: '100%', minHeight: 44, marginTop: 2 }}
+                        data-primary-verb="true"
+                        className="btn-floor-primary"
+                        style={{ ...jobBtn.style, width: '100%', minHeight: 56, marginTop: 4 }}
                         onClick={() => navigate(jobRoute(job.bookingNo, job.job))}
                       >
                         <Icon name={jobBtn.icon} size={15} />
@@ -1296,16 +1396,18 @@ export default function OperationsQueues() {
             initialJob={dock.job}
             onClose={() => setDock(null)}
             onDirtyChange={onDockDirty}
+            onBusyChange={onDockBusy}
           />
         )}
         </div>
+        </>
       )}
       </div>
 
       <ConfirmDialog
         isOpen={pendingDock !== null}
         onClose={() => setPendingDock(null)}
-        onConfirm={() => { const next = pendingDock; setPendingDock(null); if (next) setDock(next) }}
+        onConfirm={() => { if (dockBusy.current) return; const next = pendingDock; setPendingDock(null); if (next) setDock(next) }}
         title="You have unsaved changes."
         description={`Discard them and open ${pendingDock?.bookingNo ?? 'the next job'}?`}
         cancelLabel="Stay Here"

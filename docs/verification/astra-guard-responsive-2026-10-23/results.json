@@ -1,0 +1,189 @@
+{
+  "at": "2026-10-23T12:19:03.822Z",
+  "scope": "Read-only local mock preview samples after merge; no business records created or changed. These samples do not certify physical devices, every route/role or hosted/offline behavior.",
+  "sourceHashObservedDuring": "2b53a1a45e807881b5d6775c6841f1ad1034bac64013d8aa3d225b19149e1819",
+  "today": {
+    "desktop": {
+      "documentWidth": 1440,
+      "height": 900,
+      "width": 1440
+    },
+    "tablet": {
+      "documentWidth": 820,
+      "height": 1180,
+      "width": 820
+    },
+    "phone": {
+      "documentWidth": 360,
+      "height": 800,
+      "width": 360
+    },
+    "dateFooter": {
+      "before": {
+        "pickups": {
+          "bottom": 8600.25,
+          "height": 8319.65625,
+          "left": 274,
+          "right": 834.28125,
+          "top": 280.59375,
+          "width": 560.28125,
+          "x": 274,
+          "y": 280.59375
+        },
+        "returns": {
+          "bottom": 2791.25,
+          "height": 2510.65625,
+          "left": 851.71875,
+          "right": 1412,
+          "top": 280.59375,
+          "width": 560.28125,
+          "x": 851.71875,
+          "y": 280.59375
+        },
+        "overdue": true
+      },
+      "after": {
+        "pickups": {
+          "bottom": 8600.25,
+          "height": 8319.65625,
+          "left": 274,
+          "right": 834.28125,
+          "top": 280.59375,
+          "width": 560.28125,
+          "x": 274,
+          "y": 280.59375
+        },
+        "returns": {
+          "bottom": 2791.25,
+          "height": 2510.65625,
+          "left": 851.71875,
+          "right": 1412,
+          "top": 280.59375,
+          "width": 560.28125,
+          "x": 851.71875,
+          "y": 280.59375
+        },
+        "overdue": true
+      },
+      "geometryUnchanged": true
+    }
+  },
+  "newRental": {
+    "phone": {
+      "documentWidth": 360,
+      "headerButtons": [
+        {
+          "name": "More rental actions",
+          "rect": {
+            "bottom": 53.5,
+            "height": 44,
+            "left": 134,
+            "right": 178,
+            "top": 9.5,
+            "width": 44,
+            "x": 134,
+            "y": 9.5
+          }
+        },
+        {
+          "name": "Confirm Booking",
+          "rect": {
+            "bottom": 53.5,
+            "height": 44,
+            "left": 178,
+            "right": 222,
+            "top": 9.5,
+            "width": 44,
+            "x": 178,
+            "y": 9.5
+          }
+        },
+        {
+          "name": "Rental summary",
+          "rect": {
+            "bottom": 53.5,
+            "height": 44,
+            "left": 222,
+            "right": 266,
+            "top": 9.5,
+            "width": 44,
+            "x": 222,
+            "y": 9.5
+          }
+        },
+        {
+          "name": "Search",
+          "rect": {
+            "bottom": 53.5,
+            "height": 44,
+            "left": 266,
+            "right": 310,
+            "top": 9.5,
+            "width": 44,
+            "x": 266,
+            "y": 9.5
+          }
+        },
+        {
+          "name": "BA — user profile · Mock mode",
+          "rect": {
+            "bottom": 53.5,
+            "height": 44,
+            "left": 310,
+            "right": 354,
+            "top": 9.5,
+            "width": 44,
+            "x": 310,
+            "y": 9.5
+          }
+        }
+      ],
+      "height": 800,
+      "width": 360
+    },
+    "tablet": {
+      "documentWidth": 820,
+      "height": 1180,
+      "width": 820
+    },
+    "desktop": {
+      "documentWidth": 1440,
+      "height": 900,
+      "width": 1440
+    },
+    "catalogue": {
+      "dialog": {
+        "bottom": 730,
+        "height": 419,
+        "left": 27,
+        "right": 323,
+        "top": 311,
+        "width": 296,
+        "x": 27,
+        "y": 311
+      },
+      "navigation": {
+        "bottom": 800,
+        "height": 58,
+        "left": 0,
+        "right": 360,
+        "top": 742,
+        "width": 360,
+        "x": 0,
+        "y": 742
+      }
+    }
+  },
+  "assertions": {
+    "noDocumentWidthOverflow": true,
+    "bookingHeaderTouchTargets": true,
+    "catalogueClearsBottomNavigation": true
+  },
+  "notes": [
+    "Browser samples only. Pre-existing mock corpus used; no fake data added to business stores.",
+    "A backup of every screenshot and this report is saved outside the shared checkout in the recovery Temp directory.",
+    "Further external source changes occurred after these samples; broader current-source UI acceptance remains open."
+  ],
+  "currentSourceAtReconciliation": "6c496d909c953f2590d60a9ffc6088610f07920211088ba039476aa264b0396a",
+  "sameSourceAsSamples": false
+}

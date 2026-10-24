@@ -1,5 +1,15 @@
 # Current continuation — 21 October 2026, integrated local fixes
 
+## 24 October 2026 — New Rental search UI
+
+- Updated actual `ClientCombobox.tsx` / `AddItemPanel.tsx` with the shared coss input-group composition; added scoped `booking-search-field.css` and four behavioral regressions. Client query clearing preserves the selected client; equipment query clearing preserves filters/focus and adds no line.
+- Verified 14 focused tests and TypeScript. Browser mock checks cover 360/820/1440px, 44px embedded actions, client/history/clear/keyboard behavior and light/dark styles. Evidence: `docs/verification/coss-booking-search-2026-10-24/`.
+- Follow-up repaired the five pending Operations status/read/duplicate/shortcut regressions in actual source and the test helper type error. Added missing/unsupported-status cases and retry verification; 29 focused Operations/search checks pass. Browser Return stage controls also fit all three widths without committing a floor action.
+- Final source `a758bf1f03509acdd318dcb36d3aacad423de8465808bbc15ded0506b49e97f9`: 5380/5380 tests in 429 files, typecheck, 170 migration rebuilds, security, 31 lifecycle checks, lint, 82 contrast pairs and build pass on unchanged source. Focused follow-up: 70/70. Two stale route fixtures were aligned to their intended persisted stages and a stale-launcher regression was added; assertions were retained. Durable receipt: `docs/verification/coss-booking-search-2026-10-24/current-gates.json`; final logs: `artifacts/coss-search-final/`. Earlier attempts remain historical.
+- Remaining: current-source coverage, shared drawer/action-menu consistency, hosted and physical-device/offline acceptance. Generated completion exits 1 for historical coverage. No live migration, push, PR, reset or deletion of offline work.
+
+> **23 October 18:23 NPT — current checkout NOT VERIFIED:** a tested 0171 superior-target security repair is preserved in recovery, but the draft migration is currently absent from the active checkout after repeated external changes. Candidate database proof: 169 migrations / 31 lifecycle / 18 security groups passed. Owned full suite 5316/5320, 4 failed, 0 skipped, source changed; Calendar recheck 7/7 passed. Latest global receipts and current-source gaps are in the newest PROGRESS.md entry and docs/verification/ASTRA_CURRENT_MAIN_2026-10-23.json. Canonical checkout choice pending; production launch remains HOLD.
+
 > **21 October 2026 — confirmation completeness continuation, release HOLD:** the saved `ASTRA_UI_STABLE_CHECKPOINT_2026-10-21.json` records 5,162 passing tests and all required local gates on fingerprint `f25235ddda98a55ef6b10a2cf9f03963200685b06d0b35f40e5b6b68b1cebd1b`. Subsequent local source edits are not certified by that checkpoint. Pre-commit confirmation now reads complete ordered booking-line pages and refuses incomplete/invalid results before any transition; nine new regressions failed against the prior source. Current checks: `docs/verification/ASTRA_CONFIRM_LINES_2026-10-21.json`. Earlier entries below are historical; hosted, physical-device and full offline acceptance remain open.
 
 ## Latest integration checkpoint
@@ -327,3 +337,49 @@ This is the active implementation log for the local fixes requested on 19 Octobe
 - Current state: PARTIAL pending matching-source full gates.
 - Remaining risk or missing business decision: other active source edits can invalidate a receipt; no assertion or threshold was relaxed to accommodate them.
 - Safe rollback guidance: preserve subsequent changes, revert only the relevant runner/workflow diffs, and retain all evidence. Do not reuse stale successful coverage receipts.
+
+## 2026-10-23 02:49 NPT — WF-08 / QA-01 recovery and verification boundary
+- Workspace/branch/SHA: existing C:/Users/use/Desktop/babin-rentals-os; 619f3d227173d9b0070d2ff5fdca5d29aed2fb4c; source f63eee52ef31cdece7d9b4c67905dc17a3fa6f9cf15a9af90edca34b6670a16d.
+- Previous local changes preserved: initial snapshot plus artifacts/astra-20261023-0226; unrelated UI/header/Today edits retained.
+- Evidence/reproduction: four negative cases failed before; first corrected implementation passed 52/52, then concurrent restoration removed both files. Only the repair diffs were reapplied; second focused run also passed 52/52. Recovery patch: artifacts/astra-20261023-0226/reset-staff-recovery.patch; source copies: ResetWorkspace.after.tsx and resetQc.after.test.tsx.
+- Files changed: src/modules/rentals/ResetWorkspace.tsx; src/modules/rentals/__tests__/resetQc.test.tsx; progress and verification documentation.
+- Migration files added: none.
+- Summary: confirmed active cleaner options only; no fabricated staff fallback; visible empty/error/retry; guarded assignment.
+- Data preservation: no user stores or real records modified; all source snapshots and reports retained.
+- Tests: original assertions retained; empty/error/unavailable/rejected-read recovery and active/inactive assignment regressions added.
+- Commands/results: targeted 52/52, zero failures/skips; final-5 typecheck exit 0 with source changed; batch interrupted safely after restoration. Current full suite/coverage/build NOT VERIFIED. Completion exit 1. Exact focused start/metadata in artifacts/astra-20261023-0226/session-result.json.
+- Manual browser/device: not performed for this follow-up.
+- Current state: PARTIAL overall; targeted repair verified; current broad verification blocked by continued shared changes/restoration.
+- Remaining: complete matching-source commands, all existing business/hosted/device acceptance; see 24-row master ledger.
+- Safe rollback: preserve subsequent work and revert only owned hunks from recovery patch; never clear stores or reintroduce fabricated people to obtain green tests.
+
+## ASTRA 24-issue ledger — 23 October partial handoff
+
+Current full-source verification: NOT VERIFIED. See exact paths, corrections, test evidence, command receipts and compatibility risks in docs/verification/ASTRA_MASTER_REPAIR_2026-10-21.md.
+
+| ID | Status | Remaining acceptance |
+|---|---|---|
+| SEC-01 | PENDING STAGING | Hosted Storage JWTs, branch/active-user matrix, floor upload integration, legacy-object ownership/backfill. Existing originals are deliberately unavailable to money-blind roles; review compatibility before any application. |
+| SEC-02 | PENDING STAGING | Authenticated hosted PostgREST; complete own/foreign/inactive/branch routine inventory and trusted internal-call coverage. |
+| SEC-03 | PENDING STAGING | Hosted direct INSERT/trigger behavior; full authoritative-target authorization and telemetry separation review remain open. |
+| SEC-04 | PENDING STAGING | Hosted direct update, additional inactive/peer/last-Owner matrix. |
+| SEC-05 | PENDING STAGING | Hosted endpoint/view/export coverage, reassignment/branch/active-state matrix. |
+| REL-01 | IN PROGRESS | Original branch/authorization context, device/revocation/account-switch acceptance and an explicit legacy recovery/handoff UI remain open; provenance must not be guessed. |
+| REL-02 | IN PROGRESS | The historical conflict detector still compares server time with the device enqueue clock. Original observed-revision provenance and clock-skew acceptance, physical crash/restart and cross-device replay remain open. Read→write compare-and-swap does not establish that original baseline. |
+| WF-01 | IN PROGRESS | VAT exempt/zero-rate provenance (OPEN_DECISIONS §15), credit/refund/export/date/branch reconciliation and authenticated invoice fixtures. |
+| WF-02 | VERIFIED LOCAL | Rental-line value is not a blanket certification of invoice attribution, crew/transport, all credits or every report export. Broader finance matrix remains open. |
+| WF-03 | VERIFIED LOCAL | Hosted filters and full cancellation/archive operational matrix remain open. |
+| WF-04 | IN PROGRESS | Historical/current branch attribution, all KPI denominator/return-case charge rules, independently verified SQL/export cohorts and missing evidence semantics. |
+| WF-05 | BLOCKED | Per-unit invoice/credit/bundle allocation and state-history utilization require the recorded decision in OPEN_DECISIONS §13. |
+| WF-08 | IN PROGRESS | Full source-backed field/role/date/branch cohorts, cross-family card/export reconciliation and authenticated report API acceptance remain open. |
+| UI-02 | BLOCKED | Authorized shared handover/recount schema, legacy ownership recovery and cross-device persistent receipts (OPEN_DECISIONS §16). |
+| UI-03 | BLOCKED | Approved auditable warranty backend, monetary transaction/role contract and legacy ownership/import (OPEN_DECISIONS §16). |
+| UI-01 | BLOCKED | Production↔booking model, lifecycle/ownership and safe import of old unscoped local entries (OPEN_DECISIONS §16). |
+| WF-06 | IN PROGRESS | Full post-confirmation held-summary coverage, authenticated serial/quantity acceptance and true simultaneous PostgreSQL writer test remain open. |
+| WF-07 | VERIFIED LOCAL | Physical midnight/shift rollover and live dashboard acceptance remain open. |
+| UI-06 | VERIFIED LOCAL | Actual device keyboard/popover and price-display acceptance remain open. |
+| UI-04 | VERIFIED LOCAL | Rendered touch/focus/scroll acceptance across the responsive matrix remains open. |
+| UI-05 | IN PROGRESS | 375/430/768/820/1024/1440/1920 rendered measurements/screenshots and shared-module action hierarchy remain unverified in this task after two browser-attachment failures. |
+| QA-01 | IN PROGRESS | Technician Packing authority remains inconsistent with PERMISSIONS.md; see OPEN_DECISIONS §17. A passing dispatcher/full suite does not certify that authorization contract. Any failing or source-changed gate remains open. |
+| QA-02 | VERIFIED LOCAL | Structural completion is never a production/device/integration acceptance score. Final-3 coverage ENOENT and the earlier stale-evidence completion exit 0 are preserved; neither is presented as a successful verification. |
+| PERF-01 | BLOCKED | Representative device/network p75 startup/Today/booking/scanner/report measurements, agreed budgets and physical iPad access remain unavailable. |

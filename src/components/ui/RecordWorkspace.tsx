@@ -50,6 +50,10 @@ export interface RecordSectionProps {
   errorCount?: number
   /** Short hint shown while collapsed, e.g. "Empty" or "3 items". */
   collapsedHint?: string
+  /** Status badge shown in section header (icon + text: Saved, Unsaved, etc.). */
+  statusBadge?: ReactNode
+  /** Additional custom actions in section header trailing edge. */
+  headerAction?: ReactNode
 }
 
 export function RecordSection({
@@ -61,6 +65,8 @@ export function RecordSection({
   forceOpen = false,
   errorCount,
   collapsedHint,
+  statusBadge,
+  headerAction,
 }: RecordSectionProps) {
   const [open, setOpen] = useState(collapsible ? defaultOpen : true)
   const bodyId = useId()
@@ -70,8 +76,11 @@ export function RecordSection({
   }, [forceOpen])
 
   const expanded = !collapsible || open
-  const toggle = collapsible ? (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+  const hasAction = collapsible || statusBadge || headerAction || (errorCount && errorCount > 0)
+  const actionContent = hasAction ? (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      {statusBadge}
+      {headerAction}
       {errorCount && errorCount > 0 ? (
         <span
           style={{
@@ -87,21 +96,24 @@ export function RecordSection({
           {errorCount} {errorCount === 1 ? 'error' : 'errors'}
         </span>
       ) : null}
-      <button
-        type="button"
-        className="record-section-toggle"
-        data-record-toggle
-        aria-expanded={expanded}
-        aria-controls={bodyId}
-        onClick={() => setOpen((v) => !v)}
-      >
-        {expanded ? 'Collapse' : collapsedHint ? `Expand · ${collapsedHint}` : 'Expand'}
-      </button>
+      {collapsible && (
+        <button
+          type="button"
+          className="record-section-toggle"
+          data-record-toggle
+          aria-expanded={expanded}
+          aria-controls={bodyId}
+          onClick={() => setOpen((v) => !v)}
+        >
+          {expanded ? 'Collapse' : collapsedHint ? `Expand · ${collapsedHint}` : 'Expand'}
+        </button>
+      )}
     </div>
   ) : undefined
+
   return (
     <section id={id} className="record-section" data-record-section data-open={expanded ? 'true' : 'false'}>
-      <Card title={title} {...(toggle ? { action: toggle } : {})}>
+      <Card title={title} {...(actionContent ? { action: actionContent } : {})}>
         {/* Kept mounted while collapsed so entered values and field ids survive. */}
         <div id={bodyId} hidden={!expanded}>
           {children}

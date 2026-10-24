@@ -2365,7 +2365,7 @@ STEPS.push({
 
 // 22 Oct (Babin: "activate membership"): a membership is put on a plan, or moved to another, in ONE transaction.
 STEPS.push({
-  id: 'L32', title: 'A membership is activated or changed atomically, audited and idempotent; Coordinator and above only (0171)', expect: 'green',
+  id: 'L32', title: 'A membership is activated or changed atomically, audited and idempotent; Coordinator and above only (0174)', expect: 'green',
   async run() {
     const parse = (v) => (typeof v === 'string' ? JSON.parse(v) : v)
     const change = (role, payload) => asJwt(role, async () => {

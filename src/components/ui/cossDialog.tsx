@@ -2,6 +2,7 @@ import { forwardRef } from 'react'
 import type { ComponentProps, ReactNode } from 'react'
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { cn } from '../../lib/cn'
+import { useViewport } from '../../lib/device'
 import Icon from './Icon'
 
 type ClassProp<T> = string | ((state: T) => string | undefined) | undefined
@@ -13,6 +14,12 @@ function resolveBaseUiClass<T>(userClass: ClassProp<T>, ...baseClasses: (string 
   return cn(...baseClasses, userClass)
 }
 
+/*
+ * coss-compliant Dialog, composed over Base UI's Dialog primitives with the
+ * app's real inline-style + CSS-variable system. Complements cossDrawer with
+ * theme-token paint (--scrim, --z-modal, --card, --border2, --shadow-modal).
+ */
+
 export const Dialog = DialogPrimitive.Root
 export const DialogTrigger = DialogPrimitive.Trigger
 export const DialogClose = DialogPrimitive.Close
@@ -21,18 +28,21 @@ export const DialogPortal = DialogPrimitive.Portal
 export type DialogBackdropProps = DialogPrimitive.Backdrop.Props
 
 export const DialogBackdrop = forwardRef<HTMLDivElement, DialogBackdropProps>(function DialogBackdrop(
-  { className, ...props },
+  { className, style, ...props },
   ref
 ) {
   return (
     <DialogPrimitive.Backdrop
       ref={ref}
       data-slot="dialog-backdrop"
-      className={resolveBaseUiClass(
-        className,
-        'fixed inset-0 z-50 bg-black/40 backdrop-blur-sm transition-opacity duration-200',
-        'data-[ending-style]:opacity-0 data-[starting-style]:opacity-0'
-      )}
+      className={resolveBaseUiClass(className)}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 'var(--z-overlay)' as unknown as number,
+        background: 'var(--scrim)',
+        ...style,
+      }}
       {...props}
     />
   )
@@ -46,35 +56,80 @@ export interface DialogPopupProps extends DialogPrimitive.Popup.Props {
 }
 
 export const DialogPopup = forwardRef<HTMLDivElement, DialogPopupProps>(function DialogPopup(
-  { className, children, showCloseButton = true, bottomStickOnMobile = true, container, ...props },
+  { className, children, showCloseButton = true, bottomStickOnMobile = true, container, style, ...props },
   ref
 ) {
+  const viewport = useViewport()
+  const isMobileSheet = bottomStickOnMobile && viewport === 'phone'
+
   return (
     <DialogPortal container={container}>
       <DialogBackdrop />
       <div
         className={cn(
-          'fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6',
-          bottomStickOnMobile && 'max-sm:items-end max-sm:p-0'
+          'coss-dialog__wrapper',
+          bottomStickOnMobile && 'coss-dialog__wrapper--bottom-stick'
         )}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 'var(--z-modal)' as unknown as number,
+          display: 'flex',
+          alignItems: isMobileSheet ? 'flex-end' : 'center',
+          justifyContent: 'center',
+          padding: isMobileSheet ? 0 : 'var(--sp-md)',
+          pointerEvents: 'none',
+        }}
       >
         <DialogPrimitive.Popup
           ref={ref}
           data-slot="dialog-popup"
           className={resolveBaseUiClass(
             className,
-            'relative flex flex-col w-full max-w-lg max-h-[90vh] rounded-[var(--r-card,12px)] border border-[var(--border)] bg-[var(--card)] text-[var(--text)] shadow-xl overflow-hidden',
-            'transition-all duration-200 outline-none',
-            'data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0',
-            bottomStickOnMobile && 'max-sm:max-w-none max-sm:max-h-[85vh] max-sm:rounded-b-none max-sm:rounded-t-2xl max-sm:border-x-0 max-sm:border-b-0'
+            'coss-dialog__popup',
+            bottomStickOnMobile && 'coss-dialog__popup--bottom-stick'
           )}
+          style={{
+            pointerEvents: 'auto',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            width: '100%',
+            maxWidth: isMobileSheet ? '100%' : 520,
+            maxHeight: '85dvh',
+            borderRadius: isMobileSheet ? '16px 16px 0 0' : 'var(--r-card, 12px)',
+            border: isMobileSheet ? 'none' : '1px solid var(--border2)',
+            borderTop: '1px solid var(--border2)',
+            background: 'var(--card)',
+            color: 'var(--text)',
+            boxShadow: 'var(--shadow-modal)',
+            overflow: 'hidden',
+            outline: 'none',
+            ...style,
+          }}
           {...props}
         >
           {children}
           {showCloseButton && (
             <DialogPrimitive.Close
               aria-label="Close dialog"
-              className="absolute top-3 right-3 p-2 text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--card2)] rounded-[var(--r-xs,4px)] min-w-[44px] min-h-[44px] grid place-items-center transition-colors"
+              data-slot="dialog-close"
+              style={{
+                position: 'absolute',
+                top: 12,
+                right: 12,
+                display: 'grid',
+                placeItems: 'center',
+                minWidth: 44,
+                minHeight: 44,
+                padding: 6,
+                border: 'none',
+                borderRadius: 'var(--r-xs, 4px)',
+                background: 'transparent',
+                color: 'var(--muted)',
+                cursor: 'pointer',
+                zIndex: 2,
+              }}
             >
               <Icon name="close" size={18} />
             </DialogPrimitive.Close>
@@ -88,14 +143,23 @@ export const DialogPopup = forwardRef<HTMLDivElement, DialogPopupProps>(function
 export type DialogHeaderProps = ComponentProps<'div'>
 
 export const DialogHeader = forwardRef<HTMLDivElement, DialogHeaderProps>(function DialogHeader(
-  { className, ...props },
+  { className, style, ...props },
   ref
 ) {
   return (
     <div
       ref={ref}
       data-slot="dialog-header"
-      className={cn('flex flex-col gap-1.5 px-6 pt-6 pb-3 border-b border-[var(--border)]', className)}
+      className={cn(className)}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6,
+        padding: '16px 20px',
+        borderBottom: '1px solid var(--border)',
+        flexShrink: 0,
+        ...style,
+      }}
       {...props}
     />
   )
@@ -104,14 +168,21 @@ export const DialogHeader = forwardRef<HTMLDivElement, DialogHeaderProps>(functi
 export type DialogTitleProps = DialogPrimitive.Title.Props
 
 export const DialogTitle = forwardRef<HTMLHeadingElement, DialogTitleProps>(function DialogTitle(
-  { className, ...props },
+  { className, style, ...props },
   ref
 ) {
   return (
     <DialogPrimitive.Title
       ref={ref}
       data-slot="dialog-title"
-      className={resolveBaseUiClass(className, 'text-lg font-bold text-[var(--text)] tracking-tight')}
+      className={resolveBaseUiClass(className)}
+      style={{
+        margin: 0,
+        fontSize: 'var(--t-h3)',
+        fontWeight: 700,
+        color: 'var(--text)',
+        ...style,
+      }}
       {...props}
     />
   )
@@ -120,14 +191,21 @@ export const DialogTitle = forwardRef<HTMLHeadingElement, DialogTitleProps>(func
 export type DialogDescriptionProps = DialogPrimitive.Description.Props
 
 export const DialogDescription = forwardRef<HTMLParagraphElement, DialogDescriptionProps>(function DialogDescription(
-  { className, ...props },
+  { className, style, ...props },
   ref
 ) {
   return (
     <DialogPrimitive.Description
       ref={ref}
       data-slot="dialog-description"
-      className={resolveBaseUiClass(className, 'text-[var(--t-meta,13px)] text-[var(--muted,#9eaabb)] leading-normal')}
+      className={resolveBaseUiClass(className)}
+      style={{
+        margin: '4px 0 0',
+        fontSize: 'var(--t-meta)',
+        color: 'var(--muted)',
+        lineHeight: 1.5,
+        ...style,
+      }}
       {...props}
     />
   )
@@ -136,14 +214,22 @@ export const DialogDescription = forwardRef<HTMLParagraphElement, DialogDescript
 export type DialogPanelProps = ComponentProps<'div'>
 
 export const DialogPanel = forwardRef<HTMLDivElement, DialogPanelProps>(function DialogPanel(
-  { className, ...props },
+  { className, style, ...props },
   ref
 ) {
   return (
     <div
       ref={ref}
       data-slot="dialog-panel"
-      className={cn('flex-1 overflow-y-auto px-6 py-4 overscroll-contain space-y-4', className)}
+      className={cn(className)}
+      style={{
+        flex: 1,
+        minHeight: 0,
+        overflowY: 'auto',
+        overscrollBehavior: 'contain',
+        padding: 20,
+        ...style,
+      }}
       {...props}
     />
   )
@@ -154,18 +240,36 @@ export interface DialogFooterProps extends ComponentProps<'div'> {
 }
 
 export const DialogFooter = forwardRef<HTMLDivElement, DialogFooterProps>(function DialogFooter(
-  { className, variant = 'default', ...props },
+  { className, variant = 'default', style, ...props },
   ref
 ) {
+  const viewport = useViewport()
+  const isPhone = viewport === 'phone'
+
   return (
     <div
       ref={ref}
       data-slot="dialog-footer"
-      className={cn(
-        'flex flex-col-reverse sm:flex-row sm:justify-end gap-2 px-6 py-4',
-        variant === 'default' && 'border-t border-[var(--border)] bg-[var(--card2)]/40',
-        className
-      )}
+      className={cn('coss-dialog__footer', className)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        flexWrap: 'wrap',
+        gap: 'var(--sp-md)',
+        paddingTop: 16,
+        paddingLeft: 20,
+        paddingRight: 20,
+        paddingBottom: isPhone ? 'calc(16px + env(safe-area-inset-bottom, 0px))' : 16,
+        ...(variant === 'default'
+          ? {
+              borderTop: '1px solid var(--border)',
+              background: 'var(--card2)',
+            }
+          : {}),
+        flexShrink: 0,
+        ...style,
+      }}
       {...props}
     />
   )

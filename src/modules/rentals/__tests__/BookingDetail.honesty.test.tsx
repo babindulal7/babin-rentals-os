@@ -332,6 +332,7 @@ async function openOperationsMenu() {
   await act(async () => {
     trigger?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
   })
+  await flush()
 }
 
 /** The WhatsApp entries live in a nested group that renders only once expanded. */
@@ -438,8 +439,8 @@ describe('BD-03 — a cancelled booking is marked, and its verbs are refused', (
     stage = 'On Rent'
     await mount()
     await openOperationsMenu()
-    const items = [...container.querySelectorAll('[role="menuitem"]')]
-    expect(items.map((item) => item.textContent?.trim())).toEqual([
+    const items = [...document.body.querySelectorAll('[role="menuitem"]')]
+    expect(items.map((item) => item.querySelector('.booking-operations__name')?.textContent?.trim() ?? item.textContent?.trim())).toEqual([
       'Packing',
       'Handover',
       'Return & Inspection',
@@ -458,7 +459,7 @@ describe('BD-04 — one booking-scoped Operations dropdown', () => {
     await mount()
     expect(allButtons().filter((item) => accessibleName(item) === 'Operations')).toHaveLength(1)
     await openOperationsMenu()
-    const items = [...container.querySelectorAll('[role="menuitem"]')]
+    const items = [...document.body.querySelectorAll('[role="menuitem"]')]
     expect(items).toHaveLength(4)
     expect(items.every((item) => item.getAttribute('aria-disabled') === 'true')).toBe(true)
     expect(items.every((item) => item.getAttribute('aria-label')?.includes('Operations open once this booking is Booked'))).toBe(true)

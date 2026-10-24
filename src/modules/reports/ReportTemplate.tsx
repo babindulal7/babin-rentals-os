@@ -12,6 +12,7 @@ import { captureError } from '../../lib/monitoring'
 import { useViewport } from '../../lib/device'
 import { catColor } from '../../components/ui/Charts'
 import './reports.css'
+import { IS_MOCK } from '../../lib/supabase'
 import {
   PERIODS,
   DEFAULT_PERIOD,
@@ -126,12 +127,12 @@ export function ReportTemplate({ report, onBackToCatalog }: ReportTemplateProps)
   const range = period?.range ?? null
 
   const figures: PeriodFigures | null = useMemo(
-    () => (range ? figuresFor(range.from, range.to) : null),
+    () => (range && IS_MOCK ? figuresFor(range.from, range.to) : null),
     [range],
   )
 
   const prior = useMemo(() => {
-    if (!range || compare === 'off') return null
+    if (!range || compare === 'off' || !IS_MOCK) return null
     const prev = previousPeriod(range.from, range.to)
     return prev ? figuresFor(prev.from, prev.to) : null
   }, [range, compare])

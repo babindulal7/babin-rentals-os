@@ -479,6 +479,19 @@ const LINE_TABLE = {
 } as const
 
 /**
+ * RULING 2026-10-23 (P0-B second half, migration 0171): the floor-verb slug the
+ * operations_grants table keys on. The three custody verbs are ALSO gated
+ * fail-closed inside apply_booking_stage_transition, so this mapping only
+ * decides what the early, truthful assert below asks about.
+ */
+const GRANT_SLUG: Record<JobName, 'pack' | 'handover' | 'return' | 'reset'> = {
+  Pack: 'pack',
+  Handover: 'handover',
+  Return: 'return',
+  Reset: 'reset',
+}
+
+/**
  * The line states that satisfy this verb. A line short of one of these is why a
  * stage does not move — and, for Pack alone, why its session also stays open.
  *
@@ -1011,6 +1024,17 @@ export async function runFloorVerb(
     )
   }
 
+  // RULING 2026-10-24: integrate guarded preflight in live AND mock paths.
+  // Reset's queue/task policies (0172) also enforce scope inside Postgres;
+  // this assertion gives early feedback before any write, not sole authority.
+  const { error: grantError } = await supabase.rpc('assert_operation_branch_grant', {
+    p_operation: GRANT_SLUG[job],
+    p_booking_id: booking.id,
+  })
+  if (grantError) {
+    throw new Error(`${job} authorization could not be confirmed: ${grantError.message}. Nothing was written.`)
+  }
+
   /* 2 — Reset has no session. It is the queue, per item. */
   if (!isSessionJob(job)) {
     const resetOutcome = await completeResetQueue(booking, resetEntriesOf(input), ctx, occurredAt, actionUuid)
@@ -1140,7 +1164,7 @@ export async function runFloorVerb(
       created_by: ctx.userId,
     } satisfies Database['public']['Tables']['operation_sessions']['Insert']
     try {
-      await idempotentInsert('operation_sessions', sessionPayload)
+      await idempotentInsert('operation_sessions', sessionPayload, job === 'Return' ? { queueOnFailure: false } : undefined)
     } catch (error) {
       // 0113 renamed bookings.delivery_type before the separate
       // operation_sessions.delivery_method enum. Retry only this known enum
@@ -1313,6 +1337,7 @@ export async function runFloorVerb(
       sessionId,
       { state: 'Completed', completed_at: occurredAt, completed_by: ctx.userId, updated_at: occurredAt },
       actionUuid,
+      job === 'Return' ? { queueOnFailure: false } : undefined,
     )
   }
 
@@ -1371,7 +1396,7 @@ export async function runFloorVerb(
      (`0002:86` compares it to `return_at` once, at the return session). See the
      header for why this is the OS's field to write. */
   if (job === 'Return' && stage !== null && stage.to === 'Returned') {
-    await safeUpdate('bookings', booking.id, { actual_return_at: occurredAt, updated_at: occurredAt }, actionUuid)
+    await safeUpdate('bookings', booking.id, { actual_return_at: occurredAt, updated_at: occurredAt }, actionUuid, { queueOnFailure: false })
   }
 
   return {
@@ -1542,7 +1567,7 @@ async function writeReturnLine(
   }
 
   if (priorId !== null) {
-    await safeUpdate('return_lines', priorId, { ...fields, updated_at: at }, actionUuid)
+    await safeUpdate('return_lines', priorId, { ...fields, updated_at: at }, actionUuid, { queueOnFailure: false })
     return priorId
   }
   const rowId = generateClientUuid()
@@ -1552,7 +1577,7 @@ async function writeReturnLine(
     booking_line_id: line.bookingLineId,
     created_by: ctx.userId,
     ...fields,
-  })
+  }, { queueOnFailure: false })
   return rowId
 }
 
@@ -1595,7 +1620,7 @@ async function writeMovements(
       resulting_item_state: resulting,
       moved_at: at,
       created_by: ctx.userId,
-    })
+    }, job === 'Return' ? { queueOnFailure: false } : undefined)
     return 1
   }
 
@@ -1614,7 +1639,7 @@ async function writeMovements(
       resulting_item_state: resulting,
       moved_at: at,
       created_by: ctx.userId,
-    })
+    }, job === 'Return' ? { queueOnFailure: false } : undefined)
     written += 1
   }
   return written
@@ -1661,7 +1686,7 @@ async function writeDamageFindings(
       /* 0130: `damage_findings.estimated_cost` is ungranted once Law 6 arms
          this table — a default `RETURNING *` would throw 42501 after the row
          commits. The caller counts finds; it never reads the row. */
-      { returnRow: false },
+      { returnRow: false, queueOnFailure: false },
     )
   }
   return damage.length
@@ -1826,7 +1851,7 @@ async function writeUnitStates(
     if (outcome === 'missing') return u.unit_state !== 'Returned'
     return true
   })
-  await Promise.all(targets.map((u) => safeUpdate('booking_line_units', u.id, patch, actionUuid)))
+  await Promise.all(targets.map((u) => safeUpdate('booking_line_units', u.id, patch, actionUuid, job === 'Return' ? { queueOnFailure: false } : undefined)))
 }
 
 /* ── The reset queue: raised at Return, completed at Reset ──────────────── */
@@ -1929,7 +1954,7 @@ async function enqueueReturnedUnits(
       requires_reset: true,
       entered_queue_at: at,
       created_by: ctx.userId,
-    })
+    }, { queueOnFailure: false })
     written += 1
   }
 

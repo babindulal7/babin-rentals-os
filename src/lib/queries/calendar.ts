@@ -5,7 +5,14 @@ import { todaysOutgoing } from './bookings'
 import type { ListFilters } from './listQuery'
 import type { ListQueryResult } from './useList'
 import type { Database } from '../../types/supabase'
-import type { Bar, BarKind } from '../../data/calendar'
+import {
+  RESOURCE_CATALOGUE,
+  type Bar,
+  type BarKind,
+  type ResourceDefinition,
+  type ResourceRow,
+  type RowType,
+} from '../../data/calendar'
 
 /**
  * # The Calendar Workspace's one read
@@ -372,6 +379,153 @@ export async function listCalendarDrafts(fromAd: string, toAd: string): Promise<
     rows.push({ id: `draft-${draft.id}`, draftId: draft.id, kind: 'Draft', label: `Draft #${draft.booking_no ?? draft.id.slice(0, 8)}`, sub: `${draft.client_name || 'Client not selected'} · not reserved`, client: draft.client_name ?? '', from, to: to < from ? from : to })
   }
   return { rows, total: count ?? rows.length }
+}
+
+/**
+ * Maps live booking and draft bars onto physical Resource Catalogue lanes
+ * (Equipment, Vehicles, Crew, Warehouse Bays) and automatically executes
+ * double-booking and conflict detection.
+ */
+/**
+ * Builds resource lanes for the Timeline view.
+ *
+ * FAILS CLOSED: In production, where no authoritative physical unit/asset/crew
+ * repository records exist, returns an empty array. This triggers the truthful
+ * empty-state messaging rather than fabricating operational equipment lanes,
+ * fictitious serial numbers, or bogus staff assignments.
+ *
+ * When authoritative resource definitions and unit assignments exist:
+ *  1. Only assigns bars that carry an explicit, authoritative matching unitId or resourceId.
+ *     Never uses booking-label hash arithmetic or pseudo-modulo mappings.
+ *  2. Evaluates double bookings strictly using half-open intervals [pickup, return)
+ *     (a.from < b.to && b.from < a.to). Back-to-back bookings on the turnover boundary
+ *     do not clash. Overlapping bookings across different units never conflict.
+ */
+export function buildResourceTimeline(
+  liveBars: readonly Bar[],
+  selectedRowType: 'All' | RowType = 'All',
+  authoritativeCatalogue: readonly ResourceDefinition[] = RESOURCE_CATALOGUE,
+): ResourceRow[] {
+  if (authoritativeCatalogue.length === 0) {
+    return []
+  }
+
+  const catalogue =
+    selectedRowType === 'All'
+      ? authoritativeCatalogue
+      : authoritativeCatalogue.filter((r) => r.type === selectedRowType)
+
+  return catalogue.map((res) => {
+    // 1. Collect authoritatively assigned bars for this resource
+    const assignedBars: Bar[] = []
+
+    for (const b of liveBars) {
+      if (!b) continue
+
+      // Only assign if bar carries an authoritative matching resourceId or unitId
+      const matchesResource =
+        b.resourceId === res.id ||
+        b.unitId === res.id ||
+        (Boolean(b.unitId) && Boolean(res.code) && b.unitId === res.code)
+
+      if (!matchesResource) continue
+
+      const cloned: Bar = {
+        id: `${b.id}-${res.id}`,
+        kind: b.kind,
+        label: b.label,
+        from: b.from,
+        to: b.to,
+      }
+      if (b.bookingNo) cloned.bookingNo = b.bookingNo
+      if (b.draftId) cloned.draftId = b.draftId
+      if (b.sub) cloned.sub = b.sub
+      if (b.client) cloned.client = b.client
+      if (b.note) cloned.note = b.note
+      if (b.noteAt) cloned.noteAt = b.noteAt
+      if (b.dot) cloned.dot = b.dot
+      if (b.unitId) cloned.unitId = b.unitId
+      if (b.resourceId) cloned.resourceId = b.resourceId
+      assignedBars.push(cloned)
+    }
+
+    // Sort bars chronologically
+    assignedBars.sort((a, b) => a.from.getTime() - b.from.getTime() || a.to.getTime() - b.to.getTime())
+
+    // 2. Double-Booking & Conflict Detection using strict half-open interval [from, to) bounds
+    const conflictBars: Bar[] = []
+    const conflictIndices = new Set<number>()
+
+    for (let i = 0; i < assignedBars.length; i++) {
+      const barA = assignedBars[i]
+      if (!barA || barA.kind === 'Completed' || barA.kind === 'Draft') continue
+
+      for (let j = i + 1; j < assignedBars.length; j++) {
+        const barB = assignedBars[j]
+        if (!barB || barB.kind === 'Completed' || barB.kind === 'Draft') continue
+
+        // Check date overlap in half-open intervals [A.from, A.to) and [B.from, B.to)
+        // Overlap exists iff A.from < B.to && B.from < A.to
+        const aStart = barA.from.getTime()
+        const aEnd = barA.to.getTime()
+        const bStart = barB.from.getTime()
+        const bEnd = barB.to.getTime()
+
+        if (aStart < bEnd && bStart < aEnd) {
+          conflictIndices.add(i)
+          conflictIndices.add(j)
+
+          const conflictFrom = new Date(Math.max(aStart, bStart))
+          const conflictTo = new Date(Math.min(aEnd, bEnd))
+
+          conflictBars.push({
+            id: `conflict-${res.id}-${barA.id}-${barB.id}`,
+            kind: 'Conflict',
+            label: 'CONFLICT',
+            sub: `Double Booking: ${barA.label} & ${barB.label}`,
+            from: conflictFrom,
+            to: conflictTo,
+            dot: 'danger',
+          })
+        }
+      }
+    }
+
+    // Flag all conflicting bars with dot: 'danger'
+    for (const idx of conflictIndices) {
+      const bar = assignedBars[idx]
+      if (bar) bar.dot = 'danger'
+    }
+
+    const finalBars = [...assignedBars, ...conflictBars].sort(
+      (a, b) => a.from.getTime() - b.from.getTime() || a.to.getTime() - b.to.getTime(),
+    )
+
+    // Compute lane meta and tone
+    let laneMeta = res.meta
+    let laneTone = res.metaTone
+
+    if (conflictBars.length > 0) {
+      laneMeta = `${conflictBars.length} conflict${conflictBars.length > 1 ? 's' : ''} detected`
+      laneTone = 'progress'
+    } else if (finalBars.length > 0) {
+      laneMeta = `${finalBars.length} allocation${finalBars.length > 1 ? 's' : ''}`
+      laneTone = 'primary'
+    }
+
+    const row: ResourceRow = {
+      id: res.id,
+      name: res.name,
+      type: res.type,
+      meta: laneMeta,
+      icon: res.icon,
+      bars: finalBars,
+    }
+    if (res.code) row.code = res.code
+    if (laneTone) row.metaTone = laneTone
+
+    return row
+  })
 }
 
 export * from '../../data/calendar'

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { readLocal, writeLocal } from './safeStorage'
+import { BP } from './breakpoints'
 
 export type DisplayDensity = 'compact' | 'comfortable'
 
@@ -23,8 +24,8 @@ export function DisplayDensityProvider({ children, initial }: { children: ReactN
     const saved = readLocal(KEY)
     if (saved === 'compact' || saved === 'comfortable') return saved
     if (initial) return initial
-    // Default to compact for desktop/tablet (> 768px), comfortable for phone
-    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+    // Default to compact for desktop/tablet (>= 768px), comfortable for phone (< 768px)
+    if (typeof window !== 'undefined' && window.innerWidth < BP.phone) {
       return 'comfortable'
     }
     return 'compact'

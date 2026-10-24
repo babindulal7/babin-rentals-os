@@ -32,6 +32,8 @@ interface DashboardMovementPanelProps {
   compactEmpty?: boolean
   onSelectPeriod?: (period: 'Tomorrow' | 'Today') => void
   emptyFooter?: ReactNode
+  panelId?: string | undefined
+  tabId?: string | undefined
 }
 
 export function dashboardAction(row: MovementRow, side: 'outgoing' | 'incoming'): {
@@ -98,6 +100,8 @@ export default function DashboardMovementPanel({
   compactEmpty = false,
   onSelectPeriod,
   emptyFooter,
+  panelId,
+  tabId,
 }: DashboardMovementPanelProps) {
   const navigate = useNavigate()
   const { openOperations } = useOperationsWorkspace()
@@ -133,7 +137,7 @@ export default function DashboardMovementPanel({
   }, [list.rows, side, globalQuery])
 
   return (
-    <section className={`movement-panel movement-panel--${side}${compactEmpty ? ' movement-panel--compact' : ''}`} aria-labelledby={`${side}-panel-title`}>
+    <section id={panelId} role={tabId ? 'tabpanel' : undefined} tabIndex={tabId ? 0 : undefined} className={`movement-panel movement-panel--${side}${compactEmpty ? ' movement-panel--compact' : ''}`} aria-labelledby={tabId ?? `${side}-panel-title`}>
       <header className="movement-panel__header">
         <span className={`movement-panel__icon movement-panel__icon--${side}`} aria-hidden="true">
           <Icon name={icon} size={24} />

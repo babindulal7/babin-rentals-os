@@ -1,6 +1,6 @@
 /**
  * RULING 2026-10-22. The mock's `change_client_membership` stands in for the real
- * function (0171) in `dev:mock` and in browser checks, so it must refuse and
+ * function (0174) in `dev:mock` and in browser checks, so it must refuse and
  * behave exactly as the SQL does — same roles, same refusals, one live membership
  * per client, an idempotency receipt — or it would teach people the wrong thing.
  * The SQL itself is proven by `check:lifecycle` step L32; this keeps the stand-in

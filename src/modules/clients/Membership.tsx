@@ -11,6 +11,7 @@ import { Select } from '../../components/ui/Select'
 import { formatMoney } from '../../lib/money'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { listMembers, type MemberListRow } from '../../lib/queries/membership'
+import { EnrollMembershipModal } from './modals/EnrollMembershipModal'
 import './clients.css'
 
 const PAGE_SIZES = [10, 25, 50] as const
@@ -37,6 +38,7 @@ export default function Membership({ embedded = false, filtersOpen: externalFilt
   const requestedPageSize = Number(params.get('mps') ?? PAGE_SIZES[0])
   const pageSize = PAGE_SIZES.find((size) => size === requestedPageSize) ?? PAGE_SIZES[0]
   const [internalFiltersOpen, setInternalFiltersOpen] = useState(false)
+  const [enrollOpen, setEnrollOpen] = useState(false)
   const filtersOpen = externalFiltersOpen ?? internalFiltersOpen
   const closeFilters = onFiltersClose ?? (() => setInternalFiltersOpen(false))
 
@@ -140,6 +142,11 @@ export default function Membership({ embedded = false, filtersOpen: externalFilt
         controls={
           <ListControlRow
             search={embedded ? <SearchInput value={search} onChange={(value) => updateParam('mq', value, true)} onClear={() => updateParam('mq', '', true)} placeholder="Search members" aria-label="Search members" /> : undefined}
+            extras={
+              <Button variant="primary" size="sm" icon="plus" onClick={() => setEnrollOpen(true)}>
+                + Add Membership
+              </Button>
+            }
             sort={
               <select aria-label="Sort members" value={sort} onChange={(event) => updateParam('ms', event.target.value)} style={{ minHeight: 44 }}>
                 <option value="name">Name A–Z</option>
@@ -216,6 +223,14 @@ export default function Membership({ embedded = false, filtersOpen: externalFilt
           </DataTableShell>
         )}
       </ListWorkspace>
+
+      {enrollOpen && (
+        <EnrollMembershipModal
+          isOpen={enrollOpen}
+          onClose={() => setEnrollOpen(false)}
+          onEnrolled={() => setRetry((r) => r + 1)}
+        />
+      )}
     </div>
   )
 }

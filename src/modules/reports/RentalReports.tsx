@@ -1,7 +1,7 @@
 import { formatAd } from '../../lib/bs'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { PageHeader, Button, KpiStrip, cardStyle } from '../../components/ui/Page'
+import { PageHeader, Button, cardStyle } from '../../components/ui/Page'
 import type { Kpi } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { PageBody } from '../../components/ui/PageBody'
@@ -15,6 +15,11 @@ import Icon from '../../components/ui/Icon'
 import { formatMoney, type Paisa } from '../../lib/money'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
+import {
+  ReportKpiCard,
+  ReportKpiStrip,
+} from '../../components/ui/reports'
+import '../../styles/reportChartTokens.css'
 import {
   getRentalPerformanceReport,
   getRentalDurationReport,
@@ -339,7 +344,7 @@ export default function RentalReports() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+    <div className="babin-report" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
       <PageHeader
         icon="calendar"
         title="Rentals Reports"
@@ -422,7 +427,17 @@ export default function RentalReports() {
       {/* TAB 1: PERFORMANCE */}
       {activeTab === 'performance' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-          <KpiStrip items={performanceKpis} columns={viewport === 'phone' ? 1 : viewport === 'tablet' ? 2 : 4} />
+          <ReportKpiStrip ariaLabel="Rental performance summary metrics">
+            {performanceKpis.map((k) => (
+              <ReportKpiCard
+                key={k.label}
+                label={k.label}
+                value={k.value}
+                icon={k.icon}
+                note={k.note}
+              />
+            ))}
+          </ReportKpiStrip>
 
           <div
             style={{
@@ -572,7 +587,17 @@ export default function RentalReports() {
       {/* TAB 2: DURATION */}
       {activeTab === 'duration' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-          <KpiStrip items={durationKpis} columns={viewport === 'phone' ? 1 : viewport === 'tablet' ? 2 : 4} />
+          <ReportKpiStrip ariaLabel="Rental duration summary metrics">
+            {durationKpis.map((k) => (
+              <ReportKpiCard
+                key={k.label}
+                label={k.label}
+                value={k.value}
+                icon={k.icon === 'timer' ? 'clock' : k.icon}
+                note={k.note}
+              />
+            ))}
+          </ReportKpiStrip>
 
           <div
             style={{
@@ -640,7 +665,17 @@ export default function RentalReports() {
       {/* TAB 3: CANCELLATIONS */}
       {activeTab === 'cancellations' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-          <KpiStrip items={cancellationKpis} columns={viewport === 'phone' ? 1 : viewport === 'tablet' ? 2 : 4} />
+          <ReportKpiStrip ariaLabel="Rental cancellations summary metrics">
+            {cancellationKpis.map((k) => (
+              <ReportKpiCard
+                key={k.label}
+                label={k.label}
+                value={k.value}
+                icon={k.icon}
+                note={k.note}
+              />
+            ))}
+          </ReportKpiStrip>
 
           <div
             style={{

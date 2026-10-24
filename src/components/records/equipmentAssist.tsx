@@ -3,12 +3,12 @@ import Icon from '../ui/Icon'
 import { Button, Card } from '../ui/Page'
 import { listInventory } from '../../lib/queries/inventory'
 import type { RecordValues } from '../../lib/recordEditor'
-import { toBs, formatBs, formatAd } from '../../lib/bs'
 import { generateCode128Svg } from '../../lib/labelPrinter'
 import { useToast } from '../ui/Toast'
 import { rupees, formatMoney } from '../../lib/money'
 import { InputGroup, InputGroupTextarea, InputGroupAddon } from '../ui/InputGroup'
 import { Kbd } from '../ui/Kbd'
+import { Modal } from '../ui/Modal'
 
 /*
  * Add Equipment assists (8 Oct 2026, RULINGS-2026-10-08.md; Add Equipment v3.0
@@ -273,7 +273,6 @@ export function UnitBarcodeModal({
   isOpen,
   unit,
   index,
-  assetCode,
   equipmentName,
   onClose,
 }: {
@@ -287,12 +286,12 @@ export function UnitBarcodeModal({
   const { showSuccessToast } = useToast()
   if (!isOpen || !unit) return null
 
-  const serial = String(unit.serial_no || 'NO-SERIAL')
-  const tag = String(unit.asset_tag || `${assetCode}-${String(index + 1).padStart(2, '0')}`)
-  const condition = String(unit.condition || 'Excellent')
+  const serial = text(unit.serial_no) || 'Not recorded'
+  const tag = text(unit.asset_tag)
+  const condition = text(unit.condition) || 'Not recorded'
 
   const copyTag = () => {
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+    if (tag && typeof navigator !== 'undefined' && navigator.clipboard) {
       void navigator.clipboard.writeText(tag).then(() => {
         showSuccessToast('Asset tag copied', tag)
       })
@@ -300,54 +299,45 @@ export function UnitBarcodeModal({
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="barcode-modal-title"
-      className="equipment-modal-backdrop"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Unit Barcode & Tag"
+      subtitle="High-density Code128 asset identifier and physical unit verification."
+      size="md"
+      footer={
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: 10 }}>
+          <Button type="button" variant="secondary" icon="copy" onClick={copyTag} disabled={!tag} title={tag ? 'Copy Tag' : 'No assigned asset tag'}>
+            {tag ? `Copy Tag (${tag})` : 'Copy Tag'}
+          </Button>
+          <Button type="button" variant="primary" onClick={onClose}>
+            Done
+          </Button>
+        </div>
+      }
     >
-      <div className="equipment-modal-card">
-        <div className="equipment-modal-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Icon name="barcode" size={20} style={{ color: 'var(--link)' }} />
-            <h3 id="barcode-modal-title" style={{ margin: 0, fontSize: 'var(--t-ui)' }}>
-              Unit Barcode &amp; Tag
-            </h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 'var(--t-meta)' }}>
+          <div>
+            <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>Equipment</span>
+            <strong>{equipmentName || 'New Equipment'}</strong>
           </div>
-          <button
-            type="button"
-            className="equipment-icon-button"
-            onClick={onClose}
-            aria-label="Close"
-          >
-            <Icon name="x" size={18} />
-          </button>
+          <div>
+            <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>Unit Index</span>
+            <span>Unit #{index + 1}</span>
+          </div>
+          <div>
+            <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>Serial Number</span>
+            <span className="identifier" style={{ fontWeight: 600 }}>{serial}</span>
+          </div>
+          <div>
+            <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>Condition</span>
+            <span className="equipment-badge-condition">{condition}</span>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 'var(--t-meta)' }}>
-            <div>
-              <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>Equipment</span>
-              <strong>{equipmentName || 'New Equipment'}</strong>
-            </div>
-            <div>
-              <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>Unit Index</span>
-              <span>Unit #{index + 1}</span>
-            </div>
-            <div>
-              <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>Serial Number</span>
-              <span className="identifier" style={{ fontWeight: 600 }}>{serial}</span>
-            </div>
-            <div>
-              <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>Condition</span>
-              <span className="equipment-badge-condition">{condition}</span>
-            </div>
-          </div>
-
-          <div className="equipment-barcode-card" style={{ padding: '16px 20px', border: '1px solid var(--border)' }}>
+        {tag ? (
+          <div className="equipment-barcode-card" style={{ padding: '16px 20px', border: '1px solid var(--border)', borderRadius: 'var(--r-card)' }}>
             <div
               className="equipment-barcode-svg"
               dangerouslySetInnerHTML={{ __html: generateCode128Svg(tag, 44) }}
@@ -356,18 +346,11 @@ export function UnitBarcodeModal({
               {tag}
             </span>
           </div>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-            <Button type="button" variant="secondary" icon="copy" onClick={copyTag}>
-              Copy Tag ({tag})
-            </Button>
-            <Button type="button" variant="primary" onClick={onClose}>
-              Done
-            </Button>
-          </div>
-        </div>
+        ) : (
+          <p>A barcode is available after the unit has an assigned asset tag.</p>
+        )}
       </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -393,114 +376,92 @@ export function EquipmentCatalogPreviewModal({
 }) {
   if (!isOpen) return null
 
-  const code = assetCode || (values.asset_code ? String(values.asset_code) : 'EQ000234')
+  const code = text(assetCode) || 'Assigned on save'
   const trackingMode = String(values.tracking_mode || 'Serialised')
   const stockCount = trackingMode === 'Serialised' ? rows.length : Number(values.total_quantity || 0)
   const name = text(values.name) || 'Untitled Equipment'
-  const brand = text(values.brand) || 'Generic'
+  const brand = text(values.brand) || 'Not set'
   const model = text(values.model)
   const dailyRate = Number(values.daily_rate || 0)
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="catalog-preview-title"
-      className="equipment-modal-backdrop"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose()
-      }}
-    >
-      <div className="equipment-modal-card equipment-modal-card--wide">
-        <div className="equipment-modal-header">
-          <div>
-            <h3 id="catalog-preview-title" style={{ margin: 0, fontSize: 'var(--t-ui)' }}>
-              Operational Catalogue Preview
-            </h3>
-            <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-              Live rendering of this asset card across Inventory, Rental Quotes, and Booking pickers.
-            </span>
-          </div>
-          <button
-            type="button"
-            className="equipment-icon-button"
-            onClick={onClose}
-            aria-label="Close"
-          >
-            <Icon name="x" size={18} />
-          </button>
-        </div>
-
-        <div className="equipment-catalog-card-preview">
-          <div className="equipment-preview-asset-tile">
-            <div className="equipment-preview-asset-media">
-              {imagePreviewUrl ? (
-                <img
-                  src={imagePreviewUrl}
-                  alt={name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, color: 'var(--muted)' }}>
-                  <Icon name="camera" size={32} />
-                  <span style={{ fontSize: 'var(--t-th)' }}>No Image</span>
-                </div>
-              )}
-              <span className="equipment-preview-code-tag identifier">{code}</span>
-            </div>
-
-            <div className="equipment-preview-asset-info">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                <span className="equipment-preview-badge">{categoryName || 'Uncategorized'}</span>
-                <span className="equipment-preview-badge equipment-preview-badge--mode">{trackingMode}</span>
-                <span className="equipment-preview-badge equipment-preview-badge--status">Active Catalogue</span>
-              </div>
-
-              <h4 style={{ margin: '6px 0 2px', fontSize: 'var(--t-ui)', color: 'var(--text)' }}>{name}</h4>
-              <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-                {brand}{model ? ` · ${model}` : ''}
-              </div>
-
-              {text(values.description) && (
-                <p style={{ margin: '8px 0 0', fontSize: 'var(--t-th)', color: 'var(--muted)', lineClamp: 2, WebkitLineClamp: 2, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                  {text(values.description)}
-                </p>
-              )}
-
-              <div className="equipment-preview-divider" />
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <div>
-                  <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>Available Stock</span>
-                  <strong style={{ fontSize: 'var(--t-ui)', color: 'var(--text)' }}>
-                    {stockCount} {stockCount === 1 ? 'unit' : 'units'}
-                  </strong>
-                </div>
-
-                <div style={{ textAlign: 'right' }}>
-                  <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>Rental Rate</span>
-                  {canViewMoney ? (
-                    <strong style={{ fontSize: 'var(--t-ui)', color: 'var(--link)' }}>
-                      {dailyRate > 0 ? `${formatMoney(rupees(dailyRate))} / day` : 'Not set'}
-                    </strong>
-                  ) : (
-                    <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)', fontStyle: 'italic' }}>
-                      Restricted (Law 1)
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Operational Catalogue Preview"
+      subtitle="Local preview of the values in this form."
+      size="lg"
+      footer={
+        <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
           <Button type="button" variant="primary" onClick={onClose}>
             Close Preview
           </Button>
         </div>
+      }
+    >
+      <div className="equipment-catalog-card-preview">
+        <div className="equipment-preview-asset-tile">
+          <div className="equipment-preview-asset-media">
+            {imagePreviewUrl ? (
+              <img
+                src={imagePreviewUrl}
+                alt={name}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, color: 'var(--muted)' }}>
+                <Icon name="camera" size={32} />
+                <span style={{ fontSize: 'var(--t-th)' }}>No Image</span>
+              </div>
+            )}
+            <span className="equipment-preview-code-tag identifier">{code}</span>
+          </div>
+
+          <div className="equipment-preview-asset-info">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <span className="equipment-preview-badge">{categoryName || 'Uncategorized'}</span>
+              <span className="equipment-preview-badge equipment-preview-badge--mode">{trackingMode}</span>
+              <span className="equipment-preview-badge equipment-preview-badge--status">Active Catalogue</span>
+            </div>
+
+            <h4 style={{ margin: '6px 0 2px', fontSize: 'var(--t-ui)', color: 'var(--text)' }}>{name}</h4>
+            <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+              {brand}{model ? ` · ${model}` : ''}
+            </div>
+
+            {text(values.description) && (
+              <p style={{ margin: '8px 0 0', fontSize: 'var(--t-th)', color: 'var(--muted)', lineClamp: 2, WebkitLineClamp: 2, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                {text(values.description)}
+              </p>
+            )}
+
+            <div className="equipment-preview-divider" />
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <div>
+                <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>Available Stock</span>
+                <strong style={{ fontSize: 'var(--t-ui)', color: 'var(--text)' }}>
+                  {stockCount} {stockCount === 1 ? 'unit' : 'units'}
+                </strong>
+              </div>
+
+              <div style={{ textAlign: 'right' }}>
+                <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>Rental Rate</span>
+                {canViewMoney ? (
+                  <strong style={{ fontSize: 'var(--t-ui)', color: 'var(--link)' }}>
+                    {dailyRate > 0 ? `${formatMoney(rupees(dailyRate))} / day` : 'Not set'}
+                  </strong>
+                ) : (
+                  <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)', fontStyle: 'italic' }}>
+                    Restricted
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -552,15 +513,13 @@ export function EquipmentInformationDrawerContent({
   const [copied, setCopied] = useState(false)
   const ready = equipmentReadiness(values, rows)
   const open = ready.filter((r) => !r.ok).length
-  const code = assetCode || (values.asset_code ? String(values.asset_code) : 'EQ000234')
+  const savedCode = editing ? text(assetCode) : ''
+  const code = savedCode || 'Assigned on save'
   const serialised = (values.tracking_mode ?? 'Serialised') === 'Serialised'
   const stockCount = serialised ? rows.length : Number(values.total_quantity || 0)
-  const today = new Date()
-  const bsDate = toBs(today)
-  const formattedBs = bsDate ? formatBs(bsDate) : ''
 
   const copyCode = () => {
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+    if (savedCode && typeof navigator !== 'undefined' && navigator.clipboard) {
       void navigator.clipboard.writeText(code).then(() => {
         setCopied(true)
         showSuccessToast('Asset code copied', code)
@@ -576,23 +535,23 @@ export function EquipmentInformationDrawerContent({
         <div className="equipment-info-grid">
           <div className="equipment-info-row">
             <span className="equipment-info-label">Created by</span>
-            <span className="equipment-info-val">{userName || 'Staff'}</span>
+            <span className="equipment-info-val">{editing ? 'Not available' : userName || 'Not available'}</span>
           </div>
           <div className="equipment-info-row">
             <span className="equipment-info-label">Created date</span>
             <span className="equipment-info-val">
-              {formattedBs ? `${formattedBs} · ` : ''}{formatAd(today)}
+              {editing ? 'Not available' : 'Not saved'}
             </span>
           </div>
           <div className="equipment-info-row">
             <span className="equipment-info-label">Last updated</span>
-            <span className="equipment-info-val">{editing ? 'In catalogue' : 'Never saved'}</span>
+            <span className="equipment-info-val">{editing ? 'Not available' : 'Never saved'}</span>
           </div>
           <div className="equipment-info-row">
             <span className="equipment-info-label">Status</span>
             <span className="equipment-status-pill">
-              <span className="equipment-status-dot" />
-              {editing ? 'Active' : 'Draft'}
+              <Icon name="lock" size={14} />
+              {editing ? text(values.status) || 'Not available' : 'Not saved'}
             </span>
           </div>
         </div>
@@ -610,7 +569,8 @@ export function EquipmentInformationDrawerContent({
               type="button"
               className="equipment-copy-btn"
               onClick={copyCode}
-              title="Copy Asset Code"
+              disabled={!savedCode}
+              title={savedCode ? 'Copy Asset Code' : 'Save equipment before copying its assigned code'}
               aria-label="Copy Asset Code"
             >
               <Icon name="copy" size={14} />
@@ -618,13 +578,13 @@ export function EquipmentInformationDrawerContent({
             </button>
           </div>
 
-          <div className="equipment-barcode-card">
+          {savedCode ? <div className="equipment-barcode-card">
             <div
               className="equipment-barcode-svg"
               dangerouslySetInnerHTML={{ __html: generateCode128Svg(code, 30) }}
             />
             <span className="equipment-barcode-text identifier">{code}</span>
-          </div>
+          </div> : <p className="equipment-summary__note">A barcode is available after equipment is saved.</p>}
 
           <p style={{ margin: '6px 0 0', fontSize: 'var(--t-th)', color: 'var(--muted)', lineHeight: 1.4 }}>
             One Asset Code drives barcode and QR labels. Serials match manufacturer labels on hardware.
@@ -657,10 +617,10 @@ export function EquipmentInformationDrawerContent({
                     {String(row.serial_no || 'no serial yet')}
                   </span>
                   <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-                    {String(row.asset_tag || `${code}-${String(i + 1).padStart(2, '0')}`)}
+                    {String(row.asset_tag || (editing ? 'Not available' : 'Not assigned'))}
                   </span>
                   <span className="equipment-tree-badge">
-                    {String(row.status || 'In Stock')}
+                    {String(row.status || (editing ? 'Not available' : 'Not saved'))}
                   </span>
                 </div>
               ))}
@@ -675,7 +635,7 @@ export function EquipmentInformationDrawerContent({
           <div className="equipment-invariant-box">
             <Icon name="check" size={14} style={{ color: 'var(--success-text)', flexShrink: 0 }} />
             <span>
-              Preview reconciles — {stockCount} listed = {stockCount} stock. No unit carries a booking.
+              {stockCount} {stockCount === 1 ? 'unit' : 'units'} listed in this form.
             </span>
           </div>
         </div>
@@ -686,11 +646,11 @@ export function EquipmentInformationDrawerContent({
         <div className="equipment-info-grid">
           <div className="equipment-info-row">
             <span className="equipment-info-label">Parent / Container</span>
-            <span className="equipment-info-val">Direct Shelf (None)</span>
+            <span className="equipment-info-val">Not available</span>
           </div>
           <div className="equipment-info-row">
             <span className="equipment-info-label">Contained items</span>
-            <span className="equipment-info-val">0 Items</span>
+            <span className="equipment-info-val">Not available</span>
           </div>
           <div className="equipment-info-row">
             <span className="equipment-info-label">Total Stock</span>
@@ -702,7 +662,7 @@ export function EquipmentInformationDrawerContent({
           </div>
           <div className="equipment-info-row">
             <span className="equipment-info-label">Bundle eligible</span>
-            <span className="equipment-info-val">Yes ✓</span>
+            <span className="equipment-info-val">Not available</span>
           </div>
         </div>
       </Card>
@@ -735,6 +695,8 @@ export function EquipmentInformationDrawerContent({
               type="button"
               className="equipment-quick-action-btn"
               onClick={onGenerateAssetTags}
+              disabled={!savedCode}
+              title={savedCode ? 'Generate Tags' : 'Save equipment before generating tags from its assigned code'}
             >
               <Icon name="checklist" size={16} />
               <span>Generate Tags</span>
@@ -754,6 +716,8 @@ export function EquipmentInformationDrawerContent({
             type="button"
             className="equipment-quick-action-btn"
             onClick={copyCode}
+            disabled={!savedCode}
+            title={savedCode ? 'Copy Code' : 'Save equipment before copying its assigned code'}
           >
             <Icon name="copy" size={16} />
             <span>Copy Code</span>

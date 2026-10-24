@@ -5,8 +5,16 @@
    the sticky table header and row cells below it. */
 .operations-v2__filters { position: relative; z-index: 30; }
 .operations-v2__topline { justify-content: flex-end; }
-.operations-v2__queues { padding: 14px 0 6px; border-top: 1px solid var(--border); }
-.operations-v2__queue { min-height: 46px; }
+.operations-v2__queues {
+  padding: 14px 0 6px;
+  border-top: 1px solid var(--border);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.operations-v2__queues::-webkit-scrollbar {
+  display: none;
+}
+.operations-v2__queue { min-height: var(--tap, 44px); }
 .operations-v2__date-wrap, .operations-v2__more-wrap { position: relative; }
 .operations-v2__date-wrap:has(.operations-v2__popover) { z-index: 31; }
 .operations-v2__popover { position: absolute; z-index: 50; top: calc(100% + 8px); right: 0; width: min(360px, calc(100vw - 32px)); padding: 12px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r-card); box-shadow: var(--shadow-lg); }
@@ -62,4 +70,25 @@
 /* Canonical bands only (768/1280, see styles/responsive.css). The old 900px
    "tablet" rule moved into the phone band (the layout it fixed wraps fine
    until then); 620px became the canonical 768 phone band. */
-@media (max-width: 767px) { .operations-v2__topline { justify-content: flex-start; } .operations-v2__filter-select { min-width: 120px; flex: 1 1 140px; } .operations-v2__queues { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 10px; } .operations-v2__queue { flex-shrink: 0; } .operations-v2__filters { align-items: stretch; } .operations-v2__filter-select, .operations-v2__search { flex: 1 1 100%; width: 100%; } .operations-v2__custom-range { grid-template-columns: 1fr; } .operations-v2__resultbar { align-items: flex-start; flex-direction: column; } }
+@media (max-width: 767px) {
+  .operations-v2__topline { justify-content: flex-start; }
+  .operations-v2__filter-select { min-width: 120px; flex: 1 1 140px; }
+  .operations-v2__queues {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    max-width: 100%;
+    box-sizing: border-box;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .operations-v2__queues::-webkit-scrollbar {
+    display: none;
+  }
+  .operations-v2__queue { flex-shrink: 0; }
+  .operations-v2__filters { align-items: stretch; }
+  .operations-v2__filter-select, .operations-v2__search { flex: 1 1 100%; width: 100%; }
+  .operations-v2__custom-range { grid-template-columns: 1fr; }
+  .operations-v2__resultbar { align-items: flex-start; flex-direction: column; }
+}

@@ -8,6 +8,7 @@ import {
   EquipmentWizardStepper,
   UnitBarcodeModal,
   EquipmentCatalogPreviewModal,
+  EquipmentInformationDrawerContent,
 } from '../equipmentAssist'
 import type { RecordValues } from '../../../lib/recordEditor'
 
@@ -181,7 +182,8 @@ describe('equipmentAssist — 5-Stage Precision Cinema Equipment Intake', () => 
 
     expect(container.textContent).toContain('Operational Catalogue Preview')
     expect(container.textContent).toContain('Sony FX3')
-    expect(container.textContent).toContain('Restricted (Law 1)')
+    expect(container.textContent).toContain('Restricted')
+    expect(container.textContent).not.toContain('Law 1')
     expect(container.textContent).not.toContain('Rs 4,500')
 
     // When canViewMoney is true, displays formatted rupees
@@ -206,5 +208,52 @@ describe('equipmentAssist — 5-Stage Precision Cinema Equipment Intake', () => 
       )
     })
     expect(container.textContent).toMatch(/Rs\s*4,500\s*\/\s*day/)
+  })
+  it('does not generate a barcode from a record code when a unit tag is missing', async () => {
+    await act(async () => {
+      root.render(createElement(UnitBarcodeModal, {
+        isOpen: true, unit: {}, index: 0, assetCode: 'EQ-RECORDED-42',
+        equipmentName: 'Recorded equipment', onClose: vi.fn(),
+      }))
+    })
+    expect(container.querySelector('.equipment-barcode-svg')).toBeNull()
+    expect(container.textContent).toContain('after the unit has an assigned asset tag')
+    expect(container.textContent).not.toMatch(/EQ-RECORDED-42-01|Excellent|NO-SERIAL/)
+    expect([...container.querySelectorAll('button')].find(b => b.textContent === 'Copy Tag')?.disabled).toBe(true)
+  })
+
+  it('does not invent an assigned code, persisted status or relationships for unsaved equipment', async () => {
+    const generate = vi.fn()
+    await act(async () => {
+      root.render(createElement(EquipmentInformationDrawerContent, {
+        values: { tracking_mode: 'Serialised' }, rows: [{ serial_no: 'REAL-SERIAL' }],
+        categoryName: undefined, editing: false, onGenerateAssetTags: generate,
+      }))
+    })
+    expect(container.textContent).toContain('Assigned on save')
+    expect(container.textContent).toContain('Not saved')
+    expect(container.textContent).not.toMatch(/EQ000234|Direct Shelf|No unit carries a booking|Draft/)
+    expect(container.querySelector('.equipment-barcode-svg')).toBeNull()
+    const copy = container.querySelector<HTMLButtonElement>('[aria-label="Copy Asset Code"]')
+    expect(copy?.disabled).toBe(true)
+    const tags = [...container.querySelectorAll('button')].find(b => b.textContent?.includes('Generate Tags'))
+    expect(tags?.disabled).toBe(true)
+    expect(tags?.title).toContain('Save equipment')
+    await act(async () => tags?.click())
+    expect(generate).not.toHaveBeenCalled()
+  })
+
+  it('presents a saved code and recorded status without assuming an active catalogue record', async () => {
+    await act(async () => {
+      root.render(createElement(EquipmentInformationDrawerContent, {
+        values: { status: 'Inactive', tracking_mode: 'Serialised' }, rows: [],
+        categoryName: undefined, editing: true, assetCode: 'EQ-RECORDED-42',
+      }))
+    })
+    expect(container.querySelector('.equipment-status-pill')?.textContent).toContain('Inactive')
+    expect(container.querySelector('.equipment-code-val')?.textContent).toBe('EQ-RECORDED-42')
+    expect(container.querySelector('.equipment-barcode-svg svg')).not.toBeNull()
+    expect(container.querySelector<HTMLButtonElement>('[aria-label="Copy Asset Code"]')?.disabled).toBe(false)
+    expect(container.textContent).not.toContain('Direct Shelf')
   })
 })

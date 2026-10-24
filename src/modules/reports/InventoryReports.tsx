@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { PageHeader, KpiStrip, cardStyle } from '../../components/ui/Page'
+import { PageHeader, cardStyle } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { ReportToolbar } from '../../components/ui/ReportToolbar'
 import { PageBody } from '../../components/ui/PageBody'
@@ -7,8 +7,13 @@ import { useLoad } from '../../lib/queries/useLoad'
 import type { ReportCsvRow } from '../../components/ui/ReportToolbar'
 import { getInventoryReportSummary, sharePercent, type InventoryReportSummary } from '../../lib/queries/inventoryReports'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
-import { useViewport } from '../../lib/device'
 import ShortageSection from './ShortageSection'
+import {
+  ReportKpiCard,
+  ReportKpiStrip,
+  ReportChartCard,
+} from '../../components/ui/reports'
+import '../../styles/reportChartTokens.css'
 
 const NOT_MEASURED = 'not measured'
 const NOT_TRACKED = 'not tracked yet'
@@ -44,7 +49,6 @@ export function inventoryCsv(summary: InventoryReportSummary | null, money: bool
 
 export default function InventoryReports() {
   const money = useCanViewMoney()
-  const viewport = useViewport()
   /* Phase 6 — one read, one ladder. A failed count used to print "Could not
      load unit counts" with no Retry, and the KPIs read "…" then "Unavailable";
      both now come from `PageBody` (skeleton · banner with Retry · nothing-yet). */
@@ -52,7 +56,7 @@ export default function InventoryReports() {
   const summary = load.data
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+    <div className="babin-report" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
       <PageHeader
         icon="box"
         title="Inventory Reports"
@@ -84,48 +88,107 @@ export default function InventoryReports() {
         emptyTitle="No units recorded yet"
         emptyMessage="Unit counts appear here once the first piece of equipment is added to Inventory."
       >
-      {summary && (
-        <>
-      {/* Real counts only (Law 16). A figure with no source reads "Not measured",
-          never 0 or a plausible default. */}
-      <KpiStrip
-        columns={viewport === 'phone' ? 1 : viewport === 'tablet' ? 2 : 4}
-        items={[
-          { label: 'Total Assets', value: String(summary.activeUnits), icon: 'box', accent: 'primary', note: 'Units not retired' },
-          { label: 'Utilization', value: 'Not measured', icon: 'activity', accent: 'progress', note: 'No rate-over-time source yet' },
-          { label: 'Available', value: String(summary.inStock), icon: 'check', accent: 'success', note: 'Units In Stock right now' },
-          { label: 'Inventory Accuracy', value: 'Not measured', icon: 'checklist', accent: 'success', note: 'Needs audit variance data' },
-        ]}
-      />
+        {summary && (
+          <>
+            {/* Real counts only (Law 16). A figure with no source reads "Not measured",
+                never 0 or a plausible default. */}
+            <ReportKpiStrip ariaLabel="Inventory status metrics">
+              <ReportKpiCard
+                label="Total Assets"
+                value={String(summary.activeUnits)}
+                icon="box"
+                note="Units not retired"
+              />
+              <ReportKpiCard
+                label="Utilization"
+                value="Not measured"
+                icon="chart"
+                note="No rate-over-time source yet"
+              />
+              <ReportKpiCard
+                label="Available"
+                value={String(summary.inStock)}
+                icon="check"
+                note="Units In Stock right now"
+              />
+              <ReportKpiCard
+                label="Inventory Accuracy"
+                value="Not measured"
+                icon="checklist"
+                note="Needs audit variance data"
+              />
+            </ReportKpiStrip>
 
-      <section aria-label="Units by status" style={cardStyle}>
-        <div style={{ fontSize: 'var(--t-body)', fontWeight: 600, padding: 'var(--sp-md)', borderBottom: '1px solid var(--border)' }}>Units by Status</div>
-          <DataTableShell ariaLabel="Units by Status">
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 'var(--t-meta)' }}>
-              <thead>
-                <tr style={{ color: 'var(--text2)' }}>
-                  <th style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>Status</th>
-                  <th style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>Count</th>
-                  <th style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>Share of all units</th>
-                </tr>
-              </thead>
-              <tbody>
-                {summary.byStatus.map((r) => {
-                  const pct = sharePercent(r.count, summary.totalUnits)
-                  return (
-                    <tr key={r.status} style={{ borderTop: '1px solid var(--border)' }}>
-                      <td style={{ padding: 'var(--sp-sm) var(--sp-md)', fontWeight: 600 }}>{r.status}</td>
-                      <td style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>{r.count}</td>
-                      <td style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>{pct === null ? 'Not measured' : `${pct}%`}</td>
+            <ReportChartCard
+              title="Units by Status"
+              basis="Live physical unit lifecycle status counts"
+              source="Inventory · product_units_v"
+              description="Current inventory distribution across physical asset states."
+            >
+              {/* Status proportion bar */}
+              {summary.totalUnits > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  <div
+                    style={{
+                      height: 14,
+                      borderRadius: 4,
+                      overflow: 'hidden',
+                      display: 'flex',
+                      background: 'var(--card2)',
+                    }}
+                  >
+                    {summary.byStatus.map((r, idx) => {
+                      const pct = Math.max(Math.round((r.count / summary.totalUnits) * 100), 1)
+                      const colors = [
+                        'var(--chart-1, #0284c7)',
+                        'var(--chart-2, #0d9488)',
+                        'var(--chart-3, #d97706)',
+                        'var(--chart-4, #dc2626)',
+                        'var(--chart-5, #7c3aed)',
+                        'var(--chart-6, #db2777)',
+                      ]
+                      return (
+                        <div
+                          key={r.status}
+                          style={{
+                            width: `${pct}%`,
+                            background: colors[idx % colors.length],
+                            height: '100%',
+                          }}
+                          title={`${r.status}: ${r.count} (${pct}%)`}
+                        />
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <DataTableShell ariaLabel="Units by Status">
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 'var(--t-meta)' }}>
+                  <thead>
+                    <tr style={{ color: 'var(--text2)', borderBottom: '1px solid var(--border)' }}>
+                      <th style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>Status</th>
+                      <th style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>Count</th>
+                      <th style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>Share of all units</th>
                     </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </DataTableShell>
-      </section>
-        </>
-      )}
+                  </thead>
+                  <tbody>
+                    {summary.byStatus.map((r) => {
+                      const pct = sharePercent(r.count, summary.totalUnits)
+                      return (
+                        <tr key={r.status} style={{ borderTop: '1px solid var(--border)' }}>
+                          <td style={{ padding: 'var(--sp-sm) var(--sp-md)', fontWeight: 600 }}>{r.status}</td>
+                          <td style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>{r.count}</td>
+                          <td style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>{pct === null ? 'Not measured' : `${pct}%`}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </DataTableShell>
+            </ReportChartCard>
+          </>
+        )}
       </PageBody>
 
       {/* C7 — the one list of over-committed products for a period. Real holds and

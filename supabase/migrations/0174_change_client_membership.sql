@@ -1,4 +1,4 @@
--- 0171 — change_client_membership: put a client on a membership plan, or move them to another.
+-- 0174 — change_client_membership: put a client on a membership plan, or move them to another.
 --
 -- RULING 2026-10-22 (Babin: "activate membership" = make the tier change real; fee left blank).
 -- WRITTEN locally; never apply to the live project without Babin's go-ahead and the backup step

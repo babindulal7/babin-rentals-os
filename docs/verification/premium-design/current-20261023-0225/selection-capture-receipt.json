@@ -1,0 +1,15 @@
+[
+  {
+    "name": "browser",
+    "args": [
+      "after",
+      "inventory,rentals"
+    ],
+    "log": "C:/Users/use/AppData/Local/Temp/babin-premium-protected-20261023/current/browser-after-final.log",
+    "startedAt": "2026-10-23T06:24:32.323Z",
+    "exitCode": 0,
+    "sourceHash": "85024300ad31820baec2ebfa5387dc9e48768d5f4f0ea0bcf14b079bd9734971",
+    "afterHash": "85024300ad31820baec2ebfa5387dc9e48768d5f4f0ea0bcf14b079bd9734971",
+    "sourceChanged": false
+  }
+]
