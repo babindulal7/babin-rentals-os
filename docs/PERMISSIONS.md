@@ -319,6 +319,7 @@ model**. Nothing is stored: `product_units_service_v` derives it at read time.
 | `invoice.void` (+ credit note) | M+ · Accounts | issued invoices immutable; ⭐ S1-a default: Owner · Admin · Manager · Accounts (R-05). Coordinator excluded. | ✓ |
 | `deposit.confirm_refund` | M+ · Accounts | accountant confirms auto-calculated refund (21 Jul) | ○ |
 | `deposit.release` | M+ · Accounts | never automated (Tier 3) | ○ |
+| `closing.approve` (sign off the Daily Closing) | M+ · Accounts | INSERT gated by `daily_closings_finance_insert` = `auth_is_finance_or_admin()` (0078 policy, 0117 predicate, R-05). **Coordinator excluded** — reads the figures, cannot sign (RULINGS-2026-10-18 #1). Refused offline. Owner/Manager-only reading still open (§4.40(a)). | ✓ |
 | `expense.submit` | all staff | own claims for Floor/Driver | ○ |
 | `expense.approve` | M+ · Accounts (⭐ Rs 25,000 threshold; above → Owner) | never own submission | ○ |
 | `expense.reverse` | M+ · Accounts | posted expenses reverse, drafts discard | ○ |
