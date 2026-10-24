@@ -8,7 +8,6 @@ import type { IconName } from '../../components/ui/Icon'
 import { Input, Select, SearchInput } from '../../components/ui'
 import { Card, PageHeader, Button, Rail, SummaryRows, cardStyle } from '../../components/ui/Page'
 import { PageShell } from '../../components/ui/PageShell'
-import { InfoTooltip } from '../../components/ui/InfoTooltip'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { EmptyState, ErrorBanner, LoadingSkeleton } from '../../components/ui/StateViews'
 import { Unavailable } from '../../components/ui/Unavailable'
@@ -420,12 +419,12 @@ function KpiCard({
   footer?: ReactNode
 }) {
   return (
-    <article className="lift" style={{ ...cardStyle, padding: '13px 14px', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+    <article className="lift" style={{ ...cardStyle, padding: '8px 12px', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 28 }}>
         <span
           style={{
-            width: 30,
-            height: 30,
+            width: 24,
+            height: 24,
             borderRadius: 'var(--r-sm)',
             background: BRAND[accent],
             color: BRAND_ON[accent],
@@ -434,13 +433,12 @@ function KpiCard({
             flexShrink: 0,
           }}
         >
-          <Icon name={icon} size={16} fill />
+          <Icon name={icon} size={14} fill />
         </span>
-        {/* Wraps rather than ellipsising. Six cards across leaves ~83px beside
-            the icon tile, and "Total Assets Stored" clipped to "Total Asse…" —
-            a KPI whose own name is unreadable is not a KPI. */}
+        {/* Wraps rather than ellipsising: a KPI whose own name is unreadable is not a KPI. */}
         <div
           style={{
+            flex: '1 1 auto',
             fontSize: 'var(--t-meta)',
             fontWeight: 600,
             color: 'var(--text2)',
@@ -450,15 +448,20 @@ function KpiCard({
         >
           {label}
         </div>
-        {note && <InfoTooltip content={note} label={`About ${label}`} size={16} style={{ marginLeft: 'auto', flexShrink: 0 }} />}
+        <div
+          className="figure"
+          style={{ flex: '0 0 auto', fontSize: 'clamp(14px, 1.1vw, 17px)', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}
+        >
+          {value}
+        </div>
       </div>
-      <div
-        className="figure"
-        style={{ fontSize: 'var(--t-h2)', fontWeight: 700, color: 'var(--text)', marginTop: 9, letterSpacing: '-0.02em' }}
-      >
-        {value}
-      </div>
-      {footer && <div style={{ marginTop: 'auto', paddingTop: 9 }}>{footer}</div>}
+      {/* RULING 2026-10-23: the note is printed on the tile, not hidden behind an (i). */}
+      {note && (
+        <div title={note} style={{ marginTop: 2, fontSize: 'var(--t-th)', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {note}
+        </div>
+      )}
+      {footer && <div style={{ marginTop: 'auto', paddingTop: 6 }}>{footer}</div>}
     </article>
   )
 }

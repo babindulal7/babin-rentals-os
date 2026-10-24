@@ -1,7 +1,6 @@
 import type { ReactNode, CSSProperties } from 'react'
 import Icon from './Icon'
 import type { IconName } from './Icon'
-import { InfoTooltip } from './InfoTooltip'
 import { BRAND, BRAND_ON, BRAND_TEXT } from '../../lib/status'
 import type { BrandKey } from '../../lib/status'
 import { InformationDrawer } from './InformationDrawer'
@@ -97,7 +96,7 @@ export interface Kpi {
   accent: BrandKey
   /** Delta line, e.g. "8.4% vs last month". */
   delta?: { direction: 'up' | 'down'; text: string; good?: boolean }
-  /** Extra explanation — shown in the card's (i) tooltip, not on its face. */
+  /** Extra explanation — printed on the tile as part of its one-line caption. */
   note?: string
   /** A secondary FIGURE (e.g. "Rs 1,234 receivable") — stays visible on the card. */
   detail?: string
@@ -143,17 +142,17 @@ export function KpiStrip({ items, columns }: { items: Kpi[]; columns?: number })
     >
       {items.map((k) => {
         const isZero = k.value === '0' || k.value === 'Rs 0' || k.value === 'Rs. 0' || k.value === 'Rs 0.00' || k.value === '—'
-        // Definition (L1), note and zero explanation (L2) all ride in ONE (i)
-        // tooltip, like PageHeader's description (R-39: less on the card face).
-        // The delta stays inline — it is a figure, not an explanation.
-        const info = [k.definition, k.note, isZero ? k.zeroExplanation : undefined].filter((t): t is string => Boolean(t))
+        // RULING 2026-10-23: no (i) on a tile. The one-line definition (L1), note and — when the
+        // figure is zero — its explanation (L2) are printed on the tile itself, one line, ellipsised.
+        const caption = isZero && k.zeroExplanation ? k.zeroExplanation : [k.definition, k.note].filter(Boolean).join(' · ')
+        const hasSecondLine = Boolean(caption || k.delta || k.detail)
         return (
-          <article key={k.label} className="surface-card kpi-tile" style={{ padding: 'var(--section-padding)', minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <article key={k.label} className="surface-card kpi-tile" style={{ padding: '8px 12px', minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 28 }}>
               <span
                 style={{
-                  width: 30,
-                  height: 30,
+                  width: 24,
+                  height: 24,
                   borderRadius: 'var(--r-sm)',
                   background: BRAND[isZero ? 'neutral' : k.accent],
                   color: BRAND_ON[isZero ? 'neutral' : k.accent],
@@ -162,81 +161,56 @@ export function KpiStrip({ items, columns }: { items: Kpi[]; columns?: number })
                   flexShrink: 0,
                 }}
               >
-                <Icon name={k.icon} size={16} fill />
+                <Icon name={k.icon} size={14} fill />
               </span>
-              <div
+              <span
+                className="kpi-tile__label"
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 5,
+                  flex: '1 1 auto',
+                  fontSize: 'var(--t-meta)',
+                  fontWeight: 600,
+                  color: 'var(--muted)',
                   minWidth: 0,
-                  flex: 1,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
                 }}
               >
-                <span
-                  className="kpi-tile__label"
-                  style={{
-                    fontSize: 'var(--t-meta)',
-                    fontWeight: 600,
-                    color: 'var(--muted)',
-                    minWidth: 0,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {k.label}
+                {k.label}
+              </span>
+              <span
+                className="kpi-value"
+                style={{
+                  flex: '0 1 auto',
+                  maxWidth: '60%',
+                  fontSize: 'clamp(14px, 1.1vw, 17px)',
+                  color: 'var(--text)',
+                  lineHeight: 1.2,
+                  letterSpacing: '-0.02em',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
+                {k.value}
+              </span>
+              {k.spark && (
+                <span style={{ width: 40, flexShrink: 0 }}>
+                  <Spark points={k.spark} color={BRAND[k.accent]} />
                 </span>
-              </div>
-              {info.length > 0 && (
-                <InfoTooltip
-                  label={`About ${k.label}`}
-                  size={16}
-                  style={{ marginLeft: 'auto', flexShrink: 0 }}
-                  content={info.map((t) => (
-                    <p key={t} style={{ margin: 0 }}>
-                      {t}
-                    </p>
-                  ))}
-                />
               )}
             </div>
 
-            {/*
-              The value gets the card's full width rather than being indented
-              under the icon. Six cards across leaves ~190px, and "Rs 25,00,000"
-              does not fit in what is left after a 30px tile — it would either
-              wrap (reading as two numbers) or clip.
-            */}
-            <div
-              className="kpi-value"
-              style={{
-                marginTop: 9,
-                fontSize: k.value.length > 8 ? 'clamp(16px, 1.05vw, var(--t-kpi, 22px))' : 'clamp(16px, 1.5vw, var(--t-kpi, 22px))',
-                fontWeight: 700,
-                fontFamily: 'var(--font-id)',
-                color: 'var(--text)',
-                lineHeight: 1.15,
-                letterSpacing: '-0.025em',
-                whiteSpace: 'nowrap',
-                // A figure longer than the card degrades to an ellipsis rather
-                // than bleeding past the border.
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                fontVariantNumeric: 'tabular-nums',
-              }}
-            >
-              {k.value}
-            </div>
-
-            {(k.delta || k.detail) && (
-              <div style={{ marginTop: 7, fontSize: 'var(--t-meta)', display: 'flex', alignItems: 'center', gap: 'var(--sp-xs)' }}>
+            {hasSecondLine && (
+              <div style={{ marginTop: 2, fontSize: 'var(--t-th)', display: 'flex', alignItems: 'center', gap: 'var(--sp-xs)', minWidth: 0 }}>
                 {k.delta && (
                   <span
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 3,
+                      flexShrink: 0,
                       fontWeight: 600,
                       color: (k.delta.good ?? k.delta.direction === 'up') ? 'var(--success-text)' : 'var(--danger-text)',
                     }}
@@ -245,13 +219,16 @@ export function KpiStrip({ items, columns }: { items: Kpi[]; columns?: number })
                     {k.delta.text}
                   </span>
                 )}
-                {k.detail && <span style={{ color: 'var(--muted)' }}>{k.detail}</span>}
-              </div>
-            )}
-
-            {k.spark && (
-              <div style={{ marginTop: 'var(--sp-sm)' }}>
-                <Spark points={k.spark} color={BRAND[k.accent]} />
+                {k.detail && <span style={{ color: 'var(--muted)', flexShrink: 0 }}>{k.detail}</span>}
+                {caption && (
+                  <span
+                    className="kpi-tile__caption"
+                    title={caption}
+                    style={{ color: 'var(--muted)', minWidth: 0, flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                  >
+                    {caption}
+                  </span>
+                )}
               </div>
             )}
           </article>

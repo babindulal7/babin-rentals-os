@@ -1,0 +1,103 @@
+/*
+ * Babin Rentals OS: controlled shadcn preset b1avaxO6a black/light adaptation.
+ * Preset: Rhea, olive base, emerald accent, blue charts, medium radius.
+ * Scope: existing light/dark themes only. Glass + high-contrast stay unchanged.
+ * Preserve existing status tokens, roles, lifecycle, rental math, fonts and icons.
+ * Remove its single import from main.tsx to roll back immediately.
+ */
+
+:root[data-theme='light']:not([data-style='glass']) {
+  --bg0: #e9eee5;
+  --bg: #f4f6f1;
+  --bgglow: #f6f8f4;
+  --bg-gradient-1: #f4f6f1;
+  --bg-gradient-2: #e9eee5;
+  --bg-radial-mesh: none;
+  --app: #f4f6f1;
+  --surface: #ffffff;
+  --surface-2: #f1f4ee;
+  --surface-card: var(--surface);
+  --surface-card-hover: var(--surface-2);
+  --card: #ffffff;
+  --card2: #edf1e9;
+  --inset: #ebefe8;
+  --inset2: #e4e9e0;
+  --sidebar: #ffffff;
+  --modal: #ffffff;
+  --dropdown: #ffffff;
+
+  --text: #17211b;
+  --text2: #314337;
+  --muted: #4d6051;
+  --border: #748678;
+  --border2: #697d6d;
+  --divider: color-mix(in srgb, var(--border) 52%, transparent);
+
+  --hover-card: #eaf1eb;
+  --hover-sidebar: #eaf1eb;
+  --hover-row: #eaf1eb;
+  --nav-active-bg: #e6f0e7;
+  --nav-icon: #475d4e;
+  --input-bg: #ffffff;
+  --input-border: #748678;
+  --input-focus: #0b6d4e;
+  --input-placeholder: #4d6051;
+  --th-bg: #e9f0e7;
+  --tr-bg: #ffffff;
+  --tr-hover: #eaf1eb;
+  --tr-alt: #f5f8f5;
+
+  --shadow-card: 0 1px 3px rgba(21, 42, 27, 0.09), 0 1px 2px rgba(21, 42, 27, 0.04);
+  --shadow-modal: 0 20px 48px rgba(17, 39, 23, 0.16);
+  --chart-grid: #d2dfd6;
+  --preset-emerald: #0b6d4e;
+  --preset-emerald-soft: #e1efe6;
+}
+
+:root[data-theme='dark']:not([data-style='glass']) {
+  --bg0: #060806;
+  --bg: #090c0a;
+  --bgglow: #0e160f;
+  --bg-gradient-1: #090c0a;
+  --bg-gradient-2: #060806;
+  --bg-radial-mesh: none;
+  --app: #090c0a;
+  --surface: #161b18;
+  --surface-2: #202823;
+  --surface-card: var(--surface);
+  --surface-card-hover: var(--surface-2);
+  --card: #161b18;
+  --card2: #202823;
+  --inset: #111713;
+  --inset2: #171f1a;
+  --sidebar: #0b100d;
+  --modal: #171d19;
+  --dropdown: #171d19;
+
+  --text: #f4f7f4;
+  --text2: #d1ddd4;
+  --muted: #a7b5aa;
+  --border: rgba(255, 255, 255, 0.28);
+  --border2: rgba(255, 255, 255, 0.36);
+  --divider: rgba(255, 255, 255, 0.21);
+
+  --hover-card: #28362c;
+  --hover-sidebar: #202d23;
+  --hover-row: rgba(255, 255, 255, 0.065);
+  --nav-active-bg: #18352a;
+  --nav-icon: #a7b5aa;
+  --input-bg: #121a15;
+  --input-border: rgba(255, 255, 255, 0.46);
+  --input-focus: #5bd5a1;
+  --input-placeholder: #a7b5aa;
+  --th-bg: #18201a;
+  --tr-bg: #151b17;
+  --tr-hover: rgba(255, 255, 255, 0.065);
+  --tr-alt: #111713;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.72);
+  --chart-grid: #324238;
+  --preset-emerald: #5bd5a1;
+  --preset-emerald-soft: #163b2b;
+}
