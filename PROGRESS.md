@@ -1,5 +1,52 @@
 # Progress Log
 
+## 2026-10-24 — Reports shadcn/ui Adoption Blueprint v1.4 (Phases 0, 1, 2)
+
+**Did**
+- Implemented `BABIN RENTALS OS — shadcn/ui Reports & UX Adoption Blueprint v1.4` on isolated feature branch `feat/reports-shadcn-modernization`.
+- Created scoped design token layer `src/styles/reportChartTokens.css` mapping `--chart-1` to `--chart-6` to Babin's canonical categorical `--cat-1` to `--cat-6` across Light, Dark, and High-Contrast modes.
+- Built reusable reporting UI primitives in `src/components/ui/reports/`:
+  - `ReportKpiCard` & `ReportKpiStrip`: Standardized KPI strip with primary value, unit badge, change pill vs preceding period, and definition tooltip.
+  - `ReportEmpty`: Law 16 truthful empty state specifying reason, remedy, filter clear action, and missing backend source indicator.
+  - `ReportChartCard`: Header card with title, metric basis explanation, date range, verified source badge, and audit reconciliation footer.
+  - `ReportChart`: Recharts AreaChart wrapper with gradient fills, accessible fallback HTML data table toggle ("View as table") with 44px hit area, live ARIA status for selected points, and mobile tap tooltip dismissal.
+- Phase 0 Mock Gating: Enforced truthful mock gating (Law 16) in `CustomReport.tsx`, `ReportCatalog.tsx`, and `ReportTemplate.tsx` so un-wired queries or fixture-backed projections from `data/pulse.ts` render "Not tracked yet" in production (`!IS_MOCK`).
+- Phase 1 Revenue Report Pilot: Modernized `RevenueReport.tsx` with Recharts AreaChart, `ReportKpiStrip` (Taxable revenue, Issued invoices, Average invoice, Excluded voids), and credit-note settlement reconciliation.
+- Phase 2 Family Polish: Modernized `RentalReports.tsx`, `InventoryReports.tsx`, and `EquipmentPerformance.tsx` with `ReportKpiStrip`, `ReportChartCard`, and status distribution / performer ranking visualizations while strictly preserving `PageBody` state ladders and money-blind role restrictions.
+
+**Ruled**
+- Preserved existing `PageShell`, `PageHeader`, `PageBody`, `ReportToolbar`, and `DataTableShell`. No duplicate sidebars, routing, or drawer systems.
+- Zero fabrication law (Law 16): No fixture numbers or hardcoded zeros in production reports. Missing metrics explicitly display "Not tracked yet".
+- Preserved integer paisa (`src/lib/money.ts`), Nepal BS/AD dates, and financial access control (`useCanViewMoney` / `auth_can_view_money`).
+
+**Verified**
+- Tests: 13/13 test files passed (118/118 tests in `src/modules/reports/__tests__/`), including `RevenueReport.recharts.test.tsx`, `Reports.law16.states.test.tsx`, and `InventoryReports.csv.test.ts`.
+- TypeScript: `npm run typecheck` passes with zero errors (`tsc --noEmit`).
+- Lint: `npm run lint` passes with zero warnings (`eslint src --max-warnings 0`).
+- Color contrast: `npm run check:contrast` passes 82/82 contrast pairs (WCAG AA).
+- Production build: `npm run build` succeeds cleanly producing verified chunks and PWA service worker.
+
+## Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | — |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | — |
+| Lifecycle | steps green / total | 31 / 31 (100%) | — |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 170 files · check:pglite 170/170 applied, 0 failed (recorded 2026-10-24T02:54:33.191Z). Suite: PASS — 5380/5380 passed, 0 failed (recorded 2026-10-24T02:54:20.057Z); source fingerprint matches.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-24T02:55:25.833Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+
+- Proceed with Phase 3 (Data Table sorting & filter enhancements) and remaining report modules (Operations, Sales VAT, Expense reports).
+- Hosted role/JWT/PostgREST/Storage, physical device and offline/reconnect acceptance tests remain separate.
+
 <!-- coss-booking-search-20261024:start -->
 ## 2026-10-24 — New Rental coss search and Operations status readback
 
