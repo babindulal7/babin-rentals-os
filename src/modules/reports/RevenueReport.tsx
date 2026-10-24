@@ -1,16 +1,23 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { PageHeader, cardStyle } from '../../components/ui/Page'
+import { PageHeader } from '../../components/ui/Page'
 import { ReportFamiliesNav } from '../../components/ui/ReportFamiliesNav'
 import { ReportToolbar } from '../../components/ui/ReportToolbar'
 import type { ReportCsvRow, ReportFilters } from '../../components/ui/ReportToolbar'
-import { InteractiveRevenueTrend } from '../../components/ui/charts/InteractiveRevenueTrend'
 import { PageBody } from '../../components/ui/PageBody'
 import { useLoad } from '../../lib/queries/useLoad'
-import { formatMoney } from '../../lib/money'
+import { formatMoney, type Paisa } from '../../lib/money'
 import { businessDayAd } from '../../lib/bs'
 import { useAuth } from '../../lib/auth'
 import { getIssuedRevenueTrend, type IssuedRevenueReport } from '../../lib/queries/reportRevenueTrend'
+import {
+  ReportAreaChart,
+  ReportChartCard,
+  ReportKpiCard,
+  ReportKpiStrip,
+  type ReportChartPoint,
+} from '../../components/ui/reports'
+import '../../styles/reportChartTokens.css'
 
 /**
  * This report displays ONLY successfully fetched taxable issued-invoice values.
@@ -28,8 +35,6 @@ function daysAgo(day: string, count: number): string {
 
 function readReportDate(value: string | undefined, fallback: string): string {
   if (!value) return fallback
-  // ReportToolbar supplies Nepal-local date instants. The date-only portion
-  // is the intended AD civil date, without coercing it through browser TZ.
   return value.slice(0, 10)
 }
 
@@ -41,122 +46,206 @@ export default function RevenueReport() {
 
   const from = readReportDate(filters.dateRange?.fromAd, daysAgo(today, 89))
   const to = readReportDate(filters.dateRange?.toAd, today)
-  const windowIsValid = from <= to && (
-    (new Date(to + 'T00:00:00Z').getUTCFullYear() - new Date(from + 'T00:00:00Z').getUTCFullYear())*12 +
-    new Date(to + 'T00:00:00Z').getUTCMonth() - new Date(from + 'T00:00:00Z').getUTCMonth() < 24
+  const windowIsValid =
+    from <= to &&
+    (new Date(to + 'T00:00:00Z').getUTCFullYear() - new Date(from + 'T00:00:00Z').getUTCFullYear()) * 12 +
+      new Date(to + 'T00:00:00Z').getUTCMonth() -
+      new Date(from + 'T00:00:00Z').getUTCMonth() <
+      24
+
+  const load = useLoad<IssuedRevenueReport>(
+    async () => {
+      if (!permitted) return null
+      return getIssuedRevenueTrend({ fromAd: from, toAd: to })
+    },
+    [permitted, from, to],
   )
 
-  /* Phase 6 — the hand-rolled load state becomes `useLoad`, so a failure
-     offline is worded as such and retries on reconnect, and `PageBody` draws
-     loading · Error + Retry · nothing-yet vs "nothing in this period". A role
-     outside the executive set never sends the read (Law 6). */
-  const filtered = Boolean(filters.dateRange?.fromAd || filters.dateRange?.toAd)
-  const load = useLoad<IssuedRevenueReport>(() => getIssuedRevenueTrend(from, to), {
-    key: `${from}|${to}`,
-    enabled: permitted && windowIsValid,
-  })
   const report = load.data
 
-  const rows = useMemo<ReportCsvRow[]>(() => {
+  const rows: ReportCsvRow[] = useMemo(() => {
     if (!report) return []
     return [
-      ['Issued invoice taxable revenue — actual (NPR), before VAT'],
-      ['AD window', report.fromAd, report.toAd],
-      ['Status', 'Issued nonvoid invoices; credit notes reconciled as paid-amount records, not subtracted from taxable sales'],
-      ['Credit notes on invoices issued in window', report.creditReconciliation.creditNoteCount],
-      ['Credit-note paid amounts (not taxable deductions)', formatMoney(report.creditReconciliation.creditNoteAmountPaisa)],
-      ['Voided invoice taxable amounts excluded', formatMoney(report.creditReconciliation.voidedTaxablePaisa)],
+      ['Report', 'Issued invoice taxable revenue (monthly trend)'],
+      ['Basis', 'Taxable invoice amounts before VAT for issued invoices grouped by AD issue date. Excludes drafts and voids. Credit notes are reconciled below on a cash-paid correction basis, not as taxable sales deductions.'],
+      ['Date window', `${from} to ${to}`],
+      ['Total taxable value', formatMoney(report.totalPaisa)],
+      ['Total issued invoices', report.issuedCount],
+      ['Voided invoice taxable value excluded', formatMoney(report.creditReconciliation.voidedTaxablePaisa)],
+      ['Voided invoices excluded', report.creditReconciliation.voidedInvoiceCount],
+      ['Credit notes issued on period invoices', report.creditReconciliation.creditNoteCount],
+      ['Total credit-note value', formatMoney(report.creditReconciliation.creditNoteAmountPaisa)],
       ['Paid voids needing credit review', report.creditReconciliation.paidVoidMismatchCount],
       ['Credit notes on active invoices for review', report.creditReconciliation.activeInvoiceCreditNoteCount],
       ['Month', 'Taxable value', 'Issued invoices'],
-      ...report.months.map(m => [m.label, formatMoney(m.amountPaisa), m.invoiceCount] as ReportCsvRow),
+      ...report.months.map((m) => [m.label, formatMoney(m.amountPaisa), m.invoiceCount] as ReportCsvRow),
       ['Total', formatMoney(report.totalPaisa), report.issuedCount],
     ]
+  }, [report, from, to])
+
+  const chartData: ReportChartPoint[] = useMemo(() => {
+    if (!report) return []
+    return report.months.map((m) => ({
+      periodKey: m.periodStartUtc,
+      periodLabel: m.label,
+      value: m.amountPaisa,
+      formattedValue: formatMoney(m.amountPaisa),
+      subText: `${m.invoiceCount} issued invoice${m.invoiceCount === 1 ? '' : 's'}`,
+    }))
+  }, [report])
+
+  const averageInvoicePaisa = useMemo<Paisa>(() => {
+    if (!report || report.issuedCount === 0) return 0 as Paisa
+    return Math.round(report.totalPaisa / report.issuedCount) as Paisa
   }, [report])
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:'var(--sp-md)' }}>
-      <PageHeader icon="dollar" title="Revenue Reports" description="Issued invoice taxable revenue, excluding VAT and unissued or void invoices." />
+    <div className="babin-report" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+      <PageHeader
+        icon="dollar"
+        title="Revenue Reports"
+        description="Issued invoice taxable revenue, excluding VAT and unissued or void invoices."
+      />
       <ReportFamiliesNav current="Revenue" />
       {!permitted ? (
         <PageBody
-          restricted
-          restrictedReason="Revenue figures are restricted to Owner, Admin, Manager and Accounts."
-          restrictedRequiredRole="Owner, Admin, Manager or Accounts"
+          loading={false}
+          error={null}
+          empty={true}
+          emptyTitle="Financial reports are restricted"
+          emptyMessage="Revenue and sales figures are limited to management and accounts roles."
         >
-          {null}
+          <div />
         </PageBody>
       ) : (
         <>
-          <ReportToolbar title="Revenue Reports" value={filters} onChange={setFilters} dateColumn="issue_date"
-            {...(!load.loading && !load.error && report ? { csv: { filename:'revenue-issued-monthly', build: () => rows } } : {})}
+          <ReportToolbar
+            title="Revenue Reports"
+            value={filters}
+            onChange={setFilters}
+            dateColumn="issue_date"
+            {...(!load.loading && !load.error && report ? { csv: { filename: 'revenue-issued-monthly', build: () => rows } } : {})}
           />
-          <section style={{...cardStyle,padding:'var(--sp-md)'}} aria-label="Issued invoice revenue trend">
-            <h3 style={{margin:'0 0 8px',color:'var(--text)'}}>Monthly issued invoice revenue</h3>
-            <p style={{color:'var(--text2)',fontSize:'var(--t-meta)',margin:'0 0 14px'}}>
-              Actual taxable invoice amounts before VAT · AD calendar months · {from} to {to}.
-              Current nonvoid invoice snapshot grouped by issue month: later voids may restate older months.
-              Draft and void invoices excluded. Credit notes record paid amounts, not taxable sales deductions.
-              Credit notes are checked separately; this is not a full audited net-sales statement.
-            </p>
-            {!windowIsValid ? (
-              <p role="alert">Choose a valid report window of no more than 24 calendar months.</p>
-            ) : (
-              <PageBody
-                noun="revenue"
-                loading={load.loading}
-                error={load.error}
-                onRetry={load.reload}
-                hasRows={report !== null}
-                skeleton="card"
-                empty={report !== null && report.issuedCount === 0 && report.creditReconciliation.voidedInvoiceCount === 0}
-                emptyIsFiltered={filtered}
-                onClearFilters={() => setFilters({})}
-                clearLabel="Back to the last 90 days"
-                emptyTitle={filtered ? 'No invoices issued in this period' : 'No invoices issued in the last 90 days'}
-                emptyMessage={
-                  filtered
-                    ? 'Revenue appears here for invoices issued in the selected window.'
-                    : 'Revenue appears here once an invoice is issued. Choose a wider period to look further back.'
-                }
-              >
+
+          {!windowIsValid ? (
+            <div
+              role="alert"
+              style={{
+                padding: 'var(--sp-md)',
+                borderRadius: 'var(--r-card)',
+                background: 'var(--card)',
+                border: '1px solid var(--border)',
+                color: 'var(--st-cancelled-fg, #ef4444)',
+              }}
+            >
+              Selected date range is invalid. Please select an end date on or after the start date, spanning less than 24 months.
+            </div>
+          ) : (
+            <PageBody
+              loading={load.loading}
+              error={load.error}
+              skeleton="table"
+              onRetry={load.retry}
+              empty={!load.loading && !load.error && (!report || report.issuedCount === 0)}
+              emptyTitle="No revenue recorded"
+              emptyMessage="No taxable issued invoices were found in this date window."
+            >
               {report && (
-              <>
-                <div style={{display:'flex',flexWrap:'wrap',gap:26,marginBottom:20}}>
-                  <div><small>Taxable amount (before VAT)</small><strong style={{display:'block',fontSize:23}}>{formatMoney(report.totalPaisa)}</strong></div>
-                  <div><small>Issued invoices</small><strong style={{display:'block',fontSize:23}}>{report.issuedCount}</strong></div>
-                </div>
-                <InteractiveRevenueTrend months={report.months} />
-                <section aria-label="Credit-note reconciliation for selected invoice dates" style={{marginTop:20,paddingTop:14,borderTop:'1px solid var(--border)'}}>
-                  <h4 style={{margin:'0 0 8px'}}>Credit-note reconciliation</h4>
-                  <p style={{color:'var(--text2)',fontSize:'var(--t-meta)'}}>
-                    For invoices issued {from} to {to}, including voided invoices omitted from the chart.
-                    Credit-note amounts reflect paid-value corrections, not taxable sales credits;
-                    notes issued for invoices outside this period are not in this check.
-                  </p>
-                  <dl style={{display:'flex',flexWrap:'wrap',gap:24}}>
-                    <div><dt>Voided invoice taxable amount excluded</dt><dd>{formatMoney(report.creditReconciliation.voidedTaxablePaisa)} ({report.creditReconciliation.voidedInvoiceCount} invoices)</dd></div>
-                    <div><dt>Credit-note amount (settlement basis)</dt><dd>{formatMoney(report.creditReconciliation.creditNoteAmountPaisa)} ({report.creditReconciliation.creditNoteCount} notes)</dd></div>
-                  </dl>
-                  {report.creditReconciliation.paidVoidMismatchCount > 0 || report.creditReconciliation.activeInvoiceCreditNoteCount > 0 ? (
-                    <p role="alert">
-                      Manual ledger review needed: {report.creditReconciliation.paidVoidMismatchCount} paid voided invoice(s)
-                      with credit-note amounts not matching paid amounts, and {report.creditReconciliation.activeInvoiceCreditNoteCount}
-                      credit note(s) on nonvoid invoices. Do not treat this as audited net sales.
-                    </p>
-                  ) : (
-                    <p role="status">No paid-void credit mismatches found in this invoice-date window. This is not an audited net-sales statement.</p>
-                  )}
-                </section>
-                {report.issuedCount===0 && <p>No issued invoices recorded for the selected period.</p>}
-              </>
+                <>
+                  {/* KPI Summary Strip */}
+                  <ReportKpiStrip ariaLabel="Revenue summary metrics">
+                    <ReportKpiCard
+                      label="Taxable revenue"
+                      value={formatMoney(report.totalPaisa)}
+                      icon="dollar"
+                      note="Before VAT · Actual"
+                    />
+                    <ReportKpiCard
+                      label="Issued invoices"
+                      value={report.issuedCount}
+                      icon="file"
+                      note={`${report.months.length} calendar months`}
+                    />
+                    <ReportKpiCard
+                      label="Average invoice"
+                      value={formatMoney(averageInvoicePaisa)}
+                      icon="receipt"
+                      note="Per issued invoice"
+                    />
+                    <ReportKpiCard
+                      label="Excluded voids"
+                      value={formatMoney(report.creditReconciliation.voidedTaxablePaisa)}
+                      icon="archive"
+                      note={`${report.creditReconciliation.voidedInvoiceCount} voided invoices`}
+                    />
+                  </ReportKpiStrip>
+
+                  {/* Primary Chart Card */}
+                  <ReportChartCard
+                    title="Monthly issued invoice revenue"
+                    basis="Actual taxable invoice amounts before VAT · AD calendar months"
+                    dateWindow={`${from} to ${to}`}
+                    source="Finance · issued invoices"
+                    description="Current nonvoid invoice snapshot grouped by issue month. Later voids may restate older months. Draft and void invoices excluded. Credit notes record paid amounts, not taxable sales deductions."
+                    ariaLabel="Issued invoice revenue trend"
+                    reconciliation={
+                      <section aria-label="Credit-note reconciliation for selected invoice dates" style={{ marginTop: 20, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+                        <h4 style={{ margin: '0 0 8px', fontSize: 'var(--t-body, 14px)', fontWeight: 600 }}>
+                          Credit-note reconciliation
+                        </h4>
+                        <p style={{ color: 'var(--text2)', fontSize: 'var(--t-meta, 12px)', margin: '0 0 10px' }}>
+                          For invoices issued {from} to {to}, including voided invoices omitted from the chart.
+                          Credit-note amounts reflect paid-value corrections, not taxable sales credits;
+                          notes issued for invoices outside this period are not in this check.
+                        </p>
+                        <dl style={{ display: 'flex', flexWrap: 'wrap', gap: 24, margin: '0 0 10px' }}>
+                          <div>
+                            <dt style={{ color: 'var(--text2)', fontSize: 11 }}>Voided invoice taxable amount excluded</dt>
+                            <dd style={{ margin: 0, fontWeight: 600, fontFamily: 'JetBrains Mono Variable, monospace' }}>
+                              {formatMoney(report.creditReconciliation.voidedTaxablePaisa)} ({report.creditReconciliation.voidedInvoiceCount} invoices)
+                            </dd>
+                          </div>
+                          <div>
+                            <dt style={{ color: 'var(--text2)', fontSize: 11 }}>Credit-note amount (settlement basis)</dt>
+                            <dd style={{ margin: 0, fontWeight: 600, fontFamily: 'JetBrains Mono Variable, monospace' }}>
+                              {formatMoney(report.creditReconciliation.creditNoteAmountPaisa)} ({report.creditReconciliation.creditNoteCount} notes)
+                            </dd>
+                          </div>
+                        </dl>
+                        {report.creditReconciliation.paidVoidMismatchCount > 0 || report.creditReconciliation.activeInvoiceCreditNoteCount > 0 ? (
+                          <p role="alert" style={{ color: 'var(--st-cancelled-fg, #ef4444)', margin: 0 }}>
+                            Manual ledger review needed: {report.creditReconciliation.paidVoidMismatchCount} paid voided invoice(s)
+                            with credit-note amounts not matching paid amounts, and {report.creditReconciliation.activeInvoiceCreditNoteCount}
+                            credit note(s) on nonvoid invoices. Do not treat this as audited net sales.
+                          </p>
+                        ) : (
+                          <p role="status" style={{ color: 'var(--text2)', margin: 0 }}>
+                            No paid-void credit mismatches found in this invoice-date window. This is not an audited net-sales statement.
+                          </p>
+                        )}
+                      </section>
+                    }
+                  >
+                    <ReportAreaChart
+                      data={chartData}
+                      ariaLabel="Issued invoice revenue trend chart"
+                      metricLabel="Taxable invoice revenue"
+                      height={280}
+                      empty={report.months.length === 0}
+                      emptyMessage="No issued invoices recorded for the selected period."
+                    />
+                  </ReportChartCard>
+                </>
               )}
-              </PageBody>
-            )}
-          </section>
-          <p style={{fontSize:'var(--t-meta)',color:'var(--text2)'}}>
-            Detailed invoice records and settlement corrections remain available in <Link to="/finance?tab=invoices">Finance invoices</Link>.
-            Previously hardcoded category and project-revenue figures are withheld until their attribution can be verified.
+            </PageBody>
+          )}
+
+          <p style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', marginTop: 4 }}>
+            Detailed invoice records and settlement corrections remain available in{' '}
+            <Link to="/finance?tab=invoices" style={{ color: 'var(--link)' }}>
+              Finance invoices
+            </Link>
+            . Previously hardcoded category and project-revenue figures are withheld until their attribution can be verified.
           </p>
         </>
       )}
