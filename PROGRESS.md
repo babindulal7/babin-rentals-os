@@ -1,5 +1,39 @@
 # Progress Log
 
+## 2026-10-24 — KPI tiles checked in the browser; module KPI strip made compact
+
+**Did**
+- Built the mock bundle from this worktree and drove it in the browser pane as Owner at 1440, 1024, 768 and 375 wide, on Rentals, Warehouses (Settings) and Audit Log.
+- Found and fixed: (1) `ModuleKpiStrip`, which draws the Rentals, Clients, Finance and Crew tiles, was untouched by the earlier compact change, so it is now one row of icon, label and count with the subtitle below; (2) at six across, Warehouses' "Inventory Accuracy" label was squeezed to 41px and its value overlapped it, so on all three tile kinds the value now drops under the label when they do not fit; (3) on a phone the three Rentals tiles wrapped unevenly, so each now stacks label over count.
+- Ruling record: rows 3 and 4 added to the KPI section of `RULINGS-2026-10-23.md`.
+
+**Ruled**
+- Compact tiles apply to every KPI component, not only `KpiStrip`. Revert: `git revert` this commit.
+
+**Verified**
+- Browser (mock build, Owner): Rentals tiles 62px high at 1024, label and count on one row; phone 375, no horizontal overflow, three tiles 77px high with the count under a left-aligned label. Warehouses at 375: no overflow, no clipped label, value inside the card. Audit Log (shared `KpiStrip`): 4 tiles 64px high with the caption printed on the tile and no button.
+- The phone stacking rule was checked by injecting the same CSS into the page, then confirmed only by measurement (count below label, left-aligned, 77px); that last CSS edit was not rebuilt and re-opened.
+- Compiler-API check and ESLint on the 4 changed code files: 0 diagnostics. `vitest` on rentals, inventory, settings, clients, finance, crew, admin and the KPI test: 49 files, 565 tests passed.
+- **Not verified:** whole-project `tsc`, `lint:ui-copy`, `build`; the other screens that use `KpiStrip` (about 30) were not each opened; contrast of the caption text was not measured; Nepali (`lang=ne`) rendering of the tiles was not checked.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+
+Migrations 168 files · check:pglite not run this session. Suite: partial direct `vitest run` (see Verified), not `npm test`.
+Counted by `npm run completion` (22 Oct receipt block re-used unchanged; this change touches no action, table or capability).
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Quick-information drawer button: decide content inline on each screen or kept behind another control.
+- Open the remaining `KpiStrip` screens, check caption contrast and Nepali rendering; run whole-project `tsc`, `lint:ui-copy` and `build` on a machine with free memory.
+
 ## 2026-10-24 — Activate membership: the client page's tier change is real (`change_client_membership`, 0174)
 
 **Did**

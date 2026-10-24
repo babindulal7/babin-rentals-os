@@ -355,7 +355,7 @@ export interface KpiSpec {
 export function KpiCard({ k }: { k: KpiSpec }) {
   return (
     <article className="lift" style={{ ...cardStyle, padding: '8px 12px', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 28 }}>
+      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 8, rowGap: 2, minHeight: 28 }}>
         <span
           style={{
             width: 24,
@@ -376,7 +376,7 @@ export function KpiCard({ k }: { k: KpiSpec }) {
             fontSize: 'var(--t-meta)',
             fontWeight: 600,
             color: 'var(--text2)',
-            minWidth: 0,
+            minWidth: 'min(100%, min-content)',
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -388,7 +388,8 @@ export function KpiCard({ k }: { k: KpiSpec }) {
           className="kpi-value"
           style={{
             flex: '0 1 auto',
-            maxWidth: '60%',
+            marginLeft: 'auto',
+            maxWidth: '100%',
             fontSize: 'clamp(14px, 1.1vw, 17px)',
             fontWeight: 700,
             color: 'var(--text)',
