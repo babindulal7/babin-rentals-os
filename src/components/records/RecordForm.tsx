@@ -17,6 +17,11 @@ import { useToast } from '../ui/Toast'
 import { EquipmentSummary, useEquipmentDuplicate } from './equipmentAssist'
 import { EquipmentRecordEditor } from './EquipmentRecordEditor'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
+import {
+  SectionSaveStatusBadge,
+  SectionSaveBar,
+  useSectionSaveManager,
+} from './RecordSectionSaveStatus'
 import './equipment-assist.css'
 import { useViewport } from '../../lib/device'
 
@@ -90,7 +95,62 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
     if (kind === 'client') result.splice(result.indexOf('Notes'), 0, 'Commercial details')
     return result
   }, [kind, canViewMoney])
-  const set=(key:string,value:string|boolean)=>{setValues(v=>({...v,[key]:value}));setErrors(e=>{const next={...e};delete next[key];return next})}
+
+  const sectionManager = useSectionSaveManager({
+    kind,
+    recordId: snapshot?.id ?? recordId,
+    snapshot,
+    onSnapshotUpdated: (newSnapshot) => {
+      setSnapshot(newSnapshot)
+      setValues((prev) => ({ ...prev, ...newSnapshot.values }))
+      if (newSnapshot.rows) setRows(newSnapshot.rows)
+      saved.current = true
+    },
+    onCreateInitialRecord: async (_sectionKey, sectionFields, sectionRows) => {
+      const mergedValues = { ...values, ...sectionFields }
+      const invalid = validateRecord(kind, mergedValues)
+      setErrors(invalid)
+      if (Object.keys(invalid).length) {
+        focusRecordField(fieldId(Object.keys(invalid)[0]!))
+        throw new Error('Please resolve validation errors before saving.')
+      }
+      const clientUuid = newClientUuid()
+      const input = {
+        kind,
+        id: null,
+        expectedRevision: null,
+        clientUuid,
+        values: recordPayload(kind, mergedValues, false),
+        rows: sectionRows ?? rows,
+      }
+      const ctx = { userId: user!.id, role: user!.role, isOnline: online }
+      const res = await saveRecord(input, ctx)
+      saved.current = true
+      return {
+        id: res.id,
+        kind,
+        code: res.code,
+        revision: res.revision,
+        values: mergedValues,
+        rows: sectionRows ?? rows,
+      } as RecordSnapshot
+    },
+    userId: user?.id,
+    userRole: user?.role,
+  })
+
+  const set = (key: string, value: string | boolean) => {
+    setValues((v) => ({ ...v, [key]: value }))
+    setErrors((e) => {
+      const next = { ...e }
+      delete next[key]
+      return next
+    })
+    const fieldSpec = recordFields[kind].find((f) => f.key === key)
+    if (fieldSpec) {
+      sectionManager.markSectionDirty(fieldSpec.section.toLowerCase())
+    }
+  }
   function exit(){if(onDone){onDone();return} if(recordId){const params=new URLSearchParams(location.search);params.delete('action');navigate(`${location.pathname}${params.size?`?${params}`:''}`)}else navigate(kind==='bundle'?'/inventory?tab=bundles':routes[kind])}
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean
@@ -286,6 +346,7 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
           canViewMoney={canViewMoney}
           manufacturerDiffers={manufacturerDiffers}
           setManufacturerDiffers={setManufacturerDiffers}
+          sectionManager={sectionManager}
         />
       ) : (
         <>
@@ -313,7 +374,7 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
               </span>
             </div>
           )}
-          {sections.map((section) => (
+          {sections.map((section, sectionIdx) => (
             <RecordSection
               key={section}
               title={section}
@@ -328,6 +389,18 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
                 (section === 'Notes' && false)
               }
               collapsedHint="Empty"
+              statusBadge={
+                <SectionSaveStatusBadge
+                  status={sectionManager.getSectionStatus(
+                    section.toLowerCase(),
+                    sectionHasError(section),
+                    section === 'Commercial details' && kind === 'client'
+                  )}
+                  savedAtTime={sectionManager.savedSections[section.toLowerCase()]?.savedAt}
+                  errorCount={recordFields[kind].filter((f) => f.section === section && Boolean(errors[f.key])).length}
+                  errorMessage={sectionManager.sectionErrors[section.toLowerCase()]}
+                />
+              }
             >
               <div className="record-fields">
                 {recordFields[kind].filter((f) => f.section === section).map(renderField)}
@@ -341,7 +414,13 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
                       {rowField(row, index, 'designation', 'Designation')}
                       {rowField(row, index, 'phone', 'Contact phone')}
                       {rowField(row, index, 'email', 'Contact email')}
-                      <Button disabled={busy} onClick={() => setRows([])}>
+                      <Button
+                        disabled={busy}
+                        onClick={() => {
+                          setRows([])
+                          sectionManager.markSectionDirty('contact')
+                        }}
+                      >
                         Remove primary contact
                       </Button>
                     </div>
@@ -349,7 +428,10 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
                   {!rows.length && (
                     <Button
                       disabled={busy}
-                      onClick={() => setRows([{ full_name: '', designation: null, phone: null, email: null }])}
+                      onClick={() => {
+                        setRows([{ full_name: '', designation: null, phone: null, email: null }])
+                        sectionManager.markSectionDirty('contact')
+                      }}
                     >
                       Add primary contact
                     </Button>
@@ -376,7 +458,7 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
                         <Button
                           disabled={busy}
                           key={p.id}
-                          onClick={() =>
+                          onClick={() => {
                             setRows((prev) => [
                               ...prev,
                               {
@@ -388,7 +470,8 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
                                 sort_order: prev.length,
                               },
                             ])
-                          }
+                            sectionManager.markSectionDirty('components')
+                          }}
                         >
                           Add {p.name}
                         </Button>
@@ -400,13 +483,59 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
                         {rowField(row, index, 'quantity', 'Quantity', 'number')}
                         {rowField(row, index, 'days', 'Days', 'number')}
                         {rowField(row, index, 'is_mandatory', 'Required component', 'checkbox')}
-                        <Button disabled={busy} onClick={() => setRows((prev) => prev.filter((_, i) => i !== index))}>
+                        <Button
+                          disabled={busy}
+                          onClick={() => {
+                            setRows((prev) => prev.filter((_, i) => i !== index))
+                            sectionManager.markSectionDirty('components')
+                          }}
+                        >
                           Remove component
                         </Button>
                       </div>
                     </Card>
                   ))}
                 </div>
+              )}
+              {section !== 'Commercial details' && (
+                <SectionSaveBar
+                  sectionName={section}
+                  status={sectionManager.getSectionStatus(section.toLowerCase(), sectionHasError(section))}
+                  isSaving={sectionManager.savingSection === section.toLowerCase()}
+                  canSave={Boolean(snapshot?.id || recordId || section.toLowerCase() === 'identity') && !sectionHasError(section)}
+                  saveDisabledReason={
+                    !snapshot?.id && !recordId && section.toLowerCase() !== 'identity'
+                      ? 'Save the Identity section first to enable section saving'
+                      : sectionHasError(section)
+                      ? 'Resolve errors in this section before saving'
+                      : null
+                  }
+                  onSave={async () => {
+                    const sectionFields = recordFields[kind].filter((f) => f.section === section)
+                    const payload: RecordValues = {}
+                    for (const f of sectionFields) {
+                      payload[f.key] = values[f.key] ?? null
+                    }
+                    await sectionManager.saveSection(
+                      section.toLowerCase(),
+                      payload,
+                      section === 'Contact' ? rows : undefined
+                    )
+                  }}
+                  onNext={
+                    sectionIdx < sections.length - 1
+                      ? () => {
+                          const nextSec = sections[sectionIdx + 1]
+                          if (nextSec) {
+                            const nextEl = document.getElementById(sectionId(nextSec))
+                            nextEl?.scrollIntoView({ behavior: 'smooth' })
+                          }
+                        }
+                      : undefined
+                  }
+                  nextLabel={sectionIdx < sections.length - 1 ? sections[sectionIdx + 1] : undefined}
+                  errorMessage={sectionManager.sectionErrors[section.toLowerCase()]}
+                />
               )}
             </RecordSection>
           ))}

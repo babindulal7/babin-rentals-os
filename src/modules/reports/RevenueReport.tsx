@@ -18,6 +18,7 @@ import {
   type ReportChartPoint,
 } from '../../components/ui/reports'
 import '../../styles/reportChartTokens.css'
+import '../../styles/shadcn-preset-pilot.css'
 
 /**
  * This report displays ONLY successfully fetched taxable issued-invoice values.
@@ -98,7 +99,11 @@ export default function RevenueReport() {
   }, [report])
 
   return (
-    <div className="babin-report" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+    <div
+      className="babin-report br-preset-pilot"
+      data-ui-preset="rhea"
+      style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}
+    >
       <PageHeader
         icon="dollar"
         title="Revenue Reports"
@@ -108,7 +113,7 @@ export default function RevenueReport() {
       {!permitted ? (
         <PageBody
           restricted
-          restrictedReason="Revenue and sales figures are limited to management and accounts roles."
+          restrictedReason="Revenue figures are restricted to Owner, Admin, Manager and Accounts."
           restrictedRequiredRole="Owner, Admin, Manager or Accounts"
         >
           {null}

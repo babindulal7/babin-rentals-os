@@ -71,7 +71,7 @@ export default function BookingOperationsMenu({ bookingNo, bookingStatus, unavai
     <Menu.Trigger render={trigger} />
     <Menu.Portal><Menu.Positioner sideOffset={6} align="end" className="booking-operations__positioner">
       <Menu.Popup aria-label="Operations" className="booking-operations__popup" finalFocus={() => selected.current ? false : triggerRef.current}>
-        {choices.map(({ job, label, icon, reason }) => <Menu.Item key={job} className="booking-operations__item" disabled={reason !== null} aria-label={reason ? `${label}. Unavailable: ${reason}` : label} title={reason ?? undefined} onClick={() => select(job, reason)}>{content(label, icon, reason)}</Menu.Item>)}
+        {choices.map(({ job, label, icon, reason }) => <Menu.Item key={job} className="booking-operations__item" disabled={reason !== null} aria-disabled={reason !== null} aria-label={reason ? `${label}. Unavailable: ${reason}` : label} title={reason ?? undefined} onClick={() => select(job, reason)}>{content(label, icon, reason)}</Menu.Item>)}
       </Menu.Popup>
     </Menu.Positioner></Menu.Portal>
   </Menu.Root>

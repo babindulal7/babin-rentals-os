@@ -26,7 +26,7 @@ export function ReportKpiCard({
 }: ReportKpiCardProps) {
   return (
     <div
-      className="babin-report-kpi-card"
+      className="babin-report-kpi-card rhea-kpi-card"
       role="region"
       aria-label={ariaLabel || `${label}: ${value}${unit ? ` ${unit}` : ''}`}
     >
@@ -94,7 +94,7 @@ export function ReportKpiStrip({
   ariaLabel = 'Report summary key performance indicators',
 }: ReportKpiStripProps) {
   return (
-    <section className="babin-report-kpis" aria-label={ariaLabel}>
+    <section className="babin-report-kpis rhea-kpi-grid" aria-label={ariaLabel}>
       {children}
     </section>
   )

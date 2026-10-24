@@ -2252,7 +2252,7 @@ function BookingDetailView() {
               />
             }
             primary={
-              primaryAction.isOperable && !(onPhone && primaryAction.job) && (!booking.isCancelled || stage === 'Quote') && !booking.isClosed ? (
+              primaryAction.isOperable && (!booking.isCancelled || stage === 'Quote') && !booking.isClosed ? (
                 primaryAction.actionType === 'confirm' ? (
                   cancelledReason ? (
                     <Unavailable reason={`${booking.bookingNo} is cancelled — a cancelled booking is not confirmed.`}>
