@@ -1,35 +1,27 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Modal } from '../../../components/ui/Modal'
-import { Button } from '../../../components/ui/Page'
-import { Unavailable } from '../../../components/ui/Unavailable'
+import { Button } from '../../../components/ui/Button'
+import { enrollClientMembership } from '../../../actions/clients/enrollMembership'
+import { useAuth } from '../../../lib/auth'
+import { useToast } from '../../../components/ui/Toast'
+import { supabase } from '../../../lib/supabase'
 import { MEMBERSHIP_TIERS, type ClientRecord, type MembershipTier } from '../../../lib/queries/clients'
 
 export interface UpgradeTierModalProps {
   isOpen: boolean
   onClose: () => void
-  /**
-   * Never called today — see `SAVE_BLOCKED`. Kept on the contract so the wired
-   * version fires it with the tier the action actually wrote.
-   */
   onSuccess: (newTier: MembershipTier) => void
   client: ClientRecord
 }
 
-/**
- * Labels only. The discount percentage and deposit-waiver policy that used to
- * sit beside each tier here are gone: `membership_plans` carries
- * `individual_discount_pct` and `default_credit_limit` per level, and 0005's
- * comment on that table is the rule — *"no plan value may be hardcoded in
- * application code; every read comes from this table."* A "15% OFF RENTALS"
- * badge from a constant was exactly that, and it disagreed with whatever the
- * table holds.
- *
- * TODO: read the selected tier's entitlements from `membership_plans_v` —
- * `useMembershipPlans()` (`lib/queries/useClients.ts`) already does, and the
- * Credit tab (`Clients.tsx` CreditView) already renders it — and show them
- * here instead of `PLAN_NOTE`. Money columns arrive `null` for a money-blind
- * session, so the render must tolerate that.
- */
+interface PlanRow {
+  id: string
+  level: string
+  label: string
+  individual_discount_pct: number
+  annual_fee: number | null
+}
+
 const TIER_DESCRIPTIONS: Record<MembershipTier, string> = {
   Academy: 'Entry tier for students and emerging indie film crew.',
   Creator: 'Designed for independent creators, vloggers, and commercial videographers.',
@@ -38,27 +30,79 @@ const TIER_DESCRIPTIONS: Record<MembershipTier, string> = {
   Elite: 'Top-tier enterprise partners and marquee feature film productions.',
 }
 
-const PLAN_NOTE = 'Plan entitlements come from the membership plans table and are not shown here yet.'
-
-/*
- * TODO(decision) — no tier-change action exists. A tier lives in
- * `client_memberships` (`createClient.ts` :379), a different table from
- * `clients`, and nothing in `src/actions/clients` writes it; `updateClient` is
- * a stub. What stood here emitted `MEMBERSHIP_TIER_CHANGED`, called
- * `onSuccess`, and closed — a Save that wrote nothing, with an
- * `authorizedBy: user?.name ?? 'Admin'` fallback that fabricated an approver.
- * The event belongs in the action, after its write succeeds.
- */
-const SAVE_BLOCKED =
-  'Tier changes are a client-membership action that is not built yet — nothing typed here can be saved.'
-
 export function UpgradeTierModal({
   isOpen,
   onClose,
+  onSuccess,
   client,
 }: UpgradeTierModalProps) {
+  const { user } = useAuth()
+  const { showSuccessToast } = useToast()
+  const [plans, setPlans] = useState<PlanRow[]>([])
   const [selectedTier, setSelectedTier] = useState<MembershipTier>(client.membership || 'Academy')
   const [notes, setNotes] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let active = true
+    async function fetchPlans() {
+      try {
+        const { data, error } = await supabase
+          .from('membership_plans_v')
+          .select('id, level, label, individual_discount_pct, annual_fee')
+          .order('level', { ascending: true })
+        if (error) throw error
+        if (active && data) {
+          setPlans(data as unknown as PlanRow[])
+        }
+      } catch {
+        // Fallback
+      }
+    }
+    if (isOpen) void fetchPlans()
+    return () => {
+      active = false
+    }
+  }, [isOpen])
+
+  const matchedPlan = plans.find((p) => p.level === selectedTier || p.label === selectedTier)
+
+  const handleSubmit = async () => {
+    if (!user) {
+      setError('Please sign in to update tier.')
+      return
+    }
+    if (!matchedPlan) {
+      setError(`Membership plan configuration not found for tier ${selectedTier}.`)
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+
+    try {
+      await enrollClientMembership(
+        {
+          clientId: client.id,
+          planId: matchedPlan.id,
+          notes: notes.trim() || undefined,
+        },
+        { userId: user.id, role: user.role }
+      )
+
+      showSuccessToast(
+        'Membership Tier Updated',
+        `${client.name} has been updated to ${selectedTier}. Prior tier superseded in history.`
+      )
+      onSuccess(selectedTier)
+      onClose()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <Modal
@@ -68,34 +112,37 @@ export function UpgradeTierModal({
       subtitle={`Update the membership tier for ${client.name}.`}
       size="md"
       footer={
-        <>
-          <Button variant="secondary" onClick={onClose}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, width: '100%' }}>
+          <Button variant="secondary" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
-          <Unavailable reason={SAVE_BLOCKED}>
-            <Button variant="primary" disabled>
-              Apply Tier Change
-            </Button>
-          </Unavailable>
-        </>
+          <Button
+            variant="primary"
+            onClick={handleSubmit}
+            disabled={saving || !matchedPlan || selectedTier === client.membership}
+          >
+            {saving ? 'Updating Tier…' : 'Apply Tier Change'}
+          </Button>
+        </div>
       }
     >
-      {/* Enter inside a field must not submit either — there is nothing to submit to. */}
-      <form onSubmit={(e) => e.preventDefault()} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-        <div
-          role="status"
-          style={{
-            padding: '10px 14px',
-            borderRadius: 'var(--r-btn)',
-            background: 'var(--card2)',
-            border: '1px solid var(--border)',
-            color: 'var(--text2)',
-            fontSize: 'var(--t-meta)',
-            lineHeight: 1.45,
-          }}
-        >
-          {SAVE_BLOCKED}
-        </div>
+      <form onSubmit={(e) => { e.preventDefault(); void handleSubmit() }} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+        {error && (
+          <div
+            role="alert"
+            style={{
+              padding: '10px 14px',
+              borderRadius: 'var(--r-btn)',
+              background: 'color-mix(in srgb, var(--danger, #ef4444) 15%, var(--card))',
+              border: '1px solid var(--danger)',
+              color: 'var(--danger-text, #ef4444)',
+              fontSize: 'var(--t-meta)',
+              lineHeight: 1.45,
+            }}
+          >
+            {error}
+          </div>
+        )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <label style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
@@ -104,6 +151,7 @@ export function UpgradeTierModal({
           <select
             value={selectedTier}
             onChange={(e) => setSelectedTier(e.target.value as MembershipTier)}
+            disabled={saving}
             style={{
               minHeight: 44,
               padding: '0 12px',
@@ -117,7 +165,7 @@ export function UpgradeTierModal({
           >
             {MEMBERSHIP_TIERS.map((tier) => (
               <option key={tier} value={tier}>
-                {tier}
+                {tier} {tier === client.membership ? '(Current)' : ''}
               </option>
             ))}
           </select>
@@ -138,20 +186,21 @@ export function UpgradeTierModal({
           <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.45 }}>
             {TIER_DESCRIPTIONS[selectedTier]}
           </p>
-          <div style={{ fontSize: 'var(--t-caption)', color: 'var(--muted)', marginTop: 4 }}>
-            {PLAN_NOTE}
+          <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text)', marginTop: 4 }}>
+            Rental Discount: <strong>{matchedPlan ? `${matchedPlan.individual_discount_pct}%` : 'Read from database'}</strong>
           </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <label style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
-            Notes / Partner Reference (Optional)
+            Change Reason / Reference Notes (Optional)
           </label>
           <textarea
             rows={2}
-            placeholder="Add any internal remarks or qualifying portfolio link…"
+            placeholder="Reason for upgrading or changing client tier…"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
+            disabled={saving}
             style={{
               padding: '8px 12px',
               borderRadius: 'var(--r-btn)',

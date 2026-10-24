@@ -1,5 +1,62 @@
 # Progress Log
 
+## 2026-10-24 — Integration: Workbar Alignments, Unified Record Workspace & Manage Stock
+
+**Did**
+- Integrated `feat/operations-workbar-alignment` into `main`:
+  - Aligned WAI-ARIA roving tabindex (tabIndex 0 on active, -1 on inactive, ArrowLeft/ArrowRight/Home/End keyboard navigation) across:
+    - Today dispatch presets (`src/modules/today/Today.tsx` & `TodayWorkbarAlignment.test.tsx`).
+    - Operations queues chips (`src/modules/operations/OperationsQueues.tsx` & `OperationsWorkbarAlignment.test.tsx`).
+    - Calendar view tabs & range pill (`src/modules/calendar/Calendar.tsx`, `calendar.css`, & `CalendarViewTabs.test.tsx`).
+    - Rentals Hub status tabs with loading/error safe counters (`src/modules/rentals/RentalsList.tsx`, `ModuleFilterBar.tsx`, `module-shell.css`, & `rentalsWorkbarAlignment.test.tsx`).
+- Integrated `feat/unified-record-workspace-manage-stock` into `main`:
+  - Authored Migration `0173_section_saves_and_unit_lifecycle.sql` providing `save_record_section`, `add_equipment_units`, `retire_equipment_unit`, and `enroll_client_membership` transactional RPCs.
+  - Implemented typed server-backed actions:
+    - `src/actions/inventory/manageStock.ts` (`addEquipmentUnits`, `retireEquipmentUnit`) with role enforcement, input validation, and offline fail-closed refusal.
+    - `src/actions/clients/enrollMembership.ts` (`enrollClientMembership`) with transactional active membership supersession.
+  - Implemented frontend management modal flows:
+    - Serial intake (`AddUnitsModal.tsx`) with single and batch intake, warehouse assignment, and barcode generation.
+    - Soft retirement (`RetireUnitModal.tsx`) with >= 10-char reason requirement, active reservation block, and Law 3 history preservation.
+    - Stock adjustment (`AdjustStockModal.tsx`) and Asset Detail fleet operations hookup (`AssetDetail.tsx`).
+    - Client membership enrollment (`EnrollMembershipModal.tsx`), tier upgrade (`UpgradeTierModal.tsx`), and Membership status management (`Membership.tsx`).
+  - Added 1-click next actionable operation split button in `BookingOperationsMenu.tsx` while preserving compact mobile layouts and `BookingDetail.tsx` contract.
+  - Added comprehensive tests (80 new tests, 5,494/5,494 suite total passing).
+
+**Ruled**
+- Law 3 (Nothing is deleted): equipment units transition to 'Retired' status with recorded reason and timestamp; records, relations, and audit trails remain permanently immutable.
+- Law 15: All interactive workbar chips, tabs, and action triggers maintain minHeight >= 44px touch floor (`var(--tap, 44px)`).
+- Law 16 (Honest data): Missing or loading queue counts display non-numeric indicators ('…' / '—'), never false zeros.
+- Custody, fleet modification, and membership transactions require active online connection and fail closed offline.
+
+**Verified**
+- TypeScript: `npm run typecheck` passes with 0 errors (`tsc --noEmit`).
+- ESLint: `npm run lint` passes with 0 warnings (`eslint src --max-warnings 0`).
+- Postgres Migrations (PGlite): `npm run check:pglite` passes with 171/171 migrations applied from scratch, 0 leaks, 0 failures.
+- Postgres Lifecycle Suite: `npm run check:lifecycle` passes 31/31 stages green through real Postgres + RLS.
+- Accessibility Contrast: `npm run check:contrast` passes 82/82 WCAG AA pairs across light, dark, and glass themes.
+- Test Suite: 442 test files, 5,494/5,494 tests passing (`npm test`).
+- Production Build: `npm run build` succeeds cleanly producing verified bundle and PWA service worker.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 57 (95%) | +2 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 31 / 31 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 171 files · check:pglite 171/171 applied, 0 failed (recorded 2026-10-24T10:28:08.450Z). Suite: PASS — 5494/5494 passed, 0 failed (recorded 2026-10-24T10:35:28.184Z); source fingerprint matches.
+Coverage suite: Historical suite: 5186/5186 passed, 0 failed (recorded 2026-10-21T18:25:20.548Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-24T10:28:21.273Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+
+- Proceed with Phase 3 reporting tables and remaining report modules (Operations, Sales VAT, Expense reports).
+- Hosted role/JWT/PostgREST/Storage, physical scanner/device, and offline/reconnect acceptance tests remain separate; production release HOLD remains.
+
 ## 2026-10-24 — Reports shadcn/ui Adoption Blueprint v1.4 (Phases 0, 1, 2) & Preset Pilot
 
 **Did**

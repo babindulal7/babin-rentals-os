@@ -239,7 +239,26 @@ export default function OperationsShell({
     [actions?.isDirty, busy, job],
   )
 
-  // Keyboard navigation: 1-4 jumps between unlocked stages
+  // Keyboard navigation: 1-4 jumps between unlocked stages, / focuses scanner
+  const handleBlockerJump = useCallback(() => {
+    if (!bodyEl) return
+    const target =
+      bodyEl.querySelector<HTMLElement>(
+        '[data-blocker-target], [aria-invalid="true"], #handover-receiver-sig, #handover-warehouse-sig, #return-receiver-sig, #return-warehouse-sig'
+      ) ||
+      bodyEl.querySelector<HTMLElement>(
+        '.floor-scanner-input, #operations-command-input'
+      )
+    if (target) {
+      if (typeof target.scrollIntoView === 'function') {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+      if ('focus' in target && typeof target.focus === 'function') {
+        target.focus({ preventScroll: true })
+      }
+    }
+  }, [bodyEl])
+
   useEffect(() => {
     if (!isOpen) return
 
@@ -251,6 +270,18 @@ export default function OperationsShell({
       const tagName = target?.tagName?.toLowerCase()
       if (tagName === 'input' || tagName === 'textarea' || tagName === 'select' || target?.closest('[contenteditable]:not([contenteditable="false"])')) {
         return
+      }
+
+      if (e.key === '/') {
+        const scanInput = bodyEl?.querySelector<HTMLInputElement>(
+          '.floor-scanner-input, #operations-command-input'
+        )
+        if (scanInput) {
+          e.preventDefault()
+          scanInput.focus()
+          scanInput.select?.()
+          return
+        }
       }
 
       if (['1', '2', '3', '4'].includes(e.key)) {
@@ -468,7 +499,15 @@ export default function OperationsShell({
           >
             {blockedHint && (
               <p role="status" className="operations-shell__blocked">
-                Still needed: {blockedHint}
+                Still needed: {blockedHint}{' '}
+                <button
+                  type="button"
+                  className="operations-shell__blocked-jump"
+                  onClick={handleBlockerJump}
+                  aria-label={`Jump to ${blockedHint}`}
+                >
+                  (Jump)
+                </button>
               </p>
             )}
             <div

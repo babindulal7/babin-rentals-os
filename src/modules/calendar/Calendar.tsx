@@ -2907,11 +2907,13 @@ export default function Calendar() {
 
   const rangePill = (
     <span
+      className="calendar-range-pill"
       style={{
         display: 'inline-flex',
         alignItems: 'center',
         gap: 'var(--sp-sm)',
-        height: 34,
+        minHeight: 'var(--tap)',
+        height: 'var(--tap)',
         padding: '0 11px',
         borderRadius: 'var(--r-btn)',
         border: '1px solid var(--border)',
@@ -3032,7 +3034,19 @@ export default function Calendar() {
      is `id`d and controls its `tabpanel` (the `centre` block below) so the
      selected panel announces which tab produced it. */
   const viewTabs = allowedViews.length > 1 && (
-    <span role="tablist" aria-label="Calendar view" className="calendar-view-tabs" style={{ display: 'flex', gap: 3, padding: 3, borderRadius: 10, background: 'var(--card2)', border: '1px solid var(--border)' }}>
+    <span
+      role="tablist"
+      aria-label="Calendar view"
+      className="calendar-view-tabs"
+      style={{
+        display: 'flex',
+        gap: 3,
+        padding: 3,
+        borderRadius: 10,
+        background: 'var(--card2)',
+        border: '1px solid var(--border)',
+      }}
+    >
       {allowedViews.map((v) => {
         const on = view === v
         return (
@@ -3044,7 +3058,25 @@ export default function Calendar() {
             aria-controls={`calendar-view-panel-${urlSlug(v)}`}
             onClick={() => setViewChoice(v)}
             aria-selected={on}
+            tabIndex={on ? 0 : -1}
             className={`calendar-tab-btn ${on ? 'is-active' : ''}`}
+            onKeyDown={(event) => {
+              const backwards = event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+              const forwards = event.key === 'ArrowRight' || event.key === 'ArrowDown'
+              if (!backwards && !forwards && event.key !== 'Home' && event.key !== 'End') return
+              const index = allowedViews.indexOf(v)
+              const next =
+                event.key === 'Home'
+                  ? allowedViews[0]
+                  : event.key === 'End'
+                    ? allowedViews[allowedViews.length - 1]
+                    : allowedViews[(index + (backwards ? -1 : 1) + allowedViews.length) % allowedViews.length]
+              if (!next) return
+              event.preventDefault()
+              setViewChoice(next)
+              const buttons = event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
+              buttons?.[allowedViews.indexOf(next)]?.focus()
+            }}
             style={{
               // Law 15 — tabs touch the 44 floor like every other control.
               minHeight: 'var(--tap)',

@@ -535,6 +535,42 @@ export default function Today() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [goToToday, stepDay, isPhone])
 
+  const onPresetKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    const currentPeriod =
+      pickupDateFilter.kind === 'quick' &&
+      returnDateFilter.kind === 'quick' &&
+      pickupDateFilter.period === returnDateFilter.period
+        ? pickupDateFilter.period
+        : 'Today'
+    const currentIdx = QUICK_PERIODS.indexOf(currentPeriod)
+    if (currentIdx === -1) return
+
+    let nextIdx = currentIdx
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      nextIdx = (currentIdx + 1) % QUICK_PERIODS.length
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      nextIdx = (currentIdx - 1 + QUICK_PERIODS.length) % QUICK_PERIODS.length
+    } else if (e.key === 'Home') {
+      nextIdx = 0
+    } else if (e.key === 'End') {
+      nextIdx = QUICK_PERIODS.length - 1
+    } else {
+      return
+    }
+
+    e.preventDefault()
+    const nextPeriod = QUICK_PERIODS[nextIdx]
+    if (!nextPeriod) return
+    syncBothPanels({ kind: 'quick', period: nextPeriod })
+
+    const nextEl = document.getElementById(
+      `dispatch-preset-tab-${nextPeriod.replace(/\s+/g, '-').toLowerCase()}`,
+    )
+    if (nextEl) {
+      nextEl.focus()
+    }
+  }
+
   const navigate = useNavigate()
 
   return (
@@ -580,18 +616,34 @@ export default function Today() {
           />
         </div>
         <div className="dispatch-toolbar__dates" role="group" aria-label="Dispatch day for pickups and returns">
-          <div className="dispatch-toolbar__presets">
-            {QUICK_PERIODS.map((period) => (
-              <button
-                key={period}
-                type="button"
-                aria-pressed={pickupDateFilter.kind === 'quick' && pickupDateFilter.period === period
-                  && returnDateFilter.kind === 'quick' && returnDateFilter.period === period}
-                onClick={() => syncBothPanels({ kind: 'quick', period })}
-              >
-                {QUICK_PERIOD_LABELS[lang][period]}
-              </button>
-            ))}
+          <div
+            className="dispatch-toolbar__presets"
+            role="tablist"
+            aria-label="Preset dispatch periods"
+            onKeyDown={onPresetKeyDown}
+          >
+            {QUICK_PERIODS.map((period) => {
+              const isActive =
+                pickupDateFilter.kind === 'quick' &&
+                pickupDateFilter.period === period &&
+                returnDateFilter.kind === 'quick' &&
+                returnDateFilter.period === period
+              return (
+                <button
+                  key={period}
+                  id={`dispatch-preset-tab-${period.replace(/\s+/g, '-').toLowerCase()}`}
+                  role="tab"
+                  type="button"
+                  tabIndex={isActive ? 0 : -1}
+                  aria-selected={isActive}
+                  aria-pressed={isActive}
+                  style={{ minHeight: 'var(--tap, 44px)' }}
+                  onClick={() => syncBothPanels({ kind: 'quick', period })}
+                >
+                  {QUICK_PERIOD_LABELS[lang][period]}
+                </button>
+              )
+            })}
           </div>
           <MasterDispatchDateControl
             filter={pickupDateFilter}

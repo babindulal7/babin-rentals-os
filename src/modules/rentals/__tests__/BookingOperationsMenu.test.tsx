@@ -132,4 +132,15 @@ describe('booking-level Operations dropdown', () => {
     // Packing is for stage Booked, so on stage Packed it reports completion, not role denial
     expect(packing?.getAttribute('title')).not.toContain('permission')
   })
+
+  it('opens next actionable stage in one click via quick action button without opening menu', async () => {
+    await mount('B-715', 'Booked')
+    const quickBtn = container.querySelector<HTMLButtonElement>('.booking-operations__quick')
+    expect(quickBtn).not.toBeNull()
+    expect(quickBtn?.textContent).toContain('Packing')
+    await act(async () => quickBtn?.click())
+
+    expect(path).toBe('/rentals/new')
+    expect(container.querySelector('[role="dialog"]')?.textContent).toContain('Operations · B-715')
+  })
 })

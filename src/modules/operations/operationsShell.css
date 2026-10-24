@@ -13,6 +13,8 @@
 .operations-shell__footer { display:flex; flex-direction:column; width:100%; gap:8px; }
 .operations-shell__actions { display:flex; justify-content:space-between; align-items:center; width:100%; gap:12px; }
 .operations-shell__blocked { margin:0; font-size:var(--t-meta); color:var(--text2); overflow-wrap:anywhere; }
+.operations-shell__blocked-jump { display:inline-flex; align-items:center; margin-left:6px; padding:2px 6px; background:transparent; border:1px solid var(--border); border-radius:var(--r-btn); color:var(--primary); font:inherit; font-size:var(--t-meta); font-weight:600; text-decoration:none; cursor:pointer; }
+.operations-shell__blocked-jump:hover { background:var(--nav-active-bg); }
 .operations-shell__modal .app-modal__header > div:first-child { flex:1; }
 .operations-shell__panel { display:flex; flex-direction:column; min-width:0; position:sticky; top:calc(var(--header-h,64px) + 12px); max-height:calc(100dvh - var(--header-h,64px) - 24px); background:var(--card); border:1px solid var(--border); border-radius:var(--r-card); overflow:hidden; }
 .operations-shell__panel-head { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; padding:12px 16px; border-bottom:1px solid var(--border); }

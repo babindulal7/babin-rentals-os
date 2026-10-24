@@ -337,12 +337,15 @@ export function exceptionFilters(facet: ExceptionFacet, nowAd: string, todayAd: 
 
 /* ── Chips ─────────────────────────────────────────────────────────────── */
 
-function chipStyle(on: boolean) {
+const QUEUE_TAB_KEYS = ['all', 'Pack', 'Handover', 'Return', 'Reset', 'Cases'] as const
+type QueueTabKey = (typeof QUEUE_TAB_KEYS)[number]
+
+function chipStyle(on: boolean): CSSProperties {
   return {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 'var(--sp-sm)',
-    minHeight: 44,
+    minHeight: 'var(--tap, 44px)',
     padding: '0 14px',
     borderRadius: 'var(--r-btn)',
     border: `1.5px solid ${on ? 'var(--primary, #2456d6)' : 'var(--border)'}`,
@@ -442,15 +445,17 @@ function getJobButtonProps(job: JobName): {
 }
 
 interface QueueChipProps {
+  id?: string
   queue: VerbQueue
   active: boolean
+  tabIndex?: number
   total: number | null
   loading: boolean
   error: string | null
   onToggle: () => void
 }
 
-function QueueChip({ queue, active, total, loading, error, onToggle }: QueueChipProps) {
+function QueueChip({ id, queue, active, tabIndex, total, loading, error, onToggle }: QueueChipProps) {
   const tok = total === 0 ? STATUS.neutral : queue.job === 'Reset' ? STATUS.progress : STATUS[statusToken(JOBS_META[queue.job].runsAt)]
 
   /*
@@ -465,10 +470,14 @@ function QueueChip({ queue, active, total, loading, error, onToggle }: QueueChip
 
   return (
     <button
+      id={id}
+      role="tab"
       type="button"
       className="operations-v2__queue"
       onClick={onToggle}
+      aria-selected={active}
       aria-pressed={active}
+      tabIndex={tabIndex ?? (active ? 0 : -1)}
       style={chipStyle(active)}
       {...(error ? { title: error } : {})}
     >
@@ -622,6 +631,47 @@ export default function OperationsQueues() {
     setClientFilter('all')
     setProjectFilter('all')
     setSelectedBookingNos(new Set())
+  }
+
+  const activeQueueTabKey: QueueTabKey = useMemo(() => {
+    if (selected === 'Cases') return 'Cases'
+    if (selected !== null) return selected
+    return 'all'
+  }, [selected])
+
+  const onQueueKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const currentIdx = QUEUE_TAB_KEYS.indexOf(activeQueueTabKey)
+    if (currentIdx === -1) return
+
+    let nextIdx = currentIdx
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      nextIdx = (currentIdx + 1) % QUEUE_TAB_KEYS.length
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      nextIdx = (currentIdx - 1 + QUEUE_TAB_KEYS.length) % QUEUE_TAB_KEYS.length
+    } else if (e.key === 'Home') {
+      nextIdx = 0
+    } else if (e.key === 'End') {
+      nextIdx = QUEUE_TAB_KEYS.length - 1
+    } else {
+      return
+    }
+
+    e.preventDefault()
+    const nextKey = QUEUE_TAB_KEYS[nextIdx]
+    if (!nextKey) return
+
+    if (nextKey === 'all') {
+      setActive(null)
+    } else if (nextKey === 'Cases') {
+      patch({ queue: 'cases', quick: null })
+    } else {
+      setActive(nextKey)
+    }
+
+    const nextEl = document.getElementById(`operations-queue-tab-${nextKey}`)
+    if (nextEl) {
+      nextEl.focus()
+    }
   }
 
   /* Queue search stays local to the already server-filtered operation set and
@@ -931,12 +981,21 @@ export default function OperationsQueues() {
         }}
       >
 
-      <div className="operations-v2__queues" role="group" aria-label="Operational queues">
+      <div
+        className="operations-v2__queues"
+        role="tablist"
+        aria-label="Operational queues"
+        onKeyDown={onQueueKeyDown}
+      >
         <button
+          id="operations-queue-tab-all"
+          role="tab"
           type="button"
           className="operations-v2__queue"
           onClick={() => setActive(null)}
+          aria-selected={selected === null && group === null && exception === null}
           aria-pressed={selected === null && group === null && exception === null}
+          tabIndex={(selected === null && group === null && exception === null) ? 0 : -1}
           aria-label={list.loading && list.total === null ? 'All Active: loading count' : list.error ? 'All Active: count unavailable' : `All Active: ${list.total ?? jobs.length} jobs`}
           style={chipStyle(selected === null && group === null && exception === null)}
         >
@@ -961,11 +1020,27 @@ export default function OperationsQueues() {
             {list.loading && list.total === null ? '…' : list.error ? '—' : String(list.total ?? jobs.length)}
           </span>
         </button>
-        {CHIPS.map((q) => <QueueChip key={q.job} queue={q} active={selected === q.job} total={counts[q.job].total} loading={counts[q.job].loading} error={counts[q.job].error} onToggle={() => setActive(selected === q.job ? null : q.job)} />)}
+        {CHIPS.map((q) => (
+          <QueueChip
+            key={q.job}
+            id={`operations-queue-tab-${q.job}`}
+            queue={q}
+            active={selected === q.job}
+            tabIndex={selected === q.job ? 0 : -1}
+            total={counts[q.job].total}
+            loading={counts[q.job].loading}
+            error={counts[q.job].error}
+            onToggle={() => setActive(selected === q.job ? null : q.job)}
+          />
+        ))}
         <Link
+          id="operations-queue-tab-Cases"
+          role="tab"
           to="/inventory/cases"
           onClick={(event) => { event.preventDefault(); patch({ queue: selected === 'Cases' ? null : 'cases', quick: null }) }}
+          aria-selected={selected === 'Cases'}
           aria-pressed={selected === 'Cases'}
+          tabIndex={selected === 'Cases' ? 0 : -1}
           className="operations-v2__queue"
           style={{ ...chipStyle(selected === 'Cases'), textDecoration: 'none' }}
         >
