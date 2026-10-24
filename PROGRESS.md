@@ -1,5 +1,40 @@
 # Progress Log
 
+## 2026-10-24 — KPI tile: (i) removed, definition on the tile, compact size
+
+**Did**
+- Babin chose "remove the KPI tile (i) and show each definition as visible one-line text", then "make kpi small like buttons".
+- `KpiStrip` (`components/ui/Page.tsx`), the Warehouses `KpiCard` and the Settings `KpiCard` no longer render an `InfoTooltip`. `definition` and `note` print as one ellipsised caption line on the tile; a zero figure shows its `zeroExplanation` instead (L1/L2 kept). Tiles are one compact row (24px icon, label, value, 8×12 padding). `responsive.css` loses the phone `min-height: 2.7em` on the label.
+- `KpiStrip.info.test.tsx` rewritten for the new behaviour (caption visible, no button, no tooltip).
+- Ruling record: new section in `RULINGS-2026-10-23.md`.
+
+**Ruled**
+- A KPI tile carries no (i); its definition is on the tile (L1/L2). Tiles are button-sized. No data field changed. Still held: the Quick-information drawer button.
+- Revert: `git revert` this commit.
+
+**Verified**
+- Compiler API semantic check and ESLint on the 4 changed TypeScript files: 0 diagnostics, 0 problems.
+- **Not verified:** the full vitest run was started and only about 8% complete when this was committed on Babin's instruction, so no suite result is recorded for this change. The tiles were not looked at in a browser, so the new size, the ellipsis at phone and tablet width, and contrast of the caption are unchecked. A whole-project `tsc`, `lint:ui-copy` and `build` were not run.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 52 / 55 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+
+Migrations 168 files · check:pglite not run this session. Suite: not run through `npm test` this session.
+Counted by `npm run completion` (22 Oct receipt block re-used unchanged; this change touches no action, table or capability).
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Look at the tiles in the browser at desktop, tablet and phone width; finish the full suite.
+- Decide the Quick-information drawer button: content inline on each screen, or kept behind another control.
+- Whole-project `tsc`, `lint:ui-copy` and `build` on a machine with free memory.
+
 ## 2026-10-24 — Ultra-Fast App Loading: Vendor Chunking, Route Warming & Workbox Preloading
 
 **Did**

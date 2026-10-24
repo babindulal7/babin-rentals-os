@@ -62,7 +62,6 @@
 
   .kpi-tile__label {
     display: -webkit-box !important;
-    min-height: 2.7em;
     white-space: normal !important;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
