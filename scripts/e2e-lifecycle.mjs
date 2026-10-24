@@ -2466,6 +2466,542 @@ STEPS.push({
   },
 })
 
+// 24 Oct: enroll_client_membership (0173) had no step. Its audit insert named values that are not in the enums
+// (audit_category 'Clients', audit_action 'EnrollMembership'), so every call raised and rolled back - which no
+// gate sees, because a function that always fails writes nothing to be wrong about.
+STEPS.push({
+  id: 'L33', title: 'A membership is enrolled from the Clients list: audited, idempotent, supersedes the live one; Coordinator and above only (0173)', expect: 'green',
+  async run() {
+    const parse = (v) => (typeof v === 'string' ? JSON.parse(v) : v)
+    const canon = (o) => JSON.stringify(Object.fromEntries(Object.entries(o).sort(([a], [b]) => (a < b ? -1 : 1))))
+    const ENROLL = 'select enroll_client_membership($1::uuid, $2::uuid, $3::date, $4::numeric, $5::text, $6::uuid)'
+    const plans = {}
+    const ask = (over) => ({ client: CLIENT, plan: plans.Academy, joinDate: '2026-10-01', fee: 5000, notes: 'Joined at the counter', key: crypto.randomUUID(), ...over })
+    const bind = (a) => [a.client, a.plan, a.joinDate, a.fee, a.notes, a.key]
+    const enroll = (role, a) => asJwt(role, async () => {
+      await q('savepoint membership_enroll')
+      try { return parse(await one(ENROLL, bind(a))) }
+      catch (error) { await q('rollback to savepoint membership_enroll'); throw error }
+      finally { await q('release savepoint membership_enroll') }
+    })
+    // Asserts the refusal AND, when given, its SQLSTATE: 42501 is what the API layer turns into "not permitted".
+    const reject = (role, what, a, matcher, code) => asJwt(role, async () => {
+      await q('savepoint membership_guard')
+      try {
+        let failure = null
+        try { await q(ENROLL, bind(a)) } catch (error) { failure = error }
+        if (failure === null) throw new Refused(`${what}: the database ACCEPTED it. It must not.`)
+        const message = String(failure.message)
+        if (!matcher.test(message)) throw new Refused(`${what}: refused, but by the wrong thing — ${message.split('\n')[0]}`)
+        if (code !== undefined) assertEq(failure.code, code, `${what}: SQLSTATE`)
+      } finally { await q('rollback to savepoint membership_guard'); await q('release savepoint membership_guard') }
+    })
+    const liveRows = (clientId) => asOwnerOfTheDatabase(() =>
+      q(`select m.id, p.level::text as level, m.fee_paid, m.join_date::text as join_date
+           from client_memberships m join membership_plans p on p.id = m.plan_id
+          where m.client_id = $1 and m.superseded_at is null`, [clientId]).then((r) => r.rows))
+    const allRows = (clientId) => asOwnerOfTheDatabase(() =>
+      one('select count(*) from client_memberships where client_id = $1', [clientId]).then(Number))
+    const auditFor = (key) => asOwnerOfTheDatabase(() =>
+      q(`select actor_id, actor_role::text as role, category::text as category, module::text as module, action::text as action
+           from audit_events where client_uuid = $1`, [key]).then((r) => r.rows))
+    const receiptsFor = (key) => asOwnerOfTheDatabase(() =>
+      one('select count(*) from record_editor_private.receipts where key = $1', [key]).then(Number))
+
+    await undone(async () => {
+      await asOwnerOfTheDatabase(() => q(
+        `insert into membership_plans (client_uuid, level, label, default_credit_limit, display_order, status, retired_at) values
+           (gen_random_uuid(), 'Academy', 'Access Member', 100000, 1, 'Active', null),
+           (gen_random_uuid(), 'Creator', 'Partner', 250000, 2, 'Active', null)`))
+      for (const row of (await asOwnerOfTheDatabase(() => q('select id, level::text as level from membership_plans'))).rows) plans[row.level] = row.id
+
+      // 1 · Enroll: a client with no live membership gets one. Coordinator is allowed (PERMISSIONS C5).
+      const enrollment = ask({})
+      assertEq((await liveRows(CLIENT)).length, 0, 'the fixture client starts with no membership')
+      const first = await enroll('Coordinator', enrollment)
+      assertEq(first.level, 'Academy', 'enrolled onto Academy')
+      assertEq(first.plan_label, 'Access Member', 'and the answer names the plan')
+      assert(first.superseded_membership_id === null, 'nothing was replaced')
+      const live1 = await liveRows(CLIENT)
+      assertEq(live1.length, 1, 'exactly one live membership')
+      assertEq(live1[0].id, first.id, 'the live row is the one the function reported')
+      assertEq(Number(live1[0].fee_paid), 5000, 'the fee that was entered is the fee recorded')
+      assertEq(live1[0].join_date, '2026-10-01', 'on the date that was entered')
+      const audit1 = await auditFor(enrollment.key)
+      assertEq(audit1.length, 1, 'one audit row')
+      assertEq(audit1[0].actor_id, U.Coordinator, 'the audit row names the real actor')
+      assertEq(audit1[0].role, 'Coordinator', 'and their role')
+      assertEq(audit1[0].category, 'Administration', 'filed under Administration, as every client write is')
+      assertEq(audit1[0].module, 'Clients', 'in the Clients module')
+      assertEq(audit1[0].action, 'Update', 'as an Update, the same as change_client_membership')
+      assertEq(await receiptsFor(enrollment.key), 1, 'and one receipt for the retry path')
+
+      // 2 · Retry with the same key: the first answer, no second row, no second audit. A key never changes meaning.
+      const again = await enroll('Coordinator', enrollment)
+      assertEq(canon(again), canon(first), 'a retry returns the first answer, unchanged')
+      assertEq(await allRows(CLIENT), 1, 'a retry writes no second membership')
+      assertEq((await auditFor(enrollment.key)).length, 1, 'a retry writes no second audit row')
+      assertEq(await receiptsFor(enrollment.key), 1, 'and no second receipt')
+      await reject('Coordinator', 'the same key with a different plan', { ...enrollment, plan: plans.Creator }, /different change/i)
+      await reject('Coordinator', 'the same key with a different fee', { ...enrollment, fee: 6000 }, /different change/i)
+      await reject('Coordinator', 'the same key with a different note', { ...enrollment, notes: 'Something else' }, /different change/i)
+      await reject('Manager', 'the same key and request from a different actor', enrollment, /different change/i)
+      assertEq(await allRows(CLIENT), 1, 'no refused retry wrote a row')
+      assertEq((await auditFor(enrollment.key)).length, 1, 'and none wrote an audit row')
+
+      // 3 · Move: enrolling a client who already has a live membership supersedes it. The old row is retained, never deleted.
+      const move = ask({ plan: plans.Creator, joinDate: '2026-10-15', fee: null, notes: null })
+      const up = await enroll('Manager', move)
+      assertEq(up.level, 'Creator', 'now Creator')
+      assertEq(up.superseded_membership_id, first.id, 'the answer names the membership it replaced')
+      const live2 = await liveRows(CLIENT)
+      assertEq(live2.length, 1, 'still exactly one live membership')
+      assertEq(live2[0].id, up.id, 'and it is the new one')
+      assertEq(await allRows(CLIENT), 2, 'the old row is retained')
+      const old = await asOwnerOfTheDatabase(() => q('select superseded_by_id, superseded_at from client_memberships where id = $1', [first.id]).then((r) => r.rows[0]))
+      assertEq(old.superseded_by_id, up.id, 'the old row points at the new one')
+      assert(old.superseded_at !== null, 'and is stamped superseded')
+      assertEq((await auditFor(move.key)).length, 1, 'the move wrote its own audit row')
+
+      // 4 · Who may. Nobody outside Owner/Admin/Manager/Coordinator, and the refusal is 42501 with nothing written.
+      const refusedKeys = []
+      for (const role of ['Warehouse', 'Accounts', 'Technician', 'Driver', 'Client']) {
+        const refused = ask({ client: OTHER_CLIENT })
+        refusedKeys.push(refused.key)
+        await reject(role, `${role} enrolling a membership`, refused, /Permission denied to enroll membership/i, '42501')
+      }
+      assertEq(await allRows(OTHER_CLIENT), 0, 'no refused role wrote a membership')
+      const refusedAudits = await asOwnerOfTheDatabase(() => one('select count(*) from audit_events where client_uuid = any($1::uuid[])', [refusedKeys]).then(Number))
+      assertEq(refusedAudits, 0, 'and none wrote an audit row')
+      const byAdmin = await enroll('Admin', ask({ client: OTHER_CLIENT }))
+      assertEq(byAdmin.level, 'Academy', 'Admin can enroll')
+      const byOwner = await enroll('Owner', ask({ client: OTHER_CLIENT, plan: plans.Creator }))
+      assertEq(byOwner.superseded_membership_id, byAdmin.id, 'Owner can move them on')
+      assertEq((await liveRows(OTHER_CLIENT)).length, 1, 'one live membership after two enrollments')
+      assertEq(await allRows(OTHER_CLIENT), 2, 'and both rows are retained')
+
+      // 5 · Bad input is refused before anything is written.
+      const before = await allRows(CLIENT)
+      await reject('Manager', 'a missing key', ask({ key: null }), /client key is required/i)
+      await reject('Manager', 'a missing client', ask({ client: null }), /Client is required/i)
+      await reject('Manager', 'a missing plan', ask({ plan: null }), /Plan is required/i)
+      await reject('Manager', 'a client that does not exist', ask({ client: crypto.randomUUID() }), /Client not found/i)
+      await reject('Manager', 'a plan that does not exist', ask({ plan: crypto.randomUUID() }), /plan not found/i)
+      assertEq(await allRows(CLIENT), before, 'no refusal wrote a membership')
+      assertEq((await liveRows(CLIENT))[0].id, up.id, 'and none disturbed the live one')
+    })
+  },
+})
+
+// 24 Oct: the other three functions in 0173 had no step either (L33 covers the fourth). They are driven here by what
+// they promise - one atomic, audited, idempotent write that only the right roles can make - and, for each, by the
+// ways the schema could make that promise false: a column or enum value that is not there, a trigger that refuses
+// the write. A function that raises on every call writes nothing, so no other gate had anything to object to.
+const owned = (text, params) => asOwnerOfTheDatabase(() => q(text, params).then((r) => r.rows))
+const countOf = (text, params) => asOwnerOfTheDatabase(() => one(text, params).then(Number))
+const canonical = (o) => JSON.stringify(Object.fromEntries(Object.entries(o).sort(([a], [b]) => (a < b ? -1 : 1))))
+/** Call an RPC as a signed-in role; a refusal rolls back to a savepoint so the step's transaction survives it. */
+const rpcJson = (role, text, params) => asJwt(role, async () => {
+  await q('savepoint rpc_call')
+  try {
+    const v = await one(text, params)
+    return typeof v === 'string' ? JSON.parse(v) : v
+  } catch (error) { await q('rollback to savepoint rpc_call'); throw error }
+  finally { await q('release savepoint rpc_call') }
+})
+/** Assert a call is refused by the right thing and, when given, with the right SQLSTATE (42501 = not permitted). */
+const refusedWith = (role, what, text, params, matcher, code) => asJwt(role, async () => {
+  await q('savepoint rpc_refusal')
+  try {
+    let failure = null
+    try { await q(text, params) } catch (error) { failure = error }
+    if (failure === null) throw new Refused(`${what}: the database ACCEPTED it. It must not.`)
+    const message = String(failure.message)
+    if (matcher !== undefined && !matcher.test(message)) throw new Refused(`${what}: refused, but by the wrong thing — ${message.split('\n')[0]}`)
+    if (code !== undefined) assertEq(failure.code, code, `${what}: SQLSTATE`)
+  } finally { await q('rollback to savepoint rpc_refusal'); await q('release savepoint rpc_refusal') }
+})
+const auditOf = (key) => owned(
+  `select actor_id, actor_role::text as role, category::text as category, module::text as module, action::text as action,
+          severity::text as severity, table_name, record_id, new_values
+     from audit_events where client_uuid = $1`, [key])
+const receiptsOf = (key) => countOf('select count(*) from record_editor_private.receipts where key = $1', [key])
+
+STEPS.push({
+  id: 'L34', title: 'A record section saves atomically, idempotently and revision-locked, writes only real allowlisted columns; client sections Coordinator+, stock sections Manager+ (0173)', expect: 'green',
+  async run() {
+    const SECTION = 'select save_record_section($1, $2::uuid, $3, $4, $5::uuid, $6::jsonb, $7::jsonb)'
+    const bind = (kind, id, name, revision, key, values, rows = []) => [kind, id, name, revision, key, JSON.stringify(values), JSON.stringify(rows)]
+    const save = (role, ...a) => rpcJson(role, SECTION, bind(...a))
+    const refuse = (role, what, a, matcher, code) => refusedWith(role, what, SECTION, bind(...a), matcher, code)
+    const fresh = () => crypto.randomUUID()
+
+    await undone(async () => {
+      // 0 · Every field a section may write is a real column of the table it writes - otherwise that section can never save.
+      const tables = { client: 'clients', equipment: 'products', bundle: 'bundles' }
+      const sections = [
+        ['client', 'identity'], ['client', 'contact'], ['client', 'address'], ['client', 'notes'], ['client', 'commercial'],
+        ['equipment', 'identity'], ['equipment', 'location'], ['equipment', 'relationships'], ['equipment', 'purchase'], ['equipment', 'pricing'], ['equipment', 'maintenance'],
+        ['bundle', 'identity'], ['bundle', 'rates'],
+      ]
+      const unreal = []
+      for (const [kind, name] of sections) {
+        const fields = await one('select record_editor_private.section_fields($1, $2)', [kind, name])
+        assert(Array.isArray(fields), `${kind}/${name} is a known section`)
+        for (const field of fields) {
+          const real = await countOf(`select count(*) from information_schema.columns where table_schema = 'public' and table_name = $1 and column_name = $2`, [tables[kind], field])
+          if (real === 0) unreal.push(`${kind}/${name}/${field}`)
+        }
+      }
+      assertEq(unreal.join(', '), '', 'every editable field is a real column of the table it writes')
+
+      // 1 · A client section: Coordinator saves identity; the answer, the row, the audit row and the receipt agree.
+      const cid = crypto.randomUUID()
+      await owned(
+        `insert into clients (id, client_uuid, client_code, name, phone, created_by)
+         values ($1, gen_random_uuid(), $2, 'L34 Section Films', '+9779800000134', $3)`,
+        [cid, await one("select next_document_number('client')"), U.Owner])
+      const opened = await editorRead('Coordinator', 'client', cid)
+      const key = fresh()
+      const request = ['client', cid, 'identity', opened.revision, key, { name: 'L34 Section Films Ltd' }]
+      const saved = await save('Coordinator', ...request)
+      assertEq(saved.values.name, 'L34 Section Films Ltd', 'the answer carries the saved name')
+      assert(saved.revision !== opened.revision, 'a save moves the revision')
+      assertEq(await one('select name from clients where id = $1', [cid]), 'L34 Section Films Ltd', 'the edit persisted on the same row')
+      assertEq(await one('select phone from clients where id = $1', [cid]), '+9779800000134', 'a field outside the section is untouched')
+      const audit = await auditOf(key)
+      assertEq(audit.length, 1, 'one audit row')
+      assertEq(audit[0].actor_id, U.Coordinator, 'the audit row names the real actor')
+      assertEq(audit[0].role, 'Coordinator', 'and their role')
+      assertEq(audit[0].category, 'Administration', 'filed under Administration')
+      assertEq(audit[0].module, 'Clients', 'in the Clients module')
+      assertEq(audit[0].action, 'Update', 'as an Update')
+      assertEq(audit[0].record_id, cid, 'against the client')
+      assertEq(audit[0].new_values.section, 'identity', 'naming the section saved')
+      assertEq(await receiptsOf(key), 1, 'and one receipt for the retry path')
+
+      // 2 · Retry: the first answer, nothing more written. A key never changes meaning.
+      const again = await save('Coordinator', ...request)
+      assertEq(canonical(again), canonical(saved), 'a retry returns the first answer, unchanged')
+      assertEq((await auditOf(key)).length, 1, 'a retry writes no second audit row')
+      assertEq(await receiptsOf(key), 1, 'and no second receipt')
+      await refuse('Coordinator', 'the same key with different values', ['client', cid, 'identity', opened.revision, key, { name: 'Other Name' }], /different change/i)
+      await refuse('Manager', 'the same key and request from another actor', request, /different change/i)
+
+      // 3 · Revision lock and payload checks refuse before anything is written.
+      await refuse('Coordinator', 'a stale revision', ['client', cid, 'identity', opened.revision, fresh(), { name: 'Stale write' }], /changed since you opened/i, '40001')
+      await refuse('Coordinator', 'a field outside the section', ['client', cid, 'identity', saved.revision, fresh(), { phone: '+9779800000999' }], /cannot be edited in section identity/i)
+      await refuse('Coordinator', 'a credit limit through a section', ['client', cid, 'commercial', saved.revision, fresh(), { approved_credit_limit: 999999 }], /cannot be edited in section commercial/i)
+      await refuse('Coordinator', 'an unknown section', ['client', cid, 'nonsense', saved.revision, fresh(), {}], /Unknown section/i)
+      await refuse('Coordinator', 'a blank name', ['client', cid, 'identity', saved.revision, fresh(), { name: '   ' }], /Name is required/i)
+      await refuse('Coordinator', 'a missing key', ['client', cid, 'identity', saved.revision, null, { name: 'No key' }], /save key is required/i)
+      await refuse('Coordinator', 'a missing revision', ['client', cid, 'identity', null, fresh(), { name: 'No revision' }], /revision is required/i)
+      await refuse('Coordinator', 'a payload that is not an object', ['client', cid, 'identity', saved.revision, fresh(), []], /Invalid section payload/i)
+      await refuse('Coordinator', 'a record that does not exist', ['client', crypto.randomUUID(), 'identity', saved.revision, fresh(), { name: 'Ghost' }], /Record not found/i)
+      assertEq(await one('select name from clients where id = $1', [cid]), 'L34 Section Films Ltd', 'no refusal changed the record')
+
+      // 4 · Derived rules: an Individual carries no organisation subtype (and, by constraint, no website); an empty country defaults to Nepal.
+      let snap = await save('Coordinator', 'client', cid, 'identity', saved.revision, fresh(), { type_parent: 'Organisation', org_subtype: 'Production House', website: 'https://films.example.test' })
+      assertEq(snap.values.org_subtype, 'Production House', 'an Organisation keeps its subtype')
+      await refuse('Coordinator', 'an Individual that still has a website', ['client', cid, 'identity', snap.revision, fresh(), { type_parent: 'Individual' }], /clients_org_fields_null_for_individual/i)
+      snap = await save('Coordinator', 'client', cid, 'identity', snap.revision, fresh(), { type_parent: 'Individual', website: null })
+      assert(snap.values.org_subtype === null, 'an Individual carries no organisation subtype')
+      snap = await save('Coordinator', 'client', cid, 'address', snap.revision, fresh(), { city: 'Kathmandu', country: null })
+      assertEq(snap.values.country, 'Nepal', 'an empty country defaults to Nepal')
+
+      // 5 · The contact section also writes the primary contact row, and only this client's own.
+      snap = await save('Coordinator', 'client', cid, 'contact', snap.revision, fresh(), { email: 'films@example.test' }, [{ full_name: 'Sita Rai', phone: '+9779801234568' }])
+      assertEq(snap.rows.length, 1, 'the contact was added')
+      assertEq(snap.rows[0].full_name, 'Sita Rai', 'with the name that was entered')
+      const contactId = snap.rows[0].id
+      snap = await save('Coordinator', 'client', cid, 'contact', snap.revision, fresh(), {}, [{ id: contactId, designation: 'Producer' }])
+      assertEq(snap.rows.length, 1, 'editing the contact adds no second one')
+      assertEq(snap.rows[0].id, contactId, 'it keeps its identity')
+      assertEq(snap.rows[0].designation, 'Producer', 'and takes the edit')
+      const otherOpened = await editorRead('Coordinator', 'client', OTHER_CLIENT)
+      const otherSaved = await save('Coordinator', 'client', OTHER_CLIENT, 'contact', otherOpened.revision, fresh(), {}, [{ full_name: 'Other Contact', phone: '+9779801234570' }])
+      await refuse('Coordinator', "another client's contact", ['client', cid, 'contact', snap.revision, fresh(), {}, [{ id: otherSaved.rows[0].id, designation: 'Hijacked' }]], /does not belong to this client/i)
+      await refuse('Coordinator', 'a second primary contact', ['client', cid, 'contact', snap.revision, fresh(), {}, [{ full_name: 'Second Contact' }]], /primary|duplicate|already/i)
+      assertEq(await one(`select designation from client_contacts where id = $1`, [otherSaved.rows[0].id]), null, "the other client's contact is untouched")
+
+      // 6 · Equipment sections (Manager+): catalogue and rates move; stock and unit data do not.
+      const stockBefore = await one('select total_quantity from products where id = $1', [SERIAL_PRODUCT])
+      const equipment = await editorRead('Manager', 'equipment', SERIAL_PRODUCT)
+      const priceKey = fresh()
+      const priced = await save('Manager', 'equipment', SERIAL_PRODUCT, 'pricing', equipment.revision, priceKey, { daily_rate: 4200, weekly_rate: 21000 })
+      assertEq(Number(await one('select daily_rate from products where id = $1', [SERIAL_PRODUCT])), 4200, 'the rate persisted')
+      assertEq(await one('select total_quantity from products where id = $1', [SERIAL_PRODUCT]), stockBefore, 'stock is untouched by a section save')
+      const pricedAudit = await auditOf(priceKey)
+      assertEq(pricedAudit.length, 1, 'one audit row')
+      assertEq(pricedAudit[0].category, 'Inventory', 'filed under Inventory')
+      assertEq(pricedAudit[0].module, 'Inventory', 'in the Inventory module')
+      assertEq(pricedAudit[0].table_name, 'products', 'against the product')
+      assertEq(pricedAudit[0].record_id, SERIAL_PRODUCT, 'by id')
+      const described = await save('Manager', 'equipment', SERIAL_PRODUCT, 'identity', priced.revision, fresh(), { description: 'L34 description' })
+      assertEq(described.values.description, 'L34 description', 'identity edits the catalogue')
+      const related = await save('Manager', 'equipment', SERIAL_PRODUCT, 'relationships', described.revision, fresh(), {})
+      assertEq(related.values.description, 'L34 description', 'a section with nothing editable saves as a no-op')
+      await refuse('Manager', 'a field the section does not own', ['equipment', SERIAL_PRODUCT, 'relationships', related.revision, fresh(), { name: 'Not here' }], /cannot be edited in section relationships/i)
+      await refuse('Manager', 'stock quantity through a section', ['equipment', SERIAL_PRODUCT, 'pricing', related.revision, fresh(), { total_quantity: 99 }], /cannot be edited in section pricing/i)
+      await refuse('Manager', 'tracking mode through a section', ['equipment', SERIAL_PRODUCT, 'identity', related.revision, fresh(), { tracking_mode: 'Quantity' }], /cannot be edited in section identity/i)
+      // Unit location (warehouse, rack, shelf, bin) belongs to product_units, not products: the section is refused by name,
+      // not by a missing-column error. Per-unit location is still saved by save_record_editor (L26).
+      await refuse('Manager', 'the equipment location section', ['equipment', SERIAL_PRODUCT, 'location', related.revision, fresh(), { rack: 'R1', shelf: 'S1', bin: 'B1' }], /cannot be edited in section location/i)
+      assertEq(await one('select total_quantity from products where id = $1', [SERIAL_PRODUCT]), stockBefore, 'no refusal touched stock')
+
+      // 7 · A bundle section (Manager+): rates move, components stay.
+      const bundle = await editorSave('Manager', 'bundle', null, null, fresh(), { name: 'L34 Kit', daily_rate: 5000, weekly_rate: 25000 },
+        [{ product_id: SERIAL_PRODUCT, quantity: 1, days: 1, is_mandatory: true, sort_order: 0 }])
+      const rated = await save('Manager', 'bundle', bundle.id, 'rates', bundle.revision, fresh(), { daily_rate: 5500, weekly_rate: 27000 })
+      assertEq(Number(await one('select daily_rate from bundles where id = $1', [bundle.id])), 5500, 'the bundle rate persisted')
+      assertEq(rated.rows.length, 1, 'the components were not touched')
+
+      // 8 · Who may. Client sections: Owner/Admin/Manager/Coordinator. Stock sections: Owner/Admin/Manager. Nobody else.
+      const refusedKeys = []
+      const targets = {
+        client: [cid, 'identity', { name: 'Not allowed' }],
+        equipment: [SERIAL_PRODUCT, 'pricing', { daily_rate: 1 }],
+        bundle: [bundle.id, 'rates', { daily_rate: 1 }],
+      }
+      for (const [kind, [id, name, values]] of Object.entries(targets)) {
+        const barred = kind === 'client' ? ['Warehouse', 'Accounts', 'Technician', 'Driver', 'Client'] : ['Coordinator', 'Warehouse', 'Accounts', 'Technician', 'Driver', 'Client']
+        for (const role of barred) {
+          const refusedKey = fresh()
+          refusedKeys.push(refusedKey)
+          await refuse(role, `${role} saving a ${kind} section`, [kind, id, name, 'any-revision', refusedKey, values], /Permission denied for this record/i, '42501')
+        }
+      }
+      assertEq(await countOf('select count(*) from audit_events where client_uuid = any($1::uuid[])', [refusedKeys]), 0, 'no refused role wrote an audit row')
+      assertEq(Number(await one('select daily_rate from products where id = $1', [SERIAL_PRODUCT])), 4200, 'and none changed a rate')
+      for (const role of ['Owner', 'Admin']) {
+        const open = await editorRead(role, 'equipment', SERIAL_PRODUCT)
+        const done = await save(role, 'equipment', SERIAL_PRODUCT, 'identity', open.revision, fresh(), { description: `Saved by ${role}` })
+        assertEq(done.values.description, `Saved by ${role}`, `${role} can save an equipment section`)
+      }
+      const ownerClient = await editorRead('Owner', 'client', cid)
+      assert((await save('Owner', 'client', cid, 'notes', ownerClient.revision, fresh(), { notes: 'Saved by Owner' })).values.notes === 'Saved by Owner', 'Owner can save a client section')
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L35', title: 'Equipment units are added in one audited, idempotent, all-or-nothing write that keeps stock in step; Manager and above only (0173)', expect: 'green',
+  async run() {
+    const ADD = 'select add_equipment_units($1::uuid, $2::jsonb, $3::uuid)'
+    const add = (role, product, units, key) => rpcJson(role, ADD, [product, JSON.stringify(units), key])
+    const refuse = (role, what, product, units, key, matcher, code) =>
+      refusedWith(role, what, ADD, [product, units === null ? null : JSON.stringify(units), key], matcher, code)
+    const unitCount = () => countOf('select count(*) from product_units where product_id = $1', [SERIAL_PRODUCT])
+    const liveCount = () => countOf(`select count(*) from product_units where product_id = $1 and status <> 'Retired'`, [SERIAL_PRODUCT])
+    const stock = () => countOf('select total_quantity from products where id = $1', [SERIAL_PRODUCT])
+    const fresh = () => crypto.randomUUID()
+
+    await undone(async () => {
+      const warehouse = await one('select id from warehouses order by warehouse_code limit 1')
+      const branch = await one('select branch_id from warehouses where id = $1', [warehouse])
+      const assetCode = await one('select asset_code from products where id = $1', [SERIAL_PRODUCT])
+      const unitsBefore = await unitCount()
+
+      // 1 · Manager adds two units: rows, tags, defaults, stock, audit and receipt agree.
+      const key = fresh()
+      const batch = [
+        { serial_no: 'L35-SN-A', warehouse_id: warehouse, condition: 'Excellent', rack: 'R9', shelf: 'S2', bin: 'B3', purchase_date: '2026-09-01' },
+        { serial_no: '  L35-SN-B  ', warehouse_id: warehouse },
+      ]
+      const added = await add('Manager', SERIAL_PRODUCT, batch, key)
+      assertEq(added.added_count, 2, 'two units added')
+      assertEq(added.unit_ids.length, 2, 'and named in the answer')
+      const rows = await owned(
+        `select asset_tag, serial_no, status::text as status, condition::text as condition, branch_id, warehouse_id, rack, shelf, bin,
+                purchase_date::text as purchase_date, created_by
+           from product_units where id = any($1::uuid[]) order by asset_tag`, [added.unit_ids])
+      assertEq(rows[0].asset_tag, `${assetCode}-${String(unitsBefore + 1).padStart(2, '0')}`, 'the first tag continues the product numbering')
+      assertEq(rows[1].asset_tag, `${assetCode}-${String(unitsBefore + 2).padStart(2, '0')}`, 'and the second follows')
+      assertEq(rows[0].serial_no, 'L35-SN-A', 'serial as entered')
+      assertEq(rows[1].serial_no, 'L35-SN-B', 'serial trimmed')
+      assertEq(rows[0].status, 'In Stock', 'a new unit is In Stock')
+      assertEq(rows[0].condition, 'Excellent', 'condition as entered')
+      assertEq(rows[1].condition, 'Good', 'condition defaults to Good')
+      assertEq(rows[0].branch_id, branch, 'the unit takes its warehouse\'s branch')
+      assertEq(rows[0].warehouse_id, warehouse, 'and its warehouse')
+      assertEq([rows[0].rack, rows[0].shelf, rows[0].bin].join('/'), 'R9/S2/B3', 'location as entered')
+      assertEq(rows[0].purchase_date, '2026-09-01', 'purchase date as entered')
+      assertEq(rows[0].created_by, U.Manager, 'the unit is attributed to the actor')
+      assertEq(await unitCount(), unitsBefore + 2, 'two rows were written')
+      assertEq(added.total_quantity, await liveCount(), 'the answer reports the live unit count')
+      assertEq(await stock(), await liveCount(), 'and products.total_quantity follows it')
+      const audit = await auditOf(key)
+      assertEq(audit.length, 1, 'one audit row')
+      assertEq(audit[0].actor_id, U.Manager, 'the audit row names the real actor')
+      assertEq(audit[0].role, 'Manager', 'and their role')
+      assertEq(audit[0].category, 'Inventory', 'filed under Inventory')
+      assertEq(audit[0].module, 'Inventory', 'in the Inventory module')
+      assertEq(audit[0].action, 'Create', 'as a Create')
+      assertEq(audit[0].table_name, 'product_units', 'against the units')
+      assertEq(audit[0].record_id, SERIAL_PRODUCT, 'recorded on the product')
+      assertEq(await receiptsOf(key), 1, 'and one receipt for the retry path')
+
+      // 2 · Retry: the first answer, nothing more written.
+      const again = await add('Manager', SERIAL_PRODUCT, batch, key)
+      assertEq(canonical(again), canonical(added), 'a retry returns the first answer, unchanged')
+      assertEq(await unitCount(), unitsBefore + 2, 'a retry adds no units')
+      assertEq((await auditOf(key)).length, 1, 'and no second audit row')
+      assertEq(await receiptsOf(key), 1, 'and no second receipt')
+      await refuse('Manager', 'the same key with different units', SERIAL_PRODUCT, [batch[0]], key, /different change/i)
+      await refuse('Admin', 'the same key and units from another actor', SERIAL_PRODUCT, batch, key, /different change/i)
+
+      // 3 · All or nothing: a bad unit anywhere in the batch writes none of it.
+      const lastGood = await unitCount()
+      await refuse('Manager', 'a serial already in use', SERIAL_PRODUCT, [{ serial_no: 'L35-SN-C', warehouse_id: warehouse }, { serial_no: 'L35-SN-A', warehouse_id: warehouse }], fresh(), /already in use/i)
+      await refuse('Manager', 'the same serial twice in one batch', SERIAL_PRODUCT, [{ serial_no: 'L35-DUP', warehouse_id: warehouse }, { serial_no: 'L35-DUP', warehouse_id: warehouse }], fresh(), /already in use/i)
+      await refuse('Manager', 'a unit with no warehouse', SERIAL_PRODUCT, [{ serial_no: 'L35-SN-D', warehouse_id: warehouse }, { serial_no: 'L35-SN-E' }], fresh(), /Warehouse is required/i)
+      await refuse('Manager', 'a warehouse that does not exist', SERIAL_PRODUCT, [{ serial_no: 'L35-SN-F', warehouse_id: crypto.randomUUID() }], fresh(), /Invalid warehouse/i)
+      await refuse('Manager', 'a condition that is not one', SERIAL_PRODUCT, [{ serial_no: 'L35-SN-G', warehouse_id: warehouse, condition: 'New' }], fresh(), /unit_condition/i)
+      assertEq(await unitCount(), lastGood, 'no refused batch left a unit behind')
+      assertEq(await countOf(`select count(*) from product_units where serial_no like 'L35-%' and serial_no not in ('L35-SN-A', 'L35-SN-B')`), 0, 'not even the good ones before the bad one')
+      assertEq(await stock(), await liveCount(), 'and stock still matches the units')
+
+      // 4 · Input checks.
+      await refuse('Manager', 'a missing key', SERIAL_PRODUCT, [{ warehouse_id: warehouse }], null, /client key is required/i)
+      await refuse('Manager', 'no units', SERIAL_PRODUCT, [], fresh(), /At least one unit/i)
+      await refuse('Manager', 'units that are not a list', SERIAL_PRODUCT, { warehouse_id: warehouse }, fresh(), /At least one unit/i)
+      await refuse('Manager', 'a product that does not exist', crypto.randomUUID(), [{ warehouse_id: warehouse }], fresh(), /Product not found/i)
+      await refuse('Manager', 'a quantity product', QTY_PRODUCT, [{ warehouse_id: warehouse }], fresh(), /Serialised/i)
+
+      // 5 · Who may. Owner/Admin/Manager only; a unit with no serial is allowed.
+      const noSerial = await add('Admin', SERIAL_PRODUCT, [{ warehouse_id: warehouse }], fresh())
+      assertEq(noSerial.added_count, 1, 'Admin can add a unit')
+      assert((await owned('select serial_no from product_units where id = $1', [noSerial.unit_ids[0]]))[0].serial_no === null, 'a unit may have no serial')
+      assertEq((await add('Owner', SERIAL_PRODUCT, [{ serial_no: 'L35-SN-O', warehouse_id: warehouse }], fresh())).added_count, 1, 'Owner can add a unit')
+      const settled = await unitCount()
+      const refusedKeys = []
+      for (const role of ['Coordinator', 'Warehouse', 'Accounts', 'Technician', 'Driver', 'Client']) {
+        const refusedKey = fresh()
+        refusedKeys.push(refusedKey)
+        await refuse(role, `${role} adding units`, SERIAL_PRODUCT, [{ serial_no: `L35-NO-${role}`, warehouse_id: warehouse }], refusedKey, /Permission denied to add equipment units/i, '42501')
+      }
+      assertEq(await unitCount(), settled, 'no refused role added a unit')
+      assertEq(await countOf('select count(*) from audit_events where client_uuid = any($1::uuid[])', [refusedKeys]), 0, 'or an audit row')
+      assertEq(await stock(), await liveCount(), 'stock matches the units after every call')
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L36', title: 'A unit is retired in one audited, idempotent write that the engine records; held, booked or in-service units are refused; Manager and above only (0173)', expect: 'green',
+  async run() {
+    const RETIRE = 'select retire_equipment_unit($1::uuid, $2, $3::uuid)'
+    const retire = (role, unit, reason, key) => rpcJson(role, RETIRE, [unit, reason, key])
+    const refuse = (role, what, unit, reason, key, matcher, code) => refusedWith(role, what, RETIRE, [unit, reason, key], matcher, code)
+    const fresh = () => crypto.randomUUID()
+    const REASON = 'Sensor cracked beyond repair during field drop'
+
+    await undone(async () => {
+      // A product of its own with five units, so no earlier step's leftovers decide what this one sees.
+      const warehouse = await one('select id from warehouses order by warehouse_code limit 1')
+      const category = await one('select id from inventory_categories order by name limit 1')
+      const product = crypto.randomUUID()
+      await owned(
+        `insert into products (id, client_uuid, asset_code, name, category_id, brand, tracking_mode, total_quantity, daily_rate, created_by)
+         values ($1, gen_random_uuid(), $2, 'L36 Retirement Camera', $3, 'Lifecycle', 'Serialised', 5, 3500, $4)`,
+        [product, await one("select next_document_number('equipment')"), category, U.Owner])
+      const units = []
+      for (let n = 0; n < 5; n++) {
+        units.push(crypto.randomUUID())
+        await owned(
+          `insert into product_units (id, client_uuid, product_id, asset_tag, serial_no, status, branch_id, warehouse_id, created_by)
+           values ($1, gen_random_uuid(), $2, $3, $4, 'In Stock', $5, $6, $7)`,
+          [units[n], product, `L36-U0${String(n + 1)}`, `L36-SN-0${String(n + 1)}`, BRANCH, warehouse, U.Owner])
+      }
+      const unitRow = (id) => owned(
+        `select status::text as status, retired_at, retired_by, retirement_reason from product_units where id = $1`, [id]).then((r) => r[0])
+      const liveUnits = () => countOf(`select count(*) from product_units where product_id = $1 and status <> 'Retired'`, [product])
+      const stock = () => countOf('select total_quantity from products where id = $1', [product])
+
+      // 1 · Manager retires a free unit: the engine records it, stock follows, the row stays, audit and receipt agree.
+      const key = fresh()
+      const done = await retire('Manager', units[0], `  ${REASON}  `, key)
+      assertEq(done.status, 'Retired', 'the answer says Retired')
+      assertEq(done.asset_tag, 'L36-U01', 'and names the unit')
+      assertEq(done.total_quantity, 4, 'stock follows the live units')
+      const row = await unitRow(units[0])
+      assertEq(row.status, 'Retired', 'the engine recorded it as Retired')
+      assert(row.retired_at !== null, 'with a retirement time')
+      assertEq(row.retired_by, U.Manager, 'by the actor')
+      assertEq(row.retirement_reason, REASON, 'and the trimmed reason')
+      assertEq(await countOf('select count(*) from product_units where product_id = $1', [product]), 5, 'the unit is retained, never deleted (Law 3)')
+      assertEq(await stock(), 4, 'products.total_quantity follows')
+      assertEq(await liveUnits(), 4, 'and equals the live units')
+      const audit = await auditOf(key)
+      assertEq(audit.length, 1, 'one audit row')
+      assertEq(audit[0].actor_id, U.Manager, 'the audit row names the real actor')
+      assertEq(audit[0].role, 'Manager', 'and their role')
+      assertEq(audit[0].category, 'Inventory', 'filed under Inventory')
+      assertEq(audit[0].module, 'Inventory', 'in the Inventory module')
+      assertEq(audit[0].action, 'Update', 'as an Update, like every terminal status change')
+      assertEq(audit[0].severity, 'Medium', 'above Informational: retirement is permanent')
+      assertEq(audit[0].table_name, 'product_units', 'against the unit')
+      assertEq(audit[0].record_id, units[0], 'by id')
+      assertEq(await receiptsOf(key), 1, 'and one receipt for the retry path')
+
+      // 2 · Retry: the first answer. A key never changes meaning; a retired unit cannot be retired again.
+      const again = await retire('Manager', units[0], REASON, key)
+      assertEq(canonical(again), canonical(done), 'a retry returns the first answer, unchanged')
+      assertEq((await auditOf(key)).length, 1, 'a retry writes no second audit row')
+      assertEq(await stock(), 4, 'and does not move stock again')
+      await refuse('Manager', 'the same key with a different reason', units[0], 'A completely different explanation', key, /different change/i)
+      await refuse('Admin', 'the same key and reason from another actor', units[0], REASON, key, /different change/i)
+      await refuse('Manager', 'a unit that is already retired', units[0], REASON, fresh(), /already retired/i)
+
+      // 3 · Input checks.
+      await refuse('Manager', 'a missing key', units[3], REASON, null, /client key is required/i)
+      await refuse('Manager', 'no reason', units[3], null, fresh(), /at least 10 characters/i)
+      await refuse('Manager', 'a reason that is only padding', units[3], '   short   ', fresh(), /at least 10 characters/i)
+      await refuse('Manager', 'a unit that does not exist', crypto.randomUUID(), REASON, fresh(), /Unit not found/i)
+
+      // 4 · Who may. Owner/Admin/Manager only, and the refusal writes nothing.
+      const refusedKeys = []
+      for (const role of ['Coordinator', 'Warehouse', 'Accounts', 'Technician', 'Driver', 'Client']) {
+        const refusedKey = fresh()
+        refusedKeys.push(refusedKey)
+        await refuse(role, `${role} retiring a unit`, units[3], REASON, refusedKey, /Permission denied to retire equipment units/i, '42501')
+      }
+      assertEq((await unitRow(units[3])).status, 'In Stock', 'no refused role retired the unit')
+      assertEq(await countOf('select count(*) from audit_events where client_uuid = any($1::uuid[])', [refusedKeys]), 0, 'or wrote an audit row')
+      assertEq((await retire('Admin', units[3], REASON, fresh())).status, 'Retired', 'Admin can retire a unit')
+      assertEq((await retire('Owner', units[4], REASON, fresh())).status, 'Retired', 'Owner can retire a unit')
+      assertEq(await stock(), 2, 'stock follows every retirement')
+
+      // 5 · A unit in service is refused: the engine's own status says so (here: an open maintenance record).
+      await owned(
+        `insert into maintenance_records (id, client_uuid, record_no, product_unit_id, maintenance_type, description, scheduled_date, created_by)
+         values (gen_random_uuid(), gen_random_uuid(), 'MR-L36-01', $1, 'Cleaning', 'L36 fixture', now(), $2)`, [units[1], U.Owner])
+      assertEq((await unitRow(units[1])).status, 'Maintenance', 'the open maintenance record put the unit in Maintenance')
+      await refuse('Manager', 'a unit in maintenance', units[1], REASON, fresh(), /unit\.retire\.active_status/i)
+      assertEq((await unitRow(units[1])).status, 'Maintenance', 'the refusal left it in Maintenance')
+
+      // 6 · A unit on a booking is refused while the booking is live, and freed when the booking is cancelled.
+      await as('Coordinator', async () => {
+        await createBooking({
+          key: 'retire_probe',
+          window: ['2110-03-01T04:00:00Z', '2110-03-03T04:00:00Z'],
+          actor: 'Coordinator',
+          lines: [{ productId: product, description: 'Retirement probe camera', qty: 1, days: 2, rate: 3500, units: [units[2]] }],
+        })
+        await transition('retire_probe', 'Quote', 'Booked', 'Coordinator')
+      })
+      assert((await liveHolds('retire_probe')) > 0, 'the Booked booking holds the unit')
+      await refuse('Manager', 'a unit with a live reservation', units[2], REASON, fresh(), /unit\.retire\.active_reservation/i)
+      await owned(`update inventory_reservations set released_at = now(), released_reason = 'L36 fixture: hold released' where booking_id = $1`, [bookingIds.retire_probe])
+      await refuse('Manager', 'a unit assigned to a Booked booking', units[2], REASON, fresh(), /unit\.retire\.active_booking/i)
+      await rpcAs('Manager', 'select cancel_booking($1::jsonb)', [JSON.stringify({ booking_id: bookingIds.retire_probe, client_uuid: fresh(), reason: 'Probe booking cancelled before retirement' })])
+      assertEq((await retire('Manager', units[2], REASON, fresh())).status, 'Retired', 'once the booking is cancelled the unit can be retired')
+      assertEq(await stock(), 1, 'stock follows')
+      assertEq((await unitRow(units[1])).status, 'Maintenance', 'and the unit in service is still the one that remains')
+    })
+  },
+})
+
 /* ── Run ──────────────────────────────────────────────────────────────────── */
 
 await seed()

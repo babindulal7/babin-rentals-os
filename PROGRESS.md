@@ -1,5 +1,92 @@
 # Progress Log
 
+## 2026-10-24 — 0173's other three functions driven: `retire_equipment_unit` could never succeed (six defects), Location section unsaveable, `add_equipment_units` sound — lifecycle L34–L36
+
+**Did**
+- Followed the "found, not changed" note from the entry below. Wrote **L34** (`save_record_section`), **L35** (`add_equipment_units`) and **L36** (`retire_equipment_unit`) in `scripts/e2e-lifecycle.mjs` first, ran them against 0173 as found, and fixed what each printed, one defect at a time:
+  - **`retire_equipment_unit` — could not succeed at all.** (1) reservation gate read `inventory_reservations.unit_id` / `status` — the table has `asset_id` / `released_at`; (2) booking gate read `booking_lines.unit_id` — units attach through `booking_line_units.asset_id`; (3) the update set `status = 'Retired'`, which the 0114 engine guard refuses for every role — now sets `retired_at` and the engine records Retired; (4) audit action `'Retire'` is not an `audit_action` — now `'Update'`; (5) severity `'Warning'` is an `audit_status`, not an `audit_severity` — now `'Medium'` ⭐; (6) a unit on a cancelled booking was blocked forever because `cancel_booking` keeps the stage — the gate now ignores cancelled bookings, as the 0114 engine does.
+  - **`save_record_section` — one defect.** The equipment **Location** section listed four columns (`warehouse_id`, `rack`, `shelf`, `bin`) that `products` does not have, so it could never save. Its allowlist is now empty: refused by name. **Nothing was built**: what "Save Location" should write is unruled → `docs/OPEN_DECISIONS.md` §21. The client, equipment and bundle sections that exist all held up.
+  - **`add_equipment_units` — no defect.** L35 passed against the code as found.
+- `// RULING 2026-10-24:` comments sit at every fix site in 0173. No `src/` file changed; the browser mock was not touched.
+- A throwaway PGlite database in the scratchpad was used to read the schema; temporary `node_modules` links used to run the gates were removed afterwards, nothing installed.
+
+**Ruled** (`RULINGS-2026-10-24.md`, last section)
+- Seven rows with sources and reverts. Two judgement calls: Location is refused, not built (§21); retirement severity is `Medium` ⭐ (above Informational, below the `High` alert threshold). No permission cell, capability, role set or delete/audit path changed.
+
+**Verified**
+- **Against 0173 as found:** L34 FAIL at its first assertion (`every editable field is a real column … equipment/location/warehouse_id, rack, shelf, bin`); L35 pass; L36 FAIL at its first call (`column "unit_id" does not exist`). Then, one fix per run: L36 `column bl.unit_id does not exist` → `GATE:gate.unit_status.direct_write` → `invalid input value for enum audit_action: "Retire"` → `invalid input value for enum audit_severity: "Warning"` → `GATE:unit.retire.active_booking` on a cancelled booking → 36/36. L34's later failure (`clients_org_fields_null_for_individual`) was the test's own fixture (an Individual given a website); the function was right and the test now asserts the refusal.
+- **The steps can fail:** five deliberate breakages of 0173 — total_quantity sync removed, revision lock removed, Coordinator allowed to add units, same-key request check removed, Warehouse allowed to retire — each caught at the expected assertion (`expected 5, got 3`; `a stale revision: the database ACCEPTED it`; `Coordinator adding units: …ACCEPTED`; `the same key with different values: …ACCEPTED`; `Warehouse retiring a unit: …ACCEPTED`), then 0173 restored byte-for-byte (hash unchanged).
+- Coverage: L34 — allowlisted fields are real columns; client section save with row, audit (actor, role, category, module, action, section) and receipt; retry returns the identical answer; same key with other values or actor refused; stale revision 40001; out-of-section fields, unknown section, blank name, missing key/revision, non-object payload, missing record refused; Individual/Organisation and country rules; contact add/edit, another client's contact and a second primary refused; equipment and bundle sections do not touch stock or components; Warehouse/Accounts/Technician/Driver/Client (and Coordinator for stock) refused with 42501 and write nothing. L35 — rows, tags, defaults, branch, stock, audit, receipt; retry; atomic batches; bad input; roles. L36 — retirement, engine status, stock, retained row, audit, receipt; retry; same key other reason or actor; already retired; bad input; roles; Maintenance, live hold and Booked-booking refusals; retire after cancel.
+- On the final tree: `npx tsc --noEmit` exit 0; `npm run lint` exit 0 (0 warnings); `npm run check:pglite` 172/172 applied, 0 failed, 87 definer functions with pinned `search_path`; `npm run check:lifecycle` 36/36 green.
+- **Not verified:** a hosted Supabase project (0173 is not applied there; PGlite has no JWT, PostgREST or live RLS); none of the three flows was driven in a browser (Equipment ▸ Add units, Retire, the section Save bars), so the dialogs, `manageStock.ts`, `recordEditor.ts` and the mock were not exercised against the corrected SQL; the full vitest and coverage suites were not run (no `src/` file changed).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 55 / 58 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 36 / 36 (100%) | +3 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 172 files · check:pglite 172/172 applied, 0 failed (recorded 2026-10-24T17:53:46.638Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-10-24T17:53:58.762Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+
+- Apply 0171–0174 to the live project only with Babin's go-ahead and the backup step (CLAUDE.md N-5). Nothing here applies anything.
+- **`docs/OPEN_DECISIONS.md` §21: what equipment "Save Location" writes.** Until ruled, its Save bar shows "cannot be edited in section location" and the section is not built.
+- **Mock gaps.** `__mocks__/recordEditor.ts`: `retireUnitEditor` has none of the reservation / booking / maintenance gates and writes `status` directly; `saveSectionEditor` checks fields against the whole record, not the section, and does nothing for equipment location. Browser checks in mock mode do not show these rules.
+- None of the three flows has been driven in a browser against the corrected behaviour.
+- A second primary contact through the contact section is refused by a raw unique-index message, not a readable sentence.
+- `docs/OPEN_DECISIONS.md` §20 is unchanged: one membership writer or two, restart the term, renewal of a lapsed membership.
+- Hosted role/JWT/PostgREST/Storage, physical-device and offline/reconnect acceptance remain separate; production release HOLD remains.
+
+## 2026-10-24 — `enroll_client_membership` (0173) could never succeed: three defects fixed, lifecycle step L33
+
+**Did**
+- Followed up the "found, not changed" note from the activate-membership entry below. Wrote **L33** in `scripts/e2e-lifecycle.mjs` first and ran it against the unmodified 0173; it failed, then each fix exposed the next defect:
+  1. `'Clients'::audit_category` — not a value of that enum (`Clients` is an `audit_module`). Now `'Administration'`, as `change_client_membership` (0174) and the client save in 0173 write it.
+  2. `'EnrollMembership'` as `audit_action` — not a value of that enum either; **not in the original report**, hidden behind #1. Now `'Update'` (not a new enum value: `ALTER TYPE … ADD VALUE` cannot be undone).
+  3. The old membership row was pointed at `v_new_id` before the new row existed, and `superseded_by_id` is an immediate foreign key (0005), so enrolling a client who already had a live membership raised 23503. **Also not in the original report.** Now: set `superseded_at`, insert, set `superseded_by_id` last (the order 0174 uses).
+- 0173 was edited in place (unapplied). Nothing else changed: roles, refusals, fee/join-date inputs and the two-writers question (`docs/OPEN_DECISIONS.md` §20) are as they were. `change_client_membership` and the two writers were not merged. `// RULING 2026-10-24:` comments sit at both fix sites.
+- To run the gates in this worktree (it had no `node_modules`) a temporary junction to the main checkout's `node_modules` was used and removed afterwards; no package was installed or changed.
+
+**Ruled** (`RULINGS-2026-10-24.md`, last section)
+- Category `Administration`, action `Update`, module `Clients`; supersede in the 0174 order. Each row has its revert. No permission cell, capability, role set or audit path changed.
+
+**Verified**
+- **L33 against the unmodified 0173: FAIL** — `invalid input value for enum audit_category: "Clients"` (32/33 green; L1–L32 unaffected). With only #1 fixed: `invalid input value for enum audit_action: "EnrollMembership"`. With #1 and #2: `violates foreign key constraint "client_memberships_superseded_by_id_fkey"` at the move, after the enrollment, retry and wrong-key checks had passed. With all three: **33/33 green**.
+- L33 drives the function as each role through real Postgres + RLS in PGlite: Coordinator enrolls (membership row, fee and join date as entered, one audit row with the real actor, role, category `Administration`, module `Clients`, action `Update`, one receipt); retry with the same key returns the identical answer and writes no second row, audit or receipt; the same key with a different plan, fee, note or actor is refused ("different change"); a second enrollment supersedes the live row, keeps it, and points it at the new one; **Warehouse, Accounts, Technician, Driver and Client are refused with SQLSTATE 42501** and write no membership or audit row; Admin and Owner can enroll and move; a missing key/client/plan and an unknown client/plan are refused with nothing written.
+- On the final tree: `npx tsc --noEmit` exit 0; `npm run lint` exit 0 (0 warnings); `npm run check:pglite` 172/172 applied, 0 failed, 87 definer functions with pinned `search_path`; `npm run check:lifecycle` 33/33 green.
+- **Not verified:** a hosted Supabase project (0173 is not applied there; PGlite has no JWT, PostgREST or live RLS); "+ Add Membership" was not driven in a browser, so the modal, `enrollMembership.ts` and the mock were not exercised against the corrected function; the full vitest suite and the coverage suite were not run (no `src/` file changed); L33 deliberately asserts nothing about behaviour that is unruled (retired plan, deactivated client, same-plan move: `docs/OPEN_DECISIONS.md` §20).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 55 / 58 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 33 / 33 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 172 files · check:pglite 172/172 applied, 0 failed (recorded 2026-10-24T17:34:54.308Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-10-24T17:35:08.582Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+
+- Apply 0171–0174 to the live project only with Babin's go-ahead and the backup step (CLAUDE.md N-5). Nothing here applies anything.
+- **The other three functions in 0173 have no lifecycle step.** `retire_equipment_unit` audits with `'Retire'`, which is not an `audit_action` value (0001, 0119) — read from the enum definitions, **not run**; if confirmed, every retirement fails the way enrollment did. `save_record_section` and `add_equipment_units` are untested by any script. Each needs a step first, then a fix if it fails.
+- `docs/OPEN_DECISIONS.md` §20 is unchanged: one membership writer or two, restart the term, renewal of a lapsed membership.
+- "+ Add Membership" should be driven once in the browser against the corrected behaviour (the mock mirrors the intended function, not this SQL).
+- Hosted role/JWT/PostgREST/Storage, physical-device and offline/reconnect acceptance remain separate; production release HOLD remains.
+
 ## 2026-10-24 — Activate membership: the client page's tier change is real (`change_client_membership`, 0174)
 
 **Did**

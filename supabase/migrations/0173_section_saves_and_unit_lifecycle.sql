@@ -35,7 +35,12 @@ select case p_kind
   when 'equipment' then
     case p_section
       when 'identity' then array['name', 'short_name', 'category_id', 'brand', 'model', 'manufacturer', 'description']
-      when 'location' then array['warehouse_id', 'rack', 'shelf', 'bin']
+      -- RULING 2026-10-24: warehouse_id, rack, shelf and bin are product_units columns; products has none of them, so
+      -- this section could never save (write_row raised "column does not exist"). Unit location is saved per unit by
+      -- save_record_editor (L26). Empty = refused by name ("cannot be edited in section location"), like relationships.
+      -- TODO(decision): what "Save Location" should write is unruled - docs/OPEN_DECISIONS.md §21.
+      -- Revert = restore array['warehouse_id', 'rack', 'shelf', 'bin'] (and accept that the section cannot save).
+      when 'location' then array[]::text[]
       when 'relationships' then array[]::text[]
       when 'purchase' then array['purchase_date', 'purchase_price', 'replacement_value']
       when 'pricing' then array['daily_rate', 'weekly_rate', 'monthly_rate', 'hourly_rate', 'weekend_rate', 'deposit_percent', 'deposit_fixed', 'min_rental_days', 'rental_enabled']
@@ -346,22 +351,33 @@ begin
     raise exception 'GATE:unit.retire.active_status|Unit % is currently in % state and cannot be retired safely. Resolve active operational holds first.', v_unit.asset_tag, v_unit.status;
   end if;
 
-  if exists (select 1 from public.inventory_reservations where unit_id = p_unit_id and status = 'active') then
+  -- RULING 2026-10-24: inventory_reservations has no unit_id or status column (0003): a unit is asset_id and a live hold is
+  -- released_at is null. The old predicate raised "column does not exist" on every call, before anything was retired.
+  -- Revert = restore the old predicate (and accept that no unit can be retired).
+  if exists (select 1 from public.inventory_reservations where asset_id = p_unit_id and released_at is null) then
     raise exception 'GATE:unit.retire.active_reservation|Unit % has an active booking reservation and cannot be retired.', v_unit.asset_tag;
   end if;
 
+  -- RULING 2026-10-24: booking_lines has no unit_id (0003); a unit is attached to a line through booking_line_units.asset_id.
+  -- And a cancelled booking keeps its stage (cancel_booking sets cancelled_at, not a stage), so without cancelled_at is null
+  -- a unit once booked and then cancelled could never be retired - recompute_unit_status (0114) excludes cancelled bookings
+  -- the same way. Revert = restore bl.unit_id / drop the cancelled_at test (and accept the dead gate / the stuck unit).
   if exists (
-    select 1 from public.booking_lines bl
+    select 1 from public.booking_line_units blu
+    join public.booking_lines bl on bl.id = blu.booking_line_id
     join public.bookings b on b.id = bl.booking_id
-    where bl.unit_id = p_unit_id and b.stage in ('Booked', 'Packed', 'On Rent')
+    where blu.asset_id = p_unit_id and b.stage in ('Booked', 'Packed', 'On Rent') and b.cancelled_at is null
   ) then
     raise exception 'GATE:unit.retire.active_booking|Unit % is assigned to an active booking and cannot be retired.', v_unit.asset_tag;
   end if;
 
   -- Apply soft retirement
+  -- RULING 2026-10-24: this update used to set status = 'Retired' itself. product_units.status is owned by the engine
+  -- (0114): a direct write is refused by product_units_status_guard (GATE:gate.unit_status.direct_write), so retirement
+  -- could never complete. Setting retired_at is enough - trg_product_units_retire_status recomputes the status to Retired.
+  -- Revert = add status = 'Retired' back (and accept the refusal).
   update public.product_units
-     set status = 'Retired',
-         retired_at = clock_timestamp(),
+     set retired_at = clock_timestamp(),
          retired_by = auth.uid(),
          retirement_reason = btrim(p_reason),
          updated_at = clock_timestamp()
@@ -380,8 +396,13 @@ begin
     'retired_at', clock_timestamp()
   );
 
+  -- RULING 2026-10-24: this insert named action 'Retire' (not an audit_action) and severity 'Warning' (an audit_STATUS
+  -- value, not an audit_severity), so every retirement raised and rolled back. Now 'Update', as booking archive (0167) and
+  -- every other terminal status change files it, and 'Medium': above Informational because retirement is permanent, below
+  -- the High alert threshold (audit_settings.min_severity_alert). Verified by lifecycle step L36.
+  -- Revert = restore the two literals (and accept that no retirement can succeed).
   insert into audit_events(client_uuid, event_class, category, module, action, severity, status, table_name, record_id, actor_id, actor_role, new_values)
-  values(p_key, 'status change', 'Inventory'::audit_category, 'Inventory'::audit_module, 'Retire', 'Warning', 'Success', 'product_units', p_unit_id, auth.uid(), auth_user_role(), v_response);
+  values(p_key, 'status change', 'Inventory'::audit_category, 'Inventory'::audit_module, 'Update', 'Medium', 'Success', 'product_units', p_unit_id, auth.uid(), auth_user_role(), v_response);
 
   insert into record_editor_private.receipts(key, actor, request, response) values(p_key, auth.uid(), v_request, v_response);
   return v_response;
@@ -443,10 +464,13 @@ begin
    where client_id = p_client_id and superseded_at is null
      for update;
 
+  -- RULING 2026-10-24: the old row used to be pointed at v_new_id here, before that row existed.
+  -- superseded_by_id is an immediate foreign key (0005), so every enrollment over a live membership
+  -- raised 23503. Free the one-live slot first, insert, and set the pointer last (as 0174 does).
+  -- Revert = move the superseded_by_id assignment back into this update (and accept the 23503).
   if v_existing_id is not null then
     update public.client_memberships
-       set superseded_at = clock_timestamp(),
-           superseded_by_id = v_new_id
+       set superseded_at = clock_timestamp()
      where id = v_existing_id;
   end if;
 
@@ -468,6 +492,10 @@ begin
     auth.uid()
   );
 
+  if v_existing_id is not null then
+    update public.client_memberships set superseded_by_id = v_new_id where id = v_existing_id;
+  end if;
+
   v_response := jsonb_build_object(
     'id', v_new_id,
     'client_id', p_client_id,
@@ -479,8 +507,12 @@ begin
     'superseded_membership_id', v_existing_id
   );
 
+  -- RULING 2026-10-24: this insert named 'Clients'::audit_category and 'EnrollMembership'::audit_action, neither of
+  -- which exists (audit_category and audit_action are closed enums; 'Clients' is an audit_MODULE). Every call raised
+  -- and rolled back. Category/action now match change_client_membership (0174) and the client save above.
+  -- Verified by lifecycle step L33. Revert = restore the two literals (and accept that no call can succeed).
   insert into audit_events(client_uuid, event_class, category, module, action, severity, status, table_name, record_id, actor_id, actor_role, new_values)
-  values(p_key, 'status change', 'Clients'::audit_category, 'Clients'::audit_module, 'EnrollMembership', 'Informational', 'Success', 'client_memberships', v_new_id, auth.uid(), auth_user_role(), v_response);
+  values(p_key, 'status change', 'Administration'::audit_category, 'Clients'::audit_module, 'Update', 'Informational', 'Success', 'client_memberships', v_new_id, auth.uid(), auth_user_role(), v_response);
 
   insert into record_editor_private.receipts(key, actor, request, response) values(p_key, auth.uid(), v_request, v_response);
   return v_response;
