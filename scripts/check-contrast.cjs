@@ -2,20 +2,31 @@
    Parses the real file so this measures what merged, not what was intended. */
 const fs=require('fs')
 const css=fs.readFileSync(require('path').join(__dirname,'..','src','styles','theme.css'),'utf8').replace(/\r\n/g,'\n')
+const palette=fs.readFileSync(require('path').join(__dirname,'..','src','styles','preset-black-light.css'),'utf8').replace(/\r\n/g,'\n')
+const pilot=fs.readFileSync(require('path').join(__dirname,'..','src','styles','shadcn-preset-pilot.css'),'utf8').replace(/\r\n/g,'\n')
 
-function block(sel){
-  const i=css.indexOf(sel); if(i<0) throw new Error('missing '+sel)
-  const s=css.indexOf('{',i), e=css.indexOf('\n}',s)
+function block(sel,source=css){
+  const i=source.indexOf(sel); if(i<0) throw new Error('missing '+sel)
+  const s=source.indexOf('{',i), e=source.indexOf('\n}',s)
   const out={}
-  for(const m of css.slice(s,e).matchAll(/(--[a-z0-9-]+):\s*(#[0-9a-fA-F]{6})/g)) out[m[1]]=m[2]
+  for(const m of source.slice(s,e).matchAll(/(--[a-z0-9-]+):\s*(#[0-9a-fA-F]{6})/g)) out[m[1]]=m[2]
   return out
 }
 /* v4.2 §2.1 flipped the default: bare :root now carries the LIGHT values and
    dark is the addressed theme. The selectors here mirror theme.css exactly —
    this gate parses the shipped file, so it must track the shipped shape. */
-const D=block(":root[data-theme='dark'] {")
-const L=block(":root,\n:root[data-theme='light'] {")
+const D={...block(":root[data-theme='dark'] {"),...block(":root[data-theme='dark']:not([data-style='glass']) {",palette)}
+const L={...block(":root,\n:root[data-theme='light'] {"),...block(":root[data-theme='light']:not([data-style='glass']) {",palette)}
 const H=block(":root[data-theme='high-contrast'] {")
+// A scoped background token must never overwrite foreground --muted again.
+for(const m of pilot.matchAll(/\n\s*(--[a-z0-9-]+):/g)) {
+  if(!m[1].startsWith('--rhea-')&&!m[1].startsWith('--shadow-rhea-')) throw new Error('Unnamespaced pilot token: '+m[1])
+}
+const pilotRoles={}
+for(const m of pilot.matchAll(/\n\s*(--rhea-[a-z0-9-]+):\s*var\((--[a-z0-9-]+)\);/g)) pilotRoles[m[1]]=m[2]
+for(const [role,base] of Object.entries({'--rhea-muted-fg':'--muted','--rhea-card':'--card','--rhea-card-fg':'--text','--rhea-primary':'--btn-primary-bg','--rhea-primary-fg':'--btn-primary-fg'})) {
+  if(pilotRoles[role]!==base) throw new Error('Pilot colour role must inherit active theme: '+role+' -> '+base)
+}
 
 function srgb(c){c/=255;return c<=0.04045?c/12.92:Math.pow((c+0.055)/1.055,2.4)}
 function lum(x){const h=x.replace('#','')
@@ -85,7 +96,14 @@ for(const [theme,T] of [['DARK ',D],['LIGHT',L]]){
   chk(theme,T,'btn-primary fg/hover','--btn-primary-fg','--hover-button',4.5)
   chk(theme,T,'WhatsApp ink / card','--text','--card',4.5)
   chk(theme,T,'WhatsApp ink / hover','--text','--hover-card',4.5)
+  chk(theme,T,'report muted / card','--muted','--card',4.5)
   console.log('')
+}
+for(const [theme,T] of [['PILOT-D',D],['PILOT-L',L],['PILOT-H',H]]) {
+  const roles={...T,...Object.fromEntries(Object.entries(pilotRoles).map(([role,base])=>[role,T[base]]))}
+  chk(theme,roles,'KPI label / card','--rhea-muted-fg','--rhea-card',4.5)
+  chk(theme,roles,'KPI value / card','--rhea-card-fg','--rhea-card',4.5)
+  chk(theme,roles,'primary foreground / fill','--rhea-primary-fg','--rhea-primary',4.5)
 }
 for(const [label,fg,bg] of [
   ['btn-primary fg/bg','--btn-primary-fg','--btn-primary-bg'],
@@ -145,6 +163,8 @@ for(const [theme,T,base] of [['GLASS-D',D,'dark'],['GLASS-L',L,'light']]){
   chkWorst(theme,'text2 / bare canvas + glow',ink('--text2'),bare,4.5)
   chkWorst(theme,'nav-active / glass sidebar',ink('--nav-active-accent'),sides,4.5)
   chkWorst(theme,'text2 / glass sidebar',ink('--text2'),sides,4.5)
+  chkWorst(theme+'-PILOT','KPI label / glass card',ink(pilotRoles['--rhea-muted-fg']),cards,4.5)
+  chkWorst(theme+'-PILOT','KPI value / glass card',ink(pilotRoles['--rhea-card-fg']),cards,4.5)
   console.log('')
 }
 console.log(`${n-fails}/${n} pass, ${fails} FAIL`)

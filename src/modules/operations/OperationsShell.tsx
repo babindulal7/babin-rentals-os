@@ -13,6 +13,7 @@ import { DomainEvents, EVENT_TYPES } from '../../events/eventBus'
 import { FLOOR_TWO_COLUMN_MIN, FloorNarrowContext } from './floorPanelContext'
 import { RentalMoreActions } from '../rentals/actions/RentalMoreActions'
 import { useViewport } from '../../lib/device'
+import type { OperationWorkspaceActions } from './operationWorkspaceActions'
 import './operationsShell.css'
 
 const PackingWorkspace = lazy(() => import('../rentals/PackingWorkspace'))
@@ -60,16 +61,7 @@ const STATUS_AFTER: Record<JobName, BookingStatus> = {
   Reset: 'Returned',
 }
 
-export interface WorkspaceActions {
-  canComplete: boolean
-  dispatching: boolean
-  complete: () => void
-  isDirty: boolean
-  label?: string
-  error?: string | null
-  /** First requirement still unmet, shown beside a disabled Confirm so the operator need not hunt for it. */
-  blockedReason?: string | null
-}
+export type WorkspaceActions = OperationWorkspaceActions
 
 export interface OperationsShellProps {
   bookingNo: string
@@ -242,6 +234,10 @@ export default function OperationsShell({
   // Keyboard navigation: 1-4 jumps between unlocked stages, / focuses scanner
   const handleBlockerJump = useCallback(() => {
     if (!bodyEl) return
+    if (actions?.focusBlocker) {
+      actions.focusBlocker(bodyEl)
+      return
+    }
     const target =
       bodyEl.querySelector<HTMLElement>(
         '[data-blocker-target], [aria-invalid="true"], #handover-receiver-sig, #handover-warehouse-sig, #return-receiver-sig, #return-warehouse-sig'
@@ -257,7 +253,7 @@ export default function OperationsShell({
         target.focus({ preventScroll: true })
       }
     }
-  }, [bodyEl])
+  }, [actions, bodyEl])
 
   useEffect(() => {
     if (!isOpen) return
@@ -459,6 +455,7 @@ export default function OperationsShell({
         onClose={() => setPending(null)}
         onConfirm={() => {
           const choice = pending
+          actions?.discard?.()
           setPending(null)
           setActions(null)
           if (choice?.type === 'switch') setJob(choice.job)

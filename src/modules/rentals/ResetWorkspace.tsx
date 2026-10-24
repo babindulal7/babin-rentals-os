@@ -14,6 +14,7 @@ import { JOBS, statusToken } from '../../lib/workflow'
 import type { BookingStatus, JobState } from '../../lib/workflow'
 import { useFloorViewport } from '../operations/floorPanelContext'
 import { nextRequirement } from '../operations/nextRequirement'
+import { focusOperationTarget, type OperationWorkspaceActions } from '../operations/operationWorkspaceActions'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../components/ui/Toast'
 import { captureError } from '../../lib/monitoring'
@@ -311,16 +312,7 @@ export interface ResetWorkspaceProps {
   embedded?: boolean
   onConfirmSuccess?: () => void
   onCancel?: () => void
-  onRegisterActions?: (actions: {
-    canComplete: boolean
-    dispatching: boolean
-    complete: () => void
-    isDirty: boolean
-    label?: string
-    error?: string | null
-    /** First requirement still unmet, worded for the footer beside a disabled Confirm. */
-    blockedReason?: string | null
-  }) => void
+  onRegisterActions?: (actions: OperationWorkspaceActions) => void
 }
 
 export default function ResetWorkspace({
@@ -374,6 +366,7 @@ export default function ResetWorkspace({
    * problem. Local until Complete Reset dispatches — dispatch-then-commit,
    * where "commit" is the navigation away on the resolved promise. */
   const [marks, setMarks] = useState<Record<string, RowRec>>({})
+  const [persistedMarks, setPersistedMarks] = useState<Record<string, RowRec>>({})
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [filter, setFilter] = useState<(typeof QUEUE_FILTERS)[number]>('All')
   const [query, setQuery] = useState('')
@@ -432,6 +425,7 @@ export default function ResetWorkspace({
   useEffect(() => {
     // A different booking arrived: everything verified belonged to the old one.
     setMarks({})
+    setPersistedMarks({})
     setSelected(new Set())
     setProblemDraft({})
     setQcReason({})
@@ -449,29 +443,6 @@ export default function ResetWorkspace({
     if (!floorId || rows.length === 0) return
     let active = true
 
-    // Check if session storage has completed reset for this booking
-    const isCachedCompleted = sessionStorage.getItem(`reset_completed:${floorId}`) === 'true'
-    if (isCachedCompleted) {
-      setMarks((prev) => {
-        const next = { ...prev }
-        for (const r of rows) {
-          if (!next[r.key]) {
-            const entry: RowRec = {
-              queueState: 'Ready',
-              ticks: [...ROW_TASKS],
-              problem: 'No Problems',
-            }
-            if (actor) {
-              entry.cleanedBy = actor
-              entry.qcBy = actor
-            }
-            next[r.key] = entry
-          }
-        }
-        return next
-      })
-    }
-
     void Promise.resolve(
       supabase
         .from('cleaning_queue_entries')
@@ -480,8 +451,7 @@ export default function ResetWorkspace({
     )
       .then(({ data }) => {
         if (!active || !data || data.length === 0) return
-        setMarks((prev) => {
-          const next = { ...prev }
+        const saved: Record<string, RowRec> = {}
           for (const entry of data) {
             const matchingRow = rows.find((r) => r.assetId === entry.unit_id)
             if (matchingRow) {
@@ -496,11 +466,11 @@ export default function ResetWorkspace({
               if (entry.qc_by) rec.qcBy = entry.qc_by
               if (entry.qc_skip_reason) rec.qcSkipReason = entry.qc_skip_reason
               if (entry.qc_fail_reason) rec.qcFailReason = entry.qc_fail_reason
-              next[matchingRow.key] = rec
+              saved[matchingRow.key] = rec
             }
           }
-          return next
-        })
+        setPersistedMarks(saved)
+        setMarks((prev) => ({ ...saved, ...prev }))
       })
       .catch(() => {})
 
@@ -533,16 +503,16 @@ export default function ResetWorkspace({
   )
   const remainingCount = counts.Waiting + counts.Cleaning + counts.QC
 
-  const filterCounts = useMemo<Record<(typeof QUEUE_FILTERS)[number], number>>(
+  const filterCounts = useMemo<Record<'Needs action' | (typeof QUEUE_FILTERS)[number], number>>(
     () => ({
+      'Needs action': remainingCount,
       All: rows.length,
       Waiting: counts.Waiting,
       Cleaning: counts.Cleaning,
       QC: counts.QC,
       Ready: counts.Ready,
-      Exceptions: exceptionRows.length,
     }),
-    [rows.length, counts.Waiting, counts.Cleaning, counts.QC, counts.Ready, exceptionRows.length],
+    [remainingCount, rows.length, counts.Waiting, counts.Cleaning, counts.QC, counts.Ready],
   )
 
   const totalUnits = rows.reduce((n, r) => n + r.qty, 0)
@@ -613,7 +583,8 @@ export default function ResetWorkspace({
     () =>
       rows.filter((r) => {
         const rec = marks[r.key] ?? FRESH
-        if (filter !== 'All' && (rec.problem !== 'No Problems' || rec.queueState !== filter)) return false
+        if (filter === 'Needs action' && (rec.problem !== 'No Problems' || rec.queueState === 'Ready')) return false
+        if (filter !== 'All' && filter !== 'Needs action' && (rec.problem !== 'No Problems' || rec.queueState !== filter)) return false
         if (query && !`${r.name} ${r.serial ?? ''}`.toLowerCase().includes(query.toLowerCase())) return false
         return true
       }),
@@ -993,17 +964,8 @@ export default function ResetWorkspace({
     setDispatching(true)
 
     if (dispatchRows.length === 0) {
-      // If all items are quantity-tracked, per 0003:899 and floorVerb.ts:1808-1811,
-      // quantity items carry no cleaning_queue_entries in Postgres.
-      // Floor verification is complete.
-      sessionStorage.setItem(`reset_completed:${floor.id}`, 'true')
-      void DomainEvents.emit(EVENT_TYPES.RENTAL_RESET_COMPLETED, { bookingNo: floor.bookingNo })
+      setDispatchError('Quantity-only reset completion cannot be recorded by the current server contract. Local checklist marks have not been saved.')
       setDispatching(false)
-      if (onConfirmSuccess) {
-        onConfirmSuccess()
-      } else {
-        navigate(`/rentals/${id}`)
-      }
       return
     }
 
@@ -1074,7 +1036,6 @@ export default function ResetWorkspace({
         ),
       )
       .then(() => {
-        sessionStorage.setItem(`reset_completed:${floor.id}`, 'true')
         void DomainEvents.emit(EVENT_TYPES.RENTAL_RESET_COMPLETED, { bookingNo: floor.bookingNo })
         showSuccessToast('Reset Completed', `Rental ${floor.bookingNo} reset and returned to pool`)
         if (onConfirmSuccess) {
@@ -1090,8 +1051,14 @@ export default function ResetWorkspace({
       })
   }
 
-  const isDirty = !untouched
+  const isDirty = JSON.stringify(marks) !== JSON.stringify(persistedMarks) || Object.keys(problemDraft).length > 0 || Object.values(qcReason).some((reason) => reason.trim() !== '')
   const blockedReason = nextRequirement(gates.filter((g) => !g.pass).map((g) => g.label))
+  const blockerTarget = remainingCount > 0 ? '[data-operation-target="reset-next"]' : '#reset-gates'
+  const focusBlocker = (scope: HTMLElement) => {
+    setFilter('All')
+    setQuery('')
+    focusOperationTarget(scope, blockerTarget)
+  }
   useEffect(() => {
     onRegisterActions?.({
       canComplete,
@@ -1101,9 +1068,11 @@ export default function ResetWorkspace({
       isDirty,
       label: 'Confirm & Complete',
       error: dispatchError,
+      focusBlocker,
+      discard: () => { setMarks(persistedMarks); setProblemDraft({}); setQcReason({}); setSelected(new Set()) },
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason])
+  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget, persistedMarks])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */
 
@@ -1359,13 +1328,13 @@ export default function ResetWorkspace({
               <SegmentedControl
                 ariaLabel="Filter reset queue"
                 size="sm"
-                options={QUEUE_FILTERS.map((f) => ({
+                options={(['Needs action', ...QUEUE_FILTERS] as const).map((f) => ({
                   id: f,
                   label: f,
                   badge: filterCounts[f],
                 }))}
                 value={filter}
-                onChange={(val) => setFilter(val as (typeof QUEUE_FILTERS)[number])}
+                onChange={(val) => setFilter(val as 'Needs action' | (typeof QUEUE_FILTERS)[number])}
               />
             </div>
 

@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { Menu } from '@base-ui/react/menu'
 import Icon, { type IconName } from '../../components/ui/Icon'
 import { Drawer, DrawerTrigger, DrawerPopup, DrawerHeader, DrawerTitle, DrawerDescription, DrawerPanel } from '../../components/ui/cossDrawer'
-import { stepWriteGate, entryStepFor } from '../../lib/operationsShell'
+import { stepWriteGate } from '../../lib/operationsShell'
 import { useViewport } from '../../lib/device'
 import type { BookingStatus, JobName } from '../../lib/workflow'
 import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext'
@@ -53,7 +53,7 @@ export default function BookingOperationsMenu({ bookingNo, bookingStatus, unavai
         return j
       }
     }
-    return entryStepFor(bookingStatus)
+    return null
   }, [bookingNo, bookingStatus, unavailable, user])
 
   const choices = OPERATIONS.map(operation => {

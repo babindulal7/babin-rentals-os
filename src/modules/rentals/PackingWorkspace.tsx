@@ -19,6 +19,7 @@ import { Unavailable } from '../../components/ui/Unavailable'
 import { CompactButton, TapCheckbox } from '../../components/ui/TouchTarget'
 import { useFloorViewport } from '../operations/floorPanelContext'
 import { nextRequirement } from '../operations/nextRequirement'
+import { focusOperationTarget, type OperationWorkspaceActions } from '../operations/operationWorkspaceActions'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../components/ui/Toast'
 import { RentalIntelFromFloor } from '../../components/intel/RentalIntelFromFloor'
@@ -482,16 +483,7 @@ export interface PackingWorkspaceProps {
   bookingNo?: string
   embedded?: boolean
   onConfirmSuccess?: () => void
-  onRegisterActions?: (actions: {
-    canComplete: boolean
-    dispatching: boolean
-    complete: () => void
-    isDirty: boolean
-    label?: string
-    error?: string | null
-    /** First requirement still unmet, worded for the footer beside a disabled Confirm. */
-    blockedReason?: string | null
-  }) => void
+  onRegisterActions?: (actions: OperationWorkspaceActions) => void
 }
 
 export default function PackingWorkspace({
@@ -552,7 +544,7 @@ export default function PackingWorkspace({
   const [verifiedKitDeps, setVerifiedKitDeps] = useState<Record<string, string[]>>({})
   const [restoredFromStorage, setRestoredFromStorage] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]>('All')
+  const [filter, setFilter] = useState<(typeof FILTERS)[number]>('Pending')
   const [queryInput, setQueryInput] = useState('')
   const [query, setQuery] = useState('')
 
@@ -1039,12 +1031,10 @@ export default function PackingWorkspace({
     )
   }
 
-  /** 1-Click Quick Pack: marks all pending packed, verifies kit dependencies, and satisfies photo requirement */
+  /** Explicit bulk item marks do not attest separate kit checks or create evidence. */
   const quickPackAll = () => {
     markPendingPacked()
-    verifyAllKitDependencies()
-    setPhotoCount((p) => Math.max(p, 1))
-    setScanLog((p) => ['⚡ Quick Pack All completed: all pending units packed & kit dependencies verified', ...p].slice(0, 5))
+    setScanLog((p) => ['• Pending units marked packed — kit verification and evidence unchanged', ...p].slice(0, 5))
   }
 
   /* RULING 2026-09-08 (R-28): which of these units are due for a service.
@@ -1167,6 +1157,15 @@ export default function PackingWorkspace({
     photoCount > 0 ||
     Object.keys(verifiedKitDeps).length > 0
   const blockedReason = nextRequirement(gates.filter((g) => !g.pass).map((g) => g.label))
+  const blockerTarget = !anythingResolved || pendingRows.length > 0 ? '.floor-scanner-input'
+    : shortReasons.length > 0 ? '[data-operation-target="pack-missing"]'
+      : needsPhoto ? '#pack-evidence' : '#pack-kit-checks'
+  const focusBlocker = (scope: HTMLElement) => {
+    setFilter('All')
+    setQueryInput('')
+    setQuery('')
+    focusOperationTarget(scope, blockerTarget)
+  }
   useEffect(() => {
     const actions = {
       canComplete,
@@ -1176,11 +1175,13 @@ export default function PackingWorkspace({
       isDirty,
       label: 'Confirm & Next →',
       error: dispatchError,
+      focusBlocker,
+      discard: discardRestoredScan,
     }
     registerActions(actions)
     onRegisterActions?.(actions)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [registerActions, onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason])
+  }, [registerActions, onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */
 
@@ -1869,6 +1870,7 @@ export default function PackingWorkspace({
 
                 {kitEvaluation.hasCinemaGear && (
                   <Card
+                    id="pack-kit-checks"
                     title="Cinema Kit Checklist"
                     action={
                       <Button
@@ -2105,6 +2107,7 @@ export default function PackingWorkspace({
                         <div key={r.key}>
                           <div style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>{r.name}</div>
                           <input
+                            data-operation-target={(marks[r.key]?.reason ?? '').trim().length < MIN_REASON ? 'pack-missing' : undefined}
                             value={marks[r.key]?.reason ?? ''}
                             onChange={(e) => setReason(r.key, e.target.value)}
                             placeholder={`Reason (min ${MIN_REASON} characters)`}
@@ -2131,7 +2134,7 @@ export default function PackingWorkspace({
                     />
                     <span style={{ flex: 1, color: 'var(--text2)' }}>Booking photo — required before completion</span>
                     <span className="figure" style={{ color: 'var(--muted)' }}>{photoCount}</span>
-                    <RowAction label="Take Photo" onClick={() => setPhotoCount((n) => n + 1)} />
+                    <span id="pack-evidence"><RowAction label="Take Photo" onClick={() => setPhotoCount((n) => n + 1)} /></span>
                   </div>
                   <p style={{ margin: '9px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
                     {/* Ruled mandatory (§4.31): one photo per booking, not per case. This count is local to this

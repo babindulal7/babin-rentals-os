@@ -5,6 +5,16 @@ export type RecordKind = 'client' | 'equipment' | 'bundle'
 export type RecordValue = string | number | boolean | null
 export type RecordValues = Record<string, RecordValue>
 export interface RecordSnapshot { id: string; code: string; revision: string; values: RecordValues; rows: RecordValues[] }
+export interface RecordSectionChange { section: string; fields: RecordValues; rows?: RecordValues[] | undefined }
+/** Only the committed section may replace local input; sibling drafts stay intact. */
+export function applySavedRecordSection(local: { values: RecordValues; rows: RecordValues[] }, saved: RecordSnapshot, change: RecordSectionChange) {
+  const values = { ...local.values }
+  for (const key of Object.keys(change.fields)) values[key] = saved.values[key] ?? null
+  return { values, rows: change.rows === undefined ? local.rows : saved.rows }
+}
+export function recordSectionKey(title: string): string {
+  return ({ Addresses: 'address', 'Commercial details': 'commercial', 'Stock & Units': 'stock', 'Pricing & Rental': 'pricing', 'Maintenance & Documents': 'maintenance' } as Record<string, string>)[title] ?? title.toLowerCase()
+}
 export interface RecordField { key: string; label: string; section: string; type?: 'text' | 'textarea' | 'number' | 'money' | 'date' | 'checkbox' | 'select'; required?: boolean; options?: readonly string[]; source?: 'categories' | 'warehouses'; createOnly?: boolean }
 const field = (key: string, label: string, section: string, rest: Omit<RecordField, 'key' | 'label' | 'section'> = {}): RecordField => ({ key, label, section, ...rest })
 export const recordFields: Record<RecordKind, RecordField[]> = {

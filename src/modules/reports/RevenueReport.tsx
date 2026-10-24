@@ -1,20 +1,22 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { PageHeader } from '../../components/ui/Page'
+import { PageHeader, Button } from '../../components/ui/Page'
 import { ReportFamiliesNav } from '../../components/ui/ReportFamiliesNav'
 import { ReportToolbar } from '../../components/ui/ReportToolbar'
-import type { ReportCsvRow, ReportFilters } from '../../components/ui/ReportToolbar'
+import type { ReportCompare, ReportCsvRow, ReportFilters } from '../../components/ui/ReportToolbar'
 import { PageBody } from '../../components/ui/PageBody'
 import { useLoad } from '../../lib/queries/useLoad'
-import { formatMoney, type Paisa } from '../../lib/money'
+import { formatMoney } from '../../lib/money'
 import { businessDayAd } from '../../lib/bs'
 import { useAuth } from '../../lib/auth'
 import { getIssuedRevenueTrend, type IssuedRevenueReport } from '../../lib/queries/reportRevenueTrend'
+import { averageReportAmount, precedingReportWindow, reportMoneyChange } from '../../lib/intel/reportPresentation'
 import {
   ReportAreaChart,
   ReportChartCard,
   ReportKpiCard,
   ReportKpiStrip,
+  ReportDataTable,
   type ReportChartPoint,
 } from '../../components/ui/reports'
 import '../../styles/reportChartTokens.css'
@@ -44,6 +46,7 @@ export default function RevenueReport() {
   const permitted = Boolean(user && EXECUTIVE_ROLES.has(user.role))
   const today = businessDayAd()
   const [filters, setFilters] = useState<ReportFilters>({})
+  const [compare, setCompare] = useState<ReportCompare>('off')
 
   const from = readReportDate(filters.dateRange?.fromAd, daysAgo(today, 89))
   const to = readReportDate(filters.dateRange?.toAd, today)
@@ -61,6 +64,12 @@ export default function RevenueReport() {
   })
 
   const report = load.data
+  const previousWindow = useMemo(() => windowIsValid ? precedingReportWindow(from, to) : null, [from, to, windowIsValid])
+  const priorLoad = useLoad<IssuedRevenueReport>(() => {
+    if (!previousWindow) return Promise.reject(new Error('Invalid comparison window'))
+    return getIssuedRevenueTrend(previousWindow.fromAd, previousWindow.toAd)
+  }, { key: previousWindow ? `${previousWindow.fromAd}|${previousWindow.toAd}` : 'invalid', enabled: permitted && windowIsValid && compare === 'previous' })
+  const prior = compare === 'previous' ? priorLoad.data : null
 
   const rows: ReportCsvRow[] = useMemo(() => {
     if (!report) return []
@@ -68,6 +77,10 @@ export default function RevenueReport() {
       ['Report', 'Issued invoice taxable revenue (monthly trend)'],
       ['Basis', 'Taxable invoice amounts before VAT for issued invoices grouped by AD issue date. Excludes drafts and voids. Credit notes are reconciled below on a cash-paid correction basis, not as taxable sales deductions.'],
       ['Date window', `${from} to ${to}`],
+      ...(compare === 'previous' && previousWindow ? [
+        ['Previous date window', `${previousWindow.fromAd} to ${previousWindow.toAd}`],
+        ...(prior ? [['Previous taxable value', formatMoney(prior.totalPaisa)], ['Change from previous period', reportMoneyChange(report.totalPaisa, prior.totalPaisa).value]] : [['Previous period status', 'Not available']]),
+      ] as ReportCsvRow[] : []),
       ['Total taxable value', formatMoney(report.totalPaisa)],
       ['Total issued invoices', report.issuedCount],
       ['Voided invoice taxable value excluded', formatMoney(report.creditReconciliation.voidedTaxablePaisa)],
@@ -80,7 +93,7 @@ export default function RevenueReport() {
       ...report.months.map((m) => [m.label, formatMoney(m.amountPaisa), m.invoiceCount] as ReportCsvRow),
       ['Total', formatMoney(report.totalPaisa), report.issuedCount],
     ]
-  }, [report, from, to])
+  }, [report, from, to, compare, previousWindow, prior])
 
   const chartData: ReportChartPoint[] = useMemo(() => {
     if (!report) return []
@@ -93,10 +106,13 @@ export default function RevenueReport() {
     }))
   }, [report])
 
-  const averageInvoicePaisa = useMemo<Paisa>(() => {
-    if (!report || report.issuedCount === 0) return 0 as Paisa
-    return Math.round(report.totalPaisa / report.issuedCount) as Paisa
+  const averageInvoicePaisa = useMemo(() => {
+    return report ? averageReportAmount(report.totalPaisa, report.issuedCount) : averageReportAmount(0 as never, 0)
   }, [report])
+  const detailRows = useMemo(() => [
+    ...(report?.months ?? []).map(month => ({ ...month, series: 'Current', id: `current-${month.periodStartUtc}` })),
+    ...(prior?.months ?? []).map(month => ({ ...month, series: 'Previous', id: `previous-${month.periodStartUtc}` })),
+  ], [report, prior])
 
   return (
     <div
@@ -125,8 +141,15 @@ export default function RevenueReport() {
             value={filters}
             onChange={setFilters}
             dateColumn="issue_date"
-            {...(!load.loading && !load.error && report ? { csv: { filename: 'revenue-issued-monthly', build: () => rows } } : {})}
+            compare={compare}
+            onCompareChange={setCompare}
+            {...(!load.loading && !load.error && report && (compare === 'off' || (prior && !priorLoad.loading && !priorLoad.error)) ? { csv: { filename: 'revenue-issued-monthly', build: () => rows } } : {})}
           />
+          {compare === 'previous' && previousWindow && <div style={{ color: 'var(--text2)' }}>
+            Previous period: {previousWindow.fromAd} to {previousWindow.toAd} · same number of days, immediately before the selected period.
+            {priorLoad.loading && <p role="status">Loading previous period…</p>}
+            {priorLoad.error && <p role="alert">Previous period unavailable: {priorLoad.error} <Button variant="secondary" onClick={priorLoad.reload}>Retry comparison</Button></p>}
+          </div>}
 
           {!windowIsValid ? (
             <div
@@ -149,7 +172,7 @@ export default function RevenueReport() {
               onRetry={load.reload}
               hasRows={report !== null}
               skeleton="table"
-              empty={report !== null && report.issuedCount === 0}
+              empty={report !== null && report.issuedCount === 0 && report.creditReconciliation.voidedInvoiceCount === 0 && report.creditReconciliation.creditNoteCount === 0 && report.creditReconciliation.paidVoidMismatchCount === 0 && report.creditReconciliation.activeInvoiceCreditNoteCount === 0}
               emptyIsFiltered={filtered}
               onClearFilters={() => setFilters({})}
               emptyTitle={filtered ? 'No revenue recorded in this period' : 'No invoices issued in the last 90 days'}
@@ -166,6 +189,7 @@ export default function RevenueReport() {
                     <ReportKpiCard
                       label="Taxable revenue"
                       value={formatMoney(report.totalPaisa)}
+                      {...(prior ? { delta: reportMoneyChange(report.totalPaisa, prior.totalPaisa) } : {})}
                       icon="dollar"
                       note="Before VAT · Actual"
                     />
@@ -239,11 +263,25 @@ export default function RevenueReport() {
                       data={chartData}
                       ariaLabel="Issued invoice revenue trend chart"
                       metricLabel="Taxable invoice revenue"
+                      currency="NPR"
+                      valueUnit="paisa"
                       height={280}
                       empty={report.months.length === 0}
                       emptyMessage="No issued invoices recorded for the selected period."
                     />
                   </ReportChartCard>
+                  <ReportDataTable
+                    ariaLabel="Monthly invoice revenue details"
+                    rows={detailRows}
+                    getRowId={row => row.id}
+                    sourceAction={<Link to="/finance?tab=invoices" style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', color: 'var(--link)' }}>Open source invoices</Link>}
+                    columns={[
+                      { id: 'period', header: 'Month', cell: row => row.label, sortValue: row => row.periodStartUtc },
+                      { id: 'series', header: 'Period', cell: row => row.series, sortValue: row => row.series },
+                      { id: 'amount', header: 'Taxable value', align: 'right', cell: row => formatMoney(row.amountPaisa), sortValue: row => row.amountPaisa },
+                      { id: 'count', header: 'Issued invoices', align: 'right', cell: row => row.invoiceCount, sortValue: row => row.invoiceCount },
+                    ]}
+                  />
                 </>
               )}
             </PageBody>

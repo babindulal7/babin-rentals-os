@@ -236,7 +236,7 @@ export default function EquipmentPerformance() {
             {summary.topPerformers.length > 0 && (
               <ReportChartCard
                 title="Top Performing Models by Revenue"
-                basis="Ranked by total rental invoice revenue"
+                basis="Priced equipment lines on noncancelled bookings · pickup date window"
                 source="Bookings · Line item attribution"
                 description="Relative comparison of top revenue-generating products in the selected period."
               >

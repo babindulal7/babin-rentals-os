@@ -95,10 +95,12 @@ vi.mock('../../../lib/device', async (orig) => ({
 }))
 
 let mockUserRole = 'Warehouse'
-vi.mock('../../../context/AuthContext', () => ({
+vi.mock('../../../lib/auth', () => ({
   useAuth: () => ({
     user: { id: 'u-1', name: 'Rabin Dulal', role: mockUserRole, branchId: 'br-main' },
     isAuthenticated: true,
+    loading: false,
+    isLocked: false,
   }),
 }))
 

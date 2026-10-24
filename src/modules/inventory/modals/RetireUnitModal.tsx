@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Modal } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Button'
 import { retireEquipmentUnit } from '../../../actions/inventory/manageStock'
 import { useAuth } from '../../../lib/auth'
 import { useToast } from '../../../components/ui/Toast'
 import Icon from '../../../components/ui/Icon'
+import { newClientUuid } from '../../../lib/supabase'
 
 export interface RetireUnitModalProps {
   isOpen: boolean
@@ -44,6 +45,7 @@ export function RetireUnitModal({
   const [confirmTag, setConfirmTag] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const submissionKeyRef = useRef<{ fingerprint: string; key: string } | null>(null)
 
   const isBlocked = ACTIVE_HOLD_STATES.includes(unit.state)
   const fullReason = `${category}: ${notes.trim()}`
@@ -74,10 +76,16 @@ export function RetireUnitModal({
     setError(null)
 
     try {
+      const fingerprint = JSON.stringify({ unitId: unit.id, reason: fullReason })
+      if (!submissionKeyRef.current || submissionKeyRef.current.fingerprint !== fingerprint) {
+        submissionKeyRef.current = { fingerprint, key: newClientUuid() }
+      }
+
       await retireEquipmentUnit(
-        { unitId: unit.id, reason: fullReason },
+        { unitId: unit.id, reason: fullReason, clientUuid: submissionKeyRef.current.key },
         { userId: user.id, role: user.role }
       )
+      submissionKeyRef.current = null
 
       showSuccessToast(
         'Unit retired',

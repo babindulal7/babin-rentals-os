@@ -12,13 +12,19 @@ vi.mock('../HandoverWorkspace', () => ({ default: () => <div>Handover workspace 
 vi.mock('../ReturnWorkspace', () => ({ default: () => <div>Return workspace body</div> }))
 vi.mock('../ResetWorkspace', () => ({ default: () => <div>Reset workspace body</div> }))
 
-let currentRole = 'Owner'
+let currentRole: string | null = 'Owner'
+let mockViewport: 'desktop' | 'phone' = 'desktop'
 vi.mock('../../../lib/auth', () => ({
   useAuth: () => ({
-    user: { id: 'u-test', name: 'Test User', role: currentRole, isSharedDevice: false },
+    user: currentRole ? { id: 'u-test', name: 'Test User', role: currentRole, isSharedDevice: false } : null,
     loading: false,
     isLocked: false,
   }),
+}))
+
+vi.mock('../../../lib/device', async (orig) => ({
+  ...(await orig<typeof import('../../../lib/device')>()),
+  useViewport: () => mockViewport,
 }))
 
 ;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
@@ -62,6 +68,7 @@ afterEach(async () => {
   container.remove()
   path = ''
   currentRole = 'Owner'
+  mockViewport = 'desktop'
 })
 
 describe('booking-level Operations dropdown', () => {
@@ -142,5 +149,68 @@ describe('booking-level Operations dropdown', () => {
 
     expect(path).toBe('/rentals/new')
     expect(container.querySelector('[role="dialog"]')?.textContent).toContain('Operations · B-715')
+  })
+
+  describe('Quick Action Gating & Fallback Safety', () => {
+    it('suppresses quick action button for anonymous (not signed in) users', async () => {
+      currentRole = null
+      await mount('B-715', 'Booked')
+      expect(container.querySelector('.booking-operations__quick')).toBeNull()
+      const trigger = container.querySelector('button[aria-label="Operations"]')
+      expect(trigger).not.toBeNull()
+    })
+
+    it('suppresses quick action button for Driver role across stages', async () => {
+      currentRole = 'Driver'
+      await mount('B-715', 'Booked')
+      expect(container.querySelector('.booking-operations__quick')).toBeNull()
+    })
+
+    it('suppresses quick action button for Coordinator role across stages', async () => {
+      currentRole = 'Coordinator'
+      await mount('B-715', 'Booked')
+      expect(container.querySelector('.booking-operations__quick')).toBeNull()
+    })
+
+    it('suppresses quick action button for Technician when stage is Packed (lacks Handover grant)', async () => {
+      currentRole = 'Technician'
+      await mount('B-715', 'Packed')
+      expect(container.querySelector('.booking-operations__quick')).toBeNull()
+    })
+
+    it('shows quick action button for Warehouse role on permitted stages', async () => {
+      currentRole = 'Warehouse'
+      await mount('B-715', 'Booked')
+      const quickBtn = container.querySelector<HTMLButtonElement>('.booking-operations__quick')
+      expect(quickBtn).not.toBeNull()
+      expect(quickBtn?.textContent).toContain('Packing')
+    })
+
+    it('suppresses quick action button on Closed stage even for Owner', async () => {
+      currentRole = 'Owner'
+      await mount('B-715', 'Closed')
+      expect(container.querySelector('.booking-operations__quick')).toBeNull()
+    })
+
+    it('suppresses quick action button on Cancelled stage even for Owner', async () => {
+      currentRole = 'Owner'
+      await mount('B-715', 'Cancelled' as unknown as BookingStatus)
+      expect(container.querySelector('.booking-operations__quick')).toBeNull()
+    })
+
+    it('suppresses quick action button on invalid or unknown booking status', async () => {
+      currentRole = 'Owner'
+      await mount('B-715', 'UnknownStage' as unknown as BookingStatus)
+      expect(container.querySelector('.booking-operations__quick')).toBeNull()
+    })
+
+    it('renders responsive mobile drawer on phone viewport vs desktop menu', async () => {
+      mockViewport = 'phone'
+      await mount('B-715', 'Booked')
+      const quickBtn = container.querySelector<HTMLButtonElement>('.booking-operations__quick')
+      expect(quickBtn).not.toBeNull()
+      await openMenu()
+      expect(document.querySelector('[data-slot="drawer-popup"], [role="dialog"]')).not.toBeNull()
+    })
   })
 })

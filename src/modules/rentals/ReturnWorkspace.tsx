@@ -17,6 +17,7 @@ import { Input } from '../../components/ui/Input'
 import { Unavailable } from '../../components/ui/Unavailable'
 import { useFloorViewport } from '../operations/floorPanelContext'
 import { nextRequirement } from '../operations/nextRequirement'
+import { focusOperationTarget, type OperationWorkspaceActions } from '../operations/operationWorkspaceActions'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../components/ui/Toast'
 import { RentalIntelFromFloor } from '../../components/intel/RentalIntelFromFloor'
@@ -482,16 +483,7 @@ export interface ReturnWorkspaceProps {
   embedded?: boolean
   onConfirmSuccess?: () => void
   onCancel?: () => void
-  onRegisterActions?: (actions: {
-    canComplete: boolean
-    dispatching: boolean
-    complete: () => void
-    isDirty: boolean
-    label?: string
-    error?: string | null
-    /** First requirement still unmet, worded for the footer beside a disabled Confirm. */
-    blockedReason?: string | null
-  }) => void
+  onRegisterActions?: (actions: OperationWorkspaceActions) => void
 }
 
 /** Determines cinema-specific optical or sensor inspection requirements */
@@ -571,7 +563,7 @@ export default function ReturnWorkspace({
   const [marks, setMarks] = useState<Record<string, Mark>>({})
   const [restoredFromStorage, setRestoredFromStorage] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]>('All')
+  const [filter, setFilter] = useState<(typeof FILTERS)[number]>('Outstanding')
   const [query, setQuery] = useState('')
   const [scanLog, setScanLog] = useState<string[]>([])
   const [sessionNotes, setSessionNotes] = useState('')
@@ -824,15 +816,18 @@ export default function ReturnWorkspace({
   }, [visible])
 
   /* ── mark helpers ────────────────────────────────────────────────────── */
-  const markReturned = (key: string) =>
+  const markReturned = (key: string) => {
+    // Keep the received row visible for its separate inspection choice.
+    setFilter('All')
     setMarks((p) => ({
       ...p,
       [key]: {
         state: 'Returned',
         returnedAtIso: new Date().toISOString(),
-        condition: p[key]?.condition ?? 'Good',
+        ...(p[key]?.condition ? { condition: p[key]?.condition } : {}),
       },
     }))
+  }
   const markNotReturned = (key: string) => setMarks((p) => ({ ...p, [key]: { state: 'Not Returned', reason: '' } }))
   const clearMark = (key: string) =>
     setMarks((p) => {
@@ -1095,15 +1090,15 @@ export default function ReturnWorkspace({
       setScanLog((p) => ['• Nothing is outstanding — all items already received', ...p].slice(0, 5))
       return
     }
+    setFilter('All')
 
     setMarks((p) => {
       const next = { ...p }
       for (const r of outstanding) {
-        next[r.key] = {
-          state: 'Returned',
-          returnedAtIso: at,
-          condition: next[r.key]?.condition ?? 'Good',
-        }
+        const prevCond = next[r.key]?.condition
+        next[r.key] = prevCond !== undefined
+          ? { state: 'Returned', returnedAtIso: at, condition: prevCond }
+          : { state: 'Returned', returnedAtIso: at }
       }
       return next
     })
@@ -1199,6 +1194,17 @@ export default function ReturnWorkspace({
 
   const isDirty = Object.keys(marks).length > 0 || sessionNotes.trim().length > 0 || sigReturning !== null || sigWarehouse !== null
   const blockedReason = nextRequirement(gates.filter((g) => !g.pass).map((g) => g.label))
+  const blockerTarget = !anythingResolved ? '.floor-scanner-input'
+    : conditionMissing.length > 0 ? '[data-operation-target="return-condition"]'
+      : damageIncomplete.length > 0 ? '[data-operation-target="return-damage"]'
+        : shortReasons.length > 0 ? '[data-operation-target="return-reason"]'
+          : noDecision.length > 0 || mixedDecisionLines.length > 0 ? '[data-operation-target="return-decision"]'
+            : `[data-operation-signature="${!sigReturning ? 'Returning person (Client / Courier)' : 'Warehouse staff'}"]`
+  const focusBlocker = (scope: HTMLElement) => {
+    setFilter('All')
+    setQuery('')
+    focusOperationTarget(scope, blockerTarget)
+  }
   useEffect(() => {
     onRegisterActions?.({
       canComplete,
@@ -1208,9 +1214,11 @@ export default function ReturnWorkspace({
       isDirty,
       label: 'Confirm Return session',
       error: dispatchError,
+      focusBlocker,
+      discard: discardRestoredScan,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason])
+  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */
 
@@ -2061,6 +2069,7 @@ export default function ReturnWorkspace({
                               onChange={(e) => patchMark(r.key, { reason: e.target.value })}
                               placeholder={`Reason (min ${MIN_REASON} characters)`}
                               aria-label={`Reason ${r.name} was not returned`}
+                              data-operation-target={reason.trim().length < MIN_REASON ? 'return-reason' : undefined}
                               /* Law 15 — a typed field on a touch device, inside a
                                  blocking gate: the Law 10 reason is entered here. */
                               style={{ width: '100%', minHeight: 44, marginTop: 5, padding: '0 8px', borderRadius: 'var(--r-input)', border: `1px solid ${reason.trim().length < MIN_REASON ? 'var(--danger)' : 'var(--input-border)'}`, background: 'var(--input-bg)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontFamily: 'inherit' }}
@@ -2073,6 +2082,7 @@ export default function ReturnWorkspace({
                                 patchMark(r.key, { decision: e.target.value as NotReturnedDecision })
                               }}
                               aria-label={`Decision for ${r.name}`}
+                              data-operation-target={!mark?.decision || mixedDecisionLines.includes(r.lineId) ? 'return-decision' : undefined}
                               style={{ width: '100%', minHeight: 44, marginTop: 6, borderRadius: 'var(--r-input)', border: `1px solid ${mark?.decision ? 'var(--input-border)' : 'var(--danger)'}`, background: 'var(--input-bg)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontFamily: 'inherit' }}
                             >
                               <option value="" disabled>Choose a decision…</option>
@@ -2277,7 +2287,7 @@ function ConditionPicker({
   compact?: boolean
 }) {
   return (
-    <div role="radiogroup" aria-label={`Condition of ${name}`} style={{ display: 'flex', flexWrap: 'wrap', gap: compact ? 4 : 6 }}>
+    <div role="radiogroup" aria-label={`Condition of ${name}`} data-operation-target={value === undefined ? 'return-condition' : undefined} style={{ display: 'flex', flexWrap: 'wrap', gap: compact ? 4 : 6 }}>
       {CONDITIONS.map((c) => {
         const on = value === c
         return (
@@ -2336,6 +2346,7 @@ function DamagePanel({
         onChange={(e) => onDescription(e.target.value)}
         placeholder={`Describe the ${mark.condition === 'Lost' ? 'loss' : 'damage'}`}
         aria-label={`Damage description for ${name}`}
+        data-operation-target={!(mark.damageDescription ?? '').trim() || !photos ? 'return-damage' : undefined}
         style={{ width: '100%', minHeight: 46, padding: 7, borderRadius: 'var(--r-input)', border: `1px solid ${(mark.damageDescription ?? '').trim() === '' ? 'var(--danger)' : 'var(--input-border)'}`, background: 'var(--input-bg)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontFamily: 'inherit', resize: 'vertical' }}
       />
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', flexWrap: 'wrap' }}>
@@ -2386,7 +2397,7 @@ function SigRow({
     whiteSpace: 'nowrap' as const,
   }
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+    <div data-operation-signature={label} style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
       <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>{label}</span>

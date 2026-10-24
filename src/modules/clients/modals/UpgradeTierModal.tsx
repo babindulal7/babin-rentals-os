@@ -84,7 +84,7 @@ export function UpgradeTierModal({
     try {
       await enrollClientMembership(
         {
-          clientId: client.id,
+          clientId: client.dbId || client.id,
           planId: matchedPlan.id,
           notes: notes.trim() || undefined,
         },

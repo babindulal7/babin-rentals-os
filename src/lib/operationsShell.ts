@@ -83,7 +83,8 @@ export const SHELL_STEPS: ShellStepDef[] = [
   { key: 'Reset', label: 'Reset · Cleaning', icon: 'refresh' },
 ]
 
-export function entryStepFor(status: BookingStatus): JobName | null {
+export function entryStepFor(status?: BookingStatus | string | null): JobName | null {
+  if (!status) return null
   const found = (Object.keys(JOBS) as JobName[]).find((j) => JOBS[j].runsAt === status)
   if (found) return found
   // Returned's job (Reset) also opens read-only at Closed — spec §4's table.
@@ -101,12 +102,19 @@ export interface StepGate {
  * Reason text is inline, never a toast — matches the spec's own example
  * ("Pickup closed 6 Aug 09:14 by Ramesh.").
  */
-export function stepWriteGate(step: JobName, bookingStatus: BookingStatus, completedAt?: string, completedBy?: string): StepGate {
+export function stepWriteGate(step: JobName, bookingStatus: BookingStatus | string, completedAt?: string, completedBy?: string): StepGate {
   const meta = JOBS[step]
+  if (!meta) {
+    return { allowed: false, reason: `Unknown step ${step}.` }
+  }
+  const currentStatusMeta = (BOOKING_STATUS as Record<string, typeof BOOKING_STATUS[BookingStatus]>)[bookingStatus]
+  if (!currentStatusMeta) {
+    return { allowed: false, reason: `Operations cannot run on ${bookingStatus} bookings.` }
+  }
   if (meta.runsAt === bookingStatus) return { allowed: true, reason: null }
 
-  const currentOrder = BOOKING_STATUS[bookingStatus].order
-  const runsAtOrder = BOOKING_STATUS[meta.runsAt].order
+  const currentOrder = currentStatusMeta.order
+  const runsAtOrder = BOOKING_STATUS[meta.runsAt]?.order ?? 0
 
   if (currentOrder < runsAtOrder) {
     return { allowed: false, reason: `${step} opens once this booking reaches ${meta.runsAt} — it is currently ${bookingStatus}.` }
@@ -119,11 +127,13 @@ export function stepWriteGate(step: JobName, bookingStatus: BookingStatus, compl
 
 export type StepDotState = 'not-started' | 'in-progress' | 'done' | 'blocked'
 
-export function stepDotState(step: JobName, bookingStatus: BookingStatus, progress: { done: number; total: number }): StepDotState {
+export function stepDotState(step: JobName, bookingStatus: BookingStatus | string, progress: { done: number; total: number }): StepDotState {
   const gate = stepWriteGate(step, bookingStatus)
   if (!gate.allowed) {
-    const currentOrder = BOOKING_STATUS[bookingStatus].order
-    const runsAtOrder = BOOKING_STATUS[JOBS[step].runsAt].order
+    const currentStatusMeta = (BOOKING_STATUS as Record<string, typeof BOOKING_STATUS[BookingStatus]>)[bookingStatus]
+    if (!currentStatusMeta) return 'blocked'
+    const currentOrder = currentStatusMeta.order
+    const runsAtOrder = BOOKING_STATUS[JOBS[step]?.runsAt]?.order ?? 0
     return currentOrder > runsAtOrder ? 'done' : 'blocked'
   }
   if (progress.done === 0) return 'not-started'

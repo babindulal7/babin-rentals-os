@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Modal } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Button'
 import { addEquipmentUnits, type UnitIntakeRow } from '../../../actions/inventory/manageStock'
 import { useAuth } from '../../../lib/auth'
 import { useToast } from '../../../components/ui/Toast'
+import { newClientUuid } from '../../../lib/supabase'
 
 export interface AddUnitsModalProps {
   isOpen: boolean
@@ -42,6 +43,7 @@ export function AddUnitsModal({
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const submissionKeyRef = useRef<{ fingerprint: string; key: string } | null>(null)
 
   const parsedSerials = batchSerialsText
     .split('\n')
@@ -91,8 +93,13 @@ export function AddUnitsModal({
               purchase_date: purchaseDate || undefined,
             }))
 
+      const fingerprint = JSON.stringify({ productId, units })
+      if (!submissionKeyRef.current || submissionKeyRef.current.fingerprint !== fingerprint) {
+        submissionKeyRef.current = { fingerprint, key: newClientUuid() }
+      }
+
       const result = await addEquipmentUnits(
-        { productId, units },
+        { productId, units, clientUuid: submissionKeyRef.current.key },
         { userId: user.id, role: user.role }
       )
 
@@ -100,6 +107,7 @@ export function AddUnitsModal({
         'Units added to fleet',
         `Successfully added ${result.added_count} ${result.added_count === 1 ? 'unit' : 'units'} to ${productName}. Total: ${result.total_quantity}.`
       )
+      submissionKeyRef.current = null
       onUnitsAdded()
       onClose()
     } catch (err: unknown) {

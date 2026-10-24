@@ -11,6 +11,7 @@ import { PageBody } from '../../components/ui/PageBody'
 import { Unavailable } from '../../components/ui/Unavailable'
 import { useFloorViewport } from '../operations/floorPanelContext'
 import { nextRequirement } from '../operations/nextRequirement'
+import { focusOperationTarget, type OperationWorkspaceActions } from '../operations/operationWorkspaceActions'
 import { useAuth } from '../../lib/auth'
 import { RentalIntelFromFloor } from '../../components/intel/RentalIntelFromFloor'
 import { EquipmentIntelFromFloor } from '../../components/intel/EquipmentIntelFromFloor'
@@ -463,16 +464,7 @@ export interface HandoverWorkspaceProps {
   embedded?: boolean
   onConfirmSuccess?: () => void
   onCancel?: () => void
-  onRegisterActions?: (actions: {
-    canComplete: boolean
-    dispatching: boolean
-    complete: () => void
-    isDirty: boolean
-    label?: string
-    error?: string | null
-    /** First requirement still unmet, worded for the footer beside a disabled Confirm. */
-    blockedReason?: string | null
-  }) => void
+  onRegisterActions?: (actions: OperationWorkspaceActions) => void
 }
 
 export default function HandoverWorkspace({
@@ -526,7 +518,7 @@ export default function HandoverWorkspace({
   const [showScanner, setShowScanner] = useState(false)
   const [showDriverModal, setShowDriverModal] = useState(false)
   const presence = useFloorPresence(floor?.bookingNo, user?.name || 'Warehouse staff', user?.role)
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]>('All')
+  const [filter, setFilter] = useState<(typeof FILTERS)[number]>('Ready')
   const [query, setQuery] = useState('')
   const [scanLog, setScanLog] = useState<string[]>([])
   const [sessionNotes, setSessionNotes] = useState('')
@@ -1286,8 +1278,17 @@ export default function HandoverWorkspace({
       })
   }
 
-  const isDirty = Object.keys(marks).length > 0 || sessionNotes.trim().length > 0 || signatures.receiver !== null || signatures.warehouse !== null
+  const isDirty = discardable.length > 0
   const blockedReason = nextRequirement(gates.filter((g) => !g.passing).map((g) => g.label))
+  const blockerTarget = firstBlockedGate?.n === 1 ? '#handover-receiver-verification'
+    : firstBlockedGate?.n === 2 ? (shortReasons.length > 0 ? '[data-operation-target="handover-missing"]' : '.floor-scanner-input')
+      : firstBlockedGate?.n === 5 ? `[data-operation-signature="${!signatures.receiver ? 'Receiver' : 'Warehouse Staff'}"]`
+        : firstBlockedGate?.n === 6 ? '#handover-evidence' : `[data-operation-gate="${firstBlockedGate?.n}"]`
+  const focusBlocker = (scope: HTMLElement) => {
+    setFilter('All')
+    setQuery('')
+    focusOperationTarget(scope, blockerTarget)
+  }
   useEffect(() => {
     onRegisterActions?.({
       canComplete,
@@ -1297,9 +1298,10 @@ export default function HandoverWorkspace({
       isDirty,
       label: 'Confirm & Next →',
       error: dispatchError,
+      focusBlocker,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason])
+  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */
 
@@ -1494,6 +1496,7 @@ export default function HandoverWorkspace({
                     model lands, so the card carries only the real client and
                     the two verification facts gate 1 needs. */}
                 <Card
+                  id="handover-receiver-verification"
                   title="Receiver Verification"
                   action={
                     (!govIdVerified || !bookingAuthVerified) ? (
@@ -1848,7 +1851,7 @@ export default function HandoverWorkspace({
                 <Card title="Session Gates">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
                     {gates.map((g) => (
-                      <div key={g.n} className={`floor-gate-row ${g.passing ? 'is-pass' : 'is-pending'}`}>
+                      <div key={g.n} data-operation-gate={g.n} className={`floor-gate-row ${g.passing ? 'is-pass' : 'is-pending'}`}>
                         <Icon name={g.passing ? 'checklist' : 'alert_triangle'} size={14} style={{ color: g.passing ? 'var(--success-text)' : 'var(--progress-text)', marginTop: 2, flexShrink: 0 }} />
                         <div style={{ minWidth: 0, flex: 1 }}>
                           <div style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: g.passing ? 'var(--text)' : 'var(--progress-text)' }}>{g.label}</div>
@@ -2013,7 +2016,7 @@ export default function HandoverWorkspace({
                       />
                       <span style={{ flex: 1, color: 'var(--text2)' }}>Booking photo — required before completion</span>
                       <span className="figure" style={{ color: 'var(--muted)' }}>{photoCount}</span>
-                      <RowAction label="Take Photo" onClick={() => setPhotoCount((n) => n + 1)} />
+                      <span id="handover-evidence"><RowAction label="Take Photo" onClick={() => setPhotoCount((n) => n + 1)} /></span>
                     </div>
                     <p style={{ margin: '7px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
                       {/* Ruled mandatory (§4.31): one photo per booking, not per case. This count is local to this
@@ -2105,6 +2108,7 @@ export default function HandoverWorkspace({
                             onChange={(e) => setReason(r.key, e.target.value)}
                             placeholder={`Reason (min ${MIN_REASON} characters)`}
                             aria-label={`Reason ${r.name} is missing`}
+                            data-operation-target={(marks[r.key]?.reason ?? '').trim().length < MIN_REASON ? 'handover-missing' : undefined}
                             /* Law 15 — a typed field on a touch device, inside a
                                blocking gate: the Law 10 reason is entered here. */
                             style={{ width: '100%', minHeight: 44, marginTop: 5, padding: '0 8px', borderRadius: 'var(--r-input)', border: `1px solid ${(marks[r.key]?.reason ?? '').trim().length < MIN_REASON ? 'var(--danger)' : 'var(--input-border)'}`, background: 'var(--input-bg)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontFamily: 'inherit' }}
@@ -2411,7 +2415,7 @@ function SigRow({
     whiteSpace: 'nowrap' as const,
   }
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+    <div data-operation-signature={label} style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
       <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>{label}</span>
