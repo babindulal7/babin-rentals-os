@@ -3,7 +3,7 @@
 **Before writing any code in this project:**
 
 1. Read [`docs/00_READ_FIRST.md`](docs/00_READ_FIRST.md) — documentation governance and rules of truth.
-2. Read [`PLAN.md`](PLAN.md) — the laws, the build order, and the decisions that block work.
+2. Read [`PLAN.md`](PLAN.md) — the laws, the build order, and the decisions that block work. *(`PLAN.md` is not present in the repository at `b4c986a`; until it is restored, use [`docs/PRODUCT_RULES.md`](docs/PRODUCT_RULES.md) for the laws and [`docs/OPEN_DECISIONS.md`](docs/OPEN_DECISIONS.md) for blocking decisions. Do not recreate it from memory.)*
 3. Read [`PROGRESS.md`](PROGRESS.md) — what state the build is actually in.
 
 **Before ending a session:** update [`PROGRESS.md`](PROGRESS.md) with what changed, **how it

@@ -1,5 +1,40 @@
 # Progress Log
 
+## 2026-10-25 — Documentation pointer and status-label corrections (docs only)
+
+**Did**
+- `CLAUDE.md`, `AGENTS.md`, `docs/00_READ_FIRST.md`: `PLAN.md` is referenced as a required read but is not in the repository at `b4c986a`. Added a one-line note at each pointer saying so and naming the files to use instead (`docs/PRODUCT_RULES.md` for laws, `docs/OPEN_DECISIONS.md` for blocking decisions). `PLAN.md` itself was NOT recreated — its contents cannot be reconstructed without inventing decisions.
+- `docs/00_READ_FIRST.md`: Rule 2 now says `PROGRESS.md` is ~2.5 MB and to read only the newest entry and search by keyword.
+- `docs/CURRENT_STATE.md`: the 25 Oct banner and `PROGRESS.md` (2026-10-25 entry) named migration "0175"; on disk it is `0177_verified_return_reservations.sql` (branch-local 0175, renumbered at merge; `0176` is the partial-Return release; `0175` does not exist). Corrected both. Added a SUPERSEDED banner above the 4 Oct snapshot body ("100%", 150 migrations, 3,938 tests, "P0 blockers: 0") so it cannot be read as current.
+- `docs/UI_UX_RULES.md` §2: said "warm dark theme default". `index.html` and `src/lib/theme.tsx` default to light (DESIGN_DIRECTION_SPEC_v4.2 §2.1); dark is a toggle. Corrected and listed the other supported modes (`system`, `high-contrast`, `glass`, `glass-light`).
+- `index.html`: the comment above the theme script described a hardcoded `data-theme="dark"` first paint; reworded to match the real `data-theme="light"` (comment only, no code change).
+
+**Ruled**
+- No ruling. Pointer and label corrections only: no behaviour, permission, money, capability or migration change. Nothing applied to any Supabase project (N-5).
+
+**Verified**
+- Docs-only diff; no source, SQL or test file touched. `node scripts/lint-progress.mjs` run after the edit: exit 0. Typecheck, test suite, migration rebuild, lifecycle and build were NOT run — nothing they cover changed (docs-only diff). Re-checked by reading: the 0175/0176/0177 filenames in `supabase/migrations/`, the `data-theme` default in `index.html`, and the default in `src/lib/theme.tsx`.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 55 / 58 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 174 files · check:pglite Historical, incomplete or failed receipt (2026-10-25T17:04:33.336Z); current source NOT VERIFIED. Suite: Historical suite: 5738/5739 passed, 1 failed (recorded 2026-10-25T16:52:35.983Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5737/5739 passed, 2 failed (recorded 2026-10-25T16:52:56.936Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-25T17:04:47.117Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- `PLAN.md` is missing: restore it from wherever Babin keeps it (README still cites `PLAN.md §0`, `§4.0b`, `§4.26`, `§4.38a`). Until then those references point at nothing.
+- `docs/UI_UX_RULES.md` section numbering jumps from §5 to §11; left as is because other files cite §11/§12.
+- Completion block was produced by `npm run completion` but gates were not re-run: the receipts on disk are historical and show 1–2 failing tests (5738/5739 suite, 5737/5739 coverage) from earlier on 25 Oct. Next session that touches code should run `npm run check:pglite`, `npm run check:lifecycle` and the suite first, and find which test fails.
+
 ## 2026-10-25 — Gemini implementation review repairs
 
 **Did**
@@ -7,7 +42,7 @@
 - Repaired membership UUID identity and legacy rupee conversion from integer paisa, plus pending/network guards and stable unit/membership attempts. Stock controls follow the stricter Owner/Admin/Manager rule.
 - Repaired financial chart units, void-only reconciliation, chart selection/dismissal/focus, source descriptions, comparisons and report table controls. Namespaced pilot tokens and composed-theme contrast checks preserve the active theme. Browser-discovered month search and mislabeled 90-day default were corrected. Pinned react-is 18.3.1 for the React 18/Recharts runtime.
 - Repaired actual Operations blocker targets, persisted Discard, action-focused defaults, explicit Return inspection, saved evidence reads, genuine second-inspector QC and persisted Reset wait times. Preserved the concurrent Operations header/stage-bar ruling.
-- Added migration 0175 for verified partial serial/quantity Return holds, private bounded receipt history, branch enforcement, immutable seals, compensating quantity receipts and QC defects surviving Reset timestamps. Open receipts retain holds; completed partial sessions release only their own usable stock.
+- Added migration 0175 [renumbered 0177 at merge — see RULINGS-2026-10-25.md] for verified partial serial/quantity Return holds, private bounded receipt history, branch enforcement, immutable seals, compensating quantity receipts and QC defects surviving Reset timestamps. Open receipts retain holds; completed partial sessions release only their own usable stock.
 - Return drafts persist the original request identity, payload and timestamp across reloads. The action reconciles a committed receipt by its key and refuses changed quantity/outcome during an interrupted retry. Unknown receipt history blocks intake.
 - Expanded authenticated PGlite section/stock/membership contracts and partial Return regressions; required both in CI. Lifecycle harness now supplies its JWT subject as well as the legacy local actor ID, so it exercises the stricter actor check honestly.
 
@@ -78,7 +113,7 @@ Counted by `npm run completion`, not typed. Source changed since the last gate r
 ## Remaining
 
 - The rest of Reset's popup was left alone: its filters and QC are being changed by another session in the same files.
-- The Evidence cards in Pack, Handover and Return were not touched for the same reason (saved-photo status was landing in them).
+- Evidence: follow-up on 25 Oct trimmed only repeated wording in Pack and Handover and shortened the shared status sentence; Return's and Reset's Evidence cards had no repeated text to cut.
 - Not driven: dark and glass themes, the read-only Reset view of a Closed booking, a real Supabase project, a physical tablet.
 - The three `resetQc.test.tsx` failures belong to the Reset QC change and need that change's author to update the tests or the behaviour.
 

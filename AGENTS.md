@@ -4,7 +4,7 @@ React 18 · TS 5.7 strict · Vite 5 · Tailwind v4 · Supabase Postgres + RLS ·
 
 ## Start here (authority order)
 
-`docs/00_READ_FIRST.md` → `CLAUDE.md` → `docs/PERMISSIONS.md` (§3/§4/§6 matrix) → `RULINGS-*.md` (newest first) → `docs/PRODUCT_RULES.md` → `docs/CURRENT_STATE.md` → `PROGRESS.md` → `PLAN.md` → Foundation Spec. Where specs conflict, Foundation wins; where permissions conflict, `PERMISSIONS.md` wins and **stricter wins** (B-1). Never read `src/archive/` or dated `docs/audits/` as current truth.
+`docs/00_READ_FIRST.md` → `CLAUDE.md` → `docs/PERMISSIONS.md` (§3/§4/§6 matrix) → `RULINGS-*.md` (newest first) → `docs/PRODUCT_RULES.md` → `docs/CURRENT_STATE.md` → `PROGRESS.md` → `PLAN.md` *(absent from the repo at `b4c986a` — skip it; use `docs/OPEN_DECISIONS.md`)* → Foundation Spec. Where specs conflict, Foundation wins; where permissions conflict, `PERMISSIONS.md` wins and **stricter wins** (B-1). Never read `src/archive/` or dated `docs/audits/` as current truth.
 
 - Never invent a product decision. Mark `TODO(decision)`, log in `PLAN.md §4` / `docs/OPEN_DECISIONS.md`, work on something unblocked.
 - Session end: update `PROGRESS.md` (newest first, Did / Ruled / Verified) with `## Completion` + `## Remaining` blocks. Run `npm run completion` — never hand-type a percentage. `npm run lint:progress` enforces the blocks (CI runs it).

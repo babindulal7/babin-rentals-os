@@ -24,7 +24,7 @@ Ease of use outranks visual flourish while remaining subordinate to non-negotiab
   - Identifiers, Barcodes, Booking Numbers: `--font-id` (`JetBrains Mono Variable`, monospace)
   - *Banned Fonts:* `Inter` is not used anywhere in the codebase.
 - **Color System:**
-  - Warm dark theme default with gold accents (`#d8a93a`) and blue workspace accents (`#3b82f6`).
+  - **Light is the default theme; dark is a per-user toggle** (DESIGN_DIRECTION_SPEC_v4.2 §2.1; `index.html`, `src/lib/theme.tsx`). Other supported modes: `system`, `high-contrast`, `glass`, `glass-light`. Gold accents (`#d8a93a`) and blue workspace accents (`#3b82f6`).
   - Strict token consumption: Use semantic CSS variables (`var(--app)`, `var(--card)`, `var(--border)`, `var(--text-primary)`, etc.). Never introduce hardcoded hex colors or untracked Tailwind palette classes.
 
 ---
