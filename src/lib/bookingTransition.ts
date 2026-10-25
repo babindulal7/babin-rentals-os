@@ -26,11 +26,8 @@
  *    and `0002:447-452` requires approver + reason + `audit_event_id` together.
  *    `is_reversal` is hardcoded `false` here; a reversal needs its own approval
  *    path, not an extra boolean on this one.
- *  - *The Booqable push.* `booqable/sync.ts` §11's `pushOrderReserve` /
- *    `pushOrderStart` / `pushOrderStop` are the write-back for the same three
- *    advances, and each takes a sign-off boolean this module cannot derive. Whether
- *    an OS-initiated advance must also enqueue the outbox is unruled — PLAN.md §4.16.
- *    Callers that need it call the push function themselves, as they do today.
+ *  - *External sync.* R-36 (9 Sep 2026) removed Booqable synchronization; an
+ *    OS-initiated advance enqueues nothing outbound.
  */
 
 import { idempotentInsert } from './dataAccess'
