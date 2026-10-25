@@ -282,6 +282,7 @@ describe('ResetWorkspace — RS-12, the QC identity', () => {
     })
     try {
       await mount()
+      await flush(8)
       expect(text()).toContain('480m in queue')
     } finally {
       from.mockRestore()
