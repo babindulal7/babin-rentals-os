@@ -1,6 +1,6 @@
 ---
 name: babin-report-excellence
-description: Produces premium, easy-to-scan business reports for Babin Rentals in one shared design language across two surfaces — an in-app dark cinematic view and a light exportable document (PDF/Word/Docs). Use whenever generating, restructuring, or reviewing a report on rental finances (P&L/VAT/revenue), equipment utilization/ROI, client/rental activity, or operations (queues/turnaround). Internal-first: the readers are the owner (fast decisions) and operations staff.
+description: "Produces premium, easy-to-scan business reports for Babin Rentals in one shared design language across two surfaces — an in-app dark cinematic view and a light exportable document (PDF/Word/Docs). Use whenever generating, restructuring, or reviewing a report on rental finances (P&L/VAT/revenue), equipment utilization/ROI, client/rental activity, or operations (queues/turnaround). Internal-first: the readers are the owner (fast decisions) and operations staff."
 ---
 
 # Babin Report Excellence
