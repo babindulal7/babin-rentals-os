@@ -1,0 +1,50 @@
+# Migration ledger — claim a number before writing SQL
+
+Three lanes write migrations in parallel. To stop two branches using the same number:
+
+1. In your branch's **first commit**, add a row below with the next free number, your task id,
+   a slug and your branch, status `claimed`.
+2. Name the file `supabase/migrations/<number>_<slug>.sql`.
+3. Update the status as it moves: `claimed → written → verified (check:pglite + check:lifecycle
+   green in one run) → staging → live (batch N)`.
+4. If a merge conflict on this file shows a collision, **the later merge renumbers** its file and
+   its row (as 0175 → 0177 did on 25 Oct) and fixes every comment that cites the number.
+5. Never reuse a number that exists in the repo **or** in the live ledger
+   (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
+
+**Next free number: 0178**
+
+| Number | Task | Slug | Branch | Status |
+|---|---|---|---|---|
+| — | — | — | — | — |
+
+## Expected migrations (not yet claimed)
+
+Listed so lanes can see what is coming. A card marked "if needed" may turn out not to need one.
+
+| Task | What the migration does |
+|---|---|
+| T2-03 | `collateral_documents` + RLS + Close gate for a held ID |
+| T2-04 | Gate 1 override by handover-capable staff (if enforced in SQL) |
+| T2-05 | Technician in the handover operation grant (if 0171 excludes it) |
+| T2-06 | Maintenance job ↔ damage finding link; clearance on completion |
+| T3-03 | Cancellation tiers table (if not a settings key) |
+| T3-04 | Invoice VAT treatment + backfill |
+| T3-07 | Opening balances (append-only) |
+| T4-02 | Delivery reschedule RPC (if needed) |
+| T4-03 | Delivery proof evidence link (if needed) |
+| T4-04 | `team_notes` |
+| T4-05 | `shift_handovers` + acknowledgements |
+| T5-01 / T5-05 | `notifications`, event triggers, `notification_preferences` |
+| T5-03 | `email_log` |
+| T5-04 | Morning digest query function + cron schedule |
+| T7-02 | `public_catalogue_v`, `public_availability()`, `catalogue` bucket |
+| T7-03 | Portal binding + RLS ending the `portal_*` deny-all |
+| T7-04 | `booking_requests` + lines |
+| T7-05 | `payment_intents` + allocation function |
+| T7-07 | Online refunds (if a separate table is needed) |
+| T8-02 | `save_membership_plan` RPC (if needed) |
+| T8-03 / T8-04 | Membership change with credit; renewal |
+| T8-06 | Crew overtime fraction (if needed) |
+| T8-08 | Stored TDS on payouts |
+| T9-02 | `external_holds` in the availability check |

@@ -1,5 +1,11 @@
 # Babin Rentals OS — Comprehensive Remaining Work Register
 
+> **26 October 2026 — superseded as the work register.** The ordered plan to go-live is now
+> [`PLAN.md`](../PLAN.md) with task cards in [`docs/plans/`](plans/README.md); every open item
+> below is carried there (release → T1, floor → T2, booking/money → T3, delivery/notes → T4,
+> devices → T2-11, decisions 5.1–5.9 → `RULINGS-2026-10-26.md`). This file is kept as history.
+> Correction: §6.1 below said the BS table stops at 2083 — `src/lib/bs.ts` covers BS 2078–2095.
+
 > **24 October 2026 — integration choice resolved:** the guarded 0171+0172 pair and permanent security/CI regression wiring are integrated into shared source. Fresh source-matched verification is running. Remaining: completed shared-source receipts, real hosted paired Return/Reset failure/resume and Auth/Storage acceptance on isolated staging, physical tests on confirmed iPhone 17 Pro/M4 iPad Pro, and owner-controlled backup/restore/cutover. No hosted migration application. [Integration report](verification/OPERATIONS_BRANCH_INTEGRATION_2026-10-24.md).
 
 > **23 October 2026 — Reset site resolved, candidate repair verified locally:** unbooked cleaning/reset items use the unit's current warehouse branch. The attached candidate 0172 closes queue/task branch writes and reparenting plus early floor-action authorization; 5,339 tests plus separate coverage, 170 migrations and 31 lifecycle steps pass on its own fingerprint. Remaining: explicit guarded 0171+0172 model/integration choice, permanent CI wiring, split Return/Reset-grant acceptance, source-matched release verification, isolated staging, actual devices and owner-controlled backup/cutover. Primary/production are not certified. See [candidate report](verification/RESET_BRANCH_CANDIDATE_2026-10-23.md).

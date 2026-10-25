@@ -2,6 +2,22 @@
 **v1.0 · 22 Bhadra 2083 BS · 7 Sep 2026**
 Location: `docs/PERMISSIONS.md` (beside Foundation v3.0 and UI_UX.md)
 
+> ## ⏳ Ruled 26 Oct 2026, not yet in code — these cells change when their task lands
+>
+> Babin's rulings in [`RULINGS-2026-10-26.md`](../RULINGS-2026-10-26.md) change the cells below.
+> Per B-3 each one is edited **in the same commit as its code, migration and T-1 fixture**, so until
+> then the tables in this file still describe what runs. Do not build against the new cells early,
+> and do not treat the old cells as the owner's intent.
+>
+> | Ruling | Cell(s) that will change | Task |
+> |---|---|---|
+> | D2 | §6.1 `gate.handover.receiver_unverified`: M+ → any staff allowed to hand over, reason ≥ 10 chars | T2-04 |
+> | D3 | §3 Technician: Pack 👁 → ✅, Handover → ✅, Return and Reset ✅ (money-blind unchanged) | T2-05 |
+> | D1 | §6.1 new rows: ID document satisfies the deposit gate; Close refused while an ID is held | T2-03 |
+> | D29 | §7 "no public signup" → client sign-up by verified email (one-time code) | T7-03 |
+> | D34 | §5 "Rental rates … Client: on request/quote only" and §7 "no catalogue in v1" → public daily rates | T7-02 |
+> | D30 | §7 client writes: add "pay online" (advance or invoice balance) | T7-05 |
+
 > ## ⛔ VERIFIED 7 Sep 2026 — read §16 before building from §4, §5, §9 or §12
 >
 > Filed and then checked against the code, the repo migrations and the live database the same

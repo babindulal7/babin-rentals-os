@@ -1,5 +1,47 @@
 # Progress Log
 
+## 2026-10-26 — Go-live roadmap: new PLAN.md, 11 track plans, Babin's ruling round (docs only)
+
+**Did**
+- Read the repository end to end on a clean clone of `main` at `34cce2d` (governance docs, newest PROGRESS entries, RULINGS 8–25 Oct, OPEN_DECISIONS, REMAINING_WORK, release docs, route table, actions, query layer, migrations, live-ledger planner) and measured the gates fresh (below).
+- Found that **Pack and Handover cannot complete in the live app**: both screens require a saved photo (`PackingWorkspace.tsx` gate "Evidence Captured", `HandoverWorkspace.tsx` gate 6, §4.31 ruling) and no screen calls `uploadEvidencePhoto()` (`src/lib/evidenceStorage.ts`) — the helper exists with no caller. Also counted ~280 "not built / not tracked yet" markers on ~50 screens, six browser-only stores that refuse live (productions, delivery, team notes, shift handover, warranty, coupons), no notifications, no `supabase/functions/`, a 15-key Nepali catalogue against ~4,400 distinct visible strings, 9 open PRs and ~90 remote branches.
+- Asked Babin 54 questions in 15 tappable rounds (scope, cutover, deadline, every open owner decision, hosting, email, scanner, public rates, domains). Recorded all answers.
+- Wrote **`PLAN.md`** (new — not a reconstruction of the pre-October file): finish line (G1–G10), measured state, tracks T0–T10 with lanes and sizes, decisions index (§4.1 ruled, §4.2 open O-1…O-13 with ⭐ defaults), calendar AD + BS (day X Mon 1 Feb 2027 · 18 Magh 2083; Booqable cancelled by 10 Mar, before the 20 Mar renewal), parallel-work protocol, risks, and a map for old "PLAN.md §x" citations.
+- Wrote **`docs/plans/`**: README (card format, gates), T0 Repo hygiene, T1 Release & infrastructure (incl. hosting alternatives with sources), T2 Floor loop, T3 Booking & money, T4 Shared tools, T5 Notifications & email, T6 Nepali, T7 Online booking & payments, T8 Membership & crew, T9 Booqable cutover, T10 After go-live, BABIN_ACTIONS (owner checklist with dates and the membership-plan template), MIGRATION_LEDGER (claim numbers; next free 0178).
+- Updated pointers and registers: `CLAUDE.md`, `AGENTS.md`, `docs/00_READ_FIRST.md` (PLAN.md exists again; one agent per checkout; test command note); `docs/OPEN_DECISIONS.md` (table of every entry closed by the rulings; corrected the stale "BS table stops at 2083" — it covers 2078–2095); banners on `docs/CURRENT_STATE.md` and `docs/REMAINING_WORK.md`; a "ruled, not yet in code" box at the top of `docs/PERMISSIONS.md`.
+
+**Ruled**
+- `RULINGS-2026-10-26.md`: scope rulings S1–S15 and decisions D1–D34, Babin's typed answers quoted verbatim, readings marked. Headlines: go-live first, off Booqable before 20 Mar 2027; photo gate stays — build camera upload; delivery, shared notes/handover, notifications and Nepali are go-live items; trial with double entry then OS-only; online booking in the OS at `book.babinrentals.com` with verified-email accounts, public daily rates, no hold until staff confirm, eSewa/Khalti/Fonepay (Fonepay merchant exists); staging = separate Supabase project; hosting = Cloudflare Pages; email from `@babinrentals.com`; camera + Bluetooth scanner; ID card may replace the cash deposit; any handover staff may override gate 1 with a reason; Technician may do every floor verb; repair-job close clears damage; memberships live at go-live with prorated plan changes; crew overtime as half/full days billed and paid; TDS withheld.
+- **No permission cell, capability, code path, migration or setting changed in this commit.** The rulings that change cells (D1–D3, D29, D30, D34) take effect with their task's code + migration + PERMISSIONS + T-1 fixture in one commit (B-3); PERMISSIONS.md carries a pending box until then. Nothing applied to any Supabase project (N-5).
+
+**Verified**
+- Fresh gates on `34cce2d`, Linux, Node 22.23, `npm ci --ignore-scripts`: `tsc --noEmit` **0 errors**; `check:pglite` **174/174** applied, 31 views / 0 anon-readable, 20 anon-executable functions / 0 unauthorized, 93 definer functions pinned; `check:lifecycle` **33/33 green**; `VITE_DATA_SOURCE=mock npx vitest run` **5,739 / 5,739 passed in 463 files** (592 s). A first run **without** `VITE_DATA_SOURCE=mock` failed 132 files on "Missing VITE_SUPABASE_URL" (4,481 tests passed, none failed) — an environment default, not a code fault; card T0-02 fixes the runner.
+- Not run: lint, contrast, page-shell and UI-copy lints, build, coverage — this diff is Markdown only and touches no file they read.
+- Milestone BS dates computed with the repo's own `src/lib/bs.ts` (bundled with esbuild); weekdays checked with Node.
+- `npm run db:plan` read-only: live ledger snapshot 17 Oct = 156 rows, newest 0164; 19 files pending (0157–0163, 0165–0174, 0176, 0177); 0047 seed must stay excluded; 7 rename mismatches; 2 unexplained live rows (`archive_bakery_pos_schema`, `0047_seed_tail_b917_equipment_line`).
+- Hosting facts in T1's appendix were checked against the providers' own pages on 26 Oct (links in the appendix).
+- Rebased onto `main` `f3aa132` before pushing. The commits after `34cce2d` touch `PROGRESS.md`, `docs/WORKFLOWS.md` and one comment in `src/lib/bookingTransition.ts` only, so the measurements above still describe the code.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 55 / 58 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 33 / 33 (100%) | — |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 174 files · check:pglite 174/174 applied, 0 failed (recorded 2026-10-25T18:24:13.649Z). Suite: not run through `npm test` this session, so no receipt — the direct `vitest run` result is under Verified.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-10-25T18:24:23.031Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin's week-1 actions in `docs/plans/BABIN_ACTIONS.md` (backup, staging approval, Cloudflare, eSewa/Khalti merchant applications, Fonepay API credentials, email account, membership table, staff roster, five accountant questions).
+- First build cards: T0-02 (test runner default), T1-01/T1-02 (backup, staging), T2-01 (camera evidence — unblocks the floor loop), T6-01 (Nepali glossary).
+- PLAN.md §4.2 O-1 … O-13 stay open with ⭐ defaults.
+
 ## 2026-10-25 (b) — Lifecycle review against current code; close-gate docs and a stale comment corrected
 
 **Did**
