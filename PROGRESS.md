@@ -1,5 +1,40 @@
 # Progress Log
 
+## 2026-10-25 (b) — Lifecycle review against current code; close-gate docs and a stale comment corrected
+
+**Did**
+- Read-only review of the custody lifecycle against `main` (02de99ce): `docs/WORKFLOWS.md`, `bookingTransition.ts`, `floorVerb.ts`, `apply_booking_stage_transition()` (latest definition `0171`; close block unchanged since `0155`), `0172` Reset RLS, and the test/gate names.
+- `docs/WORKFLOWS.md` §3.3 listed three close gates; the trigger enforces six (invoice exists or Owner/Admin zero-value override, invoices settled, deposit resolved or Manager+ skip with reason, no open cases, no live reservations, no pending-approval damage). Rewrote it from the migration, and added §3.4 for the `0171`/`0172` branch scoping.
+- `bookingTransition.ts` header still described a Booqable push and `PLAN.md §4.16`; R-36 removed Booqable sync and `src/booqable/` is gone. Replaced the bullet with a one-line R-36 note. Comment only, no code change.
+- Not edited: the `0171` migration comment that says Reset depends on the action layer alone. `0172` now enforces Reset in RLS, so the comment is out of date, but editing an existing migration file was not worth the checksum risk for a comment.
+
+**Ruled**
+- Nothing ruled. Documentation and comment correction only; no behavior, permission or schema change.
+
+**Verified**
+- After merging `main` (13 newer commits, migrations through 0177) into this branch: `check:pglite` 174/174 applied, 0 failed; no view readable by anon, 0 unauthorized anon functions, 93 definer functions with pinned `search_path`. `check:lifecycle`: 33/33 green. Both exit 0 on the merged tree.
+- Before the merge, on `main` 02de99ce: `node scripts/test-operations-grants.mjs` (0171) all `[ok]`; `node scripts/test-reset-branch-boundary.mjs` (0172) 14/14 groups PASS; `node scripts/check-astra-phase0.mjs` 18 Phase 0 SQL regressions PASS. All exit 0, PGlite only. Not re-run after the merge.
+- `tsc --noEmit` exit 0 on the merged tree; ESLint on `bookingTransition.ts` 0 problems.
+- **Not verified:** no dedicated test for a stale `from_stage` refusal or for two clients committing the same transition at once (the trigger refuses a stale `from_stage`; no lifecycle step proves it). Full `vitest run`, `lint:ui-copy`, `build`, hosted Supabase, devices: not run.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 55 / 58 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 33 / 33 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 174 files · check:pglite 174/174 applied, 0 failed (recorded 2026-10-25T18:53:23Z). Suite: not run this session.
+Gates read from `.lifecycle-result.json`, written 2026-10-25T18:53:39Z. Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Add a lifecycle step for a stale `from_stage` refusal and one for a concurrent same-transition commit.
+- Correct the `0171` migration comment about Reset in a future migration's header, not in place.
+
 ## 2026-10-25 — Documentation pointer and status-label corrections (docs only)
 
 **Did**

@@ -78,7 +78,15 @@ The core lifecycle consists of 6 sequential stages:
 - Deposit release or application to damage is performed via audited settlement actions.
 
 ### 3.3 Rental Closure Gate Invariants (R-41)
-Closing a rental requires meeting all three database gates simultaneously:
-1. **Invoice Gate:** All issued invoices must be paid in full (Outstanding = 0), or credit note issued.
-2. **Damage Gate (R-41):** No unresolved `damage_findings` row may stand at `Pending Approval`. All findings must be approved, dispositioned, or voided.
-3. **Case Gate:** No unresolved operational cases linked to the booking.
+Closing a rental (Returned → Closed) requires meeting every database gate in `apply_booking_stage_transition()` (latest definition `0171`, close block unchanged since `0155`) simultaneously:
+1. **Invoice exists:** at least one non-void invoice, or an Owner/Admin zero-value override with a reason of at least 10 characters (§4.51, audited).
+2. **Invoice settled:** every non-void invoice has Outstanding = 0; voided invoices are excluded.
+3. **Deposit resolved:** a required or held deposit is settled, or skipped by Manager-or-above with a reason of at least 10 characters (`0155`). The skip is audited and moves no money; the deposit stays a liability.
+4. **Case Gate:** no unresolved operational cases linked to the booking.
+5. **Reservation Gate:** no live (unreleased) `inventory_reservations` for the booking.
+6. **Damage Gate (R-41):** no unvoided `damage_findings` row may stand at `Pending Approval`. All findings must be approved, dispositioned, or voided.
+
+Every stage move also passes the forward-only, no-skip and `from_stage` checks (a stale read is refused), and pack / handover / return additionally pass their session and unit gates. The booking stage changes only through an insert into `booking_stage_transitions`; the trigger is the sole writer of `bookings.stage`.
+
+### 3.4 Branch scoping of floor verbs (`0171`, `0172`)
+Per-branch `operations_grants` narrow who may run Pack, Handover, Return and Reset at a given site. An actor with no grant rows keeps the role-based permission at every branch; any grant history (including revoked) scopes the actor to active grants only. Pack / Handover / Return are enforced in the stage trigger. Reset moves no stage, so it is enforced by restrictive RLS on `cleaning_queue_entries` and `cleaning_task_results` (`0172`), with `assert_operation_branch_grant` as the early action-layer check.
