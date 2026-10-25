@@ -1,5 +1,47 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 26 October 2026: Babin's ruling round — what it closed, what is still open
+
+Babin answered every open owner decision in one session (54 questions). Full wording, readings and
+reverts: [`RULINGS-2026-10-26.md`](../RULINGS-2026-10-26.md). Index of what remains open, each with
+a ⭐ default: [`PLAN.md` §4.2](../PLAN.md) (O-1 … O-13). Entries below this section are kept as
+history; where one is closed here, the ruling id is given.
+
+| Entry below | Closed by |
+|---|---|
+| 24 Oct — authoritative physical-clearance record after repair | **D4** — closing the Maintenance (repair) job with a note → T2-06 |
+| 20 Oct — P0-B Technician excluded from Handover | **D3** — Technician may Pack, Hand over, Return, Reset → T2-05 |
+| 20 Oct — P0-B location scoping | **D27** — one site (Boudha) for now; automatic staff grant |
+| 17 Oct / §14 — legacy Storage objects | **D33** — quarantine (kept, no access) → T1-06 |
+| §11 D-2 — Booqable seasonal rulesets | **D20** — import with end dates → T9-01 |
+| §11 G3 — structure-priced invoices | engineering → T3-09 |
+| §12 / §4.64(a) duplicate / re-book | **D9** → T3-01 |
+| §12 / §4.64(b) VAT-inclusive rates | **D10** — no |
+| §12 / §4.64(c) delivery rescheduling | **D8** — driver job only + WhatsApp draft → T4-02 |
+| §12 / §4.64(d) late/night charge | **D7** — staff add a service line → T3-10 |
+| §12 / §4.64(e) depreciation lives | **D17** — per category ⭐ → T10 |
+| §12 / §4.65(a) Reset next-unit priority | **D5** — badge + sort, 4 h ⭐ → T2-07 |
+| §12 / §4.65(b) Handover gate 1 override | **D2** — any handover-capable staff with a reason → T2-04 |
+| §12 / §4.65(c) ID document as deposit | **D1** — yes, instead of cash → T2-03 |
+| §13 per-unit revenue attribution | **D16** — by days out → T10 |
+| §13 cancellation fee policy | **D12** — tiers by notice, set by Babin → T3-03 |
+| §13 bank / cash balance | **D15** — via daily closing → T3-07 |
+| §14 unattributed offline work | **D28** — exported to a file per device, never auto-assigned → T4-06 |
+| §15 VAT classification | **D13** — zero-VAT invoices are non-VAT bills → T3-04 |
+| §16 production model | **D26** — groups bookings (after go-live) |
+| §16 legacy local-record ownership | **D28** → T4-06 |
+| §17 Technician Pack authority | **D3** |
+| §18 crew overtime and hourly pay | **D24** — day rate + staff-added half/full overtime days, billed and paid → T8-06 |
+| §19 equipment navigation | **D19** — one page, seven sections → T3-08 |
+| §20 membership term on change | **D22** — new term, unused days credited → T8-03 |
+| §20 lapsed renewal | **D23** → T8-04 |
+| §20 plans themselves | **D32** — Babin sends the table → T8-01 |
+| §20 two write paths | engineering → T8-03 (stricter rule set wins) |
+| §5 BS calendar beyond 2083 | not a decision: `src/lib/bs.ts` already covers BS 2078–2095 |
+
+Still open as engineering, not owner decisions: §17 branch attribution of **historical**
+report cohorts, and the original-revision capture for legacy offline updates (§17 last bullet).
+
 ## 24 October 2026: Return reservation contract — engineering scope pending
 
 - Owner availability policy is settled by Booking Operations v1.1 and `RULINGS-2026-10-24.md`: pending cleanup alone is not a hold. This is not an open product-policy question.
@@ -82,8 +124,8 @@ Available physical devices are iPhone 17 Pro and M4 iPad Pro. Device acceptance 
 
 ## 5. Official Bikram Sambat Calendar Expansion (§4.34)
 - **Question:** Provision of official month lengths for BS 2084 and beyond.
-- **Context:** `src/lib/bs.ts` currently anchors BS 2083. Expanding to 2084+ requires the official publication of the Nepal Calendar Determination Committee to prevent date calculation errors on VAT invoices.
-- **Current Status:** Blocked externally on official committee data.
+- **Context:** *(corrected 26 Oct 2026)* `src/lib/bs.ts` carries month lengths for **BS 2078–2095** (`BS_MAX_YEAR = 2095`, i.e. to April 2039 AD). The earlier wording "anchors BS 2083" was stale. Extending beyond 2095 needs the official publication of the Nepal Calendar Determination Committee.
+- **Current Status:** Not blocking; revisit before 2038.
 
 ---
 

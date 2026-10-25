@@ -16,7 +16,7 @@ When any two documents in this repository conflict or disagree, read in this exa
 5. docs/PRODUCT_RULES.md           — Canonical business laws & durability invariants
 6. docs/CURRENT_STATE.md           — Current verified runtime & release gate status
 7. PROGRESS.md                     — Chronological implementation ledger (what is actually built)
-8. PLAN.md                         — Dependency-ordered build roadmap (NOT PRESENT in the repo at b4c986a; skip this level — laws are in docs/PRODUCT_RULES.md, open decisions in docs/OPEN_DECISIONS.md)
+8. PLAN.md                         — Go-live roadmap, calendar and decisions index (re-created 26 Oct 2026; task cards in docs/plans/)
 9. Foundation Specification        — Canonical domain model & business concepts
 10. Historical Audits & Plans      — Point-in-time measurements (never current status)
 ```
@@ -41,7 +41,7 @@ If a document mentions a P0 or P1 blocker, check `docs/OPEN_DECISIONS.md`, `PROG
 When an agent or developer encounters an ambiguity, missing requirement, or edge-case conflict:
 - **Never invent a product decision** or fabricate mock data/compliance flags.
 - Check `docs/OPEN_DECISIONS.md` and binding rulings `RULINGS-*.md`.
-- If unruled, record a `TODO(decision)`, log the question in `docs/OPEN_DECISIONS.md` (`PLAN.md §4` is not in the repo), and proceed with unblocked work.
+- If unruled, record a `TODO(decision)`, log the question in `docs/OPEN_DECISIONS.md`, index it in `PLAN.md` §4.2, and proceed with unblocked work.
 
 ---
 
@@ -49,6 +49,8 @@ When an agent or developer encounters an ambiguity, missing requirement, or edge
 
 | Path | Purpose | Authority Level |
 |---|---|---|
+| [`PLAN.md`](../PLAN.md) | Go-live roadmap: finish line, tracks, calendar, decisions index, parallel-work protocol | **Active Truth** |
+| [`docs/plans/`](plans/README.md) | Build-ready task cards per track (T0–T10), owner checklist, migration ledger | **Active Truth** |
 | [`docs/CURRENT_STATE.md`](CURRENT_STATE.md) | Current phase, runtime gate verification, release readiness | **Active Truth** |
 | [`docs/PRODUCT_RULES.md`](PRODUCT_RULES.md) | Non-negotiable domain laws (Laws 1–16) and active rulings | **Active Truth** |
 | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) | Technical stack, data boundaries, offline queue architecture | **Active Truth** |
