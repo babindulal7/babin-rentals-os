@@ -248,7 +248,7 @@ scope too; a Return grant alone cannot authorize it. Revoking the
 last active grant scopes a user to nothing — never back to global. No §3 cell and no
 role set above changed.
 
-**Verified partial Return — 25 October 2026 (0175, local source only).** The same
+**Verified partial Return — 25 October 2026 (0177, local source only).** The same
 Return role ceiling and booking-branch grant constrain direct receipt writes and
 the money-free `read_verified_return_quantities` RPC. Usable serials and verified
 quantity receipts release only their own reservation when their Return session

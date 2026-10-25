@@ -2,7 +2,8 @@
 /**
  * scripts/test-partial-return-reservation-release.mjs
  *
- * Acceptance test suite for RULINGS 2026-10-24/25 & migrations 0174/0175:
+ * Acceptance test suite for RULINGS 2026-10-24/25 & migrations 0176/0177:
+ * Branch-local 0174/0175 were renumbered at merge before any live application.
  * Release reservations on verified physical return.
  *
  * Verifies:

@@ -1,5 +1,6 @@
 -- =============================================================================
--- 0174 — RULING 2026-10-24: Release reservations on verified physical return.
+-- 0176 — RULING 2026-10-24: Release reservations on verified physical return.
+-- Renumbered from branch-local 0174 during merge; never applied live.
 --
 -- ## What was wrong
 --

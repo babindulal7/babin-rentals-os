@@ -1,6 +1,7 @@
 -- RULING 2026-10-24: only a verified, persisted usable Return releases stock.
--- Extend 0174 to quantity receipts and keep genuine QC defects independent of
+-- 0177: Extend 0176 to quantity receipts and keep genuine QC defects independent of
 -- Reset completion. WRITTEN locally; never apply to hosted Supabase (N-5).
+-- Renumbered from branch-local 0175 during merge; never applied live.
 begin;
 
 -- Only verified new receipts enter this private ledger. Historical movements

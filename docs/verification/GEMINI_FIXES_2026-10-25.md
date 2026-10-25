@@ -32,7 +32,10 @@ matches displayed labels rather than only ISO sort keys.
 
 ## Return safety
 
-0175 extends 0174 with a private verified quantity ledger and branch enforcement.
+0177 extends 0176 with a private verified quantity ledger and branch enforcement.
+At merge, these branch-local Return migrations were renumbered from 0174/0175
+to preserve main's 0174 membership migration; neither Return migration was applied live.
+The verification receipts below retain their original pre-merge numbering and source.
 Usable returns release their own existing holds when the Return session completes.
 Open sessions retain holds, and retries reconcile the original saved attempt.
 Completed sessions refuse new facts or reopening. Quantity receipts cannot exceed
@@ -74,7 +77,7 @@ blocker focus, and persisted Discard. All interaction used visible Mock Mode.
 
 ## Deliberate limits
 
-- Migration 0175 is WRITTEN + VERIFIED locally; hosted application and production verification
+- Migration 0177 is WRITTEN + VERIFIED locally; hosted application and production verification
   remain Babin's backup/apply workflow under N-5. No live migration was run.
 - Missing backend capabilities remain visibly unavailable: new image/relationship
   persistence, evidence upload/capture, and quantity-only Reset completion. Existing
