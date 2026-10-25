@@ -7,24 +7,30 @@ import { UpgradeTierModal } from '../../clients/modals/UpgradeTierModal'
 import type { ClientRecord } from '../../../lib/queries/clients'
 
 const mock = vi.hoisted(() => ({
-  add: vi.fn(), enroll: vi.fn(), success: vi.fn(), sequence: 0, online: true,
-  clientId: '10000000-0000-4000-8000-000000000001', planId: '10000000-0000-4000-8000-000000000002',
+  add: vi.fn(), change: vi.fn(), success: vi.fn(), sequence: 0, online: true, plansLoading: false,
+  clientId: '10000000-0000-4000-8000-000000000001',
 }))
 vi.mock('../../../actions/inventory/manageStock', () => ({ addEquipmentUnits: mock.add }))
-vi.mock('../../../actions/clients/enrollMembership', () => ({ enrollClientMembership: mock.enroll }))
+vi.mock('../../../actions/clients/changeMembership', () => ({ changeMembership: mock.change, NOTE_MAX: 500 }))
+vi.mock('../../../lib/queries/useClients', () => ({
+  useMembershipPlans: () => ({
+    rows: mock.plansLoading ? [] : [{ level: 'Creator', label: 'Creator', individualDiscountPct: 10, defaultCreditLimit: 5_000_000, displayOrder: 1 }],
+    loading: mock.plansLoading, error: null, isEmpty: false, refetch: () => {},
+  }),
+}))
 vi.mock('../../../lib/auth', () => ({ useAuth: () => ({ user: { id: 'owner', role: 'Owner' } }) }))
 vi.mock('../../../lib/network', () => ({ useNetwork: () => mock.online }))
 vi.mock('../../../components/ui/Toast', () => ({ useToast: () => ({ showSuccessToast: mock.success }) }))
 vi.mock('../../../lib/supabase', () => ({
   newClientUuid: () => `request-${++mock.sequence}`,
-  supabase: { from: () => ({ select: () => ({ order: async () => ({ data: [
-    { id: mock.planId, level: 'Creator', label: 'Creator', individual_discount_pct: 10, annual_fee: 1000 },
-  ], error: null }) }) }) },
 }))
 vi.mock('../../../components/ui/Modal', () => ({ Modal: ({ isOpen, title, children, footer, onClose }: {
   isOpen: boolean; title: string; children: ReactNode; footer: ReactNode; onClose: () => void
 }) => isOpen ? <section aria-label={title}><button onClick={onClose}>Close dialog</button>{children}{footer}</section> : null }))
 vi.mock('../../../components/ui/Button', () => ({ Button: ({ children, onClick, disabled }: {
+  children: ReactNode; onClick?: (() => void) | undefined; disabled?: boolean | undefined
+}) => <button onClick={onClick} disabled={disabled}>{children}</button> }))
+vi.mock('../../../components/ui/Page', () => ({ Button: ({ children, onClick, disabled }: {
   children: ReactNode; onClick?: (() => void) | undefined; disabled?: boolean | undefined
 }) => <button onClick={onClick} disabled={disabled}>{children}</button> }))
 vi.mock('../../../components/ui/Icon', () => ({ default: () => null }))
@@ -47,7 +53,7 @@ async function chooseCreator() {
   await act(async () => { select.value = 'Creator'; select.dispatchEvent(new Event('change',{bubbles:true})) })
 }
 beforeEach(() => {
-  mock.add.mockReset(); mock.enroll.mockReset(); mock.success.mockReset(); mock.sequence=0; mock.online=true
+  mock.add.mockReset(); mock.change.mockReset(); mock.success.mockReset(); mock.sequence=0; mock.online=true; mock.plansLoading=false
   close.mockReset(); done.mockReset()
   host=document.createElement('div'); document.body.append(host); root=createRoot(host)
 })
@@ -84,21 +90,63 @@ describe('stock and membership committed-request identity', () => {
     expect(host.textContent).toContain('Connect to add units')
   })
   it('uses the saved client UUID and retains tier-change key on retry', async () => {
-    mock.enroll.mockRejectedValueOnce(new Error('Response lost')).mockResolvedValue({})
-    await render(<UpgradeTierModal isOpen client={client()} onClose={close} onSuccess={done} />)
+    mock.change.mockRejectedValueOnce(new Error('Response lost')).mockResolvedValue({})
+    await render(<UpgradeTierModal isOpen client={client()} hasMembership onClose={close} onSuccess={done} />)
     await chooseCreator()
     await act(async () => button('Apply Tier Change').click())
+    expect(host.textContent).toContain('Response lost')
+    expect(done).not.toHaveBeenCalled()
     await act(async () => button('Apply Tier Change').click())
-    expect(mock.enroll.mock.calls[0]![0].clientId).toBe(mock.clientId)
-    expect(mock.enroll.mock.calls[1]![0].clientUuid).toBe(mock.enroll.mock.calls[0]![0].clientUuid)
-    expect(done).toHaveBeenCalledOnce()
+    const first = mock.change.mock.calls[0]![0]
+    expect(first).toMatchObject({ clientDbId: mock.clientId, clientCode: 'C-001', planLevel: 'Creator' })
+    expect(first).not.toHaveProperty('feePaid')
+    expect(first).not.toHaveProperty('planId')
+    expect(first.clientUuid).toMatch(/^[0-9a-f-]{36}$/i)
+    expect(mock.change.mock.calls[1]![0].clientUuid).toBe(first.clientUuid)
+    expect(done).toHaveBeenCalledExactlyOnceWith('Creator')
   })
   it('fails closed when a client has only a display code', async () => {
     const missingId={...client(),dbId:undefined} as unknown as ClientRecord
-    await render(<UpgradeTierModal isOpen client={missingId} onClose={close} onSuccess={done} />)
+    await render(<UpgradeTierModal isOpen client={missingId} hasMembership onClose={close} onSuccess={done} />)
     await chooseCreator()
     await act(async () => button('Apply Tier Change').click())
-    expect(mock.enroll).not.toHaveBeenCalled()
+    expect(mock.change).not.toHaveBeenCalled()
     expect(host.textContent).toContain('Reload this client')
+  })
+  it('waits for the live membership plans before allowing a tier change', async () => {
+    mock.plansLoading = true
+    await render(<UpgradeTierModal isOpen client={client()} hasMembership onClose={close} onSuccess={done} />)
+    expect(host.textContent).toContain('Loading membership plans')
+    expect(button('Apply Tier Change').disabled).toBe(true)
+    expect(mock.change).not.toHaveBeenCalled()
+    mock.plansLoading = false
+    await render(<UpgradeTierModal isOpen client={client()} hasMembership onClose={close} onSuccess={done} />)
+    expect(host.querySelector('select')?.value).toBe('Creator')
+    expect(button('Apply Tier Change').disabled).toBe(false)
+  })
+  it('refuses offline tier changes before calling the action', async () => {
+    mock.online = false
+    await render(<UpgradeTierModal isOpen client={client()} hasMembership onClose={close} onSuccess={done} />)
+    await act(async () => button('Apply Tier Change').click())
+    expect(mock.change).not.toHaveBeenCalled()
+    expect(host.textContent).toContain('Connect to update client membership')
+  })
+  it('refuses concurrent tier changes and closing while a change is pending', async () => {
+    let finish: (() => void) | undefined
+    mock.change.mockImplementation(() => new Promise<void>(resolve => { finish = resolve }))
+    await render(<UpgradeTierModal isOpen client={client()} hasMembership onClose={close} onSuccess={done} />)
+    await act(async () => {
+      const submit = button('Apply Tier Change')
+      submit.click()
+      submit.click()
+      button('Close dialog').click()
+    })
+    expect(mock.change).toHaveBeenCalledTimes(1)
+    expect(close).not.toHaveBeenCalled()
+    expect(done).not.toHaveBeenCalled()
+    expect(button('Cancel').disabled).toBe(true)
+    await act(async () => finish?.())
+    expect(done).toHaveBeenCalledExactlyOnceWith('Creator')
+    expect(close).toHaveBeenCalledOnce()
   })
 })
