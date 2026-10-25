@@ -96,6 +96,7 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `npx eslint` on every file touched: exit 0.
 - Vitest: `OperationsShell.test.tsx` 32/32; the four-file focused run 52/52; `rentals/__tests__` + `operations/__tests__` + `components`: 1133 passed, **3 failed** — all in `resetQc.test.tsx` (quick-pass and QC identity). They follow another session's uncommitted change to Reset's QC behaviour (default QC reason, quick-pass no longer passes QC) in the same checkout, not this work. One blocker-jump test in `QuickOperationsPopUp.test.tsx` failed once mid-session while `handleBlockerJump` was being edited by that session, and passed on the next run.
 - After the Reset tile removal: `npx tsc --noEmit` exit 0, `eslint` on `ResetWorkspace.tsx` and its new test exit 0, `ResetWorkspace.embedded.test.tsx` 3/3, `ResetWorkspaceExpansion.test.tsx` 14/14; `resetQc.test.tsx` still shows the same 3 failures on the same lines (it mounts the full page, which this change does not touch).
+- After the Evidence wording trim: `npx tsc --noEmit` 0 errors; `eslint` on the four touched files exit 0; `OperationsShell`, `handoverWorkspace`, `realWorkspaceGuidance`, `PackingWorkspace.embedded`, `ResetWorkspace.embedded` and `resetQc` tests 75/75 (`resetQc` now passes — the other session fixed it). In the app the Pack Evidence card reads: row, one status line, Refresh button.
 - `npm run lint:progress`: exit 0 (this entry carries Completion and Remaining).
 - Not run: the full `npm test`, `check:pglite`, `check:lifecycle` (no migration or SQL touched — the counter below says so honestly).
 
@@ -114,7 +115,8 @@ Counted by `npm run completion`, not typed. Source changed since the last gate r
 
 - The rest of Reset's popup was left alone: its filters and QC are being changed by another session in the same files.
 - Evidence: follow-up on 25 Oct trimmed only repeated wording in Pack and Handover and shortened the shared status sentence; Return's and Reset's Evidence cards had no repeated text to cut.
-- Not driven: dark and glass themes, the read-only Reset view of a Closed booking, a real Supabase project, a physical tablet.
+- Themes driven on 25 Oct (mock build, Pack #818 popup): light, dark, high-contrast, dark+glass and light+glass. Measured label contrast on the solid themes — open stage and count 16.97–19.9:1, locked labels 6.91–7.73:1, fill vs surface 3.86–12.93:1 — and read the two glass variants by eye (surface is transparent there, so no ratio). In light+glass an empty track is almost invisible; the lock icon and label still say the stage is locked.
+- Not driven: the read-only Reset view of a Closed booking (every stage is locked in the list menus, so the popup cannot be opened for one from the UI; the `OperationsShell` unit test covers its "Read only" label), a real Supabase project, a physical tablet.
 - The three `resetQc.test.tsx` failures belong to the Reset QC change and need that change's author to update the tests or the behaviour.
 
 ## 2026-10-24 — Partial Return Reservation Release (0174), Server Contracts Repair (0173), Daily Closing Permission Alignment (L32), & Operations Fallback Safety

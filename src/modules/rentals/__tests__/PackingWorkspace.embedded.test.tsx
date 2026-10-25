@@ -152,6 +152,9 @@ describe('PackingWorkspace inside the Operations popup (embedded)', () => {
     expect(text).not.toContain('Units packed')
     expect(text).not.toContain('No missing items.')
     expect(text).not.toContain('operation_sessions.notes')
+    // The Evidence row already says the photo is required; a paragraph under it said it again.
+    expect(text).toContain('Booking photo — required before completion')
+    expect(text).not.toContain('One saved photo is required')
   })
 })
 

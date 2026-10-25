@@ -2148,10 +2148,8 @@ export default function PackingWorkspace({
                       style={{ color: photoCount > 0 ? 'var(--success-text)' : 'var(--progress-text)', flexShrink: 0 }}
                     />
                     <span style={{ flex: 1, color: 'var(--text2)' }}>Booking photo — required before completion</span>
-                    <span className="figure" style={{ color: 'var(--muted)' }}>{photoCount}</span>
                   </div>
-                  <p style={{ margin: '9px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
-                    One saved photo is required per booking before completion.</p>
+                  {/* RULING 2026-10-25: the paragraph and the count that restated this row, and the status line's second count, are gone. */}
                   <OperationEvidenceStatus id="pack-evidence" status={savedEvidence} />
                 </Card>
 
