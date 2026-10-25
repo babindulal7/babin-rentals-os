@@ -11,6 +11,7 @@ import { useFloorViewport } from '../floorPanelContext'
 let dirty = false
 let mockError: string | null = null
 let mockBlocked: string | null = null
+let mockProgress: { done: number; total: number } | undefined
 const completionCalls = vi.fn()
 
 type MockProps = {
@@ -29,6 +30,7 @@ function MockWorkspace({ bookingNo, onConfirmSuccess, onRegisterActions }: MockP
       label: 'Confirm Action',
       complete: () => { completionCalls(); onConfirmSuccess?.() },
       error: mockError,
+      progress: mockProgress,
     })
   }, [onConfirmSuccess, onRegisterActions])
   const band = useFloorViewport()
@@ -84,6 +86,10 @@ const originalFetch = fetchFloor.getMockImplementation()!
 let container: HTMLDivElement
 let root: Root
 
+/** The stage the header's progress bar marks as open (RULING 2026-10-25: the subtitle no longer names it). */
+const openStage = () =>
+  container.querySelector('nav[aria-label="Operation stage"] button[aria-current="step"]')?.getAttribute('aria-label') ?? ''
+
 async function mount(
   onClose = vi.fn(),
   status: 'Quote' | 'Booked' | 'Packed' | 'On Rent' | 'Returned' | 'Closed' = 'Booked',
@@ -118,6 +124,7 @@ beforeEach(() => {
   dirty = false
   mockError = null
   mockBlocked = null
+  mockProgress = undefined
   completionCalls.mockClear()
   fetchFloor.mockReset().mockImplementation(originalFetch)
 })
@@ -220,7 +227,8 @@ describe('Task 5 — Operations popup navigation and state', () => {
     await mount(vi.fn(), 'On Rent', 'Return')
     const confirm = [...container.querySelectorAll('button')].find(b => b.textContent?.trim() === 'Confirm Return session')
     await act(async () => confirm?.click())
-    expect(container.textContent).toContain('Return & Inspection · Status: On Rent')
+    expect(container.textContent).toContain('Status: On Rent')
+    expect(openStage()).toContain('Return & Inspection')
     expect(container.querySelector('button[aria-label^="Cleaning & Reset"]')?.hasAttribute('disabled')).toBe(true)
     expect(container.querySelector('button[aria-current="step"]')?.getAttribute('aria-label')).toContain('Return & Inspection')
   })
@@ -235,7 +243,8 @@ describe('Task 5 — Operations popup navigation and state', () => {
     expect([...container.querySelectorAll('button')].find(b => b.textContent === 'Retry booking status')).toBeDefined()
     mockStage = 'Returned'
     await act(async () => [...container.querySelectorAll('button')].find(b => b.textContent === 'Retry booking status')?.click())
-    expect(container.textContent).toContain('Cleaning & Reset · Status: Returned')
+    expect(container.textContent).toContain('Status: Returned')
+    expect(openStage()).toContain('Cleaning & Reset')
     expect(completionCalls).toHaveBeenCalledTimes(1)
   })
 
@@ -308,7 +317,9 @@ describe('Task 5 — Operations popup navigation and state', () => {
     mockStage = 'Packed'
     await act(async () => confirmBtn?.click())
 
-    expect(container.textContent).toContain('Handover · Status: Packed')
+    expect(container.textContent).toContain('Status: Packed')
+
+    expect(openStage()).toContain('Handover')
     const leftBtn = [...container.querySelectorAll('button')].find(
       (b) => b.textContent?.trim() === '← Packing',
     )
@@ -329,7 +340,8 @@ describe('Task 5 — Operations popup navigation and state', () => {
     await act(async () => leftBtn?.click())
 
     expect(onClose).not.toHaveBeenCalled()
-    expect(container.textContent).toContain('Packing · Status: Packed')
+    expect(container.textContent).toContain('Status: Packed')
+    expect(openStage()).toContain('Packing')
     expect([...container.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Close')).toBe(true)
   })
 
@@ -355,7 +367,8 @@ describe('Task 5 — Operations popup navigation and state', () => {
 
     // Navigated back to packing, modal remains open
     expect(onClose).not.toHaveBeenCalled()
-    expect(container.textContent).toContain('Packing · Status: Packed')
+    expect(container.textContent).toContain('Status: Packed')
+    expect(openStage()).toContain('Packing')
   })
 
   it('Return & Inspection shows ← Handover and Confirm Return session', async () => {
@@ -414,7 +427,8 @@ describe('Task 5 — Operations popup navigation and state', () => {
 
     // Clicking completed Packing tab switches to Packing view
     await act(async () => packTab?.click())
-    expect(container.textContent).toContain('Packing · Status: On Rent')
+    expect(container.textContent).toContain('Status: On Rent')
+    expect(openStage()).toContain('Packing')
     // Primary button indicates completed
     const completedBtn = [...container.querySelectorAll('button')].find(
       (b) => b.textContent?.trim() === 'Completed ✓',
@@ -451,18 +465,67 @@ describe('Task 5 — Operations popup navigation and state', () => {
 
   it('switches between unlocked stages using 1-4 number keys', async () => {
     await mount(vi.fn(), 'On Rent', 'Pack')
-    expect(container.textContent).toContain('Packing · Status: On Rent')
+    expect(container.textContent).toContain('Status: On Rent')
+    expect(openStage()).toContain('Packing')
 
     // Press '2' to switch to Handover
     await act(async () => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: '2' }))
     })
-    expect(container.textContent).toContain('Handover · Status: On Rent')
+    expect(container.textContent).toContain('Status: On Rent')
+    expect(openStage()).toContain('Handover')
 
     // Press '3' to switch to Return
     await act(async () => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: '3' }))
     })
-    expect(container.textContent).toContain('Return & Inspection · Status: On Rent')
+    expect(container.textContent).toContain('Status: On Rent')
+    expect(openStage()).toContain('Return & Inspection')
+  })
+})
+
+describe('RULING 2026-10-25 — the stage progress bar lives in the header', () => {
+  const stage = (name: string) =>
+    [...container.querySelectorAll<HTMLButtonElement>('nav[aria-label="Operation stage"] button')].find((b) =>
+      b.getAttribute('aria-label')?.startsWith(name),
+    )
+  const fillOf = (button: HTMLButtonElement | undefined) =>
+    button?.querySelector<HTMLElement>('.operations-shell__stage-fill')?.style.transform
+
+  it('is inside the modal header, not the scrolling body', async () => {
+    await mount()
+    expect(container.querySelector('.app-modal__header nav[aria-label="Operation stage"]')).not.toBeNull()
+    expect(container.querySelector('.app-modal__content nav[aria-label="Operation stage"]')).toBeNull()
+    expect(container.querySelectorAll('nav[aria-label="Operation stage"] button')).toHaveLength(4)
+  })
+
+  it('shows the live count of the open stage and fills in proportion to it', async () => {
+    mockProgress = { done: 1, total: 2 }
+    await mount()
+    const pack = stage('Packing')
+    expect(pack?.querySelector('.operations-shell__stage-count')?.textContent).toBe('1/2')
+    expect(pack?.getAttribute('aria-label')).toContain('1/2')
+    expect(fillOf(pack)).toBe('scaleX(0.5)')
+  })
+
+  it('draws a completed stage full and a stage that is not open yet empty', async () => {
+    await mount(vi.fn(), 'Packed', 'Handover')
+    expect(fillOf(stage('Packing'))).toBe('scaleX(1)')
+    expect(stage('Packing')?.getAttribute('data-state')).toBe('done')
+    expect(fillOf(stage('Return'))).toBe('scaleX(0)')
+    expect(stage('Return')?.hasAttribute('disabled')).toBe(true)
+  })
+
+  it('does not invent a count when the workspace has reported none', async () => {
+    await mount()
+    expect(container.querySelector('.operations-shell__stage-count')).toBeNull()
+    expect(fillOf(stage('Packing'))).toBe('scaleX(0)')
+  })
+
+  it('leaves the subtitle with the booking status only — the bar names the stage', async () => {
+    await mount(vi.fn(), 'Packed', 'Handover')
+    const header = container.querySelector('.app-modal__header')?.textContent ?? ''
+    expect(header).toContain('Status: Packed')
+    expect(header).not.toContain('Handover · Status')
   })
 })

@@ -8,6 +8,7 @@ import { ToastProvider } from '../../ui/Toast'
 const role = vi.hoisted(() => ({ current: 'Owner' }))
 const keys = vi.hoisted(() => ({ n: 0 }))
 const saveRecord = vi.hoisted(() => vi.fn())
+const saveRecordSection = vi.hoisted(() => vi.fn())
 const updateEquipment = vi.hoisted(() => vi.fn())
 const readRecordEditor = vi.hoisted(() => vi.fn())
 const inventoryRows = vi.hoisted(() => ({ current: [] as Array<{ id: string; name: string; model: string | null }> }))
@@ -15,7 +16,7 @@ const inventoryRows = vi.hoisted(() => ({ current: [] as Array<{ id: string; nam
 vi.mock('../../../lib/auth', () => ({ useAuth: () => ({ user: { id: 'u-1', name: 'T', role: role.current }, loading: false, isLocked: false }) }))
 vi.mock('../../../lib/network', () => ({ useNetwork: () => true }))
 vi.mock('../../../lib/supabase', () => ({ supabase: {}, newClientUuid: () => `key-${++keys.n}` }))
-vi.mock('../../../actions/recordEditor', () => ({ saveRecord }))
+vi.mock('../../../actions/recordEditor', () => ({ saveRecord, saveRecordSection }))
 vi.mock('../../../actions/inventory/updateEquipment', () => ({ updateEquipment }))
 vi.mock('../../../lib/queries/recordEditor', () => ({
   readRecordEditor,
@@ -80,6 +81,7 @@ beforeEach(() => {
   role.current = 'Owner'
   keys.n = 0
   saveRecord.mockReset()
+  saveRecordSection.mockReset()
   updateEquipment.mockReset()
   readRecordEditor.mockReset()
   inventoryRows.current = []
@@ -425,5 +427,105 @@ describe('RecordForm - equipment add assists (Add Equipment v3.0, 8 Oct 2026)', 
     await click(button('Add 1 unit'))
     await click(button('Create equipment'))
     expect(saveRecord).toHaveBeenCalledTimes(1)
+  })
+})
+
+
+describe('RecordForm section persistence', () => {
+  it('saves Identity while preserving unsaved Notes and the leave warning', async () => {
+    readRecordEditor.mockResolvedValue(clientSnapshot)
+    saveRecordSection.mockResolvedValue({ ...clientSnapshot, revision: 'rev-2', values: { ...clientSnapshot.values, name: 'New Films' } })
+    await mount('client', 'cl-1')
+    await type('name', 'New Films')
+    await type('notes', 'Draft note that must survive')
+    await click(button('Save Identity'))
+    await flush()
+    expect(saveRecordSection).toHaveBeenCalledOnce()
+    expect(saveRecordSection.mock.calls[0]![0].values).not.toHaveProperty('notes')
+    expect(field('notes')!.value).toBe('Draft note that must survive')
+    await click(button('Cancel'))
+    expect(container.textContent).toContain('Discard unsaved changes?')
+  })
+
+  it('continues warning about edits made after a successful section save', async () => {
+    readRecordEditor.mockResolvedValue(clientSnapshot)
+    saveRecordSection.mockResolvedValue({ ...clientSnapshot, revision: 'rev-2', values: { ...clientSnapshot.values, name: 'New Films' } })
+    await mount('client', 'cl-1')
+    await type('name', 'New Films')
+    await click(button('Save Identity'))
+    await type('notes', 'Later unsaved note')
+    await click(button('Cancel'))
+    expect(container.textContent).toContain('Discard unsaved changes?')
+    expect(field('notes')!.value).toBe('Later unsaved note')
+  })
+
+  it('retries an ambiguous section failure with the same key and revision', async () => {
+    readRecordEditor.mockResolvedValue(clientSnapshot)
+    saveRecordSection.mockRejectedValueOnce(new Error('Response lost'))
+    saveRecordSection.mockResolvedValueOnce({ ...clientSnapshot, revision: 'rev-2', values: { ...clientSnapshot.values, name: 'New Films' } })
+    await mount('client', 'cl-1')
+    await type('name', 'New Films')
+    await click(button('Save Identity'))
+    await click(button('Save Identity'))
+    expect(saveRecordSection).toHaveBeenCalledTimes(2)
+    expect(saveRecordSection.mock.calls[1]![0].clientUuid).toBe(saveRecordSection.mock.calls[0]![0].clientUuid)
+    expect(saveRecordSection.mock.calls[1]![0].expectedRevision).toBe('rev-1')
+  })
+
+  it('serializes section and whole-record saving while preserving sibling rows', async () => {
+    readRecordEditor.mockResolvedValue(clientSnapshot)
+    let resolve!: (value: typeof clientSnapshot) => void
+    saveRecordSection.mockReturnValue(new Promise(result => { resolve = result }))
+    await mount('client', 'cl-1')
+    await type('name', 'New Films')
+    await click(button('Save Identity'))
+    expect(button('Save Contact')!.disabled).toBe(true)
+    expect(container.querySelector<HTMLButtonElement>('button[aria-label="Save changes"]')!.disabled).toBe(true)
+    expect(field('phone')!.disabled).toBe(true)
+    await click(button('Save Contact'))
+    await click(button('Save changes'))
+    expect(saveRecordSection).toHaveBeenCalledOnce()
+    expect(saveRecord).not.toHaveBeenCalled()
+    await act(async () => resolve({ ...clientSnapshot, revision: 'rev-2', values: { ...clientSnapshot.values, name: 'New Films' } }))
+    expect([...container.querySelectorAll('input')].some(input => input.value === 'Sita Rai')).toBe(true)
+  })
+
+  it('uses the canonical address section key and keeps initial creation explicit', async () => {
+    await mount('client')
+    expect(button('Save Identity')!.disabled).toBe(true)
+    expect(container.textContent).toContain('Create the record first')
+    await act(async () => root.unmount()); container.remove()
+    readRecordEditor.mockResolvedValue(clientSnapshot)
+    saveRecordSection.mockResolvedValue({ ...clientSnapshot, revision: 'rev-2' })
+    await mount('client', 'cl-1')
+    await type('city', 'Lalitpur')
+    await click(button('Save Addresses'))
+    expect(saveRecordSection.mock.calls[0]![0].section).toBe('address')
+    expect(saveRecordSection.mock.calls[0]![0].values.city).toBe('Lalitpur')
+  })
+})
+
+
+describe('equipment section save parity', () => {
+  const equipment = {id: 'equipment-1', code: 'EQ-1', revision: 'rev-1', values: {name: 'FX3', brand: 'Sony', category_id: 'c1', tracking_mode: 'Serialised', quantity_unit: 'piece', daily_rate: 100, rental_enabled: true}, rows: [{id: 'unit-1', serial_no: 'SN-1', asset_tag: 'EQ-1-01', warehouse_id: 'c1', rack: 'A', shelf: null, bin: null}]}
+  it('marks edited equipment sections dirty and exposes all supported section saves', async () => {
+    readRecordEditor.mockResolvedValue(equipment)
+    await mount('equipment', equipment.id)
+    await type('name', 'Edited FX3')
+    const identity = [...container.querySelectorAll('[data-record-section]')].find(section => section.querySelector('h2')?.textContent === 'Identity')!
+    expect(identity.querySelector('[role="status"]')?.textContent).toContain('Unsaved changes')
+    for (const label of ['Save Stock & Units', 'Save Purchase', 'Save Pricing & Rental', 'Save Maintenance & Documents']) expect(button(label)).toBeDefined()
+    expect(button('Save Relationships')).toBeUndefined()
+    expect(container.textContent).toContain('photos are not yet saveable')
+  })
+
+  it('sends unit locations as row patches without product-level rack/shelf fields', async () => {
+    readRecordEditor.mockResolvedValue(equipment)
+    saveRecordSection.mockResolvedValue({...equipment, revision: 'rev-2', rows: [{...equipment.rows[0], rack: 'B'}]})
+    await mount('equipment', equipment.id)
+    const rack = container.querySelector<HTMLInputElement>('[aria-label="rack for unit 1"]')!
+    await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(rack, 'B'); rack.dispatchEvent(new Event('input', {bubbles: true})) })
+    await click(button('Save Location'))
+    expect(saveRecordSection.mock.calls[0]![0]).toMatchObject({section: 'location', values: {}, rows: [{id: 'unit-1', warehouse_id: 'c1', rack: 'B'}]})
   })
 })

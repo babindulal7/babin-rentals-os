@@ -17,6 +17,7 @@ import {
   canReleaseDeposit,
   canReversePayment,
   canOverrideCreditLimit,
+  canApproveDailyClosing,
   canManageSettings,
   canPublishTeamViews,
   canExportClientPii,
@@ -194,6 +195,25 @@ describe('canOverrideCreditLimit', () => {
 
   it('is blocked offline', () => {
     for (const role of ALL_ROLES) expect(canOverrideCreditLimit(role, false)).toBe(false)
+  })
+})
+
+describe('canApproveDailyClosing', () => {
+  /* RULING 2026-10-18: the set `daily_closings_finance_insert` admits since
+     0117 redefined `auth_is_finance_or_admin()`. L32 in e2e-lifecycle.mjs
+     asserts the same four against the policy itself. */
+  it('is Owner, Admin, Manager and Accounts — the four RLS admits since 0117', () => {
+    const allowed = ALL_ROLES.filter((r) => canApproveDailyClosing(r))
+    expect(allowed).toEqual(['Owner', 'Admin', 'Manager', 'Accounts'])
+  })
+
+  it('refuses Coordinator, who can read the closing but not sign it', () => {
+    expect(canViewMoney('Coordinator')).toBe(true)
+    expect(canApproveDailyClosing('Coordinator')).toBe(false)
+  })
+
+  it('is blocked offline', () => {
+    for (const role of ALL_ROLES) expect(canApproveDailyClosing(role, false)).toBe(false)
   })
 })
 

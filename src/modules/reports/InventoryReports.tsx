@@ -1,17 +1,17 @@
 import { Link } from 'react-router-dom'
 import { PageHeader, cardStyle } from '../../components/ui/Page'
-import { DataTableShell } from '../../components/ui/DataTable'
 import { ReportToolbar } from '../../components/ui/ReportToolbar'
 import { PageBody } from '../../components/ui/PageBody'
 import { useLoad } from '../../lib/queries/useLoad'
 import type { ReportCsvRow } from '../../components/ui/ReportToolbar'
-import { getInventoryReportSummary, sharePercent, type InventoryReportSummary } from '../../lib/queries/inventoryReports'
+import { getInventoryReportSummary, sharePercent, type InventoryReportSummary, type StatusCount } from '../../lib/queries/inventoryReports'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import ShortageSection from './ShortageSection'
 import {
   ReportKpiCard,
   ReportKpiStrip,
   ReportChartCard,
+  ReportDataTable,
 } from '../../components/ui/reports'
 import '../../styles/reportChartTokens.css'
 
@@ -163,29 +163,15 @@ export default function InventoryReports() {
                 </div>
               )}
 
-              <DataTableShell ariaLabel="Units by Status">
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 'var(--t-meta)' }}>
-                  <thead>
-                    <tr style={{ color: 'var(--text2)', borderBottom: '1px solid var(--border)' }}>
-                      <th style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>Status</th>
-                      <th style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>Count</th>
-                      <th style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>Share of all units</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {summary.byStatus.map((r) => {
-                      const pct = sharePercent(r.count, summary.totalUnits)
-                      return (
-                        <tr key={r.status} style={{ borderTop: '1px solid var(--border)' }}>
-                          <td style={{ padding: 'var(--sp-sm) var(--sp-md)', fontWeight: 600 }}>{r.status}</td>
-                          <td style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>{r.count}</td>
-                          <td style={{ padding: 'var(--sp-sm) var(--sp-md)' }}>{pct === null ? 'Not measured' : `${pct}%`}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </DataTableShell>
+              <ReportDataTable<StatusCount>
+                ariaLabel="Units by Status" rows={summary.byStatus} getRowId={row => row.status}
+                sourceAction={<Link to="/inventory" style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>Open source inventory</Link>}
+                columns={[
+                  { id: 'status', header: 'Status', cell: row => row.status, sortValue: row => row.status },
+                  { id: 'count', header: 'Count', align: 'right', cell: row => row.count, sortValue: row => row.count },
+                  { id: 'share', header: 'Share of all units', align: 'right', cell: row => { const share = sharePercent(row.count, summary.totalUnits); return share === null ? 'Not measured' : `${share}%` }, sortValue: row => sharePercent(row.count, summary.totalUnits) },
+                ]}
+              />
             </ReportChartCard>
           </>
         )}

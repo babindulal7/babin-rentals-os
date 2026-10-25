@@ -164,6 +164,7 @@ export function ReportTemplate({ report, onBackToCatalog }: ReportTemplateProps)
     : ''
 
   const csvRows = (): ReportCsvRow[] => {
+    if (!IS_MOCK) return [['Report', report.name], ['Status', 'Not tracked yet'], ['Reason', 'A verified live source is not connected to this report.'], ['Available source screen', report.route ?? 'Not available']]
     if (!projection) return [['Report', report.name], ['Status', 'Not tracked yet'], ['Reason', report.needs ?? '']]
     return [
       ['Report', report.name],
@@ -235,11 +236,11 @@ export function ReportTemplate({ report, onBackToCatalog }: ReportTemplateProps)
           §9.7 — "Building it once gives all 45 filters and export." */}
       <ReportToolbar
         title={report.name}
-        {...(range ? { value: { dateRange: reportDateRange('period', range.from, range.to) } } : {})}
+        {...(IS_MOCK && range ? { value: { dateRange: reportDateRange('period', range.from, range.to) } } : {})}
         {...(projection ? { csv: { filename: report.key, build: csvRows } } : {})}
-        compare={compare}
-        onCompareChange={setCompare}
+        {...(IS_MOCK ? { compare, onCompareChange: setCompare } : {})}
       >
+        {IS_MOCK && <>
         <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--t-meta)', color: 'var(--text2)', fontWeight: 600 }}>
           Period
           <select
@@ -272,6 +273,7 @@ export function ReportTemplate({ report, onBackToCatalog }: ReportTemplateProps)
         >
           Save view
         </Button>
+        </>}
       </ReportToolbar>
 
       {/* ── the body: either the report, or why there is no report ───────── */}
@@ -296,9 +298,10 @@ export function ReportTemplate({ report, onBackToCatalog }: ReportTemplateProps)
         <Card>
           <EmptyState
             icon={<Icon name="calendar" size={26} />}
-            title="No figures for this period"
-            description={`${period?.why ?? 'The selected range is outside the ledger.'} The ledger covers ${LEDGER_COVERAGE}.`}
+            title={IS_MOCK ? 'No figures for this period' : 'Not tracked yet'}
+            description={IS_MOCK ? `${period?.why ?? 'The selected range is outside the ledger.'} The ledger covers ${LEDGER_COVERAGE}.` : 'A verified live source is not connected to this report. Changing the date range cannot supply this metric.'}
           />
+          {!IS_MOCK && report.route && <p><Link to={report.route}>Open the available source report</Link></p>}
         </Card>
       ) : (
         <>

@@ -5,7 +5,7 @@ import { useNetwork } from '../../lib/network'
 import { newClientUuid } from '../../lib/supabase'
 import { saveRecord } from '../../actions/recordEditor'
 import { updateEquipment } from '../../actions/inventory/updateEquipment'
-import { recordDefaults, recordFields, recordPayload, validateRecord, type RecordField, type RecordKind, type RecordSnapshot, type RecordValues } from '../../lib/recordEditor'
+import { applySavedRecordSection, recordSectionKey, recordDefaults, recordFields, recordPayload, validateRecord, type RecordField, type RecordKind, type RecordSnapshot, type RecordValues } from '../../lib/recordEditor'
 import { readRecordEditor, recordEditorOptions } from '../../lib/queries/recordEditor'
 import { listInventory } from '../../lib/queries/inventory'
 import { findClientsByPhoneTail } from '../../lib/queries/clients'
@@ -47,9 +47,9 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
   const [duplicate,setDuplicate]=useState<{id:string;name:string}|null>(null)
   /** Add Equipment §3: Manufacturer shows only when it differs from Brand. */
   const [manufacturerDiffers,setManufacturerDiffers]=useState(false)
-  const saved=useRef(false); const submitting=useRef(false); const saveKey=useRef<{fingerprint:string;key:string}|null>(null)
+  const submitting=useRef(false); const saveKey=useRef<{fingerprint:string;key:string}|null>(null)
   const initial=useRef(JSON.stringify({values:{...recordDefaults[kind]},rows:[]}))
-  const fingerprint=JSON.stringify({values,rows}); const dirty=!saved.current && fingerprint!==initial.current
+  const fingerprint=JSON.stringify({values,rows}); const dirty=fingerprint!==initial.current
   useUnsavedRecord(dirty)
   const permitted=Boolean(user && rolesFor(kind,Boolean(recordId)).includes(user.role))
   const equipmentDuplicate=useEquipmentDuplicate(values.name,values.model,kind==='equipment' && !recordId)
@@ -60,7 +60,7 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
   useEffect(()=>{
     if(!recordId) return
     let active=true; setLoading(true); setError('')
-    void readRecordEditor(kind,recordId).then(result=>{if(!active)return; setSnapshot(result);setValues(result.values);setRows(result.rows);initial.current=JSON.stringify({values:result.values,rows:result.rows});saved.current=false}).catch((e:unknown)=>{if(active)setError(e instanceof Error?e.message:String(e))}).finally(()=>{if(active)setLoading(false)})
+    void readRecordEditor(kind,recordId).then(result=>{if(!active)return; setSnapshot(result);setValues(result.values);setRows(result.rows);initial.current=JSON.stringify({values:result.values,rows:result.rows})}).catch((e:unknown)=>{if(active)setError(e instanceof Error?e.message:String(e))}).finally(()=>{if(active)setLoading(false)})
     return()=>{active=false}
   },[kind,recordId,reload])
   useEffect(()=>{
@@ -100,44 +100,28 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
     kind,
     recordId: snapshot?.id ?? recordId,
     snapshot,
-    onSnapshotUpdated: (newSnapshot) => {
+    onSnapshotUpdated: (newSnapshot, change) => {
       setSnapshot(newSnapshot)
-      setValues((prev) => ({ ...prev, ...newSnapshot.values }))
-      if (newSnapshot.rows) setRows(newSnapshot.rows)
-      saved.current = true
-    },
-    onCreateInitialRecord: async (_sectionKey, sectionFields, sectionRows) => {
-      const mergedValues = { ...values, ...sectionFields }
-      const invalid = validateRecord(kind, mergedValues)
-      setErrors(invalid)
-      if (Object.keys(invalid).length) {
-        focusRecordField(fieldId(Object.keys(invalid)[0]!))
-        throw new Error('Please resolve validation errors before saving.')
-      }
-      const clientUuid = newClientUuid()
-      const input = {
-        kind,
-        id: null,
-        expectedRevision: null,
-        clientUuid,
-        values: recordPayload(kind, mergedValues, false),
-        rows: sectionRows ?? rows,
-      }
-      const ctx = { userId: user!.id, role: user!.role, isOnline: online }
-      const res = await saveRecord(input, ctx)
-      saved.current = true
-      return {
-        id: res.id,
-        kind,
-        code: res.code,
-        revision: res.revision,
-        values: mergedValues,
-        rows: sectionRows ?? rows,
-      } as RecordSnapshot
+      setValues(prev => applySavedRecordSection({ values: prev, rows }, newSnapshot, change).values)
+      if (change.rows !== undefined) setRows(newSnapshot.rows)
+      initial.current = JSON.stringify({ values: newSnapshot.values, rows: newSnapshot.rows })
     },
     userId: user?.id,
     userRole: user?.role,
+    isBusy: () => submitting.current,
   })
+  const formBusy = busy || sectionManager.savingSection !== null
+  const { markSectionDirty } = sectionManager
+
+  useEffect(() => {
+    const baseline = snapshot?.values ?? recordDefaults[kind]
+    for (const f of recordFields[kind]) {
+      if (String(values[f.key] ?? '') !== String(baseline[f.key] ?? '')) markSectionDirty(recordSectionKey(f.section))
+    }
+    if (JSON.stringify(rows) !== JSON.stringify(snapshot?.rows ?? [])) {
+      markSectionDirty(kind === 'client' ? 'contact' : kind === 'bundle' ? 'components' : 'location')
+    }
+  }, [kind, values, rows, snapshot, markSectionDirty])
 
   const set = (key: string, value: string | boolean) => {
     setValues((v) => ({ ...v, [key]: value }))
@@ -148,7 +132,7 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
     })
     const fieldSpec = recordFields[kind].find((f) => f.key === key)
     if (fieldSpec) {
-      sectionManager.markSectionDirty(fieldSpec.section.toLowerCase())
+      sectionManager.markSectionDirty(recordSectionKey(fieldSpec.section))
     }
   }
   function exit(){if(onDone){onDone();return} if(recordId){const params=new URLSearchParams(location.search);params.delete('action');navigate(`${location.pathname}${params.size?`?${params}`:''}`)}else navigate(kind==='bundle'?'/inventory?tab=bundles':routes[kind])}
@@ -177,7 +161,7 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
     })
   }
   const fieldId=(key:string)=>`record-${key}`
-  const sectionId=(section:string)=>`record-section-${section.toLowerCase().replace(/[^a-z]+/g,'-')}`
+  const sectionId=(section:string)=>`record-section-${recordSectionKey(section).replace(/[^a-z]+/g,'-')}`
   const errorList=Object.entries(errors).map(([key,message])=>({id:fieldId(key),message}))
   function sectionHasValue(section:string){return recordFields[kind].some(f=>f.section===section && (f.type==='checkbox'?false:String(values[f.key]??'').trim()!=='' && String(values[f.key])!==String(recordDefaults[kind][f.key]??'')))}
   const sectionHasError = (section: string) => recordFields[kind].some((f) => f.section === section && Boolean(errors[f.key]))
@@ -189,23 +173,24 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
     const blank={...recordDefaults[kind]}
     // RULING 2026-10-08 row 3: nothing carries over — including the trunk's equipment-assist toggle, which merged in beside this.
     setValues(blank);setRows([]);setErrors({});setDuplicate(null);setManufacturerDiffers(false)
-    saveKey.current=null;saved.current=false;initial.current=JSON.stringify({values:blank,rows:[]})
+    saveKey.current=null;initial.current=JSON.stringify({values:blank,rows:[]})
     focusRecordField(fieldId('name'))
   }
   async function save(then:'open'|'another'='open'){
-    if(submitting.current || !user || !permitted)return
+    if(submitting.current || sectionManager.isSaving() || !user || !permitted)return
     const invalid=validateRecord(kind,values)
     if(kind==='bundle' && !rows.length)invalid.components='Add at least one component.'
     if(kind==='equipment' && values.tracking_mode==='Serialised' && !rows.length)invalid.units='Add at least one unit.'
     setErrors(invalid)
     if(Object.keys(invalid).length){focusRecordField(fieldId(Object.keys(invalid)[0]!));return}
     submitting.current=true;setBusy(true);setError('')
-    if(saveKey.current?.fingerprint!==fingerprint)saveKey.current={fingerprint,key:newClientUuid()}
+    const requestFingerprint=JSON.stringify({fingerprint,id:snapshot?.id??null,revision:snapshot?.revision??null})
+    if(saveKey.current?.fingerprint!==requestFingerprint)saveKey.current={fingerprint:requestFingerprint,key:newClientUuid()}
     try{
       const input={kind,id:snapshot?.id??null,expectedRevision:snapshot?.revision??null,clientUuid:saveKey.current!.key,values:recordPayload(kind,values,Boolean(recordId)),rows}
       const ctx={userId:user.id,role:user.role,isOnline:online}
       const result=kind==='equipment' && snapshot?await updateEquipment({...input,id:snapshot.id,expectedRevision:snapshot.revision},ctx):await saveRecord(input,ctx)
-      saved.current=true;initial.current=fingerprint
+      initial.current=fingerprint
       if(then==='another'){showSuccessToast(`${names[kind]} saved`,`${result.code} · the form is clear for the next one`);resetForNext();return}
       showSuccessToast(`${names[kind]} saved`,result.code)
       if(onDone && recordId){onDone();return}
@@ -216,13 +201,13 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
   function renderField(f:RecordField){
     if(kind==='client' && f.key==='org_subtype' && values.type_parent!=='Organisation')return null
     if(kind==='equipment' && f.key==='total_quantity' && values.tracking_mode==='Serialised')return null
-    if(kind==='equipment' && f.key==='manufacturer' && !manufacturerDiffers)return <label className="record-field record-field--inline" key="manufacturer-differs" htmlFor="record-manufacturer-differs"><input id="record-manufacturer-differs" type="checkbox" disabled={busy} checked={false} onChange={()=>setManufacturerDiffers(true)}/><span>Made by a different manufacturer than the brand</span></label>
-    const disabled=busy || Boolean(recordId && f.createOnly)
+    if(kind==='equipment' && f.key==='manufacturer' && !manufacturerDiffers)return <label className="record-field record-field--inline" key="manufacturer-differs" htmlFor="record-manufacturer-differs"><input id="record-manufacturer-differs" type="checkbox" disabled={formBusy} checked={false} onChange={()=>setManufacturerDiffers(true)}/><span>Made by a different manufacturer than the brand</span></label>
+    const disabled=formBusy || Boolean(recordId && f.createOnly)
     const props={id:`record-${f.key}`,disabled,'aria-invalid':Boolean(errors[f.key]),'aria-describedby':errors[f.key]?`record-${f.key}-error`:undefined}
     return <label className="record-field" key={f.key} htmlFor={props.id}><span>{f.label}{f.required?' *':''}</span>{f.type==='checkbox'?<input {...props} type="checkbox" checked={Boolean(values[f.key])} onChange={e=>set(f.key,e.target.checked)}/>:f.type==='select'?<select {...props} value={String(values[f.key]??'')} onChange={e=>set(f.key,e.target.value)}><option value="">Select…</option>{f.source?(options[f.source]??[]).map(o=><option key={o.id} value={o.id}>{o.name}</option>):f.options?.map(o=><option key={o} value={o}>{o}</option>)}</select>:f.type==='textarea'?<textarea {...props} value={String(values[f.key]??'')} onChange={e=>set(f.key,e.target.value)}/>:<input {...props} type={f.type==='date'?'date':f.type==='number'?'number':'text'} inputMode={f.type==='money'?'decimal':undefined} value={String(values[f.key]??'')} onChange={e=>set(f.key,e.target.value)}/>} {errors[f.key]&&<span id={`record-${f.key}-error`} role="alert">{errors[f.key]}</span>}</label>
   }
   function rowField(row:RecordValues,index:number,key:string,label:string,type='text'){
-    return <label className="record-field" key={key}><span>{label}</span>{key==='warehouse_id'?<select disabled={busy} value={String(row[key]??'')} onChange={e=>setRows(prev=>prev.map((r,i)=>i===index?{...r,[key]:e.target.value}:r))}><option value="">Select warehouse…</option>{(options.warehouses??[]).map(w=><option value={w.id} key={w.id}>{w.name}</option>)}</select>:<input disabled={busy} type={type} min={type==='number'?1:undefined} checked={type==='checkbox'?Boolean(row[key]):undefined} value={type==='checkbox'?undefined:String(row[key]??'')} onChange={e=>setRows(prev=>prev.map((r,i)=>i===index?{...r,[key]:type==='checkbox'?e.target.checked:type==='number'?Number(e.target.value):e.target.value}:r))}/>}</label>
+    return <label className="record-field" key={key}><span>{label}</span>{key==='warehouse_id'?<select disabled={formBusy} value={String(row[key]??'')} onChange={e=>setRows(prev=>prev.map((r,i)=>i===index?{...r,[key]:e.target.value}:r))}><option value="">Select warehouse…</option>{(options.warehouses??[]).map(w=><option value={w.id} key={w.id}>{w.name}</option>)}</select>:<input disabled={formBusy} type={type} min={type==='number'?1:undefined} checked={type==='checkbox'?Boolean(row[key]):undefined} value={type==='checkbox'?undefined:String(row[key]??'')} onChange={e=>setRows(prev=>prev.map((r,i)=>i===index?{...r,[key]:type==='checkbox'?e.target.checked:type==='number'?Number(e.target.value):e.target.value}:r))}/>}</label>
   }
   if(!permitted)return <Card title="Record unavailable">Your role cannot edit this record.</Card>
   if(loading)return <Card title="Loading record">Loading saved values…</Card>
@@ -308,7 +293,7 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
       }
       actions={
         <RecordActions
-          busy={busy}
+          busy={formBusy}
           dirty={dirty || !recordId}
           label={recordId ? 'Save changes' : `Create ${kind}`}
           onSave={() => void save()}
@@ -321,7 +306,7 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
                 icon="plus"
                 aria-label="Create & add another"
                 title="Create & add another"
-                disabled={busy}
+                disabled={formBusy}
                 onClick={() => void save('another')}
               >
                 Create &amp; add another
@@ -341,7 +326,7 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
           setRows={setRows}
           errors={errors}
           setErrors={setErrors}
-          busy={busy}
+          busy={formBusy}
           options={options}
           canViewMoney={canViewMoney}
           manufacturerDiffers={manufacturerDiffers}
@@ -392,13 +377,13 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
               statusBadge={
                 <SectionSaveStatusBadge
                   status={sectionManager.getSectionStatus(
-                    section.toLowerCase(),
+                    recordSectionKey(section),
                     sectionHasError(section),
                     section === 'Commercial details' && kind === 'client'
                   )}
-                  savedAtTime={sectionManager.savedSections[section.toLowerCase()]?.savedAt}
+                  savedAtTime={sectionManager.savedSections[recordSectionKey(section)]?.savedAt}
                   errorCount={recordFields[kind].filter((f) => f.section === section && Boolean(errors[f.key])).length}
-                  errorMessage={sectionManager.sectionErrors[section.toLowerCase()]}
+                  errorMessage={sectionManager.sectionErrors[recordSectionKey(section)]}
                 />
               }
             >
@@ -415,7 +400,7 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
                       {rowField(row, index, 'phone', 'Contact phone')}
                       {rowField(row, index, 'email', 'Contact email')}
                       <Button
-                        disabled={busy}
+                        disabled={formBusy}
                         onClick={() => {
                           setRows([])
                           sectionManager.markSectionDirty('contact')
@@ -427,7 +412,7 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
                   ))}
                   {!rows.length && (
                     <Button
-                      disabled={busy}
+                      disabled={formBusy}
                       onClick={() => {
                         setRows([{ full_name: '', designation: null, phone: null, email: null }])
                         sectionManager.markSectionDirty('contact')
@@ -456,7 +441,7 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
                       .filter((p) => !rows.some((r) => r.product_id === p.id))
                       .map((p) => (
                         <Button
-                          disabled={busy}
+                          disabled={formBusy}
                           key={p.id}
                           onClick={() => {
                             setRows((prev) => [
@@ -484,7 +469,7 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
                         {rowField(row, index, 'days', 'Days', 'number')}
                         {rowField(row, index, 'is_mandatory', 'Required component', 'checkbox')}
                         <Button
-                          disabled={busy}
+                          disabled={formBusy}
                           onClick={() => {
                             setRows((prev) => prev.filter((_, i) => i !== index))
                             sectionManager.markSectionDirty('components')
@@ -500,27 +485,29 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
               {section !== 'Commercial details' && (
                 <SectionSaveBar
                   sectionName={section}
-                  status={sectionManager.getSectionStatus(section.toLowerCase(), sectionHasError(section))}
-                  isSaving={sectionManager.savingSection === section.toLowerCase()}
-                  canSave={Boolean(snapshot?.id || recordId || section.toLowerCase() === 'identity') && !sectionHasError(section)}
+                  status={sectionManager.getSectionStatus(recordSectionKey(section), sectionHasError(section))}
+                  isSaving={sectionManager.savingSection === recordSectionKey(section)}
+                  canSave={Boolean(snapshot?.id || recordId) && !formBusy && !sectionHasError(section)}
                   saveDisabledReason={
-                    !snapshot?.id && !recordId && section.toLowerCase() !== 'identity'
-                      ? 'Save the Identity section first to enable section saving'
+                    !snapshot?.id && !recordId
+                      ? 'Create the record first to enable section saving'
                       : sectionHasError(section)
                       ? 'Resolve errors in this section before saving'
                       : null
                   }
-                  onSave={async () => {
+                  onSave={() => {
+                    const invalid = validateRecord(kind, values)
+                    const invalidFields = recordFields[kind].filter(field => field.section === section && invalid[field.key])
+                    if (invalidFields.length) { setErrors(previous => ({...previous, ...Object.fromEntries(invalidFields.map(field => [field.key, invalid[field.key]!]))})); focusRecordField(fieldId(invalidFields[0]!.key)); return }
                     const sectionFields = recordFields[kind].filter((f) => f.section === section)
+                    const normalized = recordPayload(kind, values, Boolean(snapshot?.id))
                     const payload: RecordValues = {}
-                    for (const f of sectionFields) {
-                      payload[f.key] = values[f.key] ?? null
-                    }
-                    await sectionManager.saveSection(
-                      section.toLowerCase(),
+                    for (const f of sectionFields) payload[f.key] = normalized[f.key] ?? null
+                    void sectionManager.saveSection(
+                      recordSectionKey(section),
                       payload,
-                      section === 'Contact' ? rows : undefined
-                    )
+                      section === 'Contact' || section === 'Components' ? rows : undefined
+                    ).catch(() => {})
                   }}
                   onNext={
                     sectionIdx < sections.length - 1
@@ -534,7 +521,7 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
                       : undefined
                   }
                   nextLabel={sectionIdx < sections.length - 1 ? sections[sectionIdx + 1] : undefined}
-                  errorMessage={sectionManager.sectionErrors[section.toLowerCase()]}
+                  errorMessage={sectionManager.sectionErrors[recordSectionKey(section)]}
                 />
               )}
             </RecordSection>

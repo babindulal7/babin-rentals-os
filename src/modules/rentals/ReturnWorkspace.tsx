@@ -17,6 +17,9 @@ import { Input } from '../../components/ui/Input'
 import { Unavailable } from '../../components/ui/Unavailable'
 import { useFloorViewport } from '../operations/floorPanelContext'
 import { nextRequirement } from '../operations/nextRequirement'
+import { focusOperationTarget, type OperationWorkspaceActions } from '../operations/operationWorkspaceActions'
+import { useOperationEvidence } from '../operations/useOperationEvidence'
+import { OperationEvidenceStatus } from '../operations/OperationEvidenceStatus'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../components/ui/Toast'
 import { RentalIntelFromFloor } from '../../components/intel/RentalIntelFromFloor'
@@ -28,10 +31,12 @@ import { formatBsOrAd, formatAd, formatAdDateTime } from '../../lib/bs'
 import { lateBand, formatOverage, bandConsequence } from '../../lib/lateFee'
 import { newClientUuid } from '../../lib/supabase'
 import { fetchFloorBooking, type FloorBooking, type FloorLine } from '../../lib/queries/bookings'
+import { fetchReturnQuantityFacts } from '../../lib/queries/returnQuantityFacts'
 /* Law 1 — the engine owns the rule, this screen only renders it. `0003:399`'s
    "unresolved Not Returned" is answered in `floorVerb.ts`; re-listing the three
    decisions here would be a second copy to drift (RT-03). */
 import { notReturnedDecisionEndsLine, type FloorLineInput } from '../../actions/rentals/floorVerb'
+import type { CompleteReturnInput } from '../../actions/rentals/returnRental'
 import type { ItemCondition, NotReturnedDecision } from '../../types/database'
 import { CompactButton } from '../../components/ui/TouchTarget'
 import { deliveryTypeLabel } from '../../lib/format'
@@ -221,6 +226,9 @@ interface ReturnRow {
   name: string
   /** Units this row stands for: 1 per physical unit, `booking_lines.qty` for a quantity row. */
   qty: number
+  /** Verified earlier receipts and the quantity still out before this session. */
+  priorReceived: number
+  remainingQty: number | null
   location: string | null
   /** Bundle / flight-case parent grouping tag. */
   group: string
@@ -237,18 +245,25 @@ interface Mark {
   returnedAtIso?: string
   /** §6.3 — a radio group's single value; supplying it is what marks the line Inspected. */
   condition?: ItemCondition
+  /** This session's quantity, kept as typed so invalid/empty drafts remain visible. */
+  receivedQty?: string
   damageDescription?: string
-  /** A LOCAL tally — no file is uploaded from this screen; the Evidence Workspace owns the files. */
+  /** Replaced by the verified saved-file count before validation and dispatch. */
   damagePhotos?: number
   reason?: string
   decision?: NotReturnedDecision
+}
+
+interface ReturnCompletionAttempt {
+  draftFingerprint: string
+  input: CompleteReturnInput
 }
 
 /**
  * Flatten the booking's lines into checklist rows. The group tag is rendered
  * inline because Return has no separate bundle rail.
  */
-function buildRows(floor: FloorBooking): ReturnRow[] {
+function buildRows(floor: FloorBooking, receivedQuantities: ReadonlyMap<string, number> | null): ReturnRow[] {
   const lineById = new Map(floor.lines.map((l) => [l.id, l]))
   const groupOf = (line: FloorLine): string => {
     const parent = line.parentLineId !== null ? lineById.get(line.parentLineId) : undefined
@@ -275,6 +290,8 @@ function buildRows(floor: FloorBooking): ReturnRow[] {
           serial: u.serial ?? u.assetTag,
           name: line.units.length > 1 ? `${name} · unit ${i + 1}` : name,
           qty: 1,
+          priorReceived: u.unitState === 'Returned' ? 1 : 0,
+          remainingQty: u.unitState === 'Returned' ? 0 : 1,
           location: u.location,
           group: groupOf(line),
           alreadyReturned: u.unitState === 'Returned',
@@ -285,6 +302,7 @@ function buildRows(floor: FloorBooking): ReturnRow[] {
       // one row for the whole line, triaged as one. `unitsPresence === 'absent'`
       // is handled before this function is called — an absent embed must never
       // read as "no units" (the defect bookingQuery.ts:110-113 records).
+      const received = receivedQuantities?.get(line.id)
       rows.push({
         key: `line:${line.id}`,
         lineId: line.id,
@@ -292,13 +310,24 @@ function buildRows(floor: FloorBooking): ReturnRow[] {
         serial: null,
         name,
         qty: line.qty,
+        priorReceived: received ?? 0,
+        remainingQty: received === undefined ? null : line.qty - received,
         location: null,
         group: groupOf(line),
-        alreadyReturned: false,
+        alreadyReturned: received === line.qty,
       })
     }
   }
   return rows
+}
+
+/** Validate a whole-number form input against the persisted remaining quantity. */
+function receivedThisSession(row: ReturnRow, mark: Mark | undefined): number | null {
+  if (mark?.state !== 'Returned') return 0
+  if (row.assetId !== null) return 1
+  if (row.remainingQty === null || !/^\d+$/.test(mark.receivedQty ?? '')) return null
+  const quantity = Number(mark.receivedQty)
+  return Number.isSafeInteger(quantity) && quantity >= 1 && quantity <= row.remainingQty ? quantity : null
 }
 
 /** The most severe of the given conditions, or null when none was recorded. */
@@ -337,8 +366,7 @@ function worstCondition(conds: readonly ItemCondition[]): ItemCondition | null {
  * into free text. Two things still ride the notes, because they have nowhere
  * else to go: damage on a QUANTITY line, which names no unit and so cannot
  * parent a finding (`damage_findings.unit_id` is NOT NULL), and the photo
- * tally, which is local — pretending it uploaded something would fabricate
- * evidence.
+ * reference summary. Evidence counts come from persisted booking/unit links.
  */
 function buildReturnLines(
   lines: readonly FloorLine[],
@@ -404,7 +432,7 @@ function buildReturnLines(
             serials: scanned.map((r) => r.serial ?? ''),
           }
         : {}),
-      qty: returned.reduce((n, r) => n + r.qty, 0),
+      qty: returned.reduce((n, r) => n + (receivedThisSession(r, marks[r.key]) ?? 0), 0),
       ...(worst === null ? {} : { condition: worst }),
       ...(damage.length > 0 ? { damage } : {}),
     })
@@ -429,7 +457,7 @@ function buildReturnLines(
     const m = marks[r.key]
     if (!m || m.state !== 'Returned') continue
     if (m.condition !== 'Damaged' && m.condition !== 'Lost') continue
-    const photos = `${m.damagePhotos ?? 0} photo(s) counted locally on the floor; none uploaded from this screen.`
+    const photos = `${m.damagePhotos ?? 0} saved photo(s) linked to this returned unit.`
     extraNotes.push(
       r.assetId === null
         ? `${r.name} returned ${m.condition}: ${(m.damageDescription ?? '').trim()} — this line tracks a quantity, ` +
@@ -482,16 +510,7 @@ export interface ReturnWorkspaceProps {
   embedded?: boolean
   onConfirmSuccess?: () => void
   onCancel?: () => void
-  onRegisterActions?: (actions: {
-    canComplete: boolean
-    dispatching: boolean
-    complete: () => void
-    isDirty: boolean
-    label?: string
-    error?: string | null
-    /** First requirement still unmet, worded for the footer beside a disabled Confirm. */
-    blockedReason?: string | null
-  }) => void
+  onRegisterActions?: (actions: OperationWorkspaceActions) => void
 }
 
 /** Determines cinema-specific optical or sensor inspection requirements */
@@ -562,6 +581,8 @@ export default function ReturnWorkspace({
     returningName: string
     sigReturning: Sig | null
     sigWarehouse: Sig | null
+    completionKey?: string
+    completionAttempt?: ReturnCompletionAttempt | null
   }
 
   /* ── triage state, keyed on the real rows ────────────────────────────────
@@ -569,9 +590,10 @@ export default function ReturnWorkspace({
    * Local until Complete Session dispatches — dispatch-then-commit, where
    * "commit" is the navigation away on the resolved promise. */
   const [marks, setMarks] = useState<Record<string, Mark>>({})
+  const savedEvidence = useOperationEvidence(floor?.id ?? null)
   const [restoredFromStorage, setRestoredFromStorage] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]>('All')
+  const [filter, setFilter] = useState<(typeof FILTERS)[number]>('Outstanding')
   const [query, setQuery] = useState('')
   const [scanLog, setScanLog] = useState<string[]>([])
   const [sessionNotes, setSessionNotes] = useState('')
@@ -591,12 +613,35 @@ export default function ReturnWorkspace({
    * double-press replays the same key and resolves to the first write.
    */
   const [completionKey, setCompletionKey] = useState(() => newClientUuid())
+  const [completionAttempt, setCompletionAttempt] = useState<ReturnCompletionAttempt | null>(null)
+  const completionAttemptRef = useRef<ReturnCompletionAttempt | null>(null)
+  const submitLock = useRef(false)
+  const [hydratedDraftFor, setHydratedDraftFor] = useState<string | null>(null)
+  const draftFingerprint = JSON.stringify({ marks, sessionNotes, returningName, sigReturning, sigWarehouse })
+  const retryingSavedAttempt = completionAttempt !== null && completionAttempt.draftFingerprint === draftFingerprint
+  const [returnQuantities, setReturnQuantities] = useState<{ bookingId: string; received: Map<string, number> } | null>(null)
+  const [quantityError, setQuantityError] = useState<string | null>(null)
+  const [quantityReload, setQuantityReload] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    setReturnQuantities(null)
+    setQuantityError(null)
+    if (!floor || !buildRows(floor, null).some(row => row.assetId === null)) return
+    const expected = floor.lines.filter(line => line.productId !== null && !NON_PACKABLE_LINE_TYPES.has(line.lineType) && line.trackingMode !== 'Consumable')
+    void fetchReturnQuantityFacts(floor.id, expected).then(received => {
+      if (active) setReturnQuantities({ bookingId: floor.id, received })
+    }).catch((error: unknown) => {
+      if (active) setQuantityError(error instanceof Error ? error.message : 'Prior received quantities could not be verified.')
+    })
+    return () => { active = false }
+  }, [floor, quantityReload])
 
   const floorId = floor?.id ?? null
   useEffect(() => {
     setDispatchError(null)
     setDispatching(false)
-    setCompletionKey(newClientUuid())
+    submitLock.current = false
 
     if (floorId) {
       const persisted = loadFloorScan<PersistedReturnScan>('return', floorId)
@@ -614,7 +659,12 @@ export default function ReturnWorkspace({
         setReturningName(persisted.payload.returningName || '')
         setSigReturning(persisted.payload.sigReturning ?? null)
         setSigWarehouse(persisted.payload.sigWarehouse ?? null)
+        const attempt = persisted.payload.completionAttempt ?? null
+        setCompletionKey(attempt?.input.clientUuid ?? persisted.payload.completionKey ?? newClientUuid())
+        setCompletionAttempt(attempt)
+        completionAttemptRef.current = attempt
         setRestoredFromStorage(true)
+        setHydratedDraftFor(floorId)
         return
       }
     }
@@ -626,12 +676,16 @@ export default function ReturnWorkspace({
     setReturningName('')
     setSigReturning(null)
     setSigWarehouse(null)
+    setCompletionKey(newClientUuid())
+    setCompletionAttempt(null)
+    completionAttemptRef.current = null
     setRestoredFromStorage(false)
+    setHydratedDraftFor(floorId)
   }, [floorId])
 
   // Auto-save active scanning state to local storage
   useEffect(() => {
-    if (!floorId) return
+    if (!floorId || hydratedDraftFor !== floorId) return
     const hasContent =
       Object.keys(marks).length > 0 ||
       sessionNotes.trim().length > 0 ||
@@ -646,11 +700,13 @@ export default function ReturnWorkspace({
         returningName,
         sigReturning,
         sigWarehouse,
+        completionKey,
+        completionAttempt,
       })
     } else {
       clearFloorScan('return', floorId)
     }
-  }, [floorId, marks, scanLog, sessionNotes, returningName, sigReturning, sigWarehouse])
+  }, [floorId, hydratedDraftFor, marks, scanLog, sessionNotes, returningName, sigReturning, sigWarehouse, completionKey, completionAttempt])
 
   const discardRestoredScan = () => {
     if (floorId) clearFloorScan('return', floorId)
@@ -661,9 +717,22 @@ export default function ReturnWorkspace({
     setSigReturning(null)
     setSigWarehouse(null)
     setRestoredFromStorage(false)
+    setQcStatusMap({})
+    setActiveSigningRole(null)
+    setCompletionKey(newClientUuid())
+    setCompletionAttempt(null)
+    completionAttemptRef.current = null
+    submitLock.current = false
+    setDispatchError(null)
+    setQuantityReload(value => value + 1)
   }
 
-  const rows = useMemo<ReturnRow[]>(() => (floor ? buildRows(floor) : []), [floor])
+  const rows = useMemo<ReturnRow[]>(() => (floor ? buildRows(floor, returnQuantities?.bookingId === floor.id ? returnQuantities.received : null) : []), [floor, returnQuantities])
+  const quantitiesVerified = rows.every(row => row.remainingQty !== null)
+  const verifiedMarks = useMemo<Record<string, Mark>>(() => Object.fromEntries(Object.entries(marks).map(([key, mark]) => {
+    const row = rows.find(item => item.key === key)
+    return [key, { ...mark, damagePhotos: savedEvidence.evidence?.filesByUnit[row?.assetId ?? ''] ?? 0 }]
+  })), [marks, rows, savedEvidence.evidence])
   const actionable = useMemo(() => rows.filter((r) => !r.alreadyReturned), [rows])
   const stateOf = (r: ReturnRow): RowState => (r.alreadyReturned ? 'Returned' : (marks[r.key]?.state ?? 'Outstanding'))
 
@@ -671,9 +740,9 @@ export default function ReturnWorkspace({
   const totalUnits = rows.reduce((n, r) => n + r.qty, 0)
   const returnedRows = actionable.filter((r) => marks[r.key]?.state === 'Returned')
   const missingRows = actionable.filter((r) => marks[r.key]?.state === 'Not Returned')
-  const outstandingRows = actionable.filter((r) => marks[r.key] === undefined)
-  const backUnits = rows.filter((r) => stateOf(r) === 'Returned').reduce((n, r) => n + r.qty, 0)
-  const outstandingUnits = outstandingRows.reduce((n, r) => n + r.qty, 0)
+  const outstandingRows = actionable.filter((r) => marks[r.key] === undefined || (marks[r.key]?.state === 'Returned' && (receivedThisSession(r, marks[r.key]) ?? 0) < (r.remainingQty ?? r.qty)))
+  const backUnits = rows.reduce((n, r) => n + r.priorReceived + (r.alreadyReturned ? 0 : receivedThisSession(r, marks[r.key]) ?? 0), 0)
+  const outstandingUnits = outstandingRows.reduce((n, r) => n + (r.remainingQty ?? r.qty) - (receivedThisSession(r, marks[r.key]) ?? 0), 0)
   const pct = totalUnits > 0 ? Math.round((backUnits / totalUnits) * 100) : 0
 
   const filterCounts = useMemo<Record<(typeof FILTERS)[number], number>>(
@@ -731,13 +800,14 @@ export default function ReturnWorkspace({
    * item resolved" is deliberately NOT among them: Return is multi-session
    * (0003:129) and a partial session completes honestly. */
   const anythingResolved = returnedRows.length > 0 || missingRows.length > 0
+  const invalidQuantities = returnedRows.filter(row => receivedThisSession(row, marks[row.key]) === null)
   const conditionMissing = returnedRows.filter((r) => marks[r.key]?.condition === undefined)
   const damagedRows = returnedRows.filter((r) => {
     const c = marks[r.key]?.condition
     return c === 'Damaged' || c === 'Lost'
   })
   const damageIncomplete = damagedRows.filter(
-    (r) => (marks[r.key]?.damageDescription ?? '').trim() === '' || (marks[r.key]?.damagePhotos ?? 0) === 0,
+    (r) => (marks[r.key]?.damageDescription ?? '').trim() === '' || (verifiedMarks[r.key]?.damagePhotos ?? 0) === 0,
   )
   const shortReasons = missingRows.filter((r) => (marks[r.key]?.reason ?? '').trim().length < MIN_REASON)
   const noDecision = missingRows.filter((r) => marks[r.key]?.decision === undefined)
@@ -756,9 +826,27 @@ export default function ReturnWorkspace({
 
   const gates: Array<{ label: string; pass: boolean; detail: string | null }> = [
     {
+      label: 'Previously attempted receipt matches this draft',
+      pass: completionAttempt === null || completionAttempt.draftFingerprint === draftFingerprint,
+      detail: completionAttempt === null || retryingSavedAttempt ? null : 'This receipt was already attempted with different details. Restore the original details to retry, or check the saved quantities and discard this draft before starting another receipt.',
+    },
+    {
+      label: 'Prior received quantities verified',
+      pass: quantitiesVerified,
+      detail: quantitiesVerified ? null : quantityError ?? 'Verify the quantities still out before recording this return.',
+    },
+    {
       label: 'At least one item received or declared Not Returned',
-      pass: anythingResolved,
+      pass: anythingResolved || retryingSavedAttempt,
       detail: anythingResolved ? null : 'Nothing has been triaged yet — a session claiming work on nothing is refused.',
+    },
+    {
+      label: 'Received quantities are whole numbers within the remaining quantity',
+      // The original request may already have committed, reducing the visible
+      // remainder. Replaying its persisted key reconciles that receipt; it
+      // never builds a fresh request from these now-stale marks.
+      pass: invalidQuantities.length === 0 || retryingSavedAttempt,
+      detail: invalidQuantities.length === 0 ? null : 'Enter a received quantity from 1 to the verified remaining quantity for each received line.',
     },
     {
       label: 'Every received item carries a condition',
@@ -807,7 +895,7 @@ export default function ReturnWorkspace({
     () =>
       rows.filter((r) => {
         const s = r.alreadyReturned ? 'Returned' : (marks[r.key]?.state ?? 'Outstanding')
-        if (filter !== 'All' && s !== filter) return false
+        if (filter !== 'All' && s !== filter && !(filter === 'Outstanding' && marks[r.key]?.state === 'Returned' && !r.alreadyReturned && (receivedThisSession(r, marks[r.key]) ?? 0) < (r.remainingQty ?? r.qty))) return false
         if (query && !`${r.group} ${r.name} ${r.serial ?? ''}`.toLowerCase().includes(query.toLowerCase())) return false
         return true
       }),
@@ -824,15 +912,21 @@ export default function ReturnWorkspace({
   }, [visible])
 
   /* ── mark helpers ────────────────────────────────────────────────────── */
-  const markReturned = (key: string) =>
+  const markReturned = (key: string) => {
+    const row = rows.find(item => item.key === key)
+    if (!row || row.remainingQty === null || row.alreadyReturned) return
+    // Keep the received row visible for its separate inspection choice.
+    setFilter('All')
     setMarks((p) => ({
       ...p,
       [key]: {
         state: 'Returned',
         returnedAtIso: new Date().toISOString(),
-        condition: p[key]?.condition ?? 'Good',
+        ...(row.assetId === null ? { receivedQty: p[key]?.receivedQty ?? String(row.remainingQty) } : {}),
+        ...(p[key]?.condition ? { condition: p[key]?.condition } : {}),
       },
     }))
+  }
   const markNotReturned = (key: string) => setMarks((p) => ({ ...p, [key]: { state: 'Not Returned', reason: '' } }))
   const clearMark = (key: string) =>
     setMarks((p) => {
@@ -845,12 +939,6 @@ export default function ReturnWorkspace({
       const cur = p[key]
       if (!cur) return p
       return { ...p, [key]: { ...cur, ...patch } }
-    })
-  const addDamagePhoto = (key: string) =>
-    setMarks((p) => {
-      const cur = p[key]
-      if (!cur) return p
-      return { ...p, [key]: { ...cur, damagePhotos: (cur.damagePhotos ?? 0) + 1 } }
     })
 
   const [ambientBarcode, setAmbientBarcode] = useState('')
@@ -1008,6 +1096,7 @@ export default function ReturnWorkspace({
   }
 
   const receive = (key: string, via: 'scan' | 'manual' = 'manual') => {
+    if (!quantitiesVerified) return
     unlockAudioContext()
     const row = rows.find((r) => r.key === key)
     if (!row) {
@@ -1088,6 +1177,7 @@ export default function ReturnWorkspace({
 
   /** Bulk receipt records item marks only; QC and signatures require their own explicit capture. */
   const checkInAllClean = () => {
+    if (!quantitiesVerified) return
     unlockAudioContext()
     const at = new Date().toISOString()
     const outstanding = actionable.filter((r) => marks[r.key]?.state !== 'Returned')
@@ -1095,15 +1185,17 @@ export default function ReturnWorkspace({
       setScanLog((p) => ['• Nothing is outstanding — all items already received', ...p].slice(0, 5))
       return
     }
+    setFilter('All')
 
     setMarks((p) => {
       const next = { ...p }
       for (const r of outstanding) {
-        next[r.key] = {
-          state: 'Returned',
-          returnedAtIso: at,
-          condition: next[r.key]?.condition ?? 'Good',
-        }
+        const prevCond = next[r.key]?.condition
+        const mark: Mark = prevCond !== undefined
+          ? { state: 'Returned', returnedAtIso: at, condition: prevCond }
+          : { state: 'Returned', returnedAtIso: at }
+        if (r.assetId === null) mark.receivedQty = next[r.key]?.receivedQty ?? String(r.remainingQty)
+        next[r.key] = mark
       }
       return next
     })
@@ -1117,6 +1209,7 @@ export default function ReturnWorkspace({
   }
 
   const declareNotReturned = (key: string) => {
+    if (!quantitiesVerified) return
     const row = rows.find((r) => r.key === key)
     if (!row || row.alreadyReturned) return
     triggerScanPulse('error')
@@ -1144,23 +1237,41 @@ export default function ReturnWorkspace({
 
   /* ── the dispatch — real line ids, dispatch-then-commit ────────────────── */
   const completeSession = () => {
-    if (!canComplete || !floor) return
+    if (!canComplete || !floor || submitLock.current) return
     // The identity is the signed-in operator or there is no dispatch — never a
     // made-up `{ userId: 'USR-001' }` on a floor record.
     if (!user) {
       setDispatchError('You are not signed in, so this return cannot be recorded against anyone. Nothing was written.')
       return
     }
+    submitLock.current = true
     setDispatchError(null)
     setDispatching(true)
 
-    const occurredAt = new Date().toISOString()
-    const { payload, extraNotes } = buildReturnLines(floor.lines, rows, marks)
+    const { payload, extraNotes } = buildReturnLines(floor.lines, rows, verifiedMarks)
     const sigNotes = [
       sigReturning ? `Returning person signature: ${sigReturning.name} at ${formatAdDateTime(sigReturning.atIso)}` : null,
       sigWarehouse ? `Warehouse staff signature: ${sigWarehouse.name} at ${formatAdDateTime(sigWarehouse.atIso)}` : null,
     ].filter((n): n is string => n !== null)
     const notes = [sessionNotes.trim(), ...sigNotes, ...extraNotes].filter((n) => n !== '').join('\n')
+    const attempt = completionAttemptRef.current ?? {
+      draftFingerprint,
+      input: {
+        rentalId: floor.id,
+        lines: payload,
+        clientUuid: completionKey,
+        occurredAt: new Date().toISOString(),
+        ...(notes === '' ? {} : { notes }),
+      },
+    }
+    completionAttemptRef.current = attempt
+    setCompletionAttempt(attempt)
+    // Persist before starting the request: a reload or lost response must replay
+    // this exact request identity and payload, including its original timestamp.
+    saveFloorScan<PersistedReturnScan>('return', floor.id, {
+      marks, scanLog, sessionNotes, returningName, sigReturning, sigWarehouse,
+      completionKey, completionAttempt: attempt,
+    })
 
     /*
      * ⚠ `navigate` is INSIDE `.then`. This dispatch used to send `lines: []`,
@@ -1171,18 +1282,13 @@ export default function ReturnWorkspace({
     import('../../actions/rentals/index')
       .then((m) =>
         m.completeReturn(
-          {
-            rentalId: floor.id,
-            lines: payload,
-            clientUuid: completionKey,
-            occurredAt,
-            ...(notes === '' ? {} : { notes }),
-          },
+          attempt.input,
           { userId: user.id, role: user.role },
         ),
       )
       .then(() => {
-        clearFloorScan('return', floor.id)
+        discardRestoredScan()
+        setDispatching(false)
         showSuccessToast('Return session saved', `Received items recorded for ${floor.bookingNo}. Cleaning and QC tasks remain tracked separately.`)
         if (onConfirmSuccess) {
           onConfirmSuccess()
@@ -1194,23 +1300,43 @@ export default function ReturnWorkspace({
         captureError(err, { where: 'ReturnWorkspace.return', bookingId: id })
         setDispatchError(formatGateError(err))
         setDispatching(false)
+        submitLock.current = false
+        setQuantityReload(value => value + 1)
       })
   }
 
+  const completeRef = useRef(completeSession)
+  completeRef.current = completeSession
   const isDirty = Object.keys(marks).length > 0 || sessionNotes.trim().length > 0 || sigReturning !== null || sigWarehouse !== null
   const blockedReason = nextRequirement(gates.filter((g) => !g.pass).map((g) => g.label))
+  const blockerTarget = !quantitiesVerified ? '#return-quantity-verification'
+    : !anythingResolved ? '.floor-scanner-input'
+    : invalidQuantities.length > 0 ? '[data-operation-target="return-quantity"]'
+    : conditionMissing.length > 0 ? '[data-operation-target="return-condition"]'
+      : damageIncomplete.length > 0 ? '[data-operation-target="return-damage"]'
+        : shortReasons.length > 0 ? '[data-operation-target="return-reason"]'
+          : noDecision.length > 0 || mixedDecisionLines.length > 0 ? '[data-operation-target="return-decision"]'
+            : `[data-operation-signature="${!sigReturning ? 'Returning person (Client / Courier)' : 'Warehouse staff'}"]`
+  const focusBlocker = (scope: HTMLElement) => {
+    setFilter('All')
+    setQuery('')
+    focusOperationTarget(scope, blockerTarget)
+  }
   useEffect(() => {
     onRegisterActions?.({
       canComplete,
       blockedReason,
       dispatching,
-      complete: completeSession,
+      complete: () => completeRef.current(),
       isDirty,
       label: 'Confirm Return session',
       error: dispatchError,
+      focusBlocker,
+      discard: discardRestoredScan,
+      progress: quantitiesVerified ? { done: backUnits, total: totalUnits } : undefined,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason])
+  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget, backUnits, totalUnits, quantitiesVerified])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */
 
@@ -1287,6 +1413,14 @@ export default function ReturnWorkspace({
 
         {floor !== null && stageBlock === null && floor.linesPresence === 'present' && rows.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+            {rows.some(row => row.assetId === null) && (
+              <div id="return-quantity-verification">
+                <p role={quantityError ? 'alert' : 'status'} style={{ margin: 0, color: quantityError ? 'var(--danger-text)' : 'var(--muted)' }}>
+                  {quantityError ?? (quantitiesVerified ? 'Prior received quantities verified. Enter only the quantity received in this session.' : 'Verifying prior received quantities…')}
+                </p>
+                {!quantitiesVerified && <Button onClick={() => setQuantityReload(value => value + 1)}>Retry return quantities</Button>}
+              </div>
+            )}
             {restoredFromStorage && (
               <div
                 role="status"
@@ -1317,7 +1451,10 @@ export default function ReturnWorkspace({
                 </Button>
               </div>
             )}
+            {/* RULING 2026-10-25: inside the Operations popup the header's stage bar shows this progress and the shell's
+                booking actions already carry View Booking, so the whole row is dropped there. */}
             {/* ── header ─────────────────────────────────────────────────── */}
+            {!embedded && (
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--sp-lg)', flexWrap: 'wrap' }}>
               {!embedded && (
                 <div style={{ minWidth: 0, flex: 1 }}>
@@ -1370,7 +1507,7 @@ export default function ReturnWorkspace({
                       Return job: {jobChip.label}
                     </span>
                   </div>
-                  <p style={{ margin: '5px 0 0', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+                  <div style={{ margin: '5px 0 0', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
                     <RentalIntelFromFloor floor={floor} context="return" role={user?.role ?? 'Client'}>
                       <Link to={`/rentals/${id}`} style={{ color: 'var(--link)', fontWeight: 600, textDecoration: 'none' }} className="identifier">
                         {floor.bookingNo}
@@ -1378,7 +1515,7 @@ export default function ReturnWorkspace({
                     </RentalIntelFromFloor>
                     {floor.project ? ` · ${floor.project}` : ''}
                     {floor.clientName ? ` · ${floor.clientName}` : ''}
-                  </p>
+                  </div>
                 </div>
               )}
 
@@ -1443,6 +1580,7 @@ export default function ReturnWorkspace({
                 </Link>
               </div>
             </div>
+            )}
 
             {/* ── §4 booking strip — read-only, no money (§8.3). Every cell is
                 a real column off `fetchFloorBooking`; the seed build's
@@ -1551,12 +1689,12 @@ export default function ReturnWorkspace({
                   action={
                     phone ? (
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <Button icon="zap" onClick={checkInAllClean}>Check In All</Button>
+                        <Button icon="zap" onClick={checkInAllClean} disabled={!quantitiesVerified}>Check In All</Button>
                         <Button icon="camera" onClick={() => setShowScanner(true)}>Scan</Button>
                       </div>
                     ) : (
                       <>
-                        <Button icon="zap" onClick={checkInAllClean}>Check In All Clean</Button>
+                        <Button icon="zap" onClick={checkInAllClean} disabled={!quantitiesVerified}>Check In All Clean</Button>
                         <Button icon="camera" onClick={() => setShowScanner(true)}>Scan / Camera</Button>
                       </>
                     )
@@ -1634,7 +1772,7 @@ export default function ReturnWorkspace({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)', padding: 'var(--sp-sm)' }}>
                       {groupedVisible.map((r, i) => {
                         const s = stateOf(r)
-                        const mark = marks[r.key]
+                        const mark = verifiedMarks[r.key]
                         const tone = STATUS[ROW_TONE[s]]
                         return (
                           <Fragment key={r.key}>
@@ -1663,6 +1801,7 @@ export default function ReturnWorkspace({
                                 </div>
                               )}
                             </div>
+                            {r.assetId === null && <ReturnQuantityControl row={r} mark={mark} disabled={dispatching} onChange={value => patchMark(r.key, { receivedQty: value })} />}
                             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, height: 22, padding: '0 8px', borderRadius: 'var(--r-badge)', background: tone.bg, color: tone.fg, fontSize: 'var(--t-meta)', fontWeight: 600 }}>
                                 <Icon name={s === 'Not Returned' ? 'alert_triangle' : s === 'Returned' ? 'return_arrow' : 'truck'} size={11} />
@@ -1685,6 +1824,7 @@ export default function ReturnWorkspace({
                                 <button
                                   type="button"
                                   onClick={() => receive(r.key)}
+                                  disabled={!quantitiesVerified}
                                   style={{ minHeight: 44, borderRadius: 'var(--r-btn)', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text)', fontSize: 'var(--t-meta)', fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}
                                 >
                                   Mark Returned
@@ -1692,6 +1832,7 @@ export default function ReturnWorkspace({
                                 <button
                                   type="button"
                                   onClick={() => declareNotReturned(r.key)}
+                                  disabled={!quantitiesVerified}
                                   style={{ minHeight: 44, borderRadius: 'var(--r-btn)', border: '1px solid var(--border)', background: 'transparent', color: 'var(--danger-text)', fontSize: 'var(--t-meta)', fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer' }}
                                 >
                                   Not Returned
@@ -1752,7 +1893,7 @@ export default function ReturnWorkspace({
                                 mark={mark}
                                 name={r.name}
                                 onDescription={(v) => patchMark(r.key, { damageDescription: v })}
-                                onAddPhoto={() => addDamagePhoto(r.key)}
+                                onRefreshEvidence={savedEvidence.refresh}
                               />
                             )}
                             {mark?.state === 'Returned' && mark.returnedAtIso && (
@@ -1785,7 +1926,7 @@ export default function ReturnWorkspace({
                         <tbody>
                           {groupedVisible.map((r, i) => {
                             const s = stateOf(r)
-                            const mark = marks[r.key]
+                            const mark = verifiedMarks[r.key]
                             const tone = STATUS[ROW_TONE[s]]
                             const damaged = mark?.state === 'Returned' && (mark.condition === 'Damaged' || mark.condition === 'Lost')
                             return (
@@ -1851,7 +1992,9 @@ export default function ReturnWorkspace({
                                       <span style={{ color: 'var(--muted)' }}>—</span>
                                     )}
                                   </td>
-                                  <td className="figure" style={td}>{r.qty}</td>
+                                  <td className="figure" style={td}>
+                                    {r.assetId === null ? <ReturnQuantityControl row={r} mark={mark} disabled={dispatching} onChange={value => patchMark(r.key, { receivedQty: value })} /> : r.qty}
+                                  </td>
                                   <td style={td}>
                                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, height: 20, padding: '0 8px', borderRadius: 'var(--r-badge)', background: tone.bg, color: tone.fg, fontSize: 'var(--t-meta)', fontWeight: 600 }}>
                                       <Icon name={s === 'Not Returned' ? 'alert_triangle' : s === 'Returned' ? 'return_arrow' : 'truck'} size={11} />
@@ -1898,8 +2041,8 @@ export default function ReturnWorkspace({
                                     <span style={{ display: 'flex', gap: 'var(--sp-sm)', justifyContent: 'flex-end' }}>
                                       {!r.alreadyReturned && s === 'Outstanding' && (
                                         <>
-                                          <RowAction label="Mark Returned" onClick={() => receive(r.key)} />
-                                          <RowAction label="Not Returned" onClick={() => declareNotReturned(r.key)} />
+                                          <RowAction label="Mark Returned" disabled={!quantitiesVerified} onClick={() => receive(r.key)} />
+                                          <RowAction label="Not Returned" disabled={!quantitiesVerified} onClick={() => declareNotReturned(r.key)} />
                                         </>
                                       )}
                                       {!r.alreadyReturned && s !== 'Outstanding' && <RowAction label="Undo" onClick={() => clearMark(r.key)} />}
@@ -1913,7 +2056,7 @@ export default function ReturnWorkspace({
                                         mark={mark}
                                         name={r.name}
                                         onDescription={(v) => patchMark(r.key, { damageDescription: v })}
-                                        onAddPhoto={() => addDamagePhoto(r.key)}
+                                        onRefreshEvidence={savedEvidence.refresh}
                                       />
                                     </td>
                                   </tr>
@@ -1960,6 +2103,8 @@ export default function ReturnWorkspace({
 
               {/* ── right rail — progress, the gate checklist, the completion gate ── */}
               <OperationAside label="Return summary">
+                {/* RULING 2026-10-25: inside the Operations popup the header's stage bar already shows this progress. */}
+                {!embedded && (
                 <Card title="Progress">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-md)' }}>
                     <Ring pct={pct} />
@@ -1973,6 +2118,7 @@ export default function ReturnWorkspace({
                     </div>
                   </div>
                 </Card>
+                )}
 
                 {/*
                   §12.1's session gates — every condition named, pass or fail,
@@ -2044,6 +2190,8 @@ export default function ReturnWorkspace({
                     session that was never recorded. */}
                 {dispatchError && <ErrorBanner title="This return was not recorded" message={dispatchError} />}
 
+                {/* RULING 2026-10-25: inside the Operations popup an empty "No items are Not Returned" card is not drawn. */}
+                {(!embedded || missingRows.length > 0) && (
                 <Card title="Items Not Returned">
                   {missingRows.length === 0 ? (
                     <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>No items are Not Returned.</p>
@@ -2061,6 +2209,7 @@ export default function ReturnWorkspace({
                               onChange={(e) => patchMark(r.key, { reason: e.target.value })}
                               placeholder={`Reason (min ${MIN_REASON} characters)`}
                               aria-label={`Reason ${r.name} was not returned`}
+                              data-operation-target={reason.trim().length < MIN_REASON ? 'return-reason' : undefined}
                               /* Law 15 — a typed field on a touch device, inside a
                                  blocking gate: the Law 10 reason is entered here. */
                               style={{ width: '100%', minHeight: 44, marginTop: 5, padding: '0 8px', borderRadius: 'var(--r-input)', border: `1px solid ${reason.trim().length < MIN_REASON ? 'var(--danger)' : 'var(--input-border)'}`, background: 'var(--input-bg)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontFamily: 'inherit' }}
@@ -2073,6 +2222,7 @@ export default function ReturnWorkspace({
                                 patchMark(r.key, { decision: e.target.value as NotReturnedDecision })
                               }}
                               aria-label={`Decision for ${r.name}`}
+                              data-operation-target={!mark?.decision || mixedDecisionLines.includes(r.lineId) ? 'return-decision' : undefined}
                               style={{ width: '100%', minHeight: 44, marginTop: 6, borderRadius: 'var(--r-input)', border: `1px solid ${mark?.decision ? 'var(--input-border)' : 'var(--danger)'}`, background: 'var(--input-bg)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontFamily: 'inherit' }}
                             >
                               <option value="" disabled>Choose a decision…</option>
@@ -2099,6 +2249,7 @@ export default function ReturnWorkspace({
                     </div>
                   )}
                 </Card>
+                )}
 
                 <Card title="Signatures">
                   {/* §9 — captured before completion (gate 6); written into the
@@ -2123,11 +2274,6 @@ export default function ReturnWorkspace({
                   />
                   {/* §9 — optional, and uncapturable: no witness identity exists on this screen to sign as. */}
                   <SigRow label="Witness" sig={null} required={false} unavailable={WITNESS_UNAVAILABLE} />
-
-                  <p style={{ margin: '9px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
-                    Signatures are written into <span className="identifier">operation_sessions.notes</span> with the
-                    dispatch — digitally attested on glass before return completion.
-                  </p>
                 </Card>
 
                 <Card title="Return Notes">
@@ -2139,16 +2285,11 @@ export default function ReturnWorkspace({
                     rows={3}
                     style={{ width: '100%', minHeight: 64, padding: '8px 9px', borderRadius: 'var(--r-input)', border: '1px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontFamily: 'inherit', resize: 'vertical' }}
                   />
-                  <p style={{ margin: '7px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
-                    Written to <span className="identifier">operation_sessions.notes</span> with the dispatch —
-                    nothing is saved until the session completes.
-                  </p>
                 </Card>
 
-                {/* Evidence is a viewer, not a verb (spec 03). The damage photo
-                    counts on this screen are local tallies; the files live in
-                    the Evidence Workspace. */}
+                {/* Evidence counts come from saved files linked to the booking and units. */}
                 <Card title="Evidence">
+                  <OperationEvidenceStatus status={savedEvidence} />
                   <Link
                     to={`/rentals/${id}/evidence`}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 44, fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--link)', textDecoration: 'none' }}
@@ -2157,8 +2298,7 @@ export default function ReturnWorkspace({
                     Compare in Evidence
                   </Link>
                   <p style={{ margin: '5px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
-                    Damage photo counts on this screen are local to this session — no file is uploaded from here;
-                    capture, matching and storage live in the Evidence Workspace.
+                    Damage photo counts include saved photos linked to each unit. Photo upload is unavailable here.
                   </p>
                 </Card>
 
@@ -2265,6 +2405,38 @@ const bigScanBtn = { display: 'inline-flex', alignItems: 'center', justifyConten
  * what marks the line Inspected on the write side (`return_lines` CHECK :382
  * takes condition, inspector and time together).
  */
+function ReturnQuantityControl({ row, mark, disabled, onChange }: {
+  row: ReturnRow
+  mark: Mark | undefined
+  disabled: boolean
+  onChange: (value: string) => void
+}) {
+  const valid = receivedThisSession(row, mark) !== null
+  return <div style={{ whiteSpace: 'normal', minWidth: 140, fontSize: 'var(--t-meta)' }}>
+    <p style={{ margin: '4px 0', color: 'var(--muted)' }}>
+      {row.remainingQty === null ? 'Remaining quantity not verified' : `Previously received: ${row.priorReceived} · Remaining: ${row.remainingQty} of ${row.qty}`}
+    </p>
+    {!row.alreadyReturned && mark?.state === 'Returned' && <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      Received quantity
+      <input
+        type="number"
+        inputMode="numeric"
+        min={1}
+        max={row.remainingQty ?? undefined}
+        step={1}
+        value={mark.receivedQty ?? ''}
+        disabled={disabled || row.remainingQty === null}
+        onChange={event => onChange(event.target.value)}
+        aria-label={`Received quantity for ${row.name}`}
+        aria-invalid={!valid}
+        data-operation-target={!valid ? 'return-quantity' : undefined}
+        style={{ minHeight: 44, width: 120, padding: '0 8px', borderRadius: 'var(--r-input)', border: `1px solid ${valid ? 'var(--input-border)' : 'var(--danger)'}`, background: 'var(--input-bg)', color: 'var(--text)', fontFamily: 'inherit' }}
+      />
+      {!valid && <span role="status" style={{ color: 'var(--danger-text)' }}>Enter a whole number from 1 to {row.remainingQty ?? 'the verified remaining quantity'}.</span>}
+    </label>}
+  </div>
+}
+
 function ConditionPicker({
   value,
   onChange,
@@ -2277,7 +2449,7 @@ function ConditionPicker({
   compact?: boolean
 }) {
   return (
-    <div role="radiogroup" aria-label={`Condition of ${name}`} style={{ display: 'flex', flexWrap: 'wrap', gap: compact ? 4 : 6 }}>
+    <div role="radiogroup" aria-label={`Condition of ${name}`} data-operation-target={value === undefined ? 'return-condition' : undefined} style={{ display: 'flex', flexWrap: 'wrap', gap: compact ? 4 : 6 }}>
       {CONDITIONS.map((c) => {
         const on = value === c
         return (
@@ -2321,12 +2493,12 @@ function DamagePanel({
   mark,
   name,
   onDescription,
-  onAddPhoto,
+  onRefreshEvidence,
 }: {
   mark: Mark
   name: string
   onDescription: (v: string) => void
-  onAddPhoto: () => void
+  onRefreshEvidence: () => void
 }) {
   const photos = mark.damagePhotos ?? 0
   return (
@@ -2336,15 +2508,16 @@ function DamagePanel({
         onChange={(e) => onDescription(e.target.value)}
         placeholder={`Describe the ${mark.condition === 'Lost' ? 'loss' : 'damage'}`}
         aria-label={`Damage description for ${name}`}
+        data-operation-target={!(mark.damageDescription ?? '').trim() ? 'return-damage' : undefined}
         style={{ width: '100%', minHeight: 46, padding: 7, borderRadius: 'var(--r-input)', border: `1px solid ${(mark.damageDescription ?? '').trim() === '' ? 'var(--danger)' : 'var(--input-border)'}`, background: 'var(--input-bg)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontFamily: 'inherit', resize: 'vertical' }}
       />
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', flexWrap: 'wrap' }}>
         <span className="figure" style={{ fontSize: 'var(--t-meta)', color: photos > 0 ? 'var(--success-text)' : 'var(--danger-text)' }}>
           {photos} photo(s)
         </span>
-        <RowAction label="Count a Photo" onClick={onAddPhoto} />
+        <span data-operation-target={!photos ? 'return-damage' : undefined}><RowAction label="Refresh saved photos" onClick={onRefreshEvidence} /></span>
         <span style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-          A local count — the file itself is captured in the Evidence Workspace.
+          Only saved photos linked to this unit satisfy the evidence requirement.
         </span>
       </div>
     </div>
@@ -2386,7 +2559,7 @@ function SigRow({
     whiteSpace: 'nowrap' as const,
   }
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+    <div data-operation-signature={label} style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
       <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>{label}</span>
@@ -2476,7 +2649,7 @@ function SigRow({
           style={{
             ...capture,
             color: 'var(--primary, #38bdf8)',
-            borderColor: 'color-mix(in srgb, var(--primary, #2563eb) 40%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--primary, #2563eb) 40%, transparent)',
             cursor: disabled ? 'not-allowed' : 'pointer',
           }}
         >

@@ -581,15 +581,10 @@ export function canReversePayment(role: SystemRole, isOnline: boolean = true): b
  * `canVoidInvoice`, `canOverrideCreditLimit`): a signed record the database has
  * not confirmed is the one thing a closing must never be.
  */
+// RULING 2026-10-18: closing.approve is Owner/Admin/Manager/Accounts — the set 0117's auth_is_finance_or_admin() admits.
 export function canApproveDailyClosing(role: SystemRole, isOnline: boolean = true): boolean {
   if (!isOnline) return false
-  return (
-    role === 'Owner' ||
-    role === 'Admin' ||
-    role === 'Manager' ||
-    role === 'Coordinator' ||
-    role === 'Accounts'
-  )
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Accounts'
 }
 
 /** Check if role can override client credit limits */

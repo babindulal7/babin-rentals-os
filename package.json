@@ -47,6 +47,8 @@
     "test:operations-grants": "node scripts/test-operations-grants.mjs",
     "test:pricing-structures": "node scripts/test-pricing-structures.mjs",
     "test:race": "node scripts/test-last-unit-race.mjs",
+    "test:server-contracts": "node scripts/test-unit-lifecycle-and-contracts.mjs",
+    "test:partial-return": "node scripts/test-partial-return-reservation-release.mjs",
     "check:fixtures": "node scripts/check-no-fixtures.mjs",
     "check:security": "node scripts/check-astra-phase0.mjs && npm run test:operations-grants && node scripts/test-reset-branch-boundary.mjs"
   },
@@ -69,7 +71,12 @@
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.1.1",
     "recharts": "^3.10.1",
-    "vite-plugin-pwa": "^1.3.0"
+    "vite-plugin-pwa": "^1.3.0",
+    "class-variance-authority": "^0.7.1",
+    "cn": "^0.5.0",
+    "lucide-react": "^1.61.0",
+    "react-is": "18.3.1",
+    "shiki": "^4.5.0"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",

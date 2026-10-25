@@ -88,6 +88,8 @@ export interface ModalProps {
   surfaceStyle?: CSSProperties | undefined
   contentStyle?: CSSProperties
   headerActions?: ReactNode
+  /** A full-width row under the title line, still inside the header (the Operations stage progress bar). */
+  headerContent?: ReactNode
 }
 
 const SIZE_MAX_WIDTH: Record<NonNullable<ModalProps['size']>, number> = {
@@ -117,6 +119,7 @@ export function Modal({
   surfaceStyle,
   contentStyle,
   headerActions,
+  headerContent,
 }: ModalProps) {
   // Keeps the modal mounted for a beat after isOpen flips to false so the
   // CSS fade/scale-out below can actually play instead of vanishing instantly.
@@ -317,6 +320,7 @@ export function Modal({
             padding: fillScreen ? 'calc(12px + env(safe-area-inset-top, 0px)) 16px 12px' : phone ? 'calc(16px + env(safe-area-inset-top, 0px)) 20px 16px' : '16px 20px',
             borderBottom: '1px solid var(--border)',
             flexShrink: 0,
+            ...(headerContent ? { flexWrap: 'wrap' } : {}),
           }}
         >
           {sheet && swipeDismiss && <span aria-hidden="true" style={{ position: 'absolute', top: 6, left: 'calc(50% - 18px)', width: 36, height: 4, borderRadius: 2, background: 'var(--border2)' }} />}
@@ -372,6 +376,7 @@ export function Modal({
             <TouchTarget />
             <Icon name="close" size={20} />
           </button>
+          {headerContent && <div className="app-modal__header-content" style={{ flexBasis: '100%', minWidth: 0 }}>{headerContent}</div>}
         </div>
 
         {/* Content */}

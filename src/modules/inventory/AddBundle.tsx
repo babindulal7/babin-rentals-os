@@ -20,7 +20,9 @@ import { useToast } from '../../components/ui/Toast'
 import { formatMoney, parseMoney, rupees, roundHalfUp, toRupees } from '../../lib/money'
 import { useBundleWithItems } from '../../lib/queries/useBundles'
 import { readRecordEditor } from '../../lib/queries/recordEditor'
-import { UnsavedLeaveDialog, useUnsavedRecord } from '../../components/ui/RecordWorkspace'
+import { RecordWorkspace, RecordSection, RecordActions, useUnsavedRecord } from '../../components/ui/RecordWorkspace'
+import { useSectionSaveManager, SectionSaveBar, SectionSaveStatusBadge } from '../../components/records/RecordSectionSaveStatus'
+import type { RecordSnapshot, RecordValues } from '../../lib/recordEditor'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import type { BundleWithItems, BundleComponent } from '../../lib/queries/bundles'
 import type {
@@ -218,55 +220,14 @@ function FieldBlock({
   )
 }
 
-/** The render's numbered section chrome — 1 Bundle Details … 4 Notes. */
-function Section({
-  n,
-  title,
-  action,
-  children,
-  bodyStyle,
-}: {
-  n: number
-  title: string
-  action?: ReactNode
-  children: ReactNode
-  bodyStyle?: CSSProperties
+/** Bundle sections use the same save/status furniture as other records. */
+function Section({ n, title, action, children, bodyStyle, statusBadge, footer }: {
+  n: number; title: string; action?: ReactNode; children: ReactNode; bodyStyle?: CSSProperties;
+  statusBadge?: ReactNode; footer?: ReactNode
 }) {
-  return (
-    <section style={{ ...cardStyle, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 9,
-          padding: '11px 14px',
-          borderBottom: '1px solid var(--border)',
-        }}
-      >
-        <span
-          className="figure"
-          aria-hidden
-          style={{
-            width: 21,
-            height: 21,
-            flexShrink: 0,
-            borderRadius: 'var(--r-badge)',
-            display: 'grid',
-            placeItems: 'center',
-            background: 'var(--select-bg)',
-            color: 'var(--select-fg)',
-            fontSize: 'var(--t-th)',
-            fontWeight: 700,
-          }}
-        >
-          {n}
-        </span>
-        <h2 style={{ margin: 0, fontSize: 'var(--t-ui)', fontWeight: 700, color: 'var(--text)' }}>{title}</h2>
-        {action && <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)' }}>{action}</span>}
-      </div>
-      <div style={{ padding: 14, minWidth: 0, ...bodyStyle }}>{children}</div>
-    </section>
-  )
+  return <RecordSection title={title} id={`bundle-section-${n}`} statusBadge={statusBadge} headerAction={action}>
+    <div style={{minWidth: 0, ...bodyStyle}}>{children}</div>{footer}
+  </RecordSection>
 }
 
 /** Foundation §3.1 — BS above AD, Latin digits, always with a year. */
@@ -405,7 +366,6 @@ function downloadCsv(name: string, rows: string[][]) {
  * So the field says the number is assigned on save, the export no longer stamps
  * one, and the success toast quotes only what the action hands back.
  */
-const NOTES_LIMIT = 500
 
 export interface AddBundleProps {
   bundleRef?: string | undefined
@@ -435,7 +395,6 @@ export function AddBundle(props: AddBundleProps = {}) {
   const phone = viewport === 'phone'
   const { user } = useAuth()
   const { showSuccessToast } = useToast()
-  const fileRef = useRef<HTMLInputElement | null>(null)
 
   /* §4 — Bundle Details */
   const [name, setName] = useState('')
@@ -443,7 +402,6 @@ export function AddBundle(props: AddBundleProps = {}) {
   const [active, setActive] = useState(true)
   const [description, setDescription] = useState('')
   const [tags, setTags] = useState<string[]>([])
-  const [thumbnail, setThumbnail] = useState<string | null>(null)
 
   /* §7.3 — the rate is computed; an override is declared, never hidden. */
   const [override, setOverride] = useState(false)
@@ -456,6 +414,7 @@ export function AddBundle(props: AddBundleProps = {}) {
      pre-populated and refuse on line 1 the moment Create was pressed. */
   const [lines, setLines] = useState<DraftLine[]>([])
   const [originalBundle, setOriginalBundle] = useState<BundleWithItems | null>(props.initialBundle ?? null)
+  const hydratedBundleId = useRef<string | null>(null)
   const [initialLineKeys, setInitialLineKeys] = useState<Map<string, string>>(new Map()) // itemId -> lineKey
   const [deactivatedItemIds, setDeactivatedItemIds] = useState<string[]>([])
   const existingBundleRecord = useBundleWithItems(bundleRef, money)
@@ -471,7 +430,6 @@ export function AddBundle(props: AddBundleProps = {}) {
   const [crew, setCrew] = useState<CrewPick[]>([])
   const [vehicle, setVehicle] = useState<VehicleType | null>(null)
 
-  const [notes, setNotes] = useState('')
 
   /*
    * ── The catalogue this screen builds a bundle FROM ─────────────────────
@@ -634,7 +592,8 @@ export function AddBundle(props: AddBundleProps = {}) {
   const fetchedBundle: BundleWithItems | undefined = props.initialBundle ?? existingBundleRecord.rows[0]
   useEffect(() => {
     if (!isEditMode || !fetchedBundle) return
-    if (originalBundle?.id === fetchedBundle.id) return
+    if (hydratedBundleId.current === fetchedBundle.id) return
+    hydratedBundleId.current = fetchedBundle.id
 
     setOriginalBundle(fetchedBundle)
     setName(fetchedBundle.name)
@@ -671,11 +630,18 @@ export function AddBundle(props: AddBundleProps = {}) {
     setInitialLineKeys(itemKeyMap)
 
     const sumParts = initialLines.reduce((sum, l) => sum + l.originalRatePaisa * l.qty, 0)
-    if (fetchedBundle.dailyRate !== sumParts && fetchedBundle.dailyRate > 0) {
-      setOverride(true)
-      setOverrideRate(String(toRupees(fetchedBundle.dailyRate)))
-      setOverrideReason('Existing bundle daily rate override')
-    }
+    const hasOverride = fetchedBundle.dailyRate !== sumParts && fetchedBundle.dailyRate > 0
+    const hydratedOverrideRate = hasOverride ? String(toRupees(fetchedBundle.dailyRate)) : ''
+    setOverride(hasOverride)
+    setOverrideRate(hydratedOverrideRate)
+    setOverrideReason(hasOverride ? 'Existing bundle daily rate override' : '')
+    setDeactivatedItemIds([])
+    const hydratedCategory = fetchedBundle.category ?? liveCategories.find(item => item.id === fetchedBundle.categoryId)?.name ?? ''
+    bundleBaseline.current = JSON.stringify({name: fetchedBundle.name, category: hydratedCategory, active: fetchedBundle.isActive,
+      description: fetchedBundle.description ?? '', components: initialLines.map(line => [line.modelId, line.qty]), deactivatedItemIds: [],
+      pricing: initialLines.map(line => [line.modelId, line.originalRatePaisa, line.discountKind, line.discountPct, line.discountFixedPaisa]),
+      override: hasOverride, overrideRate: hydratedOverrideRate})
+
   }, [isEditMode, fetchedBundle, originalBundle?.id, liveCategories])
 
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -693,6 +659,7 @@ export function AddBundle(props: AddBundleProps = {}) {
   /* Record revision for the atomic save (update_bundle, 0153). Read when the edit opens; a save made
      against a bundle that has since changed is refused and the operator's entries are kept. */
   const [bundleRevision, setBundleRevision] = useState<string | null>(null)
+  const [bundleSnapshot, setBundleSnapshot] = useState<RecordSnapshot | null>(null)
   const [revisionError, setRevisionError] = useState<string | null>(null)
   const bundleKeyFingerprint = useRef<string | null>(null)
   const editingBundleId = isEditMode ? (fetchedBundle?.id ?? null) : null
@@ -700,14 +667,14 @@ export function AddBundle(props: AddBundleProps = {}) {
     if (!editingBundleId) return
     let active = true
     void readRecordEditor('bundle', editingBundleId)
-      .then((snap) => { if (active) { setBundleRevision(snap.revision); setRevisionError(null) } })
+      .then((snap) => { if (active) { setBundleRevision(snap.revision); setBundleSnapshot(snap); setRevisionError(null) } })
       .catch((err: unknown) => { if (active) setRevisionError(err instanceof Error ? err.message : String(err)) })
     return () => { active = false }
   }, [editingBundleId])
 
   /* Unsaved-change protection: the baseline is the form as first shown (hydrated record in edit mode,
      the empty form in create mode). Cancel and link navigation ask only when something differs. */
-  const bundleFingerprint = JSON.stringify({ name, category, active, description, lines: lines.map((l) => [l.modelId, l.qty]), deactivatedItemIds, override, overrideRate })
+  const bundleFingerprint = JSON.stringify({ name, category, active, description, components: lines.map((l) => [l.modelId, l.qty]), deactivatedItemIds, pricing: lines.map(l => [l.modelId, l.originalRatePaisa, l.discountKind, l.discountPct, l.discountFixedPaisa]), override, overrideRate })
   const bundleBaseline = useRef<string | null>(null)
   useEffect(() => {
     if (bundleBaseline.current !== null) return
@@ -739,8 +706,60 @@ export function AddBundle(props: AddBundleProps = {}) {
   const breakdown = useMemo(() => breakdownOf(lines, crew, vehicle, liveById), [lines, crew, vehicle, liveById])
   const drift = useMemo(() => rateDriftOf(lines, liveById), [lines, liveById])
 
+  const sectionManager = useSectionSaveManager({
+    kind: 'bundle', recordId: editingBundleId, snapshot: bundleSnapshot,
+    userId: user?.id, userRole: user?.role, isBusy: saving,
+    onSnapshotUpdated: (saved, change) => {
+      setBundleSnapshot(saved); setBundleRevision(saved.revision)
+      const baseline = JSON.parse(bundleBaseline.current ?? bundleFingerprint) as Record<string, unknown>
+      const current = JSON.parse(bundleFingerprint) as Record<string, unknown>
+      const committed = change.section === 'identity' ? ['name','category','active','description']
+        : change.section === 'components' ? ['components','deactivatedItemIds'] : ['pricing','override','overrideRate']
+      for (const key of committed) baseline[key] = current[key]
+      if (change.section === 'components') {
+        baseline.deactivatedItemIds = []
+        setDeactivatedItemIds([])
+        const keys = new Map<string, string>()
+        for (const row of saved.rows) {
+          const line = lines.find(line => line.modelId === row.product_id)
+          if (line && typeof row.id === 'string') keys.set(row.id, line.key)
+        }
+        setInitialLineKeys(keys)
+      }
+      bundleBaseline.current = JSON.stringify(baseline)
+      setOriginalBundle(previous => {
+        if (!previous) return previous
+        if (change.section === 'identity') return { ...previous, name: String(saved.values.name ?? previous.name),
+          description: typeof saved.values.description === 'string' ? saved.values.description : null,
+          categoryId: typeof saved.values.category_id === 'string' ? saved.values.category_id : null,
+          isActive: typeof saved.values.is_active === 'boolean' ? saved.values.is_active : previous.isActive }
+        if (change.section === 'rates') return { ...previous, dailyRate: rupees(Number(saved.values.daily_rate ?? 0)) }
+        return { ...previous, items: saved.rows.map((row): BundleComponent => {
+          const old = previous.items.find(item => item.itemId === row.id)
+          const model = liveById.get(String(row.product_id))
+          return { itemId: String(row.id), productId: String(row.product_id), quantity: Number(row.quantity),
+            days: Number(row.days ?? 1), isMandatory: row.is_mandatory !== false, sortOrder: Number(row.sort_order ?? 0),
+            productName: model?.name ?? old?.productName ?? String(row.product_id), category: model?.category ?? old?.category ?? null,
+            brand: model?.brand ?? old?.brand ?? null, dailyRate: model?.unitRatePaisa ?? old?.dailyRate ?? null,
+            trackingMode: old?.trackingMode ?? null, unitsTotal: model?.stock ?? old?.unitsTotal ?? 0,
+            unitsInStock: model?.available ?? old?.unitsInStock ?? 0 }
+        }) }
+      })
+    },
+  })
+  const builderBusy = saving || sectionManager.savingSection !== null
+  const { markSectionDirty: markBundleSectionDirty } = sectionManager
+  useEffect(() => {
+    if (!bundleBaseline.current) return
+    const baseline = JSON.parse(bundleBaseline.current) as Record<string, unknown>
+    const current = JSON.parse(bundleFingerprint) as Record<string, unknown>
+    if (['name','category','active','description'].some(key => JSON.stringify(baseline[key]) !== JSON.stringify(current[key]))) markBundleSectionDirty('identity')
+    if (['components','deactivatedItemIds'].some(key => JSON.stringify(baseline[key]) !== JSON.stringify(current[key]))) markBundleSectionDirty('components')
+    if (['pricing','override','overrideRate'].some(key => JSON.stringify(baseline[key]) !== JSON.stringify(current[key]))) markBundleSectionDirty('rates')
+  }, [bundleFingerprint, markBundleSectionDirty])
+
   /* ── §13 · this page sets prices, so the floor does not get it ────────── */
-  if (!money) {
+  if (!money || !user || !['Owner', 'Admin', 'Manager'].includes(user.role)) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
         <ScreenHeader
@@ -756,10 +775,10 @@ export function AddBundle(props: AddBundleProps = {}) {
         <RestrictedState
           reason={
             isEditMode
-              ? 'Editing a bundle is not available for your role. A bundle sets prices — every rate, discount and the daily rate itself — so editing one is a commercial decision your role does not carry. Ask an Owner, Admin, Coordinator or Accounts user to update it.'
-              : 'Creating a bundle is not available for your role. A bundle sets prices — every rate, discount and the daily rate itself — so building one is a commercial decision your role does not carry. You can open any saved bundle from Inventory ▸ Bundles to see its contents and print its packing list. Ask an Owner, Admin, Coordinator or Accounts user to create a new one.'
+              ? 'Editing a bundle is not available for your role. A bundle sets prices — every rate, discount and the daily rate itself — so editing one is a commercial decision your role does not carry. Ask an Owner, Admin or Manager user to update it.'
+              : 'Creating a bundle is not available for your role. A bundle sets prices — every rate, discount and the daily rate itself — so building one is a commercial decision your role does not carry. You can open any saved bundle from Inventory ▸ Bundles to see its contents and print its packing list. Ask an Owner, Admin or Manager user to create a new one.'
           }
-          requiredRole="Owner, Admin, Coordinator or Accounts"
+          requiredRole="Owner, Admin or Manager"
         />
       </div>
     )
@@ -853,6 +872,7 @@ export function AddBundle(props: AddBundleProps = {}) {
    * so the row's `daily_rate` is the figure the toast quotes, not zero.
    */
   const saveBundle = (isDraft: boolean) => {
+    if (saving || sectionManager.isSaving()) return
     if (!user) {
       setSaveError(
         'You are not signed in, so this bundle cannot be attributed to anyone. Nothing was saved. Sign in and try again.',
@@ -865,6 +885,7 @@ export function AddBundle(props: AddBundleProps = {}) {
     }
     // Law 8: one key per press, per row, reused by every retry of that press.
     const keys = writeKeys.current
+    const lineKey = (identity: string) => { let key = keys.lines.get(identity); if (!key) { key = newClientUuid(); keys.lines.set(identity, key) } return key }
     if (!keys.bundle) keys.bundle = newClientUuid()
     setSaveError(null)
     setSaving(true)
@@ -885,7 +906,7 @@ export function AddBundle(props: AddBundleProps = {}) {
       const lineAdds: UpdateBundleLineAdd[] = []
       const lineDeactivations: UpdateBundleLineDeactivate[] = deactivatedItemIds.map((itemId) => ({
         itemId,
-        clientUuid: newClientUuid(),
+        clientUuid: lineKey(`deactivate:${itemId}`),
       }))
 
       for (const l of lines) {
@@ -903,7 +924,7 @@ export function AddBundle(props: AddBundleProps = {}) {
             lineEdits.push({
               itemId: matchedInitialItemId,
               quantity: l.qty,
-              clientUuid: newClientUuid(),
+              clientUuid: lineKey(`edit:${matchedInitialItemId}`),
             })
           }
         } else {
@@ -911,13 +932,13 @@ export function AddBundle(props: AddBundleProps = {}) {
             productId: l.modelId,
             qty: l.qty,
             days: 1,
-            clientUuid: newClientUuid(),
+            clientUuid: lineKey(`add:${l.key}`),
           })
         }
       }
 
       /* A retry of the SAME content reuses its key (idempotent); changed content gets a new one. */
-      const fingerprint = JSON.stringify({ patch, lineEdits: lineEdits.map((e) => [e.itemId, e.quantity]), lineAdds: lineAdds.map((a) => [a.productId, a.qty]), lineDeactivations: lineDeactivations.map((d) => d.itemId) })
+      const fingerprint = JSON.stringify({ revision: bundleRevision, patch, lineEdits: lineEdits.map((e) => [e.itemId, e.quantity]), lineAdds: lineAdds.map((a) => [a.productId, a.qty]), lineDeactivations: lineDeactivations.map((d) => d.itemId) })
       if (bundleKeyFingerprint.current !== fingerprint) {
         keys.bundle = newClientUuid()
         bundleKeyFingerprint.current = fingerprint
@@ -1040,6 +1061,28 @@ export function AddBundle(props: AddBundleProps = {}) {
       })
       .finally(() => setSaving(false))
   }
+
+  const saveBuilderSection = (section: 'identity' | 'rates' | 'components') => {
+    if (builderBusy) return
+    const values: RecordValues = section === 'identity' ? {
+      name: name.trim(), description: description.trim() || null,
+      category_id: liveCategories.find(item => item.name === category)?.id ?? null, is_active: active,
+    } : section === 'rates' ? { daily_rate: toRupees(effectiveRatePaisa) } : {}
+    if (section === 'identity' && (!name.trim() || !values.category_id)) { setSaveError('Enter a bundle name and category before saving this section.'); return }
+    if (section === 'rates' && blockingReason) { setSaveError(blockingReason); return }
+    const rows: RecordValues[] | undefined = section === 'components' ? lines.map((line, index) => {
+      const id = [...initialLineKeys].find(([, key]) => key === line.key)?.[0] ?? null
+      const original = originalBundle?.items.find(item => item.itemId === id)
+      return { id, product_id: line.modelId, quantity: line.qty, days: original?.days ?? 1, is_mandatory: original?.isMandatory ?? true, sort_order: index }
+    }) : undefined
+    void sectionManager.saveSection(section, values, rows).catch(() => {})
+  }
+  const builderBadge = (section: string) => <SectionSaveStatusBadge status={sectionManager.getSectionStatus(section, false)}
+    errorMessage={sectionManager.sectionErrors[section]} savedAtTime={sectionManager.savedSections[section]?.savedAt} />
+  const builderSaveBar = (section: 'identity' | 'rates' | 'components', label: string) => <SectionSaveBar
+    sectionName={label} status={sectionManager.getSectionStatus(section, false)} isSaving={sectionManager.savingSection === section}
+    canSave={Boolean(bundleSnapshot) && !builderBusy} saveDisabledReason={!bundleSnapshot ? 'Create the bundle first to enable section saving' : null}
+    onSave={() => saveBuilderSection(section)} errorMessage={sectionManager.sectionErrors[section]} />
 
   /* ── line editing ─────────────────────────────────────────────────────── */
 
@@ -1244,7 +1287,7 @@ export function AddBundle(props: AddBundleProps = {}) {
   }))
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+    <RecordWorkspace><fieldset disabled={builderBusy} style={{display: 'contents', border: 0, padding: 0, margin: 0}}><div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
       {SEED_ERRORS.length > 0 && (
         <Banner tone="danger" icon="alert_triangle" title="The inventory tree does not reconcile.">
           <ul style={{ margin: 0, paddingLeft: 'var(--sp-lg)' }}>
@@ -1362,7 +1405,8 @@ export function AddBundle(props: AddBundleProps = {}) {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0 }}>
           {/* ── 1 · Bundle Details ─────────────────────────────────────── */}
-          <Section n={1} title="Bundle Details">
+          <Section n={1} title="Bundle Details" statusBadge={<>{builderBadge('identity')}{builderBadge('rates')}</>}
+            footer={<>{builderSaveBar('identity', 'Identity')}{builderSaveBar('rates', 'Rates')}</>}>
             <div style={{ display: 'grid', gridTemplateColumns: phone ? '1fr' : desktop ? 'minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr) auto' : 'repeat(2, minmax(0,1fr))', gap: 14 }}>
               <Field label="Bundle Name" required>
                 <input
@@ -1524,46 +1568,7 @@ export function AddBundle(props: AddBundleProps = {}) {
                 </span>
               </FieldBlock>
 
-              <FieldBlock label="Thumbnail">
-                <span style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                  <span
-                    aria-hidden
-                    style={{
-                      width: 76,
-                      height: 54,
-                      borderRadius: 'var(--r-sm)',
-                      border: '1px solid var(--border)',
-                      background: 'var(--card2)',
-                      display: 'grid',
-                      placeItems: 'center',
-                      overflow: 'hidden',
-                      color: 'var(--muted)',
-                    }}
-                  >
-                    {thumbnail ? (
-                      <img src={thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <Icon name="photo" size={19} />
-                    )}
-                  </span>
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    accept="image/png,image/jpeg"
-                    style={{ display: 'none' }}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0]
-                      if (!f) return
-                      const reader = new FileReader()
-                      reader.onload = () => setThumbnail(typeof reader.result === 'string' ? reader.result : null)
-                      reader.readAsDataURL(f)
-                    }}
-                  />
-                  <Button icon="upload" onClick={() => fileRef.current?.click()}>
-                    {thumbnail ? 'Change image' : 'Add image'}
-                  </Button>
-                </span>
-              </FieldBlock>
+              <FieldBlock label="Thumbnail"><p role="note" style={subtle}>Image attachments are not yet saveable.</p></FieldBlock>
             </div>
 
             {/* §7.3 — computed by default; an override is declared and reasoned. */}
@@ -1875,6 +1880,7 @@ export function AddBundle(props: AddBundleProps = {}) {
               <Section
                 n={3}
                 title={`Bundle Items (${lines.length})`}
+                statusBadge={builderBadge('components')} footer={builderSaveBar('components', 'Components')}
                 bodyStyle={{ padding: 0 }}
                 action={
                   lines.length > 0 ? (
@@ -2138,90 +2144,14 @@ export function AddBundle(props: AddBundleProps = {}) {
           </Section>
 
           {/* ── 5 · Notes ──────────────────────────────────────────────── */}
-          <Section n={5} title="Notes (Optional)">
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value.slice(0, NOTES_LIMIT))}
-              rows={3}
-              placeholder="Internal notes about this bundle…"
-              aria-label="Internal notes"
-              style={{ ...controlBase, height: 'auto', padding: '8px 9px', resize: 'vertical', lineHeight: 1.5 }}
-            />
-            <div style={{ display: 'flex', marginTop: 6 }}>
-              <span style={subtle}>{/* §11 */}Internal only. Never printed, never visible to the client. </span>
-              <span className="figure" style={{ marginLeft: 'auto', ...subtle }}>
-                {notes.length} / {NOTES_LIMIT}
-              </span>
-            </div>
-          </Section>
+          <Section n={5} title="Notes (Optional)"><p role="note" style={subtle}>Internal bundle notes are not yet saveable.</p></Section>
 
-          {/* §3 — the footer owns Cancel, Save Draft and Create Bundle.
-              Spec 7.7 PHONE: "three accordion steps with a sticky [Save]" — so
-              below 768 this bar sticks to the bottom of the viewport instead of
-              sitting at the end of a very long scroll. */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              flexWrap: 'wrap',
-              paddingTop: 'var(--sp-md)',
-              borderTop: '1px solid var(--border)',
-              ...(phone
-                ? {
-                    position: 'sticky' as const,
-                    bottom: 0,
-                    zIndex: 3,
-                    background: 'var(--bg)',
-                    paddingBottom: 'var(--sp-sm)',
-                  }
-                : {}),
-            }}
-          >
-            <Button onClick={requestExit}>Cancel</Button>
-            <UnsavedLeaveDialog />
-            <ConfirmDialog isOpen={confirmCancel} title="Discard unsaved changes?" description="Your edits to this bundle have not been saved and will be lost." confirmLabel="Discard" cancelLabel="Keep editing" variant="danger" onClose={() => setConfirmCancel(false)} onConfirm={() => { setConfirmCancel(false); handleExit() }} />
-            <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-              {isEditMode ? (
-                blockingReason ? (
-                  <Unavailable reason={blockingReason}>
-                    <Button icon="check" variant="primary" disabled>
-                      Save Changes
-                    </Button>
-                  </Unavailable>
-                ) : (
-                  <Button icon="check" variant="primary" disabled={saving} onClick={() => saveBundle(false)}>
-                    {saving ? 'Saving…' : 'Save Changes'}
-                  </Button>
-                )
-              ) : (
-                <>
-                  {draftBlockingReason ? (
-                    <Unavailable reason={draftBlockingReason}>
-                      <Button icon="file" disabled>
-                        Save Draft
-                      </Button>
-                    </Unavailable>
-                  ) : (
-                    <Button icon="file" disabled={saving} onClick={() => saveBundle(true)}>
-                      {saving ? 'Saving…' : 'Save Draft'}
-                    </Button>
-                  )}
-                  {blockingReason ? (
-                    <Unavailable reason={blockingReason}>
-                      <Button icon="plus" variant="primary" disabled>
-                        Create Bundle
-                      </Button>
-                    </Unavailable>
-                  ) : (
-                    <Button icon="plus" variant="primary" disabled={saving} onClick={() => saveBundle(false)}>
-                      {saving ? 'Saving…' : 'Create Bundle'}
-                    </Button>
-                  )}
-                </>
-              )}
-            </span>
-          </div>
+          <RecordActions busy={builderBusy} dirty={bundleDirty || !isEditMode}
+            disabled={Boolean(blockingReason)} label={isEditMode ? 'Save Changes' : 'Create Bundle'}
+            onSave={() => saveBundle(false)} onCancel={requestExit}
+            statusText={blockingReason ?? undefined}
+            extra={!isEditMode ? <Button icon="file" disabled={builderBusy || Boolean(draftBlockingReason)} onClick={() => saveBundle(true)}>Save Draft</Button> : undefined} />
+          <ConfirmDialog isOpen={confirmCancel} title="Discard unsaved changes?" description="Your edits to this bundle have not been saved and will be lost." confirmLabel="Discard" cancelLabel="Keep editing" variant="danger" onClose={() => setConfirmCancel(false)} onConfirm={() => { setConfirmCancel(false); handleExit() }} />
 
           {/* Law 12 — inline and persistent, beside the control that failed, and
               below it so it cannot push the buttons out from under the cursor.
@@ -2568,7 +2498,7 @@ export function AddBundle(props: AddBundleProps = {}) {
           ]}
         />
       )}
-    </div>
+    </div></fieldset></RecordWorkspace>
   )
 }
 

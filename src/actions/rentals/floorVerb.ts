@@ -834,6 +834,49 @@ async function readLatestSession(
   return rows[0] ?? null
 }
 
+interface ExistingReturnSession {
+  id: string
+  session_no: number
+  state: 'In Progress' | 'Completed'
+  notes: string | null
+}
+
+/** Resolve the original receipt before deriving the next session sequence. */
+async function readReturnSessionForAction(bookingId: string, actionUuid: string): Promise<ExistingReturnSession | null> {
+  const { data, error } = await supabase.from('operation_sessions')
+    .select('id, booking_id, operation, client_uuid, session_no, state, notes')
+    .eq('client_uuid', actionUuid).maybeSingle()
+  if (error) throw new Error(`Return receipt retry could not be verified: ${error.message}. Nothing was written.`)
+  if (data === null) return null
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error('Return receipt retry is incomplete. Nothing was written.')
+  }
+  const row = data as Record<string, unknown>
+  if (typeof row.id !== 'string' || !row.id || row.booking_id !== bookingId || row.operation !== 'Return' ||
+    row.client_uuid !== actionUuid || typeof row.session_no !== 'number' || !Number.isSafeInteger(row.session_no) ||
+    row.session_no <= 0 || (row.state !== 'In Progress' && row.state !== 'Completed') ||
+    (row.notes !== null && typeof row.notes !== 'string')) {
+    throw new Error('Return receipt retry does not match this booking and completion key. Nothing was written.')
+  }
+  return { id: row.id, session_no: row.session_no, state: row.state, notes: row.notes }
+}
+
+async function completedReturnResult(booking: BookingHead, session: ExistingReturnSession): Promise<FloorVerbResult> {
+  return {
+    success: true,
+    bookingId: booking.id,
+    sessionId: session.id,
+    sessionClosed: true,
+    lines: 0,
+    movements: 0,
+    damageFindings: 0,
+    unitsReset: 0,
+    queued: 0,
+    stage: null,
+    stageHeldBy: booking.stage === 'On Rent' ? await linesShortOfTerminal('Return', await readBookingLines(booking.id)) : [],
+  }
+}
+
 /* ── Validation — everything judgeable without a round trip ─────────────── */
 
 /** Runs inside each action's `validate`, so it fires before `execute` and before any write. */
@@ -1017,12 +1060,17 @@ export async function runFloorVerb(
   if (booking.closed_at !== null) {
     throw new Error(`${booking.booking_no} is Closed. Closed is final (0002:96) — nothing further is recorded.`)
   }
-  if (booking.stage !== meta.runsAt) {
-    throw new Error(
-      `${job} runs at stage ${meta.runsAt}; ${booking.booking_no} is at ${booking.stage}. ` +
-        'Nothing was written. If this is a repeat submit, the first one already landed.',
-    )
+  const assertStage = () => {
+    if (booking.stage !== meta.runsAt) {
+      throw new Error(
+        `${job} runs at stage ${meta.runsAt}; ${booking.booking_no} is at ${booking.stage}. ` +
+          'Nothing was written. If this is a repeat submit, the first one already landed.',
+      )
+    }
   }
+  // A stable Return key can prove that a sealed session already succeeded,
+  // including when the final stage changed before its response was lost.
+  if (job !== 'Return' || input.clientUuid === undefined) assertStage()
 
   // RULING 2026-10-24: integrate guarded preflight in live AND mock paths.
   // Reset's queue/task policies (0172) also enforce scope inside Postgres;
@@ -1034,6 +1082,12 @@ export async function runFloorVerb(
   if (grantError) {
     throw new Error(`${job} authorization could not be confirmed: ${grantError.message}. Nothing was written.`)
   }
+
+  const originalReturnSession = job === 'Return' && input.clientUuid !== undefined
+    ? await readReturnSessionForAction(booking.id, actionUuid)
+    : null
+  if (originalReturnSession?.state === 'Completed') return completedReturnResult(booking, originalReturnSession)
+  assertStage()
 
   /* 2 — Reset has no session. It is the queue, per item. */
   if (!isSessionJob(job)) {
@@ -1079,7 +1133,7 @@ export async function runFloorVerb(
    *     minted here rather than read back, so the child rows can point at it even
    *     on the offline path, where `idempotentInsert` queues the write and
    *     returns the payload instead of a server-assigned row. */
-  const latest = await readLatestSession(booking.id, operation)
+  const latest = originalReturnSession ?? await readLatestSession(booking.id, operation)
   const resumed = latest !== null && latest.state === 'In Progress' ? latest : null
 
   /* 4a — a Packing session that cannot be resumed is the only one this booking
@@ -1146,6 +1200,32 @@ export async function runFloorVerb(
   // setting. Revert: restore `generateClientUuid()` here.
   const sessionId = resumed?.id ?? (await operationSessionId(booking.id, operation, nextSessionNo))
 
+  // Return receipts are immutable. An exact retry may finish an open session,
+  // but a changed count needs an explicit correction instead of silently
+  // leaving the old receipt behind while rewriting its line state.
+  const resumedReturnMovements = job === 'Return' && resumed !== null
+    ? await readSessionMovements(sessionId, lines.map((line) => line.bookingLineId))
+    : null
+  if (resumedReturnMovements !== null) {
+    for (const line of lines) {
+      const prior = resumedReturnMovements.get(line.bookingLineId)?.qtyRow
+      if (prior && scannedUnits(line).length === 0) {
+        if (prior.qty !== movedQty(line, requiredByLine.get(line.bookingLineId) ?? 0)) {
+          throw new Error(
+            `Return: booking line ${line.bookingLineId} already recorded ${prior.qty} in this session. ` +
+              'A changed quantity requires an explicit correction; retry with the recorded quantity. Nothing was written.',
+          )
+        }
+        if (prior.resultingState !== returnMovementState(line)) {
+          throw new Error(
+            `Return: booking line ${line.bookingLineId} already has a recorded receipt condition. ` +
+              'A changed condition or outcome requires an explicit correction. Nothing was written.',
+          )
+        }
+      }
+    }
+  }
+
   if (resumed === null) {
     const sessionPayload = {
       id: sessionId,
@@ -1164,7 +1244,16 @@ export async function runFloorVerb(
       created_by: ctx.userId,
     } satisfies Database['public']['Tables']['operation_sessions']['Insert']
     try {
-      await idempotentInsert('operation_sessions', sessionPayload, job === 'Return' ? { queueOnFailure: false } : undefined)
+      const inserted = await idempotentInsert('operation_sessions', sessionPayload, job === 'Return' ? { queueOnFailure: false } : undefined)
+      const insertedRow: unknown = inserted.data
+      const insertedId = insertedRow && typeof insertedRow === 'object' && 'id' in insertedRow ? insertedRow.id : null
+      if (job === 'Return' && insertedId !== sessionId) {
+        // Another request can commit between the key lookup and this insert.
+        // Never attach children to the uncommitted, newly derived session ID.
+        const committed = await readReturnSessionForAction(booking.id, actionUuid)
+        if (committed?.state === 'Completed') return completedReturnResult(booking, committed)
+        throw new Error('The original Return session must be retried before recording more items. Nothing further was written.')
+      }
     } catch (error) {
       // 0113 renamed bookings.delivery_type before the separate
       // operation_sessions.delivery_method enum. Retry only this known enum
@@ -1204,7 +1293,7 @@ export async function runFloorVerb(
   const queueCandidates: ResetQueueCandidate[] = []
   /* Law 8 — a resumed session must not append a second movement for a unit
      the earlier pass already moved. Read once, consult per line. */
-  const priorMovements = await readSessionMovements(sessionId, lines.map((l) => l.bookingLineId))
+  const priorMovements = resumedReturnMovements ?? await readSessionMovements(sessionId, lines.map((l) => l.bookingLineId))
 
   for (const line of lines) {
     const required = requiredByLine.get(line.bookingLineId) ?? 0
@@ -1599,17 +1688,12 @@ async function writeMovements(
   const scans = scannedUnits(line)
 
   if (scans.length === 0) {
-    /* One quantity movement per (session, line). A resumed session that states
-       a new count corrects the row it already wrote rather than adding a second
-       one — the counters sum this table (0003:291), so a second row would
-       double the packed quantity (BUG_AUDIT_LIFECYCLE PK-04). */
+    /* One quantity movement per (session, line). An exact retry reuses its
+       immutable receipt; subsequent partial Returns use a new session. */
     if (prior?.qtyRow) {
       /* `session_line_movements` is append-only (its Update type is `never`),
-         so a resumed pass that states a DIFFERENT count cannot correct the row
-         it already wrote. The line row (`qty_packed_entered` / the line state)
-         carries the corrected count; the movement stays at what first moved.
-         Not appending a second row is the fix here — TODO(decision): whether a
-         within-session correction should append a delta movement instead. */
+         so Return refuses a changed count before any write above. Pack and
+         Handover retain their existing line-state correction behavior. */
       return 0
     }
     await idempotentInsert('session_line_movements', {
@@ -1745,7 +1829,7 @@ async function writeSignatures(
 interface PriorMovements {
   unitIds: Set<string>
   serials: Set<string>
-  qtyRow: { id: string; qty: number } | null
+  qtyRow: { id: string; qty: number; resultingState: ItemQuantityState } | null
 }
 
 async function readSessionMovements(sessionId: string, lineIds: readonly string[]): Promise<Map<string, PriorMovements>> {
@@ -1753,11 +1837,11 @@ async function readSessionMovements(sessionId: string, lineIds: readonly string[
   if (lineIds.length === 0) return out
   const { data, error } = await supabase
     .from('session_line_movements')
-    .select('id, booking_line_id, unit_id, serial, qty')
+    .select('id, booking_line_id, unit_id, serial, qty, resulting_item_state')
     .eq('session_id', sessionId)
     .in('booking_line_id', [...lineIds])
   if (error) throw new Error(`Could not read the movements already recorded on session ${sessionId}: ${error.message}`)
-  for (const r of (data ?? []) as Array<{ id: string; booking_line_id: string; unit_id: string | null; serial: string | null; qty: number }>) {
+  for (const r of (data ?? []) as Array<{ id: string; booking_line_id: string; unit_id: string | null; serial: string | null; qty: number; resulting_item_state: ItemQuantityState }>) {
     let p = out.get(r.booking_line_id)
     if (!p) {
       p = { unitIds: new Set(), serials: new Set(), qtyRow: null }
@@ -1765,7 +1849,7 @@ async function readSessionMovements(sessionId: string, lineIds: readonly string[
     }
     if (r.unit_id !== null) p.unitIds.add(r.unit_id)
     else if (r.serial !== null) p.serials.add(r.serial)
-    else p.qtyRow = { id: r.id, qty: r.qty }
+    else p.qtyRow = { id: r.id, qty: r.qty, resultingState: r.resulting_item_state }
   }
   return out
 }

@@ -43,9 +43,8 @@ export const InputGroup = forwardRef<HTMLDivElement, InputGroupProps>(function I
   ref
 ) {
   const childrenArray = Children.toArray(children)
-  /* The dead utility classes expressed this with `has-[textarea]:flex-col` /
-     `has-[[data-align=block-*]]:flex-col`; a direct-children scan says the
-     same thing without depending on CSS :has() support. */
+  /* Detect textareas and block-aligned addons directly rather than depending
+     on CSS relational selectors for the layout. */
   const isBlockLayout =
     childrenArray.some(childIsTextarea) || childrenArray.some(childIsBlockAddon)
 

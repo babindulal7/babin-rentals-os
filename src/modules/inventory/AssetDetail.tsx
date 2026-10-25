@@ -681,7 +681,7 @@ function AssetDetailView() {
                   })}
                 </div>
 
-                {user && ['Owner', 'Admin', 'Manager', 'Warehouse'].includes(user.role) && (
+                {user && ['Owner', 'Admin', 'Manager'].includes(user.role) && (
                   <Button
                     variant="primary"
                     icon="plus"
@@ -751,12 +751,12 @@ function AssetDetailView() {
                     <Button variant="ghost" size="sm" onClick={() => setEditingUnit((prev) => (prev === u.id ? null : u.id))}>
                       {editingUnit === u.id ? 'Close' : 'Edit'}
                     </Button>
-                    {u.state !== 'Retired' && user && ['Owner', 'Admin', 'Manager', 'Warehouse'].includes(user.role) && (
+                    {u.state !== 'Retired' && user && ['Owner', 'Admin', 'Manager'].includes(user.role) && (
                       <Button
                         variant="danger"
                         size="sm"
                         onClick={() => setRetiringUnit(u)}
-                        style={{ minHeight: 36 }}
+                        style={{ minHeight: 44 }}
                       >
                         Retire
                       </Button>
@@ -846,12 +846,12 @@ function AssetDetailView() {
                                 <Button variant="ghost" onClick={() => setEditingUnit((prev) => (prev === u.id ? null : u.id))}>
                                   {editingUnit === u.id ? 'Close' : 'Edit'}
                                 </Button>
-                                {u.state !== 'Retired' && user && ['Owner', 'Admin', 'Manager', 'Warehouse'].includes(user.role) && (
+                                {u.state !== 'Retired' && user && ['Owner', 'Admin', 'Manager'].includes(user.role) && (
                                   <Button
                                     variant="danger"
                                     size="sm"
                                     onClick={() => setRetiringUnit(u)}
-                                    style={{ minHeight: 36 }}
+                                    style={{ minHeight: 44 }}
                                   >
                                     Retire
                                   </Button>

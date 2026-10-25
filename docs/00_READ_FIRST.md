@@ -16,7 +16,7 @@ When any two documents in this repository conflict or disagree, read in this exa
 5. docs/PRODUCT_RULES.md           — Canonical business laws & durability invariants
 6. docs/CURRENT_STATE.md           — Current verified runtime & release gate status
 7. PROGRESS.md                     — Chronological implementation ledger (what is actually built)
-8. PLAN.md                         — Dependency-ordered build roadmap
+8. PLAN.md                         — Dependency-ordered build roadmap (NOT PRESENT in the repo at b4c986a; skip this level — laws are in docs/PRODUCT_RULES.md, open decisions in docs/OPEN_DECISIONS.md)
 9. Foundation Specification        — Canonical domain model & business concepts
 10. Historical Audits & Plans      — Point-in-time measurements (never current status)
 ```
@@ -29,7 +29,7 @@ When any two documents in this repository conflict or disagree, read in this exa
 Historical audits, bug sweeps, and review documents are **dated snapshots**, not living specifications. A dated audit describes the codebase on the day it was run. It cannot supersede a core architectural law, a newer binding ruling, or verified code in the repository.
 
 ### Rule 2: `PROGRESS.md` Is the Sole Implementation Ledger
-The state of what has been built, tested, and verified lives exclusively in [`PROGRESS.md`](../PROGRESS.md) (newest entries at top). Do not assume a feature or migration is complete because a plan proposed it. Verify in `PROGRESS.md` and through live gate checks.
+The state of what has been built, tested, and verified lives exclusively in [`PROGRESS.md`](../PROGRESS.md) (newest entries at top). The file is about 2.5 MB: read only the newest entry (the first ~60 lines) and search the rest by keyword — do not load it whole. Do not assume a feature or migration is complete because a plan proposed it. Verify in `PROGRESS.md` and through live gate checks.
 
 ### Rule 3: Dated Audits Are Historical Measurements
 Never repeat a dated audit's findings, readiness score, or blocker counts as present-tense fact. A score of "42% ready" or "18 blockers" from August or early September 2026 is an archival artifact. The current state is defined by fresh execution of the repository's runtime gates.
@@ -41,7 +41,7 @@ If a document mentions a P0 or P1 blocker, check `docs/OPEN_DECISIONS.md`, `PROG
 When an agent or developer encounters an ambiguity, missing requirement, or edge-case conflict:
 - **Never invent a product decision** or fabricate mock data/compliance flags.
 - Check `docs/OPEN_DECISIONS.md` and binding rulings `RULINGS-*.md`.
-- If unruled, record a `TODO(decision)`, log the question in `PLAN.md §4` / `docs/OPEN_DECISIONS.md`, and proceed with unblocked work.
+- If unruled, record a `TODO(decision)`, log the question in `docs/OPEN_DECISIONS.md` (`PLAN.md §4` is not in the repo), and proceed with unblocked work.
 
 ---
 

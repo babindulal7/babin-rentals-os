@@ -23,7 +23,7 @@ const state = vi.hoisted(() => ({
     refetch: vi.fn(),
   },
   calls: [] as Array<{ input: Record<string, unknown>; ctx: Record<string, unknown> }>,
-  outcome: { fail: null as string | null },
+  outcome: { fail: null as string | null, hold: null as Promise<void> | null },
   toasts: [] as string[],
   online: true,
 }))
@@ -36,6 +36,7 @@ vi.mock('../../../actions/clients/changeMembership', () => ({
   NOTE_MAX: 500,
   changeMembership: vi.fn(async (input: Record<string, unknown>, ctx: Record<string, unknown>) => {
     state.calls.push({ input, ctx })
+    if (state.outcome.hold) await state.outcome.hold
     if (state.outcome.fail) throw new Error(state.outcome.fail)
     return { client_id: input['clientDbId'], plan_level: input['planLevel'] }
   }),
@@ -109,6 +110,7 @@ beforeEach(() => {
   state.plans = { rows: PLANS, loading: false, error: null, isEmpty: false, refetch: vi.fn() }
   state.calls = []
   state.outcome.fail = null
+  state.outcome.hold = null
   state.toasts = []
   state.online = true
   onClose = vi.fn()
@@ -257,10 +259,42 @@ describe('applying', () => {
     expect(state.calls[2]!.input['clientUuid']).not.toBe(state.calls[0]!.input['clientUuid'])
   })
 
-  it('passes the real connection state to the action', async () => {
+  it('refuses offline before starting a membership write', async () => {
     state.online = false
     await mount({ hasMembership: false })
     await click('Activate Membership')
-    expect(state.calls[0]!.ctx['isOnline']).toBe(false)
+    expect(state.calls).toHaveLength(0)
+    expect(document.body.querySelector('[role="alert"]')?.textContent).toContain('Connect to update client membership.')
+    expect(onSuccess).not.toHaveBeenCalled()
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it.each(['', 'C-0042'])('refuses an unavailable database client identity (%s)', async (dbId) => {
+    await mount({ hasMembership: false, client: { ...client, dbId } })
+    await click('Activate Membership')
+    expect(state.calls).toHaveLength(0)
+    expect(document.body.querySelector('[role="alert"]')?.textContent).toContain('saved client identity is unavailable')
+    expect(onSuccess).not.toHaveBeenCalled()
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('allows one pending write and keeps its inputs and Cancel locked until confirmation', async () => {
+    let release: (() => void) | undefined
+    state.outcome.hold = new Promise<void>((resolve) => { release = resolve })
+    await mount({ hasMembership: false })
+    await act(async () => {
+      button('Activate Membership')!.click()
+      button('Activate Membership')!.click()
+    })
+    expect(state.calls).toHaveLength(1)
+    expect(select()!.disabled).toBe(true)
+    expect(note()!.disabled).toBe(true)
+    expect(button('Cancel')!.disabled).toBe(true)
+    await click('Cancel')
+    expect(onClose).not.toHaveBeenCalled()
+    expect(onSuccess).not.toHaveBeenCalled()
+    await act(async () => { release?.() })
+    expect(onSuccess).toHaveBeenCalledWith('Academy')
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 })

@@ -72,8 +72,6 @@ function createLiveClient() {
  * The mock imports are inside the conditional so they are tree-shaken out of
  * production bundles.
  */
-let _supabase: ReturnType<typeof createLiveClient> | null = null
-
 let _mockClientPromise: Promise<ReturnType<typeof createLiveClient>> | null = null
 
 async function createMockClient(): Promise<ReturnType<typeof createLiveClient>> {
@@ -86,28 +84,6 @@ async function createMockClient(): Promise<ReturnType<typeof createLiveClient>> 
     return { ...mockSupabase, storage: mockStorage } as unknown as ReturnType<typeof createLiveClient>
   })()
   return _mockClientPromise
-}
-
-/**
- * Get the Supabase client. In production (IS_MOCK=false), returns the live client synchronously.
- * In mock mode (IS_MOCK=true), throws — use getSupabaseClient() instead for async access.
- */
-export function getSupabaseClient(): ReturnType<typeof createLiveClient> {
-  if (IS_MOCK) {
-    throw new Error('Mock mode requires async client. Use getSupabaseClientAsync() instead.')
-  }
-  if (!_supabase) _supabase = createLiveClient()
-  return _supabase
-}
-
-/**
- * Async version for mock mode. In production, returns the live client immediately.
- */
-export async function getSupabaseClientAsync(): Promise<ReturnType<typeof createLiveClient>> {
-  if (IS_MOCK) {
-    return createMockClient()
-  }
-  return getSupabaseClient()
 }
 
 let _mockClient: ReturnType<typeof createLiveClient> | null = null
@@ -136,6 +112,28 @@ export const supabase: ReturnType<typeof createLiveClient> = IS_MOCK
       },
     })
   : createLiveClient()
+
+/**
+ * Get the Supabase client. In production (IS_MOCK=false), returns the live client synchronously.
+ * In mock mode (IS_MOCK=true), throws — use getSupabaseClient() instead for async access.
+ */
+export function getSupabaseClient(): ReturnType<typeof createLiveClient> {
+  if (IS_MOCK) {
+    throw new Error('Mock mode requires async client. Use getSupabaseClientAsync() instead.')
+  }
+  return supabase
+}
+
+/**
+ * Async version for mock mode. In production, returns the live client immediately.
+ */
+export async function getSupabaseClientAsync(): Promise<ReturnType<typeof createLiveClient>> {
+  if (IS_MOCK) {
+    if (!_mockClient) _mockClient = await createMockClient()
+    return _mockClient
+  }
+  return getSupabaseClient()
+}
 
 /**
  * Idempotency key for every write.

@@ -82,6 +82,12 @@ jobs:
       - name: Lifecycle
         run: npm run check:lifecycle
 
+      - name: Record sections, equipment lifecycle and membership RPC contracts
+        run: npm run test:server-contracts
+
+      - name: Verified partial serial and quantity Return reservations
+        run: npm run test:partial-return
+
       # R-29: an entry that logs Did / Ruled / Verified and no Completion /
       # Remaining is logged as unfinished, and this is what says so. One grep.
       - name: PROGRESS.md carries its Completion and Remaining blocks

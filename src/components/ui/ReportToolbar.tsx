@@ -420,6 +420,8 @@ export interface ReportToolbarProps {
    * date dimension to filter on.
    */
   dateColumn?: string | undefined
+  /** Bounded readers must not offer an all-history range they cannot query. */
+  allowAllDates?: boolean | undefined
   /**
    * Branch names, exactly as they appear in the rows being filtered.
    *
@@ -445,6 +447,7 @@ export function ReportToolbar({
   value = {},
   onChange,
   dateColumn,
+  allowAllDates = true,
   branches,
   branchGroup = 'branch',
   compare,
@@ -559,7 +562,7 @@ export function ReportToolbar({
           </span>
 
           <select value={preset} onChange={(e) => pickPreset(e.target.value)} aria-label="Date range" style={controlStyle}>
-            {REPORT_RANGE_PRESETS.map((p) => (
+            {REPORT_RANGE_PRESETS.filter(p => allowAllDates || p.days !== null).map((p) => (
               <option key={p.key} value={p.key}>
                 {p.label}
               </option>

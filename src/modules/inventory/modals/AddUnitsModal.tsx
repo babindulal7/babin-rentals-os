@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Modal } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Button'
 import { addEquipmentUnits, type UnitIntakeRow } from '../../../actions/inventory/manageStock'
 import { useAuth } from '../../../lib/auth'
 import { useToast } from '../../../components/ui/Toast'
+import { newClientUuid } from '../../../lib/supabase'
+import { useNetwork } from '../../../lib/network'
 
 export interface AddUnitsModalProps {
   isOpen: boolean
@@ -26,6 +28,8 @@ export function AddUnitsModal({
 }: AddUnitsModalProps) {
   const { user } = useAuth()
   const { showSuccessToast } = useToast()
+  const online = useNetwork()
+  const submitting = useRef(false)
   const [mode, setMode] = useState<'single' | 'batch'>('single')
   const [warehouseId, setWarehouseId] = useState<string>(warehouses[0]?.id ?? '')
   const [rack, setRack] = useState('')
@@ -42,6 +46,7 @@ export function AddUnitsModal({
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const submissionKeyRef = useRef<{ fingerprint: string; key: string } | null>(null)
 
   const parsedSerials = batchSerialsText
     .split('\n')
@@ -51,6 +56,7 @@ export function AddUnitsModal({
   const countToAdd = mode === 'single' ? 1 : parsedSerials.length
 
   const handleSubmit = async () => {
+    if (submitting.current) return
     if (!user) {
       setError('Please sign in to add units.')
       return
@@ -63,7 +69,12 @@ export function AddUnitsModal({
       setError('Please enter at least one serial number (one per line).')
       return
     }
+    if (!online) {
+      setError('Connect to add units to equipment.')
+      return
+    }
 
+    submitting.current = true
     setSaving(true)
     setError(null)
 
@@ -91,20 +102,27 @@ export function AddUnitsModal({
               purchase_date: purchaseDate || undefined,
             }))
 
+      const fingerprint = JSON.stringify({ productId, units })
+      if (!submissionKeyRef.current || submissionKeyRef.current.fingerprint !== fingerprint) {
+        submissionKeyRef.current = { fingerprint, key: newClientUuid() }
+      }
+
       const result = await addEquipmentUnits(
-        { productId, units },
-        { userId: user.id, role: user.role }
+        { productId, units, clientUuid: submissionKeyRef.current.key },
+        { userId: user.id, role: user.role, isOnline: online }
       )
 
       showSuccessToast(
         'Units added to fleet',
         `Successfully added ${result.added_count} ${result.added_count === 1 ? 'unit' : 'units'} to ${productName}. Total: ${result.total_quantity}.`
       )
+      submissionKeyRef.current = null
       onUnitsAdded()
       onClose()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
+      submitting.current = false
       setSaving(false)
     }
   }
@@ -114,7 +132,7 @@ export function AddUnitsModal({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={() => { if (!submitting.current) onClose() }}
       title={`Add Units — ${productName}`}
       subtitle={`Intake serialized units under asset code ${assetCode ?? 'EQ'}.`}
       size="md"
