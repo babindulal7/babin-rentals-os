@@ -12,23 +12,23 @@
 - Nothing ruled. Documentation and comment correction only; no behavior, permission or schema change.
 
 **Verified**
-- `check:pglite`: 172/172 applied, 0 failed; no view readable by anon, 0 unauthorized anon functions, 87 definer functions with pinned `search_path`. `check:lifecycle`: 32/32 green. Both re-run after the edits, same source window, exit 0.
-- `node scripts/test-operations-grants.mjs` (0171): all checks `[ok]`, "OPERATIONS BRANCH GRANTS VERIFIED". `node scripts/test-reset-branch-boundary.mjs` (0172): 14/14 groups PASS. `node scripts/check-astra-phase0.mjs`: 18 Phase 0 SQL regressions PASS. All exit 0, PGlite only.
-- `tsc --noEmit` exit 0; ESLint on `bookingTransition.ts` 0 problems.
+- After merging `main` (13 newer commits, migrations through 0177) into this branch: `check:pglite` 174/174 applied, 0 failed; no view readable by anon, 0 unauthorized anon functions, 93 definer functions with pinned `search_path`. `check:lifecycle`: 33/33 green. Both exit 0 on the merged tree.
+- Before the merge, on `main` 02de99ce: `node scripts/test-operations-grants.mjs` (0171) all `[ok]`; `node scripts/test-reset-branch-boundary.mjs` (0172) 14/14 groups PASS; `node scripts/check-astra-phase0.mjs` 18 Phase 0 SQL regressions PASS. All exit 0, PGlite only. Not re-run after the merge.
+- `tsc --noEmit` exit 0 on the merged tree; ESLint on `bookingTransition.ts` 0 problems.
 - **Not verified:** no dedicated test for a stale `from_stage` refusal or for two clients committing the same transition at once (the trigger refuses a stale `from_stage`; no lifecycle step proves it). Full `vitest run`, `lint:ui-copy`, `build`, hosted Supabase, devices: not run.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 55 / 58 (95%) | +3 |
+| Backend | actions implemented / total | 55 / 58 (95%) | +0 |
 | Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
-| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +1 |
-| Lifecycle | steps green / total | 32 / 32 (100%) | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 33 / 33 (100%) | +1 |
 | Overall | structural mean of five | ≈ 96% | — |
 
-Migrations 172 files · check:pglite 172/172 applied, 0 failed (recorded 2026-10-25T17:42:03Z). Suite: not run this session.
-Gates read from `.lifecycle-result.json`, written 2026-10-25T17:42:25Z. Counted by `npm run completion`, not typed.
+Migrations 174 files · check:pglite 174/174 applied, 0 failed (recorded 2026-10-25T18:53:23Z). Suite: not run this session.
+Gates read from `.lifecycle-result.json`, written 2026-10-25T18:53:39Z. Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
