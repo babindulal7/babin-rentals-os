@@ -108,7 +108,7 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
     },
     userId: user?.id,
     userRole: user?.role,
-    isBusy: busy,
+    isBusy: () => submitting.current,
   })
   const formBusy = busy || sectionManager.savingSection !== null
   const { markSectionDirty } = sectionManager
@@ -184,7 +184,8 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
     setErrors(invalid)
     if(Object.keys(invalid).length){focusRecordField(fieldId(Object.keys(invalid)[0]!));return}
     submitting.current=true;setBusy(true);setError('')
-    if(saveKey.current?.fingerprint!==fingerprint)saveKey.current={fingerprint,key:newClientUuid()}
+    const requestFingerprint=JSON.stringify({fingerprint,id:snapshot?.id??null,revision:snapshot?.revision??null})
+    if(saveKey.current?.fingerprint!==requestFingerprint)saveKey.current={fingerprint:requestFingerprint,key:newClientUuid()}
     try{
       const input={kind,id:snapshot?.id??null,expectedRevision:snapshot?.revision??null,clientUuid:saveKey.current!.key,values:recordPayload(kind,values,Boolean(recordId)),rows}
       const ctx={userId:user.id,role:user.role,isOnline:online}
@@ -494,16 +495,19 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
                       ? 'Resolve errors in this section before saving'
                       : null
                   }
-                  onSave={async () => {
+                  onSave={() => {
+                    const invalid = validateRecord(kind, values)
+                    const invalidFields = recordFields[kind].filter(field => field.section === section && invalid[field.key])
+                    if (invalidFields.length) { setErrors(previous => ({...previous, ...Object.fromEntries(invalidFields.map(field => [field.key, invalid[field.key]!]))})); focusRecordField(fieldId(invalidFields[0]!.key)); return }
                     const sectionFields = recordFields[kind].filter((f) => f.section === section)
                     const normalized = recordPayload(kind, values, Boolean(snapshot?.id))
                     const payload: RecordValues = {}
                     for (const f of sectionFields) payload[f.key] = normalized[f.key] ?? null
-                    await sectionManager.saveSection(
+                    void sectionManager.saveSection(
                       recordSectionKey(section),
                       payload,
                       section === 'Contact' || section === 'Components' ? rows : undefined
-                    )
+                    ).catch(() => {})
                   }}
                   onNext={
                     sectionIdx < sections.length - 1

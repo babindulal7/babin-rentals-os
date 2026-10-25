@@ -2,7 +2,7 @@
 /**
  * scripts/test-partial-return-reservation-release.mjs
  *
- * Acceptance test suite for RULING 2026-10-24 & Migration 0174:
+ * Acceptance test suite for RULINGS 2026-10-24/25 & migrations 0174/0175:
  * Release reservations on verified physical return.
  *
  * Verifies:
@@ -29,7 +29,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const db = await PGlite.create({ extensions: { pgcrypto, btree_gist } })
 const sql = (statement, params = []) => db.query(statement, params)
 
-console.log('Bootstrapping PGlite database and migrations 0001 through 0174...')
+console.log('Bootstrapping PGlite database and all local migration sources...')
 await db.exec(readFileSync(join(ROOT, 'supabase/pglite-prelude.sql'), 'utf8'))
 const migrationDir = join(ROOT, 'supabase/migrations')
 for (const file of readdirSync(migrationDir).filter(f => f.endsWith('.sql')).sort()) {
@@ -218,6 +218,18 @@ const returnTime = new Date().toISOString()
 await sql(`update booking_line_units
   set returned_at = $1, unit_state = 'Returned', condition = 'Good'
   where id = $2`, [returnTime, bluA])
+assert((await sql('select released_at from inventory_reservations where booking_line_id=$1 and asset_id=$2',[line1,unitA])).rows[0].released_at === null,
+  'A timestamp alone cannot release an unverified Return')
+const returnSession = (await sql(`insert into operation_sessions
+  (client_uuid,booking_id,operation,session_no,state,warehouse_staff_id,created_by)
+  values(gen_random_uuid(),$1,'Return',1,'In Progress',$2,$2) returning id`,[booking1,ownerId])).rows[0].id
+await sql(`insert into return_lines
+  (client_uuid,session_id,booking_line_id,state,qty_expected,condition,inspection_state,inspected_by,inspected_at,created_by)
+  values(gen_random_uuid(),$1,$2,'Outstanding',2,'Good','Inspected',$3,clock_timestamp(),$3)`,[returnSession,line1,ownerId])
+await sql('update booking_line_units set return_session_id=$1 where id=$2',[returnSession,bluA])
+assert((await sql('select released_at from inventory_reservations where booking_line_id=$1 and asset_id=$2',[line1,unitA])).rows[0].released_at === null,
+  'An open Return retains its hold until the persisted session commit')
+await sql(`update operation_sessions set state='Completed',completed_at=clock_timestamp(),completed_by=$1 where id=$2`,[ownerId,returnSession])
 
 // Assert parent booking is still On Rent
 const b1Stage = (await sql(`select stage from bookings where id = $1`, [booking1])).rows[0].stage
@@ -326,6 +338,14 @@ try {
 }
 assert(qcError !== null, 'QC defect blocks reservation')
 assert(qcError?.message.includes('GATE:unit.reserve.qc_defect'), `Threw expected QC defect gate: ${qcError?.message}`)
+await sql('update cleaning_queue_entries set reset_completed_at=now() where id=$1',[cqeId])
+let stampedDefectError = null
+try {
+  await sql(`insert into inventory_reservations(client_uuid,booking_id,booking_line_id,asset_id,period,created_by)
+    values(gen_random_uuid(),$1,$2,$3,tstzrange($4::timestamptz,$5::timestamptz,'[)'),$6)`,
+    [booking2,line2,unitA,b2Start,b2End,ownerId])
+} catch (error) { stampedDefectError = error }
+assert(stampedDefectError?.message.includes('GATE:unit.reserve.qc_defect'), 'Reset completion timestamp cannot clear a genuine QC defect')
 
 console.log('\n--- 7. Damage Finding blocks reservation until cleared ---')
 // Clear QC failure on queue entry first
@@ -374,14 +394,16 @@ assert(clearHoldId !== null, 'Reservation succeeded after clearance')
 await sql(`delete from inventory_reservations where id = $1`, [clearHoldId])
 
 console.log('\n--- 9. Atomic Transaction Rollback preserves reservation hold ---')
-// Reset Unit A returned_at to null to test rollback
-await sql(`update booking_line_units set returned_at = null, unit_state = 'Picked Up' where id = $1`, [bluA])
-await sql(`update inventory_reservations set released_at = null, released_reason = null where booking_line_id = $1 and asset_id = $2`, [line1, unitA])
-
 // Begin subtransaction that fails
 try {
   await sql('BEGIN')
-  await sql(`update booking_line_units set returned_at = now() where id = $1`, [bluA])
+  const rollbackSession=(await sql(`insert into operation_sessions(client_uuid,booking_id,operation,session_no,state,warehouse_staff_id,created_by)
+    values(gen_random_uuid(),$1,'Return',2,'In Progress',$2,$2) returning id`,[booking1,ownerId])).rows[0].id
+  await sql('update return_lines set session_id=$1,inspected_at=clock_timestamp() where booking_line_id=$2',[rollbackSession,line1])
+  await sql(`update booking_line_units set returned_at=clock_timestamp(),unit_state='Returned',condition='Good',return_session_id=$1 where id=$2`,[rollbackSession,bluB])
+  await sql(`update operation_sessions set state='Completed' where id=$1`,[rollbackSession])
+  assert((await sql('select released_at from inventory_reservations where booking_line_id=$1 and asset_id=$2',[line1,unitB])).rows[0].released_at !== null,
+    'Verified receipt and reservation adjustment are in the same transaction')
   // Force an error to trigger rollback
   await sql(`select * from nonexistent_table_forcing_rollback`)
   await sql('COMMIT')
@@ -389,7 +411,7 @@ try {
   await sql('ROLLBACK')
 }
 
-const holdAfterRollback = (await sql(`select released_at from inventory_reservations where booking_line_id = $1 and asset_id = $2`, [line1, unitA])).rows[0]
+const holdAfterRollback = (await sql(`select released_at from inventory_reservations where booking_line_id = $1 and asset_id = $2`, [line1, unitB])).rows[0]
 assert(holdAfterRollback.released_at === null, 'Failed transaction rollback leaves reservation hold active')
 
 console.log('\n--- 10. Role-gated write check on booking_line_units ---')
@@ -397,15 +419,160 @@ console.log('\n--- 10. Role-gated write check on booking_line_units ---')
 await sql(`set role authenticated`)
 await asUser(driverId)
 
-const driverRes = await sql(`update booking_line_units set returned_at = now() where id = $1`, [bluA])
+const driverRes = await sql(`update booking_line_units set returned_at = now() where id = $1`, [bluB])
 assert(driverRes.affectedRows === 0, 'Driver role cannot update booking_line_units (0 rows updated due to RLS)')
 
 // Reset session to table owner
 await sql(`reset role`)
 await asUser(ownerId)
 
-const checkBlu = (await sql(`select returned_at from booking_line_units where id = $1`, [bluA])).rows[0]
+const checkBlu = (await sql(`select returned_at from booking_line_units where id = $1`, [bluB])).rows[0]
 assert(checkBlu.returned_at === null, 'Driver update was filtered out by RLS and did not modify returned_at')
+
+console.log('\n--- 11. Verified quantity receipts release only their own quantity ---')
+const quantitySession = (await sql(`insert into operation_sessions
+  (client_uuid,booking_id,operation,session_no,state,warehouse_staff_id,created_by)
+  values(gen_random_uuid(),$1,'Return',2,'In Progress',$2,$2) returning id`,[booking1,ownerId])).rows[0].id
+const quantityProduct = (await sql(`insert into products
+  (client_uuid,name,brand,category_id,tracking_mode,asset_code,total_quantity,daily_rate,created_by)
+  values(gen_random_uuid(),'Return quantity fixture','Test',$1,'Quantity','EQ000175',5,0,$2) returning id`,[category,ownerId])).rows[0].id
+const quantityLine = (await sql(`insert into booking_lines
+  (client_uuid,booking_id,product_id,line_type,qty,description,rate,days,created_by)
+  values(gen_random_uuid(),$1,$2,'Equipment',5,'Five quantity items',0,4,$3) returning id`,[booking1,quantityProduct,ownerId])).rows[0].id
+const quantityHold = (await sql(`insert into inventory_reservations
+  (client_uuid,booking_id,booking_line_id,product_id,qty,period,created_by)
+  values(gen_random_uuid(),$1,$2,$3,5,tstzrange($4::timestamptz,$5::timestamptz,'[)'),$6) returning id`,
+  [booking1,quantityLine,quantityProduct,b1Start,b1End,ownerId])).rows[0].id
+let uninspectedQuantityError = null
+try {
+  await sql(`insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,moved_at,created_by)
+    values(gen_random_uuid(),$1,$2,2,'Returned',now(),$3)`,[quantitySession,quantityLine,ownerId])
+} catch (error) { uninspectedQuantityError = error }
+assert(uninspectedQuantityError?.message.includes('GATE:return.quantity.inspection'), 'Uninspected quantity cannot release stock')
+assert((await sql('select qty from inventory_reservations where id=$1',[quantityHold])).rows[0].qty === 5,'Failed quantity receipt leaves all five held')
+await sql(`insert into return_lines
+  (client_uuid,session_id,booking_line_id,state,qty_expected,condition,inspection_state,inspected_by,inspected_at,created_by)
+  values(gen_random_uuid(),$1,$2,'Outstanding',5,'Good','Inspected',$3,clock_timestamp(),$3)`,[quantitySession,quantityLine,ownerId])
+const quantityKey = crypto.randomUUID()
+const firstReceipt = (await sql(`insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,moved_at,created_by)
+  values($1,$2,$3,2,'Returned',now(),$4) returning id`,[quantityKey,quantitySession,quantityLine,ownerId])).rows[0].id
+assert((await sql('select qty from inventory_reservations where id=$1',[quantityHold])).rows[0].qty === 5,'Open quantity receipt retains its hold before completion')
+await sql(`insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,moved_at,created_by)
+  values($1,$2,$3,2,'Returned',now(),$4) on conflict(client_uuid) do nothing`,[quantityKey,quantitySession,quantityLine,ownerId])
+assert((await sql('select qty from inventory_reservations where id=$1',[quantityHold])).rows[0].qty === 5,'A replayed open quantity receipt does not release stock')
+let changedInspection=null
+try { await sql("update return_lines set condition='Damaged' where booking_line_id=$1",[quantityLine]) } catch(error) {changedInspection=error}
+assert(changedInspection?.message.includes('GATE:return.quantity.retry'),'Interrupted usable receipt cannot be reclassified damaged before seal')
+await sql(`update operation_sessions set state='Completed',completed_at=clock_timestamp(),completed_by=$1 where id=$2`,[ownerId,quantitySession])
+assert((await sql('select qty from inventory_reservations where id=$1',[quantityHold])).rows[0].qty === 3,'Committing the two-item receipt releases two and leaves three held')
+let sealedAppend=null
+try { await sql(`insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,moved_at,created_by)
+  values(gen_random_uuid(),$1,$2,1,'Returned',now(),$3)`,[quantitySession,quantityLine,ownerId]) } catch(error) {sealedAppend=error}
+assert(sealedAppend?.message.includes('GATE:return.session.sealed'),'Sealed Return refuses a fresh quantity receipt')
+let reopened=null
+try { await sql("update operation_sessions set state='In Progress' where id=$1",[quantitySession]) } catch(error) {reopened=error}
+assert(reopened?.message.includes('GATE:return.session.sealed'),'Completed Return cannot be reopened to append facts')
+let sealedSerial=null
+try { await sql("update booking_line_units set returned_at=clock_timestamp(),return_session_id=$1,unit_state='Returned',condition='Good' where id=$2",[quantitySession,bluB]) } catch(error) {sealedSerial=error}
+assert(sealedSerial?.message.includes('GATE:return.session.sealed'),'Sealed Return refuses new serial facts')
+assert((await sql('select qty from inventory_reservations where id=$1',[quantityHold])).rows[0].qty === 3,'Refused sealed mutations preserve held quantity')
+async function nextQuantityPass(number) {
+  const id=(await sql(`insert into operation_sessions(client_uuid,booking_id,operation,session_no,state,warehouse_staff_id,created_by)
+    values(gen_random_uuid(),$1,'Return',$2,'In Progress',$3,$3) returning id`,[booking1,number,ownerId])).rows[0].id
+  await sql('update return_lines set session_id=$1,inspected_at=clock_timestamp(),inspected_by=$2 where booking_line_id=$3',[id,ownerId,quantityLine])
+  return id
+}
+assert((await sql('select released_at from inventory_reservations where booking_line_id=$1 and asset_id=$2',[line1,unitB])).rows[0].released_at === null,
+  'Quantity receipt leaves unrelated serial reservation untouched')
+assert((await sql('select stage from bookings where id=$1',[booking1])).rows[0].stage === 'On Rent','Partial quantity receipt keeps parent On Rent')
+const extraLine = (await sql(`insert into booking_lines(client_uuid,booking_id,product_id,line_type,qty,description,rate,days,created_by)
+  values(gen_random_uuid(),$1,$2,'Equipment',2,'Next quantity booking',0,2,$3) returning id`,[booking2,quantityProduct,ownerId])).rows[0].id
+const nextQuantityHold = (await sql(`insert into inventory_reservations(client_uuid,booking_id,booking_line_id,product_id,qty,period,created_by)
+  values(gen_random_uuid(),$1,$2,$3,2,tstzrange($4::timestamptz,$5::timestamptz,'[)'),$6) returning id`,
+  [booking2,extraLine,quantityProduct,b2Start,b2End,ownerId])).rows[0].id
+assert(Boolean(nextQuantityHold),'Returned quantity is immediately reservable by an overlapping booking')
+let capacityError = null
+try {
+  await sql(`insert into inventory_reservations(client_uuid,booking_id,booking_line_id,product_id,qty,period,created_by)
+    values(gen_random_uuid(),$1,$2,$3,1,tstzrange($4::timestamptz,$5::timestamptz,'[)'),$6)`,
+    [booking2,extraLine,quantityProduct,b2Start,b2End,ownerId])
+} catch (error) { capacityError = error }
+assert(capacityError !== null,'Quantity capacity still refuses stock that remains out')
+await sql(`update inventory_reservations set released_at=now(),released_reason='Fixture next booking released' where id=$1`,[nextQuantityHold])
+const correctionSession=await nextQuantityPass(3)
+await sql(`insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,moved_at,created_by,reverses_movement_id)
+  values(gen_random_uuid(),$1,$2,1,'Returned',now(),$3,$4)`,[correctionSession,quantityLine,ownerId,firstReceipt])
+await sql(`update operation_sessions set state='Completed',completed_at=clock_timestamp(),completed_by=$1 where id=$2`,[ownerId,correctionSession])
+assert((await sql('select qty from inventory_reservations where id=$1',[quantityHold])).rows[0].qty === 4,'Append-only receipt correction restores the matching quantity hold')
+const remainderSession=await nextQuantityPass(4)
+await sql(`insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,moved_at,created_by)
+  values(gen_random_uuid(),$1,$2,4,'Returned',now(),$3)`,[remainderSession,quantityLine,ownerId])
+await sql(`update operation_sessions set state='Completed',completed_at=clock_timestamp(),completed_by=$1 where id=$2`,[ownerId,remainderSession])
+assert((await sql('select released_at from inventory_reservations where id=$1',[quantityHold])).rows[0].released_at !== null,'Receiving the remainder releases the existing hold without deletion')
+assert((await sql('select state from return_lines where booking_line_id=$1',[quantityLine])).rows[0].state === 'Returned',
+  'Cumulative verified quantity completes the line for the existing stage-transition engine')
+let excessError = null
+const branchSession=await nextQuantityPass(5)
+try {
+  await sql(`insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,moved_at,created_by)
+    values(gen_random_uuid(),$1,$2,2,'Returned',now(),$3)`,[branchSession,quantityLine,ownerId])
+} catch (error) { excessError=error }
+assert(excessError?.message.includes('GATE:return.quantity.bounds'),'Verified receipt beyond booked quantity is refused atomically')
+assert(Number((await sql('select sum(quantity_delta) as qty from record_editor_private.verified_return_quantities where booking_line_id=$1',[quantityLine])).rows[0].qty) === 5,
+  'Refused excess receipt cannot alter the private balance')
+
+console.log('\n--- 12. Direct partial receipts enforce branch grants ---')
+let otherBranch=(await sql('select id from branches where id<>$1 limit 1',[branch])).rows[0]?.id
+if (!otherBranch) otherBranch=(await sql(`insert into branches(client_uuid,branch_code,name,address,phone,email,pan_vat_no,is_headquarters,is_active)
+  values(gen_random_uuid(),'BR-OTHER','Other branch','Pokhara','+977-1-4444445','branch@example.invalid','123456788',false,true) returning id`)).rows[0].id
+await sql(`insert into operations_grants(client_uuid,user_id,branch_id,operation,granted_by)
+  values(gen_random_uuid(),$1,$2,'return',$3)`,[warehouseId,otherBranch,ownerId])
+await sql('update return_lines set session_id=$1,inspected_at=clock_timestamp(),inspected_by=$2 where booking_line_id=$3',[branchSession,ownerId,line1])
+await sql('set role authenticated')
+await asUser(warehouseId)
+assert((await sql("select auth_may_perform_operation('return',$1) as allowed",[branch])).rows[0].allowed === false,
+  'Test operator really lacks a Return grant on the booking branch')
+let branchError=null
+try {
+  await sql(`update booking_line_units set returned_at=clock_timestamp(),unit_state='Returned',condition='Good',return_session_id=$1 where id=$2`,[branchSession,bluB])
+} catch (error) { branchError=error }
+assert(branchError?.message.includes('GATE:operations.grant'),'Direct serial receipt without branch grant is refused')
+let quantityBranchError=null
+try {
+  await sql(`insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,moved_at,created_by,reverses_movement_id)
+    values(gen_random_uuid(),$1,$2,1,'Returned',now(),$3,$4)`,[branchSession,quantityLine,warehouseId,firstReceipt])
+} catch (error) { quantityBranchError=error }
+assert(quantityBranchError?.message.includes('GATE:operations.grant'),'Direct quantity correction cannot bypass branch scoping')
+let privateReadError=null
+try { await sql('select * from record_editor_private.verified_return_quantities') } catch (error) {privateReadError=error}
+assert(privateReadError?.code === '42501','Private verification ledger is inaccessible to direct authenticated reads')
+await sql('reset role')
+await asUser(ownerId)
+assert((await sql('select released_at from inventory_reservations where booking_line_id=$1 and asset_id=$2',[line1,unitB])).rows[0].released_at === null,
+  'Refused direct serial receipt leaves its original hold active')
+assert(Number((await sql('select sum(quantity_delta) as qty from record_editor_private.verified_return_quantities where booking_line_id=$1',[quantityLine])).rows[0].qty) === 5,
+  'Refused correction rolls back its movement and private receipt')
+const originalGrant=(await sql(`insert into operations_grants(client_uuid,user_id,branch_id,operation,granted_by)
+  values(gen_random_uuid(),$1,$2,'return',$3) returning id`,[warehouseId,branch,ownerId])).rows[0].id
+await sql('set role authenticated')
+await asUser(warehouseId)
+await sql(`update booking_line_units set returned_at=clock_timestamp(),unit_state='Returned',condition='Good',return_session_id=$1 where id=$2`,[branchSession,bluB])
+await sql(`update operation_sessions set state='Completed',completed_at=clock_timestamp(),completed_by=$1 where id=$2`,[warehouseId,branchSession])
+assert((await sql('select released_at from inventory_reservations where booking_line_id=$1 and asset_id=$2',[line1,unitB])).rows[0].released_at !== null,
+  'Positive control: properly granted serial receipt releases its own hold')
+const readFacts=(await sql('select read_verified_return_quantities($1) as facts',[booking1])).rows[0].facts
+assert(readFacts.find(row=>row.booking_line_id===quantityLine)?.returned_qty === 5,'Authorized quantity read returns the verified balance')
+assert(readFacts.find(row=>row.booking_line_id===line1)?.returned_qty === 0,'Quantity facts explicitly include zero for serialized lines')
+await sql('reset role')
+await asUser(ownerId)
+await sql('update operations_grants set revoked_at=now(),revoked_by=$1 where id=$2',[ownerId,originalGrant])
+await sql('set role authenticated')
+await asUser(warehouseId)
+let revokedRead=null
+try { await sql('select read_verified_return_quantities($1)',[booking1]) } catch(error) {revokedRead=error}
+assert(revokedRead?.message.includes('GATE:operations.grant'),'Revoking the booking-branch grant denies quantity RPC reads')
+await sql('reset role')
+await asUser(ownerId)
 
 console.log(`\n========================================`)
 console.log(`All ${assertionsPassed} partial return acceptance assertions PASSED (0 failures)!`)

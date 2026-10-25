@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Modal } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Button'
 import { enrollClientMembership } from '../../../actions/clients/enrollMembership'
 import { useAuth } from '../../../lib/auth'
 import { useToast } from '../../../components/ui/Toast'
-import { supabase } from '../../../lib/supabase'
+import { newClientUuid, supabase } from '../../../lib/supabase'
+import { useNetwork } from '../../../lib/network'
 import { MEMBERSHIP_TIERS, type ClientRecord, type MembershipTier } from '../../../lib/queries/clients'
 
 export interface UpgradeTierModalProps {
@@ -38,6 +39,9 @@ export function UpgradeTierModal({
 }: UpgradeTierModalProps) {
   const { user } = useAuth()
   const { showSuccessToast } = useToast()
+  const online = useNetwork()
+  const submitting = useRef(false)
+  const requestKey = useRef<{ fingerprint: string; key: string } | null>(null)
   const [plans, setPlans] = useState<PlanRow[]>([])
   const [selectedTier, setSelectedTier] = useState<MembershipTier>(client.membership || 'Academy')
   const [notes, setNotes] = useState('')
@@ -57,7 +61,7 @@ export function UpgradeTierModal({
           setPlans(data as unknown as PlanRow[])
         }
       } catch {
-        // Fallback
+        if (active) setError('Membership plans could not be loaded. Close and reopen to retry.')
       }
     }
     if (isOpen) void fetchPlans()
@@ -69,6 +73,7 @@ export function UpgradeTierModal({
   const matchedPlan = plans.find((p) => p.level === selectedTier || p.label === selectedTier)
 
   const handleSubmit = async () => {
+    if (submitting.current) return
     if (!user) {
       setError('Please sign in to update tier.')
       return
@@ -77,19 +82,32 @@ export function UpgradeTierModal({
       setError(`Membership plan configuration not found for tier ${selectedTier}.`)
       return
     }
+    const clientId = client.dbId ?? client.id
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clientId)) {
+      setError('Reload this client before changing membership. The saved client identity is unavailable.')
+      return
+    }
+    if (!online) {
+      setError('Connect to update client membership.')
+      return
+    }
 
+    submitting.current = true
     setSaving(true)
     setError(null)
 
     try {
+      const payload = { clientId, planId: matchedPlan.id, notes: notes.trim() || undefined }
+      const fingerprint = JSON.stringify(payload)
+      if (requestKey.current?.fingerprint !== fingerprint) requestKey.current = { fingerprint, key: newClientUuid() }
       await enrollClientMembership(
         {
-          clientId: client.dbId || client.id,
-          planId: matchedPlan.id,
-          notes: notes.trim() || undefined,
+          ...payload,
+          clientUuid: requestKey.current.key,
         },
-        { userId: user.id, role: user.role }
+        { userId: user.id, role: user.role, isOnline: online }
       )
+      requestKey.current = null
 
       showSuccessToast(
         'Membership Tier Updated',
@@ -100,6 +118,7 @@ export function UpgradeTierModal({
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
+      submitting.current = false
       setSaving(false)
     }
   }
@@ -107,7 +126,7 @@ export function UpgradeTierModal({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={() => { if (!submitting.current) onClose() }}
       title="Change Membership Tier"
       subtitle={`Update the membership tier for ${client.name}.`}
       size="md"

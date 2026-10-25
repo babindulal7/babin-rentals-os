@@ -1,11 +1,22 @@
 /* Booking Operations owns domain geometry; all paint uses existing theme tokens. */
-.operations-shell__stages { display:grid; grid-template-columns:repeat(4,minmax(76px,1fr)); gap:8px; margin:0 0 12px; padding:0 0 12px; border-bottom:1px solid var(--border); overflow-x:auto; }
-.operations-shell__stages .operations-shell__stage { min-height:64px; min-width:0; padding:10px; white-space:normal; border-radius:var(--r-btn); box-shadow:none; }
-.operations-shell__stage[aria-current="step"] { border-color:var(--primary); background:var(--nav-active-bg); color:var(--text); }
-.operations-shell__stage .ui-button__label { display:flex; flex-direction:column; align-items:flex-start; gap:4px; min-width:0; }
-.operations-shell__stage-name { font-size:var(--t-ui); font-weight:600; }
-.operations-shell__stage-state { font-size:var(--t-meta); font-weight:400; line-height:1.25; }
-.operations-shell__stage-sep { display:none; }
+/* The stage progress bar lives in the modal / dock header (RULING 2026-10-25): four segments, one row. */
+.operations-shell__stages { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; width:100%; margin:0; padding:0; }
+.operations-shell__stage { display:flex; flex-direction:column; justify-content:flex-end; gap:6px; min-width:0; min-height:var(--tap,44px); padding:6px 2px 4px; border:0; border-radius:var(--r-btn); background:transparent; color:var(--text2); font:inherit; text-align:left; cursor:pointer; }
+.operations-shell__stage:hover:not(:disabled) { background:var(--hover-card,transparent); }
+.operations-shell__stage:focus-visible { outline:2px solid var(--focus-ring); outline-offset:1px; }
+.operations-shell__stage:disabled { cursor:not-allowed; color:var(--muted); }
+.operations-shell__stage[aria-current="step"] { color:var(--text); }
+.operations-shell__stage-head { display:flex; align-items:center; gap:6px; min-width:0; }
+.operations-shell__stage-head > svg { flex-shrink:0; }
+.operations-shell__stage-name { font-size:var(--t-meta); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.operations-shell__stage-count { margin-left:auto; padding-left:4px; font-size:var(--t-meta); font-weight:700; font-variant-numeric:tabular-nums; color:var(--text); }
+.operations-shell__stage-track { display:block; height:6px; border-radius:var(--r-badge,999px); background:var(--card2); overflow:hidden; }
+.operations-shell__stage-fill { display:block; width:100%; height:100%; border-radius:inherit; background:var(--success); transform-origin:left; transition:transform var(--dur,200ms) ease; }
+.operations-shell__stage[data-state="open"] .operations-shell__stage-fill { background:var(--primary); }
+.operations-shell__stage[data-state="open"] .operations-shell__stage-track { box-shadow:0 0 0 1px var(--primary); }
+.operations-shell__stage[data-state="locked"] .operations-shell__stage-track { opacity:.5; }
+.operations-shell__panel-head { flex-wrap:wrap; }
+.operations-shell__panel-head .operations-shell__stages { flex:0 0 100%; }
 .operations-shell__details { margin:0 0 12px; color:var(--text2); font-size:var(--t-meta); border-bottom:1px solid var(--border); }
 .operations-shell__details summary { display:list-item; min-height:44px; padding:12px 4px; cursor:pointer; color:var(--text); font-weight:600; }
 .operations-shell__facts { display:flex; flex-wrap:wrap; align-items:center; gap:12px 20px; padding:0 4px 12px; }
@@ -36,9 +47,11 @@
   .operations-shell__modal .operations-shell__actions > :last-child { order:2; }
 }
 @media (max-width:767px) {
-  .operations-shell__stages { gap:4px; }
-  .operations-shell__stages .operations-shell__stage { flex-direction:column; min-height:76px; padding:8px 4px; gap:4px; }
-  .operations-shell__stage .ui-button__label { align-items:center; text-align:center; }
-  .operations-shell__stage-name, .operations-shell__stage-state { font-size:12px; }
+  .operations-shell__stages { gap:6px; }
+  .operations-shell__stage { padding-inline:0; }
+  .operations-shell__stage-head { gap:4px; }
+  .operations-shell__stage-name, .operations-shell__stage-count { font-size:12px; }
+  /* The open stage already carries its count, bold name and outlined track; its stage icon is what gives way on a phone. */
+  .operations-shell__stage[data-state="open"] .operations-shell__stage-head > svg { display:none; }
   .operations-shell__actions { flex-direction:column-reverse; align-items:stretch; gap:8px; }
 }

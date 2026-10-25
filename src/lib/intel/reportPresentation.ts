@@ -8,7 +8,7 @@ export function formatReportAxisValue(value: number, unit: 'count' | 'paisa'): s
   if (!Number.isFinite(value)) return '—'
   if (unit === 'paisa') {
     const paisa = roundHalfUp(value)
-    const rupees = Math.round(paisa / 100)
+    const rupees = roundHalfUp(paisa / 100)
     const absRupees = Math.abs(rupees)
     const sign = rupees < 0 ? '-' : ''
     if (absRupees >= 10_000_000) {
@@ -32,7 +32,7 @@ export function formatReportAxisValue(value: number, unit: 'count' | 'paisa'): s
 export function precedingReportWindow(fromAd: string, toAd: string): { fromAd: string; toAd: string } {
   const from = new Date(`${fromAd}T00:00:00Z`).getTime()
   const to = new Date(`${toAd}T00:00:00Z`).getTime()
-  if (!Number.isFinite(from) || !Number.isFinite(to) || to < from) throw new Error('Invalid comparison window')
+  if (!Number.isFinite(from) || !Number.isFinite(to) || to < from || new Date(from).toISOString().slice(0, 10) !== fromAd || new Date(to).toISOString().slice(0, 10) !== toAd) throw new Error('Invalid comparison window')
   const day = 86_400_000
   return {
     fromAd: new Date(from - (to - from + day)).toISOString().slice(0, 10),
@@ -42,6 +42,12 @@ export function precedingReportWindow(fromAd: string, toAd: string): { fromAd: s
 
 export function averageReportAmount(total: Paisa, count: number): Paisa {
   return (count > 0 ? roundHalfUp(total / count) : 0) as Paisa
+}
+
+/** A void/credit population must keep reconciliation visible even without issued sales. */
+export function hasRevenueActivity(report: { issuedCount: number; creditReconciliation: { voidedInvoiceCount: number; creditNoteCount: number; paidVoidMismatchCount: number; activeInvoiceCreditNoteCount: number } }): boolean {
+  const credits = report.creditReconciliation
+  return report.issuedCount > 0 || credits.voidedInvoiceCount > 0 || credits.creditNoteCount > 0 || credits.paidVoidMismatchCount > 0 || credits.activeInvoiceCreditNoteCount > 0
 }
 
 export function reportMoneyChange(current: Paisa, previous: Paisa): { value: string; isPositive: boolean; isNeutral: boolean } {

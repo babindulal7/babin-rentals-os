@@ -14,10 +14,9 @@
  *
  *  1. there is no name field on the QC control at all;
  *  2. the control names the operator the pass will be recorded as;
- *  3. QC-by therefore always equals cleaned-by, which the engine accepts only
- *     as a declared skipped QC with a reason — so the audited reason is now
- *     required on every pass, and the dispatched entry carries
- *     `qcBy: user.id`, `qcSkipped: true` and that reason.
+ *  3. when the operator also cleaned the unit, the engine accepts a declared
+ *     skipped QC only with an audited reason. A confirmed different cleaner
+ *     allows an actual second-person inspection without inventing a skip.
  *
  * The last test is the positive control: an entry built the old way — a typed
  * name that `selfIdOf` cannot resolve — reaches `runFloorVerb` with no `qcBy`
@@ -27,7 +26,7 @@ import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vite
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { loadMockClient } from '../../../lib/supabase'
+import { loadMockClient, getSupabaseClientAsync } from '../../../lib/supabase'
 import { fetchStaffDirectory, type StaffDirectoryRow } from '../../../lib/queries/staff'
 
 vi.mock('../../../lib/queries/staff', () => ({ fetchStaffDirectory: vi.fn() }))
@@ -181,7 +180,7 @@ async function type(el: HTMLInputElement, value: string) {
 async function reachQc() {
   const select = container.querySelector<HTMLInputElement>('input[aria-label="Select Sony FX3"]')
   if (!select) throw new Error('no row checkbox')
-  await check(select)
+  if (!select.checked) await check(select)
 
   // The batch panel's shared checklist cascades to the selection: three shared
   // tasks plus the configuration reset this workspace exists to record.
@@ -199,6 +198,12 @@ async function reachQc() {
 const passButton = () => button('Pass')
 const reasonField = () =>
   container.querySelector<HTMLInputElement>('input[aria-label="Reason for self-performed QC"]')
+const showReady = async () => {
+  const ready = [...container.querySelectorAll<HTMLButtonElement>('[aria-label="Filter reset queue"] [role="tab"]')]
+    .find((item) => item.textContent?.startsWith('Ready'))
+  if (!ready) throw new Error('no Ready filter')
+  await click(ready)
+}
 
 afterEach(async () => {
   await flush(4)
@@ -262,6 +267,28 @@ describe('ResetWorkspace — confirmed cleaner identities only', () => {
 })
 
 describe('ResetWorkspace — RS-12, the QC identity', () => {
+  it('shows queue wait only from the recorded entry time, without truncating long waits', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime('2026-10-25T08:00:00Z')
+    const client = await getSupabaseClientAsync()
+    const originalFrom = client.from.bind(client)
+    const from = vi.spyOn(client, 'from').mockImplementation((table) => {
+      if (table === 'cleaning_queue_entries') return { select: () => ({ eq: async () => ({ data: [{
+        unit_id: 'a-1', entered_queue_at: '2026-10-25T00:00:00Z', clean_completed_at: null,
+        reset_completed_at: null, problem_state: 'No Problems', cleaned_by: null, qc_by: null,
+        qc_skip_reason: null, qc_fail_reason: null,
+      }], error: null }) }) } as any
+      return originalFrom(table)
+    })
+    try {
+      await mount()
+      expect(text()).toContain('480m in queue')
+    } finally {
+      from.mockRestore()
+      vi.useRealTimers()
+    }
+  })
+
   it('offers no name field, and names the operator the pass will be recorded as', async () => {
     await mount()
     await reachQc()
@@ -289,6 +316,7 @@ describe('ResetWorkspace — RS-12, the QC identity', () => {
     await type(reasonField() as HTMLInputElement, 'Sole cleaner on shift')
     await click(passButton())
 
+    await showReady()
     expect(text()).toContain('QC by Babin Shrestha')
   })
 
@@ -326,10 +354,11 @@ describe('ResetWorkspace — RS-12, the QC identity', () => {
     expect(reasonField()?.value).toBe('Clean & inspected')
 
     await click(passButton())
+    await showReady()
     expect(text()).toContain('QC by Babin Shrestha')
   })
 
-  it('allows batch pass QC for selected items', async () => {
+  it('requires an explicit self-QC reason before a selected batch can pass', async () => {
     await mount()
     await reachQc()
 
@@ -341,9 +370,13 @@ describe('ResetWorkspace — RS-12, the QC identity', () => {
       (b) => b.textContent?.includes('Pass QC for All'),
     )
     expect(batchPassBtn).toBeDefined()
+    expect(batchPassBtn?.disabled).toBe(true)
+    expect(dispatched).toHaveLength(0)
+    await type(container.querySelector<HTMLInputElement>('input[aria-label="Batch QC reason"]')!, 'Sole cleaner on shift')
     expect(batchPassBtn?.disabled).toBe(false)
 
     await click(batchPassBtn!)
+    await showReady()
     expect(text()).toContain('QC by Babin Shrestha')
   })
 
@@ -361,8 +394,43 @@ describe('ResetWorkspace — RS-12, the QC identity', () => {
     expect(quickCleanBtn?.disabled).toBe(false)
 
     await click(quickCleanBtn!)
-    // Now it reached QC!
+    // Cleanup attestation reaches QC, but never passes it or supplies a reason.
     expect(text()).toContain('QC will be recorded as Babin Shrestha')
+    expect(passButton().disabled).toBe(true)
+    expect(reasonField()?.value).toBe('')
+    expect(button('Complete Reset').disabled).toBe(true)
+    expect(dispatched).toHaveLength(0)
+  })
+
+  it.each(['individual', 'batch'] as const)('records genuine second-inspector %s QC without declaring a skipped check', async (mode) => {
+    vi.mocked(fetchStaffDirectory).mockResolvedValue({ kind: 'ok', rows: [{
+      id: 'confirmed-cleaner', fullName: 'Recorded Cleaner', email: 'cleaner@example.test',
+      primaryRole: 'Technician', isActive: true, employeeCode: null, department: null,
+      branchCode: null, branchName: null, hasPin: false, pinLockedUntil: null,
+      hasAuthAccount: true, lastSignInAt: null,
+    }] })
+    await mount()
+    await check(container.querySelector<HTMLInputElement>('input[aria-label="Select Sony FX3"]')!)
+    const cleaner = container.querySelector<HTMLSelectElement>('#staff-cleaner-select')!
+    cleaner.value = 'confirmed-cleaner'
+    await act(async () => { cleaner.dispatchEvent(new Event('change', { bubbles: true })) })
+    await click(button('Assign'))
+    await click(button('Check All Tasks'))
+    await click(button('Mark Clean & Move to QC'))
+
+    expect(text()).toContain('Verified 2nd-party inspection')
+    expect(reasonField()).toBeNull()
+    const pass = mode === 'individual' ? passButton() : button('Pass QC for All 1 Selected')
+    expect(pass.disabled).toBe(false)
+    await click(pass)
+    await click(button('Complete Reset'))
+
+    expect(dispatched).toHaveLength(1)
+    const input = dispatched[0] as { resetEntries: Array<Record<string, unknown>> }
+    expect(input.resetEntries).toHaveLength(1)
+    expect(input.resetEntries[0]).toMatchObject({ cleanedBy: 'confirmed-cleaner', qcBy: 'u-1' })
+    expect(input.resetEntries[0]).not.toHaveProperty('qcSkipped')
+    expect(input.resetEntries[0]).not.toHaveProperty('qcSkipReason')
   })
 
   /*

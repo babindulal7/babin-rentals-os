@@ -12,6 +12,8 @@ import { Unavailable } from '../../components/ui/Unavailable'
 import { useFloorViewport } from '../operations/floorPanelContext'
 import { nextRequirement } from '../operations/nextRequirement'
 import { focusOperationTarget, type OperationWorkspaceActions } from '../operations/operationWorkspaceActions'
+import { useOperationEvidence } from '../operations/useOperationEvidence'
+import { OperationEvidenceStatus } from '../operations/OperationEvidenceStatus'
 import { useAuth } from '../../lib/auth'
 import { RentalIntelFromFloor } from '../../components/intel/RentalIntelFromFloor'
 import { EquipmentIntelFromFloor } from '../../components/intel/EquipmentIntelFromFloor'
@@ -523,7 +525,8 @@ export default function HandoverWorkspace({
   const [scanLog, setScanLog] = useState<string[]>([])
   const [sessionNotes, setSessionNotes] = useState('')
   /** ⭐ §4.31 — one photo per BOOKING. Local tally; no upload path exists here yet. */
-  const [photoCount, setPhotoCount] = useState(0)
+  const savedEvidence = useOperationEvidence(floor?.id ?? null)
+  const photoCount = savedEvidence.evidence?.files ?? 0
   /* §11.1 gate 1 — the receiver's ID and authorization, actually checked. */
   const [govIdVerified, setGovIdVerified] = useState(false)
   const [bookingAuthVerified, setBookingAuthVerified] = useState(false)
@@ -642,7 +645,6 @@ export default function HandoverWorkspace({
     // A different booking arrived: everything verified belonged to the old one.
     settle.current.floorId = floorId
     setMarks({})
-    setPhotoCount(0)
     setScanLog([])
     setSessionNotes('')
     setGovIdVerified(false)
@@ -724,7 +726,6 @@ export default function HandoverWorkspace({
       : null,
     govIdVerified || bookingAuthVerified ? 'the receiver ID checks' : null,
     paymentVerified || depositReceived ? 'the payment and deposit gate marks' : null,
-    photoCount > 0 ? 'the evidence tally' : null,
     sessionNotes.trim() !== '' ? 'the session notes' : null,
     overrideReason.trim() !== '' ? 'the money-outstanding reason' : null,
   ].filter((entry): entry is string => entry !== null)
@@ -1278,6 +1279,8 @@ export default function HandoverWorkspace({
       })
   }
 
+  const completeRef = useRef(completeSession)
+  completeRef.current = completeSession
   const isDirty = discardable.length > 0
   const blockedReason = nextRequirement(gates.filter((g) => !g.passing).map((g) => g.label))
   const blockerTarget = firstBlockedGate?.n === 1 ? '#handover-receiver-verification'
@@ -1294,14 +1297,15 @@ export default function HandoverWorkspace({
       canComplete,
       blockedReason,
       dispatching,
-      complete: completeSession,
+      complete: () => completeRef.current(),
       isDirty,
       label: 'Confirm & Next →',
       error: dispatchError,
       focusBlocker,
+      progress: { done: outUnits, total: totalUnits },
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget])
+  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget, outUnits, totalUnits])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */
 
@@ -1374,6 +1378,9 @@ export default function HandoverWorkspace({
         {floor !== null && stageBlock === null && floor.linesPresence === 'present' && rows.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
             {/* ── header. Rulings §4 — breadcrumbs via the shell, no `←`. ── */}
+            {/* RULING 2026-10-25: inside the Operations popup the header's stage bar shows this progress and the shell's
+                booking actions already carry View Booking, so the whole row is dropped there. */}
+            {!embedded && (
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--sp-lg)', flexWrap: 'wrap' }}>
               {!embedded && (
                 <div style={{ minWidth: 0, flex: 1 }}>
@@ -1406,7 +1413,7 @@ export default function HandoverWorkspace({
                       </span>
                     )}
                   </div>
-                  <p style={{ margin: '5px 0 0', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+                  <div style={{ margin: '5px 0 0', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
                     <RentalIntelFromFloor floor={floor} context="handover" role={user?.role ?? 'Client'}>
                       <Link to={`/rentals/${id}`} style={{ color: 'var(--link)', fontWeight: 600, textDecoration: 'none' }} className="identifier">
                         {floor.bookingNo}
@@ -1414,7 +1421,7 @@ export default function HandoverWorkspace({
                     </RentalIntelFromFloor>
                     {floor.project ? ` · ${floor.project}` : ''}
                     {floor.clientName ? ` · ${floor.clientName}` : ''}
-                  </p>
+                  </div>
                 </div>
               )}
 
@@ -1449,6 +1456,7 @@ export default function HandoverWorkspace({
                 </Link>
               </div>
             </div>
+            )}
 
             {/* §5 booking strip — read-only, every cell a real column off
                 `fetchFloorBooking`. No money anywhere (Law 6 / §8.3): the seed
@@ -1531,8 +1539,7 @@ export default function HandoverWorkspace({
                     <CheckLine label="Booking Authorization Verified" checked={bookingAuthVerified} onToggle={() => setBookingAuthVerified((v) => !v)} disabled={dispatching} />
                   </div>
                   <p style={{ margin: '9px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
-                    Checked against the receiver&apos;s physical ID at the counter. No receiver identity is stored
-                    from this screen — these two facts ride the session as gate 1.
+                    Checked against the receiver&apos;s physical ID at the counter.
                   </p>
                 </Card>
 
@@ -1901,13 +1908,13 @@ export default function HandoverWorkspace({
                     <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
                       <div style={{ fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--text)' }}>Manager Override</div>
                       <p role="alert" style={{ margin: '4px 0 6px', fontSize: 'var(--t-meta)', color: 'var(--danger-text)', fontWeight: 600, lineHeight: 1.45 }}>
-                        Not available in this build. {OVERRIDE_UNAVAILABLE}
+                        Not available in this build — clear the gates themselves instead.
                       </p>
-                      <p style={{ margin: '0 0 6px', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
-                        {/* §11.4 reserves this for Owner / Manager; Warehouse cannot override. Who may override a
-                        session gate is not yet ruled, and no action records the approver — so no session-gate
-                        override is recorded here, rather than one recorded against nobody. Handing over with
-                        money outstanding is a different decision and is recorded: it is below. */}A session override is not available yet. </p>
+                      {/* RULING 2026-10-25: the line that said "A session override is not available yet." repeated the alert above it.
+                          §11.4 reserves this for Owner / Manager; Warehouse cannot override. Who may override a session gate is
+                          not yet ruled, and no action records the approver — so no session-gate override is recorded here, rather
+                          than one recorded against nobody. Handing over with money outstanding is a different decision and is
+                          recorded: it is below. */}
                       <div style={{ marginTop: 6 }}>
                         <Unavailable reason={OVERRIDE_UNAVAILABLE}>
                           <button
@@ -1977,13 +1984,10 @@ export default function HandoverWorkspace({
                       cannot view rental balances." — untrue for an Owner (this screen shows amounts to no role)
                       and it left "your certification" dangling mid-sentence. Restored in plain words; revert =
                       put the swapped line back. */}
-                      This screen shows no amounts, so it cannot tell you whether this booking owes anything. The
-                      payment and deposit checks above are <strong>your certification</strong> that payment and
-                      deposit are cleared — not a reading of the ledger. A reason written here is recorded with
-                      the completion, but it does <strong>not</strong> open those gates and cannot release a
-                      booking whose money is unresolved: this build has no way to hand over against outstanding
-                      money. <strong>Do not tick a money gate you cannot certify in order to get past it.</strong>
-                      If the money is genuinely unresolved, the handover waits.
+                      No amounts are shown here, so the payment and deposit checks above are <strong>your
+                      certification</strong>, not a ledger reading. A reason written here is recorded but does
+                      <strong> not</strong> open those gates. <strong>Do not tick a money gate you cannot certify.</strong>{' '}
+                      If the money is unresolved, the handover waits.
                     </p>
                     <textarea
                       value={overrideReason}
@@ -2016,11 +2020,10 @@ export default function HandoverWorkspace({
                       />
                       <span style={{ flex: 1, color: 'var(--text2)' }}>Booking photo — required before completion</span>
                       <span className="figure" style={{ color: 'var(--muted)' }}>{photoCount}</span>
-                      <span id="handover-evidence"><RowAction label="Take Photo" onClick={() => setPhotoCount((n) => n + 1)} /></span>
                     </div>
                     <p style={{ margin: '7px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
-                      {/* Ruled mandatory (§4.31): one photo per booking, not per case. This count is local to this
-                      session — no photo is uploaded from here yet. */}One photo is required per booking. Use the Evidence workspace to capture and save it. </p>
+                      One saved photo is required per booking before completion.</p>
+                    <OperationEvidenceStatus id="handover-evidence" status={savedEvidence} />
                   </div>
 
                   {/* §9.2 Signatures — captured at session close, never before.
@@ -2064,7 +2067,12 @@ export default function HandoverWorkspace({
               {/* ── right rail ─────────────────────────────────────────── */}
               <OperationAside label="Handover summary">
                 {/* §10 — no Outstanding, no Deposit Pending here (§13.1). Warehouse sees no money. */}
-                <Card title="Handover Summary" action={<span className="figure" style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>{pct}%</span>}>
+                {/* RULING 2026-10-25: inside the Operations popup the header's stage bar shows this progress and the checklist
+                    chips show the counts, so only the earlier-session note stays there. */}
+                {(!embedded || priorRows.length > 0) && (
+                <Card title={embedded ? 'Earlier sessions' : 'Handover Summary'} action={embedded ? undefined : <span className="figure" style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>{pct}%</span>}>
+                  {!embedded && (
+                  <>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-md)' }}>
                     <Ring pct={pct} />
                     <div>
@@ -2086,15 +2094,20 @@ export default function HandoverWorkspace({
                         <span className="figure" style={{ fontWeight: 700 }}>{v}</span>
                       </div>
                     ))}
-                    {priorRows.length > 0 && (
-                      <p style={{ margin: '9px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
-                        {priorRows.length} item{priorRows.length === 1 ? ' was' : 's were'} recorded by an earlier
-                        session and {priorRows.length === 1 ? 'is' : 'are'} shown, not re-dispatched.
-                      </p>
-                    )}
                   </div>
+                  </>
+                  )}
+                  {priorRows.length > 0 && (
+                    <p style={{ margin: embedded ? 0 : '9px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
+                      {priorRows.length} item{priorRows.length === 1 ? ' was' : 's were'} recorded by an earlier
+                      session and {priorRows.length === 1 ? 'is' : 'are'} shown, not re-dispatched.
+                    </p>
+                  )}
                 </Card>
+                )}
 
+                {/* RULING 2026-10-25: inside the Operations popup an empty "No missing items" card is not drawn. */}
+                {(!embedded || missingRows.length > 0) && (
                 <Card title="Missing Items">
                   {missingRows.length === 0 ? (
                     <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>No missing items this session.</p>
@@ -2121,6 +2134,7 @@ export default function HandoverWorkspace({
                     </div>
                   )}
                 </Card>
+                )}
 
                 <Card title="Session Notes">
                   <textarea
@@ -2131,10 +2145,6 @@ export default function HandoverWorkspace({
                     rows={3}
                     style={{ width: '100%', minHeight: 64, padding: '8px 9px', borderRadius: 'var(--r-input)', border: '1px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontFamily: 'inherit', resize: 'vertical' }}
                   />
-                  <p style={{ margin: '7px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
-                    Written to <span className="identifier">operation_sessions.notes</span> with the dispatch —
-                    nothing is saved until this session completes.
-                  </p>
                 </Card>
 
                 {/* Law 12 — inline and persistent, never a toast. This is what

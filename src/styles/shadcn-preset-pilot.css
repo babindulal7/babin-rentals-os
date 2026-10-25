@@ -43,7 +43,7 @@
 }
 
 /* Base Rhea component utility classes */
-.rhea-card {
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-card {
   display: flex;
   flex-direction: column;
   gap: var(--rhea-card-spacing);
@@ -59,20 +59,20 @@
   transition: box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
-.rhea-card[data-size="sm"] {
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-card[data-size="sm"] {
   --rhea-card-spacing: var(--rhea-card-spacing-sm);
   padding: var(--rhea-card-spacing-sm);
   gap: var(--rhea-card-spacing-sm);
 }
 
-.rhea-card-header {
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-card-header {
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: start;
   gap: 6px;
 }
 
-.rhea-card-title {
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-card-title {
   font-family: var(--rhea-font-heading);
   font-size: 1.05rem;
   font-weight: 600;
@@ -81,7 +81,7 @@
   margin: 0;
 }
 
-.rhea-card-description {
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-card-description {
   font-family: var(--rhea-font-sans);
   font-size: 0.875rem;
   color: var(--rhea-muted-fg);
@@ -90,13 +90,13 @@
   grid-column: 1 / -1;
 }
 
-.rhea-card-content {
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-card-content {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.rhea-card-footer {
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-card-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -107,14 +107,14 @@
 }
 
 /* Rhea KPI Card styling */
-.rhea-kpi-grid {
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
   margin-bottom: 20px;
 }
 
-.rhea-kpi-card {
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-kpi-card {
   position: relative;
   border-radius: var(--rhea-radius-card);
   background-color: var(--rhea-card);
@@ -128,7 +128,7 @@
   justify-content: space-between;
 }
 
-.rhea-kpi-label {
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-kpi-label {
   font-family: var(--rhea-font-sans);
   font-size: 0.825rem;
   font-weight: 500;
@@ -138,7 +138,7 @@
   margin-bottom: 6px;
 }
 
-.rhea-kpi-value {
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-kpi-value {
   font-family: var(--rhea-font-mono);
   font-size: 1.65rem;
   font-weight: 700;
@@ -146,7 +146,7 @@
   line-height: 1.2;
 }
 
-.rhea-kpi-meta {
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-kpi-meta {
   font-family: var(--rhea-font-sans);
   font-size: 0.8rem;
   color: var(--rhea-muted-fg);
@@ -156,7 +156,7 @@
   gap: 6px;
 }
 
-.rhea-kpi-badge {
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-kpi-badge {
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
@@ -167,13 +167,13 @@
   color: var(--rhea-fg);
 }
 
-.rhea-kpi-badge--primary {
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-kpi-badge--primary {
   background-color: var(--rhea-primary);
   color: var(--rhea-primary-fg);
 }
 
 /* Rhea chart container */
-.rhea-chart-container {
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-chart-container {
   border-radius: var(--rhea-radius-card);
   background-color: var(--rhea-card);
   border: 1px solid var(--rhea-border);

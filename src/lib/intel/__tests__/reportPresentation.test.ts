@@ -4,6 +4,7 @@ import {
   precedingReportWindow,
   averageReportAmount,
   reportMoneyChange,
+  hasRevenueActivity,
 } from '../reportPresentation'
 import type { Paisa } from '../../money'
 
@@ -33,6 +34,7 @@ describe('reportPresentation', () => {
 
       // 0 paisa
       expect(formatReportAxisValue(0, 'paisa')).toBe('Rs 0')
+      expect(formatReportAxisValue(-10_000_000, 'paisa')).toBe('-Rs 1L')
     })
 
     it('handles non-finite values safely', () => {
@@ -46,6 +48,11 @@ describe('reportPresentation', () => {
       const window = precedingReportWindow('2026-10-01', '2026-10-31')
       expect(window.toAd).toBe('2026-09-30')
       expect(window.fromAd).toBe('2026-08-31')
+    })
+    it('preserves a one-day leap-year window and refuses rolled-over civil dates', () => {
+      expect(precedingReportWindow('2024-03-01', '2024-03-01')).toEqual({ fromAd: '2024-02-29', toAd: '2024-02-29' })
+      expect(() => precedingReportWindow('2026-02-30', '2026-03-02')).toThrow('Invalid comparison window')
+      expect(() => precedingReportWindow('2026-10-31', '2026-10-01')).toThrow('Invalid comparison window')
     })
   })
 
@@ -66,5 +73,12 @@ describe('reportPresentation', () => {
       expect(negative.value).toBe('-Rs 300')
       expect(negative.isPositive).toBe(false)
     })
+  })
+
+  it('treats a void or credit mismatch as report activity even without issued sales', () => {
+    const empty = { issuedCount: 0, creditReconciliation: { voidedInvoiceCount: 0, creditNoteCount: 0, paidVoidMismatchCount: 0, activeInvoiceCreditNoteCount: 0 } }
+    expect(hasRevenueActivity(empty)).toBe(false)
+    expect(hasRevenueActivity({ ...empty, creditReconciliation: { ...empty.creditReconciliation, voidedInvoiceCount: 1 } })).toBe(true)
+    expect(hasRevenueActivity({ ...empty, creditReconciliation: { ...empty.creditReconciliation, paidVoidMismatchCount: 1 } })).toBe(true)
   })
 })

@@ -236,7 +236,7 @@ export interface UseSectionSaveManagerOptions {
   onCreateInitialRecord?: ((sectionKey: string, payload: RecordValues, rows?: RecordValues[]) => Promise<RecordSnapshot>) | undefined
   userId: string | undefined
   userRole: Role | undefined
-  isBusy?: boolean | undefined
+  isBusy?: boolean | (() => boolean) | undefined
 }
 
 export function useSectionSaveManager({
@@ -278,7 +278,7 @@ export function useSectionSaveManager({
       sectionFieldsPayload: RecordValues,
       sectionRowsPayload?: RecordValues[]
     ) => {
-      if (inFlight.current || isBusy) throw new Error('Wait for the current save to finish. Your changes are still here.')
+      if (inFlight.current || (typeof isBusy === 'function' ? isBusy() : isBusy)) throw new Error('Wait for the current save to finish. Your changes are still here.')
       if (!userId || !userRole) {
         throw new Error('Please sign in to save this section.')
       }
@@ -289,6 +289,7 @@ export function useSectionSaveManager({
 
       if (!recordId || !snapshot) {
         if (onCreateInitialRecord) {
+          inFlight.current = true
           setSavingSection(sectionKey)
           setSectionErrors((prev) => ({ ...prev, [sectionKey]: null }))
           try {
@@ -302,6 +303,7 @@ export function useSectionSaveManager({
             setSectionErrors((prev) => ({ ...prev, [sectionKey]: msg }))
             throw err
           } finally {
+            inFlight.current = false
             setSavingSection(null)
           }
         }

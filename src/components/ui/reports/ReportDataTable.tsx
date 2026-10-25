@@ -8,12 +8,14 @@ export interface ReportDataColumn<Row> extends DataTableColumn<Row> {
 }
 
 /** Controls only the already-authorized rows. It never reads a wider dataset. */
-export function ReportDataTable<Row>({ rows, columns, getRowId, ariaLabel, sourceAction }: {
+export function ReportDataTable<Row>({ rows, columns, getRowId, ariaLabel, sourceAction, searchable = true, emptyMessage }: {
   rows: readonly Row[]
   columns: readonly ReportDataColumn<Row>[]
   getRowId: (row: Row) => string
   ariaLabel: string
   sourceAction?: ReactNode
+  searchable?: boolean
+  emptyMessage?: string
 }) {
   const [search, setSearch] = useState('')
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set())
@@ -23,7 +25,13 @@ export function ReportDataTable<Row>({ rows, columns, getRowId, ariaLabel, sourc
   const visible = columns.filter(column => !hidden.has(column.id)).map(column => column.id)
   const filtered = useMemo(() => {
     const needle = search.trim().toLocaleLowerCase()
-    const result = rows.filter(row => !needle || columns.some(column => String(column.sortValue(row) ?? '').toLocaleLowerCase().includes(needle)))
+    const result = rows.filter(row => !needle || columns.some(column => {
+      // Month labels and formatted amounts differ from their sortable values.
+      // Search visible primitive text as well as the authoritative sort value.
+      const cell = column.cell(row)
+      const displayed = typeof cell === 'string' || typeof cell === 'number' ? cell : ''
+      return [displayed, column.sortValue(row)].some(value => String(value ?? '').toLocaleLowerCase().includes(needle))
+    }))
     const column = columns.find(item => item.id === sort.columnId)
     if (!column) return result
     return result.map((row, index) => ({ row, index })).sort((a, b) => {
@@ -41,9 +49,9 @@ export function ReportDataTable<Row>({ rows, columns, getRowId, ariaLabel, sourc
 
   return <section aria-label={`${ariaLabel} controls`} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-      <label style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>Search
+      {searchable && <label style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>Search
         <input aria-label={`Search ${ariaLabel}`} value={search} onChange={event => { setSearch(event.target.value); setPage(0) }} style={{ ...control, width: 220, maxWidth: '100%' }} />
-      </label>
+      </label>}
       <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>Sort by
         <select aria-label={`Sort ${ariaLabel} by`} value={sort.columnId} onChange={event => { setSort({ columnId: event.target.value, direction: 'asc' }); setPage(0) }} style={control}>
           {columns.map(column => <option key={column.id} value={column.id}>{column.header}</option>)}
@@ -64,9 +72,9 @@ export function ReportDataTable<Row>({ rows, columns, getRowId, ariaLabel, sourc
       </details>
       {sourceAction}
     </div>
-    <DataTable ariaLabel={ariaLabel} rows={pageRows} columns={columns.map(column => ({ ...column, sortable: true }))} getRowId={getRowId} visibleColumnIds={visible} sort={sort} onSortChange={next => { setSort(next); setPage(0) }} emptyState={search ? `No rows match “${search}”.` : 'No records in this period.'} />
+    <DataTable ariaLabel={ariaLabel} rows={pageRows} columns={columns.map(column => ({ ...column, sortable: true, cell: (row: Row) => <span className={typeof column.sortValue(row) === 'number' || column.align === 'right' ? 'figure' : undefined}>{column.cell(row)}</span> }))} getRowId={getRowId} visibleColumnIds={visible} sort={sort} onSortChange={next => { setSort(next); setPage(0) }} emptyState={emptyMessage ?? (search ? `No rows match “${search}”.` : 'No records in this period.')} />
     <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-      <span role="status">{filtered.length} rows · Page {currentPage + 1} of {lastPage + 1}</span>
+      <span role="status" className="figure">{filtered.length} rows · Page {currentPage + 1} of {lastPage + 1}</span>
       <Button variant="secondary" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>Previous page</Button>
       <Button variant="secondary" disabled={currentPage === lastPage} onClick={() => setPage(currentPage + 1)}>Next page</Button>
       <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>Rows per page

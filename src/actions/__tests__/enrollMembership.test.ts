@@ -39,6 +39,10 @@ describe('enrollClientMembership action', () => {
     ).toThrow('Membership Plan ID is required.')
   })
 
+  it.each([-1, 1.5, Number.NaN, Number.MAX_SAFE_INTEGER + 1])('rejects invalid integer-paisa fee %s', (feePaid) => {
+    expect(() => enrollClientMembershipConfig.validate({ ...validInput, feePaid })).toThrow('integer paisa')
+  })
+
   it.each(['Owner', 'Admin', 'Manager', 'Coordinator'] as Role[])(
     'allows %s to enroll or upgrade membership',
     async (role) => {
@@ -64,7 +68,7 @@ describe('enrollClientMembership action', () => {
         p_client_id: 'client-001',
         p_plan_id: 'plan-gold',
         p_join_date: '2026-10-24',
-        p_fee_paid: 2500000,
+        p_fee_paid: 25000,
         p_notes: 'Upgraded to Gold plan annual',
         p_key: 'custom-membership-key',
       })

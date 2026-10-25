@@ -707,7 +707,7 @@ export function EquipmentRecordEditor({
             Compatible with: <em>Not tracked here</em>
           </p>
           <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-            Informational only; powers packing warnings.
+            Compatibility relationships are not available in this editor.
           </span>
         </div>
       </div>
@@ -745,7 +745,7 @@ export function EquipmentRecordEditor({
                 <span>{key === 'warehouse_id' ? 'Warehouse' : key.charAt(0).toUpperCase() + key.slice(1)}</span>
                 {key === 'warehouse_id' ? <select aria-label={`Warehouse for unit ${index + 1}`} value={String(row[key] ?? '')}
                   onChange={event => { setRows(previous => previous.map((unit, i) => i === index ? {...unit, [key]: event.target.value} : unit)); sectionManager?.markSectionDirty('location') }}>
-                  <option value="">Select warehouse…</option>{(options.warehouses ?? []).map(warehouse => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>)}
+                  <option value="">Select warehouseâ€¦</option>{(options.warehouses ?? []).map(warehouse => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>)}
                 </select> : <input aria-label={`${key} for unit ${index + 1}`} value={String(row[key] ?? '')}
                   onChange={event => { setRows(previous => previous.map((unit, i) => i === index ? {...unit, [key]: event.target.value} : unit)); sectionManager?.markSectionDirty('location') }} />}
               </label>)}
@@ -843,11 +843,11 @@ export function EquipmentRecordEditor({
           isSaving={sectionManager.savingSection === 'location'}
           canSave={!busy && Boolean(recordId || snapshot?.id) && rows.length > 0}
           saveDisabledReason={!recordId && !snapshot?.id ? 'Save Identity first' : null}
-          onSave={async () => {
-            await sectionManager.saveSection('location', {}, rows.map(row => ({
+          onSave={() => {
+            void sectionManager.saveSection('location', {}, rows.map(row => ({
               id: row.id ?? null, warehouse_id: row.warehouse_id ?? null,
               rack: row.rack ?? null, shelf: row.shelf ?? null, bin: row.bin ?? null,
-            })))
+            }))).catch(() => {})
           }}
           onNext={() => {
             const nextSec = canViewMoney ? 'Purchase' : 'Maintenance & Documents'

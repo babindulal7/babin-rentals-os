@@ -58,7 +58,7 @@ function AccessibleTooltip({ active, point, metricLabel, onClose }: CustomToolti
         {onClose && (
           <button
             type="button"
-            onClick={onClose}
+            onClick={event => { event.stopPropagation(); onClose() }}
             aria-label="Close tooltip"
             style={{
               background: 'transparent',
@@ -114,6 +114,7 @@ export function ReportAreaChart({
   const [viewTable, setViewTable] = useState(showTableDefault)
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const dismissedIndex = useRef<number | null>(null)
+  const chartRef = useRef<HTMLDivElement>(null)
   const selectedPoint = selectedIndex === null ? null : data[selectedIndex] ?? null
   const gradientId = `report-chart-${useId().replace(/:/g, '')}`
   useEffect(() => { setSelectedIndex(null); dismissedIndex.current = null }, [data])
@@ -129,6 +130,7 @@ export function ReportAreaChart({
   function dismissTooltip() {
     dismissedIndex.current = selectedIndex
     setSelectedIndex(null)
+    chartRef.current?.focus({ preventScroll: true })
   }
   function navigatePoint(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === 'Escape') { event.preventDefault(); dismissTooltip(); return }
@@ -281,14 +283,14 @@ export function ReportAreaChart({
           </table>
         </div>
       ) : (
-        <div style={{ width: '100%', height }} aria-label={`${ariaLabel}. Use Left and Right arrows to select a period; Escape closes its tooltip.`} role="group" tabIndex={0} onKeyDown={navigatePoint}>
+        <div ref={chartRef} style={{ width: '100%', height }} aria-label={`${ariaLabel}. Use Left and Right arrows to select a period; Escape closes its tooltip.`} role="group" tabIndex={0} onKeyDown={navigatePoint}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
               data={data}
               margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
               accessibilityLayer={false}
-              onClick={(state) => selectPoint(state, true)}
-              onMouseMove={(state) => selectPoint(state, false)}
+              onClick={(state, event) => { if (!(event.target instanceof Element && event.target.closest('.babin-report-tooltip'))) selectPoint(state, true) }}
+              onMouseMove={(state, event) => { if (!(event.target instanceof Element && event.target.closest('.babin-report-tooltip'))) selectPoint(state, false) }}
             >
               <defs>
                 <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">

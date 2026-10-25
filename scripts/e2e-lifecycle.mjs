@@ -126,7 +126,10 @@ const db = await PGlite.create({ extensions: { pgcrypto, btree_gist } })
 
 /** Run as a signed-in staff member: the role `authenticated`, identified. */
 async function as(role, fn) {
-  await db.exec(`set role authenticated; select set_config('app.current_user_id', '${U[role]}', false);`)
+  await db.exec(`set role authenticated;
+    select set_config('app.current_user_id', '${U[role]}', false);
+    select set_config('request.jwt.claim.sub', '${U[role]}', false);
+    select set_config('request.jwt.claim.role', 'authenticated', false);`)
   try {
     return await fn()
   } finally {
@@ -135,10 +138,12 @@ async function as(role, fn) {
        aborted" OVER the real error — which is how L9 spent one run reporting a
        transaction state instead of the four payments it was asking about. */
     try {
-      await db.exec(`reset role; select set_config('app.current_user_id', '', false);`)
+      await db.exec(`reset role; select set_config('app.current_user_id', '', false);
+        select set_config('request.jwt.claim.sub', '', false); select set_config('request.jwt.claim.role', '', false);`)
     } catch {
       await db.exec('rollback;')
-      await db.exec(`reset role; select set_config('app.current_user_id', '', false);`)
+      await db.exec(`reset role; select set_config('app.current_user_id', '', false);
+        select set_config('request.jwt.claim.sub', '', false); select set_config('request.jwt.claim.role', '', false);`)
     }
   }
 }

@@ -4,6 +4,34 @@ const fs=require('fs')
 const css=fs.readFileSync(require('path').join(__dirname,'..','src','styles','theme.css'),'utf8').replace(/\r\n/g,'\n')
 const palette=fs.readFileSync(require('path').join(__dirname,'..','src','styles','preset-black-light.css'),'utf8').replace(/\r\n/g,'\n')
 const pilot=fs.readFileSync(require('path').join(__dirname,'..','src','styles','shadcn-preset-pilot.css'),'utf8').replace(/\r\n/g,'\n')
+const entry=fs.readFileSync(require('path').join(__dirname,'..','src','main.tsx'),'utf8')
+const lumaPath=require('path').join(__dirname,'..','src','styles','shadcn-luma-ui.css')
+const luma=entry.includes("import './styles/shadcn-luma-ui.css'")&&fs.existsSync(lumaPath)?fs.readFileSync(lumaPath,'utf8'):null
+
+function declarations(source,selector){
+  const i=source.indexOf(selector);if(i<0)throw new Error('missing '+selector)
+  const start=source.indexOf('{',i),end=source.indexOf('}',start)
+  return Object.fromEntries([...source.slice(start+1,end).matchAll(/(?:^|[;\n])\s*([a-z0-9-]+):\s*([^;]+);/g)].map(m=>[m[1],m[2].trim()]))
+}
+function colour(value,tokens,background,depth=0){
+  if(!value||depth>8)return null
+  const mix=value.match(/^color-mix\(in srgb,\s*(.+?)\s+([\d.]+)%,\s*transparent\)$/)
+  if(mix){
+    const foreground=colour(mix[1],tokens,background,depth+1)
+    if(!foreground||!background)return null
+    return hex(over([...rgb(foreground).slice(0,3),Number(mix[2])/100],rgb(background)))
+  }
+  const reference=value.match(/^var\((--[a-z0-9-]+)(?:,\s*([^)]*))?\)$/)
+  if(reference)return colour(tokens[reference[1]]??reference[2],tokens,background,depth+1)
+  const parsed=rgb(value)
+  if(!parsed){
+    if(value==='transparent')return background??null
+    if(['inherit','initial','unset','currentColor'].includes(value))return null
+    throw new Error('Unsupported effective contrast colour: '+value)
+  }
+  if(parsed[3]===1)return hex(parsed)
+  return background?hex(over(parsed,rgb(background))):null
+}
 
 function block(sel,source=css){
   const i=source.indexOf(sel); if(i<0) throw new Error('missing '+sel)
@@ -18,6 +46,16 @@ function block(sel,source=css){
 const D={...block(":root[data-theme='dark'] {"),...block(":root[data-theme='dark']:not([data-style='glass']) {",palette)}
 const L={...block(":root,\n:root[data-theme='light'] {"),...block(":root[data-theme='light']:not([data-style='glass']) {",palette)}
 const H=block(":root[data-theme='high-contrast'] {")
+const darkTokens={...declarations(css,":root[data-theme='dark'] {"),...declarations(palette,":root[data-theme='dark']:not([data-style='glass']) {")}
+const lightTokens={...declarations(css,":root,\n:root[data-theme='light'] {"),...declarations(palette,":root[data-theme='light']:not([data-style='glass']) {")}
+const highTokens=declarations(css,":root[data-theme='high-contrast'] {")
+for(const [T,tokens] of [[D,darkTokens],[L,lightTokens]])for(const key of Object.keys(T)){
+  if(tokens[key])T[key]=colour(tokens[key],tokens,T['--bg'])
+}
+// Resolve translucent overlay surfaces instead of silently retaining old hex values.
+for(const [T,tokens] of [[D,darkTokens],[L,lightTokens]])for(const [key,under] of [['--nav-active-bg','--sidebar'],['--hover-card','--card']]){
+  const composed=colour(tokens[key],tokens,T[under]);if(composed)T[key]=composed
+}
 // A scoped background token must never overwrite foreground --muted again.
 for(const m of pilot.matchAll(/\n\s*(--[a-z0-9-]+):/g)) {
   if(!m[1].startsWith('--rhea-')&&!m[1].startsWith('--shadow-rhea-')) throw new Error('Unnamespaced pilot token: '+m[1])
@@ -104,6 +142,21 @@ for(const [theme,T] of [['PILOT-D',D],['PILOT-L',L],['PILOT-H',H]]) {
   chk(theme,roles,'KPI label / card','--rhea-muted-fg','--rhea-card',4.5)
   chk(theme,roles,'KPI value / card','--rhea-card-fg','--rhea-card',4.5)
   chk(theme,roles,'primary foreground / fill','--rhea-primary-fg','--rhea-primary',4.5)
+}
+if(luma){
+  const primary=declarations(luma,'.ui-button--primary {'),tag=declarations(luma,'.tag {')
+  for(const [name,T,tokens]of [['LUMA-D',D,darkTokens],['LUMA-L',L,lightTokens],['LUMA-H',H,highTokens]]){
+    const colours={
+      '--button-fg':colour(primary.color,tokens,T['--card'])??T['--text'],
+      '--button-bg':colour(primary.background,tokens,T['--card'])??T['--card'],
+      '--tag-fg':colour(tag.color,tokens,T['--card'])??T['--text'],
+      '--tag-bg':colour(tag.background,tokens,T['--card'])??T['--card'],
+      '--tag-canvas-bg':colour(tag.background,tokens,T['--bg'])??T['--bg'],
+    }
+    chk(name,colours,'primary foreground / fill','--button-fg','--button-bg',4.5)
+    chk(name,colours,'tag ink / card wash','--tag-fg','--tag-bg',4.5)
+    chk(name,colours,'tag ink / canvas wash','--tag-fg','--tag-canvas-bg',4.5)
+  }
 }
 for(const [label,fg,bg] of [
   ['btn-primary fg/bg','--btn-primary-fg','--btn-primary-bg'],

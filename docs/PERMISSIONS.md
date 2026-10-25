@@ -248,6 +248,17 @@ scope too; a Return grant alone cannot authorize it. Revoking the
 last active grant scopes a user to nothing — never back to global. No §3 cell and no
 role set above changed.
 
+**Verified partial Return — 25 October 2026 (0175, local source only).** The same
+Return role ceiling and booking-branch grant constrain direct receipt writes and
+the money-free `read_verified_return_quantities` RPC. Usable serials and verified
+quantity receipts release only their own reservation when their Return session
+is persisted Completed; an interrupted open session retains its holds. Completed
+Return seals cannot reopen or accept new receipt facts. Quantity history is
+private, bounded by the booked quantity, and unavailable history blocks receipt
+entry. A Reset completion stamp cannot clear a recorded QC defect. These are
+enforcement repairs to existing rules, with no permission widening or hosted
+application; N-5 still applies.
+
 Grant administration is Owner/Admin only; Admin cannot issue/revoke grants for
 Owner/Admin targets (including self). Direct table writes remain revoked from
 authenticated roles. Approval is local source integration only; N-5 still applies.

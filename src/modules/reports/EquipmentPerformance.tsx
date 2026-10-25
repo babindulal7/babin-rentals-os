@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { PageHeader, cardStyle } from '../../components/ui/Page'
-import { DataTableShell } from '../../components/ui/DataTable'
 import { PageBody } from '../../components/ui/PageBody'
 import { ReportToolbar } from '../../components/ui/ReportToolbar'
 import type { ReportCsvRow, ReportFilters } from '../../components/ui/ReportToolbar'
@@ -13,15 +13,15 @@ import { formatMoney } from '../../lib/money'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useLoad } from '../../lib/queries/useLoad'
 import { NOT_TRACKED } from '../../lib/queries/reportSupport'
-import { reportFilterOptions, hasReportFilters, NoMatchRow } from './reportStates'
+import { reportFilterOptions, hasReportFilters } from './reportStates'
 import {
   ReportKpiCard,
   ReportKpiStrip,
   ReportChartCard,
+  ReportDataTable,
 } from '../../components/ui/reports'
 import '../../styles/reportChartTokens.css'
 
-const cell = { padding: 'var(--sp-sm) var(--sp-md)' } as const
 const perUnit = (r: EquipmentPerformanceRow) => (r.revenuePerUnit === null ? '—' : formatMoney(r.revenuePerUnit))
 
 /** The export body — the same headline figures and tables the page draws. */
@@ -41,38 +41,20 @@ function equipmentCsv(summary: EquipmentPerformanceSummary | null): ReportCsvRow
 }
 
 function PerformerTable({ label, rows }: { label: string; rows: EquipmentPerformanceRow[] }) {
-  return (
-    <section aria-label={label} style={cardStyle}>
-      <div style={{ fontSize: 'var(--t-body)', fontWeight: 600, padding: 'var(--sp-md)', borderBottom: '1px solid var(--border)' }}>{label}</div>
-      <DataTableShell ariaLabel={label}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 'var(--t-meta)', minWidth: 560 }}>
-          <thead>
-            <tr style={{ color: 'var(--text2)' }}>
-              <th style={cell}>Product</th>
-              <th style={cell}>Category</th>
-              <th style={{ ...cell, textAlign: 'right' }}>Bookings</th>
-              <th style={{ ...cell, textAlign: 'right' }}>Units</th>
-              <th style={{ ...cell, textAlign: 'right' }}>Revenue</th>
-              <th style={{ ...cell, textAlign: 'right' }}>Per Unit</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && <NoMatchRow colSpan={6} noun="products" />}
-            {rows.map((p) => (
-              <tr key={p.productId} style={{ borderTop: '1px solid var(--border)' }}>
-                <td style={{ ...cell, fontWeight: 600 }}>{p.name}</td>
-                <td style={cell}>{p.category}</td>
-                <td style={{ ...cell, textAlign: 'right' }}>{p.bookings}</td>
-                <td style={{ ...cell, textAlign: 'right' }}>{p.units}</td>
-                <td style={{ ...cell, textAlign: 'right' }}>{formatMoney(p.revenue)}</td>
-                <td style={{ ...cell, textAlign: 'right' }}>{perUnit(p)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </DataTableShell>
-    </section>
-  )
+  return <section aria-label={label} style={cardStyle}>
+    <h3 style={{ margin: 0, fontSize: 'var(--t-body)', paddingBottom: 12 }}>{label}</h3>
+    <ReportDataTable<EquipmentPerformanceRow>
+      ariaLabel={label} rows={rows} getRowId={row => row.productId}
+      columns={[
+        { id: 'product', header: 'Product', cell: row => <Link to={`/inventory/${row.productId}`}>{row.name}</Link>, sortValue: row => row.name },
+        { id: 'category', header: 'Category', cell: row => row.category, sortValue: row => row.category },
+        { id: 'bookings', header: 'Bookings', align: 'right', cell: row => row.bookings, sortValue: row => row.bookings },
+        { id: 'units', header: 'Units', align: 'right', cell: row => row.units, sortValue: row => row.units },
+        { id: 'revenue', header: 'Revenue', align: 'right', cell: row => formatMoney(row.revenue), sortValue: row => row.revenue },
+        { id: 'perUnit', header: 'Per Unit', align: 'right', cell: perUnit, sortValue: row => row.revenuePerUnit },
+      ]}
+    />
+  </section>
 }
 
 function PerformerRankingBars({ rows }: { rows: EquipmentPerformanceRow[] }) {

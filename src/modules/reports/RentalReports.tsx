@@ -3,11 +3,10 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageHeader, Button, cardStyle } from '../../components/ui/Page'
 import type { Kpi } from '../../components/ui/Page'
-import { DataTableShell } from '../../components/ui/DataTable'
 import { PageBody } from '../../components/ui/PageBody'
 import { useLoad } from '../../lib/queries/useLoad'
 import { NOT_TRACKED } from '../../lib/queries/reportSupport'
-import { reportFilterOptions, hasReportFilters, NoMatchRow } from './reportStates'
+import { reportFilterOptions, hasReportFilters } from './reportStates'
 import { ReportToolbar } from '../../components/ui/ReportToolbar'
 import type { ReportCsvRow, ReportFilters } from '../../components/ui/ReportToolbar'
 import { Donut, Legend, HBars, type Slice } from '../../components/ui/Charts'
@@ -18,33 +17,20 @@ import { useViewport } from '../../lib/device'
 import {
   ReportKpiCard,
   ReportKpiStrip,
+  ReportDataTable,
 } from '../../components/ui/reports'
 import '../../styles/reportChartTokens.css'
 import {
   getRentalPerformanceReport,
   getRentalDurationReport,
   getCancellationsReport,
+  type TopBookingItem,
+  type DurationBucket,
+  type CancelledBookingItem,
 } from '../../lib/queries/rentalReports'
 
 type RentalTab = 'performance' | 'duration' | 'cancellations'
 
-const th = {
-  textAlign: 'left' as const,
-  padding: '10px 12px',
-  fontSize: 'var(--t-th)',
-  fontWeight: 600,
-  color: 'var(--text2)',
-  whiteSpace: 'nowrap' as const,
-  borderBottom: '1px solid var(--border)',
-}
-
-const td = {
-  height: 'var(--row-min-h)',
-  padding: '10px 12px',
-  fontSize: 'var(--t-meta)',
-  color: 'var(--text)',
-  borderBottom: '1px solid var(--border)',
-}
 
 export default function RentalReports() {
   const money = useCanViewMoney()
@@ -529,57 +515,18 @@ export default function RentalReports() {
               </Link>
             </div>
 
-            <DataTableShell ariaLabel="High-Value Rental Contracts">
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={th}>Booking No</th>
-                    <th style={th}>Client</th>
-                    <th style={th}>Production / Project</th>
-                    <th style={th}>Duration</th>
-                    <th style={th}>Stage</th>
-                    {money && <th style={{ ...th, textAlign: 'right' }}>Rental Value</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredTopBookings.length === 0 && <NoMatchRow colSpan={money ? 6 : 5} query={searchQuery} noun="bookings" />}
-                  {filteredTopBookings.map((b) => (
-                    <tr key={b.id}>
-                      <td style={td}>
-                        <Link
-                          to={`/rentals/${b.bookingNo}`}
-                          style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}
-                        >
-                          {b.bookingNo}
-                        </Link>
-                      </td>
-                      <td style={td}>{b.clientName}</td>
-                      <td style={td}>{b.project}</td>
-                      <td style={td}>{b.days} days</td>
-                      <td style={td}>
-                        <span
-                          style={{
-                            display: 'inline-block',
-                            padding: '2px 8px',
-                            borderRadius: 'var(--r-sm)',
-                            fontSize: 'var(--t-meta)',
-                            background: b.stage === 'On Rent' ? 'var(--status-info-bg)' : 'var(--surface-hover)',
-                            color: b.stage === 'On Rent' ? 'var(--status-info-text)' : 'var(--text)',
-                          }}
-                        >
-                          {b.stage}
-                        </span>
-                      </td>
-                      {money && (
-                        <td style={{ ...td, textAlign: 'right', fontWeight: 600 }}>
-                          {formatMoney(b.value)}
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </DataTableShell>
+            <ReportDataTable<TopBookingItem>
+              ariaLabel="High-Value Rental Contracts" rows={filteredTopBookings} getRowId={row => row.id} searchable={false}
+              emptyMessage={searchQuery.trim() ? `No bookings match “${searchQuery.trim()}”.` : 'No bookings to show.'}
+              columns={[
+                { id: 'number', header: 'Booking No', cell: row => <Link to={`/rentals/${row.bookingNo}`}>{row.bookingNo}</Link>, sortValue: row => row.bookingNo },
+                { id: 'client', header: 'Client', cell: row => row.clientName, sortValue: row => row.clientName },
+                { id: 'project', header: 'Production / Project', cell: row => row.project, sortValue: row => row.project },
+                { id: 'duration', header: 'Duration', cell: row => `${row.days} days`, sortValue: row => row.days },
+                { id: 'stage', header: 'Stage', cell: row => <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}><Icon name="box" size={14} />{row.stage}</span>, sortValue: row => row.stage },
+                ...(money ? [{ id: 'value', header: 'Rental Value', align: 'right' as const, cell: (row: TopBookingItem) => formatMoney(row.value), sortValue: (row: TopBookingItem) => row.value }] : []),
+              ]}
+            />
           </div>
         </div>
       )}
@@ -624,40 +571,19 @@ export default function RentalReports() {
             <h3 style={{ fontSize: 'var(--t-h3)', fontWeight: 600, marginBottom: 'var(--sp-sm)' }}>
               Rental Duration Buckets Summary
             </h3>
-            <DataTableShell ariaLabel="Rental Duration Buckets Summary">
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={th}>Span</th>
-                    <th style={th}>Bookings</th>
-                    <th style={th}>Volume Share</th>
-                    <th style={th}>Total Equipment Days</th>
-                    {money && <th style={{ ...th, textAlign: 'right' }}>Total Revenue</th>}
-                    {money && <th style={{ ...th, textAlign: 'right' }}>Avg Daily Rate</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {durationData?.buckets.map((b) => (
-                    <tr key={b.key}>
-                      <td style={{ ...td, fontWeight: 600 }}>{b.label}</td>
-                      <td style={td}>{b.count} hires</td>
-                      <td style={td}>{b.sharePercent}%</td>
-                      <td style={td}>{b.totalDays} unit days</td>
-                      {money && (
-                        <td style={{ ...td, textAlign: 'right', fontWeight: 600 }}>
-                          {formatMoney(b.revenue)}
-                        </td>
-                      )}
-                      {money && (
-                        <td style={{ ...td, textAlign: 'right', color: 'var(--text2)' }}>
-                          {formatMoney(b.avgDailyRate)} / day
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </DataTableShell>
+            <ReportDataTable<DurationBucket>
+              ariaLabel="Rental Duration Buckets Summary" rows={durationData?.buckets ?? []} getRowId={row => row.key}
+              columns={[
+                { id: 'span', header: 'Span', cell: row => row.label, sortValue: row => row.minDays },
+                { id: 'bookings', header: 'Bookings', cell: row => `${row.count} hires`, sortValue: row => row.count },
+                { id: 'share', header: 'Volume Share', cell: row => `${row.sharePercent}%`, sortValue: row => row.sharePercent },
+                { id: 'days', header: 'Total Equipment Days', cell: row => `${row.totalDays} unit days`, sortValue: row => row.totalDays },
+                ...(money ? [
+                  { id: 'revenue', header: 'Total Revenue', align: 'right' as const, cell: (row: DurationBucket) => formatMoney(row.revenue), sortValue: (row: DurationBucket) => row.revenue },
+                  { id: 'rate', header: 'Avg Daily Rate', align: 'right' as const, cell: (row: DurationBucket) => `${formatMoney(row.avgDailyRate)} / day`, sortValue: (row: DurationBucket) => row.avgDailyRate },
+                ] : []),
+              ]}
+            />
           </div>
         </div>
       )}
@@ -710,44 +636,18 @@ export default function RentalReports() {
             <p style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', marginBottom: 'var(--sp-md)' }}>
               Audit trail of terminal cancellation transitions and client cited reasons.
             </p>
-            <DataTableShell ariaLabel="Cancelled Bookings Register">
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={th}>Booking No</th>
-                    <th style={th}>Client</th>
-                    <th style={th}>Production / Project</th>
-                    <th style={th}>Scheduled Pickup</th>
-                    {money && <th style={{ ...th, textAlign: 'right' }}>Lost Value</th>}
-                    <th style={th}>Cancellation Reason</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredCancelledBookings.length === 0 && <NoMatchRow colSpan={money ? 6 : 5} query={searchQuery} noun="cancelled bookings" />}
-                  {filteredCancelledBookings.map((cb) => (
-                    <tr key={cb.id}>
-                      <td style={td}>
-                        <Link
-                          to={`/rentals/${cb.bookingNo}`}
-                          style={{ color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}
-                        >
-                          {cb.bookingNo}
-                        </Link>
-                      </td>
-                      <td style={td}>{cb.clientName}</td>
-                      <td style={td}>{cb.project}</td>
-                      <td style={td}>{formatAd(new Date(cb.scheduledPickup))}</td>
-                      {money && (
-                        <td style={{ ...td, textAlign: 'right', fontWeight: 600, color: 'var(--status-danger-text)' }}>
-                          {formatMoney(cb.lostRevenue)}
-                        </td>
-                      )}
-                      <td style={td}>{cb.reason}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </DataTableShell>
+            <ReportDataTable<CancelledBookingItem>
+              ariaLabel="Cancelled Bookings Register" rows={filteredCancelledBookings} getRowId={row => row.id} searchable={false}
+              emptyMessage={searchQuery.trim() ? `No cancelled bookings match “${searchQuery.trim()}”.` : 'No cancelled bookings to show.'}
+              columns={[
+                { id: 'number', header: 'Booking No', cell: row => <Link to={`/rentals/${row.bookingNo}`}>{row.bookingNo}</Link>, sortValue: row => row.bookingNo },
+                { id: 'client', header: 'Client', cell: row => row.clientName, sortValue: row => row.clientName },
+                { id: 'project', header: 'Production / Project', cell: row => row.project, sortValue: row => row.project },
+                { id: 'pickup', header: 'Scheduled Pickup', cell: row => formatAd(new Date(row.scheduledPickup)), sortValue: row => row.scheduledPickup },
+                ...(money ? [{ id: 'value', header: 'Lost Value', align: 'right' as const, cell: (row: CancelledBookingItem) => formatMoney(row.lostRevenue), sortValue: (row: CancelledBookingItem) => row.lostRevenue }] : []),
+                { id: 'reason', header: 'Cancellation Reason', cell: row => row.reason, sortValue: row => row.reason },
+              ]}
+            />
           </div>
         </div>
       )}

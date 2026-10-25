@@ -2,15 +2,15 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageHeader, Button } from '../../components/ui/Page'
 import { ReportFamiliesNav } from '../../components/ui/ReportFamiliesNav'
-import { ReportToolbar } from '../../components/ui/ReportToolbar'
+import { ReportToolbar, reportDateRange } from '../../components/ui/ReportToolbar'
 import type { ReportCompare, ReportCsvRow, ReportFilters } from '../../components/ui/ReportToolbar'
 import { PageBody } from '../../components/ui/PageBody'
 import { useLoad } from '../../lib/queries/useLoad'
-import { formatMoney } from '../../lib/money'
+import { formatMoney, rupees } from '../../lib/money'
 import { businessDayAd } from '../../lib/bs'
 import { useAuth } from '../../lib/auth'
 import { getIssuedRevenueTrend, type IssuedRevenueReport } from '../../lib/queries/reportRevenueTrend'
-import { averageReportAmount, precedingReportWindow, reportMoneyChange } from '../../lib/intel/reportPresentation'
+import { averageReportAmount, hasRevenueActivity, precedingReportWindow, reportMoneyChange } from '../../lib/intel/reportPresentation'
 import {
   ReportAreaChart,
   ReportChartCard,
@@ -50,6 +50,7 @@ export default function RevenueReport() {
 
   const from = readReportDate(filters.dateRange?.fromAd, daysAgo(today, 89))
   const to = readReportDate(filters.dateRange?.toAd, today)
+  const displayedFilters: ReportFilters = { ...filters, dateRange: reportDateRange('issue_date', from, to) }
   const windowIsValid =
     from <= to &&
     (new Date(to + 'T00:00:00Z').getUTCFullYear() - new Date(from + 'T00:00:00Z').getUTCFullYear()) * 12 +
@@ -64,19 +65,21 @@ export default function RevenueReport() {
   })
 
   const report = load.data
+  const displayedFrom = report?.fromAd ?? from
+  const displayedTo = report?.toAd ?? to
   const previousWindow = useMemo(() => windowIsValid ? precedingReportWindow(from, to) : null, [from, to, windowIsValid])
   const priorLoad = useLoad<IssuedRevenueReport>(() => {
     if (!previousWindow) return Promise.reject(new Error('Invalid comparison window'))
     return getIssuedRevenueTrend(previousWindow.fromAd, previousWindow.toAd)
   }, { key: previousWindow ? `${previousWindow.fromAd}|${previousWindow.toAd}` : 'invalid', enabled: permitted && windowIsValid && compare === 'previous' })
-  const prior = compare === 'previous' ? priorLoad.data : null
+  const prior = compare === 'previous' && previousWindow && !priorLoad.loading && !priorLoad.error && report?.fromAd === from && report.toAd === to && priorLoad.data?.fromAd === previousWindow.fromAd && priorLoad.data.toAd === previousWindow.toAd ? priorLoad.data : null
 
   const rows: ReportCsvRow[] = useMemo(() => {
     if (!report) return []
     return [
       ['Report', 'Issued invoice taxable revenue (monthly trend)'],
       ['Basis', 'Taxable invoice amounts before VAT for issued invoices grouped by AD issue date. Excludes drafts and voids. Credit notes are reconciled below on a cash-paid correction basis, not as taxable sales deductions.'],
-      ['Date window', `${from} to ${to}`],
+      ['Date window', `${displayedFrom} to ${displayedTo}`],
       ...(compare === 'previous' && previousWindow ? [
         ['Previous date window', `${previousWindow.fromAd} to ${previousWindow.toAd}`],
         ...(prior ? [['Previous taxable value', formatMoney(prior.totalPaisa)], ['Change from previous period', reportMoneyChange(report.totalPaisa, prior.totalPaisa).value]] : [['Previous period status', 'Not available']]),
@@ -92,8 +95,9 @@ export default function RevenueReport() {
       ['Month', 'Taxable value', 'Issued invoices'],
       ...report.months.map((m) => [m.label, formatMoney(m.amountPaisa), m.invoiceCount] as ReportCsvRow),
       ['Total', formatMoney(report.totalPaisa), report.issuedCount],
+      ...(prior ? [[], ['Previous period monthly detail'], ['Month', 'Taxable value', 'Issued invoices'], ...prior.months.map(month => [month.label, formatMoney(month.amountPaisa), month.invoiceCount]), ['Total', formatMoney(prior.totalPaisa), prior.issuedCount]] as ReportCsvRow[] : []),
     ]
-  }, [report, from, to, compare, previousWindow, prior])
+  }, [report, displayedFrom, displayedTo, compare, previousWindow, prior])
 
   const chartData: ReportChartPoint[] = useMemo(() => {
     if (!report) return []
@@ -107,7 +111,7 @@ export default function RevenueReport() {
   }, [report])
 
   const averageInvoicePaisa = useMemo(() => {
-    return report ? averageReportAmount(report.totalPaisa, report.issuedCount) : averageReportAmount(0 as never, 0)
+    return report ? averageReportAmount(report.totalPaisa, report.issuedCount) : rupees(0)
   }, [report])
   const detailRows = useMemo(() => [
     ...(report?.months ?? []).map(month => ({ ...month, series: 'Current', id: `current-${month.periodStartUtc}` })),
@@ -138,9 +142,10 @@ export default function RevenueReport() {
         <>
           <ReportToolbar
             title="Revenue Reports"
-            value={filters}
+            value={displayedFilters}
             onChange={setFilters}
             dateColumn="issue_date"
+            allowAllDates={false}
             compare={compare}
             onCompareChange={setCompare}
             {...(!load.loading && !load.error && report && (compare === 'off' || (prior && !priorLoad.loading && !priorLoad.error)) ? { csv: { filename: 'revenue-issued-monthly', build: () => rows } } : {})}
@@ -172,7 +177,7 @@ export default function RevenueReport() {
               onRetry={load.reload}
               hasRows={report !== null}
               skeleton="table"
-              empty={report !== null && report.issuedCount === 0 && report.creditReconciliation.voidedInvoiceCount === 0 && report.creditReconciliation.creditNoteCount === 0 && report.creditReconciliation.paidVoidMismatchCount === 0 && report.creditReconciliation.activeInvoiceCreditNoteCount === 0}
+              empty={report !== null && !hasRevenueActivity(report) && (!prior || !hasRevenueActivity(prior))}
               emptyIsFiltered={filtered}
               onClearFilters={() => setFilters({})}
               emptyTitle={filtered ? 'No revenue recorded in this period' : 'No invoices issued in the last 90 days'}
@@ -217,7 +222,7 @@ export default function RevenueReport() {
                   <ReportChartCard
                     title="Monthly issued invoice revenue"
                     basis="Actual taxable invoice amounts before VAT · AD calendar months"
-                    dateWindow={`${from} to ${to}`}
+                    dateWindow={`${displayedFrom} to ${displayedTo}`}
                     source="Finance · issued invoices"
                     description="Current nonvoid invoice snapshot grouped by issue month. Later voids may restate older months. Draft and void invoices excluded. Credit notes record paid amounts, not taxable sales deductions."
                     ariaLabel="Issued invoice revenue trend"
@@ -227,7 +232,7 @@ export default function RevenueReport() {
                           Credit-note reconciliation
                         </h4>
                         <p style={{ color: 'var(--text2)', fontSize: 'var(--t-meta, 12px)', margin: '0 0 10px' }}>
-                          For invoices issued {from} to {to}, including voided invoices omitted from the chart.
+                          For invoices issued {displayedFrom} to {displayedTo}, including voided invoices omitted from the chart.
                           Credit-note amounts reflect paid-value corrections, not taxable sales credits;
                           notes issued for invoices outside this period are not in this check.
                         </p>

@@ -6,6 +6,7 @@ import { useAuth } from '../../../lib/auth'
 import { useToast } from '../../../components/ui/Toast'
 import Icon from '../../../components/ui/Icon'
 import { newClientUuid } from '../../../lib/supabase'
+import { useNetwork } from '../../../lib/network'
 
 export interface RetireUnitModalProps {
   isOpen: boolean
@@ -40,6 +41,8 @@ export function RetireUnitModal({
 }: RetireUnitModalProps) {
   const { user } = useAuth()
   const { showSuccessToast } = useToast()
+  const online = useNetwork()
+  const submitting = useRef(false)
   const [category, setCategory] = useState<string>(RETIREMENT_CATEGORIES[0])
   const [notes, setNotes] = useState('')
   const [confirmTag, setConfirmTag] = useState('')
@@ -53,6 +56,7 @@ export function RetireUnitModal({
   const tagConfirmed = confirmTag.trim() === unit.assetTag
 
   const handleSubmit = async () => {
+    if (submitting.current) return
     if (!user) {
       setError('Please sign in to retire equipment.')
       return
@@ -71,7 +75,12 @@ export function RetireUnitModal({
       setError('A detailed explanation of at least 10 characters is required.')
       return
     }
+    if (!online) {
+      setError('Connect to retire equipment.')
+      return
+    }
 
+    submitting.current = true
     setSaving(true)
     setError(null)
 
@@ -83,7 +92,7 @@ export function RetireUnitModal({
 
       await retireEquipmentUnit(
         { unitId: unit.id, reason: fullReason, clientUuid: submissionKeyRef.current.key },
-        { userId: user.id, role: user.role }
+        { userId: user.id, role: user.role, isOnline: online }
       )
       submissionKeyRef.current = null
 
@@ -96,6 +105,7 @@ export function RetireUnitModal({
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
+      submitting.current = false
       setSaving(false)
     }
   }
@@ -105,7 +115,7 @@ export function RetireUnitModal({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={() => { if (!submitting.current) onClose() }}
       title={`Retire Unit — ${unit.assetTag}`}
       subtitle={`Permanently remove unit from active fleet. Historical records, serial numbers, and past bookings remain preserved.`}
       size="md"

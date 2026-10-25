@@ -306,5 +306,78 @@ await expectThrows(
 )
 
 console.log(`\n========================================`)
+console.log('--- 5. Real section payloads and preservation contracts ---')
+async function snapshot(kind, id) {
+  return (await sql('select read_record_editor($1,$2::text) as result', [kind,id])).rows[0].result
+}
+async function section(kind, id, name, values, rows = [], key = crypto.randomUUID(), revision) {
+  const before = await snapshot(kind,id)
+  const result = (await sql('select save_record_section($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb) as result',
+    [kind,id,name,revision ?? before.revision,key,JSON.stringify(values),JSON.stringify(rows)])).rows[0].result
+  return { before, result, key }
+}
+await sql('set role authenticated')
+const contact = await section('client',client,'contact',{website:'https://example.invalid'},[
+  {full_name:'Test Producer',designation:'Producer',phone:'+9779800000901',email:'producer@example.invalid'},
+])
+assert(contact.result.values.website === 'https://example.invalid', 'Contact website saves through the actual allowlist')
+assert(contact.result.rows[0].full_name === 'Test Producer', 'Primary contact persists with the Contact section')
+const contactId = contact.result.rows[0].id
+const address = await section('client',client,'address',{address_line:'Kathmandu',city:'Kathmandu',country:'Nepal'})
+assert(address.result.values.city === 'Kathmandu', 'Address section accepts the canonical singular key')
+assert(address.result.rows[0].id === contactId, 'Address save preserves untouched primary contact')
+const notes = await section('client',client,'notes',{notes:'Recorded notes'})
+assert(notes.result.values.website === 'https://example.invalid', 'Notes save preserves saved Contact fields')
+assert(notes.result.rows[0].id === contactId, 'Notes save preserves contact identity')
+const replay = await section('client',client,'notes',{notes:'Recorded notes'},[],notes.key,notes.before.revision)
+assert(replay.result.revision === notes.result.revision, 'Ambiguous response retry returns the same section receipt')
+await expectThrows(() => section('client',client,'notes',{notes:'Different request'},[],notes.key,notes.before.revision),
+  'different change','A section request key cannot be reused for a different payload')
+await expectThrows(() => section('client',client,'notes',{notes:'Unsafe',approved_credit_limit:999999}),
+  'cannot be edited','Section allowlist refuses a commercial field smuggled through Notes')
+assert((await snapshot('client',client)).values.notes === 'Recorded notes', 'Refused section write leaves the record unchanged')
+const locationBefore = await snapshot('equipment',productId)
+const location = await section('equipment',productId,'location',{},[{id:unitHeldId,warehouse_id:warehouse,rack:'B',shelf:'4',bin:'2'}])
+assert(location.result.rows.find(row=>row.id===unitHeldId).rack === 'B', 'Location saves existing unit location instead of product columns')
+assert(location.result.rows.length === locationBefore.rows.length, 'Location save preserves all other unit rows including retired history')
+assert(location.result.values.total_quantity === locationBefore.values.total_quantity, 'Location save cannot change stock quantity')
+await expectThrows(() => section('equipment',productId,'location',{},[{id:unitHeldId,warehouse_id:warehouse,status:'In Stock'}]),
+  'Only unit location','Location section refuses custody/status fields')
+const stock = await section('equipment',productId,'stock',{reorder_level:3,quantity_unit:'piece'})
+assert(stock.result.values.reorder_level === 3, 'Stock metadata section saves independently')
+await expectThrows(() => section('equipment',productId,'stock',{total_quantity:55}),
+  'cannot be edited','Stock metadata cannot replace deliberate stock adjustment')
+const purchase = await section('equipment',productId,'purchase',{replacement_value:500000})
+assert(purchase.result.values.replacement_value === 500000, 'Purchase section persists its own data')
+const pricing = await section('equipment',productId,'pricing',{daily_rate:2500,min_rental_days:1})
+assert(pricing.result.values.daily_rate === 2500, 'Pricing section persists without losing unit locations')
+assert(pricing.result.rows.find(row=>row.id===unitHeldId).rack === 'B', 'Pricing save retains unit location')
+const maintenance = await section('equipment',productId,'maintenance',{notes_warehouse:'Inspect caps',prep_time_minutes:15})
+assert(maintenance.result.values.prep_time_minutes === 15, 'Maintenance section persists independently')
+await sql('reset role')
+const bundle = (await sql(`insert into bundles(client_uuid,bundle_code,name,daily_rate,created_by)
+  values(gen_random_uuid(),'BD-SECTION-TEST','Section bundle',1000,$1) returning id`,[ownerId])).rows[0].id
+await sql(`insert into bundle_items(client_uuid,bundle_id,product_id,quantity,days,is_mandatory,sort_order,created_by)
+  values(gen_random_uuid(),$1,$2,1,1,true,0,$3)`,[bundle,productId,ownerId])
+await sql('set role authenticated')
+const bundleIdentity = await section('bundle',bundle,'identity',{name:'Verified section bundle',is_active:true})
+assert(bundleIdentity.result.values.is_active === true, 'Active Bundle Builder identity round-trips through snapshot')
+const oldItem = bundleIdentity.result.rows[0].id
+const bundleRate = await section('bundle',bundle,'rates',{daily_rate:1500})
+assert(bundleRate.result.rows[0].id === oldItem, 'Bundle rate save preserves component identity')
+const bundleComponents = await section('bundle',bundle,'components',{},[
+  {product_id:productId,quantity:2,days:3,is_mandatory:false,sort_order:0},
+])
+assert(bundleComponents.result.rows.length === 1 && bundleComponents.result.rows[0].quantity === 2, 'Bundle component replacement persists transactionally')
+assert(bundleComponents.result.values.daily_rate === 1500, 'Component save preserves separately saved rate')
+const oldItemState = (await sql('select is_active from bundle_items where id=$1',[oldItem])).rows[0]
+assert(oldItemState.is_active === false, 'Removed bundle component is deactivated with history retained')
+await expectThrows(() => section('bundle',bundle,'components',{},[]),'at least one component','Active bundle refuses an empty component section')
+assert((await snapshot('bundle',bundle)).rows.length === 1, 'Rejected empty bundle leaves previous components intact')
+await asUser(driverId)
+await expectThrows(()=> section('client',client,'notes',{notes:'Denied'}),'Permission denied','Driver cannot enter the section editor')
+await sql('reset role')
+await asUser(ownerId)
 console.log(`All ${testsPassed} integration assertions PASSED (0 failures)!`)
 console.log(`========================================\n`)
+await db.close()

@@ -1,10 +1,12 @@
 import { createAction, type ActionConfig, type ActionContext } from '../core'
 import { newClientUuid, supabase } from '../../lib/supabase'
+import { toRupees, type Paisa } from '../../lib/money'
 
 export interface EnrollClientMembershipInput {
   clientId: string
   planId: string
   joinDate?: string | undefined
+  /** Integer paisa. The RPC's legacy rupee column is converted at this boundary. */
   feePaid?: number | null | undefined
   notes?: string | undefined
   clientUuid?: string | undefined
@@ -28,6 +30,9 @@ export const enrollClientMembershipConfig: ActionConfig<EnrollClientMembershipIn
   validate(input) {
     if (!input.clientId) throw new Error('Client ID is required.')
     if (!input.planId) throw new Error('Membership Plan ID is required.')
+    if (input.feePaid != null && (!Number.isSafeInteger(input.feePaid) || input.feePaid < 0)) {
+      throw new Error('Membership fee must be a non-negative amount in integer paisa.')
+    }
   },
   async execute(input, ctx: ActionContext) {
     if (!['Owner', 'Admin', 'Manager', 'Coordinator'].includes(ctx.role)) {
@@ -38,7 +43,7 @@ export const enrollClientMembershipConfig: ActionConfig<EnrollClientMembershipIn
       p_client_id: input.clientId,
       p_plan_id: input.planId,
       p_join_date: input.joinDate ?? null,
-      p_fee_paid: input.feePaid ?? null,
+      p_fee_paid: input.feePaid == null ? null : toRupees(input.feePaid as Paisa),
       p_notes: input.notes ?? null,
       p_key: input.clientUuid ?? newClientUuid(),
     })

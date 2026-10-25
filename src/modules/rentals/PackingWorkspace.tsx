@@ -1,5 +1,5 @@
 import type React from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
@@ -20,6 +20,8 @@ import { CompactButton, TapCheckbox } from '../../components/ui/TouchTarget'
 import { useFloorViewport } from '../operations/floorPanelContext'
 import { nextRequirement } from '../operations/nextRequirement'
 import { focusOperationTarget, type OperationWorkspaceActions } from '../operations/operationWorkspaceActions'
+import { useOperationEvidence } from '../operations/useOperationEvidence'
+import { OperationEvidenceStatus } from '../operations/OperationEvidenceStatus'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../components/ui/Toast'
 import { RentalIntelFromFloor } from '../../components/intel/RentalIntelFromFloor'
@@ -532,7 +534,6 @@ export default function PackingWorkspace({
     marks: Record<string, Mark>
     scanLog: string[]
     sessionNotes: string
-    photoCount: number
     verifiedKitDependencies?: Record<string, string[]> | undefined
   }
 
@@ -558,7 +559,8 @@ export default function PackingWorkspace({
   const [scanLog, setScanLog] = useState<string[]>([])
   const [sessionNotes, setSessionNotes] = useState('')
   /** ⭐ §4.31 — one photo per BOOKING. Local tally; no upload path exists here yet. */
-  const [photoCount, setPhotoCount] = useState(0)
+  const savedEvidence = useOperationEvidence(floor?.id ?? null)
+  const photoCount = savedEvidence.evidence?.files ?? 0
   const presence = useFloorPresence(floor?.bookingNo, user?.name || 'Warehouse staff', user?.role)
   /**
    * Law 12 — a dispatch failure is inline and persistent, and navigation
@@ -593,11 +595,9 @@ export default function PackingWorkspace({
         persisted &&
         (Object.keys(persisted.payload.marks || {}).length > 0 ||
           (persisted.payload.sessionNotes || '').trim() !== '' ||
-          (persisted.payload.photoCount || 0) > 0 ||
           Object.keys(persisted.payload.verifiedKitDependencies || {}).length > 0)
       ) {
         setMarks(persisted.payload.marks || {})
-        setPhotoCount(persisted.payload.photoCount || 0)
         setScanLog(persisted.payload.scanLog || [])
         setSessionNotes(persisted.payload.sessionNotes || '')
         setVerifiedKitDeps(persisted.payload.verifiedKitDependencies || {})
@@ -608,7 +608,6 @@ export default function PackingWorkspace({
 
     // No persisted scans: start fresh
     setMarks({})
-    setPhotoCount(0)
     setScanLog([])
     setSessionNotes('')
     setVerifiedKitDeps({})
@@ -621,25 +620,22 @@ export default function PackingWorkspace({
     const hasContent =
       Object.keys(marks).length > 0 ||
       sessionNotes.trim().length > 0 ||
-      photoCount > 0 ||
       Object.keys(verifiedKitDeps).length > 0
     if (hasContent) {
       saveFloorScan<PersistedPackScan>('pack', floorId, {
         marks,
         scanLog,
         sessionNotes,
-        photoCount,
         verifiedKitDependencies: verifiedKitDeps,
       })
     } else {
       clearFloorScan('pack', floorId)
     }
-  }, [floorId, marks, scanLog, sessionNotes, photoCount, verifiedKitDeps])
+  }, [floorId, marks, scanLog, sessionNotes, verifiedKitDeps])
 
   const discardRestoredScan = () => {
     if (floorId) clearFloorScan('pack', floorId)
     setMarks({})
-    setPhotoCount(0)
     setScanLog([])
     setSessionNotes('')
     setVerifiedKitDeps({})
@@ -1151,10 +1147,11 @@ export default function PackingWorkspace({
       })
   }
 
+  const completeRef = useRef(completePacking)
+  completeRef.current = completePacking
   const isDirty =
     Object.keys(marks).length > 0 ||
     sessionNotes.trim().length > 0 ||
-    photoCount > 0 ||
     Object.keys(verifiedKitDeps).length > 0
   const blockedReason = nextRequirement(gates.filter((g) => !g.pass).map((g) => g.label))
   const blockerTarget = !anythingResolved || pendingRows.length > 0 ? '.floor-scanner-input'
@@ -1171,17 +1168,18 @@ export default function PackingWorkspace({
       canComplete,
       blockedReason,
       dispatching,
-      complete: completePacking,
+      complete: () => completeRef.current(),
       isDirty,
       label: 'Confirm & Next →',
       error: dispatchError,
       focusBlocker,
       discard: discardRestoredScan,
+      progress: { done: packedUnits, total: totalUnits },
     }
     registerActions(actions)
     onRegisterActions?.(actions)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [registerActions, onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget])
+  }, [registerActions, onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget, packedUnits, totalUnits])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */
 
@@ -1279,6 +1277,8 @@ export default function PackingWorkspace({
                 </Button>
               </div>
             )}
+            {/* RULING 2026-10-25: inside the Operations popup the header's stage bar already shows this progress. */}
+            {!embedded && (
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--sp-lg)', flexWrap: 'wrap' }}>
               {/*
                 §3 — header. No Back, no ✕, and Complete Packing is NOT here.
@@ -1390,6 +1390,7 @@ export default function PackingWorkspace({
                     button that dispatched `saveDraft({ id: floor.id }, …)` here. */}
               </div>
             </div>
+            )}
 
             {/* §4 — read-only booking summary, one compact row. BS above AD.
                 Every cell is a real column off `fetchFloorBooking`; the seed
@@ -1848,6 +1849,8 @@ export default function PackingWorkspace({
               {/* ── §9 right — progress, the gate checklist, the completion gate ── */}
               <div className="operation-workspace-sidebar">
               <OperationAside label="Packing progress">
+                {/* RULING 2026-10-25: inside the Operations popup the header's stage bar already shows this progress. */}
+                {!embedded && (
                 <Card title="Progress">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-md)' }}>
                     <Ring pct={pct} />
@@ -1867,6 +1870,7 @@ export default function PackingWorkspace({
                     </div>
                   </div>
                 </Card>
+                )}
 
                 {kitEvaluation.hasCinemaGear && (
                   <Card
@@ -2038,7 +2042,12 @@ export default function PackingWorkspace({
                   </div>
                 )}
 
+                {/* RULING 2026-10-25: inside the Operations popup the header bar, the filter chips and the Blockers card already carry
+                    these counts; only the verified-by split (PK-07), which nothing else says, stays there. */}
+                {(!embedded || packedRows.length > 0) && (
                 <Card title="Packing Summary">
+                  {!embedded && (
+                  <>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-md)' }}>
                     <Ring pct={pct} />
                     <div>
@@ -2065,6 +2074,8 @@ export default function PackingWorkspace({
                       </div>
                     ))}
                   </div>
+                  </>
+                  )}
 
                   {/*
                     PK-07 — how the packed rows were verified, which the record
@@ -2076,7 +2087,7 @@ export default function PackingWorkspace({
                     session notes at dispatch.
                   */}
                   {packedRows.length > 0 && (
-                    <div style={{ marginTop: 11, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                    <div style={embedded ? undefined : { marginTop: 11, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
                       <div style={{ fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
                         How the packed rows were verified
                       </div>
@@ -2097,7 +2108,10 @@ export default function PackingWorkspace({
                     </div>
                   )}
                 </Card>
+                )}
 
+                {/* RULING 2026-10-25: inside the Operations popup an empty "No missing items" card is not drawn. */}
+                {(!embedded || missingRows.length > 0) && (
                 <Card title="Missing Items">
                   {missingRows.length === 0 ? (
                     <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>No missing items.</p>
@@ -2121,6 +2135,7 @@ export default function PackingWorkspace({
                     </div>
                   )}
                 </Card>
+                )}
 
                 {/* §9 Evidence — ⭐ §4.31: ONE photo per booking, not per case.
                     Honest about its own maturity: the count is local, no file
@@ -2134,12 +2149,10 @@ export default function PackingWorkspace({
                     />
                     <span style={{ flex: 1, color: 'var(--text2)' }}>Booking photo — required before completion</span>
                     <span className="figure" style={{ color: 'var(--muted)' }}>{photoCount}</span>
-                    <span id="pack-evidence"><RowAction label="Take Photo" onClick={() => setPhotoCount((n) => n + 1)} /></span>
                   </div>
                   <p style={{ margin: '9px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
-                    {/* Ruled mandatory (§4.31): one photo per booking, not per case. This count is local to this
-                    session — no photo is uploaded from here yet; capture, matching and storage live in the
-                    Evidence Workspace. */}One photo is required per booking. Use the Evidence workspace to capture and save it. </p>
+                    One saved photo is required per booking before completion.</p>
+                  <OperationEvidenceStatus id="pack-evidence" status={savedEvidence} />
                 </Card>
 
                 <Card title="Packing Notes">
@@ -2151,10 +2164,6 @@ export default function PackingWorkspace({
                     rows={3}
                     style={{ width: '100%', minHeight: 64, padding: '8px 9px', borderRadius: 'var(--r-input)', border: '1px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontFamily: 'inherit', resize: 'vertical' }}
                   />
-                  <p style={{ margin: '7px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
-                    Written to <span className="identifier">operation_sessions.notes</span> with the dispatch —
-                    nothing is saved until Complete Packing lands.
-                  </p>
                 </Card>
 
                 {scanLog.length > 0 && (
@@ -2219,6 +2228,8 @@ export default function PackingWorkspace({
                     })}
                   </div>
 
+                  {/* RULING 2026-10-25: the same four counts sit in the filter chips above the checklist; not repeated in the popup. */}
+                  {!embedded && (
                   <div style={{ marginTop: 11, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
                     <div style={{ fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--text)', marginBottom: 7 }}>Bundle Summary</div>
                     {[
@@ -2237,6 +2248,7 @@ export default function PackingWorkspace({
                       Group counts are derived from the booking&apos;s live lines and always sum to {rows.length}.
                     </p>
                   </div>
+                  )}
                 </Card>
               </OperationAside>
               </div>

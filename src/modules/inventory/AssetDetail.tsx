@@ -756,7 +756,7 @@ function AssetDetailView() {
                         variant="danger"
                         size="sm"
                         onClick={() => setRetiringUnit(u)}
-                        style={{ minHeight: 36 }}
+                        style={{ minHeight: 44 }}
                       >
                         Retire
                       </Button>
@@ -851,7 +851,7 @@ function AssetDetailView() {
                                     variant="danger"
                                     size="sm"
                                     onClick={() => setRetiringUnit(u)}
-                                    style={{ minHeight: 36 }}
+                                    style={{ minHeight: 44 }}
                                   >
                                     Retire
                                   </Button>
