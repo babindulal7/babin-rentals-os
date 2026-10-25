@@ -15,7 +15,8 @@
 - Compiler API semantic check on 22 changed files (plus 30 files that use rails earlier in the session): 0 diagnostics; ESLint on the changed files: 0 problems.
 - Full `vitest run`: 447 files, 5,580 tests; 5 failed, all tests that asserted the removed drawer or its header slot. Updated them; `src/components/shell` and `src/components/ui`: 59 files, 522 tests pass. The other 445 files passed in the full run. The two updated files were not re-run inside a second full run.
 - Browser (mock build, Owner): at 1440 wide, summaries are on the page as an aside with no toggle and no dialog on New Rental (350px), Booking Detail (288), Payments ▸ Deposits (288), Finance (288), Pulse (300), Calendar (300), Add Equipment (324) and Add Client (324), with no horizontal overflow. At 768, Booking Detail and Pulse show the summary content as plain blocks, no overflow, no toggle. At 375, New Rental shows the Booking Summary inline at the bottom (351px wide), no overflow.
-- **Not verified:** Documents, Crew Assist, Bundles, Add Bundle, Warehouses, Operations floor asides, Backup, Audit Settings and Expense Reports were not opened; the Calendar full view and the phone views of most screens were not opened; `lint:ui-copy`, whole-project `tsc` and `build` were not run.
+- Second browser pass (built-in browser, same mock build, Owner), every screen that was left unchecked: at 1440 wide, inline summaries with no toggle, no dialog and no overflow on Documents (300), Crew Assist (320), Bundles (324), Add Bundle (318), Backup (288), Audit Settings (288), Expense Reports (300), Tools (288), Warehouses (296, below the main block because the Settings column is only 716 wide, by that screen's flex-wrap design), Packing (progress and item tree, 300 each), Handover (300), Return (300), Reset (selected items and groups, 300 each) and the Calendar full view (event detail 300 at the right edge). At 375: Documents, Crew, Payments, Add Equipment, Bundles, Add Bundle, Backup, Audit Settings, Expense Reports, Tools, Warehouses, Pulse, Calendar, Packing, Handover, Return and Reset had no overflow, no toggle and no error; Booking Detail keeps its summary under the Money tab (Quick Actions, Booking Summary). At 768: New Rental, Crew, Backup, Packing and Add Equipment passed.
+- **Still not verified:** Add Client, Finance, Pulse and Calendar at 768; the Operations floor Evidence workspace; screenshots (the browser pane was hidden, so checks were DOM measurements, not looked-at pixels); `lint:ui-copy`, whole-project `tsc` and `build`.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -32,7 +33,7 @@ Counted by `npm run completion` (22 Oct receipt block re-used unchanged; this ch
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Open the screens listed as not verified above, at phone width especially.
+- Look at the screens as pixels once the browser pane is shown; open the screens listed under "Still not verified".
 - Whole-project `tsc`, `lint:ui-copy` and `build` on a machine with free memory.
 
 ## 2026-10-24 — KPI tiles checked in the browser; module KPI strip made compact
