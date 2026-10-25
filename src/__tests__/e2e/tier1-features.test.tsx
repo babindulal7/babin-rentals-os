@@ -148,8 +148,20 @@ const MOCK_BOOKING = {
 
 vi.mock('../../lib/queries/bookings', async (importOriginal) => {
   const real = await importOriginal<typeof import('../../lib/queries/bookings')>()
+  const rentalData = await vi.importActual<typeof import('../../data/rentals')>('../../data/rentals')
   return {
     ...real,
+    // bookings and rentals import each other; retain live public bindings omitted by an early namespace spread.
+    get ROWS_PER_PAGE() { return rentalData.ROWS_PER_PAGE },
+    get OPTIONAL_COLUMNS() { return rentalData.OPTIONAL_COLUMNS },
+    get CHIP_MEANS() { return rentalData.CHIP_MEANS },
+    get SUB_RENTAL_NOTE() { return rentalData.SUB_RENTAL_NOTE },
+    get SUB_RENTAL_UNANSWERED() { return rentalData.SUB_RENTAL_UNANSWERED },
+    get rentalGlance() { return rentalData.rentalGlance },
+    get rentalDetailGroups() { return rentalData.rentalDetailGroups },
+    get rentalsQuery() { return rentalData.rentalsQuery },
+    get toRentalListRow() { return rentalData.toRentalListRow },
+    get withSubRental() { return rentalData.withSubRental },
     listBookings: async () => ({
       rows: [MOCK_BOOKING],
       total: 1,
@@ -204,6 +216,9 @@ import Header from '../../components/shell/Header'
 import Sidebar from '../../components/shell/Sidebar'
 import { Button } from '../../components/ui/Page'
 import PageActionsStandard from '../../components/ui/PageActions'
+
+// Load Finance during collection so its dependency graph does not consume the render test budget.
+const { default: Finance } = await import('../../modules/finance/Finance')
 
 // Helper mount utility
 let container: HTMLDivElement
@@ -484,7 +499,6 @@ describe('Tier 1: Feature Coverage (Happy Path & Isolations)', { timeout: 90000 
     }, 60_000)
 
     it('Finance dashboard renders financial KPIs and invoices table', async () => {
-      const { default: Finance } = await import('../../modules/finance/Finance')
       await mountComponent(<Finance />, ['/finance'])
 
       expect(container.textContent).toContain('Finance')
