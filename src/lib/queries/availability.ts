@@ -481,20 +481,26 @@ async function readOpenCleaning(unitIds: readonly string[]): Promise<Map<string,
     id: string
     unit_id: string
     requires_clean: boolean | null
+    requires_reset?: boolean
+    reset_completed_at?: string | null
+    clean_completed_at?: string | null
     problem_state?: string
     qc_fail_reason?: string | null
     bookings: { booking_no: string } | { booking_no: string }[] | null
   }>((from, to) => supabase
     .from('cleaning_queue_entries')
-    .select('id, unit_id, requires_clean, problem_state, qc_fail_reason, bookings ( booking_no )')
+    .select('id, unit_id, requires_clean, requires_reset, reset_completed_at, clean_completed_at, problem_state, qc_fail_reason, bookings ( booking_no )')
     .in('unit_id', [...new Set(unitIds)])
-    .eq('requires_reset', true)
-    .is('reset_completed_at', null)
     .order('id', { ascending: true })
     .range(from, to), 'reset queue')
 
   for (const row of entries) {
     const problem = row.problem_state && row.problem_state !== 'No Problems' ? row.problem_state : row.qc_fail_reason?.trim() ? 'QC failed' : null
+    // RULING 2026-10-24: finishing Reset cannot clear an actual QC defect.
+    // Keep defect rows regardless of task timestamps; omit completed clean work.
+    const pendingReset = row.requires_reset !== false && row.reset_completed_at == null
+    const pendingClean = row.requires_clean === true && row.clean_completed_at == null
+    if (!problem && !pendingReset && !pendingClean) continue
     const b = Array.isArray(row.bookings) ? row.bookings[0] : row.bookings
     /* The first pending task supplies the supplementary booking reference.
        This metadata neither releases a reservation nor disqualifies a unit. */

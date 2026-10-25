@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, type Dispatch, type SetStateAction, type ChangeEvent } from 'react'
+import { useState, useMemo, type Dispatch, type SetStateAction } from 'react'
 import Icon from '../ui/Icon'
 import { Button } from '../ui/Page'
 import { DateField } from '../ui/DateField'
@@ -13,7 +13,7 @@ import {
   UnitBarcodeModal,
   EquipmentCatalogPreviewModal,
 } from './equipmentAssist'
-import type { RecordSnapshot, RecordValues, RecordValue } from '../../lib/recordEditor'
+import { recordFields, recordPayload, recordSectionKey, validateRecord, type RecordSnapshot, type RecordValues, type RecordValue } from '../../lib/recordEditor'
 import { useToast } from '../ui/Toast'
 import { rupees, formatMoney } from '../../lib/money'
 import {
@@ -70,32 +70,7 @@ export function EquipmentRecordEditor({
   const [currentStage, setCurrentStage] = useState<number>(1)
   const [barcodeModalUnit, setBarcodeModalUnit] = useState<{ unit: RecordValues; index: number } | null>(null)
   const [catalogPreviewOpen, setCatalogPreviewOpen] = useState<boolean>(false)
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
-
-  const handleImageSelect = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Image file size must be less than 5 MB.')
-      return
-    }
-    const url = URL.createObjectURL(file)
-    setImagePreviewUrl(url)
-    showSuccessToast('Image thumbnail attached', file.name)
-  }
-
-  const handleRemoveImage = () => {
-    if (imagePreviewUrl) {
-      URL.revokeObjectURL(imagePreviewUrl)
-    }
-    setImagePreviewUrl(null)
-  }
-
-  useEffect(() => {
-    return () => {
-      if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl)
-    }
-  }, [imagePreviewUrl])
+  const imagePreviewUrl: string | null = null
 
   const stage = EQUIPMENT_STAGES.find((s) => s.id === currentStage) ?? EQUIPMENT_STAGES[0]!
   const prevStage = currentStage > 1 ? (EQUIPMENT_STAGES.find((s) => s.id === currentStage - 1) ?? null) : null
@@ -122,12 +97,34 @@ export function EquipmentRecordEditor({
 
   const set = (key: string, value: RecordValue) => {
     setValues((v) => ({ ...v, [key]: value } as RecordValues))
+    const field = recordFields.equipment.find(field => field.key === key)
+    if (field) sectionManager?.markSectionDirty(recordSectionKey(field.section))
     setErrors((e) => {
       const next = { ...e }
       delete next[key]
       return next
     })
   }
+
+  const sectionFields = (title: string) => recordFields.equipment.filter(field => field.section === title)
+  const sectionInvalid = (title: string) => sectionFields(title).some(field => Boolean(errors[field.key]))
+  const sectionBadge = (title: string) => sectionManager ? (
+    <SectionSaveStatusBadge status={sectionManager.getSectionStatus(recordSectionKey(title), sectionInvalid(title))}
+      savedAtTime={sectionManager.savedSections[recordSectionKey(title)]?.savedAt}
+      errorMessage={sectionManager.sectionErrors[recordSectionKey(title)]} />
+  ) : undefined
+  const sectionSaveBar = (title: string) => sectionManager ? (
+    <SectionSaveBar sectionName={title} status={sectionManager.getSectionStatus(recordSectionKey(title), sectionInvalid(title))}
+      isSaving={sectionManager.savingSection === recordSectionKey(title)}
+      canSave={Boolean(recordId || snapshot?.id) && !busy && !sectionInvalid(title)}
+      saveDisabledReason={!recordId && !snapshot?.id ? 'Create equipment first to enable section saving' : null}
+      errorMessage={sectionManager.sectionErrors[recordSectionKey(title)]}
+      onSave={() => { const invalid = validateRecord('equipment', values); const invalidFields = sectionFields(title).filter(field => invalid[field.key]);
+        if (invalidFields.length) { setErrors(previous => ({...previous, ...Object.fromEntries(invalidFields.map(field => [field.key, invalid[field.key]!]))})); return }
+        const normalized = recordPayload('equipment', values, true); const payload: RecordValues = {};
+        for (const field of sectionFields(title)) if (!field.createOnly) payload[field.key] = normalized[field.key] ?? null
+        void sectionManager.saveSection(recordSectionKey(title), payload).catch(() => {}) }} />
+  ) : null
 
   const sectionId = (section: string) =>
     `record-section-${section.toLowerCase().replace(/[^a-z]+/g, '-')}`
@@ -300,122 +297,12 @@ export function EquipmentRecordEditor({
           />
         </label>
 
-        {/* Media Thumbnail with local client-side preview */}
-        <div className="equipment-form-span-full">
-          <label style={{ display: 'block', fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text2)', marginBottom: 8 }}>
-            Equipment Media &amp; Thumbnail
-          </label>
-          <div className="equipment-media-container">
-            <div
-              className="equipment-media-thumb"
-              style={{
-                position: 'relative',
-                overflow: 'hidden',
-                cursor: imagePreviewUrl ? 'default' : 'pointer',
-                borderStyle: imagePreviewUrl ? 'solid' : 'dashed',
-                borderColor: imagePreviewUrl ? 'var(--border2)' : 'var(--border)',
-              }}
-              onClick={() => {
-                if (!imagePreviewUrl) {
-                  document.getElementById('equipment-image-file-input')?.click()
-                }
-              }}
-            >
-              {imagePreviewUrl ? (
-                <>
-                  <img
-                    src={imagePreviewUrl}
-                    alt="Thumbnail preview"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                  <button
-                    type="button"
-                    className="equipment-icon-button"
-                    style={{
-                      position: 'absolute',
-                      top: 4,
-                      right: 4,
-                      background: 'rgba(0,0,0,0.7)',
-                      color: '#ffffff',
-                      borderRadius: '50%',
-                      width: 26,
-                      height: 26,
-                    }}
-                    title="Remove image"
-                    aria-label="Remove image"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleRemoveImage()
-                    }}
-                  >
-                    <Icon name="x" size={14} />
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Icon name="camera" size={24} />
-                  <span>Upload photo</span>
-                  <span className="equipment-media-sub">PNG, JPG up to 5MB</span>
-                </>
-              )}
-            </div>
-
-            <input
-              id="equipment-image-file-input"
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              style={{ display: 'none' }}
-              disabled={busy}
-              onChange={handleImageSelect}
-            />
-
-            <div className="equipment-media-gallery">
-              <div className="equipment-gallery-slot"><span>Angle 1</span></div>
-              <div className="equipment-gallery-slot"><span>Angle 2</span></div>
-              <div className="equipment-gallery-slot"><span>Ports</span></div>
-              <div className="equipment-gallery-slot"><span>Serial tag</span></div>
-              <button
-                type="button"
-                className="equipment-gallery-slot is-add"
-                style={{ background: 'transparent', cursor: 'pointer', font: 'inherit' }}
-                onClick={() => document.getElementById('equipment-image-file-input')?.click()}
-                title="Upload additional asset photo"
-              >
-                <span>+ Add</span>
-              </button>
-            </div>
-          </div>
-          <p style={{ margin: '8px 0 0', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-            Select a primary product photo for catalog cards, quote presentations, and warehouse handover identification.
-          </p>
-        </div>
+        <p className="equipment-form-span-full" role="note">
+          Equipment photos are not yet saveable. No image will be attached by this form.
+        </p>
       </div>
 
-      {sectionManager && (
-        <SectionSaveBar
-          sectionName="Identity"
-          status={sectionManager.getSectionStatus('identity', Boolean(errors.name))}
-          isSaving={sectionManager.savingSection === 'identity'}
-          canSave={!errors.name && Boolean(values.name)}
-          saveDisabledReason={!values.name ? 'Equipment name is required' : null}
-          onSave={async () => {
-            await sectionManager.saveSection('identity', {
-              name: (values.name ?? '') as RecordValue,
-              short_name: (values.short_name ?? null) as RecordValue,
-              category_id: (values.category_id ?? null) as RecordValue,
-              brand: (values.brand ?? null) as RecordValue,
-              model: (values.model ?? null) as RecordValue,
-              manufacturer: (values.manufacturer ?? null) as RecordValue,
-              description: (values.description ?? null) as RecordValue,
-            })
-          }}
-          onNext={() => {
-            document.getElementById(sectionId('Stock & Units'))?.scrollIntoView({ behavior: 'smooth' })
-          }}
-          nextLabel="Stock & Units"
-          errorMessage={sectionManager.sectionErrors['identity']}
-        />
-      )}
+      {sectionSaveBar('Identity')}
     </RecordSection>
   )
 
@@ -424,6 +311,7 @@ export function EquipmentRecordEditor({
     <RecordSection
       id={sectionId('Stock & Units')}
       title="Stock & Units"
+      statusBadge={sectionBadge('Stock & Units')}
       collapsible={false}
     >
       {editing && (
@@ -761,6 +649,7 @@ export function EquipmentRecordEditor({
           </label>
         </div>
       )}
+      {sectionSaveBar('Stock & Units')}
     </RecordSection>
   )
 
@@ -775,7 +664,7 @@ export function EquipmentRecordEditor({
       statusBadge={
         sectionManager ? (
           <SectionSaveStatusBadge
-            status={sectionManager.getSectionStatus('relationships', false)}
+            status="readonly"
             savedAtTime={sectionManager.savedSections['relationships']?.savedAt}
             errorMessage={sectionManager.sectionErrors['relationships']}
           />
@@ -802,7 +691,7 @@ export function EquipmentRecordEditor({
             <span>2. Kit Membership</span>
           </div>
           <p style={{ margin: '8px 0 4px', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-            Used in bundles: <em>None assigned</em>
+            Used in bundles: <em>Open Bundles to view membership</em>
           </p>
           <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
             Read-only here; bundle membership is edited in Bundles.
@@ -815,10 +704,10 @@ export function EquipmentRecordEditor({
             <span>3. Compatibility</span>
           </div>
           <p style={{ margin: '8px 0 4px', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-            Compatible with: <em>None linked</em>
+            Compatible with: <em>Not tracked here</em>
           </p>
           <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-            Informational only; powers packing warnings.
+            Compatibility relationships are not available in this editor.
           </span>
         </div>
       </div>
@@ -826,26 +715,7 @@ export function EquipmentRecordEditor({
         Relationship persistence pending API integration — inventory relationships will attach here.
       </p>
 
-      {sectionManager && (
-        <SectionSaveBar
-          sectionName="Relationships"
-          status={sectionManager.getSectionStatus('relationships', false)}
-          isSaving={sectionManager.savingSection === 'relationships'}
-          canSave={Boolean(recordId || snapshot?.id)}
-          saveDisabledReason={!recordId && !snapshot?.id ? 'Save Identity first' : null}
-          onSave={async () => {
-            await sectionManager.saveSection('relationships', {
-              parent_id: values.parent_id ?? null,
-              kit_role: values.kit_role ?? null,
-            })
-          }}
-          onNext={() => {
-            document.getElementById(sectionId('Location'))?.scrollIntoView({ behavior: 'smooth' })
-          }}
-          nextLabel="Location"
-          errorMessage={sectionManager.sectionErrors['relationships']}
-        />
-      )}
+
     </RecordSection>
   )
 
@@ -866,7 +736,24 @@ export function EquipmentRecordEditor({
         ) : undefined
       }
     >
-      <div className="record-fields equipment-form-grid">
+      {editing ? (
+        <div className="record-fields equipment-form-grid">
+          {rows.map((row, index) => <fieldset key={String(row.id ?? index)} className="equipment-form-span-full" disabled={busy}>
+            <legend>{String(row.asset_tag ?? row.serial_number ?? `Unit ${index + 1}`)}</legend>
+            <div className="record-fields equipment-form-grid">
+              {(['warehouse_id', 'rack', 'shelf', 'bin'] as const).map(key => <label className="record-field" key={key}>
+                <span>{key === 'warehouse_id' ? 'Warehouse' : key.charAt(0).toUpperCase() + key.slice(1)}</span>
+                {key === 'warehouse_id' ? <select aria-label={`Warehouse for unit ${index + 1}`} value={String(row[key] ?? '')}
+                  onChange={event => { setRows(previous => previous.map((unit, i) => i === index ? {...unit, [key]: event.target.value} : unit)); sectionManager?.markSectionDirty('location') }}>
+                  <option value="">Select warehouse…</option>{(options.warehouses ?? []).map(warehouse => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>)}
+                </select> : <input aria-label={`${key} for unit ${index + 1}`} value={String(row[key] ?? '')}
+                  onChange={event => { setRows(previous => previous.map((unit, i) => i === index ? {...unit, [key]: event.target.value} : unit)); sectionManager?.markSectionDirty('location') }} />}
+              </label>)}
+            </div>
+          </fieldset>)}
+          {!rows.length && <p>There are no serialised units to relocate. Manage stock from Equipment Detail.</p>}
+        </div>
+      ) : (      <div className="record-fields equipment-form-grid">
         <label className="record-field" htmlFor="record-default-warehouse">
           <span>Primary warehouse *</span>
           <select
@@ -947,20 +834,20 @@ export function EquipmentRecordEditor({
           </div>
         )}
       </div>
+)}
 
       {sectionManager && (
         <SectionSaveBar
           sectionName="Location"
           status={sectionManager.getSectionStatus('location', false)}
           isSaving={sectionManager.savingSection === 'location'}
-          canSave={Boolean(recordId || snapshot?.id)}
+          canSave={!busy && Boolean(recordId || snapshot?.id) && rows.length > 0}
           saveDisabledReason={!recordId && !snapshot?.id ? 'Save Identity first' : null}
-          onSave={async () => {
-            await sectionManager.saveSection('location', {
-              rack: defaultRack || values.rack || null,
-              shelf: defaultShelf || values.shelf || null,
-              bin: defaultBin || values.bin || null,
-            })
+          onSave={() => {
+            void sectionManager.saveSection('location', {}, rows.map(row => ({
+              id: row.id ?? null, warehouse_id: row.warehouse_id ?? null,
+              rack: row.rack ?? null, shelf: row.shelf ?? null, bin: row.bin ?? null,
+            }))).catch(() => {})
           }}
           onNext={() => {
             const nextSec = canViewMoney ? 'Purchase' : 'Maintenance & Documents'
@@ -978,6 +865,7 @@ export function EquipmentRecordEditor({
     <RecordSection
       id={sectionId('Purchase')}
       title="Purchase"
+      statusBadge={sectionBadge('Purchase')}
       collapsible
       defaultOpen={true}
       forceOpen={Boolean(errors.purchase_price || errors.replacement_value || errors.purchase_date)}
@@ -1033,6 +921,7 @@ export function EquipmentRecordEditor({
           {errors.replacement_value && <span id="record-replacement_value-error" role="alert">{errors.replacement_value}</span>}
         </label>
       </div>
+      {sectionSaveBar('Purchase')}
     </RecordSection>
   )
 
@@ -1041,6 +930,7 @@ export function EquipmentRecordEditor({
     <RecordSection
       id={sectionId('Pricing & Rental')}
       title="Pricing & Rental"
+      statusBadge={sectionBadge('Pricing & Rental')}
       collapsible
       defaultOpen={true}
       forceOpen={Boolean(errors.daily_rate)}
@@ -1164,6 +1054,7 @@ export function EquipmentRecordEditor({
           <span>Available for rental (item can be picked and booked in rental quotes)</span>
         </label>
       </div>
+      {sectionSaveBar('Pricing & Rental')}
     </RecordSection>
   )
 
@@ -1172,6 +1063,7 @@ export function EquipmentRecordEditor({
     <RecordSection
       id={sectionId('Maintenance & Documents')}
       title="Maintenance & Documents"
+      statusBadge={sectionBadge('Maintenance & Documents')}
       collapsible
       defaultOpen={false}
       forceOpen={Boolean(errors.prep_time_minutes || errors.cleaning_time_minutes || errors.notes_internal)}
@@ -1254,6 +1146,7 @@ export function EquipmentRecordEditor({
           </p>
         </div>
       </div>
+      {sectionSaveBar('Maintenance & Documents')}
     </RecordSection>
   )
 

@@ -59,6 +59,8 @@ const db = vi.hoisted(() => {
     responses: {} as Record<string, unknown[][]>,
     grants: [] as Array<{ name: string; args: Record<string, unknown> }>,
     grantError: null as { message: string } | null,
+    returnKeyRows: [] as unknown[],
+    returnKeyError: null as { message: string } | null,
   }
 
   function nextRows(table: string): unknown[] {
@@ -99,6 +101,9 @@ const db = vi.hoisted(() => {
         return builder
       },
       maybeSingle() {
+        if (table === 'operation_sessions' && call.ops.some((op) => op[0] === 'eq' && op[1] === 'client_uuid')) {
+          return Promise.resolve({ data: state.returnKeyRows[0] ?? null, error: state.returnKeyError })
+        }
         const rows = nextRows(table)
         return Promise.resolve({ data: rows[0] ?? null, error: null })
       },
@@ -117,6 +122,8 @@ const db = vi.hoisted(() => {
     state.responses = {}
     state.grants = []
     state.grantError = null
+    state.returnKeyRows = []
+    state.returnKeyError = null
   }
 
   return { state, from, reset }
@@ -153,6 +160,7 @@ const writes = vi.hoisted(() => {
     rejectedPickupInserts: 0,
     queueOptions: [] as Array<{table:string; queueOnFailure?:boolean}>,
     networkFailureOn: null as string | null,
+    loseSessionSealResponse: false,
   }
   function reset(): void {
     state.ops = []
@@ -162,6 +170,7 @@ const writes = vi.hoisted(() => {
     state.rejectedPickupInserts = 0
     state.queueOptions = []
     state.networkFailureOn = null
+    state.loseSessionSealResponse = false
   }
   return { state, reset }
 })
@@ -187,6 +196,9 @@ vi.mock('../../../lib/dataAccess', () => ({
   safeUpdate: async (table: string, id: string, payload: Record<string, unknown>, clientUuid?: string, options?: {queueOnFailure?:boolean}) => {
     writes.state.queueOptions.push({table,...options})
     writes.state.ops.push({ kind: 'update', table, id, payload, ...(clientUuid === undefined ? {} : { clientUuid }) })
+    if (writes.state.loseSessionSealResponse && table === 'operation_sessions' && payload['state'] === 'Completed') {
+      throw new Error('Return session seal committed; response lost')
+    }
     return { data: { ...payload, id }, error: null }
   },
 }))
@@ -967,6 +979,143 @@ describe('Return', () => {
     db.state.responses['bookings'] = [[bookingAt('On Rent')], [bookingAt('Returned')]]
     db.state.responses['booking_lines'] = [[{ id: LINE_A, qty: 1 }]]
     db.state.responses['operation_sessions'] = [[]]
+  })
+
+  it('resolves a committed partial receipt by its original completion key after the seal response is lost', async () => {
+    db.state.responses['booking_lines'] = [[{ id: LINE_A, qty: 5 }]]
+    db.state.responses['return_lines'] = [[], [{ id: 'rl-1', booking_line_id: LINE_A, state: 'Outstanding' }]]
+    writes.state.loseSessionSealResponse = true
+    const input = { rentalId: 'B-715', clientUuid: 'original-completion-key', lines: [{ bookingLineId: LINE_A, qty: 2, condition: 'Good' as const }] }
+    await expect(completeReturn(input, OWNER)).rejects.toThrow('seal committed; response lost')
+
+    const original = insertsOn('operation_sessions')[0]?.payload
+    expect(original).toBeDefined()
+    db.state.returnKeyRows = [{ ...original, state: 'Completed', notes: null }]
+    db.state.responses['bookings'] = [[bookingAt('On Rent')]]
+    // A later session must not divert a retry away from its original receipt.
+    db.state.responses['operation_sessions'] = [[{ id: 'later-session', session_no: 2, state: 'Completed', notes: null }]]
+    writes.reset()
+    const result = await completeReturn(input, OWNER)
+
+    expect(result).toMatchObject({ sessionId: original?.['id'], sessionClosed: true, lines: 0, movements: 0, queued: 0, stage: null, stageHeldBy: [LINE_A] })
+    expect(writes.state.ops).toEqual([])
+    expect(db.state.calls.filter((call) => call.table === 'operation_sessions').at(-1)?.ops)
+      .toEqual([['eq', 'client_uuid', 'original-completion-key']])
+  })
+
+  it('reuses an original open Return session found by its completion key', async () => {
+    db.state.returnKeyRows = [{ id: 'original-open', booking_id: BOOKING_ID, operation: 'Return', client_uuid: 'open-key', session_no: 1, state: 'In Progress', notes: null }]
+    db.state.responses['booking_lines'] = [[{ id: LINE_A, qty: 5 }]]
+    db.state.responses['return_lines'] = [[{ id: 'rl-1', booking_line_id: LINE_A, state: 'Outstanding' }]]
+    db.state.responses['session_line_movements'] = [[{
+      id: 'receipt-1', booking_line_id: LINE_A, unit_id: null, serial: null, qty: 2, resulting_item_state: 'Returned',
+    }]]
+    const result = await completeReturn({ rentalId: 'B-715', clientUuid: 'open-key', lines: [{ bookingLineId: LINE_A, qty: 2, condition: 'Good' }] }, OWNER)
+    expect(result.sessionId).toBe('original-open')
+    expect(result.sessionClosed).toBe(true)
+    expect(insertsOn('operation_sessions')).toHaveLength(0)
+    expect(insertsOn('session_line_movements')).toHaveLength(0)
+    expect(opsOn('operation_sessions')).toEqual([expect.objectContaining({ id: 'original-open', kind: 'update' })])
+  })
+
+  it('refuses an unreadable completion key before choosing a new sequence or writing', async () => {
+    db.state.returnKeyError = { message: 'Failed to fetch' }
+    await expect(completeReturn({ rentalId: 'B-715', clientUuid: 'retry-key', lines: [{ bookingLineId: LINE_A, qty: 1 }] }, OWNER))
+      .rejects.toThrow('receipt retry could not be verified')
+    expect(writes.state.ops).toEqual([])
+    expect(db.state.calls.map((call) => call.table)).toEqual(['bookings', 'operation_sessions'])
+  })
+
+  it('refuses a completion key belonging to another booking', async () => {
+    db.state.returnKeyRows = [{ id: 'other-session', booking_id: 'other-booking', operation: 'Return', client_uuid: 'retry-key', session_no: 1, state: 'Completed', notes: null }]
+    await expect(completeReturn({ rentalId: 'B-715', clientUuid: 'retry-key', lines: [{ bookingLineId: LINE_A, qty: 1 }] }, OWNER))
+      .rejects.toThrow('does not match this booking and completion key')
+    expect(writes.state.ops).toEqual([])
+  })
+
+  it('recognizes an already completed final Return after the booking reached Returned', async () => {
+    db.state.responses['bookings'] = [[bookingAt('Returned')]]
+    db.state.returnKeyRows = [{ id: 'completed-return', booking_id: BOOKING_ID, operation: 'Return', client_uuid: 'retry-key', session_no: 1, state: 'Completed', notes: null }]
+    const result = await completeReturn({ rentalId: 'B-715', clientUuid: 'retry-key', lines: [{ bookingLineId: LINE_A, qty: 1 }] }, OWNER)
+    expect(result).toMatchObject({ sessionId: 'completed-return', sessionClosed: true, stageHeldBy: [], stage: null, movements: 0 })
+    expect(writes.state.ops).toEqual([])
+  })
+
+  it('refuses a changed quantity on an open receipt before changing notes or line records', async () => {
+    db.state.responses['booking_lines'] = [[{ id: LINE_A, qty: 5 }]]
+    db.state.responses['operation_sessions'] = [[{ id: 'return-1', session_no: 1, state: 'In Progress', notes: 'Original receipt' }]]
+    db.state.responses['session_line_movements'] = [[{
+      id: 'receipt-1', booking_line_id: LINE_A, unit_id: null, serial: null, qty: 2, resulting_item_state: 'Returned',
+    }]]
+
+    await expect(completeReturn({
+      rentalId: 'B-715', notes: 'Changed count', lines: [{ bookingLineId: LINE_A, qty: 3, condition: 'Good' }],
+    }, OWNER)).rejects.toThrow('changed quantity requires an explicit correction')
+    expect(writes.state.ops).toEqual([])
+  })
+
+  it('retries the exact quantity on an open receipt without adding it twice', async () => {
+    db.state.responses['booking_lines'] = [[{ id: LINE_A, qty: 5 }]]
+    db.state.responses['operation_sessions'] = [[{ id: 'return-1', session_no: 1, state: 'In Progress', notes: null }]]
+    db.state.responses['session_line_movements'] = [[{
+      id: 'receipt-1', booking_line_id: LINE_A, unit_id: null, serial: null, qty: 2, resulting_item_state: 'Returned',
+    }]]
+    db.state.responses['return_lines'] = [[{ id: 'rl-1', booking_line_id: LINE_A, state: 'Outstanding' }]]
+
+    const result = await completeReturn({
+      rentalId: 'B-715', lines: [{ bookingLineId: LINE_A, qty: 2, condition: 'Good' }],
+    }, OWNER)
+
+    expect(insertsOn('session_line_movements')).toHaveLength(0)
+    expect(result.movements).toBe(0)
+    expect(result.sessionClosed).toBe(true)
+    expect(result.stage).toBeNull()
+  })
+
+  it.each([
+    { name: 'Damaged', changes: { condition: 'Damaged' as const } },
+    { name: 'Missing', changes: { outcome: 'missing' as const, reason: 'The items were not received', notReturnedDecision: 'Still expected' as const } },
+  ])('refuses changing an interrupted usable quantity receipt to $name before any write', async ({ changes }) => {
+    db.state.responses['booking_lines'] = [[{ id: LINE_A, qty: 5 }]]
+    db.state.responses['operation_sessions'] = [[{ id: 'return-1', session_no: 1, state: 'In Progress', notes: null }]]
+    db.state.responses['session_line_movements'] = [[{
+      id: 'receipt-1', booking_line_id: LINE_A, unit_id: null, serial: null, qty: 2, resulting_item_state: 'Returned',
+    }]]
+    await expect(completeReturn({
+      rentalId: 'B-715', lines: [{ bookingLineId: LINE_A, qty: 2, condition: 'Good', ...changes }],
+    }, OWNER)).rejects.toThrow('changed condition or outcome requires an explicit correction')
+    expect(writes.state.ops).toEqual([])
+  })
+
+  it('records successive partial quantities in separate completed sessions and reads final completion from the database', async () => {
+    db.state.responses['booking_lines'] = [[{ id: LINE_A, qty: 5 }]]
+    db.state.responses['return_lines'] = [[], [{ id: 'rl-1', booking_line_id: LINE_A, state: 'Outstanding' }]]
+    const first = await completeReturn({
+      rentalId: 'B-715', lines: [{ bookingLineId: LINE_A, qty: 2, condition: 'Good' }],
+    }, OWNER)
+
+    expect(first.sessionClosed).toBe(true)
+    expect(first.stage).toBeNull()
+    expect(insertsOn('session_line_movements')[0]?.payload).toMatchObject({ qty: 2, session_id: first.sessionId })
+
+    writes.reset()
+    db.state.responses['bookings'] = [[bookingAt('On Rent')], [bookingAt('Returned')]]
+    db.state.responses['operation_sessions'] = [[{ id: first.sessionId, session_no: 1, state: 'Completed', notes: null }]]
+    db.state.responses['return_lines'] = [
+      [{ id: 'rl-1', booking_line_id: LINE_A, state: 'Outstanding' }],
+      // The authoritative receipt trigger resolves the cumulative 2 + 3.
+      [{ id: 'rl-1', booking_line_id: LINE_A, state: 'Returned' }],
+    ]
+    const second = await completeReturn({
+      rentalId: 'B-715', lines: [{ bookingLineId: LINE_A, qty: 3, condition: 'Good' }],
+    }, OWNER)
+
+    expect(second.sessionId).not.toBe(first.sessionId)
+    expect(insertsOn('operation_sessions')[0]?.payload).toMatchObject({ session_no: 2, state: 'In Progress' })
+    expect(insertsOn('session_line_movements')[0]?.payload).toMatchObject({ qty: 3, session_id: second.sessionId })
+    expect(opsOn('return_lines')[0]?.payload['state']).toBe('Outstanding')
+    expect(second.sessionClosed).toBe(true)
+    expect(second.stage).toEqual({ from: 'On Rent', to: 'Returned' })
   })
 
   it('refuses an offline receipt instead of sealing a partial session as saved', async () => {

@@ -1,10 +1,10 @@
-import React, { useState, useCallback, useMemo } from 'react'
+import React, { useState, useCallback, useMemo, useRef } from 'react'
 import Icon from '../ui/Icon'
 import { Button } from '../ui/Page'
 import { saveRecordSection } from '../../actions/recordEditor'
 import { newClientUuid } from '../../lib/supabase'
 import { useToast } from '../ui/Toast'
-import type { RecordKind, RecordSnapshot, RecordValues } from '../../lib/recordEditor'
+import type { RecordKind, RecordSnapshot, RecordValues, RecordSectionChange } from '../../lib/recordEditor'
 import { useNetwork } from '../../lib/network'
 import type { Role } from '../../lib/rbac'
 
@@ -232,10 +232,11 @@ export interface UseSectionSaveManagerOptions {
   kind: RecordKind
   recordId: string | null | undefined
   snapshot: RecordSnapshot | null
-  onSnapshotUpdated: (snapshot: RecordSnapshot) => void
+  onSnapshotUpdated: (snapshot: RecordSnapshot, change: RecordSectionChange) => void
   onCreateInitialRecord?: ((sectionKey: string, payload: RecordValues, rows?: RecordValues[]) => Promise<RecordSnapshot>) | undefined
   userId: string | undefined
   userRole: Role | undefined
+  isBusy?: boolean | (() => boolean) | undefined
 }
 
 export function useSectionSaveManager({
@@ -246,6 +247,7 @@ export function useSectionSaveManager({
   onCreateInitialRecord,
   userId,
   userRole,
+  isBusy = false,
 }: UseSectionSaveManagerOptions) {
   const online = useNetwork()
   const { showSuccessToast } = useToast()
@@ -253,6 +255,10 @@ export function useSectionSaveManager({
   const [dirtySections, setDirtySections] = useState<Record<string, boolean>>({})
   const [savingSection, setSavingSection] = useState<string | null>(null)
   const [sectionErrors, setSectionErrors] = useState<Record<string, string | null>>({})
+  const inFlight = useRef(false)
+  const currentSnapshot = useRef(snapshot)
+  currentSnapshot.current = snapshot
+  const attempts = useRef(new Map<string, { fingerprint: string; key: string; revision: string }>())
 
   const markSectionDirty = useCallback((sectionKey: string) => {
     setDirtySections((prev) => (prev[sectionKey] ? prev : { ...prev, [sectionKey]: true }))
@@ -272,6 +278,7 @@ export function useSectionSaveManager({
       sectionFieldsPayload: RecordValues,
       sectionRowsPayload?: RecordValues[]
     ) => {
+      if (inFlight.current || (typeof isBusy === 'function' ? isBusy() : isBusy)) throw new Error('Wait for the current save to finish. Your changes are still here.')
       if (!userId || !userRole) {
         throw new Error('Please sign in to save this section.')
       }
@@ -282,11 +289,12 @@ export function useSectionSaveManager({
 
       if (!recordId || !snapshot) {
         if (onCreateInitialRecord) {
+          inFlight.current = true
           setSavingSection(sectionKey)
           setSectionErrors((prev) => ({ ...prev, [sectionKey]: null }))
           try {
             const created = await onCreateInitialRecord(sectionKey, sectionFieldsPayload, sectionRowsPayload)
-            onSnapshotUpdated(created)
+            onSnapshotUpdated(created, { section: sectionKey, fields: sectionFieldsPayload, rows: sectionRowsPayload })
             markSectionClean(sectionKey, created.revision)
             showSuccessToast('Record created & section saved', `${sectionKey.charAt(0).toUpperCase() + sectionKey.slice(1)} synchronized`)
             return created
@@ -295,31 +303,41 @@ export function useSectionSaveManager({
             setSectionErrors((prev) => ({ ...prev, [sectionKey]: msg }))
             throw err
           } finally {
+            inFlight.current = false
             setSavingSection(null)
           }
         }
         throw new Error('Save the record identity first to enable cloud section saving.')
       }
 
+      inFlight.current = true
       setSavingSection(sectionKey)
       setSectionErrors((prev) => ({ ...prev, [sectionKey]: null }))
 
       try {
-        const clientUuid = newClientUuid()
+        const latest = currentSnapshot.current ?? snapshot
+        const fingerprint = JSON.stringify({ kind, recordId, fields: sectionFieldsPayload, rows: sectionRowsPayload ?? [] })
+        let attempt = attempts.current.get(sectionKey)
+        if (!attempt || attempt.fingerprint !== fingerprint) {
+          attempt = { fingerprint, key: newClientUuid(), revision: latest.revision }
+          attempts.current.set(sectionKey, attempt)
+        }
         const result = await saveRecordSection(
           {
             kind,
             id: recordId,
             section: sectionKey,
-            expectedRevision: snapshot.revision,
-            clientUuid,
+            expectedRevision: attempt.revision,
+            clientUuid: attempt.key,
             values: sectionFieldsPayload,
             rows: sectionRowsPayload,
           },
           { userId, role: userRole, isOnline: online }
         )
 
-        onSnapshotUpdated(result)
+        currentSnapshot.current = result
+        onSnapshotUpdated(result, { section: sectionKey, fields: sectionFieldsPayload, rows: sectionRowsPayload })
+        attempts.current.delete(sectionKey)
         markSectionClean(sectionKey, result.revision)
         showSuccessToast('Section saved', `${sectionKey.charAt(0).toUpperCase() + sectionKey.slice(1)} updated`)
         return result
@@ -328,10 +346,11 @@ export function useSectionSaveManager({
         setSectionErrors((prev) => ({ ...prev, [sectionKey]: msg }))
         throw err
       } finally {
+        inFlight.current = false
         setSavingSection(null)
       }
     },
-    [kind, recordId, snapshot, userId, userRole, online, markSectionClean, onSnapshotUpdated, onCreateInitialRecord, showSuccessToast]
+    [kind, recordId, snapshot, userId, userRole, online, isBusy, markSectionClean, onSnapshotUpdated, onCreateInitialRecord, showSuccessToast]
   )
 
   const getSectionStatus = useCallback(
@@ -372,5 +391,6 @@ export function useSectionSaveManager({
     saveSection,
     getSectionStatus,
     savedCount,
+    isSaving: () => inFlight.current,
   }
 }

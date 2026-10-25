@@ -1,0 +1,118 @@
+{
+  "at": "2026-10-24T08:12:54.511Z",
+  "observedHead": "14dbbe3aab08391583802fdd9a49c0a42400066e",
+  "checkpoint": "9dc9058837d1c163cd9332ad1ac16d5f71a20c4f",
+  "patchBase": "7245f5a0940ff216b5e9d184fde18bfe4edae3a8",
+  "patchSha256": "b607c8cb324e384fbba2c07be47587f976f055e1a50fcfa7391fc6c90bb7e715",
+  "boundary": "Recovery/reference only. Not applied to active working copy; no Git mutation or migration.",
+  "files": [
+    {
+      "file": "src/actions/rentals/floorVerb.ts",
+      "sha256": "427d76227f2612eee9f170ceb6c3179629a871b3224cfa0390bd496060c605bd"
+    },
+    {
+      "file": "src/actions/rentals/__tests__/floorVerbs.test.ts",
+      "sha256": "59f411c1bc3c2c75238959b76ca5921e9f131ac4bf44a27fc4b7bc89dcddb8be"
+    },
+    {
+      "file": "src/components/shell/Header.tsx",
+      "sha256": "0acce576b19b7920adcb2eb2d8a667768ce4b1de7ec54f3beec2f142612c93b7"
+    },
+    {
+      "file": "src/components/shell/__tests__/headerButtonPositions.test.tsx",
+      "sha256": "7d69f24e6fb3ab5dca42112407adb0b3ca744c37dec2edacc3c21348ebbf6528"
+    },
+    {
+      "file": "src/components/ui/Modal.tsx",
+      "sha256": "080a59bfdc88c51fdc22163d03fce7d40b58e9a13f79dfee3ad9cc059f7fc270"
+    },
+    {
+      "file": "src/components/ui/PageActions.tsx",
+      "sha256": "436b2f74dec6cd920ea307e5724c65d6dbd730be7089f95cc06e469bd3355e06"
+    },
+    {
+      "file": "src/lib/availability.ts",
+      "sha256": "9a760108cac63f18a8ad828ed283e8c4764e900549b15ac685383041f191433c"
+    },
+    {
+      "file": "src/lib/queries/availability.ts",
+      "sha256": "10915ea3503da0887c5dee476553efa04c1830d3bcf6c3963f7ce43fb4c3e748"
+    },
+    {
+      "file": "src/lib/queries/__tests__/availabilityCompleteness.test.ts",
+      "sha256": "f66465cf935d7e50f75d7de62d91d3db0d5e9522092e22dd112c0aeaf6d21e46"
+    },
+    {
+      "file": "src/lib/queries/operationTaskFacts.ts",
+      "sha256": "dee7aed23656e637f38171d0add971934074ca26160cf69b5035d819ba90c3a1"
+    },
+    {
+      "file": "src/lib/queries/__tests__/operationTaskFacts.test.ts",
+      "sha256": "1a23d82427d87ec0682059d0889300e6a7de8ed61a147c44d60005d9a3470837"
+    },
+    {
+      "file": "src/modules/operations/OperationsQueues.tsx",
+      "sha256": "4a7876881fcc7e4ceb99e1ff350fdcce3f5f2d9d4f82ba22fdf2d005c4c82038"
+    },
+    {
+      "file": "src/modules/operations/OperationsShell.tsx",
+      "sha256": "ac2454557b1e48cc1a297b3fbafbf819fa339b3a37519c8da429f7b46e16d4bf"
+    },
+    {
+      "file": "src/modules/operations/OperationsWorkspaceContext.tsx",
+      "sha256": "95fd717cdfbc1c6483c9ef040e07dbe089639ec4390cc315a7f965f9265b4a8d"
+    },
+    {
+      "file": "src/modules/operations/__tests__/OperationsShell.test.tsx",
+      "sha256": "5802cd815d76ff66ff97addc5324f48e07438d353dc4eab9abba87c71e01cff5"
+    },
+    {
+      "file": "src/modules/operations/__tests__/operationRoutes.test.tsx",
+      "sha256": "429f74c473140feec22a5b780f77c31061971f7716d9eea45eb711a1925adf22"
+    },
+    {
+      "file": "src/modules/operations/__tests__/OperationsWorkspaceContext.test.tsx",
+      "sha256": "6c032a22b15335fa966040d475eb351ed5817f6d35d3400f1f89552fc9b75d02"
+    },
+    {
+      "file": "src/modules/operations/operationsShell.css",
+      "sha256": "d68732825597cae7556c2c112e6b43100666cf661e6d8746729dd84412172675"
+    },
+    {
+      "file": "src/modules/rentals/BookingDetail.tsx",
+      "sha256": "0785d00c20f4ba19dd75bde1d14e189c51169c68162edf36334596242bba1863"
+    },
+    {
+      "file": "src/modules/rentals/BookingOperationsMenu.tsx",
+      "sha256": "22879ee7dd63e57f1282e2fbc0c33fe395c52f3b71a117db00a561fbd4bcc7d0"
+    },
+    {
+      "file": "src/modules/rentals/booking-operations-menu.css",
+      "sha256": "6eb4a1cd64e7cb9952e0e237f12839e1e56964d181fc5706457fd1874e8a77fb"
+    },
+    {
+      "file": "src/modules/rentals/__tests__/BookingOperationsMenu.test.tsx",
+      "sha256": "9e34ef6d6d290f6f14f67b795b34b4c71e7ad58dd4c6fa004c27f2d2236575fe"
+    },
+    {
+      "file": "src/modules/rentals/ReturnWorkspace.tsx",
+      "sha256": "f30c364c3747b671906223c0381a37e3ef37275a7fdf37d7b7bfe4ee4d987159"
+    },
+    {
+      "file": "src/modules/rentals/PackingWorkspace.tsx",
+      "sha256": "c6b6af615d818c642e42e527ab025eafd2c93ac02a0fee80efe33c9d670bab09"
+    },
+    {
+      "file": "RULINGS-2026-10-24.md",
+      "sha256": "070bf9f4008c2a86d5caaf637cc5200343f540aa3882494e50e195eee12d6a5d"
+    },
+    {
+      "file": "docs/OPEN_DECISIONS.md",
+      "sha256": "30a1ca72f672208ca3b0af0c12695d12622ea942d4bd5648120aa85582535a46"
+    }
+  ],
+  "copies": [
+    "docs/verification/booking-operations-20261024",
+    "artifacts/booking-operations-20261024"
+  ]
+}

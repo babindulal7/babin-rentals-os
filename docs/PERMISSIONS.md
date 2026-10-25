@@ -248,6 +248,17 @@ scope too; a Return grant alone cannot authorize it. Revoking the
 last active grant scopes a user to nothing — never back to global. No §3 cell and no
 role set above changed.
 
+**Verified partial Return — 25 October 2026 (0175, local source only).** The same
+Return role ceiling and booking-branch grant constrain direct receipt writes and
+the money-free `read_verified_return_quantities` RPC. Usable serials and verified
+quantity receipts release only their own reservation when their Return session
+is persisted Completed; an interrupted open session retains its holds. Completed
+Return seals cannot reopen or accept new receipt facts. Quantity history is
+private, bounded by the booked quantity, and unavailable history blocks receipt
+entry. A Reset completion stamp cannot clear a recorded QC defect. These are
+enforcement repairs to existing rules, with no permission widening or hosted
+application; N-5 still applies.
+
 Grant administration is Owner/Admin only; Admin cannot issue/revoke grants for
 Owner/Admin targets (including self). Direct table writes remain revoked from
 authenticated roles. Approval is local source integration only; N-5 still applies.
@@ -320,6 +331,7 @@ model**. Nothing is stored: `product_units_service_v` derives it at read time.
 | `invoice.void` (+ credit note) | M+ · Accounts | issued invoices immutable; ⭐ S1-a default: Owner · Admin · Manager · Accounts (R-05). Coordinator excluded. | ✓ |
 | `deposit.confirm_refund` | M+ · Accounts | accountant confirms auto-calculated refund (21 Jul) | ○ |
 | `deposit.release` | M+ · Accounts | never automated (Tier 3) | ○ |
+| `closing.approve` (sign off the Daily Closing) | M+ · Accounts | INSERT gated by `daily_closings_finance_insert` = `auth_is_finance_or_admin()` (0078 policy, 0117 predicate, R-05). **Coordinator excluded** — reads the figures, cannot sign (RULINGS-2026-10-18 #1). Refused offline. Owner/Manager-only reading still open (§4.40(a)). | ✓ |
 | `expense.submit` | all staff | own claims for Floor/Driver | ○ |
 | `expense.approve` | M+ · Accounts (⭐ Rs 25,000 threshold; above → Owner) | never own submission | ○ |
 | `expense.reverse` | M+ · Accounts | posted expenses reverse, drafts discard | ○ |

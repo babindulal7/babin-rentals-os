@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Modal } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Button'
 import { enrollClientMembership } from '../../../actions/clients/enrollMembership'
 import { useAuth } from '../../../lib/auth'
 import { useToast } from '../../../components/ui/Toast'
 import { useCanViewMoney } from '../../../lib/moneyVisibility'
-import { supabase } from '../../../lib/supabase'
+import { newClientUuid, supabase } from '../../../lib/supabase'
+import { parseMoney } from '../../../lib/money'
+import { useNetwork } from '../../../lib/network'
+import { businessDayAd } from '../../../lib/bs'
 import Icon from '../../../components/ui/Icon'
 
 export interface MembershipPlanRecord {
@@ -38,13 +41,16 @@ export function EnrollMembershipModal({
   const { user } = useAuth()
   const { showSuccessToast } = useToast()
   const canViewMoney = useCanViewMoney()
+  const online = useNetwork()
+  const submitting = useRef(false)
+  const requestKey = useRef<{ fingerprint: string; key: string } | null>(null)
 
   const [clients, setClients] = useState<Array<{ id: string; name: string; phone: string }>>([])
   const [selectedClientId, setSelectedClientId] = useState<string>(initialClientId ?? '')
 
   const [plans, setPlans] = useState<MembershipPlanRecord[]>([])
   const [selectedPlanId, setSelectedPlanId] = useState<string>('')
-  const [joinDate, setJoinDate] = useState<string>(new Date().toISOString().slice(0, 10))
+  const [joinDate, setJoinDate] = useState<string>(() => businessDayAd())
   const [feePaidInput, setFeePaidInput] = useState<string>('')
   const [notes, setNotes] = useState<string>('')
 
@@ -157,6 +163,7 @@ export function EnrollMembershipModal({
   }
 
   const handleSubmit = async () => {
+    if (submitting.current) return
     const targetClientId = initialClientId ?? selectedClientId
     if (!user) {
       setError('Please sign in to enroll membership.')
@@ -170,22 +177,40 @@ export function EnrollMembershipModal({
       setError('Please select a membership plan.')
       return
     }
+    if (!online) {
+      setError('Connect to update client membership.')
+      return
+    }
+    const feePaisa = feePaidInput.trim() ? parseMoney(feePaidInput) : null
+    if (canViewMoney && feePaidInput.trim() && (feePaisa === null || feePaisa < 0 || !Number.isSafeInteger(feePaisa))) {
+      setError('Enter a valid non-negative membership fee.')
+      return
+    }
 
+    submitting.current = true
     setSaving(true)
     setError(null)
 
     try {
-      const feeNum = feePaidInput ? Number(feePaidInput) : null
+      const payload = {
+        clientId: targetClientId,
+        planId: selectedPlanId,
+        joinDate,
+        feePaid: canViewMoney ? feePaisa : null,
+        notes: notes.trim() || undefined,
+      }
+      const fingerprint = JSON.stringify(payload)
+      if (!requestKey.current || requestKey.current.fingerprint !== fingerprint) {
+        requestKey.current = { fingerprint, key: newClientUuid() }
+      }
       const result = await enrollClientMembership(
         {
-          clientId: targetClientId,
-          planId: selectedPlanId,
-          joinDate,
-          feePaid: canViewMoney ? feeNum : null,
-          notes: notes.trim() || undefined,
+          ...payload,
+          clientUuid: requestKey.current.key,
         },
-        { userId: user.id, role: user.role }
+        { userId: user.id, role: user.role, isOnline: online }
       )
+      requestKey.current = null
 
       showSuccessToast(
         'Membership enrolled',
@@ -196,6 +221,7 @@ export function EnrollMembershipModal({
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
+      submitting.current = false
       setSaving(false)
     }
   }
@@ -207,7 +233,7 @@ export function EnrollMembershipModal({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={() => { if (!submitting.current) onClose() }}
       title="Enroll Membership"
       subtitle={`Assign membership plan and tier benefits for ${targetName}.`}
       size="md"

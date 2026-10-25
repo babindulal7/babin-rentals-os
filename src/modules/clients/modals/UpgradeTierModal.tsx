@@ -59,6 +59,7 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership }
   const [note, setNote] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const submitting = useRef(false)
 
   /* One request key per distinct request (Law 8): a retry of the SAME plan and note reuses it, so a
      response lost in transit cannot become a second membership; changing either makes a new request. */
@@ -80,9 +81,18 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership }
   const canApply = Boolean(user) && chosen !== null && !unchanged && !tooLong && !saving && !plans.loading
 
   async function apply() {
-    if (!user || !chosen || !client.dbId) return
-    const signature = `${chosen.level}|${note.trim()}`
+    if (submitting.current || !canApply || !user || !chosen) return
+    if (!client.dbId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(client.dbId)) {
+      setError('Reload this client before changing membership. The saved client identity is unavailable.')
+      return
+    }
+    if (!online) {
+      setError('Connect to update client membership.')
+      return
+    }
+    const signature = JSON.stringify([client.dbId, chosen.level, note.trim()])
     if (keyRef.current?.signature !== signature) keyRef.current = { signature, key: crypto.randomUUID() }
+    submitting.current = true
     setSaving(true)
     setError(null)
     try {
@@ -105,6 +115,7 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'The membership could not be changed.')
     } finally {
+      submitting.current = false
       setSaving(false)
     }
   }
@@ -112,13 +123,13 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership }
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={() => { if (!submitting.current) onClose() }}
       title={activating ? 'Activate Membership' : 'Change Membership Plan'}
       subtitle={activating ? `${client.name} has no membership yet.` : `${client.name} is on the ${current} plan.`}
       size="md"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
           <Button variant="primary" onClick={() => void apply()} disabled={!canApply} loading={saving}>
@@ -159,6 +170,7 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership }
               </label>
               <select
                 id={selectId}
+                disabled={saving}
                 value={effective}
                 onChange={(e) => {
                   setSelected(e.target.value as MembershipTier)
@@ -224,6 +236,7 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership }
               </label>
               <textarea
                 id={noteId}
+                disabled={saving}
                 rows={2}
                 placeholder="Why the plan is changing, or a reference — kept with the audit record."
                 value={note}

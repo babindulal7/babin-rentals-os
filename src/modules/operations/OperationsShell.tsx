@@ -1,45 +1,25 @@
 import { formatAdDateTime } from '../../lib/bs'
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '../../components/ui/Page'
-import type { IconName } from '../../components/ui/Icon'
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { Modal } from '../../components/ui/Modal'
 import { LoadingSkeleton } from '../../components/ui/StateViews'
 import { JOB_ORDER, BOOKING_STATUS, JOBS, type BookingStatus, type JobName } from '../../lib/workflow'
-import { entryStepFor, stepWriteGate, stepDotState } from '../../lib/operationsShell'
+import { entryStepFor, stepWriteGate } from '../../lib/operationsShell'
 import { fetchFloorBooking, type FloorBooking } from '../../lib/queries/bookings'
 import { fetchOperationTaskFacts, type OperationTaskFacts } from '../../lib/queries/operationTaskFacts'
 import { DomainEvents, EVENT_TYPES } from '../../events/eventBus'
 import { FLOOR_TWO_COLUMN_MIN, FloorNarrowContext } from './floorPanelContext'
 import { RentalMoreActions } from '../rentals/actions/RentalMoreActions'
 import { useViewport } from '../../lib/device'
+import type { OperationWorkspaceActions } from './operationWorkspaceActions'
+import { OperationsStageBar, STAGE_LABEL as LABEL } from './OperationsStageBar'
 import './operationsShell.css'
 
 const PackingWorkspace = lazy(() => import('../rentals/PackingWorkspace'))
 const HandoverWorkspace = lazy(() => import('../rentals/HandoverWorkspace'))
 const ReturnWorkspace = lazy(() => import('../rentals/ReturnWorkspace'))
 const ResetWorkspace = lazy(() => import('../rentals/ResetWorkspace'))
-
-const LABEL: Record<JobName, string> = {
-  Pack: 'Packing',
-  Handover: 'Handover',
-  Return: 'Return & Inspection',
-  Reset: 'Cleaning & Reset',
-}
-
-const STEP_LABEL: Record<JobName, string> = {
-  Pack: 'Pack', Handover: 'Hand', Return: 'Return', Reset: 'Reset',
-}
-
-/* One icon per stage (8 Oct 2026, RULINGS-2026-10-08.md). A stage that is not
-   open yet shows a single lock instead — the label used to carry a 🔒 emoji
-   beside the lock icon, so locked stages showed two padlocks. */
-const STEP_ICON: Record<JobName, IconName> = {
-  Pack: 'package',
-  Handover: 'truck',
-  Return: 'return_arrow',
-  Reset: 'sparkles',
-}
 
 const PREV_JOB: Partial<Record<JobName, JobName>> = {
   Handover: 'Pack',
@@ -60,16 +40,7 @@ const STATUS_AFTER: Record<JobName, BookingStatus> = {
   Reset: 'Returned',
 }
 
-export interface WorkspaceActions {
-  canComplete: boolean
-  dispatching: boolean
-  complete: () => void
-  isDirty: boolean
-  label?: string
-  error?: string | null
-  /** First requirement still unmet, shown beside a disabled Confirm so the operator need not hunt for it. */
-  blockedReason?: string | null
-}
+export type WorkspaceActions = OperationWorkspaceActions
 
 export interface OperationsShellProps {
   bookingNo: string
@@ -82,6 +53,7 @@ export interface OperationsShellProps {
   /** Reports unsaved work so a host that can swap the booking can ask first. */
   onDirtyChange?: (dirty: boolean) => void
   onBusyChange?: (busy: boolean) => void
+  onRegisterDiscard?: (discard: (() => void) | null) => void
   progress?: Partial<Record<JobName, { done: number; total: number }>>
 }
 
@@ -95,6 +67,7 @@ export default function OperationsShell({
   layout = 'modal',
   onDirtyChange,
   onBusyChange,
+  onRegisterDiscard,
   progress,
 }: OperationsShellProps) {
   const viewport = useViewport()
@@ -117,6 +90,10 @@ export default function OperationsShell({
   const identity = useRef({ bookingNo, isOpen })
   identity.current = { bookingNo, isOpen }
   const [actions, setActions] = useState<WorkspaceActions | null>(null)
+  useEffect(() => {
+    onRegisterDiscard?.(actions?.discard ?? null)
+    return () => onRegisterDiscard?.(null)
+  }, [actions?.discard, onRegisterDiscard])
   const [pending, setPending] = useState<
     | { type: 'close' }
     | { type: 'prev'; job: JobName }
@@ -242,22 +219,8 @@ export default function OperationsShell({
   // Keyboard navigation: 1-4 jumps between unlocked stages, / focuses scanner
   const handleBlockerJump = useCallback(() => {
     if (!bodyEl) return
-    const target =
-      bodyEl.querySelector<HTMLElement>(
-        '[data-blocker-target], [aria-invalid="true"], #handover-receiver-sig, #handover-warehouse-sig, #return-receiver-sig, #return-warehouse-sig'
-      ) ||
-      bodyEl.querySelector<HTMLElement>(
-        '.floor-scanner-input, #operations-command-input'
-      )
-    if (target) {
-      if (typeof target.scrollIntoView === 'function') {
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      }
-      if ('focus' in target && typeof target.focus === 'function') {
-        target.focus({ preventScroll: true })
-      }
-    }
-  }, [bodyEl])
+    actions?.focusBlocker?.(bodyEl)
+  }, [actions, bodyEl])
 
   useEffect(() => {
     if (!isOpen) return
@@ -459,6 +422,7 @@ export default function OperationsShell({
         onClose={() => setPending(null)}
         onConfirm={() => {
           const choice = pending
+          actions?.discard?.()
           setPending(null)
           setActions(null)
           if (choice?.type === 'switch') setJob(choice.job)
@@ -490,7 +454,20 @@ export default function OperationsShell({
   )
 
   const title = `Operations · ${bookingNo}${floor?.clientName ? ` · ${floor.clientName}` : ''}`
-  const subtitle = `${LABEL[job]} · Status: ${liveStatus}`
+  /* RULING 2026-10-25: the stage progress bar now sits in this header and names the open stage, so the subtitle keeps only what the
+     bar cannot say — the booking's status. Revert = restore `${LABEL[job]} · ` before it and move the bar back into `bodyNode`. */
+  const subtitle = `Status: ${liveStatus}`
+  const stageBar = (
+    <OperationsStageBar
+      job={job}
+      liveStatus={liveStatus}
+      resetDone={resetDone}
+      measured={progress}
+      live={actions?.progress}
+      disabled={floorLoading || busy || !!awaitingCompletion.current}
+      onSelect={requestJob}
+    />
+  )
   const footerNode = (
           <div
             ref={setFooterEl}
@@ -543,55 +520,6 @@ export default function OperationsShell({
   )
   const bodyNode = (
     <>
-        <nav
-          aria-label="Operation stage"
-          className="operations-shell__stages"
-        >
-          {JOB_ORDER.map((candidate) => {
-            const gate = stepWriteGate(candidate, liveStatus)
-            const selected = candidate === job
-            const currentOrder = BOOKING_STATUS[liveStatus]?.order ?? 0
-            const candidateOrder = BOOKING_STATUS[JOBS[candidate].runsAt]?.order ?? 0
-            const isCompleted = candidate === 'Reset' ? resetDone : currentOrder > candidateOrder
-            const isBlocked = currentOrder < candidateOrder
-            const measured = progress?.[candidate]
-            const state = stepDotState(candidate, liveStatus, measured ?? { done: 0, total: 1 })
-            const stateLabel =
-              candidate === 'Reset' && resetDone ? 'Done' : candidate === 'Reset' && currentOrder > candidateOrder ? 'Read only' :
-              gate.allowed && !measured
-                ? 'Open'
-                : state === 'not-started'
-                  ? 'Not started'
-                  : state === 'in-progress'
-                    ? 'In progress'
-                    : state === 'done'
-                      ? 'Done'
-                      : 'Not open yet'
-
-            const countStr = measured ? ` ${measured.done}/${measured.total}` : ''
-
-            return (
-              <Button
-                key={candidate}
-                size="sm"
-                variant="secondary"
-                className="operations-shell__stage"
-                aria-label={`${LABEL[candidate]} · ${stateLabel}${countStr}`}
-                aria-current={selected ? 'step' : undefined}
-                disabled={isBlocked || floorLoading || busy || !!awaitingCompletion.current}
-                title={!gate.allowed ? gate.reason ?? undefined : undefined}
-                onClick={() => requestJob(candidate)}
-                icon={isCompleted ? 'check' : isBlocked ? 'lock' : STEP_ICON[candidate]}
-                style={{ minHeight: 64, padding: '8px', whiteSpace: 'normal', border: `1px solid ${selected ? 'var(--primary)' : 'var(--btn-secondary-border)'}`, ...(selected ? { background: 'var(--nav-active-bg)' } : {}) }}
-
-              >
-                <span className="operations-shell__stage-name">{STEP_LABEL[candidate]}</span>
-                <span className="operations-shell__stage-sep"> · </span>
-                <span className="operations-shell__stage-state">{stateLabel}{countStr}</span>
-              </Button>
-            )
-          })}
-        </nav>
 
         {taskFacts && taskFacts.total > 0 && (job === 'Return' || job === 'Reset') && <p role="status" className="operations-shell__task-facts">Cleaning pending: {taskFacts.cleaningPending} · QC pending: {taskFacts.qcPending} · Reset complete: {taskFacts.resetDone}/{taskFacts.total}{taskFacts.problems > 0 ? ` · Issues: ${taskFacts.problems}` : ''}</p>}
         {taskError && <p role="alert">{taskError} <Button variant="secondary" onClick={() => { void refreshFloor() }}>Retry task records</Button></p>}
@@ -649,6 +577,7 @@ export default function OperationsShell({
               <p className="operations-shell__panel-sub">{subtitle}</p>
             </div>
             <Button variant="ghost" icon="close" aria-label="Close panel (Esc)" onClick={requestClose} style={{ minHeight: 'var(--tap)' }}>Close</Button>
+            {stageBar}
           </header>
           <div className="operations-shell__panel-body"><FloorNarrowContext.Provider value={narrow}><div ref={setBodyEl}>{bodyNode}</div></FloorNarrowContext.Provider></div>
           <footer className="operations-shell__panel-foot">{footerNode}</footer>
@@ -671,6 +600,7 @@ export default function OperationsShell({
         fill
         title={title}
         subtitle={subtitle}
+        headerContent={stageBar}
         footer={footerNode}
       >
         <FloorNarrowContext.Provider value={narrow}>

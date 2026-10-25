@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import './rentals.css'
 import Icon from '../../components/ui/Icon'
@@ -14,6 +14,9 @@ import { JOBS, statusToken } from '../../lib/workflow'
 import type { BookingStatus, JobState } from '../../lib/workflow'
 import { useFloorViewport } from '../operations/floorPanelContext'
 import { nextRequirement } from '../operations/nextRequirement'
+import { focusOperationTarget, type OperationWorkspaceActions } from '../operations/operationWorkspaceActions'
+import { useOperationEvidence } from '../operations/useOperationEvidence'
+import { OperationEvidenceStatus } from '../operations/OperationEvidenceStatus'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../../components/ui/Toast'
 import { captureError } from '../../lib/monitoring'
@@ -171,7 +174,6 @@ interface ResetRow {
   serial: string | null
   name: string
   category: Category
-  waitingMinutes?: number
   /** Units this row stands for: 1 per physical unit, `booking_lines.qty` for a quantity row. */
   qty: number
   required: boolean
@@ -195,9 +197,11 @@ interface RowRec {
   damageType?: string | undefined
   damageSeverity?: string | undefined
   notes?: string | undefined
+  enteredQueueAt?: string | undefined
 }
 
 const FRESH: RowRec = { queueState: 'Waiting', ticks: [], problem: 'No Problems' }
+const RESET_FILTERS = ['Needs action', ...QUEUE_FILTERS, 'Exceptions'] as const
 
 interface ProblemDraft {
   type: ProblemState
@@ -240,9 +244,6 @@ function buildRows(floor: FloorBooking): ResetRow[] {
     return src.productName ?? src.description ?? src.lineType
   }
 
-  const refTime = floor.actualReturnAtAd ?? floor.returnAtAd ?? floor.pickupAtAd
-  const waitingMinutes = Math.max(15, Math.floor((Date.now() - new Date(refTime ?? Date.now()).getTime()) / 60000) % 360)
-
   const rows: ResetRow[] = []
   for (const line of floor.lines) {
     const name = line.productName ?? line.description ?? `${line.lineType} line`
@@ -256,7 +257,6 @@ function buildRows(floor: FloorBooking): ResetRow[] {
           serial: u.serial ?? u.assetTag,
           name: line.units.length > 1 ? `${name} · unit ${i + 1}` : name,
           category,
-          waitingMinutes,
           qty: 1,
           required: u.isRequired,
           location: u.location,
@@ -275,7 +275,6 @@ function buildRows(floor: FloorBooking): ResetRow[] {
         serial: null,
         name,
         category,
-        waitingMinutes,
         qty: line.qty,
         required: true,
         location: null,
@@ -311,16 +310,7 @@ export interface ResetWorkspaceProps {
   embedded?: boolean
   onConfirmSuccess?: () => void
   onCancel?: () => void
-  onRegisterActions?: (actions: {
-    canComplete: boolean
-    dispatching: boolean
-    complete: () => void
-    isDirty: boolean
-    label?: string
-    error?: string | null
-    /** First requirement still unmet, worded for the footer beside a disabled Confirm. */
-    blockedReason?: string | null
-  }) => void
+  onRegisterActions?: (actions: OperationWorkspaceActions) => void
 }
 
 export default function ResetWorkspace({
@@ -374,8 +364,10 @@ export default function ResetWorkspace({
    * problem. Local until Complete Reset dispatches — dispatch-then-commit,
    * where "commit" is the navigation away on the resolved promise. */
   const [marks, setMarks] = useState<Record<string, RowRec>>({})
+  const savedEvidence = useOperationEvidence(floor?.id ?? null)
+  const [persistedMarks, setPersistedMarks] = useState<Record<string, RowRec>>({})
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [filter, setFilter] = useState<(typeof QUEUE_FILTERS)[number]>('All')
+  const [filter, setFilter] = useState<(typeof RESET_FILTERS)[number]>('Needs action')
   const [query, setQuery] = useState('')
   const [problemDraft, setProblemDraft] = useState<Record<string, ProblemDraft>>({})
   /*
@@ -383,6 +375,7 @@ export default function ResetWorkspace({
    * a name is not something this screen can record: see `passQc` below.
    */
   const [qcReason, setQcReason] = useState<Record<string, string>>({})
+  const [batchQcReason, setBatchQcReason] = useState('')
   /** Law 12 — a dispatch failure is inline and persistent, never a toast. */
   const [dispatchError, setDispatchError] = useState<string | null>(null)
   const [dispatching, setDispatching] = useState(false)
@@ -432,9 +425,11 @@ export default function ResetWorkspace({
   useEffect(() => {
     // A different booking arrived: everything verified belonged to the old one.
     setMarks({})
+    setPersistedMarks({})
     setSelected(new Set())
     setProblemDraft({})
     setQcReason({})
+    setBatchQcReason('')
     setDispatchError(null)
     setDispatching(false)
     setCompletionKey(newClientUuid())
@@ -449,39 +444,15 @@ export default function ResetWorkspace({
     if (!floorId || rows.length === 0) return
     let active = true
 
-    // Check if session storage has completed reset for this booking
-    const isCachedCompleted = sessionStorage.getItem(`reset_completed:${floorId}`) === 'true'
-    if (isCachedCompleted) {
-      setMarks((prev) => {
-        const next = { ...prev }
-        for (const r of rows) {
-          if (!next[r.key]) {
-            const entry: RowRec = {
-              queueState: 'Ready',
-              ticks: [...ROW_TASKS],
-              problem: 'No Problems',
-            }
-            if (actor) {
-              entry.cleanedBy = actor
-              entry.qcBy = actor
-            }
-            next[r.key] = entry
-          }
-        }
-        return next
-      })
-    }
-
     void Promise.resolve(
       supabase
         .from('cleaning_queue_entries')
-        .select('unit_id, clean_completed_at, reset_completed_at, problem_state, cleaned_by, qc_by, qc_skip_reason, qc_fail_reason')
+        .select('unit_id, entered_queue_at, clean_completed_at, reset_completed_at, problem_state, cleaned_by, qc_by, qc_skip_reason, qc_fail_reason')
         .eq('booking_id', floorId),
     )
       .then(({ data }) => {
         if (!active || !data || data.length === 0) return
-        setMarks((prev) => {
-          const next = { ...prev }
+        const saved: Record<string, RowRec> = {}
           for (const entry of data) {
             const matchingRow = rows.find((r) => r.assetId === entry.unit_id)
             if (matchingRow) {
@@ -492,22 +463,29 @@ export default function ResetWorkspace({
                 ticks: isReady || isQC ? [...ROW_TASKS] : [],
                 problem: (entry.problem_state as ProblemState) ?? 'No Problems',
               }
-              if (entry.cleaned_by) rec.cleanedBy = entry.cleaned_by
-              if (entry.qc_by) rec.qcBy = entry.qc_by
+              if (entry.cleaned_by) {
+                rec.cleanedBy = entry.cleaned_by === user?.id ? actor ?? entry.cleaned_by : entry.cleaned_by
+                rec.cleanedByUserId = entry.cleaned_by
+              }
+              if (entry.qc_by) {
+                rec.qcBy = entry.qc_by === user?.id ? actor ?? entry.qc_by : entry.qc_by
+                rec.qcByUserId = entry.qc_by
+              }
               if (entry.qc_skip_reason) rec.qcSkipReason = entry.qc_skip_reason
               if (entry.qc_fail_reason) rec.qcFailReason = entry.qc_fail_reason
-              next[matchingRow.key] = rec
+              if (entry.entered_queue_at) rec.enteredQueueAt = entry.entered_queue_at
+              saved[matchingRow.key] = rec
             }
           }
-          return next
-        })
+        setPersistedMarks(saved)
+        setMarks((prev) => ({ ...saved, ...prev }))
       })
       .catch(() => {})
 
     return () => {
       active = false
     }
-  }, [floorId, rows, actor])
+  }, [floorId, rows, actor, user?.id])
 
   /* ── derived tallies, all over the real rows ─────────────────────────── */
   const activeRows = rows.filter((r) => recOf(r.key).problem === 'No Problems')
@@ -533,8 +511,9 @@ export default function ResetWorkspace({
   )
   const remainingCount = counts.Waiting + counts.Cleaning + counts.QC
 
-  const filterCounts = useMemo<Record<(typeof QUEUE_FILTERS)[number], number>>(
+  const filterCounts = useMemo<Record<(typeof RESET_FILTERS)[number], number>>(
     () => ({
+      'Needs action': remainingCount,
       All: rows.length,
       Waiting: counts.Waiting,
       Cleaning: counts.Cleaning,
@@ -542,7 +521,7 @@ export default function ResetWorkspace({
       Ready: counts.Ready,
       Exceptions: exceptionRows.length,
     }),
-    [rows.length, counts.Waiting, counts.Cleaning, counts.QC, counts.Ready, exceptionRows.length],
+    [rows.length, counts.Waiting, counts.Cleaning, counts.QC, counts.Ready, remainingCount, exceptionRows.length],
   )
 
   const totalUnits = rows.reduce((n, r) => n + r.qty, 0)
@@ -586,12 +565,9 @@ export default function ResetWorkspace({
                 : 'Nothing has reached Ready and no exception has been recorded — a reset claiming work on nothing is refused.',
         }
       : {
-          label: 'All items resolved on floor',
-          pass: remainingCount === 0 && (readyRows.length > 0 || exceptionRows.length > 0),
-          detail:
-            remainingCount === 0 && (readyRows.length > 0 || exceptionRows.length > 0)
-              ? null
-              : 'Every quantity-tracked item must reach Ready or be recorded as an exception.',
+          label: 'Quantity-only reset recording available',
+          pass: false,
+          detail: 'The current server contract cannot record quantity-only reset completion. Local checks are not a saved Reset.',
         },
     {
       /* The engine refuses this too — it is checked here so the refusal reads
@@ -604,6 +580,11 @@ export default function ResetWorkspace({
       }),
       detail: 'A unit marked Damaged raises a damage finding, and its description is a database column, not a form field.',
     },
+    {
+      label: 'Damaged items carry saved evidence',
+      pass: rows.every(r => recOf(r.key).problem !== 'Damaged' || (savedEvidence.evidence?.filesByUnit[r.assetId ?? ''] ?? 0) > 0),
+      detail: 'A damage finding requires a saved photo linked to the affected unit.',
+    },
   ]
   const firstBlockedGate = gates.find((g) => !g.pass) ?? null
   const canComplete = firstBlockedGate === null && !dispatching
@@ -613,7 +594,9 @@ export default function ResetWorkspace({
     () =>
       rows.filter((r) => {
         const rec = marks[r.key] ?? FRESH
-        if (filter !== 'All' && (rec.problem !== 'No Problems' || rec.queueState !== filter)) return false
+        if (filter === 'Needs action' && (rec.problem !== 'No Problems' || rec.queueState === 'Ready')) return false
+        if (filter === 'Exceptions' && rec.problem === 'No Problems') return false
+        if (filter !== 'All' && filter !== 'Needs action' && filter !== 'Exceptions' && (rec.problem !== 'No Problems' || rec.queueState !== filter)) return false
         if (query && !`${r.name} ${r.serial ?? ''}`.toLowerCase().includes(query.toLowerCase())) return false
         return true
       }),
@@ -728,15 +711,14 @@ export default function ResetWorkspace({
     const rec = recOf(r.key)
     return rec.problem === 'No Problems' && rec.queueState === 'QC'
   })
-  const [batchQcReason, setBatchQcReason] = useState('Clean & inspected')
+  const batchRequiresSelfCheck = qcEligibleRows.some(
+    (r) => (user && recOf(r.key).cleanedByUserId === user.id) || recOf(r.key).cleanedBy === actor,
+  )
+  const batchQcBlocked = !actor || (batchRequiresSelfCheck && batchQcReason.trim().length < 5)
 
   const batchPassQc = () => {
-    if (!actor || qcEligibleRows.length === 0) return
+    if (!actor || qcEligibleRows.length === 0 || batchQcBlocked) return
     const reason = batchQcReason.trim()
-    const requiresSelfCheck = qcEligibleRows.some(
-      (r) => (user && recOf(r.key).cleanedByUserId === user.id) || recOf(r.key).cleanedBy === actor,
-    )
-    if (requiresSelfCheck && reason.length < 5) return
 
     setMarks((prev) => {
       const next = { ...prev }
@@ -748,21 +730,21 @@ export default function ResetWorkspace({
           queueState: 'Ready',
           qcBy: actor,
           qcByUserId: user?.id,
-          ...(selfCheck ? { qcSkipReason: reason } : { qcSkipReason: reason || `Verified QC by ${actor}` }),
+          qcSkipReason: selfCheck ? reason : undefined,
         }
       })
       return next
     })
   }
 
-  /** 1-Click Quick Reset: completes cleaning tasks and passes standard QC for all problem-free items */
+  /** Bulk cleaning is an explicit attestation; QC remains a separate action. */
   const quickResetAll = () => {
     if (!actor) {
       setDispatchError(NO_ACTOR)
       return
     }
     setDispatchError(null)
-    const candidates = rows.filter((r) => recOf(r.key).problem === 'No Problems')
+    const candidates = rows.filter((r) => recOf(r.key).problem === 'No Problems' && ['Waiting', 'Cleaning'].includes(recOf(r.key).queueState))
     if (candidates.length === 0) return
 
     setMarks((prev) => {
@@ -772,10 +754,9 @@ export default function ResetWorkspace({
         next[r.key] = {
           ...rec,
           ticks: [...ROW_TASKS],
-          queueState: 'Ready',
+          queueState: 'QC',
           cleanedBy: rec.cleanedBy ?? actor,
-          qcBy: actor,
-          qcSkipReason: 'Routine QC passed',
+          cleanedByUserId: rec.cleanedByUserId ?? user?.id,
         }
       })
       return next
@@ -783,7 +764,7 @@ export default function ResetWorkspace({
     setSelected(new Set(candidates.map((r) => r.key)))
   }
 
-  /** 1-Click Quick Pass for all currently selected items */
+  /** Selected cleaning can move to QC, never silently pass it. */
   const quickPassSelectedToReady = () => {
     if (!actor || selRows.length === 0) return
     setDispatchError(null)
@@ -791,19 +772,16 @@ export default function ResetWorkspace({
       const next = { ...prev }
       selRows.forEach((r) => {
         const rec = next[r.key] ?? FRESH
-        if (rec.problem === 'No Problems') {
+        if (rec.problem === 'No Problems' && ['Waiting', 'Cleaning'].includes(rec.queueState)) {
           const catClean = cleanTasksForCategory(r.category)
           const catReset = resetTasksForCategory(r.category)
           const allTasks = Array.from(new Set([...ROW_TASKS, ...catClean, ...catReset]))
           next[r.key] = {
             ...rec,
             ticks: allTasks,
-            queueState: 'Ready',
+            queueState: 'QC',
             cleanedBy: rec.cleanedBy ?? actor,
             cleanedByUserId: rec.cleanedByUserId ?? user?.id,
-            qcBy: actor,
-            qcByUserId: user?.id,
-            qcSkipReason: 'Routine QC passed',
           }
         }
       })
@@ -909,7 +887,9 @@ export default function ResetWorkspace({
     })
   }
   const confirmProblem = (key: string) => {
-    const draft = problemDraft[key]
+    const pending = problemDraft[key]
+    const row = rows.find(item => item.key === key)
+    const draft = pending ? { ...pending, evidence: savedEvidence.evidence?.filesByUnit[row?.assetId ?? ''] ?? 0 } : undefined
     if (!draft || !problemReady(draft)) return
     setRec(key, { problem: draft.type, problemReason: draft.reason, damageType: draft.damageType, damageSeverity: draft.severity })
     setSelected((prev) => {
@@ -972,7 +952,7 @@ export default function ResetWorkspace({
     const selfCheck = (user && rec.cleanedByUserId === user.id) || actor === rec.cleanedBy
     if (selfCheck && reason.trim().length < 5) return
     setDispatchError(null)
-    setRec(key, { queueState: 'Ready', qcBy: actor, qcByUserId: user?.id, ...(selfCheck ? { qcSkipReason: reason } : { qcSkipReason: reason || `Verified QC by ${actor}` }) })
+    setRec(key, { queueState: 'Ready', qcBy: actor, qcByUserId: user?.id, qcSkipReason: selfCheck ? reason.trim() : undefined })
   }
   const failQc = (key: string) => {
     const reason = qcReason[key] ?? ''
@@ -993,17 +973,8 @@ export default function ResetWorkspace({
     setDispatching(true)
 
     if (dispatchRows.length === 0) {
-      // If all items are quantity-tracked, per 0003:899 and floorVerb.ts:1808-1811,
-      // quantity items carry no cleaning_queue_entries in Postgres.
-      // Floor verification is complete.
-      sessionStorage.setItem(`reset_completed:${floor.id}`, 'true')
-      void DomainEvents.emit(EVENT_TYPES.RENTAL_RESET_COMPLETED, { bookingNo: floor.bookingNo })
+      setDispatchError('Quantity-only reset completion cannot be recorded by the current server contract. Local checklist marks have not been saved.')
       setDispatching(false)
-      if (onConfirmSuccess) {
-        onConfirmSuccess()
-      } else {
-        navigate(`/rentals/${id}`)
-      }
       return
     }
 
@@ -1074,7 +1045,6 @@ export default function ResetWorkspace({
         ),
       )
       .then(() => {
-        sessionStorage.setItem(`reset_completed:${floor.id}`, 'true')
         void DomainEvents.emit(EVENT_TYPES.RENTAL_RESET_COMPLETED, { bookingNo: floor.bookingNo })
         showSuccessToast('Reset Completed', `Rental ${floor.bookingNo} reset and returned to pool`)
         if (onConfirmSuccess) {
@@ -1090,20 +1060,31 @@ export default function ResetWorkspace({
       })
   }
 
-  const isDirty = !untouched
+  const completeRef = useRef(completeResetJob)
+  completeRef.current = completeResetJob
+  const isDirty = JSON.stringify(marks) !== JSON.stringify(persistedMarks) || Object.keys(problemDraft).length > 0 || Object.values(qcReason).some((reason) => reason.trim() !== '') || batchQcReason.trim() !== ''
   const blockedReason = nextRequirement(gates.filter((g) => !g.pass).map((g) => g.label))
+  const blockerTarget = remainingCount > 0 ? '[data-operation-target="reset-next"]' : '#reset-gates'
+  const focusBlocker = (scope: HTMLElement) => {
+    setFilter('All')
+    setQuery('')
+    focusOperationTarget(scope, blockerTarget)
+  }
   useEffect(() => {
     onRegisterActions?.({
       canComplete,
       blockedReason,
       dispatching,
-      complete: completeResetJob,
+      complete: () => completeRef.current(),
       isDirty,
       label: 'Confirm & Complete',
       error: dispatchError,
+      focusBlocker,
+      discard: () => { setMarks(persistedMarks); setProblemDraft({}); setQcReason({}); setBatchQcReason(''); setSelected(new Set()) },
+      progress: { done: readyUnits, total: totalUnits },
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason])
+  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget, persistedMarks, readyUnits, totalUnits])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */
 
@@ -1175,6 +1156,8 @@ export default function ResetWorkspace({
             {/* ── header — canonical stage badge + the job chip. Two axes, two
                  chips (Rulings §7); no `←`, the shell breadcrumb is the upward
                  affordance (Rulings §4). ── */}
+            {/* RULING 2026-10-25: inside the Operations popup the header's stage bar already shows this progress. */}
+            {!embedded && (
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--sp-lg)', flexWrap: 'wrap' }}>
               {!embedded && (
                 <div style={{ minWidth: 0, flex: 1 }}>
@@ -1230,6 +1213,7 @@ export default function ResetWorkspace({
                 </div>
               </div>
             </div>
+            )}
 
             {/* §4 booking summary strip — Bento 2.0 bar with AD/BS duality */}
             {/* RULING 2026-10-14 (R14-4): inside the shell/dock the sheet title and booking strip already say this. */}
@@ -1260,6 +1244,8 @@ export default function ResetWorkspace({
             )}
 
             {/* §3.1 — chip tiles, one per queue state, counted over the real rows. */}
+            {/* RULING 2026-10-25: inside the Operations popup the filter chips just below carry these same four counts, so the tiles are not drawn there. */}
+            {!embedded && (
             <div style={{ display: 'grid', gridTemplateColumns: phone ? 'repeat(2, minmax(0,1fr))' : 'repeat(4, minmax(0,1fr))', gap: 'var(--sp-md)' }}>
               {([
                 { key: 'Waiting', label: 'WAITING', sub: 'Not started', value: counts.Waiting, icon: 'timer' as const, tone: TONE.Waiting },
@@ -1298,6 +1284,7 @@ export default function ResetWorkspace({
                 </div>
               ))}
             </div>
+            )}
 
             {/* filters — queue states and ambient search */}
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1359,13 +1346,13 @@ export default function ResetWorkspace({
               <SegmentedControl
                 ariaLabel="Filter reset queue"
                 size="sm"
-                options={QUEUE_FILTERS.map((f) => ({
+                options={RESET_FILTERS.map((f) => ({
                   id: f,
                   label: f,
                   badge: filterCounts[f],
                 }))}
                 value={filter}
-                onChange={(val) => setFilter(val as (typeof QUEUE_FILTERS)[number])}
+                onChange={(val) => setFilter(val as (typeof RESET_FILTERS)[number])}
               />
             </div>
 
@@ -1387,12 +1374,12 @@ export default function ResetWorkspace({
                   action={
                     phone ? (
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <Button icon="zap" onClick={quickResetAll}>Reset All</Button>
+                        <Button icon="zap" onClick={quickResetAll}>Clean all → QC</Button>
                         <Button icon="checklist" onClick={selectAllVisible}>Select All</Button>
                       </div>
                     ) : (
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <Button icon="zap" onClick={quickResetAll}>Quick Reset All</Button>
+                        <Button icon="zap" onClick={quickResetAll}>Clean all → QC</Button>
                         <Button icon="checklist" onClick={selectAllVisible}>Select All Visible</Button>
                       </div>
                     )
@@ -1431,9 +1418,7 @@ export default function ResetWorkspace({
                                     {isException ? rec.problem : rec.queueState}
                                   </span>
                                   {!isException && (
-                                    <span style={{ fontSize: '11px', color: queueTimeTone(r.waitingMinutes ?? 35) === 'danger' ? 'var(--danger-text)' : queueTimeTone(r.waitingMinutes ?? 35) === 'progress' ? 'var(--progress-text)' : 'var(--muted)', fontWeight: 600 }}>
-                                      {r.waitingMinutes ?? 35}m
-                                    </span>
+                                    <QueueWait enteredAt={rec.enteredQueueAt} />
                                   )}
                                 </span>
                                 {r.serial && (
@@ -1455,7 +1440,7 @@ export default function ResetWorkspace({
                               {rec.cleanedBy ? ` · cleaned by ${rec.cleanedBy}` : ''}
                             </span>
 
-                            <div>
+                            <div data-operation-target={!isException && rec.queueState !== 'Ready' ? 'reset-next' : undefined}>
                               {isException ? (
                                 <RowAction label="Undo" onClick={() => undoProblem(r.key)} />
                               ) : rec.queueState === 'Waiting' ? (
@@ -1565,14 +1550,12 @@ export default function ResetWorkspace({
                                     {isException ? rec.problem : rec.queueState}
                                   </span>
                                   {!isException && (
-                                    <span style={{ fontSize: '11px', color: queueTimeTone(r.waitingMinutes ?? 35) === 'danger' ? 'var(--danger-text)' : queueTimeTone(r.waitingMinutes ?? 35) === 'progress' ? 'var(--progress-text)' : 'var(--muted)', fontWeight: 600 }}>
-                                      {r.waitingMinutes ?? 35}m
-                                    </span>
+                                    <QueueWait enteredAt={rec.enteredQueueAt} />
                                   )}
                                 </td>
                                 <td className="figure" style={{ ...td, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>{r.location ?? '—'}</td>
                                 <td style={{ ...td, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>{rec.cleanedBy ?? '—'}</td>
-                                <td style={{ ...td, minWidth: 190 }}>
+                                <td data-operation-target={!isException && rec.queueState !== 'Ready' ? 'reset-next' : undefined} style={{ ...td, minWidth: 190 }}>
                                   {isException ? (
                                     <RowAction label="Undo" onClick={() => undoProblem(r.key)} />
                                   ) : rec.queueState === 'Waiting' ? (
@@ -1676,7 +1659,7 @@ export default function ResetWorkspace({
                             }}
                           >
                             <Icon name="zap" size={14} />
-                            Quick Pass {selRows.length} to Ready
+                            Clean {selRows.length} selected → QC
                           </button>
                         </div>
                       )}
@@ -1784,7 +1767,8 @@ export default function ResetWorkspace({
                       <div style={{ marginTop: 11, paddingTop: 10, borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
                         {selRows.map((r) => {
                           const rec = recOf(r.key)
-                          const draft = problemDraft[r.key]
+                          const pending = problemDraft[r.key]
+                          const draft = pending ? { ...pending, evidence: savedEvidence.evidence?.filesByUnit[r.assetId ?? ''] ?? 0 } : undefined
                           const catCleanTasks = cleanTasksForCategory(r.category)
                           const catResetTasks = resetTasksForCategory(r.category)
                           const allUnitTasks = Array.from(new Set([...ROW_TASKS, ...catCleanTasks, ...catResetTasks]))
@@ -1877,12 +1861,12 @@ export default function ResetWorkspace({
                                           <option value="">Severity…</option>
                                           {SEVERITIES.map((s) => <option key={s} value={s}>{s}</option>)}
                                         </select>
-                                        <Button icon="camera" onClick={() => changeProblemField(r.key, { evidence: draft.evidence + 1 })}>
-                                          Add Evidence Photo ({draft.evidence})
+                                        <Button icon="refresh" onClick={savedEvidence.refresh}>
+                                          Refresh saved photos ({draft.evidence})
                                         </Button>
                                         <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
                                           {/* Required before recording — Warehouse records the finding, never a cost (§8.3). The count is
-                                          local to this session; capture and storage live in the Evidence Workspace. */}Add evidence before recording the finding. Use the Evidence workspace to save it. </p>
+                                          only saved photos satisfy the gate. */}A saved photo linked to this unit is required. Photo upload is unavailable here.</p>
                                       </>
                                     )}
                                     <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
@@ -1992,14 +1976,14 @@ export default function ResetWorkspace({
                             </div>
                             <button
                               type="button"
-                              disabled={!actor || batchQcReason.trim().length < 5}
+                              disabled={batchQcBlocked}
                               onClick={batchPassQc}
                               style={{
                                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, width: '100%', minHeight: 44, marginTop: 4,
                                 borderRadius: 'var(--r-btn)', fontSize: 'var(--t-ui)', fontWeight: 600, fontFamily: 'inherit',
-                                cursor: (!actor || batchQcReason.trim().length < 5) ? 'not-allowed' : 'pointer',
-                                background: (!actor || batchQcReason.trim().length < 5) ? 'var(--card2)' : 'var(--st-in-bg)',
-                                color: (!actor || batchQcReason.trim().length < 5) ? 'var(--muted)' : 'var(--st-in-fg)',
+                                cursor: batchQcBlocked ? 'not-allowed' : 'pointer',
+                                background: batchQcBlocked ? 'var(--card2)' : 'var(--st-in-bg)',
+                                color: batchQcBlocked ? 'var(--muted)' : 'var(--st-in-fg)',
                                 border: '1px solid var(--st-in-fg)',
                               }}
                             >
@@ -2016,7 +2000,8 @@ export default function ResetWorkspace({
                 {/* The completion gate checklist — every condition named, pass
                     or fail, inline in the rail. A blocked gate is never a toast
                     (Law 12); the reason stays on screen while the block lasts. */}
-                <Card title="Blockers">
+                <Card id="reset-gates" title="Blockers">
+                  <OperationEvidenceStatus status={savedEvidence} />
                   <div role="status" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {gates.map((g) => (
                       <div key={g.label} className={`floor-gate-row ${g.pass ? 'is-pass' : 'is-pending'}`}>
@@ -2229,7 +2214,7 @@ export default function ResetWorkspace({
                       borderRadius: 'var(--r-xs)',
                     }}
                   >
-                    Quick Pass to Ready
+                    Clean selected → QC
                   </button>
                   <button
                     type="button"
@@ -2334,6 +2319,14 @@ export default function ResetWorkspace({
  * Aliased rather than renamed so the call sites below read unchanged.
  */
 const RowAction = CompactButton
+
+function QueueWait({ enteredAt }: { enteredAt: string | undefined }) {
+  const entered = enteredAt ? Date.parse(enteredAt) : NaN
+  if (!Number.isFinite(entered) || entered > Date.now()) return null
+  const minutes = Math.floor((Date.now() - entered) / 60_000)
+  const tone = queueTimeTone(minutes)
+  return <span style={{ fontSize: '11px', color: tone === 'danger' ? 'var(--danger-text)' : tone === 'progress' ? 'var(--progress-text)' : 'var(--muted)', fontWeight: 600 }}>{minutes}m in queue</span>
+}
 
 /**
  * §10 — QC.

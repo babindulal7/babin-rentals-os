@@ -51,6 +51,10 @@ let pickupAtAd: string | null = '2026-07-16T00:15:00.000Z'
 let returnAtAd: string | null = '2026-07-19T00:15:00.000Z'
 /** Resolves/rejects the pending `handoverRental`, so a dispatch can be held open. */
 let settleDispatch: { resolve: (v: unknown) => void; reject: (e: unknown) => void } | null = null
+let savedEvidenceCount = 0
+vi.mock('../../../lib/queries/operationEvidence', () => ({
+  fetchOperationEvidence: async () => ({ files: savedEvidenceCount, filesByUnit: {} }),
+}))
 
 vi.mock('../../../lib/auth', () => ({
   useAuth: () => ({
@@ -184,6 +188,7 @@ afterEach(async () => {
   pickupAtAd = '2026-07-16T00:15:00.000Z'
   returnAtAd = '2026-07-19T00:15:00.000Z'
   settleDispatch = null
+  savedEvidenceCount = 0
   navigate = null
 })
 
@@ -224,7 +229,8 @@ async function passAllGates() {
   for (const b of enabled('Mark Cleared →')) await click(b)
   for (const b of enabled('Capture')) await click(b)
   for (const b of enabled('Capture')) await click(b)
-  await click(button('Take Photo'))
+  savedEvidenceCount = 1
+  await click(button('Refresh saved evidence'))
 }
 
 /* ── HO-12a ──────────────────────────────────────────────────────────────── */

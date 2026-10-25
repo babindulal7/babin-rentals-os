@@ -1,0 +1,2090 @@
+diff --git a/RULINGS-2026-10-24.md b/RULINGS-2026-10-24.md
+index ff7d3be8..0547874b 100644
+--- a/RULINGS-2026-10-24.md
++++ b/RULINGS-2026-10-24.md
+@@ -1,5 +1,11 @@
+ # Rulings — 24 October 2026
+ 
++## Committed Return and independent cleaning/QC/Reset tasks
++
++Babin's Booking Operations brief v1.1 explicitly rules that individually verified, physically received usable units become bookable after a successful persisted Return, even while Cleaning, QC or Reset tasks are pending. Partial Return can keep the parent booking On Rent. Actual damage/loss, maintenance, retirement and conflicting reservations remain exclusions. Reset completion is read from task records; it neither advances the rental stage nor creates the initial availability event.
++
++This product ruling does not authorize hosted changes. The same brief explicitly prohibits migrations. The disposable local reservation probe shows that the current database still retains the original unit hold after a partial Return. Local migration-authoring clarification was requested; no permission is inferred from the product ruling, no hold is hidden from availability reads, and no migration was authored/applied in this pass. Evidence: `artifacts/booking-operations-20261024/reservation-contract-probe.json`.
++
+ ## Integrate the guarded operations-branch pair
+ 
+ Babin explicitly selected **“Integrate the guarded pair”** after being shown the 0171 defaults and Admin boundary. This approves local shared-source integration of guarded 0171 + 0172, not hosted migration application, deployment or physical acceptance.
+diff --git a/docs/OPEN_DECISIONS.md b/docs/OPEN_DECISIONS.md
+index 96c02b06..cae91906 100644
+--- a/docs/OPEN_DECISIONS.md
++++ b/docs/OPEN_DECISIONS.md
+@@ -1,5 +1,12 @@
+ # Babin Rentals OS — Open Decisions Register
+ 
++## 24 October 2026: Return reservation contract — engineering scope pending
++
++- Owner availability policy is settled by Booking Operations v1.1 and `RULINGS-2026-10-24.md`: pending cleanup alone is not a hold. This is not an open product-policy question.
++- `TODO(decision)`: the brief also says no migration. A disposable PGlite probe confirms that partial Return leaves A's original reservation active while B remains out; GiST rejects A's new overlapping reservation (`23P01`). Clarification is pending on authoring/verifying a narrow local-only database correction. No hosted apply, release-by-query workaround or migration is authorized by this entry.
++- `TODO(decision)`: identify the authoritative physical-clearance record for a genuine damage/QC finding after repair. Financial approval/disposition is not proof of physical repair. Current availability remains conservative on non-voided findings and recorded defects; do not auto-clear them based on Reset, payment or case finance.
++- Probe and UI evidence are under `artifacts/booking-operations-20261024/` and `docs/verification/booking-operations-20261024/`.
++
+ ## 24 October 2026: guarded 0171 + 0172 integration — APPROVED
+ 
+ Babin explicitly chose **“Integrate the guarded pair”**, including the explained pristine/global, history/scoped, revoke-last/deny-all and Owner/Admin superior/self-target rules. Shared-source integration and permanent security/CI wiring are authorized and being verified. This resolves the model/canonical-source choice below, not N-5 hosted application or production readiness. Unbooked Reset uses the unit's current warehouse branch, as already selected. New current evidence will be recorded in `verification/OPERATIONS_BRANCH_INTEGRATION_2026-10-24.md`.
+diff --git a/src/actions/rentals/__tests__/floorVerbs.test.ts b/src/actions/rentals/__tests__/floorVerbs.test.ts
+index ca4c4b57..473965e9 100644
+--- a/src/actions/rentals/__tests__/floorVerbs.test.ts
++++ b/src/actions/rentals/__tests__/floorVerbs.test.ts
+@@ -151,6 +151,8 @@ const writes = vi.hoisted(() => {
+     refuseInsertOn: null as string | null,
+     legacyPickupEnum: false,
+     rejectedPickupInserts: 0,
++    queueOptions: [] as Array<{table:string; queueOnFailure?:boolean}>,
++    networkFailureOn: null as string | null,
+   }
+   function reset(): void {
+     state.ops = []
+@@ -158,13 +160,20 @@ const writes = vi.hoisted(() => {
+     state.refuseInsertOn = null
+     state.legacyPickupEnum = false
+     state.rejectedPickupInserts = 0
++    state.queueOptions = []
++    state.networkFailureOn = null
+   }
+   return { state, reset }
+ })
+ 
+ vi.mock('../../../lib/dataAccess', () => ({
+   generateClientUuid: () => `gen-${String(++writes.state.seq).padStart(4, '0')}`,
+-  idempotentInsert: async (table: string, payload: Record<string, unknown>) => {
++  idempotentInsert: async (table: string, payload: Record<string, unknown>, options?: {queueOnFailure?:boolean}) => {
++    writes.state.queueOptions.push({table,...options})
++    if (writes.state.networkFailureOn === table) {
++      if (options?.queueOnFailure === false) throw new Error('Offline Return receipt refused')
++      return {data:null,error:null,queued:true}
++    }
+     if (table === 'operation_sessions' && writes.state.legacyPickupEnum && payload['delivery_method'] === 'Client Pickup') {
+       writes.state.rejectedPickupInserts += 1
+       throw new Error('[DataAccess] Insert failed on operation_sessions: invalid input value for enum delivery_method: "Client Pickup"')
+@@ -175,7 +184,8 @@ vi.mock('../../../lib/dataAccess', () => ({
+     writes.state.ops.push({ kind: 'insert', table, id: null, payload })
+     return { data: { id: payload['id'] ?? `${table}-row`, ...payload }, error: null }
+   },
+-  safeUpdate: async (table: string, id: string, payload: Record<string, unknown>, clientUuid?: string) => {
++  safeUpdate: async (table: string, id: string, payload: Record<string, unknown>, clientUuid?: string, options?: {queueOnFailure?:boolean}) => {
++    writes.state.queueOptions.push({table,...options})
+     writes.state.ops.push({ kind: 'update', table, id, payload, ...(clientUuid === undefined ? {} : { clientUuid }) })
+     return { data: { ...payload, id }, error: null }
+   },
+@@ -959,6 +969,22 @@ describe('Return', () => {
+     db.state.responses['operation_sessions'] = [[]]
+   })
+ 
++  it('refuses an offline receipt instead of sealing a partial session as saved', async () => {
++    db.state.responses.return_lines = [[]]
++    writes.state.networkFailureOn = 'return_lines'
++    await expect(completeReturn({rentalId:'B-715',lines:[{bookingLineId:LINE_A,unitIds:['u1'],condition:'Good'}]},OWNER)).rejects.toThrow('Offline Return receipt refused')
++    expect(opsOn('operation_sessions').some(op => op.payload.state === 'Completed')).toBe(false)
++    expect(insertsOn('booking_stage_transitions')).toHaveLength(0)
++  })
++
++  it('keeps Return custody writes online while retaining separate scan/note queuing', async () => {
++    db.state.responses.return_lines = [[],[{id:'rl-1',booking_line_id:LINE_A,state:'Returned'}]]
++    await completeReturn({rentalId:'B-715',lines:[{bookingLineId:LINE_A,unitIds:['u1'],condition:'Good'}]},OWNER)
++    const critical = writes.state.queueOptions.filter(op => ['operation_sessions','return_lines','booking_line_units','session_line_movements','cleaning_queue_entries'].includes(op.table))
++    expect(critical.length).toBeGreaterThan(2)
++    expect(critical.every(op => op.queueOnFailure === false)).toBe(true)
++  })
++
+   it('sets condition, inspector and time together — CHECK 0003:382 takes all three or none', async () => {
+     db.state.responses['return_lines'] = [[], [{ id: 'rl-1', booking_line_id: LINE_A, state: 'Returned' }]]
+ 
+diff --git a/src/actions/rentals/floorVerb.ts b/src/actions/rentals/floorVerb.ts
+index 281ce0f5..4e00c925 100644
+--- a/src/actions/rentals/floorVerb.ts
++++ b/src/actions/rentals/floorVerb.ts
+@@ -1164,7 +1164,7 @@ export async function runFloorVerb(
+       created_by: ctx.userId,
+     } satisfies Database['public']['Tables']['operation_sessions']['Insert']
+     try {
+-      await idempotentInsert('operation_sessions', sessionPayload)
++      await idempotentInsert('operation_sessions', sessionPayload, job === 'Return' ? { queueOnFailure: false } : undefined)
+     } catch (error) {
+       // 0113 renamed bookings.delivery_type before the separate
+       // operation_sessions.delivery_method enum. Retry only this known enum
+@@ -1337,6 +1337,7 @@ export async function runFloorVerb(
+       sessionId,
+       { state: 'Completed', completed_at: occurredAt, completed_by: ctx.userId, updated_at: occurredAt },
+       actionUuid,
++      job === 'Return' ? { queueOnFailure: false } : undefined,
+     )
+   }
+ 
+@@ -1395,7 +1396,7 @@ export async function runFloorVerb(
+      (`0002:86` compares it to `return_at` once, at the return session). See the
+      header for why this is the OS's field to write. */
+   if (job === 'Return' && stage !== null && stage.to === 'Returned') {
+-    await safeUpdate('bookings', booking.id, { actual_return_at: occurredAt, updated_at: occurredAt }, actionUuid)
++    await safeUpdate('bookings', booking.id, { actual_return_at: occurredAt, updated_at: occurredAt }, actionUuid, { queueOnFailure: false })
+   }
+ 
+   return {
+@@ -1566,7 +1567,7 @@ async function writeReturnLine(
+   }
+ 
+   if (priorId !== null) {
+-    await safeUpdate('return_lines', priorId, { ...fields, updated_at: at }, actionUuid)
++    await safeUpdate('return_lines', priorId, { ...fields, updated_at: at }, actionUuid, { queueOnFailure: false })
+     return priorId
+   }
+   const rowId = generateClientUuid()
+@@ -1576,7 +1577,7 @@ async function writeReturnLine(
+     booking_line_id: line.bookingLineId,
+     created_by: ctx.userId,
+     ...fields,
+-  })
++  }, { queueOnFailure: false })
+   return rowId
+ }
+ 
+@@ -1619,7 +1620,7 @@ async function writeMovements(
+       resulting_item_state: resulting,
+       moved_at: at,
+       created_by: ctx.userId,
+-    })
++    }, job === 'Return' ? { queueOnFailure: false } : undefined)
+     return 1
+   }
+ 
+@@ -1638,7 +1639,7 @@ async function writeMovements(
+       resulting_item_state: resulting,
+       moved_at: at,
+       created_by: ctx.userId,
+-    })
++    }, job === 'Return' ? { queueOnFailure: false } : undefined)
+     written += 1
+   }
+   return written
+@@ -1685,7 +1686,7 @@ async function writeDamageFindings(
+       /* 0130: `damage_findings.estimated_cost` is ungranted once Law 6 arms
+          this table — a default `RETURNING *` would throw 42501 after the row
+          commits. The caller counts finds; it never reads the row. */
+-      { returnRow: false },
++      { returnRow: false, queueOnFailure: false },
+     )
+   }
+   return damage.length
+@@ -1850,7 +1851,7 @@ async function writeUnitStates(
+     if (outcome === 'missing') return u.unit_state !== 'Returned'
+     return true
+   })
+-  await Promise.all(targets.map((u) => safeUpdate('booking_line_units', u.id, patch, actionUuid)))
++  await Promise.all(targets.map((u) => safeUpdate('booking_line_units', u.id, patch, actionUuid, job === 'Return' ? { queueOnFailure: false } : undefined)))
+ }
+ 
+ /* ── The reset queue: raised at Return, completed at Reset ──────────────── */
+@@ -1953,7 +1954,7 @@ async function enqueueReturnedUnits(
+       requires_reset: true,
+       entered_queue_at: at,
+       created_by: ctx.userId,
+-    })
++    }, { queueOnFailure: false })
+     written += 1
+   }
+ 
+diff --git a/src/components/shell/Header.tsx b/src/components/shell/Header.tsx
+index 9bd72e81..8873ce0f 100644
+--- a/src/components/shell/Header.tsx
++++ b/src/components/shell/Header.tsx
+@@ -237,6 +237,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
+   // and record badges. These are NOT secondary commands. Keep their own
+   // desktop positions visible even when secondary slots fill up.
+   const legacyContext = legacyGroups.flatMap((group) => extractValidActions(group.extra))
++  const persistentActions = legacyGroups.flatMap((group) => extractValidActions(group.persistent))
+   const legacySecondary = [
+     ...legacyGroups.flatMap((group) => extractValidActions(group.secondary)),
+     ...looseSecondary,
+@@ -843,6 +844,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
+               move a primary CTA past the More button. */}
+           <span className="app-global-header__action-slot app-global-header__action-slot--secondary" data-header-slot="secondary">
+                 <span ref={ws?.setHeaderSecondaryActionsElement} className="workspace-header-secondary-actions" />
++                {persistentActions.map((action, idx) => <span key={isValidElement(action) && action.key != null ? String(action.key) : `persistent-${idx}`}>{action}</span>)}
+                 {!compactHeader && visibleLegacySecondary.map((action, idx) => (
+                   <span key={isValidElement(action) && action.key != null ? String(action.key) : `hdr-secondary-${idx}`}>{action}</span>
+                 ))}
+diff --git a/src/components/shell/__tests__/headerButtonPositions.test.tsx b/src/components/shell/__tests__/headerButtonPositions.test.tsx
+index 1e9b3433..159b4f62 100644
+--- a/src/components/shell/__tests__/headerButtonPositions.test.tsx
++++ b/src/components/shell/__tests__/headerButtonPositions.test.tsx
+@@ -37,6 +37,14 @@ const slot = (name: string) => container.querySelector<HTMLElement>(`[data-heade
+ const displayedSlots = () => Array.from(container.querySelectorAll('[data-header-slot]')).map((node) => node.getAttribute('data-header-slot'))
+ 
+ describe('Babin Rentals OS — fixed button locations', () => {
++  it.each(['phone', 'tablet', 'desktop'])('keeps a contextual popup trigger outside More at %s width', async viewport => {
++    mock.viewport = viewport
++    mock.narrow = true
++    await act(async () => root.render(<MemoryRouter><WorkspaceProvider><Header crumbs={[{label:'Rentals'}]} /><PageHeader title="Rentals" actions={<PageActions persistent={<button aria-label="Operations">Operations</button>} primary={<button>Confirm</button>} />} /></WorkspaceProvider></MemoryRouter>))
++    expect(slot('secondary')?.querySelector('[aria-label="Operations"]')).not.toBeNull()
++    expect(slot('more')?.querySelector('[aria-label="Operations"]')).toBeNull()
++    expect(container.querySelectorAll('header')).toHaveLength(1)
++  })
+   it('moves secondary actions into More when an expanded desktop sidebar leaves a narrow header', async () => {
+     mock.narrow = true
+     const exportRows = vi.fn()
+diff --git a/src/components/ui/Modal.tsx b/src/components/ui/Modal.tsx
+index b274d950..671d05d2 100644
+--- a/src/components/ui/Modal.tsx
++++ b/src/components/ui/Modal.tsx
+@@ -1,5 +1,5 @@
+ import { useEffect, useId, useRef, useState } from 'react'
+-import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react'
++import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react'
+ import { createPortal } from 'react-dom'
+ import Icon from './Icon'
+ import { TouchTarget } from './TouchTarget'
+@@ -83,6 +83,11 @@ export interface ModalProps {
+    */
+   fill?: boolean
+   portal?: boolean
++  /** Scoped workspace chrome; overlay/focus/stack behavior remains shared. */
++  className?: string
++  surfaceStyle?: CSSProperties | undefined
++  contentStyle?: CSSProperties
++  headerActions?: ReactNode
+ }
+ 
+ const SIZE_MAX_WIDTH: Record<NonNullable<ModalProps['size']>, number> = {
+@@ -108,6 +113,10 @@ export function Modal({
+   peekHeight = false,
+   fill = false,
+   portal,
++  className,
++  surfaceStyle,
++  contentStyle,
++  headerActions,
+ }: ModalProps) {
+   // Keeps the modal mounted for a beat after isOpen flips to false so the
+   // CSS fade/scale-out below can actually play instead of vanishing instantly.
+@@ -172,7 +181,13 @@ export function Modal({
+         const first = surface.querySelector<HTMLElement>(FOCUSABLE)
+         ;(first ?? surface).focus()
+       })
+-      return () => window.cancelAnimationFrame(raf)
++      return () => {
++        window.cancelAnimationFrame(raf)
++        // Providers may remove the dialog immediately rather than render one
++        // closed frame. Return focus on that unmount path as well.
++        if (openerRef.current?.isConnected) openerRef.current.focus()
++        openerRef.current = null
++      }
+     }
+     openerRef.current?.focus()
+     openerRef.current = null
+@@ -258,7 +273,7 @@ export function Modal({
+ 
+       <div
+         ref={surfaceRef}
+-        className="app-modal__surface"
++        className={['app-modal__surface', className].filter(Boolean).join(' ')}
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby={title ? titleId : undefined}
+@@ -282,6 +297,7 @@ export function Modal({
+           opacity: isOpen ? 1 : 0,
+           transform: isOpen ? 'translate(0, 0)' : sidePeek ? 'translateX(12px)' : 'translateY(8px)',
+           transition: 'opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
++          ...surfaceStyle,
+         }}
+       >
+         {/* Header */}
+@@ -330,6 +346,7 @@ export function Modal({
+               </p>
+             )}
+           </div>
++          {headerActions}
+           <button
+             type="button"
+             onClick={onClose}
+@@ -360,7 +377,7 @@ export function Modal({
+         {/* Content */}
+         <div
+           className="app-modal__content"
+-          style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: fillScreen ? 16 : 20 }}
++          style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: fillScreen ? 16 : 20, ...contentStyle }}
+         >
+           {children}
+         </div>
+diff --git a/src/components/ui/PageActions.tsx b/src/components/ui/PageActions.tsx
+index 03ef1fe5..7fd6d968 100644
+--- a/src/components/ui/PageActions.tsx
++++ b/src/components/ui/PageActions.tsx
+@@ -12,6 +12,8 @@ export interface PageActionsProps {
+   primary?: ReactNode
+   /** Normal alternate actions (secondary buttons, export, import) */
+   secondary?: ReactNode[] | ReactNode
++  /** Compact contextual launcher that owns its own popup; keep out of another menu. */
++  persistent?: ReactNode
+   /** Overflow menu items or custom overflow menu node */
+   overflow?: OverflowMenuItem[] | ReactNode
+   /** Additional items (badges, share buttons, info pills) */
+@@ -345,6 +347,7 @@ export function ActionsOverflowMenu({
+ export function PageActions({
+   primary,
+   secondary,
++  persistent,
+   overflow,
+   extra,
+   className = '',
+@@ -384,6 +387,8 @@ export function PageActions({
+         </span>
+       ))}
+ 
++      {persistent}
++
+       {visibleSecondary.map((action, idx) => (
+         <span key={isValidElement(action) && action.key != null ? String(action.key) : `sec-${idx}`} style={{ display: 'inline-flex' }}>
+           {action}
+diff --git a/src/lib/availability.ts b/src/lib/availability.ts
+index fdba3ef5..9a57f749 100644
+--- a/src/lib/availability.ts
++++ b/src/lib/availability.ts
+@@ -223,6 +223,8 @@ export interface UnitCandidate {
+   readonly state: string
+   /** Actual physical condition; IO callers must supply a validated value. */
+   readonly condition?: string
++  /** A real unresolved physical-safety fact, never a pending-cleaning proxy. */
++  readonly safetyHold?: string | null
+   /** `product_units.retired_at`. Non-null means retired — see `isRetired`. */
+   readonly retiredAt: string | null
+   /**
+@@ -238,6 +240,8 @@ export interface UnitCandidate {
+ 
+ /** Pending cleanup/reset task metadata; this does not hold a usable unit. */
+ export interface OpenCleaning {
++  /** An actual recorded defect/QC failure; pending tasks alone never set this. */
++  readonly safetyHold?: string | null
+   /** The booking the gear came back from, for the sentence the picker prints. */
+   readonly bookingNo: string | null
+   /** True when the entry also still wants a clean — reported, not judged. */
+@@ -480,8 +484,8 @@ export function selectUnitsForLine(input: SelectUnitsInput): AssignmentOutcome {
+     }
+ 
+     // RULING 2026-10-24: queue tasks do not block; real damage/loss still does.
+-    if (unit.condition === 'Damaged' || unit.condition === 'Lost') {
+-      rejected.push({ unitId: unit.unitId, assetTag: unit.assetTag, reason: { kind: 'condition', condition: unit.condition } })
++    if (unit.safetyHold || unit.condition === 'Damaged' || unit.condition === 'Lost') {
++      rejected.push({ unitId: unit.unitId, assetTag: unit.assetTag, reason: { kind: 'condition', condition: unit.safetyHold ?? unit.condition! } })
+       continue
+     }
+ 
+diff --git a/src/lib/queries/__tests__/availabilityCompleteness.test.ts b/src/lib/queries/__tests__/availabilityCompleteness.test.ts
+index 1d6badbc..7499a38d 100644
+--- a/src/lib/queries/__tests__/availabilityCompleteness.test.ts
++++ b/src/lib/queries/__tests__/availabilityCompleteness.test.ts
+@@ -63,6 +63,21 @@ describe('availability reads must be complete before reporting stock', () => {
+     db.failure = ''; db.nullPage = false; db.nullTable = ''; db.networkThrows = false; db.repeat = false; db.calls = []; db.cap = 2
+   })
+ 
++  it('retains an actual damage finding even when product condition still says Good', async () => {
++    db.tables.damage_findings = [{ id: 'df-1', unit_id: 'u-0', voided_at: null }]
++    expect((await readCandidates(['p-1'])).get('p-1')?.[0]?.safetyHold).toContain('Damage finding')
++  })
++
++  it('refuses unavailable safety evidence instead of certifying stock', async () => {
++    db.nullTable = 'damage_findings'
++    await expect(readCandidates(['p-1'])).rejects.toThrow(/damage findings.*missing|incomplete/i)
++  })
++
++  it.each(['Missing Item', 'Needs Repair', 'Damaged'])('retains a genuine %s reset exception without using a pending queue as the hold', async problem => {
++    db.tables.cleaning_queue_entries = [{ id:'q-1',unit_id:'u-0',requires_clean:true,requires_reset:true,reset_completed_at:null,problem_state:problem,qc_fail_reason:null }]
++    expect((await readCandidates(['p-1'])).get('p-1')?.[0]?.safetyHold).toBe(problem)
++  })
++
+   it('includes serial holds beyond a server cap smaller than the requested page', async () => {
+     expect((await readHolds(null)).map(hold => hold.unitId)).toEqual(['u-0', 'u-1', 'u-2'])
+     expect(db.calls.map(call => call.start)).toEqual([0, 2, 3])
+diff --git a/src/lib/queries/__tests__/operationTaskFacts.test.ts b/src/lib/queries/__tests__/operationTaskFacts.test.ts
+new file mode 100644
+index 00000000..bbf28f18
+--- /dev/null
++++ b/src/lib/queries/__tests__/operationTaskFacts.test.ts
+@@ -0,0 +1,22 @@
++import { beforeEach, describe, expect, it, vi } from 'vitest'
++import { fetchOperationTaskFacts } from '../operationTaskFacts'
++const db = vi.hoisted(() => ({ rows: [] as Record<string, unknown>[], error: false, missing: false }))
++vi.mock('../../supabase', () => ({ supabase: { from: () => {
++  let start = 0
++  const query = { select: () => query, eq: () => query, order: () => query, range: (from: number) => { start = from; return query }, then: (resolve: (value: unknown) => unknown) => Promise.resolve({data: db.missing ? null : db.rows.slice(start, start + 1), error: db.error ? {message:'denied'} : null}).then(resolve) }
++  return query
++} } }))
++const pending = (id: string) => ({ id, requires_clean: true, requires_reset: true, clean_completed_at: null, reset_completed_at: null, qc_at: null, qc_skipped: false, qc_skip_reason: null, problem_state: 'No Problems' })
++beforeEach(() => { db.rows = []; db.error = false; db.missing = false })
++describe('saved cleanup facts', () => {
++  it('keeps pending tasks pending independently of a returned booking', async () => {
++    db.rows = [pending('a'), pending('b')]
++    expect(await fetchOperationTaskFacts('booking')).toEqual({total:2,resetDone:0,cleaningPending:2,qcPending:2,problems:0})
++  })
++  it('counts persisted completion and actual exceptions, never progress by stage', async () => {
++    db.rows = [{...pending('a'), clean_completed_at:'2026-10-24T00:00:00Z', reset_completed_at:'2026-10-24T01:00:00Z', qc_at:'2026-10-24T00:30:00Z'}, {...pending('b'), problem_state:'Damaged'}]
++    expect(await fetchOperationTaskFacts('booking')).toEqual({total:2,resetDone:1,cleaningPending:1,qcPending:1,problems:1})
++  })
++  it('does not treat an unreadable task source as zero tasks', async () => { db.missing = true; await expect(fetchOperationTaskFacts('booking')).rejects.toThrow('could not be verified') })
++  it('reports an honest empty queue without claiming completion', async () => { expect((await fetchOperationTaskFacts('booking')).total).toBe(0) })
++})
+diff --git a/src/lib/queries/availability.ts b/src/lib/queries/availability.ts
+index b0bd23d7..1abe35ed 100644
+--- a/src/lib/queries/availability.ts
++++ b/src/lib/queries/availability.ts
+@@ -428,6 +428,19 @@ export async function readCandidates(productIds: readonly string[]): Promise<Map
+     .range(from, to), 'equipment units')
+ 
+   const cleaning = await readOpenCleaning(units.map((u) => u.id))
++  // Return/QC can persist a finding before product_units.condition changes.
++  // Read only money-safe physical facts; financial disposition is not repair.
++  const findings = units.length === 0 ? [] : await readCompleteAvailability<{ id: string; unit_id: string }>((from, to) => supabase
++    .from('damage_findings')
++    .select('id, unit_id')
++    .in('unit_id', units.map(unit => unit.id))
++    .is('voided_at', null)
++    .order('id', { ascending: true })
++    .range(from, to), 'damage findings')
++  const damaged = new Set(findings.map(finding => {
++    if (typeof finding.unit_id !== 'string' || !units.some(unit => unit.id === finding.unit_id)) throw new Error('Damage findings are incomplete; availability could not be checked.')
++    return finding.unit_id
++  }))
+ 
+   for (const row of units) {
+     if (!['Excellent', 'Good', 'Fair', 'Damaged', 'Lost'].includes(row.condition)) {
+@@ -441,6 +454,7 @@ export async function readCandidates(productIds: readonly string[]): Promise<Map
+       productId: row.product_id,
+       state: row.status,
+       condition: row.condition,
++      safetyHold: damaged.has(row.id) ? 'Damage finding requires physical clearance' : cleaning.get(row.id)?.safetyHold ?? null,
+       retiredAt: row.retired_at,
+       openCleaning: cleaning.get(row.id) ?? null,
+     })
+@@ -467,10 +481,12 @@ async function readOpenCleaning(unitIds: readonly string[]): Promise<Map<string,
+     id: string
+     unit_id: string
+     requires_clean: boolean | null
++    problem_state?: string
++    qc_fail_reason?: string | null
+     bookings: { booking_no: string } | { booking_no: string }[] | null
+   }>((from, to) => supabase
+     .from('cleaning_queue_entries')
+-    .select('id, unit_id, requires_clean, bookings ( booking_no )')
++    .select('id, unit_id, requires_clean, problem_state, qc_fail_reason, bookings ( booking_no )')
+     .in('unit_id', [...new Set(unitIds)])
+     .eq('requires_reset', true)
+     .is('reset_completed_at', null)
+@@ -478,11 +494,15 @@ async function readOpenCleaning(unitIds: readonly string[]): Promise<Map<string,
+     .range(from, to), 'reset queue')
+ 
+   for (const row of entries) {
++    const problem = row.problem_state && row.problem_state !== 'No Problems' ? row.problem_state : row.qc_fail_reason?.trim() ? 'QC failed' : null
+     const b = Array.isArray(row.bookings) ? row.bookings[0] : row.bookings
+     /* The first pending task supplies the supplementary booking reference.
+        This metadata neither releases a reservation nor disqualifies a unit. */
+     if (!out.has(row.unit_id)) {
+-      out.set(row.unit_id, { bookingNo: b?.booking_no ?? null, requiresClean: row.requires_clean === true })
++      out.set(row.unit_id, { bookingNo: b?.booking_no ?? null, requiresClean: row.requires_clean === true, ...(problem ? { safetyHold: problem } : {}) })
++    } else if (problem) {
++      const previous = out.get(row.unit_id)!
++      out.set(row.unit_id, { ...previous, safetyHold: problem })
+     }
+   }
+ 
+diff --git a/src/lib/queries/operationTaskFacts.ts b/src/lib/queries/operationTaskFacts.ts
+new file mode 100644
+index 00000000..ba6d514a
+--- /dev/null
++++ b/src/lib/queries/operationTaskFacts.ts
+@@ -0,0 +1,33 @@
++import { supabase } from '../supabase'
++
++export interface OperationTaskFacts {
++  total: number
++  resetDone: number
++  cleaningPending: number
++  qcPending: number
++  problems: number
++}
++
++/** Cleanup facts are independent of booking stage and unit availability. */
++export async function fetchOperationTaskFacts(bookingId: string): Promise<OperationTaskFacts> {
++  const facts: OperationTaskFacts = { total: 0, resetDone: 0, cleaningPending: 0, qcPending: 0, problems: 0 }
++  const seen = new Set<string>()
++  for (;;) {
++    const { data, error } = await supabase.from('cleaning_queue_entries')
++      .select('id, requires_clean, requires_reset, clean_completed_at, reset_completed_at, qc_at, qc_skipped, qc_skip_reason, qc_fail_reason, problem_state')
++      .eq('booking_id', bookingId).order('id', { ascending: true }).range(seen.size, seen.size + 499)
++    if (error || !Array.isArray(data)) throw new Error('Cleaning and QC task records could not be verified. Retry booking status.')
++    if (data.length === 0) return facts
++    for (const row of data) {
++      if (!row.id || seen.has(row.id) || typeof row.requires_clean !== 'boolean' || typeof row.requires_reset !== 'boolean') throw new Error('Cleaning and QC task records are incomplete. Retry booking status.')
++      if ([row.clean_completed_at, row.reset_completed_at, row.qc_at].some(value => value !== null && (typeof value !== 'string' || !Number.isFinite(Date.parse(value))))) throw new Error('Cleaning and QC timestamps could not be verified. Retry booking status.')
++      seen.add(row.id)
++      facts.total += 1
++      if (row.reset_completed_at) facts.resetDone += 1
++      if (row.requires_clean && !row.clean_completed_at) facts.cleaningPending += 1
++      if (row.requires_reset && !row.qc_at && !(row.qc_skipped && row.qc_skip_reason?.trim())) facts.qcPending += 1
++      if ((row.problem_state && row.problem_state !== 'No Problems') || row.qc_fail_reason?.trim()) facts.problems += 1
++    }
++    if (seen.size > 50_000) throw new Error('Cleaning and QC task records exceed the read limit.')
++  }
++}
+diff --git a/src/modules/operations/OperationsQueues.tsx b/src/modules/operations/OperationsQueues.tsx
+index de13caa4..47fe14c9 100644
+--- a/src/modules/operations/OperationsQueues.tsx
++++ b/src/modules/operations/OperationsQueues.tsx
+@@ -541,10 +541,15 @@ export default function OperationsQueues() {
+   const [pendingDock, setPendingDock] = useState<Dock | null>(null)
+   const [cursorNo, setCursorNo] = useState<string | null>(null)
+   const dockDirty = useRef(false)
+-  const onDockDirty = useCallback((dirty: boolean) => { dockDirty.current = dirty }, [])
++  const dockBusy = useRef(false)
++  const [dockProtected, setDockProtected] = useState(false)
++  const [dockNotice, setDockNotice] = useState<string | null>(null)
++  const onDockDirty = useCallback((dirty: boolean) => { dockDirty.current = dirty; setDockProtected(dirty || dockBusy.current) }, [])
++  const onDockBusy = useCallback((busy: boolean) => { dockBusy.current = busy; setDockProtected(busy || dockDirty.current); if (!busy) setDockNotice(null) }, [])
+   /* RULING 2026-10-14 (R14-3): swapping the docked booking would drop unsaved packing work, so ask first. */
+   const requestDock = (next: Dock) => {
+-    if (dock && dock.bookingNo !== next.bookingNo && dockDirty.current) setPendingDock(next)
++    if (dockBusy.current) { setDockNotice('An operation is being saved. Wait for its result before changing bookings.'); return }
++    if (dock && (dock.bookingNo !== next.bookingNo || dock.job !== next.job) && dockDirty.current) setPendingDock(next)
+     else setDock(next)
+   }
+   const [params, setParams] = useSearchParams()
+@@ -565,7 +570,13 @@ export default function OperationsQueues() {
+   const viewport = useViewport()
+   const phone = viewport === 'phone'
+   const tabular = !phone
+-  const dockOpen = dock !== null && viewport === 'desktop'
++  // Keep the SAME workspace mounted when rotation/zoom crosses a breakpoint
++  // with unsaved marks or an in-flight write. New narrow-screen jobs still use
++  // the global modal; this existing dock becomes a focused inline workspace.
++  const dockOpen = dock !== null && (viewport === 'desktop' || dockProtected)
++  useEffect(() => {
++    if (dockOpen && dockProtected && viewport !== 'desktop') document.querySelector('.operations-shell__panel')?.scrollIntoView({ block: 'start' })
++  }, [dockOpen, dockProtected, viewport])
+   /* RULING 2026-10-15: below desktop the two workspace links live in More and a fresh
+      data badge takes no width, so the page title keeps the header (BLOCKER-02: at 375px
+      the header overflowed by 207px; at 768px the title measured 0px). Revert = set this
+@@ -1046,7 +1057,9 @@ export default function OperationsQueues() {
+       </>}
+ 
+       {selected === 'Cases' ? <CasesWorkspace embedded searchControl={{ value: caseSearchInput, onChange: setCaseSearchInput }} /> : (
+-        <div className={`operations-v2__split${dockOpen ? ' operations-v2__split--open' : ''}`}>
++        <>
++        {dockNotice && <p role="status">{dockNotice}</p>}
++        <div className={`operations-v2__split${dockOpen ? ' operations-v2__split--open' : ''}`} data-dock-focused={dockProtected && viewport !== 'desktop' ? 'true' : undefined}>
+         <Card style={{ overflow: 'hidden' }} bodyStyle={{ padding: 0 }}>
+           <PageBody
+             loading={list.loading}
+@@ -1308,16 +1321,18 @@ export default function OperationsQueues() {
+             initialJob={dock.job}
+             onClose={() => setDock(null)}
+             onDirtyChange={onDockDirty}
++            onBusyChange={onDockBusy}
+           />
+         )}
+         </div>
++        </>
+       )}
+       </div>
+ 
+       <ConfirmDialog
+         isOpen={pendingDock !== null}
+         onClose={() => setPendingDock(null)}
+-        onConfirm={() => { const next = pendingDock; setPendingDock(null); if (next) setDock(next) }}
++        onConfirm={() => { if (dockBusy.current) return; const next = pendingDock; setPendingDock(null); if (next) setDock(next) }}
+         title="You have unsaved changes."
+         description={`Discard them and open ${pendingDock?.bookingNo ?? 'the next job'}?`}
+         cancelLabel="Stay Here"
+diff --git a/src/modules/operations/OperationsShell.tsx b/src/modules/operations/OperationsShell.tsx
+index c8180900..20fce9fa 100644
+--- a/src/modules/operations/OperationsShell.tsx
++++ b/src/modules/operations/OperationsShell.tsx
+@@ -1,16 +1,18 @@
+-import { formatAd } from '../../lib/bs'
+-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react'
++import { formatAdDateTime } from '../../lib/bs'
++import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+ import { Button } from '../../components/ui/Page'
+ import type { IconName } from '../../components/ui/Icon'
+ import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+ import { Modal } from '../../components/ui/Modal'
+ import { LoadingSkeleton } from '../../components/ui/StateViews'
+ import { JOB_ORDER, BOOKING_STATUS, JOBS, type BookingStatus, type JobName } from '../../lib/workflow'
+-import { stepWriteGate, stepDotState } from '../../lib/operationsShell'
++import { entryStepFor, stepWriteGate, stepDotState } from '../../lib/operationsShell'
+ import { fetchFloorBooking, type FloorBooking } from '../../lib/queries/bookings'
++import { fetchOperationTaskFacts, type OperationTaskFacts } from '../../lib/queries/operationTaskFacts'
+ import { DomainEvents, EVENT_TYPES } from '../../events/eventBus'
+ import { FLOOR_TWO_COLUMN_MIN, FloorNarrowContext } from './floorPanelContext'
+ import { RentalMoreActions } from '../rentals/actions/RentalMoreActions'
++import { useViewport } from '../../lib/device'
+ import './operationsShell.css'
+ 
+ const PackingWorkspace = lazy(() => import('../rentals/PackingWorkspace'))
+@@ -26,7 +28,7 @@ const LABEL: Record<JobName, string> = {
+ }
+ 
+ const STEP_LABEL: Record<JobName, string> = {
+-  Pack: 'Packing', Handover: 'Handover', Return: 'Return', Reset: 'Cleaning',
++  Pack: 'Pack', Handover: 'Hand', Return: 'Return', Reset: 'Reset',
+ }
+ 
+ /* One icon per stage (8 Oct 2026, RULINGS-2026-10-08.md). A stage that is not
+@@ -79,6 +81,7 @@ export interface OperationsShellProps {
+   layout?: 'modal' | 'panel'
+   /** Reports unsaved work so a host that can swap the booking can ask first. */
+   onDirtyChange?: (dirty: boolean) => void
++  onBusyChange?: (busy: boolean) => void
+   progress?: Partial<Record<JobName, { done: number; total: number }>>
+ }
+ 
+@@ -88,14 +91,31 @@ export default function OperationsShell({
+   bookingStatus,
+   isOpen,
+   onClose,
+-  initialJob = 'Pack',
++  initialJob,
+   layout = 'modal',
+   onDirtyChange,
++  onBusyChange,
+   progress,
+ }: OperationsShellProps) {
+-  const [job, setJob] = useState<JobName>(initialJob)
++  const viewport = useViewport()
++  const [expanded, setExpanded] = useState(false)
++  const [job, setJob] = useState<JobName>(initialJob ?? entryStepFor(bookingStatus) ?? 'Pack')
+   const [liveStatus, setLiveStatus] = useState<BookingStatus>(bookingStatus)
+   const [floor, setFloor] = useState<FloorBooking | null>(null)
++  const [floorLoading, setFloorLoading] = useState(true)
++  const [floorError, setFloorError] = useState<string | null>(null)
++  const [taskFacts, setTaskFacts] = useState<OperationTaskFacts | null>(null)
++  const [taskError, setTaskError] = useState<string | null>(null)
++  const [workspaceRevision, setWorkspaceRevision] = useState(0)
++  const [bodyEl, setBodyEl] = useState<HTMLElement | null>(null)
++  const readingFloor = useRef(false)
++  const readVersion = useRef(0)
++  const firstRead = useRef(true)
++  const awaitingCompletion = useRef<JobName | null>(null)
++  const submitLock = useRef(false)
++  const [submitting, setSubmitting] = useState(false)
++  const identity = useRef({ bookingNo, isOpen })
++  identity.current = { bookingNo, isOpen }
+   const [actions, setActions] = useState<WorkspaceActions | null>(null)
+   const [pending, setPending] = useState<
+     | { type: 'close' }
+@@ -105,22 +125,69 @@ export default function OperationsShell({
+   >(null)
+ 
+   const refreshFloor = useCallback(async () => {
++    const version = ++readVersion.current
++    readingFloor.current = true
++    setFloorLoading(true)
++    setFloorError(null)
+     try {
+       const data = await fetchFloorBooking(bookingNo)
+-      if (data) {
+-        setFloor(data)
++      if (version !== readVersion.current || identity.current.bookingNo !== bookingNo || !identity.current.isOpen) return null
++      if (!data) throw new Error('Booking could not be found. Retry booking status before confirming.')
++      if (!Object.prototype.hasOwnProperty.call(BOOKING_STATUS, data.stage)) throw new Error('Booking status is unavailable. Retry booking status before confirming.')
++      const status = data.stage as BookingStatus
++      setFloor(data)
++      setLiveStatus(status)
++      if (firstRead.current && initialJob === undefined) setJob(entryStepFor(status) ?? 'Pack')
++      firstRead.current = false
++      setTaskFacts(null)
++      setTaskError(null)
++      let savedTasks: OperationTaskFacts | null = null
++      try {
++        const facts = await fetchOperationTaskFacts(data.id)
++        if (version !== readVersion.current || identity.current.bookingNo !== bookingNo || !identity.current.isOpen) return null
++        setTaskFacts(facts)
++        savedTasks = facts
++      } catch (error) {
++        if (version !== readVersion.current) return null
++        setTaskError(error instanceof Error ? error.message : 'Cleaning and QC tasks could not be verified.')
++      }
++      return { ...data, stage: status, taskFacts: savedTasks }
++    } catch (error) {
++      if (version === readVersion.current) setFloorError(error instanceof Error ? error.message : 'Booking status could not be read.')
++      return null
++    } finally {
++      if (version === readVersion.current) {
++        readingFloor.current = false
++        setFloorLoading(false)
+       }
+-    } catch {
+-      // Fallback silently if floor cannot be read (e.g. in headless unit test)
+     }
+-  }, [bookingNo])
++  }, [bookingNo, initialJob])
+ 
+   useEffect(() => {
+     if (!isOpen) return
+-    setJob(initialJob)
+-    setLiveStatus(bookingStatus)
++    setJob(initialJob ?? entryStepFor(bookingStatus) ?? 'Pack')
++    setFloor(null)
++    firstRead.current = true
++    awaitingCompletion.current = null
++    submitLock.current = false
++    setSubmitting(false)
++    setPending(null)
+     void refreshFloor()
+-  }, [bookingNo, bookingStatus, initialJob, isOpen, refreshFloor])
++    return () => { readVersion.current += 1 }
++    // Status notifications must not discard an operator's pending marks.
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [bookingNo, initialJob, isOpen, refreshFloor])
++
++  const busy = submitting || !!actions?.dispatching
++  useEffect(() => {
++    onBusyChange?.(busy)
++    return () => onBusyChange?.(false)
++  }, [busy, onBusyChange])
++  useEffect(() => {
++    if (!actions?.error) return
++    submitLock.current = false
++    setSubmitting(false)
++  }, [actions?.error])
+ 
+   useEffect(() => {
+     if (!isOpen || !actions?.isDirty) return
+@@ -133,15 +200,17 @@ export default function OperationsShell({
+ 
+   // Universal close action (top-right X, Esc, or Stage 1 Close button)
+   const requestClose = useCallback(() => {
++    if (busy) return
+     if (actions?.isDirty) {
+       setPending({ type: 'close' })
+     } else {
+       onClose()
+     }
+-  }, [actions?.isDirty, onClose])
++  }, [actions?.isDirty, busy, onClose])
+ 
+   // Navigation back to previous operation
+   const requestPrev = useCallback(() => {
++    if (busy || awaitingCompletion.current) return
+     const prev = PREV_JOB[job]
+     if (!prev) {
+       requestClose()
+@@ -153,11 +222,12 @@ export default function OperationsShell({
+       setActions(null)
+       setJob(prev)
+     }
+-  }, [actions?.isDirty, job, requestClose])
++  }, [actions?.isDirty, busy, job, requestClose])
+ 
+   // Switching stages via tab click
+   const requestJob = useCallback(
+     (nextJob: JobName) => {
++      if (busy || awaitingCompletion.current) return
+       if (nextJob === job) return
+       if (actions?.isDirty) {
+         setPending({ type: 'switch', job: nextJob })
+@@ -166,7 +236,7 @@ export default function OperationsShell({
+         setJob(nextJob)
+       }
+     },
+-    [actions?.isDirty, job],
++    [actions?.isDirty, busy, job],
+   )
+ 
+   // Keyboard navigation: 1-4 jumps between unlocked stages
+@@ -174,9 +244,12 @@ export default function OperationsShell({
+     if (!isOpen) return
+ 
+     const handleKeyDown = (e: KeyboardEvent) => {
+-      const target = e.target as HTMLElement | null
++      if (e.defaultPrevented || e.isComposing || e.ctrlKey || e.altKey || e.metaKey || readingFloor.current || pending) return
++      const target = e.target instanceof Element ? e.target : null
++      const dialog = target?.closest('[role="dialog"], [role="alertdialog"]')
++      if (dialog && (!bodyEl || !dialog.contains(bodyEl))) return
+       const tagName = target?.tagName?.toLowerCase()
+-      if (tagName === 'input' || tagName === 'textarea' || tagName === 'select' || target?.isContentEditable) {
++      if (tagName === 'input' || tagName === 'textarea' || tagName === 'select' || target?.closest('[contenteditable]:not([contenteditable="false"])')) {
+         return
+       }
+ 
+@@ -197,7 +270,7 @@ export default function OperationsShell({
+ 
+     window.addEventListener('keydown', handleKeyDown)
+     return () => window.removeEventListener('keydown', handleKeyDown)
+-  }, [isOpen, liveStatus, requestJob])
++  }, [isOpen, liveStatus, requestJob, bodyEl, pending])
+ 
+   const isDirty = !!actions?.isDirty
+   useEffect(() => {
+@@ -220,9 +293,28 @@ export default function OperationsShell({
+ 
+   // Progression upon successful confirmation
+   const completed = useCallback(async () => {
++    if (readingFloor.current) return
++    awaitingCompletion.current = job
+     const next = NEXT_JOB[job]
+     const targetStatus = STATUS_AFTER[job]
+ 
++    // A committed session can still be a partial return. Read the persisted
++    // stage before offering the next operation or emitting its completion event.
++    const latest = await refreshFloor()
++    if (identity.current.bookingNo !== bookingNo || !identity.current.isOpen) return
++    if (!latest) {
++      setSubmitting(false)
++      return
++    }
++    awaitingCompletion.current = null
++    submitLock.current = false
++    setSubmitting(false)
++    setActions(null)
++    setWorkspaceRevision((revision) => revision + 1)
++    if (job === 'Reset' && (!latest.taskFacts || latest.taskFacts.total === 0 || latest.taskFacts.resetDone !== latest.taskFacts.total || latest.taskFacts.problems > 0)) return
++    if (job === 'Return') void DomainEvents.emit(EVENT_TYPES.INVENTORY_RETURNED, { bookingNo })
++    if (BOOKING_STATUS[latest.stage].order < BOOKING_STATUS[targetStatus].order) return
++
+     // Emit domain event for the completed stage
+     if (job === 'Pack') {
+       void DomainEvents.emit(EVENT_TYPES.RENTAL_PACKED, { bookingNo })
+@@ -232,17 +324,10 @@ export default function OperationsShell({
+       void DomainEvents.emit(EVENT_TYPES.RENTAL_PICKED_UP, { bookingNo })
+     } else if (job === 'Return') {
+       void DomainEvents.emit(EVENT_TYPES.RENTAL_RETURNED, { bookingNo })
+-      void DomainEvents.emit(EVENT_TYPES.INVENTORY_RETURNED, { bookingNo })
+     } else if (job === 'Reset') {
+       void DomainEvents.emit(EVENT_TYPES.RENTAL_RESET_COMPLETED, { bookingNo })
+     }
+ 
+-    // Refresh state from database
+-    await refreshFloor()
+-
+-    setActions(null)
+-    setLiveStatus(targetStatus)
+-
+     if (next) {
+       setJob(next)
+     } else {
+@@ -253,11 +338,12 @@ export default function OperationsShell({
+   const currentGate = stepWriteGate(job, liveStatus)
+   const currentJobOrder = BOOKING_STATUS[liveStatus]?.order ?? 0
+   const jobRunsAtOrder = BOOKING_STATUS[JOBS[job].runsAt]?.order ?? 0
+-  const isCurrentJobCompleted = currentJobOrder > jobRunsAtOrder
++  const resetDone = currentJobOrder >= BOOKING_STATUS.Returned.order && !!taskFacts && taskFacts.total > 0 && taskFacts.resetDone === taskFacts.total && taskFacts.problems === 0
++  const isCurrentJobCompleted = job === 'Reset' ? resetDone : currentJobOrder > jobRunsAtOrder
+ 
+   // Left and Right footer button labels
+   const leftLabel = job === 'Pack' ? 'Close' : `← ${LABEL[PREV_JOB[job]!]}`
+-  const rightLabel = actions?.dispatching
++  const rightLabel = busy
+     ? 'Saving…'
+     : isCurrentJobCompleted
+       ? 'Completed ✓'
+@@ -266,7 +352,7 @@ export default function OperationsShell({
+         : job === 'Handover'
+           ? 'Confirm Handover & Next'
+           : job === 'Return'
+-            ? 'Confirm Return & Next'
++            ? 'Confirm Return session'
+             : 'Confirm Reset'
+ 
+   // RULING 2026-10-14 (R14-5): say what is still needed beside a disabled Confirm; the gates themselves are unchanged.
+@@ -296,7 +382,6 @@ export default function OperationsShell({
+   /* RULING 2026-10-14 (R14-8): the room the workspace actually has, not the window's width: the dock is always narrow, and a
+      tablet held upright gives the full-screen sheet ~780px, which a list-plus-rail layout cannot
+      use. Narrow → the one-column layout. Width 0 (no layout engine) says nothing, so it is ignored. */
+-  const [bodyEl, setBodyEl] = useState<HTMLElement | null>(null)
+   const [narrow, setNarrow] = useState(layout === 'panel')
+   useLayoutEffect(() => {
+     if (layout === 'panel') {
+@@ -328,13 +413,13 @@ export default function OperationsShell({
+ 
+   const workspace =
+     job === 'Pack' ? (
+-      <PackingWorkspace key={`${bookingNo}:Pack`} {...workspaceProps} />
++      <PackingWorkspace key={`${bookingNo}:Pack:${workspaceRevision}`} {...workspaceProps} />
+     ) : job === 'Handover' ? (
+-      <HandoverWorkspace key={`${bookingNo}:Handover`} {...workspaceProps} />
++      <HandoverWorkspace key={`${bookingNo}:Handover:${workspaceRevision}`} {...workspaceProps} />
+     ) : job === 'Return' ? (
+-      <ReturnWorkspace key={`${bookingNo}:Return`} {...workspaceProps} />
++      <ReturnWorkspace key={`${bookingNo}:Return:${workspaceRevision}`} {...workspaceProps} />
+     ) : (
+-      <ResetWorkspace key={`${bookingNo}:Reset`} {...workspaceProps} />
++      <ResetWorkspace key={`${bookingNo}:Reset:${workspaceRevision}`} {...workspaceProps} />
+     )
+ 
+   const discardDialog = (
+@@ -379,12 +464,7 @@ export default function OperationsShell({
+           <div
+             ref={setFooterEl}
+             className="operations-shell__footer"
+-            style={{
+-              width: '100%',
+-              display: 'flex',
+-              flexDirection: 'column',
+-              gap: 8,
+-            }}
++
+           >
+             {blockedHint && (
+               <p role="status" className="operations-shell__blocked">
+@@ -397,15 +477,24 @@ export default function OperationsShell({
+               <Button
+                 variant="secondary"
+                 onClick={requestPrev}
+-                disabled={actions?.dispatching}
++                disabled={floorLoading || busy}
+                 style={{ minHeight: 'var(--tap)' }}
+               >
+                 {leftLabel}
+               </Button>
+               <Button
+                 variant="primary"
+-                onClick={() => actions?.complete()}
+-                disabled={isCurrentJobCompleted || !actions?.canComplete || actions?.dispatching}
++                onClick={() => {
++                  if (submitLock.current || readingFloor.current || floorError || !floor || floor.isCancelled || floor.isClosed || !currentGate.allowed || !actions?.canComplete) return
++                  submitLock.current = true
++                  setSubmitting(true)
++                  try { actions.complete() } catch (error) {
++                    submitLock.current = false
++                    setSubmitting(false)
++                    setFloorError(error instanceof Error ? error.message : 'The operation could not be started. Retry before continuing.')
++                  }
++                }}
++                disabled={floorLoading || !!floorError || !floor || floor.isCancelled || floor.isClosed || !currentGate.allowed || (job === 'Reset' && (!taskFacts || !!taskError)) || isCurrentJobCompleted || !actions?.canComplete || busy || !!awaitingCompletion.current}
+                 style={{ minHeight: 56, whiteSpace: 'normal' }}
+               >
+                 {rightLabel}
+@@ -424,11 +513,12 @@ export default function OperationsShell({
+             const selected = candidate === job
+             const currentOrder = BOOKING_STATUS[liveStatus]?.order ?? 0
+             const candidateOrder = BOOKING_STATUS[JOBS[candidate].runsAt]?.order ?? 0
+-            const isCompleted = currentOrder > candidateOrder
++            const isCompleted = candidate === 'Reset' ? resetDone : currentOrder > candidateOrder
+             const isBlocked = currentOrder < candidateOrder
+             const measured = progress?.[candidate]
+             const state = stepDotState(candidate, liveStatus, measured ?? { done: 0, total: 1 })
+             const stateLabel =
++              candidate === 'Reset' && resetDone ? 'Done' : candidate === 'Reset' && currentOrder > candidateOrder ? 'Read only' :
+               gate.allowed && !measured
+                 ? 'Open'
+                 : state === 'not-started'
+@@ -445,21 +535,16 @@ export default function OperationsShell({
+               <Button
+                 key={candidate}
+                 size="sm"
+-                variant={selected ? 'primary' : 'secondary'}
++                variant="secondary"
+                 className="operations-shell__stage"
+                 aria-label={`${LABEL[candidate]} · ${stateLabel}${countStr}`}
+                 aria-current={selected ? 'step' : undefined}
+-                disabled={isBlocked}
++                disabled={isBlocked || floorLoading || busy || !!awaitingCompletion.current}
+                 title={!gate.allowed ? gate.reason ?? undefined : undefined}
+                 onClick={() => requestJob(candidate)}
+                 icon={isCompleted ? 'check' : isBlocked ? 'lock' : STEP_ICON[candidate]}
+-                style={{
+-                  minHeight: 64,
+-                  minWidth: 0,
+-                  whiteSpace: 'normal',
+-                  padding: '10px 12px',
+-                  opacity: isBlocked ? 0.6 : 1,
+-                }}
++                style={{ minHeight: 64, padding: '8px', whiteSpace: 'normal', border: `1px solid ${selected ? 'var(--primary)' : 'var(--btn-secondary-border)'}`, ...(selected ? { background: 'var(--nav-active-bg)' } : {}) }}
++
+               >
+                 <span className="operations-shell__stage-name">{STEP_LABEL[candidate]}</span>
+                 <span className="operations-shell__stage-sep"> · </span>
+@@ -469,77 +554,30 @@ export default function OperationsShell({
+           })}
+         </nav>
+ 
++        {taskFacts && taskFacts.total > 0 && (job === 'Return' || job === 'Reset') && <p role="status" className="operations-shell__task-facts">Cleaning pending: {taskFacts.cleaningPending} · QC pending: {taskFacts.qcPending} · Reset complete: {taskFacts.resetDone}/{taskFacts.total}{taskFacts.problems > 0 ? ` · Issues: ${taskFacts.problems}` : ''}</p>}
++        {taskError && <p role="alert">{taskError} <Button variant="secondary" onClick={() => { void refreshFloor() }}>Retry task records</Button></p>}
++
++        {floorError && (
++          <div style={{ marginBottom: 12 }}>
++            <p role="alert" style={{ color: 'var(--danger-text)' }}>{floorError}</p>
++            <Button disabled={floorLoading} onClick={() => { if (awaitingCompletion.current) void completed(); else void refreshFloor() }}>
++              Retry booking status
++            </Button>
++          </div>
++        )}
++
+         {floor && (
+-          <div
+-            style={{
+-              display: 'flex',
+-              alignItems: 'center',
+-              gap: 'var(--sp-md)',
+-              flexWrap: 'wrap',
+-              padding: '8px 14px',
+-              borderRadius: 'var(--r-sm)',
+-              background: 'var(--surface-2, rgba(255, 255, 255, 0.04))',
+-              border: '1px solid var(--border)',
+-              marginBottom: 14,
+-              fontSize: 'var(--t-meta)',
+-              color: 'var(--text2)',
+-            }}
+-          >
+-            <div className="operations-shell__strip-dup">
+-              <span style={{ color: 'var(--muted)', marginRight: 4 }}>Booking:</span>
+-              <strong style={{ color: 'var(--text)' }}>{bookingNo}</strong>
++          <details className="operations-shell__details">
++            <summary>Booking details</summary>
++            <div className="operations-shell__facts">
++              {floor.project && <span><strong>Project</strong> {floor.project}</span>}
++              {floor.pickupAtAd && <span><strong>Pickup</strong> {formatAdDateTime(floor.pickupAtAd)}</span>}
++              {floor.returnAtAd && <span><strong>Return</strong> {formatAdDateTime(floor.returnAtAd)}</span>}
++              {floor.deliveryType && <span><strong>Delivery</strong> {floor.deliveryType}</span>}
++              <span><strong>Lines</strong> {floor.lines.length}</span>
++              {!busy && !actions?.isDirty ? <RentalMoreActions compact ariaLabel="Booking actions" booking={{ id: floor.id, bookingNo, clientName: floor.clientName, stage: liveStatus, isCancelled: floor.isCancelled, isClosed: floor.isClosed, isPackingInProgress: floor.lines.some(line => line.units.some(unit => unit.packed)) }} onActionCompleted={() => { void refreshFloor(); onClose() }} /> : <span>Save or discard current work before using booking actions.</span>}
+             </div>
+-            {floor.clientName && (
+-              <div className="operations-shell__strip-dup">
+-                <span style={{ color: 'var(--muted)', marginRight: 4 }}>Client:</span>
+-                <strong style={{ color: 'var(--text)' }}>{floor.clientName}</strong>
+-              </div>
+-            )}
+-            {floor.project && (
+-              <div>
+-                <span style={{ color: 'var(--muted)', marginRight: 4 }}>Project:</span>
+-                <strong style={{ color: 'var(--text)' }}>{floor.project}</strong>
+-              </div>
+-            )}
+-            {floor.pickupAtAd && (
+-              <div>
+-                <span style={{ color: 'var(--muted)', marginRight: 4 }}>Pickup:</span>
+-                <span style={{ color: 'var(--booking-date-text)' }}>{formatAd(new Date(floor.pickupAtAd))}</span>
+-              </div>
+-            )}
+-            {floor.returnAtAd && (
+-              <div>
+-                <span style={{ color: 'var(--muted)', marginRight: 4 }}>Return:</span>
+-                <span style={{ color: 'var(--booking-date-text)' }}>{formatAd(new Date(floor.returnAtAd))}</span>
+-              </div>
+-            )}
+-            {floor.deliveryType && (
+-              <div>
+-                <span style={{ color: 'var(--muted)', marginRight: 4 }}>Delivery:</span>
+-                <span style={{ color: 'var(--text)', textTransform: 'capitalize' }}>{floor.deliveryType}</span>
+-              </div>
+-            )}
+-            {floor.lines && floor.lines.length > 0 && (
+-              <div style={{ marginLeft: 'auto' }}>
+-                <span style={{ color: 'var(--muted)', marginRight: 4 }}>Lines:</span>
+-                <strong style={{ color: 'var(--text)' }}>{floor.lines.length}</strong>
+-              </div>
+-            )}
+-            <RentalMoreActions
+-              compact
+-              ariaLabel="Booking actions"
+-              booking={{
+-                id: floor.id,
+-                bookingNo,
+-                clientName: floor.clientName,
+-                stage: liveStatus,
+-                isCancelled: floor.isCancelled,
+-                isClosed: floor.isClosed,
+-                isPackingInProgress: floor.lines.some((line) => line.units.some((unit) => unit.packed)),
+-              }}
+-              onActionCompleted={() => { void refreshFloor(); onClose() }}
+-            />
+-          </div>
++          </details>
+         )}
+ 
+         {!currentGate.allowed && (
+@@ -551,7 +589,7 @@ export default function OperationsShell({
+               fontSize: 'var(--t-meta)',
+             }}
+           >
+-            {currentGate.reason}
++            {job === 'Reset' && liveStatus === 'Closed' ? 'This booking is Closed. Saved Reset tasks are read-only here.' : currentGate.reason}
+           </p>
+         )}
+ 
+@@ -587,6 +625,10 @@ export default function OperationsShell({
+         isOpen={isOpen}
+         onClose={requestClose}
+         size="full"
++        className="operations-shell__modal"
++        surfaceStyle={viewport === 'desktop' ? { maxWidth: expanded ? '100vw' : 1320, width: expanded ? '100vw' : '96vw', height: expanded ? '100dvh' : 'min(94dvh, 920px)', maxHeight: expanded ? '100dvh' : '94dvh', ...(expanded ? {borderRadius:0} : {}) } : undefined}
++        contentStyle={{padding:12}}
++        headerActions={viewport === 'desktop' ? <Button variant="ghost" onClick={() => setExpanded(value => !value)} aria-label={expanded ? 'Contain operations workspace' : 'Expand operations workspace'}>{expanded ? 'Contain' : 'Expand'}</Button> : undefined}
+         fill
+         title={title}
+         subtitle={subtitle}
+diff --git a/src/modules/operations/OperationsWorkspaceContext.tsx b/src/modules/operations/OperationsWorkspaceContext.tsx
+index 8e8cbdb1..44f37ba8 100644
+--- a/src/modules/operations/OperationsWorkspaceContext.tsx
++++ b/src/modules/operations/OperationsWorkspaceContext.tsx
+@@ -1,22 +1,48 @@
+-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
++import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
+ import type { BookingStatus, JobName } from '../../lib/workflow'
++import { entryStepFor } from '../../lib/operationsShell'
++import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+ import OperationsShell from './OperationsShell'
+ 
+ interface OpenWorkspace { bookingNo: string; bookingStatus: BookingStatus; job: JobName }
+ interface OperationsWorkspaceValue {
+-  openOperations: (bookingNo: string, bookingStatus: BookingStatus, job: JobName) => void
++  openOperations: (bookingNo: string, bookingStatus: BookingStatus, job?: JobName) => void
+   closeOperations: () => void
+ }
+ const OperationsWorkspaceContext = createContext<OperationsWorkspaceValue | null>(null)
+ 
+ export function OperationsWorkspaceProvider({ children }: { children: ReactNode }) {
+   const [workspace, setWorkspace] = useState<OpenWorkspace | null>(null)
+-  const closeOperations = useCallback(() => setWorkspace(null), [])
+-  const openOperations = useCallback((bookingNo: string, bookingStatus: BookingStatus, job: JobName) => setWorkspace({ bookingNo, bookingStatus, job }), [])
++  const active = useRef(workspace)
++  active.current = workspace
++  const dirty = useRef(false)
++  const busy = useRef(false)
++  const [pending, setPending] = useState<{ target: OpenWorkspace | null } | null>(null)
++  const [notice, setNotice] = useState<string | null>(null)
++  const replace = useCallback((target: OpenWorkspace | null) => {
++    dirty.current = false
++    setNotice(null)
++    setWorkspace(target)
++  }, [])
++  const request = useCallback((target: OpenWorkspace | null) => {
++    if (busy.current) { setNotice('An operation is being saved. Wait for its result before changing bookings.'); return }
++    if (dirty.current) setPending({ target })
++    else replace(target)
++  }, [replace])
++  const closeOperations = useCallback(() => request(null), [request])
++  const openOperations = useCallback((bookingNo: string, bookingStatus: BookingStatus, selected?: JobName) => {
++    const job = selected ?? entryStepFor(bookingStatus) ?? 'Pack'
++    if (active.current?.bookingNo === bookingNo && active.current.job === job) return
++    request({ bookingNo, bookingStatus, job })
++  }, [request])
++  const reportDirty = useCallback((value: boolean) => { dirty.current = value }, [])
++  const reportBusy = useCallback((value: boolean) => { busy.current = value; if (!value) setNotice(null) }, [])
+   const value = useMemo(() => ({ openOperations, closeOperations }), [closeOperations, openOperations])
+   return <OperationsWorkspaceContext.Provider value={value}>
+     {children}
+-    {workspace && <OperationsShell isOpen bookingNo={workspace.bookingNo} bookingStatus={workspace.bookingStatus} initialJob={workspace.job} onClose={closeOperations} />}
++    {notice && <p role="status">{notice}</p>}
++    {workspace && <OperationsShell key={`${workspace.bookingNo}:${workspace.job}`} isOpen bookingNo={workspace.bookingNo} bookingStatus={workspace.bookingStatus} initialJob={workspace.job} onDirtyChange={reportDirty} onBusyChange={reportBusy} onClose={() => replace(null)} />}
++    <ConfirmDialog isOpen={pending !== null} title="Discard unsaved operations work?" description={pending?.target ? `Discard the current marks and open ${pending.target.bookingNo}?` : 'Discard the current unsaved operations work and close?'} cancelLabel="Keep editing" confirmLabel="Discard changes" variant="danger" onClose={() => setPending(null)} onConfirm={() => { if (busy.current) return; const target = pending?.target ?? null; setPending(null); replace(target) }} />
+   </OperationsWorkspaceContext.Provider>
+ }
+ 
+diff --git a/src/modules/operations/__tests__/OperationsShell.test.tsx b/src/modules/operations/__tests__/OperationsShell.test.tsx
+index 9d81222a..22671e7b 100644
+--- a/src/modules/operations/__tests__/OperationsShell.test.tsx
++++ b/src/modules/operations/__tests__/OperationsShell.test.tsx
+@@ -11,6 +11,7 @@ import { useFloorViewport } from '../floorPanelContext'
+ let dirty = false
+ let mockError: string | null = null
+ let mockBlocked: string | null = null
++const completionCalls = vi.fn()
+ 
+ type MockProps = {
+   bookingNo?: string
+@@ -26,7 +27,7 @@ function MockWorkspace({ bookingNo, onConfirmSuccess, onRegisterActions }: MockP
+       dispatching: false,
+       isDirty: dirty,
+       label: 'Confirm Action',
+-      complete: () => onConfirmSuccess?.(),
++      complete: () => { completionCalls(); onConfirmSuccess?.() },
+       error: mockError,
+     })
+   }, [onConfirmSuccess, onRegisterActions])
+@@ -73,15 +74,19 @@ vi.mock('../../../lib/device', async (orig) => ({
+   ...(await orig<typeof import('../../../lib/device')>()),
+   useViewport: () => 'tablet' as const,
+ }))
++vi.mock('../../../lib/queries/operationTaskFacts', () => ({ fetchOperationTaskFacts: vi.fn(async () => ({ total: 2, resetDone: 0, cleaningPending: 2, qcPending: 2, problems: 0 })) }))
+ 
+ const { default: OperationsShell } = await import('../OperationsShell')
++const { fetchFloorBooking } = await import('../../../lib/queries/bookings')
++const fetchFloor = vi.mocked(fetchFloorBooking)
++const originalFetch = fetchFloor.getMockImplementation()!
+ 
+ let container: HTMLDivElement
+ let root: Root
+ 
+ async function mount(
+   onClose = vi.fn(),
+-  status: 'Quote' | 'Booked' | 'Packed' | 'On Rent' | 'Returned' = 'Booked',
++  status: 'Quote' | 'Booked' | 'Packed' | 'On Rent' | 'Returned' | 'Closed' = 'Booked',
+   initialJob: 'Pack' | 'Handover' | 'Return' | 'Reset' = 'Pack',
+ ) {
+   mockStage = status
+@@ -113,6 +118,8 @@ beforeEach(() => {
+   dirty = false
+   mockError = null
+   mockBlocked = null
++  completionCalls.mockClear()
++  fetchFloor.mockReset().mockImplementation(originalFetch)
+ })
+ 
+ afterEach(async () => {
+@@ -190,6 +197,92 @@ describe('panel layout', () => {
+ })
+ 
+ describe('Task 5 — Operations popup navigation and state', () => {
++  it('does not invent Reset completion from a Closed booking', async () => {
++    await mount(vi.fn(), 'Closed', 'Reset')
++    expect(container.querySelector('button[aria-current="step"]')?.getAttribute('aria-label')).toContain('Read only')
++    expect(container.textContent).toContain('Cleaning pending: 2')
++    expect(container.textContent).not.toContain('Completed ✓')
++  })
++
++  it('ignores a late status read for the previously selected booking', async () => {
++    let resolve!: (value: Awaited<ReturnType<typeof fetchFloorBooking>>) => void
++    fetchFloor.mockReturnValueOnce(new Promise(r => { resolve = r }))
++    await mount(vi.fn(), 'Booked', 'Pack')
++    const next = { ...(await originalFetch('B-715'))!, id:'b-716', bookingNo:'B-716', stage:'Booked' }
++    fetchFloor.mockResolvedValueOnce(next)
++    await act(async () => root.render(<MemoryRouter><OperationsShell bookingNo="B-716" bookingStatus="Booked" initialJob="Pack" isOpen onClose={vi.fn()} /></MemoryRouter>))
++    await act(async () => { resolve({ ...next, id:'b-715', bookingNo:'B-715', stage:'Returned' }); await Promise.resolve() })
++    expect(container.textContent).toContain('Operations · B-716')
++    expect(container.textContent).toContain('Status: Booked')
++    expect(container.querySelector('button[aria-label^="Cleaning & Reset"]')?.hasAttribute('disabled')).toBe(true)
++  })
++  it('keeps a committed partial Return On Rent and does not unlock Reset', async () => {
++    await mount(vi.fn(), 'On Rent', 'Return')
++    const confirm = [...container.querySelectorAll('button')].find(b => b.textContent?.trim() === 'Confirm Return session')
++    await act(async () => confirm?.click())
++    expect(container.textContent).toContain('Return & Inspection · Status: On Rent')
++    expect(container.querySelector('button[aria-label^="Cleaning & Reset"]')?.hasAttribute('disabled')).toBe(true)
++    expect(container.querySelector('button[aria-current="step"]')?.getAttribute('aria-label')).toContain('Return & Inspection')
++  })
++
++  it('does not advance after a committed session if authoritative refresh fails', async () => {
++    await mount(vi.fn(), 'On Rent', 'Return')
++    fetchFloor.mockRejectedValueOnce(new Error('Booking could not be read'))
++    const confirm = [...container.querySelectorAll('button')].find(b => b.textContent?.trim() === 'Confirm Return session')
++    await act(async () => confirm?.click())
++    expect(container.querySelector('[role="alert"]')?.textContent).toContain('Booking could not be read')
++    expect(container.querySelector('button[aria-label^="Cleaning & Reset"]')?.hasAttribute('disabled')).toBe(true)
++    expect([...container.querySelectorAll('button')].find(b => b.textContent === 'Retry booking status')).toBeDefined()
++    mockStage = 'Returned'
++    await act(async () => [...container.querySelectorAll('button')].find(b => b.textContent === 'Retry booking status')?.click())
++    expect(container.textContent).toContain('Cleaning & Reset · Status: Returned')
++    expect(completionCalls).toHaveBeenCalledTimes(1)
++  })
++
++  it('blocks confirmation when the initial booking read fails, with a visible retry', async () => {
++    fetchFloor.mockRejectedValueOnce(new Error('Network unavailable'))
++    await mount(vi.fn(), 'Booked', 'Pack')
++    expect(container.querySelector('[role="alert"]')?.textContent).toContain('Network unavailable')
++    const confirm = [...container.querySelectorAll('button')].find(b => b.textContent?.trim() === 'Confirm Packing & Next')
++    expect(confirm?.disabled).toBe(true)
++    expect(completionCalls).not.toHaveBeenCalled()
++  })
++
++  it('accepts only one completion while its persisted status read is pending', async () => {
++    await mount(vi.fn(), 'Booked', 'Pack')
++    let resolve!: (value: Awaited<ReturnType<typeof fetchFloorBooking>>) => void
++    const pendingRead = new Promise<Awaited<ReturnType<typeof fetchFloorBooking>>>(r => { resolve = r })
++    fetchFloor.mockReturnValueOnce(pendingRead)
++    const confirm = [...container.querySelectorAll('button')].find(b => b.textContent?.trim() === 'Confirm Packing & Next')
++    await act(async () => { confirm?.click(); confirm?.click() })
++    expect(completionCalls).toHaveBeenCalledTimes(1)
++    mockStage = 'Packed'
++    await act(async () => { resolve(await originalFetch('B-715')); await pendingRead })
++  })
++
++  it.each([null, 'Ready'])('refuses an absent or unsupported persisted stage (%s)', async (stage) => {
++    const booking = await originalFetch('B-715')
++    fetchFloor.mockResolvedValueOnce(stage === null ? null : { ...booking!, stage })
++    await mount(vi.fn(), 'Booked', 'Pack')
++    expect(container.querySelector('[role="alert"]')).not.toBeNull()
++    const confirm = [...container.querySelectorAll('button')].find(b => b.textContent?.trim() === 'Confirm Packing & Next')
++    expect(confirm?.disabled).toBe(true)
++    expect(completionCalls).not.toHaveBeenCalled()
++  })
++
++  it('does not consume stage shortcuts from a nested dialog', async () => {
++    await mount(vi.fn(), 'On Rent', 'Return')
++    const nested = document.createElement('div')
++    nested.setAttribute('role', 'dialog')
++    nested.setAttribute('aria-modal', 'true')
++    const button = document.createElement('button')
++    nested.append(button)
++    container.append(nested)
++    await act(async () => button.dispatchEvent(new KeyboardEvent('keydown', { key: '1', bubbles: true })))
++    expect(container.querySelector('button[aria-current="step"]')?.getAttribute('aria-label')).toContain('Return & Inspection')
++    nested.remove()
++  })
++
+   it('shows a workspace error once, without repeating it in the modal footer', async () => {
+     mockError = 'Handover could not be recorded'
+     await mount(vi.fn(), 'Packed', 'Handover')
+@@ -265,11 +358,11 @@ describe('Task 5 — Operations popup navigation and state', () => {
+     expect(container.textContent).toContain('Packing · Status: Packed')
+   })
+ 
+-  it('Return & Inspection shows ← Handover and Confirm Return & Next', async () => {
++  it('Return & Inspection shows ← Handover and Confirm Return session', async () => {
+     await mount(vi.fn(), 'On Rent', 'Return')
+     const buttons = [...container.querySelectorAll('button')]
+     const leftBtn = buttons.find((b) => b.textContent?.trim() === '← Handover')
+-    const confirmBtn = buttons.find((b) => b.textContent?.trim() === 'Confirm Return & Next')
++    const confirmBtn = buttons.find((b) => b.textContent?.trim() === 'Confirm Return session')
+ 
+     expect(leftBtn).toBeDefined()
+     expect(confirmBtn).toBeDefined()
+@@ -314,7 +407,7 @@ describe('Task 5 — Operations popup navigation and state', () => {
+     // When booking is On Rent, Packing is already completed
+     await mount(vi.fn(), 'On Rent', 'Return')
+     const packTab = [...container.querySelectorAll<HTMLButtonElement>('nav[aria-label="Operation stage"] button')].find(
+-      (b) => b.textContent?.includes('Packing'),
++      (b) => b.getAttribute('aria-label')?.startsWith('Packing'),
+     )
+     expect(packTab).toBeDefined()
+     expect(packTab?.hasAttribute('disabled')).toBe(false)
+@@ -349,9 +442,10 @@ describe('Task 5 — Operations popup navigation and state', () => {
+   it('renders booking context summary details', async () => {
+     await mount(vi.fn(), 'Booked', 'Pack')
+     expect(container.textContent).toContain('Himalayan Films')
+-    expect(container.textContent).toContain('Booking:')
++    expect(container.querySelector('summary')?.textContent).toBe('Booking details')
+     expect(container.textContent).toContain('B-715')
+-    expect(container.textContent).toContain('Pickup:')
++    expect(container.textContent).toContain('Pickup')
++    expect(container.textContent?.match(/Himalayan Films/g)).toHaveLength(1)
+     expect(container.textContent).toContain('20/9/2026')
+   })
+ 
+diff --git a/src/modules/operations/__tests__/OperationsWorkspaceContext.test.tsx b/src/modules/operations/__tests__/OperationsWorkspaceContext.test.tsx
+new file mode 100644
+index 00000000..ce7fd986
+--- /dev/null
++++ b/src/modules/operations/__tests__/OperationsWorkspaceContext.test.tsx
+@@ -0,0 +1,44 @@
++// @vitest-environment jsdom
++import { act } from 'react'
++import { createRoot, type Root } from 'react-dom/client'
++import { afterEach, describe, expect, it, vi } from 'vitest'
++import { OperationsWorkspaceProvider, useOperationsWorkspace } from '../OperationsWorkspaceContext'
++import type { OperationsShellProps } from '../OperationsShell'
++
++vi.mock('../OperationsShell', () => ({ default: ({ bookingNo, initialJob, onClose, onDirtyChange, onBusyChange }: OperationsShellProps) => <section aria-label="Workspace"><p>{bookingNo} {initialJob}</p><button onClick={() => onDirtyChange?.(true)}>Mark dirty</button><button onClick={() => onBusyChange?.(true)}>Begin save</button><button onClick={() => onBusyChange?.(false)}>Finish save</button><button onClick={onClose}>Shell close</button></section> }))
++;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
++function Controls() {
++  const { openOperations, closeOperations } = useOperationsWorkspace()
++  return <><button onClick={() => openOperations('BK-A', 'Booked')}>Open A</button><button onClick={() => openOperations('BK-B', 'On Rent')}>Open B</button><button onClick={closeOperations}>External close</button></>
++}
++let root: Root
++let container: HTMLDivElement
++async function click(label: string) { await act(async () => { [...document.querySelectorAll('button')].find(button => button.textContent === label)?.click() }) }
++async function mount() {
++  container = document.createElement('div'); document.body.append(container); root = createRoot(container)
++  await act(async () => root.render(<OperationsWorkspaceProvider><Controls /></OperationsWorkspaceProvider>))
++}
++afterEach(async () => { await act(async () => root.unmount()); container.remove() })
++describe('canonical Operations host', () => {
++  it('defaults to the eligible stage and never mutates a booking', async () => {
++    await mount(); await click('Open B'); expect(container.textContent).toContain('BK-B Return')
++  })
++  it('keeps dirty marks when a booking switch is cancelled', async () => {
++    await mount(); await click('Open A'); await click('Mark dirty'); await click('Open B')
++    expect(container.textContent).toContain('Discard unsaved operations work?')
++    await click('Keep editing'); expect(container.querySelector('section')?.textContent).toContain('BK-A Pack')
++  })
++  it('switches only the intended booking after explicit discard', async () => {
++    await mount(); await click('Open A'); await click('Mark dirty'); await click('Open B'); await click('Discard changes')
++    expect(container.querySelector('section')?.textContent).toContain('BK-B Return')
++  })
++  it('guards an external close while dirty', async () => {
++    await mount(); await click('Open A'); await click('Mark dirty'); await click('External close')
++    expect(container.querySelector('section')).not.toBeNull(); await click('Discard changes'); expect(container.querySelector('section')).toBeNull()
++  })
++  it('refuses booking switches during an in-flight operation', async () => {
++    await mount(); await click('Open A'); await click('Begin save'); await click('Open B')
++    expect(container.querySelector('section')?.textContent).toContain('BK-A'); expect(container.querySelector('[role="status"]')?.textContent).toContain('being saved')
++    await click('Finish save'); await click('Open B'); expect(container.querySelector('section')?.textContent).toContain('BK-B')
++  })
++})
+diff --git a/src/modules/operations/__tests__/operationRoutes.test.tsx b/src/modules/operations/__tests__/operationRoutes.test.tsx
+index 501873e3..7ff617be 100644
+--- a/src/modules/operations/__tests__/operationRoutes.test.tsx
++++ b/src/modules/operations/__tests__/operationRoutes.test.tsx
+@@ -85,6 +85,7 @@ window.matchMedia = ((query: string) =>
+  * every other number resolves to `null`, which is the honest "no such
+  * booking" answer the live query gives.
+  */
++let persistedStage = 'Booked'
+ const FLOOR_B715 = {
+   id: '11111111-1111-4111-8111-111111111111',
+   bookingNo: 'B-715',
+@@ -129,7 +130,7 @@ const FLOOR_B715 = {
+ 
+ vi.mock('../../../lib/queries/bookings', async (orig) => ({
+   ...(await orig<typeof import('../../../lib/queries/bookings')>()),
+-  fetchFloorBooking: async (ref: string) => (ref === 'B-715' ? FLOOR_B715 : null),
++  fetchFloorBooking: async (ref: string) => (ref === 'B-715' ? { ...FLOOR_B715, stage: persistedStage } : null),
+ }))
+ 
+ /*
+@@ -226,6 +227,7 @@ const filledPrimaries = () =>
+   buttons().filter((b) => (b.getAttribute('style') ?? '').includes('background: var(--btn-primary-bg)'))
+ 
+ beforeEach(() => {
++  persistedStage = 'Booked'
+   viewport = 'desktop'
+   path = ''
+ })
+@@ -499,7 +501,7 @@ describe('OperationsShell is the unified modal host', () => {
+ 
+   it('keeps the parent route while resolving another booking in-place', async () => {
+     await mount(<OperationsShell bookingNo="B-9001" bookingStatus="Booked" isOpen onClose={() => {}} />)
+-    const pack = buttons().find((b) => (b.textContent ?? '').includes('Packing'))
++    const pack = buttons().find((b) => b.getAttribute('aria-label')?.startsWith('Packing'))
+     await act(async () => {
+       pack?.click()
+     })
+@@ -509,14 +511,23 @@ describe('OperationsShell is the unified modal host', () => {
+ 
+   it('keeps a step that is not open yet visible and unclickable, with its reason', async () => {
+     // Pack runs at Booked, so at Quote every step is still ahead of the booking.
++    persistedStage = 'Quote'
+     await mount(<OperationsShell bookingNo="B-715" bookingStatus="Quote" isOpen onClose={() => {}} />)
+-    const pack = buttons().find((b) => (b.textContent ?? '').includes('Packing'))
++    const pack = buttons().find((b) => b.getAttribute('aria-label')?.startsWith('Packing'))
+     expect(pack).toBeTruthy()
+     expect(pack?.disabled).toBe(true)
+     // Law 12 — the reason is on the page, not in a toast.
+     expect(text()).toContain('opens once this booking reaches Booked')
+   })
+ 
++  it('uses persisted status when the launcher still reports a later stage', async () => {
++    persistedStage = 'Quote'
++    await mount(<OperationsShell bookingNo="B-715" bookingStatus="Packed" isOpen onClose={() => {}} />)
++    const pack = container.querySelector<HTMLButtonElement>('nav[aria-label="Operation stage"] button[aria-label^="Packing"]')
++    expect(pack?.disabled).toBe(true)
++    expect(text()).toContain('Status: Quote')
++  })
++
+   it('keeps Evidence out of the four-stage workflow', async () => {
+     await mount(<OperationsShell bookingNo="B-715" bookingStatus="Booked" isOpen onClose={() => {}} />)
+     const evidence = buttons().find((b) => (b.textContent ?? '').includes('Evidence'))
+@@ -534,7 +545,7 @@ describe('OperationsShell is the unified modal host', () => {
+  * fabricated fact.
+  */
+ describe('PK-12 — the entry step reports progress it was given, and nothing more', () => {
+-  const packRow = () => buttons().find((b) => (b.textContent ?? '').includes('Packing'))
++  const packRow = () => buttons().find((b) => b.getAttribute('aria-label')?.startsWith('Packing'))
+ 
+   it('says the step is Open, not Not started, when no progress was supplied', async () => {
+     await mount(<OperationsShell bookingNo="B-715" bookingStatus="Booked" isOpen onClose={() => {}} />)
+@@ -571,6 +582,7 @@ describe('PK-12 — the entry step reports progress it was given, and nothing mo
+   it('leaves the blocked and already-past rows alone — neither answer reads a count', async () => {
+     // At Packed: Pack is behind the booking (done), Return is ahead of it
+     // (blocked). Neither is affected by the absence of a progress map.
++    persistedStage = 'Packed'
+     await mount(<OperationsShell bookingNo="B-715" bookingStatus="Packed" isOpen onClose={() => {}} />)
+     expect(packRow()?.textContent).toContain('Done')
+     const ret = container.querySelector<HTMLButtonElement>('nav[aria-label="Operation stage"] button[aria-label^="Return & Inspection"]')
+diff --git a/src/modules/operations/operationsShell.css b/src/modules/operations/operationsShell.css
+index 5ec6e03d..5f68cfad 100644
+--- a/src/modules/operations/operationsShell.css
++++ b/src/modules/operations/operationsShell.css
+@@ -1,126 +1,42 @@
+-/* RULING 2026-10-13: keep every stage label readable and the active stage visible
+-   on phones; preserve all existing stage gates and navigation callbacks. */
+-.operations-shell__stages {
+-  display: grid;
+-  grid-template-columns: repeat(4, minmax(0, 1fr));
+-  gap: 8px;
+-  padding-bottom: 12px;
+-  margin-bottom: 16px;
+-  border-bottom: 1px solid var(--border);
+-}
+-
+-.operations-shell__stages .ui-button__label { min-width: 0; overflow-wrap: anywhere; }
+-.operations-shell__actions {
+-  width: 100%;
+-  display: flex;
+-  justify-content: space-between;
+-  align-items: center;
+-  gap: 12px;
+-}
+-
+-@media (max-width: 767px) {
+-  .operations-shell__stages { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+-  .operations-shell__actions { flex-direction: column-reverse; align-items: stretch; gap: 8px; }
+-}
+-
+-/* Desktop dock (≥1280): the job sits beside the queue instead of covering it. */
+-.operations-shell__panel {
+-  display: flex;
+-  flex-direction: column;
+-  min-width: 0;
+-  position: sticky;
+-  top: calc(var(--header-h, 64px) + 12px);
+-  max-height: calc(100vh - var(--header-h, 64px) - 24px);
+-  background: var(--card);
+-  border: 1px solid var(--border);
+-  border-radius: var(--r-md, 12px);
+-  overflow: hidden;
+-}
+-.operations-shell__panel-head {
+-  display: flex;
+-  align-items: flex-start;
+-  justify-content: space-between;
+-  gap: 8px;
+-  padding: 12px 16px;
+-  border-bottom: 1px solid var(--border);
+-}
+-.operations-shell__panel-title { margin: 0; font-size: var(--t-body, 15px); font-weight: 700; color: var(--text); overflow-wrap: anywhere; }
+-.operations-shell__panel-sub { margin: 2px 0 0; font-size: var(--t-meta); color: var(--text2); }
+-.operations-shell__panel-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 16px; }
+-.operations-shell__panel-foot { padding: 12px 16px; border-top: 1px solid var(--border); background: var(--card); }
+-
+-.operations-v2__split { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-md, 16px); align-items: start; }
+-@media (min-width: 1280px) {
+-  .operations-v2__split--open { grid-template-columns: minmax(0, 1fr) minmax(480px, 44%); }
+-}
+-.operations-v2__table tbody tr.operations-v2__row--active { background: color-mix(in srgb, var(--nav-active-bg) 60%, transparent); box-shadow: inset 3px 0 0 var(--primary); }
+-.operations-v2__table tbody tr.operations-v2__row--cursor { outline: 2px solid var(--focus-ring, var(--primary)); outline-offset: -2px; }
+-
+-/* Why Confirm is disabled, in the footer beside it rather than far down the page. */
+-.operations-shell__blocked { margin: 0; font-size: var(--t-meta); color: var(--text2); overflow-wrap: anywhere; }
+-
+-/* RULING 2026-10-14 (R14-10). Phone: the four stage steps share ONE row (icon over name over state) instead of a 2×2 grid of
+-   three-line buttons, and the Booking / Client cells — already in the sheet title — drop out, so the
+-   first screen reaches the equipment instead of ending in chrome. State stays as text + icon. */
+-.operations-shell__stage-name { font-weight: 600; }
+-@media (max-width: 767px) {
+-  .operations-shell__stages { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+-  .operations-shell__stages .ui-button { flex-direction: column; justify-content: flex-start; gap: 2px; padding: 6px 2px !important; min-height: 44px; }
+-  .operations-shell__stages .ui-button__label { text-align: center; line-height: 1.15; max-width: 100%; overflow: hidden; }
+-  .operations-shell__stage-name { display: block; font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+-  .operations-shell__stage-sep { display: none; }
+-  .operations-shell__stage-state { display: block; font-size: 10.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+-  .operations-shell__strip-dup { display: none; }
+-}
+-@media (max-width: 359px) {
+-  .operations-shell__stages { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+-}
+-
+-/* RULING 2026-10-14 (R14-11). Tablet and up, full-screen sheet: the "still needed" hint sits BETWEEN the two buttons on one
+-   row instead of above them — a whole line of height back for the checklist. The dock keeps its
+-   stacked footer (it is too narrow for three things in a row). Phones keep the stacked footer. */
+-@media (min-width: 768px) {
+-  .app-modal .operations-shell__footer { flex-direction: row !important; align-items: center; gap: 12px !important; }
+-  .app-modal .operations-shell__actions { display: contents; }
+-  .app-modal .operations-shell__actions > :first-child { order: 0; }
+-  .app-modal .operations-shell__blocked { order: 1; flex: 1 1 0; min-width: 0; text-align: center; }
+-  .app-modal .operations-shell__actions > :last-child { order: 2; }
+-}
+-
+-/* Short tablets (landscape): the four stage steps are one line each, so they do not need the
+-   padding that keeps them comfortable when their labels wrap. They stay ≥ 44px. */
+-@media (min-width: 768px) and (max-height: 860px) {
+-  .operations-shell__stages .ui-button { padding-top: 4px !important; padding-bottom: 4px !important; }
+-}
+-
+-
+-/* RULING 2026-10-16: one consistent four-step navigator for every rental operation. */
+-.operations-shell__stages {
+-  padding: 8px;
+-  gap: 8px;
+-  border: 1px solid var(--border);
+-  border-radius: var(--r-card);
+-  background: var(--surface);
+-}
+-
+-.operations-shell__stages .operations-shell__stage {
+-  min-height: 64px;
+-  border-radius: var(--r-input);
+-}
+-
+-.operations-shell__stage .ui-button__label {
+-  display: flex;
+-  flex-direction: column;
+-  align-items: flex-start;
+-  gap: 3px;
+-}
+-
+-.operations-shell__stage-sep { display: none; }
+-.operations-shell__stage-name { font-size: var(--t-ui); }
+-.operations-shell__stage-state { font-size: var(--t-th); font-weight: 500; }
+-
+-@media (max-width: 767px) {
+-  .operations-shell__stages { padding: 6px; gap: 4px; }
+-  .operations-shell__stage .ui-button__label { align-items: center; }
+-  .operations-shell__stage-name { font-size: var(--t-th); }
++/* Booking Operations owns domain geometry; all paint uses existing theme tokens. */
++.operations-shell__stages { display:grid; grid-template-columns:repeat(4,minmax(76px,1fr)); gap:8px; margin:0 0 12px; padding:0 0 12px; border-bottom:1px solid var(--border); overflow-x:auto; }
++.operations-shell__stages .operations-shell__stage { min-height:64px; min-width:0; padding:10px; white-space:normal; border-radius:var(--r-btn); box-shadow:none; }
++.operations-shell__stage[aria-current="step"] { border-color:var(--primary); background:var(--nav-active-bg); color:var(--text); }
++.operations-shell__stage .ui-button__label { display:flex; flex-direction:column; align-items:flex-start; gap:4px; min-width:0; }
++.operations-shell__stage-name { font-size:var(--t-ui); font-weight:600; }
++.operations-shell__stage-state { font-size:var(--t-meta); font-weight:400; line-height:1.25; }
++.operations-shell__stage-sep { display:none; }
++.operations-shell__details { margin:0 0 12px; color:var(--text2); font-size:var(--t-meta); border-bottom:1px solid var(--border); }
++.operations-shell__details summary { display:list-item; min-height:44px; padding:12px 4px; cursor:pointer; color:var(--text); font-weight:600; }
++.operations-shell__facts { display:flex; flex-wrap:wrap; align-items:center; gap:12px 20px; padding:0 4px 12px; }
++.operations-shell__facts strong { font-weight:500; color:var(--muted); margin-right:6px; }
++.operations-shell__footer { display:flex; flex-direction:column; width:100%; gap:8px; }
++.operations-shell__actions { display:flex; justify-content:space-between; align-items:center; width:100%; gap:12px; }
++.operations-shell__blocked { margin:0; font-size:var(--t-meta); color:var(--text2); overflow-wrap:anywhere; }
++.operations-shell__modal .app-modal__header > div:first-child { flex:1; }
++.operations-shell__panel { display:flex; flex-direction:column; min-width:0; position:sticky; top:calc(var(--header-h,64px) + 12px); max-height:calc(100dvh - var(--header-h,64px) - 24px); background:var(--card); border:1px solid var(--border); border-radius:var(--r-card); overflow:hidden; }
++.operations-shell__panel-head { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; padding:12px 16px; border-bottom:1px solid var(--border); }
++.operations-shell__panel-title { margin:0; font-size:var(--t-body); font-weight:600; color:var(--text); overflow-wrap:anywhere; }
++.operations-shell__panel-sub { margin:4px 0 0; font-size:var(--t-meta); color:var(--text2); }
++.operations-shell__panel-body { flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:12px; }
++.operations-shell__panel-foot { padding:12px 16px; border-top:1px solid var(--border); background:var(--card); }
++.operations-v2__split { display:grid; grid-template-columns:minmax(0,1fr); gap:var(--sp-md,16px); align-items:start; }
++.operations-v2__split[data-dock-focused="true"] > :first-child { display:none; }
++.operations-v2__split[data-dock-focused="true"] .operations-shell__panel { scroll-margin-top:12px; min-height:calc(100dvh - var(--header-h,64px) - 24px); }
++.operations-v2__table tbody tr.operations-v2__row--active { background:color-mix(in srgb,var(--nav-active-bg) 60%,transparent); box-shadow:inset 3px 0 0 var(--primary); }
++.operations-v2__table tbody tr.operations-v2__row--cursor { outline:2px solid var(--focus-ring); outline-offset:-2px; }
++@media (min-width:1280px) { .operations-v2__split--open { grid-template-columns:minmax(0,1fr) minmax(480px,44%); } }
++@media (min-width:768px) {
++  .operations-shell__modal .operations-shell__footer { flex-direction:row; align-items:center; gap:12px; }
++  .operations-shell__modal .operations-shell__actions { display:contents; }
++  .operations-shell__modal .operations-shell__actions > :first-child { order:0; }
++  .operations-shell__modal .operations-shell__blocked { order:1; flex:1; min-width:0; text-align:center; }
++  .operations-shell__modal .operations-shell__actions > :last-child { order:2; }
++}
++@media (max-width:767px) {
++  .operations-shell__stages { gap:4px; }
++  .operations-shell__stages .operations-shell__stage { flex-direction:column; min-height:76px; padding:8px 4px; gap:4px; }
++  .operations-shell__stage .ui-button__label { align-items:center; text-align:center; }
++  .operations-shell__stage-name, .operations-shell__stage-state { font-size:12px; }
++  .operations-shell__actions { flex-direction:column-reverse; align-items:stretch; gap:8px; }
+ }
+diff --git a/src/modules/rentals/BookingDetail.tsx b/src/modules/rentals/BookingDetail.tsx
+index 2bc3357f..1c43d32f 100644
+--- a/src/modules/rentals/BookingDetail.tsx
++++ b/src/modules/rentals/BookingDetail.tsx
+@@ -2210,19 +2210,18 @@ function BookingDetailView() {
+           }
+           actions={
+             <PageActions
+-            secondary={[
++            persistent={
+               /* The 44px icon at every width (its name stays "Operations"): the labelled
+                  trigger cost 64px more of the record title at 1280. Cleaning & Reset is
+                  its fourth row, so it has no button of its own. */
+               <BookingOperationsMenu
+-                key="ops"
+                 bookingNo={id}
+                 bookingStatus={stage}
+                 unavailable={operationsUnavailable}
+                 primary={false}
+                 compact
+-              />,
+-            ]}
++              />
++            }
+             overflow={
+               /* The one More. WhatsApp choices are its "Message client" row, built from the
+                  business settings; the old header button duplicated them with a placeholder
+@@ -2253,7 +2252,7 @@ function BookingDetailView() {
+               />
+             }
+             primary={
+-              primaryAction.isOperable && (!booking.isCancelled || stage === 'Quote') && !booking.isClosed ? (
++              primaryAction.isOperable && !(onPhone && primaryAction.job) && (!booking.isCancelled || stage === 'Quote') && !booking.isClosed ? (
+                 primaryAction.actionType === 'confirm' ? (
+                   cancelledReason ? (
+                     <Unavailable reason={`${booking.bookingNo} is cancelled — a cancelled booking is not confirmed.`}>
+diff --git a/src/modules/rentals/BookingOperationsMenu.tsx b/src/modules/rentals/BookingOperationsMenu.tsx
+index 771fb20a..b40ba5ca 100644
+--- a/src/modules/rentals/BookingOperationsMenu.tsx
++++ b/src/modules/rentals/BookingOperationsMenu.tsx
+@@ -1,11 +1,14 @@
+-import { useEffect, useId, useRef, useState } from 'react'
+-import Icon from '../../components/ui/Icon'
+-import type { IconName } from '../../components/ui/Icon'
++import { useRef, useState } from 'react'
++import { Menu } from '@base-ui/react/menu'
++import Icon, { type IconName } from '../../components/ui/Icon'
++import { Drawer, DrawerTrigger, DrawerPopup, DrawerHeader, DrawerTitle, DrawerDescription, DrawerPanel } from '../../components/ui/cossDrawer'
+ import { stepWriteGate } from '../../lib/operationsShell'
++import { useViewport } from '../../lib/device'
+ import type { BookingStatus, JobName } from '../../lib/workflow'
+ import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext'
+ import { useAuth } from '../../lib/auth'
+ import { canPerformOp, type OperationName } from '../../lib/rbac'
++import './booking-operations-menu.css'
+ 
+ const OPERATIONS: ReadonlyArray<{ job: JobName; label: string; icon: IconName }> = [
+   { job: 'Pack', label: 'Packing', icon: 'box' },
+@@ -13,170 +16,63 @@ const OPERATIONS: ReadonlyArray<{ job: JobName; label: string; icon: IconName }>
+   { job: 'Return', label: 'Return & Inspection', icon: 'return_arrow' },
+   { job: 'Reset', label: 'Cleaning & Reset', icon: 'refresh' },
+ ]
+-
+ export interface BookingOperationsMenuProps {
+-  /** Omitted while the booking is still being created. */
+   bookingNo?: string
+-  /** Omitted while the booking is still being created. */
+   bookingStatus?: BookingStatus
+-  /** A booking-level refusal, such as cancellation. */
+   unavailable?: string | null
+   primary?: boolean
+-  /** Icon-only 44px trigger for a crowded phone header; the accessible name stays "Operations". */
+   compact?: boolean
+ }
+-
+-/**
+- * The one booking-scoped Operations control used by new and existing rentals.
+- * It only links to the four canonical operation routes and never mounts a
+- * workspace over the current page.
+- */
+-export default function BookingOperationsMenu({
+-  bookingNo,
+-  bookingStatus,
+-  unavailable = null,
+-  primary = false,
+-  compact = false,
+-}: BookingOperationsMenuProps) {
++/** Responsive actions composition; the canonical provider and workspaces own execution. */
++export default function BookingOperationsMenu({ bookingNo, bookingStatus, unavailable = null, primary = false, compact = false }: BookingOperationsMenuProps) {
+   const [open, setOpen] = useState(false)
+-  const rootRef = useRef<HTMLDivElement | null>(null)
+-  const menuId = useId()
++  const phone = useViewport() === 'phone'
++  const triggerRef = useRef<HTMLButtonElement | null>(null)
++  const selected = useRef<JobName | null>(null)
+   const { openOperations } = useOperationsWorkspace()
+   const { user } = useAuth()
+-
+-  useEffect(() => {
+-    if (!open) return
+-
+-    const onPointerDown = (event: PointerEvent) => {
+-      if (!rootRef.current?.contains(event.target as Node | null)) setOpen(false)
+-    }
+-    const onKeyDown = (event: KeyboardEvent) => {
+-      if (event.key === 'Escape') setOpen(false)
+-    }
+-
+-    document.addEventListener('pointerdown', onPointerDown)
+-    window.addEventListener('keydown', onKeyDown)
+-    return () => {
+-      document.removeEventListener('pointerdown', onPointerDown)
+-      window.removeEventListener('keydown', onKeyDown)
+-    }
+-  }, [open])
+-
+-  const triggerSkin = primary
+-    ? {
+-        background: 'var(--btn-primary-bg)',
+-        color: 'var(--btn-primary-fg)',
+-        border: '1px solid transparent',
+-      }
+-    : {
+-        background: 'var(--btn-secondary-bg)',
+-        color: 'var(--text)',
+-        border: '1px solid var(--btn-secondary-border)',
+-      }
+-
+-  return (
+-    <div ref={rootRef} style={{ position: 'relative', display: 'inline-flex' }}>
+-      <button
+-        type="button"
+-        className="press"
+-        aria-haspopup="menu"
+-        aria-expanded={open}
+-        aria-controls={open ? menuId : undefined}
+-        {...(compact ? { 'aria-label': 'Operations', title: 'Operations' } : {})}
+-        onClick={() => setOpen((value) => !value)}
+-        style={{
+-          display: 'inline-flex',
+-          alignItems: 'center',
+-          justifyContent: 'center',
+-          gap: 6,
+-          minHeight: 44,
+-          minWidth: 44,
+-          padding: compact ? 0 : '0 12px',
+-          borderRadius: 'var(--r-btn)',
+-          fontFamily: 'inherit',
+-          fontSize: 'var(--t-meta)',
+-          fontWeight: 600,
+-          whiteSpace: 'nowrap',
+-          cursor: 'pointer',
+-          ...triggerSkin,
+-        }}
+-      >
+-        {compact ? <Icon name="checklist" size={17} /> : <>Operations<Icon name="chevron_down" size={14} /></>}
+-      </button>
+-
+-      {open && (
+-        <div
+-          id={menuId}
+-          role="menu"
+-          aria-label="Operations"
+-          style={{
+-            position: 'absolute',
+-            zIndex: 'var(--z-dropdown)',
+-            top: 'calc(100% + 6px)',
+-            right: 0,
+-            minWidth: 220,
+-            padding: 5,
+-            background: 'var(--dropdown)',
+-            border: '1px solid var(--border)',
+-            borderRadius: 'var(--r-card)',
+-            boxShadow: 'var(--shadow-modal)',
+-          }}
+-        >
+-          {OPERATIONS.map(({ job, label, icon }) => {
+-            const opName = job.toLowerCase() as OperationName
+-            const roleAllowed = user ? canPerformOp(user.role, opName) : true
+-            const gate = bookingStatus ? stepWriteGate(job, bookingStatus) : null
+-            const reason =
+-              unavailable ??
+-              (!bookingNo
+-                ? 'Save and confirm this booking before starting operations.'
+-                : !roleAllowed
+-                  ? `Your role (${user?.role}) does not have permission to perform ${label}.`
+-                  : gate && !gate.allowed
+-                    ? gate.reason
+-                    : null)
+-            const disabled = reason !== null
+-
+-            return (
+-              <button
+-                key={job}
+-                type="button"
+-                role="menuitem"
+-                aria-disabled={disabled}
+-                aria-label={disabled && reason ? `${label}. Unavailable: ${reason}` : label}
+-                title={disabled && reason ? reason : undefined}
+-                className="press"
+-                onClick={() => {
+-                  if (disabled || !bookingNo) return
+-                  setOpen(false)
+-                  openOperations(bookingNo, bookingStatus!, job)
+-                }}
+-                style={{
+-                  display: 'flex',
+-                  alignItems: 'center',
+-                  gap: 'var(--sp-sm)',
+-                  width: '100%',
+-                  minHeight: 44,
+-                  padding: '0 10px',
+-                  borderRadius: 'var(--r-btn)',
+-                  border: 'none',
+-                  background: 'transparent',
+-                  color: disabled ? 'var(--muted)' : 'var(--text)',
+-                  fontFamily: 'inherit',
+-                  fontSize: 'var(--t-meta)',
+-                  fontWeight: 600,
+-                  textAlign: 'left',
+-                  cursor: disabled ? 'not-allowed' : 'pointer',
+-                  opacity: disabled ? 0.62 : 1,
+-                }}
+-              >
+-                <Icon name={icon} size={15} style={{ color: disabled ? 'var(--muted)' : 'var(--text2)' }} />
+-                {label}
+-              </button>
+-            )
+-          })}
+-        </div>
+-      )}
+-    </div>
+-  )
++  const choices = OPERATIONS.map(operation => {
++    const roleAllowed = user ? canPerformOp(user.role, operation.job.toLowerCase() as OperationName) : false
++    const gate = bookingStatus ? stepWriteGate(operation.job, bookingStatus) : null
++    const reason = unavailable ?? (!bookingNo ? 'Save and confirm this booking before starting operations.'
++      : !bookingStatus ? 'Booking status is still loading. Retry before starting operations.'
++      : !roleAllowed ? `Your role (${user?.role ?? 'not signed in'}) does not have permission to perform ${operation.label}.`
++      : gate && !gate.allowed ? gate.reason : null)
++    return { ...operation, reason }
++  })
++  const select = (job: JobName, reason: string | null) => {
++    if (reason || !bookingNo || !bookingStatus) return
++    selected.current = job
++    setOpen(false)
++  }
++  const afterOpenChange = (isOpen: boolean) => {
++    if (isOpen || !selected.current || !bookingNo || !bookingStatus) return
++    const job = selected.current
++    selected.current = null
++    // The next modal must remember the real opener, not a removed menu item.
++    triggerRef.current?.focus({ preventScroll: true })
++    openOperations(bookingNo, bookingStatus, job)
++  }
++  const trigger = <button ref={triggerRef} type="button" className={`booking-operations__trigger${primary ? ' booking-operations__trigger--primary' : ''}`} aria-label="Operations" title={compact ? 'Operations' : undefined}>
++    {compact ? <Icon name="checklist" size={18} /> : <>Operations<Icon name="chevron_down" size={15} /></>}
++  </button>
++  const content = (label: string, icon: IconName, reason: string | null) => <>
++    <Icon name={icon} size={19} />
++    <span className="booking-operations__copy"><span className="booking-operations__name">{label}</span>{reason && <span className="booking-operations__reason">{reason}</span>}</span>
++  </>
++  if (phone) return <Drawer position="bottom" open={open} onOpenChange={setOpen} onOpenChangeComplete={afterOpenChange}>
++    <DrawerTrigger render={trigger} />
++    <DrawerPopup finalFocus={() => selected.current ? false : triggerRef.current}>
++      <DrawerHeader><DrawerTitle>Operations</DrawerTitle><DrawerDescription>{bookingNo ? `Choose an operation for ${bookingNo}.` : 'Save the booking to start operations.'}</DrawerDescription></DrawerHeader>
++      <DrawerPanel>{choices.map(({ job, label, icon, reason }) => <button type="button" key={job} className="booking-operations__item" aria-disabled={reason !== null} title={reason ?? undefined} onClick={() => select(job, reason)}>{content(label, icon, reason)}</button>)}</DrawerPanel>
++    </DrawerPopup>
++  </Drawer>
++  return <Menu.Root open={open} onOpenChange={setOpen} onOpenChangeComplete={afterOpenChange}>
++    <Menu.Trigger render={trigger} />
++    <Menu.Portal><Menu.Positioner sideOffset={6} align="end" className="booking-operations__positioner">
++      <Menu.Popup aria-label="Operations" className="booking-operations__popup" finalFocus={() => selected.current ? false : triggerRef.current}>
++        {choices.map(({ job, label, icon, reason }) => <Menu.Item key={job} className="booking-operations__item" disabled={reason !== null} aria-label={reason ? `${label}. Unavailable: ${reason}` : label} title={reason ?? undefined} onClick={() => select(job, reason)}>{content(label, icon, reason)}</Menu.Item>)}
++      </Menu.Popup>
++    </Menu.Positioner></Menu.Portal>
++  </Menu.Root>
+ }
+diff --git a/src/modules/rentals/PackingWorkspace.tsx b/src/modules/rentals/PackingWorkspace.tsx
+index 4ba5363f..d0fc37bb 100644
+--- a/src/modules/rentals/PackingWorkspace.tsx
++++ b/src/modules/rentals/PackingWorkspace.tsx
+@@ -1334,7 +1334,7 @@ export default function PackingWorkspace({
+                       Pack job: {jobChip.label}
+                     </span>
+                   </div>
+-                  <p style={{ margin: '5px 0 0', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
++                  <div style={{ margin: '5px 0 0', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+                     <RentalIntelFromFloor floor={floor} context="packing" role={user?.role ?? 'Client'}>
+                       <Link to={`/rentals/${id}`} style={{ color: 'var(--link)', fontWeight: 600, textDecoration: 'none' }} className="identifier">
+                         {floor.bookingNo}
+@@ -1342,7 +1342,7 @@ export default function PackingWorkspace({
+                     </RentalIntelFromFloor>
+                     {floor.project ? ` · ${floor.project}` : ''}
+                     {floor.clientName ? ` · ${floor.clientName}` : ''}
+-                  </p>
++                  </div>
+                 </div>
+               )}
+ 
+diff --git a/src/modules/rentals/ReturnWorkspace.tsx b/src/modules/rentals/ReturnWorkspace.tsx
+index 98d4eb0f..45b90701 100644
+--- a/src/modules/rentals/ReturnWorkspace.tsx
++++ b/src/modules/rentals/ReturnWorkspace.tsx
+@@ -1183,7 +1183,7 @@ export default function ReturnWorkspace({
+       )
+       .then(() => {
+         clearFloorScan('return', floor.id)
+-        showSuccessToast('Return Completed', `Rental ${floor.bookingNo} returned successfully`)
++        showSuccessToast('Return session saved', `Received items recorded for ${floor.bookingNo}. Cleaning and QC tasks remain tracked separately.`)
+         if (onConfirmSuccess) {
+           onConfirmSuccess()
+         } else {
+@@ -1206,7 +1206,7 @@ export default function ReturnWorkspace({
+       dispatching,
+       complete: completeSession,
+       isDirty,
+-      label: 'Confirm & Next →',
++      label: 'Confirm Return session',
+       error: dispatchError,
+     })
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+diff --git a/src/modules/rentals/__tests__/BookingOperationsMenu.test.tsx b/src/modules/rentals/__tests__/BookingOperationsMenu.test.tsx
+index 7b6369ea..94f467b0 100644
+--- a/src/modules/rentals/__tests__/BookingOperationsMenu.test.tsx
++++ b/src/modules/rentals/__tests__/BookingOperationsMenu.test.tsx
+@@ -54,6 +54,7 @@ async function mount(bookingNo?: string, bookingStatus?: BookingStatus) {
+ async function openMenu() {
+   const trigger = [...container.querySelectorAll('button')].find((button) => button.textContent?.trim() === 'Operations')
+   await act(async () => trigger?.click())
++  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)) })
+ }
+ 
+ afterEach(async () => {
+@@ -64,11 +65,27 @@ afterEach(async () => {
+ })
+ 
+ describe('booking-level Operations dropdown', () => {
++  it('refuses all operations while the authoritative booking status is missing', async () => {
++    await mount('B-715'); await openMenu()
++    const items = [...document.querySelectorAll('[role="menuitem"]')]
++    expect(items).toHaveLength(4)
++    expect(items.every(item => item.getAttribute('aria-disabled') === 'true')).toBe(true)
++    expect(items[0]?.textContent).toContain('status is still loading')
++  })
++
++  it('returns keyboard focus to the trigger on Escape', async () => {
++    await mount('B-715', 'Booked'); await openMenu()
++    const popup = document.querySelector('[role="menu"]')
++    await act(async () => popup?.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape',bubbles:true})))
++    await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)) })
++    expect(document.querySelector('[role="menu"]')).toBeNull()
++    expect(document.activeElement?.getAttribute('aria-label')).toBe('Operations')
++  })
+   it('contains exactly the four specified operations', async () => {
+     await mount('B-715', 'Booked')
+     await openMenu()
+ 
+-    const labels = [...container.querySelectorAll('[role="menuitem"]')].map((item) => item.textContent?.trim())
++    const labels = [...document.querySelectorAll('[role="menuitem"]')].map((item) => item.querySelector('.booking-operations__name')?.textContent?.trim())
+     expect(labels).toEqual(['Packing', 'Handover', 'Return & Inspection', 'Cleaning & Reset'])
+   })
+ 
+@@ -76,20 +93,23 @@ describe('booking-level Operations dropdown', () => {
+     await mount('B-715', 'Booked')
+     await openMenu()
+ 
+-    const packing = [...container.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+-      (item) => item.textContent?.trim() === 'Packing',
++    const packing = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
++      (item) => item.querySelector('.booking-operations__name')?.textContent?.trim() === 'Packing',
+     )
+     await act(async () => packing?.click())
++    await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)) })
+ 
+     expect(path).toBe('/rentals/new')
+     expect(container.querySelector('[role="dialog"]')?.textContent).toContain('Operations · B-715')
++    await act(async () => container.querySelector<HTMLButtonElement>('[role="dialog"] button[aria-label="Close"]')?.click())
++    expect(document.activeElement?.getAttribute('aria-label')).toBe('Operations')
+   })
+ 
+   it('keeps all four choices visible but unavailable before a new booking is saved', async () => {
+     await mount()
+     await openMenu()
+ 
+-    const items = [...container.querySelectorAll('[role="menuitem"]')]
++    const items = [...document.querySelectorAll('[role="menuitem"]')]
+     expect(items).toHaveLength(4)
+     expect(items.every((item) => item.getAttribute('aria-disabled') === 'true')).toBe(true)
+     expect(items[0]?.getAttribute('title')).toContain('Save and confirm this booking')
+@@ -100,14 +120,14 @@ describe('booking-level Operations dropdown', () => {
+     await mount('B-715', 'Packed')
+     await openMenu()
+ 
+-    const handover = [...container.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+-      (item) => item.textContent?.trim() === 'Handover',
++    const handover = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
++      (item) => item.querySelector('.booking-operations__name')?.textContent?.trim() === 'Handover',
+     )
+     expect(handover?.getAttribute('aria-disabled')).toBe('true')
+     expect(handover?.getAttribute('title')).toContain('permission')
+ 
+-    const packing = [...container.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+-      (item) => item.textContent?.trim() === 'Packing',
++    const packing = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
++      (item) => item.querySelector('.booking-operations__name')?.textContent?.trim() === 'Packing',
+     )
+     // Packing is for stage Booked, so on stage Packed it reports completion, not role denial
+     expect(packing?.getAttribute('title')).not.toContain('permission')
+diff --git a/src/modules/rentals/booking-operations-menu.css b/src/modules/rentals/booking-operations-menu.css
+new file mode 100644
+index 00000000..bdd1e52a
+--- /dev/null
++++ b/src/modules/rentals/booking-operations-menu.css
+@@ -0,0 +1,12 @@
++.booking-operations__trigger { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:44px; min-width:44px; padding:0 12px; border:1px solid var(--btn-secondary-border); border-radius:var(--r-btn); background:var(--btn-secondary-bg); color:var(--text); font:inherit; font-size:var(--t-meta); font-weight:600; white-space:nowrap; cursor:pointer; }
++.booking-operations__trigger--primary { background:var(--btn-primary-bg); color:var(--btn-primary-fg); border-color:transparent; }
++.booking-operations__positioner { z-index:var(--z-dropdown); }
++.booking-operations__popup { width:320px; max-width:calc(100vw - 24px); padding:6px; background:var(--dropdown); color:var(--text); border:1px solid var(--border); border-radius:var(--r-card); box-shadow:var(--shadow-modal); outline:none; }
++.booking-operations__item { display:flex; align-items:flex-start; gap:12px; width:100%; min-height:44px; padding:12px; border:0; border-radius:var(--r-btn); background:transparent; color:var(--text); font:inherit; text-align:left; cursor:pointer; }
++.booking-operations__item svg { flex-shrink:0; margin-top:2px; }
++.booking-operations__copy { display:grid; gap:4px; min-width:0; }
++.booking-operations__name { font-size:var(--t-ui); font-weight:600; }
++.booking-operations__reason { color:var(--text2); font-size:var(--t-meta); line-height:1.35; }
++.booking-operations__item[data-disabled], .booking-operations__item[aria-disabled="true"] { cursor:default; }
++.booking-operations__item[data-highlighted], .booking-operations__item:focus-visible { outline:2px solid var(--focus-ring); outline-offset:-2px; background:var(--surface); }
++.booking-operations__trigger:focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; }

@@ -2372,7 +2372,9 @@ export default function Calendar() {
   const [catalogError, setCatalogError] = useState<string | null>(null)
 
   useEffect(() => {
+    let active = true
     listInventory({ withMoney: true }).then((res) => {
+      if (!active) return
       setCatalogProducts(
         res.rows.map((r) => ({
           id: r.id,
@@ -2382,8 +2384,12 @@ export default function Calendar() {
         }))
       )
     }).catch((err: unknown) => {
+      if (!active) return
       setCatalogError(err instanceof Error ? err.message : String(err))
     })
+    return () => {
+      active = false
+    }
   }, [])
   /*
    * ⛔ An `overlays` Set lived here, holding the three §5.1 layer names, driven

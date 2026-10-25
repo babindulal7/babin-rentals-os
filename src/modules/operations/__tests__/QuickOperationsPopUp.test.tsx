@@ -14,6 +14,7 @@ let mockDirty = false
 let mockBlocked: string | null = null
 let mockError: string | null = null
 const mockComplete = vi.fn()
+const mockFocusBlocker = vi.fn()
 
 interface MockProps {
   bookingNo?: string
@@ -34,6 +35,7 @@ function MockWorkspace({ bookingNo, onConfirmSuccess, onRegisterActions }: MockP
         onConfirmSuccess?.()
       },
       error: mockError,
+      focusBlocker: mockFocusBlocker,
     })
   }, [onConfirmSuccess, onRegisterActions])
 
@@ -95,10 +97,12 @@ vi.mock('../../../lib/device', async (orig) => ({
 }))
 
 let mockUserRole = 'Warehouse'
-vi.mock('../../../context/AuthContext', () => ({
+vi.mock('../../../lib/auth', () => ({
   useAuth: () => ({
     user: { id: 'u-1', name: 'Rabin Dulal', role: mockUserRole, branchId: 'br-main' },
     isAuthenticated: true,
+    loading: false,
+    isLocked: false,
   }),
 }))
 
@@ -256,18 +260,11 @@ describe('Quick Operations Pop-up UX (v1.2 Spec)', () => {
       expect(jumpBtn).not.toBeNull()
       expect(jumpBtn?.getAttribute('aria-label')).toContain('Jump to Client signature is required before handover')
 
-      const sigPad = container.querySelector<HTMLElement>('#handover-receiver-sig')
-      expect(sigPad).not.toBeNull()
-      const scrollSpy = vi.fn()
-      sigPad!.scrollIntoView = scrollSpy
-      const focusSpy = vi.spyOn(sigPad!, 'focus')
-
       await act(async () => {
         jumpBtn?.click()
       })
 
-      expect(scrollSpy).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' })
-      expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true })
+      expect(mockFocusBlocker).toHaveBeenCalledWith(expect.any(HTMLElement))
     })
 
     it('primary confirm button is disabled while blocker is present and enables when resolved', async () => {

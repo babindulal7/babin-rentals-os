@@ -26,8 +26,9 @@ select case p_kind
   when 'client' then
     case p_section
       when 'identity' then array['type_parent', 'org_subtype', 'name', 'pan_vat', 'business_registration', 'website']
-      when 'contact' then array['phone', 'email']
+      when 'contact' then array['phone', 'email', 'website']
       when 'address' then array['address_line', 'city', 'district', 'postal_code', 'country', 'billing_address']
+      when 'addresses' then array['address_line', 'city', 'district', 'postal_code', 'country', 'billing_address']
       when 'notes' then array['notes']
       when 'commercial' then array[]::text[]
       else null
@@ -35,7 +36,8 @@ select case p_kind
   when 'equipment' then
     case p_section
       when 'identity' then array['name', 'short_name', 'category_id', 'brand', 'model', 'manufacturer', 'description']
-      when 'location' then array['warehouse_id', 'rack', 'shelf', 'bin']
+      when 'location' then array[]::text[]
+      when 'stock' then array['quantity_unit', 'reorder_level']
       when 'relationships' then array[]::text[]
       when 'purchase' then array['purchase_date', 'purchase_price', 'replacement_value']
       when 'pricing' then array['daily_rate', 'weekly_rate', 'monthly_rate', 'hourly_rate', 'weekend_rate', 'deposit_percent', 'deposit_fixed', 'min_rental_days', 'rental_enabled']
@@ -44,8 +46,9 @@ select case p_kind
     end
   when 'bundle' then
     case p_section
-      when 'identity' then array['name', 'description', 'category_id']
+      when 'identity' then array['name', 'description', 'category_id', 'is_active']
       when 'rates' then array['daily_rate', 'weekly_rate']
+      when 'components' then array[]::text[]
       else null
     end
   else null
@@ -53,6 +56,15 @@ end;
 $$;
 revoke all on function record_editor_private.section_fields(text, text) from public, anon;
 grant execute on function record_editor_private.section_fields(text, text) to authenticated;
+
+-- The existing bundle action already edits is_active; expose the same field to
+-- the editor snapshot without widening the bundle.manage role boundary.
+create or replace function record_editor_private.fields(kind text) returns text[] language sql immutable as $$
+select case kind
+when 'client' then array['type_parent','org_subtype','name','phone','email','pan_vat','business_registration','website','address_line','city','district','postal_code','country','billing_address','notes']
+when 'equipment' then array['name','short_name','category_id','brand','model','manufacturer','description','reorder_level','quantity_unit','purchase_date','purchase_price','replacement_value','daily_rate','weekly_rate','monthly_rate','hourly_rate','weekend_rate','deposit_percent','deposit_fixed','min_rental_days','rental_enabled','prep_time_minutes','cleaning_time_minutes','inspection_required','packing_required','notes_internal','notes_warehouse']
+when 'bundle' then array['name','description','category_id','daily_rate','weekly_rate','is_active'] end;
+$$;
 
 -- 1. save_record_section RPC
 create or replace function public.save_record_section(
@@ -70,8 +82,6 @@ set search_path = public, pg_temp
 as $$
 declare
   tab text;
-  child_tab text;
-  fk text;
   allowed text[];
   child_allowed text[];
   existing jsonb;
@@ -81,7 +91,9 @@ declare
   patch jsonb;
   response jsonb;
   row_data jsonb;
-  child_id uuid;
+  merged_rows jsonb;
+  known_row jsonb;
+  editor_key uuid;
 begin
   -- Role authorization
   if auth.uid() is null or not coalesce(
@@ -96,7 +108,9 @@ begin
   if p_key is null then raise exception 'A save key is required.'; end if;
   if p_id is null then raise exception 'Record ID is required for section saving.'; end if;
   if p_revision is null then raise exception 'Expected revision is required for section saving.'; end if;
-  if jsonb_typeof(p_values) <> 'object' then raise exception 'Invalid section payload.'; end if;
+  if jsonb_typeof(p_values) is distinct from 'object' or jsonb_typeof(p_rows) is distinct from 'array' then
+    raise exception 'Invalid section payload.';
+  end if;
 
   request := jsonb_build_object('kind', p_kind, 'id', p_id, 'section', p_section, 'revision', p_revision, 'values', p_values, 'rows', p_rows);
   perform pg_advisory_xact_lock(hashtextextended(p_key::text, 0));
@@ -130,41 +144,42 @@ begin
     raise exception 'This record changed since you opened it. Reload the latest record before saving. Your changes have not been saved.' using errcode = '40001';
   end if;
 
-  patch := p_values;
-  if p_kind = 'client' then
-    if patch ? 'country' and patch->>'country' is null then patch := patch || '{"country":"Nepal"}'; end if;
-    if patch ? 'type_parent' and patch->>'type_parent' <> 'Organisation' then patch := patch || '{"org_subtype":null}'; end if;
-  end if;
-
-  if patch ? 'name' and nullif(btrim(patch->>'name'), '') is null then
-    raise exception 'Name is required.';
-  end if;
-
-  patch := patch || jsonb_build_object('updated_at', clock_timestamp());
-
-  -- Update parent table
-  begin
-    perform record_editor_private.write_row(tab, p_id, patch);
-  exception when unique_violation then
-    raise exception '%', case when p_kind = 'client' then 'A client with this phone number already exists. Open the existing client instead. Your changes have not been saved.' else 'A record with these details already exists. Your changes have not been saved.' end using errcode = '23505';
-  end;
-
-  -- Optional child row processing for sections that manage specific child rows
-  if p_kind = 'client' and p_section = 'contact' and jsonb_array_length(p_rows) > 0 then
-    child_allowed := array['full_name', 'designation', 'phone', 'email'];
+  -- RULING 2026-10-24: a section changes only its own allowlisted fields/rows.
+  -- Reuse the existing transactional editor for location/custody validation,
+  -- contact deactivation and bundle component history, retaining all other rows.
+  merged_rows := current_snapshot->'rows';
+  if (p_kind = 'client' and p_section = 'contact') or
+     (p_kind = 'bundle' and p_section = 'components') then
+    merged_rows := p_rows;
+  elsif p_kind = 'equipment' and p_section = 'location' then
+    child_allowed := array['id', 'warehouse_id', 'rack', 'shelf', 'bin'];
+    if exists (
+      select 1 from jsonb_array_elements(p_rows) row_value
+      where jsonb_typeof(row_value) is distinct from 'object'
+         or nullif(row_value->>'id', '') is null
+    ) then raise exception 'Location changes require existing unit IDs.'; end if;
+    if (select count(*) from jsonb_array_elements(p_rows)) <>
+       (select count(distinct row_value->>'id') from jsonb_array_elements(p_rows) row_value) then
+      raise exception 'A unit may appear only once in a location change.';
+    end if;
     for row_data in select value from jsonb_array_elements(p_rows) loop
-      child_id := (row_data->>'id')::uuid;
-      if child_id is not null then
-        execute 'select to_jsonb(t) from public.client_contacts t where id = $1 and client_id = $2' into existing using child_id, p_id;
-        if existing is null then raise exception 'Contact does not belong to this client.'; end if;
-        perform record_editor_private.write_row('client_contacts', child_id, record_editor_private.pick(row_data, child_allowed));
-      else
-        perform record_editor_private.write_row('client_contacts', null, record_editor_private.pick(row_data, child_allowed) || jsonb_build_object('client_id', p_id, 'is_primary', true, 'client_uuid', gen_random_uuid(), 'created_by', auth.uid()));
+      if exists (select 1 from jsonb_object_keys(row_data) k where not (k = any(child_allowed))) then
+        raise exception 'Only unit location fields may be edited in this section.';
       end if;
+      select value into known_row from jsonb_array_elements(merged_rows)
+        where value->>'id' = row_data->>'id';
+      if known_row is null then raise exception 'This unit does not belong to the equipment record.'; end if;
+      select jsonb_agg(case when value->>'id' = row_data->>'id' then value || row_data else value end order by ordinal)
+        into merged_rows from jsonb_array_elements(merged_rows) with ordinality as units(value, ordinal);
     end loop;
+  elsif jsonb_array_length(p_rows) <> 0 then
+    raise exception 'Child rows cannot be edited in section %.', p_section;
   end if;
 
-  response := record_editor_private.read_snapshot(p_kind, p_id::text);
+  -- The inner key is deterministic, so even ambiguous-response retries cannot
+  -- duplicate a write. Both receipts and the section audit commit atomically.
+  editor_key := md5(p_key::text || ':record-section-editor')::uuid;
+  response := public.save_record_editor(p_kind, p_id, p_revision, editor_key, p_values, merged_rows);
   insert into audit_events(client_uuid, event_class, category, module, action, severity, status, table_name, record_id, actor_id, actor_role, new_values)
   values(p_key, 'status change', (case when p_kind = 'client' then 'Administration' else 'Inventory' end)::audit_category, (case when p_kind = 'client' then 'Clients' else 'Inventory' end)::audit_module, 'Update', 'Informational', 'Success', tab, p_id, auth.uid(), auth_user_role(), jsonb_build_object('section', p_section, 'revision', response->>'revision'));
 
@@ -346,26 +361,30 @@ begin
     raise exception 'GATE:unit.retire.active_status|Unit % is currently in % state and cannot be retired safely. Resolve active operational holds first.', v_unit.asset_tag, v_unit.status;
   end if;
 
-  if exists (select 1 from public.inventory_reservations where unit_id = p_unit_id and status = 'active') then
+  if exists (select 1 from public.inventory_reservations where asset_id = p_unit_id and released_at is null) then
     raise exception 'GATE:unit.retire.active_reservation|Unit % has an active booking reservation and cannot be retired.', v_unit.asset_tag;
   end if;
 
   if exists (
-    select 1 from public.booking_lines bl
+    select 1 from public.booking_line_units blu
+    join public.booking_lines bl on bl.id = blu.booking_line_id
     join public.bookings b on b.id = bl.booking_id
-    where bl.unit_id = p_unit_id and b.stage in ('Booked', 'Packed', 'On Rent')
+    where blu.asset_id = p_unit_id
+      and blu.released_at is null
+      and b.stage in ('Booked', 'Packed', 'On Rent')
   ) then
     raise exception 'GATE:unit.retire.active_booking|Unit % is assigned to an active booking and cannot be retired.', v_unit.asset_tag;
   end if;
 
   -- Apply soft retirement
   update public.product_units
-     set status = 'Retired',
-         retired_at = clock_timestamp(),
+     set retired_at = clock_timestamp(),
          retired_by = auth.uid(),
          retirement_reason = btrim(p_reason),
          updated_at = clock_timestamp()
    where id = p_unit_id;
+
+  perform public.recompute_unit_status(p_unit_id);
 
   -- Synchronize total_quantity
   select count(*) into v_total from public.product_units where product_id = v_unit.product_id and status <> 'Retired';
@@ -381,7 +400,7 @@ begin
   );
 
   insert into audit_events(client_uuid, event_class, category, module, action, severity, status, table_name, record_id, actor_id, actor_role, new_values)
-  values(p_key, 'status change', 'Inventory'::audit_category, 'Inventory'::audit_module, 'Retire', 'Warning', 'Success', 'product_units', p_unit_id, auth.uid(), auth_user_role(), v_response);
+  values(p_key, 'status change', 'Inventory'::audit_category, 'Inventory'::audit_module, 'Update', 'Medium', 'Success', 'product_units', p_unit_id, auth.uid(), auth_user_role(), v_response);
 
   insert into record_editor_private.receipts(key, actor, request, response) values(p_key, auth.uid(), v_request, v_response);
   return v_response;
@@ -445,8 +464,7 @@ begin
 
   if v_existing_id is not null then
     update public.client_memberships
-       set superseded_at = clock_timestamp(),
-           superseded_by_id = v_new_id
+       set superseded_at = clock_timestamp()
      where id = v_existing_id;
   end if;
 
@@ -468,6 +486,12 @@ begin
     auth.uid()
   );
 
+  if v_existing_id is not null then
+    update public.client_memberships
+       set superseded_by_id = v_new_id
+     where id = v_existing_id;
+  end if;
+
   v_response := jsonb_build_object(
     'id', v_new_id,
     'client_id', p_client_id,
@@ -480,7 +504,7 @@ begin
   );
 
   insert into audit_events(client_uuid, event_class, category, module, action, severity, status, table_name, record_id, actor_id, actor_role, new_values)
-  values(p_key, 'status change', 'Clients'::audit_category, 'Clients'::audit_module, 'EnrollMembership', 'Informational', 'Success', 'client_memberships', v_new_id, auth.uid(), auth_user_role(), v_response);
+  values(p_key, 'status change', 'Administration'::audit_category, 'Clients'::audit_module, 'Create', 'Informational', 'Success', 'client_memberships', v_new_id, auth.uid(), auth_user_role(), v_response);
 
   insert into record_editor_private.receipts(key, actor, request, response) values(p_key, auth.uid(), v_request, v_response);
   return v_response;

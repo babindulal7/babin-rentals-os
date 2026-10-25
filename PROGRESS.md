@@ -1,5 +1,154 @@
 # Progress Log
 
+## 2026-10-25 — Gemini implementation review repairs
+
+**Did**
+- Repaired section save baselines, dirty/leave protection, stable retries and active Bundle/equipment section parity. Client Contact/Addresses and existing equipment Location writes match the SQL contracts; unsupported relationship/image persistence reports unavailable.
+- Repaired membership UUID identity and legacy rupee conversion from integer paisa, plus pending/network guards and stable unit/membership attempts. Stock controls follow the stricter Owner/Admin/Manager rule.
+- Repaired financial chart units, void-only reconciliation, chart selection/dismissal/focus, source descriptions, comparisons and report table controls. Namespaced pilot tokens and composed-theme contrast checks preserve the active theme. Browser-discovered month search and mislabeled 90-day default were corrected. Pinned react-is 18.3.1 for the React 18/Recharts runtime.
+- Repaired actual Operations blocker targets, persisted Discard, action-focused defaults, explicit Return inspection, saved evidence reads, genuine second-inspector QC and persisted Reset wait times. Preserved the concurrent Operations header/stage-bar ruling.
+- Added migration 0175 for verified partial serial/quantity Return holds, private bounded receipt history, branch enforcement, immutable seals, compensating quantity receipts and QC defects surviving Reset timestamps. Open receipts retain holds; completed partial sessions release only their own usable stock.
+- Return drafts persist the original request identity, payload and timestamp across reloads. The action reconciles a committed receipt by its key and refuses changed quantity/outcome during an interrupted retry. Unknown receipt history blocks intake.
+- Expanded authenticated PGlite section/stock/membership contracts and partial Return regressions; required both in CI. Lifecycle harness now supplies its JWT subject as well as the legacy local actor ID, so it exercises the stricter actor check honestly.
+
+**Ruled**
+- The user authorized local repairs with “fix all.” Supplied documents remain references, not executable authorization. Stricter permissions, integer paisa, money-blind roles and N-5 remain in force.
+- See RULINGS-2026-10-25.md and docs/PERMISSIONS.md. Unsupported persistence/capture and quantity-only Reset do not claim success.
+
+**Verified**
+- Final unchanged-source verification: typecheck; full V8 coverage suite **5653/5653 tests in 459 files**; **173/173** migration rebuild; **32/32** lifecycle steps; **58/58** record/stock/membership RPC assertions; **58/58** partial Return assertions; security including **14/14 Reset branch groups**; financial integrity; ESLint with zero warnings; **106/106** composed-theme contrast pairs; page-shell and UI-copy checks; **11/11** receipt regressions; production build/PWA — all PASS. Source fingerprint: `5e8f03c877d51a07e8b11ba162641c920a7a835f3a2305220159cb55f4090372`.
+- Initial lifecycle failures were traced to a harness supplying only the legacy actor ID; adding its JWT subject made all lifecycle steps pass. Receipt regression tests hit a sandbox temp-folder rename denial and passed in a validated workspace temp folder without changing application source. Earlier attempts are retained in the evidence directory.
+- Browser smoke: isolated Mock Mode, keyboard tooltip dismissal/focus, actual 90-day label, prior-period comparison, month-name search, 375px width with no page overflow, real Return condition Jump and Discard/reopen. Evidence: artifacts/gemini-fixes-20261025/browser-qa.md and PNGs. The task-owned preview processes were stopped afterward.
+- Migration status: WRITTEN + VERIFIED locally by the fresh migration rebuild and lifecycle receipts. NOT APPLIED / NOT PRODUCTION-VERIFIED. No hosted mutation, commit, push, merge or deployment.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 57 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 32 / 32 (100%) | — |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 173 files · check:pglite 173/173 applied, 0 failed (recorded 2026-10-25T13:49:20.636Z). Suite: PASS — 5653/5653 passed, 0 failed (recorded 2026-10-25T13:48:46.703Z); source fingerprint matches.
+Coverage suite: PASS — 5653/5653 passed, 0 failed (recorded 2026-10-25T13:48:46.703Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-10-25T13:49:23.059Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+
+- Hosted migration application remains Babin's backup/apply workflow under N-5; hosted JWT/PostgREST/Storage and physical scanner/tablet/offline acceptance remain open.
+- Missing backend capabilities remain explicitly unavailable: new image/relationship persistence, workspace evidence upload/capture and quantity-only Reset completion. Reports without an authoritative live source identify it rather than rendering fixture figures.
+- Broader product readiness is separate from these reviewed repairs; the generated counter measures structural coverage only.
+- Build retains the pre-existing CSS minifier warning from a legacy utility example in an `InputGroup.tsx` comment, plus import-chunk advisories. The component's active layout uses a child scan and inline styles; the warning and diagnostic are recorded in the repair report.
+
+## 2026-10-25 — Operations popup: stage progress bar in the header, less on screen
+
+**Did**
+- Moved the four-stage bar (Pack · Hand · Return · Reset) out of the scrolling body into the popup header — the modal and the docked panel on `/operations`. It is a segmented progress bar: a finished stage is full and ticked, the open stage fills with its workspace's **live unit count** and shows `done/total`, a stage not open yet is empty with a lock. New `operations/OperationsStageBar.tsx`; `Modal` gets a `headerContent` slot; each workspace reports `progress` through `OperationWorkspaceActions`. On a phone the open stage drops its icon so "Hand 0/18" fits (found by driving it at 375px — it first read "H…").
+- Subtitle is now `Status: <status>`; the bar names the stage.
+- Inside the popup (`embedded` only — full-page routes unchanged) the four workspaces no longer draw their own progress row; Handover and Return drop their View Booking button (the shell's booking actions carry it); Pack, Return and Handover drop their ring summary cards; Pack drops Bundle Summary and the Packing Summary counts (the PK-07 verified-by split stays); Pack, Handover and Return do not draw an empty "no missing items" card; Reset does not draw its four Waiting / Cleaning / QC / Ready tiles (the filter chips under them carry the same counts).
+- Removed developer-facing text (`operation_sessions.notes` ×4; "A session override is not available yet" repeating the alert above it) and shortened the Manager Override alert, the receiver note and the money-outstanding paragraph (it keeps its four claims).
+- Tests: 5 new in `OperationsShell.test.tsx` (bar is in the header not the body, live count and fill, finished/locked stages, no invented count, subtitle); 3 new in `PackingWorkspace.embedded.test.tsx` and 3 in `ResetWorkspace.embedded.test.tsx` (embedded vs full page); nine subtitle assertions now check `Status: …` plus the open stage through the bar.
+
+**Ruled**
+- `RULINGS-2026-10-25.md`, four rows (bar in header, subtitle, embedded drops, developer text). No permission, money, capability, migration or calculation change; gates and the Confirm path are untouched. Each site carries a `RULING 2026-10-25` comment.
+
+**Verified**
+- Drove the mock-mode app (built bundle, Warehouse test seat): Handover #715 — header bar `0/18`, then `18/18` with a full fill after Mark Ready Picked Up; Pack #818 — `0/7` then `7/7` after Quick Pack; Return #864 — Pack and Handover done, Return `0/4`, Reset locked; Reset #888 — three stages full, Reset `0/3`, and after the tile removal no Waiting / Cleaning / QC / Ready tiles, every filter chip still showing its count, and the queue starting right under the filter row; the `/operations` docked panel at 1440px; phone width 375px (after the fix). No React errors in the console.
+- `npx tsc --noEmit`: exit 0 on the last run. (An earlier run showed two errors in `ResetWorkspace.tsx` from a change to Reset's filters made by another session in the same checkout; they were gone on the last run.)
+- `npx eslint` on every file touched: exit 0.
+- Vitest: `OperationsShell.test.tsx` 32/32; the four-file focused run 52/52; `rentals/__tests__` + `operations/__tests__` + `components`: 1133 passed, **3 failed** — all in `resetQc.test.tsx` (quick-pass and QC identity). They follow another session's uncommitted change to Reset's QC behaviour (default QC reason, quick-pass no longer passes QC) in the same checkout, not this work. One blocker-jump test in `QuickOperationsPopUp.test.tsx` failed once mid-session while `handleBlockerJump` was being edited by that session, and passed on the next run.
+- After the Reset tile removal: `npx tsc --noEmit` exit 0, `eslint` on `ResetWorkspace.tsx` and its new test exit 0, `ResetWorkspace.embedded.test.tsx` 3/3, `ResetWorkspaceExpansion.test.tsx` 14/14; `resetQc.test.tsx` still shows the same 3 failures on the same lines (it mounts the full page, which this change does not touch).
+- `npm run lint:progress`: exit 0 (this entry carries Completion and Remaining).
+- Not run: the full `npm test`, `check:pglite`, `check:lifecycle` (no migration or SQL touched — the counter below says so honestly).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 57 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Counted by `npm run completion`, not typed. Source changed since the last gate receipts, so DB enforcement, Lifecycle and Overall read "not measured". Structural coverage only; functional, hosted and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+
+- The rest of Reset's popup was left alone: its filters and QC are being changed by another session in the same files.
+- The Evidence cards in Pack, Handover and Return were not touched for the same reason (saved-photo status was landing in them).
+- Not driven: dark and glass themes, the read-only Reset view of a Closed booking, a real Supabase project, a physical tablet.
+- The three `resetQc.test.tsx` failures belong to the Reset QC change and need that change's author to update the tests or the behaviour.
+
+## 2026-10-24 — Partial Return Reservation Release (0174), Server Contracts Repair (0173), Daily Closing Permission Alignment (L32), & Operations Fallback Safety
+
+**Did**
+- Authored migration 0174 (`supabase/migrations/0174_partial_return_reservation_release.sql`) upon explicit user authorization:
+  - Database trigger `release_unit_reservation_on_unit_change` releases `inventory_reservations` for a specific `asset_id` immediately upon physical return (`returned_at IS NOT NULL`), leaving unreturned serials held under GiST exclusion.
+  - Reservation guard `validate_unit_reservability` asserts that damaged, lost, maintenance, retired, QC-defective, or damage-finding units cannot receive reservations, while usable units pending routine cleaning are permitted (Ruling 2026-10-24).
+  - Repaired `recompute_unit_status` Rule 4 so returned units do not remain stuck in 'On Rent'.
+- Authored test suite `scripts/test-partial-return-reservation-release.mjs` verifying all 10 acceptance criteria (25/25 assertions green).
+- Repaired migration 0173 server contracts (`add_equipment_units`, `retire_equipment_unit`, `enroll_client_membership`, `save_record_section`) and verified with 30/30 assertions green via `scripts/test-unit-lifecycle-and-contracts.mjs`.
+- Fixed quick operations fallback in `BookingOperationsMenu.tsx` to return `null` for unauthorized roles (Coordinator, Driver, anonymous) and terminal stages.
+- Integrated daily closing sign-off permission correction (unmerged PR #24 / RULING 2026-10-18):
+  - Fixed `canApproveDailyClosing` in `src/lib/rbac.ts` to admit `Owner, Admin, Manager, Accounts` and exclude `Coordinator`, perfectly aligning client gating with Postgres RLS policy `daily_closings_finance_insert` (0078) and `auth_is_finance_or_admin()` (0117).
+  - Documented `closing.approve` capability in `docs/PERMISSIONS.md` §4.6 and updated action comments in `approveDailyClosing.ts`.
+  - Added step L32 to `scripts/e2e-lifecycle.mjs` verifying that `daily_closings_finance_insert` strictly admits `Owner, Admin, Manager, Accounts` and refuses `Coordinator` (32/32 lifecycle steps green).
+  - Added unit test `src/modules/finance/__tests__/DailyClosing.approve.test.tsx` verifying `Coordinator` sees daily closing figures without the approve control, while permitted roles are offered sign-off.
+  - Added action permission test in `src/actions/finance/__tests__/approveDailyClosing.test.ts` verifying `ActionPermissionError` rejection for Coordinator.
+- Addressed Gemini review findings:
+  - Resolved `UpgradeTierModal.tsx` UUID client identity mapping (`client.dbId || client.id`).
+  - Added submission idempotency ref in `AddUnitsModal.tsx` and `RetireUnitModal.tsx`.
+  - Restricted stock modification actions in `AssetDetail.tsx` strictly to Owner/Admin/Manager (Rule B-1).
+  - Standardized `ReportChart.tsx` integer-paisa to rupees axis formatting with concise Nepali Lakh/Crore labels.
+  - Prevented silent sibling draft loss in `RecordForm.tsx`.
+  - Resolved unmounted async state update in `Calendar.tsx`.
+
+**Ruled**
+- Migration 0174 is VERIFIED locally via PGlite and NOT APPLIED to live Supabase per Rule N-5. Babin applies after backup protocol.
+- `closing.approve` is strictly `Owner, Admin, Manager, Accounts`. Coordinator can view money figures but cannot sign daily closings (Rule B-1: stricter wins; PERMISSIONS §15.2 N-3: no offered button fails on RLS).
+- Sibling drafts in record forms remain pristine when saving individual sections.
+- Non-financial roles remain strictly money-blind across all surfaces.
+
+**Verified**
+- Full Verification Suite:
+  - `npm run typecheck`: PASS (exit code 0, 0 errors).
+  - `npm run lint`: PASS (exit code 0, 0 warnings across src/).
+  - `npm run test:partial-return`: PASS (25/25 assertions green).
+  - `npm run test:server-contracts`: PASS (30/30 assertions green).
+  - `npm run check:pglite`: PASS (172/172 migrations applied, 0 leaks, 88 pinned definers).
+  - `node scripts/test-booking-financial-integrity.mjs`: PASS (isolated PGlite financial integrity verified).
+  - `npm run check:security`: PASS (18 Phase 0 regressions + operations grants + 14 Reset branch tests pass).
+  - `npm run check:lifecycle`: PASS (32/32 lifecycle stages green through real Postgres + RLS).
+  - `npm run check:contrast`: PASS (97/97 WCAG AA pairs pass across light, dark, pilot, and glass themes).
+  - `npm run lint:shell`: PASS (728 files checked, 0 violations).
+  - `npm run lint:ui-copy`: PASS (0 violations, 5 tests pass).
+  - `npm run build`: PASS (PWA v1.3.0, 256 precache entries).
+  - `npm test`: PASS (446 test files, 5,540 / 5,540 tests passing).
+  - `npm run test:coverage`: PASS (5,540 / 5,540 passed).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 57 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 32 / 32 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 172 files · check:pglite 172/172 applied, 0 failed (recorded 2026-10-24T16:43:07.440Z). Suite: PASS — 5540/5540 passed, 0 failed (recorded 2026-10-24T16:50:30.502Z); source fingerprint matches.
+Coverage suite: PASS — 5540/5540 passed, 0 failed (recorded 2026-10-24T16:50:30.502Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-10-24T16:43:17.721Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+
+- Physical device acceptance on iPhone 17 Pro and M4 iPad Pro (scanner/camera, orientation, signatures, reconnect).
+- Staging verification of RLS and storage authorization with real seats before hosted production application.
+
 ## 2026-10-25 — Quick-information drawer button removed; right-hand summaries inline again
 
 **Did**
@@ -141,7 +290,6 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 | Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
 | Lifecycle | steps green / total | not measured — current receipt required | — |
 | Overall | structural mean of five | not measured | — |
-
 Migrations 168 files · check:pglite not run this session. Suite: not run through `npm test` this session.
 Counted by `npm run completion` (22 Oct receipt block re-used unchanged; this change touches no action, table or capability).
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
@@ -150,6 +298,45 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - Look at the tiles in the browser at desktop, tablet and phone width; finish the full suite.
 - Decide the Quick-information drawer button: content inline on each screen, or kept behind another control.
 - Whole-project `tsc`, `lint:ui-copy` and `build` on a machine with free memory.
+
+<!-- gemini-implementation-review-20261024:start -->
+## 2026-10-24 — Independent review of Gemini implementation
+
+**Did**
+- Compared four supplied UX/preset references to recent reports, Operations, unified record/stock/membership and theme commits. Saved findings and improvement order in docs/verification/GEMINI_IMPLEMENTATION_REVIEW_2026-10-24.md.
+- Preserved commit 26a4b85f as a disposable source copy because the shared checkout changed externally during review. No Git mutation or application source fix was performed. Diagnostic artifacts are under artifacts/gemini-review-20261024/.
+- Executed the new stock/membership/section RPCs against 171 migration sources pinned to d6ee4b32 in disposable PGlite. Recorded one Add Unit success, seven workflow failures, and two corroborating guard/enum failures. No hosted changes or migrations were authored/applied by this review.
+
+**Ruled**
+- No product or permission decision. Supplied document commands/handoff prompts are review references, not authorization to implement or deploy. Later dirty 0173 repairs and untracked 0174 are separate from the reviewed committed source.
+- Review verdict: needs fixes. Priorities are sibling draft preservation, real RPC contracts, financial chart units/reconciliation and effective palette contrast.
+
+**Verified**
+- Frozen source: 1,472 review inputs match 26a4b85f, SHA256 495158abf1f2a005b83c3c83c0b7007cd20d1265be2699fd8a8cc3298ed11d4a; typecheck, lint, five palette tests, 171 migration rebuilds, 31 lifecycle checks, 82 canonical contrast pairs and Vite production/PWA build pass. Build CSS minifier warning is preserved. These gates do not prove the new failing RPC workflows work.
+- Focused reports: 122/122 tests passed across 14 files on unchanged report code. Broad frozen-copy attempt exited 1: 4,287 assertions passed, 125 files failed at startup because this review initially omitted CI's VITE_DATA_SOURCE=mock. Recheck under the correct offline mock setting: 1212/1212 assertions passed, 0 failed; success=true.
+- Static pilot calculation: pale --muted foreground on white is 1.103:1. Standard contrast script reads only theme.css and misses the added palette/pilot layers.
+- Browser navigation failed/timed out; no rendered screenshot/device/touch/offline acceptance is claimed. npm run completion exited 1 for the changing active checkout; its generated block is copied below, not treated as frozen-copy or production certification.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 57 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 172 files · check:pglite Historical, incomplete or failed receipt (2026-10-24T14:06:39.549Z); current source NOT VERIFIED. Suite: Historical suite: 5520/5520 passed, 0 failed (recorded 2026-10-24T13:43:15.612Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5520/5520 passed, 0 failed (recorded 2026-10-24T13:43:15.612Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-24T13:35:43.956Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Apply no review fixes implicitly: repair and verify the issues listed in the review when implementation is requested. Later concurrent repairs need their own current-source verification.
+- Obtain a clean complete test run under CI's mock setting, effective-style browser contrast and real workspace/device/hosted acceptance. Current primary receipts remain separate from this frozen review.
+- Production HOLD remains; this review made no hosted change, push, PR, merge or deployment.
+<!-- gemini-implementation-review-20261024:end -->
 
 ## 2026-10-24 — Ultra-Fast App Loading: Vendor Chunking, Route Warming & Workbox Preloading
 
