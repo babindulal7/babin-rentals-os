@@ -48,7 +48,7 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - No ruling. Pointer and label corrections only: no behaviour, permission, money, capability or migration change. Nothing applied to any Supabase project (N-5).
 
 **Verified**
-- Docs-only diff; no source, SQL or test file touched. `node scripts/lint-progress.mjs` run after the edit: exit 0. Typecheck, test suite, migration rebuild, lifecycle and build were NOT run — nothing they cover changed (docs-only diff). Re-checked by reading: the 0175/0176/0177 filenames in `supabase/migrations/`, the `data-theme` default in `index.html`, and the default in `src/lib/theme.tsx`.
+- Docs-only diff; no source, SQL or test file touched. `node scripts/lint-progress.mjs` run after the edit: exit 0. Run afterwards on `main` at `34cce2dc` (26 Oct, local): `npm run typecheck` exit 0; `npm run lint` exit 0; `npm test` (full vitest suite, ~25 min) **FAILED — 8 of 5,739 tests, 2 of 463 files**: 7 in `src/modules/operations/__tests__/realWorkspaceGuidance.test.tsx` (missing DOM such as `[aria-label="Filter reset queue"]`, empty body where "Restored in-progress return session" is expected) and 1 in `src/__tests__/e2e/tier1-features.test.tsx` (Finance dashboard KPIs, ~32 s alone). Re-running those two files alone: 21/21 pass. Reads as load-related flakiness, not proven. Migration rebuild, pglite, lifecycle and build were NOT run. Re-checked by reading: the 0175/0176/0177 filenames in `supabase/migrations/`, the `data-theme` default in `index.html`, and the default in `src/lib/theme.tsx`.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -68,7 +68,7 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 ### Remaining
 - `PLAN.md` is missing: restore it from wherever Babin keeps it (README still cites `PLAN.md §0`, `§4.0b`, `§4.26`, `§4.38a`). Until then those references point at nothing.
 - `docs/UI_UX_RULES.md` section numbering jumps from §5 to §11; left as is because other files cite §11/§12.
-- Completion block was produced by `npm run completion` but gates were not re-run: the receipts on disk are historical and show 1–2 failing tests (5738/5739 suite, 5737/5739 coverage) from earlier on 25 Oct. Next session that touches code should run `npm run check:pglite`, `npm run check:lifecycle` and the suite first, and find which test fails.
+- Completion block was produced by `npm run completion` but gates were not re-run: the receipts on disk are historical and show 1–2 failing tests (5738/5739 suite, 5737/5739 coverage) from earlier on 25 Oct. A full run on 26 Oct reproduced 8 failures that pass in isolation (see Verified): decide whether to raise the timeout / serialise `realWorkspaceGuidance.test.tsx` and the Finance dashboard test, or find the load-dependent cause. `npm run check:pglite` and `npm run check:lifecycle` still need a current run.
 
 ## 2026-10-25 — Gemini implementation review repairs
 
