@@ -2021,7 +2021,7 @@ export default function HandoverWorkspace({
                       <span style={{ flex: 1, color: 'var(--text2)' }}>Booking photo — required before completion</span>
                     </div>
                     {/* RULING 2026-10-25: the paragraph and the count that restated this row are gone. */}
-                    <OperationEvidenceStatus id="handover-evidence" status={savedEvidence} />
+                    <OperationEvidenceStatus id="handover-evidence" status={savedEvidence} bookingId={floor?.id} stage="Pickup" category="Inspection" />
                   </div>
 
                   {/* §9.2 Signatures — captured at session close, never before.

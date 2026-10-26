@@ -1,6 +1,6 @@
 # Babin Rentals OS
 
-> **Current status (14 Oct 2026):** Source and GitHub CI exist, but the application has **not been released or verified against live Supabase**. This README contains a historical **16 August** capability snapshot; do not use its counts or stub claims to describe the current build. Read [the October live security audit](docs/release/2026-10-14/LIVE_SECURITY_AUDIT.md), [October blocker register](docs/release/2026-10-13/BLOCKERS.md) and [deployment runbook](DEPLOYMENT.md) before making release decisions. A proposed security migration remains **unapplied live**.
+> **Current status (26 Oct 2026):** Active build on the road to go-live by 1 Feb 2027. Full roadmap is in [`PLAN.md`](PLAN.md); verified gate measurements are in [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md); rulings are in [`RULINGS-2026-10-26.md`](RULINGS-2026-10-26.md). Live release is on HOLD pending backup and staging rehearsal (Rule N-5).
 
 React 18 · TypeScript · Vite · Tailwind v4 · Supabase
 
@@ -8,33 +8,10 @@ React 18 · TypeScript · Vite · Tailwind v4 · Supabase
 Start with `00 Getting Started/Foundation Specification.md`. Where anything disagrees with
 Foundation, Foundation wins.
 
----
-
-## Status
-
-*Rewritten 16 Aug 2026. This said "Schema first — this scaffold exists so the database work
-has somewhere to land", which had stopped being true by a wide margin.*
-
-**A 54-route application on a live Postgres schema, with a partly-connected data layer.**
-
-| | State, measured 16 Aug 2026 |
-|---|---|
-| Schema | 121 tables, 62 migrations, RLS on 121/121, 231 policies, 36 triggers — applied to the live project |
-| Data | Real: 121 bookings · 419 booking lines · 76 clients · 126 products · 120 invoices · 93 payments |
-| Screens | 52 of 52 routes driven in a browser; all render |
-| Gates | `tsc --noEmit` exit 0 · `vitest run` 1,982 passed / 78 files · `vite build` exit 0 |
-| Auth | Real Supabase Auth — sign-in, session, and password reset by email |
-
-**What green does not mean.** 1,982 passing tests coexist with roughly two dozen unbuilt
-actions, because the untested surface is exactly the unbuilt surface. `createRental` and
-`saveDraft` are still stubs, so a booking cannot be created in the app; Booking Detail still
-renders one seeded record for every booking number, though it now says so on screen. Green
-means "what exists is correct", not "the system works".
-
 **Where the truth lives:** Start with [`docs/00_READ_FIRST.md`](docs/00_READ_FIRST.md) for governance, [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md) for verified status, [`PLAN.md`](PLAN.md) (laws, build order, open decisions), and [`PROGRESS.md`](PROGRESS.md) (what changed and how it was verified, newest first). Every other document in this repo is dated; `docs/DOC_MIGRATION_MAP.md` records classifications.
 
 ```
-supabase/migrations/   ← the schema — 62 files, 0001–0062 (0062 written, deliberately unapplied)
+supabase/migrations/   ← the schema (applied through 0164 live; 0165–0177 verified locally)
 src/lib/supabase.ts    ← anon key only, RLS is the enforcement layer
 src/styles/theme.css   ← the token layer
 src/actions/           ← the write layer; a stub refuses rather than faking success
@@ -156,7 +133,21 @@ that.
 
 ---
 
-## ⚠ Token drift — needs a decision before the UI port
+## Historical archive (16 Aug 2026)
+
+### Status snapshot (16 Aug 2026)
+
+*This snapshot is kept for historical context; do not use its counts or stub claims to describe the current build.*
+
+| | State, measured 16 Aug 2026 |
+|---|---|
+| Schema | 121 tables, 62 migrations, RLS on 121/121, 231 policies, 36 triggers — applied to the live project |
+| Data | Real: 121 bookings · 419 booking lines · 76 clients · 126 products · 120 invoices · 93 payments |
+| Screens | 52 of 52 routes driven in a browser; all render |
+| Gates | `tsc --noEmit` exit 0 · `vitest run` 1,982 passed / 78 files · `vite build` exit 0 |
+| Auth | Real Supabase Auth — sign-in, session, and password reset by email |
+
+### ⚠ Token drift (historical analysis)
 
 `src/index.css` was ported **verbatim** from the capsule build rather than "corrected",
 because the standing instruction is to match the approved render and these are design

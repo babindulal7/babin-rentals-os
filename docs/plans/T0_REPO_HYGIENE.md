@@ -8,7 +8,7 @@ fresh clone without hand-set environment; root clutter archived; stale "current"
 
 ---
 
-### T0-01 · Merge the plan pack            status: doing · size: S · lane A
+### T0-01 · Merge the plan pack            status: done · size: S · lane A
 **What** — Merge `PLAN.md`, `docs/plans/`, `RULINGS-2026-10-26.md` and the pointer updates.
 **Why** — S2–S4.
 **Where** — this PR.
@@ -17,7 +17,7 @@ fresh clone without hand-set environment; root clutter archived; stale "current"
 at the new PLAN.md; 3) `npm run lint:progress` exits 0.
 **Needs** — Babin's review of the PR.
 
-### T0-02 · Test runner works on a fresh clone            status: todo · size: S · lane A
+### T0-02 · Test runner works on a fresh clone            status: done · size: S · lane A
 **What** — `scripts/run-tests.mjs` sets `VITE_DATA_SOURCE=mock` when neither it nor
 `VITE_SUPABASE_URL` is set, and prints which data source it used. Same for `test:coverage`.
 **Why** — On 26 Oct a plain `npx vitest run` on a fresh clone failed **132 of 463 files** on
@@ -51,7 +51,7 @@ mattered is shown to exist on `main` (file + line), not assumed.
 2) every deleted unmerged branch has an `archive/` tag.
 **Needs** — Babin's OK to delete branches (GitHub settings may protect some).
 
-### T0-05 · Documents tell the truth            status: todo · size: S · lane A
+### T0-05 · Documents tell the truth            status: done · size: S · lane A
 **What** — Already done in the plan PR: banners on `docs/REMAINING_WORK.md` and
 `docs/CURRENT_STATE.md` pointing at PLAN.md; `docs/OPEN_DECISIONS.md` maps every entry closed by
 RULINGS-2026-10-26; the stale "BS table stops at 2083" corrected (it covers 2078–2095). Still to do:
@@ -81,7 +81,7 @@ RULINGS. Nothing is deleted (moved, Law 3 spirit).
 `*.md` finds no broken relative link introduced by the move.
 **Needs** — T0-03 (some PRs may touch those files).
 
-### T0-07 · Retire the three dead inspection stubs            status: todo · size: S · lane A
+### T0-07 · Retire the three dead inspection stubs            status: done · size: S · lane A
 **What** — Move `src/actions/inspections/{startInspection,passInspection,failInspection}.ts` (and
 their tests, if any) to `src/archive/actions/inspections/`. Inspection lives inside the Return
 workspace; nothing calls these three.
@@ -94,7 +94,7 @@ workspace; nothing calls these three.
 3) grep finds no import of the moved files.
 **Needs** — none.
 
-### T0-08 · Lanes and worktrees in AGENTS.md            status: todo · size: S · lane A
+### T0-08 · Lanes and worktrees in AGENTS.md            status: done · size: S · lane A
 **What** — Add PLAN.md §6 (lanes, worktrees, branch names, migration ledger) to `AGENTS.md` so
 non-Claude agents (Codex, Gemini, Antigravity) follow the same protocol.
 **Why** — Several agents edited one checkout on 21–25 Oct and invalidated each other's receipts.

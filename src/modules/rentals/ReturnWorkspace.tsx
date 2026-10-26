@@ -2289,7 +2289,7 @@ export default function ReturnWorkspace({
 
                 {/* Evidence counts come from saved files linked to the booking and units. */}
                 <Card title="Evidence">
-                  <OperationEvidenceStatus status={savedEvidence} />
+                  <OperationEvidenceStatus status={savedEvidence} bookingId={floor?.id} stage="Return" category="Inspection" />
                   <Link
                     to={`/rentals/${id}/evidence`}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 44, fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--link)', textDecoration: 'none' }}

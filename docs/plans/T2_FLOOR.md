@@ -18,7 +18,7 @@ written and has **no caller**.
 
 ---
 
-### T2-01 · Camera evidence upload            status: todo · size: L · lane A
+### T2-01 · Camera evidence upload            status: done · size: L · lane A
 **What** — Wire `uploadEvidencePhoto()` into: Pack (booking photo), Handover (booking photo),
 Return (damage photo per flagged unit — required by the 21 Jul return-flag lock), Reset (QC
 defect photo) and the Evidence workspace (upload + review). Capture with

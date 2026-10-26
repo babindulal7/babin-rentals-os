@@ -1,12 +1,42 @@
 /** A new full-suite attempt invalidates old green evidence before Vitest starts. */
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { beginVerification, coverageRunDirectory, finishVerification, testReceipt, writeTestReceipt } from './test-receipt.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+
+function findConfiguredSupabaseUrl(rootDir) {
+  if (process.env.VITE_SUPABASE_URL) return process.env.VITE_SUPABASE_URL
+  for (const file of ['.env.local', '.env']) {
+    const fullPath = join(rootDir, file)
+    if (!existsSync(fullPath)) continue
+    try {
+      const content = readFileSync(fullPath, 'utf8')
+      for (const line of content.split('\n')) {
+        const m = line.match(/^\s*VITE_SUPABASE_URL\s*=\s*(.*)\s*$/)
+        if (m) {
+          const val = m[1].replace(/^["']|["']$/g, '').trim()
+          if (val) return val
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return null
+}
+
+const configuredUrl = findConfiguredSupabaseUrl(root)
+if (!process.env.VITE_DATA_SOURCE && !configuredUrl) {
+  process.env.VITE_DATA_SOURCE = 'mock'
+  console.log('[test runner] VITE_DATA_SOURCE=mock (auto-detected: no VITE_SUPABASE_URL or VITE_DATA_SOURCE configured)')
+} else {
+  console.log(`[test runner] data source=${process.env.VITE_DATA_SOURCE ?? 'live'}`)
+}
+
 const args = process.argv.slice(2)
 const coverage = args.includes('--coverage')
 const outputArgument = args.find(arg => arg.startsWith('--outputFile='))

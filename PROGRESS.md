@@ -1,5 +1,55 @@
 # Progress Log
 
+## 2026-10-26 (e) — T0 hygiene & T2-01 camera evidence upload wired to floor workspaces
+
+**Did**
+- Resolved merge between shadcn-integration and PR #29 go-live roadmap in `PROGRESS.md` and `docs/CURRENT_STATE.md`.
+- Updated test runner (`scripts/run-tests.mjs`) to auto-detect when neither `VITE_SUPABASE_URL` nor `VITE_DATA_SOURCE` is configured, defaulting to `process.env.VITE_DATA_SOURCE = 'mock'` (T0-02).
+- Archived unused stubs `src/actions/inspections/{startInspection,passInspection,failInspection}.ts` to `src/archive/actions/inspections/` per Law 3; updated capabilities in `src/actions/__tests__/core.test.ts`. Backend actions implemented / total reached 55/55 (100%), capabilities at 45/45 (100%) (T0-07).
+- Updated `README.md` and `AGENTS.md` to reflect current doc truth, PLAN.md §6 lane rules, and migration ledger protocols (T0-05, T0-08).
+- Implemented camera evidence capture and upload (T2-01):
+  - Created client-side image compression engine in `src/lib/imageCompression.ts` (1600px long edge max, 0.8 JPEG quality, Canvas-based EXIF/GPS stripping, headless fallback) with unit tests (`src/lib/__tests__/imageCompression.test.ts`).
+  - Hardened `src/lib/evidenceStorage.ts` with browser-safe offline check (`typeof window !== 'undefined'`), support for Reset/Damage stages without active sessions, auto-creation of in-progress operation sessions where required by SQL constraints, and unit-level item ID association.
+  - Rewrote `src/modules/operations/OperationEvidenceStatus.tsx` to provide native camera input `<input type="file" accept="image/*" capture="environment">`, live progress indicators, offline warning, and Law 8 same-`clientUuid` retry button.
+  - Integrated `OperationEvidenceStatus` into `PackingWorkspace.tsx`, `HandoverWorkspace.tsx`, `ReturnWorkspace.tsx`, and `ResetWorkspace.tsx`.
+  - Updated `src/modules/rentals/EvidenceWorkspace.tsx` and `src/lib/queries/evidence.ts` with real photo capture, multi-file upload, and gallery viewing.
+
+**Ruled**
+- Custody transitions remain fail-closed online RPCs; evidence upload does not fake success when offline (Law 12, R-40).
+- Evidence captured adheres to integer paisa and money-blind role rules: Warehouse and Technician roles view photos without any financial leaks.
+- Client-side image compression ensures photos uploaded do not exceed 1600px long edge and have metadata stripped.
+
+**Verified**
+- `npm run typecheck` (`tsc --noEmit`): PASS (0 errors).
+- `npm run lint` (`eslint src --max-warnings 0`): PASS (0 errors, 0 warnings).
+- `npm run check:pglite`: PASS (174/174 migrations applied from scratch, 31 views checked, 93 definer functions pinned).
+- `npm run check:lifecycle`: PASS (33/33 green).
+- `npm run check:contrast`: PASS (106/106 WCAG AA token pairs).
+- `npm test`: PASS — 463 test files passed, 5,742 tests passed.
+- `npm run build`: PASS (built in 2m 9s, PWA generated).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 55 / 55 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 45 / 45 (100%) | -3 |
+| Lifecycle | steps green / total | 33 / 33 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 174 files · check:pglite 174/174 applied, 0 failed (recorded 2026-10-26T09:30:55.211Z). Suite: PASS — 5742/5742 passed, 0 failed (recorded 2026-10-26T09:40:10.145Z); source fingerprint matches.
+Coverage suite: Historical suite: 5739/5739 passed, 0 failed (recorded 2026-10-26T06:01:16.431Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-26T09:31:19.005Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Next priority floor task: T2-02 (Drawn signatures on glass for Receiver, Warehouse, Driver — new `src/components/ui/SignaturePad.tsx`, `HandoverWorkspace.tsx` gate 5, `writeSignatures`).
+- T2-03 (ID card as deposit collateral record kept apart from money).
+- T2-04 (Gate 1 override by any handover staff with audited 10+ character reason).
+- T2-05 (Technician can do every floor verb while remaining money-blind).
+- T6-01 (Nepali glossary wave 1 for ~200 floor terms).
+
 ## 2026-10-26 — Shadcn committed to main; isolated integration verified
 
 **Did**

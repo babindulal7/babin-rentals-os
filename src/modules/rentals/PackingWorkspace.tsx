@@ -2150,7 +2150,7 @@ export default function PackingWorkspace({
                     <span style={{ flex: 1, color: 'var(--text2)' }}>Booking photo — required before completion</span>
                   </div>
                   {/* RULING 2026-10-25: the paragraph and the count that restated this row, and the status line's second count, are gone. */}
-                  <OperationEvidenceStatus id="pack-evidence" status={savedEvidence} />
+                  <OperationEvidenceStatus id="pack-evidence" status={savedEvidence} bookingId={floor?.id} stage="Packing" category="Packing" />
                 </Card>
 
                 <Card title="Packing Notes">

@@ -2001,7 +2001,7 @@ export default function ResetWorkspace({
                     or fail, inline in the rail. A blocked gate is never a toast
                     (Law 12); the reason stays on screen while the block lasts. */}
                 <Card id="reset-gates" title="Blockers">
-                  <OperationEvidenceStatus status={savedEvidence} />
+                  <OperationEvidenceStatus status={savedEvidence} bookingId={floor?.id} stage="Reset" category="Inspection" />
                   <div role="status" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {gates.map((g) => (
                       <div key={g.label} className={`floor-gate-row ${g.pass ? 'is-pass' : 'is-pending'}`}>

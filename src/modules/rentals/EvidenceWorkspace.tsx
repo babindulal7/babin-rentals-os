@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import './rentals.css'
 import Icon from '../../components/ui/Icon'
@@ -20,18 +20,42 @@ import { formatBsOrAd, formatAd } from '../../lib/bs'
 import { formatRentalDays, rentalDaysBetween } from '../../lib/rentalDays'
 import { deliveryTypeLabel } from '../../lib/format'
 import { fetchFloorBooking, type FloorBooking } from '../../lib/queries/bookings'
+import { compressEvidencePhoto } from '../../lib/imageCompression'
+import { uploadEvidencePhoto } from '../../lib/evidenceStorage'
 import {
   PHOTOS,
   matchState,
   THRESHOLDS,
   CATEGORY_NAMES,
-  UPLOAD_SOURCES,
   UPLOAD_ROADMAP,
   STEPS,
   BULK_ACTIONS,
   LIMITS,
+  fetchBookingEvidenceFiles,
+  type SavedEvidenceFile,
 } from '../../lib/queries/evidence'
 import type { MatchState } from '../../lib/queries/evidence'
+import type { Database } from '../../types/supabase'
+
+type EvidenceCategory = Database['public']['Enums']['evidence_category']
+
+const VALID_EVIDENCE_CATEGORIES: ReadonlySet<string> = new Set([
+  'Packing',
+  'Pickup / Delivery',
+  'Return',
+  'Inspection',
+  'Damage',
+  'Cleaning',
+  'Maintenance',
+  'Warehouse',
+  'Client Documents',
+  'Marketing',
+  'Others',
+])
+
+function toEvidenceCategory(val: string): EvidenceCategory {
+  return VALID_EVIDENCE_CATEGORIES.has(val) ? (val as EvidenceCategory) : 'Inspection'
+}
 
 /**
  * **Evidence Workspace** — `Evidence Workspace.md` v1.1 (Build Locked).
@@ -100,24 +124,6 @@ import type { MatchState } from '../../lib/queries/evidence'
  *    state in which no category filter applies; the control now says what it
  *    clears and the empty state names the category that stays.
  */
-
-const SOURCE_ICON: Record<(typeof UPLOAD_SOURCES)[number], IconName> = {
-  'Take Photo': 'camera',
-  'Record Video': 'video',
-  'Upload Files': 'upload',
-  'Upload Folder': 'folder',
-}
-
-/**
- * Why nothing on this screen can accept a file yet.
- *
- * Deliberately the same fact `Expenses.tsx` states for its receipt slot: the
- * destination exists in the schema, the *upload* does not. Keeping one wording
- * for one cause means a reader who meets it twice learns it once.
- */
-const UPLOAD_UNAVAILABLE =
-  'Uploading is not built yet — no storage bucket is configured and nothing in the app uploads a file, so a picker here would take your photo and store nothing. ' +
-  'Keep evidence on the device until it ships.'
 
 const TONE: Record<MatchState, { bg: string; fg: string }> = {
   Matched: { bg: 'var(--st-in-bg)', fg: 'var(--st-in-fg)' },
@@ -354,6 +360,68 @@ export default function EvidenceWorkspace() {
    * now on screen. Everything the viewer did to the previous one is dropped.
    */
   const floorId = floor?.id ?? null
+  const cameraInputRef = useRef<HTMLInputElement | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadProgressText, setUploadProgressText] = useState<string | null>(null)
+  const [uploadErrorText, setUploadErrorText] = useState<string | null>(null)
+  const [savedFiles, setSavedFiles] = useState<SavedEvidenceFile[]>([])
+
+  useEffect(() => {
+    if (!floorId) return
+    let active = true
+    fetchBookingEvidenceFiles(floorId)
+      .then((files) => {
+        if (active) setSavedFiles(files)
+      })
+      .catch(() => {
+        if (active) setSavedFiles([])
+      })
+    return () => {
+      active = false
+    }
+  }, [floorId])
+
+  const handleUploadFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !floor?.id) return
+    if (!user?.id) {
+      setUploadErrorText('Sign in is required to upload evidence')
+      return
+    }
+    setUploading(true)
+    setUploadErrorText(null)
+    setUploadProgressText('Compressing photo on device…')
+    try {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        throw new Error('Device is offline. Photo was kept on device and will upload when connectivity is restored.')
+      }
+      const compressed = await compressEvidencePhoto(file)
+      setUploadProgressText('Uploading to storage…')
+      const targetStage = category === 'Return' ? 'Return' : category === 'Damage' ? 'Damage' : 'Packing'
+      await uploadEvidencePhoto({
+        file: compressed.blob,
+        filename: `evidence_${targetStage.toLowerCase()}_${Date.now()}.jpg`,
+        category: toEvidenceCategory(category),
+        reference: {
+          bookingId: floor.id,
+          operationStage: targetStage,
+        },
+        userId: user.id,
+      })
+      showSuccessToast('Evidence photo saved successfully')
+      setUploadProgressText(null)
+      const fresh = await fetchBookingEvidenceFiles(floor.id)
+      setSavedFiles(fresh)
+    } catch (err) {
+      setUploadErrorText(err instanceof Error ? err.message : String(err))
+      setUploadProgressText(null)
+    } finally {
+      setUploading(false)
+      if (e.target) e.target.value = ''
+    }
+  }
+
   useEffect(() => {
     setSelected([])
     setActive('p1')
@@ -622,20 +690,61 @@ export default function EvidenceWorkspace() {
                     photo and store nothing — worse than a greyed button, because the
                     operator would believe the evidence was filed.
                   */}
+                  <input
+                    ref={cameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    disabled={uploading}
+                    onChange={handleUploadFile}
+                    style={{ display: 'none' }}
+                    aria-label="Take evidence photo"
+                  />
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    disabled={uploading}
+                    onChange={handleUploadFile}
+                    style={{ display: 'none' }}
+                    aria-label="Upload evidence files"
+                  />
+
+                  {uploadErrorText && (
+                    <div role="alert" style={{ color: 'var(--danger-text)', fontSize: 'var(--t-caption, 12px)', marginBottom: 8 }}>
+                      {uploadErrorText}
+                    </div>
+                  )}
+                  {uploadProgressText && (
+                    <div role="status" style={{ color: 'var(--muted)', fontSize: 'var(--t-caption, 12px)', marginBottom: 8 }}>
+                      {uploadProgressText}
+                    </div>
+                  )}
+
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {UPLOAD_SOURCES.map((u) => (
-                      <Unavailable key={u} reason={UPLOAD_UNAVAILABLE} style={{ display: 'block' }}>
-                        <Button icon={SOURCE_ICON[u]} disabled>
-                          {u}
-                        </Button>
-                      </Unavailable>
-                    ))}
+                    <Button
+                      icon="camera"
+                      disabled={uploading || !floor?.id}
+                      onClick={() => cameraInputRef.current?.click()}
+                      style={{ minHeight: 'var(--tap, 44px)' }}
+                    >
+                      {uploading ? 'Processing…' : 'Take Photo'}
+                    </Button>
+                    <Button
+                      icon="upload"
+                      disabled={uploading || !floor?.id}
+                      onClick={() => fileInputRef.current?.click()}
+                      style={{ minHeight: 'var(--tap, 44px)' }}
+                    >
+                      Upload Files
+                    </Button>
+                    <Unavailable reason="Folder upload is not supported on mobile/tablet browsers." style={{ display: 'block' }}>
+                      <Button icon="folder" disabled>
+                        Upload Folder
+                      </Button>
+                    </Unavailable>
                   </div>
-                  {/* The drop zone invited the same gesture and swallowed it the same
-                      way — with no `onDrop` it silently did nothing, and a dashed
-                      border is the one shape that means "drop here". It states the
-                      same reason rather than inviting the drop. */}
-                  <Unavailable reason={UPLOAD_UNAVAILABLE} style={{ display: 'block' }}>
+                  <Unavailable reason="Drag & drop upload is unavailable on touch devices." style={{ display: 'block' }}>
                     <div
                       aria-disabled="true"
                       style={{ marginTop: 9, padding: '18px 10px', borderRadius: 'var(--r-btn)', border: '1.5px dashed var(--border)', textAlign: 'center', color: 'var(--muted)', fontSize: 'var(--t-meta)', opacity: 0.6 }}
@@ -695,6 +804,41 @@ export default function EvidenceWorkspace() {
 
               {/* ── §6 / §8 centre ──────────────────────────────────────────── */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0, ...place.list }}>
+                {savedFiles.length > 0 && (
+                  <Card title={`Saved Booking Evidence (${savedFiles.length})`}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {savedFiles.map((sf) => (
+                        <div
+                          key={sf.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '8px 12px',
+                            background: 'var(--card2)',
+                            borderRadius: 'var(--r-sm, 6px)',
+                            border: '1px solid var(--border)',
+                            fontSize: 'var(--t-meta)',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Icon name="camera" size={16} style={{ color: 'var(--success-text)' }} />
+                            <div>
+                              <div style={{ fontWeight: 600 }}>{sf.filename}</div>
+                              <div style={{ color: 'var(--muted)', fontSize: 'var(--t-caption, 12px)' }}>
+                                Stage: {sf.operationStage} · {Math.round(sf.fileSizeBytes / 1024)} KB · {sf.createdAt ? new Date(sf.createdAt).toLocaleTimeString() : ''}
+                              </div>
+                            </div>
+                          </div>
+                          <span style={{ fontSize: 'var(--t-caption, 12px)', padding: '2px 8px', borderRadius: 4, background: 'var(--success-bg)', color: 'var(--success-text)' }}>
+                            Saved
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                )}
+
                 <Card title="Processing — sample files">
                   <div style={{ display: 'grid', gridTemplateColumns: phone ? 'repeat(2, minmax(0,1fr))' : 'repeat(4, minmax(0,1fr))', gap: 'var(--sp-md)' }}>
                     {[

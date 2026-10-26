@@ -18,12 +18,21 @@ npm run dev:mock             # vite --mode mock, VITE_DATA_SOURCE=mock local cor
 npm run dev:local            # vite --mode localdb
 npm run typecheck            # tsc --noEmit
 npm run lint                 # eslint src --max-warnings 0 (src only; archive/scripts/supabase excluded)
-npm test                     # vitest run (full suite) — without .env.local run it as `VITE_DATA_SOURCE=mock npm test`, as CI does (T0-02 makes this the default)
+npm test                     # vitest run (full suite) — auto-detects mock mode if VITE_SUPABASE_URL and VITE_DATA_SOURCE are unset (T0-02)
 npx vitest run <path>        # single file, e.g. npx vitest run src/__tests__/e2e/tier1-features.test.tsx
 npm run build                # tsc --noEmit && vite build → dist/
 ```
 
 Verification order for any change: `typecheck → test → check:pglite + check:lifecycle → build`. CI (`Node 24`, `.github/workflows/ci.yml`) runs exactly: typecheck, test, `check:pglite`, `check:lifecycle`, `lint:progress`, `check:contrast`, build, coverage.
+
+## Parallel lanes and worktrees (PLAN.md §6)
+
+- **Three lanes, one writer each:** Lane A = T0, T1, T2, T9. Lane B = T3, T4, T5, T8. Lane C = T6, T7. Non-Claude agents (Codex, Gemini, Antigravity) follow this protocol.
+- **One task = one branch = one PR:** Branch name `lane-<a|b|c>/<task-id>-<slug>`, e.g. `lane-a/T2-01-camera-evidence`. Merge to `main` only with CI green.
+- **Migration numbers are claimed, not guessed:** Before writing SQL, claim the next free number in `docs/plans/MIGRATION_LEDGER.md` in the branch's first commit.
+- **Database first:** A permission or gate changes in Postgres (migration + lifecycle step) before the UI offers it (P2, P3, N-3).
+- **Session end:** Update `PROGRESS.md` (Did / Ruled / Verified) with `## Completion` (run `npm run completion`, never hand-type) and `## Remaining`. `npm run lint:progress` enforces the format. Tick task card in `docs/plans/`.
+- **Done means:** Real data, permissions enforced in the database, five screen states (loading, empty, error, restricted, offline), phone/tablet/desktop, tests passing, PR merged, PROGRESS logged. A screen that only looks finished is not done (Law 16).
 
 DB / lifecycle gates (allowed in `opencode.jsonc`, never prompt-blocked):
 ```bash
