@@ -122,8 +122,8 @@ describe('booking-level Operations dropdown', () => {
     expect(items[0]?.getAttribute('title')).toContain('Save and confirm this booking')
   })
 
-  it('disables Handover for Technician role who lacks client-facing handover grant (P0-B)', async () => {
-    currentRole = 'Technician'
+  it('disables Handover for Coordinator role who lacks client-facing handover grant (P0-B, D3)', async () => {
+    currentRole = 'Coordinator'
     await mount('B-715', 'Packed')
     await openMenu()
 
@@ -132,12 +132,17 @@ describe('booking-level Operations dropdown', () => {
     )
     expect(handover?.getAttribute('aria-disabled')).toBe('true')
     expect(handover?.getAttribute('title')).toContain('permission')
+  })
 
-    const packing = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
-      (item) => item.querySelector('.booking-operations__name')?.textContent?.trim() === 'Packing',
+  it('permits Handover for Technician role per Ruling D3 (T2-05)', async () => {
+    currentRole = 'Technician'
+    await mount('B-715', 'Packed')
+    await openMenu()
+
+    const handover = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+      (item) => item.querySelector('.booking-operations__name')?.textContent?.trim() === 'Handover',
     )
-    // Packing is for stage Booked, so on stage Packed it reports completion, not role denial
-    expect(packing?.getAttribute('title')).not.toContain('permission')
+    expect(handover?.getAttribute('aria-disabled')).toBe('false')
   })
 
   it('opens next actionable stage in one click via quick action button without opening menu', async () => {
@@ -172,10 +177,18 @@ describe('booking-level Operations dropdown', () => {
       expect(container.querySelector('.booking-operations__quick')).toBeNull()
     })
 
-    it('suppresses quick action button for Technician when stage is Packed (lacks Handover grant)', async () => {
-      currentRole = 'Technician'
+    it('suppresses quick action button for Accounts when stage is Packed (lacks Handover grant)', async () => {
+      currentRole = 'Accounts'
       await mount('B-715', 'Packed')
       expect(container.querySelector('.booking-operations__quick')).toBeNull()
+    })
+
+    it('shows quick action button for Technician when stage is Packed per Ruling D3 (T2-05)', async () => {
+      currentRole = 'Technician'
+      await mount('B-715', 'Packed')
+      const quickBtn = container.querySelector<HTMLButtonElement>('.booking-operations__quick')
+      expect(quickBtn).not.toBeNull()
+      expect(quickBtn?.textContent).toContain('Handover')
     })
 
     it('shows quick action button for Warehouse role on permitted stages', async () => {

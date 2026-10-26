@@ -353,12 +353,29 @@ async function readCloseGates(bookingId: string, bookingNo: string): Promise<Clo
     (await countPending('return_line_id', returnLineIds)) +
     (await countPending('cleaning_queue_entry_id', idsOf(cleaningRows)))
 
+  /* ── Gate 5 · D1 / T2-03 · Collateral Held ───────────────────────────────── */
+  const { data: collateralRows, error: collateralError } = await supabase
+    .from('collateral_documents')
+    .select('id')
+    .eq('booking_id', bookingId)
+    .is('returned_at', null)
+
+  if (collateralError) {
+    throw new Error(
+      `Could not read collateral documents for ${bookingNo}, so whether client ID is held is unknown: ` +
+        collateralError.message,
+    )
+  }
+
+  const collateralHeld = (collateralRows ?? []).length > 0
+
   return {
     rentalInvoiced,
     rentalOutstandingPaisa,
     depositHeldPaisa,
     openCases: (caseRows ?? []).length,
     damageChargesPendingApproval,
+    collateralHeld,
   }
 }
 

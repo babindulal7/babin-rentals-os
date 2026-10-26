@@ -52,7 +52,7 @@ link it with `signatures.signature_evidence_file_id`; keep signer name and time 
 finger on the iPhone and Apple Pencil on the iPad; 44 px controls.
 **Needs** — T2-01.
 
-### T2-03 · ID card as the deposit            status: todo · size: L · lane A
+### T2-03 · ID card as the deposit            status: done · size: L · lane A
 **What** — New collateral record kept **apart from money** (Law 5): type (citizenship card,
 passport, driving licence), number (stored, shown masked except to Manager+), photo (T2-01; visible
 to **Manager and above** only), held by, held at, returned by, returned at. At Handover the deposit

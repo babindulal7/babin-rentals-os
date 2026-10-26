@@ -451,6 +451,7 @@ Known hole to keep closed: **`security_deposits` was readable by money-blind ses
 | `operations.grant.issue_role` / `operations.grant.revoke_role` | Issue/revoke operation grants | Owner/Admin; Admin cannot target Owner/Admin, including self | none | grant actor/time; no deletion | Guarded 0171; RULINGS-2026-10-24 |
 | `gate.handover.payment_outstanding` | Release gear with **payment outstanding** (advance tier not met) | **Any staff** — warning shown, release allowed | none | yes, per session | his ruling 7 Sep; 21 Jul soft gate |
 | `gate.handover.payment_outstanding` | Release gear with **deposit outstanding** | same as above | none | yes | same rule — the gate is one gate |
+| `gate.handover.deposit_collateral` | ID document satisfies deposit gate in lieu of cash | Any staff allowed to hand over | none | yes, recorded on collateral record | D1 (26 Oct 2026, 0181) |
 | `gate.handover.receiver_unverified` | Receiver not verified at handover | **Any staff allowed to hand over** | ≥10 chars | yes, per session | D2 (26 Oct 2026, 0179) |
 | `gate.conflict.overbooking` | Overbooking (GiST conflict) | M+ | mandatory | yes; losing reservation deactivated | 21 Jul |
 | `gate.conflict.crew` | Crew double-booking | M+ | mandatory | yes | Crew v3.1 |
@@ -491,6 +492,7 @@ Known hole to keep closed: **`security_deposits` was readable by money-blind ses
 | `gate.close.invoice_unsettled` | Returned → Closed with unsettled invoice | nobody | — | yes | Stage 1 (0116) |
 | `gate.close.deposit_unresolved` | Returned → Closed with unresolved deposit | **M+ may pass it with a written reason** (0155); nobody otherwise. Offered only while Settings ▸ Financial ▸ Deposit rules is On; the database enforces role and reason regardless | ≥10 chars (`booking_stage_transitions.deposit_skip_reason`) | yes — `audit_events` gate `close_deposit_skipped` with deposit held/pending; **no money moves**, the deposit stays a liability | Stage 1 (0116); RULINGS-2026-10-06 (0155) |
 | `gate.close.deposit_skip_role` | Deposit skip attempted below Manager | nobody | — | refused | 0155 |
+| `gate.close.collateral_held` | Returned → Closed with client collateral (ID card) still held | nobody | return collateral before closing | yes | D1 (26 Oct 2026, 0181) |
 | `gate.close.open_case` | Returned → Closed with open case | nobody | — | yes | Stage 1 (0116) |
 | `gate.close.reservation_live` | Returned → Closed with live reservation | nobody | — | yes | Stage 1 (0116) |
 | `gate.unit_status.direct_write` | Direct write to product_units.status | nobody (engine-owned) | — | yes | Stage 1 (0114) |

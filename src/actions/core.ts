@@ -302,6 +302,11 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'rental.revert':
     case 'rental.archive':
       return rbac.canManageRentalLifecycle(ctx.role, online);
+    // RULING 2026-10-26 (D1, Task T2-03, migration 0181):
+    // ID card document as collateral deposit (receive / return).
+    case 'collateral.receive':
+    case 'collateral.return':
+      return rbac.canManageCollateral(ctx.role);
 
     case 'rental.pickup':
     case 'rental.return':

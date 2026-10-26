@@ -239,6 +239,7 @@ describe('a rental that really is finished closes', () => {
       depositHeldPaisa: 0,
       openCases: 0,
       damageChargesPendingApproval: 0,
+      collateralHeld: false,
     })
   })
 

@@ -96,6 +96,7 @@ vi.mock('../../lib/supabase', () => {
           eq: () => queryBuilder,
           neq: () => queryBuilder,
           in: () => queryBuilder,
+          is: () => queryBuilder,
           order: () => Promise.resolve({ data: [], error: null }),
           maybeSingle: async () => {
             if (table === 'bookings') {

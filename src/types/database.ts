@@ -56,6 +56,7 @@ export type CrewRoleDb =
 export type PackingLineState = 'Pending' | 'Packed' | 'Partial' | 'Missing' | 'Not Required' | 'Replaced'
 export type PhysicalCondition = 'Excellent' | 'Good' | 'Fair' | 'Damaged' | 'Not Inspected'
 export type SignatureRole = 'Receiver' | 'Warehouse staff' | 'Driver' | 'Witness' | 'Returning person'
+export type CollateralType = 'citizenship_card' | 'passport' | 'driving_licence' | 'other'
 export type OverrideType =
   | 'Gate override'
   | 'Scan block override'
@@ -1678,6 +1679,47 @@ export interface Database {
           created_by: string
         }
         Update: Partial<Database['public']['Tables']['override_records']['Insert']>
+      }
+
+      /**
+       * `0181_collateral_deposit_id_card.sql`. Client collateral held in lieu of cash deposit.
+       */
+      collateral_documents: {
+        Row: {
+          id: string
+          client_uuid: string
+          booking_id: string
+          collateral_type: CollateralType
+          document_number: string
+          evidence_file_id: string | null
+          notes: string | null
+          held_at: string
+          held_by: string
+          returned_at: string | null
+          returned_by: string | null
+          created_at: string
+          created_by: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          client_uuid?: string
+          booking_id: string
+          collateral_type: CollateralType
+          document_number: string
+          evidence_file_id?: string | null
+          notes?: string | null
+          held_at?: string
+          held_by: string
+          returned_at?: string | null
+          returned_by?: string | null
+          created_at?: string
+          created_by: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['collateral_documents']['Insert']>
       }
     }
   }

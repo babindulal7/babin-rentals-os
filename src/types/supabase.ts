@@ -3217,6 +3217,96 @@ export type Database = {
           },
         ]
       }
+      collateral_documents: {
+        Row: {
+          booking_id: string
+          client_uuid: string
+          collateral_type: Database["public"]["Enums"]["collateral_type"]
+          created_at: string
+          created_by: string
+          document_number: string
+          evidence_file_id: string | null
+          held_at: string
+          held_by: string
+          id: string
+          notes: string | null
+          returned_at: string | null
+          returned_by: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          booking_id: string
+          client_uuid?: string
+          collateral_type: Database["public"]["Enums"]["collateral_type"]
+          created_at?: string
+          created_by: string
+          document_number: string
+          evidence_file_id?: string | null
+          held_at?: string
+          held_by: string
+          id?: string
+          notes?: string | null
+          returned_at?: string | null
+          returned_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          booking_id?: string
+          client_uuid?: string
+          collateral_type?: Database["public"]["Enums"]["collateral_type"]
+          created_at?: string
+          created_by?: string
+          document_number?: string
+          evidence_file_id?: string | null
+          held_at?: string
+          held_by?: string
+          id?: string
+          notes?: string | null
+          returned_at?: string | null
+          returned_by?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collateral_documents_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collateral_documents_evidence_file_id_fkey"
+            columns: ["evidence_file_id"]
+            isOneToOne: false
+            referencedRelation: "evidence_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collateral_documents_held_by_fkey"
+            columns: ["held_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collateral_documents_returned_by_fkey"
+            columns: ["returned_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collateral_documents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       containers: {
         Row: {
           barcode: string | null
@@ -12744,6 +12834,11 @@ export type Database = {
         | "Returned"
         | "Completed"
         | "Cancelled"
+      collateral_type:
+        | "citizenship_card"
+        | "passport"
+        | "driving_licence"
+        | "other"
       commercial_override_kind: "Credit Limit" | "Payment Terms"
       commercial_override_status: "Pending" | "Approved" | "Rejected" | "Void"
       comparison_basis:

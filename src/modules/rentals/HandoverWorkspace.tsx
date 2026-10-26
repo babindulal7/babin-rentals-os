@@ -29,13 +29,14 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 import { toBs, formatBs, formatAd, formatAdDateTime } from '../../lib/bs'
 import { rentalDaysBetween } from '../../lib/rentalDays'
-import { newClientUuid } from '../../lib/supabase'
+import { supabase, newClientUuid } from '../../lib/supabase'
 import { fetchFloorBooking, type FloorBooking, type FloorLine } from '../../lib/queries/bookings'
 import type { FloorLineInput } from '../../actions/rentals/floorVerb'
 import { CompactButton, TapCheckbox } from '../../components/ui/TouchTarget'
 import { deliveryTypeLabel } from '../../lib/format'
 import { formatGateError } from '../../lib/gates'
 import { DriverHandoverModal } from '../operations/DriverHandoverModal'
+import { HoldCollateralModal } from './modals/HoldCollateralModal'
 import { recordFloorScanEvent } from '../../lib/floorScanStorage'
 import { useFloorPresence } from '../../lib/floorPresence'
 import { SignOnGlassModal, type DigitalSignature } from './modals/SignOnGlassModal'
@@ -525,6 +526,9 @@ export default function HandoverWorkspace({
   /* §11.1 gates 3 / 4 — booleans, never amounts (Law 6). */
   const [paymentVerified, setPaymentVerified] = useState(false)
   const [depositReceived, setDepositReceived] = useState(false)
+  /** ID card held as deposit collateral (D1, T2-03). */
+  const [collateralHeld, setCollateralHeld] = useState(false)
+  const [showHoldCollateralModal, setShowHoldCollateralModal] = useState(false)
   /** §9.2 — captured at session close. Names come off real records only. */
   const [signatures, setSignatures] = useState<{ receiver?: Sig; warehouse?: Sig; driver?: Sig }>({})
   const [activeSigningRole, setActiveSigningRole] = useState<'receiver' | 'warehouse' | 'driver' | null>(null)
@@ -643,6 +647,7 @@ export default function HandoverWorkspace({
     setBookingAuthVerified(false)
     setPaymentVerified(false)
     setDepositReceived(false)
+    setCollateralHeld(false)
     setSignatures({})
     setOverrideReason('')
     setDispatchError(null)
@@ -650,6 +655,24 @@ export default function HandoverWorkspace({
     setStageHeld(null)
     setConfirmingCancel(false)
     setCompletionKey(newClientUuid())
+  }, [floorId])
+
+  useEffect(() => {
+    if (!floorId) return
+    let active = true
+    void supabase
+      .from('collateral_documents_v')
+      .select('id')
+      .eq('booking_id', floorId)
+      .is('returned_at', null)
+      .then(({ data, error }) => {
+        if (active && !error && data && data.length > 0) {
+          setCollateralHeld(true)
+        }
+      })
+    return () => {
+      active = false
+    }
   }, [floorId])
 
   const rows = useMemo<HandRow[]>(() => (floor ? buildRows(floor) : []), [floor])
@@ -717,7 +740,7 @@ export default function HandoverWorkspace({
       ? `${(signatures.receiver ? 1 : 0) + (signatures.warehouse ? 1 : 0)} signature${signatures.receiver && signatures.warehouse ? 's' : ''}`
       : null,
     govIdVerified || bookingAuthVerified ? 'the receiver ID checks' : null,
-    paymentVerified || depositReceived ? 'the payment and deposit gate marks' : null,
+    paymentVerified || depositReceived || collateralHeld ? 'the payment and deposit gate marks' : null,
     sessionNotes.trim() !== '' ? 'the session notes' : null,
     overrideReason.trim() !== '' ? 'the money-outstanding reason' : null,
   ].filter((entry): entry is string => entry !== null)
@@ -729,7 +752,7 @@ export default function HandoverWorkspace({
   const receiverPassing = receiverDirectlyVerified || gate1Overridden
   const itemsPassing = touchedCount > 0 && shortReasons.length === 0
   const paymentPassing = paymentVerified
-  const depositPassing = depositReceived
+  const depositPassing = depositReceived || collateralHeld
   const driverNeeded = driverSignatureRequired(floor?.deliveryType ?? null)
   /*
    * Receiver + warehouse gate the close. The driver row (when the delivery
@@ -769,7 +792,14 @@ export default function HandoverWorkspace({
     // supplies the real role, so the render decides on `moneyGateClearer` (canViewMoney, Law 6) whether the
     // control is live or an `Unavailable` — a Warehouse actor never self-certifies a money gate.
     { n: 3, label: 'Payment Verified', passing: paymentPassing, blocking: paymentPassing ? null : 'Payment required', overridable: true, ...(paymentVerified ? {} : { resolve: () => setPaymentVerified(true) }) },
-    { n: 4, label: 'Deposit Received', passing: depositPassing, blocking: depositPassing ? null : 'Deposit required', overridable: true, ...(depositReceived ? {} : { resolve: () => setDepositReceived(true) }) },
+    {
+      n: 4,
+      label: collateralHeld ? 'Deposit Received (ID Collateral Held)' : 'Deposit Received',
+      passing: depositPassing,
+      blocking: depositPassing ? null : 'Deposit required',
+      overridable: true,
+      ...(depositPassing ? {} : { resolve: () => setDepositReceived(true) }),
+    },
     { n: 5, label: 'Signatures Complete', passing: signaturesPassing, blocking: signaturesPassing ? null : 'Receiver and warehouse signatures not yet captured' },
     {
       n: 6,
@@ -1922,6 +1952,28 @@ export default function HandoverWorkspace({
                           <div style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: g.passing ? 'var(--text)' : 'var(--progress-text)' }}>{g.label}</div>
                           {!g.passing && g.blocking && <div style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)', marginTop: 2 }}>{g.blocking}</div>}
                         </div>
+                        {g.n === 4 && !g.passing && (
+                          <button
+                            type="button"
+                            onClick={() => setShowHoldCollateralModal(true)}
+                            style={{
+                              minHeight: 44,
+                              padding: '0 10px',
+                              border: '1px solid var(--border)',
+                              borderRadius: 'var(--r-xs)',
+                              background: 'var(--panel)',
+                              color: 'var(--text)',
+                              fontWeight: 600,
+                              fontSize: 'var(--t-meta)',
+                              cursor: 'pointer',
+                              fontFamily: 'inherit',
+                              whiteSpace: 'nowrap',
+                              marginRight: 6,
+                            }}
+                          >
+                            Hold ID Card
+                          </button>
+                        )}
                         {!g.passing && g.resolve && (moneyGateClearer ? (
                           <button type="button" onClick={g.resolve} style={{ minHeight: 44, border: 'none', background: 'transparent', color: 'var(--link)', fontWeight: 600, fontSize: 'var(--t-meta)', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
                             Mark Cleared →
@@ -2348,6 +2400,20 @@ export default function HandoverWorkspace({
                 onSuccess={() => {
                   setShowDriverModal(false)
                   setReload((r) => r + 1)
+                }}
+              />
+            )}
+
+            {showHoldCollateralModal && floor && (
+              <HoldCollateralModal
+                isOpen={showHoldCollateralModal}
+                onClose={() => setShowHoldCollateralModal(false)}
+                bookingId={floor.id}
+                bookingNo={floor.bookingNo}
+                onSuccess={(col) => {
+                  setCollateralHeld(true)
+                  setDepositReceived(true)
+                  showSuccessToast('Collateral Recorded', `ID card held as deposit (${col.documentNumber})`)
                 }}
               />
             )}

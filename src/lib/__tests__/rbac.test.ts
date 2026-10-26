@@ -30,6 +30,7 @@ import {
   canMergeClients,
   canWriteSharedTriage,
   canApprovePurchase,
+  canManageCollateral,
 } from '../rbac'
 
 /**
@@ -576,5 +577,22 @@ describe('canApprovePurchase', () => {
       'Accounts',
       'Driver',
     ])
+  })
+})
+
+describe('canManageCollateral — Ruling D1 / Task T2-03', () => {
+  it('allows floor and desk staff (Owner, Admin, Manager, Coordinator, Warehouse, Technician)', () => {
+    expect(canManageCollateral('Owner')).toBe(true)
+    expect(canManageCollateral('Admin')).toBe(true)
+    expect(canManageCollateral('Manager')).toBe(true)
+    expect(canManageCollateral('Coordinator')).toBe(true)
+    expect(canManageCollateral('Warehouse')).toBe(true)
+    expect(canManageCollateral('Technician')).toBe(true)
+  })
+
+  it('denies Accounts, Driver, and Client', () => {
+    expect(canManageCollateral('Accounts')).toBe(false)
+    expect(canManageCollateral('Driver')).toBe(false)
+    expect(canManageCollateral('Client')).toBe(false)
   })
 })

@@ -2725,6 +2725,274 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L36',
+  title: 'ID satisfies deposit gate at Handover without cash deposit (D1, T2-03)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      // 1. Create a fresh booking with deposit required
+      await as('Coordinator', async () => {
+        await createBooking({
+          key: 'l36',
+          window: ['2099-12-15T04:00:00Z', '2099-12-17T04:00:00Z'],
+          actor: 'Coordinator',
+          lines: [
+            {
+              productId: SERIAL_PRODUCT,
+              description: 'Lifecycle Camera for Collateral Deposit',
+              qty: 1,
+              days: 2,
+              rate: 3500,
+              units: [UNITS[0]],
+            },
+          ],
+        })
+      })
+      const bId = bookingIds.l36
+
+      // Quote -> Booked
+      await transition('l36', 'Quote', 'Booked', 'Coordinator')
+
+      // Set pending deposit on booking
+      await asOwnerOfTheDatabase(async () => {
+        await q(
+          `insert into security_deposits (client_uuid, deposit_no, booking_id, client_id, branch_id, required_amount, pending_amount)
+           select gen_random_uuid(), 'SD-L36', b.id, b.client_id, $2::uuid, 10000, 10000 from bookings b where b.id = $1::uuid`,
+          [bId, BRANCH],
+        )
+      })
+
+      // Pack booking
+      await as('Warehouse', async () => {
+        await actionPackRental({
+          key: 'l36',
+          actor: 'Warehouse',
+          units: [{ id: UNITS[0], serial: 'LCSN-001' }],
+        })
+      })
+
+      // Setup Handover session
+      const handoverSessionId = crypto.randomUUID()
+      await as('Warehouse', async () => {
+        await q(
+          `insert into operation_sessions (id, client_uuid, booking_id, operation, session_no, state, delivery_method, warehouse_staff_id, created_by, government_id_verified, booking_authorization_verified)
+           values ($1, gen_random_uuid(), $2, 'Handover', 1, 'In Progress', 'Client Pickup', $3, $3, true, true)`,
+          [handoverSessionId, bId, U.Warehouse],
+        )
+        const hlLineId = await one('select id from booking_lines where booking_id = $1', [bId])
+        await q(
+          `insert into handover_lines (client_uuid, booking_line_id, state, qty_required, first_session_id, completed_session_id, created_by)
+           values (gen_random_uuid(), $1, 'Picked Up', 1, $2, $2, $3)`,
+          [hlLineId, handoverSessionId, U.Warehouse],
+        )
+        await q(
+          `insert into signatures (client_uuid, session_id, signature_role, signer_name, signed_at, device, is_required, created_by)
+           values (gen_random_uuid(), $1, 'Receiver', 'Collateral Test Signer', now(), 'iPad-1', true, $2)`,
+          [handoverSessionId, U.Warehouse],
+        )
+      })
+
+      // Moving to On Rent without cash deposit or collateral is refused (R-06 warning requires reason)
+      await as('Warehouse', async () => {
+        await q('savepoint deposit_warn_probe')
+        try {
+          await refuses(
+            'handover without cash deposit or collateral is refused without override reason',
+            `insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at)
+             values (gen_random_uuid(), $1, $2, 'Packed', 'On Rent', $3, 'Warehouse', now())`,
+            [bId, BRANCH, U.Warehouse],
+            /pending deposit of Rs\. 10000\.00/,
+          )
+        } finally {
+          await q('rollback to savepoint deposit_warn_probe')
+          await q('release savepoint deposit_warn_probe')
+        }
+      })
+
+      // Now client presents ID card as deposit collateral instead of cash (D1, T2-03)
+      await as('Warehouse', async () => {
+        await q(
+          `insert into collateral_documents (client_uuid, booking_id, collateral_type, document_number, held_by, created_by)
+           values (gen_random_uuid(), $1, 'citizenship_card', '27-01-78-12345', $2, $2)`,
+          [bId, U.Warehouse],
+        )
+      })
+
+      // Handover with held ID succeeds WITHOUT money override reason!
+      await as('Warehouse', async () => {
+        await q(
+          `insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at)
+           values (gen_random_uuid(), $1, $2, 'Packed', 'On Rent', $3, 'Warehouse', now())`,
+          [bId, BRANCH, U.Warehouse],
+        )
+        await q(`update operation_sessions set state = 'Completed' where id = $1`, [handoverSessionId])
+      })
+
+      assertEq(await stageOf('l36'), 'On Rent', 'booking advanced to On Rent with ID held as deposit')
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L37',
+  title: 'Close refused while ID held; accepted once returned (D1, T2-03)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      // 1. Create and progress booking to On Rent with held collateral
+      await as('Coordinator', async () => {
+        await createBooking({
+          key: 'l37',
+          window: ['2099-12-20T04:00:00Z', '2099-12-22T04:00:00Z'],
+          actor: 'Coordinator',
+          lines: [
+            {
+              productId: SERIAL_PRODUCT,
+              description: 'Lifecycle Camera for Collateral Close Gate',
+              qty: 1,
+              days: 2,
+              rate: 3500,
+              units: [UNITS[0]],
+            },
+          ],
+        })
+      })
+      const bId = bookingIds.l37
+      await transition('l37', 'Quote', 'Booked', 'Coordinator')
+
+      await as('Warehouse', async () => {
+        await actionPackRental({
+          key: 'l37',
+          actor: 'Warehouse',
+          units: [{ id: UNITS[0], serial: 'LCSN-001' }],
+        })
+      })
+
+      await as('Warehouse', async () => {
+        await q(
+          `insert into collateral_documents (client_uuid, booking_id, collateral_type, document_number, held_by, created_by)
+           values (gen_random_uuid(), $1, 'passport', 'PA09876543', $2, $2)`,
+          [bId, U.Warehouse],
+        )
+        await actionHandoverRental({
+          key: 'l37',
+          actor: 'Warehouse',
+          signerName: 'Passport Signer',
+          deliveryMethod: 'Client Pickup',
+          verified: true,
+        })
+      })
+      assertEq(await stageOf('l37'), 'On Rent', 'booking is On Rent')
+
+      // Return booking
+      await as('Warehouse', async () => {
+        await actionReturnRental({
+          key: 'l37',
+          actor: 'Warehouse',
+          returnedUnits: [{ id: UNITS[0] }],
+        })
+      })
+      assertEq(await stageOf('l37'), 'Returned', 'booking is Returned')
+
+      // Provide settled invoice
+      await asOwnerOfTheDatabase(async () => {
+        await q(
+          `insert into invoices (client_uuid, invoice_no, booking_id, client_id, branch_id, issue_date, due_date, total_amount, paid_amount, outstanding_amount, status)
+           select gen_random_uuid(), 'INV-L37', b.id, b.client_id, $2::uuid, current_date, current_date + 7, 7000, 7000, 0, 'Paid' from bookings b where b.id = $1::uuid`,
+          [bId, BRANCH],
+        )
+      })
+
+      // Attempt Close while collateral is still held: MUST BE REFUSED (gate.close.collateral_held)
+      await as('Manager', async () => {
+        await q('savepoint collateral_close_probe')
+        try {
+          await refuses(
+            'closing while collateral is held is refused',
+            `insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at)
+             values (gen_random_uuid(), $1, $2, 'Returned', 'Closed', $3, 'Manager', now())`,
+            [bId, BRANCH, U.Manager],
+            /gate\.close\.collateral_held/,
+          )
+        } finally {
+          await q('rollback to savepoint collateral_close_probe')
+          await q('release savepoint collateral_close_probe')
+        }
+      })
+
+      // Staff records return of ID to client
+      await as('Warehouse', async () => {
+        await q(
+          `update collateral_documents set returned_at = now(), returned_by = $2, updated_at = now(), updated_by = $2 where booking_id = $1`,
+          [bId, U.Warehouse],
+        )
+      })
+
+      // Close now SUCCEEDS!
+      await as('Manager', async () => {
+        await q(
+          `insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at)
+           values (gen_random_uuid(), $1, $2, 'Returned', 'Closed', $3, 'Manager', now())`,
+          [bId, BRANCH, U.Manager],
+        )
+      })
+
+      assertEq(await stageOf('l37'), 'Closed', 'booking closed after returning collateral')
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L38',
+  title: 'Warehouse cannot read ID document number; Manager reads unmasked (D1, T2-03)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      const bId = bookingIds.a
+      const docNum = 'NP-CITIZEN-998877'
+      await asOwnerOfTheDatabase(async () => {
+        await q(
+          `insert into collateral_documents (client_uuid, booking_id, collateral_type, document_number, held_by, created_by)
+           values (gen_random_uuid(), $1, 'citizenship_card', $2, $3, $3)`,
+          [bId, docNum, U.Owner],
+        )
+      })
+
+      // 1. Warehouse direct select on collateral_documents.document_number is refused by column permissions
+      await as('Warehouse', async () => {
+        await q('savepoint wh_doc_probe')
+        try {
+          await refuses(
+            'Warehouse direct select on collateral_documents.document_number is refused',
+            `select document_number from collateral_documents where booking_id = $1`,
+            [bId],
+            /permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint wh_doc_probe')
+          await q('release savepoint wh_doc_probe')
+        }
+      })
+
+      // 2. Warehouse select on collateral_documents_v returns masked document_number and null evidence_file_id
+      await as('Warehouse', async () => {
+        const rows = (await q(`select document_number, evidence_file_id from collateral_documents_v where booking_id = $1`, [bId])).rows
+        assertEq(rows.length, 1, 'Warehouse finds collateral record')
+        assertEq(rows[0].document_number, '••••-••••-8877', 'Warehouse sees masked document number')
+        assertEq(rows[0].evidence_file_id, null, 'Warehouse sees null evidence file id')
+      })
+
+      // 3. Manager select on collateral_documents_v returns unmasked document_number
+      await as('Manager', async () => {
+        const rows = (await q(`select document_number from collateral_documents_v where booking_id = $1`, [bId])).rows
+        assertEq(rows.length, 1, 'Manager finds collateral record')
+        assertEq(rows[0].document_number, docNum, 'Manager sees unmasked document number')
+      })
+    })
+  },
+})
+
 /* ── Run ──────────────────────────────────────────────────────────────────── */
 
 await seed()

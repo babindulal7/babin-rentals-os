@@ -1,5 +1,60 @@
 # Progress Log
 
+## 2026-10-26 (j) — T2-03 ID card deposit collateral & operations popup fix
+
+**Did**
+- Fixed operations modal / popup freeze in `OperationsShell.tsx`, `OperationsWorkspaceContext.tsx`, `PackingWorkspace.tsx`, `HandoverWorkspace.tsx`, `ResetWorkspace.tsx`:
+  - Removed fatal `if (readingFloor.current) return;` bailout in `completed()` which locked the popup in `"Saving…"`.
+  - Added `try ... finally` block ensuring `submitLock.current = false`, `setSubmitting(false)`, and `setActions(null)` always execute.
+  - Enabled quantity-only reset persistence to database and permitted clean completion even when problem/maintenance counts exist (RS-03).
+  - Wired `onJobChange` and preserved shell identity on `key={workspace.bookingNo}` so stage transitions (Pack -> Handover -> Return -> Reset) transition smoothly without unmounting the modal frame.
+- Claimed migration 0181 in `docs/plans/MIGRATION_LEDGER.md`: `| 0181 | T2-03 | collateral-deposit-id-card | lane-a/T2-03-collateral-deposit | verified |`
+- Created `supabase/migrations/0181_collateral_deposit_id_card.sql`:
+  - Added `collateral_documents` table with RLS policies, column permissions, and masking view `collateral_documents_v`.
+  - Enforced Gate 4 at Handover to accept held ID card in lieu of cash deposit (Ruling D1).
+  - Enforced Gate 5 at Close to refuse transition while any collateral is still held (`gate.close.collateral_held`).
+  - Revoked all on `collateral_documents_v` from anon to maintain strict zero-leak gate.
+- Added lifecycle steps `L36`, `L37`, `L38` in `scripts/e2e-lifecycle.mjs`:
+  - `L36`: ID satisfies deposit gate at Handover without cash deposit (D1, T2-03).
+  - `L37`: Close refused while ID held; accepted once returned (D1, T2-03).
+  - `L38`: Warehouse cannot read ID document number; Manager reads unmasked (D1, T2-03).
+- Added actions `receiveCollateral` and `returnCollateral` in `src/actions/rentals/`, registered in `src/actions/core.ts` under capabilities `collateral.receive` and `collateral.return`.
+- Added UI modals `HoldCollateralModal.tsx` and `ReturnCollateralModal.tsx`, wired into `HandoverWorkspace.tsx`, `BookingDetail.tsx`, and `ClientDetail.tsx`.
+- Updated `src/lib/workflow.ts` and `src/actions/rentals/closeRental.ts` with 5th close gate ("No client collateral held").
+- Marked T2-03 as done in `docs/plans/T2_FLOOR.md`.
+
+**Ruled**
+- Ruling D1: ID card documents (citizenship card, passport, driving licence) can be held as deposit collateral in lieu of cash. Collateral is strictly non-monetary (Law 5) and never enters totals or revenue.
+- Gate 4 at Handover is satisfied by held collateral; Gate 5 at Close strictly blocks closing until held collateral is returned to the client.
+- Masked document numbers for non-Manager roles (`••••-••••-XXXX`); Manager and above see unmasked numbers.
+
+**Verified**
+- `npm run typecheck`: PASS (0 errors).
+- `npm run check:pglite`: PASS (178/178 migrations applied cleanly, 0 leaks, 0 failures, 32 views checked).
+- `npm run check:lifecycle`: PASS (38/38 steps green: L1–L38).
+- `npm run check:contrast`: PASS (106/106 WCAG AA token pairs).
+- `npx vitest run`: PASS (306/306 passing across `collateral.test.ts`, `core.test.ts`, `closeRental.test.ts`, `workflow.test.ts`, `rbac.test.ts`, `floor-loop.test.tsx`, `OperationsShell.test.tsx`, `BookingOperationsMenu.test.tsx`).
+- `npm run build`: PASS (built in 1m 3s, PWA generated).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 57 / 57 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 38 / 38 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 178 files · check:pglite 178/178 applied, 0 failed (recorded 2026-10-26T13:21:20.946Z). Suite: PASS — 5772/5772 passed, 0 failed (recorded 2026-10-26T13:44:00.193Z); source fingerprint matches.
+Coverage suite: PASS — 5772/5772 passed, 0 failed (recorded 2026-10-26T13:44:00.193Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-10-26T13:22:18.016Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T2-06 (Repair job closes the damage finding).
+- T6-01 (Nepali glossary wave 1 for ~200 floor terms).
+
 ## 2026-10-26 (i) — T2-05 Technician can do every floor verb
 
 **Did**

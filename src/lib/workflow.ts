@@ -312,6 +312,11 @@ export interface CloseGateInput {
    * database re-checks the reason length and the role.
    */
   depositSkipReason?: string
+  /**
+   * **D1 / T2-03.** Whether client collateral (ID card) is still held.
+   * Close is refused while an ID is still held (gate.close.collateral_held).
+   */
+  collateralHeld?: boolean
 }
 
 /**
@@ -333,6 +338,7 @@ export function closeGates(i: CloseGateInput): Array<{ label: string; passing: b
      and no reason makes it so. */
   const depositSkipped = held > 0 && (i.depositSkipReason?.trim().length ?? 0) >= 10
   const pending = i.damageChargesPendingApproval
+  const collateralHeld = Boolean(i.collateralHeld)
 
   return [
     {
@@ -370,6 +376,13 @@ export function closeGates(i: CloseGateInput): Array<{ label: string; passing: b
         pending === 0
           ? null
           : `${pending} damage finding${pending === 1 ? '' : 's'} awaiting approval, and approving one is not built yet`,
+    },
+    {
+      label: 'No client collateral held',
+      passing: !collateralHeld,
+      blocking: collateralHeld
+        ? "Client collateral (ID card) is still held — return the client's ID before closing"
+        : null,
     },
   ]
 }

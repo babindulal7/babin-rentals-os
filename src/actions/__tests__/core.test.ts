@@ -344,9 +344,9 @@ describe('createAction — fails closed', () => {
       }
     })
 
-    it('allows inspection.* to floor roles and denies to non-floor roles (PLAN.md §4.29)', async () => {
-      const floorRoles = ['Owner', 'Admin', 'Manager', 'Warehouse'] as const
-      const nonFloorRoles = ['Driver', 'Technician', 'Accounts', 'Coordinator'] as const
+    it('allows inspection.* to floor roles and denies to non-floor roles (PLAN.md §4.29, D3)', async () => {
+      const floorRoles = ['Owner', 'Admin', 'Manager', 'Warehouse', 'Technician'] as const
+      const nonFloorRoles = ['Driver', 'Accounts', 'Coordinator'] as const
 
       for (const capability of ['inspection.create', 'inspection.pass', 'inspection.fail']) {
         for (const role of floorRoles) {

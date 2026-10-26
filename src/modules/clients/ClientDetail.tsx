@@ -1,6 +1,6 @@
 import { RecordForm } from '../../components/records/RecordForm'
 import { useSearchParams } from 'react-router-dom'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
@@ -35,7 +35,7 @@ import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useAuth } from '../../lib/auth'
 import { useNetwork } from '../../lib/network'
 import { canBlockClient, canChangeMembership } from '../../lib/rbac'
-import { newClientUuid } from '../../lib/supabase'
+import { supabase, newClientUuid } from '../../lib/supabase'
 import { gateContext, canViewPII, canViewOnStopReason, moneyScope } from '../../lib/fieldGating'
 import { STATUS } from '../../lib/status'
 import type { BrandKey } from '../../lib/status'
@@ -455,6 +455,29 @@ function ClientDetailView() {
     { isFilteredOverride: false },
   )
   const [showCreateDoc, setShowCreateDoc] = useState(false)
+  const [collateralHeldCount, setCollateralHeldCount] = useState<number>(0)
+
+  useEffect(() => {
+    const bookingIds = rentals.rows.map((r) => r.id).filter(Boolean)
+    if (bookingIds.length === 0) {
+      setCollateralHeldCount(0)
+      return
+    }
+    let active = true
+    void supabase
+      .from('collateral_documents_v')
+      .select('id', { count: 'exact', head: true })
+      .in('booking_id', bookingIds)
+      .is('returned_at', null)
+      .then(({ count, error }) => {
+        if (active && !error && typeof count === 'number') {
+          setCollateralHeldCount(count)
+        }
+      })
+    return () => {
+      active = false
+    }
+  }, [rentals.rows])
 
   /* ── On Stop — RULING §11.2 ─────────────────────────────────────────────
    *
@@ -829,6 +852,7 @@ function ClientDetailView() {
                    page-level gate, so it is named as one. */
                 { key: 'pan', label: 'PAN', value: client.pan ?? 'Not on file' },
                 { label: 'KYC', value: client.kycStatus },
+                { label: 'Collateral Held', value: collateralHeldCount > 0 ? 'ID Held' : '—' },
                 { key: 'id', label: 'Client number', value: client.id },
               ]}
             />

@@ -38,6 +38,7 @@ const PASSING_GATES: CloseGateInput = {
   depositHeldPaisa: 0,
   openCases: 0,
   damageChargesPendingApproval: 0,
+  collateralHeld: false,
 }
 
 /* ── §1.2 · the canonical six ───────────────────────────────────────────── */
@@ -231,14 +232,21 @@ describe('FLAGS — §1.9', () => {
   })
 })
 
-/* ── §1.7 · the four close gates ────────────────────────────────────────── */
+/* ── §1.7 · the close gates ────────────────────────────────────────── */
 
 describe('closeGates — §1.7', () => {
-  it('is four gates, all passing on a clean booking', () => {
+  it('is five gates, all passing on a clean booking', () => {
     const gates = closeGates(PASSING_GATES)
-    expect(gates).toHaveLength(4)
+    expect(gates).toHaveLength(5)
     expect(gates.every((g) => g.passing)).toBe(true)
     expect(gates.every((g) => g.blocking === null)).toBe(true)
+  })
+
+  it('refuses Close when client collateral (ID card) is still held (D1, T2-03)', () => {
+    const gates = closeGates({ ...PASSING_GATES, collateralHeld: true })
+    const collateralGate = gates.find((g) => g.label === 'No client collateral held')
+    expect(collateralGate?.passing).toBe(false)
+    expect(collateralGate?.blocking).toMatch(/Client collateral \(ID card\) is still held/i)
   })
 
   it('Reset and Cleaning are deliberately NOT close gates', () => {

@@ -35,7 +35,7 @@ import { useDomainEvent } from '../../events/useDomainEvent'
 import { EVENT_TYPES } from '../../events/eventBus'
 import { Unavailable } from '../../components/ui/Unavailable'
 import { useAuth } from '../../lib/auth'
-import { newClientUuid } from '../../lib/supabase'
+import { supabase, newClientUuid } from '../../lib/supabase'
 import { gateContext, canViewMoneyField } from '../../lib/fieldGating'
 import {
   canRecordPayment,
@@ -44,6 +44,7 @@ import {
   canPerformOp,
   canWriteBookingDesk,
   canCloseRental,
+  canManageCollateral,
 } from '../../lib/rbac'
 import { IntelCard } from '../../components/ui/IntelCard'
 import { ClientIntelFromId } from '../../components/intel/ClientIntelFromId'
@@ -56,6 +57,7 @@ import { displayProjectType } from '../../lib/projectTypes'
 import { PROJECT_TYPES, isProjectType, validateProjectType } from '../../lib/projectTypes'
 import { updateBookingProject } from '../../actions/rentals/updateBookingProject'
 import { ExtendRentalModal } from './modals/ExtendRentalModal'
+import { ReturnCollateralModal } from './modals/ReturnCollateralModal'
 import { AssignCrewModal } from './modals/AssignCrewModal'
 import { BookingCrewList } from './BookingCrewList'
 import { canAssignPricedCrew } from '../../lib/crewAssignment'
@@ -1015,6 +1017,48 @@ function BookingDetailView() {
   const booking = head.rows[0]
   const bookingId = booking?.id ?? null
 
+  interface CollateralDoc {
+    id: string
+    booking_id: string
+    collateral_type: string
+    document_number: string
+    held_by: string
+    held_at: string
+    notes: string | null
+    returned_at: string | null
+    returned_by: string | null
+    return_notes: string | null
+  }
+
+  const [collaterals, setCollaterals] = useState<CollateralDoc[]>([])
+  const [returnCollateralTarget, setReturnCollateralTarget] = useState<CollateralDoc | null>(null)
+
+  const fetchCollaterals = useCallback(async () => {
+    if (!bookingId) {
+      setCollaterals([])
+      return
+    }
+    try {
+      const { data, error } = await supabase
+        .from('collateral_documents_v')
+        .select('id, booking_id, collateral_type, document_number, held_by, held_at, notes, returned_at, returned_by, return_notes')
+        .eq('booking_id', bookingId)
+        .order('held_at', { ascending: false })
+      if (!error && data) {
+        setCollaterals(data as CollateralDoc[])
+      }
+    } catch {
+      // ignore
+    }
+  }, [bookingId])
+
+  useEffect(() => {
+    void fetchCollaterals()
+  }, [fetchCollaterals])
+
+  const activeCollateral = collaterals.find((c) => c.returned_at === null) ?? null
+  const userCanManageCollateral = user ? canManageCollateral(user.role) : false
+
   /* ── lines + units — `fetchFloorBooking`, the per-booking read ────────────
    * Not a list, so it does not go through `useList`; same cancellation rule.
    */
@@ -1418,6 +1462,10 @@ function BookingDetailView() {
       )
       return
     }
+    if (activeCollateral) {
+      setCloseError("Cannot close booking while client collateral (ID card) is still held. Return collateral first.")
+      return
+    }
     setCloseError(null)
     setClosing(true)
     // Law 8 — minted HERE, at the press, and reused by every retry of this one press.
@@ -1433,7 +1481,7 @@ function BookingDetailView() {
         setCloseError(formatGateError(err))
       })
       .finally(() => setClosing(false))
-  }, [id, user, showSuccessToast, refetchHead])
+  }, [id, user, showSuccessToast, refetchHead, activeCollateral])
 
   const submitCloseOverride = useCallback(() => {
     const ctx = actionCtx(user)
@@ -1923,6 +1971,9 @@ function BookingDetailView() {
   }
   if (canBookingMoney && booking.depositRequired && booking.depositRequired > 0 && stage !== 'Closed') {
     blockers.push(`Security deposit required: ${formatMoney(booking.depositRequired)}`)
+  }
+  if (activeCollateral) {
+    blockers.push("Client collateral (ID card) is still held — return the client's ID before closing")
   }
 
   const recordPaymentButton = (label: string) => {
@@ -2765,8 +2816,27 @@ function BookingDetailView() {
                           label: 'Deposit Required',
                           value: booking.depositRequired !== null ? formatMoney(booking.depositRequired) : 'Not recorded',
                         },
+                        ...(activeCollateral
+                          ? [
+                              {
+                                label: 'Collateral Held',
+                                value: `${activeCollateral.collateral_type.replace(/_/g, ' ')} (${activeCollateral.document_number})`,
+                              },
+                            ]
+                          : []),
                       ]}
                     />
+                    {activeCollateral && stage === 'Returned' && userCanManageCollateral && (
+                      <div style={{ marginTop: 'var(--sp-xs)' }}>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setReturnCollateralTarget(activeCollateral)}
+                        >
+                          Return ID
+                        </Button>
+                      </div>
+                    )}
                     <NotWiredNote>
                       {/* Received and pending live in security_deposits / deposit_movements, which have no query module
                       yet (Law 5 keeps them out of the payments ledger) — absent here, not zero. */}Deposit movements are not available yet. </NotWiredNote>
@@ -3183,6 +3253,23 @@ function BookingDetailView() {
         variant="danger"
         isSubmitting={releasingUnitId !== null}
       />
+
+      {returnCollateralTarget && booking && (
+        <ReturnCollateralModal
+          isOpen={Boolean(returnCollateralTarget)}
+          onClose={() => setReturnCollateralTarget(null)}
+          bookingId={booking.id}
+          bookingNo={booking.bookingNo}
+          collateralId={returnCollateralTarget.id}
+          collateralType={returnCollateralTarget.collateral_type.replace(/_/g, ' ')}
+          documentNumber={returnCollateralTarget.document_number}
+          onSuccess={() => {
+            showSuccessToast('Collateral Returned', `ID returned to client for ${booking.bookingNo}`)
+            void fetchCollaterals()
+            refetchHead()
+          }}
+        />
+      )}
 
       <ExtendRentalModal
         isOpen={showExtendModal}

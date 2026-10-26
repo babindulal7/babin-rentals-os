@@ -519,6 +519,16 @@ export function canReturn(role: SystemRole): boolean {
   return canPerformOperations(role) // receiving + triage is floor + technician work
 }
 
+/**
+ * RULING 2026-10-26 (D1, Task T2-03, migration 0181):
+ * Collateral documents (ID cards held in lieu of cash deposit) may be received
+ * or returned by any staff member capable of handover or desk operations
+ * (Owner, Admin, Manager, Coordinator, Warehouse, Technician).
+ */
+export function canManageCollateral(role: SystemRole): boolean {
+  return canPerformOperations(role) || canWriteBookingDesk(role)
+}
+
 export function canReset(role: SystemRole): boolean {
   return canPerformOperations(role) // QC / cleaning is floor + technician work
 }
