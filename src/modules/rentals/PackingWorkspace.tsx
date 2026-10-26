@@ -46,6 +46,8 @@ import {
   unlockAudioContext,
 } from '../../lib/acousticFeedback'
 import { getCinemaKitDependencies, evaluateKitCompleteness } from '../../lib/kitBuildVerification'
+import { exportPackingListPdf, openPdfForPrint } from '../../lib/pdf/exportPdf'
+import type { PackingListPdfItem } from '../../lib/pdf/generatePdf'
 import './rentals.css'
 
 
@@ -288,6 +290,52 @@ export function buildRows(floor: FloorBooking): PackRow[] {
     }
   }
   return rows
+}
+
+export function buildPackingPdfItems(lines: readonly FloorLine[]): PackingListPdfItem[] {
+  const parentIds = new Set(lines.map((l) => l.parentLineId).filter((p): p is string => p !== null))
+  const items: PackingListPdfItem[] = []
+
+  for (const line of lines) {
+    if (parentIds.has(line.id) || line.lineType === 'Bundle') {
+      items.push({
+        id: line.id,
+        name: line.productName ?? line.description ?? 'Equipment Package',
+        quantity: line.qty,
+        isParent: true,
+        parentLineId: line.parentLineId,
+      })
+    }
+  }
+
+  for (const line of lines) {
+    if (parentIds.has(line.id)) continue
+    if (NON_PACKABLE_LINE_TYPES.has(line.lineType)) continue
+
+    const baseName = line.productName ?? line.description ?? 'Equipment'
+    if (line.unitsPresence === 'present' && line.units.length > 0) {
+      line.units.forEach((u, i) => {
+        items.push({
+          id: u.id,
+          name: line.units.length > 1 ? `${baseName} (Unit ${i + 1})` : baseName,
+          serialNo: u.serial ?? u.assetTag ?? null,
+          quantity: 1,
+          location: u.location,
+          parentLineId: line.parentLineId,
+        })
+      })
+    } else {
+      items.push({
+        id: line.id,
+        name: baseName,
+        quantity: line.qty,
+        location: null,
+        parentLineId: line.parentLineId,
+      })
+    }
+  }
+
+  return items
 }
 
 /**
@@ -581,6 +629,31 @@ export default function PackingWorkspace({
    * double-press replays the same key and resolves to the first write.
    */
   const [completionKey, setCompletionKey] = useState(() => newClientUuid())
+  const [printing, setPrinting] = useState(false)
+
+  const handlePrintPackingList = async () => {
+    if (!floor) return
+    setPrinting(true)
+    try {
+      const items = buildPackingPdfItems(floor.lines)
+      const result = await exportPackingListPdf({
+        bookingNo: floor.bookingNo,
+        clientName: floor.clientName ?? 'Client',
+        pickupAtAd: floor.pickupAtAd,
+        returnAtAd: floor.returnAtAd,
+        deliveryType: floor.deliveryType ? deliveryTypeLabel(floor.deliveryType) : 'Client Pickup',
+        project: floor.project,
+        packedBy: user?.name ?? 'Warehouse Staff',
+        items,
+      })
+      openPdfForPrint(result.blob, `Packing_List_${floor.bookingNo}`)
+      showSuccessToast('Packing List Ready', `Opened printable packing list for ${floor.bookingNo}.`)
+    } catch (err) {
+      captureError(err as Error, { where: 'handlePrintPackingList', bookingNo: floor.bookingNo })
+    } finally {
+      setPrinting(false)
+    }
+  }
 
   const floorId = floor?.id ?? null
   useEffect(() => {
@@ -1378,11 +1451,14 @@ export default function PackingWorkspace({
                   has.
                 */}
                 {!embedded && (
-                <Unavailable reason="Printing a packing list is not built. Nothing in the app generates a packing-list document, and there is no print stylesheet, so this would send the whole workspace — filters, rails and buttons — to the printer instead of a list.">
-                  <Button icon="file" disabled>
+                  <Button
+                    icon="file"
+                    onClick={handlePrintPackingList}
+                    loading={printing}
+                    disabled={printing}
+                  >
                     Print Packing List
                   </Button>
-                </Unavailable>
                 )}
                 {/* RULING 2026-10-14: Save Draft removed. It called `saveDraft({ id })`, which with no draft
                     data only bumps `bookings.updated_at` — no tick, note or photo reached the server, and

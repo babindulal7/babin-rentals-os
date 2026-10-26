@@ -40,7 +40,7 @@ vi.mock('../../supabase', () => ({
   IS_MOCK: false,
 }))
 
-import { exportInvoicePdf, exportDocumentPdf } from '../exportPdf'
+import { exportInvoicePdf, exportDocumentPdf, exportPackingListPdf, exportReturnReportPdf } from '../exportPdf'
 import { supabase } from '../../supabase'
 
 describe('exportPdf', () => {
@@ -163,5 +163,38 @@ describe('exportPdf', () => {
     expect(result.bytes.byteLength).toBeGreaterThan(500)
     expect(result.storagePath).toBeUndefined()
     expect(failures.updates).toHaveLength(0)
+  })
+
+  it('exports packing list PDF offline/local without requiring auth or throwing storage errors', async () => {
+    failures.auth = true
+    const res = await exportPackingListPdf({
+      bookingNo: 'BK-100',
+      clientName: 'Client Alpha',
+      items: [
+        { id: '1', name: 'Item 1', quantity: 1 },
+      ],
+    })
+    expect(res.blob).toBeInstanceOf(Blob)
+    expect(res.bytes.byteLength).toBeGreaterThan(500)
+    expect(res.filename).toContain('BK-100')
+  })
+
+  it('exports return report PDF offline/local without requiring auth or throwing storage errors', async () => {
+    failures.auth = true
+    const res = await exportReturnReportPdf({
+      bookingNo: 'BK-200',
+      clientName: 'Client Beta',
+      totalUnits: 1,
+      returnedUnits: 1,
+      missingUnits: 0,
+      damagedUnits: 0,
+      photosCount: 0,
+      lines: [
+        { id: '1', name: 'Item 1', quantity: 1, outcome: 'Received' },
+      ],
+    })
+    expect(res.blob).toBeInstanceOf(Blob)
+    expect(res.bytes.byteLength).toBeGreaterThan(500)
+    expect(res.filename).toContain('BK-200')
   })
 })

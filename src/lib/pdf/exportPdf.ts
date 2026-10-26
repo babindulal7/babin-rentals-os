@@ -13,8 +13,12 @@ import { supabase } from '../supabase'
 import {
   generateInvoicePdf,
   generateDocumentPdf,
+  generatePackingListPdf,
+  generateReturnReportPdf,
   type InvoicePdfData,
   type DocumentPdfData,
+  type PackingListPdfData,
+  type ReturnReportPdfData,
 } from './generatePdf'
 
 export interface ExportPdfOptions {
@@ -186,5 +190,153 @@ export async function exportDocumentPdf(
     signedUrl,
     filename,
     fileSizeBytes: bytes.byteLength,
+  }
+}
+
+/**
+ * Exports a warehouse packing list as a PDF document.
+ * Follows the 27 Jul hierarchy rule (parent-first, children nested) and is strictly money-blind.
+ */
+export async function exportPackingListPdf(
+  packingData: PackingListPdfData,
+  options: ExportPdfOptions = {},
+): Promise<ExportPdfResult> {
+  const {
+    uploadToStorage = false,
+    expiresInSeconds = 86400,
+    download = false,
+    documentId,
+  } = options
+
+  const safeBookingNo = sanitizePathSegment(packingData.bookingNo || 'BOOKING')
+  const safeName = sanitizePathSegment(packingData.documentNo || `PACKING_LIST_${safeBookingNo}`)
+  const filename = options.filename || `${safeName}.pdf`
+
+  const bytes = generatePackingListPdf(packingData)
+  const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
+
+  let storagePath: string | undefined
+  let signedUrl: string | undefined
+
+  if (uploadToStorage) {
+    try {
+      const stored = await uploadPrivatePdf(blob, safeName, expiresInSeconds)
+      storagePath = stored.storagePath
+      signedUrl = stored.signedUrl
+      const reference = documentId || packingData.documentNo
+      if (reference) {
+        await supabase
+          .from('document_registry')
+          .update({ file_url: storagePath, file_size_bytes: bytes.byteLength })
+          .eq(documentId ? 'id' : 'document_no', reference)
+      }
+    } catch {
+      // Storage upload failure in floor/offline mode does not block printing
+    }
+  }
+
+  if (download && typeof window !== 'undefined' && typeof document !== 'undefined') {
+    const downloadUrl = signedUrl || URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = downloadUrl
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    if (!signedUrl) {
+      setTimeout(() => URL.revokeObjectURL(downloadUrl), 5000)
+    }
+  }
+
+  return {
+    blob,
+    bytes,
+    storagePath,
+    signedUrl,
+    filename,
+    fileSizeBytes: bytes.byteLength,
+  }
+}
+
+/**
+ * Exports a warehouse return inspection report as a PDF document.
+ * Strictly money-blind — includes units, outcomes, photos count, and flags.
+ */
+export async function exportReturnReportPdf(
+  returnData: ReturnReportPdfData,
+  options: ExportPdfOptions = {},
+): Promise<ExportPdfResult> {
+  const {
+    uploadToStorage = false,
+    expiresInSeconds = 86400,
+    download = false,
+    documentId,
+  } = options
+
+  const safeBookingNo = sanitizePathSegment(returnData.bookingNo || 'BOOKING')
+  const safeName = sanitizePathSegment(returnData.documentNo || `RETURN_REPORT_${safeBookingNo}`)
+  const filename = options.filename || `${safeName}.pdf`
+
+  const bytes = generateReturnReportPdf(returnData)
+  const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
+
+  let storagePath: string | undefined
+  let signedUrl: string | undefined
+
+  if (uploadToStorage) {
+    try {
+      const stored = await uploadPrivatePdf(blob, safeName, expiresInSeconds)
+      storagePath = stored.storagePath
+      signedUrl = stored.signedUrl
+      const reference = documentId || returnData.documentNo
+      if (reference) {
+        await supabase
+          .from('document_registry')
+          .update({ file_url: storagePath, file_size_bytes: bytes.byteLength })
+          .eq(documentId ? 'id' : 'document_no', reference)
+      }
+    } catch {
+      // Storage upload failure in floor/offline mode does not block printing
+    }
+  }
+
+  if (download && typeof window !== 'undefined' && typeof document !== 'undefined') {
+    const downloadUrl = signedUrl || URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = downloadUrl
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    if (!signedUrl) {
+      setTimeout(() => URL.revokeObjectURL(downloadUrl), 5000)
+    }
+  }
+
+  return {
+    blob,
+    bytes,
+    storagePath,
+    signedUrl,
+    filename,
+    fileSizeBytes: bytes.byteLength,
+  }
+}
+
+/**
+ * Opens a PDF document blob for direct viewing and printing on iPad / desktop.
+ */
+export function openPdfForPrint(blob: Blob, _title?: string): void {
+  if (typeof window === 'undefined') return
+  const url = URL.createObjectURL(blob)
+  const opened = window.open(url, '_blank')
+  if (!opened) {
+    // If popups are blocked, download the file directly so the operator gets it
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${_title || 'document'}.pdf`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
   }
 }

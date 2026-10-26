@@ -2,7 +2,12 @@ import { describe, it, expect } from 'vitest'
 import {
   generateInvoicePdf,
   generateDocumentPdf,
+  generatePackingListPdf,
+  generateReturnReportPdf,
+  organizePackingListItems,
   type InvoicePdfData,
+  type PackingListPdfData,
+  type ReturnReportPdfData,
 } from '../generatePdf'
 import { rupees } from '../../money'
 
@@ -214,6 +219,138 @@ describe('generatePdf', () => {
       expect(text).toContain('Alpha Productions')
       expect(text).toContain('The customer agrees to maintain the equipment')
       expect(text.trimEnd().endsWith('%%EOF')).toBe(true)
+    })
+  })
+
+  describe('generatePackingListPdf (T2-08, 27 Jul hierarchy rule)', () => {
+    it('organizes items parent-first with children nested underneath and loose items trailing', () => {
+      const items = [
+        { id: 'loose-1', name: 'Tripod 75mm', quantity: 1, parentLineId: null },
+        { id: 'parent-1', name: 'RED V-Raptor Camera Package', quantity: 1, isParent: true, parentLineId: null },
+        { id: 'child-1', name: 'RED V-Raptor Body', serialNo: 'RAP-001', quantity: 1, parentLineId: 'parent-1' },
+        { id: 'child-2', name: 'DSMC3 RED Touch 7.0 Monitor', serialNo: 'MON-101', quantity: 1, parentLineId: 'parent-1' },
+        { id: 'loose-2', name: 'Aputure 600d Light', quantity: 2, parentLineId: null },
+      ]
+
+      const organized = organizePackingListItems(items)
+
+      expect(organized.map((i) => i.id)).toEqual([
+        'parent-1',
+        'child-1',
+        'child-2',
+        'loose-1',
+        'loose-2',
+      ])
+      expect(organized[0]?.isParent).toBe(true)
+      expect(organized[1]?.isChild).toBe(true)
+      expect(organized[2]?.isChild).toBe(true)
+      expect(organized[3]?.isChild).toBeUndefined()
+    })
+
+    it('generates a valid, money-blind A4 packing list PDF with hierarchical structure', () => {
+      const data: PackingListPdfData = {
+        bookingNo: 'BK-2026-0042',
+        clientName: 'Annapurna Cinema Films',
+        clientPhone: '+977-9801234567',
+        project: 'High Altitude Documentary',
+        pickupAtAd: '2026-11-01T04:00:00.000Z',
+        returnAtAd: '2026-11-08T04:00:00.000Z',
+        deliveryType: 'Van Delivery',
+        packedBy: 'Babin Shrestha',
+        company: { name: 'Babin Rentals Kathmandu' },
+        items: [
+          { id: 'pkg-1', name: 'Camera A Package', quantity: 1, isParent: true, location: 'Bay 1' },
+          { id: 'unit-1', name: 'Sony FX3 Body', serialNo: 'SN-FX3-001', quantity: 1, parentLineId: 'pkg-1', location: 'Shelf A2' },
+          { id: 'unit-2', name: 'Sony 24-70mm GM II', serialNo: 'SN-GM-024', quantity: 1, parentLineId: 'pkg-1', location: 'Shelf A3' },
+          { id: 'tripod', name: 'Sachtler Flowtech 75 Tripod', serialNo: 'SN-TRIP-75', quantity: 1, location: 'Grip Rack' },
+        ],
+      }
+
+      const bytes = generatePackingListPdf(data)
+      expect(bytes).toBeInstanceOf(Uint8Array)
+
+      const text = new TextDecoder().decode(bytes)
+
+      // Standard PDF structure
+      expect(text.startsWith('%PDF-1.4\n')).toBe(true)
+      expect(text).toContain('PACKING LIST')
+      expect(text).toContain('BK-2026-0042')
+      expect(text).toContain('Annapurna Cinema Films')
+      expect(text).toContain('Van Delivery')
+      expect(text).toContain('[PACKAGE] Camera A Package')
+      expect(text).toContain('Sony FX3 Body')
+      expect(text).toContain('SN-FX3-001')
+      expect(text).toContain('Sachtler Flowtech 75 Tripod')
+      expect(text).toContain('Packed & Verified By')
+      expect(text).toContain('Received By / Transport Driver')
+      expect(text.trimEnd().endsWith('%%EOF')).toBe(true)
+
+      // Strict money-blindness (Law 6)
+      expect(text).not.toContain('Rs')
+      expect(text).not.toContain('NPR')
+      expect(text).not.toContain('paisa')
+      expect(text).not.toContain('Deposit')
+      expect(text).not.toContain('Subtotal')
+      expect(text).not.toContain('Total:')
+    })
+  })
+
+  describe('generateReturnReportPdf (T2-08, Return report)', () => {
+    it('generates a valid, money-blind A4 return report PDF with outcomes and evidence photo counts', () => {
+      const data: ReturnReportPdfData = {
+        bookingNo: 'BK-2026-0088',
+        clientName: 'Mountaineer Media',
+        clientPhone: '+977-9811223344',
+        project: 'Expedition Shoot',
+        pickupAtAd: '2026-10-10T04:00:00.000Z',
+        expectedReturnAtAd: '2026-10-15T04:00:00.000Z',
+        actualReturnAtAd: '2026-10-15T08:30:00.000Z',
+        inspectedBy: 'Ramesh Karki',
+        totalUnits: 4,
+        returnedUnits: 3,
+        missingUnits: 1,
+        damagedUnits: 1,
+        photosCount: 2,
+        flags: ['Missing Item recorded', 'Front element scratch logged'],
+        company: { name: 'Babin Rentals Kathmandu' },
+        lines: [
+          { id: 'l1', name: 'Sony FX6 Cinema Camera', serialNo: 'SN-FX6-001', quantity: 1, outcome: 'Received', problemRoute: 'Ready for Reset' },
+          { id: 'l2', name: 'Sony 50mm f/1.2 GM', serialNo: 'SN-GM-050', quantity: 1, outcome: 'Damaged', problemRoute: 'Service / Repair' },
+          { id: 'l3', name: 'V-Mount 98Wh Battery', serialNo: 'SN-BAT-098', quantity: 1, outcome: 'Missing', problemRoute: 'Missing Item Route' },
+          { id: 'l4', name: 'Manfrotto 504HD Tripod', serialNo: 'SN-MAN-504', quantity: 1, outcome: 'Received', problemRoute: 'Ready for Reset' },
+        ],
+      }
+
+      const bytes = generateReturnReportPdf(data)
+      expect(bytes).toBeInstanceOf(Uint8Array)
+
+      const text = new TextDecoder().decode(bytes)
+
+      // Standard PDF structure
+      expect(text.startsWith('%PDF-1.4\n')).toBe(true)
+      expect(text).toContain('RETURN INSPECTION REPORT')
+      expect(text).toContain('BK-2026-0088')
+      expect(text).toContain('Mountaineer Media')
+      expect(text).toContain('Total Items')
+      expect(text).toContain('Returned Clean')
+      expect(text).toContain('Missing Items')
+      expect(text).toContain('Photos Captured')
+      expect(text).toContain('Sony FX6 Cinema Camera')
+      expect(text).toContain('Sony 50mm f/1.2 GM')
+      expect(text).toContain('Damaged')
+      expect(text).toContain('Missing')
+      expect(text).toContain('Service / Repair')
+      expect(text).toContain('Inspected By')
+      expect(text).toContain('Returned By')
+      expect(text.trimEnd().endsWith('%%EOF')).toBe(true)
+
+      // Strict money-blindness (Law 6)
+      expect(text).not.toContain('Rs')
+      expect(text).not.toContain('NPR')
+      expect(text).not.toContain('paisa')
+      expect(text).not.toContain('Deposit')
+      expect(text).not.toContain('Subtotal')
+      expect(text).not.toContain('Total Amount')
     })
   })
 })

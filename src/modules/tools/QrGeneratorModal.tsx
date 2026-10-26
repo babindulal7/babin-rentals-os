@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { Card } from '../../components/ui/Page'
 import { Button } from '../../components/ui/Button'
 import Icon from '../../components/ui/Icon'
+import { printLabel } from '../../lib/labelPrinter'
 
 function qrSeedHash(seed: string): number {
   let h = 2166136261
@@ -207,7 +208,19 @@ export default function QrGenerator() {
             </div>
           </div>
 
-          <Button onClick={() => window.print()}>
+          <Button
+            onClick={() => {
+              printLabel(
+                {
+                  assetCode: tagText || 'SAMPLE',
+                  title: tagText || 'Equipment Tag',
+                  barcodeValue: tagText || 'SAMPLE',
+                  orgName: 'BABIN RENTALS OS',
+                },
+                'standard',
+              )
+            }}
+          >
             <Icon name="download" size={14} />
             Print Tag Label
           </Button>

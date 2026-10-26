@@ -52,6 +52,8 @@ import {
   unlockAudioContext,
 } from '../../lib/acousticFeedback'
 import { SignOnGlassModal, type DigitalSignature } from './modals/SignOnGlassModal'
+import { exportReturnReportPdf, openPdfForPrint } from '../../lib/pdf/exportPdf'
+import type { ReturnReportPdfLine } from '../../lib/pdf/generatePdf'
 import './rentals.css'
 
 
@@ -729,6 +731,75 @@ export default function ReturnWorkspace({
 
   const rows = useMemo<ReturnRow[]>(() => (floor ? buildRows(floor, returnQuantities?.bookingId === floor.id ? returnQuantities.received : null) : []), [floor, returnQuantities])
   const quantitiesVerified = rows.every(row => row.remainingQty !== null)
+  const [printing, setPrinting] = useState(false)
+
+  const handlePrintReturnReport = async () => {
+    if (!floor) return
+    setPrinting(true)
+    try {
+      const reportLines: ReturnReportPdfLine[] = rows.map((r) => {
+        const mark = marks[r.key]
+        let outcome = 'Pending Return'
+        let problemRoute = 'Intake Pending'
+        if (r.alreadyReturned) {
+          outcome = 'Received (Prior Session)'
+          problemRoute = 'Ready for Reset'
+        } else if (mark?.state === 'Returned') {
+          if (mark.condition === 'Damaged') {
+            outcome = 'Damaged'
+            problemRoute = 'Service & Repair'
+          } else {
+            outcome = 'Received'
+            problemRoute = 'Ready for Reset'
+          }
+        } else if (mark?.state === 'Not Returned') {
+          outcome = mark.decision || 'Missing'
+          problemRoute = mark.decision === 'Client Retaining' ? 'Rental Extension Review' : 'Missing Item Investigation'
+        }
+
+        return {
+          id: r.key,
+          name: r.name,
+          serialNo: r.serial,
+          quantity: r.qty,
+          outcome,
+          problemRoute,
+          notes: mark?.damageDescription || mark?.reason || null,
+        }
+      })
+
+      const returnedCount = reportLines.filter((l) => l.outcome.startsWith('Received')).length
+      const damagedCount = reportLines.filter((l) => l.outcome === 'Damaged').length
+      const missingCount = reportLines.filter((l) => l.outcome === 'Missing' || l.outcome.includes('Retaining')).length
+
+      const flags: string[] = []
+      if (damagedCount > 0) flags.push(`${damagedCount} unit(s) recorded damaged / requiring repair`)
+      if (missingCount > 0) flags.push(`${missingCount} unit(s) recorded missing / retained by client`)
+
+      const result = await exportReturnReportPdf({
+        bookingNo: floor.bookingNo,
+        clientName: floor.clientName ?? 'Client',
+        pickupAtAd: floor.pickupAtAd,
+        expectedReturnAtAd: floor.returnAtAd,
+        actualReturnAtAd: floor.actualReturnAtAd,
+        inspectedBy: user?.name ?? 'Warehouse Staff',
+        totalUnits: reportLines.length,
+        returnedUnits: returnedCount,
+        missingUnits: missingCount,
+        damagedUnits: damagedCount,
+        photosCount: savedEvidence.evidence?.files ?? 0,
+        flags,
+        lines: reportLines,
+      })
+
+      openPdfForPrint(result.blob, `Return_Report_${floor.bookingNo}`)
+      showSuccessToast('Return Report Ready', `Opened printable return report for ${floor.bookingNo}.`)
+    } catch (err) {
+      captureError(err as Error, { where: 'handlePrintReturnReport', bookingNo: floor.bookingNo })
+    } finally {
+      setPrinting(false)
+    }
+  }
   const verifiedMarks = useMemo<Record<string, Mark>>(() => Object.fromEntries(Object.entries(marks).map(([key, mark]) => {
     const row = rows.find(item => item.key === key)
     return [key, { ...mark, damagePhotos: savedEvidence.evidence?.filesByUnit[row?.assetId ?? ''] ?? 0 }]
@@ -1568,11 +1639,14 @@ export default function ReturnWorkspace({
                      import `lib/money` at all.
                 */}
                 {!embedded && (
-                <Unavailable reason="Printing a return report is not built. Nothing in the app generates a return-report document, and there is no print stylesheet, so this would send the whole workspace — filters, rails and buttons — to the printer instead of a report. The one printable document that exists is a money receipt, which a warehouse floor screen may not show.">
-                  <Button icon="file" disabled>
+                  <Button
+                    icon="file"
+                    onClick={handlePrintReturnReport}
+                    loading={printing}
+                    disabled={printing}
+                  >
                     Print Return Report
                   </Button>
-                </Unavailable>
                 )}
                 <Link to={`/rentals/${id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 44, padding: '0 12px', borderRadius: 'var(--r-btn)', border: '1px solid var(--btn-secondary-border)', background: 'var(--btn-secondary-bg)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontWeight: 600, textDecoration: 'none' }}>
                   <Icon name="external_link" size={14} />
