@@ -1,5 +1,49 @@
 # Progress Log
 
+## 2026-10-27 — T2-10: Offline outbox for scans and ticks
+
+**Did**
+- Routed all non-custodial floor writes (barcode scans, manual checklist ticks, reset tasks) through the Dexie IndexedDB outbox (`src/lib/offlineQueue.ts`, `dataAccess.ts` idempotent insert) with `client_uuid` and `scanned_at` timestamp.
+- Updated `src/lib/offlineQueue.ts` to notify reactive listeners on queue changes (`onQueueChange`) across enqueuing, resolution, failure, and queue drain.
+- Enhanced `src/lib/syncEngine.ts` to reactively update pending queue counts immediately on every floor tick/scan and persisted `lastSyncTime` into localStorage (`babin-rentals:last-sync-time`) across tab refreshes.
+- Created `src/components/ui/FloorOfflineStatus.tsx` providing floor operators visual feedback of connection status, queued outbox counts, last flush timestamp (`Just now`, `Xs ago`, `Xm ago`), and manual "Flush Now" control.
+- Integrated `FloorOfflineStatus` and offline detection across all warehouse floor workspaces: `PackingWorkspace.tsx`, `HandoverWorkspace.tsx`, `ReturnWorkspace.tsx`, and `ResetWorkspace.tsx`.
+- Strictly enforced Law 1 & Rule R-40: custodial stage transitions (`packRental`, `handoverRental`, `returnRental`, `completeResetJob`) remain fail-closed online RPCs, never queued offline. When offline (`navigator.onLine === false` or network dropped), the Confirm button displays "Needs connection to complete" and is disabled across both in-page buttons, mobile sticky bars (`StickyFloorBar`), and embedded operations modals (`onRegisterActions`).
+- Added comprehensive unit tests in `src/lib/__tests__/floorOfflineOutbox.test.ts` (verifying 20 scans and ticks queue in airplane mode and flush cleanly to server rows with zero duplicates, including 23505 conflict idempotency handling) and `src/modules/rentals/__tests__/floorOfflineWorkspace.test.tsx` (verifying UI status banners, outbox counts, last flush timestamps, and disabled/enabled Confirm button safety states).
+
+**Ruled**
+- Law 1 & R-40: Custody transitions are fail-closed online RPCs, never queued offline. Non-custodial floor events (scans, checklist ticks, notes) queue durably in Dexie with `client_uuid` idempotency keys.
+- Law 6: Money-blindness strictly preserved across all floor offline indicators and workspace surfaces.
+- Outbox reactivity: Sync status and pending counters update synchronously upon scan/tick enqueue without waiting for polling intervals.
+
+**Verified**
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 errors, 0 warnings.
+- `npx vitest run src/lib/__tests__/floorOfflineOutbox.test.ts src/modules/rentals/__tests__/floorOfflineWorkspace.test.tsx`: 6/6 tests passed.
+- `npx vitest run src/lib/__tests__/floorScanStorage.test.ts src/lib/__tests__/offlineQueue.test.ts src/lib/__tests__/offlineQueue.phase0.test.ts src/lib/__tests__/offlineQueue.conflicts.test.ts src/actions/__tests__/offlineGating.test.ts src/modules/rentals/__tests__/PackingWorkspace.embedded.test.tsx src/modules/rentals/__tests__/ResetWorkspace.embedded.test.tsx src/modules/rentals/__tests__/ResetWorkspace.quantity.test.tsx`: 46/46 tests passed.
+- `npm run check:pglite`: 178/178 migrations applied, 0 leaks, 0 failed.
+- `npm run check:lifecycle`: 38/38 steps green (L1–L38).
+- `npm run check:contrast`: 106/106 WCAG AA token pairs pass in light and dark mode.
+- `npm run build`: built in 1m 49s, 8145 modules transformed, PWA service worker generated cleanly.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 57 / 57 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 38 / 38 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 178 files · check:pglite 178/178 applied, 0 failed (recorded 2026-10-26T20:00:57.551Z). Suite: Historical suite: 5763/5764 passed, 1 failed (recorded 2026-10-26T18:02:08.761Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-26T20:01:08.449Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Nothing open from T2-10. Ready to proceed to the next card on Lane A (`T2-12 · Client collectors and ID on file`).
+
 ## 2026-10-27 — T2-08: Floor printing (Packing list manifest, Return report, QR/label print)
 
 **Did**

@@ -166,7 +166,7 @@ a manual tick records "ticked by hand" so the audit shows which items were not s
 item can be packed, handed over and returned by hand in ≤ 2 taps.
 **Needs** — Babin buys the scanner (O-16).
 
-### T2-10 · Offline outbox for scans and ticks            status: todo · size: M · lane A
+### T2-10 · Offline outbox for scans and ticks            status: done · size: M · lane A
 **What** — Route non-custodial floor writes (scan events, checklist ticks, notes, queue stamps)
 through the Dexie outbox (`src/lib/offlineQueue.ts`, `dataAccess.ts` idempotent insert) with
 `client_uuid`. Custody transitions stay online RPCs (R-40). Show queued count and last flush.

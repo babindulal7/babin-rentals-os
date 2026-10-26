@@ -54,6 +54,7 @@ import {
 import { SignOnGlassModal, type DigitalSignature } from './modals/SignOnGlassModal'
 import { exportReturnReportPdf, openPdfForPrint } from '../../lib/pdf/exportPdf'
 import type { ReturnReportPdfLine } from '../../lib/pdf/generatePdf'
+import { FloorOfflineStatus } from '../../components/ui/FloorOfflineStatus'
 import './rentals.css'
 
 
@@ -624,6 +625,18 @@ export default function ReturnWorkspace({
   const [returnQuantities, setReturnQuantities] = useState<{ bookingId: string; received: Map<string, number> } | null>(null)
   const [quantityError, setQuantityError] = useState<string | null>(null)
   const [quantityReload, setQuantityReload] = useState(0)
+  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true)
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -1223,6 +1236,17 @@ export default function ReturnWorkspace({
       return
     }
     markReturned(key)
+    if (floor?.id) {
+      void recordFloorScanEvent({
+        bookingId: floor.id,
+        context: 'return',
+        code: row.serial ?? row.name,
+        codeType: via === 'scan' ? 'barcode' : 'manual_entry',
+        result: 'accepted',
+        resolvedUnitId: row.assetId,
+        actorId: user?.id,
+      })
+    }
     if (via === 'scan') {
       triggerScanPulse('success')
       const remaining = actionable.filter((r) => r.key !== key && marks[r.key]?.state !== 'Returned')
@@ -1230,15 +1254,6 @@ export default function ReturnWorkspace({
         playCaseComplete()
       } else {
         playScanSuccess()
-      }
-      if (floor?.id) {
-        void recordFloorScanEvent({
-          bookingId: floor.id,
-          context: 'return',
-          code: row.serial ?? row.name,
-          result: 'accepted',
-          resolvedUnitId: row.assetId,
-        })
       }
     }
     setScanLog((p) =>
@@ -1395,8 +1410,8 @@ export default function ReturnWorkspace({
   }
   useEffect(() => {
     onRegisterActions?.({
-      canComplete,
-      blockedReason,
+      canComplete: isOnline && canComplete,
+      blockedReason: !isOnline ? 'Needs connection to complete' : blockedReason,
       dispatching,
       complete: () => completeRef.current(),
       isDirty,
@@ -1407,7 +1422,7 @@ export default function ReturnWorkspace({
       progress: quantitiesVerified ? { done: backUnits, total: totalUnits } : undefined,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget, backUnits, totalUnits, quantitiesVerified])
+  }, [onRegisterActions, isOnline, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget, backUnits, totalUnits, quantitiesVerified])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */
 
@@ -1757,6 +1772,7 @@ export default function ReturnWorkspace({
             >
               {/* ── centre — the triage list over the real rows ─────────────── */}
               <div style={{ minWidth: 0 }}>
+                <FloorOfflineStatus verb="return" />
                 <Card
                   title="Equipment Checklist"
                   bodyStyle={{ padding: 0 }}
@@ -2236,8 +2252,9 @@ export default function ReturnWorkspace({
                 {!embedded && (
                   <button
                     type="button"
-                    disabled={!canComplete}
+                    disabled={!isOnline || !canComplete || dispatching}
                     onClick={completeSession}
+                    title={!isOnline ? 'Custody transitions require an internet connection (R-40)' : undefined}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -2250,12 +2267,16 @@ export default function ReturnWorkspace({
                       fontSize: 'var(--t-ui)',
                       fontWeight: 600,
                       fontFamily: 'inherit',
-                      cursor: canComplete ? 'pointer' : 'not-allowed',
-                      ...(canComplete ? BLUE_PRIMARY : { background: 'var(--card2)', color: 'var(--muted)', border: '1px solid var(--border)' }),
+                      cursor: isOnline && canComplete ? 'pointer' : 'not-allowed',
+                      ...(isOnline && canComplete ? BLUE_PRIMARY : { background: 'var(--card2)', color: 'var(--muted)', border: '1px solid var(--border)' }),
                     }}
                   >
-                    <Icon name="checklist" size={15} />
-                    {dispatching ? 'Recording…' : allResolved ? 'Complete Return' : 'Complete Session'}
+                    <Icon name={isOnline ? 'checklist' : 'alert_triangle'} size={15} />
+                    {dispatching
+                      ? 'Recording…'
+                      : !isOnline
+                      ? 'Needs connection to complete'
+                      : allResolved ? 'Complete Return' : 'Complete Session'}
                   </button>
                 )}
 
@@ -2459,11 +2480,15 @@ export default function ReturnWorkspace({
                 }}
                 onScan={() => setShowScanner(true)}
                 primaryAction={{
-                  label: dispatching ? 'Recording…' : allResolved ? 'Complete Return' : 'Complete Session',
+                  label: dispatching
+                    ? 'Recording…'
+                    : !isOnline
+                    ? 'Needs connection to complete'
+                    : allResolved ? 'Complete Return' : 'Complete Session',
                   onClick: completeSession,
-                  disabled: !canComplete,
+                  disabled: !isOnline || !canComplete,
                   loading: dispatching,
-                  icon: 'checklist',
+                  icon: isOnline ? 'checklist' : 'alert_triangle',
                 }}
               />
             )}

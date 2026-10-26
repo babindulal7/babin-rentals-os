@@ -48,6 +48,8 @@ import { fetchStaffDirectory } from '../../lib/queries/staff'
 import type { QueueState, ProblemState } from '../../lib/queries/reset'
 import { CompactButton, TapCheckbox, TouchTarget } from '../../components/ui/TouchTarget'
 import { formatGateError } from '../../lib/gates'
+import { FloorOfflineStatus } from '../../components/ui/FloorOfflineStatus'
+import { recordFloorScanEvent } from '../../lib/floorScanStorage'
 
 /**
  * **Reset Workspace** — `04 Operations/Cleaning & Reset Workflow.md` v3.1
@@ -391,6 +393,18 @@ export default function ResetWorkspace({
    * double-press replays the same key and resolves to the first write.
    */
   const [completionKey, setCompletionKey] = useState(() => newClientUuid())
+  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true)
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
 
   const [staffList, setStaffList] = useState<Array<{ id: string; name: string; role: string }>>([])
   const [selectedCleanerId, setSelectedCleanerId] = useState<string>('')
@@ -741,6 +755,16 @@ export default function ResetWorkspace({
       return
     }
     setDispatchError(null)
+    cleanableRows.forEach((r) => {
+      void recordFloorScanEvent({
+        barcode: r.serial ?? r.name,
+        codeType: 'manual_entry',
+        context: 'reset',
+        bookingId: floor?.id,
+        actorId: user?.id,
+        result: 'accepted',
+      })
+    })
     setMarks((prev) => {
       const next = { ...prev }
       cleanableRows.forEach((r) => {
@@ -872,6 +896,16 @@ export default function ResetWorkspace({
       return
     }
     setDispatchError(null)
+    selRows.forEach((r) => {
+      void recordFloorScanEvent({
+        barcode: r.serial ?? r.name,
+        codeType: 'manual_entry',
+        context: 'reset',
+        bookingId: floor?.id,
+        actorId: user?.id,
+        result: 'accepted',
+      })
+    })
     const allDone = selRows.every((r) => recOf(r.key).ticks.includes(task))
     setMarks((prev) => {
       const next = { ...prev }
@@ -894,6 +928,17 @@ export default function ResetWorkspace({
       return
     }
     setDispatchError(null)
+    const row = rows.find((r) => r.key === key)
+    if (row) {
+      void recordFloorScanEvent({
+        barcode: row.serial ?? row.name,
+        codeType: 'manual_entry',
+        context: 'reset',
+        bookingId: floor?.id,
+        actorId: user?.id,
+        result: 'accepted',
+      })
+    }
     const rec = recOf(key)
     const ticks = rec.ticks.includes(task) ? rec.ticks.filter((t) => t !== task) : [...rec.ticks, task]
     setRec(key, {
@@ -1127,8 +1172,8 @@ export default function ResetWorkspace({
   }
   useEffect(() => {
     onRegisterActions?.({
-      canComplete,
-      blockedReason,
+      canComplete: isOnline && canComplete,
+      blockedReason: !isOnline ? 'Needs connection to complete' : blockedReason,
       dispatching,
       complete: () => completeRef.current(),
       isDirty,
@@ -1139,7 +1184,7 @@ export default function ResetWorkspace({
       progress: { done: readyUnits, total: totalUnits },
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget, persistedMarks, readyUnits, totalUnits])
+  }, [onRegisterActions, isOnline, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget, persistedMarks, readyUnits, totalUnits])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */
 
@@ -1423,6 +1468,7 @@ export default function ResetWorkspace({
 
               {/* ── centre — the queue, over the real rows ──────────────────── */}
               <div style={{ minWidth: 0 }}>
+                <FloorOfflineStatus verb="reset" />
                 <Card
                   title="Reset Queue"
                   bodyStyle={{ padding: 0 }}
@@ -2360,16 +2406,21 @@ export default function ResetWorkspace({
                 <span style={{ marginLeft: 'auto' }}>
                   <button
                     type="button"
-                    disabled={!canComplete}
+                    disabled={!isOnline || !canComplete || dispatching}
                     onClick={completeResetJob}
+                    title={!isOnline ? 'Custody transitions require an internet connection (R-40)' : undefined}
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 7, minHeight: 56, padding: '0 16px', borderRadius: 'var(--r-btn)',
-                      fontSize: 'var(--t-ui)', fontWeight: 600, fontFamily: 'inherit', cursor: canComplete ? 'pointer' : 'not-allowed',
-                      ...(canComplete ? BLUE_PRIMARY : { background: 'var(--card2)', color: 'var(--muted)', border: '1px solid var(--border)' }),
+                      fontSize: 'var(--t-ui)', fontWeight: 600, fontFamily: 'inherit', cursor: isOnline && canComplete ? 'pointer' : 'not-allowed',
+                      ...(isOnline && canComplete ? BLUE_PRIMARY : { background: 'var(--card2)', color: 'var(--muted)', border: '1px solid var(--border)' }),
                     }}
                   >
-                    <Icon name="checklist" size={15} />
-                    {dispatching ? 'Recording…' : 'Complete Reset'}
+                    <Icon name={isOnline ? 'checklist' : 'alert_triangle'} size={15} />
+                    {dispatching
+                      ? 'Recording…'
+                      : !isOnline
+                      ? 'Needs connection to complete'
+                      : 'Complete Reset'}
                   </button>
                 </span>
               </div>

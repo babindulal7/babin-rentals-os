@@ -47,6 +47,7 @@ import {
 import { getCinemaKitDependencies, evaluateKitCompleteness } from '../../lib/kitBuildVerification'
 import { exportPackingListPdf, openPdfForPrint } from '../../lib/pdf/exportPdf'
 import type { PackingListPdfItem } from '../../lib/pdf/generatePdf'
+import { FloorOfflineStatus } from '../../components/ui/FloorOfflineStatus'
 import './rentals.css'
 
 
@@ -461,7 +462,7 @@ export function buildPackLines(
      * way: `unitIds` carries `product_units.id`, which is the identity the
      * movement row is keyed on, and the serial is a convenience beside it.
      */
-    const serials = scanned.map((r) => r.serial).filter((s): s is string => s !== null && s.trim() !== '')
+    const serials = scanned.map((r) => r.serial).filter((s): s is string => typeof s === 'string' && s.trim() !== '')
     const everySerialKnown = serials.length === scanned.length
 
     /*
@@ -473,7 +474,7 @@ export function buildPackLines(
      * invent a location string nobody typed.
      */
     const locations = [
-      ...new Set(packed.map((r) => r.location).filter((l): l is string => l !== null && l.trim() !== '')),
+      ...new Set(packed.map((r) => r.location).filter((l): l is string => typeof l === 'string' && l.trim() !== '')),
     ]
     const [onlyLocation] = locations
 
@@ -629,6 +630,18 @@ export default function PackingWorkspace({
    */
   const [completionKey, setCompletionKey] = useState(() => newClientUuid())
   const [printing, setPrinting] = useState(false)
+  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true)
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
 
   const handlePrintPackingList = async () => {
     if (!floor) return
@@ -928,13 +941,15 @@ export default function PackingWorkspace({
     const row = rows.find((r) => r.key === key)
     if (!row) {
       setScanLog((p) => [`✕ ${key} is not on this checklist`, ...p].slice(0, 5))
-      if (via === 'scan' && floor?.id) {
+      if (floor?.id) {
         void recordFloorScanEvent({
           bookingId: floor.id,
           context: 'packing',
           code: key,
+          codeType: via === 'scan' ? 'barcode' : 'manual_entry',
           result: 'rejected',
           resultReason: 'is not on this booking checklist',
+          actorId: user?.id,
         })
       }
       return { ok: false, message: 'is not on this booking checklist — nothing was ticked.' }
@@ -942,14 +957,16 @@ export default function PackingWorkspace({
     const current = stateOf(key)
     if (current === 'Packed') {
       setScanLog((p) => [`• ${row.name} was already ticked — nothing changed`, ...p].slice(0, 5))
-      if (via === 'scan' && floor?.id) {
+      if (floor?.id) {
         void recordFloorScanEvent({
           bookingId: floor.id,
           context: 'packing',
           code: row.serial ?? row.name,
+          codeType: via === 'scan' ? 'barcode' : 'manual_entry',
           result: 'warning',
           resultReason: 'was already ticked packed',
           resolvedUnitId: row.assetId,
+          actorId: user?.id,
         })
       }
       return { ok: false, message: 'was already ticked packed — nothing changed.' }
@@ -957,13 +974,15 @@ export default function PackingWorkspace({
 
     markPacked(key, via)
     const how = via === 'scan' ? 'scanned and ticked packed' : 'ticked packed by hand'
-    if (via === 'scan' && floor?.id) {
+    if (floor?.id) {
       void recordFloorScanEvent({
         bookingId: floor.id,
         context: 'packing',
         code: row.serial ?? row.name,
+        codeType: via === 'scan' ? 'barcode' : 'manual_entry',
         result: 'accepted',
         resolvedUnitId: row.assetId,
+        actorId: user?.id,
       })
     }
 
@@ -1238,8 +1257,8 @@ export default function PackingWorkspace({
   }
   useEffect(() => {
     const actions = {
-      canComplete,
-      blockedReason,
+      canComplete: isOnline && canComplete,
+      blockedReason: !isOnline ? 'Needs connection to complete' : blockedReason,
       dispatching,
       complete: () => completeRef.current(),
       isDirty,
@@ -1252,7 +1271,7 @@ export default function PackingWorkspace({
     registerActions(actions)
     onRegisterActions?.(actions)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [registerActions, onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget, packedUnits, totalUnits])
+  }, [registerActions, onRegisterActions, isOnline, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget, packedUnits, totalUnits])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */
 
@@ -1512,6 +1531,7 @@ export default function PackingWorkspace({
 
               {/* ── §6 centre — checklist over the real rows ─────────────────── */}
               <div style={{ minWidth: 0 }}>
+                <FloorOfflineStatus verb="pack" />
                 {presence.presenceBanner && (
                   <div
                     style={{
@@ -2060,8 +2080,9 @@ export default function PackingWorkspace({
                 {!embedded && (
                   <button
                     type="button"
-                    disabled={!canComplete}
+                    disabled={!isOnline || !canComplete || dispatching}
                     onClick={completePacking}
+                    title={!isOnline ? 'Custody transitions require an internet connection (R-40)' : undefined}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -2074,12 +2095,16 @@ export default function PackingWorkspace({
                       fontSize: 'var(--t-ui)',
                       fontWeight: 600,
                       fontFamily: 'inherit',
-                      cursor: canComplete ? 'pointer' : 'not-allowed',
-                      ...(canComplete ? BLUE_PRIMARY : { background: 'var(--card2)', color: 'var(--muted)', border: '1px solid var(--border)' }),
+                      cursor: isOnline && canComplete ? 'pointer' : 'not-allowed',
+                      ...(isOnline && canComplete ? BLUE_PRIMARY : { background: 'var(--card2)', color: 'var(--muted)', border: '1px solid var(--border)' }),
                     }}
                   >
-                    <Icon name="checklist" size={15} />
-                    {dispatching ? 'Recording…' : 'Complete Packing'}
+                    <Icon name={isOnline ? 'checklist' : 'alert_triangle'} size={15} />
+                    {dispatching
+                      ? 'Recording…'
+                      : !isOnline
+                      ? 'Needs connection to complete'
+                      : 'Complete Packing'}
                   </button>
                 )}
 

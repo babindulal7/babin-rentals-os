@@ -12,8 +12,9 @@
 
 import { enqueueMutation, drainQueue } from './offlineQueue'
 import { newClientUuid, IS_MOCK } from './supabase'
+import { syncEngine } from './syncEngine'
 
-export type FloorVerb = 'pack' | 'return' | 'handover'
+export type FloorVerb = 'pack' | 'return' | 'handover' | 'reset'
 
 export interface FloorScanRecord<T> {
   bookingId: string
@@ -135,41 +136,75 @@ export function clearAllFloorScans(): void {
 }
 
 export interface FloorScanEventParams {
-  bookingId: string
-  context: 'packing' | 'handover' | 'return' | 'lookup' | 'stock_check'
-  code: string
-  codeType?: 'barcode' | 'qr_code' | 'manual_entry' | 'rfid'
-  result?: 'accepted' | 'rejected' | 'warning' | 'override'
-  resultReason?: string | null
-  resolvedUnitId?: string | null
-  sessionId?: string | null
-  deviceId?: string
+  bookingId?: string | null | undefined
+  context: 'packing' | 'handover' | 'return' | 'reset' | 'lookup' | 'stock_check'
+  code?: string | undefined
+  barcode?: string | undefined
+  codeType?: 'barcode' | 'qr_code' | 'manual_entry' | 'rfid' | 'QR' | 'Barcode 1D' | 'Manual entry' | undefined
+  result?: 'accepted' | 'rejected' | 'warning' | 'override' | 'Accepted' | 'Duplicate' | 'Wrong job' | 'Not expected here' | 'Blocked' | 'Unknown code' | undefined
+  resultReason?: string | null | undefined
+  resolvedUnitId?: string | null | undefined
+  sessionId?: string | null | undefined
+  deviceId?: string | undefined
+  actorId?: string | null | undefined
+}
+
+function mapCodeType(type?: string): 'QR' | 'Barcode 1D' | 'Manual entry' {
+  if (!type) return 'Barcode 1D'
+  if (type === 'QR' || type === 'qr_code') return 'QR'
+  if (type === 'Manual entry' || type === 'manual_entry') return 'Manual entry'
+  return 'Barcode 1D'
+}
+
+function mapScanResult(res?: string): 'Accepted' | 'Duplicate' | 'Wrong job' | 'Not expected here' | 'Blocked' | 'Unknown code' {
+  if (!res) return 'Accepted'
+  if (res === 'Accepted' || res === 'accepted') return 'Accepted'
+  if (res === 'Duplicate' || res === 'warning') return 'Duplicate'
+  if (res === 'Blocked' || res === 'override') return 'Blocked'
+  if (res === 'Wrong job') return 'Wrong job'
+  if (res === 'Not expected here') return 'Not expected here'
+  if (res === 'Unknown code' || res === 'rejected') return 'Unknown code'
+  return 'Accepted'
 }
 
 /**
- * Records a non-custodial scan event into the Dexie offline queue (Law 8).
- * Replays automatically via drainQueue() when network connectivity is present.
+ * Records a non-custodial scan event or checklist tick into the Dexie offline queue (Law 8).
+ * Replays automatically via drainQueue() when network connectivity is restored.
  */
 export async function recordFloorScanEvent(params: FloorScanEventParams): Promise<boolean> {
+  const rawCode = params.code ?? params.barcode ?? ''
+  if (!rawCode) {
+    return false
+  }
+
   const clientUuid = newClientUuid()
+  const isOffline = typeof navigator !== 'undefined' ? !navigator.onLine : false
   const payload = {
     client_uuid: clientUuid,
     context: params.context,
-    booking_id: params.bookingId,
+    booking_id: params.bookingId ?? null,
     session_id: params.sessionId ?? null,
-    code: params.code,
-    code_type: params.codeType ?? 'barcode',
+    code: rawCode,
+    code_type: mapCodeType(params.codeType),
     resolved_unit_id: params.resolvedUnitId ?? null,
-    result: params.result ?? 'accepted',
+    result: mapScanResult(params.result),
     result_reason: params.resultReason ?? null,
     scanned_at: new Date().toISOString(),
-    queued_offline: typeof navigator !== 'undefined' ? !navigator.onLine : false,
-    device_id: params.deviceId ?? (typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 50) : 'device-web'),
+    queued_offline: isOffline,
+    device_id: params.deviceId ?? (typeof navigator !== 'undefined' && navigator.userAgent ? navigator.userAgent.slice(0, 50) : 'device-web'),
   }
 
   try {
-    const enqueued = await enqueueMutation('scan_events', 'insert', payload, clientUuid)
-    if (typeof navigator !== 'undefined' && navigator.onLine && !IS_MOCK) {
+    const submittingIdentity = params.actorId
+      ? { actorId: params.actorId, environment: IS_MOCK ? 'mock' : 'live' }
+      : undefined
+
+    const enqueued = await enqueueMutation('scan_events', 'insert', payload, clientUuid, submittingIdentity)
+
+    // Notify syncEngine to refresh badge/counters immediately
+    void syncEngine.refreshPendingCount().catch(() => {})
+
+    if (!isOffline && !IS_MOCK) {
       void drainQueue().catch(() => {})
     }
     return enqueued

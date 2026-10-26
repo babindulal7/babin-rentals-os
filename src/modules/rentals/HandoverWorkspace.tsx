@@ -46,6 +46,7 @@ import {
   playCaseComplete,
   unlockAudioContext,
 } from '../../lib/acousticFeedback'
+import { FloorOfflineStatus } from '../../components/ui/FloorOfflineStatus'
 import './rentals.css'
 
 
@@ -577,6 +578,18 @@ export default function HandoverWorkspace({
   const [completionKey, setCompletionKey] = useState(() => newClientUuid())
   /** HO-12 — Cancel Handover asks first. See `discardable` and the dialog. */
   const [confirmingCancel, setConfirmingCancel] = useState(false)
+  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true)
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
 
   /**
    * HO-14 — which booking the in-flight dispatch belongs to, and whether this
@@ -971,16 +984,18 @@ export default function HandoverWorkspace({
       return { ok: false, message }
     }
     markPicked(key, via)
+    if (floor?.id) {
+      void recordFloorScanEvent({
+        bookingId: floor.id,
+        context: 'handover',
+        code: row.serial ?? row.name,
+        codeType: via === 'scan' ? 'barcode' : 'manual_entry',
+        result: 'accepted',
+        resolvedUnitId: row.assetId,
+        actorId: user?.id,
+      })
+    }
     if (via === 'scan') {
-      if (floor?.id) {
-        void recordFloorScanEvent({
-          bookingId: floor.id,
-          context: 'handover',
-          code: row.serial ?? row.name,
-          result: 'accepted',
-          resolvedUnitId: row.assetId,
-        })
-      }
       triggerScanPulse('success')
       const remaining = rows.filter((r) => r.key !== key && r.prior === null && marks[r.key]?.state !== 'Picked Up')
       if (remaining.length === 0) {
@@ -1344,8 +1359,8 @@ export default function HandoverWorkspace({
   }
   useEffect(() => {
     onRegisterActions?.({
-      canComplete,
-      blockedReason,
+      canComplete: isOnline && canComplete,
+      blockedReason: !isOnline ? 'Needs connection to complete' : blockedReason,
       dispatching,
       complete: () => completeRef.current(),
       isDirty,
@@ -1355,7 +1370,7 @@ export default function HandoverWorkspace({
       progress: { done: outUnits, total: totalUnits },
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget, outUnits, totalUnits])
+  }, [onRegisterActions, isOnline, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget, outUnits, totalUnits])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */
 
@@ -1632,6 +1647,7 @@ export default function HandoverWorkspace({
                 </Card>
 
                 {/* ── §7 Equipment checklist over the real rows ──────────── */}
+                <FloorOfflineStatus verb="handover" />
                 {presence.presenceBanner && (
                   <div
                     style={{
@@ -2342,11 +2358,12 @@ export default function HandoverWorkspace({
                 <span style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
                   Nothing is saved until {primaryLabel} — cancelling discards this session
                 </span>
-                <span style={{ marginLeft: 'auto' }} title={gateSummary ?? undefined}>
+                <span style={{ marginLeft: 'auto' }} title={!isOnline ? 'Custody transitions require an internet connection (R-40)' : (gateSummary ?? undefined)}>
                   <button
                     type="button"
-                    disabled={!canComplete}
+                    disabled={!isOnline || !canComplete || dispatching}
                     onClick={completeSession}
+                    title={!isOnline ? 'Custody transitions require an internet connection (R-40)' : undefined}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -2357,12 +2374,16 @@ export default function HandoverWorkspace({
                       fontSize: 'var(--t-ui)',
                       fontWeight: 600,
                       fontFamily: 'inherit',
-                      cursor: canComplete ? 'pointer' : 'not-allowed',
-                      ...(canComplete ? BLUE_PRIMARY : { background: 'var(--card2)', color: 'var(--muted)', border: '1px solid var(--border)' }),
+                      cursor: isOnline && canComplete ? 'pointer' : 'not-allowed',
+                      ...(isOnline && canComplete ? BLUE_PRIMARY : { background: 'var(--card2)', color: 'var(--muted)', border: '1px solid var(--border)' }),
                     }}
                   >
-                    <Icon name="checklist" size={15} />
-                    {dispatching ? 'Recording…' : primaryLabel}
+                    <Icon name={isOnline ? 'checklist' : 'alert_triangle'} size={15} />
+                    {dispatching
+                      ? 'Recording…'
+                      : !isOnline
+                      ? 'Needs connection to complete'
+                      : primaryLabel}
                   </button>
                 </span>
               </div>
@@ -2466,11 +2487,11 @@ export default function HandoverWorkspace({
                 }}
                 onScan={() => setShowScanner(true)}
                 primaryAction={{
-                  label: dispatching ? 'Recording…' : primaryLabel,
+                  label: dispatching ? 'Recording…' : !isOnline ? 'Needs connection to complete' : primaryLabel,
                   onClick: completeSession,
-                  disabled: !canComplete,
+                  disabled: !isOnline || !canComplete,
                   loading: dispatching,
-                  icon: 'checklist',
+                  icon: isOnline ? 'checklist' : 'alert_triangle',
                 }}
               />
             )}
