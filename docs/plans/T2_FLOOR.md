@@ -23,7 +23,7 @@ written and has **no caller**.
 
 ---
 
-### T2-01 · Camera evidence upload            status: done (built 26 Oct to the pre-W27 spec: one photo per step, 1600 px / q0.8 — W27 delta is T2-16) · size: L · lane A
+### T2-01 · Camera evidence upload            status: done in part (26 Oct, `3fca220`) — the rest is T2-16 · size: L · lane A
 **What** — Wire `uploadEvidencePhoto()` into: Pack (booking photo), Handover (booking photo),
 Return (damage photo per flagged unit — required by the 21 Jul return-flag lock), Reset (QC
 defect photo) and the Evidence workspace (upload + review). Capture with
@@ -47,6 +47,97 @@ money anywhere on the screens touched; 5) a failed upload leaves the gate red an
 retryable; 6) tests cover compress (a 12 MB phone photo ends ≤ 3 MB, a damage photo ≤ 10 MB),
 several photos in one step, retry-same-uuid, offline refusal.
 **Needs** — none to build in mock mode; T1-06 (Storage accepted on staging) for the staging checks.
+
+**Built 26 Oct (`3fca220`):** one booking-level photo per tap at Pack, Handover, Return and Reset,
+compressed on the device (1600 px, JPEG 0.8, EXIF stripped), retry with the same `clientUuid`.
+**Not built yet → T2-16:** several photos per pick, a damage photo per flagged unit at Return, the
+10 MB damage-photo size and an honest offline message. The staging checks (Done when 1–3) wait for T1-06.
+
+### T2-16 · Finish evidence capture            status: todo · size: L · lane A · [go-live]
+**What** — Finish what T2-01 left (Claude's review of `3fca220`, 26 Oct):
+1) **Honest offline message.** Offline, the screens say the photo "was saved / kept on device and will
+   upload when connectivity is restored", but nothing keeps or uploads it (`OperationEvidenceStatus.tsx`
+   `handleFileChange` and `handleRetry`; `EvidenceWorkspace.tsx` `handleUploadFile`;
+   `evidenceStorage.ts` `assertStorageAvailable`). Say "You are
+   offline — this photo was not saved. Take it again when you are back online." A real on-device
+   queue may come later; a false "saved" may not (Law 16: every action is an authentic operation).
+   **Claude sent this wording as `fix-evidence-offline-text.patch` on 26 Oct** (it also removes the
+   "(Law 12 / R-40)" developer text that turned `lint:ui-copy` red on `3fca220`); if it is on `main`,
+   this item is done.
+2) **A damage photo per flagged unit at Return** (21 Jul return-flag lock): each flagged unit row
+   gets its own photo button that passes `itemId`; Return cannot complete while a flagged unit has
+   no photo. Today `ReturnWorkspace.tsx` passes no `itemId`.
+3) **Several photos at once** (W27): `multiple` on the input on the floor screens and the Evidence
+   page (both read only `files[0]` today); upload one by one with "2 of 3" progress; each photo keeps
+   its own `client_uuid` for retry.
+4) **Photo sizes** (W27): damage photos keep detail — at most 10 MB (long edge up to 2560 px,
+   quality 0.9, stepping down until under the cap); other photos stay at 1600 px / 0.8 (under 3 MB).
+5) **A failed load is not "0 photos":** `fetchBookingEvidenceFiles()` (`src/lib/queries/evidence.ts`)
+   returns `[]` on any error, so the screen shows no photos instead of "could not load". Return the
+   error and show "Could not load photos — Retry".
+6) **One owner for sessions.** `resolveOrCreateSession()` (`evidenceStorage.ts`) opens a Packing,
+   Handover or Return session from the photo button with a random `client_uuid`; the Return verb keys
+   its receipt on its own action `client_uuid` (`floorVerb.ts`, `readReturnSessionForAction`). Add a
+   test: photo first → Return completes → retry with the same action key → no second session and no
+   second release. If it fails, open the session through the floor-verb action instead.
+7) **Evidence page stage mapping.** `EvidenceWorkspace.tsx` sends every category except Return and
+   Damage to the `Packing` stage. After Pack is complete there is no In Progress Packing session, and a
+   booking may have only one Packing session ever (`operation_sessions_one_packing_per_booking`,
+   0003), so those uploads fail. Map each category to its own stage; attach to the open session or use
+   a stage that needs none (`Damage`, `Reset` — 0003 `evidence_references_operational_stage_needs_a_session`).
+**Why** — W27; the 21 Jul return-flag lock; Law 16 (no success that did not happen); R-40.
+**Where** — `src/modules/operations/OperationEvidenceStatus.tsx`, `src/lib/evidenceStorage.ts`,
+`src/lib/imageCompression.ts`, `src/lib/queries/evidence.ts`, `src/modules/rentals/ReturnWorkspace.tsx`,
+`src/modules/rentals/EvidenceWorkspace.tsx`;
+`src/actions/rentals/floorVerb.ts` only if step 6's test fails.
+**Database** — none expected: `evidence_references.item_id` exists and `Damage`/`Reset` are in the
+`evidence_operation_stage` enum (0001). If a column is missing, claim a number.
+**Build notes** — keep one state value per photo — idle · compressing · uploading ·
+saved · failed · offline (not saved) — handled by an exhaustive `switch`, instead of separate flags
+(`isUploading`, `uploadError`, `retryPayload`) that can contradict each other.
+**Done when** — 1) offline, nothing says "saved"; 2) Return with two flagged units cannot complete
+until each has its photo; 3) picking three photos uploads three with a count; 4) a 12 MP damage photo
+keeps a 2560 px long edge and ends ≤ 10 MB, a normal photo ≤ 3 MB; 5) a forced query error shows the
+retry message; 6) the session retry test passes; 7) a Handover photo added on the Evidence page
+after Pack is complete saves; gates green; driven in `dev:mock` at 375, 820 and
+1440 px as Warehouse and Technician.
+**Needs** — T2-01 (done in part). Staging checks of T2-01 (Done when 1–3) still wait for T1-06.
+
+### T2-17 · Save a unit's details            status: todo · size: M · lane A · [go-live]
+**What** — On the equipment page, the unit editor (`AssetDetail.tsx`, `UnitEditor`) lets staff change
+a unit's asset tag, serial, status, rack, shelf, bin and condition, then says "Editing this session
+only — there is no unit-update action yet, so nothing is persisted" (line 223). Staff label and
+re-shelve real stock as they go (W72), and a screen that looks editable but saves nothing must not
+ship (Law 16), so make it real:
+1) An `updateUnit` action — one write with `client_uuid` and an audit row — for **asset tag, serial,
+   rack, shelf and bin**. Asset tag never empty and unique; serial may be empty. Spaces and dashes are
+   trimmed, not refused.
+2) **Status is read-only here.** Nobody writes `product_units.status` directly
+   (`gate.unit_status.direct_write`, 0114): it changes through Pack, Return, Reset and Retire. Show it
+   with that hint.
+3) **Condition is read-only after intake** (PERMISSIONS §3.1, Warehouse limited cell: condition at intake). Later changes come
+   through Return inspection and repair jobs.
+4) Replacement value stays intake-only and is never sent to money-blind roles (already so).
+5) After Save, read the unit back and show "Saved"; on failure keep the draft and say why inline. If
+   someone changed the unit since it was opened, say so instead of overwriting.
+6) After an asset tag change, offer **Reprint label** (T2-08) — the old label no longer matches.
+**Why** — Law 16 (the editor implies a save that never happens); PERMISSIONS §3.1 (the Warehouse
+limited cell: edit identity, units and location); W72; usability task U12 (`docs/USABILITY_TESTS.md`).
+**Where** — `src/modules/inventory/AssetDetail.tsx` (`UnitEditor`), new
+`src/actions/inventory/updateUnit.ts`, `product_units` (update policy `product_units_update`: Owner ·
+Admin · Manager · Warehouse, 0018). Use the capability PERMISSIONS §4 gives unit edits; if none fits,
+add one for exactly that role set in PERMISSIONS §4, `src/lib/rbac.ts` and the T-1 fixture in the
+same commit (B-3), never wider than RLS (N-3).
+**Database** — none expected (policy and audit exist). If the uniqueness or trim rule needs SQL, claim
+a number and add a lifecycle step.
+**Build notes** — one state value: editing · saving · saved · failed · changed-by-someone-else; Save is
+disabled while saving; labels outside the fields.
+**Done when** — 1) as Warehouse, change rack and shelf, Save, reload — the new values are there;
+2) an empty or duplicate asset tag is refused inline and the draft is kept; 3) status and condition
+cannot be edited here; 4) as Coordinator (not in the update policy) the editor is not offered (B-1);
+5) Warehouse gets no replacement value in the DOM or the payload; 6) two tabs editing the same unit —
+the second save is told the unit changed; 7) screen check passes at 375 / 820 / 1440.
+**Needs** — none (T2-08 for the reprint step).
 
 ### T2-02 · Drawn signatures            status: done (built 26 Oct; terms line + checkbox already in the sign modal; the receiver-from-collectors picker lands with T2-12) · size: M · lane A
 **What** — A signature pad (finger or stylus) for Receiver and Warehouse at Handover and Driver on
@@ -193,6 +284,9 @@ account only (same rule as T2-03).
 **Database** — migration (claim a number): `client_id_documents` (or reuse the client document
 store if it fits) + `client_collectors` with RLS (staff read booking-scoped clients; ID number and
 photo columns Manager+; Client reads own); lifecycle step "Warehouse cannot read an ID number".
+**Build notes** — the form keeps the draft apart from what is saved and shows
+loading → saving → saved / failed; phone numbers and ID numbers accept spaces and dashes and are cleaned,
+not refused; labels sit outside the fields.
 **Done when** — a first-time client cannot be handed gear without an ID on file (clear inline
 message + "Add ID" in place); a repeat client's collector is picked in one tap; Warehouse never sees
 an ID number.
@@ -223,6 +317,9 @@ scanning keeps its current meaning (mark the item). Money hidden for floor roles
 **Where** — `src/components/shell/ScannerFab.tsx`, `src/lib/scannerLookup.ts`,
 `src/modules/inventory/AssetDetail.tsx` (or a lighter sheet), `src/lib/queries/inventory.ts`.
 **Database** — none expected.
+**Build notes** — a Bluetooth scanner types the code and presses Enter. Never
+debounce scans — that drops items. Ignore the same code a second time within ⭐ 1.5 s; trim spaces and
+match case-insensitively; every code is checked by the server, and an unknown code says so inline.
 **Done when** — scan → card in ≤ 1 second on the iPad; an item on rent shows the client and due-back
 time; a Warehouse seat sees no money.
 **Needs** — none.
@@ -238,20 +335,6 @@ follows only after a Manager (< Rs 25,000) or Owner (≥ Rs 25,000) approves.
 **Done when** — a Reset damage on staging creates the case on the right booking with photos, the
 client gets the notice, and no amount appears until approval.
 **Needs** — T2-01, T5-07 for the email.
-
-### T2-16 · Photo rules from W27: several photos, size caps, HEIC            status: todo · size: S · lane A · [go-live]
-**What** — T2-01 shipped one photo per step with one shrink rule. Bring it to W27: the file input gets
-`multiple`; **one or more photos per step, the gate needs at least one**; shrink on the device until
-**damage photos ≤ 10 MB and every other photo ≤ 3 MB** (lower the long edge and the JPEG quality step
-by step, keep serial numbers readable), strip EXIF location, convert HEIC to JPEG. Same `clientUuid`
-on retry; offline still refuses inline.
-**Why** — W27; T2-01 was built before the workflow round.
-**Where** — `src/lib/imageCompression.ts`, `src/lib/evidenceStorage.ts`, `src/modules/rentals/EvidenceWorkspace.tsx`,
-`src/modules/operations/OperationEvidenceStatus.tsx`, `src/lib/__tests__/imageCompression.test.ts`.
-**Database** — none.
-**Done when** — a 12 MB phone photo ends ≤ 3 MB, a damage photo ≤ 10 MB, three photos attach to one
-step and the gate passes on the first, a HEIC file uploads as JPEG, retry reuses the uuid.
-**Needs** — T2-01 (done).
 
 ### T2-11 · Device day            status: todo · size: M · lane A + Babin + staff
 **What** — One supervised session on the **iPhone 17 Pro, M4 iPad Pro and the Bluetooth scanner**

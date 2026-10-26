@@ -42,3 +42,8 @@ computation (Law 16), Android and iOS store builds (Capacitor / installed PWA fi
   policies) — review against real query plans, never drop by count.
 - Main bundle 704 kB (20 Oct) — after T1-14's first pass.
 - Coverage only measures `src/lib/**`.
+- **Seven global style layers** load on every screen (`src/main.tsx`: `theme.css`,
+  `preset-black-light.css`, `ui-v2.css`, `responsive.css`, `shadcn-preset-pilot.css`,
+  `shadcn-luma-ui.css`, `shadcn-rhea-ui.css`). Merge them into one token layer after go-live, behind
+  light/dark/role screenshot baselines and `check:contrast` (106/106 on 26 Oct). Until then, add no
+  further preset on top.

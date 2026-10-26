@@ -1,7 +1,7 @@
 # T8 — Membership & crew
 
 **Goal:** memberships are live on day one with Babin's real plans, fair plan changes and renewals;
-crew bookings bill and pay overtime and withhold TDS. **Lane A · Codex-1 (moved from Gemini, L8).** Rulings: D21–D25, D32, W68; 21 Jul and
+crew bookings bill and pay overtime and withhold TDS. **Lane A · Codex-1 (moved from Gemini, L12).** Rulings: D21–D25, D32, W68; 21 Jul and
 28 Jul membership locks (discount %, priority booking, pay-later credit, benefits vary by level);
 Law 10 (discounts ungated); PERMISSIONS §5 (crew payout rates and TDS: Owner, Admin, Manager,
 Accounts only).

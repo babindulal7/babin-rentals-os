@@ -20,6 +20,7 @@ copy-paste prompt in [`prompts/`](prompts/README.md).
 | Owner checklist | [BABIN_ACTIONS.md](BABIN_ACTIONS.md) | Babin | — |
 | Migration numbers | [MIGRATION_LEDGER.md](MIGRATION_LEDGER.md) | all | — |
 | Agent prompts | [prompts/](prompts/README.md) | all | — |
+| Usability tests and the screen check | [../USABILITY_TESTS.md](../USABILITY_TESTS.md) | all · Babin | — |
 
 ---
 
@@ -59,16 +60,37 @@ run that ends in a branch ready to merge and a PROGRESS.md entry.
 
 ## Gates every card must pass (CI is off — these are the gate, W75)
 
+The same steps `.github/workflows/ci.yml` ran, in its order (T0-11 turns this into one command).
+A gate that is skipped is how a red check reaches `main` — on 26 Oct the UI-copy check went red
+that way.
+
 ```bash
 npm run typecheck
-VITE_DATA_SOURCE=mock npm test        # without it ~130 files fail on missing environment, not on code
-npm run check:pglite && npm run check:lifecycle   # only if SQL changed — both, same run (R-35)
 npm run lint
+VITE_DATA_SOURCE=mock npm test        # keep the variable until T0-10: with a live URL in .env.local the runner would use live settings
+npm run check:pglite                  # with check:lifecycle, both green in one run = migration Verified (R-35)
+node scripts/test-booking-financial-integrity.mjs
+npm run check:security
+npm run check:lifecycle
+npm run test:server-contracts
+npm run test:partial-return
+npm run lint:progress
+node --test scripts/test-receipt.test.mjs
+npm run lint:shell
+npm run lint:ui-copy
+npm run check:contrast
 npm run build
+VITE_DATA_SOURCE=mock npm run test:coverage   # before each live batch (long)
 ```
 
+PowerShell: set the variable first — `$env:VITE_DATA_SOURCE='mock'` — then run the same lines without
+the `VITE_DATA_SOURCE=mock` prefix.
+
 Then drive the changed screen in `npm run dev:mock` at **375, 820 and 1440 px**, as each role the
-card names. A migration is **Verified** only with both DB gates green in one run; it reaches the
+card names, and run the **screen check** in [`docs/USABILITY_TESTS.md`](../USABILITY_TESTS.md) §1 —
+which screen, which booking, where am I, the next action, search and exit, nothing claiming a save
+that did not happen, touch, forgiving forms. Write the result in the PROGRESS entry. A card may also
+carry **Build notes** — patterns from the reference books (`docs/USABILITY_TESTS.md` §5). A migration is **Verified** only with both DB gates green in one run; it reaches the
 live project only through Babin's apply batches (N-5).
 
 ## Words used in these plans

@@ -1,6 +1,6 @@
 # Agent prompts — one per card
 
-Generated 26 Oct 2026 (rebased onto `main` a7bd355f in the evening — cards already built are removed) from the cards in `docs/plans/T*.md`. **The card is the source of truth:**
+Generated 26 Oct 2026 from the cards in `docs/plans/T*.md`. **The card is the source of truth:**
 when a card changes, Claude sends updated prompts at a check-in (or edit the prompt to match).
 Each file is copy-paste ready — open it, copy everything below the line, paste it into the lane's agent.
 
@@ -15,6 +15,8 @@ Claude reviews the merged work at 7:38 AM and 7:38 PM NPT and tells you what to 
 | [T0-03](T0-03.md) | Open pull request triage | M | go-live |
 | [T0-04](T0-04.md) | Branch triage | M | go-live |
 | [T0-06](T0-06.md) | Archive root clutter | S | go-live |
+| [T0-10](T0-10.md) | Tests never run with live settings | S | go-live |
+| [T0-11](T0-11.md) | One command for the local gate | S | go-live |
 | [T1-01](T1-01.md) | Fresh production backup + restore drill | S | go-live |
 | [T1-02](T1-02.md) | Staging project | M | go-live |
 | [T1-03](T1-03.md) | Settle the ledger before anything is applied | M | go-live |
@@ -30,6 +32,8 @@ Claude reviews the merged work at 7:38 AM and 7:38 PM NPT and tells you what to 
 | [T1-13](T1-13.md) | Real staff accounts on live | S | go-live |
 | [T1-14](T1-14.md) | Performance on real devices | M | go-live |
 | [T1-15](T1-15.md) | Switch user with name + PIN | L | go-live |
+| [T2-16](T2-16.md) | Finish evidence capture | L | go-live |
+| [T2-17](T2-17.md) | Save a unit's details | M | go-live |
 | [T2-06](T2-06.md) | Repair job closes the damage | L | go-live |
 | [T2-08](T2-08.md) | Floor printing | M | go-live |
 | [T2-09](T2-09.md) | Bluetooth scanner at the packing bench | S | go-live |
@@ -39,7 +43,6 @@ Claude reviews the merged work at 7:38 AM and 7:38 PM NPT and tells you what to 
 | [T2-14](T2-14.md) | Scan a label → item card | M | go-live |
 | [T2-15](T2-15.md) | Damage found during reset | S | soon |
 | [T2-11](T2-11.md) | Device day | M | go-live |
-| [T2-16](T2-16.md) | Photo rules from W27: several photos, size caps, HEIC | S | go-live |
 | [T9-01](T9-01.md) | Bring the catalogue and clients across | M | go-live |
 | [T9-02](T9-02.md) | Booqable rentals block the OS calendar | M | go-live |
 | [T9-03](T9-03.md) | The trial | M | go-live |
@@ -141,10 +144,14 @@ Claude reviews the merged work at 7:38 AM and 7:38 PM NPT and tells you what to 
 | [T3-05](T3-05.md) | IRD e-billing check | Babin + accountant |
 | [T9-04](T9-04.md) | Go / no-go | Babin |
 | [T9-06](T9-06.md) | Run-off | staff |
+| [T9-09](T9-09.md) | Usability test rounds | Babin + staff |
 
 ## Already done
 
 - T0-01 · Merge the plan pack — done (PR #29, merged 26 Oct 2026 01:22 NPT)
-- T0-02 · T0-05 · T0-07 — done on `main` 26 Oct (test runner default, documents, inspection stubs)
-- T0-08 · Lanes and worktrees in AGENTS.md — done in the 26 Oct workflow package (files)
-- T2-01 · T2-02 · T2-03 · T2-04 · T2-05 · T2-07 — built on `main` 26 Oct (T2-01 needs the W27 delta: T2-16).
+- T0-02 · Test runner works on a fresh clone — done (26 Oct, `3fca220`)
+- T0-05 · Documents tell the truth — done (26 Oct, `3fca220`)
+- T0-07 · Retire the three dead inspection stubs — done (26 Oct, `3fca220`)
+- T0-08 · Lanes and worktrees in AGENTS.md — done (26 Oct — AGENTS.md on main `3fca220`; lanes, agents and local gates added by the workflow package)
+- T2-02 · T2-03 · T2-04 · T2-05 · T2-07 — built on `main` 26 Oct (T2-02: the receiver picker comes with T2-12)
+- T2-01 · Camera evidence upload — done in part (26 Oct, `3fca220`) — the rest is T2-16

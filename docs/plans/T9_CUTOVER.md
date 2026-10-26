@@ -34,6 +34,8 @@ Imported history keeps Booqable's figures (19 Aug ruling).
 **Where** — `src/modules/clients/ImportCenter`, `src/modules/inventory/ProductsImportCenter.tsx`,
 `src/lib/clientImport.ts`, `src/lib/productImport.ts`, `pricing_rulesets` / pricing structure tables.
 **Database** — data, through the app's import paths (no raw SQL on live).
+**Build notes** — read the export → preview with a result per row → commit once
+per batch; rejected rows are listed with the reason; a failed batch leaves nothing half-loaded.
 **Done when** — counts reconcile with Booqable (clients, products, bundles, structures); a sample of
 20 products prices the same 3-day quote in both systems (allowing the known rounding difference).
 **Needs** — Batch 1 live; T3-09.
@@ -105,3 +107,16 @@ at its new home.
 **Done when** — archive files listed in `docs/live/BOOQABLE_ARCHIVE_<date>.md`; cancellation
 confirmation saved; the root domain no longer shows the Booqable store.
 **Needs** — T9-06.
+
+### T9-09 · Usability test rounds            status: todo · size: S each · Babin + staff
+**What** — Watch three staff use the app on staging and fix what trips them, following
+`docs/USABILITY_TESTS.md` §2–§3: three people per round (floor, desk, someone new), about 45 minutes
+each, task cards U1–U12, a score sheet, and a same-day ranking of the ten worst problems. Rounds:
+**device day Sun 10 Jan 2027 (26 Poush)**, **during the trial Wed 20 Jan (6 Magh)** ⭐, then **the first
+Sunday of each month, 11:00–13:00** ⭐. Claude prepares the task cards with real staging booking
+numbers before each round and turns the ranked list into cards at the next check-in.
+**Why** — R-39 counts taps but cannot see hesitation, wrong units or false "saved"; L10.
+**Done when** — each round leaves `docs/verification/USABILITY_<date>.md` (problems ranked, decisions,
+participants as P1/P2/P3 — no names); the top three problems of a round are fixed or carded before the
+next round.
+**Needs** — T1-02 (staging), T1-05 (role accounts), test bookings on staging.

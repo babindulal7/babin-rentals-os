@@ -4,7 +4,7 @@
 
 Babin answered a second round (~100 questions) on the daily workflow and how the build runs:
 [`RULINGS-2026-10-26-workflow.md`](../RULINGS-2026-10-26-workflow.md) (W1–W91, Claude's resolutions
-L1–L7). It also settled these earlier ⭐ items: daily volume (10–20 pickups and returns, W3); a fully
+L1–L12). It also settled these earlier ⭐ items: daily volume (10–20 pickups and returns, W3); a fully
 booked item offers both a similar owned item and a sub-rent (W10); overdue escalation = everyone at
 once (W39); the cleaner may QC their own work when alone (W43); damage found after the client left is
 claimed from the client by default (W44).

@@ -167,6 +167,9 @@ corrections are saved as aliases so the next paste matches better.
 **Where** — `src/modules/rentals/NewRental.tsx`, `src/modules/rentals/booking/AddItemPanel.tsx`, new
 `src/lib/gearListParser.ts` (pure, tested), product alias storage.
 **Database** — migration (claim a number) only if a `product_aliases` table is needed; otherwise none.
+**Build notes** — read the pasted text → show a preview with a result per line
+(matched · several matches, pick one · not found) → add only what the person confirms, in one write.
+Unmatched lines stay visible; nothing is added half-way.
 **Done when** — the parser has tests for 20 real-shaped lists (quantities before/after, "x2", "2pcs",
 Nepali digits, emoji bullets); 80%+ of lines in the samples auto-match; nothing is added without the
 confirm tap; Warehouse sees no prices in the preview.
@@ -264,6 +267,9 @@ the return date.
 GiST-checked), linked-booking column; lifecycle steps "a change can never double-book", "a packed
 unit cannot be silently removed", "linked booking carries the parent id". PERMISSIONS §4 new
 capability `rental.change` for booking-desk roles, same commit (B-3).
+**Build notes** — keep the draft apart from the saved booking; Save is disabled
+while saving; if someone else changed the booking since it was opened, say so and show what changed
+instead of overwriting it.
 **Done when** — the three cases work on staging with two devices; no double booking; audit rows exist.
 **Needs** — T3-14.
 
@@ -273,6 +279,8 @@ and reserves that exact unit if it is free — in one action (W8).
 **Why** — W8.
 **Where** — `AddItemPanel.tsx`, `src/lib/scannerLookup.ts`.
 **Database** — none.
+**Build notes** — same scanner rules as T2-14 — never debounce, ignore a repeat of
+the same code within ⭐ 1.5 s, server check per code.
 **Done when** — scan → line added with that unit; a booked unit says who has it and offers T3-13.
 **Needs** — T2-14 (shared scan lookup).
 
@@ -298,6 +306,9 @@ serial/asset code and collectors.
 **Where** — `src/lib/queries/globalSearch.ts`, `src/components/shell/CommandPalette.tsx`,
 `MobileHeaderSearch.tsx`.
 **Database** — none expected; add a search index migration (claim a number) if a query is slow.
+**Build notes** — search after typing pauses (~250 ms ⭐); cancel the previous
+request with `AbortController` and show only the latest results; "no results", "searching" and "search
+failed — retry" look different. Never apply "latest wins" to a write.
 **Done when** — each of the seven keys finds the right booking in < 1 s on staging data; money never
 shown to floor roles.
 **Needs** — none.

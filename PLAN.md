@@ -1,11 +1,11 @@
 # PLAN.md — Babin Rentals OS: the road to go-live
 
-**Version 1.2 · 26 Oct 2026 (9 Kartik 2083) · Owner: Babin Dulal · Status: ACTIVE**
+**Version 1.3 · 26 Oct 2026 (9 Kartik 2083) · Owner: Babin Dulal · Status: ACTIVE**
 
-*v1.2 (evening): rebased onto `main` at `a7bd355f` (T2-01, T2-02, T2-04, T2-05 are built — T2-01 needs the W27 delta, T2-16); Babin asked Claude to choose who does what, so [L8](RULINGS-2026-10-26-workflow.md) moves T8 to Codex-1 and keeps two writing cards with Claude.*
+*v1.3 (evening): merges the second workflow package (v3: the fuller CI-off check list, T0-10/T0-11, the richer T2-16, T2-17, T9-09, the usability guide) with the v2 lane choices; T2-02 to T2-05 and T2-07 are built on `main`. Babin asked Claude to choose who does what, so [L12](RULINGS-2026-10-26-workflow.md) moves T8 to Codex-1 and keeps two writing cards with Claude.*
 
 *v1.1 (afternoon): Babin's workflow round — [`RULINGS-2026-10-26-workflow.md`](RULINGS-2026-10-26-workflow.md) W1–W91 —
-adds 27 cards to T0–T8, sets the agent lanes (Codex-1 · Gemini · Codex-2, Claude reviews), turns CI off
+adds 32 cards to T0–T9, sets the agent lanes (Codex-1 · Gemini · Codex-2, Claude reviews), turns CI off
 in favour of local checks, and makes Claude read-only on GitHub.*
 
 > **This is a new file.** The PLAN.md that existed before October is not in the repository and
@@ -72,7 +72,7 @@ older receipt.
 | Actions implemented (`npm run completion`) | **55 / 58** — the 3 missing are inspection stubs nothing calls |
 | Routed screens on the database | **50 / 60** — 0 on seed data; the other 10 are sign-in, 404, onboarding and three static pages |
 | Capabilities mapped | **48 / 48** |
-| GitHub CI | **Off.** No run has passed since 15 Oct 19:23; the run on PR #29 (25 Oct) shows GitHub refusing to start the job for a billing reason. Babin ruled CI stays off; local checks are the gate (W75, §6.4). |
+| GitHub CI | **Off.** No run has passed since 15 Oct 19:23 UTC; the run on PR #29 (25 Oct) shows GitHub refusing to start the job for a billing reason. Babin ruled CI stays off; local checks are the gate (W75, §6.4). |
 
 What stops go-live today:
 
@@ -99,21 +99,21 @@ What stops go-live today:
 
 | ID | Track | Delivers | Go-live? | Lane · agent | Size* |
 |---|---|---|---|---|---|
-| [T0](docs/plans/T0_REPO_HYGIENE.md) | Repo & process hygiene | PR/branch triage, doc truth, test runner default, CI off | Yes (week 1) | A · Codex-1 + Babin | 4 |
+| [T0](docs/plans/T0_REPO_HYGIENE.md) | Repo & process hygiene | PR/branch triage, doc truth, test runner default (tests never use live settings), CI off, one gate command | Yes (week 1) | A · Codex-1 + Babin | 4 |
 | [T1](docs/plans/T1_RELEASE.md) | Release & infrastructure | Backup, staging, migrations live, hosting, email DNS, monitoring, switch user by PIN | Yes | A · Codex-1 + Babin | 18 |
-| [T2](docs/plans/T2_FLOOR.md) | Floor loop completion | Camera evidence, signatures, ID deposit, collectors, overrides, Technician, repair clearance, self-QC, Reset priority, printing, scanner, scan → item card, offline, devices | Yes | A · Codex-1 | 33 (4 built) |
+| [T2](docs/plans/T2_FLOOR.md) | Floor loop completion | Camera evidence (first part built 26 Oct; T2-16 finishes it), saving a unit's details, signatures, ID deposit, collectors, overrides, Technician, repair clearance, self-QC, Reset priority, printing, scanner, scan → item card, offline, devices | Yes | A · Codex-1 | 33 (5 built) |
 | [T3](docs/plans/T3_BOOKING_MONEY.md) | Booking & money rules | Re-book, paste a list, fully booked options, deposits, cancellation tiers, non-VAT bills, draft invoice at Confirm, change/extend, share, who owes, find/availability, balances, accountant pack, expenses | Yes | C · Codex-2 | 45 |
 | [T4](docs/plans/T4_SHARED_TOOLS.md) | Shared operations tools | Delivery dispatch, zones, rider links, team notes, shift handover, old-data export | Yes | B · Gemini | 17 |
 | [T5](docs/plans/T5_NOTIFICATIONS.md) | Notifications & email | In-app centre, email service, digest, automatic client emails, payment reminders, pop-ups, approvals, role homes | Yes | B · Gemini | 22 |
 | [T6](docs/plans/T6_NEPALI.md) | Nepali language | Glossary, string catalogue, approved Nepali, layout pass | Yes | B · Gemini | 22 |
 | [T7](docs/plans/T7_ONLINE_BOOKING.md) | Online booking & payments | Public catalogue (show-online flags), client accounts with ID, requests (12 h notice, 1 h answer), Fonepay/eSewa/Khalti | Yes | C · Codex-2 | 32 |
 | [T8](docs/plans/T8_MEMBERSHIP_CREW.md) | Membership & crew | Plans, proration, renewal, overtime, TDS, staff discount | Yes | A · Codex-1 | 14 |
-| [T9](docs/plans/T9_CUTOVER.md) | Booqable cutover | Import, holds, trial, day X, archive, cancel | Yes | A · Codex-1 + Babin | 10 |
+| [T9](docs/plans/T9_CUTOVER.md) | Booqable cutover | Import, holds, trial, day X, archive, cancel, monthly usability tests | Yes | A · Codex-1 + Babin | 10 |
 | [T10](docs/plans/T10_AFTER_GO_LIVE.md) | After go-live | Productions, coupons, warranty, ROI/depreciation, admin tools, width | No | — | — |
 
 \* Size = estimated agent build sessions (one focused session ≈ one task branch). Total for go-live
 ≈ **215 sessions in ~13 weeks** — about **5–6 sessions a week per lane** across three lanes
-(by 26 Oct evening, after T2-01/02/04/05 landed and T8 moved to lane A: lane A ≈ 72, lane B ≈ 61, lane C ≈ 75, plus two writing cards for Claude; §6).
+(by 26 Oct evening, after T2-02 to T2-05 and T2-07 landed and T8 moved to lane A: lane A ≈ 72, lane B ≈ 61, lane C ≈ 75, plus two writing cards for Claude; §6).
 Cards tagged **[soon]** may slip to the first two weeks after day X if a lane falls behind; untagged
 and **[go-live]** cards may not. Owner time is listed separately in
 [`docs/plans/BABIN_ACTIONS.md`](docs/plans/BABIN_ACTIONS.md).
@@ -143,7 +143,7 @@ D29, D30, D34); those cells change in `docs/PERMISSIONS.md` **in the same commit
 them.
 
 Afternoon round: [`RULINGS-2026-10-26-workflow.md`](RULINGS-2026-10-26-workflow.md) — **W1–W91** (the
-daily workflow and how we build) and Claude's resolutions **L1–L7**. W43 (self-QC), W49 (rider
+daily workflow and how we build) and Claude's resolutions **L1–L12**. W43 (self-QC), W49 (rider
 links), W53 (switch user by PIN) and W88 (desk staff change confirmed bookings) change permission
 cells or gates when their cards land (B-3).
 
@@ -189,8 +189,8 @@ Dates in AD with BS (computed with `src/lib/bs.ts`).
 | **M1** | 22 Nov · 6 Mangsir | **Live batch 0** (0163 alone — closes six anonymous RPCs). Staging rehearses 0157–0177; nine role seats pass; Cloudflare staging behind Access; email domain verified. |
 | **M2** | 6 Dec · 20 Mangsir | **Live batch 1 applied by Babin** (the rest of 0157–0177, after a fresh backup). Camera evidence, signatures, ID deposit on staging. Glossary approved. |
 | **M3** | 3 Jan 2027 · 19 Poush | Go-live features complete on staging (T2–T5, T8, T3); Fonepay online payment working on staging; Nepali wave 1 (floor) approved. **Live batch 2.** |
-| **M4** | 10 Jan · 26 Poush | Device day (iPhone 17 Pro, M4 iPad Pro, Bluetooth scanner, airplane mode); D-5 green; security review closed; Booqable data imported and holds live. **Live batch 3.** |
-| **Trial** | 11–31 Jan · 27 Poush–17 Magh | Every real job entered in both systems; daily reconcile; Booqable stays master. Nepali waves 2–4 land during the trial; staff switch language as each wave is approved. |
+| **M4** | 10 Jan · 26 Poush | Device day (iPhone 17 Pro, M4 iPad Pro, Bluetooth scanner, airplane mode) with **usability round 1** (T9-09); D-5 green; security review closed; Booqable data imported and holds live. **Live batch 3.** |
+| **Trial** | 11–31 Jan · 27 Poush–17 Magh | Every real job entered in both systems; daily reconcile; Booqable stays master. Nepali waves 2–4 land during the trial; staff switch language as each wave is approved. **Usability round 2 on Wed 20 Jan · 6 Magh** ⭐. |
 | **Go / no-go** | 29 Jan · 15 Magh | Babin decides against the §1 list. Nepali 100% approved. |
 | **X — go-live** | **Mon 1 Feb · 18 Magh** | New rentals OS-only; online booking live; Booqable store stops taking bookings. |
 | **M6** | 1 Mar · 17 Falgun | Last Booqable rental returned and closed; Booqable data archived. |
@@ -198,6 +198,8 @@ Dates in AD with BS (computed with `src/lib/bs.ts`).
 
 **Every day:** Claude check-ins at **7:38 AM and 7:38 PM** NPT (W77 — Babin asked for 8; the scheduler runs slightly early) — what changed on GitHub, the fast
 checks re-run on `main`, what looks wrong, and the next prompt to paste.
+
+**Every month after X:** usability round on the first Sunday, 11:00–13:00 ⭐ (`docs/USABILITY_TESTS.md`, T9-09).
 
 **Slack:** X may slip to 15 Feb (3 Falgun) and still meet the deadline, provided the last open
 Booqable rental ends by 10 Mar. If T7 payments lag, go live with Fonepay only — never let a
@@ -215,13 +217,13 @@ Ruled 26 Oct afternoon (W74–W78, W90, L5).
    prompt. Claude's own work (plans, prompts, patches) arrives **as files** that Babin applies.
 2. **Three lanes, one agent each, each in its own git worktree** — never two agents in one checkout
    (the 23 Oct "source changed during verification" failures came from that):
-   - **Lane A · Codex-1:** T0 (code cards), T1 (code cards), T2 floor, T9 cutover tooling, **then T8 membership & crew** (L8).
+   - **Lane A · Codex-1:** T0 (code cards), T1 (code cards), T2 floor, T9 cutover tooling, **then T8 membership & crew** (L12).
    - **Lane B · Gemini:** T4 shared tools, T5 notifications & email, then T6
      Nepali waves (glossary and machinery early).
    - **Lane C · Codex-2:** T3 booking & money, then T7 online booking & payments.
    - **Claude's own cards (arrive as files, Babin approves):** T6-01 Nepali glossary draft and
      T7-01 online-booking spec. Everything else Claude does is review.
-   - **Why this split (L8):** money, permission and security cards (T2-03, T3, T7, T8) go to the Codex
+   - **Why this split (L12):** money, permission and security cards (T2-03, T3, T7, T8) go to the Codex
      lanes because they end in Postgres migrations that must pass `check:pglite` + `check:lifecycle`;
      Gemini takes the high-volume UI and text work (delivery, notes, notification screens, Nepali
      extraction) where its large context helps; Claude reads every migration and every money or
@@ -230,11 +232,13 @@ Ruled 26 Oct afternoon (W74–W78, W90, L5).
    `lane-a/T2-01-camera-evidence`. Each card has a ready prompt in
    [`docs/plans/prompts/`](docs/plans/prompts/README.md) — paste it into the lane's agent.
 4. **CI is off; these local checks are the gate** (W75). Before an agent says a card is done, and
-   again before Babin merges it locally:
-   `npm run typecheck` → `VITE_DATA_SOURCE=mock npm test` → if SQL changed, `npm run check:pglite`
-   **and** `npm run check:lifecycle` in the same run (R-35 "Verified") → `npm run lint` →
-   `npm run build`. Drive the changed screen in `npm run dev:mock` at 375 / 820 / 1440. Paste the
-   results into the card's PROGRESS entry.
+   again before Babin merges it locally, run **every step `.github/workflows/ci.yml` ran, in its
+   order** — the list is in [`docs/plans/README.md`](docs/plans/README.md) until T0-11 makes it one
+   command: typecheck · lint · tests (mock data) · migrations from scratch · financial integrity ·
+   security · lifecycle · server contracts · partial Return · lint:progress · receipt test · page
+   shell · UI copy · contrast · build (coverage before each live batch). SQL changes need
+   `check:pglite` and `check:lifecycle` green in the same run (R-35 "Verified"). Drive the changed
+   screen in `npm run dev:mock` at 375 / 820 / 1440. Paste the results into the card's PROGRESS entry.
 5. **Migration numbers are claimed, not guessed.** Claim the next free number in
    [`docs/plans/MIGRATION_LEDGER.md`](docs/plans/MIGRATION_LEDGER.md) in the branch's first commit.
    If two branches collide, the later merge renumbers (as 0175 → 0177 did).
@@ -251,8 +255,9 @@ Ruled 26 Oct afternoon (W74–W78, W90, L5).
    printed by `npm run completion`, a Remaining block — `npm run lint:progress` checks both), and
    ticks its card in the track file.
 10. **Done means:** real data, permissions enforced in the database, the five screen states
-    (loading, empty, error, restricted, offline), phone/tablet/desktop, tests, merged by Babin,
-    PROGRESS logged. A screen that only *looks* finished is not done (Law 16).
+    (loading, empty, error, restricted, offline), phone/tablet/desktop, the **screen check** in
+    [`docs/USABILITY_TESTS.md`](docs/USABILITY_TESTS.md) §1 passed on every changed screen, tests,
+    merged by Babin, PROGRESS logged. A screen that only *looks* finished is not done (Law 16).
 
 ---
 

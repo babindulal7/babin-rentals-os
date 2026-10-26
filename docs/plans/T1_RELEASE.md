@@ -120,6 +120,9 @@ rupee figures.
 **Why** — A floor error at 6 AM must reach someone.
 **Where** — `src/lib/monitoring.ts`, Pages env vars.
 **Database** — none.
+**Build notes** — an error shown to staff is one plain line — what happened,
+whether trying again may help, what to do — plus a short reference code that matches the Sentry event.
+Raw database or gate text (`GATE:…`, Postgres messages) goes to the log, never to the screen.
 **Done when** — a forced test error on staging appears in Sentry with path only, no query string.
 **Needs** — T1-07.
 

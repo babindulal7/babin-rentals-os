@@ -11,8 +11,12 @@ editing this file or telling Claude at a check-in.
 - [ ] **Disable the GitHub CI workflow** — Actions → CI → ⋯ → Disable workflow (T0-09). CI stays off;
       local checks are the gate.
 - [ ] Set up the three agent worktrees: **Codex-1 (lane A), Gemini (lane B), Codex-2 (lane C)**
-      (PLAN.md §6) and paste the first prompts: `prompts/T2-16.md` (Codex-1), `prompts/T4-04.md`
-      (Gemini), `prompts/T3-01.md` (Codex-2).
+      (PLAN.md §6) and paste the first prompts: `prompts/T0-10.md` then `prompts/T2-16.md` (Codex-1 —
+      T2-16 finishes the camera upload you pushed on 26 Oct), `prompts/T4-04.md` (Gemini),
+      `prompts/T3-01.md` (Codex-2).
+- [ ] Apply Claude's `fix-evidence-offline-text.patch` (offline text; turns the red UI-copy check green).
+- [ ] From now on, run the **full check list** (`docs/plans/README.md`) before every push — CI no longer
+      catches anything (T0-11 makes it one command).
 - [ ] Take a production backup — `scripts/backup-db.ps1`, ~30 min (T1-01).
 - [ ] Approve the cost of a second Supabase project for staging (T1-02).
 - [ ] Create a Cloudflare account; later add three DNS records when asked: `app.`, `book.`, `staging-app.` (T1-07).
@@ -72,6 +76,9 @@ editing this file or telling Claude at a check-in.
 
 - [ ] **Device day** with staff: iPhone 17 Pro, M4 iPad Pro, the counter PC, a laptop, the scanner;
       one night-shift return (T2-11).
+- [ ] **Usability round 1** the same day: watch three staff (floor, desk, someone new) do the task cards
+      in `docs/USABILITY_TESTS.md`; rank the ten worst problems before you go home (T9-09). Claude sends
+      the task cards with real staging booking numbers the day before.
 - [ ] Every staff member signs in once on each shared device and sets a **4-digit PIN** (T1-15, T1-13).
 - [ ] **Live batch 3** (T1-10).
 - [ ] Three short **staff training** sessions, including the night shift (T9-07).
@@ -80,6 +87,7 @@ editing this file or telling Claude at a check-in.
 
 - [ ] Every real job goes into Booqable **and** the OS (T9-03).
 - [ ] 10 minutes each evening on the reconcile sheet.
+- [ ] **Usability round 2 — Wed 20 Jan (6 Magh)** ⭐ (T9-09).
 
 ## Decide and switch
 
@@ -88,6 +96,8 @@ editing this file or telling Claude at a check-in.
 - [ ] **Mon 1 Feb (18 Magh) — day X**: new rentals only in the OS; stop new Booqable bookings (T9-05).
 - [ ] By **1 Mar (17 Falgun)**: last Booqable rental closed; export the Booqable archive (T9-08).
 - [ ] By **10 Mar (26 Falgun)**: **cancel Booqable** (renews 20 Mar · 6 Chaitra) (T9-08).
+- [ ] **Every month from February:** usability round on the first Sunday, 11:00–13:00 ⭐ — 7 Feb
+      (24 Magh), 7 Mar (23 Falgun), 4 Apr (21 Chaitra) (T9-09).
 
 ---
 
