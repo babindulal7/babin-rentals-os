@@ -4,7 +4,8 @@ Location: `docs/PERMISSIONS.md` (beside Foundation v3.0 and UI_UX.md)
 
 > ## ⏳ Ruled 26 Oct 2026, not yet in code — these cells change when their task lands
 >
-> Babin's rulings in [`RULINGS-2026-10-26.md`](../RULINGS-2026-10-26.md) change the cells below.
+> Babin's rulings in [`RULINGS-2026-10-26.md`](../RULINGS-2026-10-26.md) and
+> [`RULINGS-2026-10-26-workflow.md`](../RULINGS-2026-10-26-workflow.md) change the cells below.
 > Per B-3 each one is edited **in the same commit as its code, migration and T-1 fixture**, so until
 > then the tables in this file still describe what runs. Do not build against the new cells early,
 > and do not treat the old cells as the owner's intent.
@@ -17,6 +18,11 @@ Location: `docs/PERMISSIONS.md` (beside Foundation v3.0 and UI_UX.md)
 > | D29 | §7 "no public signup" → client sign-up by verified email (one-time code) | T7-03 |
 > | D34 | §5 "Rental rates … Client: on request/quote only" and §7 "no catalogue in v1" → public daily rates | T7-02 |
 > | D30 | §7 client writes: add "pay online" (advance or invoice balance) | T7-05 |
+> | W43 | §6.1 new row: QC by the same person who cleaned, only with "alone on shift" ticked and audited (today a DB CHECK refuses it) | T2-13 |
+> | W49 | §3/§7 new access path: a one-time, job-scoped delivery link for a hired rider — no login, no money, expires | T4-08 |
+> | W53 | Sign-in: switch user on a shared device by name + 4-digit PIN, restoring that person's own session (not the screen-lock curtain) | T1-15 |
+> | W88 | §4 new capability `rental.change`: booking-desk roles change items and dates after Confirm (today quote-only edits + extend) | T3-18 |
+> | W68 | §6.1 note: a Staff client's 20% discount is an ordinary discount line (Law 10, ungated) | T8-09 |
 
 > ## ⛔ VERIFIED 7 Sep 2026 — read §16 before building from §4, §5, §9 or §12
 >

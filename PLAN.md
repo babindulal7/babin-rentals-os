@@ -1,6 +1,12 @@
 # PLAN.md — Babin Rentals OS: the road to go-live
 
-**Version 1.0 · 26 Oct 2026 (9 Kartik 2083) · Owner: Babin Dulal · Status: ACTIVE**
+**Version 1.2 · 26 Oct 2026 (9 Kartik 2083) · Owner: Babin Dulal · Status: ACTIVE**
+
+*v1.2 (evening): rebased onto `main` at `a7bd355f` (T2-01, T2-02, T2-04, T2-05 are built — T2-01 needs the W27 delta, T2-16); Babin asked Claude to choose who does what, so [L8](RULINGS-2026-10-26-workflow.md) moves T8 to Codex-1 and keeps two writing cards with Claude.*
+
+*v1.1 (afternoon): Babin's workflow round — [`RULINGS-2026-10-26-workflow.md`](RULINGS-2026-10-26-workflow.md) W1–W91 —
+adds 27 cards to T0–T8, sets the agent lanes (Codex-1 · Gemini · Codex-2, Claude reviews), turns CI off
+in favour of local checks, and makes Claude read-only on GitHub.*
 
 > **This is a new file.** The PLAN.md that existed before October is not in the repository and
 > is **not** reconstructed here. Babin ruled on 26 Oct 2026 that the new master roadmap becomes
@@ -38,13 +44,13 @@ Go-live happens only when all ten are true:
 | # | On go-live day | Track |
 |---|---|---|
 | G1 | Live database carries every verified migration, applied by Babin after a backup and a staging rehearsal; nine-role checks pass on staging; live smoke tests pass. | T1 |
-| G2 | The full floor loop runs on real devices with real data: book → pack (camera photo) → hand over (drawn signatures, ID or cash deposit, gates) → return (damage photos) → reset ("needed next") → invoice → payment → close. | T2 |
-| G3 | Booking and money rules are in: re-book, per-product deposits entered, cancellation tiers set, non-VAT bills classified, opening balances in daily closing. | T3 |
-| G4 | Delivery dispatch, shared team notes and shared shift handover work across devices. | T4 |
-| G5 | In-app notifications and the emailed morning digest work from `@babinrentals.com`. | T5 |
+| G2 | The full floor loop runs on real devices with real data: book → pack (camera photos) → hand over (one drawn signature, ID or cash deposit, collectors list, gates) → return (damage photos) → reset ("needed next", self-QC when alone) → invoice → payment → close; staff switch users on shared devices by name + PIN; scanning any label shows who has the item. | T2, T1-15 |
+| G3 | Booking and money rules are in: re-book, paste a WhatsApp list, per-product deposits entered, cancellation tiers set, non-VAT bills classified, draft invoice from Confirm numbered on full payment, change/extend confirmed bookings, share documents, who-owes list, find and availability in two taps, opening balances in daily closing. | T3 |
+| G4 | Delivery dispatch with zone fees and one-time rider links, shared team notes and shared shift handover (three shifts) work across devices. | T4 |
+| G5 | In-app notifications, phone pop-ups, the approvals inbox, role home screens, the emailed morning digest, and the automatic client emails (pickup/return reminders and receipts, late return, damage notice, payment reminders) work from `@babinrentals.com`. | T5 |
 | G6 | Every staff screen is in Nepali, approved by Babin, switchable per user. | T6 |
 | G7 | Online booking is live at `book.babinrentals.com`: verified-email accounts, public daily rates, staff-confirmed requests, online payment (Fonepay at minimum; eSewa and Khalti when their merchant accounts are open). Cross-client test D-5 passes. | T7 |
-| G8 | Membership plans are loaded with proration and renewal; crew overtime and TDS work. | T8 |
+| G8 | Membership plans are loaded with proration and renewal; crew overtime and TDS work; staff renting gets the 20% staff discount. | T8 |
 | G9 | Booqable data is imported, open Booqable rentals block availability in the OS, and the trial has reconciled. | T9 |
 | G10 | Hosting on Cloudflare Pages, error monitoring on, backups scheduled, rollback written down. | T1 |
 
@@ -66,6 +72,7 @@ older receipt.
 | Actions implemented (`npm run completion`) | **55 / 58** — the 3 missing are inspection stubs nothing calls |
 | Routed screens on the database | **50 / 60** — 0 on seed data; the other 10 are sign-in, 404, onboarding and three static pages |
 | Capabilities mapped | **48 / 48** |
+| GitHub CI | **Off.** No run has passed since 15 Oct 19:23; the run on PR #29 (25 Oct) shows GitHub refusing to start the job for a billing reason. Babin ruled CI stays off; local checks are the gate (W75, §6.4). |
 
 What stops go-live today:
 
@@ -73,9 +80,10 @@ What stops go-live today:
    (0157–0177)** wait, plus 7 rename mismatches and 2 unexplained live rows (`npm run db:plan`).
    No staging project, no fresh backup, no nine-role check on real logins, Storage scoping not
    accepted on a hosted project. Never driven on a physical phone, iPad, scanner or offline.
-2. **The floor loop cannot finish live.** Pack and Handover both require a saved photo
-   (§4.31 ruling) and **no screen can upload one** — `uploadEvidencePhoto()` exists in
-   `src/lib/evidenceStorage.ts` but has no caller.
+2. **The floor loop is not finished live.** Camera upload (T2-01), drawn signatures (T2-02), the
+   ID-card deposit (T2-03), the Gate 1 override (T2-04) and Technician floor verbs (T2-05) are built
+   on `main` (26 Oct) but not on staging or live; still open: W27 photo rules (T2-16), collectors and
+   ID on file (T2-12), repair clearance, printing, offline.
 3. **About 280 "not built / not tracked yet" markers on ~50 screens** (photo upload, printing,
    delivery, maintenance job detail, warehouse transfers, expense reversal …).
 4. **Browser-only features refuse on the live app:** Productions, Team Notes, Shift Handover,
@@ -89,23 +97,26 @@ What stops go-live today:
 
 ## §3 Tracks
 
-| ID | Track | Delivers | Go-live? | Lane | Size* |
+| ID | Track | Delivers | Go-live? | Lane · agent | Size* |
 |---|---|---|---|---|---|
-| [T0](docs/plans/T0_REPO_HYGIENE.md) | Repo & process hygiene | Lanes, PR/branch triage, doc truth, test runner default | Yes (week 1) | A | 4 |
-| [T1](docs/plans/T1_RELEASE.md) | Release & infrastructure | Backup, staging, migrations live, hosting, email DNS, monitoring | Yes | A | 14 |
-| [T2](docs/plans/T2_FLOOR.md) | Floor loop completion | Camera evidence, signatures, ID deposit, overrides, Technician, repair clearance, Reset priority, printing, scanner, offline, devices | Yes | A | 26 |
-| [T3](docs/plans/T3_BOOKING_MONEY.md) | Booking & money rules | Re-book, deposits, cancellation tiers, non-VAT bills, balances, documents | Yes | B | 18 |
-| [T4](docs/plans/T4_SHARED_TOOLS.md) | Shared operations tools | Delivery dispatch, team notes, shift handover, old-data export | Yes | B | 12 |
-| [T5](docs/plans/T5_NOTIFICATIONS.md) | Notifications & email | In-app centre, email sending, morning digest | Yes | B | 10 |
-| [T6](docs/plans/T6_NEPALI.md) | Nepali language | Glossary, string catalogue, approved Nepali, layout pass | Yes | C | 22 |
-| [T7](docs/plans/T7_ONLINE_BOOKING.md) | Online booking & payments | Public catalogue, client accounts, requests, Fonepay/eSewa/Khalti | Yes | C | 32 |
-| [T8](docs/plans/T8_MEMBERSHIP_CREW.md) | Membership & crew | Plans, proration, renewal, overtime, TDS | Yes | B | 13 |
-| [T9](docs/plans/T9_CUTOVER.md) | Booqable cutover | Import, holds, trial, day X, archive, cancel | Yes | A | 10 |
+| [T0](docs/plans/T0_REPO_HYGIENE.md) | Repo & process hygiene | PR/branch triage, doc truth, test runner default, CI off | Yes (week 1) | A · Codex-1 + Babin | 4 |
+| [T1](docs/plans/T1_RELEASE.md) | Release & infrastructure | Backup, staging, migrations live, hosting, email DNS, monitoring, switch user by PIN | Yes | A · Codex-1 + Babin | 18 |
+| [T2](docs/plans/T2_FLOOR.md) | Floor loop completion | Camera evidence, signatures, ID deposit, collectors, overrides, Technician, repair clearance, self-QC, Reset priority, printing, scanner, scan → item card, offline, devices | Yes | A · Codex-1 | 33 (4 built) |
+| [T3](docs/plans/T3_BOOKING_MONEY.md) | Booking & money rules | Re-book, paste a list, fully booked options, deposits, cancellation tiers, non-VAT bills, draft invoice at Confirm, change/extend, share, who owes, find/availability, balances, accountant pack, expenses | Yes | C · Codex-2 | 45 |
+| [T4](docs/plans/T4_SHARED_TOOLS.md) | Shared operations tools | Delivery dispatch, zones, rider links, team notes, shift handover, old-data export | Yes | B · Gemini | 17 |
+| [T5](docs/plans/T5_NOTIFICATIONS.md) | Notifications & email | In-app centre, email service, digest, automatic client emails, payment reminders, pop-ups, approvals, role homes | Yes | B · Gemini | 22 |
+| [T6](docs/plans/T6_NEPALI.md) | Nepali language | Glossary, string catalogue, approved Nepali, layout pass | Yes | B · Gemini | 22 |
+| [T7](docs/plans/T7_ONLINE_BOOKING.md) | Online booking & payments | Public catalogue (show-online flags), client accounts with ID, requests (12 h notice, 1 h answer), Fonepay/eSewa/Khalti | Yes | C · Codex-2 | 32 |
+| [T8](docs/plans/T8_MEMBERSHIP_CREW.md) | Membership & crew | Plans, proration, renewal, overtime, TDS, staff discount | Yes | A · Codex-1 | 14 |
+| [T9](docs/plans/T9_CUTOVER.md) | Booqable cutover | Import, holds, trial, day X, archive, cancel | Yes | A · Codex-1 + Babin | 10 |
 | [T10](docs/plans/T10_AFTER_GO_LIVE.md) | After go-live | Productions, coupons, warranty, ROI/depreciation, admin tools, width | No | — | — |
 
-\* Size = estimated agent build sessions (one focused session ≈ one PR). Total for go-live
-≈ **160 sessions in ~14 weeks**, so **three lanes must run in parallel** (§6). Owner time is
-listed separately in [`docs/plans/BABIN_ACTIONS.md`](docs/plans/BABIN_ACTIONS.md).
+\* Size = estimated agent build sessions (one focused session ≈ one task branch). Total for go-live
+≈ **215 sessions in ~13 weeks** — about **5–6 sessions a week per lane** across three lanes
+(by 26 Oct evening, after T2-01/02/04/05 landed and T8 moved to lane A: lane A ≈ 72, lane B ≈ 61, lane C ≈ 75, plus two writing cards for Claude; §6).
+Cards tagged **[soon]** may slip to the first two weeks after day X if a lane falls behind; untagged
+and **[go-live]** cards may not. Owner time is listed separately in
+[`docs/plans/BABIN_ACTIONS.md`](docs/plans/BABIN_ACTIONS.md).
 
 **Dependencies (read top to bottom):**
 
@@ -131,6 +142,11 @@ D29, D30, D34); those cells change in `docs/PERMISSIONS.md` **in the same commit
 (B-3), not before — until then a "ruled, not yet in code" box at the top of PERMISSIONS.md lists
 them.
 
+Afternoon round: [`RULINGS-2026-10-26-workflow.md`](RULINGS-2026-10-26-workflow.md) — **W1–W91** (the
+daily workflow and how we build) and Claude's resolutions **L1–L7**. W43 (self-QC), W49 (rider
+links), W53 (switch user by PIN) and W88 (desk staff change confirmed bookings) change permission
+cells or gates when their cards land (B-3).
+
 ### §4.2 Still open
 
 Each has a ⭐ default the build may use until Babin answers (CLAUDE.md B-5). Full text and history
@@ -145,12 +161,16 @@ stay in [`docs/OPEN_DECISIONS.md`](docs/OPEN_DECISIONS.md).
 | O-5 | TDS rate on crew payouts. | Accountant to supply; payouts show "TDS: rate not set" until then | T8-08 |
 | O-6 | Is IRD-certified e-billing required? (D14) | Accountant to confirm by 30 Nov | T3-05 |
 | O-7 | How non-VAT bills appear in the VAT register and returns. | Separate section "Non-VAT bills"; accountant confirms | T3-04 |
-| O-8 | Bluetooth scanner model (S14). | Claude proposes 2–3 iPad-compatible models; Babin buys | T2-09 |
+| O-8 | *(replaced by O-16)* | — | — |
 | O-9 | Membership plan table content (D32). | Babin sends it; plans stay empty until then | T8-01 |
 | O-10 | Cancellation tier figures (D12). | Babin enters them in Settings; until then no fee is suggested | T3-03 |
 | O-11 | Rental agreement terms text. | Babin supplies; current template wording until then | T3-06 |
 | O-12 | A plan downgrade where the unused-days credit is larger than the new fee. | The rest becomes the client's account credit, not cash | T8-03 |
 | O-13 | What a cancellation fee % is taken from. | The booking's rental total before VAT | T3-03 |
+| O-14 | A numbered (fully paid) invoice that later changes — extension, late fee, damage (W17). | Accountant decides: second invoice or credit note; until then the app blocks the change with a clear message | T3-14 step 4 |
+| O-15 | Fee for each delivery zone (W48, L6). | Rs 3,500 for each valley zone; outside the valley quoted | T4-07 |
+| O-16 | Label printer and Bluetooth scanner models (W54, S14). | Claude proposes 2–3 of each with Nepal prices at a check-in; Babin buys | T2-08, T2-09 |
+| O-17 | VAT timing: may the tax invoice wait until the client pays in full (W16), even for credit clients who pay weeks later? [VAT Act 2052 §6](https://nepallaws.com/Laws/value-added-tax-act-2052/section-6-place-and-time-of-supply/) puts the time of a supply at the earliest of invoice, service or payment, with its own rule for part payments | As ruled (number on full payment) until the accountant answers; if the invoice must come earlier, the numbering moment becomes one setting. The numbering step ships only after the answer | T3-14 |
 
 ### §4.3 How a new decision gets in
 
@@ -176,6 +196,9 @@ Dates in AD with BS (computed with `src/lib/bs.ts`).
 | **M6** | 1 Mar · 17 Falgun | Last Booqable rental returned and closed; Booqable data archived. |
 | **M7** | 10 Mar · 26 Falgun | Booqable cancelled — 10 days before the 20 Mar renewal. |
 
+**Every day:** Claude check-ins at **7:38 AM and 7:38 PM** NPT (W77 — Babin asked for 8; the scheduler runs slightly early) — what changed on GitHub, the fast
+checks re-run on `main`, what looks wrong, and the next prompt to paste.
+
 **Slack:** X may slip to 15 Feb (3 Falgun) and still meet the deadline, provided the last open
 Booqable rental ends by 10 Mar. If T7 payments lag, go live with Fonepay only — never let a
 missing wallet hold X.
@@ -184,27 +207,52 @@ missing wallet hold X.
 
 ## §6 How agents work
 
-1. **Three lanes, one writer each.** Lane A = T0, T1, T2, T9. Lane B = T3, T4, T5, T8. Lane C =
-   T6, T7. Each lane works in **its own git worktree** on its own branch — never two agents in one
-   checkout (the 23 Oct "source changed during verification" failures came from that).
-2. **One task = one branch = one PR.** Branch name `lane-<a|b|c>/<task-id>-<slug>`, e.g.
-   `lane-a/T2-01-camera-evidence`. Merge to `main` only with CI green.
-3. **Migration numbers are claimed, not guessed.** Before writing SQL, claim the next free number
-   in [`docs/plans/MIGRATION_LEDGER.md`](docs/plans/MIGRATION_LEDGER.md) in the branch's first
-   commit. If two branches collide, the later merge renumbers (as 0175 → 0177 did).
-4. **Gates per change:** `npm run typecheck` → `VITE_DATA_SOURCE=mock npm test` → if SQL changed,
-   `npm run check:pglite` **and** `npm run check:lifecycle` in the same run (R-35 "Verified") →
-   `npm run lint` → `npm run build`. Drive the changed screen in mock mode at 375 / 820 / 1440.
-5. **Database first.** A permission or gate changes in Postgres (migration + lifecycle step) before
+Ruled 26 Oct afternoon (W74–W78, W90, L5).
+
+1. **Who builds, who reviews.** **Codex and Gemini build** on Babin's computer. **Claude reviews**
+   and never writes to GitHub: it reads the repository, checks every new commit at **7:38 AM and
+   7:38 PM** NPT, re-runs the fast checks, and sends Babin a short summary with links, problems and the next
+   prompt. Claude's own work (plans, prompts, patches) arrives **as files** that Babin applies.
+2. **Three lanes, one agent each, each in its own git worktree** — never two agents in one checkout
+   (the 23 Oct "source changed during verification" failures came from that):
+   - **Lane A · Codex-1:** T0 (code cards), T1 (code cards), T2 floor, T9 cutover tooling, **then T8 membership & crew** (L8).
+   - **Lane B · Gemini:** T4 shared tools, T5 notifications & email, then T6
+     Nepali waves (glossary and machinery early).
+   - **Lane C · Codex-2:** T3 booking & money, then T7 online booking & payments.
+   - **Claude's own cards (arrive as files, Babin approves):** T6-01 Nepali glossary draft and
+     T7-01 online-booking spec. Everything else Claude does is review.
+   - **Why this split (L8):** money, permission and security cards (T2-03, T3, T7, T8) go to the Codex
+     lanes because they end in Postgres migrations that must pass `check:pglite` + `check:lifecycle`;
+     Gemini takes the high-volume UI and text work (delivery, notes, notification screens, Nepali
+     extraction) where its large context helps; Claude reads every migration and every money or
+     permission diff before Babin merges.
+3. **One card = one branch.** Branch name `lane-<a|b|c>/<card-id>-<slug>`, e.g.
+   `lane-a/T2-01-camera-evidence`. Each card has a ready prompt in
+   [`docs/plans/prompts/`](docs/plans/prompts/README.md) — paste it into the lane's agent.
+4. **CI is off; these local checks are the gate** (W75). Before an agent says a card is done, and
+   again before Babin merges it locally:
+   `npm run typecheck` → `VITE_DATA_SOURCE=mock npm test` → if SQL changed, `npm run check:pglite`
+   **and** `npm run check:lifecycle` in the same run (R-35 "Verified") → `npm run lint` →
+   `npm run build`. Drive the changed screen in `npm run dev:mock` at 375 / 820 / 1440. Paste the
+   results into the card's PROGRESS entry.
+5. **Migration numbers are claimed, not guessed.** Claim the next free number in
+   [`docs/plans/MIGRATION_LEDGER.md`](docs/plans/MIGRATION_LEDGER.md) in the branch's first commit.
+   If two branches collide, the later merge renumbers (as 0175 → 0177 did).
+6. **Files no lane may edit without saying so in its prompt:** `PLAN.md`, `docs/PERMISSIONS.md`,
+   `src/lib/rbac.ts`, `src/actions/core.ts`, `src/lib/money.ts`, `src/lib/pricingPipeline.ts`.
+   A card that must change one says so; the lane merges it before another lane touches the file.
+   **Nepali extraction (T6) touches every screen:** Gemini converts a module only when no open
+   card in lanes A or C touches that module's files — the T6 prompts list which modules are free.
+7. **Database first.** A permission or gate changes in Postgres (migration + lifecycle step) before
    the UI offers it (P2, P3, N-3).
-6. **Live database:** agents write, number and verify migrations; **Babin applies** them in the
+8. **Live database:** agents write, number and verify migrations; **Babin applies** them in the
    planned batches after a backup (N-5). Staging gets every migration first.
-7. **Every session ends with a `PROGRESS.md` entry** (Did / Ruled / Verified, a Completion block
+9. **Every card ends with a `PROGRESS.md` entry** (Did / Ruled / Verified, a Completion block
    printed by `npm run completion`, a Remaining block — `npm run lint:progress` checks both), and
-   ticks its task card in the track file.
-8. **Done means:** real data, permissions enforced in the database, the five screen states
-   (loading, empty, error, restricted, offline), phone/tablet/desktop, tests, PR merged, PROGRESS
-   logged. A screen that only *looks* finished is not done (Law 16).
+   ticks its card in the track file.
+10. **Done means:** real data, permissions enforced in the database, the five screen states
+    (loading, empty, error, restricted, offline), phone/tablet/desktop, tests, merged by Babin,
+    PROGRESS logged. A screen that only *looks* finished is not done (Law 16).
 
 ---
 
@@ -220,6 +268,9 @@ missing wallet hold X.
 | Photo storage growth | Storage quota warnings | Compress on device (⭐ long edge 1600 px); monthly size check |
 | One person approves everything | Owner actions slip | [`BABIN_ACTIONS.md`](docs/plans/BABIN_ACTIONS.md) has dated owner tasks |
 | Scope creep | New ideas land in go-live tracks | Anything not in §1 goes to T10 |
+| CI is off | A merge breaks `main` unnoticed | Local gates before every merge (§6.4); Claude re-runs the fast checks on `main` twice a day and reports red at once |
+| Automatic client emails go wrong | Wrong time, wrong client, an amount before approval | Server-built emails only (never browser text); one send per booking + event; the T5-06 register and its test; staging dry run with test clients |
+| ~215 sessions for go-live | A lane falls behind | [soon] cards slip first; Claude flags a lane more than a week behind at a check-in |
 
 ---
 

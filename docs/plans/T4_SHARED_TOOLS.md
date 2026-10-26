@@ -1,12 +1,16 @@
 # T4 — Shared operations tools
 
 **Goal:** the tools staff share across devices — delivery dispatch, team notes, shift handover —
-read and write the database instead of one browser's storage. **Lane B.** Rulings: S6, D8, D28;
+read and write the database instead of one browser's storage. **Lane B · Gemini.** Rulings: S6, D8, D28, W32, W46–W49;
 Laws 3, 6, 8; DELIVERY_DISPATCH_PHASE2 (16 Oct).
 
-**Exit (G4):** on staging and live: a delivery job assigned on the desk iPad appears on the driver's
-phone; a note written on one device shows on another; a shift handover written at logout is read
-by the next shift; every device has offered its old browser-only entries as a file and kept them.
+**Exit (G4):** on staging and live: a delivery job assigned on the desk iPad reaches the rider as a
+one-time link (W49) and the delivery fee comes from the zone (W48); a note written on one device
+shows on another; a shift handover written at the end of any of the three shifts is read by the next
+shift; every device has offered its old browser-only entries as a file and kept them.
+
+**Volume:** 5 or more deliveries or collections a day (W46), by hired riders for now; an own scooter
+and e-van are planned (W47).
 
 **Today:** `src/lib/queries/delivery.ts`, `internalNotes.ts` and `shiftHandover.ts` refuse in live
 mode ("unavailable … nothing has been saved") and keep data under the browser keys
@@ -23,7 +27,11 @@ Transit → Delivered / Failed, terminal states immutable). The Driver sees **on
 them**; Manager/Coordinator/Warehouse see their branch; no money on any driver screen (Law 6).
 Follow the transition matrix and the seven test groups in
 `docs/release/2026-10-16/DELIVERY_DISPATCH_PHASE2.md`.
-**Why** — S6 (delivery dispatch at go-live); 21 Jul lock (driver + vehicle on delivery/pickup).
+Riders are hired and change often, so staff dispatch each job **by sending the rider a one-time
+link (T4-08)**; staff and own drivers (later) use the app. Each job records **who delivered**
+(rider name and phone, or staff user) and **vehicle** (hired bike · own scooter · own e-van —
+W47; the vehicle list lives in Settings).
+**Why** — S6 (delivery dispatch at go-live); 21 Jul lock (driver + vehicle on delivery/pickup); W46, W47.
 **Where** — `src/lib/queries/delivery.ts`, `src/modules/operations/DeliveryWorkspace.tsx`,
 `src/lib/deliveryDispatchWorkflow.ts` (UI mirror only), new action files under `src/actions/`.
 **Database** — none new expected (0165/0166 go live in Batch 1); add lifecycle steps for the
@@ -69,8 +77,10 @@ hides a note from the default list but keeps it.
 
 ### T4-05 · Shift handover on the database            status: todo · size: M · lane B
 **What** — New table for shift handovers: from staff, written at (logout flow — 28 Jul lock),
-open items, notes, acknowledged by / at. The next shift sees unacknowledged handovers on Today
-and acknowledges them. Replace `shiftHandover.ts` localStorage; keep `HandoverSheet.tsx`,
+open items, notes, cash counted (when closing is "per shift", T3-07), acknowledged by / at. The
+next shift sees unacknowledged handovers on Today and acknowledges them. **Three shifts** (W32):
+06:00–15:00, 14:00–23:00, 22:00–07:00 — kept in Settings ▸ Operations ▸ Shifts so times can change;
+the overlap hour is when handover is due. Replace `shiftHandover.ts` localStorage; keep `HandoverSheet.tsx`,
 `ShiftHandoverPanel.tsx`, `ShiftBriefModal.tsx`.
 **Why** — S6.
 **Where** — `src/lib/queries/shiftHandover.ts`, `src/modules/auth/HandoverSheet.tsx`,
@@ -93,3 +103,40 @@ per device until dismissed; reachable later from Settings ▸ System.
 **Done when** — on a device seeded with old keys the file downloads with every entry; the keys are
 still present afterwards; a clean device shows nothing.
 **Needs** — none.
+
+### T4-07 · Delivery zones and fees            status: todo · size: S · lane B · [go-live]
+**What** — Settings ▸ Operations ▸ **Delivery zones**: a short table of zones with a fee each.
+Starting zones (L6, researched — Kathmandu services group the valley the same way):
+**Inside Ring Road · Outside Ring Road, inside the valley · Far valley (Bhaktapur town, Godawari,
+valley edges) · Outside the valley (quoted per trip)**. Fees ⭐ Rs 3,500 for each valley zone until
+Babin sets them (O-15); "Outside the valley" asks staff to type the fee. On a booking (and on online
+requests, W85) choosing delivery means choosing a zone — one tap — and the fee fills in. Pickup at
+the shop stays Rs 0. Replace the fixed Rs 3,500 "Babin Delivery" price.
+**Why** — W48, W85, L6.
+**Where** — `src/lib/settingsStore.ts`, settings table (0158), `src/lib/bookingTransportForm.ts`,
+`NewRental.tsx` transport section, `src/lib/pricingPipeline.ts`.
+**Database** — migration (claim a number) if zones need their own table rather than a settings key.
+**Done when** — four zones editable by Owner/Admin/Manager; a booking's delivery fee follows its zone;
+Warehouse cannot see fees.
+**Needs** — none.
+
+### T4-08 · One-time rider link            status: todo · size: L · lane B · [go-live]
+**What** — For a hired rider (W49): staff tap "Send to rider" on a delivery job, type the rider's
+name and phone, and share a link (WhatsApp/SMS from the staff phone). The link opens **only that
+job**, with **no login and no money**: pickup point, drop address and contact, item count and case
+labels, "Picked up from shop", "Delivered" with receiver name, drawn signature (T2-02) and an
+optional photo (T2-01). It stops working once the job is Delivered or Failed, or after 24 hours ⭐,
+and staff can cancel it. Every step is recorded against the job with the rider's name and the link
+id (not a user account).
+**Why** — W49; hired riders change often.
+**Where** — new public route (separate small entry, like `marketing.html`/`booking.html`),
+`supabase/functions/rider-link/` (Edge Function validating the token), `DeliveryWorkspace.tsx`.
+**Database** — migration (claim a number): `delivery_job_links` (random 128-bit token stored
+**hashed**, job id, expires at, revoked at, rider name/phone) + RPCs callable only through the Edge
+Function; lifecycle/security steps "a link reads only its job", "an expired or revoked link reads
+nothing", "no money column is reachable", "a used link cannot deliver twice". PERMISSIONS §3/§7: a
+new non-login access path — add the row in the same commit (B-3).
+**Done when** — a rider on any phone completes a delivery from the link; the job, signature and time
+appear for staff; a second use, an expired link and a guessed link all fail; a security review note
+is in `docs/verification/` and Claude has reviewed it at a check-in.
+**Needs** — T4-01, T2-01, T2-02.

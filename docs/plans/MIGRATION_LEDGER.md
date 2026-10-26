@@ -27,9 +27,6 @@ Listed so lanes can see what is coming. A card marked "if needed" may turn out n
 
 | Task | What the migration does |
 |---|---|
-| T2-03 | `collateral_documents` + RLS + Close gate for a held ID |
-| T2-04 | Gate 1 override by handover-capable staff (if enforced in SQL) |
-| T2-05 | Technician in the handover operation grant (if 0171 excludes it) |
 | T2-06 | Maintenance job ↔ damage finding link; clearance on completion |
 | T3-03 | Cancellation tiers table (if not a settings key) |
 | T3-04 | Invoice VAT treatment + backfill |
@@ -51,3 +48,16 @@ Listed so lanes can see what is coming. A card marked "if needed" may turn out n
 | T8-06 | Crew overtime fraction (if needed) |
 | T8-08 | Stored TDS on payouts |
 | T9-02 | `external_holds` in the availability check |
+| T2-12 | `client_id_documents` (or the client document store) + `client_collectors`, masked ID columns |
+| T2-13 | `qc_self_checked` flag; CHECK becomes `qc_by <> cleaned_by or qc_self_checked` |
+| T3-12 | `product_aliases` (if needed) |
+| T3-13 | product "similar to" link (if needed) |
+| T3-14 | Draft invoice on Confirm, re-sync while Draft, issue on full payment |
+| T3-18 | `change_booking(jsonb)` RPC, linked-booking column, `rental.change` |
+| T3-21 | search indexes (if a query is slow) |
+| T4-07 | delivery zones table (if not a settings key) |
+| T4-08 | `delivery_job_links` (hashed tokens, expiry, revoke) + link RPCs |
+| T5-07 / T5-08 | `client_message_events`, cron jobs, `reminders_paused` on clients |
+| T5-09 | `push_subscriptions` |
+| T7-02 | `show_online`, `online_bundle_only` on products (with the catalogue view) |
+| T8-09 | staff-client link (if needed) |

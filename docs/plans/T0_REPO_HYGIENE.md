@@ -1,14 +1,14 @@
 # T0 — Repo & process hygiene
 
 **Goal:** before feature work fans out into three lanes, make the repository safe for parallel
-agents and make its documents tell the truth. **Lane A · week 1 (by 1 Nov 2026 · 16 Kartik 2083).**
+agents and make its documents tell the truth. **Lane A · Codex-1 + Babin · week 1 (by 1 Nov 2026 · 16 Kartik 2083).**
 
 **Exit:** one roadmap (PLAN.md) merged; open PRs and branches triaged; `npm test` passes on a
 fresh clone without hand-set environment; root clutter archived; stale "current" claims fixed.
 
 ---
 
-### T0-01 · Merge the plan pack            status: done · size: S · lane A
+### T0-01 · Merge the plan pack            status: done (PR #29, merged 26 Oct 2026 01:22 NPT) · size: S · lane A
 **What** — Merge `PLAN.md`, `docs/plans/`, `RULINGS-2026-10-26.md` and the pointer updates.
 **Why** — S2–S4.
 **Where** — this PR.
@@ -29,7 +29,7 @@ suite that is really a missing variable wastes every new session's first hour.
 does **not** force mock; 3) receipt records the data source.
 **Needs** — none.
 
-### T0-03 · Open pull request triage            status: todo · size: M · lane A
+### T0-03 · Open pull request triage            status: todo · size: M · Babin + Codex-1 (local)
 **What** — For each open PR decide: merged elsewhere → close with a pointer; superseded → close
 with the superseding commit; still needed → rebase onto `main` and assign to a card.
 **Why** — Nine open PRs (#6, #7, #17, #19, #23, #24, #25, #26, #28) carry work that may or may not
@@ -37,10 +37,11 @@ be on `main`. Example: #24 (daily-closing approval) was integrated on 24 Oct per
 **Where** — GitHub; record the outcome in `PROGRESS.md`.
 **Database** — none.
 **Done when** — 1) every PR is closed or linked to a card; 2) for each closed PR, the diff that
-mattered is shown to exist on `main` (file + line), not assumed.
+mattered is shown to exist on `main` (file + line), not assumed. Claude does the reading and sends
+the list (W74 — Claude never closes or pushes); Babin or a local agent closes the PRs.
 **Needs** — none.
 
-### T0-04 · Branch triage            status: todo · size: M · lane A
+### T0-04 · Branch triage            status: todo · size: M · Babin + Codex-1 (local)
 **What** — For each of the ~90 remote branches: list commits not on `main`
 (`git log --oneline main..origin/<branch>`). Merged → delete the branch. Unmerged → tag it
 `archive/<branch>` then delete the branch, and list the tags in `docs/archive/BRANCHES_2026-10.md`.
@@ -95,10 +96,23 @@ workspace; nothing calls these three.
 **Needs** — none.
 
 ### T0-08 · Lanes and worktrees in AGENTS.md            status: done · size: S · lane A
-**What** — Add PLAN.md §6 (lanes, worktrees, branch names, migration ledger) to `AGENTS.md` so
-non-Claude agents (Codex, Gemini, Antigravity) follow the same protocol.
+**What** — Add PLAN.md §6 (lanes, agents, worktrees, branch names, migration ledger, local gates)
+to `AGENTS.md` so Codex and Gemini follow the same protocol.
 **Why** — Several agents edited one checkout on 21–25 Oct and invalidated each other's receipts.
 **Where** — `AGENTS.md`.
 **Database** — none.
-**Done when** — AGENTS.md has a "Parallel work" section that matches PLAN.md §6 word for word.
+**Done when** — AGENTS.md has a "Parallel work" section that matches PLAN.md §6.
 **Needs** — T0-01.
+
+### T0-09 · CI off: local checks are the gate            status: todo · size: S · Babin
+**What** — GitHub CI has not passed since 15 Oct; the run on PR #29 (25 Oct) shows GitHub refusing to
+start the job for a billing reason. Babin ruled **keep CI off** (W75): 1) Babin disables the workflow
+(GitHub → Actions → CI → ⋯ → Disable workflow; re-enable any time); 2) every agent runs the full
+local list before saying a task is done (PLAN §6.4) and pastes the results into its PROGRESS entry;
+3) Babin runs the same list before merging locally; 4) Claude re-runs the fast checks on `main` at
+each check-in (7:38 AM / 7:38 PM) and reports anything red.
+**Why** — W75, W77.
+**Where** — GitHub settings (Babin); `AGENTS.md` "Commands" note (done in the 26 Oct package).
+**Database** — none.
+**Done when** — no new red X appears on pushes; the first check-in report shows the gates on `main`.
+**Needs** — none.

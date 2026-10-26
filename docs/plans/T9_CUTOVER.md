@@ -1,7 +1,7 @@
 # T9 — Booqable cutover
 
 **Goal:** move the business from Booqable to the OS without a double booking or a lost rupee, and
-cancel Booqable before it renews. **Lane A + Babin + staff.** Rulings: S7, S8, S9, D20, D28; 19 Aug
+cancel Booqable before it renews. **Lane A · Codex-1 + Babin + staff.** Rulings: S7, S8, S9, D20, D28; 19 Aug
 money ruling (imported history keeps Booqable's figures; new bookings use the OS's whole-rupee
 model); 1 Sep bridge rulings (the OS is the terminal system).
 

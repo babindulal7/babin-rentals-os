@@ -29,6 +29,10 @@ permission or named-action gate — it removes *avoidable* steps only. Budgets:
   claim migration numbers in `docs/plans/MIGRATION_LEDGER.md` before writing SQL.
 - **Never apply a migration to a live Supabase project** without explicit approval.
 - **Verify by driving the app**, not by reading the code you just wrote.
+- **Claude in a cloud chat session is read-only on GitHub** (ruled 26 Oct 2026, W74): read,
+  review and suggest; never push, open or close PRs, or comment. Deliver plans, prompts and
+  patches as files for Babin. Codex and Gemini build locally; Babin merges.
+- **CI is off** (W75): the local gates in `PLAN.md` §6.4 are the merge gate.
 
 ## The ones most easily broken
 

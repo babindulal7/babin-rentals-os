@@ -6,8 +6,17 @@ React 18 · TS 5.7 strict · Vite 5 · Tailwind v4 · Supabase Postgres + RLS ·
 
 `docs/00_READ_FIRST.md` → `CLAUDE.md` → `docs/PERMISSIONS.md` (§3/§4/§6 matrix) → `RULINGS-*.md` (newest first) → `docs/PRODUCT_RULES.md` → `docs/CURRENT_STATE.md` → `PROGRESS.md` → `PLAN.md` *(go-live roadmap, re-created 26 Oct 2026; task cards in `docs/plans/`)* → Foundation Spec. Where specs conflict, Foundation wins; where permissions conflict, `PERMISSIONS.md` wins and **stricter wins** (B-1). Never read `src/archive/` or dated `docs/audits/` as current truth.
 
-- Never invent a product decision. Mark `TODO(decision)`, log in `PLAN.md §4` / `docs/OPEN_DECISIONS.md`, work on something unblocked.
-- Session end: update `PROGRESS.md` (newest first, Did / Ruled / Verified) with `## Completion` + `## Remaining` blocks. Run `npm run completion` — never hand-type a percentage. `npm run lint:progress` enforces the blocks (CI runs it).
+- Never invent a product decision. Mark `TODO(decision)`, log in `docs/OPEN_DECISIONS.md`, index it in `PLAN.md` §4.2, work on something unblocked.
+- Session end: update `PROGRESS.md` (newest first, Did / Ruled / Verified) with `## Completion` + `## Remaining` blocks. Run `npm run completion` — never hand-type a percentage. Run `npm run lint:progress` yourself — it enforces the blocks (CI is off).
+
+## Parallel work (PLAN.md §6 — ruled 26 Oct 2026)
+
+- **Lanes:** **Codex-1 = lane A** (T0, T1 code, T2 floor, T9 cutover, then T8) · **Gemini = lane B** (T4, T5, then T6 Nepali) · **Codex-2 = lane C** (T3 booking & money, T7 online booking). Claude reviews at 7:38 AM and 7:38 PM NPT and never pushes; Babin merges locally.
+- **One agent per checkout.** Each lane works in its own git worktree on its own branch: `lane-<a|b|c>/<card-id>-<slug>` (e.g. `lane-a/T2-01-camera-evidence`). Never edit another lane's open card files.
+- **Your task is a card** in `docs/plans/T*.md`; its prompt is `docs/plans/prompts/<card-id>.md`. Set the card to `doing` in your first commit and tick it when done.
+- **Migrations:** claim the next free number in `docs/plans/MIGRATION_LEDGER.md` in your first commit. Never apply anything to live Supabase (N-5).
+- **Shared files** (`PLAN.md`, `docs/PERMISSIONS.md`, `src/lib/rbac.ts`, `src/actions/core.ts`, `src/lib/money.ts`, `src/lib/pricingPipeline.ts`): change one only when your card says so, and say so in your report.
+- **Nepali (T6)** converts a module only when no open lane A or C card touches that module.
 
 ## Commands
 
@@ -23,11 +32,11 @@ npx vitest run <path>        # single file, e.g. npx vitest run src/__tests__/e2
 npm run build                # tsc --noEmit && vite build → dist/
 ```
 
-Verification order for any change: `typecheck → test → check:pglite + check:lifecycle → build`. CI (`Node 24`, `.github/workflows/ci.yml`) runs exactly: typecheck, test, `check:pglite`, `check:lifecycle`, `lint:progress`, `check:contrast`, build, coverage.
+Verification order for any change: `typecheck → test → check:pglite + check:lifecycle → build`. **GitHub CI is off since 26 Oct 2026** (billing; Babin ruled W75 — `RULINGS-2026-10-26-workflow.md`): run the same list it ran yourself before you report a card done, and paste the results into PROGRESS.md — typecheck, `VITE_DATA_SOURCE=mock npm test`, `check:pglite`, `check:lifecycle`, `lint`, `lint:progress`, `check:contrast`, build. The workflow file `.github/workflows/ci.yml` stays as the reference list.
 
 ## Parallel lanes and worktrees (PLAN.md §6)
 
-- **Three lanes, one writer each:** Lane A = T0, T1, T2, T9. Lane B = T3, T4, T5, T8. Lane C = T6, T7. Non-Claude agents (Codex, Gemini, Antigravity) follow this protocol.
+- **Three lanes, one writer each:** Lane A = T0, T1, T2, T9, T8. Lane B = T4, T5, T6. Lane C = T3, T7. Non-Claude agents (Codex, Gemini, Antigravity) follow this protocol.
 - **One task = one branch = one PR:** Branch name `lane-<a|b|c>/<task-id>-<slug>`, e.g. `lane-a/T2-01-camera-evidence`. Merge to `main` only with CI green.
 - **Migration numbers are claimed, not guessed:** Before writing SQL, claim the next free number in `docs/plans/MIGRATION_LEDGER.md` in the branch's first commit.
 - **Database first:** A permission or gate changes in Postgres (migration + lifecycle step) before the UI offers it (P2, P3, N-3).

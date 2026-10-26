@@ -1,5 +1,154 @@
 # Progress Log
 
+## 2026-10-26 (l) — Workflow round (v2, rebased onto 7d84c323): ~100 answers recorded; plans, lanes and agent prompts updated; Claude chose who does what (docs only, delivered as files)
+
+**Did**
+- **v2 rebase (evening):** the first package sat on `main` 17b10b2. `main` then built T2-01, T2-02, T2-04, T2-05 (a7bd355f) then T2-03 (33801bb5, migration 0181) and T2-07. Merged the six overlapping files (`AGENTS.md`, `docs/CURRENT_STATE.md`, `docs/PERMISSIONS.md`, `docs/plans/MIGRATION_LEDGER.md`, `T0_REPO_HYGIENE.md`, `T2_FLOOR.md`) three-way against 17b10b2 → a7bd355f, kept main's done statuses, dropped 9 prompts for cards already done (T0-02, T0-05, T0-07, T2-01 to T2-05, T2-07), fixed the ledger (next free **0182**) and a stale lane line in `AGENTS.md`.
+- **Found while rebasing:** T2-01 was built to the pre-W27 spec (one photo per step, 1600 px / q0.8, no HEIC) → new card **T2-16** + prompt. T2-02's sign modal already has the terms line and checkbox; only the receiver-from-collectors picker is missing → added to T2-12.
+- **Who does what (L8):** Codex-1 lane A now also takes **T8**; Gemini keeps T4, T5, T6; Codex-2 keeps T3, T7; **Claude writes T6-01 (glossary draft) and T7-01 (online booking spec) as files** and reviews everything else. PLAN §3/§6, AGENTS, both READMEs and the T8 prompts updated.
+- Asked Babin ~100 questions in 26 tappable rounds about the working day (booking desk, money and invoices, client messages, floor, delivery, clients and ID, devices and staff, online booking, other modules) and about how the build runs. Recorded every answer in **`RULINGS-2026-10-26-workflow.md`**: W1–W91 with his typed answers quoted, Claude's resolutions L1–L7 where he gave no preference (each with a revert), §M the earlier ⭐ items the answers settle, §N the new open items.
+- **`PLAN.md` v1.1:** finish line G2–G8 widened to the answers; GitHub CI row in §2; §3 tracks with lane, agent and size (≈215 sessions: lane A ≈65, B ≈75, C ≈77) and the [go-live]/[soon] tags; §4.2 adds O-14 (accountant: a numbered invoice that later changes), O-15 (fee per delivery zone), O-16 (label printer and scanner models, replaces O-8) and O-17 (accountant: VAT timing against "number on full payment"); §5 twice-daily check-ins; §6 rewritten as the build protocol (Codex-1 = lane A, Gemini = lane B, Codex-2 = lane C; Claude reviews read-only; one card = one branch `lane-<a|b|c>/<card>-<slug>`; CI off, local gates; shared files; the Nepali rule; database first; Babin applies to live); §7 new risks.
+- **Track plans** `docs/plans/T0`–`T9`: lanes relabelled and **27 new cards** — T0-09 (CI off); T1-15 (switch user with name + PIN, design first); T2-12 client collectors + ID on file, T2-13 self-QC, T2-14 scan a label → item card, T2-15 damage found at reset; T3-12 paste a WhatsApp list, T3-13 fully booked → similar item or sub-rent, T3-14 draft invoice at Confirm / number on full payment, T3-15 payment-method default, T3-16 share documents, T3-17 extend in two taps, T3-18 change a confirmed booking, T3-19 scan to add, T3-20 who owes + statement, T3-21 one search box, T3-22 availability in two taps, T3-23 accountant pack, T3-24 quick expense; T4-07 delivery zones, T4-08 one-time rider link; T5-07 automatic client emails, T5-08 payment reminders, T5-09 phone pop-ups, T5-10 approvals inbox, T5-11 role home screens; T8-09 staff renting at 20%. Existing cards widened where an answer changed them (T2-01 photo sizes, T2-08 labels, T3-07 shifts and closing, T4-01 rider vehicles, T4-05 three shifts, T5-03 English email, T7-02/03/04 online flags, ID upload, notice and answer times).
+- **`docs/plans/prompts/`** (new): one copy-paste prompt per open card — 117 files plus an index per lane in build order, owner cards and done cards listed separately. The five security cards (T1-15, T4-08, T7-03, T7-05, T7-06) start with a design note in `docs/verification/`.
+- Process files: `AGENTS.md` (parallel-work section, CI-off gate list, TODO(decision) pointer); `CLAUDE.md` (Claude read-only on GitHub, W74; CI off, W75); `docs/plans/README.md` (lanes, who does what, gates with CI off); `docs/plans/BABIN_ACTIONS.md` (week 1: apply this package, disable CI, three worktrees, first prompts T0-02 / T4-04 / T3-01, backup, staging, payments, email, roster with shifts, seven accountant questions; zone-fee and membership templates); `MIGRATION_LEDGER.md` (expected migrations for the new cards; next free still 0178); `docs/PERMISSIONS.md` pending box (W43, W49, W53, W68, W88); `docs/OPEN_DECISIONS.md` (afternoon-round section); `docs/CURRENT_STATE.md` banner (CI state).
+- Scheduled Claude's review as a cloud scheduled task at **07:38 and 19:38 NPT** daily (Babin asked for 8 AM and 8 PM). It reads GitHub and the repo only.
+- Delivered as files: one local commit on `local/2026-10-26-workflow` (from `main` 17b10b2), exported as a `git am` patch plus the same files in plain form. **Nothing pushed, no PR opened (W74).**
+
+**Ruled**
+- `RULINGS-2026-10-26-workflow.md` W1–W91. Headlines: 10–20 pickups and returns a day; a fully booked item offers both a similar owned item and a sub-rent; invoice drafted at Confirm and numbered only on full payment; listed client emails (pickup and return reminders, receipts, late at 30 min, damage notice without an amount) are automatic, WhatsApp stays a draft; payment reminders at completion, day 5, day 10, then every 5 days, pausable per client; a third shift 22:00–07:00; self-QC allowed when alone; damage found later is claimed from the client; delivery by zone with a one-time rider link; tap name + 4-digit PIN to switch user; any desk staff may change a confirmed booking; staff rent as clients with 20% off; online booking needs 12 h notice and an answer within 1 h; Claude never pushes and CI stays off.
+- Session report (§15.4) — Claude's resolutions; reply with an L-number to flip one:
+
+| # | Gap | Decision | Why | Where | Revert |
+|---|---|---|---|---|---|
+| L1 | New Rental dates — "mix" (W6, W7) | Tomorrow 06:00 → next day 06:00; chips 1d · 2d · 3d · 1w | 06:00 rental day; defaults are doctrine (R-39) | T3-01 | change the default in `NewRental.tsx` |
+| L2 | Payment method — "mix" (W13) | Preselect the client's last method | A fixed default is wrong half the time | T3-15 | preselect Bank Transfer |
+| L3 | Agreement vs receipt signature (W29, no preference) | One signature per handover is both | The DB gate already needs one signature per session (0171) | T2-02 | separate the two signatures |
+| L4 | Mark-all vs item-by-item (W30) | Keep "Mark all picked up" | Built 25 Oct | — | — |
+| L5 | Which agent builds what (W90) | Codex-1 A · Gemini B · Codex-2 C | Lanes follow track dependencies | PLAN §6 | edit PLAN §6 |
+| L6 | Delivery zones (W48, "do research") | Four zones; ⭐ Rs 3,500 per valley zone | Kathmandu courier zones (Ring Road / valley / outside) | T4-07 | edit the zone table |
+| L7 | Self-QC (W43) | Only with an "alone on shift" tick, audited | Keeps the trail honest | T2-13 | restore the CHECK |
+| L8 | Which agent does what, again (Babin: "choose which AI") | T8 moves Gemini → Codex-1; Claude writes T6-01 and T7-01 as files; T2-16 added | T8 is proration/overtime/TDS arithmetic that must pass check:pglite + check:lifecycle; lane A freed capacity when four T2 cards landed; Gemini keeps UI-heavy and text-heavy tracks | PLAN §3/§6, AGENTS, T8 card + prompts | put T8 back under lane B (card headers, prompts T8-*, PLAN, AGENTS) |
+
+- O-17 raised, not ruled: W16 (number on full payment) stands, but [VAT Act 2052 §6](https://nepallaws.com/Laws/value-added-tax-act-2052/section-6-place-and-time-of-supply/) sets the time of a supply at the earliest of invoice, service or payment, with its own rule for part payments. T3-14's numbering step ships only after the accountant answers.
+- **No permission cell, capability, code path, migration or setting changed.** The answers that change a cell (W43, W49, W53, W68, W88) sit in the PERMISSIONS.md pending box and take effect with their card's code + migration + T-1 fixture in one commit (B-3). Nothing applied to any Supabase project (N-5).
+
+**Verified**
+- **v2 (this rebase): no gate was run** — the disk was at 99 MB free, so no worktree could be created; the six overlap merges were done with `git merge-file` against 17b10b2 and read by hand; the package changes Markdown only. Re-run `npm run lint:progress` after applying. Earlier measurements below are from `main` 17b10b2 (v1) and stay valid for the docs-only claim:
+- Gates on `main` 17b10b2 — the code this package sat on first; the package changes Markdown only: `tsc --noEmit` **0 errors**; `check:pglite` **174/174** applied, 0 failed, 31 views / 0 anon-readable, 20 anon-executable functions / 0 unauthorized, 93 definer functions pinned; `check:lifecycle` **33/33 green**; `VITE_DATA_SOURCE=mock npm test` **5,739 / 5,739 passed in 463 files** (658 s; receipt valid, source fingerprint unchanged during the run).
+- Facts the new cards rest on, re-read in code: `uploadEvidencePhoto()` has no caller (only its export, `src/lib/evidenceStorage.ts:80`) → T2-01; CHECK `cleaning_queue_entries_qc_is_a_second_pair_of_eyes` (`0003_operations.sql`) refuses `qc_by = cleaned_by` unless QC is skipped with a reason → T2-13 needs a migration; the handover agreement gate needs one `signatures` row per session (`0171`, `gate.handover.agreement_unsigned`) → L3; `ScreenLock.tsx` is session re-entry, not a sign-in → T1-15 is a design card; PIN verification lives in `0066_staff_auth_pins.sql`.
+- GitHub, read-only (REST): the last successful CI run is 15 Oct 2026 19:23 UTC on `main`; every run since has failed, including PR #29 and its merge (25 Oct 19:35 and 19:37 UTC); the check-run annotation on PR #29 is GitHub's billing refusal, not a test failure. `origin/main` was still 17b10b2 at 14:05 NPT; the 9 open PRs are unchanged.
+- Relative links in the changed Markdown checked by script: **307 links, 3 broken — all three already broken on `main`** (two in the old `docs/CURRENT_STATE.md` body, one in `CLAUDE.md` to the spec folder outside the repo).
+- The prompt generator parsed 119 cards: 117 prompts (lane A 42, B 37, C 34, owner 4) and 2 done cards without prompts.
+- Not run: `lint`, `check:contrast`, `build` — no file they read changed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 57 / 57 (100%) | +2 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | -1 |
+| Lifecycle | steps green / total | 38 / 38 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 178 files · check:pglite 178/178 applied, 0 failed (recorded 2026-10-26T14:17:14.976Z). Suite: PASS — 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); source fingerprint matches.
+Coverage suite: PASS — 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-10-26T14:17:29.589Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Nothing open from T2-07. Ready to proceed to next task on Lane A (e.g. T2-08 Floor printing or T2-10 Offline outbox).
+
+## 2026-10-26 — Today card verb: the 56px floor is pinned by a test
+
+**Did**
+- Checked the Today card's main action button against the 56px floor-verb rule in `UI_UX_RULES.md` ("Touch Target Floor"). I had measured it at 44px on `main` `07fd34f3` on 22 Oct. Commit `7aa3af22` (23 Oct) already restored a `min-height: 56px` rule for it, so no CSS change was needed.
+- Added two source-level tests in `movementPanel.test.tsx`: the last rule that sets the verb's `min-height` on the full card selector says 56px, and no rule after it sets a smaller value. Many layers of `dashboard.css` set 44px on this button, which is how it regressed once without any test failing.
+- The file's shared `afterEach` now tolerates "nothing mounted" (`if (root)`, `host?.remove()`), so tests that mount nothing, including these, pass when run alone.
+
+**Ruled**
+- No ruling. This enforces the existing touch-target floor; no CSS, role, money gate, migration or write path changed.
+
+**Verified**
+- Browser, mock Owner, mock build of `main` `ae30ed45` served by `vite preview`: the verb is 56px on the Returns and Pickups queues at 1280 and at 390, and its computed `min-height` is 56px.
+- Mutation checks: setting the 56px rule back to 44px turns "sets it to 56px" red; appending a later rule that sets 44px turns "no later rule lowers it" red. CSS restored after each.
+- `tsc --noEmit` 0; eslint on `src/modules/today` 0; the 6 Today test files / 142 tests pass. The full suite was not re-run: this change adds tests and a guard in a test file only.
+- Not verified: dark/glass by eye, native phone hardware.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 55 / 58 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 174 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-22T13:13:11.038Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+## Remaining
+- Nothing open from this change. The earlier note about a 44px verb button (22 Oct entry) is resolved by `7aa3af22`.
+
+## 2026-10-26 (j) — T2-03 ID card deposit collateral & operations popup fix
+
+**Did**
+- Fixed operations modal / popup freeze in `OperationsShell.tsx`, `OperationsWorkspaceContext.tsx`, `PackingWorkspace.tsx`, `HandoverWorkspace.tsx`, `ResetWorkspace.tsx`:
+  - Removed fatal `if (readingFloor.current) return;` bailout in `completed()` which locked the popup in `"Saving…"`.
+  - Added `try ... finally` block ensuring `submitLock.current = false`, `setSubmitting(false)`, and `setActions(null)` always execute.
+  - Enabled quantity-only reset persistence to database and permitted clean completion even when problem/maintenance counts exist (RS-03).
+  - Wired `onJobChange` and preserved shell identity on `key={workspace.bookingNo}` so stage transitions (Pack -> Handover -> Return -> Reset) transition smoothly without unmounting the modal frame.
+- Claimed migration 0181 in `docs/plans/MIGRATION_LEDGER.md`: `| 0181 | T2-03 | collateral-deposit-id-card | lane-a/T2-03-collateral-deposit | verified |`
+- Created `supabase/migrations/0181_collateral_deposit_id_card.sql`:
+  - Added `collateral_documents` table with RLS policies, column permissions, and masking view `collateral_documents_v`.
+  - Enforced Gate 4 at Handover to accept held ID card in lieu of cash deposit (Ruling D1).
+  - Enforced Gate 5 at Close to refuse transition while any collateral is still held (`gate.close.collateral_held`).
+  - Revoked all on `collateral_documents_v` from anon to maintain strict zero-leak gate.
+- Added lifecycle steps `L36`, `L37`, `L38` in `scripts/e2e-lifecycle.mjs`:
+  - `L36`: ID satisfies deposit gate at Handover without cash deposit (D1, T2-03).
+  - `L37`: Close refused while ID held; accepted once returned (D1, T2-03).
+  - `L38`: Warehouse cannot read ID document number; Manager reads unmasked (D1, T2-03).
+- Added actions `receiveCollateral` and `returnCollateral` in `src/actions/rentals/`, registered in `src/actions/core.ts` under capabilities `collateral.receive` and `collateral.return`.
+- Added UI modals `HoldCollateralModal.tsx` and `ReturnCollateralModal.tsx`, wired into `HandoverWorkspace.tsx`, `BookingDetail.tsx`, and `ClientDetail.tsx`.
+- Updated `src/lib/workflow.ts` and `src/actions/rentals/closeRental.ts` with 5th close gate ("No client collateral held").
+- Marked T2-03 as done in `docs/plans/T2_FLOOR.md`.
+
+**Ruled**
+- Ruling D1: ID card documents (citizenship card, passport, driving licence) can be held as deposit collateral in lieu of cash. Collateral is strictly non-monetary (Law 5) and never enters totals or revenue.
+- Gate 4 at Handover is satisfied by held collateral; Gate 5 at Close strictly blocks closing until held collateral is returned to the client.
+- Masked document numbers for non-Manager roles (`••••-••••-XXXX`); Manager and above see unmasked numbers.
+
+**Verified**
+- `npm run typecheck`: PASS (0 errors).
+- `npm run check:pglite`: PASS (178/178 migrations applied cleanly, 0 leaks, 0 failures, 32 views checked).
+- `npm run check:lifecycle`: PASS (38/38 steps green: L1–L38).
+- `npm run check:contrast`: PASS (106/106 WCAG AA token pairs).
+- `npx vitest run`: PASS (306/306 passing across `collateral.test.ts`, `core.test.ts`, `closeRental.test.ts`, `workflow.test.ts`, `rbac.test.ts`, `floor-loop.test.tsx`, `OperationsShell.test.tsx`, `BookingOperationsMenu.test.tsx`).
+- `npm run build`: PASS (built in 1m 3s, PWA generated).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 57 / 57 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 38 / 38 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 178 files · check:pglite 178/178 applied, 0 failed (recorded 2026-10-26T13:21:20.946Z). Suite: PASS — 5772/5772 passed, 0 failed (recorded 2026-10-26T13:44:00.193Z); source fingerprint matches.
+Coverage suite: PASS — 5772/5772 passed, 0 failed (recorded 2026-10-26T13:44:00.193Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-10-26T13:22:18.016Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+(Docs-only change: counts copied unchanged from the previous entry; not re-measured.)
+
+### Remaining
+- Babin: apply this package (v2: patch on `7d84c323` or later) (`APPLY_2026-10-26_workflow.md` in the zip), disable the CI workflow in GitHub, open three worktrees and paste the first prompts — `T2-16` (Codex-1), `T4-04` (Gemini), `T3-01` (Codex-2) — then the rest of week 1 in `docs/plans/BABIN_ACTIONS.md`.
+- Open with ⭐ defaults: `PLAN.md` §4.2 O-1…O-7, O-9…O-17. Accountant: seven questions (O-14 and O-17 block T3-14's numbering step).
+- First check-in: 26 Oct 19:38 NPT.
+
 ## 2026-10-26 (k) — T2-07 Reset "Needed next" badge & queue sorting
 
 **Did**

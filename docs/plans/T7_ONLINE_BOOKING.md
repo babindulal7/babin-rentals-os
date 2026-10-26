@@ -2,7 +2,7 @@
 
 **Goal:** replace the Booqable store before Booqable is switched off: a public catalogue with daily
 rates at `book.babinrentals.com`, client accounts by verified email, booking requests that staff
-confirm, and online payment by Fonepay, eSewa and Khalti. **Lane C.** Rulings: S9, S15, D29, D30,
+confirm, and online payment by Fonepay, eSewa and Khalti. **Lane C · Codex-2.** Rulings: S9, S15, D29, D30, W63–W66, W84, W85,
 D31, D34; 30 Aug D2 (binding only by verified control of the client's stored email); Laws 4, 5, 6,
 8; P8; **N-7 — no portal write path is switched on before test D-5 passes**; N-8 (Babin enters
 every gateway credential).
@@ -22,7 +22,7 @@ in v1" and §5 "rates on request/quote only" → public daily rates (D34); a fif
 
 ---
 
-### T7-01 · Online booking spec            status: todo · size: M · lane C
+### T7-01 · Online booking spec            status: todo · size: M · Claude writes (arrives as a file)
 **What** — One document, `docs/ONLINE_BOOKING_SPEC.md`, fixing before any code: the screens
 (catalogue, product, cart with dates, sign-in, request, pay, my bookings), the tables
 (`booking_requests`, `booking_request_lines`, `payment_intents`, portal binding), the RPCs and
@@ -45,6 +45,10 @@ only "available / not available" per product and day — no booking numbers or n
 photos: a public `catalogue` bucket, uploaded by Owner/Admin/Manager from the equipment editor
 (today a local preview only — this card builds the upload). Add both objects to an explicit anon
 allow-list so `check:pglite` still fails on any **other** anon-readable view or function.
+**What shows online (W64):** every product with a rate can be listed, but each product has two
+switches set by staff — **Show online** (on/off) and **Only inside bundles** (the item never appears
+alone; it appears as part of the bundles that contain it). Both default to off until staff turn them
+on, so nothing appears online by accident.
 **Why** — S9, D34.
 **Where** — `vite.config.ts` (third input), new `src/booking/`, new migration, equipment editor
 photo section, `scripts/check-pglite.mjs` + `scripts/allowed-anon-functions.mjs` (+ a views list).
@@ -61,7 +65,9 @@ Supabase Auth with the T1-09 SMTP. First sign-in asks for name, phone and option
 the account is bound to that client; otherwise it is bound to **nothing** — it can browse and
 request, and staff decide at confirm time to link it to an existing client or create one (audited).
 Write the policies that end the deny-all on the `portal_*` tables. Cloudflare Turnstile on the
-code request (T7-09).
+code request (T7-09). **ID on file (W50, W84):** a new online client uploads one ID document (photo
++ type + number) with their first request; staff check it at confirm; it is stored once and reused
+(W51), in a private bucket readable by staff with access and by that client only.
 **Why** — D29; P8.
 **Where** — new migration, `src/booking/auth/*`, `src/lib/auth.tsx` (Client branch),
 `docs/PERMISSIONS.md` §7.
@@ -78,7 +84,11 @@ full price **with VAT** and the advance due (D34, computed server-side). Staff s
 requests" queue (chip on Rentals and a Today card; paid requests on top, D31); **Confirm** opens New
 Rental prefilled and creates the booking with `create_booking` (reservations happen here); **Decline**
 needs a reason the client sees. Client gets emails: request received, confirmed, declined (T5-03).
-**Why** — D29, D31, D34.
+**Rules from 26 Oct (W63, W66, W85):** pickup at least **12 hours** after the request; delivery can
+be chosen with the **zone fee** (T4-07; "outside the valley" means staff will quote); staff promise an
+answer within **1 hour, any time** — the request turns orange at 45 minutes ⭐ and pops up again on
+staff phones (T5-09).
+**Why** — D29, D31, D34, W63, W66, W85.
 **Where** — `src/booking/*`, `src/modules/rentals/RentalsList.tsx`, `NewRental.tsx` prefill,
 `src/modules/today/*`, new migration.
 **Database** — migration (claim number): `booking_requests` + lines + RLS (client: own; staff:

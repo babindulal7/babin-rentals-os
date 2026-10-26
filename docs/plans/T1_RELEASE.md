@@ -2,7 +2,7 @@
 
 **Goal:** a live database that matches the verified source, a staging copy to rehearse on, hosting,
 email, monitoring and backups — so every other track can be accepted on staging and shipped to
-live in small, reversible batches. **Lane A.** Rulings: S10, S12, S13, S15, D27, D33; N-5, N-8.
+live in small, reversible batches. **Lane A · Codex-1 (code) + Babin.** Rulings: S10, S12, S13, S15, D27, D33, W53, W56, W74, W75; N-5, N-8.
 
 **Exit (G1, G10):** live carries every verified migration through three Babin-applied batches;
 nine role seats pass on staging; Storage scoping accepted with Client A / Client B; the staff app
@@ -129,7 +129,9 @@ limits (candidates: Resend, Postmark, Amazon SES, Brevo); Babin creates the acco
 domain: SPF, DKIM, DMARC (start `p=none`, move to `quarantine` after two clean weeks). Point
 **Supabase Auth custom SMTP** at it (client sign-in codes, staff password resets). Store the API
 key as an Edge Function secret — Babin enters it (N-8).
-**Why** — S13; T5 digest; T7 client accounts. Supabase's built-in mailer is not for production volume.
+Plan for **~3,000–4,000 emails a month** (W21: ~6 automatic client emails per booking × 10–20
+bookings a day, plus staff digests and payment reminders) when picking the plan.
+**Why** — S13; W21; T5 digest; T7 client accounts. Supabase's built-in mailer is not for production volume.
 **Where** — DNS, Supabase Auth settings, Edge Function secrets.
 **Database** — none.
 **Done when** — a test email from `no-reply@babinrentals.com` lands in Gmail's inbox (not spam)
@@ -178,6 +180,8 @@ once a month and record the result.
 **What** — Create a login for every staff member with the correct role; deactivate test or old
 accounts (never delete — Law 3); each staff member signs in once on their own device before the
 trial.
+More than 10 staff use the app daily (W56); each one also sets a **4-digit PIN** for switching on
+shared devices (T1-15).
 **Why** — The trial (T9-03) runs on real accounts; audit trails need real names.
 **Where** — Settings ▸ People & Access; `users` table.
 **Database** — live, through the app.
@@ -194,6 +198,28 @@ screen < 3 s on 4G.
 **Database** — none.
 **Done when** — the budget holds on both devices; numbers recorded.
 **Needs** — T1-07.
+
+
+### T1-15 · Switch user with name + PIN            status: todo · size: L · lane A · [go-live]
+**What** — On a shared iPad or the counter PC (W52, W53): staff tap their **name**, type their
+**4-digit PIN**, and the device switches to **their own real session** — every action after that is
+theirs. Design first (a one-page note reviewed at a Claude check-in before code), because the
+existing screen lock is deliberately **not** a sign-in (`ScreenLock.tsx`: a PIN that only looked like
+a sign-in once left a header saying "Owner" over a session with no JWT). The intended shape:
+1) each person signs in **fully once** on the device (email + password); 2) the device keeps that
+person's refresh token encrypted under a **non-extractable device key** (WebCrypto, IndexedDB);
+3) switching = name → PIN checked **on the server** (`verifyStaffPin`, 0066, with its 5-try lockout)
+→ the stored token restores a real Supabase session; 4) idle auto-lock (⭐ 5 minutes) returns to the
+name list; 5) "Remove me from this device" and an Owner/Admin "forget this device" clear tokens;
+6) at most ⭐ 15 people per device.
+**Why** — W53, W56 (more than 10 staff, shared devices); every write must carry the right person.
+**Where** — `src/lib/auth.tsx`, `src/modules/auth/*`, `src/lib/secureStorage.ts`, header user menu.
+**Database** — none expected (PIN rows and lockout exist in 0066); add an audit event for each switch.
+**Done when** — on the M4 iPad: A signs in, B signs in, switching A → B → A takes ≤ 3 taps + PIN each
+time; rows written after a switch carry the new person; 5 wrong PINs lock that person only; a token
+copied off the device does not work elsewhere without the device key; Claude has reviewed the
+design note and the code.
+**Needs** — none.
 
 ---
 

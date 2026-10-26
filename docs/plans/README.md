@@ -1,41 +1,53 @@
 # docs/plans — build-ready plans for go-live
 
 The master roadmap is [`/PLAN.md`](../../PLAN.md). This folder holds one plan per track. Each
-task is a **card** an agent can pick up and finish in one branch and one pull request.
+task is a **card** an agent can pick up and finish on one branch. Every card has a ready
+copy-paste prompt in [`prompts/`](prompts/README.md).
 
-| Track | File | Lane | Go-live? |
+| Track | File | Lane · agent | Go-live? |
 |---|---|---|---|
-| T0 Repo & process hygiene | [T0_REPO_HYGIENE.md](T0_REPO_HYGIENE.md) | A | Yes — week 1 |
-| T1 Release & infrastructure | [T1_RELEASE.md](T1_RELEASE.md) | A | Yes |
-| T2 Floor loop completion | [T2_FLOOR.md](T2_FLOOR.md) | A | Yes |
-| T3 Booking & money rules | [T3_BOOKING_MONEY.md](T3_BOOKING_MONEY.md) | B | Yes |
-| T4 Shared operations tools | [T4_SHARED_TOOLS.md](T4_SHARED_TOOLS.md) | B | Yes |
-| T5 Notifications & email | [T5_NOTIFICATIONS.md](T5_NOTIFICATIONS.md) | B | Yes |
-| T6 Nepali language | [T6_NEPALI.md](T6_NEPALI.md) | C | Yes |
-| T7 Online booking & payments | [T7_ONLINE_BOOKING.md](T7_ONLINE_BOOKING.md) | C | Yes |
-| T8 Membership & crew | [T8_MEMBERSHIP_CREW.md](T8_MEMBERSHIP_CREW.md) | B | Yes |
-| T9 Booqable cutover | [T9_CUTOVER.md](T9_CUTOVER.md) | A | Yes |
+| T0 Repo & process hygiene | [T0_REPO_HYGIENE.md](T0_REPO_HYGIENE.md) | A · Codex-1 + Babin | Yes — week 1 |
+| T1 Release & infrastructure | [T1_RELEASE.md](T1_RELEASE.md) | A · Codex-1 + Babin | Yes |
+| T2 Floor loop completion | [T2_FLOOR.md](T2_FLOOR.md) | A · Codex-1 | Yes |
+| T3 Booking & money rules | [T3_BOOKING_MONEY.md](T3_BOOKING_MONEY.md) | C · Codex-2 | Yes |
+| T4 Shared operations tools | [T4_SHARED_TOOLS.md](T4_SHARED_TOOLS.md) | B · Gemini | Yes |
+| T5 Notifications & email | [T5_NOTIFICATIONS.md](T5_NOTIFICATIONS.md) | B · Gemini | Yes |
+| T6 Nepali language | [T6_NEPALI.md](T6_NEPALI.md) | B · Gemini | Yes |
+| T7 Online booking & payments | [T7_ONLINE_BOOKING.md](T7_ONLINE_BOOKING.md) | C · Codex-2 | Yes |
+| T8 Membership & crew | [T8_MEMBERSHIP_CREW.md](T8_MEMBERSHIP_CREW.md) | A · Codex-1 | Yes |
+| T9 Booqable cutover | [T9_CUTOVER.md](T9_CUTOVER.md) | A · Codex-1 + Babin | Yes |
 | T10 After go-live | [T10_AFTER_GO_LIVE.md](T10_AFTER_GO_LIVE.md) | — | No |
 | Owner checklist | [BABIN_ACTIONS.md](BABIN_ACTIONS.md) | Babin | — |
 | Migration numbers | [MIGRATION_LEDGER.md](MIGRATION_LEDGER.md) | all | — |
+| Agent prompts | [prompts/](prompts/README.md) | all | — |
 
 ---
+
+## Who does what (PLAN.md §6, ruled 26 Oct)
+
+- **Codex-1 (lane A), Gemini (lane B), Codex-2 (lane C)** build, each in its own git worktree on
+  Babin's computer.
+- **Babin** merges locally, applies migrations to live after a backup, and does the owner tasks.
+- **Claude** reviews: reads GitHub at 7:38 AM and 7:38 PM NPT, re-runs the fast checks on `main`, and
+  sends a short summary, problems and the next prompt. Claude never pushes; its work arrives as files.
 
 ## Picking the next task
 
 1. Open your lane's tracks. Take the **first card whose status is `todo` and whose `Needs` are all
-   `done`**. Within a track, cards are in build order.
-2. Set the card's status to `doing` and your branch name in your first commit.
-3. Work in **your own worktree** (`git worktree add ../bro-lane-a lane-a/T2-01-camera-evidence`).
+   `done`**. Within a track, cards are in build order. Cards tagged **[soon]** come after the
+   untagged and **[go-live]** cards of the same track unless the prompt says otherwise.
+2. Paste the card's prompt from [`prompts/`](prompts/README.md) into your agent.
+3. Set the card's status to `doing` with your branch name in your first commit.
+4. Work in **your own worktree** (`git worktree add ../bro-lane-a lane-a/T2-01-camera-evidence`).
    Never share a checkout with another agent.
-4. When the PR merges, set the card to `done` with the PR number and the date.
+5. When Babin merges it, set the card to `done` with the date.
 
 ## Card format
 
 ```
-### T2-01 · Camera evidence upload            status: todo · size: L · lane A
+### T2-01 · Camera evidence upload            status: todo · size: L · lane A · [go-live]
 What     — one to three lines.
-Why      — the ruling or lock it serves (RULINGS-2026-10-26 Dx, an older ruling, a law).
+Why      — the ruling or lock it serves (RULINGS-2026-10-26 Dx, …-workflow Wx, an older ruling, a law).
 Where    — files, tables, RPCs.
 Database — "none", or "migration: claim in MIGRATION_LEDGER.md" + what it does.
 Done when — numbered acceptance checks: tests, gates, screens driven, roles tried.
@@ -43,13 +55,13 @@ Needs    — cards or Babin actions that must be done first.
 ```
 
 Sizes: **S** ≤ 1 session · **M** 2–3 · **L** 4–6 · **XL** 7+. A session is one focused agent
-run that ends in a PR and a PROGRESS.md entry.
+run that ends in a branch ready to merge and a PROGRESS.md entry.
 
-## Gates every card must pass
+## Gates every card must pass (CI is off — these are the gate, W75)
 
 ```bash
 npm run typecheck
-VITE_DATA_SOURCE=mock npm test        # CI runs the suite in mock mode; without it ~130 files fail on missing env
+VITE_DATA_SOURCE=mock npm test        # without it ~130 files fail on missing environment, not on code
 npm run check:pglite && npm run check:lifecycle   # only if SQL changed — both, same run (R-35)
 npm run lint
 npm run build
@@ -65,4 +77,6 @@ live project only through Babin's apply batches (N-5).
 - **Live** — Supabase project `sxguwvgoserhdolewibb`. Agents never write to it.
 - **Batch** — a set of verified migrations Babin applies to live in one session (T1-10).
 - **Day X** — go-live, Mon 1 Feb 2027 (18 Magh 2083).
+- **Check-in** — Claude's twice-daily review message (7:38 AM and 7:38 PM NPT).
 - **⭐** — a business figure taken as a default until Babin changes it (CLAUDE.md B-5).
+- **[go-live] / [soon]** — must be done by day X / may slip to the first two weeks after it.

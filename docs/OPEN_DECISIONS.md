@@ -1,5 +1,24 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 26 October 2026 (afternoon): the workflow round
+
+Babin answered a second round (~100 questions) on the daily workflow and how the build runs:
+[`RULINGS-2026-10-26-workflow.md`](../RULINGS-2026-10-26-workflow.md) (W1–W91, Claude's resolutions
+L1–L7). It also settled these earlier ⭐ items: daily volume (10–20 pickups and returns, W3); a fully
+booked item offers both a similar owned item and a sub-rent (W10); overdue escalation = everyone at
+once (W39); the cleaner may QC their own work when alone (W43); damage found after the client left is
+claimed from the client by default (W44).
+
+New open items, each with a ⭐ default in [`PLAN.md` §4.2](../PLAN.md):
+- **O-14** — a fully paid (numbered) invoice that later changes: second invoice or credit note? The
+  accountant decides; until then the app blocks such a change with a clear message (T3-14).
+- **O-15** — the fee for each delivery zone (T4-07); ⭐ Rs 3,500 per valley zone.
+- **O-16** — label printer and Bluetooth scanner models (replaces O-8); Claude proposes, Babin buys.
+- **O-17** — VAT timing: may the tax invoice wait until full payment (W16)? [VAT Act 2052 §6](https://nepallaws.com/Laws/value-added-tax-act-2052/section-6-place-and-time-of-supply/) sets the
+  time of a supply at the earliest of the invoice, the service or the payment, and has its own rule for
+  part payments — so an advance or the handover may already require the invoice. The accountant decides;
+  if needed the numbering moment becomes one setting, and T3-14's numbering step ships only after the answer.
+
 ## 26 October 2026: Babin's ruling round — what it closed, what is still open
 
 Babin answered every open owner decision in one session (54 questions). Full wording, readings and
