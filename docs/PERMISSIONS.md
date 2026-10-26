@@ -89,7 +89,7 @@ These sit beside PLAN.md's 17. Numbered P1–P10 so they can be cited.
 | **Manager** | Runs daily operations and reports | All floor verbs, all approvals under threshold, block/merge clients, overbooking override, payment reversals, cancel after Packed, Reports in full. **Settings view only.** No users, no integrations, no backups. | All |
 | **Coordinator** | Rental coordinator / front desk (Sales folded in) | Bookings end to end (create · confirm · edit · extend · cancel before Packed), Clients create/edit, **Payments full** (records advance and more — 22 Jul), Quotes/Invoices/Agreements generation, comms drafts, Sub-rental + Suppliers. Floor verbs allowed. | **Booking money + client balance/deposit only.** No purchase cost, ROI, utilisation %, P&L, payout rates. |
 | **Warehouse** | Floor staff, equipment caretaker | Pack · Handover · Return · Reset; scan; stock check; equipment identity/units/location/labels; raise damage/missing/maintenance; create a booking (no discount line); walk-in client (commercial section not rendered); submit own expenses. | **None.** Gate checklist reads "Payment required" with no amount. |
-| **Technician** | AC / prep technician | Return triage (shared with Warehouse), Reset, Maintenance jobs and Cases (write), equipment condition at intake. **View-only on Packing Queue and Scan** (22 Jul). | None |
+| **Technician** | AC / prep technician | All four floor verbs: Pack, Handover, Return, Reset (D3, 26 Oct 2026); scan; Maintenance jobs and Cases (write), equipment condition at intake. | None |
 | **Accounts** | Accountant | Finance in full: record payments, issue/void invoices with credit note, expenses entry + approval under threshold, deposit refund confirmation, VAT/registers, all Reports. Suppliers (with Coordinator). Crew payouts + TDS. **No payment reversals** (⭐ §13). No floor verbs, no booking edits. | All |
 | **Driver** | Delivery / logistics | Own assigned trips: read booking header, items, destination, receiver phone/address **inside the trip only**. Submit own fuel/transport expenses. Nothing else. | None |
 | **Client** | External — a production house's people | Portal only (§7). | Own invoices/payments/deposit only |
@@ -115,8 +115,8 @@ Legend: **✅** Full · **👁** View · **◐** Limited (explained in §3.1 by 
 |---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | **Dashboard** (jobs only, no money KPIs) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 👁 | ◐ D1 | ✕ |
 | **New Rental** (full page) | ✅ | ✅ | ✅ | ✅ | ◐ W1 | ✕ | ✕ | ✕ | ✕ |
-| **Operations — Pack** | ✅ | ✅ | ✅ | ✅ | ✅ | 👁 | ✕ | ✕ | ✕ |
-| **Operations — Handover** | ✅ | ✅ | ✅ | ✅ | ◐ W2 | 👁 | ✕ | ◐ D2 | ✕ |
+| **Operations — Pack** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✕ | ✕ | ✕ |
+| **Operations — Handover** | ✅ | ✅ | ✅ | ✅ | ◐ W2 | ◐ W2 | ✕ | ◐ D2 | ✕ |
 | **Operations — Return & triage** | ✅ | ✅ | ✅ | ✅ | ◐ W3 | ◐ W3 | ✕ | ◐ D2 | ✕ |
 | **Operations — Reset** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✕ | ✕ | ✕ |
 | **Operations — Cases** (damage/missing) | ✅ | ✅ | ✅ | ◐ C1 | ◐ W4 | ◐ W4 | ◐ A1 | ✕ | ◐ P1 |
@@ -236,8 +236,8 @@ Ladder shorthand: `M+` = Owner · Admin · Manager. `C+` = M+ · Coordinator. `F
 
 | Capability | Roles | Notes | Code |
 |---|---|---|---|
-| `rental.pack` | C+ · Warehouse | Technician **view-only** (22 Jul) | ○ (packRental) |
-| `rental.pickup` (= Handover session) | C+ · Warehouse | soft gate: any of these may release with payment outstanding **after warning, logged** | ✓ |
+| `rental.pack` | C+ · Warehouse · Technician | D3 (26 Oct 2026) admits Technician to pack gear | ○ (packRental) |
+| `rental.pickup` (= Handover session) | C+ · Warehouse · Technician | soft gate: any of these may release with payment outstanding **after warning, logged** (D3 admits Tech) | ✓ |
 | `rental.pickup.override_receiver` | M+ | receiver-verification gate, reason ≥10 | ○ |
 | `rental.return` (triage) | C+ · Floor | shared triage (21 Jul) | ✓ |
 | `rental.reset` | C+ · Floor | non-blocking stage | ○ (completeReset) |

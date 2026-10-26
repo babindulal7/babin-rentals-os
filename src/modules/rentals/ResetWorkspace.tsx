@@ -1053,6 +1053,7 @@ export default function ResetWorkspace({
       .then(() => {
         void DomainEvents.emit(EVENT_TYPES.RENTAL_RESET_COMPLETED, { bookingNo: floor.bookingNo })
         showSuccessToast('Reset Completed', `Rental ${floor.bookingNo} reset and returned to pool`)
+        setDispatching(false)
         if (onConfirmSuccess) {
           onConfirmSuccess()
         } else {

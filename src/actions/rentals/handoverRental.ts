@@ -63,8 +63,8 @@ export const handoverRental = createAction<HandoverRentalInput, FloorVerbResult>
   name: 'HANDOVER_RENTAL',
   // Was `rental.handover`, which `core.ts:checkCapability` cannot resolve and
   // therefore denies. `operations.perform` is the rule that actually exists.
-  // P0-B per-operation grant: resolves through canHandover (floor only —
-  // Technician is excluded because handing gear to a client is not prep work).
+  // P0-B per-operation grant: resolves through canHandover (floor + Technician
+  // per Ruling D3, 26 Oct 2026).
   // Agrees with the UI wiring in BookingOperationsMenu and BookingDetail's
   // primary action; changing who may hand over is a one-line change in rbac.ts.
   permissions: ['operations.handover'],

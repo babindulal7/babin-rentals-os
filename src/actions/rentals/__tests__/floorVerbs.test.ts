@@ -1895,6 +1895,13 @@ describe('the dispatcher — implemented, and gated on a capability that actuall
     ).resolves.toMatchObject({ success: true })
   })
 
+  it('lets Technician perform the floor verbs (D3, T2-05)', async () => {
+    setUpPack()
+    await expect(
+      packRental({ id: 'B-715', lines: [{ bookingLineId: LINE_A, unitIds: ['u1'] }] }, { userId: 't-1', role: 'Technician' }),
+    ).resolves.toMatchObject({ success: true })
+  })
+
   it('refuses Coordinator — operations.perform does not reach the booking desk', async () => {
     setUpPack()
     await expect(

@@ -502,8 +502,8 @@ async function actionCompleteReset({ key, actor }) {
   const currentStage = await stageOf(key)
   assert(currentStage === 'Returned', `actionCompleteReset: booking ${key} must be Returned, got ${currentStage}`)
   await q(
-    `insert into cleaning_queue_entries (client_uuid, booking_id, unit_id, status, created_by)
-     values (gen_random_uuid(), $1, $2, 'Inspected', $3)
+    `insert into cleaning_queue_entries (client_uuid, booking_id, unit_id, state, created_by)
+     values (gen_random_uuid(), $1, $2, 'Ready', $3)
      on conflict do nothing`,
     [bookingId, UNITS[0], U[actor]],
   )
@@ -2633,6 +2633,94 @@ STEPS.push({
 
       const finalStage = await stageOf('l34')
       assertEq(finalStage, 'On Rent', 'booking advanced to On Rent after Warehouse override')
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L35',
+  title: 'Technician can perform every floor verb (Pack, Handover, Return, Reset); Coordinator refused (D3, T2-05)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      // 1. Create a fresh booking
+      await as('Coordinator', async () => {
+        await createBooking({
+          key: 'l35',
+          window: ['2099-12-10T04:00:00Z', '2099-12-12T04:00:00Z'],
+          actor: 'Coordinator',
+          lines: [
+            {
+              productId: SERIAL_PRODUCT,
+              description: 'Lifecycle Camera for Technician',
+              qty: 1,
+              days: 2,
+              rate: 3500,
+              units: [UNITS[0]],
+            },
+          ],
+        })
+      })
+
+      // Quote -> Booked
+      await transition('l35', 'Quote', 'Booked', 'Coordinator')
+
+      // Coordinator is refused from floor verbs by RLS on operation_sessions
+      await as('Coordinator', async () => {
+        await q('savepoint coord_pack_probe')
+        try {
+          await refuses(
+            'Coordinator cannot write operation_sessions',
+            `insert into operation_sessions (client_uuid, booking_id, operation, session_no, state, warehouse_staff_id, created_by)
+             values (gen_random_uuid(), $1, 'Packing', 1, 'In Progress', $2, $2)`,
+            [bookingIds.l35, U.Coordinator],
+            /row-level security/i,
+          )
+        } finally {
+          await q('rollback to savepoint coord_pack_probe')
+          await q('release savepoint coord_pack_probe')
+        }
+      })
+
+      // Technician performs Pack -> Packed
+      await as('Technician', async () => {
+        await actionPackRental({
+          key: 'l35',
+          actor: 'Technician',
+          units: [{ id: UNITS[0], serial: 'LCSN-001' }],
+        })
+      })
+      assertEq(await stageOf('l35'), 'Packed', 'Technician advanced booking to Packed')
+
+      // Technician performs Handover -> On Rent
+      await as('Technician', async () => {
+        await actionHandoverRental({
+          key: 'l35',
+          actor: 'Technician',
+          signerName: 'Tech Handover Client',
+          deliveryMethod: 'Client Pickup',
+          verified: true,
+        })
+      })
+      assertEq(await stageOf('l35'), 'On Rent', 'Technician advanced booking to On Rent')
+
+      // Technician performs Return -> Returned
+      await as('Technician', async () => {
+        await actionReturnRental({
+          key: 'l35',
+          actor: 'Technician',
+          returnedUnits: [{ id: UNITS[0] }],
+        })
+      })
+      assertEq(await stageOf('l35'), 'Returned', 'Technician advanced booking to Returned')
+
+      // Technician performs Reset
+      await as('Technician', async () => {
+        await actionCompleteReset({
+          key: 'l35',
+          actor: 'Technician',
+        })
+      })
     })
   },
 })

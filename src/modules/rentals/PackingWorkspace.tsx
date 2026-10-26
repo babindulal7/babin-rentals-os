@@ -1130,6 +1130,7 @@ export default function PackingWorkspace({
         if (result.stage !== null) {
           clearFloorScan('pack', floor.id)
           showSuccessToast('Packing Completed', `Rental ${floor.bookingNo} is now Packed`)
+          setDispatching(false)
           if (onConfirmSuccess) {
             onConfirmSuccess()
           } else {

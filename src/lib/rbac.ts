@@ -77,19 +77,15 @@ const BOOKING_DESK: ReadonlySet<SystemRole> = new Set<SystemRole>([
 ])
 
 /**
- * The floor. `BOOKING_DESK` minus Coordinator.
+ * The floor. `BOOKING_DESK` minus Coordinator, plus Technician per Ruling D3 (26 Oct 2026).
  *
- * Mirrors the live write policy shared by `operation_sessions`, `stock_audits`,
- * `stock_transfers`, `maintenance_records` and `evidence_files` (read off
- * `pg_policies` on 16 Aug 2026): Owner, Admin, Manager, Warehouse. Coordinator
- * is absent from every one of them — taking a booking is desk work, moving the
- * gear is not.
- *
- * ⚠ Not the same set as `canPerformOperations`, which also admits Technician.
- * That function governs *working* a session someone else opened; this one
- * governs writing the session row. Do not collapse them without a ruling.
+ * Mirrors the live write policy shared by `operation_sessions`, `session_line_movements`,
+ * `packing_lines`, `handover_lines`, `return_lines`, `signatures`, `cleaning_queue_entries`,
+ * `maintenance_records` and `evidence_files` (updated in migration 0180):
+ * Owner, Admin, Manager, Warehouse, Technician. Coordinator is absent — taking a
+ * booking is desk work, moving the gear is not.
  */
-const FLOOR: ReadonlySet<SystemRole> = new Set<SystemRole>(['Owner', 'Admin', 'Manager', 'Warehouse'])
+const FLOOR: ReadonlySet<SystemRole> = new Set<SystemRole>(['Owner', 'Admin', 'Manager', 'Warehouse', 'Technician'])
 
 /**
  * Back office. Mirrors `client_merges_all` and `suppliers_all` (live, 16 Aug
@@ -503,14 +499,12 @@ export function canPerformOperations(role: SystemRole): boolean {
   return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Warehouse' || role === 'Technician'
 }
 
-const FLOOR_ROLES: readonly SystemRole[] = ['Owner', 'Admin', 'Manager', 'Warehouse']
-
 export function canPack(role: SystemRole): boolean {
-  return canPerformOperations(role) // prep is floor + technician work
+  return canPerformOperations(role) // prep is floor + technician work (D3)
 }
 
 export function canHandover(role: SystemRole): boolean {
-  return FLOOR_ROLES.includes(role)
+  return canPerformOperations(role) // client-facing handoff admits Technician (D3, 26 Oct 2026)
 }
 
 /**

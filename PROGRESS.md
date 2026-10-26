@@ -1,5 +1,80 @@
 # Progress Log
 
+## 2026-10-26 (i) — T2-05 Technician can do every floor verb
+
+**Did**
+- Claimed migration 0180 in `docs/plans/MIGRATION_LEDGER.md`: `| 0180 | T2-05 | technician-floor-verbs | lane-a/T2-05-technician-floor | verified |`
+- Created `supabase/migrations/0180_technician_floor_verbs.sql`:
+  - Updated RLS write policies to admit `Technician` alongside `('Owner', 'Admin', 'Manager', 'Warehouse')`:
+    - `operation_sessions` (`operation_sessions_all`)
+    - `session_line_movements` (`session_line_movements_all`)
+    - `packing_lines` (`packing_lines_all`)
+    - `handover_lines` (`handover_lines_all`)
+    - `return_lines` (`return_lines_all`)
+    - `signatures` (`signatures_all`)
+    - `cleaning_queue_entries` (`cleaning_queue_entries_all`)
+    - `cleaning_task_results` (`cleaning_task_results_all`)
+    - `evidence_files` (`evidence_files_all`)
+    - `evidence_references` (`evidence_references_all`)
+    - `product_units` (`product_units_update`)
+    - `booking_stage_transitions` (`booking_stage_transitions_insert`)
+- Added lifecycle step `L35` (`Technician can perform every floor verb (Pack, Handover, Return, Reset); Coordinator refused (D3, T2-05)`) in `scripts/e2e-lifecycle.mjs`, verifying:
+  - Coordinator is refused from floor verbs by RLS on `operation_sessions`.
+  - Technician advances booking `Quote` -> `Booked` -> `Packed` (`actionPackRental`).
+  - Technician advances booking `Packed` -> `On Rent` (`actionHandoverRental`).
+  - Technician advances booking `On Rent` -> `Returned` (`actionReturnRental`).
+  - Technician performs Reset (`actionCompleteReset`).
+- Updated `docs/PERMISSIONS.md`:
+  - Section 2 summary table: updated Technician row to include all four floor verbs (Pack, Handover, Return, Reset per Ruling D3).
+  - Section 3 matrix: Pack (✅), Handover (◐ W2 / ✅), Return & triage (◐ W3), Reset (✅).
+  - Section 4.2 capability table: updated `rental.pack` and `rental.pickup` to include Technician alongside C+ and Warehouse.
+- Updated `src/lib/rbac.ts`:
+  - Updated `FLOOR` set to include `'Technician'`: `const FLOOR = new Set(['Owner', 'Admin', 'Manager', 'Warehouse', 'Technician'])`.
+  - Updated `canHandover(role)` to return `canPerformOperations(role)` (admitting Technician).
+  - Updated `canWriteFloor(role)` and comments reflecting Ruling D3 (26 Oct 2026).
+- Updated `src/actions/rentals/handoverRental.ts`:
+  - Updated capability permission note for `canHandover` admitting Technician.
+- Updated `src/modules/operations/OperationsShell.tsx`:
+  - Typed `onJobChange` with optional `| undefined` under `exactOptionalPropertyTypes`.
+- Updated unit tests:
+  - `src/lib/__tests__/rbac.test.ts`: updated `canHandover` and `canWriteFloor` tests to assert Technician admittance.
+  - `src/actions/rentals/__tests__/floorVerbs.test.ts`: added test asserting Technician can perform floor verbs.
+- Marked T2-05 as `status: done` in `docs/plans/T2_FLOOR.md`.
+
+**Ruled**
+- Ruling D3 (26 Oct 2026): Technician can Pack, Handover, Return, Reset.
+- Money-blindness strictly preserved: `Technician` remains in `MONEY_BLIND`, receives no amounts in DOM or payloads, and cannot clear financial gates.
+
+**Verified**
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings).
+- `npm run check:pglite`: PASS (177/177 migrations applied from scratch, 0 failed, 31 views checked, 93 definer functions pinned).
+- `npm run check:lifecycle`: PASS (35/35 green, step L35 verified).
+- `npm run check:contrast`: PASS (106/106 WCAG AA token pairs).
+- `npx vitest run`: PASS (165/165 passing across `rbac.test.ts` and `floorVerbs.test.ts`).
+- `npm run build`: PASS (built in 1m 46s, PWA generated).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 55 / 55 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 45 / 45 (100%) | +0 |
+| Lifecycle | steps green / total | 35 / 35 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 177 files · check:pglite 177/177 applied, 0 failed (recorded 2026-10-26T11:40:30.789Z). Suite: Historical suite: 5747/5747 passed, 0 failed (recorded 2026-10-26T10:02:45.577Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5739/5739 passed, 0 failed (recorded 2026-10-26T06:01:16.431Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-26T11:41:01.947Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T2-03 (ID card as the deposit collateral record kept apart from money).
+- T2-06 (Repair job closes the damage finding).
+- T6-01 (Nepali glossary wave 1 for ~200 floor terms).
+
 ## 2026-10-26 (h) — T2-04 Gate 1 override by any handover staff member
 
 **Did**

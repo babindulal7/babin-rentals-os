@@ -84,7 +84,7 @@ overrides gate 1 with reason; refused without".
 **Done when** — DB gate and UI agree; reason < 10 chars refused inline; audit row exists.
 **Needs** — none.
 
-### T2-05 · Technician can do every floor verb            status: todo · size: M · lane A
+### T2-05 · Technician can do every floor verb            status: done · size: M · lane A
 **What** — Technician may Pack, Hand over, Return and Reset (D3). Update `canPack`, `canHandover`
 (and the per-operation grants from 0171) and PERMISSIONS §3 Technician cells in one commit.
 Technician stays **money-blind** — the payment/deposit gates still show "Payment required" with no

@@ -53,8 +53,9 @@ export interface OperationsShellProps {
   /** Reports unsaved work so a host that can swap the booking can ask first. */
   onDirtyChange?: (dirty: boolean) => void
   onBusyChange?: (busy: boolean) => void
-  onRegisterDiscard?: (discard: (() => void) | null) => void
-  progress?: Partial<Record<JobName, { done: number; total: number }>>
+  onRegisterDiscard?: ((discard: (() => void) | null) => void) | undefined
+  onJobChange?: ((job: JobName) => void) | undefined
+  progress?: Partial<Record<JobName, { done: number; total: number }>> | undefined
 }
 
 /** Global modal chrome around the existing, backend-powered workspaces. */
@@ -68,6 +69,7 @@ export default function OperationsShell({
   onDirtyChange,
   onBusyChange,
   onRegisterDiscard,
+  onJobChange,
   progress,
 }: OperationsShellProps) {
   const viewport = useViewport()
@@ -140,8 +142,14 @@ export default function OperationsShell({
     }
   }, [bookingNo, initialJob])
 
+  const openedBookingRef = useRef<string | null>(null)
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) {
+      openedBookingRef.current = null
+      return
+    }
+    if (openedBookingRef.current === bookingNo) return
+    openedBookingRef.current = bookingNo
     setJob(initialJob ?? entryStepFor(bookingStatus) ?? 'Pack')
     setFloor(null)
     firstRead.current = true
@@ -198,8 +206,9 @@ export default function OperationsShell({
     } else {
       setActions(null)
       setJob(prev)
+      onJobChange?.(prev)
     }
-  }, [actions?.isDirty, busy, job, requestClose])
+  }, [actions?.isDirty, busy, job, onJobChange, requestClose])
 
   // Switching stages via tab click
   const requestJob = useCallback(
@@ -211,9 +220,10 @@ export default function OperationsShell({
       } else {
         setActions(null)
         setJob(nextJob)
+        onJobChange?.(nextJob)
       }
     },
-    [actions?.isDirty, busy, job],
+    [actions?.isDirty, busy, job, onJobChange],
   )
 
   // Keyboard navigation: 1-4 jumps between unlocked stages, / focuses scanner
@@ -287,52 +297,70 @@ export default function OperationsShell({
 
   // Progression upon successful confirmation
   const completed = useCallback(async () => {
-    if (readingFloor.current) return
     awaitingCompletion.current = job
     const next = NEXT_JOB[job]
     const targetStatus = STATUS_AFTER[job]
 
-    // A committed session can still be a partial return. Read the persisted
-    // stage before offering the next operation or emitting its completion event.
-    const latest = await refreshFloor()
-    if (identity.current.bookingNo !== bookingNo || !identity.current.isOpen) return
-    if (!latest) {
+    let verified = false
+    try {
+      // A committed session can still be a partial return. Read the persisted
+      // stage before offering the next operation or emitting its completion event.
+      const latest = await refreshFloor()
+      if (identity.current.bookingNo !== bookingNo || !identity.current.isOpen) return
+      if (!latest) return
+
+      verified = true
+      awaitingCompletion.current = null
+
+      if (job === 'Return') void DomainEvents.emit(EVENT_TYPES.INVENTORY_RETURNED, { bookingNo })
+
+      // For Return, a partial return leaves the stage as On Rent (< Returned).
+      // Keep operator on Return workspace with fresh data.
+      if (job === 'Return' && BOOKING_STATUS[latest.stage].order < BOOKING_STATUS[targetStatus].order) return
+
+      // Verify stage reached target before advancing (for Pack, Handover)
+      if (job !== 'Reset' && BOOKING_STATUS[latest.stage].order < BOOKING_STATUS[targetStatus].order) return
+
+      // Emit domain event for the completed stage
+      if (job === 'Pack') {
+        void DomainEvents.emit(EVENT_TYPES.RENTAL_PACKED, { bookingNo })
+        void DomainEvents.emit(EVENT_TYPES.INVENTORY_PACKED, { bookingNo })
+      } else if (job === 'Handover') {
+        void DomainEvents.emit(EVENT_TYPES.RENTAL_HANDED_OVER, { bookingNo })
+        void DomainEvents.emit(EVENT_TYPES.RENTAL_PICKED_UP, { bookingNo })
+      } else if (job === 'Return') {
+        void DomainEvents.emit(EVENT_TYPES.RENTAL_RETURNED, { bookingNo })
+      } else if (job === 'Reset') {
+        void DomainEvents.emit(EVENT_TYPES.RENTAL_RESET_COMPLETED, { bookingNo })
+      }
+
+      if (next) {
+        setJob(next)
+        onJobChange?.(next)
+      } else {
+        onClose()
+      }
+    } finally {
+      if (verified) {
+        awaitingCompletion.current = null
+      }
+      submitLock.current = false
       setSubmitting(false)
-      return
+      setActions(null)
+      setWorkspaceRevision((revision) => revision + 1)
     }
-    awaitingCompletion.current = null
-    submitLock.current = false
-    setSubmitting(false)
-    setActions(null)
-    setWorkspaceRevision((revision) => revision + 1)
-    if (job === 'Reset' && (!latest.taskFacts || latest.taskFacts.total === 0 || latest.taskFacts.resetDone !== latest.taskFacts.total || latest.taskFacts.problems > 0)) return
-    if (job === 'Return') void DomainEvents.emit(EVENT_TYPES.INVENTORY_RETURNED, { bookingNo })
-    if (BOOKING_STATUS[latest.stage].order < BOOKING_STATUS[targetStatus].order) return
-
-    // Emit domain event for the completed stage
-    if (job === 'Pack') {
-      void DomainEvents.emit(EVENT_TYPES.RENTAL_PACKED, { bookingNo })
-      void DomainEvents.emit(EVENT_TYPES.INVENTORY_PACKED, { bookingNo })
-    } else if (job === 'Handover') {
-      void DomainEvents.emit(EVENT_TYPES.RENTAL_HANDED_OVER, { bookingNo })
-      void DomainEvents.emit(EVENT_TYPES.RENTAL_PICKED_UP, { bookingNo })
-    } else if (job === 'Return') {
-      void DomainEvents.emit(EVENT_TYPES.RENTAL_RETURNED, { bookingNo })
-    } else if (job === 'Reset') {
-      void DomainEvents.emit(EVENT_TYPES.RENTAL_RESET_COMPLETED, { bookingNo })
-    }
-
-    if (next) {
-      setJob(next)
-    } else {
-      onClose()
-    }
-  }, [job, bookingNo, refreshFloor, onClose])
+  }, [job, bookingNo, refreshFloor, onClose, onJobChange])
 
   const currentGate = stepWriteGate(job, liveStatus)
   const currentJobOrder = BOOKING_STATUS[liveStatus]?.order ?? 0
   const jobRunsAtOrder = BOOKING_STATUS[JOBS[job].runsAt]?.order ?? 0
-  const resetDone = currentJobOrder >= BOOKING_STATUS.Returned.order && !!taskFacts && taskFacts.total > 0 && taskFacts.resetDone === taskFacts.total && taskFacts.problems === 0
+  const resetDone =
+    currentJobOrder >= BOOKING_STATUS.Returned.order &&
+    !!taskFacts &&
+    taskFacts.total > 0 &&
+    taskFacts.cleaningPending === 0 &&
+    taskFacts.qcPending === 0 &&
+    (taskFacts.resetDone === taskFacts.total || taskFacts.problems > 0)
   const isCurrentJobCompleted = job === 'Reset' ? resetDone : currentJobOrder > jobRunsAtOrder
 
   // Left and Right footer button labels
@@ -425,9 +453,15 @@ export default function OperationsShell({
           actions?.discard?.()
           setPending(null)
           setActions(null)
-          if (choice?.type === 'switch') setJob(choice.job)
-          else if (choice?.type === 'prev') setJob(choice.job)
-          else if (choice?.type === 'close') onClose()
+          if (choice?.type === 'switch') {
+            setJob(choice.job)
+            onJobChange?.(choice.job)
+          } else if (choice?.type === 'prev') {
+            setJob(choice.job)
+            onJobChange?.(choice.job)
+          } else if (choice?.type === 'close') {
+            onClose()
+          }
         }}
         title={
           pending?.type === 'close'
@@ -504,7 +538,16 @@ export default function OperationsShell({
                   if (submitLock.current || readingFloor.current || floorError || !floor || floor.isCancelled || floor.isClosed || !currentGate.allowed || !actions?.canComplete) return
                   submitLock.current = true
                   setSubmitting(true)
-                  try { actions.complete() } catch (error) {
+                  try {
+                    const result: unknown = (actions.complete as () => unknown)()
+                    if (result && typeof (result as Promise<unknown>).catch === 'function') {
+                      ;(result as Promise<unknown>).catch((error: unknown) => {
+                        submitLock.current = false
+                        setSubmitting(false)
+                        setFloorError(error instanceof Error ? error.message : 'The operation failed. Retry before continuing.')
+                      })
+                    }
+                  } catch (error) {
                     submitLock.current = false
                     setSubmitting(false)
                     setFloorError(error instanceof Error ? error.message : 'The operation could not be started. Retry before continuing.')

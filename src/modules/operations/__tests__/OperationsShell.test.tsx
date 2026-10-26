@@ -94,6 +94,7 @@ async function mount(
   onClose = vi.fn(),
   status: 'Quote' | 'Booked' | 'Packed' | 'On Rent' | 'Returned' | 'Closed' = 'Booked',
   initialJob: 'Pack' | 'Handover' | 'Return' | 'Reset' = 'Pack',
+  onJobChange?: (job: 'Pack' | 'Handover' | 'Return' | 'Reset') => void,
 ) {
   mockStage = status
   container = document.createElement('div')
@@ -108,6 +109,7 @@ async function mount(
           initialJob={initialJob}
           isOpen
           onClose={onClose}
+          onJobChange={onJobChange}
         />
       </MemoryRouter>,
     )
@@ -527,5 +529,43 @@ describe('RULING 2026-10-25 — the stage progress bar lives in the header', () 
     const header = container.querySelector('.app-modal__header')?.textContent ?? ''
     expect(header).toContain('Status: Packed')
     expect(header).not.toContain('Handover · Status')
+  })
+})
+
+describe('popup progression and unstuck guarantees', () => {
+  it('Confirm Reset closes the modal and emits completion even if there are problem records', async () => {
+    const onClose = vi.fn()
+    const { fetchOperationTaskFacts } = await import('../../../lib/queries/operationTaskFacts')
+    vi.mocked(fetchOperationTaskFacts)
+      .mockResolvedValueOnce({
+        total: 2,
+        resetDone: 1,
+        cleaningPending: 1,
+        qcPending: 0,
+        problems: 0,
+      })
+      .mockResolvedValueOnce({
+        total: 2,
+        resetDone: 1,
+        cleaningPending: 0,
+        qcPending: 0,
+        problems: 1,
+      })
+    await mount(onClose, 'Returned', 'Reset')
+    const confirm = [...container.querySelectorAll('button')].find(b => b.textContent?.trim() === 'Confirm Reset')
+    expect(confirm).toBeDefined()
+    expect(confirm?.hasAttribute('disabled')).toBe(false)
+    await act(async () => confirm?.click())
+    expect(completionCalls).toHaveBeenCalledTimes(1)
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('notifies onJobChange when advancing to next stage', async () => {
+    const onJobChange = vi.fn()
+    await mount(vi.fn(), 'Booked', 'Pack', onJobChange)
+    const confirm = [...container.querySelectorAll('button')].find(b => b.textContent?.trim() === 'Confirm Packing & Next')
+    mockStage = 'Packed'
+    await act(async () => confirm?.click())
+    expect(onJobChange).toHaveBeenCalledWith('Handover')
   })
 })

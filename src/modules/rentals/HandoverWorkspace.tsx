@@ -1272,6 +1272,7 @@ export default function HandoverWorkspace({
         // HO-05 — leave only when the stage moved; a held stage stays here and says so.
         if (result.stage !== null) {
           showSuccessToast('Handover Completed', `Rental ${floor.bookingNo} is now On Rent`)
+          setDispatching(false)
           if (onConfirmSuccess) {
             onConfirmSuccess()
           } else {

@@ -242,8 +242,8 @@ describe('per-operation grants (P0-B)', () => {
   it('canPack admits the floor plus Technician', () => {
     expect(ALL_ROLES.filter((r) => canPack(r))).toEqual(['Owner', 'Admin', 'Manager', 'Warehouse', 'Technician'])
   })
-  it('canHandover admits the floor only (client-facing handoff)', () => {
-    expect(ALL_ROLES.filter((r) => canHandover(r))).toEqual(['Owner', 'Admin', 'Manager', 'Warehouse'])
+  it('canHandover admits the floor plus Technician (D3, 26 Oct 2026)', () => {
+    expect(ALL_ROLES.filter((r) => canHandover(r))).toEqual(['Owner', 'Admin', 'Manager', 'Warehouse', 'Technician'])
   })
   it('canReturn admits the floor plus Technician (triage)', () => {
     expect(ALL_ROLES.filter((r) => canReturn(r))).toEqual(['Owner', 'Admin', 'Manager', 'Warehouse', 'Technician'])
@@ -474,9 +474,9 @@ describe('canWriteBookingDesk', () => {
 })
 
 describe('canWriteFloor', () => {
-  it('mirrors operation_sessions_all -- the desk minus Coordinator', () => {
+  it('mirrors operation_sessions_all -- admits Technician per Ruling D3 (0180)', () => {
     const allowed = ALL_ROLES.filter((r) => canWriteFloor(r))
-    expect(allowed).toEqual(['Owner', 'Admin', 'Manager', 'Warehouse'])
+    expect(allowed).toEqual(['Owner', 'Admin', 'Manager', 'Warehouse', 'Technician'])
   })
 
   /*
@@ -489,13 +489,12 @@ describe('canWriteFloor', () => {
   })
 
   /*
-   * And it is NOT canPerformOperations, which admits Technician. Writing the
-   * session row and working a session someone else opened are different acts;
-   * collapsing them is the mistake this pins shut.
+   * D3 (26 Oct 2026, 0180): Technician can perform all floor verbs (pack, handover,
+   * return, reset) and writes floor session rows.
    */
-  it('excludes Technician, who canPerformOperations admits', () => {
+  it('admits Technician per Ruling D3 alongside canPerformOperations', () => {
     expect(canPerformOperations('Technician')).toBe(true)
-    expect(canWriteFloor('Technician')).toBe(false)
+    expect(canWriteFloor('Technician')).toBe(true)
   })
 })
 

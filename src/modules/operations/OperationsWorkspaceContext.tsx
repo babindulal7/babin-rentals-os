@@ -39,11 +39,14 @@ export function OperationsWorkspaceProvider({ children }: { children: ReactNode 
   const reportDirty = useCallback((value: boolean) => { dirty.current = value }, [])
   const reportBusy = useCallback((value: boolean) => { busy.current = value; if (!value) setNotice(null) }, [])
   const registerDiscard = useCallback((value: (() => void) | null) => { discard.current = value }, [])
+  const handleJobChange = useCallback((nextJob: JobName) => {
+    setWorkspace((current) => (current ? { ...current, job: nextJob } : null))
+  }, [])
   const value = useMemo(() => ({ openOperations, closeOperations }), [closeOperations, openOperations])
   return <OperationsWorkspaceContext.Provider value={value}>
     {children}
     {notice && <p role="status">{notice}</p>}
-    {workspace && <OperationsShell key={`${workspace.bookingNo}:${workspace.job}`} isOpen bookingNo={workspace.bookingNo} bookingStatus={workspace.bookingStatus} initialJob={workspace.job} onDirtyChange={reportDirty} onBusyChange={reportBusy} onRegisterDiscard={registerDiscard} onClose={() => replace(null)} />}
+    {workspace && <OperationsShell key={workspace.bookingNo} isOpen bookingNo={workspace.bookingNo} bookingStatus={workspace.bookingStatus} initialJob={workspace.job} onDirtyChange={reportDirty} onBusyChange={reportBusy} onRegisterDiscard={registerDiscard} onJobChange={handleJobChange} onClose={() => replace(null)} />}
     <ConfirmDialog isOpen={pending !== null} title="Discard unsaved operations work?" description={pending?.target ? `Discard the current marks and open ${pending.target.bookingNo}?` : 'Discard the current unsaved operations work and close?'} cancelLabel="Keep editing" confirmLabel="Discard changes" variant="danger" onClose={() => setPending(null)} onConfirm={() => { if (busy.current) return; const target = pending?.target ?? null; discard.current?.(); setPending(null); replace(target) }} />
   </OperationsWorkspaceContext.Provider>
 }
