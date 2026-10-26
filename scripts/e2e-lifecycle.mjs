@@ -434,15 +434,15 @@ async function actionPackRental({ key, actor, units }) {
   return { sessionId: packingSessionId }
 }
 
-async function actionHandoverRental({ key, actor, signerName = 'Lifecycle Client Signer', deliveryMethod = 'Client Pickup' }) {
+async function actionHandoverRental({ key, actor, signerName = 'Lifecycle Client Signer', deliveryMethod = 'Client Pickup', verified = true }) {
   const bookingId = bookingIds[key]
   const currentStage = await stageOf(key)
   assert(currentStage === 'Packed', `actionHandoverRental: booking ${key} must be Packed, got ${currentStage}`)
   const handoverSessionId = crypto.randomUUID()
   await q(
-    `insert into operation_sessions (id, client_uuid, booking_id, operation, session_no, state, delivery_method, warehouse_staff_id, created_by)
-     values ($1, gen_random_uuid(), $2, 'Handover', 1, 'In Progress', $3, $4, $4)`,
-    [handoverSessionId, bookingId, deliveryMethod, U[actor]],
+    `insert into operation_sessions (id, client_uuid, booking_id, operation, session_no, state, delivery_method, warehouse_staff_id, created_by, government_id_verified, booking_authorization_verified)
+     values ($1, gen_random_uuid(), $2, 'Handover', 1, 'In Progress', $3, $4, $4, $5, $5)`,
+    [handoverSessionId, bookingId, deliveryMethod, U[actor], verified],
   )
   await q(
     `insert into handover_lines (client_uuid, booking_line_id, state, qty_required, first_session_id, completed_session_id, created_by)
@@ -1650,8 +1650,8 @@ const STEPS = [
 
         const handoverSessionId = crypto.randomUUID()
         await q(
-          `insert into operation_sessions (id, client_uuid, booking_id, operation, session_no, state, delivery_method, warehouse_staff_id, created_by)
-           values ($1, gen_random_uuid(), $2, 'Handover', 1, 'In Progress', 'Client Pickup', $3, $3)`,
+          `insert into operation_sessions (id, client_uuid, booking_id, operation, session_no, state, delivery_method, warehouse_staff_id, created_by, government_id_verified, booking_authorization_verified)
+           values ($1, gen_random_uuid(), $2, 'Handover', 1, 'In Progress', 'Client Pickup', $3, $3, true, true)`,
           [handoverSessionId, bookingIds.cons, U.Warehouse],
         )
         // Handover still receipts every line including the consumable — the
@@ -2513,6 +2513,127 @@ STEPS.push({
       }
     })
     assertEq(admitted.join(', '), 'Owner, Admin, Manager, Accounts', 'roles daily_closings_finance_insert admits')
+  },
+})
+
+STEPS.push({
+  id: 'L34',
+  title: 'Warehouse overrides gate 1 with reason; refused without',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      await as('Coordinator', async () => {
+        await createBooking({
+          key: 'l34',
+          window: ['2099-12-01T04:00:00Z', '2099-12-03T04:00:00Z'],
+          actor: 'Coordinator',
+          lines: [
+            {
+              productId: SERIAL_PRODUCT,
+              description: 'Lifecycle Serialised Camera',
+              qty: 1,
+              days: 2,
+              rate: 3500,
+              units: [UNITS[0]],
+            },
+          ],
+        })
+      })
+      const bId = bookingIds.l34
+
+      // Advance Quote -> Booked
+      await transition('l34', 'Quote', 'Booked', 'Coordinator')
+
+      // Pack the booking
+      await as('Warehouse', async () => {
+        await actionPackRental({
+          key: 'l34',
+          actor: 'Warehouse',
+          units: [{ id: UNITS[0], serial: 'LCSN-001' }],
+        })
+      })
+
+      // Handover session with unverified receiver (verified = false)
+      const handoverSessionId = crypto.randomUUID()
+      await as('Warehouse', async () => {
+        await q(
+          `insert into operation_sessions (id, client_uuid, booking_id, operation, session_no, state, delivery_method, warehouse_staff_id, created_by, government_id_verified, booking_authorization_verified)
+           values ($1, gen_random_uuid(), $2, 'Handover', 1, 'In Progress', 'Client Pickup', $3, $3, false, false)`,
+          [handoverSessionId, bId, U.Warehouse],
+        )
+        const hlLineId = await one('select id from booking_lines where booking_id = $1', [bId])
+        await q(
+          `insert into handover_lines (client_uuid, booking_line_id, state, qty_required, first_session_id, completed_session_id, created_by)
+           values (gen_random_uuid(), $1, 'Picked Up', 1, $2, $2, $3)`,
+          [hlLineId, handoverSessionId, U.Warehouse],
+        )
+        await q(
+          `insert into signatures (client_uuid, session_id, signature_role, signer_name, signed_at, device, is_required, created_by)
+           values (gen_random_uuid(), $1, 'Receiver', 'Gate1 Test Signer', now(), 'iPad-1', true, $2)`,
+          [handoverSessionId, U.Warehouse],
+        )
+      })
+
+      // 1. Moving to On Rent without override MUST BE REFUSED
+      await as('Warehouse', async () => {
+        await q('savepoint gate1_refuse_1')
+        try {
+          await refuses(
+            'moving to On Rent with unverified receiver and no override is refused',
+            `insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at)
+             values (gen_random_uuid(), $1, $2, 'Packed', 'On Rent', $3, 'Warehouse', now())`,
+            [bId, BRANCH, U.Warehouse],
+            /gate\.handover\.receiver_unverified/,
+          )
+        } finally {
+          await q('rollback to savepoint gate1_refuse_1')
+          await q('release savepoint gate1_refuse_1')
+        }
+      })
+
+      // 2. Reason < 10 chars is refused by DB check constraint
+      const auditId = crypto.randomUUID()
+      await q(
+        `insert into audit_events (id, client_uuid, module, action, table_name, record_id, actor_id, actor_role, branch_id)
+         values ($1, gen_random_uuid(), 'Rentals', 'Approve', 'operation_sessions', $2, $3, 'Warehouse', $4)`,
+        [auditId, handoverSessionId, U.Warehouse, BRANCH],
+      )
+
+      await q('savepoint gate1_refuse_2')
+      try {
+        await refuses(
+          'gate 1 override with reason < 10 chars is refused by DB check',
+          `insert into override_records (id, client_uuid, override_type, subject_type, subject_id, gate_number, reason, approver_user_id, approver_role, audit_event_id, created_by)
+           values (gen_random_uuid(), gen_random_uuid(), 'Gate override', 'operation_sessions', $1, 1, 'short', $2, 'Warehouse', $3, $2)`,
+          [handoverSessionId, U.Warehouse, auditId],
+          /override_records_reason_min_10_chars/,
+        )
+      } finally {
+        await q('rollback to savepoint gate1_refuse_2')
+        await q('release savepoint gate1_refuse_2')
+      }
+
+      // 3. Warehouse inserts valid override record with reason >= 10 chars
+      await as('Warehouse', async () => {
+        await q(
+          `insert into override_records (id, client_uuid, override_type, subject_type, subject_id, gate_number, reason, approver_user_id, approver_role, audit_event_id, created_by)
+           values (gen_random_uuid(), gen_random_uuid(), 'Gate override', 'operation_sessions', $1, 1, 'Client forgot physical ID; verified via owner phone call', $2, 'Warehouse', $3, $2)`,
+          [handoverSessionId, U.Warehouse, auditId],
+        )
+      })
+
+      // 4. Moving to On Rent now SUCCEEDS
+      await as('Warehouse', async () => {
+        await q(
+          `insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at)
+           values (gen_random_uuid(), $1, $2, 'Packed', 'On Rent', $3, 'Warehouse', now())`,
+          [bId, BRANCH, U.Warehouse],
+        )
+      })
+
+      const finalStage = await stageOf('l34')
+      assertEq(finalStage, 'On Rent', 'booking advanced to On Rent after Warehouse override')
+    })
   },
 })
 

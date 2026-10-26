@@ -424,3 +424,37 @@ describe('HO-14 — the rental-day rule is the engine’s, and it can answer “
     expect(daysCell()).toBe('—')
   })
 })
+
+/* ── T2-04 / Ruling D2 ────────────────────────────────────────────────────── */
+
+async function type(input: HTMLInputElement, value: string) {
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value)
+  await act(async () => {
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    input.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+  await flush()
+}
+
+describe('T2-04 / Ruling D2 — Gate 1 override by handover staff', () => {
+  it('allows Gate 1 to pass when an audited reason of 10+ chars is provided without checkboxes', async () => {
+    await mount()
+    const overrideInput = document.body.querySelector<HTMLInputElement>(
+      'input[aria-label="Gate 1 override reason"]',
+    )
+    expect(overrideInput).toBeTruthy()
+
+    // Initially unverified
+    expect(text()).toContain('Government ID and booking authorization not verified')
+
+    // Entering fewer than 10 characters does not clear the gate
+    await type(overrideInput!, 'Too short')
+    expect(text()).toContain('9 / 10 chars min')
+    expect(text()).toContain('Gate 1 override requires a reason of at least 10 characters (9/10)')
+
+    // Entering 10+ characters clears Gate 1
+    await type(overrideInput!, 'ID checked on phone call with manager')
+    expect(text()).toContain('Receiver Verified (Overridden)')
+    expect(text()).not.toContain('Government ID and booking authorization not verified')
+  })
+})

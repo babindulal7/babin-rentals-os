@@ -56,6 +56,12 @@ export type CrewRoleDb =
 export type PackingLineState = 'Pending' | 'Packed' | 'Partial' | 'Missing' | 'Not Required' | 'Replaced'
 export type PhysicalCondition = 'Excellent' | 'Good' | 'Fair' | 'Damaged' | 'Not Inspected'
 export type SignatureRole = 'Receiver' | 'Warehouse staff' | 'Driver' | 'Witness' | 'Returning person'
+export type OverrideType =
+  | 'Gate override'
+  | 'Scan block override'
+  | 'Double booking override'
+  | 'Stage reversal'
+  | 'QC skip'
 
 /* ── operations enums (0001_enums.sql), typed 12 Aug 2026 ──────────────────
  *
@@ -1637,6 +1643,41 @@ export interface Database {
           created_by: string
         }
         Update: Partial<Database['public']['Tables']['signatures']['Insert']>
+      }
+
+      /**
+       * `0003_operations.sql:1022-1050`. Audited overrides for gates, scans, double bookings, etc.
+       */
+      override_records: {
+        Row: {
+          id: string
+          client_uuid: string
+          override_type: OverrideType
+          subject_type: string
+          subject_id: string
+          gate_number: number | null
+          reason: string
+          approver_user_id: string
+          approver_role: string
+          audit_event_id: string
+          created_at: string
+          created_by: string
+        }
+        Insert: {
+          id?: string
+          client_uuid: string
+          override_type: OverrideType
+          subject_type: string
+          subject_id: string
+          gate_number?: number | null
+          reason: string
+          approver_user_id: string
+          approver_role: string
+          audit_event_id: string
+          created_at?: string
+          created_by: string
+        }
+        Update: Partial<Database['public']['Tables']['override_records']['Insert']>
       }
     }
   }

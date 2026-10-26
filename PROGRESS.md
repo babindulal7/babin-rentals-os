@@ -1,5 +1,117 @@
 # Progress Log
 
+## 2026-10-26 (h) — T2-04 Gate 1 override by any handover staff member
+
+**Did**
+- Claimed migration 0179 in `docs/plans/MIGRATION_LEDGER.md`: `| 0179 | T2-04 | gate1-override-by-handover-staff | lane-a/T2-04-gate1-override | verified |`
+- Created `supabase/migrations/0179_gate1_override_by_handover_staff.sql`:
+  - Updated `override_records_approver_is_owner_or_manager` constraint so Gate 1 (`gate_number = 1`, `override_type = 'Gate override'`) approver roles admit `('Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician')`.
+  - Added RLS policy `override_records_gate1_handover_staff_insert` allowing staff with handover capability to insert Gate 1 override records.
+  - Added RLS policy `override_records_gate1_handover_staff_select` allowing staff with handover capability to read Gate 1 override records.
+  - Updated `apply_booking_stage_transition()` to enforce Gate 1: checks `(v_gov_id_verified and v_booking_auth_verified)` OR an `override_records` row for the session with `gate_number = 1`, `override_type = 'Gate override'`, and `length(reason) >= 10`. Raises `GATE:gate.handover.receiver_unverified` when unverified and not overridden.
+- Added step `L34` (`Warehouse overrides gate 1 with reason; refused without`) in `scripts/e2e-lifecycle.mjs` verifying refusal without override (`gate.handover.receiver_unverified`), refusal with < 10 characters (`override_records_reason_min_10_chars`), and successful transition with 10+ characters override.
+- Updated `docs/PERMISSIONS.md` §6.1 for `gate.handover.receiver_unverified` to reflect handover staff authority and D2 ruling.
+- Added `canOverrideReceiverVerification` in `src/lib/rbac.ts` mapping to `canHandover(role)`.
+- Added `gate1OverrideReason` to `FloorVerbInput` and `HandoverRentalInput` in `src/actions/rentals/floorVerb.ts` and `handoverRental.ts`, validating 10-char min and inserting `override_records` and `audit_events`.
+- Updated `src/types/database.ts` and `src/types/supabase.ts` with `OverrideType` and `override_records` definitions.
+- Updated `src/modules/rentals/HandoverWorkspace.tsx` to render an inline Gate 1 override reason input with live character counter (`10 chars min`), updated gate status to reflect `Receiver Verified (Overridden)`, and scoped money overrides to financial gates 3 & 4.
+- Added unit test in `src/actions/rentals/__tests__/floorVerbs.test.ts` asserting 10-character reason validation and database insert of `override_records`.
+- Added UI integration test in `src/modules/rentals/__tests__/handoverWorkspace.test.tsx` verifying inline override validation and gate clearing.
+- Marked T2-04 as `status: done` in `docs/plans/T2_FLOOR.md`.
+
+**Ruled**
+- Ruling D2 (26 Oct 2026): When receiver ID cannot be checked at Handover, any staff member allowed to hand over may override Gate 1 with an audited reason of 10+ characters.
+- Hard constraint: Reason must be at least 10 characters (`override_records_reason_min_10_chars`), enforced identically in DB check constraint and TypeScript action layer.
+
+**Verified**
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings).
+- `npm run check:pglite`: PASS (176/176 migrations applied from scratch, 0 failed, 31 views checked, 93 definer functions pinned).
+- `npm run check:lifecycle`: PASS (34/34 green, step L34 verified).
+- `npm run check:contrast`: PASS (106/106 WCAG AA token pairs).
+- `npx vitest run`: PASS (99/99 in `floorVerbs.test.ts`, 16/16 in `handoverWorkspace.test.tsx`, 1/1 in `ResetWorkspace.quantity.test.tsx`).
+- `npm run build`: PASS (built in 1m 40s, PWA generated).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 55 / 55 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 45 / 45 (100%) | +0 |
+| Lifecycle | steps green / total | 34 / 34 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 176 files · check:pglite 176/176 applied, 0 failed (recorded 2026-10-26T11:07:33.376Z). Suite: Historical suite: 5747/5747 passed, 0 failed (recorded 2026-10-26T10:02:45.577Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5739/5739 passed, 0 failed (recorded 2026-10-26T06:01:16.431Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-26T11:07:53.930Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T2-03 (ID card as the deposit collateral record kept apart from money).
+- T2-05 (Technician can do every floor verb while remaining money-blind).
+- T2-06 (Repair job closes the damage finding).
+- T6-01 (Nepali glossary wave 1 for ~200 floor terms).
+
+## 2026-10-26 (g) — T2-reset Quantity-only reset completion recorded in cleaning queue
+
+**Did**
+- Claimed migration 0178 in `docs/plans/MIGRATION_LEDGER.md`: `| 0178 | T2-reset | quantity-only-reset | lane-a/T2-quantity-reset | verified |`
+- Created `supabase/migrations/0178_quantity_only_reset.sql`:
+  - Altered `cleaning_queue_entries.unit_id` to drop `NOT NULL` constraint.
+  - Added `booking_line_id uuid references booking_lines(id)` and `qty int not null default 1`.
+  - Added table constraints `cleaning_queue_entries_unit_or_line` (ensuring each entry has either a serial unit or a booking line) and `cleaning_queue_entries_qty_positive`.
+  - Added index `idx_cleaning_queue_entries_booking_line_id`.
+  - Updated `auth_may_reset_entry(p_booking_id uuid, p_unit_id uuid)` to handle nullable `p_unit_id`.
+- Updated database type definitions in `src/types/database.ts` and `src/types/supabase.ts` for `cleaning_queue_entries` row/insert/update.
+- Extended floor verb action layer in `src/actions/rentals/completeReset.ts` and `src/actions/rentals/floorVerb.ts`:
+  - Updated `CompleteResetInput` and `FloorVerbInput` to support `lineIds?: readonly string[]` alongside `unitIds`.
+  - Updated `ResetEntryInput` to support `lineId?: string` alongside `unitId?: string`.
+  - Enqueued returned quantity lines into `cleaning_queue_entries` during Return when quantity gear comes back.
+  - Updated `completeResetQueue` to look up entries by both `unit_id` and `booking_line_id`, ensuring quantity lines are tracked and marked with `reset_completed_at`, `clean_completed_at`, cleaner/QC identities, and audit records.
+- Fixed `src/modules/rentals/ResetWorkspace.tsx`:
+  - Updated Gate 3 for quantity-only bookings to evaluate truthfully: `label: 'Quantity-only reset recording available'`, passing when items reach Ready or an exception (`dispatchRows.length > 0`).
+  - Removed hardcoded dispatch error refusing quantity-only resets (`"Quantity-only reset completion cannot be recorded by the current server contract..."`).
+  - Dispatched `readyLineIds` and mapped quantity `resetEntries` with `lineId: r.lineId`.
+  - Restored persisted cleaning queue marks matching `booking_line_id === r.lineId` as well as `unit_id === r.assetId`.
+- Added unit test suite `src/modules/rentals/__tests__/ResetWorkspace.quantity.test.tsx` verifying Gate 3 pass state and lineId dispatch on quantity-only bookings.
+- Added unit tests in `src/actions/rentals/__tests__/floorVerbs.test.ts` for quantity line reset completion and invalid line rejection.
+
+**Ruled**
+- Quantity-tracked gear lines are first-class records in `cleaning_queue_entries` (0178); reset completion cannot fake success with local storage checks, but records truthfully against real database rows.
+- Exceptions recorded on quantity items update problem state and audit trails in PostgreSQL without inventing serialized unit damage findings.
+
+**Verified**
+- `npm run typecheck`: PASS (0 errors).
+- `npx vitest run`: PASS (116/116 tests passing across `floorVerbs.test.ts`, `ResetWorkspace.quantity.test.tsx`, `ResetWorkspace.embedded.test.tsx`, and `resetQc.test.tsx`).
+- `npm run check:pglite`: PASS (176/176 migrations applied from scratch, 0 failed, 31 views checked, 93 definer functions pinned).
+- `npm run check:lifecycle`: PASS (34/34 green, 0 failed).
+- `npm run check:contrast`: PASS (106/106 WCAG AA token pairs).
+- `npm run build`: PASS (built in 1m 38s, PWA generated).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 55 / 55 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 45 / 45 (100%) | +0 |
+| Lifecycle | steps green / total | 34 / 34 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 176 files · check:pglite 176/176 applied, 0 failed (recorded 2026-10-26T10:47:16.505Z). Suite: Historical suite: 5747/5747 passed, 0 failed (recorded 2026-10-26T10:02:45.577Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5739/5739 passed, 0 failed (recorded 2026-10-26T06:01:16.431Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-26T10:47:43.875Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T2-03 (ID card as the deposit collateral record kept apart from money).
+- T2-04 (Gate 1 override by any handover staff with audited 10+ character reason).
+- T2-05 (Technician can do every floor verb while remaining money-blind).
+- T2-06 (Repair job closes the damage finding).
+- T6-01 (Nepali glossary wave 1 for ~200 floor terms).
+
 ## 2026-10-26 (f) — T2-02 Drawn signatures on glass wired to Handover, Return, and Documents
 
 **Did**

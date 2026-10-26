@@ -520,6 +520,8 @@ export default function HandoverWorkspace({
   /* §11.1 gate 1 — the receiver's ID and authorization, actually checked. */
   const [govIdVerified, setGovIdVerified] = useState(false)
   const [bookingAuthVerified, setBookingAuthVerified] = useState(false)
+  /** Gate 1 override reason when physical ID cannot be checked (D2, T2-04). */
+  const [gate1OverrideReason, setGate1OverrideReason] = useState('')
   /* §11.1 gates 3 / 4 — booleans, never amounts (Law 6). */
   const [paymentVerified, setPaymentVerified] = useState(false)
   const [depositReceived, setDepositReceived] = useState(false)
@@ -722,7 +724,9 @@ export default function HandoverWorkspace({
 
   /* ── §11.1 — the six Session Gates, kept intact, over real state ───────── */
   const shortReasons = missingRows.filter((r) => (marks[r.key]?.reason ?? '').trim().length < MIN_REASON)
-  const receiverPassing = govIdVerified && bookingAuthVerified
+  const receiverDirectlyVerified = govIdVerified && bookingAuthVerified
+  const gate1Overridden = gate1OverrideReason.trim().length >= 10
+  const receiverPassing = receiverDirectlyVerified || gate1Overridden
   const itemsPassing = touchedCount > 0 && shortReasons.length === 0
   const paymentPassing = paymentVerified
   const depositPassing = depositReceived
@@ -741,9 +745,13 @@ export default function HandoverWorkspace({
   const gates: GateRow[] = [
     {
       n: 1,
-      label: 'Receiver Verified',
+      label: gate1Overridden && !receiverDirectlyVerified ? 'Receiver Verified (Overridden)' : 'Receiver Verified',
       passing: receiverPassing,
-      blocking: receiverPassing ? null : 'Government ID and booking authorization not verified',
+      blocking: receiverPassing
+        ? null
+        : gate1OverrideReason.trim().length > 0 && gate1OverrideReason.trim().length < 10
+          ? `Gate 1 override requires a reason of at least 10 characters (${gate1OverrideReason.trim().length}/10)`
+          : 'Government ID and booking authorization not verified',
       overridable: true,
     },
     {
@@ -775,7 +783,7 @@ export default function HandoverWorkspace({
   // more: re-sending the same marks would record them twice. The way on is
   // the booking, and a later session for what remains.
   const canComplete = firstBlockedGate === null && !dispatching && stageHeld === null
-  const overridableFailing = !receiverPassing || !paymentPassing || !depositPassing
+  const overridableFailing = !paymentPassing || !depositPassing
   /** HO-04 — who may press "Mark Cleared" on gates 3 / 4: money-sighted roles only (Law 6). */
   const moneyGateClearer = user !== null && canViewMoney(user.role)
   const MONEY_GATE_UNAVAILABLE =
@@ -802,15 +810,11 @@ export default function HandoverWorkspace({
   const gateSummary = canComplete ? null : (firstBlockedGate?.blocking ?? null)
 
   /*
-   * ⭐ 12 Aug 2026 — `applyOverride` stays REFUSED. TODO(decision): no rule
-   * says who may override a session gate (`canPerformOperations` grants
-   * Warehouse, which §11.4 explicitly forbids), and no action persists an
-   * override, so applying one would open three gates with nobody named
-   * against them. The reason field stays — real input, shown back — but the
-   * control states why it cannot act (Law 12, inline and persistent).
+   * ⭐ 12 Aug 2026 — `applyOverride` stays REFUSED for money/deposit gates (see R-06).
+   * Gate 1 (receiver unverified) is overridable by any handover staff member (D2, T2-04).
    */
   const OVERRIDE_UNAVAILABLE =
-    'A manager override cannot be applied: no rule defines who may override a session gate, and no action records the approver, so applying one would open three gates with nobody named against them. Clear the gates themselves instead.'
+    'Financial gates cannot be cleared by an unrecorded override: clear the payment and deposit gates or supply the R-06 money-override reason below.'
 
   const visible = useMemo(
     () =>
@@ -1202,6 +1206,7 @@ export default function HandoverWorkspace({
             // (operation_sessions.government_id_verified / booking_authorization_verified).
             governmentIdVerified: govIdVerified,
             bookingAuthorizationVerified: bookingAuthVerified,
+            ...(gate1Overridden ? { gate1OverrideReason: gate1OverrideReason.trim() } : {}),
             /*
              * R-06's named reason, sent whenever the operator gave one.
              *
@@ -1552,6 +1557,44 @@ export default function HandoverWorkspace({
                     <CheckLine label="Government ID Verified" checked={govIdVerified} onToggle={() => setGovIdVerified((v) => !v)} disabled={dispatching} />
                     <CheckLine label="Booking Authorization Verified" checked={bookingAuthVerified} onToggle={() => setBookingAuthVerified((v) => !v)} disabled={dispatching} />
                   </div>
+                  {(!govIdVerified || !bookingAuthVerified) && (
+                    <div style={{ marginTop: 10, paddingTop: 9, borderTop: '1px dashed var(--border)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <label htmlFor="gate1-override-input" style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
+                          Override Verification (D2)
+                        </label>
+                        {gate1OverrideReason.trim().length > 0 && gate1OverrideReason.trim().length < 10 && (
+                          <span style={{ fontSize: 'var(--t-caption)', color: 'var(--warn-text)', fontWeight: 600 }}>
+                            {gate1OverrideReason.trim().length} / 10 chars min
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        id="gate1-override-input"
+                        aria-label="Gate 1 override reason"
+                        type="text"
+                        placeholder="Audited reason for skipping ID check (10+ characters)..."
+                        value={gate1OverrideReason}
+                        onChange={(e) => setGate1OverrideReason(e.target.value)}
+                        disabled={dispatching}
+                        style={{
+                          width: '100%',
+                          minHeight: 44,
+                          padding: '8px 12px',
+                          borderRadius: 'var(--r-sm)',
+                          border: '1px solid var(--border)',
+                          background: 'var(--card2)',
+                          color: 'var(--text)',
+                          fontSize: 'var(--t-body)',
+                          fontFamily: 'inherit',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                      <p style={{ margin: '4px 0 0', fontSize: 'var(--t-caption)', color: 'var(--muted)', lineHeight: 1.4 }}>
+                        Any handover staff member may override when physical ID cannot be checked (D2). Stored in immutable audit.
+                      </p>
+                    </div>
+                  )}
                   <p style={{ margin: '9px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
                     Checked against the receiver&apos;s physical ID at the counter.
                   </p>

@@ -451,7 +451,7 @@ Known hole to keep closed: **`security_deposits` was readable by money-blind ses
 | `operations.grant.issue_role` / `operations.grant.revoke_role` | Issue/revoke operation grants | Owner/Admin; Admin cannot target Owner/Admin, including self | none | grant actor/time; no deletion | Guarded 0171; RULINGS-2026-10-24 |
 | `gate.handover.payment_outstanding` | Release gear with **payment outstanding** (advance tier not met) | **Any staff** — warning shown, release allowed | none | yes, per session | his ruling 7 Sep; 21 Jul soft gate |
 | `gate.handover.payment_outstanding` | Release gear with **deposit outstanding** | same as above | none | yes | same rule — the gate is one gate |
-| `gate.handover.receiver_unverified` | Receiver not verified at handover | M+ override | ≥10 chars | yes | Handover v1.1 |
+| `gate.handover.receiver_unverified` | Receiver not verified at handover | **Any staff allowed to hand over** | ≥10 chars | yes, per session | D2 (26 Oct 2026, 0179) |
 | `gate.conflict.overbooking` | Overbooking (GiST conflict) | M+ | mandatory | yes; losing reservation deactivated | 21 Jul |
 | `gate.conflict.crew` | Crew double-booking | M+ | mandatory | yes | Crew v3.1 |
 | `gate.discount.general` | Discount — any % | C+ | **none** | line audited like any booking write | 31 Aug: ungated |

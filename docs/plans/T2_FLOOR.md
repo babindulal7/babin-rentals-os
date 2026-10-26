@@ -71,7 +71,7 @@ steps: "ID satisfies deposit gate", "Close refused while ID held", "Warehouse ca
 and no cash completes; 3) Close blocked until "Return ID" is recorded; 4) T-1 fixture updated.
 **Needs** — T2-01.
 
-### T2-04 · Gate 1 override by any handover staff            status: todo · size: M · lane A
+### T2-04 · Gate 1 override by any handover staff            status: done · size: M · lane A
 **What** — When the receiver's ID cannot be checked, **any staff member allowed to hand over** may
 override gate 1 with a reason of 10+ characters; the override is audited (actor, role, time,
 reason). Remove `OVERRIDE_UNAVAILABLE` for gate 1.

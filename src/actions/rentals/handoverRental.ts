@@ -55,6 +55,8 @@ export type HandoverRentalInput = {
   /** Gate 1 — checked against the receiver's physical ID at the counter. Written to `operation_sessions`. */
   governmentIdVerified?: boolean;
   bookingAuthorizationVerified?: boolean;
+  /** Gate 1 override reason when physical ID cannot be checked (T2-04, D2). */
+  gate1OverrideReason?: string;
 };
 
 export const handoverRental = createAction<HandoverRentalInput, FloorVerbResult>({
@@ -72,6 +74,7 @@ export const handoverRental = createAction<HandoverRentalInput, FloorVerbResult>
     validateFloorVerb('Handover', {
       bookingRef: input.bookingId,
       ...(input.lines === undefined ? {} : { lines: input.lines }),
+      ...(input.gate1OverrideReason === undefined ? {} : { gate1OverrideReason: input.gate1OverrideReason }),
     }),
 
   execute: async (input, ctx: ActionContext) => {
@@ -89,6 +92,7 @@ export const handoverRental = createAction<HandoverRentalInput, FloorVerbResult>
           ? {}
           : { bookingAuthorizationVerified: input.bookingAuthorizationVerified }),
         ...(input.signatures === undefined || input.signatures.length === 0 ? {} : { signatures: input.signatures }),
+        ...(input.gate1OverrideReason === undefined ? {} : { gate1OverrideReason: input.gate1OverrideReason }),
       },
       ctx,
     );

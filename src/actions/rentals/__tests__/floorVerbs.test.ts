@@ -972,6 +972,64 @@ describe('Handover', () => {
     // session_no is read, not assumed.
     expect(insertsOn('operation_sessions')[0]?.payload['session_no']).toBe(2)
   })
+
+  it('refuses Gate 1 override reason shorter than 10 characters', async () => {
+    db.state.responses['handover_lines'] = [
+      [],
+      [
+        { id: 'hl-1', booking_line_id: LINE_A, state: 'Picked Up' },
+        { id: 'hl-2', booking_line_id: LINE_B, state: 'Picked Up' },
+      ],
+    ]
+
+    await expect(
+      handoverRental(
+        {
+          bookingId: 'B-715',
+          lines: [
+            { bookingLineId: LINE_A, unitIds: ['u1', 'u2'] },
+            { bookingLineId: LINE_B, unitIds: ['u3'] },
+          ],
+          gate1OverrideReason: 'Short',
+        },
+        OWNER,
+      ),
+    ).rejects.toThrow(/Gate 1 override requires a reason of at least 10 characters/)
+  })
+
+  it('records Gate 1 override when reason is 10+ characters', async () => {
+    db.state.responses['handover_lines'] = [
+      [],
+      [
+        { id: 'hl-1', booking_line_id: LINE_A, state: 'Picked Up' },
+        { id: 'hl-2', booking_line_id: LINE_B, state: 'Picked Up' },
+      ],
+    ]
+
+    await handoverRental(
+      {
+        bookingId: 'B-715',
+        lines: [
+          { bookingLineId: LINE_A, unitIds: ['u1', 'u2'] },
+          { bookingLineId: LINE_B, unitIds: ['u3'] },
+        ],
+        gate1OverrideReason: 'Government ID card left in vehicle, confirmed by phone',
+      },
+      OWNER,
+    )
+
+    const overrides = insertsOn('override_records')
+    expect(overrides).toHaveLength(1)
+    expect(overrides[0]?.payload).toMatchObject({
+      override_type: 'Gate override',
+      gate_number: 1,
+      reason: 'Government ID card left in vehicle, confirmed by phone',
+      approver_role: 'Owner',
+    })
+
+    const audits = insertsOn('audit_events')
+    expect(audits.some((a) => a.payload['action'] === 'Approve' && String(a.payload['reason'] ?? '').includes('Government ID card'))).toBe(true)
+  })
 })
 
 /* ── 6 · Return ─────────────────────────────────────────────────────────── */
@@ -1784,6 +1842,37 @@ describe('Reset — the verb that opens no session and moves no stage', () => {
     ]
     await expect(completeReset({ id: 'B-715', unitIds: ['unit-1'] }, OWNER)).rejects.toThrow(
       /already reset/,
+    )
+    expect(writes.state.ops).toHaveLength(0)
+  })
+
+  it('sets reset_completed_at per quantity line entry and records completion', async () => {
+    db.state.responses['cleaning_queue_entries'] = [
+      [
+        { id: 'cq-line-1', unit_id: null, booking_line_id: 'line-1', qty: 2, requires_reset: true, reset_completed_at: null },
+      ],
+    ]
+
+    const result = await completeReset(
+      { id: 'B-715', lineIds: ['line-1'], occurredAt: '2026-08-12T05:00:00.000Z' },
+      OWNER,
+    )
+
+    expect(result.sessionId).toBeNull()
+    expect(result.unitsReset).toBe(1)
+    expect(opsOn('operation_sessions')).toHaveLength(0)
+
+    const updates = opsOn('cleaning_queue_entries')
+    expect(updates.map((o) => o.id)).toEqual(['cq-line-1'])
+    expect(updates[0]?.payload['reset_completed_at']).toBe('2026-08-12T05:00:00.000Z')
+  })
+
+  it('refuses a quantity line that is not a valid booking line', async () => {
+    db.state.responses['cleaning_queue_entries'] = [
+      [{ id: 'cq-line-1', unit_id: null, booking_line_id: 'line-1', requires_reset: true, reset_completed_at: null }],
+    ]
+    await expect(completeReset({ id: 'B-715', lineIds: ['line-1', 'line-9'] }, OWNER)).rejects.toThrow(
+      /Line line-9 is not a valid booking line of B-715/,
     )
     expect(writes.state.ops).toHaveLength(0)
   })

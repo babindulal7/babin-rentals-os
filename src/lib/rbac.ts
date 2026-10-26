@@ -513,6 +513,14 @@ export function canHandover(role: SystemRole): boolean {
   return FLOOR_ROLES.includes(role)
 }
 
+/**
+ * Gate 1 override (receiver unverified) permission check (D2, T2-04, PERMISSIONS §6.1).
+ * Any staff member allowed to hand over may override gate 1 with an audited reason of >= 10 characters.
+ */
+export function canOverrideReceiverVerification(role: SystemRole): boolean {
+  return canHandover(role)
+}
+
 export function canReturn(role: SystemRole): boolean {
   return canPerformOperations(role) // receiving + triage is floor + technician work
 }

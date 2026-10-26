@@ -2108,10 +2108,6 @@ export type Database = {
           state?: Database["public"]["Enums"]["cleaning_queue_state"]
           unit_id?: string | null
           updated_at?: string
-          return_line_id?: string | null
-          state?: Database["public"]["Enums"]["cleaning_queue_state"]
-          unit_id?: string
-          updated_at?: string
         }
         Relationships: [
           {

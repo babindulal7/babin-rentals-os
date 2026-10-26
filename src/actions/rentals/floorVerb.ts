@@ -369,6 +369,11 @@ export interface FloorVerbInput {
   governmentIdVerified?: boolean
   bookingAuthorizationVerified?: boolean
   /**
+   * Handover only — Gate 1 override reason when receiver ID/authorization cannot be checked (T2-04, D2).
+   * Any staff member allowed to hand over may override with a reason of at least 10 characters.
+   */
+  gate1OverrideReason?: string
+  /**
    * Reset only, and the fuller form of `unitIds`: the same items with the
    * record the floor actually made. When both are given this one wins; a caller
    * that passes only `unitIds` gets `{ unitId }` entries and stamps nothing but
@@ -1011,6 +1016,14 @@ export function validateFloorVerb(job: JobName, input: FloorVerbInput): void {
       }
     }
   }
+
+  if (job === 'Handover') {
+    if (input.gate1OverrideReason !== undefined && input.gate1OverrideReason.trim().length > 0) {
+      if (input.gate1OverrideReason.trim().length < 10) {
+        throw new Error('Gate 1 override requires a reason of at least 10 characters.')
+      }
+    }
+  }
 }
 
 /* ── Per-line derivation ────────────────────────────────────────────────── */
@@ -1364,6 +1377,12 @@ export async function runFloorVerb(
    *     so a double-submit does nothing rather than double-inserting. */
   if (job === 'Handover' && input.signatures && input.signatures.length > 0) {
     await writeSignatures(sessionId, input.signatures, ctx, occurredAt)
+  }
+
+  /* 5d — Gate 1 override when receiver ID/authorization cannot be verified (T2-04, D2).
+   *     Written before stage advance so apply_booking_stage_transition admits the transition. */
+  if (job === 'Handover' && input.gate1OverrideReason && input.gate1OverrideReason.trim().length >= 10) {
+    await writeGate1Override(sessionId, input.gate1OverrideReason.trim(), ctx, booking.branch_id)
   }
 
   /* 6 — one question, asked once, answering two things: has every live line of
@@ -1835,6 +1854,62 @@ async function writeSignatures(
   }
 }
 
+/**
+ * Persists an audited Gate 1 override record to `override_records` and `audit_events` (T2-04, D2).
+ * Allows any staff member allowed to hand over to release gear when receiver ID cannot be checked.
+ */
+async function writeGate1Override(
+  sessionId: string,
+  reason: string,
+  ctx: ActionContext,
+  branchId: string,
+): Promise<void> {
+  const auditId = generateClientUuid()
+  await idempotentInsert(
+    'audit_events',
+    {
+      id: auditId,
+      client_uuid: generateClientUuid(),
+      event_class: 'session',
+      category: 'Rentals',
+      module: 'Rentals',
+      action: 'Approve',
+      severity: 'Informational',
+      status: 'Success',
+      table_name: 'operation_sessions',
+      record_id: sessionId,
+      actor_id: ctx.userId,
+      actor_role: ctx.role,
+      branch_id: branchId,
+      reason,
+      new_values: {
+        gate: 'gate.handover.receiver_unverified',
+        gate_number: 1,
+        override_type: 'Gate override',
+        approver_role: ctx.role,
+      },
+    },
+    { queueOnFailure: false },
+  )
+
+  await idempotentInsert(
+    'override_records',
+    {
+      client_uuid: generateClientUuid(),
+      override_type: 'Gate override',
+      subject_type: 'operation_sessions',
+      subject_id: sessionId,
+      gate_number: 1,
+      reason,
+      approver_user_id: ctx.userId,
+      approver_role: ctx.role,
+      audit_event_id: auditId,
+      created_by: ctx.userId,
+    },
+    { queueOnFailure: false },
+  )
+}
+
 /** What an earlier pass of the SAME session already moved on a line. */
 interface PriorMovements {
   unitIds: Set<string>
@@ -1986,7 +2061,7 @@ function resetQueueCandidates(line: FloorLineInput, returnLineId: string): Reset
     }
   }
   if (!hasSerial && line.bookingLineId) {
-    out.push({ unitId: null, bookingLineId: line.bookingLineId, returnLineId, qty: line.quantity ?? 1 })
+    out.push({ unitId: null, bookingLineId: line.bookingLineId, returnLineId, qty: line.qty ?? 1 })
   }
   return out
 }
