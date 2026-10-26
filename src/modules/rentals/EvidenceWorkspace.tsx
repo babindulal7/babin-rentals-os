@@ -394,7 +394,7 @@ export default function EvidenceWorkspace() {
     setUploadProgressText('Compressing photo on device…')
     try {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        throw new Error('Device is offline. Photo was kept on device and will upload when connectivity is restored.')
+        throw new Error('You are offline. This photo was not saved — take it again when you are back online.')
       }
       const compressed = await compressEvidencePhoto(file)
       setUploadProgressText('Uploading to storage…')

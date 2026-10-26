@@ -67,7 +67,7 @@ export function OperationEvidenceStatus({
 
     try {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        throw new Error('Device is offline. Photo was saved on device and will upload when connectivity is restored.')
+        throw new Error('You are offline. This photo was not saved — take it again when you are back online.')
       }
 
       // Device compression: 1600px max edge, JPEG 0.8, EXIF location stripped
@@ -120,7 +120,7 @@ export function OperationEvidenceStatus({
 
     try {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        throw new Error('Device is offline. Photo was saved on device and will upload when connectivity is restored.')
+        throw new Error('You are offline. The photo is not saved yet — tap Retry upload when you are back online.')
       }
 
       await uploadEvidencePhoto({
@@ -180,7 +180,7 @@ export function OperationEvidenceStatus({
             fontSize: 'var(--t-caption, 12px)',
           }}
         >
-          Device is currently offline. Photo uploads require network connectivity (Law 12 / R-40).
+          You are offline. Photos need a connection to save.
         </div>
       )}
 
