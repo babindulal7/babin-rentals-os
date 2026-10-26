@@ -447,14 +447,16 @@ export default function ResetWorkspace({
     void Promise.resolve(
       supabase
         .from('cleaning_queue_entries')
-        .select('unit_id, entered_queue_at, clean_completed_at, reset_completed_at, problem_state, cleaned_by, qc_by, qc_skip_reason, qc_fail_reason')
+        .select('unit_id, booking_line_id, entered_queue_at, clean_completed_at, reset_completed_at, problem_state, cleaned_by, qc_by, qc_skip_reason, qc_fail_reason')
         .eq('booking_id', floorId),
     )
       .then(({ data }) => {
         if (!active || !data || data.length === 0) return
         const saved: Record<string, RowRec> = {}
           for (const entry of data) {
-            const matchingRow = rows.find((r) => r.assetId === entry.unit_id)
+            const matchingRow = rows.find((r) =>
+              entry.unit_id ? r.assetId === entry.unit_id : (entry.booking_line_id ? r.lineId === entry.booking_line_id : false)
+            )
             if (matchingRow) {
               const isReady = entry.reset_completed_at !== null
               const isQC = entry.clean_completed_at !== null && !isReady
@@ -496,18 +498,18 @@ export default function ResetWorkspace({
   })
 
   const readyRows = activeRows.filter((r) => recOf(r.key).queueState === 'Ready')
-  /** The dispatch payload — the REAL `product_units.id`s the operator made Ready. */
+  /** The dispatch payload — the REAL `product_units.id`s and `booking_lines.id`s the operator made Ready. */
   const readyAssetIds = readyRows.filter((r) => r.assetId !== null).map((r) => r.assetId as string)
+  const readyLineIds = readyRows.filter((r) => r.assetId === null).map((r) => r.lineId)
   const readyKeys = new Set(readyRows.map((r) => r.key))
   /**
    * Every row this dispatch will name: the Ready ones and the recorded
-   * exceptions. An exception used to be dropped, which is why a unit marked
-   * Damaged left no record at all (RS-03); it is work the floor did and it is
-   * reported. Both halves need a real `product_units.id` — a reset and a
-   * finding are per unit (0003:899, 0003:455).
+   * exceptions (both serialised units and quantity-tracked lines, 0178).
+   * An exception used to be dropped, which is why a unit marked Damaged
+   * left no record at all (RS-03); it is work the floor did and it is reported.
    */
   const dispatchRows = rows.filter(
-    (r) => r.assetId !== null && (readyKeys.has(r.key) || recOf(r.key).problem !== 'No Problems'),
+    (r) => readyKeys.has(r.key) || recOf(r.key).problem !== 'No Problems',
   )
   const remainingCount = counts.Waiting + counts.Cleaning + counts.QC
 
@@ -556,9 +558,9 @@ export default function ResetWorkspace({
              is a result, so a queue where everything turned out damaged is still a
              session worth recording (RS-03). */
           label: 'At least one serialised unit to record',
-          pass: dispatchRows.length > 0,
+          pass: dispatchRows.some((r) => r.assetId !== null),
           detail:
-            dispatchRows.length > 0
+            dispatchRows.some((r) => r.assetId !== null)
               ? null
               : readyRows.length > 0 || exceptionRows.length > 0
                 ? 'Only quantity-tracked rows are resolved so far. At least one serialised unit must reach Ready or an exception.'
@@ -566,8 +568,11 @@ export default function ResetWorkspace({
         }
       : {
           label: 'Quantity-only reset recording available',
-          pass: false,
-          detail: 'The current server contract cannot record quantity-only reset completion. Local checks are not a saved Reset.',
+          pass: dispatchRows.length > 0,
+          detail:
+            dispatchRows.length > 0
+              ? null
+              : 'Nothing has reached Ready and no exception has been recorded — a reset claiming work on nothing is refused.',
         },
     {
       /* The engine refuses this too — it is checked here so the refusal reads
@@ -973,7 +978,7 @@ export default function ResetWorkspace({
     setDispatching(true)
 
     if (dispatchRows.length === 0) {
-      setDispatchError('Quantity-only reset completion cannot be recorded by the current server contract. Local checklist marks have not been saved.')
+      setDispatchError('At least one item must reach Ready or an exception before completing Reset.')
       setDispatching(false)
       return
     }
@@ -1006,7 +1011,7 @@ export default function ResetWorkspace({
       const failReason = rec.qcFailReason?.trim() ?? ''
       const problemReason = rec.problemReason?.trim() ?? ''
       return {
-        unitId: r.assetId as string,
+        ...(r.assetId !== null ? { unitId: r.assetId } : { lineId: r.lineId }),
         ...(cleanedBy === undefined ? {} : { cleanedBy }),
         ...(qcBy === undefined ? {} : { qcBy }),
         ...(skipReason === '' ? {} : { qcSkipped: true, qcSkipReason: skipReason }),
@@ -1038,6 +1043,7 @@ export default function ResetWorkspace({
           {
             id: floor.id,
             unitIds: readyAssetIds,
+            lineIds: readyLineIds,
             resetEntries,
             clientUuid: completionKey,
           },

@@ -3,6 +3,8 @@ import { Modal } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Button'
 import Icon from '../../../components/ui/Icon'
 import { SegmentedControl } from '../../../components/ui/SegmentedControl'
+import { SignaturePad, type SignaturePadRef } from '../../../components/ui/SignaturePad'
+import { uploadEvidencePhoto } from '../../../lib/evidenceStorage'
 import { formatAdDateTime } from '../../../lib/bs'
 import { formatMoney, rupees } from '../../../lib/money'
 
@@ -12,6 +14,7 @@ export interface DigitalSignature {
   atIso: string
   dataUrl?: string | undefined
   mode: 'draw' | 'type'
+  evidenceFileId?: string | null | undefined
   verifiedGovId?: boolean | undefined
   depositAcknowledged?: boolean | undefined
 }
@@ -19,9 +22,11 @@ export interface DigitalSignature {
 export interface SignOnGlassModalProps {
   isOpen: boolean
   onClose: () => void
-  role: 'receiver' | 'warehouse' | 'returning'
+  role: 'receiver' | 'warehouse' | 'returning' | 'driver'
   defaultName: string
   bookingNo: string
+  bookingId?: string | undefined
+  userId?: string | undefined
   clientName?: string | null | undefined
   deliveryType?: string | null | undefined
   isDepositPending?: boolean | undefined
@@ -29,13 +34,14 @@ export interface SignOnGlassModalProps {
   onSignComplete: (sig: DigitalSignature) => void
 }
 
-
 export function SignOnGlassModal({
   isOpen,
   onClose,
   role,
   defaultName,
   bookingNo,
+  bookingId,
+  userId,
   clientName,
   deliveryType,
   isDepositPending = false,
@@ -49,132 +55,46 @@ export function SignOnGlassModal({
   const [verifiedGovId, setVerifiedGovId] = useState(false)
   const [depositAcknowledged, setDepositAcknowledged] = useState(!isDepositPending)
   const [canvasError, setCanvasError] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
 
-  const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const isDrawingRef = useRef(false)
-  const pointsRef = useRef<{ x: number; y: number }[]>([])
+  const sigPadRef = useRef<SignaturePadRef | null>(null)
 
   // Reset state when opened or target changes
   useEffect(() => {
     if (isOpen) {
-      setSignerName(defaultName || (role === 'receiver' || role === 'returning' ? (clientName ?? '') : 'Warehouse Staff'))
+      setSignerName(
+        defaultName ||
+          (role === 'receiver' || role === 'returning'
+            ? clientName ?? ''
+            : role === 'driver'
+              ? 'Driver'
+              : 'Warehouse Staff'),
+      )
       setHasDrawn(false)
       setCanvasError(null)
       setAgreedToTerms(true)
       setVerifiedGovId(false)
       setDepositAcknowledged(!isDepositPending)
+      setIsUploading(false)
+      sigPadRef.current?.clear()
     }
   }, [isOpen, defaultName, role, clientName, isDepositPending])
 
-  // Setup canvas high-DPI resolution
-  useEffect(() => {
-    if (!isOpen || mode !== 'draw') return
-    const timer = setTimeout(() => {
-      const canvas = canvasRef.current
-      if (!canvas) return
-      const rect = canvas.getBoundingClientRect()
-      const dpr = window.devicePixelRatio || 1
-      canvas.width = rect.width * dpr
-      canvas.height = rect.height * dpr
-      const ctx = canvas.getContext('2d')
-      if (ctx) {
-        ctx.scale(dpr, dpr)
-        ctx.strokeStyle = '#38bdf8'
-        ctx.lineWidth = 2.5
-        ctx.lineCap = 'round'
-        ctx.lineJoin = 'round'
-      }
-    }, 50)
-    return () => clearTimeout(timer)
-  }, [isOpen, mode])
-
-  const clearCanvas = () => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (ctx) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-    }
-    pointsRef.current = []
+  const handleClearSignature = () => {
+    sigPadRef.current?.clear()
     setHasDrawn(false)
     setCanvasError(null)
   }
 
-  // Pointer event handlers for drawing
-  const getCoordinates = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current
-    if (!canvas) return { x: 0, y: 0 }
-    const rect = canvas.getBoundingClientRect()
-    return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    }
-  }
-
-  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    e.preventDefault()
-    e.currentTarget.setPointerCapture(e.pointerId)
-    isDrawingRef.current = true
-    const pt = getCoordinates(e)
-    pointsRef.current = [pt]
-
-    const canvas = canvasRef.current
-    const ctx = canvas?.getContext('2d')
-    if (ctx) {
-      ctx.beginPath()
-      ctx.arc(pt.x, pt.y, 1.25, 0, Math.PI * 2)
-      ctx.fillStyle = '#38bdf8'
-      ctx.fill()
-    }
-    setHasDrawn(true)
-    setCanvasError(null)
-  }
-
-  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!isDrawingRef.current) return
-    e.preventDefault()
-    const pt = getCoordinates(e)
-    pointsRef.current.push(pt)
-
-    const canvas = canvasRef.current
-    const ctx = canvas?.getContext('2d')
-    if (!ctx || pointsRef.current.length < 2) return
-
-    const pts = pointsRef.current
-    const p1 = pts[pts.length - 2]
-    const p2 = pts[pts.length - 1]
-    if (!p1 || !p2) return
-
-    ctx.beginPath()
-    ctx.moveTo(p1.x, p1.y)
-    ctx.lineTo(p2.x, p2.y)
-    ctx.strokeStyle = '#38bdf8'
-    ctx.lineWidth = 2.5
-    ctx.lineCap = 'round'
-    ctx.lineJoin = 'round'
-    ctx.stroke()
-  }
-
-  const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!isDrawingRef.current) return
-    e.preventDefault()
-    isDrawingRef.current = false
-    try {
-      e.currentTarget.releasePointerCapture(e.pointerId)
-    } catch {
-      // Ignore if pointer capture already lost
-    }
-  }
-
-  const handleAcceptSignature = () => {
+  const handleAcceptSignature = async () => {
     const trimmedName = signerName.trim()
     if (!trimmedName) {
       setCanvasError('Please enter the signer legal name.')
       return
     }
 
-    if (mode === 'draw' && !hasDrawn) {
-      setCanvasError('Please sign your signature on the glass canvas before submitting.')
+    if (mode === 'draw' && (!hasDrawn || sigPadRef.current?.isEmpty())) {
+      setCanvasError('Please draw your signature on the glass canvas before submitting.')
       return
     }
 
@@ -190,11 +110,12 @@ export function SignOnGlassModal({
 
     const nowIso = new Date().toISOString()
     let dataUrl: string | undefined = undefined
+    let fileToUpload: File | null = null
 
-    if (mode === 'draw' && canvasRef.current) {
-      dataUrl = canvasRef.current.toDataURL('image/png')
+    if (mode === 'draw' && sigPadRef.current) {
+      dataUrl = sigPadRef.current.toDataURL('image/png')
+      fileToUpload = await sigPadRef.current.toFile(`signature-${role}-${Date.now()}.png`)
     } else if (mode === 'type') {
-      // Generate synthetic signature image from typed text
       try {
         const offCanvas = document.createElement('canvas')
         offCanvas.width = 540
@@ -218,18 +139,62 @@ export function SignOnGlassModal({
           offCtx.fillStyle = '#94a3b8'
           offCtx.fillText(`DIGITALLY ATTESTED · ${bookingNo} · ${formatAdDateTime(nowIso)}`, 40, 118)
           dataUrl = offCanvas.toDataURL('image/png')
+
+          const [header, base64] = dataUrl.split(',')
+          const mime = header?.match(/:(.*?);/)?.[1] || 'image/png'
+          const binary = atob(base64 || '')
+          const array = new Uint8Array(binary.length)
+          for (let i = 0; i < binary.length; i++) array[i] = binary.charCodeAt(i)
+          fileToUpload = new File([array], `signature-${role}-${Date.now()}.png`, { type: mime })
         }
       } catch {
-        // Fallback gracefully without dataUrl
+        // Fallback gracefully without synthetic image
       }
     }
 
+    let evidenceFileId: string | null = null
+
+    // Upload signature PNG to evidence bucket (T2-02) if bookingId and userId are provided
+    if (fileToUpload && bookingId && userId) {
+      setIsUploading(true)
+      setCanvasError(null)
+      try {
+        const uploadResult = await uploadEvidencePhoto({
+          file: fileToUpload,
+          filename: `signature-${role}-${Date.now()}.png`,
+          category: 'Client Documents',
+          reference: {
+            bookingId,
+            operationStage: role === 'returning' ? 'Return' : role === 'driver' ? 'Delivery' : 'Pickup',
+          },
+          userId,
+        })
+        evidenceFileId = uploadResult.id
+      } catch (err: unknown) {
+        setIsUploading(false)
+        const msg = err instanceof Error ? err.message : String(err)
+        setCanvasError(`Could not store signature: ${msg}`)
+        return
+      }
+      setIsUploading(false)
+    }
+
+    const mappedRole =
+      role === 'receiver'
+        ? 'Receiver'
+        : role === 'returning'
+          ? 'Returning person'
+          : role === 'driver'
+            ? 'Driver'
+            : 'Warehouse staff'
+
     onSignComplete({
       name: trimmedName,
-      role: role === 'receiver' ? 'Receiver' : role === 'returning' ? 'Returning person' : 'Warehouse staff',
+      role: mappedRole,
       atIso: nowIso,
       dataUrl,
       mode,
+      evidenceFileId,
       verifiedGovId: role === 'receiver' ? verifiedGovId : undefined,
       depositAcknowledged: isDepositPending ? depositAcknowledged : undefined,
     })
@@ -241,8 +206,10 @@ export function SignOnGlassModal({
     role === 'receiver'
       ? 'Receiver (Client / Crew Rep)'
       : role === 'returning'
-      ? 'Returning Client / Courier'
-      : 'Warehouse Staff (Inspector / Dispatcher)'
+        ? 'Returning Client / Courier'
+        : role === 'driver'
+          ? 'Driver (Delivery Handover)'
+          : 'Warehouse Staff (Inspector / Dispatcher)'
 
   return (
     <Modal
@@ -257,17 +224,26 @@ export function SignOnGlassModal({
       }
       footer={
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 12 }}>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose} disabled={isUploading}>
             Cancel
           </Button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {mode === 'draw' && (
-              <Button icon="refresh" variant="secondary" onClick={clearCanvas}>
+              <Button icon="refresh" variant="secondary" onClick={handleClearSignature} disabled={isUploading}>
                 Clear Signature
               </Button>
             )}
-            <Button icon="checklist" variant="primary" onClick={handleAcceptSignature}>
-              {role === 'returning' ? 'Accept & Sign Return' : 'Accept & Sign Handover'}
+            <Button
+              icon="checklist"
+              variant="primary"
+              onClick={handleAcceptSignature}
+              disabled={isUploading}
+            >
+              {isUploading
+                ? 'Uploading Signature…'
+                : role === 'returning'
+                  ? 'Accept & Sign Return'
+                  : 'Accept & Sign Handover'}
             </Button>
           </div>
         </div>
@@ -293,12 +269,13 @@ export function SignOnGlassModal({
               {role === 'receiver'
                 ? `I hereby confirm receipt of the listed camera packages, flight cases, and optical gear for booking ${bookingNo} in verified operating condition with clean optical elements and intact seals. I accept legal custody and operational responsibility under Babin Rentals terms until verified return.`
                 : role === 'returning'
-                ? `I hereby confirm return of the listed equipment for booking ${bookingNo}. I acknowledge the condition assessed at the counter and any recorded damage, optical discrepancies, or missing items under Babin Rentals return policies.`
-                : `I certify that all packed equipment items and flight cases have been inspected, serial numbers verified against booking ${bookingNo}, and custody transferred or returned according to protocol.`}
+                  ? `I hereby confirm return of the listed equipment for booking ${bookingNo}. I acknowledge the condition assessed at the counter and any recorded damage, optical discrepancies, or missing items under Babin Rentals return policies.`
+                  : role === 'driver'
+                    ? `I certify receipt of the packed equipment items for transport and delivery to client for booking ${bookingNo}, under verified seal and transport protocols.`
+                    : `I certify that all packed equipment items and flight cases have been inspected, serial numbers verified against booking ${bookingNo}, and custody transferred or returned according to protocol.`}
             </p>
           </div>
         </div>
-
 
         {/* Deposit Hold Warning Gate if Deposit is Pending */}
         {isDepositPending && (
@@ -376,7 +353,13 @@ export function SignOnGlassModal({
                 fontWeight: 600,
               }}
             >
-              {role === 'receiver' ? 'Authorized Client Receiver' : 'Babin Rentals Dispatch Officer'}
+              {role === 'receiver'
+                ? 'Authorized Client Receiver'
+                : role === 'returning'
+                  ? 'Returning Representative'
+                  : role === 'driver'
+                    ? 'Authorized Delivery Driver'
+                    : 'Babin Rentals Dispatch Officer'}
             </div>
           </div>
         </div>
@@ -403,75 +386,18 @@ export function SignOnGlassModal({
           />
         </div>
 
-        {/* Mode 1: Draw Canvas */}
+        {/* Mode 1: Draw Canvas with SignaturePad */}
         {mode === 'draw' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div
-              style={{
-                position: 'relative',
-                width: '100%',
-                height: 180,
-                borderRadius: 'var(--r-card, 10px)',
-                border: '1.5px dashed var(--border2, #475569)',
-                background: 'var(--input-bg, #090d16)',
-                overflow: 'hidden',
-                boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.4)',
-              }}
-            >
-              {/* Baseline signature guideline */}
-              <div
-                style={{
-                  position: 'absolute',
-                  left: 32,
-                  right: 32,
-                  bottom: 42,
-                  borderBottom: '1px dashed rgba(148, 163, 184, 0.25)',
-                  pointerEvents: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <span style={{ color: 'rgba(148, 163, 184, 0.4)', fontSize: 13, fontFamily: 'var(--font-id, sans-serif)' }}>✕ Sign on line</span>
-                <span style={{ color: 'rgba(148, 163, 184, 0.4)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Babin Rentals Digital Handover</span>
-              </div>
-
-              {!hasDrawn && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--muted, #64748b)',
-                    pointerEvents: 'none',
-                    gap: 6,
-                  }}
-                >
-                  <Icon name="edit" size={24} style={{ opacity: 0.6 }} />
-                  <span style={{ fontSize: 'var(--t-meta, 12px)' }}>Sign with finger, stylus, or cursor on glass</span>
-                </div>
-              )}
-
-              <canvas
-                ref={canvasRef}
-                onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-                onPointerLeave={handlePointerUp}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'block',
-                  cursor: 'crosshair',
-                  touchAction: 'none',
-                }}
-              />
-            </div>
+            <SignaturePad
+              ref={sigPadRef}
+              height={180}
+              onDrawChange={setHasDrawn}
+              ariaLabel="Sign on glass canvas"
+              guideText="Sign above this line · Babin Rentals Digital Handover"
+            />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 'var(--t-meta, 11px)', color: 'var(--muted)' }}>
-              <span>High-resolution vector stroke capture (Bézier smoothed)</span>
+              <span>High-resolution vector stroke capture for finger or stylus</span>
               {hasDrawn && <span style={{ color: 'var(--success-text, #22c55e)', fontWeight: 600 }}>✓ Signature Captured</span>}
             </div>
           </div>

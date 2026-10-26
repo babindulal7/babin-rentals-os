@@ -12,11 +12,11 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0178**
+**Next free number: 0179**
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
-| — | — | — | — | — |
+| 0178 | T2-reset | quantity-only-reset | lane-a/T2-quantity-reset | verified |
 
 ## Expected migrations (not yet claimed)
 

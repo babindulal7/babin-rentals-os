@@ -21,16 +21,18 @@ export type CompleteResetInput = {
   /** `bookings.id` (uuid) or `bookings.booking_no` (`B-` + digits — corrected 15 Aug 2026, see `confirmRental.ts`). */
   id: string;
   /**
-   * `cleaning_queue_entries.unit_id` for each item whose reset was completed.
+   * `cleaning_queue_entries.unit_id` for each serialised item whose reset was completed.
    *
-   * **Required in practice** — `validate` refuses an empty list. The obvious
-   * shortcut, "reset everything queued for this booking", is not available: which
-   * items an operator actually reset is a floor fact, and deriving it from the
-   * queue would assert work on items nobody touched.
+   * **Required in practice** unless `lineIds` or `resetEntries` is provided —
+   * `validate` refuses an empty list. The obvious shortcut, "reset everything queued
+   * for this booking", is not available: which items an operator actually reset
+   * is a floor fact, and deriving it from the queue would assert work on items nobody touched.
    */
   unitIds?: string[];
+  /** `booking_lines.id` for quantity-tracked items whose reset was completed. */
+  lineIds?: string[];
   /**
-   * The fuller form of `unitIds` — the same items with the record the floor
+   * The fuller form of `unitIds` / `lineIds` — the same items with the record the floor
    * actually made (who cleaned, who checked, whether the check was skipped and
    * why, any problem). One `cleaning_queue_entries` row each; see
    * `ResetEntryInput` for the uuid-not-name rule on `cleanedBy` / `qcBy`. When
@@ -56,6 +58,7 @@ export const completeReset = createAction<CompleteResetInput, FloorVerbResult>({
     validateFloorVerb('Reset', {
       bookingRef: input.id,
       ...(input.unitIds === undefined ? {} : { unitIds: input.unitIds }),
+      ...(input.lineIds === undefined ? {} : { lineIds: input.lineIds }),
       ...(input.resetEntries === undefined ? {} : { resetEntries: input.resetEntries }),
     }),
 
@@ -65,6 +68,7 @@ export const completeReset = createAction<CompleteResetInput, FloorVerbResult>({
       {
         bookingRef: input.id,
         ...(input.unitIds === undefined ? {} : { unitIds: input.unitIds }),
+        ...(input.lineIds === undefined ? {} : { lineIds: input.lineIds }),
         ...(input.resetEntries === undefined ? {} : { resetEntries: input.resetEntries }),
         ...(input.clientUuid === undefined ? {} : { clientUuid: input.clientUuid }),
         ...(input.occurredAt === undefined ? {} : { occurredAt: input.occurredAt }),

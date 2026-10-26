@@ -1545,9 +1545,11 @@ export interface Database {
         Row: {
           id: string
           client_uuid: string
-          unit_id: string
+          unit_id: string | null
+          booking_line_id: string | null
           booking_id: string | null
           return_line_id: string | null
+          qty: number
           state: CleaningQueueState
           requires_clean: boolean
           requires_reset: boolean
@@ -1572,9 +1574,11 @@ export interface Database {
         Insert: {
           id?: string
           client_uuid: string
-          unit_id: string
+          unit_id?: string | null
+          booking_line_id?: string | null
           booking_id?: string | null
           return_line_id?: string | null
+          qty?: number
           state?: CleaningQueueState
           requires_clean?: boolean
           requires_reset?: boolean

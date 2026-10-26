@@ -1,5 +1,64 @@
 # Progress Log
 
+## 2026-10-26 (f) — T2-02 Drawn signatures on glass wired to Handover, Return, and Documents
+
+**Did**
+- Created `src/components/ui/SignaturePad.tsx` supporting touch (finger), stylus (Apple Pencil), and mouse via Pointer Events (`pointerdown`, `pointermove`, `pointerup`, `pointercancel`, `setPointerCapture`). Configured with `touch-action: none` (prevents phone/tablet scrolling while drawing), DPI scaling (`window.devicePixelRatio`), minimum 44px hit target for the Clear control (Law 15), baseline guide line, and export methods (`toDataURL`, `toBlob`, `toFile`).
+- Added unit test suite `src/components/ui/__tests__/SignaturePad.test.tsx` (5/5 tests passing) covering canvas rendering, touch-action none, 44px hit floor, drawing state transitions, empty check refusal, and clear reset.
+- Extended `src/actions/rentals/floorVerb.ts`:
+  - Updated `SignatureInput` to accept `role: 'Receiver' | 'Warehouse staff' | 'Driver'` and optional `evidenceFileId?: string | null | undefined`.
+  - Updated `writeSignatures` to persist `signature_evidence_file_id: sig.evidenceFileId ?? null` into `signatures` table.
+  - Added test coverage in `src/actions/rentals/__tests__/floorVerbs.test.ts` (95/95 tests passing).
+- Upgraded `src/modules/rentals/modals/SignOnGlassModal.tsx`:
+  - Integrated `SignaturePad`.
+  - Refused blank signature pad submissions with inline feedback `"Please draw your signature on the glass canvas before submitting."`.
+  - Added automatic upload of signature drawing PNG via `uploadEvidencePhoto`, linking it to `evidence_files` and passing `evidenceFileId` back on submit.
+  - Added support for `'driver'` role alongside receiver, warehouse, and returning person.
+  - Added unit test suite `src/modules/rentals/modals/__tests__/SignOnGlassModal.test.tsx` (3/3 tests passing).
+- Integrated `SignOnGlassModal` into `src/modules/rentals/HandoverWorkspace.tsx`:
+  - Replaced unavailable Driver signature stub with real Sign-on-Glass capture when `driverNeeded` is true.
+  - Captured and passed `evidenceFileId` for Receiver, Warehouse, and Driver to `runFloorVerb('Handover')`.
+- Integrated `SignOnGlassModal` into `src/modules/rentals/ReturnWorkspace.tsx` with bookingId and userId for evidence photo upload.
+- Updated `src/data/documents.ts` and `src/lib/queries/documents.ts` to surface signed agreement evidence files on booking documents list with direct links to the evidence viewer.
+- Updated `src/modules/rentals/BookingDetail.tsx` Documents block to link signed documents to evidence viewer.
+
+**Ruled**
+- Client and warehouse drawn signatures are required on glass before gear release (21 Jul lock, PERMISSIONS §6.1).
+- Blank signatures are strictly refused inline without modifying database state.
+- Custody transitions remain fail-closed online RPCs; signature PNGs upload to Supabase storage `evidence` bucket and link to `evidence_files` and `signatures.signature_evidence_file_id`.
+- Touch targets on signature pad controls strictly adhere to minimum 44px hit targets (Law 15).
+
+**Verified**
+- `npm run typecheck` (`tsc --noEmit`): PASS (0 errors).
+- `npm run lint` (`eslint src --max-warnings 0`): PASS (0 errors, 0 warnings).
+- `npm run check:pglite`: PASS (175/175 migrations applied from scratch, 31 views checked, 93 definer functions pinned).
+- `npm run check:lifecycle`: PASS (33/33 green).
+- `npm run check:contrast`: PASS (106/106 WCAG AA token pairs).
+- `npx vitest run`: PASS (123/123 tests passing across all modified/added suites).
+- `npm run build`: PASS (built in 1m 36s, PWA generated).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 55 / 55 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 45 / 45 (100%) | +0 |
+| Lifecycle | steps green / total | 33 / 33 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 175 files · check:pglite 175/175 applied, 0 failed (recorded 2026-10-26T10:21:01.795Z). Suite: Historical suite: 5747/5747 passed, 0 failed (recorded 2026-10-26T10:02:45.577Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5739/5739 passed, 0 failed (recorded 2026-10-26T06:01:16.431Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-26T10:20:24.159Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T2-03 (ID card as the deposit collateral record kept apart from money).
+- T2-04 (Gate 1 override by any handover staff with audited 10+ character reason).
+- T2-05 (Technician can do every floor verb while remaining money-blind).
+- T2-06 (Repair job closes the damage finding).
+- T6-01 (Nepali glossary wave 1 for ~200 floor terms).
+
 ## 2026-10-26 (e) — T0 hygiene & T2-01 camera evidence upload wired to floor workspaces
 
 **Did**

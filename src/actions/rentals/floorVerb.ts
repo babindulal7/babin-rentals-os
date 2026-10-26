@@ -284,8 +284,10 @@ export interface DamageFindingInput {
 }
 
 export interface ResetEntryInput {
-  /** `cleaning_queue_entries.unit_id` — a `product_units.id`. */
-  unitId: string
+  /** `cleaning_queue_entries.unit_id` — a `product_units.id`. Optional for quantity rows. */
+  unitId?: string
+  /** `booking_lines.id` for quantity rows. */
+  lineId?: string
   /** `users.id` of whoever ticked the cleaning checklist. Stamps `clean_completed_at` with it. */
   cleanedBy?: string
   /** `users.id` of whoever performed QC. */
@@ -354,6 +356,8 @@ export interface FloorVerbInput {
   lines?: readonly FloorLineInput[]
   /** Reset only: `cleaning_queue_entries.unit_id` for each item that was reset. */
   unitIds?: readonly string[]
+  /** Reset only: `booking_lines.id` for each quantity line that was reset. */
+  lineIds?: readonly string[]
   /**
    * Handover only — gate 1's two facts, checked against the receiver's physical
    * ID at the counter. They ride `operation_sessions.government_id_verified` /
@@ -401,14 +405,16 @@ export interface FloorVerbInput {
  * `runFloorVerb`, which inserts the rows before the stage transition fires.
  */
 export interface SignatureInput {
-  /** `'Receiver'` or `'Warehouse staff'` for handovers. */
-  role: 'Receiver' | 'Warehouse staff'
+  /** `'Receiver'`, `'Warehouse staff'`, or `'Driver'` for handovers. */
+  role: 'Receiver' | 'Warehouse staff' | 'Driver'
   /** Signer's display name from real records (client name or operator name). */
   signerName: string
   /** ISO-8601 UTC — the instant the operator tapped "Sign". Law 7. */
   signedAt: string
   /** Whether this role is required. Receiver and Warehouse staff are always required. */
   isRequired: boolean
+  /** Stored signature PNG evidence file reference (T2-02). */
+  evidenceFileId?: string | null | undefined
 }
 
 export interface FloorVerbResult {
@@ -653,7 +659,9 @@ const SEVERITY_NOT_ASSESSED = 'Not assessed — no severity scale is ruled (0003
  */
 function resetEntriesOf(input: FloorVerbInput): readonly ResetEntryInput[] {
   if (input.resetEntries !== undefined) return input.resetEntries
-  return (input.unitIds ?? []).map((unitId) => ({ unitId }))
+  const unitEntries = (input.unitIds ?? []).map((unitId) => ({ unitId }))
+  const lineEntries = (input.lineIds ?? []).map((lineId) => ({ lineId }))
+  return [...unitEntries, ...lineEntries]
 }
 
 /**
@@ -889,26 +897,27 @@ export function validateFloorVerb(job: JobName, input: FloorVerbInput): void {
     const entries = resetEntriesOf(input)
     if (entries.length === 0) {
       throw new Error(
-        'Reset is recorded per item, not per booking (0003:899), so it needs the unit ids that were reset. ' +
+        'Reset is recorded per item, not per booking (0003:899), so it needs the unit or line ids that were reset. ' +
           'None were supplied, so nothing was written.',
       )
     }
 
-    const seenUnits = new Set<string>()
+    const seenTargets = new Set<string>()
     for (const entry of entries) {
-      if (!entry.unitId) throw new Error('Reset: every entry must name a product_units id.')
-      if (seenUnits.has(entry.unitId)) {
+      const targetId = entry.unitId || entry.lineId
+      if (!targetId) throw new Error('Reset: every entry must name a product_units id or a booking_lines id.')
+      if (seenTargets.has(targetId)) {
         throw new Error(
-          `Reset: unit ${entry.unitId} appears twice. A unit holds one open queue entry per booking, ` +
+          `Reset: target ${targetId} appears twice. A target holds one open queue entry per booking, ` +
             'so the second would be written over the first.',
         )
       }
-      seenUnits.add(entry.unitId)
+      seenTargets.add(targetId)
 
       if (entry.problemState === 'Damaged') {
         if ((entry.problemReason ?? '').trim() === '') {
           throw new Error(
-            `Reset: unit ${entry.unitId} is marked Damaged with no description. A damage finding's ` +
+            `Reset: target ${targetId} is marked Damaged with no description. A damage finding's ` +
               'description is a NOT NULL column (0003:457), not a form rule — nothing was written.',
           )
         }
@@ -917,7 +926,7 @@ export function validateFloorVerb(job: JobName, input: FloorVerbInput): void {
       if (entry.qcSkipped === true) {
         if ((entry.qcSkipReason ?? '').trim() === '') {
           throw new Error(
-            `Reset: unit ${entry.unitId} declares a skipped QC with no reason. ` +
+            `Reset: target ${targetId} declares a skipped QC with no reason. ` +
               'CHECK cleaning_queue_entries_qc_is_a_second_pair_of_eyes (0003:887) rejects that row.',
           )
         }
@@ -927,7 +936,7 @@ export function validateFloorVerb(job: JobName, input: FloorVerbInput): void {
         entry.qcBy === entry.cleanedBy
       ) {
         throw new Error(
-          `Reset: unit ${entry.unitId} was checked by the person who cleaned it. A self-approved check is ` +
+          `Reset: target ${targetId} was checked by the person who cleaned it. A self-approved check is ` +
             'not a check (0003:887) — either a second person checks it, or record it as a skipped QC ' +
             'with a reason. Nothing was written.',
         )
@@ -1809,6 +1818,7 @@ async function writeSignatures(
           signer_name: sig.signerName,
           signed_at: sig.signedAt,
           device: 'Web',
+          signature_evidence_file_id: sig.evidenceFileId ?? null,
           is_required: sig.isRequired,
           created_by: ctx.userId,
           created_at: occurredAt,
@@ -1941,12 +1951,14 @@ async function writeUnitStates(
 /* ── The reset queue: raised at Return, completed at Reset ──────────────── */
 
 interface ResetQueueCandidate {
-  unitId: string
+  unitId: string | null
+  bookingLineId: string | null
   returnLineId: string
+  qty: number
 }
 
 /**
- * Which units on one returned line belong in the reset queue.
+ * Which units/lines on one returned line belong in the reset queue.
  *
  * Three exclusions, each because the row would otherwise be a claim nobody
  * made:
@@ -1954,11 +1966,9 @@ interface ResetQueueCandidate {
  *  - a `'missing'` line — nothing came back, so nothing is waiting to be reset;
  *  - `condition: 'Lost'` — same fact, recorded on the line rather than the
  *    outcome, and `returnMovementState` already lands it in `'Missing'`;
- *  - a unit-less scan, i.e. a quantity-tracked line. `cleaning_queue_entries.unit_id`
- *    is NOT NULL (`0003:861`) and the queue is per item (`0003:899`), so a line
- *    with no `product_units.id` has no row to write. It is not dropped in
- *    silence: the Reset workspace lists these separately and says why.
+ *  - items that did not return.
  *
+ * Both serialised units and quantity-tracked lines are queued (0178).
  * A `'Damaged'` unit IS queued. Damage routes the item afterwards; it still
  * came back and it still has to be handled by the warehouse.
  */
@@ -1967,31 +1977,39 @@ function resetQueueCandidates(line: FloorLineInput, returnLineId: string): Reset
   if (line.condition === 'Lost') return []
 
   const out: ResetQueueCandidate[] = []
-  for (const scan of scannedUnits(line)) {
-    if (scan.unitId === null) continue
-    out.push({ unitId: scan.unitId, returnLineId })
+  const scans = scannedUnits(line)
+  let hasSerial = false
+  for (const scan of scans) {
+    if (scan.unitId !== null) {
+      hasSerial = true
+      out.push({ unitId: scan.unitId, bookingLineId: line.bookingLineId ?? null, returnLineId, qty: 1 })
+    }
+  }
+  if (!hasSerial && line.bookingLineId) {
+    out.push({ unitId: null, bookingLineId: line.bookingLineId, returnLineId, qty: line.quantity ?? 1 })
   }
   return out
 }
 
 /**
- * One queue entry per serialised unit this Return brought back.
+ * One queue entry per serialised unit or quantity line this Return brought back.
  *
  * **`requires_reset` is set explicitly, and that is the whole point.** The
  * column defaults to `false` (`0003:868`) and `completeResetQueue` refuses any
  * entry carrying `false`, because CHECK `cleaning_queue_entries_reset_only_when_required`
  * (`0003:895`) would reject the write anyway. An insert that leaned on the
  * default would therefore fill the queue with rows that can never be completed
- * — the same dead end, one step further along. Ruled: every returned serialised
- * unit enters the queue requiring a reset, and `requires_clean` keeps the
+ * — the same dead end, one step further along. Ruled: every returned item
+ * enters the queue requiring a reset, and `requires_clean` keeps the
  * column's own default of `true` — stated here rather than inherited, so a
  * later default change cannot silently retire the rule.
  *
  * **Idempotency.** Handover and Return are multi-session by design (`0003:129`,
- * staggered collection), so this runs again on the same booking with some units
- * already queued. Open entries for `(booking_id, unit_id)` are read first and
- * those units are skipped, so a second collection queues only what it actually
- * brought back and a replayed one queues nothing.
+ * staggered collection), so this runs again on the same booking with some items
+ * already queued. Open entries for `(booking_id, unit_id)` and
+ * `(booking_id, booking_line_id)` are read first and those items are skipped,
+ * so a second collection queues only what it actually brought back and a
+ * replayed one queues nothing.
  */
 async function enqueueReturnedUnits(
   booking: BookingHead,
@@ -2001,19 +2019,22 @@ async function enqueueReturnedUnits(
 ): Promise<number> {
   if (candidates.length === 0) return 0
 
-  // A unit can only be on one line of a booking, but a caller could still name
-  // it twice; first mention wins and the second is not a second row.
   const byUnit = new Map<string, ResetQueueCandidate>()
+  const byLine = new Map<string, ResetQueueCandidate>()
   for (const candidate of candidates) {
-    if (!byUnit.has(candidate.unitId)) byUnit.set(candidate.unitId, candidate)
+    if (candidate.unitId) {
+      if (!byUnit.has(candidate.unitId)) byUnit.set(candidate.unitId, candidate)
+    } else if (candidate.bookingLineId) {
+      if (!byLine.has(candidate.bookingLineId)) byLine.set(candidate.bookingLineId, candidate)
+    }
   }
   const unitIds = [...byUnit.keys()]
+  const lineIds = [...byLine.keys()]
 
   const { data, error } = await supabase
     .from('cleaning_queue_entries')
-    .select('id, unit_id')
+    .select('id, unit_id, booking_line_id')
     .eq('booking_id', booking.id)
-    .in('unit_id', unitIds)
 
   if (error) {
     throw new Error(
@@ -2021,18 +2042,42 @@ async function enqueueReturnedUnits(
     )
   }
 
-  const queued = new Set(((data ?? []) as Array<{ unit_id: string }>).map((r) => r.unit_id))
+  const existingRows = (data ?? []) as Array<{ unit_id: string | null; booking_line_id: string | null }>
+  const queuedUnits = new Set(existingRows.filter((r) => r.unit_id !== null).map((r) => r.unit_id as string))
+  const queuedLines = new Set(existingRows.filter((r) => r.booking_line_id !== null).map((r) => r.booking_line_id as string))
   let written = 0
 
   for (const unitId of unitIds) {
-    if (queued.has(unitId)) continue
+    if (queuedUnits.has(unitId)) continue
     const candidate = byUnit.get(unitId) as ResetQueueCandidate
 
     await idempotentInsert('cleaning_queue_entries', {
       client_uuid: generateClientUuid(),
       unit_id: unitId,
+      booking_line_id: candidate.bookingLineId,
       booking_id: booking.id,
       return_line_id: candidate.returnLineId,
+      qty: 1,
+      state: 'Waiting',
+      requires_clean: true,
+      requires_reset: true,
+      entered_queue_at: at,
+      created_by: ctx.userId,
+    }, { queueOnFailure: false })
+    written += 1
+  }
+
+  for (const lineId of lineIds) {
+    if (queuedLines.has(lineId)) continue
+    const candidate = byLine.get(lineId) as ResetQueueCandidate
+
+    await idempotentInsert('cleaning_queue_entries', {
+      client_uuid: generateClientUuid(),
+      unit_id: null,
+      booking_line_id: lineId,
+      booking_id: booking.id,
+      return_line_id: candidate.returnLineId,
+      qty: candidate.qty,
       state: 'Waiting',
       requires_clean: true,
       requires_reset: true,
@@ -2082,28 +2127,32 @@ async function completeResetQueue(
   at: string,
   actionUuid: string,
 ): Promise<{ reset: number; findings: number }> {
-  const byUnit = new Map(entries.map((e) => [e.unitId, e]))
+  const byUnit = new Map(entries.filter((e) => Boolean(e.unitId)).map((e) => [e.unitId as string, e]))
+  const byLine = new Map(entries.filter((e) => !e.unitId && Boolean(e.lineId)).map((e) => [e.lineId as string, e]))
   const unitIds = [...byUnit.keys()]
+  const lineIds = [...byLine.keys()]
 
   const { data, error } = await supabase
     .from('cleaning_queue_entries')
-    .select('id, unit_id, requires_clean, requires_reset, clean_completed_at, reset_completed_at')
+    .select('id, unit_id, booking_line_id, requires_clean, requires_reset, clean_completed_at, reset_completed_at')
     .eq('booking_id', booking.id)
-    .in('unit_id', unitIds)
 
   if (error) throw new Error(`Could not read the reset queue for ${booking.booking_no}: ${error.message}`)
 
   const rows = (data ?? []) as Array<{
     id: string
-    unit_id: string
+    unit_id: string | null
+    booking_line_id: string | null
     requires_clean: boolean
     requires_reset: boolean
     clean_completed_at: string | null
     reset_completed_at: string | null
   }>
 
-  const found = new Set(rows.map((e) => e.unit_id))
-  const unqueued = unitIds.filter((u) => !found.has(u))
+  const foundUnits = new Set(rows.filter((r) => r.unit_id !== null).map((e) => e.unit_id as string))
+  const foundLines = new Set(rows.filter((r) => r.booking_line_id !== null).map((e) => e.booking_line_id as string))
+
+  const unqueued = unitIds.filter((u) => !foundUnits.has(u))
   if (unqueued.length > 0) {
     throw new Error(
       `${unqueued.length} unit(s) are not in ${booking.booking_no}'s reset queue — ${unqueued.join(', ')}. ` +
@@ -2111,19 +2160,60 @@ async function completeResetQueue(
     )
   }
 
+  // If a quantity line was returned but not yet queued in cleaning_queue_entries,
+  // ensure it exists if it is a live booking line of this booking
+  const unqueuedLines = lineIds.filter((l) => !foundLines.has(l))
+  if (unqueuedLines.length > 0) {
+    const liveLines = await readBookingLines(booking.id)
+    const validBookingLineIds = new Set(liveLines.map((l) => l.id))
+    for (const lineId of unqueuedLines) {
+      if (!validBookingLineIds.has(lineId)) {
+        throw new Error(
+          `Line ${lineId} is not a valid booking line of ${booking.booking_no}. Nothing was written.`,
+        )
+      }
+      const newEntryId = generateClientUuid()
+      await idempotentInsert('cleaning_queue_entries', {
+        id: newEntryId,
+        client_uuid: generateClientUuid(),
+        unit_id: null,
+        booking_line_id: lineId,
+        booking_id: booking.id,
+        state: 'Waiting',
+        requires_clean: true,
+        requires_reset: true,
+        entered_queue_at: at,
+        created_by: ctx.userId,
+      }, { queueOnFailure: false })
+      rows.push({
+        id: newEntryId,
+        unit_id: null,
+        booking_line_id: lineId,
+        requires_clean: true,
+        requires_reset: true,
+        clean_completed_at: null,
+        reset_completed_at: null,
+      })
+    }
+  }
+
+  const targetRows = rows.filter((r) =>
+    (r.unit_id !== null && byUnit.has(r.unit_id)) || (r.booking_line_id !== null && byLine.has(r.booking_line_id)),
+  )
+
   // CHECK :895 — reset_completed_at may only be set where requires_reset.
-  const notRequired = rows.filter((e) => !e.requires_reset).map((e) => e.unit_id)
+  const notRequired = targetRows.filter((e) => !e.requires_reset).map((e) => e.unit_id ?? e.booking_line_id ?? e.id)
   if (notRequired.length > 0) {
     throw new Error(
-      `${notRequired.length} unit(s) do not require a reset — ${notRequired.join(', ')}. ` +
+      `${notRequired.length} item(s) do not require a reset — ${notRequired.join(', ')}. ` +
         'The database rejects reset_completed_at on them (0003:895). Nothing was written.',
     )
   }
 
-  const pending = rows.filter((e) => e.reset_completed_at === null)
+  const pending = targetRows.filter((e) => e.reset_completed_at === null)
   if (pending.length === 0) {
     throw new Error(
-      `Every named unit on ${booking.booking_no} was already reset. Nothing was written — this is a repeat submit.`,
+      `Every named item on ${booking.booking_no} was already reset. Nothing was written — this is a repeat submit.`,
     )
   }
 
@@ -2131,7 +2221,7 @@ async function completeResetQueue(
   let findings = 0
 
   for (const row of pending) {
-    const entry = byUnit.get(row.unit_id) as ResetEntryInput
+    const entry = (row.unit_id !== null ? byUnit.get(row.unit_id) : byLine.get(row.booking_line_id!)) as ResetEntryInput
     const problem = entry.problemState ?? 'No Problems'
     const routed = problem !== 'No Problems'
 
@@ -2166,7 +2256,7 @@ async function completeResetQueue(
      * one would mean inventing the number and the shape. `case_id` stays null
      * and the finding is the record until case creation exists.
      */
-    if (problem === 'Damaged') {
+    if (problem === 'Damaged' && row.unit_id) {
       await idempotentInsert(
         'damage_findings',
         {
@@ -2187,10 +2277,6 @@ async function completeResetQueue(
     }
 
     // Per item, never per batch (`0003:911`) — and so is its audit row.
-    // RULING 2026-10-06 (§4.36): proceed on failure, loudly (below). Earlier entries in this loop are
-    // already committed, so stopping part-way would leave a half-reset batch — worse than a missing
-    // supplementary row. `cleaning_queue_entries` has no audit trigger yet, so until one exists this
-    // row is the only record: PLAN.md §4.36 lists adding triggers for it as the follow-up.
     const entryAudit = await logAuditEvent({
       eventClass: 'session',
       category: 'Rentals',
@@ -2202,7 +2288,7 @@ async function completeResetQueue(
       actorId: ctx.userId,
       actorRole: ctx.role,
       branchId: booking.branch_id,
-      newValues: { ...fields, unit_id: row.unit_id },
+      newValues: { ...fields, unit_id: row.unit_id, booking_line_id: row.booking_line_id },
     })
     if (!entryAudit.ok) {
       console.error(

@@ -114,4 +114,58 @@ describe('documents queries', () => {
     expect(result.rows).toEqual([])
     expect(result.total).toBe(0)
   })
+
+  it('listDocuments includes signed agreement evidence for a booking', async () => {
+    const mockEqBooking = vi.fn().mockResolvedValue({
+      data: [],
+      error: null,
+      count: 0,
+    })
+
+    const mockEvidenceEqCategory = vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: 'ref-1',
+          created_at: '2026-08-01T12:00:00Z',
+          evidence_files: {
+            id: 'ef-sig-1',
+            storage_path: 'evidence/signatures/sig-1.png',
+            original_filename: 'signature-receiver-B-100.png',
+            file_size_bytes: 45000,
+          },
+        },
+      ],
+      error: null,
+    })
+    const mockEvidenceEqBooking = vi.fn().mockReturnValue({
+      eq: mockEvidenceEqCategory,
+    })
+
+    ;(supabase.from as unknown as ReturnType<typeof vi.fn>).mockImplementation((table: string) => {
+      if (table === 'document_registry') {
+        return {
+          select: vi.fn().mockReturnValue({
+            order: vi.fn().mockReturnValue({
+              eq: mockEqBooking,
+            }),
+          }),
+        }
+      }
+      if (table === 'evidence_references') {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: mockEvidenceEqBooking,
+          }),
+        }
+      }
+      return { select: vi.fn().mockReturnThis() }
+    })
+
+    const result = await listDocuments({ chips: { booking_id: ['b-100'] } })
+    expect(result.rows.length).toBe(1)
+    expect(result.rows[0]?.id).toBe('ef-sig-1')
+    expect(result.rows[0]?.type).toBe('Rental Agreement')
+    expect(result.rows[0]?.status).toBe('Signed')
+    expect(result.rows[0]?.fileUrl).toBe('evidence/signatures/sig-1.png')
+  })
 })

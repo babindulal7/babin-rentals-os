@@ -136,17 +136,6 @@ const WITNESS_UNAVAILABLE =
   /* No witness identity is captured on this screen, so a witness signature cannot be attested here. §9.2 makes the witness optional — this session is recorded with no witness rather than with a placeholder. */ "Witness signatures are not captured here. The session is recorded without a witness signature."
 
 /**
- * The driver signature, on the same witness precedent: no driver identity is
- * captured anywhere on this screen or in the floor read, and a signature
- * against an invented name is a claim that someone signed. Recorded ABSENT,
- * stated on the control — not silently dropped, and not a placeholder.
- * TODO(decision): where a driver identity comes from (crew? delivery record?)
- * before this row can gate anything.
- */
-const DRIVER_UNAVAILABLE =
-  'No driver identity is captured on this screen, so a driver signature cannot be attested here. It is recorded as absent — with a named reason — rather than signed with a placeholder.'
-
-/**
  * The three states a row can hold on THIS screen this session. `Ready` is the
  * absence of a mark; `Picked Up` and `Missing` are the two outcomes
  * `FloorLineOutcome` can carry ('done' | 'missing'). The seed build's
@@ -251,6 +240,7 @@ interface Sig {
   atIso: string
   dataUrl?: string | undefined
   mode?: ('draw' | 'type') | undefined
+  evidenceFileId?: string | null | undefined
 }
 
 interface GateRow {
@@ -534,8 +524,8 @@ export default function HandoverWorkspace({
   const [paymentVerified, setPaymentVerified] = useState(false)
   const [depositReceived, setDepositReceived] = useState(false)
   /** §9.2 — captured at session close. Names come off real records only. */
-  const [signatures, setSignatures] = useState<{ receiver?: Sig; warehouse?: Sig }>({})
-  const [activeSigningRole, setActiveSigningRole] = useState<'receiver' | 'warehouse' | null>(null)
+  const [signatures, setSignatures] = useState<{ receiver?: Sig; warehouse?: Sig; driver?: Sig }>({})
+  const [activeSigningRole, setActiveSigningRole] = useState<'receiver' | 'warehouse' | 'driver' | null>(null)
   /**
    * **R-06's named reason for handing over with money outstanding.** Not a
    * §11.4 session-gate override — see `OVERRIDE_UNAVAILABLE` for that one,
@@ -1119,21 +1109,23 @@ export default function HandoverWorkspace({
    * attestation. `signature_evidence_file_id` is left null until a richer UX
    * is ruled.
    */
-  const captureSignature = (role: 'receiver' | 'warehouse') => {
+  const captureSignature = (role: 'receiver' | 'warehouse' | 'driver') => {
     setActiveSigningRole(role)
   }
 
-  const quickCaptureSignature = (role: 'receiver' | 'warehouse') => {
+  const quickCaptureSignature = (role: 'receiver' | 'warehouse' | 'driver') => {
     const at = new Date().toISOString()
     const name =
       role === 'receiver'
         ? (floor?.clientName ?? 'Receiver')
-        : (user?.name ?? 'Warehouse Staff')
+        : role === 'driver'
+          ? 'Driver'
+          : (user?.name ?? 'Warehouse Staff')
     setSignatures((p) => ({
       ...p,
       [role]: {
         name,
-        role: role === 'receiver' ? 'Receiver' : 'Warehouse staff',
+        role: role === 'receiver' ? 'Receiver' : role === 'driver' ? 'Driver' : 'Warehouse staff',
         atIso: at,
         mode: 'type',
       },
@@ -1150,6 +1142,7 @@ export default function HandoverWorkspace({
         atIso: sig.atIso,
         dataUrl: sig.dataUrl,
         mode: sig.mode,
+        evidenceFileId: sig.evidenceFileId ?? null,
       },
     }))
     if (activeSigningRole === 'receiver') {
@@ -1238,10 +1231,31 @@ export default function HandoverWorkspace({
              */
             signatures: [
               ...(signatures.receiver
-                ? [{ role: 'Receiver' as const, signerName: signatures.receiver.name, signedAt: signatures.receiver.atIso, isRequired: true }]
+                ? [{
+                    role: 'Receiver' as const,
+                    signerName: signatures.receiver.name,
+                    signedAt: signatures.receiver.atIso,
+                    isRequired: true,
+                    evidenceFileId: signatures.receiver.evidenceFileId ?? null,
+                  }]
                 : []),
               ...(signatures.warehouse
-                ? [{ role: 'Warehouse staff' as const, signerName: signatures.warehouse.name, signedAt: signatures.warehouse.atIso, isRequired: true }]
+                ? [{
+                    role: 'Warehouse staff' as const,
+                    signerName: signatures.warehouse.name,
+                    signedAt: signatures.warehouse.atIso,
+                    isRequired: true,
+                    evidenceFileId: signatures.warehouse.evidenceFileId ?? null,
+                  }]
+                : []),
+              ...(signatures.driver
+                ? [{
+                    role: 'Driver' as const,
+                    signerName: signatures.driver.name,
+                    signedAt: signatures.driver.atIso,
+                    isRequired: false,
+                    evidenceFileId: signatures.driver.evidenceFileId ?? null,
+                  }]
                 : []),
             ],
           },
@@ -2053,9 +2067,17 @@ export default function HandoverWorkspace({
                         ? { unavailable: 'You are not signed in, so there is no operator identity to sign as.' }
                         : {})}
                     />
-                    {/* Driver renders only when the delivery method has one, and is
-                        recorded absent with a named reason — same witness precedent. */}
-                    {driverNeeded && <SigRow label="Driver" sig={undefined} required={false} disabled={dispatching} unavailable={DRIVER_UNAVAILABLE} />}
+                    {/* Driver renders when the delivery method has one, and can be signed on glass */}
+                    {driverNeeded && (
+                      <SigRow
+                        label="Driver"
+                        sig={signatures.driver}
+                        onCapture={() => captureSignature('driver')}
+                        onQuickCapture={() => quickCaptureSignature('driver')}
+                        required={false}
+                        disabled={dispatching}
+                      />
+                    )}
                     {/* §9.2 — optional, and uncapturable: there is no witness identity on this screen to sign as. */}
                     <SigRow label="Witness" sig={undefined} required={false} disabled={dispatching} unavailable={WITNESS_UNAVAILABLE} />
                   </div>
@@ -2354,8 +2376,12 @@ export default function HandoverWorkspace({
           defaultName={
             activeSigningRole === 'receiver'
               ? (floor?.clientName ?? '')
-              : (user?.name ?? 'Warehouse Staff')
+              : activeSigningRole === 'driver'
+                ? 'Driver'
+                : (user?.name ?? 'Warehouse Staff')
           }
+          bookingId={floor?.id}
+          userId={user?.id}
           bookingNo={floor?.bookingNo ?? id}
           clientName={floor?.clientName}
           deliveryType={floor?.deliveryType}

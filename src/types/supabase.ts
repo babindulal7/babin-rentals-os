@@ -2025,6 +2025,7 @@ export type Database = {
         Row: {
           assigned_to: string | null
           booking_id: string | null
+          booking_line_id: string | null
           checklist_version: number | null
           clean_completed_at: string | null
           cleaned_by: string | null
@@ -2041,17 +2042,19 @@ export type Database = {
           qc_fail_reason: string | null
           qc_skip_reason: string | null
           qc_skipped: boolean
+          qty: number
           requires_clean: boolean
           requires_reset: boolean
           reset_completed_at: string | null
           return_line_id: string | null
           state: Database["public"]["Enums"]["cleaning_queue_state"]
-          unit_id: string
+          unit_id: string | null
           updated_at: string
         }
         Insert: {
           assigned_to?: string | null
           booking_id?: string | null
+          booking_line_id?: string | null
           checklist_version?: number | null
           clean_completed_at?: string | null
           cleaned_by?: string | null
@@ -2068,17 +2071,19 @@ export type Database = {
           qc_fail_reason?: string | null
           qc_skip_reason?: string | null
           qc_skipped?: boolean
+          qty?: number
           requires_clean?: boolean
           requires_reset?: boolean
           reset_completed_at?: string | null
           return_line_id?: string | null
           state?: Database["public"]["Enums"]["cleaning_queue_state"]
-          unit_id: string
+          unit_id?: string | null
           updated_at?: string
         }
         Update: {
           assigned_to?: string | null
           booking_id?: string | null
+          booking_line_id?: string | null
           checklist_version?: number | null
           clean_completed_at?: string | null
           cleaned_by?: string | null
@@ -2095,9 +2100,14 @@ export type Database = {
           qc_fail_reason?: string | null
           qc_skip_reason?: string | null
           qc_skipped?: boolean
+          qty?: number
           requires_clean?: boolean
           requires_reset?: boolean
           reset_completed_at?: string | null
+          return_line_id?: string | null
+          state?: Database["public"]["Enums"]["cleaning_queue_state"]
+          unit_id?: string | null
+          updated_at?: string
           return_line_id?: string | null
           state?: Database["public"]["Enums"]["cleaning_queue_state"]
           unit_id?: string

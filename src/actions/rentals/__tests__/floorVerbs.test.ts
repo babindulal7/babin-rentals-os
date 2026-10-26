@@ -692,12 +692,13 @@ describe('the stage moves through the transition trigger and nothing else', () =
     db.state.responses['handover_lines'] = [[], [{ id: 'hl-1', booking_line_id: LINE_A, state: 'Picked Up' }]]
 
     const nowIso = new Date().toISOString()
+    const evidenceId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'
     await handoverRental(
       {
         bookingId: 'B-715',
         lines: [{ bookingLineId: LINE_A, unitIds: ['u1'] }],
         signatures: [
-          { role: 'Receiver', signerName: 'Alice Client', signedAt: nowIso, isRequired: true },
+          { role: 'Receiver', signerName: 'Alice Client', signedAt: nowIso, isRequired: true, evidenceFileId: evidenceId },
           { role: 'Warehouse staff', signerName: 'Bob Staff', signedAt: nowIso, isRequired: true },
         ],
       },
@@ -708,10 +709,12 @@ describe('the stage moves through the transition trigger and nothing else', () =
     expect(sigWrites).toHaveLength(2)
     expect(sigWrites[0]?.payload['signature_role']).toBe('Receiver')
     expect(sigWrites[0]?.payload['signer_name']).toBe('Alice Client')
+    expect(sigWrites[0]?.payload['signature_evidence_file_id']).toBe(evidenceId)
     expect(sigWrites[0]?.payload['created_by']).toBe(OWNER.userId)
 
     expect(sigWrites[1]?.payload['signature_role']).toBe('Warehouse staff')
     expect(sigWrites[1]?.payload['signer_name']).toBe('Bob Staff')
+    expect(sigWrites[1]?.payload['signature_evidence_file_id']).toBeNull()
 
     // Signatures written before booking_stage_transitions
     const sigIndex = writes.state.ops.findIndex((o) => o.table === 'signatures')

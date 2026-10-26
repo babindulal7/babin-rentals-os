@@ -2931,7 +2931,18 @@ function BookingDetailView() {
                         {documentsList.rows.map((doc) => (
                           <tr key={doc.id} style={{ borderBottom: '1px solid var(--border)' }}>
                             <td className="figure" style={{ ...td, fontSize: 'var(--t-meta)', fontWeight: 600 }}>
-                              {doc.id}
+                              {doc.fileUrl ? (
+                                <Link
+                                  to={`/rentals/${booking.id}/evidence`}
+                                  style={{ color: 'var(--primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                  title="View signed document"
+                                >
+                                  <Icon name="file" size={13} />
+                                  <span>{doc.id}</span>
+                                </Link>
+                              ) : (
+                                doc.id
+                              )}
                             </td>
                             <td style={{ ...td, fontSize: 'var(--t-meta)' }}>{doc.type}</td>
                             <td style={{ ...td, fontSize: 'var(--t-meta)' }}>{doc.createdTime}</td>

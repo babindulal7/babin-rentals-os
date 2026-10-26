@@ -275,9 +275,71 @@ export async function listDocuments(filters?: ListFilters): Promise<ListQueryRes
     }
 
     const mapped = ((data ?? []) as unknown as DocumentRowDb[]).map(mapDbRowToDocRow)
+
+    // T2-02: Include signed agreement / signature evidence files for this booking
+    if (filters?.chips?.booking_id?.[0]) {
+      const bId = filters.chips.booking_id[0]
+      try {
+        const { data: sigRefs } = await supabase
+          .from('evidence_references')
+          .select(`
+            id,
+            created_at,
+            evidence_files (
+              id,
+              storage_path,
+              original_filename,
+              file_size_bytes
+            )
+          `)
+          .eq('booking_id', bId)
+          .eq('category', 'Client Documents')
+
+        if (sigRefs && sigRefs.length > 0) {
+          interface EvidenceFileSubRow {
+            id: string
+            storage_path: string
+            original_filename: string
+            file_size_bytes: number | null
+          }
+          for (const rawRef of sigRefs) {
+            const rowObj = rawRef as unknown as {
+              id: string
+              created_at: string | null
+              evidence_files: EvidenceFileSubRow | null
+            }
+            const ef = rowObj.evidence_files
+            if (ef) {
+              const dt = rowObj.created_at ? new Date(rowObj.created_at) : new Date()
+              const hours = dt.getHours().toString().padStart(2, '0')
+              const mins = dt.getMinutes().toString().padStart(2, '0')
+              mapped.push({
+                id: ef.id,
+                name: ef.original_filename || 'Signed Rental Agreement',
+                type: 'Rental Agreement',
+                category: 'Rental',
+                relatedTo: bId,
+                relatedKind: 'booking',
+                party: 'Client',
+                branch: 'Kathmandu',
+                status: 'Signed',
+                recordState: 'Signed',
+                recordTone: 'neutral',
+                createdAd: dt,
+                createdTime: `${hours}:${mins}`,
+                fileUrl: ef.storage_path,
+              })
+            }
+          }
+        }
+      } catch {
+        // Fallback gracefully without breaking main document registry
+      }
+    }
+
     return {
       rows: mapped,
-      total: count ?? mapped.length,
+      total: (count ?? (data?.length ?? 0)) + (mapped.length - (data?.length ?? 0)),
     }
   } catch (error) {
     throw error instanceof Error ? error : new Error('Documents could not be loaded.')

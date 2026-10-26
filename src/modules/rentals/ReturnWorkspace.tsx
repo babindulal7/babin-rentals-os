@@ -2366,6 +2366,8 @@ export default function ReturnWorkspace({
                     ? (returningName || floor?.clientName || '')
                     : (user?.name ?? 'Warehouse Staff')
                 }
+                bookingId={floor?.id}
+                userId={user?.id}
                 bookingNo={floor?.bookingNo ?? id}
                 clientName={floor?.clientName}
                 deliveryType={floor?.deliveryType}

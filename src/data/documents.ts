@@ -163,6 +163,8 @@ export interface DocRow {
   recordTone: StatusKey
   createdAd: Date
   createdTime: string
+  /** Stored document or signature file reference / storage path. */
+  fileUrl?: string | undefined
   /** §14 — structurally absent for Warehouse, not masked. */
   finance?: boolean
   /** Days a signature has been outstanding, for the rail panel. */

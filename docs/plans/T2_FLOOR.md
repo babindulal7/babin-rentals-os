@@ -39,7 +39,7 @@ money anywhere on the screens touched; 5) a failed upload leaves the gate red an
 retryable; 6) tests cover compress, retry-same-uuid, offline refusal.
 **Needs** — T1-06 (Storage accepted on staging).
 
-### T2-02 · Drawn signatures            status: todo · size: M · lane A
+### T2-02 · Drawn signatures            status: done · size: M · lane A
 **What** — A signature pad (finger or stylus) for Receiver and Warehouse at Handover, Driver on
 delivery handovers, and agreement signing. Save the drawing as a PNG through T2-01's upload and
 link it with `signatures.signature_evidence_file_id`; keep signer name and time as today.
