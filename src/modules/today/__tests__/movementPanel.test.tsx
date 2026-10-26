@@ -38,7 +38,7 @@ async function mount(overrides: Partial<MovementRow> = {}, side: 'incoming' | 'o
     list={{ rows: [{ ...row, ...overrides }], total: paging.total ?? 1, loading: false, error: null, isEmpty: false, isFiltered: true, refetch: () => {}, lastFetchedAt: null }}
   /></MemoryRouter>))
 }
-afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.clearAllMocks() })
+afterEach(async () => { if (root) await act(async () => root.unmount()); host?.remove(); vi.clearAllMocks() })
 
 describe('movement board task clarity', () => {
   it('does not label a future return as due today or claim booked quantities are outstanding', async () => {
@@ -216,5 +216,34 @@ describe('return countdown (md brief 11)', () => {
     await act(async () => root.unmount()); host.remove()
     await mount({ status: 'Returned' })
     expect(countdown()).toBeNull()
+  })
+})
+
+/*
+ * UI_UX_RULES.md "Touch Target Floor": a primary floor verb (Pack, Handover, Return, Reset,
+ * Confirm) is at least 56px tall; secondary actions are 44px. The Today card's verb is the
+ * floor verb. Many layers of dashboard.css set a 44px `min-height` on it, and a later layer
+ * once put it back to 44px with nothing failing (measured 44px in the browser on 22 Oct, 56px
+ * again after 23 Oct). jsdom has no cascade, so this pins the source: the last rule that sets
+ * the verb's height on the full selector says 56px, and no rule after it lowers it.
+ */
+describe('the floor verb keeps its 56px height (UI_UX_RULES touch-target floor)', () => {
+  const heightRules = [...dashboardCss.matchAll(/([^{}]*\.movement-card__cta-btn[^{},]*(?:,[^{}]*)?)\{([^}]*)\}/g)]
+    .map((m) => ({ selector: (m[1] ?? '').trim(), body: m[2] ?? '', at: m.index ?? 0 }))
+    .filter((r) => /min-height\s*:/.test(r.body) && !/:(hover|active|focus-visible)/.test(r.selector))
+
+  it('has a rule that sets it to 56px on the full card selector', () => {
+    const full = heightRules.filter((r) => /\.rental-dashboard \.rental-dashboard__panels \.movement-card \.movement-card__cta-btn\s*$/.test(r.selector))
+    expect(full.length).toBeGreaterThan(0)
+    expect(full.at(-1)?.body).toMatch(/min-height:\s*56px/)
+  })
+
+  it('has no later rule that lowers the verb below 56px', () => {
+    const winner = heightRules.filter((r) => /\.rental-dashboard \.rental-dashboard__panels \.movement-card \.movement-card__cta-btn\s*$/.test(r.selector)).at(-1)!
+    const later = heightRules.filter((r) => r.at > winner.at)
+    for (const r of later) {
+      const px = /min-height:\s*(?:var\([^,]+,\s*)?(\d+)px/.exec(r.body)?.[1]
+      expect(Number(px ?? 56), `rule after the 56px one sets ${r.selector} to ${px}px`).toBeGreaterThanOrEqual(56)
+    }
   })
 })
