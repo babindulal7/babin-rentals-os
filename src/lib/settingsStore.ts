@@ -60,6 +60,7 @@ export type SettingKey =
   | 'packingTreeGrouping'
   | 'packingPhotosRequired'
   | 'evidenceRetentionDays'
+  | 'resetNeededNextHours'
   /* ── WhatsApp deep links, added 1 Sep 2026 ───────────────────────────────
    * `docs/WHATSAPP_LINKS_SPEC_v1.0.md` §6.1 lists these as the spec's own OPEN
    * items. They are added here as FIELDS, not as answers: every default below
@@ -368,6 +369,23 @@ export const SETTING_SPECS: Record<SettingKey, SettingSpec> = {
         return 'Under 30 days risks deleting a photo before a damage dispute is raised. Use 0 to keep them.'
       }
       if (n > 3650) return 'Beyond ten years, use 0 (keep) rather than a number nobody will revisit.'
+      return null
+    },
+  },
+
+  /**
+   * **Ruling D5 (Task T2-07)** — how soon a unit's next reservation pickup must be
+   * to show "Needed next" in the Reset queue and sort to the top.
+   * Default 4 hours (Ruling D5).
+   */
+  resetNeededNextHours: {
+    default: 4,
+    kind: 'number',
+    suffix: ' hours',
+    validate: (v) => {
+      const n = Number(v)
+      if (!Number.isFinite(n) || n < 1) return 'The "Needed next" window must be at least 1 hour.'
+      if (n > 72) return 'A window beyond 72 hours defeats priority sorting.'
       return null
     },
   },

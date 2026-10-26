@@ -1,5 +1,54 @@
 # Progress Log
 
+## 2026-10-26 (k) — T2-07 Reset "Needed next" badge & queue sorting
+
+**Did**
+- Implemented Ruling D5 (§4.65a / MAY_BRIEF_DECISIONS.md) for Reset queue prioritization:
+  - Added setting key `resetNeededNextHours` in `src/lib/settingsStore.ts` with default 4 hours, range 1..72.
+  - Added Settings UI control in `src/modules/settings/sections/System.tsx` under "Operations rules".
+  - Created reservation query helper `getNextReservationsForUnits()` and time/urgency utilities `isNeededNext()` & `formatPickupClockTime()` in `src/lib/queries/reset.ts`.
+  - Integrated "Needed next" badges and priority sorting into `src/modules/rentals/ResetWorkspace.tsx`:
+    - Units with next reservation pickup within `resetNeededNextHours` (default 4h) display a `"Needed next · pickup HH:mm"` badge (clock icon + text, never colour alone).
+    - Needed-next units sort to the top of the queue ordered by earliest pickup time; remaining items preserve FIFO order.
+    - Rendered in both mobile card view and desktop table equipment column.
+  - Added unit tests in `src/lib/queries/__tests__/reset.test.ts` for `isNeededNext`, `formatPickupClockTime`, and `getNextReservationsForUnits`.
+  - Added integration component test in `src/modules/rentals/__tests__/ResetWorkspace.neededNext.test.tsx` verifying 3h pickup sorting first with badge, 5h pickup not sorting first at default 4h setting, and setting changes dynamically updating threshold (6h promotes 5h unit, 2h demotes 3h unit).
+  - Marked `T2-07` status as `done` in `docs/plans/T2_FLOOR.md`.
+
+**Ruled**
+- Ruling D5 (§4.65a / MAY_BRIEF_DECISIONS.md):
+  - In the Reset queue, a unit whose next reservation pickup is within 4 hours (configurable in Settings ▸ Operations) shows a `"Needed next · pickup HH:mm"` badge (icon + text, never colour alone) and sorts to the top; the rest stay first-in, first-out.
+  - Money-blindness (Law 6) preserved: no financial data is read or rendered in the Reset workspace.
+
+**Verified**
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings/errors).
+- `npm run check:pglite`: PASS (178/178 migrations applied cleanly, 0 leaks, 0 failures).
+- `npm run check:lifecycle`: PASS (38/38 steps green: L1–L38).
+- `npm run check:contrast`: PASS (106/106 WCAG AA token pairs).
+- `npm test`: PASS (468/468 test files, 5,784/5,784 tests passing).
+- `npm run test:coverage`: PASS (full suite + coverage report generated).
+- `npm run build`: PASS (clean production build with PWA service worker).
+- `npm run completion`: PASS (100% Backend, 100% DB enforcement, 100% Permissions, 100% Lifecycle, mean ≈ 97%).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 57 / 57 (100%) | +2 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | -1 |
+| Lifecycle | steps green / total | 38 / 38 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 178 files · check:pglite 178/178 applied, 0 failed (recorded 2026-10-26T14:17:14.976Z). Suite: PASS — 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); source fingerprint matches.
+Coverage suite: PASS — 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-10-26T14:17:29.589Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Nothing open from T2-07. Ready to proceed to next task on Lane A (e.g. T2-08 Floor printing or T2-10 Offline outbox).
+
 ## 2026-10-26 — Today card verb: the 56px floor is pinned by a test
 
 **Did**

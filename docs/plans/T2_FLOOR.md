@@ -114,7 +114,7 @@ it can".
 note → unit bookable; Warehouse sees no cost.
 **Needs** — T2-01 (photos on the job).
 
-### T2-07 · Reset "Needed next"            status: todo · size: S · lane A
+### T2-07 · Reset "Needed next"            status: done · size: S · lane A
 **What** — In the Reset queue, a unit whose next reservation's pickup is within **4 hours ⭐**
 (Settings ▸ Operations) shows a "Needed next · pickup 10:30" badge (icon + text, never colour
 alone) and sorts to the top; the rest stay first-in, first-out.

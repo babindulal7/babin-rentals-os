@@ -160,6 +160,12 @@ export const SYSTEM_SECTIONS: Section[] = [
         settingKey: 'evidenceRetentionDays',
         readBy: 'modules/rentals/EvidenceWorkspace.tsx',
       },
+      {
+        label: 'Reset "Needed next" window',
+        note: 'How soon a unit\'s next reservation pickup must be to show "Needed next" in the Reset queue and sort to the top. Default 4 hours (Ruling D5).',
+        settingKey: 'resetNeededNextHours',
+        readBy: 'modules/rentals/ResetWorkspace.tsx',
+      },
     ],
   },
   { key: 'admin', title: 'Administration', icon: 'activity', fields: ADMIN_LINKS },

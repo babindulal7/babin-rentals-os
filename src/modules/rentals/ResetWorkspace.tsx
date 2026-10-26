@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import './rentals.css'
 import Icon from '../../components/ui/Icon'
 import { Card, Button, cardStyle } from '../../components/ui/Page'
+import { Badge } from '../../components/ui/Badge'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { OperationAside } from '../operations/FloorAside'
@@ -35,7 +36,12 @@ import {
   cleanTasksForCategory,
   resetTasksForCategory,
   type Category,
+  getNextReservationsForUnits,
+  isNeededNext,
+  formatPickupClockTime,
+  type NextReservationInfo,
 } from '../../lib/queries/reset'
+import { getSetting } from '../../lib/settingsStore'
 import { queueTimeTone } from '../../data/reset'
 import { fetchStaffDirectory } from '../../lib/queries/staff'
 
@@ -435,7 +441,49 @@ export default function ResetWorkspace({
     setCompletionKey(newClientUuid())
   }, [floorId])
 
-  const rows = useMemo<ResetRow[]>(() => (floor ? buildRows(floor) : []), [floor])
+  const rawRows = useMemo<ResetRow[]>(() => (floor ? buildRows(floor) : []), [floor])
+
+  const assetIds = useMemo(() => {
+    return Array.from(new Set(rawRows.map((r) => r.assetId).filter((id): id is string => Boolean(id))))
+  }, [rawRows])
+
+  const [nextReservations, setNextReservations] = useState<Record<string, NextReservationInfo>>({})
+  const neededNextHours = useMemo(() => {
+    const val = Number(getSetting('resetNeededNextHours'))
+    return Number.isFinite(val) && val > 0 ? val : 4
+  }, [])
+
+  useEffect(() => {
+    if (assetIds.length === 0) {
+      setNextReservations({})
+      return
+    }
+    let active = true
+    void getNextReservationsForUnits(assetIds, floor?.id).then((map) => {
+      if (active) {
+        setNextReservations(map)
+      }
+    })
+    return () => {
+      active = false
+    }
+  }, [assetIds, floor?.id])
+
+  const rows = useMemo(() => {
+    return [...rawRows].sort((a, b) => {
+      const nextA = a.assetId ? nextReservations[a.assetId] : undefined
+      const nextB = b.assetId ? nextReservations[b.assetId] : undefined
+      const evalA = nextA ? isNeededNext(nextA.pickupAt, neededNextHours) : { needed: false, diffHours: Infinity }
+      const evalB = nextB ? isNeededNext(nextB.pickupAt, neededNextHours) : { needed: false, diffHours: Infinity }
+
+      if (evalA.needed && !evalB.needed) return -1
+      if (!evalA.needed && evalB.needed) return 1
+      if (evalA.needed && evalB.needed && nextA && nextB) {
+        return Date.parse(nextA.pickupAt) - Date.parse(nextB.pickupAt)
+      }
+      return 0
+    })
+  }, [rawRows, nextReservations, neededNextHours])
   const recOf = (key: string): RowRec => marks[key] ?? FRESH
   const setRec = (key: string, patch: Partial<RowRec>) =>
     setMarks((p) => ({ ...p, [key]: { ...(p[key] ?? FRESH), ...patch } }))
@@ -1421,6 +1469,19 @@ export default function ResetWorkspace({
                                       Required
                                     </span>
                                   )}
+                                  {(() => {
+                                    const nextPickup = r.assetId ? nextReservations[r.assetId] : undefined
+                                    const isUrgent = nextPickup ? isNeededNext(nextPickup.pickupAt, neededNextHours).needed : false
+                                    return isUrgent && nextPickup ? (
+                                      <Badge
+                                        variant="pill"
+                                        size="sm"
+                                        tone="progress"
+                                        icon={<Icon name="clock" size={12} />}
+                                        label={`Needed next · pickup ${formatPickupClockTime(nextPickup.pickupAt)}`}
+                                      />
+                                    ) : null
+                                  })()}
                                   <span style={{ display: 'inline-flex', alignItems: 'center', height: 20, padding: '0 8px', borderRadius: 'var(--r-badge)', background: tone.bg, color: tone.fg, fontSize: 'var(--t-meta)', fontWeight: 600 }}>
                                     {isException ? rec.problem : rec.queueState}
                                   </span>
@@ -1537,6 +1598,19 @@ export default function ResetWorkspace({
                                         Required
                                       </span>
                                     )}
+                                    {(() => {
+                                      const nextPickup = r.assetId ? nextReservations[r.assetId] : undefined
+                                      const isUrgent = nextPickup ? isNeededNext(nextPickup.pickupAt, neededNextHours).needed : false
+                                      return isUrgent && nextPickup ? (
+                                        <Badge
+                                          variant="pill"
+                                          size="sm"
+                                          tone="progress"
+                                          icon={<Icon name="clock" size={12} />}
+                                          label={`Needed next · pickup ${formatPickupClockTime(nextPickup.pickupAt)}`}
+                                        />
+                                      ) : null
+                                    })()}
                                   </span>
                                   {isException && (
                                     <span style={{ display: 'block', fontSize: 'var(--t-meta)', color: 'var(--danger-text)', marginTop: 2, whiteSpace: 'normal' }}>
