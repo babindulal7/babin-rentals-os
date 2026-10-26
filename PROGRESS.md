@@ -39,6 +39,168 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - Existing unsupported capture/persistence and quantity-only Reset capabilities remain explicit. Existing membership decisions stay open.
 - Unrelated primary drafts and their broader UI changes need their own verification and commit.
 
+## 2026-10-26 (d) — UI defect remediation: token cleanup, touch floors, accessibility bindings & sandbox archiving
+
+**Did**
+- Replaced legacy `var(--green)`, `var(--red)`, and misused `var(--gold)` in `src/modules/crew/TimesheetTab.tsx`, `src/modules/inventory/WarrantyTracker.tsx`, and `src/modules/rentals/ProductionsList.tsx` with semantic tokens (`--success`, `--success-text`, `--danger-text`, `--warn-text`, `--ready-text`, `--ready`) (DEF-01, DEF-02).
+- Increased stepper navigation button touch target in `src/modules/rentals/ProductionsList.tsx` from 36px to `var(--tap, 44px)` to comply with Law 15 touch target floor (DEF-03).
+- Replaced hardcoded hex and rgba color literals in `src/modules/tools/CouponsManager.tsx` and `src/modules/tools/QrGeneratorModal.tsx` with semantic token variables (`--select-bg`, `--select-fg`, `--success-soft`, `--danger-soft`) (DEF-04).
+- Eliminated module-scope frozen clock `const TODAY = getBusinessToday()` in `src/modules/reports/Pulse.tsx`, resolving operational date dynamically during component render (DEF-05).
+- Archived unrouted legacy builder `src/modules/tools/BundleQuickBuilder.tsx` to `src/archive/tools/BundleQuickBuilder.tsx` per Law 3 (DEF-07).
+- Bound accessible `id` and `htmlFor` attributes to input and label tags in `src/modules/tools/QrGeneratorModal.tsx` and `src/modules/tools/CouponsManager.tsx` (DEF-08).
+
+**Ruled**
+- Zero business logic, permission, or schema modifications (Law 1, Law 15 preserved).
+
+**Verified**
+- `npm run typecheck` (`tsc --noEmit`): exit 0, 0 errors.
+- `npm run check:contrast`: exit 0, 106/106 WCAG 2.2 AA pairs PASS.
+- `npm run check:pglite`: exit 0, 174/174 migrations applied from scratch, 0 failed.
+- `npm run check:lifecycle`: exit 0, 33/33 booking lifecycle steps green.
+- `npx vitest run src/modules/crew/__tests__/TimesheetTab.test.tsx`: 11/11 PASS.
+- `npx vitest run src/components/ui/__tests__/buttonConsistency.test.tsx`: 5/5 PASS.
+- `npm run build`: exit 0, built in 1m 3s.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 55 / 58 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 33 / 33 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 174 files · check:pglite 174/174 applied, 0 failed (recorded 2026-10-25T20:15:08.279Z). Suite: Historical suite: 5739/5739 passed, 0 failed (recorded 2026-10-25T20:16:39.574Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5737/5739 passed, 2 failed (recorded 2026-10-25T16:52:56.936Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-25T20:15:54.663Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Plan and execute standard `RecordWorkspace` migration for `AddClient.tsx` (DEF-06) during dedicated form architecture sprint.
+- Continue tracking cross-device ergonomics against the Knowledge Atlas rubric.
+
+## 2026-10-26 (c) — Task B: Today page UX restyling, touch target floors & token consolidation
+
+**Did**
+- Consolidated foundational color token aliases in `src/styles/theme.css`: added `--green: var(--success-text);` and `--red: var(--danger-text);` to ensure standard semantic resolution without ad-hoc fallbacks (DEF-01).
+- Executed Task B — BABIN / RESTYLE on the Today page (`/today` / `/dashboard`):
+  - Refined `DashboardMovementPanel.tsx`: eliminated raw inline style objects on "View in Rentals" header button and panel footer link, moving styling to `.movement-panel__rentals-btn`, `.movement-panel__rentals-action`, `.movement-panel__footer`, and `.movement-panel__footer-link`.
+  - Elevated touch targets: raised the "View in Rentals" button from 36px to 44px (`min-height: var(--tap, 44px)`), and ensured footer drill-down link satisfies the 44px minimum touch target floor.
+  - Eliminated raw inline styling on `.movement-panel__empty-actions` and anchored action button spacing in semantic token variables (`var(--sp-sm, 8px)`).
+  - Clarified card CTA action hierarchy in `src/modules/today/dashboard.css`: established distinct visual weight between `is-dominant` actions (primary filled for immediate handovers and returns) vs `is-prep` actions (secondary surface with subtle border for pre-packing workflows), with both strictly preserving the 56px primary floor verb height.
+  - Polished mobile summary icons in `.dispatch-summary`: standardized to 36×36px rounded icon badges with `var(--ext-bg)` and `var(--success-bg)` backgrounds on viewports <768px, replacing former transparent/unstyled glyphs.
+  - Preserved all business invariants: Kathmandu 06:00–06:00 NPT shift boundary, dual BS/AD date presentation, pickup carry-over logic, and overdue return unscoped display.
+
+**Ruled**
+- Zero business logic changes in presentation layer (Law 1 preserved).
+- Floor verbs retain 56px minimum touch target floor; secondary navigation controls adhere to 44px minimum target.
+
+**Verified**
+- `npm run typecheck` (`tsc --noEmit`): exit 0, 0 errors.
+- `npm run check:contrast`: exit 0, 106/106 WCAG 2.2 AA pairs PASS.
+- `npm run check:pglite`: exit 0, 174/174 migrations applied from scratch, 0 failed, 31 views checked, 93 definer search paths pinned.
+- `npm run check:lifecycle`: exit 0, 33/33 booking lifecycle steps green.
+- `npm run check:security`: exit 0, 18 Phase 0 SQL + 32 operations grants + 14 reset branch tests PASS.
+- `npm run lint:shell`: exit 0, 789 files verified.
+- `npm run lint:ui-copy`: exit 0, 0 developer copy leaks.
+- `npm run build`: exit 0, built in 1m 6s (dist/index.html + dist/marketing.html + PWA).
+- Targeted test suites: `src/modules/today/__tests__/` (140/140 PASS across 6 test files).
+- Full test suite: `npm test` (5,739/5,739 PASS across 463 test files).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 55 / 58 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 33 / 33 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 174 files · check:pglite 174/174 applied, 0 failed (recorded 2026-10-25T20:15:08.279Z). Suite: Historical suite: 5739/5739 passed, 0 failed (recorded 2026-10-25T20:16:39.574Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5737/5739 passed, 2 failed (recorded 2026-10-25T16:52:56.936Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-25T20:15:54.663Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Live hosted Supabase migration application remains HOLD per Rule N-5 until Babin authorizes execution after backup protocol.
+- Continue UX remediation across remaining audited surfaces (e.g. AddClient form standardisation per RecordWorkspace pattern).
+
+## 2026-10-26 (b) — UI/UX Free Reading Guide synthesis & Phase 0–6 gate verification
+
+**Did**
+- Synthesized legal, no-cost UI/UX design resources (Atomic Design, Inclusive Components, Refactoring UI, Practical UI, Form Design Patterns, W3C WAI, GOV.UK, Practical Typography) into the Phase 0 audit and Phase 1–6 implementation framework for Babin Rentals OS.
+- Generated comprehensive Phase 0 UI/UX Architecture & Design System Audit artifact (`PHASE_0_DESIGN_SYSTEM_AUDIT.md`) documenting all 70+ routes, shell layouts, modals, popovers, drawers, and form shells.
+- Verified 20-point AV Rental Application Checklist across responsive layouts, 7-hue color tokens, focus rings, and 44px/56px target floors.
+- Verified Phase 3 Operations header stage progress bar (ruled 2026-10-25) and RecordWorkspace consistency.
+
+**Ruled**
+- No new rulings. Implementation adheres to existing bindings: R-39 (ease of use/tap budget), R-40 (tokens), R-43 (atomic RPCs), and RULINGS-2026-10-25 (Operations header segmented progress bar).
+
+**Verified**
+- `npm run typecheck` (`tsc --noEmit`): exit 0, 0 errors.
+- `npm run lint` (`eslint src --max-warnings 0`): exit 0, 0 warnings/errors.
+- `npm run lint:shell`: exit 0, 790 files verified.
+- `npm run lint:ui-copy`: exit 0, 0 developer copy leaks.
+- `npm run check:contrast`: exit 0, 106/106 pairs PASS.
+- `npm run check:pglite`: exit 0, 174/174 migrations applied from scratch, 0 failed, 31 views checked, 93 definer search paths pinned.
+- `npm run check:lifecycle`: exit 0, 33/33 lifecycle steps green.
+- `npm run build`: exit 0, built in 14.85s (dist/index.html + dist/marketing.html + PWA).
+- Targeted suites: `OperationsShell.test.tsx` (32/32 PASS), `realWorkspaceGuidance.test.tsx` (7/7 PASS), `RecordWorkspace.test.tsx` & `RecordActions.header.test.tsx` (13/13 PASS), `DataTable.test.tsx` & `ReportDataTable.test.tsx` (10/10 PASS), `breakpoints.test.ts` (7/7 PASS), Today & Calendar suites (47/47 PASS).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 55 / 58 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 33 / 33 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 174 files · check:pglite 174/174 applied, 0 failed (recorded 2026-10-25T19:48:08.648Z). Suite: Historical suite: 5731/5739 passed, 8 failed (recorded 2026-10-25T18:48:30.632Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5737/5739 passed, 2 failed (recorded 2026-10-25T16:52:56.936Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-25T19:48:30.301Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Live hosted Supabase migration application remains HOLD per Rule N-5 until Babin authorizes execution after backup protocol.
+- Real-device hardware touch validation on physical iPhone 17 Pro and M4 iPad Pro units.
+
+## 2026-10-26 — Ingest Babin Rentals OS Modern Web Design Knowledge Atlas
+
+**Did**
+- Preserved the user-provided "Babin Rentals OS — Modern Web Design Knowledge Atlas" into both `docs/BABIN_RENTALS_MODERN_WEB_DESIGN_KNOWLEDGE_ATLAS.md` and root `BABIN_RENTALS_MODERN_WEB_DESIGN_KNOWLEDGE_ATLAS.md` as a permanent design and architectural reference.
+- Registered the reference document in `docs/00_READ_FIRST.md` under the Directory Guide (§3).
+- Verified alignment of the 14 practical rules, operational delight principles, and responsive tablet/mobile criteria with existing project laws (Laws 11–16, R-39, R-40, Nepal time/calendar invariants).
+
+**Ruled**
+- No ruling. Documentation reference ingestion only; no permission, money, capability, or database schema change.
+
+**Verified**
+- `npm run lint:progress` passes.
+- No code or schema files modified; clean docs-only update.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 55 / 58 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 33 / 33 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 174 files · check:pglite 174/174 applied, 0 failed (recorded 2026-10-25T19:48:08.648Z). Suite: Historical suite: 5731/5739 passed, 8 failed (recorded 2026-10-25T18:48:30.632Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5737/5739 passed, 2 failed (recorded 2026-10-25T16:52:56.936Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-25T19:48:30.301Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Implement Phase A–D checklist items from the Knowledge Atlas during scheduled design remediation cycles.
+- Run full suite and verification gates during functional sprints.
+
 ## 2026-10-25 (b) — Lifecycle review against current code; close-gate docs and a stale comment corrected
 
 **Did**

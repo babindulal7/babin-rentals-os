@@ -112,8 +112,9 @@ export default function QrGenerator() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
         <div>
-          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)' }}>Serial / Tag Number</label>
+          <label htmlFor="qr-tag-text" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)' }}>Serial / Tag Number</label>
           <input
+            id="qr-tag-text"
             type="text"
             value={tagText}
             onChange={(e) => setTagText(e.target.value)}
@@ -181,9 +182,9 @@ export default function QrGenerator() {
                   fontSize: 'var(--t-ui, 13px)',
                   fontWeight: 600,
                   cursor: 'pointer',
-                  border: format === fmt ? '1px solid var(--info)' : '1px solid var(--border)',
-                  background: format === fmt ? 'rgba(47, 125, 255, 0.14)' : 'var(--surface)',
-                  color: format === fmt ? 'var(--info)' : 'var(--text2)',
+                  border: format === fmt ? '1px solid var(--primary)' : '1px solid var(--border)',
+                  background: format === fmt ? 'var(--select-bg)' : 'var(--surface)',
+                  color: format === fmt ? 'var(--select-fg)' : 'var(--text2)',
                 }}
               >
                 {fmt === 'QR' ? '2D QR Code' : '1D Barcode'}

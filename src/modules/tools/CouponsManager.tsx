@@ -211,10 +211,11 @@ export default function CouponsManager() {
 
         <div style={{ display: 'flex', gap: 'var(--sp-md)', flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <div style={{ flex: '1 1 200px' }}>
-            <label style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
+            <label htmlFor="voucher-test-code" style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
               Voucher Code
             </label>
             <input
+              id="voucher-test-code"
               type="text"
               value={testCode}
               onChange={e => setTestCode(e.target.value.toUpperCase())}
@@ -234,10 +235,11 @@ export default function CouponsManager() {
           </div>
 
           <div style={{ flex: '1 1 200px' }}>
-            <label style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
+            <label htmlFor="voucher-test-spend" style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
               Test Booking Subtotal (NPR)
             </label>
             <input
+              id="voucher-test-spend"
               type="number"
               value={testSpend}
               onChange={e => setTestSpend(e.target.value)}
@@ -265,8 +267,8 @@ export default function CouponsManager() {
               marginTop: 'var(--sp-md)',
               padding: '12px 16px',
               borderRadius: 'var(--r-btn)',
-              background: testResult.ok ? 'rgba(46, 204, 143, 0.1)' : 'rgba(255, 71, 87, 0.1)',
-              border: `1px solid ${testResult.ok ? 'var(--success-border, #2ECC8F)' : 'var(--danger-border, #FF4757)'}`,
+              background: testResult.ok ? 'var(--success-soft)' : 'var(--danger-soft)',
+              border: `1px solid ${testResult.ok ? 'var(--success-border, var(--border))' : 'var(--danger-border, var(--border))'}`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -491,8 +493,8 @@ export default function CouponsManager() {
                 style={{
                   padding: '10px 14px',
                   borderRadius: 'var(--r-btn)',
-                  background: 'rgba(255, 71, 87, 0.1)',
-                  border: '1px solid var(--danger-border, #FF4757)',
+                  background: 'var(--danger-soft)',
+                  border: '1px solid var(--danger-border, var(--border))',
                   color: 'var(--danger-text)',
                   fontSize: 'var(--t-caption)',
                 }}

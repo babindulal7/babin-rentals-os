@@ -151,7 +151,7 @@ function StaffCard({
               <span style={{ color: 'var(--text3)' }}>{TIMESHEET_DAYS[i]}</span>
               <span style={{
                 fontWeight: 600,
-                color: h === 0 ? 'var(--text3)' : h > STANDARD_DAY_HOURS ? 'var(--gold)' : 'var(--text)',
+                color: h === 0 ? 'var(--text3)' : h > STANDARD_DAY_HOURS ? 'var(--warn-text)' : 'var(--text)',
               }}>
                 {formatHours(h)}h
               </span>
@@ -176,7 +176,7 @@ function StaffCard({
                     width: '100%',
                     height: Math.round((h / 9) * 40),
                     borderRadius: '3px 3px 0 0',
-                    background: h === 0 ? 'var(--border)' : h >= STANDARD_DAY_HOURS ? 'var(--green)' : 'var(--gold)',
+                    background: h === 0 ? 'var(--border)' : h >= STANDARD_DAY_HOURS ? 'var(--success)' : 'var(--ready)',
                     minHeight: h > 0 ? 4 : 2,
                     transition: 'height 0.2s',
                   }}
@@ -393,7 +393,7 @@ export default function TimesheetTab() {
                               padding: '10px 6px',
                               textAlign: 'center',
                               fontWeight: h > STANDARD_DAY_HOURS ? 600 : 400,
-                              color: h === 0 ? 'var(--text3)' : h > STANDARD_DAY_HOURS ? 'var(--gold)' : 'var(--text)',
+                              color: h === 0 ? 'var(--text3)' : h > STANDARD_DAY_HOURS ? 'var(--warn-text)' : 'var(--text)',
                             }}
                           >
                             {h > 0 ? `${formatHours(h)}h` : '—'}
@@ -426,7 +426,7 @@ export default function TimesheetTab() {
                                       width: '100%',
                                       height: Math.max(Math.round((h / 9) * 40), h > 0 ? 4 : 2),
                                       borderRadius: '3px 3px 0 0',
-                                      background: h === 0 ? 'var(--border)' : h >= STANDARD_DAY_HOURS ? 'var(--green)' : 'var(--gold)',
+                                      background: h === 0 ? 'var(--border)' : h >= STANDARD_DAY_HOURS ? 'var(--success)' : 'var(--ready)',
                                       transition: 'height 0.2s',
                                     }}
                                   />

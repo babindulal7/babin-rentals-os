@@ -40,15 +40,15 @@ const chipStyle = (active: boolean): React.CSSProperties => ({
   cursor: 'pointer',
   display: 'inline-flex',
   alignItems: 'center',
-  border: active ? '1px solid rgba(47, 125, 255, 0.4)' : '1px solid var(--border)',
-  background: active ? 'rgba(47, 125, 255, 0.14)' : 'transparent',
-  color: active ? 'var(--info)' : 'var(--text3)',
+  border: active ? '1px solid var(--primary)' : '1px solid var(--border)',
+  background: active ? 'var(--select-bg)' : 'transparent',
+  color: active ? 'var(--select-fg)' : 'var(--text3)',
   transition: 'all 0.15s',
 })
 
 const stepperStepStyle = (isCurrent: boolean, isPast: boolean): React.CSSProperties => ({
   flex: 1,
-  minHeight: '36px',
+  minHeight: 'var(--tap, 44px)',
   textAlign: 'center',
   padding: '6px 4px',
   borderRadius: '7px',
@@ -58,9 +58,9 @@ const stepperStepStyle = (isCurrent: boolean, isPast: boolean): React.CSSPropert
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  background: isCurrent ? 'var(--info)' : isPast ? 'rgba(46, 204, 143, 0.14)' : 'var(--surface)',
-  color: isCurrent ? '#fff' : isPast ? 'var(--green)' : 'var(--text3)',
-  border: isCurrent ? '1px solid var(--info)' : isPast ? '1px solid rgba(46, 204, 143, 0.3)' : '1px solid var(--border)',
+  background: isCurrent ? 'var(--info)' : isPast ? 'var(--success-soft)' : 'var(--surface)',
+  color: isCurrent ? 'var(--on-primary, #fff)' : isPast ? 'var(--success-text)' : 'var(--text3)',
+  border: isCurrent ? '1px solid var(--info)' : isPast ? '1px solid var(--success-border, var(--border))' : '1px solid var(--border)',
   transition: 'all 0.15s',
 })
 

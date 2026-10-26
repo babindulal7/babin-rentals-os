@@ -605,6 +605,8 @@
   --good: var(--success-text);
   --bad: var(--danger-text);
   --info: var(--primary-text);
+  --green: var(--success-text);
+  --red: var(--danger-text);
 
   /*
     ---- alias registry, 22 Aug audit ----

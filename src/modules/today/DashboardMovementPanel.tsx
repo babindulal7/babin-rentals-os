@@ -148,26 +148,11 @@ export default function DashboardMovementPanel({
           </h2>
           {panelSubtitle && <p title={panelSubtitle}>{panelSubtitle}</p>}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+        <div className="movement-panel__rentals-action">
           <button
             type="button"
             onClick={() => navigate(side === 'outgoing' ? '/rentals?quick=Pickups+Today' : '/rentals?quick=Returns+Today')}
-            className="press tap"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 4,
-              fontSize: 'var(--t-meta, 13px)',
-              fontWeight: 600,
-              color: 'var(--link)',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '4px 8px',
-              borderRadius: 'var(--r-btn)',
-              minHeight: 36,
-              fontFamily: 'inherit',
-            }}
+            className="movement-panel__rentals-btn press tap"
             title={`View all ${side === 'outgoing' ? 'pickups' : 'returns'} in Rentals list`}
             aria-label={`View all ${side === 'outgoing' ? 'pickups' : 'returns'} in Rentals list`}
           >
@@ -201,7 +186,7 @@ export default function DashboardMovementPanel({
                       ? 'Nothing is scheduled to leave in this period.'
                       : 'Nothing is expected back in this period.'}
                   </p>
-                  <div className="movement-panel__empty-actions" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                  <div className="movement-panel__empty-actions">
                     {onSelectPeriod && (
                       <button
                         type="button"
@@ -437,9 +422,10 @@ export default function DashboardMovementPanel({
             filter, widened. "View all" is the widen (no separate query). A counted
             "View late" (overdue) drill-down is deferred — it needs an activity-scoped
             /rentals route param that is not wired yet, so it is not shipped half-built. */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 12px', borderTop: '1px solid var(--border)' }}>
-          <Link to="/rentals" style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--link)', textDecoration: 'none' }}>
-            View all {side === 'outgoing' ? 'bookings' : 'rentals'} <Icon name="arrow_right" size={14} />
+        <div className="movement-panel__footer">
+          <Link to="/rentals" className="movement-panel__footer-link press tap">
+            <span>View all {side === 'outgoing' ? 'bookings' : 'rentals'}</span>
+            <Icon name="arrow_right" size={14} />
           </Link>
         </div>
       </div>}

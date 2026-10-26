@@ -209,7 +209,7 @@ function WarrantyPreview() {
                     </td>
                     <td style={{ padding: '10px 8px' }}>
                       <div>{item.endDate}</div>
-                      <div style={{ fontSize: '11px', color: item.daysRemaining < 0 ? 'var(--red)' : item.daysRemaining <= 60 ? 'var(--gold)' : 'var(--text3)' }}>
+                      <div style={{ fontSize: '11px', color: item.daysRemaining < 0 ? 'var(--danger-text)' : item.daysRemaining <= 60 ? 'var(--warn-text)' : 'var(--text3)' }}>
                         {item.daysRemaining < 0 ? `${Math.abs(item.daysRemaining)}d ago` : `${item.daysRemaining}d left`}
                       </div>
                     </td>
@@ -230,7 +230,7 @@ function WarrantyPreview() {
                           {formatMoney(rupees(item.claimsRecovered))}
                         </div>
                       )}
-                      <div style={{ fontSize: '11px', color: canViewMoney && roi >= 100 ? 'var(--green)' : item.claimsCount > 0 ? 'var(--gold)' : 'var(--text3)' }}>
+                      <div style={{ fontSize: '11px', color: canViewMoney && roi >= 100 ? 'var(--success-text)' : item.claimsCount > 0 ? 'var(--ready-text)' : 'var(--text3)' }}>
                         {item.claimsCount} claim{item.claimsCount === 1 ? '' : 's'} {canViewMoney && item.claimsCount > 0 ? `· ${roi}% ROI` : ''}
                       </div>
                     </td>

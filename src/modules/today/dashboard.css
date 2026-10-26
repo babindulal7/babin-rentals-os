@@ -126,9 +126,9 @@
   /* The same presets remain in the date picker on phones. */
   .dispatch-toolbar__presets { display: none; }
   .dispatch-toolbar__dates { margin-left: auto; }
-  .dispatch-summary { padding: 12px; gap: 8px; align-items: flex-start; }
-  .dispatch-summary__icon { width: 28px; height: 36px; background: transparent; }
-  .dispatch-summary--returns .dispatch-summary__icon { background: transparent; }
+  .dispatch-summary { padding: 12px; gap: 10px; align-items: center; }
+  .dispatch-summary__icon { width: 36px; height: 36px; border-radius: var(--r-btn, 8px); background: var(--ext-bg); }
+  .dispatch-summary--returns .dispatch-summary__icon { background: var(--success-bg); }
   .dispatch-summary__heading { gap: 2px 6px; }
   .dispatch-summary__count { font-size: 24px; }
   .dispatch-summary h2 { font-size: 14px; }
@@ -3540,6 +3540,107 @@
 
 .rental-dashboard .rental-dashboard__panels .movement-card .movement-card__cta-btn {
   min-height: 56px;
+}
+
+/* ─── Task B Refinements: Rentals Link, Empty Actions & Action Distinction ─── */
+.rental-dashboard .movement-panel__rentals-action {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-xs, 6px);
+  margin-left: auto;
+}
+
+.rental-dashboard .movement-panel__rentals-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: var(--tap, 44px);
+  padding: 0 10px;
+  font-size: var(--t-meta, 13px);
+  font-weight: 600;
+  color: var(--link);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-btn, 8px);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+
+.rental-dashboard .movement-panel__rentals-btn:hover {
+  background: var(--hover-card);
+  color: var(--link-hover, var(--primary));
+  border-color: var(--border);
+}
+
+.rental-dashboard .movement-panel__rentals-btn:focus-visible {
+  outline: 2px solid var(--input-focus);
+  outline-offset: 2px;
+}
+
+.rental-dashboard .movement-panel__footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--sp-xs, 6px) var(--sp-md, 12px);
+  border-top: 1px solid var(--border);
+  background: var(--card);
+}
+
+.rental-dashboard .movement-panel__footer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: var(--tap, 44px);
+  padding: 0 10px;
+  font-size: var(--t-meta, 13px);
+  font-weight: 600;
+  color: var(--link);
+  text-decoration: none;
+  border-radius: var(--r-btn, 8px);
+  transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+
+.rental-dashboard .movement-panel__footer-link:hover {
+  background: var(--hover-card);
+  color: var(--link-hover, var(--primary));
+}
+
+.rental-dashboard .movement-panel__footer-link:focus-visible {
+  outline: 2px solid var(--input-focus);
+  outline-offset: 2px;
+}
+
+.rental-dashboard .movement-panel__empty-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm, 8px);
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+/* Clear hierarchy between primary dominant action (Handover/Return) vs preparation action (Start Packing) */
+.rental-dashboard .rental-dashboard__panels .movement-card .movement-card__cta-btn.is-prep {
+  background: var(--card2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+.rental-dashboard .rental-dashboard__panels .movement-card .movement-card__cta-btn.is-prep:hover {
+  background: var(--hover-row);
+  border-color: var(--border-strong, var(--border));
+  color: var(--primary-text);
+}
+
+.rental-dashboard .rental-dashboard__panels .movement-card .movement-card__cta-btn.is-dominant {
+  background: var(--btn-primary-bg, var(--primary));
+  color: var(--btn-primary-fg, var(--on-primary));
+  border: 1px solid transparent;
+}
+
+.rental-dashboard .rental-dashboard__panels .movement-card .movement-card__cta-btn.is-dominant:hover {
+  background: var(--hover-button, var(--primary));
+  filter: brightness(1.08);
 }
 @media (max-width: 767px) {
   .rental-dashboard .dispatch-toolbar .dashboard-master-date-control { width: auto; flex: 0 0 auto; }
