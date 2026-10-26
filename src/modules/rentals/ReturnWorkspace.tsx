@@ -754,7 +754,7 @@ export default function ReturnWorkspace({
           }
         } else if (mark?.state === 'Not Returned') {
           outcome = mark.decision || 'Missing'
-          problemRoute = mark.decision === 'Client Retaining' ? 'Rental Extension Review' : 'Missing Item Investigation'
+          problemRoute = mark.decision === 'Still expected' ? 'Still Expected / Follow Up' : 'Missing Item Investigation'
         }
 
         return {

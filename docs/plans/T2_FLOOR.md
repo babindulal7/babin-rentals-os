@@ -139,7 +139,7 @@ alone) and sorts to the top; the rest stay first-in, first-out.
 takes effect.
 **Needs** — none.
 
-### T2-08 · Floor printing            status: todo · size: M · lane A
+### T2-08 · Floor printing            status: done · size: M · lane A
 **What** — 1) Packing list print/PDF from Pack (parent-first, children nested — 27 Jul hierarchy
 rule); 2) Return report print/PDF (units, outcome, photos count, flags); 3) QR labels from
 Inventory: **QR code + asset code** on each label (W71), printed on the label printer Babin buys

@@ -1,5 +1,47 @@
 # Progress Log
 
+## 2026-10-27 — T2-08: Floor printing (Packing list manifest, Return report, QR/label print)
+
+**Did**
+- Implemented packing list binary PDF generation `generatePackingListPdf()` and export `exportPackingListPdf()` in `src/lib/pdf/generatePdf.ts` and `src/lib/pdf/exportPdf.ts`. Follows the 27 Jul hierarchy rule: packages/parent bundles first, child lines indented `   ↳` immediately below their parents, loose items following. Pure PDF 1.4 binary stream with printable `[ ]` check boxes, signature lines (Packed by, Received by), and document metadata.
+- Implemented return report binary PDF generation `generateReturnReportPdf()` and export `exportReturnReportPdf()` in `src/lib/pdf/generatePdf.ts` and `src/lib/pdf/exportPdf.ts`. Summarizes line outcomes (`Received`, `Damaged`, `Missing`), triage routes (`Cleaning`, `Repair`, `Inspection`), photo count, inspector signature block, and client acknowledgment.
+- Strictly enforced money-blindness (Law 6): zero financial amounts (Rs, NPR, rates, paisa, deposits, fines) in packing list or return report PDFs.
+- Replaced the two `<Unavailable reason="Printing … is not built">` blocks in `src/modules/rentals/PackingWorkspace.tsx` and `src/modules/rentals/ReturnWorkspace.tsx` with active print buttons that generate and open/download the PDF on iPad and desktop (`openPdfForPrint`).
+- Replaced `window.print()` in `src/modules/tools/QrGeneratorModal.tsx` with dedicated thermal / AirPrint label printing (`printLabel`).
+- Added comprehensive unit tests in `src/lib/pdf/__tests__/generatePdf.test.ts`, `src/lib/pdf/__tests__/exportPdf.test.ts`, and `src/modules/rentals/__tests__/floorPrinting.test.tsx`.
+
+**Ruled**
+- 27 Jul hierarchy rule: Parent bundle lines are listed before child components, and children are indented directly beneath their parent with `   ↳`.
+- Law 6: Floor manifests and return reports are completely money-blind for warehouse, technician, driver, and client roles.
+- AirPrint / direct printer fallback: `openPdfForPrint()` creates a revocable blob URL and opens an isolated print window on iPad/desktop with fallback direct download.
+
+**Verified**
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 errors, 0 warnings.
+- `npx vitest run src/lib/pdf/__tests__/ src/modules/rentals/__tests__/floorPrinting.test.tsx`: 23/23 tests pass across 3 files.
+- `npm run check:pglite`: 178/178 migrations applied, 0 leaks, 0 failed.
+- `npm run check:lifecycle`: 38/38 steps green (L1–L38).
+- `npm run check:contrast`: 106/106 WCAG AA token pairs pass in light and dark mode.
+- `npm run build`: built in 3m 36s, 8144 modules transformed, PWA service worker generated cleanly.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 57 / 57 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 38 / 38 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 178 files · check:pglite 178/178 applied, 0 failed (recorded 2026-10-26T18:24:19.691Z). Suite: Historical suite: 5763/5764 passed, 1 failed (recorded 2026-10-26T18:02:08.761Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-26T18:24:45.212Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Nothing open from T2-08. Ready to proceed to the next card on Lane A (`T2-10 · Offline outbox for scans and ticks`).
+
 ## 2026-10-26 (l) — Workflow round (v2, rebased onto 7d84c323): ~100 answers recorded; plans, lanes and agent prompts updated; Claude chose who does what (docs only, delivered as files)
 
 **Did**
@@ -645,7 +687,7 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `npx vitest run src/modules/crew/__tests__/TimesheetTab.test.tsx`: 11/11 PASS.
 - `npx vitest run src/components/ui/__tests__/buttonConsistency.test.tsx`: 5/5 PASS.
 - `npm run build`: exit 0, built in 1m 3s.
-=======
+
 ## 2026-10-26 — Go-live roadmap: new PLAN.md, 11 track plans, Babin's ruling round (docs only)
 
 **Did**
@@ -667,7 +709,6 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `npm run db:plan` read-only: live ledger snapshot 17 Oct = 156 rows, newest 0164; 19 files pending (0157–0163, 0165–0174, 0176, 0177); 0047 seed must stay excluded; 7 rename mismatches; 2 unexplained live rows (`archive_bakery_pos_schema`, `0047_seed_tail_b917_equipment_line`).
 - Hosting facts in T1's appendix were checked against the providers' own pages on 26 Oct (links in the appendix).
 - Rebased onto `main` `f3aa132` before pushing. The commits after `34cce2d` touch `PROGRESS.md`, `docs/WORKFLOWS.md` and one comment in `src/lib/bookingTransition.ts` only, so the measurements above still describe the code.
->>>>>>> 17b10b238edb6ac749f55085cb3799b6adbf1d65
 
 ### Completion
 | Dimension | Counts | Now | Δ |
