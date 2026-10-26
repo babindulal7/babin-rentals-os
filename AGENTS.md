@@ -4,7 +4,7 @@ React 18 · TS 5.7 strict · Vite 5 · Tailwind v4 · Supabase Postgres + RLS ·
 
 ## Start here (authority order)
 
-`docs/00_READ_FIRST.md` → `CLAUDE.md` → `docs/PERMISSIONS.md` (§3/§4/§6 matrix) → `RULINGS-*.md` (newest first) → `docs/PRODUCT_RULES.md` → `docs/CURRENT_STATE.md` → `PROGRESS.md` → `PLAN.md` *(absent from the repo at `b4c986a` — skip it; use `docs/OPEN_DECISIONS.md`)* → Foundation Spec. Where specs conflict, Foundation wins; where permissions conflict, `PERMISSIONS.md` wins and **stricter wins** (B-1). Never read `src/archive/` or dated `docs/audits/` as current truth.
+`docs/00_READ_FIRST.md` → `CLAUDE.md` → `docs/PERMISSIONS.md` (§3/§4/§6 matrix) → `RULINGS-*.md` (newest first) → `docs/PRODUCT_RULES.md` → `docs/CURRENT_STATE.md` → `PROGRESS.md` → `PLAN.md` *(go-live roadmap, re-created 26 Oct 2026; task cards in `docs/plans/`)* → Foundation Spec. Where specs conflict, Foundation wins; where permissions conflict, `PERMISSIONS.md` wins and **stricter wins** (B-1). Never read `src/archive/` or dated `docs/audits/` as current truth.
 
 - Never invent a product decision. Mark `TODO(decision)`, log in `PLAN.md §4` / `docs/OPEN_DECISIONS.md`, work on something unblocked.
 - Session end: update `PROGRESS.md` (newest first, Did / Ruled / Verified) with `## Completion` + `## Remaining` blocks. Run `npm run completion` — never hand-type a percentage. `npm run lint:progress` enforces the blocks (CI runs it).
@@ -18,7 +18,7 @@ npm run dev:mock             # vite --mode mock, VITE_DATA_SOURCE=mock local cor
 npm run dev:local            # vite --mode localdb
 npm run typecheck            # tsc --noEmit
 npm run lint                 # eslint src --max-warnings 0 (src only; archive/scripts/supabase excluded)
-npm test                     # vitest run (full suite)
+npm test                     # vitest run (full suite) — without .env.local run it as `VITE_DATA_SOURCE=mock npm test`, as CI does (T0-02 makes this the default)
 npx vitest run <path>        # single file, e.g. npx vitest run src/__tests__/e2e/tier1-features.test.tsx
 npm run build                # tsc --noEmit && vite build → dist/
 ```

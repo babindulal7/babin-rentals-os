@@ -3,7 +3,7 @@
 **Before writing any code in this project:**
 
 1. Read [`docs/00_READ_FIRST.md`](docs/00_READ_FIRST.md) — documentation governance and rules of truth.
-2. Read [`PLAN.md`](PLAN.md) — the laws, the build order, and the decisions that block work. *(`PLAN.md` is not present in the repository at `b4c986a`; until it is restored, use [`docs/PRODUCT_RULES.md`](docs/PRODUCT_RULES.md) for the laws and [`docs/OPEN_DECISIONS.md`](docs/OPEN_DECISIONS.md) for blocking decisions. Do not recreate it from memory.)*
+2. Read [`PLAN.md`](PLAN.md) — the go-live roadmap: finish line, tracks, calendar, decisions index and how agents work in parallel. Build-ready task cards are in [`docs/plans/`](docs/plans/README.md). *(Re-created 26 Oct 2026 by Babin's ruling — `RULINGS-2026-10-26.md` S4. It is a new plan, not a reconstruction of the pre-October file: laws live in [`docs/PRODUCT_RULES.md`](docs/PRODUCT_RULES.md); open decisions are indexed in `PLAN.md` §4.2 with full text in [`docs/OPEN_DECISIONS.md`](docs/OPEN_DECISIONS.md).)*
 3. Read [`PROGRESS.md`](PROGRESS.md) — what state the build is actually in.
 
 **Before ending a session:** update [`PROGRESS.md`](PROGRESS.md) with what changed, **how it
@@ -24,7 +24,9 @@ permission or named-action gate — it removes *avoidable* steps only. Budgets:
 
 - **Stay inside the current phase** in `PLAN.md`. The ordering is dependency-driven.
 - **Never invent a product decision** to unblock yourself. Mark `TODO(decision)`, add it to
-  `PLAN.md §4`, and work on something unblocked.
+  `docs/OPEN_DECISIONS.md`, index it in `PLAN.md` §4.2, and work on something unblocked.
+- **One agent per checkout.** Work in your lane's own git worktree and branch (`PLAN.md` §6);
+  claim migration numbers in `docs/plans/MIGRATION_LEDGER.md` before writing SQL.
 - **Never apply a migration to a live Supabase project** without explicit approval.
 - **Verify by driving the app**, not by reading the code you just wrote.
 
