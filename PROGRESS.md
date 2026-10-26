@@ -1,5 +1,44 @@
 # Progress Log
 
+## 2026-10-26 — Shadcn committed to main; isolated integration verified
+
+**Did**
+- Completed the authorized shadcn integration on main. Original shadcn commit `274b2074` is retained through merge `276f2f74`; integration resolutions are in `fbae3c0b`. Main merge `2a4b032d` adds two test reliability fixes and preserves concurrent history and unrelated working-tree drafts.
+- Preserved Base Rhea components, Luma/Rhea themes, report/record/Operations repairs, main's live-plan/no-fee membership activation, and UUID/online/pending/idempotency guards. Kept main's 0174 membership migration; unapplied branch Return migrations became 0176/0177 with their SQL bodies intact. Membership is L32; daily closing is L33.
+- Fixed test scheduling without changing product behavior or assertions: RecordWorkspace waits for the actual two animation frames; Tier 1 loads Finance during collection and forwards canonical live exports through the partial booking mock. Test timeouts are unchanged. Focused suites passed 9/9 and 14/14 before the full run.
+- Preserved ignored logs, coverage and source-bound receipts under `artifacts/shadcn-main-integrated-20261026/` and `artifacts/coverage-runs/66e6181f-1950-4925-a3d3-2716b929b7b1/`. Recorded durable gate metadata in the linked verification report/JSON.
+
+**Ruled**
+- No new product or permission decision. Existing membership consolidation/term questions stay in docs/OPEN_DECISIONS.md §20. No push, deployment or hosted database mutation was performed by this task.
+- Verification below certifies isolated candidate `8a153f6a96969335c3ae787f0087680519cd9145`, whose verification inputs match committed main integration `2a4b032d`. Unrelated primary working-tree drafts are preserved and are not certified by this run.
+
+**Verified**
+- All 14 gates PASS on unchanged source `b594f9948385f7426d5c39fc43889a2f4629bbf0fb798daf3d0db3592a03ed42`: typecheck; full suite with V8 coverage **5739/5739 tests in 463 files**; **174/174** migration rebuild; **33/33** lifecycle; **58/58** RPC contracts; **58/58** partial Return assertions; security and financial integrity; ESLint; **106/106** contrast pairs; page shell and UI copy; **11/11** receipt regressions; production bundle/PWA.
+- Initial merged-suite failures exposed cold-import timing and a wall-clock focus race. An intermediate isolated run was stopped to include main's concurrent comment correction; it is not counted as a passing full suite. The final frozen-source run supersedes those attempts.
+- CSS syntax warning: absent in final build after the obsolete InputGroup comment example was removed. Existing import/chunk-size advisories remain informational.
+- Return migrations 0176/0177: WRITTEN + VERIFIED locally, NOT APPLIED / NOT PRODUCTION-VERIFIED. Local PGlite proof does not certify hosted Auth/PostgREST/Storage or devices. See docs/verification/SHADCN_MAIN_INTEGRATION_2026-10-26.md.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 55 / 58 (95%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 33 / 33 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 174 files · check:pglite 174/174 applied, 0 failed (recorded 2026-10-26T06:01:40.888Z). Suite: PASS — 5739/5739 passed, 0 failed (recorded 2026-10-26T06:01:16.431Z); source fingerprint matches.
+Coverage suite: PASS — 5739/5739 passed, 0 failed (recorded 2026-10-26T06:01:16.431Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-10-26T06:01:42.727Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+
+- Hosted migration application remains Babin's backup-first N-5 action. Hosted/device/offline acceptance and the existing production HOLD remain.
+- Existing unsupported capture/persistence and quantity-only Reset capabilities remain explicit. Existing membership decisions stay open.
+- Unrelated primary drafts and their broader UI changes need their own verification and commit.
+
 ## 2026-10-25 (b) — Lifecycle review against current code; close-gate docs and a stale comment corrected
 
 **Did**
