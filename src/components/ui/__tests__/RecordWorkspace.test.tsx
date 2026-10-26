@@ -29,7 +29,13 @@ const click = async (el: Element | null | undefined) => {
     el?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }))
   })
 }
-const frame = () => act(async () => { await new Promise((r) => setTimeout(r, 40)) })
+const frame = () => act(async () => {
+  if (typeof requestAnimationFrame === 'function') {
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+    })
+  }
+})
 const byText = (text: string, tag = 'button') => [...document.querySelectorAll(tag)].find((e) => e.textContent?.trim() === text)
 
 describe('RecordSection + RecordErrorSummary', () => {
