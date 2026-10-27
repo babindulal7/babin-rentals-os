@@ -3088,6 +3088,70 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L40',
+  title: 'Self-QC refused without the flag, accepted with it, audited (W43, L7, T2-13)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      await as('Warehouse', async () => {
+        const entryId = crypto.randomUUID()
+        const unitId = UNITS[0]
+        const bookingId = bookingIds.a
+
+        // 1. Insert queue entry for reset
+        await q(
+          `insert into cleaning_queue_entries (id, client_uuid, booking_id, unit_id, state, cleaned_by, clean_completed_at, created_by)
+           values ($1, gen_random_uuid(), $2, $3, 'Cleaning', $4, now(), $4)`,
+          [entryId, bookingId, unitId, U.Warehouse],
+        )
+
+        // 2. Setting qc_by = cleaned_by without qc_self_checked is refused by the check constraint
+        await q('savepoint qc_self_check_probe')
+        try {
+          await refuses(
+            'self-QC without qc_self_checked is refused',
+            `update cleaning_queue_entries
+             set qc_by = $1, qc_at = now(), qc_self_checked = false
+             where id = $2`,
+            [U.Warehouse, entryId],
+            /cleaning_queue_entries_qc_is_a_second_pair_of_eyes/i,
+          )
+        } finally {
+          await q('rollback to savepoint qc_self_check_probe')
+          await q('release savepoint qc_self_check_probe')
+        }
+
+        // 3. Setting qc_by = cleaned_by WITH qc_self_checked = true is accepted
+        await q(
+          `update cleaning_queue_entries
+           set qc_by = $1, qc_at = now(), qc_self_checked = true, state = 'Ready'
+           where id = $2`,
+          [U.Warehouse, entryId],
+        )
+
+        const row = (await q(`select qc_by, cleaned_by, qc_self_checked from cleaning_queue_entries where id = $1`, [entryId])).rows[0]
+        assertEq(row.qc_by, U.Warehouse, 'qc_by matches operator')
+        assertEq(row.cleaned_by, U.Warehouse, 'cleaned_by matches operator')
+        assertEq(row.qc_self_checked, true, 'qc_self_checked is true')
+
+        // 4. Verify audit_events recorded the self-checked QC (Manager+ can view audit log)
+        let audit = null
+        await as('Manager', async () => {
+          audit = (await q(
+            `select new_values from audit_events
+             where table_name = 'cleaning_queue_entries' and record_id = $1 and action = 'Update'
+             order by created_at desc limit 1`,
+            [entryId],
+          )).rows[0]
+        })
+        assert(audit, 'audit event exists for cleaning_queue_entries self-QC')
+        assertEq(audit.new_values.qc_self_checked, true, 'audit record reflects qc_self_checked = true')
+      })
+    })
+  },
+})
+
 /* ── Run ──────────────────────────────────────────────────────────────────── */
 
 await seed()

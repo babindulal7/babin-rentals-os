@@ -21,7 +21,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0180 | T2-05 | technician-floor-verbs | lane-a/T2-05-technician-floor | verified |
 | 0181 | T2-03 | collateral-deposit-id-card | lane-a/T2-03-collateral-deposit | verified |
 | 0182 | T2-12 | client-collectors-and-id-on-file | lane-a/T2-12-client-collectors-and-id-on-file | verified |
-| 0183 | T2-13 | reset-self-qc-when-alone | lane-a/T2-13-self-qc-when-alone | claimed |
+| 0183 | T2-13 | reset-self-qc-when-alone | lane-a/T2-13-self-qc-when-alone | verified |
 
 ## Expected migrations (not yet claimed)
 

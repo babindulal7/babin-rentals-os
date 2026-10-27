@@ -1,5 +1,47 @@
 # Progress Log
 
+## 2026-10-27 — T2-13: Self-QC when alone
+
+**Did**
+- Claimed and verified migration `0183` in `docs/plans/MIGRATION_LEDGER.md` and created `supabase/migrations/0183_reset_self_qc_when_alone.sql`: added `qc_self_checked boolean not null default false` column to `cleaning_queue_entries` and updated check constraint `cleaning_queue_entries_qc_is_a_second_pair_of_eyes` to accept `qc_by = cleaned_by` when `qc_self_checked = true` (or when QC is skipped with reason).
+- Added lifecycle step `L40: Self-QC refused without the flag, accepted with it, audited (W43, L7, T2-13)` in `scripts/e2e-lifecycle.mjs`, asserting that self-QC is rejected by the database without `qc_self_checked`, accepted when `qc_self_checked = true`, and verified that the update trigger logs `qc_self_checked: true` in `audit_events` (40/40 green).
+- Updated `docs/PERMISSIONS.md` §6.1 with gate `gate.reset.qc_self_check` allowing Warehouse, Technician, and Manager+ to pass QC on self-cleaned gear when alone on shift, and updated `src/types/database.ts` with `qc_self_checked`.
+- Updated `src/actions/rentals/floorVerb.ts`: extended `ResetEntryInput` with `qcSelfChecked?: boolean`, updated `validateFloorVerb` to permit `qcBy === cleanedBy` when `qcSelfChecked === true` while refusing it when neither `qcSelfChecked` nor `qcSkipped` is declared, and assembled `qc_self_checked` into `cleaning_queue_entries` update and audit payload.
+- Updated `src/modules/rentals/ResetWorkspace.tsx`: added "I am alone on shift (W43, L7)" checkbox to individual row QC controls (`QcRowControls`) and batch QC actions (`batchAloneOnShift`), disabling Pass when an operator cleaned the gear unless "I am alone on shift" is ticked (or an audited skip reason is entered), and dispatching `qcSelfChecked: true` without faking a skipped QC.
+- Authored test suite `src/actions/rentals/__tests__/resetSelfQc.test.ts` (4/4 passed) and updated `src/modules/rentals/__tests__/resetQc.test.tsx` with dedicated tests for single and batch "I am alone on shift" flows (17/17 passed).
+
+**Ruled**
+- W43 & L7: The person who cleaned an item may pass its QC only when alone on shift. The QC step requires the "I am alone on shift" tick; with it ticked, `qc_by = cleaned_by` is accepted and recorded as self-checked (`qc_self_checked = true`, audited). Without it, a second person is still asked for.
+- 0003:887: Replaced the rigid constraint on `cleaning_queue_entries` with `(qc_by <> cleaned_by or qc_self_checked = true)` under non-skipped QC.
+- Law 1 & Law 12: No fabricated identities or faked skips; the database directly supports and records self-checked QC with full audit trail.
+
+**Verified**
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npx vitest run src/actions/rentals/__tests__/resetSelfQc.test.ts src/modules/rentals/__tests__/resetQc.test.tsx src/modules/rentals/__tests__/ResetWorkspace.quantity.test.tsx src/modules/rentals/__tests__/ResetWorkspace.embedded.test.tsx src/modules/rentals/__tests__/ResetWorkspace.neededNext.test.tsx`: 28/28 tests passed across 5 test suites.
+- `npm run check:pglite`: 180/180 migrations applied, 0 leaks, 0 failed.
+- `npm run check:lifecycle`: 40/40 steps green (L1–L40).
+- `npm run check:contrast`: 106/106 WCAG AA token pairs pass in light and dark mode.
+- `npm run build`: built in 2m 23s, 8150 modules transformed, PWA service worker generated cleanly.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 59 / 59 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 40 / 40 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 180 files · check:pglite 180/180 applied, 0 failed (recorded 2026-10-27T09:30:56.623Z). Suite: Historical suite: 5808/5808 passed, 0 failed (recorded 2026-10-27T07:45:41.068Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-27T09:31:18.591Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Nothing open from T2-13. Ready to merge on Lane A.
+
 ## 2026-10-27 — T2-12: Client collectors and ID on file
 
 **Did**

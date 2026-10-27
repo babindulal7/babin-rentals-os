@@ -298,6 +298,12 @@ export interface ResetEntryInput {
    * with `qc_by = cleaned_by` is rejected by the CHECK.
    */
   qcSkipped?: boolean
+  /**
+   * W43, L7, T2-13: True when the cleaner passed their own QC because they were
+   * alone on shift ("I am alone on shift" ticked). Replaces the hard refusal of
+   * `qc_by = cleaned_by` when `qcSkipped` is false. Audited.
+   */
+  qcSelfChecked?: boolean
   /** Mandatory when `qcSkipped`, and written to audit (`0003:882`). */
   qcSkipReason?: string
   /** The reason an earlier QC pass failed, carried onto the record that finally passed. */
@@ -940,11 +946,13 @@ export function validateFloorVerb(job: JobName, input: FloorVerbInput): void {
         entry.cleanedBy !== undefined &&
         entry.qcBy === entry.cleanedBy
       ) {
-        throw new Error(
-          `Reset: target ${targetId} was checked by the person who cleaned it. A self-approved check is ` +
-            'not a check (0003:887) — either a second person checks it, or record it as a skipped QC ' +
-            'with a reason. Nothing was written.',
-        )
+        if (entry.qcSelfChecked !== true) {
+          throw new Error(
+            `Reset: target ${targetId} was checked by the person who cleaned it. A self-approved check is ` +
+              'not a check (0003:887) — unless you are alone on shift (W43, L7), either a second person ' +
+              'checks it, or record it as a skipped QC with a reason. Nothing was written.',
+          )
+        }
       }
     }
     return
@@ -2313,6 +2321,7 @@ async function completeResetQueue(
       ...(entry.qcSkipped === true
         ? { qc_skipped: true, qc_skip_reason: entry.qcSkipReason ?? null, qc_at: at }
         : {}),
+      ...(entry.qcSelfChecked !== undefined ? { qc_self_checked: entry.qcSelfChecked } : {}),
       ...(entry.qcBy === undefined ? {} : { qc_by: entry.qcBy, qc_at: at }),
       ...(entry.qcFailReason === undefined ? {} : { qc_fail_reason: entry.qcFailReason }),
     }

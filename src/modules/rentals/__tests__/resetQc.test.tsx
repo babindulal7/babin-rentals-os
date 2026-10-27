@@ -434,6 +434,64 @@ describe('ResetWorkspace — RS-12, the QC identity', () => {
     expect(input.resetEntries[0]).not.toHaveProperty('qcSkipReason')
   })
 
+  it('ticking "I am alone on shift" enables Pass without entering a reason and dispatches qcSelfChecked (W43, L7, T2-13)', async () => {
+    await mount()
+    await reachQc()
+
+    // Pass button is disabled before ticking or entering a reason
+    expect(passButton().disabled).toBe(true)
+    const aloneCheckbox = container.querySelector<HTMLInputElement>('input[aria-label="I am alone on shift"]')
+    expect(aloneCheckbox).not.toBeNull()
+    expect(aloneCheckbox?.checked).toBe(false)
+
+    // Tick "I am alone on shift"
+    await check(aloneCheckbox!)
+    expect(aloneCheckbox?.checked).toBe(true)
+    expect(passButton().disabled).toBe(false)
+    expect(text()).toContain('Self-QC · alone on shift · audited')
+
+    await click(passButton())
+    await click(button('Complete Reset'))
+
+    expect(dispatched).toHaveLength(1)
+    const input = dispatched[0] as { resetEntries: Array<Record<string, unknown>> }
+    expect(input.resetEntries[0]).toMatchObject({
+      cleanedBy: 'u-1',
+      qcBy: 'u-1',
+      qcSelfChecked: true,
+    })
+    expect(input.resetEntries[0]).not.toHaveProperty('qcSkipped')
+  })
+
+  it('ticking batch "I am alone on shift" enables batch Pass and dispatches qcSelfChecked (W43, L7, T2-13)', async () => {
+    await mount()
+    await reachQc()
+
+    const select = container.querySelector<HTMLInputElement>('input[aria-label="Select Sony FX3"]')
+    if (!select?.checked) await check(select!)
+
+    const batchPassBtn = [...container.querySelectorAll('button')].find(
+      (b) => b.textContent?.includes('Pass QC for All'),
+    )
+    expect(batchPassBtn?.disabled).toBe(true)
+
+    const batchAloneCheckbox = container.querySelector<HTMLInputElement>('input[aria-label="Batch: I am alone on shift"]')
+    expect(batchAloneCheckbox).not.toBeNull()
+    await check(batchAloneCheckbox!)
+    expect(batchPassBtn?.disabled).toBe(false)
+
+    await click(batchPassBtn!)
+    await click(button('Complete Reset'))
+
+    expect(dispatched).toHaveLength(1)
+    const input = dispatched[0] as { resetEntries: Array<Record<string, unknown>> }
+    expect(input.resetEntries[0]).toMatchObject({
+      cleanedBy: 'u-1',
+      qcBy: 'u-1',
+      qcSelfChecked: true,
+    })
+  })
+
   /*
    * The positive control. `selfIdOf` is the whole reason a typed name could
    * never be written: restore the old input's behaviour — a name that is not

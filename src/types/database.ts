@@ -1577,6 +1577,7 @@ export interface Database {
           cleaned_by: string | null
           qc_by: string | null
           qc_at: string | null
+          qc_self_checked: boolean
           qc_skipped: boolean
           qc_skip_reason: string | null
           qc_fail_reason: string | null
@@ -1606,6 +1607,7 @@ export interface Database {
           cleaned_by?: string | null
           qc_by?: string | null
           qc_at?: string | null
+          qc_self_checked?: boolean
           qc_skipped?: boolean
           qc_skip_reason?: string | null
           qc_fail_reason?: string | null

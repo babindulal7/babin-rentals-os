@@ -198,7 +198,7 @@ message + "Add ID" in place); a repeat client's collector is picked in one tap; 
 an ID number.
 **Needs** — T2-01. Also wires the collector picker into `SignOnGlassModal.tsx` as the receiver name (T2-02 left free text).
 
-### T2-13 · Self-QC when alone            status: doing (lane-a/T2-13-self-qc-when-alone) · size: S · lane A · [go-live]
+### T2-13 · Self-QC when alone            status: done — awaiting merge (lane-a/T2-13-self-qc-when-alone) · size: S · lane A · [go-live]
 **What** — Allow the person who cleaned an item to pass its QC **when alone on shift** (W43, L7):
 the QC step shows "I am alone on shift" as a tick; with it ticked, `qc_by = cleaned_by` is accepted
 and recorded as self-checked (audit row says so). Without it, a second person is still asked for.
