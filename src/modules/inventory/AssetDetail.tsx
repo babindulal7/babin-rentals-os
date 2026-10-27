@@ -43,6 +43,7 @@ import { RetireUnitModal } from './modals/RetireUnitModal'
 import { recordEditorOptions } from '../../lib/queries/recordEditor'
 import { readServiceDue } from '../../lib/queries/serviceDue'
 import type { ServiceRow } from '../../lib/serviceDue'
+import { openItemCard } from '../../components/shell/ScannerFab'
 import './inventory.css'
 
 /**
@@ -747,6 +748,7 @@ function AssetDetailView() {
                     <span className="figure">{u.runningHours}h</span> run
                   </div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <Button variant="secondary" size="sm" onClick={() => openItemCard(u.assetTag)}>Item Card</Button>
                     <Button variant="secondary" size="sm" onClick={() => setLabelUnit(u)}>Label</Button>
                     <Button variant="ghost" size="sm" onClick={() => setEditingUnit((prev) => (prev === u.id ? null : u.id))}>
                       {editingUnit === u.id ? 'Close' : 'Edit'}
@@ -842,6 +844,7 @@ function AssetDetailView() {
                             </td>
                             <td style={{ padding: '10px 8px', textAlign: 'right' }}>
                               <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                                <Button variant="ghost" onClick={() => openItemCard(u.assetTag)}>Card</Button>
                                 <Button variant="ghost" onClick={() => setLabelUnit(u)}>Label</Button>
                                 <Button variant="ghost" onClick={() => setEditingUnit((prev) => (prev === u.id ? null : u.id))}>
                                   {editingUnit === u.id ? 'Close' : 'Edit'}

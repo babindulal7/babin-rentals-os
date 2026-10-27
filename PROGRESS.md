@@ -1,5 +1,60 @@
 # Progress Log
 
+## 2026-10-27 — T2-14: Scan a label → item card
+
+**Did**
+- Implemented `getItemCardData(ref, opts)` query engine in `src/lib/queries/inventory.ts` to retrieve complete equipment intelligence for any scanned barcode, QR, serial, or asset tag:
+  - Product model, brand, asset tag, serial, barcode, status, and condition.
+  - Who has it now (W91): active client name, phone link, booking number, stage, return time in AD and BS, overdue state, and live countdown timer string.
+  - Location in shop: rack, shelf, bin, warehouse.
+  - Next upcoming booking: client, booking number, stage, pickup date, relative countdown ("Starts in 2 days").
+  - Last reset: cleaned by, QC inspector, self-check status (W43), skip reason, completion timestamp.
+  - Damage findings: active uninspected or open damage findings, severity, description.
+  - Financials: daily rate and replacement value in integer paisa, strictly masked for floor roles (Law 6).
+- Created countdown formatting utilities in `src/lib/itemCountdown.ts` (`formatDueCountdown`, `formatRelativeUpcoming`) with unit test coverage in `src/lib/__tests__/itemCountdown.test.ts` (8/8 passed).
+- Created `src/modules/inventory/ItemCardSheet.tsx`: responsive bottom sheet (phone) and modal (tablet/desktop) displaying the rich item card with real-time dynamic countdown ticker (`setInterval` 30s), who has it now, location, next booking, last reset, open damage, and Law 6 money gating.
+- Added `lookupItemCard` in `src/lib/scannerLookup.ts` and wired it into `src/components/shell/ScannerFab.tsx` via `openItemCard(code)` and `br:item-card:open` custom event.
+- Added global Bluetooth / keyboard wedge listener outside floor workspaces in `ScannerFab.tsx`, automatically opening the item card when a barcode is scanned outside floor workspaces (`/packing`, `/handover`, `/return`, `/reset`, `/evidence`).
+- In floor workspaces, scanning preserves its operational meaning (marking items against packing/return/reset lists) without triggering the item card modal.
+- Added "Item Card" quick action button in `src/modules/inventory/AssetDetail.tsx` on unit cards (mobile) and unit table rows (desktop).
+- Added comprehensive unit and integration tests:
+  - `src/lib/__tests__/itemCountdown.test.ts` (8/8 passed)
+  - `src/lib/queries/__tests__/itemCardLookup.test.ts` (2/2 passed)
+  - `src/modules/inventory/__tests__/ItemCardSheet.test.tsx` (5/5 passed)
+  - `src/components/shell/__tests__/ScannerFab.itemCard.test.tsx` (3/3 passed)
+  - `src/components/shell/__tests__/ScannerFab.viewport.test.tsx` (4/4 passed)
+  - `src/components/shell/__tests__/ScannerFab.loading.test.tsx` (1/1 passed)
+
+**Ruled**
+- W91: Scanning or searching an item's label outside a floor workspace displays who has it now, due back time, and a live countdown ticker ("Due in 2h 15m" / "Overdue by 3h 10m").
+- Law 6: Warehouse, Technician, Driver, and Client seats never receive money figures in the DOM or payloads; daily rate and replacement values are strictly omitted from the payload and UI for unauthorized roles.
+- Inside floor workspaces, scanning continues to mark units on the active list rather than opening the card sheet.
+
+**Verified**
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npx vitest run src/lib/__tests__/itemCountdown.test.ts src/lib/queries/__tests__/itemCardLookup.test.ts src/modules/inventory/__tests__/ItemCardSheet.test.tsx src/components/shell/__tests__/ScannerFab.itemCard.test.tsx src/components/shell/__tests__/ScannerFab.viewport.test.tsx src/components/shell/__tests__/ScannerFab.loading.test.tsx`: 23/23 tests passed.
+- `npm run build`: built in 3m 45s, 8152 modules transformed, PWA service worker generated cleanly.
+- `npm run lint:progress`: passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 59 / 59 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 40 / 40 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 180 files · check:pglite 180/180 applied, 0 failed (recorded 2026-10-27T11:18:26.048Z). Suite: Historical suite: 5831/5832 passed, 1 failed (recorded 2026-10-27T11:13:07.819Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-27T11:18:46.224Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Nothing open from T2-14. Ready to merge on Lane A.
+
 ## 2026-10-27 — T2-13: Self-QC when alone
 
 **Did**
