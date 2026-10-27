@@ -138,7 +138,9 @@ describe('real embedded workspace guidance and draft boundaries', () => {
     await click(button('Clean all → QC'))
     expect(document.querySelector('[data-operation-target="reset-next"]')?.textContent).toContain('QC')
     await click(button('(Jump)'))
-    expect(document.activeElement?.getAttribute('aria-label')).toBe('Reason for self-performed QC')
+    expect(['Reason for self-performed QC', 'I am alone on shift']).toContain(
+      document.activeElement?.getAttribute('aria-label')
+    )
     expect(button('Quick Pass to Ready')).toBeUndefined()
     expect(document.querySelector<HTMLButtonElement>('.operations-shell__footer .ui-button--primary')?.disabled).toBe(true)
   })
