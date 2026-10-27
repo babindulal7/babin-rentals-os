@@ -1,5 +1,63 @@
 # Progress Log
 
+## 2026-10-27 — T2-06: Repair job closes the damage (Lane A · Size L)
+
+**Did**
+- Claimed migration `0184` in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0184_repair_job_closes_damage.sql`:
+  - Added repair tracking columns to `damage_findings` (`repaired_at`, `repaired_by`, `repair_maintenance_id`, `repair_notes`).
+  - Added `damage_finding_id` foreign key link to `maintenance_records`.
+  - Updated views `damage_findings_v` and `maintenance_records_v` with Law 6 role masking and column grants.
+  - Updated `validate_unit_reservability(uuid)` so that unresolved damage findings are evaluated before general maintenance and repaired findings (`repaired_at is not null`) no longer block reservations (`GATE:unit.reserve.damage_finding`).
+  - Implemented trigger `trg_maintenance_clear_damage` on `maintenance_records` to automatically clear linked `damage_findings` and restore unit condition to `Good` on status change to `Completed`.
+  - Added RPC `close_maintenance_job(p_maintenance_id, p_note, ...)` enforcing minimum 5-character completion note (Ruling D4) and restricting closing authority to Technician and Manager+ (`GATE:maintenance.close.forbidden_for_warehouse`).
+- Implemented and verified lifecycle step **`L41`** in `scripts/e2e-lifecycle.mjs`:
+  - Asserts unit with open damage finding is rejected by `GATE:unit.reserve.damage_finding`.
+  - Asserts Warehouse seat is refused permission to close maintenance jobs (42501).
+  - Asserts Technician can close maintenance job with a note, clearing the damage finding and restoring unit to `In Stock` / `Good`.
+  - Asserts subsequent booking reservation succeeds immediately.
+  - Asserts Law 6: Warehouse reads null for actual cost; Manager reads unmasked actual cost.
+- Created `src/modules/inventory/MaintenanceJobDetail.tsx`:
+  - Provides full repair job detail modal: equipment info, serial, type, priority, status pill, staff assignment, AD/BS completion dates.
+  - Law 6: Cost is hidden for Warehouse role, visible only for roles with money visibility (`useCanViewMoney`).
+  - Multi-photo upload integration using `compressEvidencePhoto` (W27 stepwise compression up to 10 MB for damage/repair, HEIC support).
+  - Note-required closing form restricted to Technician and Manager+ seats (Ruling D4).
+- Integrated `MaintenanceJobDetail` into `src/modules/inventory/Maintenance.tsx`:
+  - Replaced `<Unavailable reason="The maintenance job detail screen is not built yet.">` in phone cards and desktop table with active "Open job" action.
+  - Updates in-memory list and emits domain events on job completion.
+- Authored test suite `src/modules/inventory/__tests__/MaintenanceJobDetail.test.tsx` (5/5 passed) and updated `src/actions/maintenance/__tests__/maintenance.test.ts` (12/12 passed).
+
+**Ruled**
+- Ruling D4: Technician or Manager+ can close a repair job with a note (minimum 5 chars). Warehouse seats cannot close repair jobs.
+- Closing a repair job clears linked damage findings, resets unit condition from `Damaged` to `Good`, and recomputes unit status so the equipment becomes reservable.
+- Law 6 (Money Blindness): Warehouse seats must never see cost figures in data payloads or in the DOM.
+
+**Verified**
+- `npm run check:pglite`: 181/181 applied, 0 failed.
+- `npm run check:lifecycle`: 41/41 steps green, 0 failed.
+- `npm run typecheck`: 0 errors.
+- `npx vitest run src/modules/inventory/__tests__/MaintenanceJobDetail.test.tsx src/actions/maintenance/__tests__/maintenance.test.ts`: 17/17 passed.
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run check:contrast`: 106/106 pass, 0 FAIL.
+- `npm run build`: built in 2m 8s, 8154 modules transformed, PWA service worker generated cleanly.
+- `npm run lint:progress`: passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 59 / 59 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 41 / 41 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 181 files · check:pglite 181/181 applied, 0 failed (recorded 2026-10-27T13:55:22.522Z).
+Gates read from .lifecycle-result.json, written 2026-10-27T13:56:05.431Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Nothing open from T2-06. Ready to merge on Lane A.
+
 ## 2026-10-27 — T2-16: Photo rules from W27
 
 **Did**

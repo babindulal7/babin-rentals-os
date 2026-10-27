@@ -110,7 +110,7 @@ handover; lifecycle step "Technician completes a handover".
 **Done when** — a Technician seat on staging completes all four verbs; sees no money.
 **Needs** — T1-05 (Technician seat).
 
-### T2-06 · Repair job closes the damage            status: doing · size: L · lane A
+### T2-06 · Repair job closes the damage            status: done — awaiting merge (lane-a/T2-06-repair-job-closes-the-damage) · size: L · lane A
 **What** — Build the Maintenance job detail screen (today "not built yet", `Maintenance.tsx` ~lines
 454 and 1139): findings, actions taken, cost (money roles only), photos, and **Close job (note
 required)** for Technician or Manager+. Closing marks the linked `damage_findings` row repaired and
