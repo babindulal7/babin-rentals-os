@@ -2334,11 +2334,11 @@ async function completeResetQueue(
      * raises a Manager case instead of a direct charge decision." The FINDING is
      * written here, parented on the queue entry as the CHECK requires.
      *
-     * `TODO(decision)` — the Manager case is NOT raised: `cases` has no writer
-     * anywhere in `src/` and no case-number sequence is built (the workspace
-     * says so itself, `data/cases.ts`'s `NEW_CASE_UNAVAILABLE_REASON`). Raising
-     * one would mean inventing the number and the shape. `case_id` stays null
-     * and the finding is the record until case creation exists.
+     * Per Rulings W44 & W23 (Migration 0185, T2-15): Inserting a damage finding with
+     * source = 'Cleaning' automatically triggers case creation in PostgreSQL, linked
+     * to the booking it last came back from, defaulting to 'Charge Client' with
+     * status 'Under Review' and assessed_amount = 0 until approved by Manager
+     * (< Rs 25,000) or Owner (>= Rs 25,000).
      */
     if (problem === 'Damaged' && row.unit_id) {
       await idempotentInsert(

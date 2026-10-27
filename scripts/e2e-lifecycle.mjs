@@ -3271,6 +3271,67 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L42',
+  title: 'Damage found during reset opens a case on the booking, defaulting to client claim and unpriced (W44, W23, T2-15)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      const unitId = UNITS[0]
+      const cleanEntryId = crypto.randomUUID()
+      const findingId = crypto.randomUUID()
+
+      // 1. Staff records a cleaning queue entry for bookingIds.a and reports damage
+      await asOwnerOfTheDatabase(async () => {
+        await q(
+          `insert into cleaning_queue_entries (id, client_uuid, booking_id, unit_id, state, cleaned_by, completed_at, created_by)
+           values ($1, gen_random_uuid(), $2, $3, 'Cleaning', $4, null, $4)`,
+          [cleanEntryId, bookingIds.a, unitId, U.Warehouse],
+        )
+      })
+
+      // 2. Insert damage finding with source = 'Cleaning' as Warehouse staff
+      await as('Warehouse', async () => {
+        await q(
+          `insert into damage_findings (id, client_uuid, source, cleaning_queue_entry_id, unit_id, damage_type, description, severity, created_by)
+           values ($1, gen_random_uuid(), 'Cleaning', $2, $3, 'Optical', 'Deep scratch on front element found post-return', 'High', $4)`,
+          [findingId, cleanEntryId, unitId, U.Warehouse],
+        )
+      })
+
+      // 3. Verify the database trigger opened a linked case in cases
+      const res = await q(
+        `select df.case_id, c.case_no, c.type, c.status, c.disposition, c.counterparty_kind, c.linked_booking_id, c.assessed_amount
+           from damage_findings df
+           join cases c on c.id = df.case_id
+          where df.id = $1`,
+        [findingId],
+      )
+
+      assertEq(res.rows.length, 1, 'damage_findings row must link to a newly created case')
+      const caseRow = res.rows[0]
+      assert(caseRow.case_id !== null, 'case_id must not be null')
+      assert(/^CASE-[0-9]{4}-[0-9]{4}$/.test(caseRow.case_no), 'case_no must follow CASE-YYYY-NNNN format')
+      assertEq(caseRow.type, 'Damage', 'case type must be Damage')
+      assertEq(caseRow.status, 'Under Review', 'case status must be Under Review (W23)')
+      assertEq(caseRow.disposition, 'Charge Client', 'disposition must default to Charge Client (W44)')
+      assertEq(caseRow.counterparty_kind, 'Client', 'counterparty must be Client (W44)')
+      assertEq(caseRow.linked_booking_id, bookingIds.a, 'case must link to the booking it came back from')
+      assertEq(Number(caseRow.assessed_amount), 0, 'assessed_amount must be 0 until approved (W23)')
+
+      // 4. Law 6: Warehouse reads null for assessed_amount on cases_v; Manager reads unmasked amount
+      await as('Warehouse', async () => {
+        const vRow = (await q(`select assessed_amount, case_no from cases_v where id = $1`, [caseRow.case_id])).rows[0]
+        assertEq(vRow.assessed_amount, null, 'Warehouse cannot read assessed_amount on cases_v (Law 6)')
+      })
+      await as('Manager', async () => {
+        const vRow = (await q(`select assessed_amount, case_no from cases_v where id = $1`, [caseRow.case_id])).rows[0]
+        assertEq(Number(vRow.assessed_amount), 0, 'Manager reads unmasked assessed_amount on cases_v')
+      })
+    })
+  },
+})
+
 /* ── Run ──────────────────────────────────────────────────────────────────── */
 
 await seed()
