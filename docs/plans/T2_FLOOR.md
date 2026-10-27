@@ -239,7 +239,7 @@ follows only after a Manager (< Rs 25,000) or Owner (≥ Rs 25,000) approves.
 client gets the notice, and no amount appears until approval.
 **Needs** — T2-01, T5-07 for the email.
 
-### T2-16 · Photo rules from W27: several photos, size caps, HEIC            status: todo · size: S · lane A · [go-live]
+### T2-16 · Photo rules from W27: several photos, size caps, HEIC            status: doing · size: S · lane A · [go-live]
 **What** — T2-01 shipped one photo per step with one shrink rule. Bring it to W27: the file input gets
 `multiple`; **one or more photos per step, the gate needs at least one**; shrink on the device until
 **damage photos ≤ 10 MB and every other photo ≤ 3 MB** (lower the long edge and the JPEG quality step
