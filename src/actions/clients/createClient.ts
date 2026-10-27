@@ -114,6 +114,8 @@ export type CreateClientInput = {
   country?: string | undefined
   /** `clients.pan_vat` — CHECK: exactly nine digits, or absent. */
   panVat?: string | undefined
+  isStaff?: boolean | undefined
+  staffUserId?: string | undefined
   notes?: string | undefined
   /**
    * **Law 8.** Minted once where the operator pressed Save (`newClientUuid()`
@@ -160,6 +162,8 @@ type ClientInsertPayload = {
   postal_code: string | null
   country: string
   pan_vat: string | null
+  is_staff?: boolean
+  staff_user_id?: string | null
   notes: string | null
   created_by: string
 }
@@ -350,6 +354,8 @@ export const createClientConfig: ActionConfig<CreateClientInput, CreateClientRes
       // NOT NULL with a database default; only sent when the operator supplied one.
       country: input.country?.trim() || 'Nepal',
       pan_vat: orNull(input.panVat),
+      ...(input.isStaff !== undefined ? { is_staff: Boolean(input.isStaff) } : {}),
+      ...(input.staffUserId !== undefined ? { staff_user_id: input.staffUserId ? input.staffUserId.trim() : null } : {}),
       notes: orNull(input.notes),
       created_by: ctx.userId,
       /*
