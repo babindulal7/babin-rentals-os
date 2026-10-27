@@ -50,6 +50,7 @@ import { CompactButton, TapCheckbox, TouchTarget } from '../../components/ui/Tou
 import { formatGateError } from '../../lib/gates'
 import { FloorOfflineStatus } from '../../components/ui/FloorOfflineStatus'
 import { recordFloorScanEvent } from '../../lib/floorScanStorage'
+import { useBarcodeBurst } from '../../lib/barcodeBurst'
 
 /**
  * **Reset Workspace** — `04 Operations/Cleaning & Reset Workflow.md` v3.1
@@ -378,6 +379,15 @@ export default function ResetWorkspace({
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [filter, setFilter] = useState<(typeof RESET_FILTERS)[number]>('Needs action')
   const [query, setQuery] = useState('')
+
+  // Hardware Bluetooth & USB scanner burst listener in Reset queue (T2-09, S14)
+  useBarcodeBurst({
+    onScan: (code) => {
+      setQuery(code.trim())
+    },
+    enabled: true,
+    cooldownMs: 1000,
+  })
   const [problemDraft, setProblemDraft] = useState<Record<string, ProblemDraft>>({})
   /*
    * RS-12 — there is no `qcByDraft` any more. It held a typed NAME per row, and

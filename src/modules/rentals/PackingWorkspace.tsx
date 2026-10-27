@@ -38,6 +38,7 @@ import { clearFloorScan, loadFloorScan, saveFloorScan, recordFloorScanEvent } fr
 import { rentalDaysBetween } from '../../lib/rentalDays'
 import { NON_PACKABLE_LINE_TYPES } from '../../lib/bookingLineTypes'
 import { useFloorPresence } from '../../lib/floorPresence'
+import { useBarcodeBurst } from '../../lib/barcodeBurst'
 import {
   playScanSuccess,
   playScanError,
@@ -1010,10 +1011,9 @@ export default function PackingWorkspace({
     }, 600)
   }
 
-  const handleAmbientBarcodeSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const processScannedCode = (rawCode: string) => {
     unlockAudioContext()
-    const code = ambientBarcode.trim().toLowerCase()
+    const code = rawCode.trim().toLowerCase()
     if (!code) return
 
     // 1. Direct individual equipment scan
@@ -1076,8 +1076,20 @@ export default function PackingWorkspace({
 
     triggerScanPulse('error')
     playScanError()
-    setScanLog((p) => [`✕ No equipment matching "${ambientBarcode.trim()}" in this booking`, ...p].slice(0, 5))
+    setScanLog((p) => [`✕ No equipment matching "${rawCode.trim()}" in this booking`, ...p].slice(0, 5))
     setAmbientBarcode('')
+  }
+
+  // Hardware Bluetooth & USB scanner burst listener at the packing bench (T2-09, S14)
+  useBarcodeBurst({
+    onScan: processScannedCode,
+    enabled: true,
+    cooldownMs: 1200,
+  })
+
+  const handleAmbientBarcodeSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    processScannedCode(ambientBarcode)
   }
 
 

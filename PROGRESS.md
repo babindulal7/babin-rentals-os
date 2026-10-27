@@ -1,5 +1,58 @@
 # Progress Log
 
+## 2026-10-28 — T2-09: Bluetooth scanner at the packing bench (Lane A · Size S)
+
+**Did**
+- Authored `src/lib/barcodeBurst.ts` with `useBarcodeBurst` hook:
+  - Intercepts fast keystroke bursts (threshold <= 50ms per key) ending in `Enter` from physical Bluetooth/USB barcode scanners in HID mode.
+  - Distinguishes human typing from scanner bursts without blocking normal text entry.
+  - Enforces duplicate scan suppression window (`cooldownMs`, default 1200ms) to eliminate accidental double submits.
+  - Supports `focusTrap` option routing scanner bursts back to the scan input even when focus was elsewhere on the screen.
+- Enhanced `src/components/ui/ScannerInput.tsx`:
+  - Integrated `useBarcodeBurst` hook for ambient scanner burst detection on floor workspaces.
+  - Maintained camera scan button (`onCameraClick`) beside hardware scan input (S14).
+  - Kept manual item checkbox/tick controls accessible across all floor screens with audit tracking (W25, W72).
+  - Added visual and auditory pulse confirmation on scan.
+  - Guaranteed Law 15 touch targets >= 44px for primary buttons and actions.
+- Integrated ambient Bluetooth scanner support across floor workspaces:
+  - `PackingWorkspace.tsx`
+  - `HandoverWorkspace.tsx`
+  - `ReturnWorkspace.tsx`
+  - `ResetWorkspace.tsx`
+- Authored test suites:
+  - `src/lib/__tests__/barcodeBurst.test.ts`: verified burst timing, enter termination, cooldown duplicate prevention, and focus trap (7/7 passed).
+  - `src/components/ui/__tests__/ScannerInput.test.tsx`: verified rendering, manual typing submission, and ambient burst interception (5/5 passed).
+
+**Ruled**
+- S14: Bluetooth scanner support works in keyboard HID mode; camera scanning remains available everywhere as a fallback.
+- W25, W72: Manual tick stays beside barcode scanning on every floor screen — unlabelled items can still be handled directly by hand without blocking the workflow.
+
+**Verified**
+- `npm run typecheck`: 0 errors.
+- `npx vitest run src/lib/__tests__/barcodeBurst.test.ts src/components/ui/__tests__/ScannerInput.test.tsx`: 12/12 tests passed.
+- `npm run lint`: passed (`eslint src --max-warnings 0`).
+- `npm run completion`: verified.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 59 / 59 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 41 / 41 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 181 files · check:pglite 181/181 applied, 0 failed (recorded 2026-10-27T19:19:30.775Z). Suite: PASS — 5859/5859 passed, 0 failed (recorded 2026-10-27T19:18:23.218Z); source fingerprint matches.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-27T19:21:10.144Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Physical scanner hardware pairing with Babin (O-16) on Device Day (T2-11).
+- Ready to merge on Lane A.
+
 ## 2026-10-27 — T2-06: Repair job closes the damage (Lane A · Size L)
 
 **Did**

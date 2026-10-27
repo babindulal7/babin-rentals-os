@@ -40,6 +40,7 @@ import { DriverHandoverModal } from '../operations/DriverHandoverModal'
 import { HoldCollateralModal } from './modals/HoldCollateralModal'
 import { recordFloorScanEvent } from '../../lib/floorScanStorage'
 import { useFloorPresence } from '../../lib/floorPresence'
+import { useBarcodeBurst } from '../../lib/barcodeBurst'
 import { SignOnGlassModal, type DigitalSignature } from './modals/SignOnGlassModal'
 import {
   playScanSuccess,
@@ -1090,61 +1091,72 @@ export default function HandoverWorkspace({
     )
   }
 
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      unlockAudioContext()
-      const code = query.trim().toLowerCase()
-      if (!code) return
+  const processScannedCode = (rawCode: string) => {
+    unlockAudioContext()
+    const code = rawCode.trim().toLowerCase()
+    if (!code) return
 
-      // 1. Direct individual item match
-      const match = rows.find(
+    // 1. Direct individual item match
+    const match = rows.find(
+      (r) =>
+        (r.serial && r.serial.toLowerCase() === code) ||
+        r.key.toLowerCase() === code ||
+        (r.name && r.name.toLowerCase() === code) ||
+        (r.assetId && r.assetId.toLowerCase() === code),
+    )
+    if (match) {
+      pick(match.key, 'scan')
+      setQuery('')
+      return
+    }
+
+    // 2. Flight Case Master Tag match
+    const isFlightCaseScan =
+      code.startsWith('pel-') ||
+      code.startsWith('case-') ||
+      rows.some((r) => r.group.toLowerCase().replace(/[^a-z0-9]/g, '').includes(code.replace(/[^a-z0-9]/g, '')))
+
+    if (isFlightCaseScan) {
+      const caseRows = rows.filter(
         (r) =>
-          (r.serial && r.serial.toLowerCase() === code) ||
-          r.key.toLowerCase() === code ||
-          (r.name && r.name.toLowerCase() === code) ||
-          (r.assetId && r.assetId.toLowerCase() === code),
+          r.group.toLowerCase().replace(/[^a-z0-9]/g, '').includes(code.replace(/[^a-z0-9]/g, '')) ||
+          code.replace(/[^a-z0-9]/g, '').includes(r.group.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6)),
       )
-      if (match) {
-        pick(match.key, 'scan')
+      if (caseRows.length > 0) {
+        const pendingInCase = caseRows.filter((r) => r.prior === null && marks[r.key]?.state !== 'Picked Up')
+        if (pendingInCase.length === 0) {
+          triggerScanPulse('error')
+          playScanError()
+          setScanLog((p) => [`• Flight Case "${caseRows[0]?.group}" is already fully handed over`, ...p].slice(0, 5))
+        } else {
+          triggerScanPulse('success')
+          playScanSuccess()
+          setScanLog((p) => [
+            `📦 Flight Case "${caseRows[0]?.group}" ready (${pendingInCase.length}/${caseRows.length} units to release). Scan items to confirm.`,
+            ...p,
+          ].slice(0, 5))
+        }
         setQuery('')
         return
       }
+    }
 
-      // 2. Flight Case Master Tag match
-      const isFlightCaseScan =
-        code.startsWith('pel-') ||
-        code.startsWith('case-') ||
-        rows.some((r) => r.group.toLowerCase().replace(/[^a-z0-9]/g, '').includes(code.replace(/[^a-z0-9]/g, '')))
+    triggerScanPulse('error')
+    playScanError()
+    setScanLog((p) => [`✕ No matching item on this booking for "${rawCode.trim()}"`, ...p].slice(0, 5))
+  }
 
-      if (isFlightCaseScan) {
-        const caseRows = rows.filter(
-          (r) =>
-            r.group.toLowerCase().replace(/[^a-z0-9]/g, '').includes(code.replace(/[^a-z0-9]/g, '')) ||
-            code.replace(/[^a-z0-9]/g, '').includes(r.group.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6)),
-        )
-        if (caseRows.length > 0) {
-          const pendingInCase = caseRows.filter((r) => r.prior === null && marks[r.key]?.state !== 'Picked Up')
-          if (pendingInCase.length === 0) {
-            triggerScanPulse('error')
-            playScanError()
-            setScanLog((p) => [`• Flight Case "${caseRows[0]?.group}" is already fully handed over`, ...p].slice(0, 5))
-          } else {
-            triggerScanPulse('success')
-            playScanSuccess()
-            setScanLog((p) => [
-              `📦 Flight Case "${caseRows[0]?.group}" ready (${pendingInCase.length}/${caseRows.length} units to release). Scan items to confirm.`,
-              ...p,
-            ].slice(0, 5))
-          }
-          setQuery('')
-          return
-        }
-      }
+  // Hardware Bluetooth & USB scanner burst listener at the handover bench (T2-09, S14)
+  useBarcodeBurst({
+    onScan: processScannedCode,
+    enabled: true,
+    cooldownMs: 1200,
+  })
 
-      triggerScanPulse('error')
-      playScanError()
-      setScanLog((p) => [`✕ No matching item on this booking for "${query.trim()}"`, ...p].slice(0, 5))
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      processScannedCode(query)
     }
   }
 
