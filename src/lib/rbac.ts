@@ -288,10 +288,19 @@ export function canWriteBookingDesk(role: SystemRole): boolean {
  *
  * Covers `rental.pickup`, `rental.return`, `inventory.pack`, `inventory.ready`,
  * `inventory.audit`, `inventory.transfer`, `maintenance.create`,
- * `maintenance.complete` and `evidence.review`.
+ * and `evidence.review`.
  */
 export function canWriteFloor(role: SystemRole): boolean {
   return FLOOR.has(role)
+}
+
+/**
+ * Closing / completing a maintenance job (Ruling D4, 26 Oct 2026, T2-06).
+ * Admits Technician or Manager+ (Owner, Admin, Manager, Technician).
+ * Warehouse can create maintenance jobs (W8) but cannot clear them.
+ */
+export function canCompleteMaintenance(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Technician'
 }
 
 /**

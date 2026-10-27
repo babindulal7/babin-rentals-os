@@ -1448,6 +1448,10 @@ export interface Database {
           created_at: string
           created_by: string
           updated_at: string
+          repaired_at: string | null
+          repaired_by: string | null
+          repair_maintenance_id: string | null
+          repair_notes: string | null
         }
         Insert: {
           id?: string
@@ -1470,6 +1474,10 @@ export interface Database {
           created_at?: string
           created_by: string
           updated_at?: string
+          repaired_at?: string | null
+          repaired_by?: string | null
+          repair_maintenance_id?: string | null
+          repair_notes?: string | null
         }
         Update: Partial<Omit<Database['public']['Tables']['damage_findings']['Insert'], 'client_uuid' | 'created_by'>>
       }

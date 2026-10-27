@@ -317,7 +317,6 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'inventory.audit':
     case 'inventory.transfer':
     case 'maintenance.create':
-    case 'maintenance.complete':
     case 'evidence.review':
     // RULING 2026-09-12 (PLAN.md §4.29(a), migration 0122): 'Inspection' added
     // to operation_kind and operation_sessions; mirrors operation_sessions_all.
@@ -325,6 +324,10 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'inspection.pass':
     case 'inspection.fail':
       return rbac.canWriteFloor(ctx.role);
+
+    // Ruling D4 (26 Oct 2026, T2-06): closing a repair job is Technician or Manager+
+    case 'maintenance.complete':
+      return rbac.canCompleteMaintenance(ctx.role);
 
     case 'client.merge':
       return rbac.canMergeClients(ctx.role);

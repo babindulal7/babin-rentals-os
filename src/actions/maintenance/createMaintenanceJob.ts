@@ -23,6 +23,8 @@ export type CreateMaintenanceJobInput = {
   scheduledDate?: string | undefined;
   /** Optional vendor or service partner name */
   vendorName?: string | undefined;
+  /** Optional linked damage finding ID (D4, T2-06) */
+  damageFindingId?: string | undefined;
   /** Estimated or actual cost in rupees (numeric(14,2)) */
   cost?: number | undefined;
   /** User UUID of technician assigned */
@@ -99,6 +101,7 @@ export const createMaintenanceJobConfig: ActionConfig<CreateMaintenanceJobInput,
       client_uuid: clientUuid,
       record_no: recordNo,
       product_unit_id: resolvedUnitId,
+      damage_finding_id: input.damageFindingId || null,
       maintenance_type: maintenanceType,
       priority,
       status,

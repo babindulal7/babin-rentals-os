@@ -210,6 +210,21 @@ describe('Maintenance Actions', () => {
       ).toThrow(/Cost cannot be negative/);
     });
 
+    it('validates input: requires note or actions taken with at least 3 characters', () => {
+      expect(() =>
+        completeMaintenanceConfig.validate({
+          id: '22222222-2222-4222-8222-222222222222',
+          actionsTaken: 'ok',
+        })
+      ).toThrow(/A note\/actions taken \(minimum 3 characters\) is required/);
+
+      expect(() =>
+        completeMaintenanceConfig.validate({
+          id: '22222222-2222-4222-8222-222222222222',
+        })
+      ).toThrow(/A note\/actions taken \(minimum 3 characters\) is required/);
+    });
+
     it('completes maintenance by UUID with Law 6 safeUpdate and emits EVENT_TYPES.MAINTENANCE_COMPLETED', async () => {
       const input: CompleteMaintenanceInput = {
         id: '22222222-2222-4222-8222-222222222222',

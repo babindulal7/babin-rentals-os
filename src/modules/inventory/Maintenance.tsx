@@ -9,7 +9,6 @@ import { SearchInput } from '../../components/ui/SearchInput'
 import { DataTableShell } from '../../components/ui/DataTable'
 import type { Kpi } from '../../components/ui/Page'
 import { EmptyState, ErrorBanner } from '../../components/ui/StateViews'
-import { Unavailable } from '../../components/ui/Unavailable'
 import { STATUS } from '../../lib/status'
 import type { StatusKey } from '../../lib/status'
 import { formatMoney, rupees, type Paisa } from '../../lib/money'
@@ -34,6 +33,7 @@ import { gateContext } from '../../lib/fieldGating'
 import { IntelCard } from '../../components/ui/IntelCard'
 import { LogMaintenanceModal, type MaintenanceJobPayload } from './modals/LogMaintenanceModal'
 import { DueForService } from './components/DueForService'
+import { MaintenanceJobDetail } from './MaintenanceJobDetail'
 
 import { useDomainEvent } from '../../events/useDomainEvent'
 import { EVENT_TYPES } from '../../events/eventBus'
@@ -395,7 +395,15 @@ function Pill({ tone, icon, title, children }: { tone: StatusKey; icon: IconName
  * one primary action — the locked alternative to a 1080px table on a 375px
  * screen (`lib/device.ts:139`).
  */
-function JobCard({ record: m, money }: { record: MaintenanceRecord; money: boolean }) {
+function JobCard({
+  record: m,
+  money,
+  onOpen,
+}: {
+  record: MaintenanceRecord
+  money: boolean
+  onOpen?: (record: MaintenanceRecord) => void
+}) {
   const bs = m.estCompletion ? toBs(m.estCompletion) : null
   const days = m.estCompletion ? daysFromToday(m.estCompletion) : null
   return (
@@ -451,11 +459,9 @@ function JobCard({ record: m, money }: { record: MaintenanceRecord; money: boole
         ) : (
           <span style={{ color: 'var(--muted)', fontSize: 'var(--t-meta)' }}>No booking held</span>
         )}
-        <Unavailable reason="The maintenance job detail screen is not built yet.">
-          <Button icon="external_link" disabled>
-            Open job
-          </Button>
-        </Unavailable>
+        <Button icon="external_link" onClick={() => onOpen?.(m)}>
+          Open job
+        </Button>
       </div>
     </article>
   )
@@ -606,6 +612,8 @@ export function Maintenance({
   const [activeFilter, setActiveFilter] = useState<FilterKey>('All')
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set())
   const [isLogMaintenanceOpen, setIsLogMaintenanceOpen] = useState(false)
+  const [selectedJobForDetail, setSelectedJobForDetail] = useState<MaintenanceRecord | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [prefill, setPrefill] = useState<{ equipment: string; serial: string } | null>(null)
   const [recordsList, setRecordsList] = useState<MaintenanceRecord[]>(() => [...MAINTENANCE_DATA])
 
@@ -968,7 +976,15 @@ export function Maintenance({
           /* §7.4 PHONE — card rows, one primary action each. */
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)', padding: 'var(--sp-md)' }}>
             {filteredRecords.map((m) => (
-              <JobCard key={m.id} record={m} money={money} />
+              <JobCard
+                key={m.id}
+                record={m}
+                money={money}
+                onOpen={(job) => {
+                  setSelectedJobForDetail(job)
+                  setIsDetailOpen(true)
+                }}
+              />
             ))}
           </div>
         ) : (
@@ -1136,11 +1152,15 @@ export function Maintenance({
                         </td>
                       )}
                       <td style={{ ...td, textAlign: 'right' }}>
-                        <Unavailable reason="The maintenance job detail screen is not built yet.">
-                          <Button icon="external_link" disabled>
-                            Open job
-                          </Button>
-                        </Unavailable>
+                        <Button
+                          icon="external_link"
+                          onClick={() => {
+                            setSelectedJobForDetail(m)
+                            setIsDetailOpen(true)
+                          }}
+                        >
+                          Open job
+                        </Button>
                       </td>
                     </tr>
                   )
@@ -1188,6 +1208,19 @@ export function Maintenance({
         initialEquipment={prefill?.equipment ?? ''}
         initialSerial={prefill?.serial ?? ''}
         onSuccess={(job: MaintenanceJobPayload) => upsertRecord(recordFromStartedJob(job))}
+      />
+
+      <MaintenanceJobDetail
+        job={selectedJobForDetail}
+        isOpen={isDetailOpen}
+        onClose={() => {
+          setIsDetailOpen(false)
+          setSelectedJobForDetail(null)
+        }}
+        onJobClosed={(updatedJob) => {
+          upsertRecord(updatedJob)
+          setSelectedJobForDetail(updatedJob)
+        }}
       />
     </div>
   )

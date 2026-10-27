@@ -1357,6 +1357,56 @@ export const mockSupabase = {
       const payload = (args?.['p_payload'] ?? {}) as Record<string, unknown>
       return Promise.resolve(createInvoiceRpc(payload))
     }
+    if (name === 'close_maintenance_job' || name === 'complete_maintenance_job') {
+      try {
+        const actor = readSession()?.user.id
+        const user = store['users']?.find(row => row['id'] === actor)
+        const role = user?.['primary_role'] as string | undefined
+        if (!role || !['Owner', 'Admin', 'Manager', 'Technician'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'Permission denied: only Technician or Manager+ can close maintenance jobs.') })
+        }
+        const mntId = args?.['p_maintenance_id'] ?? args?.['p_job_id']
+        const note = (args?.['p_note'] ?? args?.['p_actions_taken'] ?? '') as string
+        if (!note || note.trim().length < 3) {
+          return Promise.resolve({ data: null, error: pgErr('23514', 'A note/actions taken (minimum 3 characters) is required to close a maintenance job.') })
+        }
+        const mRec = (store['maintenance_records'] ?? []).find(m => m['id'] === mntId)
+        if (!mRec) {
+          return Promise.resolve({ data: null, error: pgErr('P0002', `Maintenance job not found: ${mntId}`) })
+        }
+        mRec['status'] = 'Completed'
+        mRec['completed_at'] = new Date().toISOString()
+        mRec['actions_taken'] = note.trim()
+        if (args?.['p_cost'] !== undefined && args['p_cost'] !== null) {
+          mRec['cost'] = Number(args['p_cost'])
+        }
+        // Clear damage findings
+        const findings = store['damage_findings'] ?? []
+        for (const f of findings) {
+          if (f['id'] === mRec['damage_finding_id'] || f['repair_maintenance_id'] === mntId || f['unit_id'] === mRec['product_unit_id']) {
+            if (!f['repaired_at']) {
+              f['repaired_at'] = mRec['completed_at']
+              f['repaired_by'] = actor
+              f['repair_notes'] = note.trim()
+              f['repair_maintenance_id'] = mntId
+            }
+          }
+        }
+        // Restore unit
+        const units = store['product_units'] ?? []
+        const u = units.find(unit => unit['id'] === mRec['product_unit_id'])
+        if (u) {
+          u['condition'] = (args?.['p_unit_condition'] as string) || 'Good'
+          u['status'] = 'In Stock'
+        }
+        return Promise.resolve({
+          data: { success: true, id: mntId, record_no: mRec['record_no'], status: 'Completed' },
+          error: null,
+        })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
     /* ⛔ Was `{ data: null, error: null }` — a silent null that every caller
      * would read as success with an empty result. That is the
      * success-fabrication class this repo has a register for, sitting in the

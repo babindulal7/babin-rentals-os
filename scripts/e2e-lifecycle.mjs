@@ -3152,6 +3152,125 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L41',
+  title: 'Unit with open damage finding cannot be reserved; after repair job closes it can (D4, T2-06)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      const unitId = UNITS[0]
+      const findingId = crypto.randomUUID()
+      const mntId = crypto.randomUUID()
+
+      // 1. Insert a completed cleaning queue entry and unresolved damage finding on the unit
+      const cleanEntryId = crypto.randomUUID()
+      await asOwnerOfTheDatabase(async () => {
+        await q(
+          `insert into cleaning_queue_entries (id, client_uuid, booking_id, unit_id, state, cleaned_by, completed_at, created_by)
+           values ($1, gen_random_uuid(), $2, $3, 'Ready', $4, now(), $4)`,
+          [cleanEntryId, bookingIds.a, unitId, U.Owner],
+        )
+        await q(
+          `insert into damage_findings (id, client_uuid, source, cleaning_queue_entry_id, unit_id, damage_type, description, severity, created_by)
+           values ($1, gen_random_uuid(), 'Cleaning', $2, $3, 'Physical', 'Broken optical filter thread', 'Moderate', $4)`,
+          [findingId, cleanEntryId, unitId, U.Owner],
+        )
+      })
+
+      // 2. An attempt to reserve the unit with open finding is refused by validate_unit_reservability()
+      const lineId = (await q(`select id from booking_lines where booking_id = $1 limit 1`, [bookingIds.a])).rows[0].id
+      await as('Coordinator', async () => {
+        await q('savepoint reserve_damage_probe')
+        try {
+          await refuses(
+            'Unit with open damage finding cannot be reserved',
+            `insert into inventory_reservations (client_uuid, booking_id, booking_line_id, asset_id, period, created_by)
+             values (gen_random_uuid(), $1, $2, $3, tstzrange(now() + interval '1 day', now() + interval '2 days', '[]'), $4)`,
+            [bookingIds.a, lineId, unitId, U.Coordinator],
+            /GATE:unit.reserve.damage_finding/i,
+          )
+        } finally {
+          await q('rollback to savepoint reserve_damage_probe')
+          await q('release savepoint reserve_damage_probe')
+        }
+      })
+
+      // 3. Create a maintenance record linked to the damage finding
+      await asOwnerOfTheDatabase(async () => {
+        await q(
+          `insert into maintenance_records (id, client_uuid, record_no, product_unit_id, damage_finding_id, maintenance_type, priority, status, description, scheduled_date, created_by)
+           values ($1, gen_random_uuid(), 'MT-2026-9999', $2, $3, 'Repair', 'Normal', 'In Progress', 'Replace optical filter thread ring', current_date, $4)`,
+          [mntId, unitId, findingId, U.Owner],
+        )
+      })
+
+      // 4. Warehouse cannot close the maintenance job (42501 permission denied)
+      await as('Warehouse', async () => {
+        await q('savepoint wh_close_probe')
+        try {
+          await refuses(
+            'Warehouse cannot close maintenance jobs',
+            `select close_maintenance_job($1, 'Attempted close by warehouse')`,
+            [mntId],
+            /Permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint wh_close_probe')
+          await q('release savepoint wh_close_probe')
+        }
+      })
+
+      // 5. Technician closes the maintenance job with a required note
+      await as('Technician', async () => {
+        const res = await one(
+          `select close_maintenance_job($1, 'Replaced filter thread ring and tested mount tolerance.', 'Filter ring stripped', 'Replaced ring with OEM part', 2500)`,
+          [mntId],
+        )
+        assertEq(res.success, true, 'close_maintenance_job succeeded for Technician')
+      })
+
+      // 6. Linked damage finding is now marked repaired (repaired_at is set, repaired_by is set)
+      await as('Manager', async () => {
+        const findingRow = (await q(`select repaired_at, repaired_by from damage_findings where id = $1`, [findingId])).rows[0]
+        assert(findingRow, 'damage finding exists')
+        assert(findingRow.repaired_at, 'repaired_at is set on the finding')
+        assert(findingRow.repaired_by, 'repaired_by is recorded')
+      })
+
+      // 7. Unit status is recomputed to In Stock and condition is restored
+      await as('Manager', async () => {
+        const unitRow = (await q(`select status, condition from product_units where id = $1`, [unitId])).rows[0]
+        assertEq(unitRow.condition, 'Good', 'unit condition restored to Good')
+        assertEq(unitRow.status, 'In Stock', 'unit status is In Stock')
+      })
+
+      // 8. Reserving the unit now succeeds
+      await as('Coordinator', async () => {
+        const resId = crypto.randomUUID()
+        await q(
+          `insert into inventory_reservations (id, client_uuid, booking_id, booking_line_id, asset_id, period, created_by)
+           values ($1, gen_random_uuid(), $2, $3, $4, tstzrange(now() + interval '1 day', now() + interval '2 days', '[]'), $5)`,
+          [resId, bookingIds.a, lineId, unitId, U.Coordinator],
+        )
+        const row = (await q(`select id from inventory_reservations where id = $1`, [resId])).rows[0]
+        assertEq(row.id, resId, 'reservation inserted successfully after repair clearance')
+      })
+
+      // 9. Warehouse sees cost as null on maintenance_records_v (Law 6)
+      await as('Warehouse', async () => {
+        const mRow = (await q(`select cost from maintenance_records_v where id = $1`, [mntId])).rows[0]
+        assertEq(mRow.cost, null, 'Warehouse sees null cost on maintenance_records_v')
+      })
+
+      // 10. Manager reads unmasked cost
+      await as('Manager', async () => {
+        const mRow = (await q(`select cost from maintenance_records_v where id = $1`, [mntId])).rows[0]
+        assertEq(Number(mRow.cost), 2500, 'Manager reads unmasked cost')
+      })
+    })
+  },
+})
+
 /* ── Run ──────────────────────────────────────────────────────────────────── */
 
 await seed()

@@ -68,6 +68,7 @@ const WorkingCapital    = lazy(() => import('./modules/reports/WorkingCapitalRep
 const Inventory         = lazy(() => import('./modules/inventory/Inventory'))
 const BundleDetail      = lazy(() => import('./modules/inventory/BundleDetail'))
 const AssetDetail       = lazy(() => import('./modules/inventory/AssetDetail'))
+const MaintenanceJobDetail = lazy(() => import('./modules/inventory/MaintenanceJobDetail'))
 const PurchaseRequests  = lazy(() => import('./modules/inventory/PurchaseRequests'))
 const Calendar          = lazy(() => import('./modules/calendar/Calendar'))
 const OperationsQueues  = lazy(() => import('./modules/operations/OperationsQueues'))
@@ -360,6 +361,16 @@ export default function App() {
           element={
             <Shell crumbs={[{ label: 'Inventory', to: '/inventory' }, { label: 'Purchase Requests' }]} search="Search request, item, supplier…">
               <PurchaseRequests />
+            </Shell>
+          }
+        />
+
+        <Route path="/inventory/maintenance" element={<Navigate to="/inventory?tab=maintenance" replace />} />
+        <Route
+          path="/inventory/maintenance/:id"
+          element={
+            <Shell crumbs={[{ label: 'Inventory', to: '/inventory' }, { label: 'Maintenance', to: '/inventory?tab=maintenance' }, { label: 'Maintenance Job' }]} search="Search equipment, serial, SKU, category…">
+              <MaintenanceJobDetail />
             </Shell>
           }
         />
