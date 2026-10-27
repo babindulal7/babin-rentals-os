@@ -2395,10 +2395,8 @@ STEPS.push({
 
     await undone(async () => {
       await asOwnerOfTheDatabase(() => q(
-        `insert into membership_plans (client_uuid, level, label, default_credit_limit, display_order, status, retired_at) values
-           (gen_random_uuid(), 'Academy', 'Access Member', 100000, 1, 'Active', null),
-           (gen_random_uuid(), 'Creator', 'Partner', 250000, 2, 'Active', null),
-           (gen_random_uuid(), 'Elite', 'Elite Member', 0, 3, 'Retired', now())`))
+        `update membership_plans set status = 'Retired', retired_at = now() where level = 'Elite'`
+      ))
 
       // 1 · Activate: a client with no live membership gets one. Coordinator is allowed (PERMISSIONS C5).
       const k1 = crypto.randomUUID()
@@ -3328,6 +3326,72 @@ STEPS.push({
         const vRow = (await q(`select assessed_amount, case_no from cases_v where id = $1`, [caseRow.case_id])).rows[0]
         assertEq(Number(vRow.assessed_amount), 0, 'Manager reads unmasked assessed_amount on cases_v')
       })
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L43',
+  title: 'Membership plans are loaded with full economics, discount caps and tiered credit limits (D21, D32, T8-01)',
+  expect: 'green',
+  run: async () => {
+    // 1. All five plans are present in display order
+    const plans = (await q(`select level::text as level, label::text as label, annual_fee, individual_discount_pct, bundle_discount_pct, monthly_booking_limit, simultaneous_rental_limit, authorized_users, default_credit_limit, perks, display_order, status::text as status from membership_plans order by display_order`)).rows
+    assertEq(plans.length, 5, 'all five membership plans are loaded')
+    assertEq(plans.map((p) => p.level), ['Academy', 'Creator', 'Cinematographer', 'Production Alliance', 'Elite'], 'five levels in correct order')
+    assertEq(plans.map((p) => p.status), ['Active', 'Active', 'Active', 'Active', 'Active'], 'all plans active')
+
+    // 2. Check Academy, Cinematographer and Production Alliance economics
+    const academy = plans[0]
+    assertEq(Number(academy.annual_fee), 6000, 'Academy annual fee is 6000')
+    assertEq(Number(academy.individual_discount_pct), 10, 'Academy individual discount is 10%')
+    assertEq(Number(academy.bundle_discount_pct), 5, 'Academy bundle discount is 5%')
+    assertEq(Number(academy.monthly_booking_limit), 3, 'Academy booking limit is 3')
+    assertEq(Number(academy.default_credit_limit), 0, 'Academy default credit limit is 0')
+
+    const cine = plans[2]
+    assertEq(Number(cine.annual_fee), 35000, 'Cinematographer fee is 35000')
+    assertEq(Number(cine.individual_discount_pct), 20, 'Cinematographer individual discount is 20%')
+    assertEq(Number(cine.default_credit_limit), 100000, 'Cinematographer default credit limit is 100000')
+
+    const alliance = plans[3]
+    assertEq(Number(alliance.annual_fee), 80000, 'Production Alliance fee is 80000')
+    assertEq(Number(alliance.bundle_discount_pct), 12, 'Production Alliance bundle discount is 12%')
+    assertEq(Number(alliance.default_credit_limit), 250000, 'Production Alliance default credit limit is 250000')
+    assert(String(alliance.perks).includes('Priority Booking'), 'Production Alliance has Priority Booking perk')
+
+    const elite = plans[4]
+    assertEq(elite.annual_fee, null, 'Elite has custom fee (NULL)')
+    assertEq(elite.monthly_booking_limit, null, 'Elite has unlimited monthly bookings (NULL)')
+    assertEq(Number(elite.default_credit_limit), 500000, 'Elite default credit limit is 500000')
+
+    // 3. Discount cap <= 25% enforced by database constraint
+    await asOwnerOfTheDatabase(async () => {
+      let capRefused = false
+      try {
+        await q(`update membership_plans set individual_discount_pct = 26 where level = 'Academy'`)
+      } catch (err) {
+        capRefused = /membership_plans_discount_hard_cap/i.test(err.message)
+      }
+      assert(capRefused, 'discount exceeding 25% must be refused by membership_plans_discount_hard_cap CHECK constraint')
+    })
+
+    // 4. Law 6: Warehouse reads null for money columns on membership_plans_v; Manager reads unmasked amounts
+    await as('Warehouse', async () => {
+      const vRows = (await q(`select level, annual_fee, default_credit_limit, individual_discount_pct, bundle_discount_pct from membership_plans_v where level = 'Academy'`)).rows
+      assertEq(vRows.length, 1, 'Warehouse can read membership_plans_v')
+      assertEq(vRows[0].annual_fee, null, 'Warehouse cannot read annual_fee (Law 6)')
+      assertEq(vRows[0].default_credit_limit, null, 'Warehouse cannot read default_credit_limit (Law 6)')
+      assertEq(vRows[0].individual_discount_pct, null, 'Warehouse cannot read individual_discount_pct (Law 6)')
+      assertEq(vRows[0].bundle_discount_pct, null, 'Warehouse cannot read bundle_discount_pct (Law 6)')
+    })
+
+    await as('Manager', async () => {
+      const vRows = (await q(`select level, annual_fee, default_credit_limit, individual_discount_pct, bundle_discount_pct from membership_plans_v where level = 'Academy'`)).rows
+      assertEq(Number(vRows[0].annual_fee), 6000, 'Manager reads unmasked annual_fee')
+      assertEq(Number(vRows[0].default_credit_limit), 0, 'Manager reads unmasked default_credit_limit')
+      assertEq(Number(vRows[0].individual_discount_pct), 10, 'Manager reads unmasked individual_discount_pct')
+      assertEq(Number(vRows[0].bundle_discount_pct), 5, 'Manager reads unmasked bundle_discount_pct')
     })
   },
 })

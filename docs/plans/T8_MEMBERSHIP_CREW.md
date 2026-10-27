@@ -22,7 +22,7 @@ estimates pay hourly with a hard-coded 8 hours (`src/lib/queries/timesheet.ts`, 
 
 ---
 
-### T8-01 · Load Babin's plans            status: doing · size: S · lane A + Babin
+### T8-01 · Load Babin's plans            status: done — awaiting merge (lane-a/T8-01-load-babin-s-plans) · size: S · lane A + Babin
 **What** — Babin sends one row per plan with exactly these columns: level (one of the five), label,
 annual fee (NPR), individual discount %, bundle discount %, monthly booking limit, simultaneous
 rental limit, authorised users, default credit limit (NPR), term (months), perks (from the six).

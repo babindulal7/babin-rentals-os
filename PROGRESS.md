@@ -1,5 +1,58 @@
 # Progress Log
 
+## 2026-10-28 — T8-01: Load Babin's plans (Lane A · Size S)
+
+**Did**
+- Claimed migration `0186` in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0186_load_membership_plans.sql`:
+  - Loaded Babin's 5 standard membership plans into `public.membership_plans` (D21, D32) with fixed display orders 1–5:
+    1. **Academy**: Access Member, Rs 6,000/yr, 10% individual discount, 5% bundle discount, 3 bookings/mo, 1 simultaneous rental, 1 user, Rs 0 default credit, 12 mo term, no perks.
+    2. **Creator**: Access Member, Rs 15,000/yr, 15% individual discount, 7% bundle discount, 7 bookings/mo, 2 simultaneous rentals, 1 user, Rs 0 default credit, 12 mo term, no perks.
+    3. **Cinematographer**: Access Member, Rs 35,000/yr, 20% individual discount, 10% bundle discount, 10 bookings/mo, 3 simultaneous rentals, 2 users, Rs 1,00,000 default credit, 12 mo term, no perks.
+    4. **Production Alliance**: Partner, Rs 80,000/yr, 20% individual discount, 12% bundle discount, 20 bookings/mo, 7 simultaneous rentals, 5 users, Rs 2,50,000 default credit, 12 mo term, perks: Priority Booking, Dedicated Manager, Company Billing, Credit Terms.
+    5. **Elite**: Elite Member, Custom fee (NULL), 20% individual discount, Custom bundle (NULL), Unlimited bookings (NULL), Unlimited rentals (NULL), Unlimited users (NULL), Rs 5,00,000 default credit, 12 mo term, perks: Dedicated Manager, VIP Support, Custom Solutions, Company Billing, Credit Terms.
+  - Preserved hard discount cap constraint (`membership_plans_discount_hard_cap <= 25%`).
+  - Added idempotent `ON CONFLICT (level) DO UPDATE`.
+- Authored and verified lifecycle step **`L43`** in `scripts/e2e-lifecycle.mjs`:
+  - Verified all 5 plans exist in `membership_plans` in display order and status `'Active'`.
+  - Verified economics and parameters for Academy, Creator, Cinematographer, Production Alliance, and Elite.
+  - Verified database hard-cap check constraint `membership_plans_discount_hard_cap` refuses discounts > 25%.
+  - Verified Law 6: Warehouse reads null for money columns on `membership_plans_v`; Manager reads unmasked amounts.
+- Populated `membership_plans` in mock store `src/lib/__mocks__/corpus.ts` matching the migration schema and values for local/offline mock execution.
+
+**Ruled**
+- D21: Memberships live at go-live.
+- D32: Plans loaded into database per Babin's table specifications.
+- Law 6: Warehouse, Technician, Driver and Client cannot view money figures (annual fees, default credit limits, discount percentages) on membership plans.
+
+**Verified**
+- `npm run check:pglite`: 183/183 applied, 0 failed.
+- `npm run check:lifecycle`: 43/43 steps green, 0 failed.
+- `npm run typecheck`: clean, 0 errors.
+- `npm run lint`: clean, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run build`: 8154 modules transformed, dist generated cleanly.
+- `npx vitest run src/modules/clients/__tests__/`: 14 passed (156 tests).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 60 / 60 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 49 / 49 (100%) | +0 |
+| Lifecycle | steps green / total | 43 / 43 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 183 files · check:pglite 183/183 applied, 0 failed (recorded 2026-10-27T20:05:10.173Z). Suite: Historical suite: 5859/5859 passed, 0 failed (recorded 2026-10-27T19:18:23.218Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-27T20:05:24.185Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- T8-02: Plans admin screen (Clients ▸ Memberships ▸ Plans: list, create, edit, retire).
+- T8-03: Change plan with credit for unused days.
+- Ready to merge on Lane A.
+
 ## 2026-10-27 — T2-15: Damage found during reset opens a case (Lane A · Size S)
 
 **Did**
