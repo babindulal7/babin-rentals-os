@@ -129,6 +129,8 @@ export interface ClientRecord {
   email: string
   pan?: string
   isVip?: boolean
+  isStaff?: boolean
+  staffUserId?: string
   isVerified?: boolean
   isBlocked?: boolean
   blockReason?: string

@@ -3271,6 +3271,99 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L44',
+  title: 'Staff renting gear: client marked as staff gets 20% discount row, unmasked operational reads under Law 6, standard booking integrity (W68, T8-09)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      const staffClientId = crypto.randomUUID()
+      const staffClientUuid = crypto.randomUUID()
+      const staffUserId = U.Warehouse
+
+      // 1. Coordinator creates/marks a client as staff linked to Warehouse user
+      await as('Coordinator', async () => {
+        await q(
+          `insert into clients (id, client_uuid, client_code, name, phone, type_parent, is_staff, staff_user_id, created_by)
+           values ($1, $2, 'C-9891', 'Bikash (Staff Client)', '+9779801999999', 'Individual', true, $3, $4)`,
+          [staffClientId, staffClientUuid, staffUserId, U.Coordinator],
+        )
+      })
+
+      // 2. Both clients_v and client_directory_v expose is_staff = true and staff_user_id to staff sessions
+      await as('Warehouse', async () => {
+        const cRow = (await q(`select is_staff, staff_user_id from clients_v where id = $1`, [staffClientId])).rows[0]
+        assert(cRow, 'clients_v returns staff client to Warehouse')
+        assertEq(cRow.is_staff, true, 'is_staff is true in clients_v')
+        assertEq(cRow.staff_user_id, staffUserId, 'staff_user_id matches linked user')
+
+        const dRow = (await q(`select is_staff, staff_user_id from client_directory_v where id = $1`, [staffClientId])).rows[0]
+        assert(dRow, 'client_directory_v returns staff client to Warehouse')
+        assertEq(dRow.is_staff, true, 'is_staff is true in client_directory_v')
+        assertEq(dRow.staff_user_id, staffUserId, 'staff_user_id matches in directory view')
+      })
+
+      // 3. Coordinator creates a booking through create_booking with 'Staff' discount source at 20%
+      const payload = {
+        client_uuid: crypto.randomUUID(),
+        created_by: U.Coordinator,
+        branch_id: BRANCH,
+        client_id: staffClientId,
+        pickup_at: '2099-12-10T04:00:00Z',
+        return_at: '2099-12-12T04:00:00Z',
+        delivery_type: 'Client Pickup',
+        lines: [
+          {
+            client_uuid: crypto.randomUUID(),
+            line_type: 'Equipment',
+            product_id: SERIAL_PRODUCT,
+            description: 'Staff Rental Camera',
+            qty: 1,
+            days: 2,
+            rate: 3500,
+          },
+        ],
+        discounts: [
+          {
+            client_uuid: crypto.randomUUID(),
+            audit_client_uuid: crypto.randomUUID(),
+            discount_source: 'Staff',
+            percent: 20,
+            reason: 'Staff Rental Discount (20%)',
+          },
+        ],
+      }
+
+      let resBookingId = null
+      await as('Coordinator', async () => {
+        const result = await one('select create_booking($1::jsonb)', [JSON.stringify(payload)])
+        resBookingId = result.booking_id
+        assert(resBookingId, 'create_booking returned booking_id')
+
+        const discRow = (
+          await q(`select discount_source, percent, reason from booking_discounts where booking_id = $1`, [resBookingId])
+        ).rows[0]
+        assert(discRow, 'booking_discounts row exists')
+        assertEq(discRow.discount_source, 'Staff', 'discount_source is Staff')
+        assertEq(Number(discRow.percent), 20, 'discount percent is 20')
+      })
+
+      // 4. Warehouse (money-blind) cannot read discount money amounts or client credit limit under Law 6
+      await as('Warehouse', async () => {
+        const cRow = (await q(`select approved_credit_limit from clients_v where id = $1`, [staffClientId])).rows[0]
+        assertEq(cRow.approved_credit_limit, null, 'Warehouse sees null credit limit under Law 6')
+      })
+
+      // 5. Manager reads unmasked view
+      await as('Manager', async () => {
+        const discRow = (await q(`select discount_source, percent from booking_discounts where booking_id = $1`, [resBookingId])).rows[0]
+        assertEq(discRow.discount_source, 'Staff', 'Manager reads staff discount')
+        assertEq(Number(discRow.percent), 20, 'Manager reads 20%')
+      })
+    })
+  },
+})
+
 /* ── Run ──────────────────────────────────────────────────────────────────── */
 
 await seed()

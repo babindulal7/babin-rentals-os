@@ -36,6 +36,7 @@ export type SettingKey =
   | 'businessDescription'
   | 'vatNumber'
   | 'vatRatePercent'
+  | 'staffDiscountPercent'
   | 'crewCoordinationFeeRupees'
   | 'paymentTermsDays'
   | 'overdueStopDays'
@@ -119,6 +120,11 @@ export const SETTING_SPECS: Record<SettingKey, SettingSpec> = {
      says the figure is "A PERCENTAGE (13, not 0.13) from Settings ▸ Finance".
      This is the Settings ▸ Finance that comment was pointing at. */
   vatRatePercent: { default: 13, kind: 'number', suffix: '%', validate: (v) => percent(v, 'VAT rate') },
+  /**
+   * Ruling W68 (Task T8-09) — Staff rental discount percentage applied automatically
+   * on bookings for clients marked as Staff. Default 20%. Changing affects new bookings only.
+   */
+  staffDiscountPercent: { default: 20, kind: 'number', suffix: '%', validate: (v) => percent(v, 'Staff discount') },
   crewCoordinationFeeRupees: {
     /* Derived from `data/crew.ts`'s constant rather than retyped, so the
        default here and the figure the crew engine uses cannot disagree. Still

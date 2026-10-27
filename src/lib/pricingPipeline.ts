@@ -61,6 +61,9 @@ export interface DiscountDetails {
   manualDiscountReason?: string | null
   manualDiscountAuthorizedBy?: string | null
   isStudentBundle?: boolean
+  isStaffClient?: boolean
+  staffDiscountPercent?: number
+  staffDiscountRemoved?: boolean
 }
 
 /* RULING 2026-10-07: the hard-coded PROMO_CODES demo table is deleted. A code exists only as a
@@ -96,7 +99,7 @@ export interface AppliedDiscountBreakdown {
     percent: number
     applied: boolean
     /** Database provenance; create_booking must preserve this source. */
-    discountSource?: 'Manual' | 'Membership' | 'Coupon' | 'Women-DoP 5%' | 'Student' | 'College' | 'Named-client rates'
+    discountSource?: 'Manual' | 'Membership' | 'Coupon' | 'Women-DoP 5%' | 'Student' | 'College' | 'Named-client rates' | 'Staff'
     couponId?: string
     /** Actual percentage after stacking, as stored in booking_discounts. */
     effectivePercent?: number
@@ -259,8 +262,37 @@ export function evaluateDiscounts(
         exclusionReason: 'Student bundles do not stack with manual discounts',
       })
     }
+    if (discounts.isStaffClient) {
+      const staffPct = discounts.staffDiscountPercent ?? 20
+      sources.push({
+        name: `Staff Discount (${staffPct}%)`,
+        discountSource: 'Staff',
+        percent: staffPct,
+        applied: false,
+        exclusionReason: 'Student bundles do not stack with staff discounts',
+      })
+    }
   } else {
     // Normal discount stacking
+    if (discounts.isStaffClient) {
+      const staffPct = discounts.staffDiscountPercent ?? 20
+      if (discounts.staffDiscountRemoved) {
+        sources.push({
+          name: `Staff Discount (${staffPct}%)`,
+          discountSource: 'Staff',
+          percent: staffPct,
+          applied: false,
+          exclusionReason: 'Staff discount removed',
+        })
+      } else {
+        sources.push({
+          name: `Staff Discount (${staffPct}%)`,
+          discountSource: 'Staff',
+          percent: staffPct,
+          applied: true,
+        })
+      }
+    }
     if (discounts.membershipPercent && discounts.membershipPercent > 0) {
       sources.push({
         name: 'Membership Discount',
