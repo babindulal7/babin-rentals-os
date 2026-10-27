@@ -1,5 +1,102 @@
 # Progress Log
 
+## 2026-10-27 — T2-16: Photo rules from W27
+
+**Did**
+- Implemented W27 client-side photo rules in `src/lib/imageCompression.ts`:
+  - Enforced device-side byte size caps: damage photos shrink to ≤ 10 MB (`MAX_DAMAGE_PHOTO_BYTES = 10 * 1024 * 1024`) and all other evidence photos shrink to ≤ 3 MB (`MAX_STANDARD_PHOTO_BYTES = 3 * 1024 * 1024`).
+  - Implemented stepwise reduction ladder: gradually steps down dimension (from 2560/2048 to 1200) and JPEG quality (0.85 to 0.65), stopping at the highest quality satisfying the byte cap to preserve serial number legibility.
+  - Strips EXIF location and camera metadata via canvas drawing and re-encoding.
+  - Added HEIC detection (`isHeicFile` / `isHeicImage`) and conversion to JPEG format with `.jpg` file extension (`toJpegFilename`).
+- Updated `src/modules/operations/OperationEvidenceStatus.tsx`:
+  - Added `multiple` attribute to file input and extended `accept` to include `.heic,.heif`.
+  - Handled multi-file selection (`Array.from(files)`), compressing and uploading each file with progressive progress updates ("Compressing/Uploading photo N of M…").
+  - Refreshes evidence status after each photo so that operation gates clear immediately on the first photo.
+  - Reuses the exact same `clientUuid` idempotency key upon upload retry.
+  - Refuses uploads inline when the device is offline with an explicit warning banner without queueing.
+- Updated `src/modules/rentals/EvidenceWorkspace.tsx`:
+  - Added `multiple` attribute and HEIC support (`accept="image/*,.heic,.heif"`).
+  - Extended `handleUploadFile` to loop through multiple selected files with `{ isDamage: category === 'Damage' }` sizing and clean `.jpg` filenames.
+- Updated `src/lib/evidenceStorage.ts`:
+  - Extended `ACCEPTED_IMAGE_FORMATS` with `image/heic` and `image/heif` mapping to `jpg`.
+- Authored and updated tests:
+  - `src/lib/__tests__/imageCompression.test.ts`: 10/10 passed (dimension calculation, HEIC detection, 12 MB standard photo compressed to ≤ 3 MB, 12 MB damage photo compressed to ≤ 10 MB, HEIC to JPEG conversion).
+  - `src/modules/operations/__tests__/OperationEvidenceStatus.test.tsx`: 5/5 passed (multiple file input, 3-photo upload with instant gate refresh, damage size flag, idempotency key reuse on retry, offline refusal).
+  - `src/lib/__tests__/evidenceStorage.test.ts`: 11/11 passed.
+
+**Ruled**
+- W27: Several photos are allowed; the application shrinks damage photos to ≤ 10 MB and all others to ≤ 3 MB on device; EXIF location is stripped; HEIC is converted to JPEG.
+- One or more photos are allowed per operation step; the gate requires at least one and clears on the first photo.
+- Idempotency: Retry of a failed evidence upload reuses the exact same `clientUuid` (Law 8).
+- Offline: Photo upload requires online connectivity and fails closed inline when offline (Law 12, R-40).
+
+**Verified**
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npx vitest run src/lib/__tests__/imageCompression.test.ts src/lib/__tests__/evidenceStorage.test.ts src/modules/operations/__tests__/OperationEvidenceStatus.test.tsx`: 26/26 tests passed.
+- `npm run build`: built in 2m 8s, 8152 modules transformed, PWA service worker generated cleanly.
+- `npm run lint:progress`: passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 59 / 59 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 40 / 40 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 180 files · check:pglite 180/180 applied, 0 failed (recorded 2026-10-27T12:54:01.864Z). Suite: Historical suite: 5831/5832 passed, 1 failed (recorded 2026-10-27T11:13:07.819Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-27T12:54:16.438Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Nothing open from T2-16. Ready to merge on Lane A.
+
+## 2026-10-27 — T3-14 readiness audit (read-only) + the two unblocked cards
+
+**Did**
+- Read-only audit of T3-14 ("Draft invoice at Confirm, number on full payment") at branch `lane-a/T2-14-scan-a-label-to-item-card`, HEAD `1188d2b4ee641c2e2956128244f45bfb13abf5c6`. **No source, test, migration or config was changed by the audit.** Report kept outside the repo (`DeepSeek Flash - T3-14 Invoice Readiness Audit.md`).
+- Established that Confirm creates **no** invoice: `src/actions/rentals/confirmRental.ts:567` writes only the stage transition; `create_invoice` is reachable only from the manual Create-Invoice modal.
+- Established that `issue_invoice` exists server-side (`0108_issue_invoice_rpc.sql`) but **nothing in `src/` calls it** — no `issueInvoice` action, no `invoice.issue` capability in `src/actions/core.ts`, no Issue control in the mounted UI. A fully paid invoice therefore stays `Draft`, and `closeRental.ts:145,203` refuses Close without an issued invoice.
+- Found three defects that a T3-14 build would inherit: **F2** `issue_invoice` reads the invoice without `for update` (`0108:58`), so two concurrent issues both mint and the loser's number is burned (a gap in `INV-`, which `0086:88-91` forbids); **F5** `invoice_lines` has no parent-status guard, so an issued invoice's lines can be rewritten while `line_total` — and therefore the total — stays identical; **F4** `extend_booking` increments `invoice_lines.days` (`0111:126-129`) but `line_total` is a stored column, so a draft does **not** reprice, contradicting `0111:9` and `extendRental.ts:16`.
+- Added two scoped prompts so the unblocked work is not buried inside the size-L card: `docs/plans/prompts/T3-14a.md` (harden the write path: F2, F5, F4 — no decision needed) and `docs/plans/prompts/T3-14b.md` (Draft at Confirm + one re-sync function — no decision needed). The numbering half has **no** prompt and must not be started.
+
+**Ruled**
+- Nothing new. This session made no product decision and did not edit any ruling, `PLAN.md` or `docs/PERMISSIONS.md`.
+- Recorded for the record: where the docs disagree about *when* an invoice is issued, the newest ruling wins (`RULINGS-2026-10-26-workflow.md` W15/W16 — draft at Confirm, number on full payment), which supersedes `SPEC-P0-1-INVOICING.md` §3.3 and the "issued at return" copy in `CreateInvoiceModal.tsx:611-613`.
+- Flagged two documentation gaps the owner must settle: `RULINGS-2026-09-04.md` and `RULINGS-2026-09-08.md` are cited as **binding** in 8+ files but **do not exist in the repo**; and `docs/PERMISSIONS.md:192`/`:352` say Coordinator may issue an invoice while `0108:40` and `rbac.ts:418` allow Owner/Admin/Manager/Accounts only (stricter wins — the database is right, the matrix rows are stale).
+
+**Verified**
+- Git state read only: `git rev-parse HEAD`, `git branch --show-current`, `git status --porcelain`, `git log -1` — working tree clean apart from the pre-existing untracked `Nemotron PR Audit.md`.
+- **No gate was run by this session.** `check:pglite`, `check:lifecycle`, `test`, `typecheck` and `build` were deliberately not executed: the audit changed no code, and running them would not have proved anything about the missing paths. Everything below is `npm run completion` reading **recorded** receipts, which predate this HEAD and say so.
+- The one runtime claim in the audit is that `scripts/e2e-lifecycle.mjs` is local-only (`--live` unimplemented, `:37-41`) — read from its header, not from a run.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 59 / 59 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 40 / 40 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 180 files · check:pglite 180/180 applied, 0 failed (recorded 2026-10-27T11:18:26.048Z). Suite: Historical suite: 5831/5832 passed, 1 failed (recorded 2026-10-27T11:13:07.819Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-27T11:18:46.224Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **T3-14 stays `todo`.** The audit does not tick it: the Draft half is buildable, the numbering half is blocked.
+- **Blocked by the accountant (O-14, O-17).** O-14: second invoice or credit note for a numbered invoice that later changes. O-17: may the tax invoice wait for full payment, or does an advance/handover already require it? Both must be answered before the numbering step is written — the card itself says so. `T3-05` (IRD e-billing check, Babin + accountant) is the natural place to ask both.
+- **Also unruled, and hit by the card's own step 2:** MONEY-07 (re-invoicing a booking whose only invoice was voided) and MONEY-08 (`invoice_lines.line_kind` has no `Damage`/`Missing`, so a damage charge cannot become a line).
+- **Next session starts with:** `docs/plans/prompts/T3-14a.md` (lane C, no decision needed — lock the issue path, guard invoice lines, make the extension reprice), then `T3-14b.md`. Do not start the numbering half.
+- **Not done here, needs the owner:** restore or restate the missing `RULINGS-2026-09-04.md` / `-09-08.md`; fix the two `docs/PERMISSIONS.md` invoice rows; decide whether `canIssueInvoice` (`rbac.ts:416-419`, which today gates *create* not *issue*) is renamed before a real issue predicate is added.
+
 ## 2026-10-27 — T2-14: Scan a label → item card
 
 **Did**
@@ -231,6 +328,44 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 
 ## Remaining
 - Nothing open from T2-08. Ready to proceed to the next card on Lane A (`T2-10 · Offline outbox for scans and ticks`).
+
+## 2026-10-15 — R-39 budgets measured in the browser: New Rental, inline client and cancel
+
+**Did**
+- Measured the three R-39 rows that were still unmeasured, on current main (`62c9795`), seeded mock, Owner, 1440px, starting from each flow's own entry point. Gestures are counted one per tap; a native `<select>` counts as two (open, choose). Typed = fields typed, not characters.
+  - **New Rental → Booked** (Today → Create → New Rental → client → project type → Equipment → one equipment item → Confirm Booking): **10 gestures, 0 typed**. Budget ⭐ ≤12: within. Committed: "Booking Confirmed — Rental 918 is now Booked".
+  - **New client inline** (New Rental → New client → company name, phone → Create & Select Client → Continue Booking): **3 gestures, 2 typed**. The required fields are the company name and the phone, confirmed by submitting the form empty. Budget ≤3 required: within. Committed: "Client created C-1 · … is selected on this booking", and the rental's client field shows the name.
+  - **Cancel a booking** (Rentals list → row ⋮ → Cancel Booking → reason → "I confirm" checkbox → Cancel Booking): **4 gestures, 1 typed**. The 19 Sep row says 3 taps; the dialog also requires the "I confirm" checkbox, which is part of the named-action gate. Budget stays "gated". **Not committed in the mock:** the store refuses with `[mock] rpc("cancel_booking") is not implemented in the local store`. The refusal is honest (no false success), but the commit is unverified here.
+- Found, not fixed:
+  - **Bundles cannot be confirmed in mock mode.** Add Bundle → Confirm Booking is refused with "line 2 carries a productId that is not a uuid (`BND-14::Aputure LS 600d Pro`). Nothing was sent." Single equipment items commit. Not checked against the live data path.
+  - **Booking Detail's header ⋮ cannot reach Cancel with a mouse at 1440px.** The first ⋮ ("More actions") opens a menu whose only entry is another ⋮ ("More booking actions"). Clicking the inner ⋮ closes both menus, so the items inside it (Extend rental, Assign crew, Create sub-rental, Cancel booking, Message client) are not reachable from the header. The nested menu is also present on `21fb260` (before `5c1bacc`), which I saw but did not click through there. The Rentals list row ⋮ still offers Cancel Booking.
+
+**Ruled**
+- None. No product rule, budget or permission changed. The 19 Sep table is not edited in this entry; its cancel row and its New Rental row need correcting (see Remaining).
+
+**Verified**
+- Browser (seeded mock, Owner, 1440px): the three flows above, outcomes quoted from the app's own toasts and dialogs. Screens checked: the Create menu, the client picker, the equipment catalogue, the review panel, the Booking Confirmed dialog, the inline new-client form and its success card, the Rentals list row menu and the cancel dialog. Zero page errors in every run.
+- No code changed. `npm run completion` counted below; `npm run lint:progress` run.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +2 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-17T07:27:04.216Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-14T20:37:10.038Z.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Booking Detail's nested ⋮: proposed fix is one menu holding the five booking items, so Cancel is one ⋮ away from the header. It moves the header layout, so it needs a decision.
+- Bundles: check the live path before changing anything. The composite `BND-14::…` productId may be a mock-only artefact, or the app may build it for live bundles too.
+- Cancel's committed success needs the live `cancel_booking` RPC, or a mock implementation. Neither is done.
+- Correct the 19 Sep table: Cancel a booking 3 → 4 gestures (+1 typed); New Rental, Dashboard → Booked, 6–8 estimate → 10 gestures measured.
+- The 2026-10-15 "Clean UI improvements" entry exists only in `a995169`, not on main. Restore it, or leave it, at the owner's call.
 
 ## 2026-10-26 (l) — Workflow round (v2, rebased onto 7d84c323): ~100 answers recorded; plans, lanes and agent prompts updated; Claude chose who does what (docs only, delivered as files)
 

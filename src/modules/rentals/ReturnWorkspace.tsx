@@ -2395,7 +2395,7 @@ export default function ReturnWorkspace({
                     Compare in Evidence
                   </Link>
                   <p style={{ margin: '5px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
-                    Damage photo counts include saved photos linked to each unit. Photo upload is unavailable here.
+                    Damage photo counts include saved photos linked to each unit. Use Take / Upload Photo above to record return evidence.
                   </p>
                 </Card>
 

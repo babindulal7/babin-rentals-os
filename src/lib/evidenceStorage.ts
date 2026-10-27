@@ -45,6 +45,8 @@ const ACCEPTED_IMAGE_FORMATS: Readonly<Record<string, string>> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
   'image/webp': 'webp',
+  'image/heic': 'jpg',
+  'image/heif': 'jpg',
 }
 
 function assertUuid(value: string, label: string): void {
@@ -197,7 +199,8 @@ export async function uploadEvidencePhoto(
 
   const storage = supabase.storage.from(EVIDENCE_STORAGE_BUCKET)
   if (!evidence) {
-    const cleanName = options.filename.trim().replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120)
+    const rawName = options.filename.trim().replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120)
+    const cleanName = rawName.replace(/\.(heic|heif)$/i, '.jpg')
     const sessionFolder = resolvedSessionId ?? 'direct'
     const storagePath = `${reference.bookingId}/${sessionFolder}/${clientUuid}_${cleanName}`
     const { data: uploaded, error: uploadError } = await storage.upload(storagePath, file, {

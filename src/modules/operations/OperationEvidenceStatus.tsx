@@ -2,7 +2,7 @@ import { useRef, useState, useId } from 'react'
 import { Button } from '../../components/ui/Page'
 import Icon from '../../components/ui/Icon'
 import { useAuth } from '../../lib/auth'
-import { compressEvidencePhoto } from '../../lib/imageCompression'
+import { compressEvidencePhoto, DAMAGE_PHOTO_MAX_BYTES, STANDARD_PHOTO_MAX_BYTES } from '../../lib/imageCompression'
 import { uploadEvidencePhoto, type SessionStage } from '../../lib/evidenceStorage'
 import { generateClientUuid } from '../../lib/dataAccess'
 import type { useOperationEvidence } from './useOperationEvidence'
@@ -47,8 +47,8 @@ export function OperationEvidenceStatus({
   const isOffline = typeof navigator !== 'undefined' && !navigator.onLine
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const files = Array.from(e.target.files ?? [])
+    if (files.length === 0) return
 
     if (!bookingId) {
       setUploadError('Booking ID is missing. Cannot attach evidence.')
@@ -63,40 +63,59 @@ export function OperationEvidenceStatus({
 
     setIsUploading(true)
     setUploadError(null)
-    setUploadProgress('Compressing photo on device…')
+
+    const isDamage = stage === 'Damage' || category === 'Damage'
+    const maxBytes = isDamage ? DAMAGE_PHOTO_MAX_BYTES : STANDARD_PHOTO_MAX_BYTES
 
     try {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
         throw new Error('Device is offline. Photo was saved on device and will upload when connectivity is restored.')
       }
 
-      // Device compression: 1600px max edge, JPEG 0.8, EXIF location stripped
-      const compressed = await compressEvidencePhoto(file)
-      const clientUuid = generateClientUuid()
-      const cleanFileName = `photo_${stage.toLowerCase()}_${Date.now()}.jpg`
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]!
+        setUploadProgress(
+          files.length > 1
+            ? `Compressing photo ${i + 1} of ${files.length} on device…`
+            : 'Compressing photo on device…',
+        )
 
-      setRetryPayload({ file: compressed.blob, filename: cleanFileName, clientUuid })
-      setUploadProgress('Uploading to private storage and recording evidence…')
+        // Device compression (W27): damage <= 10MB, others <= 3MB, EXIF stripped, HEIC converted
+        const compressed = await compressEvidencePhoto(file, { isDamage, maxBytes })
+        const clientUuid = generateClientUuid()
+        const cleanFileName = files.length > 1
+          ? `photo_${stage.toLowerCase()}_${Date.now()}_${i + 1}.jpg`
+          : `photo_${stage.toLowerCase()}_${Date.now()}.jpg`
 
-      await uploadEvidencePhoto({
-        file: compressed.blob,
-        filename: cleanFileName,
-        category,
-        reference: {
-          bookingId,
-          operationStage: stage,
-          sessionId: sessionId || undefined,
-          itemId: itemId || undefined,
-        },
-        userId,
-        clientUuid,
-      })
+        setRetryPayload({ file: compressed.blob, filename: cleanFileName, clientUuid })
+        setUploadProgress(
+          files.length > 1
+            ? `Uploading photo ${i + 1} of ${files.length}…`
+            : 'Uploading to private storage and recording evidence…',
+        )
+
+        await uploadEvidencePhoto({
+          file: compressed.blob,
+          filename: cleanFileName,
+          category,
+          reference: {
+            bookingId,
+            operationStage: stage,
+            sessionId: sessionId || undefined,
+            itemId: itemId || undefined,
+          },
+          userId,
+          clientUuid,
+        })
+
+        // Refresh after each photo so gate clears immediately on the first photo (W27)
+        status.refresh()
+        onPhotoUploaded?.()
+      }
 
       setUploadProgress(null)
       setRetryPayload(null)
       if (fileInputRef.current) fileInputRef.current.value = ''
-      status.refresh()
-      onPhotoUploaded?.()
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       setUploadError(msg)
@@ -204,7 +223,8 @@ export function OperationEvidenceStatus({
               id={inputId}
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,.heic,.heif"
+              multiple
               capture="environment"
               disabled={isUploading}
               onChange={handleFileChange}
