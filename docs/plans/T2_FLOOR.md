@@ -214,7 +214,7 @@ the "ruled, not yet in code" box in the same commit (B-3).
 **Done when** — both paths work in mock mode and on staging; the audit shows self-checked rows.
 **Needs** — none.
 
-### T2-14 · Scan a label → item card            status: todo · size: M · lane A · [go-live]
+### T2-14 · Scan a label → item card            status: doing · size: M · lane A · [go-live]
 **What** — Scanning (camera or Bluetooth) or searching an item's QR/asset code **anywhere outside a
 floor workspace** opens its item card: status, **who has it now** (client, booking, due back, with a
 countdown), location if in the shop, next booking, last reset, open damage. Inside a workspace,
