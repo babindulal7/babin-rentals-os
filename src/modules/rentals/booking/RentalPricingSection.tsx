@@ -44,6 +44,10 @@ export interface RentalPricingSectionProps {
   setManualDiscountAuthorizedBy: (a: string) => void
   womenDopEligible: boolean
   setWomenDopEligible: (val: boolean) => void
+  isStaffClient?: boolean
+  staffDiscountPercent?: number
+  staffDiscountRemoved?: boolean
+  onToggleStaffDiscount?: (removed: boolean) => void
   isStudentBundle: boolean
   promoCodeInput: string
   setPromoCodeInput: (code: string) => void
@@ -79,6 +83,10 @@ export function RentalPricingSection({
   setManualDiscountAuthorizedBy,
   womenDopEligible,
   setWomenDopEligible,
+  isStaffClient,
+  staffDiscountPercent,
+  staffDiscountRemoved,
+  onToggleStaffDiscount,
   isStudentBundle,
   promoCodeInput,
   setPromoCodeInput,
