@@ -209,6 +209,10 @@ export interface ClientRecord {
    */
   onStop?: { reason: string; setBy: string; setAd: string }
   /** §1 Reliability [NEW] — absent everywhere in the schema and this mock layer until now. Counts only; no ₨-recovered figure is modelled yet. */
+  /** Ruling W68: marked as internal staff client; gets automatic staff discount line on bookings. */
+  isStaff?: boolean
+  isStaffClient?: boolean
+  staffUserId?: string
   reliability?: { lateReturns: number; totalReturns: number; damageCases: number; missingCases: number; avgDaysLateOverall: number }
 }
 
@@ -289,6 +293,8 @@ export const CLIENTS_DATA: ClientRecord[] = [
     id: 'C-3',
     name: 'Bikram Rai',
     clientType: 'Individual',
+    isStaff: true,
+    isStaffClient: true,
     profession: ['Cinematographer'],
     membership: 'Cinematographer',
     phone: '+977 984-1827364',
