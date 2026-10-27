@@ -178,7 +178,7 @@ REMAINING_WORK Task 2.4; the shop internet "drops sometimes" (W55) — go-live c
 duplicates, server rows = 20); the Confirm button says it needs a connection.
 **Needs** — none.
 
-### T2-12 · Client collectors and ID on file            status: todo · size: M · lane A · [go-live]
+### T2-12 · Client collectors and ID on file            status: doing (lane-a/T2-12-client-collectors-and-id-on-file) · size: M · lane A · [go-live]
 **What** — 1) **ID on file before the first rental** (W50): a client needs one ID document (type,
 number, photo) before their first Handover; stored once and reused (W51 — a citizenship card does
 not expire; record an expiry only when the document has one). The Handover receiver step shows
