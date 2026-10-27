@@ -1,5 +1,69 @@
 # Progress Log
 
+## 2026-10-27 — T2-15: Damage found during reset opens a case (Lane A · Size S)
+
+**Did**
+- Claimed migration `0185` in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0185_reset_damage_opens_case.sql`:
+  - Added trigger function `open_damage_case_on_cleaning_finding` and trigger `trg_open_damage_case_on_cleaning_finding` on `damage_findings` for `source = 'Cleaning'`.
+  - Automatically creates a linked case in `cases` table with type `'Damage'`, status `'Under Review'` (W23), disposition `'Charge Client'` (W44), `assessed_amount = 0` (W23), sequential `CASE-YYYY-NNNN` number, and links `damage_findings.case_id`.
+  - Links evidence references from cleaning queue entry or unit to the new case.
+  - Implemented RPC `create_damage_case(p_booking_id, p_unit_id, p_damage_type, p_description, p_severity, p_disposition, p_client_uuid)` allowing floor staff (Warehouse, Technician) and managers to create damage cases directly with validation and sequential numbering.
+- Implemented and verified lifecycle step **`L42`** in `scripts/e2e-lifecycle.mjs`:
+  - Staff records a cleaning queue entry and reports damage with `source = 'Cleaning'`.
+  - Database trigger opens linked case with type `'Damage'`, status `'Under Review'`, disposition `'Charge Client'`, and `assessed_amount = 0`.
+  - Verified Law 6: Warehouse reads null for `assessed_amount` on `cases_v`; Manager reads unmasked amount.
+- Updated `src/lib/damage.ts`:
+  - Added `DEFAULT_POST_RETURN_DAMAGE_DISPOSITION = 'Charge Client'` (W44).
+  - Added `POST_RETURN_DAMAGE_INITIAL_STATUS = 'Under Review'` (W23).
+  - Added `validateResetDamageReport` requiring >= 1 saved evidence photo (W27) and description >= 5 characters.
+  - Added `buildResetDamageClientNotice` formatting unpriced client notice ("under review with photos") per Ruling W23.
+- Implemented `createCase` action in `src/actions/cases/createCase.ts`:
+  - Implements `case.create` capability mapped in `src/actions/core.ts` to `rbac.isStaff(ctx.role)`.
+  - Uses RPC `create_damage_case` fast path and idempotent insert fallback with `generateClientUuid()` (Law 8).
+  - Emits `EVENT_TYPES.CASE_CREATED`.
+- Updated `src/modules/rentals/ResetWorkspace.tsx`:
+  - Replaced outdated helper text with Ruling W44/W23 notice: "Raises an open damage case on this booking, defaulting to client claim under review without an amount until approved by Manager (< Rs 25,000) or Owner (≥ Rs 25,000)."
+  - Fixed evidence photo upload category to `'Damage'`.
+  - Added toast feedback on reset completion indicating damage case opened for Manager review.
+- Authored test suites:
+  - `src/lib/__tests__/damage.test.ts`: verified `validateResetDamageReport` and `buildResetDamageClientNotice` (23/23 passed).
+  - `src/actions/cases/__tests__/createCase.test.ts`: verified `createCase` validation, permissions, and W44/W23 defaults (4/4 passed).
+- Updated mock store `applyTriggers` in `src/lib/__mocks__/client.ts` to emulate case creation when `damage_findings` is inserted with `source === 'Cleaning'`.
+
+**Ruled**
+- Ruling W44: Damage found at reset/cleaning after client has left defaults to claiming from the client (`disposition = 'Charge Client'`, `counterparty_kind = 'Client'`).
+- Ruling W23: Damage cases opened post-return start with `status = 'Under Review'` and `assessed_amount = 0`. The client receives an unpriced notice ("found, under review with photos"); the charge only follows after a Manager (< Rs 25,000) or Owner (≥ Rs 25,000) approves (PERMISSIONS §7 P1).
+- Law 6: Floor roles (Warehouse, Technician) cannot view or write monetary figures on cases or findings.
+
+**Verified**
+- `npm run check:pglite`: 182/182 applied, 0 failed.
+- `npm run check:lifecycle`: 42/42 steps green, 0 failed.
+- `npm run typecheck`: passed, 0 errors.
+- `npm test`: 481 test files passed, 5854/5854 tests passed.
+- `npm run lint`: passed with 0 warnings (`eslint src --max-warnings 0`).
+- `npm run build`: built in 10m 52s, 8154 modules transformed, dist generated cleanly.
+- `npm run completion`: counted and verified.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 60 / 60 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 49 / 49 (100%) | +1 |
+| Lifecycle | steps green / total | 42 / 42 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 182 files · check:pglite 182/182 applied, 0 failed (recorded 2026-10-27T17:38:30.935Z). Suite: PASS — 5854/5854 passed, 0 failed (recorded 2026-10-27T17:42:11.520Z); source fingerprint matches.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-27T17:39:01.899Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- T5-07 will build the actual email sending worker using `buildResetDamageClientNotice` output; currently tracked under Lane B (T5).
+- Nothing open from T2-15. Ready to merge on Lane A.
+
 ## 2026-10-27 — T2-06: Repair job closes the damage (Lane A · Size L)
 
 **Did**
