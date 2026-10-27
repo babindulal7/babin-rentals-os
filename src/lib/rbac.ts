@@ -529,6 +529,22 @@ export function canManageCollateral(role: SystemRole): boolean {
   return canPerformOperations(role) || canWriteBookingDesk(role)
 }
 
+/**
+ * Record or update client identity documents and authorized collectors (T2-12, W28, W34, W50).
+ * Handover staff, warehouse, technicians and booking desk staff can capture client ID / collectors on the spot.
+ */
+export function canManageClientCollectors(role: SystemRole): boolean {
+  return canPerformOperations(role) || canWriteBookingDesk(role)
+}
+
+/**
+ * ID number and document photo unmasked view (T2-03, T2-12).
+ * Strictly Owner, Admin, Manager. Warehouse, Technician, Driver see masked ID numbers.
+ */
+export function canViewUnmaskedId(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager'
+}
+
 export function canReset(role: SystemRole): boolean {
   return canPerformOperations(role) // QC / cleaning is floor + technician work
 }

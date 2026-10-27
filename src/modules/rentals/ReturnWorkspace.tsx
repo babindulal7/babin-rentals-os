@@ -766,8 +766,10 @@ export default function ReturnWorkspace({
             problemRoute = 'Ready for Reset'
           }
         } else if (mark?.state === 'Not Returned') {
-          outcome = mark.decision || 'Missing'
-          problemRoute = mark.decision === 'Still expected' ? 'Still Expected / Follow Up' : 'Missing Item Investigation'
+          // A Not Returned unit always counts as missing on the report; the decision only picks the route.
+          const decision = mark.decision ?? 'Still expected'
+          outcome = `Not Returned (${decision})`
+          problemRoute = decision === 'Still expected' ? 'Rental Extension Review' : 'Missing Item Investigation'
         }
 
         return {
@@ -783,11 +785,11 @@ export default function ReturnWorkspace({
 
       const returnedCount = reportLines.filter((l) => l.outcome.startsWith('Received')).length
       const damagedCount = reportLines.filter((l) => l.outcome === 'Damaged').length
-      const missingCount = reportLines.filter((l) => l.outcome === 'Missing' || l.outcome.includes('Retaining')).length
+      const missingCount = reportLines.filter((l) => l.outcome.startsWith('Not Returned')).length
 
       const flags: string[] = []
       if (damagedCount > 0) flags.push(`${damagedCount} unit(s) recorded damaged / requiring repair`)
-      if (missingCount > 0) flags.push(`${missingCount} unit(s) recorded missing / retained by client`)
+      if (missingCount > 0) flags.push(`${missingCount} unit(s) recorded not returned`)
 
       const result = await exportReturnReportPdf({
         bookingNo: floor.bookingNo,

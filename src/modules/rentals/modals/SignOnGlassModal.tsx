@@ -31,6 +31,7 @@ export interface SignOnGlassModalProps {
   deliveryType?: string | null | undefined
   isDepositPending?: boolean | undefined
   depositAmount?: number | null | undefined
+  collectors?: Array<{ id: string; name: string; roleTitle?: string | null | undefined; phone?: string | null | undefined }> | undefined
   onSignComplete: (sig: DigitalSignature) => void
 }
 
@@ -46,6 +47,7 @@ export function SignOnGlassModal({
   deliveryType,
   isDepositPending = false,
   depositAmount = null,
+  collectors,
   onSignComplete,
 }: SignOnGlassModalProps) {
   const [mode, setMode] = useState<'draw' | 'type'>('draw')
@@ -306,6 +308,56 @@ export function SignOnGlassModal({
               />
               <span>I confirm that the security deposit hold or authorized credit waiver is verified.</span>
             </label>
+          </div>
+        )}
+
+        {/* Quick Collector Selection (W28, W34, T2-12) */}
+        {role === 'receiver' && collectors && collectors.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <span style={{ fontSize: 'var(--t-caption, 11px)', fontWeight: 600, color: 'var(--text2)' }}>
+              Authorized Collector (1 Tap):
+            </span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {clientName && (
+                <button
+                  type="button"
+                  onClick={() => setSignerName(clientName)}
+                  style={{
+                    minHeight: 36,
+                    padding: '4px 10px',
+                    borderRadius: 'var(--r-sm, 6px)',
+                    border: signerName === clientName ? '1px solid var(--primary, #2563eb)' : '1px solid var(--border)',
+                    background: signerName === clientName ? 'color-mix(in srgb, var(--primary, #2563eb) 15%, var(--card))' : 'var(--card2)',
+                    color: 'var(--text)',
+                    fontSize: 'var(--t-caption, 12px)',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {clientName} (Client)
+                </button>
+              )}
+              {collectors.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setSignerName(c.name)}
+                  style={{
+                    minHeight: 36,
+                    padding: '4px 10px',
+                    borderRadius: 'var(--r-sm, 6px)',
+                    border: signerName === c.name ? '1px solid var(--primary, #2563eb)' : '1px solid var(--border)',
+                    background: signerName === c.name ? 'color-mix(in srgb, var(--primary, #2563eb) 15%, var(--card))' : 'var(--card2)',
+                    color: 'var(--text)',
+                    fontSize: 'var(--t-caption, 12px)',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {c.name} {c.roleTitle ? `(${c.roleTitle})` : ''}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

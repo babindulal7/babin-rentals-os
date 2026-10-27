@@ -2993,6 +2993,101 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L39',
+  title: 'Warehouse cannot read client ID document number or collector ID number; Manager reads unmasked (W50, W34, T2-12)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      const clientId = CLIENT
+      const idNum = 'NP-CITIZEN-123456'
+      const collectorIdNum = 'NP-DL-987654'
+
+      await asOwnerOfTheDatabase(async () => {
+        await q(
+          `insert into client_id_documents (client_uuid, client_id, id_type, id_number, created_by, verified_by)
+           values (gen_random_uuid(), $1, 'citizenship_card', $2, $3, $3)`,
+          [clientId, idNum, U.Owner],
+        )
+        await q(
+          `insert into client_collectors (client_uuid, client_id, name, phone, role_title, id_type, id_number, created_by)
+           values (gen_random_uuid(), $1, 'Sita Gurung', '+9779811223344', '1st AC', 'driving_licence', $2, $3)`,
+          [clientId, collectorIdNum, U.Owner],
+        )
+      })
+
+      // 1. Warehouse direct select on client_id_documents.id_number is refused by column permissions
+      await as('Warehouse', async () => {
+        await q('savepoint wh_id_probe')
+        try {
+          await refuses(
+            'Warehouse direct select on client_id_documents.id_number is refused',
+            `select id_number from client_id_documents where client_id = $1`,
+            [clientId],
+            /permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint wh_id_probe')
+          await q('release savepoint wh_id_probe')
+        }
+      })
+
+      // 2. Warehouse direct select on client_collectors.id_number is refused by column permissions
+      await as('Warehouse', async () => {
+        await q('savepoint wh_coll_probe')
+        try {
+          await refuses(
+            'Warehouse direct select on client_collectors.id_number is refused',
+            `select id_number from client_collectors where client_id = $1`,
+            [clientId],
+            /permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint wh_coll_probe')
+          await q('release savepoint wh_coll_probe')
+        }
+      })
+
+      // 3. Warehouse select on client_id_documents_v returns masked id_number and null evidence_file_id
+      await as('Warehouse', async () => {
+        const rows = (await q(`select id_number, evidence_file_id from client_id_documents_v where client_id = $1`, [clientId])).rows
+        assertEq(rows.length, 1, 'Warehouse finds client ID document')
+        assertEq(rows[0].id_number, '••••-••••-3456', 'Warehouse sees masked client ID document number')
+        assertEq(rows[0].evidence_file_id, null, 'Warehouse sees null evidence file id')
+      })
+
+      // 4. Warehouse select on client_collectors_v returns masked id_number and null evidence_file_id
+      await as('Warehouse', async () => {
+        const rows = (await q(`select name, id_number, evidence_file_id from client_collectors_v where client_id = $1`, [clientId])).rows
+        assertEq(rows.length, 1, 'Warehouse finds client collector')
+        assertEq(rows[0].name, 'Sita Gurung', 'Warehouse sees collector name')
+        assertEq(rows[0].id_number, '••••-••••-7654', 'Warehouse sees masked collector ID number')
+        assertEq(rows[0].evidence_file_id, null, 'Warehouse sees null evidence file id')
+      })
+
+      // 5. Manager select on client_id_documents_v returns unmasked id_number
+      await as('Manager', async () => {
+        const rows = (await q(`select id_number from client_id_documents_v where client_id = $1`, [clientId])).rows
+        assertEq(rows.length, 1, 'Manager finds client ID document')
+        assertEq(rows[0].id_number, idNum, 'Manager sees unmasked client ID document number')
+      })
+
+      // 6. Manager select on client_collectors_v returns unmasked id_number
+      await as('Manager', async () => {
+        const rows = (await q(`select id_number from client_collectors_v where client_id = $1`, [clientId])).rows
+        assertEq(rows.length, 1, 'Manager finds client collector')
+        assertEq(rows[0].id_number, collectorIdNum, 'Manager sees unmasked collector ID number')
+      })
+
+      // 7. Verify helper function client_has_id_on_file
+      await as('Warehouse', async () => {
+        const hasId = await one('select client_has_id_on_file($1)', [clientId])
+        assertEq(Boolean(hasId), true, 'client_has_id_on_file returns true for client with ID')
+      })
+    })
+  },
+})
+
 /* ── Run ──────────────────────────────────────────────────────────────────── */
 
 await seed()

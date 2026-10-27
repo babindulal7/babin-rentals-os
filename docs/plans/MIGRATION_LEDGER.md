@@ -20,7 +20,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0179 | T2-04 | gate1-override-by-handover-staff | lane-a/T2-04-gate1-override | verified |
 | 0180 | T2-05 | technician-floor-verbs | lane-a/T2-05-technician-floor | verified |
 | 0181 | T2-03 | collateral-deposit-id-card | lane-a/T2-03-collateral-deposit | verified |
-| 0182 | T2-12 | client-collectors-and-id-on-file | lane-a/T2-12-client-collectors-and-id-on-file | claimed |
+| 0182 | T2-12 | client-collectors-and-id-on-file | lane-a/T2-12-client-collectors-and-id-on-file | verified |
 
 ## Expected migrations (not yet claimed)
 

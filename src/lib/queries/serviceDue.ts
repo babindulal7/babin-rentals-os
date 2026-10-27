@@ -107,18 +107,22 @@ function toRow(row: ServiceViewRow): ServiceRow {
 export async function readServiceDue(unitIds: readonly string[]): Promise<Map<string, ServiceRow>> {
   if (unitIds.length === 0) return new Map()
 
-  const { data, error } = await supabase
-    .from('product_units_service_v')
-    .select(COLUMNS)
-    .in('unit_id', [...unitIds])
+  try {
+    const { data, error } = await supabase
+      .from('product_units_service_v')
+      .select(COLUMNS)
+      .in('unit_id', [...unitIds])
 
-  if (error) return new Map()
+    if (error) return new Map()
 
-  const byUnit = new Map<string, ServiceRow>()
-  for (const row of (data ?? []) as unknown as ServiceViewRow[]) {
-    byUnit.set(row.unit_id, toRow(row))
+    const byUnit = new Map<string, ServiceRow>()
+    for (const row of (data ?? []) as unknown as ServiceViewRow[]) {
+      byUnit.set(row.unit_id, toRow(row))
+    }
+    return byUnit
+  } catch {
+    return new Map()
   }
-  return byUnit
 }
 
 /**

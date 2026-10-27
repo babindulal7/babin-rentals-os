@@ -1,5 +1,54 @@
 # Progress Log
 
+## 2026-10-27 — T2-12: Client collectors and ID on file
+
+**Did**
+- Claimed migration `0182` in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0182_client_collectors_and_id_on_file.sql` creating `client_id_documents` and `client_collectors` tables with foreign keys and check constraints.
+- Enforced column-level masking: revoked base table SELECT permissions on sensitive columns (`id_number`, `evidence_file_id`) from non-Manager roles (`Warehouse`, `Technician`, `Driver`, `Client`); granted through masking views `client_id_documents_v` and `client_collectors_v` returning `••••-••••-XXXX` and `null` evidence files for unprivileged roles.
+- Implemented `client_has_id_on_file(uuid)` SECURITY DEFINER SQL function for rapid gate evaluation.
+- Added lifecycle step `L39: Warehouse cannot read client ID document number or collector ID number; Manager reads unmasked (W50, W34, T2-12)` in `scripts/e2e-lifecycle.mjs` verifying masking and RLS boundaries (39/39 green).
+- Added `canManageClientCollectors` and `canViewUnmaskedId` RBAC rules (`src/lib/rbac.ts`) and registered `client.manage_id` capability in `src/actions/core.ts`.
+- Created actions `src/actions/clients/recordIdDocument.ts` (enforcing null expiry on citizenship cards per W51) and `src/actions/clients/manageCollector.ts` (`createClientCollector`, `deactivateClientCollector`).
+- Added query helpers in `src/lib/queries/clients.ts` (`fetchClientIdDocument`, `hasClientIdOnFile`, `fetchClientCollectors`) with guards for mocked/stubbed environments.
+- Created modals `src/modules/clients/modals/AddClientIdModal.tsx` and `src/modules/clients/modals/AddCollectorModal.tsx`.
+- Updated `src/modules/rentals/HandoverWorkspace.tsx` Gate 1: renders "ID on file ✓" badge or warning for first-time clients; renders 1-tap collector selector chips with "+ Add Collector" on the spot; automatically sets `bookingAuthVerified` and `currentReceiverName`.
+- Enhanced `src/modules/rentals/modals/SignOnGlassModal.tsx` to accept `collectors` and display quick-select receiver chips for 1-tap signing.
+- Updated `src/modules/clients/ClientDetail.tsx` Documents tab to display Client ID on file and Authorized Collectors cards with manage modals.
+- Authored test suites in `src/actions/clients/__tests__/idAndCollectors.test.ts` (7/7 pass), `src/modules/rentals/__tests__/handoverCollectors.test.tsx` (4/4 pass), and verified all existing suites pass (`handoverWorkspace.test.tsx`, `SignOnGlassModal.test.tsx`, `ClientDetail.edit.test.tsx`).
+
+**Ruled**
+- W50: Client requires one government ID on file before their first rental; stored once and reused across future rentals.
+- W51: Nepali citizenship cards do not expire (`expiry_date` is null); passport and driver's license require expiry date.
+- W28 & W34: Authorized collectors list per client (name, phone, role/relation, optional ID). 1-tap selector at Handover and SignOnGlass fills receiver details instantly; new collectors can be registered on the spot.
+- Law 6 & T2-03: Role-based ID masking: non-Manager roles (`Warehouse`, `Technician`, `Driver`, `Client`) see masked document numbers (`••••-••••-1234`) and null photo file IDs; Manager+ and client portal users see unmasked details.
+
+**Verified**
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npx vitest run src/actions/clients/__tests__/idAndCollectors.test.ts src/modules/rentals/__tests__/handoverCollectors.test.tsx src/modules/rentals/__tests__/handoverWorkspace.test.tsx src/modules/rentals/modals/__tests__/SignOnGlassModal.test.tsx src/modules/clients/__tests__/ClientDetail.edit.test.tsx`: 34/34 tests passed.
+- `npm run check:pglite`: 179/179 migrations applied, 0 leaks, 0 failed.
+- `npm run check:lifecycle`: 39/39 steps green (L1–L39).
+- `npm run check:contrast`: 106/106 WCAG AA token pairs pass in light and dark mode.
+- `npm run build`: built in 1m 57s, 8147 modules transformed, PWA service worker generated cleanly.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 59 / 59 (100%) | +2 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +1 |
+| Lifecycle | steps green / total | 39 / 39 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 179 files · check:pglite 179/179 applied, 0 failed (recorded 2026-10-27T08:00:23.151Z). Suite: Historical suite: 5808/5808 passed, 0 failed (recorded 2026-10-27T07:45:41.068Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-27T08:00:58.508Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Nothing open from T2-12. Ready to merge on Lane A.
+
 ## 2026-10-27 — T2-10: Offline outbox for scans and ticks
 
 **Did**
