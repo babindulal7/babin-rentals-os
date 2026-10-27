@@ -105,6 +105,9 @@ Claude reviews the merged work at 7:38 AM and 7:38 PM NPT and tells you what to 
 | [T3-12](T3-12.md) | Paste a WhatsApp gear list | M | go-live |
 | [T3-13](T3-13.md) | Fully booked → similar item or sub-rent | M | go-live |
 | [T3-14](T3-14.md) | Draft invoice at Confirm, number on full payment | L | go-live |
+| [T3-14a](T3-14a.md) | Harden the invoice write path (audit F2/F5/F4) — no decision needed | M | go-live |
+| [T3-14b](T3-14b.md) | Confirm creates the Draft, Draft follows the booking — no decision needed | L | go-live |
+| [T3-14c](T3-14c.md) | Number on settlement — **BLOCKED**, do not paste until O-14 + O-17 are answered | L | blocked |
 | [T3-15](T3-15.md) | Payment method default | S | go-live |
 | [T3-16](T3-16.md) | Share documents in one tap | M | go-live |
 | [T3-17](T3-17.md) | Extend in two taps | S | go-live |
