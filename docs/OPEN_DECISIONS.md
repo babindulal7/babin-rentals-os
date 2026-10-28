@@ -1,5 +1,17 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 28 October 2026: switch-user PIN length (T1-15) — RESOLVED by Babin: **4 digits**
+
+- Babin answered **"4 pin"** on 28 Oct 2026. The shipped 6-digit parameter in migration `0066` is
+  relaxed by his explicit instruction — migration **`0186_staff_pin_four_digits.sql`** (claimed in
+  the MIGRATION_LEDGER, written on `lane-a/T1-15-switch-user-with-name-plus-pin`): `set_staff_pin`
+  enforces exactly 4 from now on; `verify_staff_pin` accepts 4 **or** 6 during the transition so
+  hashes enrolled before the ruling keep verifying until their owners rotate them.
+- Follow-up (not a decision, a scheduled tightening): once the live roster has rotated, a later
+  migration narrows verify to 4-only.
+- The honest cost is stated in the migration header: the space drops to 10^4; the 5-try/15-minute
+  lockout makes an even-odds continuous attack take ~10.4 days of uninterrupted tries.
+
 ## 28 October 2026: switch-user PIN length (T1-15) — TODO(decision)
 
 - The T1-15 card and ruling W53 say "tap name + **4-digit** PIN"; the shipped security

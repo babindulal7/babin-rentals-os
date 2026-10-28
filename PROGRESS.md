@@ -1,5 +1,48 @@
 # Progress Log
 
+## 2026-10-29 — T1-15: Switch user with name + PIN — migration 0186 written, design reviewed, all gates green
+
+**Did**
+- Card **T1-15** picked per PLAN.md §6 (first `todo` with all `Needs` done in global build order).
+- Created worktree `../bro-lane-t1-15` on branch `lane-a/T1-15-switch-user-with-name-plus-pin` from latest `main`; main checkout (lane A's T2-09) untouched.
+- Wrote **`docs/verification/T1-15_DESIGN.md`** (card-mandated design note): roster-as-lock state machine; **restore-token-into-LIMBO → server `verify_staff_pin`** (0066 verifies caller's own PIN); `signOut({scope:'local'})` on abort; per-person lockout; at-rest read/write matrix (refresh tokens as AES-GCM ciphertext under non-extractable WebCrypto device key, re-encrypted on `TOKEN_REFRESHED`; PINs never on device; honest XSS boundary); fail-closed inventory (offline refuses switching, stale rotation → full sign-in, roster cap ~15); audit `action:'Login'` + `via:'device-switch'`.
+- **Babin answered "4 pin" (28 Oct):** migration **0186_staff_pin_four_digits.sql** (ledger #0186, claimed/written/verified on this branch): `set_staff_pin` enforces exactly 4; `verify_staff_pin` accepts 4|6 during transition; weak rules rescaled (four identical, four sequential, last-4-of-mobile — whole PIN for 4-digit); transition keep 6 until rotated; follow-up to tighten verify to 4-only after roster rotates.
+- Design note reviewed at 28 Oct check-in; card status `doing` in `docs/plans/T1_RELEASE.md` with branch name.
+- **Migration 0186 written + verified** on this branch; OPEN_DECISIONS updated with ruling.
+
+**Ruled**
+- PIN length: **4 digits** (Babin 28 Oct). Migration 0186 enforces 4; verify accepts 4|6 transition; follow-up tightens verify after roster rotates.
+- 4-vs-6 conflict: B-1 recommended keeping 6, but Babin's explicit word overrides — card/W53 wording will be updated in build phase.
+
+**Verified**
+- Migration 0186: **182/182 pglite applied + 41/41 lifecycle green (same run)** — R-35 satisfied.
+- Probe: **14/14** (enrol/verify/rotate/weak-rules/transition/rotate-lockout/revoked-hash-death).
+- `npm run check:pglite`: **182/182 applied, 0 failed**; **34 anon views closed, 20 functions sealed, 99 definer paths pinned**.
+- `npm run check:lifecycle`: **41/41 green**.
+- `npm run typecheck`: **PASS (0 errors)**. `npm run lint`: **PASS (0 warnings)**.
+- Full vitest: **5,876/5,876 passed (484 files)** — 100% green.
+- `npm run build`: PASS.
+- `npm run lint:progress`: PASS.
+
+## Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 58 / 58 (100%) | +3 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 41 / 41 (100%) | +0 |
+| Overall | structural mean of five | ≈ 100% | +0 |
+Migrations 186 files · check:pglite 182/182 applied, 0 failed (recorded 2026-10-29). Suite: 5876/5876 passed, 0 failed. Gates from .lifecycle-result.json, written 2026-10-29. Counted by `npm run completion`, not typed.
+
+## Remaining
+
+- **Design note reviewed at 28 Oct check-in** — build sessions per note's order (secureStorage device key → auth.ts roster/limbo → roster UI → header menu → tests → M4 iPad acceptance with Babin).
+- Build sessions per note's order (secureStorage → auth.tsx roster/limbo → roster UI → header menu → tests → M4 iPad acceptance).
+- PIN wording in card/W53 to "4 digits" (done in build phase).
+- M4 iPad acceptance with Babin (live device drive).
+
 ## 2026-10-28 — T1-15 design phase: Switch user with name + PIN — design note, no code (card's security gate)
 
 **Did**
