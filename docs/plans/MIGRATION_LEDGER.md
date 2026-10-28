@@ -23,7 +23,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0182 | T2-12 | client-collectors-and-id-on-file | lane-a/T2-12-client-collectors-and-id-on-file | verified |
 | 0183 | T2-13 | reset-self-qc-when-alone | lane-a/T2-13-self-qc-when-alone | verified |
 | 0184 | T2-06 | repair-job-closes-damage | lane-a/T2-06-repair-job-closes-the-damage | verified |
-| 0185 | T2-15 | reset-damage-opens-case | lane-a/T2-15-damage-found-during-reset | claimed |
+| 0185 | T4-04 | team-notes | lane-b/T4-04-team-notes | written |
 
 ## Expected migrations (not yet claimed)
 
@@ -37,7 +37,6 @@ Listed so lanes can see what is coming. A card marked "if needed" may turn out n
 | T3-07 | Opening balances (append-only) |
 | T4-02 | Delivery reschedule RPC (if needed) |
 | T4-03 | Delivery proof evidence link (if needed) |
-| T4-04 | `team_notes` |
 | T4-05 | `shift_handovers` + acknowledgements |
 | T5-01 / T5-05 | `notifications`, event triggers, `notification_preferences` |
 | T5-03 | `email_log` |

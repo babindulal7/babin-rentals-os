@@ -703,3 +703,27 @@ export function canPublishTeamViews(role: SystemRole): boolean {
 export function canExportClientPii(role: SystemRole): boolean {
   return role === 'Owner' || role === 'Admin' || role === 'Manager'
 }
+
+/**
+ * Create a team note — Coordinator and above (Owner, Admin, Manager, Coordinator).
+ * Mirrors the RLS policy on `team_notes` INSERT (migration 0185).
+ */
+export function canCreateTeamNote(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+}
+
+/**
+ * Read/list team notes — all staff roles (not Client).
+ * Mirrors the RLS policy on `team_notes` SELECT (migration 0185).
+ */
+export function canReadTeamNotes(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Acknowledge a team note — all staff roles (not Client).
+ * Mirrors the RLS policy on `team_notes` UPDATE for acknowledge (migration 0185).
+ */
+export function canAcknowledgeTeamNote(role: SystemRole): boolean {
+  return isStaff(role)
+}
