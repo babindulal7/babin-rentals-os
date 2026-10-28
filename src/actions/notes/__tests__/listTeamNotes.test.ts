@@ -15,6 +15,9 @@ describe('listTeamNotes', () => {
   const validContext = { userId: 'user-123', role: 'Coordinator' as const };
   const clientContext = { userId: 'client-123', role: 'Client' as const };
 
+  const rpcOk = (data: unknown) => ({ data, error: null, count: null, status: 200, statusText: 'OK' } as any);
+  const rpcErr = (message: string) => ({ data: null, error: { message, details: '', hint: '', code: '42000', name: 'PostgrestError', toJSON: () => ({}) }, count: null, status: 400, statusText: 'Error' } as any);
+
   const mockNotes: TeamNoteRow[] = [
     {
       id: '111e4567-e89b-12d3-a456-426614174000',
@@ -59,7 +62,7 @@ describe('listTeamNotes', () => {
   });
 
   it('lists notes with defaults', async () => {
-    mockRpc.mockResolvedValue({ data: mockNotes, error: null });
+    mockRpc.mockResolvedValue(rpcOk(mockNotes));
 
     const result = await listTeamNotes({}, validContext);
 
@@ -71,7 +74,7 @@ describe('listTeamNotes', () => {
   });
 
   it('respects custom limit and offset', async () => {
-    mockRpc.mockResolvedValue({ data: [], error: null });
+    mockRpc.mockResolvedValue(rpcOk([]));
 
     await listTeamNotes({ limit: 10, offset: 20 }, validContext);
 
@@ -82,7 +85,7 @@ describe('listTeamNotes', () => {
   });
 
   it('returns empty array when no notes', async () => {
-    mockRpc.mockResolvedValue({ data: null, error: null });
+    mockRpc.mockResolvedValue(rpcOk(null));
 
     const result = await listTeamNotes({}, validContext);
 
@@ -90,7 +93,7 @@ describe('listTeamNotes', () => {
   });
 
   it('throws on RPC error', async () => {
-    mockRpc.mockResolvedValue({ data: null, error: { message: 'Permission denied' } });
+    mockRpc.mockResolvedValue(rpcErr('Permission denied'));
 
     await expect(listTeamNotes({}, validContext)).rejects.toThrow('Failed to list team notes: Permission denied');
   });

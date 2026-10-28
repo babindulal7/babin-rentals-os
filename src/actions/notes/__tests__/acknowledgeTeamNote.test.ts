@@ -22,6 +22,9 @@ describe('acknowledgeTeamNote', () => {
   const validContext = { userId: 'user-123', role: 'Coordinator' as const };
   const clientContext = { userId: 'client-123', role: 'Client' as const };
 
+  const rpcOk = (data: unknown) => ({ data, error: null, count: null, status: 200, statusText: 'OK' } as any);
+  const rpcErr = (message: string) => ({ data: null, error: { message, details: '', hint: '', code: '42000', name: 'PostgrestError', toJSON: () => ({}) }, count: null, status: 400, statusText: 'Error' } as any);
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -51,7 +54,7 @@ describe('acknowledgeTeamNote', () => {
   });
 
   it('acknowledges successfully for staff roles', async () => {
-    mockRpc.mockResolvedValue({ data: true, error: null });
+    mockRpc.mockResolvedValue(rpcOk(true));
 
     const result = await acknowledgeTeamNote(
       { noteId: '123e4567-e89b-12d3-a456-426614174000' },
@@ -65,7 +68,7 @@ describe('acknowledgeTeamNote', () => {
   });
 
   it('returns false when already acknowledged', async () => {
-    mockRpc.mockResolvedValue({ data: false, error: null });
+    mockRpc.mockResolvedValue(rpcOk(false));
 
     const result = await acknowledgeTeamNote(
       { noteId: '123e4567-e89b-12d3-a456-426614174000' },
@@ -76,7 +79,7 @@ describe('acknowledgeTeamNote', () => {
   });
 
   it('throws on RPC error', async () => {
-    mockRpc.mockResolvedValue({ data: null, error: { message: 'Note not found' } });
+    mockRpc.mockResolvedValue(rpcErr('Note not found'));
 
     await expect(
       acknowledgeTeamNote(

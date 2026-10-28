@@ -24,12 +24,15 @@ describe('createTeamNote', () => {
   const warehouseContext = { userId: 'warehouse-123', role: 'Warehouse' as const };
   const clientContext = { userId: 'client-123', role: 'Client' as const };
 
+  const rpcOk = (data: unknown) => ({ data, error: null, count: null, status: 200, statusText: 'OK' } as any);
+  const rpcErr = (message: string) => ({ data: null, error: { message, details: '', hint: '', code: '42000', name: 'PostgrestError', toJSON: () => ({}) }, count: null, status: 400, statusText: 'Error' } as any);
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('is implemented, so it does not throw ActionNotImplementedError', async () => {
-    mockRpc.mockResolvedValue({ data: 'note-uuid-123', error: null });
+    mockRpc.mockResolvedValue(rpcOk('note-uuid-123'));
     await expect(createTeamNote({ body: 'Test note' }, ownerContext)).resolves.not.toBeInstanceOf(
       ActionNotImplementedError
     );
@@ -67,7 +70,7 @@ describe('createTeamNote', () => {
   });
 
   it('creates note successfully for Owner', async () => {
-    mockRpc.mockResolvedValue({ data: 'note-uuid-123', error: null });
+    mockRpc.mockResolvedValue(rpcOk('note-uuid-123'));
 
     const result = await createTeamNote({ body: 'Test note' }, ownerContext);
 
@@ -78,7 +81,7 @@ describe('createTeamNote', () => {
   });
 
   it('creates note successfully for Coordinator', async () => {
-    mockRpc.mockResolvedValue({ data: 'note-uuid-456', error: null });
+    mockRpc.mockResolvedValue(rpcOk('note-uuid-456'));
 
     const result = await createTeamNote({ body: 'Coordinator note' }, validContext);
 
@@ -86,7 +89,7 @@ describe('createTeamNote', () => {
   });
 
   it('trims whitespace from body', async () => {
-    mockRpc.mockResolvedValue({ data: 'note-uuid-789', error: null });
+    mockRpc.mockResolvedValue(rpcOk('note-uuid-789'));
 
     await createTeamNote({ body: '  Trimmed note  ' }, ownerContext);
 
@@ -96,7 +99,7 @@ describe('createTeamNote', () => {
   });
 
   it('throws on RPC error', async () => {
-    mockRpc.mockResolvedValue({ data: null, error: { message: 'DB error' } });
+    mockRpc.mockResolvedValue(rpcErr('DB error'));
 
     await expect(
       createTeamNote({ body: 'Test note' }, ownerContext)
