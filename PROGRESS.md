@@ -1,6 +1,6 @@
 # Progress Log
 
-## 2026-10-28 — T8-09: Staff renting gear (Lane A · Size S)
+## 2026-10-29 — T8-09: Staff renting gear (Lane A · Size S)
 
 **Did**
 - Claimed migration `0188` in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0188_staff_renting_gear.sql`:
@@ -23,9 +23,13 @@
 - Updated booking UI in `src/modules/rentals/NewRental.tsx`, `RentalPricingSection.tsx`, `useNewRentalPricing.ts`:
   - Rendered staff discount banner in Pricing & Terms showing "Staff Rental Discount ({staffDiscountPercent}%)" with Law 10 removal toggle ("Remove" / "Re-apply") without approval gates.
   - Linked `ClientCombobox.tsx`, `ClientQuickView.tsx`, and `ClientsDirectory.tsx` to surface "Staff" entity badges.
+- Wired `createClient` action in `src/actions/clients/createClient.ts` to accept `isStaff`, `isStaffClient`, and `staffUserId` input and write `is_staff` / `staff_user_id` columns.
 - Authored unit test suites:
   - `src/lib/__tests__/pricingPipeline.test.ts`: 17/17 passed (tested automatic 20% staff discount injection, setting overrides, removal toggle, student bundle exclusion).
   - `src/modules/rentals/booking/__tests__/RentalPricingSection.test.tsx`: 4/4 passed (tested staff discount rendering and removal toggle without approval gate).
+  - `src/actions/clients/__tests__/createClient.test.ts`: 38/38 passed.
+  - `src/actions/clients/__tests__/updateClient.test.ts`: 12/12 passed.
+  - Full suite: 5851/5851 tests passed.
 
 **Ruled**
 - Ruling W68: A client can be marked Staff (linked to user record). A Staff client's bookings get a 20% staff discount line automatically, shown and removable like any other discount (Law 10 — no approval gate).
@@ -37,20 +41,23 @@
 - `npm run check:lifecycle`: 42/42 steps green, 0 known-red, 0 failed.
 - `npx vitest run src/lib/__tests__/pricingPipeline.test.ts`: 17/17 passed.
 - `npx vitest run src/modules/rentals/booking/__tests__/RentalPricingSection.test.tsx`: 4/4 passed.
+- `npx vitest run src/actions/clients/__tests__/createClient.test.ts`: 38/38 passed.
+- `npm test`: 5851/5851 passed (full suite).
 - `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
-- `npx vite build`: built in 2m 21s, 8154 modules transformed, PWA service worker generated cleanly.
+- `npm run build`: built in 2m 17s, 8154 modules transformed, PWA service worker generated cleanly.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 59 / 59 (100%) | +0 |
+| Backend | actions implemented / total | 59 / 59 (100%) | +1 |
 | Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
 | DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
 | Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
 | Lifecycle | steps green / total | 42 / 42 (100%) | +1 |
 | Overall | structural mean of five | ≈ 97% | — |
-Migrations 182 files · check:pglite 182/182 applied, 0 failed (recorded 2026-10-28T08:37:39.229Z).
-Gates read from .lifecycle-result.json, written 2026-10-28T08:39:07.638Z.
+Migrations 182 files · check:pglite 182/182 applied, 0 failed (recorded 2026-10-28T19:36:10.829Z). Suite: PASS — 5851/5851 passed, 0 failed (recorded 2026-10-28T20:09:32.631Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-10-28T19:36:49.448Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
