@@ -152,7 +152,7 @@ export default function Clients() {
                 />
               ),
             }
-          : activeTab === 'membership' ? {
+          : activeTab === 'membership' && params.get('msub') !== 'plans' ? {
               leading: (
                 <FilterButton
                   onClick={() => setMembershipFiltersOpen((open) => !open)}
@@ -196,7 +196,7 @@ export default function Clients() {
                 },
                 ariaLabel: 'Search clients',
               }
-            : activeTab === 'membership'
+            : activeTab === 'membership' && params.get('msub') !== 'plans'
               ? {
                   value: params.get('mq') ?? '',
                   onChange: (val: string) => {

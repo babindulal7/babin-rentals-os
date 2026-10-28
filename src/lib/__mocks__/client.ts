@@ -1442,6 +1442,94 @@ export const mockSupabase = {
         return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
       }
     }
+    if (name === 'save_membership_plan') {
+      try {
+        const actor = readSession()?.user.id
+        const user = store['users']?.find(row => row['id'] === actor)
+        const role = user?.['primary_role'] as string | undefined
+        if (!role || !['Owner', 'Admin', 'Manager'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'GATE:membership_plan.manage.forbidden: Only Manager, Admin or Owner can create or edit membership plans.') })
+        }
+        const level = String(args?.['p_level'])
+        const label = String(args?.['p_label'])
+        const planId = args?.['p_plan_id'] as string | undefined
+        const plans = store['membership_plans'] ?? []
+        const plan = planId ? plans.find(p => p['id'] === planId) : plans.find(p => p['level'] === level)
+        if (plan) {
+          plan['level'] = level
+          plan['label'] = label
+          plan['annual_fee'] = args?.['p_annual_fee'] != null ? Number(args['p_annual_fee']) : null
+          plan['individual_discount_pct'] = args?.['p_individual_discount_pct'] != null ? Number(args['p_individual_discount_pct']) : null
+          plan['bundle_discount_pct'] = args?.['p_bundle_discount_pct'] != null ? Number(args['p_bundle_discount_pct']) : null
+          plan['monthly_booking_limit'] = args?.['p_monthly_booking_limit'] != null ? Number(args['p_monthly_booking_limit']) : null
+          plan['simultaneous_rental_limit'] = args?.['p_simultaneous_rental_limit'] != null ? Number(args['p_simultaneous_rental_limit']) : null
+          plan['authorized_users'] = args?.['p_authorized_users'] != null ? Number(args['p_authorized_users']) : null
+          plan['default_credit_limit'] = args?.['p_default_credit_limit'] != null ? Number(args['p_default_credit_limit']) : 0
+          plan['term_months'] = args?.['p_term_months'] != null ? Number(args['p_term_months']) : 12
+          plan['perks'] = Array.isArray(args?.['p_perks']) ? args['p_perks'] : []
+          plan['updated_at'] = new Date().toISOString()
+          return Promise.resolve({
+            data: { ok: true, plan_id: plan['id'], level, status: plan['status'] },
+            error: null,
+          })
+        } else {
+          const newId = crypto.randomUUID()
+          const newPlan = {
+            id: newId,
+            client_uuid: (args?.['p_client_uuid'] as string) || crypto.randomUUID(),
+            level,
+            label,
+            annual_fee: args?.['p_annual_fee'] != null ? Number(args['p_annual_fee']) : null,
+            individual_discount_pct: args?.['p_individual_discount_pct'] != null ? Number(args['p_individual_discount_pct']) : null,
+            bundle_discount_pct: args?.['p_bundle_discount_pct'] != null ? Number(args['p_bundle_discount_pct']) : null,
+            monthly_booking_limit: args?.['p_monthly_booking_limit'] != null ? Number(args['p_monthly_booking_limit']) : null,
+            simultaneous_rental_limit: args?.['p_simultaneous_rental_limit'] != null ? Number(args['p_simultaneous_rental_limit']) : null,
+            authorized_users: args?.['p_authorized_users'] != null ? Number(args['p_authorized_users']) : null,
+            default_credit_limit: args?.['p_default_credit_limit'] != null ? Number(args['p_default_credit_limit']) : 0,
+            term_months: args?.['p_term_months'] != null ? Number(args['p_term_months']) : 12,
+            perks: Array.isArray(args?.['p_perks']) ? args['p_perks'] : [],
+            display_order: Number(args?.['p_display_order'] ?? plans.length + 1),
+            status: 'Active',
+            retired_at: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }
+          plans.push(newPlan)
+          return Promise.resolve({
+            data: { ok: true, plan_id: newId, level, status: 'Active' },
+            error: null,
+          })
+        }
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    if (name === 'retire_membership_plan') {
+      try {
+        const actor = readSession()?.user.id
+        const user = store['users']?.find(row => row['id'] === actor)
+        const role = user?.['primary_role'] as string | undefined
+        if (!role || !['Owner', 'Admin', 'Manager'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'GATE:membership_plan.manage.forbidden: Only Manager, Admin or Owner can retire or reactivate membership plans.') })
+        }
+        const planId = String(args?.['p_plan_id'])
+        const retire = args?.['p_retire'] ?? true
+        const plans = store['membership_plans'] ?? []
+        const plan = plans.find(p => p['id'] === planId)
+        if (!plan) {
+          return Promise.resolve({ data: null, error: pgErr('P0002', `GATE:membership_plan.not_found: Membership plan with id ${planId} not found.`) })
+        }
+        plan['status'] = retire ? 'Retired' : 'Active'
+        plan['retired_at'] = retire ? new Date().toISOString() : null
+        plan['updated_at'] = new Date().toISOString()
+        return Promise.resolve({
+          data: { ok: true, plan_id: planId, level: plan['level'], status: plan['status'] },
+          error: null,
+        })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
     /* ⛔ Was `{ data: null, error: null }` — a silent null that every caller
      * would read as success with an empty result. That is the
      * success-fabrication class this repo has a register for, sitting in the

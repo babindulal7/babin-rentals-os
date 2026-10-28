@@ -34,7 +34,7 @@ renames). Load through the T8-02 screen, or a reviewed one-off script on staging
 **Done when** — plans visible on staging and live; Babin confirms the screen matches his table.
 **Needs** — Babin's table (O-9).
 
-### T8-02 · Plans admin screen            status: doing · size: M · lane A
+### T8-02 · Plans admin screen            status: done — awaiting merge (lane-a/T8-02-plans-admin-screen) · size: M · lane A
 **What** — Clients ▸ Memberships ▸ Plans: list, create, edit, **retire** (never delete — Law 3) for
 Owner, Admin, Manager. A retired plan keeps its members until their term ends; it cannot take new
 members.

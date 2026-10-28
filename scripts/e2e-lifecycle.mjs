@@ -3396,6 +3396,107 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L44',
+  title: 'Membership plans admin: create, edit, retire and reactivate audited RPCs (Law 3, Law 6, T8-02)',
+  expect: 'green',
+  run: async () => {
+    // 1. Law 3: Hard DELETE on membership_plans is forbidden by trigger
+    await asOwnerOfTheDatabase(async () => {
+      let deleteRefused = false
+      try {
+        await q(`delete from membership_plans where level = 'Academy'`)
+      } catch (err) {
+        deleteRefused = /GATE:membership_plan\.delete\.forbidden/i.test(err.message)
+      }
+      assert(deleteRefused, 'Law 3: direct DELETE on membership_plans must be refused by prevent_membership_plans_delete trigger')
+    })
+
+    // 2. Authority: Coordinator is read-only (save_membership_plan and retire_membership_plan refused with 42501)
+    await as('Coordinator', async () => {
+      let saveRefused = false
+      try {
+        await q(`select save_membership_plan('Creator', 'Partner', 20000, 15, 8, 5, 3, 2, 50000, 12, '{"Priority Booking"}'::text[])`)
+      } catch (err) {
+        saveRefused = /GATE:membership_plan\.manage\.forbidden/i.test(err.message)
+      }
+      assert(saveRefused, 'Coordinator must be refused permission to save membership plans')
+
+      const planRow = (await q(`select id from membership_plans_v where level = 'Creator'`)).rows[0]
+      let retireRefused = false
+      try {
+        await q(`select retire_membership_plan('${planRow.id}'::uuid, true)`)
+      } catch (err) {
+        retireRefused = /GATE:membership_plan\.manage\.forbidden/i.test(err.message)
+      }
+      assert(retireRefused, 'Coordinator must be refused permission to retire membership plans')
+    })
+
+    // 3. Manager can edit an existing plan via save_membership_plan and audit row is generated
+    let planId
+    await as('Manager', async () => {
+      const res = (await q(`select save_membership_plan('Creator', 'Partner', 22000, 15, 8, 6, 4, 2, 75000, 12, '{"Priority Booking", "Dedicated Manager"}'::text[])`)).rows[0]
+      const out = typeof res.save_membership_plan === 'string' ? JSON.parse(res.save_membership_plan) : res.save_membership_plan
+      assert(out.ok, 'save_membership_plan succeeded for Manager')
+      planId = out.plan_id
+
+      const updated = (await q(`select annual_fee, individual_discount_pct, monthly_booking_limit, default_credit_limit, perks from membership_plans_v where id = '${planId}'`)).rows[0]
+      assertEq(Number(updated.annual_fee), 22000, 'Creator annual fee updated to 22000')
+      assertEq(Number(updated.individual_discount_pct), 15, 'Creator individual discount updated to 15%')
+      assertEq(Number(updated.monthly_booking_limit), 6, 'Creator monthly booking limit updated to 6')
+      assertEq(Number(updated.default_credit_limit), 75000, 'Creator default credit limit updated to 75000')
+
+      // Check audit row
+      const audit = (await q(`select action, table_name, reason from audit_events where record_id = '${planId}' order by created_at desc limit 1`)).rows[0]
+      assertEq(audit?.reason, 'membership_plan.updated', 'audit_events recorded membership_plan.updated')
+    })
+
+    // 4. Manager can retire a plan via retire_membership_plan
+    await as('Manager', async () => {
+      const res = (await q(`select retire_membership_plan('${planId}'::uuid, true)`)).rows[0]
+      const out = typeof res.retire_membership_plan === 'string' ? JSON.parse(res.retire_membership_plan) : res.retire_membership_plan
+      assert(out.ok, 'retire_membership_plan succeeded')
+      assertEq(out.status, 'Retired', 'plan status is now Retired')
+
+      const retiredRow = (await q(`select status::text as status, retired_at from membership_plans_v where id = '${planId}'`)).rows[0]
+      assertEq(retiredRow.status, 'Retired', 'plan record is Retired')
+      assert(retiredRow.retired_at !== null, 'retired_at timestamp is populated')
+
+      // Check audit row
+      const audit = (await q(`select action, table_name, reason from audit_events where record_id = '${planId}' order by created_at desc limit 1`)).rows[0]
+      assertEq(audit?.reason, 'membership_plan.retired', 'audit_events recorded membership_plan.retired')
+    })
+
+    // 5. Retired plan cannot take new members (enroll_client_membership refused)
+    await as('Coordinator', async () => {
+      const clientRow = (await q(`select id from clients_v limit 1`)).rows[0]
+      let enrollRefused = false
+      try {
+        await q(`select enroll_client_membership('${clientRow.id}'::uuid, '${planId}'::uuid, current_date, 22000, 'Test enroll', gen_random_uuid())`)
+      } catch (err) {
+        enrollRefused = /GATE:membership_plan\.retired/i.test(err.message)
+      }
+      assert(enrollRefused, 'enroll_client_membership into a retired plan must be refused')
+    })
+
+    // 6. Manager can reactivate the plan
+    await as('Manager', async () => {
+      const res = (await q(`select retire_membership_plan('${planId}'::uuid, false)`)).rows[0]
+      const out = typeof res.retire_membership_plan === 'string' ? JSON.parse(res.retire_membership_plan) : res.retire_membership_plan
+      assert(out.ok, 'reactivate plan succeeded')
+      assertEq(out.status, 'Active', 'plan status is Active again')
+
+      const reactivatedRow = (await q(`select status::text as status, retired_at from membership_plans_v where id = '${planId}'`)).rows[0]
+      assertEq(reactivatedRow.status, 'Active', 'plan status is Active')
+      assertEq(reactivatedRow.retired_at, null, 'retired_at reset to null')
+
+      // Check audit row
+      const audit = (await q(`select action, table_name, reason from audit_events where record_id = '${planId}' order by created_at desc limit 1`)).rows[0]
+      assertEq(audit?.reason, 'membership_plan.reactivated', 'audit_events recorded membership_plan.reactivated')
+    })
+  },
+})
+
 /* ── Run ──────────────────────────────────────────────────────────────────── */
 
 await seed()

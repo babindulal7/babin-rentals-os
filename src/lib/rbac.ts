@@ -179,6 +179,16 @@ export function canChangeMembership(role: SystemRole): boolean {
 }
 
 /**
+ * Check if role can manage membership plans (create, edit, retire, reactivate).
+ * Owner, Admin, Manager only. Coordinator is read-only (T8-02, Law 3).
+ *
+ * Mirrors `save_membership_plan` and `retire_membership_plan` RPCs (0187).
+ */
+export function canManageMembershipPlans(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager'
+}
+
+/**
  * Check if role can create a bundle.
  *
  * **Ruled 15 Aug 2026 by mirroring the database**, closing the fourth gap —

@@ -1,5 +1,71 @@
 # Progress Log
 
+## 2026-10-28 — T8-02: Plans admin screen (Lane A · Size M)
+
+**Did**
+- Claimed migration `0187` in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0187_membership_plans_admin.sql`:
+  - Added trigger function `prevent_membership_plans_delete` and trigger `trg_prevent_membership_plans_delete` on `membership_plans` enforcing Law 3: plans are retired, never deleted (`GATE:membership_plan.delete.forbidden`).
+  - Added audited RPC `save_membership_plan` (Owner, Admin, Manager only) with strict validation: valid level & label, 0-25% hard discount caps, positive term months, non-negative fees/credit limits, logging `membership_plan.created` or `membership_plan.updated` into `audit_events`.
+  - Added audited RPC `retire_membership_plan` (Owner, Admin, Manager only) to toggle status between `'Active'` and `'Retired'`, recording `retired_at` and logging `membership_plan.retired` or `membership_plan.reactivated` to `audit_events`.
+  - Updated `enroll_client_membership` RPC to reject retired plans (`GATE:membership_plan.retired`).
+  - Granted RPC execute privileges to `authenticated` and revoked from `public, anon`.
+- Authored and verified lifecycle step **`L44`** in `scripts/e2e-lifecycle.mjs`:
+  - Tested Law 3 delete prevention trigger.
+  - Tested RPC permissions: Coordinator rejected, Manager accepted.
+  - Tested discount cap enforcement (<= 25%).
+  - Tested retirement and reactivation with audit trail.
+  - Tested that enrolled members keep plan while new enrollments on retired plan are refused.
+- Added queries and actions:
+  - `src/lib/rbac.ts`: `canManageMembershipPlans(role)` admitting `Owner`, `Admin`, `Manager`.
+  - `src/lib/queries/membership.ts`: `MembershipPlanRecord` interface and `listMembershipPlans()` querying `membership_plans_v`.
+  - `src/actions/clients/saveMembershipPlan.ts`: action with validation and permission gating.
+  - `src/actions/clients/retireMembershipPlan.ts`: action with permission gating.
+  - `src/lib/__mocks__/client.ts`: mock handlers for offline / mock testing.
+- Built UI components:
+  - `src/modules/clients/PlansAdmin.tsx`: administrative table of plans, status filter pills (All, Active, Retired), search filter, Law 6 money blindness masking for floor roles, and action triggers.
+  - `src/modules/clients/modals/EditMembershipPlanModal.tsx`: modal to create and edit plans with validation.
+  - `src/modules/clients/modals/RetireMembershipPlanModal.tsx`: confirmation modal to retire or reactivate plans.
+  - `src/modules/clients/Membership.tsx`: sub-tab navigation (`members` | `plans`).
+- Unit and UI test coverage:
+  - `src/lib/queries/__tests__/membership.test.ts`: verified `listMembershipPlans` mapping and order (6/6 tests).
+  - `src/actions/clients/__tests__/manageMembershipPlan.test.ts`: verified validation, discount caps, role gating (13/13 tests).
+  - `src/modules/clients/__tests__/PlansAdmin.test.tsx`: verified read-only view for Coordinator, manage verbs for Manager, and Law 6 money blindness for floor roles (5/5 tests).
+
+**Ruled**
+- Law 3: Membership plans are never deleted; retired plans keep existing members until term end, but reject new enrollments.
+- Law 6: Floor roles (`Warehouse`, `Technician`, `Driver`, `Client`) never see membership fee amounts or credit limits in DOM or payloads.
+- Manager, Admin, Owner can create, edit, retire, and reactivate plans. Coordinator has read-only access.
+
+**Verified**
+- `npm run check:pglite`: 184/184 applied, 0 failed.
+- `npm run check:lifecycle`: 44/44 green, 0 failed.
+- `npm run typecheck`: clean, 0 errors.
+- `npm run lint`: clean, 0 warnings.
+- `npm run check:contrast`: 106/106 pass.
+- `npm run build`: built in 1m 26s, PWA generated.
+- `npx vitest run`: 22/22 tests pass across `membership.test.ts`, `manageMembershipPlan.test.ts`, and `PlansAdmin.test.tsx`.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 62 / 62 (100%) | +2 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 49 / 49 (100%) | +0 |
+| Lifecycle | steps green / total | 44 / 44 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 184 files · check:pglite 184/184 applied, 0 failed (recorded 2026-10-28T09:56:29.152Z). Suite: Historical suite: 5859/5859 passed, 0 failed (recorded 2026-10-27T19:18:23.218Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-28T09:56:12.368Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T8-03: Change plan with credit for unused days.
+- T8-04: Renew a lapsed membership.
+- Ready to merge on Lane A.
+
 ## 2026-10-28 — T8-01: Load Babin's plans (Lane A · Size S)
 
 **Did**

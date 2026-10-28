@@ -8,6 +8,7 @@
 --     Coordinator is read-only.
 --   - Hard discount cap <= 25% (0005 check: membership_plans_discount_hard_cap).
 --   - Audited: Every plan create, update, or status change writes an audit_events row.
+--   - Retired plans protect existing members but cannot take new members.
 -- =============================================================================
 
 begin;
@@ -47,7 +48,8 @@ create or replace function public.save_membership_plan(
   p_term_months int default 12,
   p_perks text[] default '{}',
   p_display_order int default null,
-  p_client_uuid uuid default gen_random_uuid()
+  p_client_uuid uuid default gen_random_uuid(),
+  p_plan_id uuid default null
 )
 returns jsonb
 language plpgsql
@@ -64,7 +66,7 @@ declare
   v_next_order int;
   v_existing public.membership_plans%rowtype;
 begin
-  -- Authority check: Manager, Admin, Owner only
+  -- Authority check: Manager, Admin, Owner only (Coordinator is read-only per T8-02)
   if v_role not in ('Owner', 'Admin', 'Manager') then
     raise exception 'GATE:membership_plan.manage.forbidden: Only Manager, Admin or Owner can create or edit membership plans.'
       using errcode = '42501';
@@ -109,13 +111,27 @@ begin
     v_parsed_perks := '{}'::membership_perk[];
   end if;
 
-  -- Look up existing plan by level
-  select * into v_existing from public.membership_plans where level = v_parsed_level;
+  -- Look up existing plan by p_plan_id first, then by level
+  if p_plan_id is not null then
+    select * into v_existing from public.membership_plans where id = p_plan_id;
+  end if;
 
-  if found then
+  if v_existing.id is null then
+    select * into v_existing from public.membership_plans where level = v_parsed_level;
+  end if;
+
+  if v_existing.id is not null then
     v_plan_id := v_existing.id;
+
+    -- Ensure level uniqueness if level is being changed
+    if exists (select 1 from public.membership_plans where level = v_parsed_level and id <> v_plan_id) then
+      raise exception 'GATE:membership_plan.duplicate_level: A plan with level "%" already exists.', p_level
+        using errcode = '23505';
+    end if;
+
     update public.membership_plans
     set
+      level = v_parsed_level,
       label = v_parsed_label,
       annual_fee = p_annual_fee,
       individual_discount_pct = p_individual_discount_pct,
@@ -132,15 +148,27 @@ begin
 
     -- Audit record for plan update
     insert into public.audit_events (
+      client_uuid,
+      event_class,
+      category,
+      module,
       action,
-      entity_type,
-      entity_id,
-      actor_user_id,
-      details,
-      client_uuid
+      severity,
+      status,
+      table_name,
+      record_id,
+      actor_id,
+      new_values,
+      reason
     ) values (
-      'membership_plan.updated',
-      'membership_plan',
+      coalesce(p_client_uuid, gen_random_uuid()),
+      'status change',
+      'Administration',
+      'Clients',
+      'Update',
+      'Informational',
+      'Success',
+      'membership_plans',
       v_plan_id,
       v_user_id,
       jsonb_build_object(
@@ -152,7 +180,7 @@ begin
         'default_credit_limit', p_default_credit_limit,
         'term_months', p_term_months
       ),
-      coalesce(p_client_uuid, gen_random_uuid())
+      'membership_plan.updated'
     );
   else
     if p_display_order is null then
@@ -195,15 +223,27 @@ begin
 
     -- Audit record for plan creation
     insert into public.audit_events (
+      client_uuid,
+      event_class,
+      category,
+      module,
       action,
-      entity_type,
-      entity_id,
-      actor_user_id,
-      details,
-      client_uuid
+      severity,
+      status,
+      table_name,
+      record_id,
+      actor_id,
+      new_values,
+      reason
     ) values (
-      'membership_plan.created',
-      'membership_plan',
+      coalesce(p_client_uuid, gen_random_uuid()),
+      'status change',
+      'Administration',
+      'Clients',
+      'Create',
+      'Informational',
+      'Success',
+      'membership_plans',
       v_plan_id,
       v_user_id,
       jsonb_build_object(
@@ -215,7 +255,7 @@ begin
         'default_credit_limit', p_default_credit_limit,
         'term_months', p_term_months
       ),
-      coalesce(p_client_uuid, gen_random_uuid())
+      'membership_plan.created'
     );
   end if;
 
@@ -278,15 +318,27 @@ begin
 
   -- Audit record for status change
   insert into public.audit_events (
+    client_uuid,
+    event_class,
+    category,
+    module,
     action,
-    entity_type,
-    entity_id,
-    actor_user_id,
-    details,
-    client_uuid
+    severity,
+    status,
+    table_name,
+    record_id,
+    actor_id,
+    new_values,
+    reason
   ) values (
-    case when p_retire then 'membership_plan.retired' else 'membership_plan.reactivated' end,
-    'membership_plan',
+    coalesce(p_client_uuid, gen_random_uuid()),
+    'status change',
+    'Administration',
+    'Clients',
+    'Update',
+    'Informational',
+    'Success',
+    'membership_plans',
     p_plan_id,
     v_user_id,
     jsonb_build_object(
@@ -294,7 +346,7 @@ begin
       'old_status', v_plan.status::text,
       'new_status', v_new_status::text
     ),
-    coalesce(p_client_uuid, gen_random_uuid())
+    case when p_retire then 'membership_plan.retired' else 'membership_plan.reactivated' end
   );
 
   return jsonb_build_object(
@@ -306,8 +358,116 @@ begin
 end;
 $$;
 
--- Grant execution to authenticated users (role checks are inside the functions)
-grant execute on function public.save_membership_plan to authenticated;
-grant execute on function public.retire_membership_plan to authenticated;
+
+-- 4. Invariant: A retired plan cannot take new members (T8-02, Law 3)
+create or replace function public.enroll_client_membership(
+  p_client_id uuid,
+  p_plan_id uuid,
+  p_join_date date,
+  p_fee_paid numeric,
+  p_notes text,
+  p_key uuid
+) returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_client record;
+  v_plan record;
+  v_existing_id uuid;
+  v_new_id uuid := gen_random_uuid();
+  v_receipt record;
+  v_request jsonb;
+  v_response jsonb;
+begin
+  if auth.uid() is null or not coalesce(auth_user_role()::text in ('Owner', 'Admin', 'Manager', 'Coordinator'), false) then
+    raise exception 'Permission denied to enroll membership.' using errcode = '42501';
+  end if;
+
+  if p_key is null then raise exception 'A client key is required.'; end if;
+  if p_client_id is null then raise exception 'Client is required.'; end if;
+  if p_plan_id is null then raise exception 'Plan is required.'; end if;
+
+  v_request := jsonb_build_object('client_id', p_client_id, 'plan_id', p_plan_id, 'join_date', p_join_date, 'fee_paid', p_fee_paid, 'notes', p_notes);
+  perform pg_advisory_xact_lock(hashtextextended(p_key::text, 0));
+
+  select * into v_receipt from record_editor_private.receipts where key = p_key;
+  if found then
+    if v_receipt.actor <> auth.uid() or v_receipt.request <> v_request then
+      raise exception 'This save key belongs to a different change.';
+    end if;
+    return v_receipt.response;
+  end if;
+
+  select * into v_client from public.clients where id = p_client_id for update;
+  if not found then raise exception 'Client not found.'; end if;
+
+  select * into v_plan from public.membership_plans where id = p_plan_id;
+  if not found then raise exception 'Membership plan not found.'; end if;
+  if v_plan.status::text <> 'Active' then
+    raise exception 'GATE:membership_plan.retired: That membership plan is retired and cannot take new members.' using errcode = '23514';
+  end if;
+
+  -- Lock and supersede any active live membership for this client
+  select id into v_existing_id
+    from public.client_memberships
+   where client_id = p_client_id and superseded_at is null
+     for update;
+
+  if v_existing_id is not null then
+    update public.client_memberships
+       set superseded_at = clock_timestamp()
+     where id = v_existing_id;
+  end if;
+
+  insert into public.client_memberships (
+    id,
+    client_uuid,
+    client_id,
+    plan_id,
+    join_date,
+    fee_paid,
+    notes,
+    created_by
+  ) values (
+    v_new_id,
+    p_key,
+    p_client_id,
+    p_plan_id,
+    coalesce(p_join_date, current_date),
+    p_fee_paid,
+    p_notes,
+    auth.uid()
+  );
+
+  v_response := jsonb_build_object(
+    'id', v_new_id,
+    'client_id', p_client_id,
+    'plan_id', p_plan_id,
+    'level', v_plan.level,
+    'plan_label', v_plan.label,
+    'join_date', coalesce(p_join_date, current_date),
+    'fee_paid', p_fee_paid,
+    'superseded_membership_id', v_existing_id
+  );
+
+  insert into record_editor_private.receipts (key, actor, request, response)
+  values (p_key, auth.uid(), v_request, v_response);
+
+  return v_response;
+end;
+$$;
+
+
+-- 5. Revoke execute from public and anon; grant only to authenticated
+revoke execute on function public.save_membership_plan(text, text, numeric, numeric, numeric, int, int, int, numeric, int, text[], int, uuid, uuid) from public, anon;
+grant execute on function public.save_membership_plan(text, text, numeric, numeric, numeric, int, int, int, numeric, int, text[], int, uuid, uuid) to authenticated;
+
+revoke execute on function public.retire_membership_plan(uuid, boolean, uuid) from public, anon;
+grant execute on function public.retire_membership_plan(uuid, boolean, uuid) to authenticated;
+
+revoke all on function public.enroll_client_membership(uuid, uuid, date, numeric, text, uuid) from public, anon;
+grant execute on function public.enroll_client_membership(uuid, uuid, date, numeric, text, uuid) to authenticated;
 
 commit;
