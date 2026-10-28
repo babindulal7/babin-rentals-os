@@ -3495,6 +3495,195 @@ STEPS.push({
       assertEq(audit?.reason, 'membership_plan.reactivated', 'audit_events recorded membership_plan.reactivated')
     })
   },
+},
+
+{
+  id: 'L45',
+  title: 'Change plan with credit for unused days and unified write paths (D22, T8-03)',
+  expect: 'green',
+  run: async () => {
+    // 1. Role gate: Warehouse is refused with 42501
+    await as('Warehouse', async () => {
+      let changeRefused = false
+      try {
+        await q(`select change_client_membership(jsonb_build_object(
+          'client_id', gen_random_uuid(),
+          'client_uuid', gen_random_uuid(),
+          'plan_level', 'Creator'
+        ))`)
+      } catch (err) {
+        changeRefused = /42501|Only Coordinator or above/i.test(err.message)
+      }
+      assert(changeRefused, 'Warehouse must be refused permission to change membership')
+    })
+
+    // 2. Setup client and plans for worked example
+    let testClientId
+    let plan12kId
+    let plan20kId
+    let plan6kId
+
+    await asOwnerOfTheDatabase(async () => {
+      // Create a test client using canonical next_document_number
+      const clientCode = await one("select next_document_number('client')")
+      const cRes = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+        values (gen_random_uuid(), '${clientCode}', 'L45 Test Client', '+9779800009945', 'Active', '${U.Owner}')
+        returning id`)).rows[0]
+      testClientId = cRes.id
+
+      // Create test plans with exact term and fees
+      const p1 = (await q(`insert into membership_plans (client_uuid, level, label, annual_fee, term_months, display_order, status)
+        values (gen_random_uuid(), 'Academy', 'Access Member', 12000.00, 12, 91, 'Active')
+        on conflict (level) do update set annual_fee = 12000.00, term_months = 12, status = 'Active'
+        returning id`)).rows[0]
+      plan12kId = p1.id
+
+      const p2 = (await q(`insert into membership_plans (client_uuid, level, label, annual_fee, term_months, display_order, status)
+        values (gen_random_uuid(), 'Creator', 'Partner', 20000.00, 12, 92, 'Active')
+        on conflict (level) do update set annual_fee = 20000.00, term_months = 12, status = 'Active'
+        returning id`)).rows[0]
+      plan20kId = p2.id
+
+      const p3 = (await q(`insert into membership_plans (client_uuid, level, label, annual_fee, term_months, display_order, status)
+        values (gen_random_uuid(), 'Cinematographer', 'Partner', 6000.00, 12, 93, 'Active')
+        on conflict (level) do update set annual_fee = 6000.00, term_months = 12, status = 'Active'
+        returning id`)).rows[0]
+      plan6kId = p3.id
+    })
+
+    // 3. Stricter rule: deactivated client refused
+    await as('Coordinator', async () => {
+      let deactRefused = false
+      await asOwnerOfTheDatabase(async () => {
+        await q(`update clients set status = 'Deactivated' where id = '${testClientId}'`)
+      })
+      try {
+        await q(`select change_client_membership(jsonb_build_object(
+          'client_id', '${testClientId}',
+          'client_uuid', gen_random_uuid(),
+          'plan_id', '${plan12kId}'
+        ))`)
+      } catch (err) {
+        deactRefused = /GATE:client\.deactivated/i.test(err.message)
+      }
+      assert(deactRefused, 'Deactivated client must be refused membership change')
+
+      // Restore client to Active
+      await asOwnerOfTheDatabase(async () => {
+        await q(`update clients set status = 'Active' where id = '${testClientId}'`)
+      })
+    })
+
+    // 4. Enroll client on Plan 12k with join_date 2028-01-01 (leap year: 366-day term)
+    // At effectiveChangeDate 2028-09-01: 122 days left out of 366 (exactly 4 of 12 months, 1/3 of term)
+    const effectiveChangeDate = '2028-09-01'
+    const joinDateLeap = '2028-01-01'
+
+    await as('Coordinator', async () => {
+      // First enrollment via unified enroll_client_membership
+      const enrollRes = (await q(`select enroll_client_membership(
+        '${testClientId}'::uuid,
+        '${plan12kId}'::uuid,
+        '${joinDateLeap}'::date,
+        12000.00,
+        'Initial 12k plan enrollment',
+        gen_random_uuid()
+      )`)).rows[0]
+      const enrollOut = typeof enrollRes.enroll_client_membership === 'string'
+        ? JSON.parse(enrollRes.enroll_client_membership)
+        : enrollRes.enroll_client_membership
+      assertEq(Number(enrollOut.new_fee_due), 12000, 'Initial enrollment fee due is full 12,000')
+      assertEq(Number(enrollOut.credit), 0, 'Initial enrollment credit is 0')
+    })
+
+    // 5. Stricter rule: changing to the same plan is refused
+    await as('Coordinator', async () => {
+      let samePlanRefused = false
+      try {
+        await q(`select change_client_membership(jsonb_build_object(
+          'client_id', '${testClientId}',
+          'client_uuid', gen_random_uuid(),
+          'plan_id', '${plan12kId}',
+          'effective_date', '${effectiveChangeDate}'
+        ))`)
+      } catch (err) {
+        samePlanRefused = /GATE:membership\.same_plan/i.test(err.message)
+      }
+      assert(samePlanRefused, 'Changing to the same plan must be refused')
+    })
+
+    // 6. The Worked Example (D22): fee 12,000, 4 of 12 months left (122/366 days) -> credit 4,000
+    // Change from 12k plan to 20k plan. New fee due = 20,000 - 4,000 = 16,000.
+    const changeKey = '00000000-0000-0000-0000-000000000045'
+    await as('Coordinator', async () => {
+      const changeRes = (await q(`select change_client_membership(jsonb_build_object(
+        'client_id', '${testClientId}',
+        'client_uuid', '${changeKey}',
+        'plan_id', '${plan20kId}',
+        'effective_date', '${effectiveChangeDate}',
+        'note', 'Worked example plan upgrade'
+      ))`)).rows[0]
+      const changeOut = typeof changeRes.change_client_membership === 'string'
+        ? JSON.parse(changeRes.change_client_membership)
+        : changeRes.change_client_membership
+
+      assertEq(Number(changeOut.old_fee), 12000, 'Old fee matches 12,000')
+      assertEq(changeOut.days_left, 122, 'Days left is 122')
+      assertEq(changeOut.total_days, 366, 'Total days in term is 366')
+      assertEq(Number(changeOut.credit), 4000, 'Worked example: 4 of 12 months left on Rs 12,000 yields exactly Rs 4,000 credit')
+      assertEq(Number(changeOut.new_fee), 20000, 'New fee is 20,000')
+      assertEq(Number(changeOut.new_fee_due), 16000, 'New fee due is 16,000 (20,000 - 4,000)')
+      assertEq(Number(changeOut.account_credit), 0, 'No excess account credit for upgrade')
+    })
+
+    // Verify audit trail holds old plan, new plan, credit, new_fee_due
+    await asOwnerOfTheDatabase(async () => {
+      const audit = (await q(`select old_values, new_values, reason from audit_events where client_uuid = '${changeKey}'`)).rows[0]
+      const auditNew = typeof audit.new_values === 'string' ? JSON.parse(audit.new_values) : audit.new_values
+      assertEq(Number(auditNew.credit), 4000, 'Audit record holds credit 4000')
+      assertEq(Number(auditNew.new_fee_due), 16000, 'Audit record holds new_fee_due 16000')
+      assertEq(audit.reason, 'Worked example plan upgrade', 'Audit reason preserved')
+    })
+
+    // 7. Downgrade with excess credit credited to client's account_credit (D22)
+    // Client is on 20k plan with join_date 2028-01-01.
+    // At effectiveChangeDate 2028-07-02: 183 days left out of 366 (exactly 1/2 of term) -> credit 10,000.
+    // Downgrade to 6k plan. New fee = 6,000. Credit = 10,000.
+    // Fee due = 0. Excess credit = 4,000 added to clients.account_credit!
+    await asOwnerOfTheDatabase(async () => {
+      await q(`update client_memberships set join_date = '2028-01-01', fee_paid = 20000.00 where client_id = '${testClientId}' and superseded_at is null`)
+      // Ensure starting account_credit is 0
+      await q(`update clients set account_credit = 0.00 where id = '${testClientId}'`)
+    })
+
+    await as('Coordinator', async () => {
+      const downRes = (await q(`select change_client_membership(jsonb_build_object(
+        'client_id', '${testClientId}',
+        'client_uuid', gen_random_uuid(),
+        'plan_id', '${plan6kId}',
+        'effective_date', '2028-07-02',
+        'note', 'Downgrade with account credit'
+      ))`)).rows[0]
+      const downOut = typeof downRes.change_client_membership === 'string'
+        ? JSON.parse(downRes.change_client_membership)
+        : downRes.change_client_membership
+
+      assertEq(Number(downOut.credit), 10000, 'Downgrade credit is 10,000')
+      assertEq(Number(downOut.new_fee), 6000, 'New fee is 6,000')
+      assertEq(Number(downOut.new_fee_due), 0, 'New fee due is 0 (capped at zero)')
+      assertEq(Number(downOut.account_credit), 4000, 'Excess credit of 4,000 granted as account credit')
+
+      // Check clients table has updated account_credit
+      const clientAfter = (await q(`select account_credit from clients_v where id = '${testClientId}'`)).rows[0]
+      assertEq(Number(clientAfter.account_credit), 4000, 'Client account_credit balance increased by 4,000')
+    })
+
+    // 8. Law 6: Warehouse reads null for account_credit on clients_v
+    await as('Warehouse', async () => {
+      const whClient = (await q(`select account_credit from clients_v where id = '${testClientId}'`)).rows[0]
+      assertEq(whClient.account_credit, null, 'Law 6: Warehouse reads null for client account_credit')
+    })
+  },
 })
 
 /* ── Run ──────────────────────────────────────────────────────────────────── */

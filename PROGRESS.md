@@ -1,5 +1,77 @@
 # Progress Log
 
+## 2026-10-28 — T8-03: Change plan with credit for unused days (Lane A · Size M)
+
+**Did**
+- Claimed migration `0188` in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0188_membership_plan_change_credit.sql`:
+  - Added `account_credit numeric(14,2) not null default 0.00 check (account_credit >= 0)` to `public.clients`.
+  - Updated `public.clients_v` exposing `account_credit`, masked to `NULL` for money-blind roles (`Warehouse`, `Technician`, `Driver`, `Client`) per Law 6 (`auth_can_view_money()`).
+  - Upgraded `change_client_membership(p_payload jsonb)` to implement Ruling D22 / OPEN_DECISIONS §20:
+    - Calculates unused days remaining: `days_left = max(0, old_term_end - effective_date)`.
+    - Calculates credit: `round(old_fee * days_left / days_in_old_term, 2)` (integer paisa, half-up).
+    - Calculates new fee due: `max(0, new_fee - credit)`.
+    - If credit > new fee (downgrade), credits excess to `clients.account_credit` (Law 5 non-cash liability, never cash refund).
+    - Refuses retired plans, deactivated clients, and same plan.
+    - Supersedes old membership row (`superseded_at`, `superseded_by_id`) and inserts new row starting a new term from `effective_date`.
+    - Audits change with `old_values`, `new_values` (credit, days_left, total_days, new_fee_due, account_credit), and note/reason.
+  - Upgraded `enroll_client_membership` to delegate directly to `change_client_membership`, unifying both write paths behind the stricter rule set.
+- Authored and verified lifecycle step **`L45`** in `scripts/e2e-lifecycle.mjs`:
+  - Verified leap year worked example: fee 12,000, 4 of 12 months left (122 of 366 days in leap year 2028) yields exactly Rs 4,000.00 credit to the paisa (`12000 * 122 / 366 = 4000.00`). New fee 20,000 → due 16,000.
+  - Verified audit trail preserves credit (4000) and new_fee_due (16000).
+  - Verified downgrade case: 20,000 plan, 183 of 366 days left (credit 10,000), new fee 6,000 → due 0, Rs 4,000 credited to `clients.account_credit`.
+  - Verified refusals: Warehouse (42501), deactivated client, retired plan, same plan.
+  - Verified Law 6: Warehouse reads `NULL` for `account_credit` on `clients_v`.
+- Added pure credit engine `src/lib/membershipCredit.ts`:
+  - `addMonthsToDate`, `daysBetweenDates`, and `calculateMembershipCredit` matching PostgreSQL interval math and integer-paisa half-up rounding.
+  - Unit tests in `src/lib/__tests__/membershipCredit.test.ts` (10/10 passing).
+- Updated actions and mocks:
+  - `src/actions/clients/changeMembership.ts`: supports `planId`, `effectiveDate`, `feePaid`, and returns D22 calculation output.
+  - `src/actions/clients/__tests__/changeMembership.test.ts`: added test coverage for D22 params and results (23/23 passing).
+  - `src/lib/__mocks__/client.ts` & `src/lib/__mocks__/recordEditor.ts`: mock implementation of `change_client_membership` and unified `enrollMembershipEditor`.
+  - `src/lib/__mocks__/__tests__/membershipRpc.test.ts`: verified mock RPC (20/20 passing).
+- Updated UI:
+  - `src/lib/queries/clients.ts`: added `id`, `annualFee`, `termMonths` to `MembershipPlanRow` and `listMembershipPlans()`.
+  - `src/modules/clients/modals/UpgradeTierModal.tsx`: displays the full D22 working breakdown (current plan fee, unused term remaining, credit for unused days, new plan annual fee, new fee due now, excess to account credit) before confirming. Rich toast confirmation upon change.
+  - Responsive at 375, 820, and 1440 px. Floor roles (Warehouse) cannot see or invoke tier changes.
+
+**Ruled**
+- D22: Changing plan mid-term starts a new term from today and credits unused days of old plan toward new fee: `credit = old fee × days left ÷ days in old term` (integer paisa, half-up).
+- New fee due = `max(0, new fee − credit)`. Downgrade excess credit becomes client's `account_credit` (Law 5 liability, never cash refund).
+- Unified write paths (OPEN_DECISIONS §20): retired plans, deactivated clients, and same plan are strictly refused across all enrollment and change paths.
+- Law 6: `account_credit` is masked to `NULL` on `clients_v` for floor roles (`Warehouse`, `Technician`, `Driver`, `Client`).
+
+**Verified**
+- `npm run check:pglite`: 185/185 applied, 0 failed.
+- `npm run check:lifecycle`: 45/45 green, 0 failed.
+- `npm run typecheck`: clean, 0 errors.
+- `npm test`: 185/185 test files passed, 1571/1571 tests passed.
+- `VITE_DATA_SOURCE=mock npm test`: 185/185 test files passed, 1571/1571 tests passed.
+- `npm run lint`: clean, 0 warnings.
+- `npm run check:contrast`: 106/106 pass.
+- `npm run build`: built in 1.94s, PWA generated.
+- `npx vitest run src/lib/__tests__/membershipCredit.test.ts`: 10/10 passed.
+- `npx vitest run src/actions/clients/__tests__/changeMembership.test.ts`: 23/23 passed.
+- `npx vitest run src/lib/__mocks__/__tests__/membershipRpc.test.ts`: 20/20 passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 62 / 62 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 49 / 49 (100%) | +0 |
+| Lifecycle | steps green / total | 45 / 45 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 185 files · check:pglite 185/185 applied, 0 failed.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T8-04: Renew a lapsed membership.
+- Ready to merge on Lane A.
+
 ## 2026-10-28 — T8-02: Plans admin screen (Lane A · Size M)
 
 **Did**

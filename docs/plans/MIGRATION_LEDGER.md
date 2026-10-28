@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0188**
+**Next free number: 0189**
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
@@ -26,6 +26,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0185 | T2-15 | reset-damage-opens-case | lane-a/T2-15-damage-found-during-reset | verified |
 | 0186 | T8-01 | load-membership-plans | lane-a/T8-01-load-babin-s-plans | verified |
 | 0187 | T8-02 | membership-plans-admin | lane-a/T8-02-plans-admin-screen | verified |
+| 0188 | T8-03 | membership-plan-change-credit | lane-a/T8-03-change-plan-with-credit-for-unused | verified |
 
 ## Expected migrations (not yet claimed)
 

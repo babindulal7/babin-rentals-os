@@ -45,7 +45,7 @@ are not already covered by RLS + audit trigger.
 **Done when** — Coordinator sees plans read-only; Manager can retire; audit rows exist.
 **Needs** — none.
 
-### T8-03 · Change plan with credit for unused days            status: todo · size: M · lane A
+### T8-03 · Change plan with credit for unused days            status: done — awaiting merge (lane-a/T8-03-change-plan-with-credit-for-unused) · size: M · lane A
 **What** — Changing plan mid-term starts a **new term from today** and credits the **unused days of
 the old plan** toward the new fee (D22): credit = old fee × days left ÷ days in old term (integer
 paisa, half-up). The new fee due = new fee − credit, never below zero; ⭐ if the credit is larger

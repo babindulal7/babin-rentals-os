@@ -1,13 +1,16 @@
-import { useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Modal } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Page'
 import { useToast } from '../../../components/ui/Toast'
 import { changeMembership, NOTE_MAX } from '../../../actions/clients/changeMembership'
 import { useAuth } from '../../../lib/auth'
-import { formatMoney } from '../../../lib/money'
+import { formatMoney, grouped, rupees, toRupees, type Paisa } from '../../../lib/money'
 import { useNetwork } from '../../../lib/network'
 import { useMembershipPlans } from '../../../lib/queries/useClients'
 import type { ClientRecord, MembershipTier } from '../../../lib/queries/clients'
+import { calculateMembershipCredit } from '../../../lib/membershipCredit'
+import { businessDayAd } from '../../../lib/bs'
+import { supabase } from '../../../lib/supabase'
 
 export interface UpgradeTierModalProps {
   isOpen: boolean
@@ -61,6 +64,43 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership }
   const [saving, setSaving] = useState(false)
   const submitting = useRef(false)
 
+  const [activeMembership, setActiveMembership] = useState<{
+    id: string
+    planId: string
+    joinDate: string
+    feePaid: number | null
+  } | null>(null)
+
+  useEffect(() => {
+    let active = true
+    async function loadActive() {
+      if (!hasMembership || !client.dbId) return
+      try {
+        const { data, error } = await supabase
+          .from('client_memberships_v')
+          .select('id, plan_id, join_date, fee_paid')
+          .eq('client_id', client.dbId)
+          .is('superseded_at', null)
+          .maybeSingle()
+        if (error) return
+        if (active && data) {
+          setActiveMembership({
+            id: data.id,
+            planId: data.plan_id,
+            joinDate: data.join_date,
+            feePaid: data.fee_paid != null ? Number(data.fee_paid) : null,
+          })
+        }
+      } catch {
+        // Safe fallback
+      }
+    }
+    void loadActive()
+    return () => {
+      active = false
+    }
+  }, [hasMembership, client.dbId])
+
   /* One request key per distinct request (Law 8): a retry of the SAME plan and note reuses it, so a
      response lost in transit cannot become a second membership; changing either makes a new request. */
   const keyRef = useRef<{ signature: string; key: string } | null>(null)
@@ -77,6 +117,25 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership }
 
   const activating = !hasMembership
   const verb = activating ? 'Activate Membership' : 'Apply Tier Change'
+
+  const oldPlan = hasMembership
+    ? (options.find((p) => (activeMembership && p.id === activeMembership.planId) || p.level === current) ?? null)
+    : null
+  const oldFeeRupees = activeMembership?.feePaid ?? (oldPlan?.annualFee != null ? toRupees(oldPlan.annualFee) : 0)
+  const oldJoinDate = activeMembership?.joinDate ?? businessDayAd()
+  const oldTermMonths = oldPlan?.termMonths ?? 12
+  const newFeePaisa = chosen?.annualFee ?? (0 as Paisa)
+
+  const creditWorking =
+    hasMembership && chosen && !unchanged
+      ? calculateMembershipCredit({
+          oldFeePaisa: rupees(oldFeeRupees),
+          oldJoinDate,
+          oldTermMonths,
+          effectiveDate: businessDayAd(),
+          newFeePaisa,
+        })
+      : null
 
   const canApply = Boolean(user) && chosen !== null && !unchanged && !tooLong && !saving && !plans.loading
 
@@ -96,19 +155,24 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership }
     setSaving(true)
     setError(null)
     try {
-      await changeMembership(
+      const res = await changeMembership(
         {
           clientDbId: client.dbId,
           clientCode: client.id,
           planLevel: chosen.level,
+          planId: chosen.id,
           note: note.trim() || undefined,
           clientUuid: keyRef.current.key,
         },
         { userId: user.id, role: user.role, isOnline: online },
       )
       keyRef.current = null
+      const creditNote = res.credit && res.credit > 0 ? ` (Rs ${grouped(res.credit)} credited)` : ''
+      const accountNote = res.account_credit && res.account_credit > 0 ? ` Rs ${grouped(res.account_credit)} added to account credit.` : ''
       showSuccessToast(
-        activating ? `${client.name} is now on the ${chosen.level} plan.` : `${client.name} moved to the ${chosen.level} plan.`,
+        activating
+          ? `${client.name} is now on the ${chosen.level} plan.`
+          : `${client.name} moved to the ${chosen.level} plan.${creditNote}${accountNote}`,
       )
       onSuccess(chosen.level)
       onClose()
@@ -212,14 +276,77 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership }
                   {chosen.level} · {chosen.label}
                 </span>
                 <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+                  {chosen.annualFee != null && (
+                    <>
+                      Annual fee <span className="figure">{formatMoney(chosen.annualFee)}</span>
+                      {' · '}
+                    </>
+                  )}
                   Credit limit{' '}
                   <span className="figure">{chosen.defaultCreditLimit === null ? '—' : formatMoney(chosen.defaultCreditLimit)}</span>
                   {' · '}
                   Discount{' '}
                   <span className="figure">{chosen.individualDiscountPct === null ? 'Negotiated' : `${chosen.individualDiscountPct}%`}</span>
                 </span>
-                <span style={{ fontSize: 'var(--t-caption)', color: 'var(--muted)' }}>
-                  Taken from the membership plans on file. No fee is recorded by this change.
+              </div>
+            )}
+
+            {creditWorking && (
+              <div
+                style={{
+                  padding: 14,
+                  borderRadius: 'var(--r-card, 8px)',
+                  background: 'var(--card2)',
+                  border: '1px solid var(--border)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                }}
+              >
+                <span style={{ fontWeight: 700, color: 'var(--text)', fontSize: 'var(--t-meta)' }}>
+                  Credit for unused days (Ruling D22)
+                </span>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', rowGap: 6, columnGap: 12, fontSize: 'var(--t-meta)' }}>
+                  <span style={{ color: 'var(--text2)' }}>Current plan fee:</span>
+                  <span className="figure" style={{ fontWeight: 600, color: 'var(--text)' }}>
+                    {formatMoney(creditWorking.oldFeePaisa)}
+                  </span>
+
+                  <span style={{ color: 'var(--text2)' }}>Unused term remaining:</span>
+                  <span className="figure" style={{ fontWeight: 600, color: 'var(--text)' }}>
+                    {creditWorking.daysLeft} of {creditWorking.daysInOldTerm} days
+                  </span>
+
+                  <span style={{ color: 'var(--text2)' }}>Credit for unused days:</span>
+                  <span className="figure" style={{ fontWeight: 600, color: 'var(--success, #16a34a)' }}>
+                    − {formatMoney(creditWorking.creditPaisa)}
+                  </span>
+
+                  <span style={{ color: 'var(--text2)' }}>New plan annual fee:</span>
+                  <span className="figure" style={{ fontWeight: 600, color: 'var(--text)' }}>
+                    {formatMoney(creditWorking.newFeePaisa)}
+                  </span>
+
+                  <div style={{ gridColumn: '1 / -1', height: 1, background: 'var(--border)', margin: '4px 0' }} />
+
+                  <span style={{ fontWeight: 700, color: 'var(--text)' }}>New fee due now:</span>
+                  <span className="figure" style={{ fontWeight: 700, fontSize: 'var(--t-body)', color: 'var(--text)' }}>
+                    {formatMoney(creditWorking.newFeeDuePaisa)}
+                  </span>
+
+                  {creditWorking.accountCreditPaisa > 0 && (
+                    <>
+                      <span style={{ color: 'var(--primary, #0284c7)', fontWeight: 600 }}>Excess to account credit:</span>
+                      <span className="figure" style={{ fontWeight: 700, color: 'var(--primary, #0284c7)' }}>
+                        + {formatMoney(creditWorking.accountCreditPaisa)}
+                      </span>
+                    </>
+                  )}
+                </div>
+                <span style={{ fontSize: 'var(--t-caption)', color: 'var(--muted)', marginTop: 2 }}>
+                  {creditWorking.accountCreditPaisa > 0
+                    ? 'Credit exceeds the new fee. The excess is credited to the client’s account balance (non-cash).'
+                    : 'A new term starts from today. Unused days of the old plan are credited toward the new fee.'}
                 </span>
               </div>
             )}
