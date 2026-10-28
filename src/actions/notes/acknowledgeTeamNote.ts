@@ -1,5 +1,4 @@
 import { createAction } from '../core';
-import { DomainEvents } from '../../events/eventBus';
 import { supabase } from '../../lib/supabase';
 
 export type AcknowledgeTeamNoteInput = {

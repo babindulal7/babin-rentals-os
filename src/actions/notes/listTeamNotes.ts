@@ -30,7 +30,7 @@ export const listTeamNotes = createAction<ListTeamNotesInput, ListTeamNotesOutpu
       throw new Error('Offset cannot be negative');
     }
   },
-  execute: async (input, ctx) => {
+  execute: async (input) => {
     const limit = input.limit ?? 50;
     const offset = input.offset ?? 0;
 

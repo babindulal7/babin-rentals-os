@@ -1,17 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createTeamNote } from '../createTeamNote';
 import { ActionNotImplementedError, ActionPermissionError } from '../../core';
-import { supabase } from '../../../../lib/supabase';
+import { supabase } from '../../../lib/supabase';
 
 // Mock supabase
-vi.mock('../../../../lib/supabase', () => ({
+vi.mock('../../../lib/supabase', () => ({
   supabase: {
     rpc: vi.fn(),
   },
 }));
 
 // Mock DomainEvents
-vi.mock('../../../../events/eventBus', () => ({
+vi.mock('../../../events/eventBus', () => ({
   DomainEvents: {
     emit: vi.fn().mockResolvedValue(undefined),
   },
@@ -28,9 +28,11 @@ describe('createTeamNote', () => {
     vi.clearAllMocks();
   });
 
-  it('throws ActionNotImplementedError when not implemented', async () => {
-    // This test verifies the action is marked implemented
-    expect(createTeamNote.config.implemented).toBe(true);
+  it('is implemented, so it does not throw ActionNotImplementedError', async () => {
+    mockRpc.mockResolvedValue({ data: 'note-uuid-123', error: null });
+    await expect(createTeamNote({ body: 'Test note' }, ownerContext)).resolves.not.toBeInstanceOf(
+      ActionNotImplementedError
+    );
   });
 
   it('throws when called without context', async () => {

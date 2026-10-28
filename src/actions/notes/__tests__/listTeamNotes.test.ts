@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { listTeamNotes, type TeamNoteRow } from '../listTeamNotes';
 import { ActionPermissionError } from '../../core';
-import { supabase } from '../../../../lib/supabase';
+import { supabase } from '../../../lib/supabase';
 
 // Mock supabase
-vi.mock('../../../../lib/supabase', () => ({
+vi.mock('../../../lib/supabase', () => ({
   supabase: {
     rpc: vi.fn(),
   },

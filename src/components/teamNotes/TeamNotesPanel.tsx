@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../lib/auth';
 import { listTeamNotes, createTeamNote, acknowledgeTeamNote, type TeamNoteRow } from '../../actions/notes';
-import { formatMoney } from '../../lib/money';
-import { formatDateTime } from '../../lib/bs';
-import { useActionContext } from '../../hooks/useActionContext';
+import type { ActionContext } from '../../actions/core';
+import { formatAdDateTime } from '../../lib/bs';
 
-interface TeamNotesPanelProps {
+export interface TeamNotesPanelProps {
   /** Maximum number of notes to show initially */
   initialLimit?: number;
   /** Whether to auto-refresh */
@@ -14,13 +13,18 @@ interface TeamNotesPanelProps {
   refreshInterval?: number;
 }
 
+function actionCtx(user: { id: string; role: ActionContext['role'] } | null | undefined): ActionContext | undefined {
+  return user ? { userId: user.id, role: user.role } : undefined;
+}
+
 export function TeamNotesPanel({
   initialLimit = 20,
   autoRefresh = true,
   refreshInterval = 30000,
 }: TeamNotesPanelProps) {
   const { user } = useAuth();
-  const { role } = useActionContext();
+  const ctx = actionCtx(user);
+  const role = user?.role;
   const [notes, setNotes] = useState<TeamNoteRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,18 +37,18 @@ export function TeamNotesPanel({
   const isStaff = role !== 'Client';
 
   const fetchNotes = useCallback(async () => {
-    if (!isStaff) return;
+    if (!isStaff || !ctx) return;
     try {
       setLoading(true);
       setError(null);
-      const { notes: fetchedNotes } = await listTeamNotes({ limit: initialLimit, offset: 0 });
+      const { notes: fetchedNotes } = await listTeamNotes({ limit: initialLimit, offset: 0 }, ctx);
       setNotes(fetchedNotes);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load team notes');
     } finally {
       setLoading(false);
     }
-  }, [initialLimit, isStaff]);
+  }, [initialLimit, isStaff, ctx]);
 
   useEffect(() => {
     fetchNotes();
@@ -58,10 +62,10 @@ export function TeamNotesPanel({
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newNoteBody.trim() || submitting) return;
+    if (!newNoteBody.trim() || submitting || !ctx) return;
     setSubmitting(true);
     try {
-      const { noteId } = await createTeamNote({ body: newNoteBody.trim() });
+      await createTeamNote({ body: newNoteBody.trim() }, ctx);
       setNewNoteBody('');
       setShowComposer(false);
       await fetchNotes();
@@ -73,10 +77,10 @@ export function TeamNotesPanel({
   };
 
   const handleAcknowledge = async (noteId: string) => {
-    if (acknowledging.has(noteId)) return;
+    if (acknowledging.has(noteId) || !ctx) return;
     setAcknowledging((prev) => new Set(prev).add(noteId));
     try {
-      const { acknowledged } = await acknowledgeTeamNote({ noteId });
+      const { acknowledged } = await acknowledgeTeamNote({ noteId }, ctx);
       if (acknowledged) {
         await fetchNotes();
       }
@@ -164,7 +168,7 @@ export function TeamNotesPanel({
                   {note.author_id === user?.id ? 'You' : note.author_id.slice(0, 8)}
                 </span>
                 <time className="team-note-time" dateTime={note.created_at}>
-                  {formatDateTime(note.created_at)}
+                  {formatAdDateTime(note.created_at)}
                 </time>
               </div>
               <div className="team-note-body">{note.body}</div>

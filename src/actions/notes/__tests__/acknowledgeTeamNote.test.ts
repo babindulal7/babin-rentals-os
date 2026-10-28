@@ -1,17 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { acknowledgeTeamNote } from '../acknowledgeTeamNote';
 import { ActionPermissionError } from '../../core';
-import { supabase } from '../../../../lib/supabase';
+import { supabase } from '../../../lib/supabase';
 
 // Mock supabase
-vi.mock('../../../../lib/supabase', () => ({
+vi.mock('../../../lib/supabase', () => ({
   supabase: {
     rpc: vi.fn(),
   },
 }));
 
 // Mock DomainEvents
-vi.mock('../../../../events/eventBus', () => ({
+vi.mock('../../../events/eventBus', () => ({
   DomainEvents: {
     emit: vi.fn().mockResolvedValue(undefined),
   },
@@ -20,7 +20,6 @@ vi.mock('../../../../events/eventBus', () => ({
 describe('acknowledgeTeamNote', () => {
   const mockRpc = vi.mocked(supabase.rpc);
   const validContext = { userId: 'user-123', role: 'Coordinator' as const };
-  const warehouseContext = { userId: 'warehouse-123', role: 'Warehouse' as const };
   const clientContext = { userId: 'client-123', role: 'Client' as const };
 
   beforeEach(() => {
