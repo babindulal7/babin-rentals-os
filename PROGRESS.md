@@ -1,5 +1,78 @@
 # Progress Log
 
+## 2026-10-28 — T8-04: Renew a lapsed membership (Lane A · Size S)
+
+**Did**
+- Claimed migration `0189` in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0189_renew_client_membership.sql`:
+  - Upgraded `change_client_membership(p_payload jsonb)` to implement Ruling D23 / OPEN_DECISIONS §20:
+    - Added `is_renewal` parameter (default `false`). When `true`, or when client's current term is lapsed (`effective_date >= term_end`), renewal on the same plan is permitted (previously refused with "already on this plan").
+    - Requires existing active or lapsed membership on file when renewing; defaults `plan_id` / `plan_level` to the current plan if omitted.
+    - Charges full plan annual fee on renewal: `credit = 0`, `new_fee_due = new_fee`.
+    - Starts a new term from the renewal date (`effective_date`), superseding the previous term (`superseded_at`, `superseded_by_id`) and keeping full history per Law 3.
+    - Preserves `is_renewal: true` in `new_values` in `audit_events` and records the renewal reason.
+  - Added audited convenience RPC `renew_client_membership(p_payload jsonb)` delegating to `change_client_membership` with `is_renewal: true`.
+- Authored and verified lifecycle step **`L46`** in `scripts/e2e-lifecycle.mjs`:
+  - Seeded client with a lapsed membership (joined 2025-01-01, 12-month term ended 2026-01-01).
+  - Verified permission enforcement: Warehouse is refused renewal with 42501 (`Only Coordinator or above`).
+  - Coordinator renews lapsed membership on same plan: charges full annual fee, credit is 0, new term starts from renewal date.
+  - Verified Law 3 history preservation: `client_memberships` retains both terms; old term is marked `superseded_at` pointing to the new term via `superseded_by_id`.
+  - Verified exactly one live membership row exists (`client_memberships_v` where `superseded_at is null`).
+  - Verified audit trail preserves `action: Update`, `reason`, and `new_values.is_renewal: true`.
+- Created action engine `src/actions/clients/renewMembership.ts`:
+  - Enforces `client.change_membership` capability (Coordinator and above; refuses Warehouse, Technician, Accounts, Driver, Client).
+  - Validates client dbId, code, idempotency key, plan level, non-negative fee, and note length (<= 500 chars).
+  - Calls `renew_client_membership` RPC, handles `PGRST202` for servers without migration applied, and emits `EVENT_TYPES.MEMBERSHIP_TIER_CHANGED`.
+  - Unit tests in `src/actions/clients/__tests__/renewMembership.test.ts` (18/18 passing).
+- Updated mock client `src/lib/__mocks__/client.ts`:
+  - Added `renew_client_membership` RPC handler delegating to `changeClientMembership({ ...payload, is_renewal: true })`.
+  - Updated `changeClientMembership` to permit renewal on the same plan when `is_renewal` is true or when term is lapsed, setting credit = 0 and keeping history.
+  - Mock tests in `src/lib/__mocks__/__tests__/membershipRpc.test.ts` (22/22 passing).
+- Updated UI:
+  - `src/modules/clients/modals/UpgradeTierModal.tsx`:
+    - Added renewal support on same plan: when current plan is selected, presents "Renew for a new term (Ruling D23)" toggle with breakdown (renewal plan fee, credit: Rs 0, new fee due, and Law 3 history notice).
+    - Added `initialMode?: 'change' | 'renew'` prop to open directly in renewal mode with primary verb "Renew Membership" and title "Renew Membership".
+    - Calls `renewMembership` action upon confirmation.
+    - Unit tests in `src/modules/clients/__tests__/UpgradeTierModal.test.tsx` (21/21 passing).
+  - `src/modules/clients/ClientDetail.tsx`:
+    - Added dedicated "Renew Membership" button in Membership & Credit card and More action menu for members with an existing membership.
+    - Unit tests in `src/modules/clients/__tests__/ClientDetail.membership.test.tsx` (15/15 passing).
+
+**Ruled**
+- D23: "Renew" on a lapsed (or ending) membership charges the plan fee (credit = 0), starts a new term from the renewal date, and keeps history; Coordinator and above (`client.change_membership`).
+- Law 3: Nothing is deleted; previous membership terms are superseded, not deleted or overwritten. History shows all terms.
+
+**Verified**
+- `npm run check:pglite`: 186/186 applied, 0 failed, 0 view leaks, 0 function leaks, 0 definer hygiene issues.
+- `npm run check:lifecycle`: 46/46 green, 0 known-red, 0 failed.
+- `npm run typecheck`: clean, 0 errors across entire repository.
+- `npm test`: 485/485 test files passed, 5908/5908 tests passed.
+- `npm run lint`: clean, 0 warnings.
+- `npm run check:contrast`: 106/106 pass.
+- `npm run build`: built in 1m 12s, PWA generated.
+- `npx vitest run src/actions/clients/__tests__/renewMembership.test.ts`: 18/18 passed.
+- `npx vitest run src/modules/clients/__tests__/UpgradeTierModal.test.tsx`: 21/21 passed.
+- `npx vitest run src/modules/clients/__tests__/ClientDetail.membership.test.tsx`: 15/15 passed.
+- `npx vitest run src/lib/__mocks__/__tests__/membershipRpc.test.ts`: 22/22 passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 63 / 63 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 49 / 49 (100%) | +0 |
+| Lifecycle | steps green / total | 46 / 46 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 186 files · check:pglite 186/186 applied, 0 failed (recorded 2026-10-28T17:35:20.748Z). Suite: PASS — 5908/5908 passed, 0 failed (recorded 2026-10-28T17:44:41.781Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-10-28T17:35:29.164Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T8-05: Member benefits at booking.
+- Ready to merge on Lane A.
+
 ## 2026-10-28 — T8-03: Change plan with credit for unused days (Lane A · Size M)
 
 **Did**

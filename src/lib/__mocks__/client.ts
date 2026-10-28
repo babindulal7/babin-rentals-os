@@ -1165,6 +1165,7 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
   const role = (store['users'] ?? []).find((u) => u['id'] === actor)?.['primary_role']
   if (!actor || !MEMBERSHIP_WRITERS.has(String(role))) return fail('42501', 'Only Coordinator or above can change a client membership.')
 
+  const isRenewal = Boolean(payload['is_renewal'])
   const clientId = String(payload['client_id'] ?? '')
   const key = String(payload['client_uuid'] ?? '')
   const level = payload['plan_level'] ? String(payload['plan_level']).trim() : null
@@ -1172,7 +1173,7 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
   const note = String(payload['note'] ?? '').trim() || null
   const effectiveDate = String(payload['effective_date'] ?? new Date(Date.now() + (5 * 60 + 45) * 60_000).toISOString().slice(0, 10))
   const feePaid = payload['fee_paid'] != null ? Number(payload['fee_paid']) : null
-  if (!clientId || !key || (!level && !planId)) return fail('P0001', 'Client, request key and membership plan are required.')
+  if (!clientId || !key || (!level && !planId && !isRenewal)) return fail('P0001', 'Client, request key and membership plan are required.')
   if (note !== null && note.length > 500) return fail('P0001', 'A note can be at most 500 characters.')
 
   const client = (store['clients'] ?? []).find((c) => c['id'] === clientId)
@@ -1189,20 +1190,26 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
 
   if (String(client['status']) === 'Deactivated') return fail('P0001', 'A deactivated client cannot take a membership.')
   const plans = store['membership_plans'] ?? []
-  const plan = plans.find((p) => (planId && p['id'] === planId) || (level && String(p['level']) === level))
+
+  const old = (store['client_memberships'] ?? []).find((m) => m['client_id'] === clientId && m['superseded_at'] == null)
+  if (isRenewal && !old) return fail('P0001', 'Cannot renew: client does not have an active or lapsed membership.')
+
+  let plan = plans.find((p) => (planId && p['id'] === planId) || (level && String(p['level']) === level))
+  if (!plan && isRenewal && old) {
+    plan = plans.find((p) => p['id'] === old['plan_id'])
+  }
   if (!plan) return fail('P0001', 'That membership plan does not exist.')
   if (String(plan['status'] ?? 'Active') !== 'Active') return fail('P0001', 'That membership plan is retired and cannot be assigned.')
 
-  const old = (store['client_memberships'] ?? []).find((m) => m['client_id'] === clientId && m['superseded_at'] == null)
   let previous: string | null = null
   let credit = 0
   let daysInOldTerm = 0
   let daysLeft = 0
   let oldFee = 0
+  let isRenewEffective = isRenewal
   if (old) {
     const oldPlan = plans.find((p) => p['id'] === old['plan_id'])
     previous = String(oldPlan?.['level'] ?? '') || null
-    if (old['plan_id'] === plan['id']) return fail('P0001', `This client is already on the ${plan['level']} plan.`)
 
     oldFee = Number(old['fee_paid'] ?? oldPlan?.['annual_fee'] ?? 0)
     const oldTermMonths = Number(oldPlan?.['term_months'] ?? 12)
@@ -1216,9 +1223,20 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
       effectiveDate,
       newFeePaisa: rupees(newFee),
     })
-    credit = calc.creditPaisa / 100
     daysInOldTerm = calc.daysInOldTerm
-    daysLeft = calc.daysLeft
+
+    if (calc.daysLeft <= 0) {
+      isRenewEffective = true
+    }
+
+    if (isRenewEffective) {
+      credit = 0
+      daysLeft = 0
+    } else {
+      if (old['plan_id'] === plan['id']) return fail('P0001', `This client is already on the ${plan['level']} plan.`)
+      credit = calc.creditPaisa / 100
+      daysLeft = calc.daysLeft
+    }
   }
 
   const newFee = Number(feePaid ?? plan['annual_fee'] ?? 0)
@@ -1240,6 +1258,7 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
   const result: Row = {
     client_id: clientId, plan_id: plan['id'], plan_level: plan['level'], previous_level: previous,
     membership_id: newId, superseded_membership_id: old ? old['id'] : null, joined_on: joinedOn,
+    is_renewal: isRenewEffective,
     old_fee: oldFee, days_left: daysLeft, total_days: daysInOldTerm,
     credit: credit, new_fee: newFee, new_fee_due: newFeeDue, account_credit: excessCredit,
   }
@@ -1422,6 +1441,10 @@ export const mockSupabase = {
     if (name === 'change_client_membership') {
       const payload = (args?.['p_payload'] ?? {}) as Record<string, unknown>
       return Promise.resolve(changeClientMembership(payload))
+    }
+    if (name === 'renew_client_membership') {
+      const payload = (args?.['p_payload'] ?? {}) as Record<string, unknown>
+      return Promise.resolve(changeClientMembership({ ...payload, is_renewal: true }))
     }
     if (name === 'create_invoice') {
       const payload = (args?.['p_payload'] ?? {}) as Record<string, unknown>

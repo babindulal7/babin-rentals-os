@@ -3686,6 +3686,104 @@ STEPS.push({
   },
 })
 
+// ── L46: Renew a lapsed membership (Ruling D23, T8-04) ──────────────────────
+STEPS.push({
+  id: 'L46',
+  title: 'Renew a lapsed membership: charges plan fee, starts new term, keeps history (D23, T8-04)',
+  expect: 'green',
+  run: async () => {
+    let testClientId
+    let creatorPlanId
+    let expectedFee = 20000
+    const renewKey = '00000000-0000-4000-8000-000000000046'
+
+    await asOwnerOfTheDatabase(async () => {
+      // Find Creator plan
+      const creatorPlan = (await q(`select id, annual_fee from membership_plans where level = 'Creator' and status = 'Active'`)).rows[0]
+      creatorPlanId = creatorPlan.id
+      expectedFee = Number(creatorPlan.annual_fee)
+
+      // Create test client with a LAPSED membership (joined 2025-01-01, 12 month term ended 2026-01-01)
+      const clientCode = (await one("select next_document_number('client')"))
+      const clientRes = (await q(`insert into clients (client_code, name, phone, client_uuid)
+        values ('${clientCode}', 'Lapsed Member Client', '+9779800009946', gen_random_uuid())
+        returning id`)).rows[0]
+      testClientId = clientRes.id
+
+      // Seed lapsed membership (superseded_at is null, but term ended in Jan 2026)
+      await q(`insert into client_memberships (
+        client_uuid, client_id, plan_id, join_date, fee_paid
+      ) values (
+        gen_random_uuid(), '${testClientId}', '${creatorPlanId}', '2025-01-01', 15000.00
+      )`)
+    })
+
+    // 1. Permission check: Warehouse refused (42501)
+    await as('Warehouse', async () => {
+      let renewRefused = false
+      try {
+        await q(`select renew_client_membership(jsonb_build_object(
+          'client_id', '${testClientId}',
+          'client_uuid', gen_random_uuid(),
+          'plan_id', '${creatorPlanId}'
+        ))`)
+      } catch (err) {
+        renewRefused = /42501|Only Coordinator or above/i.test(err.message)
+      }
+      assert(renewRefused, 'Warehouse must be refused permission to renew membership')
+    })
+
+    // 2. Coordinator renews the lapsed membership on the same plan (D23)
+    await as('Coordinator', async () => {
+      const renewRes = (await q(`select renew_client_membership(jsonb_build_object(
+        'client_id', '${testClientId}',
+        'client_uuid', '${renewKey}',
+        'effective_date', '2026-10-28',
+        'note', 'Renewing lapsed membership'
+      ))`)).rows[0]
+
+      const out = typeof renewRes.renew_client_membership === 'string'
+        ? JSON.parse(renewRes.renew_client_membership)
+        : renewRes.renew_client_membership
+
+      assertEq(out.is_renewal, true, 'Marked as renewal')
+      assertEq(out.plan_level, 'Creator', 'Renewed on Creator plan')
+      assertEq(out.previous_level, 'Creator', 'Previous level was Creator')
+      assertEq(Number(out.credit), 0, 'No credit for lapsed term')
+      assertEq(Number(out.new_fee), expectedFee, 'New fee is full plan fee')
+      assertEq(Number(out.new_fee_due), expectedFee, 'Full fee charged on renewal')
+      assertEq(out.joined_on, '2026-10-28', 'New term starts from renewal date')
+      assert(out.superseded_membership_id !== null, 'Old membership was superseded')
+
+      // 3. History shows both terms (Law 3: nothing is deleted)
+      const allTerms = (await q(`select id, join_date::text as join_date, superseded_at, superseded_by_id from client_memberships
+        where client_id = '${testClientId}' order by join_date asc`)).rows
+      assertEq(allTerms.length, 2, 'History shows both terms')
+      assertEq(allTerms[0].join_date, '2025-01-01', 'First term preserved in history')
+      assert(allTerms[0].superseded_at !== null, 'First term is marked superseded')
+      assertEq(allTerms[0].superseded_by_id, out.membership_id, 'First term points to second term')
+
+      assertEq(allTerms[1].join_date, '2026-10-28', 'Second term starts from renewal date')
+      assertEq(allTerms[1].superseded_at, null, 'Second term is the currently active term')
+
+      // Exactly one live membership row
+      const live = (await q(`select id from client_memberships_v where client_id = '${testClientId}' and superseded_at is null`)).rows
+      assertEq(live.length, 1, 'Exactly one live membership row exists')
+      assertEq(live[0].id, out.membership_id, 'Live row is the renewed membership')
+    })
+
+    // 4. Audit trail holds renewal action
+    await asOwnerOfTheDatabase(async () => {
+      const audit = (await q(`select action, old_values, new_values, reason from audit_events where client_uuid = '${renewKey}'`)).rows[0]
+      assertEq(audit.action, 'Update', 'Audit event recorded with action Update')
+      assertEq(audit.reason, 'Renewing lapsed membership', 'Audit reason preserved')
+      const auditNew = typeof audit.new_values === 'string' ? JSON.parse(audit.new_values) : audit.new_values
+      assertEq(auditNew.is_renewal, true, 'Audit new_values indicates is_renewal true')
+      assertEq(Number(auditNew.new_fee_due), expectedFee, 'Audit record holds new_fee_due')
+    })
+  },
+})
+
 /* ── Run ──────────────────────────────────────────────────────────────────── */
 
 await seed()

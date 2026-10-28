@@ -61,7 +61,7 @@ calculation; lifecycle step with a worked example (fee 12,000, 4 of 12 months le
 **Done when** — the worked example matches to the paisa; audit holds old plan, new plan, credit.
 **Needs** — T8-01.
 
-### T8-04 · Renew a lapsed membership            status: todo · size: S · lane A
+### T8-04 · Renew a lapsed membership            status: done — awaiting merge (lane-a/T8-04-renew-a-lapsed-membership) · size: S · lane A
 **What** — "Renew" on a lapsed (or ending) membership: charges the plan fee, starts a new term from
 the renewal date, keeps history; Coordinator and above (D23).
 **Why** — D23 (OPEN_DECISIONS §20 — today the function refuses "already on this plan").

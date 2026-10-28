@@ -27,7 +27,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0186 | T8-01 | load-membership-plans | lane-a/T8-01-load-babin-s-plans | verified |
 | 0187 | T8-02 | membership-plans-admin | lane-a/T8-02-plans-admin-screen | verified |
 | 0188 | T8-03 | membership-plan-change-credit | lane-a/T8-03-change-plan-with-credit-for-unused | verified |
-| 0189 | T8-04 | renew-client-membership | lane-a/T8-04-renew-a-lapsed-membership | claimed |
+| 0189 | T8-04 | renew-client-membership | lane-a/T8-04-renew-a-lapsed-membership | verified |
 
 ## Expected migrations (not yet claimed)
 

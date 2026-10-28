@@ -41,6 +41,15 @@ vi.mock('../../../actions/clients/changeMembership', () => ({
     return { client_id: input['clientDbId'], plan_level: input['planLevel'] }
   }),
 }))
+vi.mock('../../../actions/clients/renewMembership', () => ({
+  NOTE_MAX: 500,
+  renewMembership: vi.fn(async (input: Record<string, unknown>, ctx: Record<string, unknown>) => {
+    state.calls.push({ input: { ...input, isRenewal: true }, ctx })
+    if (state.outcome.hold) await state.outcome.hold
+    if (state.outcome.fail) throw new Error(state.outcome.fail)
+    return { client_id: input['clientDbId'], plan_level: input['planLevel'], is_renewal: true }
+  }),
+}))
 
 ;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
 
@@ -62,7 +71,7 @@ let host: HTMLDivElement | undefined
 let onClose = vi.fn()
 let onSuccess = vi.fn()
 
-async function mount(over: { hasMembership?: boolean; client?: ClientRecord } = {}) {
+async function mount(over: { hasMembership?: boolean; client?: ClientRecord; initialMode?: 'change' | 'renew' } = {}) {
   host = document.createElement('div')
   document.body.appendChild(host)
   root = createRoot(host)
@@ -74,6 +83,7 @@ async function mount(over: { hasMembership?: boolean; client?: ClientRecord } = 
         onSuccess={onSuccess}
         client={over.client ?? client}
         hasMembership={over.hasMembership ?? true}
+        initialMode={over.initialMode}
       />,
     )
   })
@@ -296,5 +306,51 @@ describe('applying', () => {
     await act(async () => { release?.() })
     expect(onSuccess).toHaveBeenCalledWith('Academy')
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('renewing a membership (Ruling D23)', () => {
+  it('allows renewal on the current plan when checkbox is checked', async () => {
+    await mount()
+    await choose('Creator')
+    expect(button('Apply Tier Change')!.hasAttribute('disabled')).toBe(true)
+
+    const checkbox = document.body.querySelector<HTMLInputElement>('input[type="checkbox"]')!
+    expect(checkbox).not.toBeNull()
+    await act(async () => {
+      checkbox.click()
+    })
+
+    expect(text()).toContain('Renew Membership')
+    expect(text()).toContain('Charges the full plan fee, starts a new term from today')
+    expect(button('Renew Membership')!.hasAttribute('disabled')).toBe(false)
+
+    await click('Renew Membership')
+    expect(state.calls).toHaveLength(1)
+    expect(state.calls[0]!.input).toMatchObject({
+      clientDbId: client.dbId,
+      clientCode: 'C-0042',
+      planLevel: 'Creator',
+      isRenewal: true,
+    })
+    expect(state.toasts).toEqual(["Asha Rai's Creator membership has been renewed for a new term."])
+    expect(onSuccess).toHaveBeenCalledWith('Creator')
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('opens directly in renewal mode when initialMode is renew', async () => {
+    await mount({ initialMode: 'renew' })
+    expect(text()).toContain('Renew Membership')
+    expect(text()).toContain('Asha Rai is renewing their Creator plan.')
+    expect(select()!.value).toBe('Creator')
+    expect(button('Renew Membership')!.hasAttribute('disabled')).toBe(false)
+
+    await click('Renew Membership')
+    expect(state.calls).toHaveLength(1)
+    expect(state.calls[0]!.input).toMatchObject({
+      clientDbId: client.dbId,
+      planLevel: 'Creator',
+      isRenewal: true,
+    })
   })
 })

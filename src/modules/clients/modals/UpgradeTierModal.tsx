@@ -3,6 +3,7 @@ import { Modal } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Page'
 import { useToast } from '../../../components/ui/Toast'
 import { changeMembership, NOTE_MAX } from '../../../actions/clients/changeMembership'
+import { renewMembership } from '../../../actions/clients/renewMembership'
 import { useAuth } from '../../../lib/auth'
 import { formatMoney, grouped, rupees, toRupees, type Paisa } from '../../../lib/money'
 import { useNetwork } from '../../../lib/network'
@@ -24,24 +25,17 @@ export interface UpgradeTierModalProps {
    * with none carries a placeholder tier (`UNJOINED_MEMBERSHIP_PLACEHOLDER`).
    */
   hasMembership: boolean
+  /** Whether to open pre-configured for renewal (Ruling D23). */
+  initialMode?: 'change' | 'renew' | undefined
 }
 
 /**
- * Activate a client's membership, or move them to another plan.
+ * Activate a client's membership, or move them to another plan, or renew.
  *
- * RULING 2026-10-22 (Babin: "activate membership"; fee left blank). This used to
- * be a dialog whose save was blocked ("no tier-change action exists") and whose
- * tier list and descriptions were constants. Now:
- *  - the plans offered are the LIVE ones from `membership_plans_v` — 0005: "no plan
- *    value may be hardcoded in application code" — with their credit and discount
- *    read from there, `null` meaning withheld or negotiated, never zero;
- *  - Apply calls `changeMembership` (one atomic RPC, 0174). The dialog emits no
- *    event and flips no state of its own: the action emits after the server
- *    confirms, and `onSuccess` is called only then;
- *  - a failure is shown inline and nothing is claimed; a success is a toast.
- *
- * No fee is recorded. Who may open it is decided by the caller with
- * `canChangeMembership`; the action and the database check it again.
+ * RULING 2026-10-22 (Babin: "activate membership"; fee left blank).
+ * RULING D23 (OPEN_DECISIONS §20): Renewing on a lapsed (or ending) membership
+ * charges the plan fee (credit = 0), starts a new term from the renewal date,
+ * and keeps history.
  */
 export function UpgradeTierModal(props: UpgradeTierModalProps) {
   // Mounted only while open: the plans are read when someone opens this, not on every client page view,
@@ -49,7 +43,7 @@ export function UpgradeTierModal(props: UpgradeTierModalProps) {
   return props.isOpen ? <UpgradeTierDialog {...props} /> : null
 }
 
-function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership }: UpgradeTierModalProps) {
+function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership, initialMode }: UpgradeTierModalProps) {
   const { user } = useAuth()
   const online = useNetwork()
   const { showSuccessToast } = useToast()
@@ -58,7 +52,9 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership }
   const noteId = useId()
 
   const current: MembershipTier | null = hasMembership ? client.membership : null
-  const [selected, setSelected] = useState<MembershipTier | ''>('')
+  const isDirectRenew = initialMode === 'renew'
+  const [selected, setSelected] = useState<MembershipTier | ''>(isDirectRenew && current ? current : '')
+  const [isRenewing, setIsRenewing] = useState<boolean>(isDirectRenew)
   const [note, setNote] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -110,13 +106,20 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership }
   const effective: MembershipTier | '' =
     selected !== '' && options.some((p) => p.level === selected)
       ? selected
-      : (options.find((p) => p.level !== current)?.level ?? '')
+      : isDirectRenew && current && options.some((p) => p.level === current)
+        ? current
+        : (options.find((p) => p.level !== current)?.level ?? '')
   const chosen = options.find((p) => p.level === effective) ?? null
   const unchanged = current !== null && effective === current
+  const isRenewal = hasMembership && unchanged && (isRenewing || isDirectRenew)
   const tooLong = note.trim().length > NOTE_MAX
 
   const activating = !hasMembership
-  const verb = activating ? 'Activate Membership' : 'Apply Tier Change'
+  const verb = activating
+    ? 'Activate Membership'
+    : isRenewal
+      ? 'Renew Membership'
+      : 'Apply Tier Change'
 
   const oldPlan = hasMembership
     ? (options.find((p) => (activeMembership && p.id === activeMembership.planId) || p.level === current) ?? null)
@@ -137,7 +140,7 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership }
         })
       : null
 
-  const canApply = Boolean(user) && chosen !== null && !unchanged && !tooLong && !saving && !plans.loading
+  const canApply = Boolean(user) && chosen !== null && (!unchanged || isRenewal) && !tooLong && !saving && !plans.loading
 
   async function apply() {
     if (submitting.current || !canApply || !user || !chosen) return
@@ -149,33 +152,51 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership }
       setError('Connect to update client membership.')
       return
     }
-    const signature = JSON.stringify([client.dbId, chosen.level, note.trim()])
+    const signature = JSON.stringify([client.dbId, chosen.level, isRenewal, note.trim()])
     if (keyRef.current?.signature !== signature) keyRef.current = { signature, key: crypto.randomUUID() }
     submitting.current = true
     setSaving(true)
     setError(null)
     try {
-      const res = await changeMembership(
-        {
-          clientDbId: client.dbId,
-          clientCode: client.id,
-          planLevel: chosen.level,
-          planId: chosen.id,
-          note: note.trim() || undefined,
-          clientUuid: keyRef.current.key,
-        },
-        { userId: user.id, role: user.role, isOnline: online },
-      )
-      keyRef.current = null
-      const creditNote = res.credit && res.credit > 0 ? ` (Rs ${grouped(res.credit)} credited)` : ''
-      const accountNote = res.account_credit && res.account_credit > 0 ? ` Rs ${grouped(res.account_credit)} added to account credit.` : ''
-      showSuccessToast(
-        activating
-          ? `${client.name} is now on the ${chosen.level} plan.`
-          : `${client.name} moved to the ${chosen.level} plan.${creditNote}${accountNote}`,
-      )
-      onSuccess(chosen.level)
-      onClose()
+      if (isRenewal) {
+        await renewMembership(
+          {
+            clientDbId: client.dbId,
+            clientCode: client.id,
+            planLevel: chosen.level,
+            ...(chosen.id ? { planId: chosen.id } : {}),
+            note: note.trim() || undefined,
+            clientUuid: keyRef.current.key,
+          },
+          { userId: user.id, role: user.role, isOnline: online },
+        )
+        keyRef.current = null
+        showSuccessToast(`${client.name}'s ${chosen.level} membership has been renewed for a new term.`)
+        onSuccess(chosen.level)
+        onClose()
+      } else {
+        const res = await changeMembership(
+          {
+            clientDbId: client.dbId,
+            clientCode: client.id,
+            planLevel: chosen.level,
+            ...(chosen.id ? { planId: chosen.id } : {}),
+            note: note.trim() || undefined,
+            clientUuid: keyRef.current.key,
+          },
+          { userId: user.id, role: user.role, isOnline: online },
+        )
+        keyRef.current = null
+        const creditNote = res?.credit && res.credit > 0 ? ` (Rs ${grouped(res.credit)} credited)` : ''
+        const accountNote = res?.account_credit && res.account_credit > 0 ? ` Rs ${grouped(res.account_credit)} added to account credit.` : ''
+        showSuccessToast(
+          activating
+            ? `${client.name} is now on the ${chosen.level} plan.`
+            : `${client.name} moved to the ${chosen.level} plan.${creditNote}${accountNote}`,
+        )
+        onSuccess(chosen.level)
+        onClose()
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'The membership could not be changed.')
     } finally {
@@ -188,8 +209,14 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership }
     <Modal
       isOpen={isOpen}
       onClose={() => { if (!submitting.current) onClose() }}
-      title={activating ? 'Activate Membership' : 'Change Membership Plan'}
-      subtitle={activating ? `${client.name} has no membership yet.` : `${client.name} is on the ${current} plan.`}
+      title={activating ? 'Activate Membership' : isRenewal ? 'Renew Membership' : 'Change Membership Plan'}
+      subtitle={
+        activating
+          ? `${client.name} has no membership yet.`
+          : isRenewal
+            ? `${client.name} is renewing their ${current} plan.`
+            : `${client.name} is on the ${current} plan.`
+      }
       size="md"
       footer={
         <>
@@ -239,6 +266,9 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership }
                 onChange={(e) => {
                   setSelected(e.target.value as MembershipTier)
                   setError(null)
+                  if (e.target.value !== current) {
+                    setIsRenewing(false)
+                  }
                 }}
                 style={{
                   minHeight: 44,
@@ -288,6 +318,11 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership }
                   Discount{' '}
                   <span className="figure">{chosen.individualDiscountPct === null ? 'Negotiated' : `${chosen.individualDiscountPct}%`}</span>
                 </span>
+                {activating && (
+                  <span style={{ fontSize: 'var(--t-caption)', color: 'var(--muted)' }}>
+                    Taken from the membership plans on file. No fee is recorded by this change.
+                  </span>
+                )}
               </div>
             )}
 
@@ -352,8 +387,52 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership }
             )}
 
             {unchanged && (
-              <div role="status" style={{ color: 'var(--text2)', fontSize: 'var(--t-meta)' }}>
-                {client.name} is already on the {current} plan. Choose a different plan.
+              <div
+                style={{
+                  padding: 14,
+                  borderRadius: 'var(--r-card, 8px)',
+                  background: 'var(--card2)',
+                  border: '1px solid var(--border)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                }}
+              >
+                <div role="status" style={{ color: 'var(--text2)', fontSize: 'var(--t-meta)' }}>
+                  {client.name} is already on the {current} plan.{!isRenewal ? ' Choose a different plan or renew below.' : ''}
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
+                  <input
+                    type="checkbox"
+                    checked={isRenewal}
+                    onChange={(e) => {
+                      setIsRenewing(e.target.checked)
+                      setError(null)
+                    }}
+                    disabled={saving}
+                  />
+                  Renew for a new term (Ruling D23)
+                </label>
+                {isRenewal && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', rowGap: 6, columnGap: 12, fontSize: 'var(--t-meta)', marginTop: 4 }}>
+                    <span style={{ color: 'var(--text2)' }}>Renewal plan fee:</span>
+                    <span className="figure" style={{ fontWeight: 600, color: 'var(--text)' }}>
+                      {chosen?.annualFee != null ? formatMoney(chosen.annualFee) : '—'}
+                    </span>
+                    <span style={{ color: 'var(--text2)' }}>Credit for renewal:</span>
+                    <span className="figure" style={{ fontWeight: 600, color: 'var(--muted)' }}>
+                      Rs 0
+                    </span>
+                    <div style={{ gridColumn: '1 / -1', height: 1, background: 'var(--border)', margin: '4px 0' }} />
+                    <span style={{ fontWeight: 700, color: 'var(--text)' }}>New fee due now:</span>
+                    <span className="figure" style={{ fontWeight: 700, fontSize: 'var(--t-body)', color: 'var(--text)' }}>
+                      {chosen?.annualFee != null ? formatMoney(chosen.annualFee) : '—'}
+                    </span>
+                    <span style={{ gridColumn: '1 / -1', fontSize: 'var(--t-caption)', color: 'var(--muted)', marginTop: 2 }}>
+                      Charges the full plan fee, starts a new term from today, and keeps previous term in history (Law 3).
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 

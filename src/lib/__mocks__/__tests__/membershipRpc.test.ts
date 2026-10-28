@@ -133,6 +133,47 @@ describe('activate, retry, change', () => {
     expect(await level(reloaded)).toBe('Creator')
     expect(await liveFor(reloaded)).toHaveLength(1)
   })
+
+  it('renews a membership on the same plan (D23): charges full fee, 0 credit, supersedes old term', async () => {
+    const m = await boot('Coordinator')
+    const first = await change(m, { client_id: CLIENT, client_uuid: KEY(1), plan_level: 'Creator' })
+    expect(first.error).toBeNull()
+
+    const renewRes = await m.rpc('renew_client_membership', {
+      p_payload: {
+        client_id: CLIENT,
+        client_uuid: KEY(2),
+        plan_level: 'Creator',
+        fee_paid: 15000,
+        note: 'Renewing for 2026',
+      },
+    })
+    expect(renewRes.error).toBeNull()
+    expect(renewRes.data).toMatchObject({
+      is_renewal: true,
+      plan_level: 'Creator',
+      previous_level: 'Creator',
+      credit: 0,
+      new_fee: 15000,
+      new_fee_due: 15000,
+    })
+
+    const all = (await rows(m, 'client_memberships')).filter((r) => r['client_id'] === CLIENT)
+    expect(all).toHaveLength(2)
+    expect(await liveFor(m)).toHaveLength(1)
+    expect((await liveFor(m))[0]!['id']).toBe((renewRes.data as Row)['membership_id'])
+  })
+
+  it('refuses renewing when client has no membership on file', async () => {
+    const m = await boot('Coordinator')
+    const renewRes = await m.rpc('renew_client_membership', {
+      p_payload: {
+        client_id: CLIENT,
+        client_uuid: KEY(1),
+      },
+    })
+    expect(renewRes.error?.message).toMatch(/Cannot renew: client does not have an active or lapsed membership/)
+  })
 })
 
 describe('refusals leave everything as it was', () => {
