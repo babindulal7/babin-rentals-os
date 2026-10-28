@@ -30,7 +30,7 @@ create policy team_notes_read_staff on public.team_notes
         exists (
             select 1 from public.users u
             where u.id = auth.uid()
-            and u.system_role in ('Owner','Admin','Manager','Coordinator','Warehouse','Technician','Driver','Accounts')
+            and u.primary_role in ('Owner','Admin','Manager','Coordinator','Warehouse','Technician','Driver','Accounts')
         )
     );
 
@@ -41,7 +41,7 @@ create policy team_notes_write_coordinator_plus on public.team_notes
         exists (
             select 1 from public.users u
             where u.id = auth.uid()
-            and u.system_role in ('Owner','Admin','Manager','Coordinator')
+            and u.primary_role in ('Owner','Admin','Manager','Coordinator')
         )
     );
 
@@ -52,14 +52,14 @@ create policy team_notes_acknowledge_staff on public.team_notes
         exists (
             select 1 from public.users u
             where u.id = auth.uid()
-            and u.system_role in ('Owner','Admin','Manager','Coordinator','Warehouse','Technician','Driver','Accounts')
+            and u.primary_role in ('Owner','Admin','Manager','Coordinator','Warehouse','Technician','Driver','Accounts')
         )
     )
     with check (
         exists (
             select 1 from public.users u
             where u.id = auth.uid()
-            and u.system_role in ('Owner','Admin','Manager','Coordinator','Warehouse','Technician','Driver','Accounts')
+            and u.primary_role in ('Owner','Admin','Manager','Coordinator','Warehouse','Technician','Driver','Accounts')
         )
         and acknowledged_by @> array[auth.uid()]::uuid[]
     );
@@ -111,7 +111,7 @@ begin
       and exists (
           select 1 from public.users u
           where u.id = auth.uid()
-          and u.system_role in ('Owner','Admin','Manager','Coordinator','Warehouse','Technician','Driver','Accounts')
+          and u.primary_role in ('Owner','Admin','Manager','Coordinator','Warehouse','Technician','Driver','Accounts')
       );
 
     get diagnostics v_updated = row_count;
@@ -148,3 +148,8 @@ comment on function public.list_team_notes(int, int) is 'List team notes (staff 
 grant execute on function public.create_team_note(text) to authenticated;
 grant execute on function public.acknowledge_team_note(uuid) to authenticated;
 grant execute on function public.list_team_notes(int, int) to authenticated;
+
+-- Revoke execute from anon and public (security: mutating and sensitive RPCs must not be reachable without a session)
+revoke all on function public.create_team_note(text) from anon, public;
+revoke all on function public.acknowledge_team_note(uuid) from anon, public;
+revoke all on function public.list_team_notes(int, int) from anon, public;
