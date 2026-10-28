@@ -152,7 +152,7 @@ Replace the two `<Unavailable reason="Printing … is not built">` blocks.
 **Done when** — PDFs open on iPad and print on the shop printer; Warehouse versions carry no prices.
 **Needs** — none.
 
-### T2-09 · Bluetooth scanner at the packing bench            status: todo · size: S · lane A + Babin
+### T2-09 · Bluetooth scanner at the packing bench            status: doing — integration verification (codex/integrate-main-scanner-20261028) · size: S · lane A + Babin
 **What** — Claude proposes 2–3 iPad-compatible Bluetooth scanners that read QR and Code 128 in
 keyboard (HID) mode, with prices from Nepali sellers; Babin buys one. Make `ScannerInput` accept a
 fast keystroke burst ending in Enter anywhere on the floor screens (focus trap on the scan field,
