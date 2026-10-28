@@ -147,6 +147,39 @@ export function RentalPricingSection({
         <div className="new-rental-pricing-adjustments" style={moneyBlock}>
           <h3 style={sub}>Discounts & Taxes</h3>
           <div style={{ marginTop: 8 }}>
+            {isStaffClient && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 12px',
+                  borderRadius: 'var(--r-btn)',
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border)',
+                  marginBottom: 12,
+                }}
+              >
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 'var(--t-ui)', color: 'var(--text)' }}>
+                    Staff Rental Discount ({staffDiscountPercent ?? 20}%)
+                  </div>
+                  <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+                    {staffDiscountRemoved
+                      ? 'Removed — standard rates apply'
+                      : 'Automatically applied for staff client (Law 10 — removable)'}
+                  </div>
+                </div>
+                <Button
+                  variant={staffDiscountRemoved ? 'secondary' : 'ghost'}
+                  size="sm"
+                  type="button"
+                  onClick={() => onToggleStaffDiscount?.(!staffDiscountRemoved)}
+                >
+                  {staffDiscountRemoved ? 'Re-apply' : 'Remove'}
+                </Button>
+              </div>
+            )}
             <div className="new-rental-pricing-presets">
               <DiscountChips
                 percent={discountPct}

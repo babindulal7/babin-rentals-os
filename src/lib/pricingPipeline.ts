@@ -52,18 +52,18 @@ export interface PromoCodeDefinition {
 }
 
 export interface DiscountDetails {
-  membershipPercent?: number
-  durationPercent?: number
-  bundleSavingPercent?: number
-  womenDopEligible?: boolean
-  promoCode?: PromoCodeDefinition | null
-  manualDiscountPercent?: number
-  manualDiscountReason?: string | null
-  manualDiscountAuthorizedBy?: string | null
-  isStudentBundle?: boolean
-  isStaffClient?: boolean
-  staffDiscountPercent?: number
-  staffDiscountRemoved?: boolean
+  membershipPercent?: number | undefined
+  durationPercent?: number | undefined
+  bundleSavingPercent?: number | undefined
+  womenDopEligible?: boolean | undefined
+  promoCode?: PromoCodeDefinition | null | undefined
+  manualDiscountPercent?: number | undefined
+  manualDiscountReason?: string | null | undefined
+  manualDiscountAuthorizedBy?: string | null | undefined
+  isStudentBundle?: boolean | undefined
+  isStaffClient?: boolean | undefined
+  staffDiscountPercent?: number | undefined
+  staffDiscountRemoved?: boolean | undefined
 }
 
 /* RULING 2026-10-07: the hard-coded PROMO_CODES demo table is deleted. A code exists only as a

@@ -127,10 +127,10 @@ export interface ClientRecord {
   membership: MembershipTier
   phone: string
   email: string
-  pan?: string
-  isVip?: boolean
-  isStaff?: boolean
-  staffUserId?: string
+  pan?: string | undefined
+  isVip?: boolean | undefined
+  isStaff?: boolean | undefined
+  staffUserId?: string | undefined
   isVerified?: boolean
   isBlocked?: boolean
   blockReason?: string
