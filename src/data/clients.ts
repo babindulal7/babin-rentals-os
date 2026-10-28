@@ -130,6 +130,7 @@ export interface ClientRecord {
   pan?: string | undefined
   isVip?: boolean | undefined
   isStaff?: boolean | undefined
+  isStaffClient?: boolean | undefined
   staffUserId?: string | undefined
   isVerified?: boolean
   isBlocked?: boolean
@@ -209,10 +210,6 @@ export interface ClientRecord {
    */
   onStop?: { reason: string; setBy: string; setAd: string }
   /** §1 Reliability [NEW] — absent everywhere in the schema and this mock layer until now. Counts only; no ₨-recovered figure is modelled yet. */
-  /** Ruling W68: marked as internal staff client; gets automatic staff discount line on bookings. */
-  isStaff?: boolean
-  isStaffClient?: boolean
-  staffUserId?: string
   reliability?: { lateReturns: number; totalReturns: number; damageCases: number; missingCases: number; avgDaysLateOverall: number }
 }
 
