@@ -24,6 +24,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0183 | T2-13 | reset-self-qc-when-alone | lane-a/T2-13-self-qc-when-alone | verified |
 | 0184 | T2-06 | repair-job-closes-damage | lane-a/T2-06-repair-job-closes-the-damage | verified |
 | 0185 | T2-15 | reset-damage-opens-case | lane-a/T2-15-damage-found-during-reset | claimed |
+| 0193 | T3-14a | invoice-write-hardening | lane-c/T3-14a-invoice-write-hardening | claimed |
 
 ## Expected migrations (not yet claimed)
 
