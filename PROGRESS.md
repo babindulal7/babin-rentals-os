@@ -1,5 +1,62 @@
 # Progress Log
 
+## 2026-10-28 — T8-09: Staff renting gear (Lane A · Size S)
+
+**Did**
+- Claimed migration `0188` in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0188_staff_renting_gear.sql`:
+  - Added `'Staff'` to enum `public.discount_source`.
+  - Added operational columns `is_staff boolean not null default false` and `staff_user_id uuid references public.users(id)` to `public.clients`.
+  - Granted column-level `select (is_staff, staff_user_id)` to authenticated role (Law 6 operational visibility).
+  - Updated views `clients_v` and `client_directory_v` to expose `is_staff` and `staff_user_id`.
+  - Updated `record_editor_private.fields` and `record_editor_private.section_fields` to admit `is_staff` and `staff_user_id` for client editing.
+- Implemented and verified lifecycle step **`L44`** in `scripts/e2e-lifecycle.mjs`:
+  - Asserts Coordinator marks client as staff member (`is_staff: true`).
+  - Asserts Warehouse reads operational flags via `clients_v` and `client_directory_v`.
+  - Asserts `create_booking` RPC creates booking with `'Staff'` discount source at 20%.
+  - Asserts Law 6 money blindness: Warehouse sees `approved_credit_limit = null` and 0 `booking_discounts` rows; Manager reads unmasked 20% staff discount.
+- Implemented configurable staff discount setting in `src/lib/settingsStore.ts` and `src/modules/settings/sections/Financial.tsx`:
+  - Registered `'staffDiscountPercent'` with default 20, `%` suffix, percentage validator; changes affect subsequent new bookings only.
+- Enhanced pricing pipeline in `src/lib/pricingPipeline.ts`:
+  - Added `'Staff'` discount source to `AppliedDiscountBreakdown['sources']`.
+  - Supported `isStaffClient`, `staffDiscountPercent`, and `staffDiscountRemoved` in `DiscountDetails`.
+  - Injected automatic staff discount into discount sources for normal stacking and student bundle protection.
+- Updated booking UI in `src/modules/rentals/NewRental.tsx`, `RentalPricingSection.tsx`, `useNewRentalPricing.ts`:
+  - Rendered staff discount banner in Pricing & Terms showing "Staff Rental Discount ({staffDiscountPercent}%)" with Law 10 removal toggle ("Remove" / "Re-apply") without approval gates.
+  - Linked `ClientCombobox.tsx`, `ClientQuickView.tsx`, and `ClientsDirectory.tsx` to surface "Staff" entity badges.
+- Authored unit test suites:
+  - `src/lib/__tests__/pricingPipeline.test.ts`: 17/17 passed (tested automatic 20% staff discount injection, setting overrides, removal toggle, student bundle exclusion).
+  - `src/modules/rentals/booking/__tests__/RentalPricingSection.test.tsx`: 4/4 passed (tested staff discount rendering and removal toggle without approval gate).
+
+**Ruled**
+- Ruling W68: A client can be marked Staff (linked to user record). A Staff client's bookings get a 20% staff discount line automatically, shown and removable like any other discount (Law 10 — no approval gate).
+- Everything else is a normal client booking: deposit, ID on file, invoice, payments. Changing the setting changes new bookings only.
+- Law 6: `is_staff` and `staff_user_id` are operational/identity attributes, visible to Warehouse, while discount monetary figures remain strictly money-blind.
+
+**Verified**
+- `npm run check:pglite`: 182/182 applied, 0 failed.
+- `npm run check:lifecycle`: 42/42 steps green, 0 known-red, 0 failed.
+- `npx vitest run src/lib/__tests__/pricingPipeline.test.ts`: 17/17 passed.
+- `npx vitest run src/modules/rentals/booking/__tests__/RentalPricingSection.test.tsx`: 4/4 passed.
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npx vite build`: built in 2m 21s, 8154 modules transformed, PWA service worker generated cleanly.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 59 / 59 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 42 / 42 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 182 files · check:pglite 182/182 applied, 0 failed (recorded 2026-10-28T08:37:39.229Z).
+Gates read from .lifecycle-result.json, written 2026-10-28T08:39:07.638Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Nothing open from T8-09. Ready to merge on Lane A.
+
 ## 2026-10-27 — T2-06: Repair job closes the damage (Lane A · Size L)
 
 **Did**
