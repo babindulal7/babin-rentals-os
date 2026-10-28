@@ -1,5 +1,43 @@
 # Progress Log
 
+## 2026-10-28 — T1-15 design phase: Switch user with name + PIN — design note, no code (card's security gate)
+
+**Did**
+- Picked card **T1-15** per the PLAN.md §6 protocol: the first `todo` card whose `Needs` are all `done` in global build order (T0/T1's earlier cards are Babin-blocked; all three lanes were mid-card — A: T2-09, B: T4-04, C: T3-01 — mapped from branch/worktree claims, which lag the plan files on `main`).
+- Created the card's own worktree `../bro-lane-t1-15` on branch `lane-a/T1-15-switch-user-with-name-plus-pin` from latest `main`; main checkout (lane A's T2-09) untouched.
+- Wrote **`docs/verification/T1-15_DESIGN.md`** — the one-page security design the card mandates before any code: the roster-as-lock state machine; the **restore-token-into-LIMBO → server `verify_staff_pin`** order (0066 verifies the caller's own PIN, so B's session must be live before B's PIN is checked); `signOut({scope:'local'})` on abort so B's rostered token is never revoked; per-person lockout (tap-your-own-name kills the old ScreenLock "B locks A" abuse structurally); the at-rest read/write matrix (refresh tokens as AES-GCM ciphertext under a **non-extractable WebCrypto device key**, re-encrypted on every `TOKEN_REFRESHED` because refresh tokens are single-use; PINs never on device; honest XSS boundary stated); the fail-closed inventory (offline refuses switching — no cached verdicts; stale rotation → full sign-in, never silent fallback; roster cap ~15 refused inline); audit of each switch as `action:'Login'` + `via:'device-switch'` (enum member exists — no migration, matching the card's "Database: none expected").
+- Logged the card-vs-migration conflict as **TODO(decision)** in `docs/OPEN_DECISIONS.md`: card/W53 say **4-digit** PIN, shipped `0066` enforces **6**; B-1 recommends keeping 6 and amending the card — relaxing a shipped security parameter is Babin's explicit word.
+- Set the card to `doing` with the branch name in `docs/plans/T1_RELEASE.md`.
+- **No code written — per the card's gate: build only after the design note is reviewed at a Claude check-in.**
+
+**Ruled**
+- Nothing invented; the one genuine conflict (PIN length) is Babin's call and is logged, not assumed.
+
+**Verified**
+- Branch is docs-only; `npm run typecheck` PASS · `npm run lint` PASS · `npm run lint:progress` PASS on the branch. `VITE_DATA_SOURCE=mock npm test` and `build` were not run — **no source changed on this branch**; the full gate list applies to the code sessions after review (stated, not skipped silently).
+
+## Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 55 / 58 (95%) | +3 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +1 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 181 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+
+- **Waiting on the next Claude check-in (7:38 AM/PM NPT):** review `docs/verification/T1-15_DESIGN.md`.
+- **Waiting on Babin:** the 4-vs-6 digit PIN decision (OPEN_DECISIONS, 28 Oct).
+- Then: code sessions per the note's build order; M4 iPad acceptance with Babin.
+
 ## 2026-10-27 — T2-06: Repair job closes the damage (Lane A · Size L)
 
 **Did**
