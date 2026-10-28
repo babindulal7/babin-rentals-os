@@ -92,7 +92,7 @@ The following files remain at the repository root:
 - `CURRENT_STATE.md` — Root mirror of `docs/CURRENT_STATE.md`
 - `RULES.md` — Durable architectural & engineering boundaries
 - `README.md` — Project introduction & quick-start guide
-- `BACKUP_PROTOCOL.md` — Native `pg_dump` backup protocol
+- [`../archive/BACKUP_PROTOCOL.md`](../archive/BACKUP_PROTOCOL.md) — Native `pg_dump` backup protocol
 - `CHANGES.md` — Major version change log
 - `RULINGS-*.md` — Dated binding rulings
 - `UI_UX_IMPROVEMENT_LOG.md` — UI/UX polish logs
