@@ -11,6 +11,7 @@ import {
   promotionDateAd,
   type PromoCodeDefinition,
 } from '../../../lib/pricingPipeline'
+import type { ClientActiveMembership } from '../../../lib/queries/membership'
 import './rental-pricing.css'
 
 const sub = {
@@ -60,6 +61,9 @@ export interface RentalPricingSectionProps {
   setDepositOverrideReason: (r: string) => void
   depositAuthorizedBy: string
   setDepositAuthorizedBy: (a: string) => void
+  clientMembership?: ClientActiveMembership | null | undefined
+  memberDiscountRemoved?: boolean | undefined
+  onToggleMemberDiscount?: (() => void) | undefined
   title?: string
 }
 
@@ -95,6 +99,9 @@ export function RentalPricingSection({
   setDepositOverrideReason,
   depositAuthorizedBy,
   setDepositAuthorizedBy,
+  clientMembership,
+  memberDiscountRemoved,
+  onToggleMemberDiscount,
   title = 'Pricing & Terms',
 }: RentalPricingSectionProps) {
   const hasDiscountOptions = womenDopEligible || Boolean(promoCodeApplied) || Boolean(promoCodeInput) || Boolean(promoNotice)
@@ -138,6 +145,47 @@ export function RentalPricingSection({
         {/* User ruling, 7 Oct: Discounts & Taxes precede Rental Charges. */}
         <div className="new-rental-pricing-adjustments" style={moneyBlock}>
           <h3 style={sub}>Discounts & Taxes</h3>
+          {clientMembership && clientMembership.benefitsActive && (
+            <div
+              data-testid="membership-benefit-line"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px 12px',
+                borderRadius: 'var(--r-btn)',
+                background: memberDiscountRemoved ? 'var(--card)' : 'var(--st-primary-bg, #eff6ff)',
+                border: `1px solid ${memberDiscountRemoved ? 'var(--border)' : 'var(--st-primary-border, #bfdbfe)'}`,
+                marginBottom: 12,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Icon name="card" size={16} style={{ color: memberDiscountRemoved ? 'var(--text2)' : 'var(--brand)' }} />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: memberDiscountRemoved ? 'var(--text2)' : 'var(--text)' }}>
+                    {clientMembership.level} Member Plan Benefit
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text2)' }}>
+                    {memberDiscountRemoved
+                      ? 'Member discount removed for this booking'
+                      : `${clientMembership.individualDiscountPct ?? 0}% on equipment · ${clientMembership.bundleDiscountPct ?? 0}% on bundles`}
+                  </div>
+                </div>
+              </div>
+              {onToggleMemberDiscount && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  aria-label={memberDiscountRemoved ? 'Apply member discount' : 'Remove member discount'}
+                  onClick={onToggleMemberDiscount}
+                  style={{ fontSize: 12, height: 28, padding: '0 8px' }}
+                >
+                  {memberDiscountRemoved ? 'Apply' : 'Remove'}
+                </Button>
+              )}
+            </div>
+          )}
           <div style={{ marginTop: 8 }}>
             <div className="new-rental-pricing-presets">
               <DiscountChips

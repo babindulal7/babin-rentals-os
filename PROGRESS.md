@@ -1,5 +1,84 @@
 # Progress Log
 
+## 2026-10-28 — T8-05: Member benefits at booking (Lane A · Size M)
+
+**Did**
+- Implemented member plan benefits in New Rental and pricing pipeline per 21 Jul / 28 Jul membership locks and Law 10:
+  - `src/lib/pricingPipeline.ts`:
+    - Extended `DiscountDetails` with `membershipPercent`, `membershipBundlePercent`, `membershipPlanName`, and `memberDiscountRemoved`.
+    - Enforced student bundle exclusion (student bundles exclude membership discounts per 21 Jul bundle lock).
+    - Added weighted percentage calculation for mixed equipment + bundle lines, computing exact paisa discount and effective percentage rounded to 2 decimal places.
+    - Handled `discountSource: 'Membership'` with 25% stacking cap.
+    - Unit tests in `src/lib/__tests__/pricingPipeline.test.ts` (19/19 passing).
+  - `src/lib/queries/membership.ts`:
+    - Added `ClientActiveMembership` interface and `fetchClientActiveMembership(client)` to extract active membership plan details, discount percentages, limits, and perks.
+    - Added `fetchClientMonthlyBookingsCount(clientId: string)` counting client bookings created in the current UTC month.
+  - `src/modules/rentals/booking/newRentalGuards.ts`:
+    - Added non-blocking soft advisory checks in `deriveRentalAlertsAndNotices`:
+      - Monthly booking limit warning: `Monthly booking limit reached for ${level} (${count}/${limit} bookings this month)` when client reaches or exceeds plan limit.
+      - Simultaneous active rental limit warning: `Simultaneous rental limit reached for ${level} (${count}/${limit} active rentals)` when active rentals reach or exceed plan limit.
+      - Both limits surfaced as warnings in `advisories` under `BookingSummaryCard` (never blocking confirm).
+    - Unit tests in `src/modules/rentals/__tests__/newRentalGuards.test.ts` (24/24 passing).
+  - `src/modules/rentals/booking/useNewRentalPricing.ts`:
+    - Integrated client membership plan discounts (`membershipPercent` on equipment, `membershipBundlePercent` on non-student bundles) into pricing calculations.
+    - Honors `memberDiscountRemoved` flag: when removed by staff, passes 0% member discount.
+  - `src/modules/rentals/booking/RentalPricingSection.tsx`:
+    - Displays member plan discount line (`data-testid="membership-benefit-line"`) with tier name and discount percentages.
+    - Enforces Law 10 (discounts ungated): staff can immediately remove the member discount via "Remove" button without supervisor or manager approval; can re-apply via "Apply" button.
+    - Unit tests in `src/modules/rentals/booking/__tests__/RentalPricingSection.test.tsx` (5/5 passing).
+  - `src/modules/rentals/booking/BookingClientSection.tsx`:
+    - Renders client membership badge (`data-testid="client-membership-badge"`) displaying tier name.
+    - Renders Priority Booking badge (`data-testid="priority-booking-badge"`) when client membership includes the Priority Booking perk.
+    - Unit tests in `src/modules/rentals/booking/__tests__/BookingClientSection.test.tsx` (3/3 passing).
+  - `src/modules/rentals/booking/useNewRentalSubmit.ts`:
+    - Automatically prepends `[Priority]` to `bookings.project` when client membership includes Priority Booking perk.
+    - Passes typed `Membership` discount rows via `bookingDiscountRows()`.
+    - Unit tests in `src/modules/rentals/booking/__tests__/useNewRentalSubmit.test.tsx` (12/12 passing).
+  - `src/modules/rentals/booking/useNewRentalClient.ts` & `src/modules/rentals/NewRental.tsx`:
+    - Loaded active client membership and monthly bookings count on client selection.
+    - Wired state and toggle callbacks through all booking sections and summary card.
+
+**Ruled**
+- Law 10 (Ungated discounts): Staff can immediately remove member discounts on a booking without requiring approval.
+- 21 Jul / 28 Jul membership locks: Student bundles exclude membership discounts; non-student bundles stack under the 25% cap.
+- Soft advisories: Monthly booking and simultaneous rental limits warn at confirm as non-blocking advisories.
+
+**Verified**
+- `npm run check:pglite`: 186/186 applied, 0 failed.
+- `npm run check:lifecycle`: 46/46 green.
+- `npm run typecheck`: clean, 0 errors.
+- `npm test`: 485/485 test files passed, 5919/5919 tests passed (0 failed).
+- `npm run lint`: clean, 0 warnings.
+- `npm run check:contrast`: 106/106 pass.
+- `npm run build`: built in 2m 20s, PWA generated.
+- Unit test suites:
+  - `src/lib/__tests__/pricingPipeline.test.ts`: 19/19 passed.
+  - `src/modules/rentals/__tests__/newRentalGuards.test.ts`: 24/24 passed.
+  - `src/modules/rentals/booking/__tests__/RentalPricingSection.test.tsx`: 5/5 passed.
+  - `src/modules/rentals/booking/__tests__/BookingClientSection.test.tsx`: 3/3 passed.
+  - `src/modules/rentals/booking/__tests__/useNewRentalSubmit.test.tsx`: 12/12 passed.
+  - `src/modules/rentals/booking/__tests__/useNewRentalHooks.test.tsx`: 6/6 passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 63 / 63 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 49 / 49 (100%) | +0 |
+| Lifecycle | steps green / total | 46 / 46 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 186 files · check:pglite 186/186 applied, 0 failed (recorded 2026-10-28T18:49:01.717Z). Suite: PASS — 5919/5919 passed, 0 failed (recorded 2026-10-28T18:57:34.181Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-10-28T18:49:25.108Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T8-06: Crew overtime: half or full day.
+- Ready to merge on Lane A.
+
 ## 2026-10-28 — T8-04: Renew a lapsed membership (Lane A · Size S)
 
 **Did**

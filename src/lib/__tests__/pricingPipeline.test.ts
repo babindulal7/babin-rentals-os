@@ -292,3 +292,146 @@ describe('New Rental pricing regressions — October 2026', () => {
     expect(() => bookingDiscountRows(quote)).toThrow(/between 0% and 100%/)
   })
 })
+
+describe('T8-05 · Member benefits in pricing pipeline', () => {
+  it('applies member plan individual discount on equipment', () => {
+    const pipeline = calculatePricingPipeline({
+      equipmentSubtotalPaisa: rupees(10000),
+      bundleSubtotalPaisa: rupees(0),
+      servicesSubtotalPaisa: rupees(0),
+      crewSubtotalPaisa: rupees(0),
+      deliveryChargePaisa: rupees(0),
+      fuelChargePaisa: rupees(0),
+      discounts: {
+        membershipPercent: 15,
+        membershipBundlePercent: 7,
+        membershipPlanName: 'Creator',
+      },
+      vatEnabled: false,
+    })
+    expect(pipeline.discounts.appliedPercent).toBe(15)
+    expect(pipeline.discounts.discountPaisa).toBe(rupees(1500))
+    expect(pipeline.taxableSubtotalPaisa).toBe(rupees(8500))
+    const rows = bookingDiscountRows(pipeline.discounts)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      discountSource: 'Membership',
+      percent: 15,
+      reason: 'Creator Membership Discount',
+    })
+  })
+
+  it('applies member plan bundle discount on bundles', () => {
+    const pipeline = calculatePricingPipeline({
+      equipmentSubtotalPaisa: rupees(0),
+      bundleSubtotalPaisa: rupees(20000),
+      servicesSubtotalPaisa: rupees(0),
+      crewSubtotalPaisa: rupees(0),
+      deliveryChargePaisa: rupees(0),
+      fuelChargePaisa: rupees(0),
+      discounts: {
+        membershipPercent: 15,
+        membershipBundlePercent: 7,
+        membershipPlanName: 'Creator',
+      },
+      vatEnabled: false,
+    })
+    expect(pipeline.discounts.appliedPercent).toBe(7)
+    expect(pipeline.discounts.discountPaisa).toBe(rupees(1400))
+    expect(pipeline.taxableSubtotalPaisa).toBe(rupees(18600))
+    const rows = bookingDiscountRows(pipeline.discounts)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      discountSource: 'Membership',
+      percent: 7,
+      reason: 'Creator Bundle Discount',
+    })
+  })
+
+  it('weights member discounts accurately when equipment and bundles are both on the booking', () => {
+    // 10,000 Rs equipment @ 15% = 1,500 Rs
+    // 10,000 Rs bundle @ 7% = 700 Rs
+    // Total discount = 2,200 Rs (11% of 20,000)
+    const pipeline = calculatePricingPipeline({
+      equipmentSubtotalPaisa: rupees(10000),
+      bundleSubtotalPaisa: rupees(10000),
+      servicesSubtotalPaisa: rupees(0),
+      crewSubtotalPaisa: rupees(0),
+      deliveryChargePaisa: rupees(0),
+      fuelChargePaisa: rupees(0),
+      discounts: {
+        membershipPercent: 15,
+        membershipBundlePercent: 7,
+        membershipPlanName: 'Creator',
+      },
+      vatEnabled: false,
+    })
+    expect(pipeline.discounts.appliedPercent).toBe(11)
+    expect(pipeline.discounts.discountPaisa).toBe(rupees(2200))
+    expect(pipeline.taxableSubtotalPaisa).toBe(rupees(17800))
+    const rows = bookingDiscountRows(pipeline.discounts)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      discountSource: 'Membership',
+      percent: 11,
+      reason: 'Creator Membership (15% items, 7% bundles)',
+    })
+  })
+
+  it('excludes member discounts on student bundles per 21 Jul bundle lock', () => {
+    const pipeline = calculatePricingPipeline({
+      equipmentSubtotalPaisa: rupees(10000),
+      bundleSubtotalPaisa: rupees(10000),
+      servicesSubtotalPaisa: rupees(0),
+      crewSubtotalPaisa: rupees(0),
+      deliveryChargePaisa: rupees(0),
+      fuelChargePaisa: rupees(0),
+      discounts: {
+        isStudentBundle: true,
+        bundleSavingPercent: 10,
+        membershipPercent: 15,
+        membershipBundlePercent: 7,
+        membershipPlanName: 'Creator',
+      },
+      vatEnabled: false,
+    })
+    expect(pipeline.discounts.appliedPercent).toBe(10)
+    const rows = bookingDiscountRows(pipeline.discounts)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.discountSource).toBe('Student')
+    const unappliedMember = pipeline.discounts.sources.filter((s) => s.discountSource === 'Membership')
+    expect(unappliedMember.every((s) => !s.applied)).toBe(true)
+    expect(unappliedMember[0]?.exclusionReason).toContain('Student bundles do not stack')
+  })
+
+  it('enforces 25% stacking cap with member discounts and additional benefits', () => {
+    // 20% member + 10% promo = 30% -> capped at 25%
+    const pipeline = calculatePricingPipeline({
+      equipmentSubtotalPaisa: rupees(20000),
+      bundleSubtotalPaisa: rupees(0),
+      servicesSubtotalPaisa: rupees(0),
+      crewSubtotalPaisa: rupees(0),
+      deliveryChargePaisa: rupees(0),
+      fuelChargePaisa: rupees(0),
+      discounts: {
+        membershipPercent: 20,
+        membershipPlanName: 'Cinematographer',
+        promoCode: {
+          code: 'BONUS10',
+          couponId: '11111111-1111-4111-8111-111111111111',
+          discountPercent: 10,
+          active: true,
+        },
+      },
+      vatEnabled: false,
+    })
+    expect(pipeline.discounts.capped).toBe(true)
+    expect(pipeline.discounts.appliedPercent).toBe(25)
+    expect(pipeline.discounts.discountPaisa).toBe(rupees(5000))
+    const rows = bookingDiscountRows(pipeline.discounts)
+    expect(rows).toMatchObject([
+      { discountSource: 'Membership', percent: 20 },
+      { discountSource: 'Coupon', percent: 5 },
+    ])
+  })
+})

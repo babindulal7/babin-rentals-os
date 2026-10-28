@@ -275,6 +275,10 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     selectClient,
     onClientCreated,
     health,
+    clientMembership,
+    monthlyBookingsCount,
+    memberDiscountRemoved,
+    toggleMemberDiscount,
   } = useNewRentalClient({
     searchParams,
     clientPool,
@@ -456,6 +460,8 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     manualDepositAmount,
     depositOverrideReason,
     depositAuthorizedBy,
+    clientMembership,
+    memberDiscountRemoved,
   })
 
   /* ── §12 alerts. Critical blocks Confirm; Warning blocks Handover. ─────── */
@@ -509,6 +515,8 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
         lines,
         equipmentLines,
         pricing,
+        clientMembership,
+        monthlyBookingsCount,
       }),
     [
       conflictLines,
@@ -527,6 +535,8 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
       lines,
       equipmentLines,
       pricing,
+      clientMembership,
+      monthlyBookingsCount,
     ],
   )
 
@@ -706,6 +716,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     setConfirmedSuccess,
     showSuccessToast,
     client,
+    clientMembership,
     lines,
     equipmentLines,
     project,
@@ -1090,6 +1101,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
               open={open[0] ?? true}
               onToggle={() => toggle(0)}
               client={client}
+              clientMembership={clientMembership}
               clientPool={clientPool}
               selectedClientId={selectedClientId}
               clientFieldTouched={clientFieldTouched}
@@ -1252,6 +1264,9 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
               setDepositOverrideReason={setDepositOverrideReason}
               depositAuthorizedBy={depositAuthorizedBy}
               setDepositAuthorizedBy={setDepositAuthorizedBy}
+              clientMembership={clientMembership}
+              memberDiscountRemoved={memberDiscountRemoved}
+              onToggleMemberDiscount={toggleMemberDiscount}
               title={SECTIONS[5]}
             />
           )}
