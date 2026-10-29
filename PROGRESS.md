@@ -1,5 +1,72 @@
 # Progress Log
 
+## 2026-10-30 — T4-04: Team notes on the database repair, verification, and rebase (Lane B · Size M)
+
+**Did**
+- Reconciled and completed migration `0185_team_notes.sql`:
+  - Created table `public.team_notes` with `id`, `client_uuid` (unique, Law 8), `body` (1..10,000 chars), `author_id` (FK `public.users(id)`), `author_name`, `author_role`, `category`, `priority`, `status`, `resolved_at`, `resolved_by`, `pinned`, `pinned_at`, `pinned_by`, `is_archived` (Law 3), `archived_at`, `archived_by`, `reference_id`, `reference_ids`, `acknowledged_by`.
+  - Implemented security definer RPCs with pinned `search_path = public, pg_temp`: `create_team_note`, `acknowledge_team_note`, `pin_team_note`, `archive_team_note`, `resolve_team_note`, and `list_team_notes`.
+  - Revoked direct `UPDATE` and `DELETE` on `public.team_notes` from `authenticated, anon, public` (Law 3: archive, never delete; append-only/audit trail).
+  - Attached audit trigger `trg_audit_team_notes` recording all team note mutations to `public.audit_logs`.
+  - Enabled RLS on `public.team_notes` admitting `auth_is_staff()`; Client and anon denied.
+- Added and verified lifecycle step **`L42`** in `scripts/e2e-lifecycle.mjs`:
+  - Asserts all 8 staff roles (Owner, Admin, Manager, Coordinator, Warehouse, Technician, Driver, Accounts) can create, read, acknowledge, pin, and archive notes.
+  - Asserts Client and anon roles are denied access (RLS/RPC).
+  - Asserts direct `UPDATE` and `DELETE` are rejected by Postgres permissions.
+  - Asserts idempotent note submission via `client_uuid` (Law 8).
+  - Asserts audit log entries recorded for note creations and mutations.
+- Updated RBAC & core action layer:
+  - Added permissions in `src/lib/rbac.ts`: `canCreateTeamNote`, `canReadTeamNotes`, `canAcknowledgeTeamNote`, `canPinTeamNote`, `canArchiveTeamNote`, `canResolveTeamNote` (all `isStaff(role)`).
+  - Registered action capabilities in `src/actions/core.ts` for `team_note.*`.
+  - Created typed action handlers in `src/actions/notes/`: `createTeamNote.ts`, `listTeamNotes.ts`, `acknowledgeTeamNote.ts`, `pinTeamNote.ts`, `archiveTeamNote.ts`, `resolveTeamNote.ts`.
+- Connected Real UI (`src/modules/notes/InternalNotesPage.tsx` and `src/modules/notes/InternalNotesDrawer.tsx`):
+  - Preserved rich existing features: reference chips, quick templates, category/priority filters, search, compact/card views, and Shift Handover brief modal.
+  - Wired live mode (`!IS_MOCK`) to database-backed queries and actions (`listTeamNotes`, `createTeamNote`, `pinTeamNote`, `resolveTeamNote`, `acknowledgeTeamNote`, `archiveTeamNote`).
+  - Implemented honest states: loading spinner, empty list, unauthorized restriction (`!isStaff`), and graceful service unavailable fallback matching `/unavailable/i` when RPC is unconfigured.
+  - Prominently displayed mandatory staff warning banner: *"Notes are seen by all staff."*
+  - Preserved existing browser-local preview in mock mode (`IS_MOCK: true`) without impersonating live persistence or deleting old `babin_internal_notes_v1` data.
+- Fixed `src/components/teamNotes/TeamNotesPanel.tsx`:
+  - Replaced broken nonexistent imports with supported `useAuth` and Kathmandu BS/UTC formatting helpers.
+  - Removed unused variables and resolved all TypeScript strict and ESLint warnings.
+- Rebased branch `lane-b/T4-04-team-notes-repair` cleanly on top of latest `main` (`9b84ed8b`, incorporating Lane A's T2-09 scanner integration).
+
+**Ruled**
+- Ruling S6: Team notes live in Postgres with authenticated staff RLS (`auth_is_staff()`). Client and anonymous users have zero access.
+- Law 3 (Nothing is deleted): Notes are archived (`is_archived = true`), never deleted. Direct SQL DELETE and UPDATE are revoked.
+- Law 8: Every write carries an idempotent client key (`client_uuid`). Replayed requests return the original note without duplication.
+- Money Blindness & Transparency: Note text is staff-wide, with mandatory warning banner *"Notes are seen by all staff."* No money values or invoice joins are exposed in the notes feed.
+
+**Verified**
+- `npm run check:pglite`: 182/182 applied, 0 failed, 34 views checked (0 anon leaks), 20 functions checked (0 unauthorized), 105 definer functions checked (0 unpinned).
+- `npm run check:lifecycle`: 42/42 steps green, 0 failed, including L42 team notes lifecycle test.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run check:contrast`: 106/106 pass, 0 FAIL.
+- `npm run build`: built in dist/, 8162 modules transformed, PWA service worker generated cleanly.
+- Vitest note suites: 69/69 passed across 9 test files (43 action tests, 12 query tests, 14 UI component tests).
+- `npm run completion`: counted by script, not typed.
+- `npm run lint:progress`: passed.
+
+### Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 65 / 65 (100%) | +3 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 54 / 54 (100%) | +3 |
+| Lifecycle | steps green / total | 42 / 42 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 182 files · check:pglite 182/182 applied, 0 failed (recorded 2026-10-30T11:16:43.175Z).
+Gates read from .lifecycle-result.json, written 2026-10-30T11:17:29.428Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+
+- Awaiting Babin's review and approval to merge `lane-b/T4-04-team-notes-repair` into `main`.
+- Once merged, begin Lane B's next task T4-05 (`Shift handover on the database`) on branch `lane-b/T4-05-shift-handovers`.
+
 ## 2026-10-30 — Reviewed main reconciliation and T2-09 scanner integration
 
 **Did**

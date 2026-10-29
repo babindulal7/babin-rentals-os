@@ -62,7 +62,7 @@ through the T2-01 / T2-02 components, linked to the delivery job.
 **Done when** — the signature shows on the job and on the booking's documents.
 **Needs** — T2-01, T2-02, T4-01.
 
-### T4-04 · Team notes on the database            status: todo · size: M · lane B
+### T4-04 · Team notes on the database            status: done — awaiting merge (lane-b/T4-04-team-notes-repair) · size: M · lane B
 **What** — New table for staff notes: author, text, optional links (booking, asset, client), pinned,
 created at; **archive, never delete** (Law 3). Staff-only (no Client). Notes that mention money
 are a writer's choice, so the note text is visible to every staff role — the screen warns "Notes

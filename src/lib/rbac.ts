@@ -705,11 +705,11 @@ export function canExportClientPii(role: SystemRole): boolean {
 }
 
 /**
- * Create a team note — Coordinator and above (Owner, Admin, Manager, Coordinator).
- * Mirrors the RLS policy on `team_notes` INSERT (migration 0185).
+ * Create a team note — all staff roles (not Client).
+ * Mirrors the RLS policy on `team_notes` INSERT and create_team_note RPC (migration 0185).
  */
 export function canCreateTeamNote(role: SystemRole): boolean {
-  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+  return isStaff(role)
 }
 
 /**
@@ -722,8 +722,33 @@ export function canReadTeamNotes(role: SystemRole): boolean {
 
 /**
  * Acknowledge a team note — all staff roles (not Client).
- * Mirrors the RLS policy on `team_notes` UPDATE for acknowledge (migration 0185).
+ * Mirrors acknowledge_team_note RPC (migration 0185).
  */
 export function canAcknowledgeTeamNote(role: SystemRole): boolean {
   return isStaff(role)
 }
+
+/**
+ * Pin/unpin a team note — all staff roles (not Client).
+ * Mirrors pin_team_note RPC (migration 0185).
+ */
+export function canPinTeamNote(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Archive a team note — all staff roles (not Client).
+ * Mirrors archive_team_note RPC (migration 0185).
+ */
+export function canArchiveTeamNote(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Resolve/reopen a team note — all staff roles (not Client).
+ * Mirrors resolve_team_note RPC (migration 0185).
+ */
+export function canResolveTeamNote(role: SystemRole): boolean {
+  return isStaff(role)
+}
+

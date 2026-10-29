@@ -3,6 +3,7 @@ import { useAuth } from '../../lib/auth';
 import { listTeamNotes, createTeamNote, acknowledgeTeamNote, type TeamNoteRow } from '../../actions/notes';
 import type { ActionContext } from '../../actions/core';
 import { formatAdDateTime } from '../../lib/bs';
+import { canCreateTeamNote, isStaff as checkIsStaff } from '../../lib/rbac';
 
 export interface TeamNotesPanelProps {
   /** Maximum number of notes to show initially */
@@ -33,8 +34,8 @@ export function TeamNotesPanel({
   const [acknowledging, setAcknowledging] = useState<Set<string>>(new Set());
   const [showComposer, setShowComposer] = useState(false);
 
-  const canCreate = role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator';
-  const isStaff = role !== 'Client';
+  const canCreate = role ? canCreateTeamNote(role) : false;
+  const isStaff = role ? checkIsStaff(role) : false;
 
   const fetchNotes = useCallback(async () => {
     if (!isStaff || !ctx) return;
@@ -109,6 +110,9 @@ export function TeamNotesPanel({
 
   return (
     <div className="team-notes-panel" role="region" aria-label="Team notes">
+      <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: 8, fontStyle: 'italic' }}>
+        Notes are seen by all staff.
+      </div>
       {canCreate && (
         <button
           type="button"

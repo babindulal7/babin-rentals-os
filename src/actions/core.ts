@@ -357,6 +357,12 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
       return rbac.canReadTeamNotes(ctx.role);
     case 'team_note.acknowledge':
       return rbac.canAcknowledgeTeamNote(ctx.role);
+    case 'team_note.pin':
+      return rbac.canPinTeamNote(ctx.role);
+    case 'team_note.archive':
+      return rbac.canArchiveTeamNote(ctx.role);
+    case 'team_note.resolve':
+      return rbac.canResolveTeamNote(ctx.role);
 
     // ⚠ FILED, not fixed: `crew.assign` is still `isStaff()`, but PERMISSIONS.md
     // §4.7 says `C+` and the §3 grid marks Crew Assist ✕ for Warehouse,
