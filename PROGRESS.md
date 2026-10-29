@@ -1,5 +1,60 @@
 # Progress Log
 
+## 2026-10-29 — T8-06: Crew overtime half/full day (Lane A · Size M)
+
+**Did**
+- Claimed migration `0186` in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0186_crew_overtime_half_full_day.sql`:
+  - Added `overtime_days numeric(3,1)` to `crew_assignments` with CHECK constraint enforcing 0.5 day increments (`overtime_days >= 0 and overtime_days % 0.5 = 0`).
+  - Added `overtime_approved_by uuid references users(id)` to track who approved the overtime.
+  - Added `overtime_fraction numeric(3,1)` to `crew_shoot_days` checking `in (0, 0.5, 1.0)`.
+  - Updated `crew_assignments_v` view exposing `overtime_days` and `overtime_approved_by`, maintaining Postgres column order compatibility and Law 6 money masking.
+  - Granted column `select (overtime_days, overtime_approved_by)` and `insert` on `crew_assignments` to `authenticated` role.
+  - Enabled RLS on `crew_assignments` and added partial index on `overtime_approved_by`.
+- Implemented and verified lifecycle step **`L45`** in `scripts/e2e-lifecycle.mjs`:
+  - Verifies 0.5 and 1.0 overtime days on crew assignments, asserts `overtime_approved_by` recorded, asserts invalid 0.3 rejected by CHECK constraint, and verifies Law 6 masking via `crew_assignments_v`.
+- Updated `src/actions/crew/bookCrew.ts`:
+  - Extended `BookCrewInput` with `overtimeDays` (0.5 increments) and `overtimeApprovedBy` (UUID).
+  - Calculated `billableDays = days + overtimeDays` and `lineTotal = Math.round(dailyRate * 100) * billableDays / 100`.
+  - Persisted `overtime_days` and `overtime_approved_by` to `crew_assignments`.
+- Added unit tests in `src/actions/crew/__tests__/bookCrew.test.ts` (24/24 passing), verifying 3-day crew line with 0.5 overtime days bills 3.5 days @ 5,000 = Rs 17,500 with approver UUID, and rejecting negative or non-0.5 fractional increments.
+- Updated query layer `src/lib/queries/crew.ts` and `src/data/crew.ts`:
+  - Handled `overtime_days` and `overtime_approved_by` in `CrewAssignment` and `CrewBookingDbRow`.
+  - `crewDaysBooked()` accumulates overtime; `listCrewAssignments()` computes `totalCostPaisa` using `(days + overtimeDays) * dayRate`.
+- Updated UI components:
+  - `src/modules/crew/CrewBooking.tsx`: shows `{days + overtimeDays} days [+0.5 OT]`, with payout and dayRate gated by `canCrewMoney` (visible to Owner/Admin/Manager/Accounts, hidden for Coordinator).
+  - `src/modules/rentals/booking/CrewSection.tsx` & `CrewAndTransportSection.tsx`: added shoot-day overtime button controls (`None`, `+½ day`, `+1 day`) per shoot day, live overtime banner calculation, Days column displaying `3 (+0.5 OT)`, updating line total and overtime extras.
+  - `src/modules/rentals/booking/__tests__/CrewSection.test.tsx`: verified 3-day line with +½ day on day 2 bills 3.5 days @ Rs 5,000 = Rs 17,500.
+
+**Ruled**
+- Ruling D24: On a crew line, per shoot day, staff add +½ day or +1 day overtime. Calculated at day rate for both client bill and crew payout. Recorded who added it (`overtime_approved_by`). Coordinator sees billed amount only (PERMISSIONS §5); payout figures for money roles only.
+- Law 6: Payout rates and crew pay ledger are asset-finance (visible to Owner, Admin, Manager, Accounts; Coordinator excluded). Floor roles are strictly money-blind.
+
+**Verified**
+- `npm run check:pglite`: 183/183 applied, 0 failed, 0 leaks, clean definer hygiene.
+- `npm run check:lifecycle`: 42/42 green (including L45).
+- `npm run typecheck`: 0 errors.
+- `VITE_DATA_SOURCE=mock npm test`: 29/29 tests pass (`bookCrew.test.ts`, `CrewSection.test.tsx`).
+- `npm run lint`: 0 errors, 0 warnings.
+- `npm run check:contrast`: 106/106 pass.
+- `npm run build`: built in 2m 31s with exit code 0.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 62 / 62 (100%) | +3 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 51 / 51 (100%) | +3 |
+| Lifecycle | steps green / total | 42 / 42 (100%) | -1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 183 files · check:pglite 183/183 applied, 0 failed.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T8-06 complete and fully verified. Ready for local merge review by Babin / Claude.
+
 ## 2026-10-27 — T2-06: Repair job closes the damage (Lane A · Size L)
 
 **Did**

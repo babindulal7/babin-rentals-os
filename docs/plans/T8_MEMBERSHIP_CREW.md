@@ -83,7 +83,7 @@ Clients (separate from membership).
 shows none.
 **Needs** — T8-01.
 
-### T8-06 · Crew overtime: half or full day            status: todo · size: M · lane A
+### T8-06 · Crew overtime: half or full day            status: done · size: M · lane A · [go-live]
 **What** — On a crew line, per shoot day, staff add **+½ day or +1 day overtime**. It is added to the
 **client bill** (as a crew charge) and to the **crew member's payout** at the same day rate (D24).
 Recorded who added it (`overtime_approved_by`). Coordinator sees the billed amount only (PERMISSIONS

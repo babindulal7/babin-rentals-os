@@ -72,6 +72,8 @@ interface CrewBookingDbRow {
   position: string
   day_rate: number | null
   days: number
+  overtime_days?: number | null
+  overtime_approved_by?: string | null
   start_date: string
   end_date: string
   location: string | null
@@ -122,6 +124,8 @@ export async function listCrewAssignments(_filters?: ListFilters): Promise<ListQ
       const member = b.crew_member_id ? memberMap.get(b.crew_member_id) : undefined
       const dayRate = b.day_rate ?? member?.day_rate ?? 0
       const days = b.days || 1
+      const overtimeDays = Number(b.overtime_days ?? 0)
+      const billableDays = days + overtimeDays
       const isInternal = member?.engagement_type === 'Permanent' || member?.engagement_type === 'Retainer'
 
       let status: AssignmentStatus = 'Draft'
@@ -147,8 +151,10 @@ export async function listCrewAssignments(_filters?: ListFilters): Promise<ListQ
         startDateAd: b.start_date,
         endDateAd: b.end_date,
         days,
+        overtimeDays: overtimeDays > 0 ? overtimeDays : undefined,
+        overtimeApprovedBy: b.overtime_approved_by ?? null,
         dayRatePaisa: rupees(dayRate),
-        totalCostPaisa: rupees(dayRate * days),
+        totalCostPaisa: rupees(dayRate * billableDays),
         status,
         cancelled: Boolean(b.cancelled_at),
         payoutStatus,

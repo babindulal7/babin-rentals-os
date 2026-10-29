@@ -3271,6 +3271,169 @@ STEPS.push({
   },
 })
 
+/* ── T8-06: Crew overtime half/full day (L45) ────────────────────────────── */
+
+STEPS.push({
+  id: 'L45',
+  title: 'Crew overtime: assignment accepts 0.5 or 1.0 overtime days at day rate, billed to client and paid to crew, approved_by recorded (D24, T8-06)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      // 1. Coordinator creates a crew assignment with 0.5 overtime days
+      const bookingId = crypto.randomUUID()
+      const crewId = crypto.randomUUID()
+      const clientUuid = crypto.randomUUID()
+
+      // Setup: insert a booking at Quote stage (will be transitioned), and crew member
+      await as('Coordinator', async () => {
+        const testClientId = crypto.randomUUID()
+        const testProductId = crypto.randomUUID()
+        const testCategoryId = crypto.randomUUID()
+        await q(
+          `insert into clients (id, client_uuid, client_code, name, phone, type_parent, created_by)
+           values ($1, gen_random_uuid(), 'C-9999', 'Overtime Test Client', '+9779801999999', 'Individual', $2)`,
+          [testClientId, U.Coordinator],
+        )
+
+        // Insert category as Owner (RLS)
+        await as('Owner', async () => {
+          await q(
+            `insert into inventory_categories (id, client_uuid, code, name, is_active, created_by)
+             values ($1, gen_random_uuid(), 'CAM', 'Camera', true, $2)`,
+            [testCategoryId, U.Owner],
+          )
+        })
+
+        // Insert product as Owner (RLS)
+        await as('Owner', async () => {
+          await q(
+            `insert into products (id, client_uuid, name, asset_code, brand, category_id, daily_rate, total_quantity, is_active, created_by)
+             values ($1, gen_random_uuid(), 'Test Camera', 'EQ000001', 'TestBrand', $2, 5000, 10, true, $3)`,
+            [testProductId, testCategoryId, U.Owner],
+          )
+        })
+
+        // Create warehouse for the product units
+        const testWarehouseId = crypto.randomUUID()
+        await as('Owner', async () => {
+          await q(
+            `insert into warehouses (id, client_uuid, warehouse_code, branch_id, name, is_primary, is_active, created_by)
+             values ($1, gen_random_uuid(), 'WH-OT', $2, 'Overtime Test Warehouse', true, true, $3)`,
+            [testWarehouseId, BRANCH, U.Owner],
+          )
+        })
+
+        // Create product units for the product (needed for reservations)
+        await as('Owner', async () => {
+          await q(
+            `insert into product_units (id, client_uuid, product_id, asset_tag, status, condition, branch_id, warehouse_id, created_by)
+             select gen_random_uuid(), gen_random_uuid(), $1, 'EQ000001-' || lpad(gs::text, 3, '0'), 'In Stock', 'Good', $2, $3, $4
+             from generate_series(1, 10) gs`,
+            [testProductId, BRANCH, testWarehouseId, U.Owner],
+          )
+        })
+
+        await q(
+          `insert into bookings (id, client_uuid, booking_no, branch_id, client_id, pickup_at, return_at, delivery_type, stage, created_by, updated_by)
+           values ($1, gen_random_uuid(), '9999', $2, $3, '2099-12-10T04:00:00Z', '2099-12-12T04:00:00Z', 'Client Pickup', 'Quote', $4, $4)`,
+          [bookingId, BRANCH, testClientId, U.Coordinator],
+        )
+
+        // Add a booking line so the booking passes the "at least one line" gate (Owner can insert rates)
+        await as('Owner', async () => {
+          await q(
+            `insert into booking_lines (id, client_uuid, booking_id, line_type, product_id, description, qty, days, rate, created_by)
+             values (gen_random_uuid(), gen_random_uuid(), $1, 'Equipment', $2, 'Test Camera', 1, 2, 5000, $3)`,
+          [bookingId, testProductId, U.Owner],
+        )
+        })
+      })
+
+      // Insert crew profile as Owner (RLS requires Owner/Admin/Manager)
+      await as('Owner', async () => {
+        await q(
+          `insert into crew_profiles_v2 (id, client_uuid, crew_code, full_name, mobile, primary_role, daily_rate, is_active, created_by)
+           values ($1, gen_random_uuid(), 'CR-9999', 'Overtime Test Crew', '+9779801999999', 'Camera Operator', 5000, true, $2)`,
+          [crewId, U.Owner],
+        )
+      })
+
+      // 2. Transition booking to Booked (Coordinator can do this)
+      await as('Coordinator', async () => {
+        await q(
+          `insert into booking_stage_transitions
+             (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+           values (gen_random_uuid(), $1, $2, 'Quote', 'Booked', $3, 'Coordinator', now(), 'Transition to Booked for crew overtime test')`,
+          [bookingId, BRANCH, U.Coordinator],
+        )
+      })
+
+      // 3. Owner assigns crew with 0.5 overtime days
+      let assignmentId = null
+      await as('Owner', async () => {
+        const result = await one(
+          `insert into crew_assignments (id, client_uuid, booking_id, crew_id, role_on_shoot, call_time, wrap_time, daily_rate, days, overtime_days, overtime_approved_by, created_by)
+           values (gen_random_uuid(), $1, $2, $3, 'Camera Operator', '2099-12-10T04:00:00Z', '2099-12-10T12:00:00Z', 5000, 2, 0.5, $4, $5)
+           returning id`,
+          [clientUuid, bookingId, crewId, U.Coordinator, U.Owner],
+        )
+        assignmentId = result
+        assert(assignmentId, 'crew assignment created with 0.5 overtime_days')
+      })
+
+      // 4. Verify overtime_days is stored correctly via crew_assignments_v
+      await as('Manager', async () => {
+        const row = (await q(`select overtime_days, overtime_approved_by, daily_rate from crew_assignments_v where id = $1`, [assignmentId])).rows[0]
+        assertEq(Number(row.overtime_days), 0.5, 'overtime_days stored as 0.5')
+        assertEq(row.overtime_approved_by, U.Coordinator, 'overtime_approved_by recorded')
+        assertEq(Number(row.daily_rate), 5000, 'daily_rate stored')
+      })
+
+      // 5. Verify full day overtime also works
+      const clientUuid2 = crypto.randomUUID()
+      let assignmentId2 = null
+      await as('Owner', async () => {
+        const result = await one(
+          `insert into crew_assignments (id, client_uuid, booking_id, crew_id, role_on_shoot, call_time, wrap_time, daily_rate, days, overtime_days, overtime_approved_by, created_by)
+           values (gen_random_uuid(), $1, $2, $3, 'Camera Operator', '2099-12-11T04:00:00Z', '2099-12-11T12:00:00Z', 5000, 2, 1.0, $4, $5)
+           returning id`,
+          [clientUuid2, bookingId, crewId, U.Owner, U.Owner],
+        )
+        assignmentId2 = result
+        assert(assignmentId2, 'crew assignment created with 1.0 overtime_days')
+      })
+
+      await as('Manager', async () => {
+        const row = (await q(`select overtime_days from crew_assignments_v where id = $1`, [assignmentId2])).rows[0]
+        assertEq(Number(row.overtime_days), 1.0, 'overtime_days stored as 1.0')
+      })
+
+      // 6. Verify CHECK constraint rejects invalid overtime (e.g., 0.3)
+      await as('Owner', async () => {
+        await q('savepoint ot_bad')
+        try {
+          await q(
+            `insert into crew_assignments (id, client_uuid, booking_id, crew_id, role_on_shoot, call_time, wrap_time, daily_rate, days, overtime_days, created_by)
+             values (gen_random_uuid(), $1, $2, $3, 'Camera Operator', '2099-12-12T04:00:00Z', '2099-12-12T12:00:00Z', 5000, 2, 0.3, $4)`,
+            [crypto.randomUUID(), bookingId, crewId, U.Owner],
+          )
+          throw new Error('Expected CHECK constraint to reject 0.3 overtime_days')
+        } catch (e) {
+          if (!/overtime_days.*check/i.test(e.message)) throw e
+          await q('rollback to savepoint ot_bad')
+        }
+      })
+
+      // 7. Verify Law 6: Warehouse (money-blind) sees null daily_rate on crew_assignments_v
+      await as('Warehouse', async () => {
+        const row = (await q(`select overtime_days, daily_rate from crew_assignments_v where id = $1`, [assignmentId])).rows[0]
+        assertEq(Number(row.overtime_days), 0.5, 'Warehouse sees overtime_days')
+        assertEq(row.daily_rate, null, 'Warehouse sees null daily_rate under Law 6')
+      })
+    })
+  },
+})
+
 /* ── Run ──────────────────────────────────────────────────────────────────── */
 
 await seed()

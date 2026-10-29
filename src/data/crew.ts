@@ -47,6 +47,8 @@ export interface CrewAssignment {
   startDateAd: string
   endDateAd: string
   days: number
+  overtimeDays?: number | undefined
+  overtimeApprovedBy?: string | null | undefined
   dayRatePaisa: Paisa
   totalCostPaisa: Paisa
   status: AssignmentStatus
@@ -622,7 +624,7 @@ export function prospectiveConflicts(
 /* ── §5.4 · crew-days and fill rate — replaces utilization entirely ─────── */
 
 export function crewDaysBooked(assignments: CrewAssignment[] = CREW_DATA): number {
-  return assignments.filter((a) => !a.cancelled && (a.status === 'Confirmed' || a.status === 'Completed')).reduce((sum, a) => sum + a.days, 0)
+  return assignments.filter((a) => !a.cancelled && (a.status === 'Confirmed' || a.status === 'Completed')).reduce((sum, a) => sum + a.days + (a.overtimeDays ?? 0), 0)
 }
 
 /** "Filled" = assignments actually staffed (Confirmed/Completed, not cancelled) — counted, never guessed. */

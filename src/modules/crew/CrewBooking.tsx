@@ -670,7 +670,7 @@ export function CrewBooking() {
                                   {c.startDateBs} — {c.endDateBs}
                                 </div>
                                 <div className="figure crew-mono" style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)', marginTop: 2 }}>
-                                  {c.startDateAd} — {c.endDateAd} ({c.days} day{c.days === 1 ? '' : 's'})
+                                  {c.startDateAd} — {c.endDateAd} ({c.days + (c.overtimeDays ?? 0)} day{c.days + (c.overtimeDays ?? 0) === 1 ? '' : 's'}{c.overtimeDays ? ` [+${c.overtimeDays} OT]` : ''})
                                 </div>
                               </td>
                               {desktop && canCrewMoney && (
@@ -797,7 +797,7 @@ function AssignmentCard({
         {inConflict && <Tag label="CONFLICT" tone="danger" />}
       </div>
       <div className="figure crew-mono" style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-        {c.linkedBooking} · {c.startDateAd} — {c.endDateAd} ({c.days} day{c.days === 1 ? '' : 's'})
+        {c.linkedBooking} · {c.startDateAd} — {c.endDateAd} ({c.days + (c.overtimeDays ?? 0)} day{c.days + (c.overtimeDays ?? 0) === 1 ? '' : 's'}{c.overtimeDays ? ` [+${c.overtimeDays} OT]` : ''})
       </div>
       {showMoney && (
         <div className="figure crew-mono" style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>

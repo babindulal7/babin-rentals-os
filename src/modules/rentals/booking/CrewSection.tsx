@@ -21,6 +21,9 @@ export interface CrewLine {
   overtimePaisa: Paisa
   accommodationPaisa: Paisa
   mealsPaisa: Paisa
+  overtimeDays?: number | undefined
+  shootDayOvertimes?: Record<number, 0 | 0.5 | 1.0> | undefined
+  overtimeApprovedBy?: string | undefined
 }
 
 const th = {
@@ -58,6 +61,7 @@ export interface CrewSectionProps {
     field: 'overtimePaisa' | 'accommodationPaisa' | 'mealsPaisa',
     paisa: Paisa,
   ) => void
+  onUpdateCrewLine?: ((crewId: string, updates: Partial<CrewLine>) => void) | undefined
   crewChargesPaisa: Paisa
   isPhone: boolean
   title?: string
@@ -74,11 +78,13 @@ export function CrewSection({
   onRemoveCrew,
   onClearCrew,
   onUpdateCrewExtras,
+  onUpdateCrewLine,
   crewChargesPaisa,
   isPhone,
   title = 'Crew',
 }: CrewSectionProps) {
   const [expandedCrew, setExpandedCrew] = useState<Set<string>>(new Set())
+  const [shootDayOvertimes, setShootDayOvertimes] = useState<Record<string, Record<number, 0 | 0.5 | 1.0>>>({})
 
   const toggleCrewExpanded = (crewId: string) => {
     setExpandedCrew((prev) => {
@@ -90,6 +96,49 @@ export function CrewSection({
       }
       return next
     })
+  }
+
+  const getShootDayFraction = (c: CrewLine, dayNum: number): 0 | 0.5 | 1.0 => {
+    if (c.shootDayOvertimes?.[dayNum] !== undefined) return c.shootDayOvertimes[dayNum]!
+    if (shootDayOvertimes[c.crewId]?.[dayNum] !== undefined) return shootDayOvertimes[c.crewId]![dayNum]!
+    return 0
+  }
+
+  const getEffectiveOvertimeDays = (c: CrewLine): number => {
+    if (c.overtimeDays !== undefined) return c.overtimeDays
+    const memberMap = c.shootDayOvertimes ?? shootDayOvertimes[c.crewId]
+    if (memberMap) {
+      const sum = Object.values(memberMap).reduce<number>((acc, f) => acc + f, 0)
+      if (sum > 0) return sum
+    }
+    if (c.overtimePaisa > 0 && c.dayRatePaisa > 0) {
+      return Math.round((c.overtimePaisa / c.dayRatePaisa) * 10) / 10
+    }
+    return 0
+  }
+
+  const handleShootDayOvertimeChange = (c: CrewLine, dayNum: number, fraction: 0 | 0.5 | 1.0) => {
+    const currentMemberMap = c.shootDayOvertimes ?? shootDayOvertimes[c.crewId] ?? {}
+    const updatedMemberMap: Record<number, 0 | 0.5 | 1.0> = {
+      ...currentMemberMap,
+      [dayNum]: fraction,
+    }
+    setShootDayOvertimes((prev) => ({
+      ...prev,
+      [c.crewId]: updatedMemberMap,
+    }))
+
+    const totalDays = Object.values(updatedMemberMap).reduce<number>((sum, f) => sum + f, 0)
+    const newOvertimePaisa = Math.round(totalDays * c.dayRatePaisa) as Paisa
+
+    onUpdateCrewExtras(c.crewId, 'overtimePaisa', newOvertimePaisa)
+    if (onUpdateCrewLine) {
+      onUpdateCrewLine(c.crewId, {
+        overtimeDays: totalDays,
+        shootDayOvertimes: updatedMemberMap,
+        overtimePaisa: newOvertimePaisa,
+      })
+    }
   }
 
   return (
@@ -177,6 +226,19 @@ export function CrewSection({
                             </td>
                             <td className="figure" style={{ ...td, textAlign: 'right' }}>
                               {c.days ?? days}
+                              {getEffectiveOvertimeDays(c) > 0 && (
+                                <span
+                                  style={{
+                                    display: 'inline-block',
+                                    fontSize: 'var(--t-micro)',
+                                    color: 'var(--text2)',
+                                    fontWeight: 600,
+                                    marginLeft: 4,
+                                  }}
+                                >
+                                  (+{getEffectiveOvertimeDays(c)} OT)
+                                </span>
+                              )}
                             </td>
                             <td className="figure" style={{ ...td, textAlign: 'right', fontWeight: 700 }}>
                               {formatMoney(
@@ -239,7 +301,78 @@ export function CrewSection({
                       </tr>
                       {canCrewMoney && expanded && (
                         <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                          <td colSpan={7} style={{ ...td, background: 'var(--card2)', padding: '10px 12px' }}>
+                          <td colSpan={7} style={{ ...td, background: 'var(--card2)', padding: '12px 14px' }}>
+                            {/* Shoot day overtime controls (D24, T8-06) */}
+                            <div style={{ marginBottom: 12 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                                <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
+                                  Shoot Day Overtime (D24)
+                                </span>
+                                {getEffectiveOvertimeDays(c) > 0 && (
+                                  <span style={{ fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--primary)' }}>
+                                    +{getEffectiveOvertimeDays(c)} day{getEffectiveOvertimeDays(c) === 1 ? '' : 's'} ({formatMoney(c.overtimePaisa)})
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                {Array.from({ length: Math.max(1, c.days ?? days ?? 1) }, (_, idx) => {
+                                  const dayNum = idx + 1
+                                  const currentFraction = getShootDayFraction(c, dayNum)
+                                  return (
+                                    <div
+                                      key={dayNum}
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 4,
+                                        background: 'var(--surface2, var(--card))',
+                                        padding: '4px 8px',
+                                        borderRadius: 'var(--r-sm)',
+                                        border: '1px solid var(--border)',
+                                      }}
+                                    >
+                                      <span style={{ fontSize: 'var(--t-micro)', fontWeight: 600, color: 'var(--text2)', marginRight: 4 }}>
+                                        Day {dayNum}:
+                                      </span>
+                                      {([0, 0.5, 1.0] as const).map((fraction) => {
+                                        const isSelected = currentFraction === fraction
+                                        const label = fraction === 0 ? 'None' : fraction === 0.5 ? '+½ day' : '+1 day'
+                                        return (
+                                          <button
+                                            key={fraction}
+                                            type="button"
+                                            className="press"
+                                            aria-pressed={isSelected}
+                                            aria-label={`Day ${dayNum} overtime ${label} for ${c.name}`}
+                                            onClick={() => handleShootDayOvertimeChange(c, dayNum, fraction)}
+                                            style={{
+                                              position: 'relative',
+                                              minHeight: 28,
+                                              minWidth: 44,
+                                              padding: '4px 8px',
+                                              borderRadius: 'var(--r-xs)',
+                                              border: isSelected ? '1px solid var(--primary)' : '1px solid var(--border)',
+                                              background: isSelected ? 'var(--primary)' : 'var(--card)',
+                                              color: isSelected ? 'var(--primary-fg, #fff)' : 'var(--text)',
+                                              fontSize: 'var(--t-micro)',
+                                              fontWeight: isSelected ? 700 : 500,
+                                              cursor: 'pointer',
+                                            }}
+                                          >
+                                            <TouchInset />
+                                            {label}
+                                          </button>
+                                        )
+                                      })}
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                              <p style={{ margin: '6px 0 0', fontSize: 'var(--t-micro)', color: 'var(--text2)', lineHeight: 1.4 }}>
+                                Adds +½ or +1 day at the same day rate to the client bill and crew member payout (D24).
+                              </p>
+                            </div>
+
                             <div
                               style={{
                                 display: 'grid',
