@@ -7,6 +7,7 @@
 - Integrated the scanner across Packing, Handover, Return and Reset. Added real input refs, enabled-state gates, modal/editing isolation, duplicate suppression and 50-serial ordering coverage. Camera and manual controls remain available.
 - Reproduced and fixed the hidden-Suspense scanner defect: the passive listener accepted `PARTIALHIDDEN-1`; the layout-effect listener detaches and clears partial input when hidden, and reattaches on reveal. Corrected the offline-photo copy rejected by the UI-copy gate.
 - Direct changes are scanner/input/floor files, one offline evidence message and task/verification logs. No direct edits to the listed shared business files; current-main core/rbac changes are inherited through normal merge. Original checkout drafts are preserved.
+- Fast-forwarded local `main` from `4126767c` to verified integration `4a31908aba0518f382de3a459078e47541e9b687` using an expected-old-ref guard after confirming main was not checked out elsewhere. This closeout changes documentation only; the original checkout and concurrent drafts remain untouched.
 
 **Ruled**
 - No new product or permission decision. T2-09 stays doing until physical scanner/iPad acceptance. Newer T1-15 records a four-digit ruling and migration 0186 outside this frozen integration; the captured design note's unresolved decision is historical.

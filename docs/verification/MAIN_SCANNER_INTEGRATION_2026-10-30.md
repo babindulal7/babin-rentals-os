@@ -60,5 +60,5 @@ Completion was generated with `npm run completion`; `npm run lint:progress` PASS
   The unresolved PIN decision in the captured design note is historical, not a new request
   for Babin to decide again. The PIN-titled commit already on main contains preview files.
 
-Local main advancement is recorded separately after checking the current ref and ancestry.
+Local `main` was fast-forwarded from `4126767c` to verified integration `4a31908aba0518f382de3a459078e47541e9b687` on 30 October, using an expected-old-ref guard and confirming main was not checked out elsewhere. The following closeout commit changes documentation only.
 The original checkout and its concurrent drafts are preserved.
