@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { BarcodeBurstDetector } from '../barcodeBurst'
+import { act, createElement, Suspense, useRef } from 'react'
+import { createRoot } from 'react-dom/client'
+import { BarcodeBurstDetector, useBarcodeBurst } from '../barcodeBurst'
+
+;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
 
 describe('BarcodeBurstDetector (T2-09)', () => {
   let detector: BarcodeBurstDetector
@@ -240,5 +244,63 @@ describe('BarcodeBurstDetector (T2-09)', () => {
     burst(instance, 'CAM-456', 10)
     expect(onScan).toHaveBeenCalledExactlyOnceWith('CAM-456')
     expect(focus).not.toHaveBeenCalled()
+  })
+})
+
+
+describe('useBarcodeBurst workspace lifecycle', () => {
+  it('stops scanning while Suspense hides a workspace and clears its partial burst', async () => {
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+    const onScan = vi.fn()
+    const pending = new Promise<void>(() => {})
+    let now = 100000
+    const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => now)
+
+    function Workspace({ suspended }: { suspended: boolean }) {
+      const targetInputRef = useRef<HTMLInputElement>(null)
+      useBarcodeBurst({ onScan, targetInputRef })
+      if (suspended) throw pending
+      return createElement('input', { ref: targetInputRef, 'aria-label': 'Scan serial' })
+    }
+
+    async function render(suspended: boolean) {
+      await act(async () => {
+        root.render(createElement(Suspense, { fallback: createElement('button', null, 'Loading workspace') },
+          createElement(Workspace, { suspended })))
+      })
+    }
+
+    function keys(value: string, submit = true) {
+      for (const key of [...value, ...(submit ? ['Enter'] : [])]) {
+        now += 10
+        window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
+      }
+    }
+
+    try {
+      await render(false)
+      keys('VISIBLE-1')
+      keys('PARTIAL', false)
+      await render(true)
+      expect(container.textContent).toContain('Loading workspace')
+      expect(container.querySelector('input')?.style.display).toBe('none')
+      const loadingButton = container.querySelector('button')
+      loadingButton?.focus()
+      expect(document.activeElement).toBe(loadingButton)
+      keys('HIDDEN-1')
+      expect(onScan.mock.calls.map(([code]) => code)).toEqual(['VISIBLE-1'])
+
+      await render(false)
+      keys('')
+      expect(onScan.mock.calls.map(([code]) => code)).toEqual(['VISIBLE-1'])
+      keys('VISIBLE-2')
+      expect(onScan.mock.calls.map(([code]) => code)).toEqual(['VISIBLE-1', 'VISIBLE-2'])
+    } finally {
+      act(() => root.unmount())
+      container.remove()
+      nowSpy.mockRestore()
+    }
   })
 })

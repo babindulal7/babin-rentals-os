@@ -1,5 +1,47 @@
 # Progress Log
 
+## 2026-10-30 — Reviewed main reconciliation and T2-09 scanner integration
+
+**Did**
+- Reconciled local main's Reset claim with GitHub root cleanup, merged the T1-15 PIN design and T3-14a invoice prompt branches, and reconciled current main `4126767c` in the isolated `lane-a/T2-09-main-integration` worktree.
+- Integrated the scanner across Packing, Handover, Return and Reset. Added real input refs, enabled-state gates, modal/editing isolation, duplicate suppression and 50-serial ordering coverage. Camera and manual controls remain available.
+- Reproduced and fixed the hidden-Suspense scanner defect: the passive listener accepted `PARTIALHIDDEN-1`; the layout-effect listener detaches and clears partial input when hidden, and reattaches on reveal. Corrected the offline-photo copy rejected by the UI-copy gate.
+- Direct changes are scanner/input/floor files, one offline evidence message and task/verification logs. No direct edits to the listed shared business files; current-main core/rbac changes are inherited through normal merge. Original checkout drafts are preserved.
+
+**Ruled**
+- No new product or permission decision. T2-09 stays doing until physical scanner/iPad acceptance. Newer T1-15 records a four-digit ruling and migration 0186 outside this frozen integration; the captured design note's unresolved decision is historical.
+- No migration authored or applied by this integration. The inherited migration chain is VERIFIED locally by both database gates, not APPLIED or PRODUCTION-VERIFIED by this session. Production release remains HOLD.
+
+**Verified**
+- Final source `536f8c0098816419072c067b7dce0bf4cb614b6bfc3d8bc9bbd06da6895b1d59`: `typecheck` PASS · `scanner-tests` PASS · `test` PASS · `pglite` PASS · `lifecycle` PASS · `financial-integrity` PASS · `security` PASS · `server-contracts` PASS · `partial-return` PASS · `test-receipts` PASS · `lint` PASS · `shell` PASS · `ui-copy` PASS · `contrast` PASS · `build` PASS · `coverage` PASS.
+- Full command receipts and timings: `docs/verification/MAIN_SCANNER_INTEGRATION_2026-10-30.md`; raw logs in `artifacts/main-scanner-integration-20261028/`. The Suspense regression failed before the fix and passed afterward. Earlier pre-fix test and UI-copy results are retained as historical attempts.
+- Full mock suite and coverage each passed 5,915/5,915 tests in 486 files; focused scanner 39/39; migrations 182/182; lifecycle 41/41; server contracts 58/58; partial Return 58/58; contrast 106/106.
+- `npm run completion` generated the block below. `npm run lint:progress` PASS after writing this entry.
+- Browser automation timed out; no 375/820/1440, role-based browser or physical-device acceptance is claimed.
+
+## Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 62 / 62 (100%) | +7 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 51 / 51 (100%) | +3 |
+| Lifecycle | steps green / total | 41 / 41 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 182 files · check:pglite 182/182 applied, 0 failed (recorded 2026-10-29T11:26:25.848Z). Suite: PASS — 5915/5915 passed, 0 failed (recorded 2026-10-29T12:32:18.531Z); source fingerprint matches.
+Coverage suite: PASS — 5915/5915 passed, 0 failed (recorded 2026-10-29T12:32:18.531Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-10-29T11:27:11.241Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+
+- T2-09: Babin's O-16 scanner purchase/availability, physical iPad 50 consecutive serials without missed/doubled scans, and manual-tick tap-count acceptance.
+- Browser acceptance at 375/820/1440 as Owner/Coordinator and Warehouse; hosted and real-device/offline acceptance remain NOT VERIFIED.
+- Lane B: inherited Team Notes 0185 still has a broad staff UPDATE policy and an unresolved `auth_is_coordinator_or_above()` call; add runtime role regressions and repair it separately. Held Reset must resolve the 0185 number collision before merging.
+- Staff, plans, Notes repair, PIN and invoice branches have advanced during verification and need fresh review of their actual latest source/receipts. The captured review's original defects are historical findings, not claims that every repair is still absent. Newer PIN 0186 and invoice 0193 runtime changes are outside this integration. Other unreviewed feature branches remain held.
+
 ## 2026-10-28 — T1-15 design phase: Switch user with name + PIN — design note, no code (card's security gate)
 
 **Did**

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 
 /** Recognize HID scanner keystrokes without treating ordinary editing as a scan. */
 export interface BarcodeBurstConfig {
@@ -158,7 +158,8 @@ export function useBarcodeBurst(config: BarcodeBurstConfig): {
     })
   }, [config.minChars, config.maxIntervalMs, config.cooldownMs, config.enabled, config.preventDefaultOnScan, targetInputRef])
 
-  useEffect(() => {
+  // Suspense hides a mounted floor by cleaning up layout effects, not passive effects.
+  useLayoutEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => detectorRef.current?.handleKeyDown(e)
     window.addEventListener('keydown', handleKeyDown, { capture: true })
     return () => {

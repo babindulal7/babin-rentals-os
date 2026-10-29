@@ -199,7 +199,7 @@ export function OperationEvidenceStatus({
             fontSize: 'var(--t-caption, 12px)',
           }}
         >
-          Device is currently offline. Photo uploads require network connectivity (Law 12 / R-40).
+          Device is offline. Connect to the internet to upload photos.
         </div>
       )}
 
