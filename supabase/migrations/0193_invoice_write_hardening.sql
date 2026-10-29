@@ -339,13 +339,11 @@ begin
 
   -- 2. Role & permission validation (C+: Coordinator, Manager, Admin, Owner)
   v_role := auth_user_role();
-  if current_user not in ('postgres', 'supabase_admin', 'service_role') then
-    if v_role is null or v_role not in ('Owner', 'Admin', 'Manager', 'Coordinator') then
-      raise exception
-        'extend_booking: this session (%) may not extend a booking. Coordinator, Manager, Admin and Owner only.',
-        coalesce(v_role::text, 'unidentified')
-        using errcode = '42501';
-    end if;
+  if v_role is null or v_role not in ('Owner', 'Admin', 'Manager', 'Coordinator') then
+    raise exception
+      'extend_booking: this session (%) may not extend a booking. Coordinator, Manager, Admin and Owner only.',
+      coalesce(v_role::text, 'unidentified')
+      using errcode = '42501';
   end if;
 
   -- 3. Resolve actor
@@ -384,8 +382,7 @@ begin
 
   -- 7. Update inventory_reservations (GiST exclusion and capacity ceiling re-evaluate here)
   update inventory_reservations
-     set period = tstzrange(lower(period), v_new_return, '[)'),
-         updated_at = v_now
+     set period = tstzrange(lower(period), v_new_return, '[)')
    where booking_id = v_booking_id
      and released_at is null;
 

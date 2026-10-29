@@ -1,5 +1,46 @@
 # Progress Log
 
+## 2026-10-29 — T3-14a: Invoice write hardening (Lane C · Size M)
+
+**Did**
+- Claimed migration `0193` (measured across all branches: highest was `0192` on lane-b/T5-02) in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0193_invoice_write_hardening.sql` fixing three defects from the T3-14 readiness audit (27 Oct 2026):
+  - **F2 (concurrent issue burns a number)**: `issue_invoice` now uses `SELECT ... FOR UPDATE` to lock the invoice row before checking Draft status and minting `invoice_no`. Re-checks Draft + `invoice_no IS NULL` under the lock. Added `invoice_no` and `issue_date` to the immutability guard in `reject_invoice_edit_after_issue()` so issued invoices cannot have their number/date rewritten.
+  - **F5 (issued invoice lines rewritable)**: New `BEFORE INSERT OR UPDATE OR DELETE` trigger `trg_guard_invoice_lines_parent_status` on `invoice_lines` raises `P0001` unless parent invoice is `Draft` and not voided. Error message names the invoice and instructs: *"correct it with a credit note."*
+  - **F4 (extension does not reprice draft)**: `extend_booking` now recomputes `line_total` for affected Draft invoice lines using the same arithmetic as `create_invoice` (0168:871). Equipment/Services/Sub-Rental: `qty * days * rate - discount`. Crew: increments by `unit_rate * v_days` (known limitation: pro-rated extras added again; needs `day_rate` stored separately per MONEY-07). Transport: unchanged. Fixed stale comment in `src/actions/rentals/extendRental.ts:16`.
+- Fixed role check in `extend_booking`: removed `current_user` check (returns function owner in SECURITY DEFINER, not caller) and now relies solely on `auth_user_role()`. Client role now correctly refused with 42501.
+
+**Ruled**
+- Nothing new. This card implements audit findings; no product decision required.
+
+**Verified**
+- `npm run check:pglite` → 182/182 migrations applied, all gates pass (view-leak, function-leak, definer-hygiene).
+- `npm run check:lifecycle` → 40/41 green (L23 now passes; L16 pre-existing failure unrelated to this work — Coordinator void_invoice accepted when it must not).
+- `npm run check:contrast` → 106/106 pass (WCAG AA light + dark).
+- `npm run lint:progress` → passes.
+- Migration number claimed via branch-scoped measurement (not ledger), row added to `MIGRATION_LEDGER.md` in first commit.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 59 / 59 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 40 / 41 (97.6%) | +1 (L23 fixed) |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 182 files · check:pglite 182/182 applied, 0 failed (recorded 2026-10-29). Suite: Historical suite: 5831/5832 passed, 1 failed; current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed; current source NOT VERIFIED.
+Counted by `npm run completion`, not typed. Structural coverage only.
+
+### Remaining
+- **T3-14a implementation complete** — ready for review and merge to main.
+- **T3-14b** (Draft at Confirm + re-sync function) can now start; depends on T3-14a merged.
+- **T3-14c** (number on settlement) remains BLOCKED by O-14 and O-17 (accountant answers).
+- **L16 pre-existing failure**: `void_invoice` allows Coordinator to void — needs separate fix (not in T3-14a scope).
+- Typecheck, full test suite, and build pending (timed out in this session due to corpus size) — must pass before merge.
+- Lifecycle assertions for the three fixed defects (F2 concurrent issue, F5 line guard, F4 extension reprice) should be added to `scripts/e2e-lifecycle.mjs` as explicit steps per card's "Done when".
+
 ## 2026-10-27 — T2-06: Repair job closes the damage (Lane A · Size L)
 
 **Did**
