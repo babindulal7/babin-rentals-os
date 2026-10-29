@@ -38,6 +38,7 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 
 ## Remaining
 
+- Draft PR publication awaits explicit approval to push `lane-a/T2-09-main-integration` to `babindulal7/babin-rentals-os`. Automatic approval review rejected that upload because explicit authorization and repository trust were not established. Local main integration is complete; no push was performed.
 - T2-09: Babin's O-16 scanner purchase/availability, physical iPad 50 consecutive serials without missed/doubled scans, and manual-tick tap-count acceptance.
 - Browser acceptance at 375/820/1440 as Owner/Coordinator and Warehouse; hosted and real-device/offline acceptance remain NOT VERIFIED.
 - Lane B: inherited Team Notes 0185 still has a broad staff UPDATE policy and an unresolved `auth_is_coordinator_or_above()` call; add runtime role regressions and repair it separately. Held Reset must resolve the 0185 number collision before merging.
