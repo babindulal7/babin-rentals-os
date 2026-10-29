@@ -1,5 +1,56 @@
 # Progress Log
 
+## 2026-10-29 — T8-07: Timesheet by the day (Lane A · Size S)
+
+**Did**
+- Replaced the hourly estimate (`STANDARD_DAY_HOURS = 8`) for timesheet pay with days × day rate + recorded overtime days in `src/lib/queries/timesheet.ts` and `src/modules/crew/TimesheetTab.tsx` (Ruling D24, closing OPEN_DECISIONS §18):
+  - In `buildTimesheetRows`: pay is calculated per shoot day as `(1 + Number(day.overtime_fraction ?? 0)) * booking.day_rate`.
+  - Added `daysWorked` and `overtimeDays` to `TimesheetRow` interface and result rows.
+  - Retained `STANDARD_DAY_HOURS = 8` for overtime hour highlighting only.
+  - Updated `listTimesheetWeek` select to include `overtime_fraction`.
+  - Updated CSV export in `timesheetCsv`: replaced "Estimated pay (Rs)" column with "Pay (Rs)", and added "Days" and "OT days" columns.
+  - In `TimesheetTab.tsx`:
+    - Changed "Estimated Pay" KPI to "Pay" with definition citing Ruling D24.
+    - Added desktop table "Days" column displaying `{daysWorked}{overtimeDays > 0 ? ' (+X OT)' : ''}`.
+    - Changed table header "Est. pay" to "Pay".
+    - In expanded row, displayed daily rate, overtime days and total pay.
+    - Updated phone `StaffCard` to show days worked and overtime along with total hours.
+    - Replaced footnote text citing estimated pay with explanation of days worked + overtime pay matching Crew Assist payouts.
+  - Removed all "Estimated pay" / "Est. pay" labels across query and UI.
+- Updated and expanded unit tests:
+  - In `src/lib/queries/__tests__/timesheet.test.ts`: verified pay by the day (1 day @ 4000 = Rs 4,000), 3-day line with +0.5 OT = 3.5 days @ 5000 = Rs 17,500, unrecorded hours with full day pay, and CSV without estimated pay labels (25/25 passing).
+  - In `src/modules/crew/__tests__/TimesheetTab.test.tsx`: verified table and KPI headers render "Pay" without "Estimated pay" labels, and asserted Law 6 money withholding from money-blind sessions (11/11 passing).
+
+**Ruled**
+- Ruling D24: Timesheet pay is by the day (days × day rate + recorded overtime days), matching Crew Assist payouts. Hours are operational tracking, not a divisor.
+- Law 6: Day rate and total pay are withheld from money-blind roles (Warehouse, Technician, Driver, Client) in DOM, KPI, and CSV.
+
+**Verified**
+- `npm run typecheck`: 0 errors.
+- `VITE_DATA_SOURCE=mock npm test`: 36/36 tests pass (`timesheet.test.ts`, `TimesheetTab.test.tsx`).
+- `npm run check:pglite`: 183/183 applied, 0 failed, 0 leaks, clean definer hygiene.
+- `npm run check:lifecycle`: 42/42 green.
+- `npm run lint`: 0 errors, 0 warnings.
+- `npm run check:contrast`: 106/106 pass.
+- `npm run build`: built in 2m 6s with exit code 0.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 62 / 62 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 51 / 51 (100%) | +0 |
+| Lifecycle | steps green / total | 42 / 42 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 183 files · check:pglite 183/183 applied, 0 failed.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T8-07 complete and fully verified. Ready for local merge review by Babin / Claude.
+
 ## 2026-10-29 — T8-06: Crew overtime half/full day (Lane A · Size M)
 
 **Did**

@@ -96,7 +96,7 @@ Recorded who added it (`overtime_approved_by`). Coordinator sees the billed amou
 payout agree.
 **Needs** — none.
 
-### T8-07 · Timesheet by the day            status: todo · size: S · lane A
+### T8-07 · Timesheet by the day            status: done — awaiting merge (lane-a/T8-07-timesheet-by-the-day) · size: S · lane A
 **What** — Replace the hourly estimate (`STANDARD_DAY_HOURS = 8`) with days × day rate + recorded
 overtime days. Hours stay visible as information only.
 **Why** — D24 closes OPEN_DECISIONS §18.
