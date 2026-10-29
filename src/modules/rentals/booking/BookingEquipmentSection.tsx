@@ -62,6 +62,8 @@ export interface BookingEquipmentSectionProps {
   navigate: (path: string) => void
   pricing: PricingPipelineResult
   isPhone?: boolean
+  /** T3-01 · W8: "Copy a past booking" — raised to the page (the D9 chooser + inject live there). */
+  onCopyPastBooking?: () => void
 }
 
 export function BookingEquipmentSection({
@@ -90,6 +92,7 @@ export function BookingEquipmentSection({
   user,
   navigate,
   pricing,
+  onCopyPastBooking,
 }: BookingEquipmentSectionProps) {
   const [collapsedBundles, setCollapsedBundles] = useState<Record<string, boolean>>({})
 
@@ -274,6 +277,7 @@ export function BookingEquipmentSection({
           showPrices={canBookingMoney}
           inputStyle={inputStyle}
           onScan={addScannedEquipment}
+          {...(onCopyPastBooking ? { onCopyPastBooking } : {})}
         />
       </div>
 

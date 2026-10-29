@@ -47,12 +47,18 @@ import {
   useNewRentalPricing,
   useNewRentalClient,
   useNewRentalNavigation,
+  useNewRentalRebook,
+  type ApplyRebookMode,
   type BlockingNotice,
   type ConfirmWriteState,
   type Line,
   type CrewLine,
 } from './booking'
 import type { PromoCodeDefinition } from '../../lib/pricingPipeline'
+import { buildRebookPrefill, formatRebookCopyOptions, type RebookPrefill } from '../../lib/rebook'
+import { RebookDialog } from './actions/RebookDialog'
+import { Modal } from '../../components/ui/Modal'
+import { newClientUuid } from '../../lib/supabase'
 import { useNewRentalProductDeposits } from './booking/useNewRentalProductDeposits'
 export type { Line, CrewLine, BlockingNotice, ConfirmWriteState }
 export { lineAmountPaisa, confirmWriteRefusals }
@@ -696,7 +702,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     setDepositAuthorizedBy,
   })
 
-  const { confirmBooking } = useNewRentalSubmit({
+  const { confirmBooking, saveAsQuote, quoteSaved, setQuoteSaved } = useNewRentalSubmit({
     editBookingId,
     confirmBlocked,
     saveState,
@@ -742,6 +748,69 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     confirmKey,
     draftBookingKey,
   })
+
+  /* ── T3-01 · Re-book ───────────────────────────────────────────────────
+   * D9's prefill lands through individual setters, NOT applyDraftFields:
+   * dates stay at the L1 default (the engine emits none), govId keeps its
+   * client-PAN seeding, and project/kind keep their own machinery (kind
+   * auto-fills from the client's last booking). 'append' serves the in-form
+   * "Copy a past booking" chip; 'fresh' serves the ?rebook= deep link. */
+  const applyRebookPrefill = useCallback(
+    (prefill: RebookPrefill, mode: ApplyRebookMode) => {
+      if (prefill.clientId) setSelectedClientId(prefill.clientId)
+      const mapped = prefill.lines.map((l) => ({ ...l }) as Line)
+      setLines((prev) => (mode === 'fresh' ? mapped : [...prev, ...mapped]))
+      if (prefill.crew.length > 0) {
+        const crewMapped = prefill.crew.map((c) => ({ ...c, role: c.role as CrewRole }) as CrewLine)
+        setCrew((prev) => (mode === 'fresh' ? crewMapped : [...prev, ...crewMapped]))
+      }
+      if (prefill.delivery) {
+        setDeliveryType(prefill.delivery.deliveryType)
+        setDeliveryChargePaisa(prefill.delivery.deliveryChargePaisa)
+        setFuelChargePaisa(prefill.delivery.fuelChargePaisa)
+        setVehicle(prefill.delivery.vehicle)
+        setNumberPlate(prefill.delivery.numberPlate)
+        setDriverContact(prefill.delivery.driverContact)
+        setSpecialInstructions(prefill.delivery.specialInstructions)
+      }
+      if (prefill.discountPct !== null) setDiscountPct(prefill.discountPct)
+    },
+    [
+      setSelectedClientId,
+      setLines,
+      setCrew,
+      setDeliveryType,
+      setDeliveryChargePaisa,
+      setFuelChargePaisa,
+      setVehicle,
+      setNumberPlate,
+      setDriverContact,
+      setSpecialInstructions,
+      setDiscountPct,
+    ],
+  )
+
+  const { notice: rebookNotice, dismissNotice: dismissRebookNotice } = useNewRentalRebook({
+    searchParams,
+    setSearchParams,
+    editBookingId,
+    role: user?.role ?? null,
+    setActionError,
+    apply: applyRebookPrefill,
+  })
+
+  /* The in-form copy flow (W8): pick which of this client's past bookings to
+   * copy, then the D9 chooser, then the prefill is APPENDED to the form. */
+  const [copyPickerOpen, setCopyPickerOpen] = useState(false)
+  const [copyRebookNo, setCopyRebookNo] = useState<string | null>(null)
+  const openCopyPicker = useCallback(() => {
+    if (!client) return
+    setCopyPickerOpen(true)
+  }, [client])
+
+  /* Client history's Re-book (D9: "on the client's history") opens the same
+   * chooser and navigates to a FRESH prefilled form. */
+  const [historyRebookNo, setHistoryRebookNo] = useState<string | null>(null)
 
   const { jumpToSection, runNoticeAction } = useNewRentalNavigation({
     client,
@@ -831,12 +900,33 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
       else setExitPrompt('unsaved-edits')
     } else handleExit()
   }
+  /* W5: "Save as quote and Confirm are both one tap." Same guards, same
+     honesty — a blocked press tells staff what to fix rather than doing
+     nothing. The hook stops at the Quote stage; nothing here invents a gate. */
+  const handleSaveAsQuote = () => {
+    if (editBookingId) return
+    setValidationAttempted(true)
+    if (!confirmBlocked) {
+      void saveAsQuote()
+      return
+    }
+    const firstNotice = blockingNotices[0]
+    if (firstNotice?.action) runNoticeAction(firstNotice.action)
+    else jumpToSection('rail-booking-summary')
+  }
   const actionBusy = saveState === 'saving'
   const actionLabel = editBookingId ? 'Save changes' : 'Confirm Booking'
   const secondaryHeaderActions: OverflowMenuItem[] = [
     ...(!editBookingId && !isDesktop ? [{
       label: 'Save draft', icon: 'file' as const,
       onClick: () => { if (!actionBusy) void saveDraft() },
+      ...(actionBusy ? { unavailable: 'Saving is in progress' } : {}),
+    }] : []),
+    /* W5 — a quote is one tap on every width, never hidden behind the
+       draft's overflow when Confirm is a visible primary. */
+    ...(!editBookingId && !isDesktop ? [{
+      label: 'Save as quote', icon: 'file' as const,
+      onClick: handleSaveAsQuote,
       ...(actionBusy ? { unavailable: 'Saving is in progress' } : {}),
     }] : []),
     { label: 'Review booking', icon: 'checklist', onClick: () => jumpToSection('rail-booking-summary') },
@@ -887,6 +977,18 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
             <WorkspaceHeaderSecondaryActions>
               <Button variant="outline" disabled={actionBusy} onClick={() => void saveDraft()}>
                 Save draft
+              </Button>
+              <Button
+                variant="outline"
+                disabled={actionBusy}
+                onClick={handleSaveAsQuote}
+                title={
+                  confirmBlocked
+                    ? `Cannot save yet:\n• ${blockingNotices.map((n) => n.text).join('\n• ')}`
+                    : 'Save this booking as a Quote at the current rates'
+                }
+              >
+                Save as quote
               </Button>
             </WorkspaceHeaderSecondaryActions>
           )}
@@ -1035,6 +1137,43 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
             </Button>
           )}
         </p>
+      )}
+
+      {/* T3-01: the D9 banner — what was copied, and what was left out. It
+          repeats nothing the form does not show; the unavailable list is the
+          one fact staff cannot see anywhere else. Dismissed, not eternal. */}
+      {rebookNotice && (
+        <div
+          role="status"
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 10,
+            margin: '0 0 var(--sp-md)',
+            padding: '10px 12px',
+            borderRadius: 'var(--r-btn)',
+            background: 'var(--st-in-bg)',
+            color: 'var(--st-in-fg)',
+            fontSize: 'var(--t-meta)',
+            lineHeight: 1.5,
+          }}
+        >
+          <Icon name="refresh" size={15} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span style={{ flex: 1 }}>
+            Re-booked from <strong>{rebookNotice.sourceBookingNo}</strong> — client, products and
+            quantities copied at today's rates. Nothing is written until you save.
+            {rebookNotice.unavailable.length > 0 && (
+              <>
+                {' '}
+                Left out as not available any more:{' '}
+                <strong>{rebookNotice.unavailable.map((u) => u.name).join(', ')}</strong>.
+              </>
+            )}
+          </span>
+          <Button variant="ghost" aria-label="Dismiss re-book notice" onClick={dismissRebookNotice}>
+            Dismiss
+          </Button>
+        </div>
       )}
 
       {/* Global Inventory Stock Contention Banner */}
@@ -1186,6 +1325,9 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
             navigate={navigate}
             pricing={pricing}
             isPhone={isPhone}
+            /* W8: the chip appears once a client is chosen — "copy a past
+               booking" is client-scoped in the form. */
+            {...(client && !editBookingId ? { onCopyPastBooking: openCopyPicker } : {})}
           />
         </div>
 
@@ -1291,6 +1433,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
             {canBookingMoney && <div className="new-rental-footer-total"><span>Rental total</span><strong>{formatMoney(pricing.rentalTotalPaisa)}</strong></div>}
             {isPhone && <Button variant="ghost" aria-label="Review rental summary" onClick={() => document.getElementById('rail-booking-summary')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>Summary</Button>}
             {!editBookingId && <Button variant="outline" onClick={() => void saveDraft()} disabled={actionBusy}>Save draft</Button>}
+            {!editBookingId && <Button variant="outline" onClick={handleSaveAsQuote} disabled={actionBusy}>Save as quote</Button>}
           </>}
         />
       )}
@@ -1322,6 +1465,93 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
         onReloadQuote={() => setQuoteReload((v) => v + 1)}
         confirmedSuccess={confirmedSuccess}
         setConfirmedSuccess={setConfirmedSuccess}
+        quoteSaved={quoteSaved}
+        setQuoteSaved={setQuoteSaved}
+        {...(!editBookingId ? { onRebookBooking: (bookingNo) => setHistoryRebookNo(bookingNo) } : {})}
+      />
+
+      {/* ── T3-01 modals ── */}
+      {/* The copy picker: this client's own booking numbers, exactly as the
+          history drawer lists them — no invented detail, per that drawer's
+          own honesty rule. Picking one opens the D9 chooser below. */}
+      <Modal
+        isOpen={copyPickerOpen}
+        onClose={() => setCopyPickerOpen(false)}
+        title="Copy a past booking"
+        subtitle={client ? `${client.name} · ${client.id}` : undefined}
+        size="sm"
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, width: '100%' }}>
+            <Button variant="secondary" onClick={() => setCopyPickerOpen(false)}>
+              Cancel
+            </Button>
+          </div>
+        }
+      >
+        {client && client.activeBookings.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {client.activeBookings.map((bookingNo) => (
+              <Button
+                key={bookingNo}
+                variant="outline"
+                icon="refresh"
+                onClick={() => {
+                  setCopyPickerOpen(false)
+                  setCopyRebookNo(bookingNo)
+                }}
+                style={{ justifyContent: 'flex-start' }}
+              >
+                {bookingNo}
+              </Button>
+            ))}
+          </div>
+        ) : (
+          <p style={{ margin: 0, fontSize: 'var(--t-ui)', color: 'var(--text2)' }}>
+            This client has no recorded bookings to copy.
+          </p>
+        )}
+      </Modal>
+
+      {/* In-form copy (W8): the chooser, then the prefill is APPENDED to the
+          current form — still nothing written until staff save. */}
+      <RebookDialog
+        isOpen={copyRebookNo !== null}
+        onClose={() => setCopyRebookNo(null)}
+        bookingNo={copyRebookNo ?? ''}
+        confirmLabel="Add to this booking"
+        onConfirm={(options, facts) => {
+          const bookingNo = copyRebookNo
+          setCopyRebookNo(null)
+          if (!bookingNo) return
+          const prefill = buildRebookPrefill(
+            facts.source,
+            facts.products,
+            facts.bundles,
+            options,
+            newClientUuid,
+          )
+          applyRebookPrefill(prefill, 'append')
+        }}
+      />
+
+      {/* Client history's Re-book (D9): fresh prefilled form. The unsaved
+          local draft survives the navigation — New Rental restores it on the
+          next fresh open — so nothing staff typed is silently lost. */}
+      <RebookDialog
+        isOpen={historyRebookNo !== null}
+        onClose={() => setHistoryRebookNo(null)}
+        bookingNo={historyRebookNo ?? ''}
+        confirmLabel="Open in New Rental"
+        onConfirm={(options) => {
+          const bookingNo = historyRebookNo
+          setHistoryRebookNo(null)
+          if (!bookingNo) return
+          const copy = formatRebookCopyOptions(options)
+          navigate(
+            `/rentals?action=new&rebook=${encodeURIComponent(bookingNo)}` +
+            (copy ? `&copy=${encodeURIComponent(copy)}` : ''),
+          )
+        }}
       />
     </PageShell>
   )

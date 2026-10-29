@@ -215,6 +215,14 @@ export interface AddItemPanelProps {
    */
   onScan?: (code: string, window: BookingWindow, days: number) => Promise<string | null>
   /**
+   * T3-01 · W8: "copy a past booking" sits beside search, scan and bundle as
+   * the fourth way to add gear. The page owns the flow (usually: pick one of
+   * the client's past bookings, then the D9 chooser); this panel only raises
+   * the tap. Omitted, the chip does not render — secondary screens keep the
+   * lean row.
+   */
+  onCopyPastBooking?: () => void
+  /**
    * Render the search field **in the section** instead of behind an "Add Item"
    * trigger.
    *
@@ -306,6 +314,7 @@ export function AddItemPanel({
   disabled = false,
   inline = false,
   onScan,
+  onCopyPastBooking,
   includeCrewAndVehicle = false,
   applyBundleSaving = false,
   onAddCrew,
@@ -792,6 +801,20 @@ export function AddItemPanel({
             >
               <Icon name="barcode" size={18} />
               <span>Scan</span>
+            </button>
+          )}
+
+          {onCopyPastBooking && (
+            <button
+              type="button"
+              className="press"
+              aria-label="Copy a past booking"
+              title="Copy a past booking"
+              onClick={onCopyPastBooking}
+              style={{ minHeight: 44, padding: '0 10px', display: 'inline-flex', gap: 5, alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--r-btn)', border: '1px solid var(--btn-secondary-border)', background: 'var(--btn-secondary-bg)', color: 'var(--text)', cursor: 'pointer', fontSize: 'var(--t-meta)', fontWeight: 600, whiteSpace: 'nowrap' }}
+            >
+              <Icon name="refresh" size={18} />
+              <span>Copy booking</span>
             </button>
           )}
 
