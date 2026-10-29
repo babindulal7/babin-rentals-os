@@ -19,7 +19,7 @@ const sampleCrew: CrewLine[] = [
     role: 'Director of Photography',
     phone: '9841234567',
     dayRatePaisa: rupees(12000),
-    overtimePaisa: rupees(1000),
+    overtimeDays: 0,
     accommodationPaisa: rupees(0),
     mealsPaisa: rupees(500),
   },

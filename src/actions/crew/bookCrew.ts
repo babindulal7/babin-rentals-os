@@ -12,6 +12,7 @@ export type BookCrewInput = {
   wrapTime?: string
   dailyRate?: number
   days?: number
+  overtimeDays?: number
   notes?: string
   clientUuid?: string
 }
@@ -21,6 +22,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 function validate(input: BookCrewInput) {
   if (!Array.isArray(input.crewIds) || !input.crewIds.length || input.crewIds.some((id) => typeof id !== 'string' || !id.trim())) throw new Error('At least one crew ID must be selected.')
   if (input.days !== undefined && (!Number.isInteger(input.days) || input.days < 1)) throw new Error('Days must be a positive integer greater than or equal to 1.')
+  if (input.overtimeDays !== undefined && (!Number.isFinite(input.overtimeDays) || input.overtimeDays < 0 || input.overtimeDays % 0.5 !== 0)) throw new Error('Overtime days must be a non-negative multiple of 0.5.')
   if (input.dailyRate !== undefined && (!Number.isFinite(input.dailyRate) || input.dailyRate < 0)) throw new Error('Daily rate must be a non-negative number.')
   if (!input.bookingId?.trim()) throw new Error('A target booking is required to assign crew.')
   if (new Set(input.crewIds.map((id) => id.trim())).size !== input.crewIds.length) throw new Error('Choose each crew member only once.')
@@ -97,7 +99,8 @@ export const bookCrewConfig: ActionConfig<BookCrewInput, BookCrewResult> = {
       if (!member?.id || !member.is_active) throw new Error(`Crew member "${crewId}" is unavailable or inactive.`)
       const dailyRate = input.dailyRate ?? member.daily_rate
       if (dailyRate == null || !Number.isFinite(Number(dailyRate)) || Number(dailyRate) < 0) throw new Error('An available crew rate is required.')
-      const lineTotal = Math.round(Number(dailyRate) * 100) * days / 100
+      const overtimeDays = input.overtimeDays ?? 0
+      const lineTotal = Math.round(Number(dailyRate) * 100) * (days + overtimeDays) / 100
       if (!Number.isFinite(lineTotal)) throw new Error('Crew total is outside the supported range.')
       const clientUuid = await assignmentKey(rootKey, member.id, input.crewIds.length === 1)
       prepared.push({
@@ -109,6 +112,7 @@ export const bookCrewConfig: ActionConfig<BookCrewInput, BookCrewResult> = {
         wrap_time: wrapTime,
         daily_rate: Math.round(Number(dailyRate) * 100) / 100,
         days,
+        overtime_days: overtimeDays,
         line_total: lineTotal,
         notes: input.notes?.trim() || null,
         created_by: ctx.userId,

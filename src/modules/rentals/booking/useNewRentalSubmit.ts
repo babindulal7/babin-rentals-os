@@ -284,7 +284,7 @@ export function useNewRentalSubmit({
                       phone: c.phone,
                       dayRate: toRupees(c.dayRatePaisa),
                       days: days || 1,
-                      overtime: toRupees(c.overtimePaisa),
+                      overtimeDays: Number(c.overtimeDays ?? 0),
                       accommodation: toRupees(c.accommodationPaisa),
                       meals: toRupees(c.mealsPaisa),
                     })),

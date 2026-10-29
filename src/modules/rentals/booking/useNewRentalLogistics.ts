@@ -98,7 +98,7 @@ export function useNewRentalLogistics({
       role: m.role,
       phone: m.phone,
       dayRatePaisa: m.dayRatePaisa,
-      overtimePaisa: rupees(0) as Paisa,
+      overtimeDays: 0,
       accommodationPaisa: rupees(0) as Paisa,
       mealsPaisa: rupees(0) as Paisa,
     }),

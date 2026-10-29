@@ -33,7 +33,7 @@ function draftData(): RentalDraftData {
     lines: Array.from({ length: 12 }, (_, index) => ({ id: `line-${index}`, name: `Gear ${index + 1}`,
       serial: '', category: 'Camera', ratePaisa: 10000, days: 2, qty: 1, discountPct: 0, location: '', committedTo: '' })),
     crew: [{ crewId: 'crew-1', name: 'Operator', role: 'Operator', phone: '', days: 3,
-      dayRatePaisa: 20000, overtimePaisa: 1000, accommodationPaisa: 0, mealsPaisa: 0 }],
+      dayRatePaisa: 20000, overtimeDays: 0, accommodationPaisa: 0, mealsPaisa: 0 }],
     deliveryChargePaisa: 99900, fuelChargePaisa: 0, vehicle: '', numberPlate: '', driverContact: '',
     discountPct: 0, vatOn: false, vatRatePercent: 13, advancePaisa: 50000,
   }

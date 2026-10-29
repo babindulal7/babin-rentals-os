@@ -589,7 +589,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
         ...member,
         role: member.role as CrewRole,
         dayRatePaisa: member.dayRatePaisa as Paisa,
-        overtimePaisa: member.overtimePaisa as Paisa,
+        overtimeDays: Number(member.overtimeDays ?? 0),
         accommodationPaisa: member.accommodationPaisa as Paisa,
         mealsPaisa: member.mealsPaisa as Paisa,
       })),

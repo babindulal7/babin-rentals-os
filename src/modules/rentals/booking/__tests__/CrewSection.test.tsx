@@ -15,7 +15,7 @@ const sampleCrew: CrewLine[] = [
     role: 'Director of Photography',
     phone: '9841234567',
     dayRatePaisa: rupees(12000),
-    overtimePaisa: rupees(0),
+    overtimeDays: 0,
     accommodationPaisa: rupees(0),
     mealsPaisa: rupees(0),
   },
@@ -96,21 +96,20 @@ describe('CrewSection', () => {
         expandBtn?.click()
       })
 
-      expect(host.textContent).toContain('Overtime (Rs) *')
+      expect(host.textContent).toContain('Overtime (days) *')
       expect(host.textContent).toContain('Meals (Rs) *')
       expect(host.textContent).toContain('Accommodation (Rs) *')
 
-      // Change overtime input
-      const overtimeInput = host.querySelector<HTMLInputElement>('input[placeholder="0"]')
-      expect(overtimeInput).not.toBeNull()
+      // Change overtime input (select dropdown)
+      const overtimeSelect = host.querySelector<HTMLSelectElement>('select')
+      expect(overtimeSelect).not.toBeNull()
 
-      if (overtimeInput) {
+      if (overtimeSelect) {
         await act(async () => {
-          Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(overtimeInput, '1500')
-          overtimeInput.dispatchEvent(new Event('input', { bubbles: true }))
-          overtimeInput.dispatchEvent(new Event('change', { bubbles: true }))
+          overtimeSelect.value = '0.5'
+          overtimeSelect.dispatchEvent(new Event('change', { bubbles: true }))
         })
-        expect(onUpdateCrewExtras).toHaveBeenCalledWith('crew-1', 'overtimePaisa', rupees(1500))
+        expect(onUpdateCrewExtras).toHaveBeenCalledWith('crew-1', 'overtimeDays', 0.5)
       }
     } finally {
       await act(async () => root.unmount())

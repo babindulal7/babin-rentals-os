@@ -129,9 +129,9 @@ describe('useNewRentalLogistics', () => {
       expect(logisticsResult.crew[0]?.dayRatePaisa).toBe(rupees(8000))
 
       await act(async () => {
-        logisticsResult.handleUpdateCrew('cr-1', { overtimePaisa: rupees(1000) })
+        logisticsResult.handleUpdateCrew('cr-1', { overtimeDays: 0.5 })
       })
-      expect(logisticsResult.crew[0]?.overtimePaisa).toBe(rupees(1000))
+      expect(logisticsResult.crew[0]?.overtimeDays).toBe(0.5)
 
       await act(async () => {
         logisticsResult.removeCrew('cr-1')
