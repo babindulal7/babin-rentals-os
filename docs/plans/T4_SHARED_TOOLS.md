@@ -20,7 +20,7 @@ database half already exists in source: `0165_delivery_jobs_and_event_rpc.sql` a
 
 ---
 
-### T4-01 · Delivery dispatch on the database            status: todo · size: L · lane B
+### T4-01 · Delivery dispatch on the database            status: done — awaiting merge (lane-b/T4-01-delivery-dispatch-on-the-database) · size: L · lane B
 **What** — Replace the localStorage store in `delivery.ts` with the 0165/0166 RPCs:
 `delivery_create_job`, `delivery_assign_driver`, `delivery_transition_job` (Scheduled → Ready → In
 Transit → Delivered / Failed, terminal states immutable). The Driver sees **only jobs assigned to

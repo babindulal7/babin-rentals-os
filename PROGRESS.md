@@ -1,5 +1,67 @@
 # Progress Log
 
+## 2026-10-31 — T4-01: Delivery dispatch on the database (Lane B · Size L)
+
+**Did**
+- Claimed and implemented migration `0187_delivery_dispatch_rpcs.sql`:
+  - Added security definer RPCs with pinned search_path (`public, pg_temp`):
+    - `delivery_create_job`: Creates delivery dispatch job for existing booking with monotonic delivery ID `DEL-YYMM-XXXX`, audit logging, and `client_uuid` idempotency (Law 8). Admitted roles: Owner, Admin, Manager, Coordinator.
+    - `delivery_assign_driver`: Assigns internal staff driver or hired courier rider/phone/vehicle. Admitted roles: Owner, Admin, Manager, Coordinator.
+    - `delivery_transition_job`: Enforces valid status transitions (`Scheduled -> Ready -> In Transit -> Delivered/Failed`) with role guards:
+      - Driver can transition only assigned jobs (enforcing driver RLS isolation).
+      - Warehouse can stage `Ready` and handover to `In Transit`.
+      - Accounts/Manager/Owner/Driver can complete delivery or log failure reason.
+      - Dispatches update corresponding `booking_transport` records when applicable.
+- Added lifecycle step **`L44`** in `scripts/e2e-lifecycle.mjs`:
+  - Asserts creation of outbound and return delivery jobs.
+  - Asserts staff driver and courier rider assignment.
+  - Asserts transitions across Scheduled -> Ready -> In Transit -> Delivered.
+  - Asserts driver seat isolation: Driver cannot transition another driver's job, but can transition their own.
+  - Asserts non-staff (Client/anon) cannot execute RPCs or mutate delivery data.
+  - Asserts idempotency key (`client_uuid`) prevents duplicate jobs.
+- Added Action layer in `src/actions/delivery/`:
+  - `createDeliveryJob.ts`: validates booking ID, scheduled time, role permission `delivery.create`.
+  - `assignDeliveryDriver.ts`: validates job ID, driver ID / rider name, role permission `delivery.assign`.
+  - `transitionDeliveryJob.ts`: validates transition rules, role permission `delivery.transition`.
+  - Exported through `src/actions/delivery/index.ts` and registered in `src/actions/core.ts`.
+- Updated RBAC & Money Blindness (`src/lib/rbac.ts`, `src/lib/queries/delivery.ts`, `src/modules/operations/DeliveryWorkspace.tsx`):
+  - Driver seat isolation: Driver role reads only assigned delivery jobs (`driver_id = auth.uid()`).
+  - Money blindness (Law 6): Drivers and warehouse staff see zero fee/revenue figures. Delivery fee column and total revenue KPI hidden for money-blind roles.
+  - Real-time event handling: wired `DELIVERY_JOB_CREATED`, `DELIVERY_DRIVER_ASSIGNED`, and `DELIVERY_JOB_TRANSITIONED` to live re-fetching.
+  - Five screen states: loading skeleton, empty state, error banner, restricted view, offline handling.
+
+**Ruled**
+- Ruling S6: Delivery dispatch lives in Postgres with atomic RPCs. Driver role is strictly isolated to assigned jobs.
+- Law 6: Delivery charges and fees are invisible to money-blind roles (Driver, Warehouse, Technician, Client).
+- Law 8: Every dispatch creation carries an idempotent `client_uuid`.
+- Law 3: Nothing is deleted; failed deliveries record failure reason and remain in the audit log.
+
+**Verified**
+- `npm run check:pglite`: 183/183 applied, 0 failed, 34 views checked (0 anon leaks), 20 functions checked (0 unauthorized), 105 definer functions checked (0 unpinned).
+- `npm run check:lifecycle`: 44/44 steps green, 0 failed, including L44 delivery dispatch lifecycle test.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run check:contrast`: 106/106 pass, 0 FAIL.
+- `npm run build`: built in dist/, 8166 modules transformed, PWA service worker generated cleanly.
+- Vitest delivery suites: 35/35 passed across 3 test files (12 action tests, 21 query tests, 2 UI component tests).
+- `npm run lint:progress`: passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 72 / 72 (100%) | +3 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 61 / 61 (100%) | +3 |
+| Lifecycle | steps green / total | 44 / 44 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 183 files · check:pglite 183/183 applied, 0 failed (recorded 2026-10-30T20:15:15.621Z). Suite: 35/35 passed, 0 failed.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- Lane B next cards: T4-07 (Delivery zones & fees), T5-01 (Notification records in Postgres), T6-01 (Nepali translations).
+
 ## 2026-10-30 — T4-05: Shift handover on the database (Lane B · Size M)
 
 **Did**

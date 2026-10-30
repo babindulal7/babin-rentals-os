@@ -177,4 +177,9 @@ export const EVENT_TYPES = {
   
   MAINTENANCE_STARTED: 'maintenance.started',
   MAINTENANCE_COMPLETED: 'maintenance.completed',
+
+  // Delivery & Dispatch (T4-01)
+  DELIVERY_JOB_CREATED: 'delivery.job_created',
+  DELIVERY_DRIVER_ASSIGNED: 'delivery.driver_assigned',
+  DELIVERY_JOB_TRANSITIONED: 'delivery.job_transitioned',
 } as const;

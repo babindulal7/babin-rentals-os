@@ -374,6 +374,14 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'shift_handover.archive':
       return rbac.canArchiveShiftHandover(ctx.role);
 
+    // Delivery dispatch (T4-01, migrations 0165/0187)
+    case 'delivery.create':
+      return rbac.canCreateDeliveryJob(ctx.role);
+    case 'delivery.assign':
+      return rbac.canAssignDeliveryDriver(ctx.role);
+    case 'delivery.transition':
+      return rbac.canTransitionDeliveryJob(ctx.role);
+
     // ⚠ FILED, not fixed: `crew.assign` is still `isStaff()`, but PERMISSIONS.md
     // §4.7 says `C+` and the §3 grid marks Crew Assist ✕ for Warehouse,
     // Technician and Driver. Left alone deliberately — there is no C+ role set
