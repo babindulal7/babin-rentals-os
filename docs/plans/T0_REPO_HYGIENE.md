@@ -30,7 +30,7 @@ suite that is really a missing variable wastes every new session's first hour.
 does **not** force mock; 3) receipt records the data source.
 **Needs** — none.
 
-### T0-03 · Open pull request triage            status: todo · size: M · Babin + Codex-1 (local)
+### T0-03 · Open pull request triage            status: doing (lane-a/T0-03-open-pull-request-triage) · size: M · Babin + Codex-1 (local)
 **What** — For each open PR decide: merged elsewhere → close with a pointer; superseded → close
 with the superseding commit; still needed → rebase onto `main` and assign to a card.
 **Why** — Nine open PRs (#6, #7, #17, #19, #23, #24, #25, #26, #28) carry work that may or may not
