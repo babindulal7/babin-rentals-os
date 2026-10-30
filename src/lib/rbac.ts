@@ -727,3 +727,27 @@ export function canReadTeamNotes(role: SystemRole): boolean {
 export function canAcknowledgeTeamNote(role: SystemRole): boolean {
   return isStaff(role)
 }
+
+/**
+ * Create a delivery zone — Coordinator and above (Owner, Admin, Manager, Coordinator).
+ * Mirrors the RLS policy on `delivery_zones` INSERT (migration 0187).
+ */
+export function canCreateDeliveryZone(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+}
+
+/**
+ * Read/list delivery zones — all staff roles (not Client).
+ * Mirrors the RLS policy on `delivery_zones` SELECT (migration 0187).
+ */
+export function canReadDeliveryZones(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Update/deactivate a delivery zone — Coordinator and above.
+ * Mirrors the RLS policy on `delivery_zones` UPDATE/DELETE (migration 0187).
+ */
+export function canManageDeliveryZones(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+}
