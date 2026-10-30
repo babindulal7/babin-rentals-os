@@ -37,7 +37,7 @@
 - Law 3: Nothing is deleted; failed deliveries record failure reason and remain in the audit log.
 
 **Verified**
-- `npm run check:pglite`: 183/183 applied, 0 failed, 34 views checked (0 anon leaks), 20 functions checked (0 unauthorized), 105 definer functions checked (0 unpinned).
+- `npm run check:pglite`: 184/184 applied, 0 failed, 35 views checked (0 anon leaks), 20 functions checked (0 unauthorized), 109 definer functions checked (0 unpinned).
 - `npm run check:lifecycle`: 44/44 steps green, 0 failed, including L44 delivery dispatch lifecycle test.
 - `npm run typecheck`: 0 errors (`tsc --noEmit`).
 - `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
@@ -49,15 +49,17 @@
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 72 / 72 (100%) | +3 |
+| Backend | actions implemented / total | 72 / 72 (100%) | +0 |
 | Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
 | DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 61 / 61 (100%) | +3 |
-| Lifecycle | steps green / total | 44 / 44 (100%) | +1 |
+| Permissions | capabilities mapped / declared | 61 / 61 (100%) | +0 |
+| Lifecycle | steps green / total | 44 / 44 (100%) | +0 |
 | Overall | structural mean of five | ≈ 97% | — |
-Migrations 183 files · check:pglite 183/183 applied, 0 failed (recorded 2026-10-30T20:15:15.621Z). Suite: 35/35 passed, 0 failed.
-Gates read from .lifecycle-result.json.
+Migrations 184 files · check:pglite 184/184 applied, 0 failed (recorded 2026-10-30T21:34:04.572Z). Suite: NOT VERIFIED — invalid test receipt.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-10-30T21:35:32.369Z.
 Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ## Remaining
 - Lane B next cards: T4-07 (Delivery zones & fees), T5-01 (Notification records in Postgres), T6-01 (Nepali translations).
