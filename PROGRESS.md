@@ -1,5 +1,72 @@
 # Progress Log
 
+## 2026-10-30 — T4-05: Shift handover on the database (Lane B · Size M)
+
+**Did**
+- Claimed migration `0186` in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0186_shift_handovers.sql`:
+  - Created table `public.shift_handovers` with columns: `id`, `client_uuid` (unique, Law 8), `shift_code` (check `A`, `B`, `C` / W32 three shifts), `shift_date`, `from_user_id`, `from_user_name`, `from_user_role`, `to_user_id`, `to_user_name`, `cash_counted_paisa` (Law 5 integer paisa), `cash_status`, `cash_variance_paisa`, `notes`, `open_items` (jsonb), `checklist` (jsonb), `status` (`pending`, `acknowledged`, `archived`), `acknowledged_at`, `acknowledged_by`, `acknowledged_by_name`, `acknowledgement_note`, `archived_at`, `archived_by`, `created_at`, `updated_at`.
+  - Implemented secure RPCs: `create_shift_handover`, `acknowledge_shift_handover`, and `archive_shift_handover` with pinned `search_path = public, pg_temp`.
+  - Created view `public.shift_handovers_v` masking `cash_counted_paisa` and `cash_variance_paisa` for money-blind roles (Warehouse, Technician, Driver, Client) via `auth_can_view_money()` (Law 6).
+  - Enforced Law 3 delete prevention trigger `trg_prevent_delete_shift_handovers` raising exception on hard delete.
+  - Attached audit trigger `trg_audit_shift_handovers` capturing mutations to `public.audit_logs` (Law 8).
+  - Enabled RLS admitting authenticated staff (`auth_is_staff()`); Client and anon denied.
+- Added and verified lifecycle step **`L43`** in `scripts/e2e-lifecycle.mjs`:
+  - Asserts staff (Warehouse) inserts shift handover with integer paisa till amounts.
+  - Asserts Law 6 cash masking in `shift_handovers_v`: Warehouse reads null for cash figures; Manager reads unmasked figures.
+  - Asserts incoming shift (Technician) acknowledges handover via `acknowledge_shift_handover` RPC.
+  - Asserts archiving via `archive_shift_handover` sets status to `'archived'` (Law 3).
+  - Asserts Client role is denied access (RLS/RPC).
+  - Asserts hard SQL delete is rejected by trigger.
+  - Asserts idempotent insertion via `client_uuid` (Law 8).
+- Updated RBAC & core action layer:
+  - Added permissions in `src/lib/rbac.ts`: `canCreateShiftHandover`, `canReadShiftHandovers`, `canAcknowledgeShiftHandover`, `canArchiveShiftHandover` (`isStaff(role)`).
+  - Registered action capabilities in `src/actions/core.ts` for `shift_handover.*`.
+  - Created typed action handlers in `src/actions/shifts/`: `createShiftHandover.ts`, `acknowledgeShiftHandover.ts`, `archiveShiftHandover.ts`, `listShiftHandovers.ts`.
+- Connected Real UI & query layer:
+  - Updated `src/lib/queries/shiftHandover.ts` to query database view `shift_handovers_v` and call shift actions in live mode while preserving mock previews.
+  - Connected `src/modules/today/ShiftHandoverPanel.tsx` to database queries and actions, enforcing Law 6 cash masking (`canSeeMoney`).
+  - Updated `src/modules/auth/HandoverSheet.tsx` logout sheet to persist handovers via `createShiftHandover` action with Kathmandu operational shift detection and `client_uuid` idempotency.
+- Authored test suite:
+  - `src/actions/shifts/__tests__/`: 24 unit tests across create, acknowledge, archive, and list actions.
+  - `src/modules/today/__tests__/ShiftHandoverPanel.test.tsx`: 4 component tests validating rendering and Law 6 money blindness.
+
+**Ruled**
+- Ruling S6: Shift handovers live in Postgres with authenticated staff RLS (`auth_is_staff()`). Client and anonymous users have zero access.
+- Ruling W32: Three operational shifts (Shift A: 06:00–15:00, Shift B: 14:00–23:00, Shift C: 22:00–07:00) with 1-hour overlap windows for handover.
+- Law 3 (Nothing is deleted): Handovers are archived (`status = 'archived'`), never deleted. Direct SQL DELETE is rejected by trigger.
+- Law 5 & 6: Integer paisa for cash counted and variance. Masked from money-blind roles (Warehouse, Technician, Driver, Client) in database views and UI.
+- Law 8: Every write carries an idempotent client key (`client_uuid`) and audits to the audit log.
+
+**Verified**
+- `npm run check:pglite`: 183/183 applied, 0 failed, 35 public views (0 anon leaks), 20 functions (0 unauthorized), 109 definer functions (0 unpinned).
+- `npm run check:lifecycle`: 43/43 steps green, 0 known-red, 0 failed, including L43 shift handovers test.
+- `npx vitest run src/actions/shifts/ src/modules/today/__tests__/ShiftHandoverPanel.test.tsx`: 28/28 passed across 5 test files.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run check:contrast`: 106/106 pass, 0 FAIL.
+- `npm run build`: built in 4m 11s, 8163 modules transformed, PWA service worker generated cleanly.
+- `npm run completion`: counted by script, not typed.
+- `npm run lint:progress`: passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 69 / 69 (100%) | +4 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 58 / 58 (100%) | +4 |
+| Lifecycle | steps green / total | 43 / 43 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 183 files · check:pglite 183/183 applied, 0 failed (recorded 2026-10-30T18:06:29.176Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-10-30T18:26:52.319Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Awaiting Babin's review and approval to merge `lane-b/T4-05-shift-handover-on-the-database` into `main`.
+- Next Lane B task: T4-06 (`Export old browser-only entries`).
+
 ## 2026-10-30 — T4-04: Team notes on the database repair, verification, and rebase (Lane B · Size M)
 
 **Did**

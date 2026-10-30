@@ -752,3 +752,35 @@ export function canResolveTeamNote(role: SystemRole): boolean {
   return isStaff(role)
 }
 
+/**
+ * Create a shift handover — all staff roles (not Client).
+ * Mirrors create_shift_handover RPC and shift_handovers INSERT policy (migration 0186).
+ */
+export function canCreateShiftHandover(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Read/list shift handovers — all staff roles (not Client).
+ * Mirrors shift_handovers_v SELECT policy (migration 0186).
+ */
+export function canReadShiftHandovers(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Acknowledge a shift handover — all staff roles (not Client).
+ * Mirrors acknowledge_shift_handover RPC (migration 0186).
+ */
+export function canAcknowledgeShiftHandover(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Archive a shift handover — all staff roles (not Client).
+ * Mirrors archive_shift_handover RPC (migration 0186).
+ */
+export function canArchiveShiftHandover(role: SystemRole): boolean {
+  return isStaff(role)
+}
+

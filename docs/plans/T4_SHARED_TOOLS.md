@@ -75,7 +75,7 @@ are seen by all staff". Replace the localStorage path in `internalNotes.ts`; kee
 hides a note from the default list but keeps it.
 **Needs** — none.
 
-### T4-05 · Shift handover on the database            status: todo · size: M · lane B
+### T4-05 · Shift handover on the database            status: done — awaiting merge (lane-b/T4-05-shift-handover-on-the-database) · size: M · lane B
 **What** — New table for shift handovers: from staff, written at (logout flow — 28 Jul lock),
 open items, notes, cash counted (when closing is "per shift", T3-07), acknowledged by / at. The
 next shift sees unacknowledged handovers on Today and acknowledges them. **Three shifts** (W32):

@@ -3433,6 +3433,132 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L43',
+  title: 'Shift handover on the database: staff can write/read/acknowledge/archive handovers; Law 6 cash masking; Client is denied; hard delete rejected (0186)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      const handoverId = crypto.randomUUID()
+      const clientUuid1 = crypto.randomUUID()
+      const clientUuid2 = crypto.randomUUID()
+
+      // 1. Warehouse staff writes shift handover from Shift A to Shift B
+      await as('Warehouse', async () => {
+        await q(
+          `insert into shift_handovers (
+            id, client_uuid, shift_code, shift_date, from_user_id, from_user_name, from_user_role,
+            to_user_id, to_user_name, cash_counted_paisa, cash_status, cash_variance_paisa, notes, checklist
+          ) values (
+            $1, $2, 'A', current_date, $3, 'Hari KC', 'Warehouse',
+            $4, 'Raju Thapa', 1840000, 'matched', 0, 'Overlap window open — handed over keys and van',
+            '[{"key":"gear","label":"Out-gear walked through","done":true},{"key":"cash","label":"Cash counted","done":true}]'::jsonb
+          )`,
+          [handoverId, clientUuid1, U.Warehouse, U.Technician],
+        )
+      })
+
+      // 2. Law 6: Warehouse reads null for cash figures in shift_handovers_v
+      await as('Warehouse', async () => {
+        const rows = (await q(`select * from shift_handovers_v where id = $1`, [handoverId])).rows
+        assertEq(rows.length, 1, 'Warehouse reads handover')
+        assertEq(rows[0].shift_code, 'A', 'Shift code matches')
+        assertEq(rows[0].cash_counted_paisa, null, 'Warehouse reads null for cash_counted_paisa (Law 6)')
+        assertEq(rows[0].cash_variance_paisa, null, 'Warehouse reads null for cash_variance_paisa (Law 6)')
+      })
+
+      // 3. Manager reads unmasked cash figures in shift_handovers_v
+      await as('Manager', async () => {
+        const rows = (await q(`select * from shift_handovers_v where id = $1`, [handoverId])).rows
+        assertEq(rows.length, 1, 'Manager reads handover')
+        assertEq(rows[0].cash_counted_paisa, 1840000n, 'Manager reads unmasked cash_counted_paisa')
+        assertEq(rows[0].cash_variance_paisa, 0n, 'Manager reads unmasked cash_variance_paisa')
+      })
+
+      // 4. Technician (incoming shift) acknowledges the handover
+      await as('Technician', async () => {
+        await q(
+          `select acknowledge_shift_handover($1, 'Received keys and counted till', 'Raju Thapa')`,
+          [handoverId],
+        )
+        const row = (await q(`select * from shift_handovers where id = $1`, [handoverId])).rows[0]
+        assertEq(row.status, 'acknowledged', 'Status transitions to acknowledged')
+        assertEq(row.acknowledged_by, U.Technician, 'Acknowledged by Technician')
+        assert(row.acknowledged_at, 'acknowledged_at timestamp is recorded')
+        assertEq(row.acknowledgement_note, 'Received keys and counted till', 'Note matches')
+      })
+
+      // 5. Client role is denied access (RLS returns 0 rows)
+      await as('Client', async () => {
+        const rows = (await q(`select * from shift_handovers where id = $1`, [handoverId])).rows
+        assertEq(rows.length, 0, 'Client cannot read shift handovers (RLS returns 0 rows)')
+      })
+
+      // 6. Client cannot insert shift handovers
+      await as('Client', async () => {
+        await q('savepoint client_handover_probe')
+        try {
+          await refuses(
+            'Client cannot insert shift handovers',
+            `insert into shift_handovers (id, client_uuid, from_user_id, from_user_name, from_user_role)
+             values (gen_random_uuid(), $1, $2, 'Client Renter', 'Client')`,
+            [clientUuid2, U.Client],
+            /violates row-level security policy|permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint client_handover_probe')
+          await q('release savepoint client_handover_probe')
+        }
+      })
+
+      // 7. Hard delete is refused by trigger / permissions (Law 3)
+      await as('Manager', async () => {
+        await q('savepoint manager_delete_probe')
+        try {
+          await refuses(
+            'Hard delete is refused by postgres permissions / trigger',
+            `delete from shift_handovers where id = $1`,
+            [handoverId],
+            /HARD DELETE FORBIDDEN|permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint manager_delete_probe')
+          await q('release savepoint manager_delete_probe')
+        }
+      })
+
+      // 8. Archival via archive_shift_handover RPC
+      await as('Manager', async () => {
+        await q(`select archive_shift_handover($1)`, [handoverId])
+        const row = (await q(`select * from shift_handovers where id = $1`, [handoverId])).rows[0]
+        assertEq(row.status, 'archived', 'Status is archived')
+        assert(row.archived_at, 'archived_at is set')
+      })
+
+      // 9. Idempotent create_shift_handover via client_uuid (Law 8)
+      await as('Coordinator', async () => {
+        const clientUuid3 = crypto.randomUUID()
+        const row1 = (await q(
+          `select * from create_shift_handover(
+            $1, 'B', 'Sita Sharma', 'Coordinator', null, null, 2500000, 'matched', 0, 'Evening handover test'
+          )`,
+          [clientUuid3],
+        )).rows[0]
+        assert(row1.id, 'Row 1 inserted')
+
+        // Duplicate replay returns identical row
+        const row2 = (await q(
+          `select * from create_shift_handover(
+            $1, 'B', 'Sita Sharma', 'Coordinator', null, null, 2500000, 'matched', 0, 'Evening handover test'
+          )`,
+          [clientUuid3],
+        )).rows[0]
+        assertEq(row2.id, row1.id, 'Duplicate client_uuid returns same shift handover row')
+      })
+    })
+  },
+})
+
 /* ── Run ──────────────────────────────────────────────────────────────────── */
 
 await seed()
