@@ -1,44 +1,44 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react'
+import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import Icon from './Icon'
 import { TouchTarget } from './TouchTarget'
 import { useViewport } from '../../lib/device'
 
 /*
- * ── Shared modal bookkeeping (module scope, one per bundle) ─────────────────
+ * Shared modal bookkeeping (module scope, one per bundle)
  *
  * Two defects lived here while each instance managed itself in isolation
- * (UI_UX_AUDIT_2026-08-28 §1, §6, §7):
+ * (UI_UX_AUDIT_2026-08-28 1, 6, 7):
  *
- *  · SCROLL LOCK — every instance's cleanup set `body.overflow = ''`
+ *  SCROLL LOCK — every instance's cleanup set `body.overflow = ''`
  *    unconditionally, so closing a ConfirmDialog stacked over another Modal
  *    (ClientsDirectory "Block Client", VoidInvoiceModal) unlocked the page
  *    while the outer modal was still up. `scrollLocks` counts open modals and
  *    only the LAST one out restores scrolling.
  *
- *  · ESCAPE — every open instance listened on `window`, so one Escape closed
+ *  ESCAPE — every open instance listened on `window`, so one Escape closed
  *    the whole stack, outer form included. `modalStack` records opening order;
  *    only the TOP modal answers Escape.
  */
 const modalStack: symbol[] = []
 let scrollLocks = 0
-let originalOverflow = ''
 
 function lockScroll(id: symbol) {
-  if (modalStack.includes(id)) return
-  if (scrollLocks === 0) originalOverflow = document.body.style.overflow
-  modalStack.push(id)
-  scrollLocks += 1
-  document.body.style.overflow = 'hidden'
+  if (!modalStack.includes(id)) {
+    modalStack.push(id)
+    scrollLocks += 1
+    document.body.style.overflow = 'hidden'
+  }
 }
 
 function unlockScroll(id: symbol) {
   const i = modalStack.indexOf(id)
-  if (i === -1) return
-  modalStack.splice(i, 1)
-  scrollLocks -= 1
-  if (scrollLocks === 0) document.body.style.overflow = originalOverflow
+  if (i !== -1) {
+    modalStack.splice(i, 1)
+    scrollLocks = Math.max(0, scrollLocks - 1)
+    if (scrollLocks === 0) document.body.style.overflow = ''
+  }
 }
 
 /* What can take focus inside the dialog, for the Tab trap and initial focus.
@@ -83,13 +83,6 @@ export interface ModalProps {
    */
   fill?: boolean
   portal?: boolean
-  /** Scoped workspace chrome; overlay/focus/stack behavior remains shared. */
-  className?: string
-  surfaceStyle?: CSSProperties | undefined
-  contentStyle?: CSSProperties
-  headerActions?: ReactNode
-  /** A full-width row under the title line, still inside the header (the Operations stage progress bar). */
-  headerContent?: ReactNode
 }
 
 const SIZE_MAX_WIDTH: Record<NonNullable<ModalProps['size']>, number> = {
@@ -115,11 +108,6 @@ export function Modal({
   peekHeight = false,
   fill = false,
   portal,
-  className,
-  surfaceStyle,
-  contentStyle,
-  headerActions,
-  headerContent,
 }: ModalProps) {
   // Keeps the modal mounted for a beat after isOpen flips to false so the
   // CSS fade/scale-out below can actually play instead of vanishing instantly.
@@ -144,33 +132,32 @@ export function Modal({
   const openerRef = useRef<HTMLElement | null>(null)
   const titleId = useId()
   const touchStartY = useRef<number | null>(null)
-  const closeHandlers = useRef({ onClose, onEscape })
-  useEffect(() => { closeHandlers.current = { onClose, onEscape } }, [onClose, onEscape])
 
   useEffect(() => {
-    if (!isOpen) return
     const id = stackId.current!
     const handleKeyDown = (e: KeyboardEvent) => {
       // Only the top of the stack answers Escape — see module comment above.
       if (e.key === 'Escape' && isOpen && modalStack[modalStack.length - 1] === id) {
-        ;(closeHandlers.current.onEscape ?? closeHandlers.current.onClose)()
+        ;(onEscape ?? onClose)()
       }
     }
-    lockScroll(id)
-    window.addEventListener('keydown', handleKeyDown)
+    if (isOpen) {
+      lockScroll(id)
+      window.addEventListener('keydown', handleKeyDown)
+    }
     return () => {
       unlockScroll(id)
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isOpen])
+  }, [isOpen, onClose, onEscape])
 
   /*
    * Focus contract (WCAG 2.4.3 / 2.1.2) — the piece FilterDrawer and MoreSheet
    * already had that this, the app's ONLY dialog, did not:
-   *   open  → remember the opener, move focus to the first focusable control
+   *   open  -> remember the opener, move focus to the first focusable control
    *           (or the surface itself, which carries tabIndex={-1} for exactly
    *           this fallback);
-   *   close → put focus back on the opener, so a keyboard user is not dropped
+   *   close -> put focus back on the opener, so a keyboard user is not dropped
    *           at <body> after every sheet.
    * rAF matches FilterDrawer.tsx:178 — the surface must be painted before it
    * can be focused.
@@ -184,13 +171,7 @@ export function Modal({
         const first = surface.querySelector<HTMLElement>(FOCUSABLE)
         ;(first ?? surface).focus()
       })
-      return () => {
-        window.cancelAnimationFrame(raf)
-        // Providers may remove the dialog immediately rather than render one
-        // closed frame. Return focus on that unmount path as well.
-        if (openerRef.current?.isConnected) openerRef.current.focus()
-        openerRef.current = null
-      }
+      return () => window.cancelAnimationFrame(raf)
     }
     openerRef.current?.focus()
     openerRef.current = null
@@ -230,10 +211,10 @@ export function Modal({
    * `Expenses.tsx` already flags in a comment that this component does not
    * honour them. Teaching `Modal` fixes every caller at once.
    *
-   *   · phone  — full-screen surface, no rounded corners, no inset, so the
+   *   phone  — full-screen surface, no rounded corners, no inset, so the
    *                sticky footer sits on the bottom edge where a thumb is.
-   *   · tablet — 60vw for a sheet, capped at its size token otherwise.
-   *   · desktop— exactly as before.
+   *   tablet — 60vw for a sheet, capped at its size token otherwise.
+   *   desktop— exactly as before.
    */
   const viewport = useViewport()
   const phone = viewport === 'phone'
@@ -276,12 +257,11 @@ export function Modal({
 
       <div
         ref={surfaceRef}
-        className={['app-modal__surface', className].filter(Boolean).join(' ')}
+        className="app-modal__surface"
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
         tabIndex={-1}
-        data-fill={fillScreen ? 'true' : undefined}
         style={{
           outline: 'none',
           position: 'relative',
@@ -300,12 +280,10 @@ export function Modal({
           opacity: isOpen ? 1 : 0,
           transform: isOpen ? 'translate(0, 0)' : sidePeek ? 'translateX(12px)' : 'translateY(8px)',
           transition: 'opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-          ...surfaceStyle,
         }}
       >
         {/* Header */}
         <div
-          className="app-modal__header"
           onTouchStart={swipeDismiss ? (event) => { touchStartY.current = event.touches[0]?.clientY ?? null } : undefined}
           onTouchEnd={swipeDismiss ? (event) => {
             const endY = event.changedTouches[0]?.clientY
@@ -320,7 +298,6 @@ export function Modal({
             padding: fillScreen ? 'calc(12px + env(safe-area-inset-top, 0px)) 16px 12px' : phone ? 'calc(16px + env(safe-area-inset-top, 0px)) 20px 16px' : '16px 20px',
             borderBottom: '1px solid var(--border)',
             flexShrink: 0,
-            ...(headerContent ? { flexWrap: 'wrap' } : {}),
           }}
         >
           {sheet && swipeDismiss && <span aria-hidden="true" style={{ position: 'absolute', top: 6, left: 'calc(50% - 18px)', width: 36, height: 4, borderRadius: 2, background: 'var(--border2)' }} />}
@@ -350,7 +327,6 @@ export function Modal({
               </p>
             )}
           </div>
-          {headerActions}
           <button
             type="button"
             onClick={onClose}
@@ -376,21 +352,14 @@ export function Modal({
             <TouchTarget />
             <Icon name="close" size={20} />
           </button>
-          {headerContent && <div className="app-modal__header-content" style={{ flexBasis: '100%', minWidth: 0 }}>{headerContent}</div>}
         </div>
 
         {/* Content */}
-        <div
-          className="app-modal__content"
-          style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: fillScreen ? 16 : 20, ...contentStyle }}
-        >
-          {children}
-        </div>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overscrollBehavior: 'contain', padding: fillScreen ? 16 : 20 }}>{children}</div>
 
         {/* Footer */}
         {footer && (
           <div
-            className="app-modal__footer"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -401,9 +370,6 @@ export function Modal({
               borderTop: '1px solid var(--border)',
               background: 'var(--card2)',
               flexShrink: 0,
-              position: 'sticky',
-              bottom: 0,
-              zIndex: 2,
             }}
           >
             {footer}

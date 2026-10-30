@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0187**
+**Next free number: 0188**
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
@@ -25,6 +25,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0184 | T2-06 | repair-job-closes-damage | lane-a/T2-06-repair-job-closes-the-damage | verified |
 | 0185 | T4-04 | team-notes | lane-b/T4-04-team-notes-repair | verified |
 | 0186 | T4-05 | shift-handovers | lane-b/T4-05-shift-handover-on-the-database | verified |
+| 0187 | T0-astra | astra-phase0-authorization | cherrypick/astra-phase0 | claimed |
 
 ## Expected migrations (not yet claimed)
 

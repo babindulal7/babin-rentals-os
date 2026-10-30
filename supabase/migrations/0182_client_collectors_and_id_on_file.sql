@@ -8,6 +8,19 @@
 
 begin;
 
+-- SEC-05 from ASTRA Phase 0: no recursion through bookings/client RLS when testing driver scope.
+-- Must exist before policies/views in this migration that reference it.
+create function public.auth_driver_has_open_booking(p_booking uuid) returns boolean
+language sql stable security definer set search_path = public, pg_temp as $$
+  select auth_user_role() = 'Driver' and exists (
+    select 1 from public.delivery_jobs j join public.bookings b on b.id=j.booking_id
+    where b.cancelled_at is null and b.archived_at is null and b.stage <> 'Closed' and j.booking_id = p_booking and j.assigned_driver_id = auth_user_id()
+      and j.status in ('Scheduled','Ready','In Transit')
+  );
+$$;
+revoke all on function public.auth_driver_has_open_booking(uuid) from public, anon;
+grant execute on function public.auth_driver_has_open_booking(uuid) to authenticated;
+
 -- 1. client_id_documents table
 create table if not exists public.client_id_documents (
   id                  uuid not null default gen_random_uuid() primary key,

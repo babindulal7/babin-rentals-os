@@ -1,7 +1,7 @@
 /**
  * Secure Auth Storage Adapter for Supabase.
  *
- * Security Mandate (PLAN.md §10, src/lib/supabase.ts:17-20):
+ * Security Mandate (PLAN.md 10, src/lib/supabase.ts:17-20):
  *   "Tokens must not sit in localStorage inside a native shell (Capacitor / Tauri);
  *    that path uses Keychain / Keystore / Stronghold instead."
  *
@@ -20,7 +20,7 @@ export interface SupportedStorage {
   removeItem(key: string): void | Promise<void>;
 }
 
-export type PlatformType = 'capacitor' | 'tauri' | 'web';
+export type PlatformType = 'capacitor' | 'tauri' | 'electron' | 'web';
 
 /** Detect the current runtime environment. */
 export function detectPlatform(): PlatformType {
@@ -33,6 +33,9 @@ export function detectPlatform(): PlatformType {
     };
     __TAURI__?: unknown;
     __TAURI_INTERNALS__?: unknown;
+    electronAPI?: {
+      isElectron?: boolean;
+    };
   };
 
   if (win.Capacitor?.isNativePlatform?.() || (win.Capacitor?.getPlatform && win.Capacitor.getPlatform() !== 'web')) {
@@ -43,13 +46,15 @@ export function detectPlatform(): PlatformType {
     return 'tauri';
   }
 
+  if (win.electronAPI?.isElectron) {
+    return 'electron';
+  }
+
   return 'web';
 }
 
 /** Web / PWA storage adapter backed by localStorage with memory fallback. */
 export class WebLocalStorageAdapter implements SupportedStorage {
-  // Failed writes must override readable but stale persistent values. A null
-  // tombstone also prevents a failed removal from restoring a signed-out session.
   private pending = new Map<string, string | null>();
 
   getItem(key: string): string | null {
@@ -97,8 +102,6 @@ export class WebLocalStorageAdapter implements SupportedStorage {
  * Refuses unencrypted localStorage.
  */
 export class CapacitorKeystoreAdapter implements SupportedStorage {
-  // Failed writes must override readable but stale persistent values. A null
-  // tombstone also prevents a failed removal from restoring a signed-out session.
   private pending = new Map<string, string | null>();
 
   private getPlugin(): {
@@ -132,8 +135,6 @@ export class CapacitorKeystoreAdapter implements SupportedStorage {
         return null;
       }
     }
-    // Secure in-memory fallback in native shell when plugin is not linked yet;
-    // NEVER reads unencrypted localStorage in native shell.
     return null;
   }
 
@@ -148,7 +149,6 @@ export class CapacitorKeystoreAdapter implements SupportedStorage {
         console.error('[CapacitorKeystoreAdapter] Failed to store in hardware keystore:', err);
       }
     }
-    // Secure in-memory fallback
     this.pending.set(key, value);
   }
 
@@ -173,8 +173,6 @@ export class CapacitorKeystoreAdapter implements SupportedStorage {
  * Refuses unencrypted localStorage.
  */
 export class TauriStrongholdAdapter implements SupportedStorage {
-  // Failed writes must override readable but stale persistent values. A null
-  // tombstone also prevents a failed removal from restoring a signed-out session.
   private pending = new Map<string, string | null>();
 
   private getTauriInvoke(): ((cmd: string, args?: Record<string, unknown>) => Promise<unknown>) | null {
@@ -235,6 +233,87 @@ export class TauriStrongholdAdapter implements SupportedStorage {
   }
 }
 
+/**
+ * Electron Desktop OS-protected secure storage adapter.
+ * Uses Electron IPC bridge backed by safeStorage (Windows DPAPI / macOS Keychain / Linux Secret Service).
+ * Refuses unencrypted localStorage for secrets.
+ */
+export class ElectronSafeStorageAdapter implements SupportedStorage {
+  private pending = new Map<string, string | null>();
+
+  private getElectronStorage(): {
+    getItem: (key: string) => Promise<string | null>;
+    setItem: (key: string, value: string) => Promise<boolean>;
+    removeItem: (key: string) => Promise<boolean>;
+  } | null {
+    if (typeof window === 'undefined') return null;
+    const win = window as unknown as {
+      electronAPI?: {
+        secureStorage?: {
+          getItem: (key: string) => Promise<string | null>;
+          setItem: (key: string, value: string) => Promise<boolean>;
+          removeItem: (key: string) => Promise<boolean>;
+        };
+      };
+    };
+    return win.electronAPI?.secureStorage ?? null;
+  }
+
+  async getItem(key: string): Promise<string | null> {
+    if (this.pending.has(key)) return this.pending.get(key) ?? null;
+    const storage = this.getElectronStorage();
+    if (storage) {
+      try {
+        const val = await storage.getItem(key);
+        if (typeof window !== 'undefined' && window.localStorage) {
+          try { window.localStorage.removeItem(key); } catch { /* ignore */ }
+        }
+        return val ?? null;
+      } catch (err) {
+        console.error('[ElectronSafeStorageAdapter] Failed to read from safeStorage:', err);
+        return null;
+      }
+    }
+    return null;
+  }
+
+  async setItem(key: string, value: string): Promise<void> {
+    const storage = this.getElectronStorage();
+    if (storage) {
+      try {
+        const ok = await storage.setItem(key, value);
+        if (ok) {
+          this.pending.delete(key);
+          if (typeof window !== 'undefined' && window.localStorage) {
+            try { window.localStorage.removeItem(key); } catch { /* ignore */ }
+          }
+          return;
+        }
+      } catch (err) {
+        console.error('[ElectronSafeStorageAdapter] Failed to store in safeStorage:', err);
+      }
+    }
+    this.pending.set(key, value);
+  }
+
+  async removeItem(key: string): Promise<void> {
+    const storage = this.getElectronStorage();
+    if (storage) {
+      try {
+        await storage.removeItem(key);
+        this.pending.delete(key);
+        if (typeof window !== 'undefined' && window.localStorage) {
+          try { window.localStorage.removeItem(key); } catch { /* ignore */ }
+        }
+        return;
+      } catch (err) {
+        console.error('[ElectronSafeStorageAdapter] Failed to remove from safeStorage:', err);
+      }
+    }
+    this.pending.set(key, null);
+  }
+}
+
 /** Factory: returns the appropriate secure storage adapter for the runtime environment. */
 export function getSecureAuthStorage(): SupportedStorage {
   const platform = detectPlatform();
@@ -243,6 +322,8 @@ export function getSecureAuthStorage(): SupportedStorage {
       return new CapacitorKeystoreAdapter();
     case 'tauri':
       return new TauriStrongholdAdapter();
+    case 'electron':
+      return new ElectronSafeStorageAdapter();
     case 'web':
     default:
       return new WebLocalStorageAdapter();
