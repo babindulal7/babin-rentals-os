@@ -2,6 +2,7 @@ import type { Dest } from '../../../lib/queries/settings'
 import type { Field, Section } from './shared'
 import { DevicePinControl } from './DevicePin'
 import { PwaInstallControl } from '../../../components/ui/PwaInstallControl'
+import { DeliveryZonesControl } from './DeliveryZonesControl'
 
 /**
  * **Settings ▸ System** — appearance, notifications, preferences, security and
@@ -165,6 +166,12 @@ export const SYSTEM_SECTIONS: Section[] = [
         note: 'How soon a unit\'s next reservation pickup must be to show "Needed next" in the Reset queue and sort to the top. Default 4 hours (Ruling D5).',
         settingKey: 'resetNeededNextHours',
         readBy: 'modules/rentals/ResetWorkspace.tsx',
+      },
+      {
+        label: 'Delivery zones',
+        note: 'Zones and fees for delivery dispatch. Pickup at the shop is always Rs 0. Coordinator+ can create, edit, and deactivate zones.',
+        custom: <DeliveryZonesControl />,
+        readBy: 'lib/queries/delivery.ts, modules/operations/DeliveryWorkspace.tsx',
       },
     ],
   },
