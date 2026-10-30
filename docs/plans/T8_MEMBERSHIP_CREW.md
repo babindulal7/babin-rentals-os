@@ -105,7 +105,7 @@ overtime days. Hours stay visible as information only.
 **Done when** — no "Estimated pay" label remains; totals match Crew Assist payouts.
 **Needs** — T8-06.
 
-### T8-08 · TDS on crew payouts            status: todo · size: M · lane A + accountant
+### T8-08 · TDS on crew payouts            status: done — awaiting merge (lane-a/T8-08-tds-on-crew-payouts) · size: M · lane A + accountant
 **What** — Settings ▸ Financial ▸ "TDS on crew payouts" (rate set by the accountant — O-5). Crew
 payouts show **gross, TDS, net**; a TDS report per month for the accountant. Until a rate is set,
 payouts show "TDS: rate not set". Money roles only (PERMISSIONS §5).

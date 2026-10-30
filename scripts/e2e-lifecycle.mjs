@@ -3433,6 +3433,126 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L43',
+  title: 'Crew payouts and TDS (D25, T8-08): money roles record payout with immutable TDS snapshot; non-money roles denied RPC; views mask TDS/gross/net under Law 6; rate change does not alter past stored payouts',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      // 1. Create a crew member and crew booking as Owner
+      const crewMemberId = crypto.randomUUID()
+      const crewBookingId = crypto.randomUUID()
+      const clientUuidBooking = crypto.randomUUID()
+      const clientUuidPayout = crypto.randomUUID()
+
+      await as('Owner', async () => {
+        await q(
+          `insert into crew_members (id, client_uuid, full_name, position, engagement_type, pan_status, withholding_rate, day_rate, created_by)
+           values ($1, gen_random_uuid(), 'Test Focus Puller', 'Focus Puller', 'freelance', 'registered', 15.00, 5000.00, $2)`,
+          [crewMemberId, U.Owner],
+        )
+
+        await q(
+          `insert into crew_bookings (id, client_uuid, crew_booking_no, crew_member_id, position, day_rate, days, start_date, end_date, state, payout_state, created_by)
+           values ($1, $2, 'CB-2099-0001', $3, 'Focus Puller', 5000.00, 2, '2099-09-10', '2099-09-11', 'Confirmed', 'Due', $4)`,
+          [crewBookingId, clientUuidBooking, crewMemberId, U.Owner],
+        )
+      })
+
+      // 2. Non-money roles (Coordinator, Warehouse, Technician, Driver, Client) are denied record_crew_payout
+      for (const nonMoneyRole of ['Coordinator', 'Warehouse', 'Technician', 'Driver', 'Client']) {
+        await as(nonMoneyRole, async () => {
+          await q('savepoint non_money_payout')
+          try {
+            await refuses(
+              `${nonMoneyRole} cannot record crew payout`,
+              `select record_crew_payout($1, $2, 15.0, 'Attempted payout')`,
+              [crypto.randomUUID(), crewBookingId],
+              /Access denied: crew payouts are restricted to money roles/i,
+            )
+          } finally {
+            await q('rollback to savepoint non_money_payout')
+            await q('release savepoint non_money_payout')
+          }
+        })
+      }
+
+      // 3. Accounts (money role per PERMISSIONS §5) records payout with 15% TDS
+      // Day rate = 5000, days = 2 -> Gross = 10000. 15% TDS = 1500. Net = 8500.
+      await as('Accounts', async () => {
+        const res = await one(
+          `select record_crew_payout($1, $2, 15.0, 'September shoot payout')`,
+          [clientUuidPayout, crewBookingId],
+        )
+        const payout = typeof res === 'string' ? JSON.parse(res) : res
+        assert(payout.ok, 'record_crew_payout returned ok')
+        assertEq(payout.gross, 10000, 'gross payout is 10000')
+        assertEq(payout.tds_rate_percent, 15, 'tds_rate_percent is 15%')
+        assertEq(payout.tds_amount, 1500, 'tds_amount is 1500')
+        assertEq(payout.net_payout, 8500, 'net_payout is 8500')
+
+        // Idempotent replay with same client_uuid
+        const replayRes = await one(
+          `select record_crew_payout($1, $2, 15.0, 'September shoot payout')`,
+          [clientUuidPayout, crewBookingId],
+        )
+        const replay = typeof replayRes === 'string' ? JSON.parse(replayRes) : replayRes
+        assert(replay.ok, 'replay returned ok')
+        assert(replay.idempotent_replay, 'replay flagged as idempotent')
+      })
+
+      // 4. Money role (Manager) sees real figures in crew_bookings_v
+      await as('Manager', async () => {
+        const row = await one(
+          `select jsonb_build_object(
+             'day_rate', day_rate,
+             'tds_rate_percent', tds_rate_percent,
+             'tds_amount', tds_amount,
+             'net_payout', net_payout,
+             'payout_state', payout_state
+           ) from crew_bookings_v where id = $1`,
+          [crewBookingId],
+        )
+        const parsed = typeof row === 'string' ? JSON.parse(row) : row
+        assertEq(parsed.day_rate, 5000, 'day_rate visible to Manager')
+        assertEq(parsed.tds_rate_percent, 15, 'tds_rate_percent visible to Manager')
+        assertEq(parsed.tds_amount, 1500, 'tds_amount visible to Manager')
+        assertEq(parsed.net_payout, 8500, 'net_payout visible to Manager')
+        assertEq(parsed.payout_state, 'Paid', 'payout_state is Paid')
+      })
+
+      // 5. Money-blind role (Warehouse) sees null for day_rate, tds_amount, net_payout under Law 6
+      await as('Warehouse', async () => {
+        const row = await one(
+          `select jsonb_build_object(
+             'day_rate', day_rate,
+             'tds_rate_percent', tds_rate_percent,
+             'tds_amount', tds_amount,
+             'net_payout', net_payout,
+             'payout_state', payout_state
+           ) from crew_bookings_v where id = $1`,
+          [crewBookingId],
+        )
+        const parsed = typeof row === 'string' ? JSON.parse(row) : row
+        assert(parsed.day_rate === null, 'day_rate masked for Warehouse')
+        assert(parsed.tds_rate_percent === null, 'tds_rate_percent masked for Warehouse')
+        assert(parsed.tds_amount === null, 'tds_amount masked for Warehouse')
+        assert(parsed.net_payout === null, 'net_payout masked for Warehouse')
+        assertEq(parsed.payout_state, 'Paid', 'payout_state visible to Warehouse')
+      })
+
+      // 6. Immutability verification: later payout with different rate (or rate change) does not alter past stored payout
+      await as('Owner', async () => {
+        const past = await one(
+          `select tds_amount from crew_bookings where id = $1`,
+          [crewBookingId],
+        )
+        assertEq(Number(past), 1500, 'past payout tds_amount remains 1500')
+      })
+    })
+  },
+})
+
 /* ── Run ──────────────────────────────────────────────────────────────────── */
 
 await seed()

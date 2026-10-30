@@ -80,6 +80,12 @@ export const FINANCIAL_SECTIONS: Section[] = [
         readBy: 'Crew Assist’s payout ledger',
       },
       {
+        label: 'TDS on crew payouts',
+        note: 'Withheld on crew payouts per accountant instructions (O-5 / D25). Blank when not configured.',
+        settingKey: 'crewPayoutTdsPercent',
+        readBy: 'Crew Assist’s payout ledger and monthly TDS reports',
+      },
+      {
         label: 'Fiscal year',
         note: 'Nepali fiscal year runs Shrawan – Ashadh.',
         value: 'FY 2083/84',
