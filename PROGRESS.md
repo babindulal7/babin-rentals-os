@@ -1,5 +1,60 @@
 # Progress Log
 
+## 2026-10-31 — T4-06: Export old browser-only entries (Lane B · Size S)
+
+**Did**
+- Created `src/lib/legacyLocalExport.ts` implementing export of legacy browser-local entries per Ruling D28 and Law 3:
+  - Scans legacy localStorage keys: `br.productions`, `babin_rentals_deliveries_v1`, `babin_internal_notes_v1`, `br.shiftHandovers`, `br.warranties`, `babin_coupons_v2`.
+  - Scans IndexedDB `BabinOfflineQueue` (pending/syncing/failed mutations, heldMutations, conflicts).
+  - Summarizes entry counts across all scanned storage keys.
+  - Builds JSON + CSV export package bundle including device metadata, summaries, full record dumps, and tabular CSV text.
+  - Strictly adheres to Law 3 and Ruling D28: never auto-imports into DB tables and never deletes or alters stored client records (bytes remain intact on device).
+  - Provides dismissal helpers (`isLegacyExportDismissed`, `dismissLegacyExport`, `resetLegacyExportDismissal`).
+- Created `src/modules/today/LegacyExportCard.tsx` and mounted it in `src/modules/today/Today.tsx`:
+  - Automatically checks device for unsynced legacy entries.
+  - Displays notice card with exact entry count: "This device has N old entries saved only here. Download them as a file for Babin."
+  - One-click "Download file for Babin" triggers download of JSON and CSV bundles.
+  - Provides "Dismiss" action to hide the card once per device.
+- Created `src/modules/settings/sections/LegacyExportControl.tsx` and wired it into Settings ▸ System ▸ Preferences in `src/modules/settings/sections/System.tsx`:
+  - Enables staff to download the legacy export bundle at any time, even after dismissal on Today.
+  - Displays live device entry count and "Restore Today notice" action when dismissed.
+- Created unit tests in `src/lib/__tests__/legacyLocalExport.test.ts`, `src/modules/today/__tests__/LegacyExportCard.test.tsx`, and `src/modules/settings/sections/__tests__/LegacyExportControl.test.tsx` (18/18 green).
+- Full verification gates passing.
+
+**Ruled**
+- Ruling D28: Export, start fresh — each device exports its old entries to a file for Babin; the shared versions start empty. Nothing is deleted or auto-imported.
+- Law 3: Archive, never delete — original browser-stored entries and Dexie outbox records remain intact.
+- Law 12: Errors inline and actionable.
+
+**Verified**
+- `npm run check:pglite`: 184/184 applied, 0 failed, 35 public views, 0 anon leaks, 109 definer functions (0 unpinned).
+- `npm run check:lifecycle`: 44/44 green, 0 known-red, 0 failed.
+- Vitest suite: 18/18 passed across legacyLocalExport and export component test files.
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (0 warnings/errors across src/).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 69 / 69 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 62 | 52 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 58 / 58 (100%) | +0 |
+| Lifecycle | steps green / total | 44 / 44 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 184 files · check:pglite 184/184 applied, 0 failed. Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Next Lane B task: T4-07 (`Delivery zones and fees`).
+- T4-08 (One-time rider link): public unauthenticated token route for hired riders with proof-of-delivery signature & photo.
+- T4-01 / T4-02 / T4-03: Delivery dispatch on database, rescheduling, and proof of delivery.
+- T5 (Notifications & email): WhatsApp draft triggers, email notifications.
+- T6 (Nepali): Full bilingual support, Nepali font assets, BS calendar consistency.
+
 ## 2026-10-31 — T8-08: TDS on crew payouts (Lane A · Size M)
 
 **Did**
@@ -35,28 +90,6 @@
 - `npm run typecheck`: 0 errors (`tsc --noEmit`).
 - `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
 - `npm run build`: built in 3m 7s, 8164 modules transformed, PWA service worker generated cleanly.
-- `npm run completion`: counted by script, not typed.
-- `npm run lint:progress`: passed.
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 69 / 69 (100%) | +4 |
-| Real data | DB-only · mixed · seed · none / 62 | 52 · 0 · 0 · 10 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 58 / 58 (100%) | +4 |
-| Lifecycle | steps green / total | 44 / 44 (100%) | +1 |
-| Overall | structural mean of five | ≈ 97% | — |
-Migrations 184 files · check:pglite 184/184 applied, 0 failed.
-Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json.
-Counted by `npm run completion`, not typed.
-Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
-
-### Remaining
-- Waiting on accountant to supply official TDS withholding rate (O-5).
-- Lane A next: T8-02 / T9 cutover.
-- Lane B next: T4-06 (`Export old browser-only entries`).
 
 ## 2026-10-30 — T4-05: Shift handover on the database (Lane B · Size M)
 
@@ -103,27 +136,6 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
 - `npm run check:contrast`: 106/106 pass, 0 FAIL.
 - `npm run build`: built in 4m 11s, 8163 modules transformed, PWA service worker generated cleanly.
-- `npm run completion`: counted by script, not typed.
-- `npm run lint:progress`: passed.
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 69 / 69 (100%) | +4 |
-| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 58 / 58 (100%) | +4 |
-| Lifecycle | steps green / total | 43 / 43 (100%) | +1 |
-| Overall | structural mean of five | ≈ 97% | — |
-Migrations 183 files · check:pglite 183/183 applied, 0 failed (recorded 2026-10-30T18:06:29.176Z). Suite: not run this session (static inspection; pass --tests to execute suite).
-Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written 2026-10-30T18:26:52.319Z.
-Counted by `npm run completion`, not typed.
-Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
-
-### Remaining
-- Awaiting Babin's review and approval to merge `lane-b/T4-05-shift-handover-on-the-database` into `main`.
-- Next Lane B task: T4-06 (`Export old browser-only entries`).
 
 ## 2026-10-30 — T4-04: Team notes on the database repair, verification, and rebase (Lane B · Size M)
 

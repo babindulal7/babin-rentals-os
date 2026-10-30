@@ -2,6 +2,7 @@ import type { Dest } from '../../../lib/queries/settings'
 import type { Field, Section } from './shared'
 import { DevicePinControl } from './DevicePin'
 import { PwaInstallControl } from '../../../components/ui/PwaInstallControl'
+import { LegacyExportControl } from './LegacyExportControl'
 
 /**
  * **Settings ▸ System** — appearance, notifications, preferences, security and
@@ -95,6 +96,11 @@ export const SYSTEM_SECTIONS: Section[] = [
         label: 'PWA Installation',
         note: 'Install Babin Rentals OS on this device for offline warehouse access and instant home screen launch.',
         custom: <PwaInstallControl />,
+      },
+      {
+        label: 'Legacy device export',
+        note: 'Download old entries saved only on this browser as a file for Babin (Ruling D28, Law 3).',
+        custom: <LegacyExportControl />,
       },
       /*
        * The idle lock used to sit here as "Session timeout", and moved to

@@ -90,7 +90,7 @@ the overlap hour is when handover is due. Replace `shiftHandover.ts` localStorag
 acknowledgement records who and when.
 **Needs** — none.
 
-### T4-06 · Export old browser-only entries            status: todo · size: S · lane B
+### T4-06 · Export old browser-only entries            status: done — awaiting merge (lane-b/T4-06-export-old-browser-only-entries) · size: S · lane B
 **What** — On the first sign-in to the live app, if the device holds any of the old keys
 (`br.productions`, `babin_rentals_deliveries_v1`, `babin_internal_notes_v1`, `br.shiftHandovers`,
 `br.warranties`, `babin_coupons_v2`, and legacy unsent offline work in IndexedDB), show one card:
