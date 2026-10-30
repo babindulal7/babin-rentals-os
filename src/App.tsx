@@ -57,6 +57,7 @@ const CasesReport       = lazy(() => import('./modules/reports/CasesReport'))
 const CustomReport      = lazy(() => import('./modules/reports/CustomReport'))
 
 const SalesVatReports   = lazy(() => import('./modules/reports/SalesVatReports'))
+const CrewTdsReport    = lazy(() => import('./modules/reports/CrewTdsReport'))
 const ActivityReports   = lazy(() => import('./modules/reports/ActivityReports'))
 const BackupRestore     = lazy(() => import('./modules/admin/BackupRestore'))
 const AuditSettings     = lazy(() => import('./modules/admin/AuditSettings'))
@@ -698,6 +699,15 @@ export default function App() {
           element={
             <Shell crumbs={[{ label: 'Finance', to: '/finance' }, { label: 'Reports', to: '/finance?tab=reports' }, { label: 'VAT / Tax Reports' }]}>
               <SalesVatReports />
+            </Shell>
+          }
+        />
+
+        <Route
+          path="/reports/tds"
+          element={
+            <Shell crumbs={[{ label: 'Finance', to: '/finance' }, { label: 'Reports', to: '/finance?tab=reports' }, { label: 'Crew TDS Reports' }]}>
+              <CrewTdsReport />
             </Shell>
           }
         />
