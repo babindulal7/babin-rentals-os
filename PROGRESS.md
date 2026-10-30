@@ -1,5 +1,62 @@
 # Progress Log
 
+## 2026-10-31 — T8-08: TDS on crew payouts (Lane A · Size M)
+
+**Did**
+- Claimed migration `0199` in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0199_tds_on_crew_payouts.sql`:
+  - Added stored payout snapshot columns to `public.crew_bookings`: `tds_rate_percent numeric(5,2)`, `tds_amount_paisa bigint`, `net_payout_paisa bigint`, `payout_recorded_at timestamptz`, `payout_recorded_by uuid references public.users(id)`.
+  - Implemented security definer RPC `record_crew_payout(p_client_uuid, p_booking_id, p_tds_rate_percent, p_notes)` restricted strictly to money roles (`auth_can_view_money()`).
+  - Added delete prevention trigger on crew bookings payouts and attached audit trigger `trg_audit_crew_bookings`.
+  - Created view `public.crew_payouts_v` masking gross, TDS, and net figures for money-blind roles (Warehouse, Technician, Driver, Client) per Law 6.
+- Added and verified lifecycle step **`L43`** in `scripts/e2e-lifecycle.mjs`:
+  - Asserts money roles (Accounts/Owner/Admin/Manager) can record payouts with immutable TDS snapshots.
+  - Asserts non-money roles (Coordinator, Warehouse, Technician, Driver, Client) are denied `record_crew_payout`.
+  - Asserts `crew_payouts_v` masks TDS, gross, and net payout figures from money-blind roles under Law 6.
+  - Asserts subsequent setting changes do not rewrite past stored payouts.
+- Configured Settings ▸ Financial:
+  - Registered `crewPayoutTdsPercent` setting in `src/lib/settingsStore.ts` with percentage validator and `%` suffix (O-5).
+  - Added "TDS on crew payouts" row in `src/modules/settings/sections/Financial.tsx`.
+- Integrated Crew Assist Payout Ledger & Reports:
+  - Updated `src/modules/crew/CrewBooking.tsx` to compute gross, TDS, and net using configured TDS rate or display "TDS: rate not set" when unconfigured.
+  - Authored `src/modules/reports/CrewTdsReport.tsx` for monthly accountant TDS reporting and registered route in `src/App.tsx`.
+- Added unit and component tests:
+  - `src/modules/crew/__tests__/crewBookingTds.test.ts`: 4/4 passed.
+  - `src/modules/reports/__tests__/CrewTdsReport.test.tsx`: 4/4 passed.
+
+**Ruled**
+- Ruling D25 & Decision O-5: TDS on crew payouts is configured in Settings ▸ Financial (set by accountant). Payouts show gross, TDS, net to money roles only (PERMISSIONS §5); until configured, payouts show "TDS: rate not set".
+- Past payouts snapshot stored TDS figures; a subsequent rate change never alters past payouts.
+- Law 6: Non-money roles (Coordinator, Warehouse, Technician, Driver, Client) have zero access to payout and TDS numbers.
+
+**Verified**
+- `npm run check:pglite`: 183/183 applied, 0 failed, 34 views checked (0 anon leaks), 20 functions checked (0 unauthorized), 106 definer functions checked (0 unpinned).
+- `npm run check:lifecycle`: 43/43 steps green, 0 known-red, 0 failed, including L43 crew payouts and TDS.
+- `npx vitest run src/modules/crew/__tests__/crewBookingTds.test.ts src/modules/reports/__tests__/CrewTdsReport.test.tsx`: 8/8 passed.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run build`: built in 3m 7s, 8164 modules transformed, PWA service worker generated cleanly.
+- `npm run completion`: counted by script, not typed.
+- `npm run lint:progress`: passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 65 / 65 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 62 | 52 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 54 / 54 (100%) | +0 |
+| Lifecycle | steps green / total | 43 / 43 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 183 files · check:pglite 183/183 applied, 0 failed (recorded 2026-10-30T20:13:49.115Z). Suite: NOT VERIFIED — invalid test receipt.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-10-30T20:14:59.716Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Waiting on accountant to supply official TDS withholding rate (O-5).
+- Ready for Babin to merge `lane-a/T8-08-tds-on-crew-payouts` into `main`.
+
 ## 2026-10-30 — T4-04: Team notes on the database repair, verification, and rebase (Lane B · Size M)
 
 **Did**
