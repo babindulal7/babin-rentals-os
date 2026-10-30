@@ -35,6 +35,11 @@ export interface BookingModalsProps {
   onReloadQuote: () => void
   confirmedSuccess: { bookingId?: string; bookingNo: string } | null
   setConfirmedSuccess: (val: { bookingId: string; bookingNo: string } | null) => void
+  /** T3-14: the Quote saved by "Save as quote" — drives its own success modal. */
+  quoteSaved: { bookingId: string; bookingNo: string } | null
+  setQuoteSaved: (val: { bookingId: string; bookingNo: string } | null) => void
+  /** T3-01 · D9: the history drawer's Re-book trigger. Omitted when editing a quote (quote has its own flow). */
+  onRebookBooking?: (bookingNo: string) => void | undefined
 }
 
 /**
@@ -71,6 +76,9 @@ export function BookingModals({
   onReloadQuote,
   confirmedSuccess,
   setConfirmedSuccess,
+  quoteSaved,
+  setQuoteSaved,
+  onRebookBooking,
 }: BookingModalsProps) {
   return (
     <>
@@ -94,6 +102,7 @@ export function BookingModals({
           onOpenBooking={(bookingNo) => navigate(`/rentals/${bookingNo}`)}
           onViewClient={(c) => navigate(`/clients/${c.id}`)}
           showMoney={canClientBalance}
+          {...(onRebookBooking ? { onRebookBooking } : {})}
         />
       )}
 
@@ -226,6 +235,61 @@ export function BookingModals({
                 onClick={() => navigate(`/rentals/${confirmedSuccess.bookingNo}/packing`)}
               >
                 Start Packing
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/rentals')}
+              >
+                Back to Rentals List
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* T3-14: the Quote saved by "Save as quote" — its own modal. */}
+      {quoteSaved && (
+        <Modal
+          isOpen={Boolean(quoteSaved)}
+          onClose={() => setQuoteSaved(null)}
+          title="Quote Saved"
+          size="md"
+        >
+          <div style={{ textAlign: 'center', padding: '16px 8px' }}>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 56,
+                height: 56,
+                borderRadius: '50%',
+                background: 'var(--st-success-bg, #ecfdf5)',
+                color: 'var(--st-success-fg, #065f46)',
+                marginBottom: 16,
+              }}
+            >
+              <Icon name="check" size={28} />
+            </div>
+            <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 700 }}>
+              Quote {quoteSaved.bookingNo} Saved
+            </h3>
+            <p style={{ margin: '0 0 20px', color: 'var(--text2)', fontSize: 'var(--t-body)', lineHeight: 1.5 }}>
+              The quote has been saved at today's rates. It follows the booking — line, date, discount, crew, delivery,
+              late-fee and damage changes regenerate its lines and totals.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 320, margin: '0 auto' }}>
+              <Button
+                variant="primary"
+                onClick={() => navigate(`/rentals/${quoteSaved.bookingNo}`)}
+              >
+                Open Quote
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => navigate(`/rentals/${quoteSaved.bookingNo}`)}
+              >
+                Continue Editing
               </Button>
               <Button
                 variant="ghost"

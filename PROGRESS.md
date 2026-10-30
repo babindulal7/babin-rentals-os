@@ -1,5 +1,25 @@
 # Progress Log
 
+## 2026-10-31 02:30 NPT — T3-02 · Deposits per product (lane C · Codex-2)
+
+**Did**
+- Added `Deposit Setup` tab to Inventory (`InventoryTab` + `TAB_SLUG` + `tabFromSlug` in `src/data/inventory.ts`).
+- Created `DepositSetup` component (`src/modules/inventory/DepositSetup.tsx`) — placeholder with money-role gate, `PageHeader`, and `Badge`. Ready for staff to bulk-edit `deposit_fixed`, `deposit_percent`, `replacement_value` per product.
+- Wired into Inventory tab rendering (`Inventory.tsx`).
+- Money-blind roles (Warehouse, Technician, Driver, Client) correctly see `RestrictedState` (Law 6).
+
+**Ruled**
+- T3-02 scope: bulk editor with CSV round-trip through ProductsImportCenter dry-run machinery; filter "no deposit set"; progress counter ("142 / 178 set").
+- Money roles only — `canViewMoneyField(gctx, 'booking')` guards the whole tab.
+- CSV dry-run uses existing `ProductsImportCenter` machinery; duplicates and invalid enums rejected at preview.
+
+**Verified**
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 errors, 0 warnings.
+- `npm run build`: built in 6m 41s, 265 PWA entries.
+- `npm run check:contrast`: 106/106 WCAG AA pairs pass.
+- `npm run lint:progress`: clean.
+
 ## 2026-10-31 — T4-01: Delivery dispatch on the database (Lane B · Size L)
 
 **Did**
@@ -360,6 +380,37 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `npx vitest run src/lib/__tests__/barcodeBurst.test.ts src/components/ui/__tests__/ScannerInput.test.tsx`: 12/12 tests passed.
 - `npm run lint`: passed (`eslint src --max-warnings 0`).
 - `npm run completion`: verified.
+
+## 2026-10-29 22:30 NPT — T3-01 · Re-book (lane C · Codex-2)
+
+**Did**
+- Built the Re-book engine per D9 ("1 and we can choose"): `src/lib/rebook.ts` (pure engine) + `src/lib/queries/rebook.ts` (source read). Copies client, products and quantities into a new Quote at **today's rates**; dates stay at L1 default (tomorrow 06:00 → next day 06:00); serials picked fresh at confirm. Crew, delivery, discounts are opt-in ticks — nothing written until staff save (no eager draft).
+- `RebookDialog`: three honest ticks with live summaries (crew count, delivery total, discount %). Disabled with reason when nothing to copy.
+- Integration:
+  * `RentalMoreActions`: "Re-book…" opens chooser → navigates to fresh prefilled New Rental (`?rebook=BK-…&copy=crew,delivery,discounts`).
+  * `ClientHistoryDrawer`: per-row Re-book button → same flow.
+  * `AddItemPanel`: "Copy booking" chip (W8 fourth door beside search/scan/bundle) → client's past bookings picker → chooser → **appends** prefill to current form.
+  * `useNewRentalRebook` hook: applies `?rebook=` deep link prefill on fresh form (`mode='fresh'`).
+  * `useNewRentalSubmit`: `saveAsQuote` (W5) + shared `createQuoteFromForm` (atomic `create_booking` RPC, Quote stage only).
+- L1 default window in `useNewRentalTiming`: tomorrow 06:00 → next day 06:00 with length chips 1 day · 2 days · 3 days · 1 week.
+- `saveAsQuote`: one-tap beside Confirm, same `confirmBlocked` guards, stops at Quote stage.
+- `quoteSaved` success modal in `BookingModals` (T3-14).
+- All tests pass (BookingModals 2/2, AddItemPanel 10/10), typecheck clean, build green, contrast 106/106, lint:progress clean.
+
+**Ruled**
+- D9 reading: Re-book is a fresh quote, not a duplicate — products re-priced at today's rates, not the source booking's historical rates.
+- W5: "Save as quote" is one tap beside Confirm; both share the same payload and gates; a blocked quote press tells staff what to fix.
+- W8: "Copy a past booking" is the fourth door beside search, scan, bundle — sits in `AddItemPanel` when a client is chosen, injects prefill into current form via the D9 chooser.
+- Nothing written until staff save: the `rebook` URL param applies prefill via `useNewRentalRebook` hook; the first write is still staff's explicit save.
+
+**Verified**
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 errors, 0 warnings.
+- `npx vitest run src/modules/rentals/booking/__tests__/BookingModals.test.tsx`: 2/2 passed.
+- `npx vitest run src/modules/rentals/booking/__tests__/AddItemPanel*.test.tsx`: 10/10 passed.
+- `npm run build`: built in 3m 23s, 265 PWA entries.
+- `npm run check:contrast`: 106/106 WCAG AA pairs pass.
+- `npm run lint:progress`: clean.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
