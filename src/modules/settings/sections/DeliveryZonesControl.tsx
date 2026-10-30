@@ -25,7 +25,7 @@ import {
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog'
 
 /**
- * Settings ▸ System ▸ Operations ▸ Delivery Zones control (T4-07, migration 0187).
+ * Settings ▸ System ▸ Operations ▸ Delivery Zones control (T4-07, migration 0189).
  * Manages delivery zones with per-zone fees for dispatch calculation.
  */
 export function DeliveryZonesControl() {

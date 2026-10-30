@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0188**
+**Next free number: 0190**
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
@@ -23,9 +23,12 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0182 | T2-12 | client-collectors-and-id-on-file | lane-a/T2-12-client-collectors-and-id-on-file | verified |
 | 0183 | T2-13 | reset-self-qc-when-alone | lane-a/T2-13-self-qc-when-alone | verified |
 | 0184 | T2-06 | repair-job-closes-damage | lane-a/T2-06-repair-job-closes-the-damage | verified |
-| 0185 | T4-04 | team-notes | lane-b/T4-04-team-notes | written |
-| 0186 | T4-05 | shift-handovers | lane-b/T4-05-shift-handovers | written |
-| 0187 | T4-07 | delivery-zones | lane-b/T4-07-delivery-zones | written |
+| 0185 | T4-04 | team-notes | lane-b/T4-04-team-notes-repair | verified |
+| 0186 | T4-05 | shift-handovers | lane-b/T4-05-shift-handover-on-the-database | verified |
+| 0187 | T4-01 | delivery-dispatch-rpcs | lane-b/T4-01-delivery-dispatch-on-the-database | verified |
+| 0188 | T3-smart-reservations | smart-reservation-holds | lane-c/T3-smart-reservations | verified |
+| 0189 | T4-07 | delivery-zones | lane-b/T4-07-delivery-zones | written |
+| 0199 | T8-08 | tds-on-crew-payouts | lane-a/T8-08-tds-on-crew-payouts | verified |
 
 ## Expected migrations (not yet claimed)
 
@@ -60,6 +63,7 @@ Listed so lanes can see what is coming. A card marked "if needed" may turn out n
 | T3-14 | Draft invoice on Confirm, re-sync while Draft, issue on full payment |
 | T3-18 | `change_booking(jsonb)` RPC, linked-booking column, `rental.change` |
 | T3-21 | search indexes (if a query is slow) |
+| T4-07 | delivery zones table (if not a settings key) |
 | T4-08 | `delivery_job_links` (hashed tokens, expiry, revoke) + link RPCs |
 | T5-07 / T5-08 | `client_message_events`, cron jobs, `reminders_paused` on clients |
 | T5-09 | `push_subscriptions` |

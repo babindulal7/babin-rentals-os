@@ -358,7 +358,7 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'team_note.acknowledge':
       return rbac.canAcknowledgeTeamNote(ctx.role);
 
-    // Delivery zones (T4-07, migration 0187)
+    // Delivery zones (T4-07, migration 0189)
     case 'delivery_zone.create':
       return rbac.canCreateDeliveryZone(ctx.role);
     case 'delivery_zone.read':

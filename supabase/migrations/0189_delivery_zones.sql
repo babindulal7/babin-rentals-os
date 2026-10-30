@@ -1,4 +1,4 @@
--- 0187_delivery_zones.sql
+-- 0189_delivery_zones.sql
 -- Delivery zones for zone-based dispatch fees
 -- T4-07: delivery_zones table + RPCs
 

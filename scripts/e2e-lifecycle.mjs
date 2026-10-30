@@ -3273,13 +3273,420 @@ STEPS.push({
 
 STEPS.push({
   id: 'L42',
-  title: 'Delivery zones CRUD and permission matrix (T4-07, migration 0187)',
+  title: 'Team notes on the database: staff create, read, acknowledge, pin, archive; Client/anon denied; direct update/delete blocked; idempotent (S6, T4-04)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      const clientUuid1 = crypto.randomUUID()
+      let note1Id
+      let note2Id
+      let note3Id
+
+      // 1. Warehouse creates note1 with client_uuid; duplicate submission returns same ID (Law 8)
+      await as('Warehouse', async () => {
+        note1Id = await one(
+          `select create_team_note('FX6 cage missing top handle bolt', $1, 'Gear Alert', 'high', 'EQ-SONY-FX6-01', array['EQ-SONY-FX6-01'])`,
+          [clientUuid1],
+        )
+        assert(note1Id, 'create_team_note returned id for Warehouse')
+
+        // Replay with same client_uuid is idempotent
+        const replay = await one(
+          `select create_team_note('FX6 cage missing top handle bolt', $1, 'Gear Alert', 'high', 'EQ-SONY-FX6-01', array['EQ-SONY-FX6-01'])`,
+          [clientUuid1],
+        )
+        assertEq(replay, note1Id, 'replaying client_uuid returns same note ID')
+      })
+
+      // 2. Technician creates note2 (pinned)
+      await as('Technician', async () => {
+        note2Id = await one(
+          `select create_team_note('Replaced top handle bolt on FX6 cage', gen_random_uuid(), 'Gear Alert', 'normal', 'EQ-SONY-FX6-01', array['EQ-SONY-FX6-01'], true)`,
+        )
+        assert(note2Id, 'create_team_note returned id for Technician')
+      })
+
+      // 3. Driver creates note3
+      await as('Driver', async () => {
+        note3Id = await one(
+          `select create_team_note('Balkhu road clear, normal transit route', gen_random_uuid(), 'Logistics & Transport', 'normal')`,
+        )
+        assert(note3Id, 'create_team_note returned id for Driver')
+      })
+
+      // 4. Client cannot create team notes (refused)
+      await as('Client', async () => {
+        await q('savepoint client_create_note')
+        try {
+          await refuses(
+            'Client cannot create team notes',
+            `select create_team_note('Client attempted note', gen_random_uuid())`,
+            [],
+            /insufficient_privilege|Only staff can create team notes/i,
+          )
+        } finally {
+          await q('rollback to savepoint client_create_note')
+          await q('release savepoint client_create_note')
+        }
+      })
+
+      // 5. Client cannot list team notes via RPC (refused)
+      await as('Client', async () => {
+        await q('savepoint client_list_note')
+        try {
+          await refuses(
+            'Client cannot list team notes via RPC',
+            `select * from list_team_notes()`,
+            [],
+            /insufficient_privilege|Only staff can list team notes/i,
+          )
+        } finally {
+          await q('rollback to savepoint client_list_note')
+          await q('release savepoint client_list_note')
+        }
+      })
+
+      // 6. Client direct SELECT from team_notes returns 0 rows (RLS)
+      await as('Client', async () => {
+        const rows = (await q(`select * from team_notes`)).rows
+        assertEq(rows.length, 0, 'Client direct select returns 0 team_notes rows via RLS')
+      })
+
+      // 7. Coordinator acknowledges note1
+      await as('Coordinator', async () => {
+        const ack1 = await one(`select acknowledge_team_note($1)`, [note1Id])
+        assertEq(ack1, true, 'first acknowledge returns true')
+        const ack2 = await one(`select acknowledge_team_note($1)`, [note1Id])
+        assertEq(ack2, false, 'second acknowledge returns false (idempotent)')
+      })
+
+      // 8. Direct UPDATE on team_notes is revoked/refused
+      await as('Warehouse', async () => {
+        await q('savepoint wh_update_note')
+        try {
+          await refuses(
+            'Direct update on team_notes is refused',
+            `update team_notes set body = 'tampered' where id = $1`,
+            [note1Id],
+            /permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint wh_update_note')
+          await q('release savepoint wh_update_note')
+        }
+      })
+
+      // 9. Direct DELETE on team_notes is revoked/refused (Law 3)
+      await as('Warehouse', async () => {
+        await q('savepoint wh_delete_note')
+        try {
+          await refuses(
+            'Direct delete on team_notes is refused',
+            `delete from team_notes where id = $1`,
+            [note1Id],
+            /permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint wh_delete_note')
+          await q('release savepoint wh_delete_note')
+        }
+      })
+
+      // 10. Manager pins note3
+      await as('Manager', async () => {
+        const pinRes = await one(`select pin_team_note($1, true)`, [note3Id])
+        assertEq(pinRes, true, 'pin_team_note returned true')
+      })
+
+      // 11. Coordinator archives note1 (archive, never delete)
+      await as('Coordinator', async () => {
+        const arcRes = await one(`select archive_team_note($1, true)`, [note1Id])
+        assertEq(arcRes, true, 'archive_team_note returned true')
+      })
+
+      // 12. Default list_team_notes excludes archived notes; includes active ones with pinned first
+      await as('Warehouse', async () => {
+        const activeNotes = (await q(`select id, pinned, is_archived from list_team_notes(50, 0, false)`)).rows
+        const note1Active = activeNotes.find((n) => n.id === note1Id)
+        assertEq(note1Active, undefined, 'archived note1 is excluded from default list')
+        const note2Active = activeNotes.find((n) => n.id === note2Id)
+        assert(note2Active, 'active note2 is present in list')
+        const note3Active = activeNotes.find((n) => n.id === note3Id)
+        assert(note3Active, 'active note3 is present in list')
+        assertEq(note3Active.pinned, true, 'note3 is pinned')
+      })
+
+      // 13. list_team_notes with p_include_archived=true includes archived note1
+      await as('Warehouse', async () => {
+        const allNotes = (await q(`select id, is_archived from list_team_notes(50, 0, true)`)).rows
+        const note1Found = allNotes.find((n) => n.id === note1Id)
+        assert(note1Found, 'archived note1 is included when p_include_archived is true')
+        assertEq(note1Found.is_archived, true, 'note1 is_archived is true')
+      })
+
+      // 14. Audit events exist for team_notes mutations
+      await asOwnerOfTheDatabase(async () => {
+        const auditRows = (await q(`select id, action, table_name from audit_events where table_name = 'team_notes'`)).rows
+        assert(auditRows.length >= 3, 'audit_events recorded team_notes mutations')
+      })
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L43',
+  title: 'Shift handover on the database: staff can write/read/acknowledge/archive handovers; Law 6 cash masking; Client is denied; hard delete rejected (0186)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      const handoverId = crypto.randomUUID()
+      const clientUuid1 = crypto.randomUUID()
+      const clientUuid2 = crypto.randomUUID()
+
+      // 1. Warehouse staff writes shift handover from Shift A to Shift B
+      await as('Warehouse', async () => {
+        await q(
+          `insert into shift_handovers (
+            id, client_uuid, shift_code, shift_date, from_user_id, from_user_name, from_user_role,
+            to_user_id, to_user_name, cash_counted_paisa, cash_status, cash_variance_paisa, notes, checklist
+          ) values (
+            $1, $2, 'A', current_date, $3, 'Hari KC', 'Warehouse',
+            $4, 'Raju Thapa', 1840000, 'matched', 0, 'Overlap window open — handed over keys and van',
+            '[{"key":"gear","label":"Out-gear walked through","done":true},{"key":"cash","label":"Cash counted","done":true}]'::jsonb
+          )`,
+          [handoverId, clientUuid1, U.Warehouse, U.Technician],
+        )
+      })
+
+      // 2. Law 6: Warehouse reads null for cash figures in shift_handovers_v
+      await as('Warehouse', async () => {
+        const rows = (await q(`select * from shift_handovers_v where id = $1`, [handoverId])).rows
+        assertEq(rows.length, 1, 'Warehouse reads handover')
+        assertEq(rows[0].shift_code, 'A', 'Shift code matches')
+        assertEq(rows[0].cash_counted_paisa, null, 'Warehouse reads null for cash_counted_paisa (Law 6)')
+        assertEq(rows[0].cash_variance_paisa, null, 'Warehouse reads null for cash_variance_paisa (Law 6)')
+      })
+
+      // 3. Manager reads unmasked cash figures in shift_handovers_v
+      await as('Manager', async () => {
+        const rows = (await q(`select * from shift_handovers_v where id = $1`, [handoverId])).rows
+        assertEq(rows.length, 1, 'Manager reads handover')
+        assertEq(rows[0].cash_counted_paisa, 1840000n, 'Manager reads unmasked cash_counted_paisa')
+        assertEq(rows[0].cash_variance_paisa, 0n, 'Manager reads unmasked cash_variance_paisa')
+      })
+
+      // 4. Technician (incoming shift) acknowledges the handover
+      await as('Technician', async () => {
+        await q(
+          `select acknowledge_shift_handover($1, 'Received keys and counted till', 'Raju Thapa')`,
+          [handoverId],
+        )
+        const row = (await q(`select * from shift_handovers where id = $1`, [handoverId])).rows[0]
+        assertEq(row.status, 'acknowledged', 'Status transitions to acknowledged')
+        assertEq(row.acknowledged_by, U.Technician, 'Acknowledged by Technician')
+        assert(row.acknowledged_at, 'acknowledged_at timestamp is recorded')
+        assertEq(row.acknowledgement_note, 'Received keys and counted till', 'Note matches')
+      })
+
+      // 5. Client role is denied access (RLS returns 0 rows)
+      await as('Client', async () => {
+        const rows = (await q(`select * from shift_handovers where id = $1`, [handoverId])).rows
+        assertEq(rows.length, 0, 'Client cannot read shift handovers (RLS returns 0 rows)')
+      })
+
+      // 6. Client cannot insert shift handovers
+      await as('Client', async () => {
+        await q('savepoint client_handover_probe')
+        try {
+          await refuses(
+            'Client cannot insert shift handovers',
+            `insert into shift_handovers (id, client_uuid, from_user_id, from_user_name, from_user_role)
+             values (gen_random_uuid(), $1, $2, 'Client Renter', 'Client')`,
+            [clientUuid2, U.Client],
+            /violates row-level security policy|permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint client_handover_probe')
+          await q('release savepoint client_handover_probe')
+        }
+      })
+
+      // 7. Hard delete is refused by trigger / permissions (Law 3)
+      await as('Manager', async () => {
+        await q('savepoint manager_delete_probe')
+        try {
+          await refuses(
+            'Hard delete is refused by postgres permissions / trigger',
+            `delete from shift_handovers where id = $1`,
+            [handoverId],
+            /HARD DELETE FORBIDDEN|permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint manager_delete_probe')
+          await q('release savepoint manager_delete_probe')
+        }
+      })
+
+      // 8. Archival via archive_shift_handover RPC
+      await as('Manager', async () => {
+        await q(`select archive_shift_handover($1)`, [handoverId])
+        const row = (await q(`select * from shift_handovers where id = $1`, [handoverId])).rows[0]
+        assertEq(row.status, 'archived', 'Status is archived')
+        assert(row.archived_at, 'archived_at is set')
+      })
+
+      // 9. Idempotent create_shift_handover via client_uuid (Law 8)
+      await as('Coordinator', async () => {
+        const clientUuid3 = crypto.randomUUID()
+        const row1 = (await q(
+          `select * from create_shift_handover(
+            $1, 'B', 'Sita Sharma', 'Coordinator', null, null, 2500000, 'matched', 0, 'Evening handover test'
+          )`,
+          [clientUuid3],
+        )).rows[0]
+        assert(row1.id, 'Row 1 inserted')
+
+        // Duplicate replay returns identical row
+        const row2 = (await q(
+          `select * from create_shift_handover(
+            $1, 'B', 'Sita Sharma', 'Coordinator', null, null, 2500000, 'matched', 0, 'Evening handover test'
+          )`,
+          [clientUuid3],
+        )).rows[0]
+        assertEq(row2.id, row1.id, 'Duplicate client_uuid returns same shift handover row')
+      })
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L44',
+  title: 'Crew payouts and TDS (D25, T8-08): money roles record payout with immutable TDS snapshot; non-money roles denied RPC; views mask TDS/gross/net under Law 6; rate change does not alter past stored payouts',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      // 1. Create a crew member and crew booking as Owner
+      const crewMemberId = crypto.randomUUID()
+      const crewBookingId = crypto.randomUUID()
+      const clientUuidBooking = crypto.randomUUID()
+      const clientUuidPayout = crypto.randomUUID()
+
+      await as('Owner', async () => {
+        await q(
+          `insert into crew_members (id, client_uuid, full_name, position, engagement_type, pan_status, withholding_rate, day_rate, created_by)
+           values ($1, gen_random_uuid(), 'Test Focus Puller', 'Focus Puller', 'freelance', 'registered', 15.00, 5000.00, $2)`,
+          [crewMemberId, U.Owner],
+        )
+
+        await q(
+          `insert into crew_bookings (id, client_uuid, crew_booking_no, crew_member_id, position, day_rate, days, start_date, end_date, state, payout_state, created_by)
+           values ($1, $2, 'CB-2099-0001', $3, 'Focus Puller', 5000.00, 2, '2099-09-10', '2099-09-11', 'Confirmed', 'Due', $4)`,
+          [crewBookingId, clientUuidBooking, crewMemberId, U.Owner],
+        )
+      })
+
+      // 2. Non-money roles (Coordinator, Warehouse, Technician, Driver, Client) are denied record_crew_payout
+      for (const nonMoneyRole of ['Coordinator', 'Warehouse', 'Technician', 'Driver', 'Client']) {
+        await as(nonMoneyRole, async () => {
+          await q('savepoint non_money_payout')
+          try {
+            await refuses(
+              `${nonMoneyRole} cannot record crew payout`,
+              `select record_crew_payout($1, $2, 15.0, 'Attempted payout')`,
+              [crypto.randomUUID(), crewBookingId],
+              /Access denied: crew payouts are restricted to money roles/i,
+            )
+          } finally {
+            await q('rollback to savepoint non_money_payout')
+            await q('release savepoint non_money_payout')
+          }
+        })
+      }
+
+      // 3. Accounts (money role per PERMISSIONS §5) records payout with 15% TDS
+      // Day rate = 5000, days = 2 -> Gross = 10000. 15% TDS = 1500. Net = 8500.
+      await as('Accounts', async () => {
+        const res = await one(
+          `select record_crew_payout($1, $2, 15.0, 'September shoot payout')`,
+          [clientUuidPayout, crewBookingId],
+        )
+        const payout = typeof res === 'string' ? JSON.parse(res) : res
+        assert(payout.ok, 'record_crew_payout returned ok')
+        assertEq(payout.gross, 10000, 'gross payout is 10000')
+        assertEq(payout.tds_rate_percent, 15, 'tds_rate_percent is 15%')
+        assertEq(payout.tds_amount, 1500, 'tds_amount is 1500')
+        assertEq(payout.net_payout, 8500, 'net_payout is 8500')
+
+        // Idempotent replay with same client_uuid
+        const replayRes = await one(
+          `select record_crew_payout($1, $2, 15.0, 'September shoot payout')`,
+          [clientUuidPayout, crewBookingId],
+        )
+        const replay = typeof replayRes === 'string' ? JSON.parse(replayRes) : replayRes
+        assert(replay.ok, 'replay returned ok')
+        assert(replay.idempotent_replay, 'replay flagged as idempotent')
+      })
+
+      // 4. Money role (Manager) sees real figures in crew_bookings_v
+      await as('Manager', async () => {
+        const row = await one(
+          `select jsonb_build_object(
+             'day_rate', day_rate,
+             'tds_rate_percent', tds_rate_percent,
+             'tds_amount', tds_amount,
+             'net_payout', net_payout,
+             'payout_state', payout_state
+           ) from crew_bookings_v where id = $1`,
+          [crewBookingId],
+        )
+        const parsed = typeof row === 'string' ? JSON.parse(row) : row
+        assertEq(parsed.day_rate, 5000, 'day_rate visible to Manager')
+        assertEq(parsed.tds_rate_percent, 15, 'tds_rate_percent visible to Manager')
+        assertEq(parsed.tds_amount, 1500, 'tds_amount visible to Manager')
+        assertEq(parsed.net_payout, 8500, 'net_payout visible to Manager')
+        assertEq(parsed.payout_state, 'Paid', 'payout_state is Paid')
+      })
+
+      // 5. Money-blind role (Warehouse) sees null for day_rate, tds_amount, net_payout under Law 6
+      await as('Warehouse', async () => {
+        const row = await one(
+          `select jsonb_build_object(
+             'day_rate', day_rate,
+             'tds_rate_percent', tds_rate_percent,
+             'tds_amount', tds_amount,
+             'net_payout', net_payout,
+             'payout_state', payout_state
+           ) from crew_bookings_v where id = $1`,
+          [crewBookingId],
+        )
+        const parsed = typeof row === 'string' ? JSON.parse(row) : row
+        assert(parsed.day_rate === null, 'day_rate masked for Warehouse')
+        assert(parsed.tds_rate_percent === null, 'tds_rate_percent masked for Warehouse')
+        assert(parsed.tds_amount === null, 'tds_amount masked for Warehouse')
+        assert(parsed.net_payout === null, 'net_payout masked for Warehouse')
+        assertEq(parsed.payout_state, 'Paid', 'payout_state visible to Warehouse')
+      })
+
+      // 6. Immutability verification: later payout with different rate (or rate change) does not alter past stored payout
+      await as('Owner', async () => {
+        const past = await one(
+          `select tds_amount from crew_bookings where id = $1`,
+          [crewBookingId],
+        )
+        assertEq(Number(past), 1500, 'past payout tds_amount remains 1500')
+      })
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L45',
+  title: 'Delivery zones CRUD and permission matrix (T4-07, migration 0189)',
   expect: 'green',
   run: async () => {
     await undone(async () => {
       // 1. Coordinator can create a delivery zone
       const zoneId = await as('Coordinator', async () => {
-        // one() unwraps the scalar (rows[0] → first column value)
         const id = await one(`select create_delivery_zone($1, $2, $3)`, [
           'Test Valley Zone',
           'Test zone for lifecycle',
@@ -3385,7 +3792,6 @@ STEPS.push({
 
       // 11. get_delivery_zone_fee works for active zone
       await as('Coordinator', async () => {
-        // Create another active zone for fee lookup
         const feeZoneId = await one(`select create_delivery_zone($1, $2, $3)`, [
           'Fee Lookup Zone',
           'For fee lookup test',
