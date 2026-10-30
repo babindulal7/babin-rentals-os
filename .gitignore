@@ -91,6 +91,11 @@ files.zip
 # local data backups (contain client PII)
 backups/
 
-# Scratch pages/configs and mock build bundles saved alongside artifacts — regenerable, not history.
+# Scratch pages/configs, test telemetry, artifacts, and local worktrees — regenerable, not history.
 /tmp/
-artifacts/**/mock-dist/
+artifacts/
+.worktrees/
+.test-result.json
+astra-*.json
+astra-*.jsonl
+docs/archive/repomix-*.xml
