@@ -3435,7 +3435,6 @@ STEPS.push({
 
 STEPS.push({
   id: 'L43',
-<<<<<<< HEAD
   title: 'Shift handover on the database: staff can write/read/acknowledge/archive handovers; Law 6 cash masking; Client is denied; hard delete rejected (0186)',
   expect: 'green',
   run: async () => {
@@ -3555,7 +3554,13 @@ STEPS.push({
           [clientUuid3],
         )).rows[0]
         assertEq(row2.id, row1.id, 'Duplicate client_uuid returns same shift handover row')
-=======
+      })
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L44',
   title: 'Crew payouts and TDS (D25, T8-08): money roles record payout with immutable TDS snapshot; non-money roles denied RPC; views mask TDS/gross/net under Law 6; rate change does not alter past stored payouts',
   expect: 'green',
   run: async () => {
@@ -3669,7 +3674,6 @@ STEPS.push({
           [crewBookingId],
         )
         assertEq(Number(past), 1500, 'past payout tds_amount remains 1500')
->>>>>>> lane-a/T8-08-tds-on-crew-payouts
       })
     })
   },

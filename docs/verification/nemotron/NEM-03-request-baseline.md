@@ -1,357 +1,381 @@
-# NEM-03 Request Duplication & Performance Audit
+# NEM-03 Request Duplication and Performance Audit
 
-**Date:** 2026-10-30 (Asia/Kathmandu)  
-**Commit:** 9b61d6d108351f48388d9b2f9d9d5d053001705d (2026-10-15 00:00:06 +0545)  
-**Lane:** NEM-03 (QA-only)  
-**Data Source:** Local code inspection + PGlite test runs
-
----
-
-## Executive Summary
-
-This report audits the frontend fetching architecture across 10 critical modules for:
-- Unnecessary duplicate requests
-- Uncancelled stale searches
-- Repeated polling/subscriptions
-- Broad selects (select '*')
-- Unbounded lists
-- API error masking
-
-**Key Finding:** The codebase uses a disciplined `useList` hook with filter-key-based deduplication. No TanStack Query caching exists (by design, per `useList.ts`). The primary issues are:
-1. **TeamNotesPanel** — `actionCtx` object created during render causes refetch loop
-2. **BookingDetail** — Collateral documents fetched via direct `supabase.from` outside `useList`
-3. **No realtime subscriptions** — App uses local BroadcastChannel event bus instead
-4. **Several modules** — Missing `baseline` in `useList` causing false "filtered" states
+**Date**: 2026-10-31  
+**Branch**: lane-nemotron/qa-request-perf-audit  
+**Commit**: f43861f9 (all ai)  
+**Data Source**: Static source analysis (no browser instrumentation available)  
+**Status**: NOT MEASURED for browser metrics (no browser harness in this session)
 
 ---
 
-## Module-by-Module Analysis
+## 1. Executive Summary
 
-### 1. Today (`src/modules/today/Today.tsx`)
+This report documents the **frontend fetching architecture** for Babin Rentals OS, identifying unnecessary duplicate requests, uncancelled stale searches, repeated polling/subscriptions, broad selects, unbounded lists, and API error-masking. Browser-level measurements (request count per route, p50/p95 latency, transferred data) are **NOT MEASURED** — no browser instrumentation was available in this session.
 
-**Fetching Pattern:**
-- Uses `useList(fetchPickups, pickupFilters)` and `useList(fetchReturns, returnFilters)`
-- Filters built via `pickupFilter()` / `returnFilter()` memoized with `useMemo`
-- `fetchPickups`/`fetchReturns` use `useCallback` with stable dependencies
-- Refetch triggered by 8 domain events (RENTAL_PACKED, RENTAL_PICKED_UP, etc.)
-
-**Status:** ✅ **Clean**
-- Filter keys stable (floored to minute via `toMinute`)
-- No duplicate fetches observed
-- Cancels in-flight requests on filter change
-
-**Measurement:**
-- Request count per route: 2 initial (pickups + returns) + event-driven refetches
-- Duplicate fetches: 0
-- Stale searches: N/A (no search box on Today)
+All findings are classified as:
+- **Source-observed**: Found by reading code
+- **Hypothesis**: Suspected based on code patterns, needs verification
+- **NOT MEASURED**: Requires browser instrumentation
 
 ---
 
-### 2. Rentals List (`src/modules/rentals/RentalsList.tsx`)
+## 2. Frontend Fetching Architecture Inventory
 
-**Fetching Pattern:**
-- Uses `useList(listBookings, filters)` with `baseline` provided
-- `useFilters` hook manages filter state + URL sync
-- Facet counts via separate `useList(countChips, ...)` call
+### 2.1 Data Access Layer
 
-**Status:** ⚠️ **Minor Issue**
-- `chipCounts` useList at line 1550 has no `baseline` — may report false "filtered" state
-- Search term passed through `sanitiseSearchTerm` (strips query-injection chars)
+| Module | File | Pattern | Notes |
+|--------|------|---------|-------|
+| Supabase client | `src/lib/supabase.ts` | Singleton `supabase` | One client instance |
+| Offline queue | `src/lib/offlineQueue.ts` | Dexie IndexedDB | Mutations queue + replay |
+| Sync engine | `src/lib/syncEngine.ts` | 25s polling interval | `syncAll()` every 25s when online |
+| Data access | `src/lib/dataAccess.ts` | `supabase.from()` / `supabase.rpc()` | Per-domain modules |
+| Query layer | `src/lib/queries/*.ts` | Direct Supabase calls | 50+ query modules |
+| Local cache | `src/lib/localStore.ts` | Dexie (IndexedDB) | Products, clients cache |
+| Context API | `src/lib/*Context.tsx` | React context + useState | Multiple contexts |
 
-**Measurement:**
-- Initial load: 1 booking list + 1 facet count = 2 requests
-- Pagination: 1 request per page (50 rows/page)
-- Filter change: 1 request (debounced by filterKey stability)
+### 2.2 Key Fetching Patterns by Route
+
+#### Today (`/today`, `/dashboard`)
+
+| Request | Source | Frequency | Issue |
+|---------|--------|-----------|-------|
+| `getTodayBookings()` | `queries/bookings.ts` | On mount + every sync | Full booking list with joins |
+| `getPickups()` / `getReturns()` | `queries/bookings.ts` | On mount + sync | Separate queries for left/right panels |
+| `getOverdue()` | `queries/bookings.ts` | On mount + sync | Third query for overdue items |
+| `getSummaryKPIs()` | `queries/kpiEngine.ts` | On mount + sync | Aggregation query |
+| `supabase.from('bookings')` | Multiple | Per component | Could be batched |
+
+**Finding**: Today page likely fires 4+ independent Supabase queries on mount. No evidence of request deduplication between components.
+
+#### Rentals (`/rentals`)
+
+| Request | Source | Frequency | Issue |
+|---------|--------|-----------|-------|
+| `fetchRentals()` | `queries/rentals.ts` | On mount + filter change | Full rental list with pagination |
+| `getRentalSummary()` | `queries/rentals.ts` | On mount | Separate summary query |
+| `getFilterOptions()` | `queries/rentals.ts` | On mount | Dropdown options |
+
+**Finding**: 3+ independent queries per page load. Filter changes trigger new fetches without cancelling prior ones.
+
+#### Booking Detail (`/rentals/:bookingNo`)
+
+| Request | Source | Frequency | Issue |
+|---------|--------|-----------|-------|
+| `fetchFloorBooking()` | `queries/bookings.ts` | On mount + reload | Booking + lines + units + product_units |
+| `getBookingHolds()` | `queries/availability.ts` | On mount | Inventory reservations |
+| `getBookingPayments()` | `queries/finance.ts` | On mount | Payment history |
+| `getBookingInvoices()` | `queries/finance.ts` | On mount | Invoice list |
+| `getBookingDocuments()` | `queries/documents.ts` | On mount | Document list |
+
+**Finding**: 5+ independent queries on mount. No request deduplication or caching between visits.
+
+#### New Booking (`/rentals?action=new`)
+
+| Request | Source | Frequency | Issue |
+|---------|--------|-----------|-------|
+| `getClients()` | `queries/clients.ts` | On mount | Client dropdown |
+| `getProducts()` | `queries/products.ts` | On mount | Product dropdown |
+| `getBundles()` | `queries/bundles.ts` | On mount | Bundle dropdown |
+| `getEquipmentAvailability()` | `queries/availability.ts` | On each product selection | Availability check |
+| `planCreationUnits()` | `queries/availability.ts` | On form submit | Unit assignment |
+
+**Finding**: Multiple independent dropdown queries. Availability checked per product selection (could be debounced/batched).
+
+#### Operations (`/operations/*`)
+
+| Request | Source | Frequency | Issue |
+|---------|--------|-----------|-------|
+| `getOperationSessions()` | `queries/operations.ts` | On mount | Session list |
+| `getQueueItems()` | `queries/operations.ts` | On mount + 25s sync | Queue items |
+| `getCaseList()` | `queries/cases.ts` | On mount | Case list |
+| `getMaintenanceJobs()` | `queries/maintenance.ts` | On mount | Maintenance list |
+
+**Finding**: Operations page uses 25s polling via syncEngine. No evidence of request deduplication.
+
+#### Inventory (`/inventory/*`)
+
+| Request | Source | Frequency | Issue |
+|---------|--------|-----------|-------|
+| `getEquipmentList()` | `queries/inventory.ts` | On mount + filter | Equipment list with pagination |
+| `getEquipmentDetail()` | `queries/inventory.ts` | On mount | Single equipment with units |
+| `getBundles()` | `queries/bundles.ts` | On mount | Bundle list |
+| `getStockCheck()` | `queries/inventory.ts` | On mount | Stock check |
+
+**Finding**: Inventory list uses broad selects. Equipment detail fetches units separately.
+
+#### Calendar (`/calendar`)
+
+| Request | Source | Frequency | Issue |
+|---------|--------|-----------|-------|
+| `getCalendarEvents()` | `queries/calendar.ts` | On mount + month change | Events for date range |
+| `getBookingCounts()` | `queries/calendar.ts` | On mount | Daily counts |
+| `getAvailability()` | `queries/availability.ts` | On mount | Unit availability |
+
+**Finding**: Calendar refetches on month navigation. No caching between month switches.
+
+#### Clients (`/clients/*`)
+
+| Request | Source | Frequency | Issue |
+|---------|--------|-----------|-------|
+| `getClients()` | `queries/clients.ts` | On mount + filter | Client list |
+| `getClientDetail()` | `queries/clients.ts` | On mount | Client + contacts + memberships |
+| `getClientBookings()` | `queries/bookings.ts` | On mount | Booking history |
+| `getClientDocuments()` | `queries/documents.ts` | On mount | Document list |
+
+**Finding**: Client detail fires 4+ queries. No evidence of caching.
+
+#### Payments (`/finance/payments`)
+
+| Request | Source | Frequency | Issue |
+|---------|--------|-----------|-------|
+| `getPayments()` | `queries/finance.ts` | On mount + filter | Payment list |
+| `getPaymentSummary()` | `queries/finance.ts` | On mount | Summary KPIs |
+| `getOutstandingInvoices()` | `queries/finance.ts` | On mount | Invoice list |
+
+**Finding**: 3+ queries on mount. Payment summary could be computed from list.
+
+#### Reports (`/reports/*`)
+
+| Request | Source | Frequency | Issue |
+|---------|--------|-----------|-------|
+| `getReportData()` | `queries/reports.ts` | On mount + filter | Report data |
+| `getReportFilters()` | `queries/reports.ts` | On mount | Filter options |
+| `getReportExport()` | `queries/reports.ts` | On export | Export data |
+
+**Finding**: Reports are heavy aggregation queries. No evidence of result caching.
 
 ---
 
-### 3. Booking Detail (`src/modules/rentals/BookingDetail.tsx`)
+## 3. Sync Engine Polling
 
-**Fetching Pattern:**
-- **Head:** `useList(listBookings, headFilters)` with `baseline: headFilters` ✅
-- **Floor:** Direct `fetchFloorBooking(id)` with `floorVersion` bump for refetch ✅
-- **Invoices:** `useList(listInvoices, invFilters, { baseline: invFilters })` ✅
-- **Payments:** `useList(listPayments, payFilters, { baseline: payFilters })` ✅
-- **Notes:** `useList(listBookingNotes, notesFilters, { baseline: notesFilters })` ✅
-- **Documents:** `useList(listDocuments, docFilters, { baseline: docFilters })` ✅
-- **Collaterals:** Direct `supabase.from('collateral_documents_v')` in `useEffect` ❌
+### 3.1 Background Sync (syncEngine.ts)
 
-**Status:** ❌ **Critical Issue — Collateral Documents**
-- `fetchCollaterals` (lines 1036-1057) uses raw `supabase.from` outside `useList`
-- No cancellation token, no loading state, no error boundary
-- Runs on every `bookingId` change without deduplication
-- No `baseline` equivalent — always refetches
-
-**Other Observations:**
-- Money fetches correctly gated by `canBookingMoney` (no-op to empty for money-blind)
-- Domain events (7 types) trigger `refreshBookingData` which bumps `floorVersion` + `refetchHead`
-- `listInvoices`/`listPayments` are whole-row RLS-gated (safe for money-blind)
-
-**Measurement:**
-- Initial load: 6 requests (head + floor + invoices + payments + notes + documents)
-- Collateral: 1 extra request (unmanaged)
-- Refetch on event: 2 requests (head + floor)
-
----
-
-### 4. New Booking (`src/modules/rentals/NewRental.tsx`)
-
-**Fetching Pattern:**
-- Uses custom hooks (`useNewRentalCatalogue`, `useNewRentalDraft`, `useNewRentalPricing`, etc.)
-- `equipmentConflicts` called during render for conflict checking
-- No `useList` — draft state managed locally
-
-**Status:** ⚠️ **Needs Review**
-- `useNewRentalCatalogue` likely fetches inventory — check for duplicate calls
-- Conflict checking on every render could be expensive
-
----
-
-### 5. Operations (`src/modules/operations/OperationsWorkspace.tsx`)
-
-**Fetching Pattern:**
-- Uses `useList` for queues (Packing, Handover, Return, Reset)
-- Separate `operationQueue` filter sets per operation
-- `useOperationsWorkspace` context shares state
-
-**Status:** ✅ **Clean** (based on pattern consistency)
-
----
-
-### 6. Inventory (`src/modules/inventory/Inventory.tsx`)
-
-**Fetching Pattern:**
-- Uses `useList(listInventory, filters)` 
-- `chipCounts` at line 1550: `useList(countChips, { search, chips })` — **missing baseline**
-
-**Status:** ⚠️ **Missing baseline in chipCounts**
-- Same issue as RentalsList — false "filtered" state possible
-
----
-
-### 7. Calendar (`src/modules/calendar/Calendar.tsx`)
-
-**Fetching Pattern:**
-- Uses `useList` for bookings in date range
-- Date range filters built from `operationalDayBounds`
-
-**Status:** ✅ **Clean** (uses standard pattern)
-
----
-
-### 8. Clients (`src/modules/clients/Clients.tsx`)
-
-**Fetching Pattern:**
-- Uses `useList(listClients, filters)`
-- `useClients` hook wraps the pattern
-
-**Status:** ✅ **Clean**
-
----
-
-### 9. Payments (`src/modules/finance/Payments.tsx`)
-
-**Fetching Pattern:**
-- Line 552: `const invoiceList = useList(fetchInvoices, invoiceFilters, { baseline: invoiceFilters })`
-- Correctly uses `baseline`
-
-**Status:** ✅ **Clean**
-
----
-
-### 10. Reports (`src/modules/reports/*`)
-
-**Fetching Pattern:**
-- Various report modules use `useList` or direct queries
-- Report queries typically opt-in to `withCount: true`
-
-**Status:** ⚠️ **Not Fully Audited** — 20+ report files, spot-checked 3, all use standard pattern
-
----
-
-## Specific Issue: TeamNotesPanel (`src/components/teamNotes/TeamNotesPanel.tsx`)
-
-### Problem
-```tsx
-// Lines 16-18: Created DURING render
-function actionCtx(user: { id: string; role: ActionContext['role'] } | null | undefined): ActionContext | undefined {
-  return user ? { userId: user.id, role: user.role } : undefined;
-}
-
-// Line 26: New object every render
-const ctx = actionCtx(user);
-
-// Lines 39-51: Depends on `ctx`
-const fetchNotes = useCallback(async () => {
-  ...
-  const { notes: fetchedNotes } = await listTeamNotes({ limit: initialLimit, offset: 0 }, ctx);
-  ...
-}, [initialLimit, isStaff, ctx]); // ctx changes every render!
-
-// Line 53-55: Effect re-runs when fetchNotes changes
-useEffect(() => {
-  fetchNotes();
-}, [fetchNotes]);
+```typescript
+// syncEngine.ts lines 52-54
+// Start periodic background sync every 25 seconds when online
+this.startBackgroundSync(25000)
 ```
 
-### Impact
-- `ctx` is a new object reference on every render
-- `fetchNotes` callback recreated every render
-- `useEffect` re-runs on every render → **infinite fetch loop**
-- In practice: `isStaff` check may short-circuit, but for staff users this is a bug
+**Finding**: Every 25 seconds, `syncAll()` runs which:
+1. Drains offline queue (IndexedDB → Supabase)
+2. Pulls product/client deltas (2 Supabase queries with `.limit(300)`)
+3. Updates sync state
 
-### Fix
-```tsx
-// Stable identity — use useMemo
-const ctx = useMemo(() => actionCtx(user), [user?.id, user?.role]);
-```
+**Impact**: Even when user is idle, 2 Supabase queries every 25 seconds. On a busy dashboard, this adds to the initial query load.
 
----
+### 3.2 Online/Offline Event Handlers
 
-## Network Request Baseline (Mock Mode)
-
-| Module | Initial Requests | Refetch Triggers | Duplicate/Uncancelled |
-|--------|-----------------|------------------|----------------------|
-| Today | 2 (pickups + returns) | 8 domain events | 0 |
-| Rentals List | 2 (list + facets) | Filter/page change | 0 |
-| Booking Detail | 5-6 (head, floor, invoices, payments, notes, docs) | 7 domain events | Collateral: 1 unmanaged |
-| New Booking | ~3 (catalogue, draft, pricing) | User actions | Unknown (needs instrumentation) |
-| Inventory | 2 (list + facets) | Filter/page change | 0 |
-| Calendar | 1 | Date change | 0 |
-| Clients | 1 | Filter/page change | 0 |
-| Payments | 1 | Filter/page change | 0 |
-| Reports | Varies | Manual refresh | 0 |
-
----
-
-## Realtime / Polling Audit
-
-| Technology | Used? | Notes |
-|------------|-------|-------|
-| Supabase Realtime (`supabase.channel`) | ❌ No | Not used anywhere |
-| Supabase Realtime subscribe | ❌ No | Types exist but no usage |
-| Polling (`setInterval`) | ❌ No | Only TeamNotesPanel has `autoRefresh` prop (30s default) |
-| Local BroadcastChannel | ✅ Yes | `eventBus.ts` for cross-tab domain events |
-| `useDomainEvent` hook | ✅ Yes | Subscribes to local event bus, auto-unsubscribes |
-
-**Note:** The app deliberately avoids Supabase realtime (per `useList.ts` comment: "When it lands, this file changes and no screen does"). All cross-tab sync uses local `BroadcastChannel` via `eventBus.ts`.
-
----
-
-## Broad Selects / Unbounded Lists
-
-| Location | Query | Risk |
-|----------|-------|------|
-| `listBookings` | Explicit `BASE_COLUMNS` (283) | ✅ Safe — named columns only |
-| `listInvoices` | Explicit columns in finance.ts | ✅ Safe |
-| `listPayments` | Explicit columns in finance.ts | ✅ Safe |
-| `fetchFloorBooking` | Explicit select in bookings.ts | ✅ Safe |
-| `listTeamNotes` | RPC `list_team_notes` | ✅ RPC — server-defined shape |
-| `collateral_documents_v` | Direct `supabase.from` select * | ⚠️ **Risk** — BookingDetail line 1043 |
-| `globalSearch` | 4 parallel RPCs (`listBookings`, `listClientRecords`, `listInventory`, `listInvoices`) | ✅ Bounded (capped at 4×limit) |
-
----
-
-## API Error Masking
-
-**Pattern in `useList.ts` (lines 199-208):**
-```ts
-.catch((err) => {
-  if (cancelled || !mounted.current) return
-  setError(err instanceof Error ? err.message : String(err))
-  // Rows LEFT AS THEY WERE — failed refresh does NOT blank the list
+```typescript
+// syncEngine.ts lines 44-50
+window.addEventListener('online', () => {
+  this.updateState({ status: 'syncing' })
+  this.syncAll().catch(() => {})
+})
+window.addEventListener('offline', () => {
+  this.updateState({ status: 'offline' })
 })
 ```
 
-**BookingDetail** (lines 1242-1262): Explicitly handles 3 states:
-- `loading` — "This booking's invoices are still being read..."
-- `error` — "This booking's invoices could not be read, so whether one exists is unknown — not absent."
-- `success` — renders data
-
-**Status:** ✅ **No error masking** — errors are surfaced inline, stale rows preserved
+**Finding**: On reconnect, `syncAll()` fires immediately. No debouncing if multiple `online` events fire.
 
 ---
 
-## Recommendations
+## 4. Known Source Hypothesis: TeamNotesPanel
 
-### Critical (Fix Immediately)
-1. **TeamNotesPanel** — Memoize `ctx` with `useMemo` to prevent infinite fetch loop
-2. **BookingDetail Collateral** — Move `fetchCollaterals` to `useList` or add proper cancellation/loading/error handling
+### 4.1 The Issue (NEM-03 specific)
 
-### High (This Sprint)
-3. **RentalsList & Inventory** — Add `baseline` to `chipCounts` useList calls
-4. **NewRental** — Profile `useNewRentalCatalogue` and conflict checking for render-loop fetches
+**File**: `src/components/teamNotes/TeamNotesPanel.tsx`
 
-### Medium (Next Sprint)
-5. **Add request instrumentation** — Dev-only hook to log fetch count/duration per module
-6. **Document `useList` contract** — Require `baseline` for screens with structural filters
+```typescript
+// Current pattern (observed):
+const actionCtx = actionCtx(user) // constructed during render
+const fetchNotes = useCallback(async () => { ... }, [actionCtx])
+useEffect(() => { fetchNotes() }, [fetchNotes])
+```
 
-### Low (Backlog)
-7. **Evaluate TanStack Query** — When added, will eliminate need for manual deduplication
-8. **Collateral documents** — Add to `useList` pattern once migration 0181 applied
+**Hypothesis**: `actionCtx(user)` creates a new object on every render. `useCallback` with this object as a dependency causes `fetchNotes` to be recreated on every render, triggering the `useEffect` on every render → repeated network reads.
 
----
+**Status**: NOT MEASURED (no browser instrumentation). Needs reproducer or test.
 
-## Commands for Verification
-
-```bash
-# Typecheck
-npm run typecheck
-
-# Unit tests (mock mode)
-VITE_DATA_SOURCE=mock npm test
-
-# PGlite migration + lifecycle
-npm run check:pglite
-npm run check:lifecycle
-
-# Lint
-npm run lint
-
-# Build
-npm run build
+**Suggested fix for Gemini (T4)**:
+```typescript
+// Memoize actionCtx
+const actionCtx = useMemo(() => actionCtx(user), [user])
+const fetchNotes = useCallback(async () => { ... }, [actionCtx])
+useEffect(() => { fetchNotes() }, [fetchNotes])
 ```
 
 ---
 
-## Measurement Methodology
+## 5. Request Duplication Patterns Found
 
-**What was measured:** Static code analysis of fetching patterns, filter key stability, cancellation handling, and error propagation.
+### 5.1 Multiple `supabase.from()` Calls for Same Data
 
-**What was NOT measured (requires browser/runtime):**
-- Actual request count per route (devtools Network tab)
-- Transferred data volume
-- p50/p95 latency
-- Real Supabase realtime behavior (not used)
-- Memory leaks from uncleaned subscriptions
+| Table | Called From | Duplication |
+|-------|-------------|-------------|
+| `bookings` | `queries/bookings.ts`, `queries/rentals.ts`, `queries/availability.ts` | 3+ independent queries |
+| `clients` | `queries/clients.ts`, `queries/rentals.ts` | 2+ independent queries |
+| `products` | `queries/inventory.ts`, `queries/availability.ts`, `queries/products.ts` | 3+ independent queries |
+| `product_units` | `queries/inventory.ts`, `queries/availability.ts` | 2+ independent queries |
+| `inventory_reservations` | `queries/availability.ts` (readHolds, readQuantityHolds, findCollidingHolds) | 3 reads for same data |
 
-**To measure at runtime:**
-```bash
-npm run dev:mock
-# Open Chrome DevTools → Network tab → Filter: Fetch/XHR
-# Navigate each module, record request count
+### 5.2 Broad Selects (`select('*')`)
+
+| Location | Table | Issue |
+|----------|-------|-------|
+| `syncEngine.pullDeltas()` | `products_v` | `select('id, name, asset_code, brand, model, status, is_active, created_at')` — 8 columns, could be narrowed |
+| `syncEngine.pullDeltas()` | `clients` | `select('id, name, phone, email, address, is_blocked, created_at')` — 7 columns |
+| `dataAccess.ts` | Various | `select('*')` in some data access functions |
+
+### 5.3 Uncancelled Stale Searches
+
+| Location | Pattern | Issue |
+|----------|---------|-------|
+| `ReturnWorkspace.tsx` | `fetchFloorBooking(id)` in `useEffect` | Has `cancelled` flag ✓ |
+| `BookingDetail.tsx` | Multiple `useEffect` fetches | Need to verify cancellation |
+| `RentalsList.tsx` | Filter change triggers fetch | No evidence of request cancellation |
+| `Clients.tsx` | Search input triggers fetch | No evidence of debouncing/cancellation |
+
+### 5.4 Realtime Subscriptions
+
+| Location | Pattern | Issue |
+|----------|---------|-------|
+| `syncEngine.ts` | `window.addEventListener('online')` | No debounce, fires syncAll immediately |
+| `offlineQueue.ts` | `window.addEventListener('online')` | Separate listener from syncEngine |
+| `supabase` realtime | Not found in source | No evidence of Supabase realtime subscriptions |
+
+**Finding**: Two separate `online` event listeners (syncEngine + offlineQueue) both fire on reconnect. No deduplication.
+
+### 5.5 Unbounded Lists
+
+| Location | Query | Issue |
+|----------|-------|-------|
+| `queries/inventory.ts` | `.limit()` not found in all paths | Some equipment lists may be unbounded |
+| `queries/clients.ts` | `.limit()` not found in all paths | Client list may be unbounded |
+| `queries/bookings.ts` | `.range()` used in some paths | Pagination exists but not consistent |
+
+---
+
+## 6. API Error Masking
+
+### 6.1 Soft-Fail Patterns
+
+| Location | Pattern | Risk |
+|----------|---------|------|
+| `syncEngine.pullDeltas()` | `try { ... } catch (e) { console.debug(...) }` | Silently skips delta caching on error |
+| `readHeldForBooking()` | Returns zeros on error | Hides reservation read failures |
+| `planCreationUnits()` | Returns `source: 'unavailable'` on error | Degrades to unit-less lines (by design) |
+| `availabilityRules()` | Falls back to defaults on missing settings | Could mask config errors |
+
+### 6.2 Error Swallowing in Actions
+
+| Location | Pattern | Risk |
+|----------|---------|------|
+| `confirmRental.execute()` | Multiple `try/catch` around DB calls | Some errors caught and re-thrown with generic messages |
+| `returnRental.execute()` | `formatGateError(err)` | Gate errors formatted but original error context lost |
+| `packRental.execute()` | Similar pattern | Same |
+
+---
+
+## 7. Browser-Level Measurements (NOT MEASURED)
+
+The following metrics could not be measured in this session because:
+- No browser instrumentation available (no DevTools, no Playwright, no Cypress)
+- No running dev server
+- No `npm run dev` launched
+
+**To measure these, run:**
+1. Start dev server: `npm run dev:mock`
+2. Open Chrome DevTools → Network tab
+3. Navigate each route and record:
+   - Request count per route
+   - Duplicate fetches (same URL fired multiple times)
+   - Transferred data (KB)
+   - p50/p95 latency
+   - Console errors
+   - Realtime subscription count
+
+**Routes to profile**: Today, Rentals, Booking Detail, New Booking, Operations, Inventory, Calendar, Clients, Payments, Reports
+
+**Viewport matrix**: 1600×900, 1366×768, 1280×800, 1194×834, 834×1194, 768×1024, 430×932, 390×844, 360×800
+
+---
+
+## 8. Prioritized Findings
+
+### P0 — Critical
+1. **TeamNotesPanel re-render fetch loop** (hypothesis) — `actionCtx(user)` in render causes useCallback recreation
+2. **Two `online` event listeners** — syncEngine + offlineQueue both fire syncAll on reconnect
+
+### P1 — High
+3. **No request cancellation** — filter changes and search inputs fire new requests without cancelling prior ones
+4. **No caching between route visits** — each navigation re-fetches all data
+5. **25s polling always active** — even on idle pages, 2 Supabase queries every 25s
+6. **Broad selects** — `select('*')` and multi-column selects where narrower would suffice
+
+### P2 — Medium
+7. **Unbounded lists** — some queries lack `.limit()` or consistent pagination
+8. **API error masking** — soft-fail patterns hide errors from operators
+9. **No debouncing** — search inputs and filter changes fire immediately
+10. **No request deduplication** — same data fetched by multiple components independently
+
+### P3 — Low
+11. **Multiple independent queries per page** — could be batched into fewer round trips
+12. **No stale-response protection** — race conditions between concurrent requests
+13. **No offline/online state coordination** — syncEngine and offlineQueue operate independently
+
+---
+
+## 9. Suggested Minimal Patches (For Owners)
+
+### For Gemini (T4) — TeamNotesPanel
+```typescript
+// Memoize actionCtx to prevent useCallback recreation
+const actionCtx = useMemo(() => actionCtx(user), [user])
+const fetchNotes = useCallback(async () => { ... }, [actionCtx])
+useEffect(() => { fetchNotes() }, [fetchNotes])
+```
+
+### For Codex-1 (T1/T2) — Sync Engine
+```typescript
+// Debounce online event handler
+let onlineTimer: ReturnType<typeof setTimeout> | null = null
+window.addEventListener('online', () => {
+  if (onlineTimer) clearTimeout(onlineTimer)
+  onlineTimer = setTimeout(() => {
+    this.updateState({ status: 'syncing' })
+    this.syncAll().catch(() => {})
+  }, 300)
+})
+```
+
+### For Codex-2 (T3/T7) — Request Cancellation
+```typescript
+// Add AbortController to fetch calls
+const controller = new AbortController()
+useEffect(() => {
+  fetchData(controller.signal)
+  return () => controller.abort()
+}, [deps])
 ```
 
 ---
 
-## Verification Receipt
+## 10. Verification Receipt
 
 ```
-Commit SHA: 9b61d6d108351f48388d9b2f9d9d5d053001705d
-Date: 2026-10-30
-Analysis: Static code inspection + test execution
-Data Source: Local mock + PGlite
-No live Supabase, no external writes, no merges or pushes.
+Commit SHA: f43861f9
+Date: 2026-10-31
+Branch: lane-nemotron/qa-request-perf-audit
+Analysis type: Static source inspection (no browser instrumentation)
+Files examined:
+  - src/lib/syncEngine.ts (25s polling, pullDeltas)
+  - src/lib/offlineQueue.ts (online event listener, drainQueue)
+  - src/lib/queries/*.ts (50+ query modules)
+  - src/components/teamNotes/TeamNotesPanel.tsx (hypothesis)
+  - src/modules/rentals/ReturnWorkspace.tsx (fetch cancellation pattern)
+  - src/lib/dataAccess.ts (broad selects)
+  - src/lib/availability.ts (multiple reads of same data)
+No live Supabase accessed. No external writes. No merges/pushes.
+Browser metrics: NOT MEASURED (no browser harness available)
 ```
-
----
-
-## Owner Routing
-
-| Issue | Owner Lane | Related Task |
-|-------|------------|--------------|
-| TeamNotesPanel ctx memoization | Gemini (Lane B) | T4-04 Team Notes |
-| BookingDetail collateral fetch | Codex-1 (Lane A) | T2-03, T2-12 |
-| RentalsList chipCounts baseline | Codex-1 (Lane A) | T3 |
-| Inventory chipCounts baseline | Gemini (Lane B) | T4 |
-| NewRental catalogue profiling | Codex-2 (Lane C) | T3/T7 |
