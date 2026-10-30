@@ -9,6 +9,8 @@
 - Direct changes are scanner/input/floor files, one offline evidence message and task/verification logs. No direct edits to the listed shared business files; current-main core/rbac changes are inherited through normal merge. Original checkout drafts are preserved.
 - Fast-forwarded local `main` from `4126767c` to verified integration `4a31908aba0518f382de3a459078e47541e9b687` using an expected-old-ref guard after confirming main was not checked out elsewhere. This closeout changes documentation only; the original checkout and concurrent drafts remain untouched.
 
+- With Babin's explicit approval on 30 October, pushed `lane-a/T2-09-main-integration`, opened draft PR [#31](https://github.com/babindulal7/babin-rentals-os/pull/31), and attached it to this chat. GitHub reports the PR textually mergeable; the documented device/browser acceptance remains open.
+
 **Ruled**
 - No new product or permission decision. T2-09 stays doing until physical scanner/iPad acceptance. Newer T1-15 records a four-digit ruling and migration 0186 outside this frozen integration; the captured design note's unresolved decision is historical.
 - No migration authored or applied by this integration. The inherited migration chain is VERIFIED locally by both database gates, not APPLIED or PRODUCTION-VERIFIED by this session. Production release remains HOLD.
@@ -24,11 +26,11 @@
 
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 62 / 62 (100%) | +7 |
+| Backend | actions implemented / total | 62 / 62 (100%) | +0 |
 | Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
-| Permissions | capabilities mapped / declared | 51 / 51 (100%) | +3 |
-| Lifecycle | steps green / total | 41 / 41 (100%) | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 51 / 51 (100%) | +0 |
+| Lifecycle | steps green / total | 41 / 41 (100%) | +0 |
 | Overall | structural mean of five | ≈ 97% | — |
 Migrations 182 files · check:pglite 182/182 applied, 0 failed (recorded 2026-10-29T11:26:25.848Z). Suite: PASS — 5915/5915 passed, 0 failed (recorded 2026-10-29T12:32:18.531Z); source fingerprint matches.
 Coverage suite: PASS — 5915/5915 passed, 0 failed (recorded 2026-10-29T12:32:18.531Z); source fingerprint matches.
@@ -38,7 +40,6 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 
 ## Remaining
 
-- Draft PR publication awaits explicit approval to push `lane-a/T2-09-main-integration` to `babindulal7/babin-rentals-os`. Automatic approval review rejected that upload because explicit authorization and repository trust were not established. Local main integration is complete; no push was performed.
 - T2-09: Babin's O-16 scanner purchase/availability, physical iPad 50 consecutive serials without missed/doubled scans, and manual-tick tap-count acceptance.
 - Browser acceptance at 375/820/1440 as Owner/Coordinator and Warehouse; hosted and real-device/offline acceptance remain NOT VERIFIED.
 - Lane B: inherited Team Notes 0185 still has a broad staff UPDATE policy and an unresolved `auth_is_coordinator_or_above()` call; add runtime role regressions and repair it separately. Held Reset must resolve the 0185 number collision before merging.

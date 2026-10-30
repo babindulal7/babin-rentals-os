@@ -63,4 +63,4 @@ Completion was generated with `npm run completion`; `npm run lint:progress` PASS
 Local `main` was fast-forwarded from `4126767c` to verified integration `4a31908aba0518f382de3a459078e47541e9b687` on 30 October, using an expected-old-ref guard and confirming main was not checked out elsewhere. The following closeout commit changes documentation only.
 The original checkout and its concurrent drafts are preserved.
 
-Draft PR publication is pending explicit approval to upload the integration branch to `babindulal7/babin-rentals-os`. Automatic approval review rejected the push because explicit authorization and repository trust were not established. No GitHub push or PR creation was performed; local main integration is complete.
+With Babin's explicit approval on 30 October, the integration branch was pushed to `babindulal7/babin-rentals-os` and draft [PR #31](https://github.com/babindulal7/babin-rentals-os/pull/31) was created and attached to this chat. The PR is textually mergeable against main `4126767c`. Physical scanner/iPad, browser and hosted acceptance remain open; T2-09 stays doing. The publication closeout changes documentation only.
