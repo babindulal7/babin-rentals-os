@@ -25,7 +25,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0184 | T2-06 | repair-job-closes-damage | lane-a/T2-06-repair-job-closes-the-damage | verified |
 | 0185 | T4-04 | team-notes | lane-b/T4-04-team-notes | written |
 | 0186 | T4-05 | shift-handovers | lane-b/T4-05-shift-handovers | written |
-| 0187 | T4-07 | delivery-zones | lane-b/T4-07-delivery-zones | claimed |
+| 0187 | T4-07 | delivery-zones | lane-b/T4-07-delivery-zones | written |
 
 ## Expected migrations (not yet claimed)
 
