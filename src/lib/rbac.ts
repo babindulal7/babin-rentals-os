@@ -784,3 +784,56 @@ export function canArchiveShiftHandover(role: SystemRole): boolean {
   return isStaff(role)
 }
 
+/**
+ * Delivery job creation — Owner, Admin, Manager, Coordinator (migration 0165/0187).
+ * Mirrors the authorization in `delivery_create_job`.
+ */
+export function canCreateDeliveryJob(role: SystemRole | null | undefined): boolean {
+  if (!role) return false
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+}
+
+/**
+ * Driver assignment to delivery job — Owner, Admin, Manager, Coordinator (migration 0165/0187).
+ * Mirrors the authorization in `delivery_assign_driver`.
+ */
+export function canAssignDeliveryDriver(role: SystemRole | null | undefined): boolean {
+  if (!role) return false
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+}
+
+/**
+ * Delivery job status transition — Owner, Admin, Manager, Coordinator, Warehouse, Driver (migration 0165/0187).
+ * Specific transition rules and assignment checks are enforced inside `delivery_transition_job`.
+ */
+export function canTransitionDeliveryJob(
+  role: SystemRole | null | undefined,
+  _fromStatus?: string,
+  toStatus?: string
+): boolean {
+  if (!role) return false
+  if (role === 'Client') return false
+
+  if (toStatus === 'Ready') {
+    return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator' || role === 'Warehouse'
+  }
+  if (toStatus === 'In Transit') {
+    return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator' || role === 'Warehouse' || role === 'Driver'
+  }
+  if (toStatus === 'Delivered') {
+    return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Driver'
+  }
+  if (toStatus === 'Failed') {
+    return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator' || role === 'Driver'
+  }
+
+  return (
+    role === 'Owner' ||
+    role === 'Admin' ||
+    role === 'Manager' ||
+    role === 'Coordinator' ||
+    role === 'Warehouse' ||
+    role === 'Driver'
+  )
+}
+

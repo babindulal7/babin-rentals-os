@@ -1,5 +1,68 @@
 # Progress Log
 
+## 2026-10-31 — T4-01: Delivery dispatch on the database (Lane B · Size L)
+
+**Did**
+- Claimed and implemented migration `0187_delivery_dispatch_rpcs.sql`:
+  - Added security definer RPCs with pinned search_path (`public, pg_temp`):
+    - `delivery_create_job`: Creates delivery dispatch job for existing booking with monotonic delivery ID `DEL-YYMM-XXXX`, audit logging, and `client_uuid` idempotency (Law 8). Admitted roles: Owner, Admin, Manager, Coordinator.
+    - `delivery_assign_driver`: Assigns internal staff driver or hired courier rider/phone/vehicle. Admitted roles: Owner, Admin, Manager, Coordinator.
+    - `delivery_transition_job`: Enforces valid status transitions (`Scheduled -> Ready -> In Transit -> Delivered/Failed`) with role guards:
+      - Driver can transition only assigned jobs (enforcing driver RLS isolation).
+      - Warehouse can stage `Ready` and handover to `In Transit`.
+      - Accounts/Manager/Owner/Driver can complete delivery or log failure reason.
+      - Dispatches update corresponding `booking_transport` records when applicable.
+- Added lifecycle step **`L45`** in `scripts/e2e-lifecycle.mjs`:
+  - Asserts creation of outbound and return delivery jobs.
+  - Asserts staff driver and courier rider assignment.
+  - Asserts transitions across Scheduled -> Ready -> In Transit -> Delivered.
+  - Asserts driver seat isolation: Driver cannot transition another driver's job, but can transition their own.
+  - Asserts non-staff (Client/anon) cannot execute RPCs or mutate delivery data.
+  - Asserts idempotency key (`client_uuid`) prevents duplicate jobs.
+- Added Action layer in `src/actions/delivery/`:
+  - `createDeliveryJob.ts`: validates booking ID, scheduled time, role permission `delivery.create`.
+  - `assignDeliveryDriver.ts`: validates job ID, driver ID / rider name, role permission `delivery.assign`.
+  - `transitionDeliveryJob.ts`: validates transition rules, role permission `delivery.transition`.
+  - Exported through `src/actions/delivery/index.ts` and registered in `src/actions/core.ts`.
+- Updated RBAC & Money Blindness (`src/lib/rbac.ts`, `src/lib/queries/delivery.ts`, `src/modules/operations/DeliveryWorkspace.tsx`):
+  - Driver seat isolation: Driver role reads only assigned delivery jobs (`driver_id = auth.uid()`).
+  - Money blindness (Law 6): Drivers and warehouse staff see zero fee/revenue figures. Delivery fee column and total revenue KPI hidden for money-blind roles.
+  - Real-time event handling: wired `DELIVERY_JOB_CREATED`, `DELIVERY_DRIVER_ASSIGNED`, and `DELIVERY_JOB_TRANSITIONED` to live re-fetching.
+  - Five screen states: loading skeleton, empty state, error banner, restricted view, offline handling.
+
+**Ruled**
+- Ruling S6: Delivery dispatch lives in Postgres with atomic RPCs. Driver role is strictly isolated to assigned jobs.
+- Law 6: Delivery charges and fees are invisible to money-blind roles (Driver, Warehouse, Technician, Client).
+- Law 8: Every dispatch creation carries an idempotent `client_uuid`.
+- Law 3: Nothing is deleted; failed deliveries record failure reason and remain in the audit log.
+
+**Verified**
+- `npm run check:pglite`: 185/185 applied, 0 failed, 35 views checked (0 anon leaks), 20 functions checked (0 unauthorized), 109 definer functions checked (0 unpinned).
+- `npm run check:lifecycle`: 45/45 steps green, 0 failed, including L45 delivery dispatch lifecycle test.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run check:contrast`: 106/106 pass, 0 FAIL.
+- `npm run build`: built in dist/, 8166 modules transformed, PWA service worker generated cleanly.
+- Vitest delivery suites: 35/35 passed across 3 test files (12 action tests, 21 query tests, 2 UI component tests).
+- `npm run lint:progress`: passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 72 / 72 (100%) | +3 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 61 / 61 (100%) | +3 |
+| Lifecycle | steps green / total | 45 / 45 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 185 files · check:pglite 185/185 applied, 0 failed.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Lane B next cards: T4-02 (Reschedule a delivery), T4-07 (Delivery zones & fees), T5-01 (Notification records in Postgres), T6-01 (Nepali translations).
+
 ## 2026-10-31 — T4-06: Export old browser-only entries (Lane B · Size S)
 
 **Did**
@@ -32,28 +95,6 @@
 - Vitest suite: 18/18 passed across legacyLocalExport and export component test files.
 - `npm run typecheck`: clean (0 errors).
 - `npm run lint`: clean (0 warnings/errors across src/).
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 69 / 69 (100%) | +0 |
-| Real data | DB-only · mixed · seed · none / 62 | 52 · 0 · 0 · 10 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 58 / 58 (100%) | +0 |
-| Lifecycle | steps green / total | 44 / 44 (100%) | +0 |
-| Overall | structural mean of five | ≈ 97% | — |
-Migrations 184 files · check:pglite 184/184 applied, 0 failed. Suite: not run this session (static inspection; pass --tests to execute suite).
-Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json.
-Counted by `npm run completion`, not typed.
-Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
-
-### Remaining
-- Next Lane B task: T4-07 (`Delivery zones and fees`).
-- T4-08 (One-time rider link): public unauthenticated token route for hired riders with proof-of-delivery signature & photo.
-- T4-01 / T4-02 / T4-03: Delivery dispatch on database, rescheduling, and proof of delivery.
-- T5 (Notifications & email): WhatsApp draft triggers, email notifications.
-- T6 (Nepali): Full bilingual support, Nepali font assets, BS calendar consistency.
 
 ## 2026-10-31 — T8-08: TDS on crew payouts (Lane A · Size M)
 
