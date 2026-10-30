@@ -93,7 +93,7 @@ const iconBtn = {
  * - Dropdowns float above content.
  */
 export default function Header({ crumbs, actions }: HeaderProps) {
-  const { user, logout, lockNow, hasPin } = useAuth()
+  const { user, logout, lockNow, hasPin, roster, removeMeFromDevice, forgetThisDevice } = useAuth()
   const sync = useSync()
   const syncStatus = sync?.status ?? (sync as { syncStatus?: string } | undefined)?.syncStatus ?? 'synced'
   const pendingCount = sync?.pendingCount ?? 0
@@ -1071,7 +1071,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                       setShowMockDialog(true)
                     }}>Mock Mode Active</Button>
                   )}
-                  {hasPin && (
+                  {(hasPin || (roster && roster.length > 0)) && (
                     <button
                       type="button"
                       onClick={() => {
@@ -1095,7 +1095,63 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                       }}
                     >
                       <Icon name="lock" size={16} />
-                      Lock Session
+                      {roster && roster.length > 1 ? 'Switch user / Lock' : 'Lock Session'}
+                    </button>
+                  )}
+                  {roster && roster.some((r) => r.userId === user?.id) && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setProfileOpen(false)
+                        await removeMeFromDevice()
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        minHeight: 44,
+                        padding: '0 10px',
+                        borderRadius: 'var(--r-sm)',
+                        border: '1px solid var(--border)',
+                        background: 'transparent',
+                        color: 'var(--muted)',
+                        fontSize: 'var(--t-ui)',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                      }}
+                    >
+                      <Icon name="user" size={16} />
+                      Remove me from this device
+                    </button>
+                  )}
+                  {(user?.role === 'Owner' || user?.role === 'Admin') && roster && roster.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setProfileOpen(false)
+                        if (window.confirm('Forget all stored sessions and roster on this device?')) {
+                          await forgetThisDevice()
+                        }
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        minHeight: 44,
+                        padding: '0 10px',
+                        borderRadius: 'var(--r-sm)',
+                        border: '1px solid var(--border)',
+                        background: 'transparent',
+                        color: 'var(--muted)',
+                        fontSize: 'var(--t-ui)',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                      }}
+                    >
+                      <Icon name="close" size={16} />
+                      Forget this device
                     </button>
                   )}
                   <button

@@ -40,8 +40,8 @@ import type { PinStatus } from '../../../lib/auth'
  */
 
 const RULES = [
-  'Six digits.',
-  'Not six of the same digit, and not six in a row.',
+  'Four digits.',
+  'Not four of the same digit, and not four in a row.',
   'Not the last four digits of your mobile number.',
 ]
 
@@ -241,7 +241,7 @@ export function DevicePinControl() {
         subtitle={
           step === 'enter'
             ? 'This PIN re-opens a locked session on this account. It is not a password and cannot sign you in.'
-            : 'Enter the same six digits again.'
+            : 'Enter the same four digits again.'
         }
         size="sm"
       >
@@ -255,7 +255,7 @@ export function DevicePinControl() {
                 // fired-once guard, so the confirm step's onComplete fires even
                 // when both PINs are identical strings.
                 key={step}
-                label={step === 'enter' ? 'Choose a six-digit PIN' : 'Confirm your PIN'}
+                label={step === 'enter' ? 'Choose a four-digit PIN' : 'Confirm your PIN'}
                 value={step === 'enter' ? first : second}
                 onChange={step === 'enter' ? setFirst : setSecond}
                 onComplete={step === 'enter' ? onFirstComplete : onSecondComplete}

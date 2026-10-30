@@ -1,5 +1,72 @@
 # Progress Log
 
+## 2026-10-30 — T1-15: Switch user with name + PIN — implementation complete, all gates green
+
+**Did**
+- Implemented **T1-15 · Switch user with name + PIN** in worktree `../bro-lane-t1-15` on branch `lane-a/T1-15-switch-user-with-name-plus-pin`.
+- Built `src/lib/deviceSession.ts`:
+  - WebCrypto non-extractable AES-GCM (256-bit) device key stored directly in IndexedDB (`babin-device-key`) via structured cloning (protects at-rest data from JS extraction).
+  - Single-use refresh token encryption/decryption using 12-byte IV + AES-GCM tag.
+  - Device roster store (`babin-device-roster`) capping membership at ≤15 staff per device.
+  - LIMBO state machine (`idle` -> `restoring` -> `verifying` -> `unlocked` / `aborted`): restores session in limbo, verifies PIN via server-side RPC `verify_staff_pin`, and cleanly calls `supabase.auth.signOut({ scope: 'local' })` on abort/failure to avoid revoking the refresh token globally.
+  - Per-person lockout tracking (5 consecutive failed attempts lock that person only without affecting other staff).
+  - Clean `getIndexedDB()` fallback for non-IndexedDB/test environments and `onversionchange` connection teardown to prevent test runner hangs.
+- Integrated into `src/lib/auth.tsx`:
+  - Connected `switchUser`, `roster`, `limboState`, `removeMeFromDevice`, `forgetThisDevice`, and `refreshRoster` into `AuthProvider`.
+  - Re-encrypts rotated refresh tokens on `TOKEN_REFRESHED` events.
+  - Server-side PIN verification emits audit event `Login` (`new_values: { via: 'device-switch' }`).
+  - Offline switches fail-closed immediately with descriptive errors.
+- Enhanced `src/modules/auth/ScreenLock.tsx`:
+  - Shared-device roster view with 56px touch target buttons, initials avatars, and lockout badges.
+  - Selecting a user transitions to their 4-digit PIN pad with "← Back to staff list".
+  - Clean fallback to single-user PIN curtain when device roster is empty.
+- Updated `PinPad.tsx` and `DevicePin.tsx` to 4-digit PIN length per Babin ruling and migration `0186`.
+- Wired Header profile menu (`src/components/shell/Header.tsx`):
+  - "Switch user / Lock" (locks device and shows roster).
+  - "Remove me from this device" (removes current user from device roster and clears encrypted session).
+  - "Forget this device" (Owner/Admin action clearing entire roster and all encrypted tokens).
+- Added test suites:
+  - `src/lib/__tests__/deviceSession.test.ts` (17/17 passing)
+  - `src/modules/auth/__tests__/screenLock.test.tsx` (14/14 passing)
+  - `src/modules/auth/__tests__/rosterLock.test.tsx` (8/8 passing)
+- Card status in `docs/plans/T1_RELEASE.md` updated to `done — awaiting merge (lane-a/T1-15-switch-user-with-name-plus-pin)`.
+
+**Ruled**
+- In accordance with Babin's 28 Oct ruling, 4-digit PIN is enforced across migration 0186 and UI.
+- All switching operations require active network connectivity and server-side verification (`verify_staff_pin`).
+
+**Verified**
+- `npm run typecheck`: **PASS (0 errors)**.
+- `npm run lint`: **PASS (0 warnings, 0 errors)**.
+- `npm run check:pglite`: **182/182 applied, 0 failed, 34 anon views closed, 20 functions sealed, 99 definer paths pinned**.
+- `npm run check:lifecycle`: **41/41 green**.
+- `npm run check:contrast`: **106/106 passing**.
+- `VITE_DATA_SOURCE=mock npm test`: **5,872/5,872 passed across 482 files**.
+- `npm run test:coverage`: **5,872/5,872 passed, coverage receipt generated**.
+- `npm run build`: **PASS (0 errors, Vite 5.4.21 production build green)**.
+- `npm run completion`: **PASS (exit code 0, 100% backend, 100% DB enforcement, 100% permissions, 100% lifecycle)**.
+- `npm run lint:progress`: **PASS**.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 59 / 59 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 41 / 41 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 182 files · check:pglite 182/182 applied, 0 failed (recorded 2026-10-29T19:06:57.739Z). Suite: PASS — 5872/5872 passed, 0 failed (recorded 2026-10-30T11:13:42.203Z); source fingerprint matches.
+Coverage suite: PASS — 5872/5872 passed, 0 failed (recorded 2026-10-30T11:13:42.203Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-10-29T19:07:32.305Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin review and merge of `lane-a/T1-15-switch-user-with-name-plus-pin`.
+- M4 iPad and iPhone 17 Pro live acceptance drive with Babin.
+- Next Lane A card per roadmap (`T1-14 · Performance on real devices` or floor loop priority).
+
 ## 2026-10-29 — T1-15: Switch user with name + PIN — migration 0186 written, design reviewed, all gates green
 
 **Did**
