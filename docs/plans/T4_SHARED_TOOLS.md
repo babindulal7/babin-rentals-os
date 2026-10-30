@@ -104,7 +104,7 @@ per device until dismissed; reachable later from Settings ▸ System.
 still present afterwards; a clean device shows nothing.
 **Needs** — none.
 
-### T4-07 · Delivery zones and fees            status: todo · size: S · lane B · [go-live]
+### T4-07 · Delivery zones and fees            status: doing — database, actions, RBAC, lifecycle step, Settings UI, and New Rental zone integration complete (lane-b/T4-07-delivery-zones) · size: S · lane B · [go-live]
 **What** — Settings ▸ Operations ▸ **Delivery zones**: a short table of zones with a fee each.
 Starting zones (L6, researched — Kathmandu services group the valley the same way):
 **Inside Ring Road · Outside Ring Road, inside the valley · Far valley (Bhaktapur town, Godawari,

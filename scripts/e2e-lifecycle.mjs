@@ -3271,6 +3271,158 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L42',
+  title: 'Delivery zones CRUD and permission matrix (T4-07, migration 0187)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      // 1. Coordinator can create a delivery zone
+      const zoneId = await as('Coordinator', async () => {
+        // one() unwraps the scalar (rows[0] → first column value)
+        const id = await one(`select create_delivery_zone($1, $2, $3)`, [
+          'Test Valley Zone',
+          'Test zone for lifecycle',
+          350000,
+        ])
+        return id
+      })
+      assert(zoneId, 'create_delivery_zone returns a zone ID')
+
+      // 2. Zone appears in list for all staff roles
+      await as('Warehouse', async () => {
+        const zones = await q(`select * from list_delivery_zones(50, 0, true)`)
+        const found = zones.rows.find((z) => z.id === zoneId)
+        assert(found, 'Warehouse can read active zones')
+        assertEq(found.name, 'Test Valley Zone', 'Zone name matches')
+        assertEq(Number(found.fee_paisa), 350000, 'Zone fee in paisa')
+      })
+
+      // 3. Coordinator can update the zone
+      await as('Coordinator', async () => {
+        const updated = await one(`select update_delivery_zone($1, $2, $3, $4, $5)`, [
+          zoneId,
+          'Test Valley Zone Updated',
+          'Updated description',
+          400000,
+          true,
+        ])
+        assertEq(updated, true, 'update_delivery_zone returns true')
+      })
+
+      // 4. Verify update reflected
+      await as('Manager', async () => {
+        const zone = await one(`select name, fee_paisa from delivery_zones where id = $1`, [zoneId])
+        assertEq(zone.name, 'Test Valley Zone Updated', 'Zone name updated')
+        assertEq(Number(zone.fee_paisa), 400000, 'Zone fee updated')
+      })
+
+      // 5. Warehouse CANNOT create a zone (insufficient privilege)
+      await as('Warehouse', async () => {
+        await q('savepoint wh_create_probe')
+        try {
+          await refuses(
+            'Warehouse cannot create delivery zones',
+            `select create_delivery_zone('WH Zone', 'Should fail', 300000)`,
+            /Only Coordinator\+ can create delivery zones/i,
+          )
+        } finally {
+          await q('rollback to savepoint wh_create_probe')
+          await q('release savepoint wh_create_probe')
+        }
+      })
+
+      // 6. Client CANNOT read zones (RLS denies)
+      await as('Client', async () => {
+        await q('savepoint client_read_probe')
+        try {
+          await refuses(
+            'Client cannot read delivery zones',
+            `select * from list_delivery_zones(50, 0, true)`,
+            /Only staff can list delivery zones/i,
+          )
+        } finally {
+          await q('rollback to savepoint client_read_probe')
+          await q('release savepoint client_read_probe')
+        }
+      })
+
+      // 7. anon CANNOT execute RPCs
+      await as('Anon', async () => {
+        await q('savepoint anon_probe')
+        try {
+          await refuses(
+            'anon cannot list delivery zones',
+            `select * from list_delivery_zones(50, 0, true)`,
+            /insufficient_privilege|permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint anon_probe')
+          await q('release savepoint anon_probe')
+        }
+      })
+
+      // 8. Deactivate (soft delete) by Coordinator
+      await as('Coordinator', async () => {
+        const deactivated = await one(`select deactivate_delivery_zone($1)`, [zoneId])
+        assertEq(deactivated, true, 'deactivate_delivery_zone returns true')
+      })
+
+      // 9. Deactivated zone not in active-only list
+      await as('Coordinator', async () => {
+        const zones = await q(`select * from list_delivery_zones(50, 0, true)`)
+        const found = zones.rows.find((z) => z.id === zoneId)
+        assert(!found, 'Deactivated zone excluded from active-only list')
+      })
+
+      // 10. Deactivated zone still visible with activeOnly=false
+      await as('Manager', async () => {
+        const zones = await q(`select * from list_delivery_zones(50, 0, false)`)
+        const found = zones.rows.find((z) => z.id === zoneId)
+        assert(found, 'Deactivated zone visible with activeOnly=false')
+        assertEq(found.is_active, false, 'Zone is_active is false')
+      })
+
+      // 11. get_delivery_zone_fee works for active zone
+      await as('Coordinator', async () => {
+        // Create another active zone for fee lookup
+        const feeZoneId = await one(`select create_delivery_zone($1, $2, $3)`, [
+          'Fee Lookup Zone',
+          'For fee lookup test',
+          500000,
+        ])
+        const fee = await one(`select get_delivery_zone_fee($1)`, ['Fee Lookup Zone'])
+        assertEq(Number(fee), 500000, 'get_delivery_zone_fee returns correct fee')
+      })
+
+      // 12. get_delivery_zone_fee fails for inactive zone
+      await as('Coordinator', async () => {
+        await q('savepoint fee_inactive_probe')
+        try {
+          await refuses(
+            'get_delivery_zone_fee fails for inactive zone',
+            `select get_delivery_zone_fee('Test Valley Zone Updated')`,
+            /Zone not found or inactive/i,
+          )
+        } finally {
+          await q('rollback to savepoint fee_inactive_probe')
+          await q('release savepoint fee_inactive_probe')
+        }
+      })
+
+      // 13. Default Kathmandu zones seeded
+      await as('Coordinator', async () => {
+        const zones = await q(`select name from delivery_zones where is_active = true order by name`)
+        const names = zones.rows.map((r) => r.name)
+        const expectedZones = ['Bhaktapur', 'Boudha', 'Kirtipur', 'Outside Valley', 'Patan', 'Ring Road', 'Swoyambhu']
+        for (const expected of expectedZones) {
+          assert(names.includes(expected), `Default zone "${expected}" is seeded and active`)
+        }
+      })
+    })
+  },
+})
+
 /* ── Run ──────────────────────────────────────────────────────────────────── */
 
 await seed()
