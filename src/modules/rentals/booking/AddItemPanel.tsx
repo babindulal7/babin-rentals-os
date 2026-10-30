@@ -1575,8 +1575,8 @@ function SubRentalQuickAdd({
             style={{
               position: 'relative',
               width: '100%',
-              height: 36,
-              minHeight: 36,
+              height: 38,
+              minHeight: TOUCH,
               padding: '0 12px',
               borderRadius: 'var(--r-btn)',
               border: 'none',
@@ -1944,6 +1944,7 @@ function EquipmentGroupRow({
               if (target && onSubRent) onSubRent(target)
             }}
             style={{
+              position: 'relative',
               marginLeft: 'auto',
               flexShrink: 0,
               height: 28,
@@ -2057,6 +2058,7 @@ function EquipmentGroupRow({
                     else if (opensOverride) onRequestOverride(u)
                   }}
                   style={{
+                    position: 'relative',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 5,
@@ -2085,6 +2087,7 @@ function EquipmentGroupRow({
                     opacity: onBooking ? 0.75 : 1,
                   }}
                 >
+                  <TouchInset />
                   <Icon name={onBooking ? 'check' : free ? 'plus' : 'error'} size={12} />
                   <span className="identifier" style={{ fontWeight: 700 }}>{u.serial}</span>
                   {onBooking ? (
