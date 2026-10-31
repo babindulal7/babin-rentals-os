@@ -5,7 +5,7 @@ import { EmptyState, LoadingSkeleton, ErrorBanner } from '../../../components/ui
 import { useToast } from '../../../components/ui/Toast'
 import { useAuth } from '../../../lib/auth'
 import { canManageSettings } from '../../../lib/rbac'
-import { formatMoney, price } from '../../../lib/money'
+import { formatMoney, type Paisa } from '../../../lib/money'
 import {
   listDeliveryZones,
   type DeliveryZoneRow,
@@ -223,7 +223,7 @@ export function DeliveryZonesControl() {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flexShrink: 0 }}>
               <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, fontFamily: 'var(--mono)', color: 'var(--text)' }}>
-                {formatMoney(price(zone.fee_paisa))}
+                {formatMoney(zone.fee_paisa as Paisa)}
               </span>
               {canManage && (
                 <>
@@ -390,7 +390,7 @@ export function DeliveryZonesControl() {
                 Existing deliveries using this zone are not affected.
               </p>
               <p style={{ margin: 0, fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-                Fee: <strong>{formatMoney(price(deletingZone.fee_paisa))}</strong>
+                Fee: <strong>{formatMoney(deletingZone.fee_paisa as Paisa)}</strong>
               </p>
             </div>
           ) : undefined

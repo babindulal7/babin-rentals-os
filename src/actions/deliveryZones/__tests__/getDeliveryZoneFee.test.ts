@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getDeliveryZoneFee } from '../getDeliveryZoneFee';
 import { ActionPermissionError } from '../../core';
-import { supabase } from '../../../../lib/supabase';
+import { supabase } from '../../../lib/supabase';
 
 // Mock supabase
-vi.mock('../../../../lib/supabase', () => ({
+vi.mock('../../../lib/supabase', () => ({
   supabase: {
     rpc: vi.fn(),
   },
@@ -38,7 +38,7 @@ describe('getDeliveryZoneFee', () => {
   });
 
   it('gets fee successfully for Coordinator', async () => {
-    mockRpc.mockResolvedValue({ data: 350000, error: null });
+    mockRpc.mockResolvedValue({ data: 350000, error: null } as any);
 
     const result = await getDeliveryZoneFee(
       { zoneName: 'Ring Road' },
@@ -52,7 +52,7 @@ describe('getDeliveryZoneFee', () => {
   });
 
   it('gets fee successfully for Owner', async () => {
-    mockRpc.mockResolvedValue({ data: 0, error: null });
+    mockRpc.mockResolvedValue({ data: 0, error: null } as any);
 
     const result = await getDeliveryZoneFee(
       { zoneName: 'Outside Valley' },
@@ -63,7 +63,7 @@ describe('getDeliveryZoneFee', () => {
   });
 
   it('trims whitespace from zone name', async () => {
-    mockRpc.mockResolvedValue({ data: 350000, error: null });
+    mockRpc.mockResolvedValue({ data: 350000, error: null } as any);
 
     await getDeliveryZoneFee(
       { zoneName: '  Ring Road  ' },
@@ -76,7 +76,7 @@ describe('getDeliveryZoneFee', () => {
   });
 
   it('throws on RPC error', async () => {
-    mockRpc.mockResolvedValue({ data: null, error: { message: 'Zone not found or inactive: Invalid Zone' } });
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'Zone not found or inactive: Invalid Zone' } } as any);
 
     await expect(
       getDeliveryZoneFee({ zoneName: 'Invalid Zone' }, coordinatorContext)

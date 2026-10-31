@@ -24,9 +24,6 @@ function getQcStatus(_name: string | null): { label: string; passed: boolean } |
 /** Asset tags identify equipment; they are not evidence of a flight-case tag. */
 function getCaseTag(_parentLine: FloorLine, _index: number): string { return 'No case tag recorded' }
 
-/** Availability must come from the windowed inventory query, never equipment names. */
-function getStockAvailability(_line: FloorLine, _index: number): { count: null; tone: 'warning' | 'success' | 'neutral' } { return { count: null, tone: 'neutral' } }
-
 // Ruling 7 Oct: a stage transition is not evidence of a per-unit scan or QC.
 function assignmentLabel(line: FloorLine, stage: string) {
   if (line.trackingMode === 'Quantity' || line.trackingMode === 'Consumable') return 'Quantity tracked'
@@ -384,7 +381,7 @@ export function LineItemTree({
 
       {/* ── 1. Nested Flight Cases ── */}
       {(activeFilter === 'all' || activeFilter === 'cases') &&
-        cases.map(({ parent, caseTag, children }, caseIdx) => {
+        cases.map(({ parent, caseTag, children }) => {
           const isCollapsed = Boolean(collapsedCases[parent.id])
           const allUnits = [
             ...parent.units,
@@ -408,7 +405,6 @@ export function LineItemTree({
           }
 
           const renderedChildren = query ? matchingChildren : children
-          const _stock = getStockAvailability(parent, caseIdx)
 
           return (
             <div
@@ -501,34 +497,8 @@ export function LineItemTree({
                         <span>{caseTag}</span>
                       </span>
 
-                      {/* Booqable Stock Availability Badge */}
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 4,
-                          fontSize: '0.725rem',
-                          fontWeight: 600,
-                          padding: '1px 7px',
-                          borderRadius: 999,
-                          background:
-                            stock.tone === 'warning'
-                              ? 'rgba(239, 68, 68, 0.12)'
-                              : stock.tone === 'neutral'
-                              ? 'rgba(245, 158, 11, 0.12)'
-                              : 'rgba(16, 185, 129, 0.12)',
-                          color:
-                            stock.tone === 'warning'
-                              ? 'var(--danger-text, #dc2626)'
-                              : stock.tone === 'neutral'
-                              ? 'var(--warning-text, #d97706)'
-                              : 'var(--muted)',
-                        }}
-                        title="Warehouse Stock Status"
-                      >
-                        <span style={{ fontSize: 9 }}>●</span>
-                        <span>{'Availability not checked'}</span>
-                      </span>
+                      {/* Availability Badge */}
+                      {renderAvailabilityPill(parent, lineAvailability)}
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2, fontSize: '0.775rem', color: 'var(--text2)' }}>
