@@ -1,8 +1,10 @@
 /**
  * Shift Handover Panel — collapsible section for the Today dashboard.
  *
- * Ported from the standalone's shifthandover screen. Shows a 5-item checklist,
- * a "Complete Handover" action, and an expandable log of past handovers with KPIs.
+ * Implements T4-05 (Ruling S6, Ruling W32, Law 3, Law 6).
+ * Backed by Supabase table `shift_handovers` and view `shift_handovers_v`.
+ * Shows a 5-item checklist, "Complete Handover" action, "Acknowledge" for incoming shift,
+ * and an expandable log of past handovers with KPIs.
  */
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { Card, KpiStrip } from '../../components/ui/Page'
@@ -13,20 +15,17 @@ import { Badge } from '../../components/ui/Badge'
 import { useToast } from '../../components/ui/Toast'
 import { useViewport } from '../../lib/device'
 import { useAuth } from '../../lib/auth'
+import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { IS_MOCK } from '../../lib/supabase'
 import {
   SHIFT_CHECKLIST,
-  getHandoverRecords,
-  completeHandover,
-  getHandoverStats,
+  getCurrentShift,
+  fetchShiftHandovers,
+  submitShiftHandover,
+  acknowledgeShiftHandover,
+  type ShiftHandoverEntity,
   type HandoverRecord,
 } from '../../lib/queries/shiftHandover'
-import {
-  listInternalNotes,
-  addInternalNote,
-  toggleResolveNote,
-  type InternalNote,
-} from '../../lib/queries/internalNotes'
 
 // ── Styles ───────────────────────────────────────────────────────────
 
@@ -98,325 +97,348 @@ const noteBoxStyle: React.CSSProperties = {
 // ── Component ────────────────────────────────────────────────────────
 
 export default function ShiftHandoverPanel() {
-  if (IS_MOCK) return <ShiftHandoverPreview />
-  return (
-    <Card><section role="status" aria-label="Staff shift handover" style={{ padding: 'var(--sp-md)' }}>
-      <h2>Staff shift handover unavailable</h2>
-      <p>Shared staff shift records are not available yet. Existing entries on this device have been kept.</p>
-    </section></Card>
-  )
-}
-
-function ShiftHandoverPreview() {
   const { showSuccessToast } = useToast()
   const viewport = useViewport()
   const isPhone = viewport === 'phone'
   const { user } = useAuth()
+  const canSeeMoney = useCanViewMoney()
+
+  const currentShift = useMemo(() => getCurrentShift(), [])
 
   const [expanded, setExpanded] = useState(false)
   const [logExpanded, setLogExpanded] = useState(false)
   const [checks, setChecks] = useState<Record<string, boolean>>({})
-  const [records, setRecords] = useState<HandoverRecord[]>(getHandoverRecords)
-  const [openLogId, setOpenLogId] = useState<number | null>(null)
+  const [entities, setEntities] = useState<ShiftHandoverEntity[]>([])
+  const [openLogId, setOpenLogId] = useState<string | null>(null)
+  const [acknowledging, setAcknowledging] = useState(false)
+  const [submittingHandover, setSubmittingHandover] = useState(false)
+  const [dbUnavailable, setDbUnavailable] = useState(false)
 
-  const [noteInput, setNoteInput] = useState('')
-  const [internalNotes, setInternalNotes] = useState<InternalNote[]>(() => listInternalNotes())
+  const loadHandovers = useCallback(async () => {
+    try {
+      const data = await fetchShiftHandovers()
+      setEntities(data)
+      setDbUnavailable(false)
+    } catch (err) {
+      if (!IS_MOCK) {
+        setDbUnavailable(true)
+      }
+      console.error('Failed to load shift handovers:', err)
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadHandovers()
+  }, [loadHandovers])
 
   useEffect(() => {
     const handleUpdate = () => {
-      setInternalNotes(listInternalNotes())
+      void loadHandovers()
     }
-    window.addEventListener('babin:notes-updated', handleUpdate)
-    return () => window.removeEventListener('babin:notes-updated', handleUpdate)
-  }, [])
+    window.addEventListener('babin:handovers-updated', handleUpdate)
+    return () => {
+      window.removeEventListener('babin:handovers-updated', handleUpdate)
+    }
+  }, [loadHandovers])
 
-  const shiftNotes = useMemo(() => {
-    return internalNotes.filter((n) => n.category === 'Shift Handover' || n.category === 'Gear Alert')
-  }, [internalNotes])
+  const records: HandoverRecord[] = useMemo(() => {
+    return entities.map((item, idx) => {
+      const isComplete = item.status === 'acknowledged'
+      const completedCount = Array.isArray(item.checklist)
+        ? item.checklist.filter((c) => c.done).length
+        : 5
+      const totalChecks = Array.isArray(item.checklist) && item.checklist.length > 0
+        ? item.checklist.length
+        : 5
 
-  const openShiftNotes = useMemo(() => {
-    return shiftNotes.filter((n) => n.status !== 'resolved')
-  }, [shiftNotes])
-
-  const handleAddNote = useCallback(() => {
-    const trimmed = noteInput.trim()
-    if (!trimmed) return
-    addInternalNote({
-      author: user?.name || 'Shift Crew',
-      authorRole: user?.role || 'Operations Staff',
-      text: trimmed,
-      category: 'Shift Handover',
-      priority: 'high',
+      return {
+        id: idx,
+        dbId: item.id,
+        date: item.shift_date,
+        dateISO: item.shift_date,
+        shiftCode: item.shift_code,
+        from: `${item.from_user_name} (Shift ${item.shift_code})`,
+        to: item.to_user_name || 'Next Shift',
+        cashAmount: item.cash_counted_paisa ? Math.round(item.cash_counted_paisa / 100) : 0,
+        cashStatus: item.cash_status,
+        cashDisplay: item.cash_counted_paisa != null
+          ? `Rs ${(item.cash_counted_paisa / 100).toLocaleString('en-IN')} · ${item.cash_status}`
+          : '',
+        checksCompleted: `${completedCount} / ${totalChecks}`,
+        status: isComplete ? 'Complete' : 'Pending',
+        notes: item.notes || (item.acknowledgement_note ? `[Ack] ${item.acknowledgement_note}` : ''),
+      }
     })
-    setNoteInput('')
-    setInternalNotes(listInternalNotes())
-    showSuccessToast('Shift note logged')
-  }, [noteInput, user, showSuccessToast])
+  }, [entities])
 
-  const todayRecord = records.find((r) => r.status === 'Pending')
-  const handoverDone = !todayRecord
+  const pendingIncoming = useMemo(() => {
+    return entities.filter((e) => e.status === 'pending')
+  }, [entities])
 
-  const allChecked = SHIFT_CHECKLIST.every((item) => handoverDone || checks[item.key])
+  const allChecked = useMemo(
+    () => SHIFT_CHECKLIST.every((item) => checks[item.key]),
+    [checks],
+  )
+  const checkedCount = useMemo(
+    () => SHIFT_CHECKLIST.filter((item) => checks[item.key]).length,
+    [checks],
+  )
 
-  const toggleCheck = useCallback((key: string) => {
-    if (handoverDone) return
+  const handleToggleCheck = (key: string) => {
     setChecks((prev) => ({ ...prev, [key]: !prev[key] }))
-  }, [handoverDone])
+  }
 
-  const handleCompleteHandover = useCallback(() => {
-    if (!allChecked || handoverDone || !todayRecord) return
-    const updated = completeHandover(
-      todayRecord.id,
-      'All pickups staged, drawer counted, no discrepancies.',
+  const handleCompleteHandover = async () => {
+    if (!allChecked || submittingHandover) return
+    setSubmittingHandover(true)
+    try {
+      await submitShiftHandover({
+        shiftCode: currentShift.code,
+        fromUserName: user?.name || 'Staff Member',
+        fromUserRole: user?.role || 'Operations',
+        notes: 'Handover completed from Today panel checklist.',
+        checklist: SHIFT_CHECKLIST.map((c) => ({
+          key: c.key,
+          label: c.label,
+          done: checks[c.key] ?? false,
+        })),
+      })
+      showSuccessToast('Shift Handover Recorded', `Handover for Shift ${currentShift.code} logged to the database.`)
+      setChecks({})
+      await loadHandovers()
+    } catch (err) {
+      console.error('Handover completion error:', err)
+    } finally {
+      setSubmittingHandover(false)
+    }
+  }
+
+  const handleAcknowledge = async (handoverId: string) => {
+    if (acknowledging) return
+    setAcknowledging(true)
+    try {
+      await acknowledgeShiftHandover(handoverId, 'Acknowledged during shift overlap', user?.name)
+      showSuccessToast('Shift Handover Acknowledged', 'Logged handover acceptance.')
+      await loadHandovers()
+    } catch (err) {
+      console.error('Acknowledgement error:', err)
+    } finally {
+      setAcknowledging(false)
+    }
+  }
+
+  const handleRecountCash = () => {
+    showSuccessToast('Cash Count Triggered', 'Please open the cash drawer and count physical currency.')
+  }
+
+  const kpis: Kpi[] = useMemo(() => {
+    const total = records.length
+    const onTime = records.filter((r) => r.checksCompleted === '5 / 5').length
+    const cashFlags = records.filter((r) => r.cashStatus === 'short' || r.cashStatus === 'over').length
+    const misses = total - onTime
+
+    const baseKpis: Kpi[] = [
+      {
+        label: 'Handovers (7d)',
+        value: total.toString(),
+        icon: 'checklist',
+        accent: 'primary',
+      },
+      {
+        label: 'Checklist 5/5',
+        value: total > 0 ? `${Math.round((onTime / total) * 100)}%` : '—',
+        icon: 'check',
+        accent: total > 0 && onTime === total ? 'success' : 'neutral',
+      },
+    ]
+
+    // Law 6: Cash variance flags only visible for money-seeing roles
+    if (canSeeMoney) {
+      baseKpis.push({
+        label: 'Cash Variance Flags',
+        value: cashFlags.toString(),
+        icon: 'alert_circle',
+        accent: cashFlags > 0 ? 'warn' : 'neutral',
+      })
+    }
+
+    baseKpis.push({
+      label: 'Checklist Misses',
+      value: misses.toString(),
+      icon: 'alert_circle',
+      accent: misses > 0 ? 'danger' : 'neutral',
+    })
+
+    return baseKpis
+  }, [records, canSeeMoney])
+
+  // Honest unavailable state when database is down/unconfigured in live mode
+  if (dbUnavailable) {
+    return (
+      <Card>
+        <section role="status" aria-label="Staff shift handover" style={{ padding: 'var(--sp-md)' }}>
+          <h2>Staff shift handover unavailable</h2>
+          <p>Shared staff shift records are currently unavailable. Existing entries on this device have been kept.</p>
+        </section>
+      </Card>
     )
-    setRecords(updated)
-    setChecks({})
-    const minute = Math.floor(Math.random() * 10)
-    showSuccessToast(`Shift handover recorded · ${todayRecord.from} → ${todayRecord.to} · 14:0${minute}`)
-  }, [allChecked, handoverDone, todayRecord, showSuccessToast])
-
-  const handleRecountCash = useCallback(() => {
-    showSuccessToast('Cash count opened — count the drawer, then enter the amount')
-  }, [showSuccessToast])
-
-  const stats = useMemo(() => getHandoverStats(records), [records])
-
-  const kpis: Kpi[] = useMemo(() => [
-    { label: 'Handovers (7D)', value: String(stats.handovers7d), icon: 'checklist', accent: 'primary' },
-    { label: 'On-Time Rate', value: stats.onTimeRate, icon: 'check', accent: 'success' },
-    { label: 'Cash Variance Flags', value: String(stats.cashFlags), icon: 'alert_triangle', accent: 'warn' },
-    { label: 'Checklist Misses', value: String(stats.checklistMisses), icon: 'alert_triangle', accent: 'warn' },
-  ], [stats])
-
-  const checkedCount = SHIFT_CHECKLIST.filter((item) => handoverDone || checks[item.key]).length
+  }
 
   return (
     <div style={sectionStyle}>
-      {/* ── Section header ─────────────────────────────────────────── */}
+      {/* ── Pending Handovers from Previous Shift (Unacknowledged) ── */}
+      {pendingIncoming.length > 0 && (
+        <Card>
+          <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Icon name="alert_circle" size={18} color="var(--warn)" />
+                <h3 style={{ margin: 0, fontSize: 'var(--t-body)', fontWeight: 600, color: 'var(--text)' }}>
+                  Pending Shift Handover ({pendingIncoming.length})
+                </h3>
+              </div>
+              <Badge tone="warning" label="Awaiting Acceptance" />
+            </div>
+
+            {pendingIncoming.map((pending) => (
+              <div
+                key={pending.id}
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: 'var(--r-md)',
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--border)',
+                  display: 'flex',
+                  flexDirection: isPhone ? 'column' : 'row',
+                  justifyContent: 'space-between',
+                  alignItems: isPhone ? 'flex-start' : 'center',
+                  gap: 12,
+                }}
+              >
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 'var(--t-base)' }}>
+                    Incoming Handover from {pending.from_user_name} (Shift {pending.shift_code})
+                  </div>
+                  <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text-muted)', marginTop: 2 }}>
+                    Date: {pending.shift_date} · Status: {pending.cash_status}
+                    {canSeeMoney && pending.cash_counted_paisa != null && (
+                      <> · Cash: Rs {(pending.cash_counted_paisa / 100).toLocaleString('en-IN')}</>
+                    )}
+                  </div>
+                  {pending.notes && (
+                    <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text)', marginTop: 6, fontStyle: 'italic' }}>
+                      "{pending.notes}"
+                    </div>
+                  )}
+                </div>
+
+                <Button
+                  variant="primary"
+                  onClick={() => void handleAcknowledge(pending.id)}
+                  disabled={acknowledging}
+                  style={{ minHeight: 44, whiteSpace: 'nowrap', alignSelf: isPhone ? 'stretch' : 'auto' }}
+                >
+                  <Icon name="check" size={16} /> Acknowledge Handover
+                </Button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* ── Collapsible header ───────────────────────────────────────── */}
       <div
         className="dashboard-shift-handover__toggle"
-        style={{ ...headerBarStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}
-        onClick={() => setExpanded((prev) => !prev)}
+        data-testid="shift-handover-toggle"
+        style={{ ...headerBarStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+        onClick={() => setExpanded((p) => !p)}
         role="button"
         tabIndex={0}
-        aria-expanded={expanded}
-        aria-label="Shift Handover"
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded((p) => !p) } }}
       >
-        <div className="dashboard-shift-handover__label" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Icon name={expanded ? 'chevron_down' : 'chevron_right'} size={16} />
-          <span style={{ fontWeight: 600, fontSize: 'var(--t-body)' }}>Shift Handover</span>
-          {openShiftNotes.length > 0 && (
-            <span
-              style={{
-                fontSize: '12px',
-                padding: '2px 8px',
-                borderRadius: '10px',
-                background: 'var(--select-bg)',
-                color: 'var(--select-fg)',
-                fontWeight: 600,
-              }}
-            >
-              <span className="font-mono tabular-nums">{openShiftNotes.length}</span> open {openShiftNotes.length === 1 ? 'note' : 'notes'}
-            </span>
-          )}
+          <span style={{ fontWeight: 600, fontSize: 'var(--t-body)' }}>
+            Active: Shift {currentShift.code} ({currentShift.name})
+          </span>
+          <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text-muted)' }}>
+            {currentShift.hours} NPT
+          </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Badge
-            className="dashboard-shift-handover__status"
-            tone={handoverDone ? 'in' : 'warning'}
-            label={handoverDone ? 'Handover complete' : 'Overlap window open · 14:00–15:00'}
+            tone={allChecked ? 'in' : 'warning'}
+            label={`${checkedCount} / ${SHIFT_CHECKLIST.length} Checks`}
           />
         </div>
       </div>
 
-      {/* ── Expanded content ───────────────────────────────────────── */}
+      {/* ── Checklist card ─────────────────────────────────────────── */}
       {expanded && (
         <Card>
-          {/* Quick Handover Note Logger */}
-          <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid var(--border)' }}>
-            <div style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text2)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Log Shift Handover Note
-            </div>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                handleAddNote()
-              }}
-              style={{ display: 'flex', gap: 8, flexWrap: isPhone ? 'wrap' : 'nowrap' }}
-            >
-              <input
-                type="text"
-                value={noteInput}
-                onChange={(e) => setNoteInput(e.target.value)}
-                placeholder="Write a handover note for the next shift… (e.g. FX3 #2 battery charging, Komodo at 7 AM)"
-                style={{
-                  flex: 1,
-                  minWidth: isPhone ? '100%' : 260,
-                  minHeight: 'var(--tap, 44px)',
-                  padding: '0 12px',
-                  borderRadius: 'var(--r-btn, 8px)',
-                  border: '1px solid var(--border)',
-                  background: 'var(--card2)',
-                  color: 'var(--text)',
-                  fontSize: 'var(--t-meta, 13px)',
-                }}
-              />
-              <button
-                type="submit"
-                disabled={!noteInput.trim()}
-                className="ui-button ui-button--sm ui-button--primary press tap"
-                style={{
-                  minHeight: 'var(--tap, 44px)',
-                  padding: '0 14px',
-                  whiteSpace: 'nowrap',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                }}
-              >
-                <Icon name="plus" size={14} /> Log Shift Note
-              </button>
-            </form>
-
-            {/* List open shift notes */}
-            {openShiftNotes.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 12 }}>
-                {openShiftNotes.map((note) => (
-                  <div
-                    key={note.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: 12,
-                      padding: '8px 12px',
-                      borderRadius: 'var(--r-xs, 6px)',
-                      background: 'var(--surface)',
-                      border: '1px solid var(--border)',
-                      fontSize: 'var(--t-meta, 13px)',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, overflow: 'hidden' }}>
-                      <span
-                        style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          background: note.priority === 'urgent' ? 'var(--danger-text)' : 'var(--warn)',
-                          flexShrink: 0,
-                        }}
-                      />
-                      <span style={{ color: 'var(--text)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {note.text}
-                      </span>
-                      <span style={{ color: 'var(--muted)', fontSize: '11px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                        — {note.author} · {note.at}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      className="ui-button ui-button--sm ui-button--ghost press tap"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        toggleResolveNote(note.id, user?.name)
-                        setInternalNotes(listInternalNotes())
-                        showSuccessToast('Note marked resolved')
-                      }}
-                      title="Mark resolved"
-                      style={{
-                        minHeight: 32,
-                        padding: '0 10px',
-                        fontSize: '12px',
-                        flexShrink: 0,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 4,
-                      }}
-                    >
-                      <Icon name="check" size={13} style={{ color: 'var(--success-text)' }} /> Resolve
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Checklist */}
           <div style={checklistStyle}>
-            <div style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text2)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Handover Checklist
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <span style={{ fontWeight: 600, fontSize: 'var(--t-base)' }}>Shift Handover Checklist</span>
+              <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text-muted)' }}>
+                Overlap window: {currentShift.overlapWindow} NPT
+              </span>
             </div>
 
             {SHIFT_CHECKLIST.map((item) => {
-              const isChecked = handoverDone || !!checks[item.key]
+              const isChecked = !!checks[item.key]
               return (
                 <div
                   key={item.key}
                   style={{
                     ...checkItemStyle,
-                    background: isChecked ? 'color-mix(in srgb, var(--success) 8%, transparent)' : 'transparent',
+                    background: isChecked ? 'var(--surface-2)' : 'var(--surface)',
                   }}
-                  onClick={() => toggleCheck(item.key)}
+                  onClick={() => handleToggleCheck(item.key)}
                   role="checkbox"
                   aria-checked={isChecked}
                   tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleCheck(item.key) } }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleToggleCheck(item.key) } }}
                 >
-                  {/* Checkbox */}
                   <div
                     style={{
-                      width: 22,
-                      height: 22,
-                      borderRadius: 'var(--r-xs, 6px)',
+                      width: 18,
+                      height: 18,
+                      borderRadius: '4px',
+                      border: isChecked ? 'none' : '2px solid var(--border)',
+                      background: isChecked ? 'var(--primary)' : 'transparent',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: 13,
                       flexShrink: 0,
-                      background: isChecked ? 'color-mix(in srgb, var(--success) 16%, var(--surface))' : 'var(--surface)',
-                      border: isChecked ? '1.5px solid color-mix(in srgb, var(--success) 60%, transparent)' : '1.5px solid var(--border)',
-                      color: 'var(--success-text)',
-                      transition: 'all 0.15s ease',
                     }}
                   >
-                    {isChecked ? <Icon name="check" size={14} style={{ color: 'var(--success-text)' }} /> : null}
+                    {isChecked && <Icon name="check" size={14} color="#ffffff" />}
                   </div>
-
-                  {/* Label + hint */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 500, fontSize: 'var(--t-body)', color: 'var(--text)' }}>
-                      {item.label}
-                    </div>
-                    <div style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)', marginTop: '2px' }}>
-                      {item.hint}
-                    </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                    <span style={{ fontWeight: 500, fontSize: 'var(--t-base)' }}>{item.label}</span>
+                    <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>{item.hint}</span>
                   </div>
                 </div>
               )
             })}
 
-            {/* Action buttons */}
-            <div style={{ display: 'flex', gap: '8px', marginTop: '4px', flexDirection: isPhone ? 'column' : 'row' }}>
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
               <Button
-                variant={handoverDone ? undefined : allChecked ? 'primary' : undefined}
-                disabled={handoverDone || !allChecked}
-                onClick={handleCompleteHandover}
+                variant={allChecked ? 'primary' : undefined}
+                disabled={!allChecked || submittingHandover}
+                onClick={() => void handleCompleteHandover()}
                 className="tap"
                 style={{
                   flex: 1,
                   minHeight: 'var(--tap, 44px)',
-                  background: handoverDone
-                    ? 'var(--surface)'
-                    : allChecked
-                      ? 'var(--success)'
-                      : 'var(--surface)',
-                  border: handoverDone || !allChecked ? '1px solid var(--border)' : 'none',
-                  color: handoverDone
-                    ? 'var(--success-text)'
-                    : allChecked
-                      ? 'var(--on-success)'
-                      : 'var(--muted)',
+                  background: allChecked
+                    ? 'var(--success)'
+                    : 'var(--surface)',
+                  border: !allChecked ? '1px solid var(--border)' : 'none',
+                  color: allChecked
+                    ? 'var(--on-success)'
+                    : 'var(--muted)',
                   fontWeight: 700,
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -424,24 +446,25 @@ function ShiftHandoverPreview() {
                   gap: 6,
                 }}
               >
-                {handoverDone ? (
-                  <>
-                    <Icon name="check" size={16} /> Handover Complete
-                  </>
+                {submittingHandover ? (
+                  'Saving Handover…'
                 ) : (
                   <>
-                    Complete Handover (<span className="font-mono tabular-nums">{checkedCount}</span> / <span className="font-mono tabular-nums">{SHIFT_CHECKLIST.length}</span>)
+                    Record Handover (<span className="font-mono tabular-nums">{checkedCount}</span> / <span className="font-mono tabular-nums">{SHIFT_CHECKLIST.length}</span>)
                   </>
                 )}
               </Button>
 
-              <Button
-                onClick={handleRecountCash}
-                className="tap"
-                style={{ minHeight: 'var(--tap, 44px)' }}
-              >
-                Recount Cash
-              </Button>
+              {/* Law 6: Recount Cash is only visible when user can view money */}
+              {canSeeMoney && (
+                <Button
+                  onClick={handleRecountCash}
+                  className="tap"
+                  style={{ minHeight: 'var(--tap, 44px)' }}
+                >
+                  Recount Cash
+                </Button>
+              )}
             </div>
           </div>
         </Card>
@@ -481,15 +504,15 @@ function ShiftHandoverPreview() {
 
               {/* Log rows */}
               {records.map((record) => {
-                const isOpen = openLogId === record.id
+                const isOpen = openLogId === record.dbId
                 return (
-                  <div key={record.id} style={logRowStyle}>
+                  <div key={record.dbId || record.id} style={logRowStyle}>
                     <div
                       style={logRowHeaderStyle}
-                      onClick={() => setOpenLogId(isOpen ? null : record.id)}
+                      onClick={() => setOpenLogId(isOpen ? null : (record.dbId || String(record.id)))}
                       role="button"
                       tabIndex={0}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpenLogId(isOpen ? null : record.id) } }}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpenLogId(isOpen ? null : (record.dbId || String(record.id))) } }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
                         <Icon name={isOpen ? 'chevron_down' : 'chevron_right'} size={12} />
@@ -505,7 +528,10 @@ function ShiftHandoverPreview() {
 
                     <div style={{ ...logRowMetaStyle, marginTop: '6px' }}>
                       <span>{record.from} → {record.to}</span>
-                      <span className="font-mono tabular-nums">{record.cashDisplay}</span>
+                      {/* Law 6: Omit cash display if not permitted */}
+                      {canSeeMoney && Boolean(record.cashDisplay) && (
+                        <span className="font-mono tabular-nums">{record.cashDisplay}</span>
+                      )}
                       <span>Checks: <span className="font-mono tabular-nums">{record.checksCompleted}</span></span>
                     </div>
 

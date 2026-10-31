@@ -20,7 +20,7 @@ import { formatBsOrAd, formatAd } from '../../lib/bs'
 import { formatRentalDays, rentalDaysBetween } from '../../lib/rentalDays'
 import { deliveryTypeLabel } from '../../lib/format'
 import { fetchFloorBooking, type FloorBooking } from '../../lib/queries/bookings'
-import { compressEvidencePhoto } from '../../lib/imageCompression'
+import { compressEvidencePhoto, DAMAGE_PHOTO_MAX_BYTES, STANDARD_PHOTO_MAX_BYTES } from '../../lib/imageCompression'
 import { uploadEvidencePhoto } from '../../lib/evidenceStorage'
 import {
   PHOTOS,
@@ -383,33 +383,60 @@ export default function EvidenceWorkspace() {
   }, [floorId])
 
   const handleUploadFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !floor?.id) return
+    const files = Array.from(e.target.files ?? [])
+    if (files.length === 0 || !floor?.id) return
     if (!user?.id) {
       setUploadErrorText('Sign in is required to upload evidence')
       return
     }
     setUploading(true)
     setUploadErrorText(null)
-    setUploadProgressText('Compressing photo on device…')
+
+    const targetStage = category === 'Return' ? 'Return' : category === 'Damage' ? 'Damage' : 'Packing'
+    const isDamage = category === 'Damage' || targetStage === 'Damage'
+    const maxBytes = isDamage ? DAMAGE_PHOTO_MAX_BYTES : STANDARD_PHOTO_MAX_BYTES
+
     try {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
         throw new Error('You are offline. This photo was not saved — take it again when you are back online.')
       }
-      const compressed = await compressEvidencePhoto(file)
-      setUploadProgressText('Uploading to storage…')
-      const targetStage = category === 'Return' ? 'Return' : category === 'Damage' ? 'Damage' : 'Packing'
-      await uploadEvidencePhoto({
-        file: compressed.blob,
-        filename: `evidence_${targetStage.toLowerCase()}_${Date.now()}.jpg`,
-        category: toEvidenceCategory(category),
-        reference: {
-          bookingId: floor.id,
-          operationStage: targetStage,
-        },
-        userId: user.id,
-      })
-      showSuccessToast('Evidence photo saved successfully')
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]!
+        setUploadProgressText(
+          files.length > 1
+            ? `Compressing photo ${i + 1} of ${files.length} on device…`
+            : 'Compressing photo on device…',
+        )
+        const compressed = await compressEvidencePhoto(file, { isDamage, maxBytes })
+        setUploadProgressText(
+          files.length > 1
+            ? `Uploading photo ${i + 1} of ${files.length} to storage…`
+            : 'Uploading to storage…',
+        )
+
+        const baseName = file.name ? file.name.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_') : 'evidence'
+        const cleanFileName = files.length > 1
+          ? `${baseName}_${targetStage.toLowerCase()}_${Date.now()}_${i + 1}.jpg`
+          : `${baseName}_${targetStage.toLowerCase()}_${Date.now()}.jpg`
+
+        await uploadEvidencePhoto({
+          file: compressed.blob,
+          filename: cleanFileName,
+          category: toEvidenceCategory(category),
+          reference: {
+            bookingId: floor.id,
+            operationStage: targetStage,
+          },
+          userId: user.id,
+        })
+      }
+
+      showSuccessToast(
+        files.length > 1
+          ? `${files.length} evidence photos saved successfully`
+          : 'Evidence photo saved successfully',
+      )
       setUploadProgressText(null)
       const fresh = await fetchBookingEvidenceFiles(floor.id)
       setSavedFiles(fresh)
@@ -693,7 +720,7 @@ export default function EvidenceWorkspace() {
                   <input
                     ref={cameraInputRef}
                     type="file"
-                    accept="image/*"
+                    accept="image/*,.heic,.heif"
                     capture="environment"
                     disabled={uploading}
                     onChange={handleUploadFile}
@@ -703,7 +730,8 @@ export default function EvidenceWorkspace() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/jpeg,image/png,image/webp"
+                    accept="image/*,.heic,.heif"
+                    multiple
                     disabled={uploading}
                     onChange={handleUploadFile}
                     style={{ display: 'none' }}

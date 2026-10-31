@@ -180,8 +180,9 @@ await sql(`update operation_sessions set state = 'Completed' where id = $1`, [pa
 
 // Handover session & signature
 const handoverSessionId = (await sql(`insert into operation_sessions
-  (client_uuid, booking_id, operation, session_no, state, delivery_method, warehouse_staff_id, created_by)
-  values (gen_random_uuid(), $1, 'Handover', 1, 'In Progress', 'Client Pickup', $2, $2) returning id`,
+  (client_uuid, booking_id, operation, session_no, state, delivery_method, warehouse_staff_id, created_by,
+   government_id_verified, booking_authorization_verified)
+  values (gen_random_uuid(), $1, 'Handover', 1, 'In Progress', 'Client Pickup', $2, $2, true, true) returning id`,
   [booking1, ownerId])).rows[0].id
 
 await sql(`insert into handover_lines

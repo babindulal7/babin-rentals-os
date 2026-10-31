@@ -4,6 +4,7 @@ import { applyListFilters, type ListFilters } from './listQuery'
 import { useList, type ListQueryResult, type ListResult } from './useList'
 import type { Database } from '../../types/supabase'
 import type { SortKey } from '../../data/inventory'
+import { formatDueCountdown, formatRelativeUpcoming } from '../itemCountdown'
 
 /**
  * # The inventory list query
@@ -1012,6 +1013,441 @@ export async function getAssetDetail(
   const units = await listUnits(product.id, money)
 
   return { product, units: units.rows, matchedUnitId }
+}
+
+/* ── Item Card — T2-14 (W91) ─────────────────────────────────────────────────
+ *
+ * Scanning an item's barcode/QR or searching an asset code anywhere outside a
+ * floor workspace opens its item card: status, who has it now (client, booking,
+ * due back with live countdown), location if in the shop, next booking, last
+ * reset, and open damage.
+ *
+ * Law 6: money is strictly hidden for floor seats.
+ */
+
+export interface ItemCardCustody {
+  bookingId: string
+  bookingNo: string
+  clientId: string
+  clientName: string
+  clientPhone: string | null
+  clientEmail: string | null
+  stage: string
+  pickupAt: string
+  returnAt: string
+  isOverdue: boolean
+  countdownText: string
+}
+
+export interface ItemCardNextBooking {
+  bookingId: string
+  bookingNo: string
+  clientId: string
+  clientName: string
+  stage: string
+  pickupAt: string
+  returnAt: string
+  relativeText: string
+}
+
+export interface ItemCardLastReset {
+  completedAt: string
+  cleanedBy: string | null
+  qcBy: string | null
+  qcSelfChecked: boolean
+  qcSkipped: boolean
+  qcSkipReason: string | null
+  problemState: string | null
+  summary: string
+}
+
+export interface ItemCardOpenDamage {
+  hasDamage: boolean
+  condition: UnitConditionDb
+  damageType?: string | null
+  description?: string | null
+  severity?: string | null
+  caseId?: string | null
+  caseNo?: string | null
+}
+
+export interface ItemCardLocation {
+  warehouseName: string | null
+  rack: string | null
+  shelf: string | null
+  bin: string | null
+  formatted: string
+}
+
+export interface ItemCardFinancials {
+  dailyRate: Paisa | null
+  replacementValue: Paisa | null
+}
+
+export interface ItemCardData {
+  unitId: string | null
+  productId: string
+  name: string
+  brand: string | null
+  model: string | null
+  assetCode: string
+  assetTag: string | null
+  serialNo: string | null
+  barcode: string | null
+  status: InventoryStateDb
+  condition: UnitConditionDb
+  categoryName: string | null
+  location: ItemCardLocation | null
+  custody: ItemCardCustody | null
+  nextBooking: ItemCardNextBooking | null
+  lastReset: ItemCardLastReset | null
+  openDamage: ItemCardOpenDamage
+  financials: ItemCardFinancials | null
+}
+
+async function fetchCustody(
+  unitId: string | null,
+  unitStatus: InventoryStateDb,
+): Promise<ItemCardCustody | null> {
+  if (!unitId) return null
+
+  const { data: bluRows, error: bluErr } = await supabase
+    .from('booking_line_units')
+    .select('id, booking_id, asset_id, unit_state, returned_at, released_at')
+    .eq('asset_id', unitId)
+
+  if (bluErr || !bluRows || bluRows.length === 0) return null
+
+  const activeBlu = bluRows.filter((r) => !r.returned_at && !r.released_at)
+  const candidateBookingIds = (activeBlu.length > 0 ? activeBlu : bluRows)
+    .map((r) => r.booking_id)
+    .filter(Boolean) as string[]
+
+  if (candidateBookingIds.length === 0) return null
+
+  const { data: bookings, error: bErr } = await supabase
+    .from('bookings')
+    .select('id, booking_no, client_id, stage, pickup_at, return_at, actual_return_at, cancelled_at')
+    .in('id', candidateBookingIds)
+
+  if (bErr || !bookings || bookings.length === 0) return null
+
+  const activeStages = ['On Rent', 'Return Due', 'Dispatched', 'Ready', 'Preparing', 'Packed']
+  let currentBooking = bookings.find((b) => !b.cancelled_at && !b.actual_return_at && activeStages.includes(b.stage))
+
+  if (unitStatus === 'On Rent' || unitStatus === 'Returning') {
+    const onRentBooking = bookings.find((b) => b.stage === 'On Rent' || b.stage === 'Return Due')
+    if (onRentBooking) currentBooking = onRentBooking
+  }
+
+  if (!currentBooking) return null
+
+  let clientName = 'Client'
+  let clientPhone: string | null = null
+  let clientEmail: string | null = null
+
+  if (currentBooking.client_id) {
+    const { data: client } = await supabase
+      .from('clients')
+      .select('id, name, phone, email')
+      .eq('id', currentBooking.client_id)
+      .maybeSingle()
+
+    if (client) {
+      clientName = client.name
+      clientPhone = client.phone
+      clientEmail = client.email
+    }
+  }
+
+  const countdown = formatDueCountdown(currentBooking.return_at)
+
+  return {
+    bookingId: currentBooking.id,
+    bookingNo: currentBooking.booking_no,
+    clientId: currentBooking.client_id ?? '',
+    clientName,
+    clientPhone,
+    clientEmail,
+    stage: currentBooking.stage,
+    pickupAt: currentBooking.pickup_at,
+    returnAt: currentBooking.return_at,
+    isOverdue: countdown.isOverdue,
+    countdownText: countdown.text,
+  }
+}
+
+async function fetchNextBooking(
+  unitId: string | null,
+  productId: string,
+): Promise<ItemCardNextBooking | null> {
+  const nowIso = new Date().toISOString()
+
+  if (unitId) {
+    const { data: resRows } = await supabase
+      .from('inventory_reservations')
+      .select('id, booking_id, asset_id, period, released_at')
+      .eq('asset_id', unitId)
+      .is('released_at', null)
+
+    if (resRows && resRows.length > 0) {
+      const bIds = resRows.map((r) => r.booking_id).filter(Boolean) as string[]
+      if (bIds.length > 0) {
+        const { data: futureBookings } = await supabase
+          .from('bookings')
+          .select('id, booking_no, client_id, stage, pickup_at, return_at, cancelled_at')
+          .in('id', bIds)
+          .gt('pickup_at', nowIso)
+          .is('cancelled_at', null)
+          .order('pickup_at', { ascending: true })
+          .limit(1)
+
+        const fb = futureBookings?.[0]
+        if (fb) {
+          let clientName = 'Client'
+          if (fb.client_id) {
+            const { data: cl } = await supabase.from('clients').select('name').eq('id', fb.client_id).maybeSingle()
+            if (cl?.name) clientName = cl.name
+          }
+          return {
+            bookingId: fb.id,
+            bookingNo: fb.booking_no,
+            clientId: fb.client_id ?? '',
+            clientName,
+            stage: fb.stage,
+            pickupAt: fb.pickup_at,
+            returnAt: fb.return_at,
+            relativeText: formatRelativeUpcoming(fb.pickup_at),
+          }
+        }
+      }
+    }
+  }
+
+  const { data: lines } = await supabase
+    .from('booking_lines')
+    .select('id, booking_id, product_id, voided_at')
+    .eq('product_id', productId)
+    .is('voided_at', null)
+    .limit(10)
+
+  if (!lines || lines.length === 0) return null
+  const bIds = lines.map((l) => l.booking_id).filter(Boolean) as string[]
+
+  const { data: futureBookings } = await supabase
+    .from('bookings')
+    .select('id, booking_no, client_id, stage, pickup_at, return_at, cancelled_at')
+    .in('id', bIds)
+    .gt('pickup_at', nowIso)
+    .is('cancelled_at', null)
+    .order('pickup_at', { ascending: true })
+    .limit(1)
+
+  const fb = futureBookings?.[0]
+  if (!fb) return null
+
+  let clientName = 'Client'
+  if (fb.client_id) {
+    const { data: cl } = await supabase.from('clients').select('name').eq('id', fb.client_id).maybeSingle()
+    if (cl?.name) clientName = cl.name
+  }
+
+  return {
+    bookingId: fb.id,
+    bookingNo: fb.booking_no,
+    clientId: fb.client_id ?? '',
+    clientName,
+    stage: fb.stage,
+    pickupAt: fb.pickup_at,
+    returnAt: fb.return_at,
+    relativeText: formatRelativeUpcoming(fb.pickup_at),
+  }
+}
+
+async function fetchLastReset(unitId: string | null): Promise<ItemCardLastReset | null> {
+  if (!unitId) return null
+
+  const { data: resetRows, error } = await supabase
+    .from('cleaning_queue_entries')
+    .select(`
+      id,
+      unit_id,
+      state,
+      clean_completed_at,
+      reset_completed_at,
+      completed_at,
+      cleaned_by,
+      qc_by,
+      qc_at,
+      qc_self_checked,
+      qc_skipped,
+      qc_skip_reason,
+      problem_state
+    `)
+    .eq('unit_id', unitId)
+    .order('completed_at', { ascending: false, nullsFirst: false })
+    .limit(1)
+
+  if (error || !resetRows || resetRows.length === 0) return null
+  const entry = resetRows[0]
+  if (!entry) return null
+
+  const completedAt = entry.completed_at || entry.reset_completed_at || entry.clean_completed_at
+  if (!completedAt) return null
+
+  let cleanedByName: string | null = null
+  let qcByName: string | null = null
+  const staffIds = [entry.cleaned_by, entry.qc_by].filter(Boolean) as string[]
+  if (staffIds.length > 0) {
+    const { data: staffList } = await supabase.from('users').select('id, full_name').in('id', staffIds)
+    if (staffList) {
+      const map = new Map(staffList.map((s) => [s.id, s.full_name]))
+      if (entry.cleaned_by) cleanedByName = map.get(entry.cleaned_by) ?? null
+      if (entry.qc_by) qcByName = map.get(entry.qc_by) ?? null
+    }
+  }
+
+  let summary = ''
+  if (entry.qc_self_checked) {
+    summary = cleanedByName
+      ? `Cleaned & self-checked by ${cleanedByName} (alone on shift, W43)`
+      : 'Cleaned & self-checked (alone on shift, W43)'
+  } else if (entry.qc_skipped) {
+    const reason = entry.qc_skip_reason ? ` (${entry.qc_skip_reason})` : ''
+    summary = cleanedByName ? `Cleaned by ${cleanedByName} · QC skipped${reason}` : `QC skipped${reason}`
+  } else if (qcByName) {
+    summary = cleanedByName
+      ? `Cleaned by ${cleanedByName} · QC passed by ${qcByName}`
+      : `QC passed by ${qcByName}`
+  } else {
+    summary = cleanedByName ? `Cleaned by ${cleanedByName}` : 'Clean completed'
+  }
+
+  return {
+    completedAt,
+    cleanedBy: cleanedByName,
+    qcBy: qcByName,
+    qcSelfChecked: Boolean(entry.qc_self_checked),
+    qcSkipped: Boolean(entry.qc_skipped),
+    qcSkipReason: entry.qc_skip_reason ?? null,
+    problemState: entry.problem_state ?? null,
+    summary,
+  }
+}
+
+async function fetchOpenDamage(
+  unitId: string | null,
+  condition: UnitConditionDb,
+): Promise<ItemCardOpenDamage> {
+  if (unitId) {
+    const { data: findings } = await supabase
+      .from('damage_findings')
+      .select('id, unit_id, damage_type, description, severity, approval_state, case_id, voided_at, disposition')
+      .eq('unit_id', unitId)
+      .is('voided_at', null)
+      .limit(1)
+
+    const df = findings?.[0]
+    if (df && df.disposition !== 'Repaired' && df.disposition !== 'Written Off') {
+      return {
+        hasDamage: true,
+        condition,
+        damageType: df.damage_type,
+        description: df.description,
+        severity: df.severity,
+        caseId: df.case_id ?? null,
+      }
+    }
+  }
+
+  if (condition === 'Damaged' || condition === 'Lost') {
+    return {
+      hasDamage: true,
+      condition,
+      description: `Unit condition is recorded as ${condition}`,
+    }
+  }
+
+  return {
+    hasDamage: false,
+    condition,
+  }
+}
+
+/**
+ * Resolves comprehensive item card details for a scanned barcode, QR, serial,
+ * or asset code (T2-14, W91).
+ */
+export async function getItemCardData(
+  ref: string,
+  opts: { withMoney?: boolean } = {},
+): Promise<ItemCardData | null> {
+  const trimmed = (ref || '').trim()
+  if (!trimmed) return null
+
+  const assetDetail = await getAssetDetail(trimmed, opts)
+  if (!assetDetail) return null
+
+  const { product, units, matchedUnitId } = assetDetail
+  const targetUnit = (matchedUnitId ? units.find((u) => u.id === matchedUnitId) : units[0]) ?? null
+
+  const unitId = targetUnit?.id ?? null
+  const status: InventoryStateDb = targetUnit?.state ?? 'In Stock'
+  const condition: UnitConditionDb = targetUnit?.condition ?? 'Good'
+
+  let location: ItemCardLocation | null = null
+  if (targetUnit) {
+    const rack = targetUnit.rack
+    const shelf = targetUnit.shelf
+    const bin = targetUnit.bin
+    const parts = [
+      rack ? `Rack ${rack}` : null,
+      shelf ? `Shelf ${shelf}` : null,
+      bin ? `Bin ${bin}` : null,
+    ].filter(Boolean)
+    location = {
+      warehouseName: 'Main Warehouse',
+      rack,
+      shelf,
+      bin,
+      formatted: parts.length > 0 ? parts.join(' · ') : 'Shop floor — no shelf assigned',
+    }
+  }
+
+  const [custody, nextBooking, lastReset, openDamage] = await Promise.all([
+    fetchCustody(unitId, status),
+    fetchNextBooking(unitId, product.id),
+    fetchLastReset(unitId),
+    fetchOpenDamage(unitId, condition),
+  ])
+
+  const financials: ItemCardFinancials | null = opts.withMoney
+    ? {
+        dailyRate: product.dailyRate,
+        replacementValue: targetUnit?.replacementValue ?? null,
+      }
+    : null
+
+  return {
+    unitId,
+    productId: product.id,
+    name: product.name,
+    brand: product.brand,
+    model: product.model,
+    assetCode: product.assetCode,
+    assetTag: targetUnit?.assetTag ?? null,
+    serialNo: targetUnit?.serialNo ?? null,
+    barcode: targetUnit?.barcode ?? null,
+    status,
+    condition,
+    categoryName: product.category,
+    location,
+    custody,
+    nextBooking,
+    lastReset,
+    openDamage,
+    financials,
+  }
 }
 
 /* ── Named filter sets ────────────────────────────────────────────────────────

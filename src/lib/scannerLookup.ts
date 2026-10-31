@@ -1,4 +1,18 @@
 import { supabase } from './supabase'
+import { getItemCardData, type ItemCardData } from './queries/inventory'
+export { BarcodeBurstDetector, useBarcodeBurst, type BarcodeBurstConfig } from './barcodeBurst'
+
+export type { ItemCardData }
+
+/**
+ * Resolves full item card details for a scanned barcode, QR, or asset code (T2-14, W91).
+ */
+export async function lookupItemCard(
+  rawCode: string,
+  opts: { withMoney?: boolean } = {},
+): Promise<ItemCardData | null> {
+  return getItemCardData(rawCode, opts)
+}
 
 export type ScanLookupResult =
   | {

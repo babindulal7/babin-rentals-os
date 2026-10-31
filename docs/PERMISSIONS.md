@@ -458,6 +458,7 @@ Known hole to keep closed: **`security_deposits` was readable by money-blind ses
 | `gate.handover.payment_outstanding` | Release gear with **payment outstanding** (advance tier not met) | **Any staff** — warning shown, release allowed | none | yes, per session | his ruling 7 Sep; 21 Jul soft gate |
 | `gate.handover.payment_outstanding` | Release gear with **deposit outstanding** | same as above | none | yes | same rule — the gate is one gate |
 | `gate.handover.deposit_collateral` | ID document satisfies deposit gate in lieu of cash | Any staff allowed to hand over | none | yes, recorded on collateral record | D1 (26 Oct 2026, 0181) |
+| `gate.reset.qc_self_check` | Pass QC on an item cleaned by same person when alone on shift | Warehouse · Technician · Manager+ | "I am alone on shift" mandatory tick (`qc_self_checked = true`) | yes, `qc_self_checked` recorded in row and audited | W43, L7 (27 Oct 2026, 0183, T2-13) |
 | `gate.handover.receiver_unverified` | Receiver not verified at handover | **Any staff allowed to hand over** | ≥10 chars | yes, per session | D2 (26 Oct 2026, 0179) |
 | `gate.conflict.overbooking` | Overbooking (GiST conflict) | M+ | mandatory | yes; losing reservation deactivated | 21 Jul |
 | `gate.conflict.crew` | Crew double-booking | M+ | mandatory | yes | Crew v3.1 |

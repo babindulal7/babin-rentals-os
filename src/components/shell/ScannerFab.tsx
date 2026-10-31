@@ -4,7 +4,11 @@ import type { BrowserMultiFormatReader } from '@zxing/browser'
 import type { IScannerControls } from '@zxing/browser'
 import { audioContextClass } from '../../lib/audioContext'
 import { useViewport } from '../../lib/device'
-import { resolveScannedCode } from '../../lib/scannerLookup'
+import { resolveScannedCode, lookupItemCard } from '../../lib/scannerLookup'
+import { FLOOR_ROUTE_SUFFIXES } from '../../data/nav'
+import type { ItemCardData } from '../../lib/queries/inventory'
+import { ItemCardSheet } from '../../modules/inventory/ItemCardSheet'
+import { useCanViewMoney } from '../../lib/moneyVisibility'
 
 /**
  * **Scanner — Foundation v2.0 §5.5.**
@@ -45,6 +49,21 @@ export function toggleScanner(): void {
   window.dispatchEvent(new CustomEvent(SCANNER_TOGGLE_EVENT))
 }
 
+export const ITEM_CARD_OPEN_EVENT = 'br:item-card:open'
+
+/** Opens the rich item card for any equipment barcode, QR, serial, or asset code (T2-14, W91). */
+export function openItemCard(code: string): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(ITEM_CARD_OPEN_EVENT, { detail: { code } }))
+  }
+}
+
+function isInsideFloorWorkspace(): boolean {
+  if (typeof window === 'undefined') return false
+  const path = window.location.pathname || ''
+  return FLOOR_ROUTE_SUFFIXES.some((s) => path.endsWith(s))
+}
+
 export default function ScannerFab() {
   /*
    * AUD-014 (Ruled): On phone viewports (<768px), the floating circular FAB button
@@ -53,6 +72,7 @@ export default function ScannerFab() {
    * button renders at bottom-right (20px off viewport edge).
    */
   const phone = useViewport() === 'phone'
+  const canViewMoney = useCanViewMoney()
   const [open, setOpen] = useState(false)
   const [context, setContext] = useState<(typeof CONTEXTS)[number]['key']>('pack')
   const [continuous, setContinuous] = useState(true)
@@ -60,6 +80,11 @@ export default function ScannerFab() {
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [hasTorch, setHasTorch] = useState(false)
   const [torchOn, setTorchOn] = useState(false)
+
+  // Item Card Sheet State — T2-14 (W91)
+  const [activeItemCard, setActiveItemCard] = useState<ItemCardData | null>(null)
+  const [itemCardOpen, setItemCardOpen] = useState(false)
+  const [itemCardLoading, setItemCardLoading] = useState(false)
   /*
    * Latest-ref for the decode callback. The camera effect below re-mounts on
    * `open` only, but `handleScan` closes over `continuous`, `context` and the
@@ -250,13 +275,92 @@ export default function ScannerFab() {
     } catch(e) {}
   }
 
-  const fire = (tone: NonNullable<Feedback>['tone'], text: string) => {
+  const fire = useCallback((tone: NonNullable<Feedback>['tone'], text: string) => {
     playTone(tone)
     if ('vibrate' in navigator) navigator.vibrate(tone === 'ok' ? 30 : tone === 'duplicate' ? [30, 40, 30] : [40, 60, 40])
     
     setFeedback({ tone, text })
     window.setTimeout(() => setFeedback(null), 2600)
-  }
+  }, [])
+
+  const openCardForCode = useCallback(async (code: string) => {
+    const c = code.trim().toUpperCase()
+    if (!c) return
+
+    setItemCardLoading(true)
+    setItemCardOpen(true)
+    try {
+      const data = await lookupItemCard(c, { withMoney: canViewMoney })
+      if (data) {
+        setActiveItemCard(data)
+        playTone('ok')
+      } else {
+        fire('unknown', `${c} — not found in inventory`)
+        setItemCardOpen(false)
+      }
+    } catch (err: unknown) {
+      fire('unknown', `Lookup failed: ${err instanceof Error ? err.message : String(err)}`)
+      setItemCardOpen(false)
+    } finally {
+      setItemCardLoading(false)
+    }
+  }, [canViewMoney, fire])
+
+  // Listen for external openItemCard events (e.g. from CommandPalette, AssetDetail, or direct trigger)
+  useEffect(() => {
+    const handleItemCardOpen = (e: Event) => {
+      const detail = (e as CustomEvent<{ code: string }>).detail
+      if (detail?.code) {
+        void openCardForCode(detail.code)
+      }
+    }
+    window.addEventListener(ITEM_CARD_OPEN_EVENT, handleItemCardOpen)
+    return () => window.removeEventListener(ITEM_CARD_OPEN_EVENT, handleItemCardOpen)
+  }, [openCardForCode])
+
+  // Global Bluetooth scanner / keyboard wedge listener outside floor workspaces (T2-14)
+  useEffect(() => {
+    let buffer = ''
+    let lastKeyTime = 0
+
+    const handleGlobalWedge = (e: KeyboardEvent) => {
+      if (isInsideFloorWorkspace()) return
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+
+      const target = e.target as HTMLElement | null
+      const isInput =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        (target && target.isContentEditable)
+
+      if (target === inputRef.current) return
+
+      const now = Date.now()
+      const diff = now - lastKeyTime
+      lastKeyTime = now
+
+      if (e.key === 'Enter') {
+        const code = buffer.trim()
+        buffer = ''
+        if (code.length >= 2 && (!isInput || diff < 60)) {
+          e.preventDefault()
+          void openCardForCode(code)
+        }
+        return
+      }
+
+      if (e.key.length === 1) {
+        if (diff > 250 && isInput) {
+          buffer = e.key
+        } else {
+          buffer += e.key
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleGlobalWedge)
+    return () => window.removeEventListener('keydown', handleGlobalWedge)
+  }, [openCardForCode])
 
   const handleScan = async (code: string) => {
     const c = code.trim().toUpperCase()
@@ -280,6 +384,9 @@ export default function ScannerFab() {
       fire('unknown', 'Not a Babin code')
     } else if (c.includes('DUP')) {
       fire('duplicate', `${c} already scanned`)
+    } else if (!isInsideFloorWorkspace()) {
+      // Outside a floor workspace: scanning opens item card! (T2-14, W91)
+      await openCardForCode(c)
     } else {
       // Real database / unit lookup via canonical resolveScannedCode (AUD-002)
       const res = await resolveScannedCode(c)
@@ -566,6 +673,13 @@ export default function ScannerFab() {
           <Icon name="search" size={22} />
         </button>
       )}
+
+      <ItemCardSheet
+        isOpen={itemCardOpen}
+        onClose={() => setItemCardOpen(false)}
+        item={activeItemCard}
+        loading={itemCardLoading}
+      />
     </div>
   )
 }

@@ -435,6 +435,7 @@ export async function readCandidates(productIds: readonly string[]): Promise<Map
     .select('id, unit_id')
     .in('unit_id', units.map(unit => unit.id))
     .is('voided_at', null)
+    .is('repaired_at', null)
     .order('id', { ascending: true })
     .range(from, to), 'damage findings')
   const damaged = new Set(findings.map(finding => {

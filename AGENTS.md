@@ -50,7 +50,7 @@ npm run db:types            # regen src/types/database.ts
 
 ## Hard prohibitions
 
-- **N-5: never push a migration to live Supabase.** `supabase db push` (any spelling) and `npm run db:apply --remote` are denied in `opencode.jsonc`. Write it, number it (`supabase/migrations/`), verify locally (`check:pglite` + `check:lifecycle` both green = `Verified` per R-35) — Babin applies after `BACKUP_PROTOCOL.md`. Never `supabase db reset` against production. `PROGRESS.md` must say WRITTEN vs VERIFIED vs APPLIED vs PRODUCTION-VERIFIED.
+- **N-5: never push a migration to live Supabase.** `supabase db push` (any spelling) and `npm run db:apply --remote` are denied in `opencode.jsonc`. Write it, number it (`supabase/migrations/`), verify locally (`check:pglite` + `check:lifecycle` both green = `Verified` per R-35) — Babin applies after [`../archive/BACKUP_PROTOCOL.md`](../archive/BACKUP_PROTOCOL.md). Never `supabase db reset` against production. `PROGRESS.md` must say WRITTEN vs VERIFIED vs APPLIED vs PRODUCTION-VERIFIED.
 - **Anon key only in the client.** Every `VITE_*` var is inlined into the bundle at build time and is public (View Source). Never a service key, JWT secret, or credential in code, logs, or commits (N-8). `docker run -e` on a built image does nothing — values must exist at `npm run build`.
 - Env changes require a Vite restart. `VITE_DEV_AUTH_BYPASS=true` skips login as seeded Owner but is double-gated on `import.meta.env.DEV` (dead code in prod).
 - No `any` in `src/` (`@typescript-eslint/no-explicit-any: error`); relaxed only in `*.test.*`. `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes` are on — index access needs guards.

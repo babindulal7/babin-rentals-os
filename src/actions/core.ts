@@ -182,6 +182,8 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
       return rbac.canConfirmRental(ctx.role);
     case 'client.create':
       return rbac.canCreateClient(ctx.role);
+    case 'client.manage_id':
+      return rbac.canManageClientCollectors(ctx.role);
     case 'client.block':
       return rbac.canBlockClient(ctx.role);
     // RULING 2026-10-22: new capability, mirrors `client_memberships_all` (0037) — Owner, Admin, Manager, Coordinator.
@@ -315,7 +317,6 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'inventory.audit':
     case 'inventory.transfer':
     case 'maintenance.create':
-    case 'maintenance.complete':
     case 'evidence.review':
     // RULING 2026-09-12 (PLAN.md §4.29(a), migration 0122): 'Inspection' added
     // to operation_kind and operation_sessions; mirrors operation_sessions_all.
@@ -323,6 +324,10 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'inspection.pass':
     case 'inspection.fail':
       return rbac.canWriteFloor(ctx.role);
+
+    // Ruling D4 (26 Oct 2026, T2-06): closing a repair job is Technician or Manager+
+    case 'maintenance.complete':
+      return rbac.canCompleteMaintenance(ctx.role);
 
     case 'client.merge':
       return rbac.canMergeClients(ctx.role);
@@ -344,6 +349,46 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     // Revert: `return rbac.canWriteSharedTriage(ctx.role);`
     case 'case.resolve':
       return rbac.canApproveDamage(ctx.role, 'Manager');
+
+    // Team notes (T4-04, migration 0185)
+    case 'team_note.create':
+      return rbac.canCreateTeamNote(ctx.role);
+    case 'team_note.read':
+      return rbac.canReadTeamNotes(ctx.role);
+    case 'team_note.acknowledge':
+      return rbac.canAcknowledgeTeamNote(ctx.role);
+    case 'team_note.pin':
+      return rbac.canPinTeamNote(ctx.role);
+    case 'team_note.archive':
+      return rbac.canArchiveTeamNote(ctx.role);
+    case 'team_note.resolve':
+      return rbac.canResolveTeamNote(ctx.role);
+
+    // Shift handovers (T4-05, migration 0186)
+    case 'shift_handover.create':
+      return rbac.canCreateShiftHandover(ctx.role);
+    case 'shift_handover.read':
+      return rbac.canReadShiftHandovers(ctx.role);
+    case 'shift_handover.acknowledge':
+      return rbac.canAcknowledgeShiftHandover(ctx.role);
+    case 'shift_handover.archive':
+      return rbac.canArchiveShiftHandover(ctx.role);
+
+    // Delivery dispatch (T4-01, migrations 0165/0187)
+    case 'delivery.create':
+      return rbac.canCreateDeliveryJob(ctx.role);
+    case 'delivery.assign':
+      return rbac.canAssignDeliveryDriver(ctx.role);
+    case 'delivery.transition':
+      return rbac.canTransitionDeliveryJob(ctx.role);
+
+    // Delivery zones (T4-07, migration 0189)
+    case 'delivery_zone.create':
+      return rbac.canCreateDeliveryZone(ctx.role);
+    case 'delivery_zone.read':
+      return rbac.canReadDeliveryZones(ctx.role);
+    case 'delivery_zone.manage':
+      return rbac.canManageDeliveryZones(ctx.role);
 
     // ⚠ FILED, not fixed: `crew.assign` is still `isStaff()`, but PERMISSIONS.md
     // §4.7 says `C+` and the §3 grid marks Crew Assist ✕ for Warehouse,

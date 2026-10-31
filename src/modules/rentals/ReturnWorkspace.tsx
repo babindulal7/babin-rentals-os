@@ -43,6 +43,7 @@ import { deliveryTypeLabel } from '../../lib/format'
 import { formatGateError } from '../../lib/gates'
 import { clearFloorScan, loadFloorScan, saveFloorScan, recordFloorScanEvent } from '../../lib/floorScanStorage'
 import { rentalDaysBetween } from '../../lib/rentalDays'
+import { useBarcodeBurst } from '../../lib/barcodeBurst'
 import { NON_PACKABLE_LINE_TYPES } from '../../lib/bookingLineTypes'
 import {
   playScanSuccess,
@@ -54,6 +55,7 @@ import {
 import { SignOnGlassModal, type DigitalSignature } from './modals/SignOnGlassModal'
 import { exportReturnReportPdf, openPdfForPrint } from '../../lib/pdf/exportPdf'
 import type { ReturnReportPdfLine } from '../../lib/pdf/generatePdf'
+import { FloorOfflineStatus } from '../../components/ui/FloorOfflineStatus'
 import './rentals.css'
 
 
@@ -624,6 +626,18 @@ export default function ReturnWorkspace({
   const [returnQuantities, setReturnQuantities] = useState<{ bookingId: string; received: Map<string, number> } | null>(null)
   const [quantityError, setQuantityError] = useState<string | null>(null)
   const [quantityReload, setQuantityReload] = useState(0)
+  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true)
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -753,8 +767,10 @@ export default function ReturnWorkspace({
             problemRoute = 'Ready for Reset'
           }
         } else if (mark?.state === 'Not Returned') {
-          outcome = mark.decision || 'Missing'
-          problemRoute = mark.decision === 'Client Retaining' ? 'Rental Extension Review' : 'Missing Item Investigation'
+          // A Not Returned unit always counts as missing on the report; the decision only picks the route.
+          const decision = mark.decision ?? 'Still expected'
+          outcome = `Not Returned (${decision})`
+          problemRoute = decision === 'Still expected' ? 'Rental Extension Review' : 'Missing Item Investigation'
         }
 
         return {
@@ -770,11 +786,11 @@ export default function ReturnWorkspace({
 
       const returnedCount = reportLines.filter((l) => l.outcome.startsWith('Received')).length
       const damagedCount = reportLines.filter((l) => l.outcome === 'Damaged').length
-      const missingCount = reportLines.filter((l) => l.outcome === 'Missing' || l.outcome.includes('Retaining')).length
+      const missingCount = reportLines.filter((l) => l.outcome.startsWith('Not Returned')).length
 
       const flags: string[] = []
       if (damagedCount > 0) flags.push(`${damagedCount} unit(s) recorded damaged / requiring repair`)
-      if (missingCount > 0) flags.push(`${missingCount} unit(s) recorded missing / retained by client`)
+      if (missingCount > 0) flags.push(`${missingCount} unit(s) recorded not returned`)
 
       const result = await exportReturnReportPdf({
         bookingNo: floor.bookingNo,
@@ -1013,6 +1029,7 @@ export default function ReturnWorkspace({
     })
 
   const [ambientBarcode, setAmbientBarcode] = useState('')
+  const barcodeInputRef = useRef<HTMLInputElement>(null)
   const [activeSigningRole, setActiveSigningRole] = useState<'returning' | 'warehouse' | null>(null)
   const [scanPulse, setScanPulse] = useState<'success' | 'error' | null>(null)
   const [qcStatusMap, setQcStatusMap] = useState<Record<string, boolean>>({})
@@ -1081,10 +1098,91 @@ export default function ReturnWorkspace({
     patchMark(key, { condition })
   }
 
-  const handleAmbientBarcodeSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const receive = (key: string, via: 'scan' | 'manual' = 'manual') => {
+    if (!quantitiesVerified) return
     unlockAudioContext()
-    const code = ambientBarcode.trim().toLowerCase()
+    const row = rows.find((r) => r.key === key)
+    if (!row) {
+      if (via === 'scan') {
+        triggerScanPulse('error')
+        playScanError()
+        if (floor?.id) {
+          void recordFloorScanEvent({
+            bookingId: floor.id,
+            context: 'return',
+            code: key,
+            result: 'rejected',
+            resultReason: 'is not on this booking',
+          })
+        }
+      }
+      return
+    }
+    if (row.alreadyReturned) {
+      if (via === 'scan') {
+        triggerScanPulse('error')
+        playScanError()
+        if (floor?.id) {
+          void recordFloorScanEvent({
+            bookingId: floor.id,
+            context: 'return',
+            code: row.serial ?? row.name,
+            result: 'warning',
+            resultReason: 'was returned in an earlier session',
+            resolvedUnitId: row.assetId,
+          })
+        }
+      }
+      setScanLog((p) => [`• ${row.name} was returned in an earlier session — nothing to record`, ...p].slice(0, 5))
+      return
+    }
+    if (marks[key]?.state === 'Returned') {
+      if (via === 'scan') {
+        triggerScanPulse('error')
+        playScanError()
+        if (floor?.id) {
+          void recordFloorScanEvent({
+            bookingId: floor.id,
+            context: 'return',
+            code: row.serial ?? row.name,
+            result: 'warning',
+            resultReason: 'already received in this session',
+            resolvedUnitId: row.assetId,
+          })
+        }
+      }
+      setScanLog((p) => [`• ${row.name} already received in this session`, ...p].slice(0, 5))
+      return
+    }
+    markReturned(key)
+    if (floor?.id) {
+      void recordFloorScanEvent({
+        bookingId: floor.id,
+        context: 'return',
+        code: row.serial ?? row.name,
+        codeType: via === 'scan' ? 'barcode' : 'manual_entry',
+        result: 'accepted',
+        resolvedUnitId: row.assetId,
+        actorId: user?.id,
+      })
+    }
+    if (via === 'scan') {
+      triggerScanPulse('success')
+      const remaining = actionable.filter((r) => r.key !== key && marks[r.key]?.state !== 'Returned')
+      if (remaining.length === 0) {
+        playCaseComplete()
+      } else {
+        playScanSuccess()
+      }
+    }
+    setScanLog((p) =>
+      [`✓ ${row.name}${row.serial ? ` (${row.serial})` : ''} received — recorded when the session completes`, ...p].slice(0, 5),
+    )
+  }
+
+  const processScannedCode = (rawCode: string) => {
+    unlockAudioContext()
+    const code = rawCode.trim().toLowerCase()
     if (!code) return
 
     // 1. Direct equipment item match
@@ -1157,93 +1255,26 @@ export default function ReturnWorkspace({
       void recordFloorScanEvent({
         bookingId: floor.id,
         context: 'return',
-        code: ambientBarcode.trim(),
+        code: rawCode.trim(),
         result: 'rejected',
-        resultReason: `No equipment matching "${ambientBarcode.trim()}" in this booking`,
+        resultReason: `No equipment matching "${rawCode.trim()}" in this booking`,
       })
     }
-    setScanLog((p) => [`✕ No equipment matching "${ambientBarcode.trim()}" in this booking`, ...p].slice(0, 5))
+    setScanLog((p) => [`✕ No equipment matching "${rawCode.trim()}" in this booking`, ...p].slice(0, 5))
     setAmbientBarcode('')
   }
 
-  const receive = (key: string, via: 'scan' | 'manual' = 'manual') => {
-    if (!quantitiesVerified) return
-    unlockAudioContext()
-    const row = rows.find((r) => r.key === key)
-    if (!row) {
-      if (via === 'scan') {
-        triggerScanPulse('error')
-        playScanError()
-        if (floor?.id) {
-          void recordFloorScanEvent({
-            bookingId: floor.id,
-            context: 'return',
-            code: key,
-            result: 'rejected',
-            resultReason: 'is not on this booking',
-          })
-        }
-      }
-      return
-    }
-    if (row.alreadyReturned) {
-      if (via === 'scan') {
-        triggerScanPulse('error')
-        playScanError()
-        if (floor?.id) {
-          void recordFloorScanEvent({
-            bookingId: floor.id,
-            context: 'return',
-            code: row.serial ?? row.name,
-            result: 'warning',
-            resultReason: 'was returned in an earlier session',
-            resolvedUnitId: row.assetId,
-          })
-        }
-      }
-      setScanLog((p) => [`• ${row.name} was returned in an earlier session — nothing to record`, ...p].slice(0, 5))
-      return
-    }
-    if (marks[key]?.state === 'Returned') {
-      if (via === 'scan') {
-        triggerScanPulse('error')
-        playScanError()
-        if (floor?.id) {
-          void recordFloorScanEvent({
-            bookingId: floor.id,
-            context: 'return',
-            code: row.serial ?? row.name,
-            result: 'warning',
-            resultReason: 'already received in this session',
-            resolvedUnitId: row.assetId,
-          })
-        }
-      }
-      setScanLog((p) => [`• ${row.name} already received in this session`, ...p].slice(0, 5))
-      return
-    }
-    markReturned(key)
-    if (via === 'scan') {
-      triggerScanPulse('success')
-      const remaining = actionable.filter((r) => r.key !== key && marks[r.key]?.state !== 'Returned')
-      if (remaining.length === 0) {
-        playCaseComplete()
-      } else {
-        playScanSuccess()
-      }
-      if (floor?.id) {
-        void recordFloorScanEvent({
-          bookingId: floor.id,
-          context: 'return',
-          code: row.serial ?? row.name,
-          result: 'accepted',
-          resolvedUnitId: row.assetId,
-        })
-      }
-    }
-    setScanLog((p) =>
-      [`✓ ${row.name}${row.serial ? ` (${row.serial})` : ''} received — recorded when the session completes`, ...p].slice(0, 5),
-    )
+  // Hardware Bluetooth & USB scanner burst listener at the return bench (T2-09, S14)
+  useBarcodeBurst({
+    onScan: processScannedCode,
+    enabled: Boolean(floor) && !floorLoading && floorError === null && !showScanner && !dispatching,
+    targetInputRef: barcodeInputRef,
+    cooldownMs: 1200,
+  })
+
+  const handleAmbientBarcodeSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    processScannedCode(ambientBarcode)
   }
 
   /** Bulk receipt records item marks only; QC and signatures require their own explicit capture. */
@@ -1395,8 +1426,8 @@ export default function ReturnWorkspace({
   }
   useEffect(() => {
     onRegisterActions?.({
-      canComplete,
-      blockedReason,
+      canComplete: isOnline && canComplete,
+      blockedReason: !isOnline ? 'Needs connection to complete' : blockedReason,
       dispatching,
       complete: () => completeRef.current(),
       isDirty,
@@ -1407,7 +1438,7 @@ export default function ReturnWorkspace({
       progress: quantitiesVerified ? { done: backUnits, total: totalUnits } : undefined,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget, backUnits, totalUnits, quantitiesVerified])
+  }, [onRegisterActions, isOnline, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget, backUnits, totalUnits, quantitiesVerified])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */
 
@@ -1757,6 +1788,7 @@ export default function ReturnWorkspace({
             >
               {/* ── centre — the triage list over the real rows ─────────────── */}
               <div style={{ minWidth: 0 }}>
+                <FloorOfflineStatus verb="return" />
                 <Card
                   title="Equipment Checklist"
                   bodyStyle={{ padding: 0 }}
@@ -1803,6 +1835,7 @@ export default function ReturnWorkspace({
                         </span>
                         <Input
                           type="text"
+                          ref={barcodeInputRef}
                           value={ambientBarcode}
                           onChange={(e) => setAmbientBarcode(e.target.value)}
                           placeholder="Scan or type barcode/serial number to check in gear…"
@@ -2236,8 +2269,9 @@ export default function ReturnWorkspace({
                 {!embedded && (
                   <button
                     type="button"
-                    disabled={!canComplete}
+                    disabled={!isOnline || !canComplete || dispatching}
                     onClick={completeSession}
+                    title={!isOnline ? 'Custody transitions require an internet connection (R-40)' : undefined}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -2250,12 +2284,16 @@ export default function ReturnWorkspace({
                       fontSize: 'var(--t-ui)',
                       fontWeight: 600,
                       fontFamily: 'inherit',
-                      cursor: canComplete ? 'pointer' : 'not-allowed',
-                      ...(canComplete ? BLUE_PRIMARY : { background: 'var(--card2)', color: 'var(--muted)', border: '1px solid var(--border)' }),
+                      cursor: isOnline && canComplete ? 'pointer' : 'not-allowed',
+                      ...(isOnline && canComplete ? BLUE_PRIMARY : { background: 'var(--card2)', color: 'var(--muted)', border: '1px solid var(--border)' }),
                     }}
                   >
-                    <Icon name="checklist" size={15} />
-                    {dispatching ? 'Recording…' : allResolved ? 'Complete Return' : 'Complete Session'}
+                    <Icon name={isOnline ? 'checklist' : 'alert_triangle'} size={15} />
+                    {dispatching
+                      ? 'Recording…'
+                      : !isOnline
+                      ? 'Needs connection to complete'
+                      : allResolved ? 'Complete Return' : 'Complete Session'}
                   </button>
                 )}
 
@@ -2372,7 +2410,7 @@ export default function ReturnWorkspace({
                     Compare in Evidence
                   </Link>
                   <p style={{ margin: '5px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
-                    Damage photo counts include saved photos linked to each unit. Photo upload is unavailable here.
+                    Damage photo counts include saved photos linked to each unit. Use Take / Upload Photo above to record return evidence.
                   </p>
                 </Card>
 
@@ -2459,11 +2497,15 @@ export default function ReturnWorkspace({
                 }}
                 onScan={() => setShowScanner(true)}
                 primaryAction={{
-                  label: dispatching ? 'Recording…' : allResolved ? 'Complete Return' : 'Complete Session',
+                  label: dispatching
+                    ? 'Recording…'
+                    : !isOnline
+                    ? 'Needs connection to complete'
+                    : allResolved ? 'Complete Return' : 'Complete Session',
                   onClick: completeSession,
-                  disabled: !canComplete,
+                  disabled: !isOnline || !canComplete,
                   loading: dispatching,
-                  icon: 'checklist',
+                  icon: isOnline ? 'checklist' : 'alert_triangle',
                 }}
               />
             )}

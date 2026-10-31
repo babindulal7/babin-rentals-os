@@ -67,7 +67,7 @@ for present-tense claims older than 20 Oct and date or correct them.
 that the 26 Oct measurement contradicts.
 **Needs** — T0-01.
 
-### T0-06 · Archive root clutter            status: todo · size: S · lane A
+### T0-06 · Archive root clutter            status: done · size: S · lane A
 **What** — Move generated or one-off files out of the repository root into `docs/archive/`:
 `repomix-output.xml` (1.2 MB), `repomix-part2.xml` (0.8 MB), `err.txt` (empty),
 `.coss-search-verify.mjs`, and dated reports that are not authorities

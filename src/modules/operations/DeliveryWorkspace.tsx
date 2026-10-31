@@ -1,8 +1,7 @@
-import { IS_MOCK } from '../../lib/supabase'
+import { useState, useMemo, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import LiveTransportPlans from './LiveTransportPlans'
 import { DateField } from '../../components/ui/DateField'
-import { useState, useMemo, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
 import { PageHeader, PageActions, Button } from '../../components/ui/Page'
@@ -12,24 +11,29 @@ import { DataTableShell } from '../../components/ui/DataTable'
 import { Modal } from '../../components/ui/Modal'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { SearchInput } from '../../components/ui/SearchInput'
-import { EmptyState } from '../../components/ui/StateViews'
+import { EmptyState, LoadingSkeleton } from '../../components/ui/StateViews'
 import { formatMoney, rupees } from '../../lib/money'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
 import { useAuth } from '../../lib/auth'
-import { useNetwork } from '../../lib/network'
-import { canPerformOperations, canViewMoney } from '../../lib/rbac'
 import {
-  getDeliveries,
-  updateDeliveryStatus,
-  assignDeliveryRider,
-  createDeliveryRecord,
-  deliveryMutationRefusal,
-  deliveryReadRefusal,
+  canCreateDeliveryJob,
+  canAssignDeliveryDriver,
+  canTransitionDeliveryJob,
+} from '../../lib/rbac'
+import {
+  fetchDeliveries,
+  liveDeliveryReadRefusal,
   type DeliveryRecord,
   type DeliveryStatus,
-  type DeliveryMode,
 } from '../../lib/queries/delivery'
+import {
+  createDeliveryJob,
+  assignDeliveryDriver,
+  transitionDeliveryJob,
+} from '../../actions/delivery'
+import { useDomainEvent } from '../../events/useDomainEvent'
+import { EVENT_TYPES } from '../../events/eventBus'
 import { useToast } from '../../components/ui/Toast'
 import { businessDayAd } from '../../lib/bs'
 import './delivery.css'
@@ -43,32 +47,53 @@ const STATUS_BADGE_STYLE: Record<DeliveryStatus, { bg: string; color: string; bo
 }
 
 type ViewMode = 'table' | 'kanban'
+type WorkspaceTab = 'dispatches' | 'transport'
 
 export function DeliveryWorkspace() {
-  return IS_MOCK ? <MockDeliveryWorkspace /> : <LiveTransportPlans />
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>('dispatches')
+
+  if (activeTab === 'transport') {
+    return (
+      <div>
+        <div style={{ padding: '8px 16px', background: 'var(--surface2)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Button variant="secondary" size="sm" onClick={() => setActiveTab('dispatches')}>
+            ← Back to Delivery Dispatches
+          </Button>
+          <span style={{ fontSize: '12px', color: 'var(--text3)' }}>Viewing Transport Overview Plans</span>
+        </div>
+        <LiveTransportPlans />
+      </div>
+    )
+  }
+
+  return <ActiveDeliveryWorkspace onSwitchToTransport={() => setActiveTab('transport')} />
 }
 
-function MockDeliveryWorkspace() {
+function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport: () => void }) {
   const { user } = useAuth()
-  const [deliveries, setDeliveries] = useState<DeliveryRecord[]>(() => getDeliveries(user?.role ?? null))
-  useEffect(() => { setDeliveries(getDeliveries(user?.role ?? null)) }, [user?.role])
+  const role = user?.role ?? null
+  const readRefusal = liveDeliveryReadRefusal(role)
+  const canMoney = useCanViewMoney()
+  const isDriver = role === 'Driver'
+
+  const [deliveries, setDeliveries] = useState<DeliveryRecord[]>([])
+  const [loading, setLoading] = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
+  const [mutationError, setMutationError] = useState<string | null>(null)
+
   const [statusFilter, setStatusFilter] = useState<'All' | DeliveryStatus>('All')
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<ViewMode>('table')
-  const canMoney = useCanViewMoney()
-  const isOnline = useNetwork()
-  const writeContext = { role: user?.role ?? null, isOnline }
-  // Conservative local preview: transport writes exclude money-blind roles.
-  // A real delivery permission/action contract is still unimplemented.
-  const canChange = !!user && canPerformOperations(user.role) && canViewMoney(user.role)
-  const writeRefusal = deliveryMutationRefusal(writeContext)
-  const readRefusal = deliveryReadRefusal(user?.role ?? null)
-  const [mutationError, setMutationError] = useState<string | null>(null)
+
   const viewport = useViewport()
   const isMobile = viewport === 'phone'
   const { showSuccessToast } = useToast()
 
-  // Modal states
+  // Permission capabilities
+  const canCreate = canCreateDeliveryJob(role)
+  const canAssign = canAssignDeliveryDriver(role)
+
+  // Modals state
   const [assignTarget, setAssignTarget] = useState<DeliveryRecord | null>(null)
   const [driverName, setDriverName] = useState('')
   const [driverPhone, setDriverPhone] = useState('')
@@ -78,19 +103,47 @@ function MockDeliveryWorkspace() {
   const [recipientName, setRecipientName] = useState('')
   const [deliveryNote, setDeliveryNote] = useState('')
 
+  const [failTarget, setFailTarget] = useState<DeliveryRecord | null>(null)
+  const [failReason, setFailReason] = useState('')
+
   const [newModalOpen, setNewModalOpen] = useState(false)
+  const [newBookingId, setNewBookingId] = useState('')
   const [newBookingNo, setNewBookingNo] = useState('')
-  const [newClientName, setNewClientName] = useState('')
-  const [newClientPhone, setNewClientPhone] = useState('')
-  const [newAddress, setNewAddress] = useState('')
-  const [newNeighborhood, setNewNeighborhood] = useState('')
-  const [newMode, setNewMode] = useState<DeliveryMode>('Babin Delivery')
+  const [newLeg, setNewLeg] = useState<'Outbound' | 'Return'>('Outbound')
   const [newDate, setNewDate] = useState(() => businessDayAd())
   const [newTime, setNewTime] = useState('10:00')
-  const [newNotes, setNewNotes] = useState('')
-  const [createError, setCreateError] = useState<string | null>(null)
+  const [newVehicle, setNewVehicle] = useState('')
+  const [newRiderName, setNewRiderName] = useState('')
+  const [newRiderPhone, setNewRiderPhone] = useState('')
 
   const [gatePassSlip, setGatePassSlip] = useState<DeliveryRecord | null>(null)
+
+  const loadData = useCallback(() => {
+    if (readRefusal) return
+    setLoading(true)
+    fetchDeliveries(role)
+      .then((data) => {
+        setDeliveries(data)
+        setLoading(false)
+        setFetchError(null)
+      })
+      .catch((err: unknown) => {
+        setFetchError(err instanceof Error ? err.message : 'Deliveries unavailable')
+        setLoading(false)
+      })
+  }, [role, readRefusal])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  // Realtime live domain events
+  useDomainEvent(EVENT_TYPES.DELIVERY_JOB_CREATED, loadData)
+  useDomainEvent(EVENT_TYPES.DELIVERY_DRIVER_ASSIGNED, loadData)
+  useDomainEvent(EVENT_TYPES.DELIVERY_JOB_TRANSITIONED, loadData)
+  useDomainEvent(EVENT_TYPES.RENTAL_PACKED, loadData)
+  useDomainEvent(EVENT_TYPES.RENTAL_HANDED_OVER, loadData)
+  useDomainEvent(EVENT_TYPES.RENTAL_CONFIRMED, loadData)
 
   const filtered = useMemo(() => {
     return deliveries.filter((d) => {
@@ -101,8 +154,8 @@ function MockDeliveryWorkspace() {
           d.id.toLowerCase().includes(q) ||
           d.bookingNo.toLowerCase().includes(q) ||
           d.clientName.toLowerCase().includes(q) ||
-          d.neighborhood.toLowerCase().includes(q) ||
           d.address.toLowerCase().includes(q) ||
+          (d.neighborhood && d.neighborhood.toLowerCase().includes(q)) ||
           (d.driverName && d.driverName.toLowerCase().includes(q))
         if (!match) return false
       }
@@ -115,10 +168,129 @@ function MockDeliveryWorkspace() {
   const readyCount = deliveries.filter((d) => d.status === 'Ready').length
   const scheduledCount = deliveries.filter((d) => d.status === 'Scheduled').length
   const deliveredCount = deliveries.filter((d) => d.status === 'Delivered').length
-  const totalRevenue = deliveries.reduce((acc, d) => acc + (d.status === 'Delivered' ? d.deliveryFeeNpr : 0), 0)
+  const failedCount = deliveries.filter((d) => d.status === 'Failed').length
+  const totalRevenue = canMoney
+    ? deliveries.reduce((acc, d) => acc + (d.status === 'Delivered' ? d.deliveryFeeNpr : 0), 0)
+    : 0
+
+  // Transition Handlers
+  const handleMarkReady = async (rec: DeliveryRecord) => {
+    if (!user?.id || !user?.role) {
+      setMutationError('User authentication required')
+      return
+    }
+    setMutationError(null)
+    try {
+      await transitionDeliveryJob(
+        {
+          jobId: rec.id,
+          expectedStatus: 'Scheduled',
+          nextStatus: 'Ready',
+        },
+        { userId: user.id, role: user.role },
+      )
+      showSuccessToast(`Dispatch ${rec.id} staged Ready for transit`)
+      loadData()
+    } catch (err) {
+      setMutationError(err instanceof Error ? err.message : 'Failed to transition to Ready')
+    }
+  }
+
+  const handleStartTransit = async (rec: DeliveryRecord) => {
+    if (!user?.id || !user?.role) {
+      setMutationError('User authentication required')
+      return
+    }
+    setMutationError(null)
+    try {
+      await transitionDeliveryJob(
+        {
+          jobId: rec.id,
+          expectedStatus: 'Ready',
+          nextStatus: 'In Transit',
+        },
+        { userId: user.id, role: user.role },
+      )
+      showSuccessToast(`Dispatch ${rec.id} marked In Transit · Driver en route`)
+      loadData()
+    } catch (err) {
+      setMutationError(err instanceof Error ? err.message : 'Failed to start transit')
+    }
+  }
+
+  const handleOpenDeliver = (rec: DeliveryRecord) => {
+    setMutationError(null)
+    setDeliverTarget(rec)
+    setRecipientName(rec.recipientName || rec.clientName)
+    setDeliveryNote('')
+  }
+
+  const handleConfirmDelivered = async () => {
+    if (!deliverTarget) return
+    if (!user?.id || !user?.role) {
+      setMutationError('User authentication required')
+      return
+    }
+    if (recipientName.trim().length < 2) {
+      setMutationError('Recipient name must be at least 2 characters.')
+      return
+    }
+    setMutationError(null)
+    try {
+      await transitionDeliveryJob(
+        {
+          jobId: deliverTarget.id,
+          expectedStatus: 'In Transit',
+          nextStatus: 'Delivered',
+          recipient: recipientName.trim(),
+          note: deliveryNote.trim() || undefined,
+        },
+        { userId: user.id, role: user.role },
+      )
+      showSuccessToast(`Dispatch ${deliverTarget.id} delivered to ${recipientName.trim()}`)
+      setDeliverTarget(null)
+      loadData()
+    } catch (err) {
+      setMutationError(err instanceof Error ? err.message : 'Failed to confirm delivery')
+    }
+  }
+
+  const handleOpenFail = (rec: DeliveryRecord) => {
+    setMutationError(null)
+    setFailTarget(rec)
+    setFailReason('')
+  }
+
+  const handleConfirmFailed = async () => {
+    if (!failTarget) return
+    if (!user?.id || !user?.role) {
+      setMutationError('User authentication required')
+      return
+    }
+    if (failReason.trim().length < 10) {
+      setMutationError('Failure reason must be explained in at least 10 characters.')
+      return
+    }
+    setMutationError(null)
+    try {
+      await transitionDeliveryJob(
+        {
+          jobId: failTarget.id,
+          expectedStatus: failTarget.status,
+          nextStatus: 'Failed',
+          note: failReason.trim(),
+        },
+        { userId: user.id, role: user.role },
+      )
+      showSuccessToast(`Dispatch ${failTarget.id} marked as Failed`)
+      setFailTarget(null)
+      loadData()
+    } catch (err) {
+      setMutationError(err instanceof Error ? err.message : 'Failed to mark job as failed')
+    }
+  }
 
   const handleOpenAssign = (rec: DeliveryRecord) => {
-    if (writeRefusal) { setMutationError(writeRefusal); return }
     setMutationError(null)
     setAssignTarget(rec)
     setDriverName(rec.driverName ?? '')
@@ -126,77 +298,66 @@ function MockDeliveryWorkspace() {
     setVehiclePlate(rec.vehiclePlate ?? '')
   }
 
-  const handleSaveAssign = () => {
+  const handleSaveAssign = async () => {
     if (!assignTarget) return
-    try {
-      const updated = assignDeliveryRider(assignTarget.id, driverName, driverPhone, vehiclePlate, writeContext)
-      setDeliveries(updated)
-      setAssignTarget(null)
-      setMutationError(null)
-      showSuccessToast(`Local preview: rider/driver assigned to ${assignTarget.id}`)
-    } catch (error) { setMutationError(error instanceof Error ? error.message : 'Delivery changes could not be saved.') }
-  }
-
-  const handleStartTransit = (rec: DeliveryRecord) => {
-    try {
-      const updated = updateDeliveryStatus(rec.id, 'In Transit', writeContext)
-      setDeliveries(updated)
-      setMutationError(null)
-      showSuccessToast(`Local preview: ${rec.id} marked In Transit · Driver en route`)
-    } catch (error) { setMutationError(error instanceof Error ? error.message : 'Delivery changes could not be saved.') }
-  }
-
-  const handleOpenDeliver = (rec: DeliveryRecord) => {
-    if (writeRefusal) { setMutationError(writeRefusal); return }
-    setMutationError(null)
-    setDeliverTarget(rec)
-    setRecipientName(rec.recipientName || rec.clientName)
-    setDeliveryNote('')
-  }
-
-  const handleConfirmDelivered = () => {
-    if (!deliverTarget) return
-    if (!recipientName.trim()) { setMutationError('Enter the name of the person who received the delivery.'); return }
-    try {
-      const updated = updateDeliveryStatus(deliverTarget.id, 'Delivered', writeContext, {
-        recipientName: recipientName.trim(),
-        notes: deliveryNote,
-      })
-      setDeliveries(updated)
-      setDeliverTarget(null)
-      setMutationError(null)
-      showSuccessToast(`Local preview: ${deliverTarget.id} marked Delivered to ${recipientName}`)
-    } catch (error) { setMutationError(error instanceof Error ? error.message : 'Delivery changes could not be saved.') }
-  }
-
-  const handleCreateDelivery = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (writeRefusal) { setCreateError(writeRefusal); return }
-    if (!newBookingNo || !newClientName || !newAddress) {
-      setCreateError('Please fill all required delivery details (Booking Number, Client Name, and Delivery Address).')
+    if (!user?.id || !user?.role) {
+      setMutationError('User authentication required')
       return
     }
-    setCreateError(null)
+    if (!driverName.trim()) {
+      setMutationError('Please specify a driver or courier rider name.')
+      return
+    }
+    setMutationError(null)
     try {
-    const created = createDeliveryRecord({
-      bookingNo: newBookingNo.toUpperCase(),
-      clientName: newClientName,
-      clientPhone: newClientPhone,
-      address: newAddress,
-      neighborhood: newNeighborhood || 'Kathmandu Valley',
-      mode: newMode,
-      status: 'Scheduled',
-      scheduledDate: newDate,
-      scheduledTime: newTime,
-      deliveryFeeNpr: newMode === 'Babin Delivery' ? 3500 : 1500,
-      notes: newNotes,
-      gatePassNo: `GP-${Math.floor(1000 + Math.random() * 9000)}`,
-      packageSealNo: `BR-SEAL-${Math.floor(100 + Math.random() * 900)}`,
-    }, writeContext)
-    setDeliveries([created, ...deliveries])
-    setNewModalOpen(false)
-    showSuccessToast(`Local preview: created delivery order ${created.id}`)
-    } catch (error) { setCreateError(error instanceof Error ? error.message : 'Delivery changes could not be saved.') }
+      await assignDeliveryDriver(
+        {
+          jobId: assignTarget.id,
+          riderName: driverName.trim(),
+          riderPhone: driverPhone.trim() || undefined,
+          vehicle: vehiclePlate.trim() || undefined,
+        },
+        { userId: user.id, role: user.role },
+      )
+      showSuccessToast(`Driver / Rider assigned to ${assignTarget.id}`)
+      setAssignTarget(null)
+      loadData()
+    } catch (err) {
+      setMutationError(err instanceof Error ? err.message : 'Failed to assign driver')
+    }
+  }
+
+  const handleCreateDelivery = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user?.id || !user?.role) {
+      setMutationError('User authentication required')
+      return
+    }
+    if (!newBookingId.trim() && !newBookingNo.trim()) {
+      setMutationError('Please provide a valid Booking ID or Number.')
+      return
+    }
+    setMutationError(null)
+    const bookingIdentifier = newBookingId.trim() || newBookingNo.trim()
+    const scheduledIso = `${newDate}T${newTime}:00Z`
+    try {
+      await createDeliveryJob(
+        {
+          bookingId: bookingIdentifier,
+          leg: newLeg,
+          scheduledAt: scheduledIso,
+          vehicle: newVehicle.trim() || undefined,
+          riderName: newRiderName.trim() || undefined,
+          riderPhone: newRiderPhone.trim() || undefined,
+        },
+        { userId: user.id, role: user.role },
+      )
+      showSuccessToast('New delivery dispatch order created')
+      setNewModalOpen(false)
+      loadData()
+    } catch (err) {
+      setMutationError(err instanceof Error ? err.message : 'Failed to create delivery dispatch')
+    }
   }
 
   return (
@@ -213,18 +374,41 @@ function MockDeliveryWorkspace() {
           }}
           actions={
             <PageActions
+              secondary={
+                <Button variant="secondary" size="sm" onClick={onSwitchToTransport}>
+                  Transport Plans Overview →
+                </Button>
+              }
               primary={
-                canChange ? <Button variant="primary" disabled={!!writeRefusal} onClick={() => setNewModalOpen(true)}>
-                  <Icon name="truck" size={16} /> + New Dispatch
-                </Button> : null
+                canCreate ? (
+                  <Button variant="primary" onClick={() => setNewModalOpen(true)}>
+                    <Icon name="truck" size={16} /> + New Dispatch
+                  </Button>
+                ) : null
               }
             />
           }
         />
       }
     >
-      <PageBody error={readRefusal}>
-        {(writeRefusal || mutationError) && <div role="alert" style={{ padding: 12, color: 'var(--st-danger-fg)', background: 'var(--st-danger-bg)' }}>{mutationError || writeRefusal}</div>}
+      <PageBody error={readRefusal || fetchError}>
+        {mutationError && (
+          <div
+            role="alert"
+            style={{
+              padding: 12,
+              marginBottom: 16,
+              borderRadius: 'var(--r-sm)',
+              color: 'var(--st-danger-fg)',
+              background: 'var(--st-danger-bg)',
+              fontWeight: 600,
+              fontSize: '13px',
+            }}
+          >
+            {mutationError}
+          </div>
+        )}
+
         <div className="delivery-workspace">
           {/* KPI Strip */}
           <div className="delivery-kpi-grid">
@@ -308,7 +492,7 @@ function MockDeliveryWorkspace() {
                   { id: 'Ready', label: 'Ready', badge: readyCount > 0 ? readyCount : undefined },
                   { id: 'Scheduled', label: 'Scheduled', badge: scheduledCount > 0 ? scheduledCount : undefined },
                   { id: 'Delivered', label: 'Delivered' },
-                  { id: 'Failed', label: 'Failed' },
+                  { id: 'Failed', label: 'Failed', badge: failedCount > 0 ? failedCount : undefined },
                 ]}
                 value={statusFilter}
                 onChange={(val) => setStatusFilter(val as 'All' | DeliveryStatus)}
@@ -344,7 +528,11 @@ function MockDeliveryWorkspace() {
           </div>
 
           {/* Main Content: Table or Kanban Board */}
-          {filtered.length === 0 ? (
+          {loading && deliveries.length === 0 ? (
+            <div style={{ padding: '40px 16px' }}>
+              <LoadingSkeleton rows={4} type="table" />
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="delivery-table-wrapper" style={{ padding: '48px 16px' }}>
               <EmptyState
                 kind={searchQuery || statusFilter !== 'All' ? 'no-results' : 'nothing-yet'}
@@ -352,19 +540,21 @@ function MockDeliveryWorkspace() {
                 description={
                   searchQuery || statusFilter !== 'All'
                     ? 'No dispatch records matched your active search query or status filter.'
-                    : 'Dispatch records and courier runs will appear here as bookings get scheduled for delivery.'
+                    : isDriver
+                      ? 'No delivery dispatches are currently assigned to you.'
+                      : 'Dispatch records and courier runs will appear here as bookings get scheduled for delivery.'
                 }
-                {...((searchQuery || statusFilter !== 'All' || (canChange && !writeRefusal)) ? {
-                  actionLabel: searchQuery || statusFilter !== 'All' ? 'Clear Filters' : '+ New Dispatch'
+                {...(searchQuery || statusFilter !== 'All' || canCreate ? {
+                  actionLabel: searchQuery || statusFilter !== 'All' ? 'Clear Filters' : '+ New Dispatch',
+                  onAction: () => {
+                    if (searchQuery || statusFilter !== 'All') {
+                      setSearchQuery('')
+                      setStatusFilter('All')
+                    } else if (canCreate) {
+                      setNewModalOpen(true)
+                    }
+                  },
                 } : {})}
-                onAction={() => {
-                  if (searchQuery || statusFilter !== 'All') {
-                    setSearchQuery('')
-                    setStatusFilter('All')
-                  } else {
-                    if (!writeRefusal) setNewModalOpen(true)
-                  }
-                }}
               />
             </div>
           ) : viewMode === 'kanban' && !isMobile ? (
@@ -391,135 +581,164 @@ function MockDeliveryWorkspace() {
                           No jobs in {colStatus}
                         </div>
                       ) : (
-                        colDeliveries.map((d) => (
-                          <div key={d.id} className="delivery-card-item">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                              <div>
-                                <span className="identifier" style={{ fontWeight: 800, color: 'var(--accent2)', fontSize: '13px' }}>
-                                  {d.id}
-                                </span>
-                                <div style={{ marginTop: 2 }}>
-                                  <Link
-                                    to={`/rentals/${d.bookingNo}`}
-                                    style={{
-                                      fontSize: '12px',
-                                      fontWeight: 600,
-                                      color: 'var(--text)',
-                                      textDecoration: 'none',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: 4,
-                                    }}
-                                  >
-                                    <Icon name="truck" size={12} /> {d.bookingNo}
-                                  </Link>
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                title="Print Gate Pass"
-                                aria-label={`Print Gate Pass for ${d.id}`}
-                                onClick={() => setGatePassSlip(d)}
-                                style={{
-                                  minWidth: 'var(--tap, 44px)',
-                                  minHeight: 'var(--tap, 44px)',
-                                  padding: '4px 6px',
-                                  borderRadius: 'var(--r-xs)',
-                                  background: 'var(--surface2)',
-                                  border: '1px solid var(--border)',
-                                  color: 'var(--text2)',
-                                  cursor: 'pointer',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                }}
-                              >
-                                <Icon name="file" size={13} />
-                              </button>
-                            </div>
+                        colDeliveries.map((d) => {
+                          const canReady = canTransitionDeliveryJob(role, 'Scheduled', 'Ready')
+                          const canTransit = canTransitionDeliveryJob(role, 'Ready', 'In Transit')
+                          const canDeliver = canTransitionDeliveryJob(role, 'In Transit', 'Delivered')
+                          const canFail = canTransitionDeliveryJob(role, d.status, 'Failed')
+                          const hasDriver = !!(d.driverId || d.driverName)
 
-                            <div>
-                              <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text)' }}>
-                                {d.clientName}
-                              </div>
-                              <div style={{ fontSize: '12px', color: 'var(--text3)', marginTop: 2, display: 'flex', alignItems: 'flex-start', gap: 4 }}>
-                                <span style={{ flexShrink: 0, marginTop: 1 }}><Icon name="truck" size={12} /></span>
-                                <span style={{ wordBreak: 'break-word' }}>{d.address}</span>
-                              </div>
-                              {d.clientPhone && (
-                                <a
-                                  href={`tel:${d.clientPhone}`}
+                          return (
+                            <div key={d.id} className="delivery-card-item">
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <div>
+                                  <span className="identifier" style={{ fontWeight: 800, color: 'var(--accent2)', fontSize: '13px' }}>
+                                    {d.id}
+                                  </span>
+                                  <div style={{ marginTop: 2 }}>
+                                    <Link
+                                      to={`/rentals/${d.bookingNo}`}
+                                      style={{
+                                        fontSize: '12px',
+                                        fontWeight: 600,
+                                        color: 'var(--text)',
+                                        textDecoration: 'none',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 4,
+                                      }}
+                                    >
+                                      <Icon name="truck" size={12} /> {d.bookingNo}
+                                    </Link>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  title="Print Gate Pass"
+                                  aria-label={`Print Gate Pass for ${d.id}`}
+                                  onClick={() => setGatePassSlip(d)}
                                   style={{
-                                    fontSize: '11px',
-                                    color: 'var(--info)',
-                                    textDecoration: 'none',
-                                    display: 'inline-block',
-                                    marginTop: 3,
+                                    minWidth: 'var(--tap, 44px)',
+                                    minHeight: 'var(--tap, 44px)',
+                                    padding: '4px 6px',
+                                    borderRadius: 'var(--r-xs)',
+                                    background: 'var(--surface2)',
+                                    border: '1px solid var(--border)',
+                                    color: 'var(--text2)',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
                                   }}
                                 >
-                                  📞 {d.clientPhone}
-                                </a>
-                              )}
-                            </div>
+                                  <Icon name="file" size={13} />
+                                </button>
+                              </div>
 
-                            <div style={{ borderTop: '1px dashed var(--border)', paddingTop: 8, fontSize: '11px', color: 'var(--text3)' }}>
-                              <div><strong>Scheduled:</strong> {d.scheduledDate} {d.scheduledTime}</div>
-                              {d.driverName ? (
-                                <div style={{ color: 'var(--text)', marginTop: 2 }}>
-                                  <strong>Driver:</strong> {d.driverName} {d.vehiclePlate ? `(${d.vehiclePlate})` : ''}
+                              <div>
+                                <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text)' }}>
+                                  {d.clientName}
                                 </div>
-                              ) : (
-                                <div style={{ color: 'var(--warn-text)', marginTop: 2 }}>
-                                  <em>Rider Unassigned</em>
+                                <div style={{ fontSize: '12px', color: 'var(--text3)', marginTop: 2, display: 'flex', alignItems: 'flex-start', gap: 4 }}>
+                                  <span style={{ flexShrink: 0, marginTop: 1 }}><Icon name="truck" size={12} /></span>
+                                  <span style={{ wordBreak: 'break-word' }}>{d.address}</span>
                                 </div>
-                              )}
-                            </div>
+                                {d.clientPhone && (
+                                  <a
+                                    href={`tel:${d.clientPhone}`}
+                                    style={{
+                                      fontSize: '11px',
+                                      color: 'var(--info)',
+                                      textDecoration: 'none',
+                                      display: 'inline-block',
+                                      marginTop: 3,
+                                    }}
+                                  >
+                                    📞 {d.clientPhone}
+                                  </a>
+                                )}
+                              </div>
 
-                            {/* Card action footer */}
-                            <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-                              {canChange && d.status === 'Scheduled' && (
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  style={{ width: '100%' }}
-                                  disabled={!!writeRefusal}
-                                  onClick={() => handleOpenAssign(d)}
-                                >
-                                  Assign Driver
-                                </Button>
-                              )}
-                              {canChange && d.status === 'Ready' && (
-                                <Button
-                                  variant="primary"
-                                  data-primary-verb
-                                  size="sm"
-                                  style={{ width: '100%' }}
-                                  disabled={!!writeRefusal}
-                                  onClick={() => handleStartTransit(d)}
-                                >
-                                  Dispatch Now
-                                </Button>
-                              )}
-                              {canChange && d.status === 'In Transit' && (
-                                <Button
-                                  variant="primary"
-                                  data-primary-verb
-                                  size="sm"
-                                  style={{ width: '100%' }}
-                                  disabled={!!writeRefusal}
-                                  onClick={() => handleOpenDeliver(d)}
-                                >
-                                  Confirm Delivered ✓
-                                </Button>
-                              )}
-                              {d.status === 'Delivered' && (
-                                <div style={{ fontSize: '11px', color: 'var(--text3)', width: '100%', textAlign: 'center', padding: '4px' }}>
-                                  ✓ Received{d.recipientName ? ` by ${d.recipientName}` : ''}
+                              <div style={{ borderTop: '1px dashed var(--border)', paddingTop: 8, fontSize: '11px', color: 'var(--text3)' }}>
+                                <div><strong>Scheduled:</strong> {d.scheduledDate} {d.scheduledTime}</div>
+                                {d.driverName ? (
+                                  <div style={{ color: 'var(--text)', marginTop: 2 }}>
+                                    <strong>Driver:</strong> {d.driverName} {d.vehiclePlate ? `(${d.vehiclePlate})` : ''}
+                                  </div>
+                                ) : (
+                                  <div style={{ color: 'var(--warn-text)', marginTop: 2 }}>
+                                    <em>Rider Unassigned</em>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Card action footer */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+                                <div style={{ display: 'flex', gap: 6 }}>
+                                  {canAssign && d.status === 'Scheduled' && (
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
+                                      style={{ width: '100%' }}
+                                      onClick={() => handleOpenAssign(d)}
+                                    >
+                                      Assign Driver
+                                    </Button>
+                                  )}
+                                  {canReady && d.status === 'Scheduled' && (
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
+                                      style={{ width: '100%' }}
+                                      onClick={() => handleMarkReady(d)}
+                                    >
+                                      Stage Ready
+                                    </Button>
+                                  )}
+                                  {canTransit && d.status === 'Ready' && (
+                                    <Button
+                                      variant="primary"
+                                      data-primary-verb
+                                      size="sm"
+                                      style={{ width: '100%' }}
+                                      disabled={!hasDriver}
+                                      onClick={() => handleStartTransit(d)}
+                                    >
+                                      Dispatch Now
+                                    </Button>
+                                  )}
+                                  {canDeliver && d.status === 'In Transit' && (
+                                    <Button
+                                      variant="primary"
+                                      data-primary-verb
+                                      size="sm"
+                                      style={{ width: '100%' }}
+                                      onClick={() => handleOpenDeliver(d)}
+                                    >
+                                      Confirm Delivered ✓
+                                    </Button>
+                                  )}
                                 </div>
-                              )}
+
+                                {canFail && (d.status === 'Scheduled' || d.status === 'Ready' || d.status === 'In Transit') && (
+                                  <Button
+                                    variant="danger"
+                                    size="sm"
+                                    onClick={() => handleOpenFail(d)}
+                                  >
+                                    Mark Failed
+                                  </Button>
+                                )}
+
+                                {d.status === 'Delivered' && (
+                                  <div style={{ fontSize: '11px', color: 'var(--text3)', width: '100%', textAlign: 'center', padding: '4px' }}>
+                                    ✓ Received{d.recipientName ? ` by ${d.recipientName}` : ''}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ))
+                          )
+                        })
                       )}
                     </div>
                   </div>
@@ -531,6 +750,12 @@ function MockDeliveryWorkspace() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
               {filtered.map((d) => {
                 const badge = STATUS_BADGE_STYLE[d.status]
+                const canReady = canTransitionDeliveryJob(role, 'Scheduled', 'Ready')
+                const canTransit = canTransitionDeliveryJob(role, 'Ready', 'In Transit')
+                const canDeliver = canTransitionDeliveryJob(role, 'In Transit', 'Delivered')
+                const canFail = canTransitionDeliveryJob(role, d.status, 'Failed')
+                const hasDriver = !!(d.driverId || d.driverName)
+
                 return (
                   <article
                     key={d.id}
@@ -676,7 +901,7 @@ function MockDeliveryWorkspace() {
                       </div>
                     </div>
 
-                    {/* Delivery Fee if money permitted */}
+                    {/* Delivery Fee if money permitted (Law 6) */}
                     {canMoney && (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px' }}>
                         <span style={{ color: 'var(--text2)' }}>Delivery Fee:</span>
@@ -687,42 +912,67 @@ function MockDeliveryWorkspace() {
                     )}
 
                     {/* Actions */}
-                    <div style={{ marginTop: 2 }}>
-                      {canChange && d.status === 'Scheduled' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 2 }}>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        {canAssign && d.status === 'Scheduled' && (
+                          <Button
+                            variant="secondary"
+                            style={{ flex: 1, minHeight: 44, justifyContent: 'center' }}
+                            onClick={() => handleOpenAssign(d)}
+                          >
+                            Assign Driver
+                          </Button>
+                        )}
+                        {canReady && d.status === 'Scheduled' && (
+                          <Button
+                            variant="secondary"
+                            style={{ flex: 1, minHeight: 44, justifyContent: 'center' }}
+                            onClick={() => handleMarkReady(d)}
+                          >
+                            Stage Ready
+                          </Button>
+                        )}
+                        {canTransit && d.status === 'Ready' && (
+                          <Button
+                            variant="primary"
+                            data-primary-verb
+                            style={{ width: '100%', minHeight: 48, justifyContent: 'center', fontWeight: 600 }}
+                            disabled={!hasDriver}
+                            onClick={() => handleStartTransit(d)}
+                          >
+                            Dispatch Now
+                          </Button>
+                        )}
+                        {canDeliver && d.status === 'In Transit' && (
+                          <Button
+                            variant="primary"
+                            data-primary-verb
+                            style={{ width: '100%', minHeight: 48, justifyContent: 'center', fontWeight: 600 }}
+                            onClick={() => handleOpenDeliver(d)}
+                          >
+                            Confirm Delivered ✓
+                          </Button>
+                        )}
+                      </div>
+
+                      {canFail && (d.status === 'Scheduled' || d.status === 'Ready' || d.status === 'In Transit') && (
                         <Button
-                          variant="secondary"
-                          style={{ width: '100%', minHeight: 44, justifyContent: 'center' }}
-                          disabled={!!writeRefusal}
-                          onClick={() => handleOpenAssign(d)}
+                          variant="danger"
+                          style={{ minHeight: 40, justifyContent: 'center' }}
+                          onClick={() => handleOpenFail(d)}
                         >
-                          Assign Driver
+                          Mark Failed
                         </Button>
                       )}
-                      {canChange && d.status === 'Ready' && (
-                        <Button
-                          variant="primary"
-                          data-primary-verb
-                          style={{ width: '100%', minHeight: 48, justifyContent: 'center', fontWeight: 600 }}
-                          disabled={!!writeRefusal}
-                          onClick={() => handleStartTransit(d)}
-                        >
-                          Dispatch Now
-                        </Button>
-                      )}
-                      {canChange && d.status === 'In Transit' && (
-                        <Button
-                          variant="primary"
-                          data-primary-verb
-                          style={{ width: '100%', minHeight: 48, justifyContent: 'center', fontWeight: 600 }}
-                          disabled={!!writeRefusal}
-                          onClick={() => handleOpenDeliver(d)}
-                        >
-                          Confirm Delivered ✓
-                        </Button>
-                      )}
+
                       {d.status === 'Delivered' && (
                         <div style={{ fontSize: '12px', color: 'var(--success-text)', textAlign: 'center', padding: '6px' }}>
                           ✓ Delivered{d.recipientName ? ` to ${d.recipientName}` : ''}
+                        </div>
+                      )}
+                      {d.status === 'Failed' && (
+                        <div style={{ fontSize: '12px', color: 'var(--st-danger-fg)', textAlign: 'center', padding: '6px' }}>
+                          ✕ Delivery Failed {d.notes ? `(${d.notes})` : ''}
                         </div>
                       )}
                     </div>
@@ -749,6 +999,12 @@ function MockDeliveryWorkspace() {
                   <tbody>
                     {filtered.map((d) => {
                       const badge = STATUS_BADGE_STYLE[d.status]
+                      const canReady = canTransitionDeliveryJob(role, 'Scheduled', 'Ready')
+                      const canTransit = canTransitionDeliveryJob(role, 'Ready', 'In Transit')
+                      const canDeliver = canTransitionDeliveryJob(role, 'In Transit', 'Delivered')
+                      const canFail = canTransitionDeliveryJob(role, d.status, 'Failed')
+                      const hasDriver = !!(d.driverId || d.driverName)
+
                       return (
                         <tr key={d.id} className="delivery-row">
                           {/* Dispatch & Booking */}
@@ -825,16 +1081,17 @@ function MockDeliveryWorkspace() {
                                   </a>
                                 )}
                               </div>
-                            ) : canChange ? (
+                            ) : canAssign ? (
                               <Button
                                 type="button"
                                 variant="secondary"
-                                disabled={!!writeRefusal}
-                                  onClick={() => handleOpenAssign(d)}
+                                onClick={() => handleOpenAssign(d)}
                               >
                                 + Assign Rider
                               </Button>
-                            ) : <span>Rider unassigned</span>}
+                            ) : (
+                              <span style={{ fontSize: '12px', color: 'var(--text4)' }}>Unassigned</span>
+                            )}
                           </td>
 
                           {/* Status */}
@@ -861,9 +1118,14 @@ function MockDeliveryWorkspace() {
                                 at {d.deliveredAt.slice(11)}
                               </div>
                             )}
+                            {d.notes && d.status === 'Failed' && (
+                              <div style={{ fontSize: '10.5px', color: 'var(--st-danger-fg)', marginTop: '3px', maxWidth: 180 }}>
+                                {d.notes}
+                              </div>
+                            )}
                           </td>
 
-                          {/* Fee */}
+                          {/* Fee (Law 6: Hidden from Driver and Warehouse) */}
                           {canMoney && (
                             <td style={{ fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
                               {formatMoney(rupees(d.deliveryFeeNpr))}
@@ -897,38 +1159,56 @@ function MockDeliveryWorkspace() {
                                 <span>Slip</span>
                               </button>
 
-                              {canChange && d.status === 'Scheduled' && (
+                              {canAssign && d.status === 'Scheduled' && (
                                 <Button
                                   variant="secondary"
                                   size="sm"
-                                  disabled={!!writeRefusal}
                                   onClick={() => handleOpenAssign(d)}
                                 >
                                   Assign
                                 </Button>
                               )}
 
-                              {canChange && d.status === 'Ready' && (
+                              {canReady && d.status === 'Scheduled' && (
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => handleMarkReady(d)}
+                                >
+                                  Ready
+                                </Button>
+                              )}
+
+                              {canTransit && d.status === 'Ready' && (
                                 <Button
                                   variant="primary"
                                   data-primary-verb
                                   size="sm"
-                                  disabled={!!writeRefusal}
+                                  disabled={!hasDriver}
                                   onClick={() => handleStartTransit(d)}
                                 >
                                   Dispatch
                                 </Button>
                               )}
 
-                              {canChange && d.status === 'In Transit' && (
+                              {canDeliver && d.status === 'In Transit' && (
                                 <Button
                                   variant="primary"
                                   data-primary-verb
                                   size="sm"
-                                  disabled={!!writeRefusal}
                                   onClick={() => handleOpenDeliver(d)}
                                 >
                                   Delivered ✓
+                                </Button>
+                              )}
+
+                              {canFail && (d.status === 'Scheduled' || d.status === 'Ready' || d.status === 'In Transit') && (
+                                <Button
+                                  variant="danger"
+                                  size="sm"
+                                  onClick={() => handleOpenFail(d)}
+                                >
+                                  Fail
                                 </Button>
                               )}
                             </div>
@@ -950,7 +1230,7 @@ function MockDeliveryWorkspace() {
               title={`Assign Driver / Rider — ${assignTarget.id}`}
             >
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-                {mutationError && <div role="alert">{mutationError}</div>}
+                {mutationError && <div role="alert" style={{ color: 'var(--st-danger-fg)' }}>{mutationError}</div>}
                 <div
                   style={{
                     padding: '12px 14px',
@@ -963,7 +1243,7 @@ function MockDeliveryWorkspace() {
                 >
                   Dispatch for booking <strong>{assignTarget.bookingNo}</strong> · {assignTarget.clientName}
                   <div style={{ color: 'var(--text3)', fontSize: '12px', marginTop: 2 }}>
-                    Destination: {assignTarget.address} ({assignTarget.neighborhood})
+                    Destination: {assignTarget.address} {assignTarget.neighborhood ? `(${assignTarget.neighborhood})` : ''}
                   </div>
                 </div>
 
@@ -974,7 +1254,7 @@ function MockDeliveryWorkspace() {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Suman Rai (Babin Staff) / Ramesh Thapa"
+                    placeholder="e.g. Suman Rai (Staff Driver) or Ramesh Thapa (Courier Rider)"
                     value={driverName}
                     onChange={(e) => setDriverName(e.target.value)}
                     style={{
@@ -1021,7 +1301,7 @@ function MockDeliveryWorkspace() {
                     type="text"
                     value={vehiclePlate}
                     onChange={(e) => setVehiclePlate(e.target.value)}
-                    placeholder="e.g. Ba 3 Cha 8821 (Scorpio Van) or Pathao 2-Wheeler"
+                    placeholder="e.g. Ba 3 Cha 8821 (Scorpio Van), Hired Bike, or Own Scooter"
                     style={{
                       width: '100%',
                       minHeight: '44px',
@@ -1039,8 +1319,8 @@ function MockDeliveryWorkspace() {
                   <Button variant="secondary" onClick={() => setAssignTarget(null)}>
                     Cancel
                   </Button>
-                  <Button variant="primary" onClick={handleSaveAssign} disabled={!!writeRefusal}>
-                    Save & Stage (Ready)
+                  <Button variant="primary" onClick={handleSaveAssign}>
+                    Save & Assign
                   </Button>
                 </div>
               </div>
@@ -1055,13 +1335,13 @@ function MockDeliveryWorkspace() {
               title={`Confirm Equipment Delivery — ${deliverTarget.id}`}
             >
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-                {mutationError && <div role="alert">{mutationError}</div>}
+                {mutationError && <div role="alert" style={{ color: 'var(--st-danger-fg)' }}>{mutationError}</div>}
                 <div
                   style={{
                     padding: '12px 14px',
                     borderRadius: 'var(--r-md)',
-                    background: 'rgba(46, 204, 143, 0.08)',
-                    border: '1px solid rgba(46, 204, 143, 0.3)',
+                    background: 'var(--surface2)',
+                    border: '1px solid var(--border)',
                     fontSize: '13px',
                     lineHeight: 1.5,
                   }}
@@ -1119,8 +1399,77 @@ function MockDeliveryWorkspace() {
                   <Button variant="secondary" onClick={() => setDeliverTarget(null)}>
                     Cancel
                   </Button>
-                  <Button variant="primary" onClick={handleConfirmDelivered} disabled={!!writeRefusal || !recipientName.trim()}>
+                  <Button
+                    variant="primary"
+                    data-primary-verb
+                    onClick={handleConfirmDelivered}
+                    disabled={recipientName.trim().length < 2}
+                  >
                     Confirm Delivery ✓
+                  </Button>
+                </div>
+              </div>
+            </Modal>
+          )}
+
+          {/* Modal: Mark Failed */}
+          {failTarget && (
+            <Modal
+              isOpen
+              onClose={() => setFailTarget(null)}
+              title={`Mark Delivery Failed — ${failTarget.id}`}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+                {mutationError && <div role="alert" style={{ color: 'var(--st-danger-fg)' }}>{mutationError}</div>}
+                <div
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: 'var(--r-md)',
+                    background: 'var(--st-danger-bg)',
+                    color: 'var(--st-danger-fg)',
+                    fontSize: '13px',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Marking dispatch <strong>{failTarget.id}</strong> as Failed. Delivery failure is an immutable terminal state.
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>
+                    Failure Reason (At least 10 characters) *
+                  </label>
+                  <textarea
+                    rows={4}
+                    required
+                    value={failReason}
+                    onChange={(e) => setFailReason(e.target.value)}
+                    placeholder="e.g. Recipient phone switched off and shooting location gate locked after 45 minutes of waiting."
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: 'var(--r-btn)',
+                      background: 'var(--card)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text)',
+                      fontSize: '13px',
+                      fontFamily: 'inherit',
+                    }}
+                  />
+                  <div style={{ fontSize: '11px', color: failReason.trim().length >= 10 ? 'var(--text3)' : 'var(--st-danger-fg)', marginTop: 4 }}>
+                    {failReason.trim().length} / 10 minimum characters
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
+                  <Button variant="secondary" onClick={() => setFailTarget(null)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="danger"
+                    onClick={handleConfirmFailed}
+                    disabled={failReason.trim().length < 10}
+                  >
+                    Confirm Failure
                   </Button>
                 </div>
               </div>
@@ -1133,12 +1482,12 @@ function MockDeliveryWorkspace() {
               isOpen
               onClose={() => {
                 setNewModalOpen(false)
-                setCreateError(null)
+                setMutationError(null)
               }}
               title="Create New Delivery Dispatch"
             >
               <form onSubmit={handleCreateDelivery} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {createError && (
+                {mutationError && (
                   <div
                     style={{
                       padding: '10px 14px',
@@ -1149,20 +1498,23 @@ function MockDeliveryWorkspace() {
                       fontWeight: 600,
                     }}
                   >
-                    {createError}
+                    {mutationError}
                   </div>
                 )}
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>
-                      Booking Number *
+                      Booking ID / Number *
                     </label>
                     <input
                       type="text"
                       required
-                      placeholder="e.g. BR-2616"
+                      placeholder="e.g. BR-2616 or UUID"
                       value={newBookingNo}
-                      onChange={(e) => setNewBookingNo(e.target.value)}
+                      onChange={(e) => {
+                        setNewBookingNo(e.target.value)
+                        setNewBookingId(e.target.value)
+                      }}
                       style={{
                         width: '100%',
                         minHeight: '44px',
@@ -1177,11 +1529,11 @@ function MockDeliveryWorkspace() {
                   </div>
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>
-                      Delivery Mode
+                      Delivery Leg
                     </label>
                     <select
-                      value={newMode}
-                      onChange={(e) => setNewMode(e.target.value as DeliveryMode)}
+                      value={newLeg}
+                      onChange={(e) => setNewLeg(e.target.value as 'Outbound' | 'Return')}
                       style={{
                         width: '100%',
                         minHeight: '44px',
@@ -1193,9 +1545,8 @@ function MockDeliveryWorkspace() {
                         fontSize: '13.5px',
                       }}
                     >
-                      <option value="Babin Delivery">Babin Delivery (Van / Staff)</option>
-                      <option value="Courier / Rider">Courier / Rider (Pathao / Cargo)</option>
-                      <option value="Self Pickup">Self Pickup</option>
+                      <option value="Outbound">Outbound (Warehouse → Client)</option>
+                      <option value="Return">Return (Client → Warehouse)</option>
                     </select>
                   </div>
                 </div>
@@ -1203,14 +1554,13 @@ function MockDeliveryWorkspace() {
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>
-                      Client Name *
+                      Rider / Carrier Name
                     </label>
                     <input
                       type="text"
-                      required
-                      placeholder="Production House or Director"
-                      value={newClientName}
-                      onChange={(e) => setNewClientName(e.target.value)}
+                      placeholder="e.g. Suman Rai / Pathao Courier"
+                      value={newRiderName}
+                      onChange={(e) => setNewRiderName(e.target.value)}
                       style={{
                         width: '100%',
                         minHeight: '44px',
@@ -1225,14 +1575,14 @@ function MockDeliveryWorkspace() {
                   </div>
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>
-                      Client Phone
+                      Rider Contact Phone
                     </label>
                     <input
                       type="tel"
                       inputMode="tel"
                       placeholder="+977 98..."
-                      value={newClientPhone}
-                      onChange={(e) => setNewClientPhone(e.target.value)}
+                      value={newRiderPhone}
+                      onChange={(e) => setNewRiderPhone(e.target.value)}
                       style={{
                         width: '100%',
                         minHeight: '44px',
@@ -1247,39 +1597,16 @@ function MockDeliveryWorkspace() {
                   </div>
                 </div>
 
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>
-                    Delivery Full Address *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Street, Landmark, Ward, City"
-                    value={newAddress}
-                    onChange={(e) => setNewAddress(e.target.value)}
-                    style={{
-                      width: '100%',
-                      minHeight: '44px',
-                      padding: '8px 12px',
-                      borderRadius: 'var(--r-btn)',
-                      background: 'var(--card)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--text)',
-                      fontSize: '13.5px',
-                    }}
-                  />
-                </div>
-
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>
-                      Neighborhood / Area
+                      Vehicle / Transportation
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. Jhamsikhel, Naxal, Baluwatar"
-                      value={newNeighborhood}
-                      onChange={(e) => setNewNeighborhood(e.target.value)}
+                      placeholder="e.g. Ba 3 Cha 8821 (Scorpio Van), Hired Bike"
+                      value={newVehicle}
+                      onChange={(e) => setNewVehicle(e.target.value)}
                       style={{
                         width: '100%',
                         minHeight: '44px',
@@ -1322,33 +1649,11 @@ function MockDeliveryWorkspace() {
                   </div>
                 </div>
 
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>
-                    Logistics & Cargo Notes
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={newNotes}
-                    onChange={(e) => setNewNotes(e.target.value)}
-                    placeholder="Security check details, floor number, fragile equipment instructions…"
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 'var(--r-btn)',
-                      background: 'var(--card)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--text)',
-                      fontSize: '13px',
-                      fontFamily: 'inherit',
-                    }}
-                  />
-                </div>
-
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
                   <Button variant="secondary" onClick={() => setNewModalOpen(false)}>
                     Cancel
                   </Button>
-                  <Button variant="primary" type="submit" disabled={!!writeRefusal}>
+                  <Button variant="primary" type="submit">
                     Create Dispatch Order
                   </Button>
                 </div>
@@ -1396,7 +1701,7 @@ function MockDeliveryWorkspace() {
                   <div><strong>Vehicle Plate:</strong> {gatePassSlip.vehiclePlate || 'N/A'}</div>
                 </div>
 
-                {canMoney && gatePassSlip.notes && (
+                {gatePassSlip.notes && (
                   <div style={{ border: '1px dashed var(--border)', padding: '10px 12px', borderRadius: 'var(--r-xs)', marginBottom: '20px', background: 'var(--surface2)' }}>
                     <strong>Special Instructions:</strong> {gatePassSlip.notes}
                   </div>

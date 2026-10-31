@@ -23,7 +23,7 @@ written and has **no caller**.
 
 ---
 
-### T2-01 · Camera evidence upload            status: done in part (26 Oct, `3fca220`) — the rest is T2-16 · size: L · lane A
+### T2-01 · Camera evidence upload            status: done in part (26 Oct, `3fca220`) — the rest is T2-18 (T2-16 built the photo rules) · size: L · lane A
 **What** — Wire `uploadEvidencePhoto()` into: Pack (booking photo), Handover (booking photo),
 Return (damage photo per flagged unit — required by the 21 Jul return-flag lock), Reset (QC
 defect photo) and the Evidence workspace (upload + review). Capture with
@@ -50,11 +50,11 @@ several photos in one step, retry-same-uuid, offline refusal.
 
 **Built 26 Oct (`3fca220`):** one booking-level photo per tap at Pack, Handover, Return and Reset,
 compressed on the device (1600 px, JPEG 0.8, EXIF stripped), retry with the same `clientUuid`.
-**Not built yet → T2-16:** several photos per pick, a damage photo per flagged unit at Return, the
+**Not built yet → T2-18:** several photos per pick, a damage photo per flagged unit at Return, the
 10 MB damage-photo size and an honest offline message. The staging checks (Done when 1–3) wait for T1-06.
 
-### T2-16 · Finish evidence capture            status: todo · size: L · lane A · [go-live]
-**What** — Finish what T2-01 left (Claude's review of `3fca220`, 26 Oct):
+### T2-18 · Finish evidence capture (what T2-16 left)            status: todo · size: L · lane A · [go-live]
+**What** — Finish what T2-01 left (Claude's review of `3fca220`, 26 Oct). **Items 3 and 4 below were built by T2-16 (several photos, size caps) — check them, do not rebuild;** items 1, 2, 5, 6 and 7 are still open:
 1) **Honest offline message.** Offline, the screens say the photo "was saved / kept on device and will
    upload when connectivity is restored", but nothing keeps or uploads it (`OperationEvidenceStatus.tsx`
    `handleFileChange` and `handleRetry`; `EvidenceWorkspace.tsx` `handleUploadFile`;
@@ -201,7 +201,7 @@ handover; lifecycle step "Technician completes a handover".
 **Done when** — a Technician seat on staging completes all four verbs; sees no money.
 **Needs** — T1-05 (Technician seat).
 
-### T2-06 · Repair job closes the damage            status: todo · size: L · lane A
+### T2-06 · Repair job closes the damage            status: done — awaiting merge (lane-a/T2-06-repair-job-closes-the-damage) · size: L · lane A
 **What** — Build the Maintenance job detail screen (today "not built yet", `Maintenance.tsx` ~lines
 454 and 1139): findings, actions taken, cost (money roles only), photos, and **Close job (note
 required)** for Technician or Manager+. Closing marks the linked `damage_findings` row repaired and
@@ -230,7 +230,7 @@ alone) and sorts to the top; the rest stay first-in, first-out.
 takes effect.
 **Needs** — none.
 
-### T2-08 · Floor printing            status: todo · size: M · lane A
+### T2-08 · Floor printing            status: done · size: M · lane A
 **What** — 1) Packing list print/PDF from Pack (parent-first, children nested — 27 Jul hierarchy
 rule); 2) Return report print/PDF (units, outcome, photos count, flags); 3) QR labels from
 Inventory: **QR code + asset code** on each label (W71), printed on the label printer Babin buys
@@ -243,7 +243,7 @@ Replace the two `<Unavailable reason="Printing … is not built">` blocks.
 **Done when** — PDFs open on iPad and print on the shop printer; Warehouse versions carry no prices.
 **Needs** — none.
 
-### T2-09 · Bluetooth scanner at the packing bench            status: todo · size: S · lane A + Babin
+### T2-09 · Bluetooth scanner at the packing bench            status: doing — code verified; iPad/scanner acceptance pending (lane-a/T2-09-main-integration) · size: S · lane A + Babin
 **What** — Claude proposes 2–3 iPad-compatible Bluetooth scanners that read QR and Code 128 in
 keyboard (HID) mode, with prices from Nepali sellers; Babin buys one. Make `ScannerInput` accept a
 fast keystroke burst ending in Enter anywhere on the floor screens (focus trap on the scan field,
@@ -257,7 +257,7 @@ a manual tick records "ticked by hand" so the audit shows which items were not s
 item can be packed, handed over and returned by hand in ≤ 2 taps.
 **Needs** — Babin buys the scanner (O-16).
 
-### T2-10 · Offline outbox for scans and ticks            status: todo · size: M · lane A
+### T2-10 · Offline outbox for scans and ticks            status: done · size: M · lane A
 **What** — Route non-custodial floor writes (scan events, checklist ticks, notes, queue stamps)
 through the Dexie outbox (`src/lib/offlineQueue.ts`, `dataAccess.ts` idempotent insert) with
 `client_uuid`. Custody transitions stay online RPCs (R-40). Show queued count and last flush.
@@ -269,7 +269,7 @@ REMAINING_WORK Task 2.4; the shop internet "drops sometimes" (W55) — go-live c
 duplicates, server rows = 20); the Confirm button says it needs a connection.
 **Needs** — none.
 
-### T2-12 · Client collectors and ID on file            status: todo · size: M · lane A · [go-live]
+### T2-12 · Client collectors and ID on file            status: done — awaiting merge (lane-a/T2-12-client-collectors-and-id-on-file) · size: M · lane A · [go-live]
 **What** — 1) **ID on file before the first rental** (W50): a client needs one ID document (type,
 number, photo) before their first Handover; stored once and reused (W51 — a citizenship card does
 not expire; record an expiry only when the document has one). The Handover receiver step shows
@@ -292,7 +292,7 @@ message + "Add ID" in place); a repeat client's collector is picked in one tap; 
 an ID number.
 **Needs** — T2-01. Also wires the collector picker into `SignOnGlassModal.tsx` as the receiver name (T2-02 left free text).
 
-### T2-13 · Self-QC when alone            status: todo · size: S · lane A · [go-live]
+### T2-13 · Self-QC when alone            status: done — awaiting merge (lane-a/T2-13-self-qc-when-alone) · size: S · lane A · [go-live]
 **What** — Allow the person who cleaned an item to pass its QC **when alone on shift** (W43, L7):
 the QC step shows "I am alone on shift" as a tick; with it ticked, `qc_by = cleaned_by` is accepted
 and recorded as self-checked (audit row says so). Without it, a second person is still asked for.
@@ -308,7 +308,7 @@ the "ruled, not yet in code" box in the same commit (B-3).
 **Done when** — both paths work in mock mode and on staging; the audit shows self-checked rows.
 **Needs** — none.
 
-### T2-14 · Scan a label → item card            status: todo · size: M · lane A · [go-live]
+### T2-14 · Scan a label → item card            status: done — awaiting merge (lane-a/T2-14-scan-a-label-to-item-card) · size: M · lane A · [go-live]
 **What** — Scanning (camera or Bluetooth) or searching an item's QR/asset code **anywhere outside a
 floor workspace** opens its item card: status, **who has it now** (client, booking, due back, with a
 countdown), location if in the shop, next booking, last reset, open damage. Inside a workspace,
@@ -335,6 +335,20 @@ follows only after a Manager (< Rs 25,000) or Owner (≥ Rs 25,000) approves.
 **Done when** — a Reset damage on staging creates the case on the right booking with photos, the
 client gets the notice, and no amount appears until approval.
 **Needs** — T2-01, T5-07 for the email.
+
+### T2-16 · Photo rules from W27: several photos, size caps, HEIC            status: done — awaiting merge (lane-a/T2-16-photo-rules-w27) · size: S · lane A · [go-live]
+**What** — T2-01 shipped one photo per step with one shrink rule. Bring it to W27: the file input gets
+`multiple`; **one or more photos per step, the gate needs at least one**; shrink on the device until
+**damage photos ≤ 10 MB and every other photo ≤ 3 MB** (lower the long edge and the JPEG quality step
+by step, keep serial numbers readable), strip EXIF location, convert HEIC to JPEG. Same `clientUuid`
+on retry; offline still refuses inline.
+**Why** — W27; T2-01 was built before the workflow round.
+**Where** — `src/lib/imageCompression.ts`, `src/lib/evidenceStorage.ts`, `src/modules/rentals/EvidenceWorkspace.tsx`,
+`src/modules/operations/OperationEvidenceStatus.tsx`, `src/lib/__tests__/imageCompression.test.ts`.
+**Database** — none.
+**Done when** — a 12 MB phone photo ends ≤ 3 MB, a damage photo ≤ 10 MB, three photos attach to one
+step and the gate passes on the first, a HEIC file uploads as JPEG, retry reuses the uuid.
+**Needs** — T2-01 (done).
 
 ### T2-11 · Device day            status: todo · size: M · lane A + Babin + staff
 **What** — One supervised session on the **iPhone 17 Pro, M4 iPad Pro and the Bluetooth scanner**

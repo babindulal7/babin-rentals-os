@@ -1,11 +1,27 @@
 import { businessDayAd, kathmanduMinutes } from '../../data/today'
-import { IS_MOCK } from '../supabase'
+import { IS_MOCK, supabase } from '../supabase'
 import { canPerformOperations, canViewMoney } from '../rbac'
 import type { SystemRole } from '../../types/database'
 
 export interface DeliveryWriteContext {
   role: SystemRole | null
   isOnline: boolean
+}
+
+export const LIVE_DELIVERY_READ_ROLES: ReadonlySet<SystemRole> = new Set([
+  'Owner',
+  'Admin',
+  'Manager',
+  'Coordinator',
+  'Warehouse',
+  'Driver',
+])
+
+export function liveDeliveryReadRefusal(role: SystemRole | null): string | null {
+  if (!role || !LIVE_DELIVERY_READ_ROLES.has(role)) {
+    return 'Delivery records are not available to this role. Drivers require assigned trip access.'
+  }
+  return null
 }
 
 export function deliveryReadRefusal(role: SystemRole | null): string | null {
@@ -34,16 +50,7 @@ function requireDeliveryMutation(context: DeliveryWriteContext): void {
 
 /**
  * One instant, rendered as `YYYY-MM-DD HH:MM`, both halves in **Kathmandu**.
- *
- * The bug this replaces: `new Date().toISOString().slice(0, 10)` for the date
- * and `new Date().toTimeString().slice(0, 5)` for the time. `toISOString` is
- * UTC and `toTimeString` is the device's own zone, so the two halves of one
- * stamp came from two different clocks — and Kathmandu is UTC+05:45, so between
- * 00:00 and 05:45 local every dispatch and delivery was stamped with YESTERDAY
- * and a time 5h45m ahead of the moment it recorded. `Finance.tsx` calls the
- * shape out by name; this is the same defect, reached the other way.
- *
- * Both halves now come from `data/today.ts`, the one place the offset lives.
+ * Both halves come from `data/today.ts`, the one place the offset lives.
  */
 function kathmanduStamp(now: Date = new Date()): string {
   const minutes = kathmanduMinutes(now.toISOString())
@@ -55,24 +62,27 @@ export type DeliveryMode = 'Babin Delivery' | 'Courier / Rider' | 'Self Pickup'
 
 export interface DeliveryRecord {
   id: string
+  bookingId?: string | undefined
   bookingNo: string
+  leg?: 'Outbound' | 'Return' | undefined
   clientName: string
   clientPhone: string
   address: string
   neighborhood: string
   mode: DeliveryMode
-  driverName?: string
-  driverPhone?: string
-  vehiclePlate?: string
+  driverId?: string | undefined
+  driverName?: string | undefined
+  driverPhone?: string | undefined
+  vehiclePlate?: string | undefined
   status: DeliveryStatus
   scheduledDate: string
   scheduledTime: string
-  dispatchedAt?: string
-  deliveredAt?: string
+  dispatchedAt?: string | undefined
+  deliveredAt?: string | undefined
   deliveryFeeNpr: number
-  notes?: string
-  recipientName?: string
-  packageSealNo?: string
+  notes?: string | undefined
+  recipientName?: string | undefined
+  packageSealNo?: string | undefined
   gatePassNo?: string
 }
 
@@ -196,7 +206,7 @@ export function updateDeliveryStatus(
   id: string,
   status: DeliveryStatus,
   context: DeliveryWriteContext,
-  extra?: { recipientName?: string; notes?: string }
+  extra?: { recipientName?: string | undefined; notes?: string | undefined }
 ): DeliveryRecord[] {
   requireDeliveryMutation(context)
   const current = getDeliveries(context.role)
@@ -245,19 +255,6 @@ export function assignDeliveryRider(
   return next
 }
 
-/**
- * The next `DEL-nnnn`, derived from the HIGHEST number in use rather than from
- * the length of the list.
- *
- * `DEL-${2600 + current.length + 1}` reads as though it cannot collide, and it
- * can: the suffix tracked the array's size, so any deletion handed the same
- * number to a second dispatch. Two records then shared an id, and every later
- * lookup by id — assign a rider, mark in transit, mark delivered — silently
- * updated whichever came first in the array and left the other untouched.
- *
- * A number that is already taken is stepped past, so a legacy record carrying a
- * non-numeric or absent id cannot make this reissue one either.
- */
 function nextDeliveryId(existing: readonly DeliveryRecord[]): string {
   let highest = 2600
   for (const d of existing) {
@@ -277,4 +274,164 @@ export function createDeliveryRecord(payload: Omit<DeliveryRecord, 'id'>, contex
   const next = [created, ...current]
   saveDeliveries(next, context)
   return created
+}
+
+interface JobRow {
+  id: string
+  booking_id: string
+  branch_id: string
+  leg: string
+  scheduled_at: string
+  status: string
+  assigned_driver_id: string | null
+  dispatched_at: string | null
+  delivered_at: string | null
+  received_by: string | null
+  last_note: string | null
+  vehicle: string | null
+  rider_name: string | null
+  rider_phone: string | null
+}
+
+interface BookingInfo {
+  id: string
+  booking_no: string
+  delivery_type: string
+  pickup_at: string
+  return_at: string
+  pickup_location: string | null
+  clients: {
+    name: string | null
+    phone: string | null
+    address_line: string | null
+  } | null
+}
+
+/**
+ * Live database query for delivery jobs.
+ * Enforces RLS isolation: Driver reads only assigned jobs.
+ * Enforces Law 6: Driver and Warehouse never receive delivery charge or monetary values.
+ */
+export async function fetchDeliveries(role: SystemRole | null): Promise<DeliveryRecord[]> {
+  const refusal = liveDeliveryReadRefusal(role)
+  if (refusal) throw new Error(refusal)
+
+  if (IS_MOCK) {
+    return getDeliveries(role)
+  }
+
+  const { data: jobs, error: jobsError } = await supabase
+    .from('delivery_jobs')
+    .select(`
+      id,
+      booking_id,
+      branch_id,
+      leg,
+      scheduled_at,
+      status,
+      assigned_driver_id,
+      dispatched_at,
+      delivered_at,
+      received_by,
+      last_note,
+      vehicle,
+      rider_name,
+      rider_phone
+    `)
+    .order('scheduled_at', { ascending: false })
+
+  if (jobsError) {
+    throw new Error(`Failed to load delivery jobs: ${jobsError.message}`)
+  }
+
+  if (!jobs || jobs.length === 0) {
+    return []
+  }
+
+  const typedJobs = jobs as unknown as JobRow[]
+  const bookingIds = Array.from(new Set(typedJobs.map((j) => j.booking_id)))
+
+  const { data: bookingsData, error: bookingsError } = await supabase
+    .from('bookings')
+    .select(`
+      id,
+      booking_no,
+      delivery_type,
+      pickup_at,
+      return_at,
+      pickup_location,
+      clients (
+        name,
+        phone,
+        address_line
+      )
+    `)
+    .in('id', bookingIds)
+
+  if (bookingsError) {
+    throw new Error(`Failed to load booking details for delivery jobs: ${bookingsError.message}`)
+  }
+
+  const bookingMap = new Map<string, BookingInfo>()
+  for (const b of (bookingsData as unknown as BookingInfo[] || [])) {
+    bookingMap.set(b.id, b)
+  }
+
+  const transportFeeMap = new Map<string, number>()
+  if (role && canViewMoney(role)) {
+    const { data: transportData } = await supabase
+      .from('booking_transport_v')
+      .select('booking_id, delivery_charge')
+      .in('booking_id', bookingIds)
+
+    if (transportData) {
+      for (const t of (transportData as { booking_id: string | null; delivery_charge: number | null }[])) {
+        if (t.booking_id && t.delivery_charge != null) {
+          transportFeeMap.set(t.booking_id, Math.round(Number(t.delivery_charge)))
+        }
+      }
+    }
+  }
+
+  return typedJobs.map((job): DeliveryRecord => {
+    const booking = bookingMap.get(job.booking_id)
+    const client = booking?.clients
+
+    const scheduledDate = job.scheduled_at ? job.scheduled_at.slice(0, 10) : ''
+    const scheduledTime = job.scheduled_at ? job.scheduled_at.slice(11, 16) : ''
+
+    const dispatchedAt = job.dispatched_at ? job.dispatched_at.replace('T', ' ').slice(0, 16) : undefined
+    const deliveredAt = job.delivered_at ? job.delivered_at.replace('T', ' ').slice(0, 16) : undefined
+
+    let mode: DeliveryMode = 'Babin Delivery'
+    if (booking?.delivery_type === 'Client Pickup') {
+      mode = 'Self Pickup'
+    } else if (job.rider_name) {
+      mode = 'Courier / Rider'
+    }
+
+    return {
+      id: job.id,
+      bookingId: job.booking_id,
+      bookingNo: booking?.booking_no ?? 'UNKNOWN',
+      leg: (job.leg as 'Outbound' | 'Return') ?? 'Outbound',
+      clientName: client?.name ?? 'Unknown Client',
+      clientPhone: client?.phone ?? '',
+      address: client?.address_line || booking?.pickup_location || 'Warehouse / Studio',
+      neighborhood: '',
+      mode,
+      driverId: job.assigned_driver_id || undefined,
+      driverName: job.rider_name || (job.assigned_driver_id ? 'Assigned Driver' : undefined),
+      driverPhone: job.rider_phone || undefined,
+      vehiclePlate: job.vehicle || undefined,
+      status: job.status as DeliveryStatus,
+      scheduledDate,
+      scheduledTime,
+      dispatchedAt,
+      deliveredAt,
+      deliveryFeeNpr: transportFeeMap.get(job.booking_id) ?? 0,
+      notes: job.last_note || undefined,
+      recipientName: job.received_by || undefined,
+    }
+  })
 }

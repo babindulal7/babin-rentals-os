@@ -30,6 +30,7 @@ import { supabase } from '../supabase'
 import type { Database } from '../../types/supabase'
 import { rupees, type Paisa } from '../money'
 import { formatBsOrAd, formatAd } from '../bs'
+import type { ClientIdDocumentType } from '../../types/database'
 import type { ClientRecord, MembershipTier } from '../../data/clients'
 import type { GateContext } from '../fieldGating'
 import { canViewMoneyField, canViewPII } from '../fieldGating'
@@ -848,6 +849,128 @@ export async function listMembershipPlans(): Promise<MembershipPlanRow[]> {
       individualDiscountPct: r.individual_discount_pct,
       displayOrder: r.display_order ?? 0,
     }))
+}
+
+export interface ClientIdDocument {
+  id: string
+  clientUuid: string
+  clientId: string
+  idType: ClientIdDocumentType
+  idNumber: string
+  evidenceFileId: string | null
+  expiryDate: string | null
+  verifiedAt: string | null
+  verifiedBy: string | null
+  notes: string | null
+  createdAt: string
+}
+
+export interface ClientCollector {
+  id: string
+  clientUuid: string
+  clientId: string
+  name: string
+  phone: string
+  roleTitle: string | null
+  idType: ClientIdDocumentType | null
+  idNumber: string | null
+  evidenceFileId: string | null
+  isActive: boolean
+  createdAt: string
+}
+
+export async function fetchClientIdDocument(clientId: string): Promise<ClientIdDocument | null> {
+  if (typeof (supabase as unknown as { from?: unknown })?.from !== 'function') return null
+  const { data, error } = await supabase
+    .from('client_id_documents_v')
+    .select('id, client_uuid, client_id, id_type, id_number, evidence_file_id, expiry_date, verified_at, verified_by, notes, created_at')
+    .eq('client_id', clientId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error) {
+    console.warn(`fetchClientIdDocument(${clientId}) warning:`, error.message)
+    return null
+  }
+  if (!data) return null
+
+  type DocRow = {
+    id: string
+    client_uuid: string
+    client_id: string
+    id_type: ClientIdDocumentType
+    id_number: string
+    evidence_file_id: string | null
+    expiry_date: string | null
+    verified_at: string | null
+    verified_by: string | null
+    notes: string | null
+    created_at: string
+  }
+  const row = data as unknown as DocRow
+
+  return {
+    id: row.id,
+    clientUuid: row.client_uuid,
+    clientId: row.client_id,
+    idType: row.id_type,
+    idNumber: row.id_number,
+    evidenceFileId: row.evidence_file_id,
+    expiryDate: row.expiry_date,
+    verifiedAt: row.verified_at,
+    verifiedBy: row.verified_by,
+    notes: row.notes,
+    createdAt: row.created_at,
+  }
+}
+
+export async function hasClientIdOnFile(clientId: string): Promise<boolean> {
+  const doc = await fetchClientIdDocument(clientId)
+  return doc !== null
+}
+
+export async function fetchClientCollectors(clientId: string): Promise<ClientCollector[]> {
+  if (typeof (supabase as unknown as { from?: unknown })?.from !== 'function') return []
+  const { data, error } = await supabase
+    .from('client_collectors_v')
+    .select('id, client_uuid, client_id, name, phone, role_title, id_type, id_number, evidence_file_id, is_active, created_at')
+    .eq('client_id', clientId)
+    .eq('is_active', true)
+    .order('name', { ascending: true })
+
+  if (error) {
+    console.warn(`fetchClientCollectors(${clientId}) warning:`, error.message)
+    return []
+  }
+
+  type CollectorRow = {
+    id: string
+    client_uuid: string
+    client_id: string
+    name: string
+    phone: string
+    role_title: string | null
+    id_type: ClientIdDocumentType | null
+    id_number: string | null
+    evidence_file_id: string | null
+    is_active: boolean
+    created_at: string
+  }
+
+  return ((data ?? []) as unknown as CollectorRow[]).map((r) => ({
+    id: r.id,
+    clientUuid: r.client_uuid,
+    clientId: r.client_id,
+    name: r.name,
+    phone: r.phone,
+    roleTitle: r.role_title,
+    idType: r.id_type,
+    idNumber: r.id_number,
+    evidenceFileId: r.evidence_file_id,
+    isActive: r.is_active,
+    createdAt: r.created_at,
+  }))
 }
 
 export {

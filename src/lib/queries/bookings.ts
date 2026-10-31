@@ -1170,6 +1170,7 @@ export interface FloorLine {
 export interface FloorBooking {
   id: string
   bookingNo: string
+  clientId?: string | null | undefined
   stage: string
   clientName: string | null
   project: string | null
@@ -1220,6 +1221,7 @@ interface RawFloorLine {
 interface RawFloorBooking {
   id: string
   booking_no: string
+  client_id?: string | null | undefined
   stage: string
   project: string | null
   pickup_at: string | null
@@ -1256,7 +1258,7 @@ interface RawFloorBooking {
  * that existed to straddle them is gone.
  */
 const FLOOR_COLUMNS =
-  'id, booking_no, stage, project, pickup_at, return_at, actual_return_at, delivery_type, cancelled_at, closed_at, ' +
+  'id, booking_no, client_id, stage, project, pickup_at, return_at, actual_return_at, delivery_type, cancelled_at, closed_at, ' +
   'clients ( name ), ' +
   'booking_lines ( id, qty, line_type, description, product_id, parent_line_id, sort_order, ' +
   'products ( name, tracking_mode ), ' +
@@ -1302,6 +1304,7 @@ export async function fetchFloorBooking(bookingRef: string): Promise<FloorBookin
   return {
     id: raw.id,
     bookingNo: raw.booking_no,
+    clientId: raw.client_id ?? null,
     stage: raw.stage,
     clientName: raw.clients?.name ?? null,
     project: raw.project,

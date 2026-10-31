@@ -20,7 +20,7 @@ database half already exists in source: `0165_delivery_jobs_and_event_rpc.sql` a
 
 ---
 
-### T4-01 · Delivery dispatch on the database            status: todo · size: L · lane B
+### T4-01 · Delivery dispatch on the database            status: done — awaiting merge (lane-b/T4-01-delivery-dispatch-on-the-database) · size: L · lane B
 **What** — Replace the localStorage store in `delivery.ts` with the 0165/0166 RPCs:
 `delivery_create_job`, `delivery_assign_driver`, `delivery_transition_job` (Scheduled → Ready → In
 Transit → Delivered / Failed, terminal states immutable). The Driver sees **only jobs assigned to
@@ -62,7 +62,7 @@ through the T2-01 / T2-02 components, linked to the delivery job.
 **Done when** — the signature shows on the job and on the booking's documents.
 **Needs** — T2-01, T2-02, T4-01.
 
-### T4-04 · Team notes on the database            status: todo · size: M · lane B
+### T4-04 · Team notes on the database            status: done · size: M · lane B
 **What** — New table for staff notes: author, text, optional links (booking, asset, client), pinned,
 created at; **archive, never delete** (Law 3). Staff-only (no Client). Notes that mention money
 are a writer's choice, so the note text is visible to every staff role — the screen warns "Notes
@@ -75,7 +75,7 @@ are seen by all staff". Replace the localStorage path in `internalNotes.ts`; kee
 hides a note from the default list but keeps it.
 **Needs** — none.
 
-### T4-05 · Shift handover on the database            status: todo · size: M · lane B
+### T4-05 · Shift handover on the database            status: done · size: M · lane B
 **What** — New table for shift handovers: from staff, written at (logout flow — 28 Jul lock),
 open items, notes, cash counted (when closing is "per shift", T3-07), acknowledged by / at. The
 next shift sees unacknowledged handovers on Today and acknowledges them. **Three shifts** (W32):
@@ -90,7 +90,7 @@ the overlap hour is when handover is due. Replace `shiftHandover.ts` localStorag
 acknowledgement records who and when.
 **Needs** — none.
 
-### T4-06 · Export old browser-only entries            status: todo · size: S · lane B
+### T4-06 · Export old browser-only entries            status: done · size: S · lane B
 **What** — On the first sign-in to the live app, if the device holds any of the old keys
 (`br.productions`, `babin_rentals_deliveries_v1`, `babin_internal_notes_v1`, `br.shiftHandovers`,
 `br.warranties`, `babin_coupons_v2`, and legacy unsent offline work in IndexedDB), show one card:
@@ -104,7 +104,7 @@ per device until dismissed; reachable later from Settings ▸ System.
 still present afterwards; a clean device shows nothing.
 **Needs** — none.
 
-### T4-07 · Delivery zones and fees            status: todo · size: S · lane B · [go-live]
+### T4-07 · Delivery zones and fees            status: doing — database, actions, RBAC, lifecycle step, Settings UI, and New Rental zone integration complete (lane-b/T4-07-delivery-zones) · size: S · lane B · [go-live]
 **What** — Settings ▸ Operations ▸ **Delivery zones**: a short table of zones with a fee each.
 Starting zones (L6, researched — Kathmandu services group the valley the same way):
 **Inside Ring Road · Outside Ring Road, inside the valley · Far valley (Bhaktapur town, Godawari,
@@ -115,7 +115,7 @@ the shop stays Rs 0. Replace the fixed Rs 3,500 "Babin Delivery" price.
 **Why** — W48, W85, L6.
 **Where** — `src/lib/settingsStore.ts`, settings table (0158), `src/lib/bookingTransportForm.ts`,
 `NewRental.tsx` transport section, `src/lib/pricingPipeline.ts`.
-**Database** — migration (claim a number) if zones need their own table rather than a settings key.
+**Database** — migration `0189_delivery_zones.sql`: `delivery_zones` table + RPCs + seed data.
 **Done when** — four zones editable by Owner/Admin/Manager; a booking's delivery fee follows its zone;
 Warehouse cannot see fees.
 **Needs** — none.

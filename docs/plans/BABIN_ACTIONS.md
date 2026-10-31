@@ -11,8 +11,8 @@ editing this file or telling Claude at a check-in.
 - [ ] **Disable the GitHub CI workflow** — Actions → CI → ⋯ → Disable workflow (T0-09). CI stays off;
       local checks are the gate.
 - [ ] Set up the three agent worktrees: **Codex-1 (lane A), Gemini (lane B), Codex-2 (lane C)**
-      (PLAN.md §6) and paste the first prompts: `prompts/T0-10.md` then `prompts/T2-16.md` (Codex-1 —
-      T2-16 finishes the camera upload you pushed on 26 Oct), `prompts/T4-04.md` (Gemini),
+      (PLAN.md §6) and paste the first prompts: `prompts/T0-10.md` then `prompts/T2-18.md` (Codex-1 —
+      T2-18 finishes the camera upload; T2-16 already built the photo rules), `prompts/T4-04.md` (Gemini),
       `prompts/T3-01.md` (Codex-2).
 - [ ] Apply Claude's `fix-evidence-offline-text.patch` (offline text; turns the red UI-copy check green).
 - [ ] From now on, run the **full check list** (`docs/plans/README.md`) before every push — CI no longer

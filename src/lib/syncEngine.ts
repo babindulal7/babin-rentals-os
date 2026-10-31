@@ -1,9 +1,26 @@
 import { supabase } from './supabase'
-import { drainQueue, getOfflineQueueSummary } from './offlineQueue'
+import { drainQueue, getOfflineQueueSummary, onQueueChange } from './offlineQueue'
 import { localStore, isIndexedDbAvailable } from './localStore'
 import type { CachedClient, CachedProduct, CachedBooking } from './localStore'
 import { captureError } from './monitoring'
 import { rupees } from './money'
+
+const LAST_SYNC_STORAGE_KEY = 'babin-rentals:last-sync-time'
+
+function readInitialLastSyncTime(): Date | null {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const raw = window.localStorage.getItem(LAST_SYNC_STORAGE_KEY)
+      if (raw) {
+        const d = new Date(raw)
+        if (!isNaN(d.getTime())) return d
+      }
+    }
+  } catch {
+    // Ignore storage errors
+  }
+  return null
+}
 
 interface RemoteProduct {
   id: string
@@ -54,7 +71,7 @@ class SyncEngine {
   private state: SyncState = {
     status: typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'synced',
     pendingCount: 0,
-    lastSyncTime: null,
+    lastSyncTime: readInitialLastSyncTime(),
   }
   private intervalTimer: number | null = null
   private syncing = false
@@ -67,6 +84,11 @@ class SyncEngine {
       })
       window.addEventListener('offline', () => {
         this.updateState({ status: 'offline' })
+      })
+
+      // Immediately react to outbox changes
+      onQueueChange(() => {
+        void this.refreshPendingCount().catch(() => {})
       })
 
       // Start periodic background sync every 25 seconds when online
@@ -85,6 +107,15 @@ class SyncEngine {
   }
 
   private updateState(partial: Partial<SyncState>) {
+    if (partial.lastSyncTime instanceof Date && !isNaN(partial.lastSyncTime.getTime())) {
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem(LAST_SYNC_STORAGE_KEY, partial.lastSyncTime.toISOString())
+        }
+      } catch {
+        // Ignore storage access errors
+      }
+    }
     this.state = { ...this.state, ...partial }
     this.listeners.forEach((l) => l(this.state))
   }

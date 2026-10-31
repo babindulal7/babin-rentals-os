@@ -24,6 +24,14 @@ import type { ListFilters } from '../../lib/queries/listQuery'
 import { listBookings, type BookingListRow } from '../../lib/queries/bookings'
 import { listInvoices, invoicesForClient, financeRestriction, type InvoiceListRow } from '../../lib/queries/finance'
 import { listDocuments, documentsForClient, type DocRow } from '../../lib/queries/documents'
+import {
+  fetchClientIdDocument,
+  fetchClientCollectors,
+  type ClientIdDocument,
+  type ClientCollector,
+} from '../../lib/queries/clients'
+import { AddClientIdModal } from './modals/AddClientIdModal'
+import { AddCollectorModal } from './modals/AddCollectorModal'
 import { CreateDocumentModal } from '../documents/CreateDocumentModal'
 import { useEditMode } from '../../lib/edit/useEditMode'
 import type { FieldSpec } from '../../lib/edit/useEditMode'
@@ -478,6 +486,26 @@ function ClientDetailView() {
       active = false
     }
   }, [rentals.rows])
+
+  const [clientIdDoc, setClientIdDoc] = useState<ClientIdDocument | null>(null)
+  const [clientCollectors, setClientCollectors] = useState<ClientCollector[]>([])
+  const [showAddIdModal, setShowAddIdModal] = useState(false)
+  const [showAddCollectorModal, setShowAddCollectorModal] = useState(false)
+
+  const reloadIdAndCollectors = useCallback(() => {
+    if (!client?.id) return
+    void Promise.all([
+      fetchClientIdDocument(client.id),
+      fetchClientCollectors(client.id),
+    ]).then(([idDoc, cols]) => {
+      setClientIdDoc(idDoc)
+      setClientCollectors(cols)
+    })
+  }, [client?.id])
+
+  useEffect(() => {
+    reloadIdAndCollectors()
+  }, [reloadIdAndCollectors])
 
   /* ── On Stop — RULING §11.2 ─────────────────────────────────────────────
    *
@@ -1321,62 +1349,172 @@ function ClientDetailView() {
       )}
 
       {activeTab === 'documents' && (
-        <Card
-          title={`Documents (${documents.rows.length})`}
-          action={
-            <Button
-              variant="secondary"
-              icon="plus"
-              onClick={() => setShowCreateDoc(true)}
-              disabled={client.isBlocked}
-            >
-              Add Document
-            </Button>
-          }
-          bodyStyle={{ padding: documents.rows.length ? 0 : undefined }}
-        >
-          <PageBody
-            loading={documents.loading}
-            error={documents.error}
-            onRetry={documents.refetch}
-            hasRows={documents.rows.length > 0}
-            empty={documents.isEmpty}
-            noun="documents"
-            emptyTitle="No documents on file"
-            emptyMessage="No documents have been recorded against this client yet. Click 'Add Document' to create a quotation, contract, or note."
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+          {/* Client ID on File (W50, W51) */}
+          <Card
+            title="Client ID on File (W50, W51)"
+            action={
+              <Button
+                variant="secondary"
+                icon="plus"
+                onClick={() => setShowAddIdModal(true)}
+                disabled={client.isBlocked}
+              >
+                {clientIdDoc ? 'Update ID' : 'Record ID'}
+              </Button>
+            }
           >
-            <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-card)', overflow: 'hidden' }}>
-              <DataTableShell ariaLabel="Client documents" data-table-scroll className="client-table-shell" style={{ overflowX: 'auto' }}>
-                <table className="client-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
-                  <thead>
-                    <tr style={{ background: 'var(--card2)' }}>
-                      <th style={th}>Document No</th>
-                      <th style={th}>Type</th>
-                      <th style={th}>Category</th>
-                      <th style={th}>Date</th>
-                      <th style={th}>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {documents.rows.map((doc) => (
-                      <tr key={doc.id} className="client-row" style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={td}>
-                          <span className="figure identifier client-mono" style={{ fontWeight: 600 }}>{doc.id}</span>
-                        </td>
-                        <td style={{ ...td, fontWeight: 600 }}>{doc.type}</td>
-                        <td style={{ ...td, color: 'var(--text2)' }}>{doc.category}</td>
-                        <td className="figure client-mono" style={{ ...td, color: 'var(--text2)' }}>{doc.createdTime}</td>
-                        <td style={td}>
-                          <Badge tone="neutral" label={doc.status} size="sm" />
-                        </td>
+            {clientIdDoc ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 'var(--r-xs)', background: 'color-mix(in srgb, var(--success) 12%, var(--card))', color: 'var(--success-text)', fontSize: 'var(--t-caption)', fontWeight: 700 }}>
+                    <Icon name="check" size={14} /> ID on file ✓
+                  </span>
+                  <span style={{ fontSize: 'var(--t-body)', fontWeight: 600, color: 'var(--text)' }}>
+                    {clientIdDoc.idType === 'citizenship_card' ? 'Citizenship Card (नेपाली नागरिकता)' : clientIdDoc.idType.replace('_', ' ').toUpperCase()}
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginTop: 4 }}>
+                  <div>
+                    <span style={{ display: 'block', fontSize: 'var(--t-caption)', color: 'var(--text2)' }}>Document Number</span>
+                    <strong className="figure identifier client-mono" style={{ fontSize: 'var(--t-body)' }}>{clientIdDoc.idNumber}</strong>
+                  </div>
+                  <div>
+                    <span style={{ display: 'block', fontSize: 'var(--t-caption)', color: 'var(--text2)' }}>Validity</span>
+                    <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text)' }}>
+                      {clientIdDoc.expiryDate ? `Expires ${formatAd(new Date(clientIdDoc.expiryDate))}` : 'Permanent (Nepal Citizenship, W51)'}
+                    </span>
+                  </div>
+                  <div>
+                    <span style={{ display: 'block', fontSize: 'var(--t-caption)', color: 'var(--text2)' }}>Recorded</span>
+                    <span className="figure client-mono" style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+                      {formatAd(new Date(clientIdDoc.createdAt))}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <EmptyState
+                title="No ID document on file"
+                description="Ruling W50 requires one government ID (citizenship, passport, license) on file before the first equipment handover. Stored once and reused (W51)."
+                actionLabel="Record ID on File"
+                onAction={() => setShowAddIdModal(true)}
+              />
+            )}
+          </Card>
+
+          {/* Authorized Collectors (W28, W34) */}
+          <Card
+            title={`Authorized Collectors (${clientCollectors.length})`}
+            action={
+              <Button
+                variant="secondary"
+                icon="plus"
+                onClick={() => setShowAddCollectorModal(true)}
+                disabled={client.isBlocked}
+              >
+                Add Collector
+              </Button>
+            }
+          >
+            {clientCollectors.length > 0 ? (
+              <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-card)', overflow: 'hidden' }}>
+                <DataTableShell ariaLabel="Authorized collectors" data-table-scroll className="client-table-shell" style={{ overflowX: 'auto' }}>
+                  <table className="client-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 500 }}>
+                    <thead>
+                      <tr style={{ background: 'var(--card2)' }}>
+                        <th style={th}>Name</th>
+                        <th style={th}>Phone</th>
+                        <th style={th}>Designation</th>
+                        <th style={th}>ID Info</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </DataTableShell>
-            </div>
-          </PageBody>
-        </Card>
+                    </thead>
+                    <tbody>
+                      {clientCollectors.map((col) => (
+                        <tr key={col.id} className="client-row" style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={{ ...td, fontWeight: 600 }}>{col.name}</td>
+                          <td className="figure client-mono" style={td}>{col.phone}</td>
+                          <td style={{ ...td, color: 'var(--text2)' }}>{col.roleTitle ?? 'Collector'}</td>
+                          <td style={{ ...td, color: 'var(--text2)' }}>
+                            {col.idNumber ? (
+                              <span className="figure client-mono">{col.idNumber}</span>
+                            ) : (
+                              '—'
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </DataTableShell>
+              </div>
+            ) : (
+              <EmptyState
+                title="No authorized collectors saved"
+                description="Save people the client usually sends (assistant, AC, driver). At handover, staff pick the receiver from the list in 1 tap (Rulings W28, W34)."
+                actionLabel="Add Collector"
+                onAction={() => setShowAddCollectorModal(true)}
+              />
+            )}
+          </Card>
+
+          <Card
+            title={`Documents (${documents.rows.length})`}
+            action={
+              <Button
+                variant="secondary"
+                icon="plus"
+                onClick={() => setShowCreateDoc(true)}
+                disabled={client.isBlocked}
+              >
+                Add Document
+              </Button>
+            }
+            bodyStyle={{ padding: documents.rows.length ? 0 : undefined }}
+          >
+            <PageBody
+              loading={documents.loading}
+              error={documents.error}
+              onRetry={documents.refetch}
+              hasRows={documents.rows.length > 0}
+              empty={documents.isEmpty}
+              noun="documents"
+              emptyTitle="No documents on file"
+              emptyMessage="No documents have been recorded against this client yet. Click 'Add Document' to create a quotation, contract, or note."
+            >
+              <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--r-card)', overflow: 'hidden' }}>
+                <DataTableShell ariaLabel="Client documents" data-table-scroll className="client-table-shell" style={{ overflowX: 'auto' }}>
+                  <table className="client-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
+                    <thead>
+                      <tr style={{ background: 'var(--card2)' }}>
+                        <th style={th}>Document No</th>
+                        <th style={th}>Type</th>
+                        <th style={th}>Category</th>
+                        <th style={th}>Date</th>
+                        <th style={th}>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {documents.rows.map((doc) => (
+                        <tr key={doc.id} className="client-row" style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={td}>
+                            <span className="figure identifier client-mono" style={{ fontWeight: 600 }}>{doc.id}</span>
+                          </td>
+                          <td style={{ ...td, fontWeight: 600 }}>{doc.type}</td>
+                          <td style={{ ...td, color: 'var(--text2)' }}>{doc.category}</td>
+                          <td className="figure client-mono" style={{ ...td, color: 'var(--text2)' }}>{doc.createdTime}</td>
+                          <td style={td}>
+                            <Badge tone="neutral" label={doc.status} size="sm" />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </DataTableShell>
+              </div>
+            </PageBody>
+          </Card>
+        </div>
       )}
 
       {activeTab === 'notes' && (
@@ -1561,6 +1699,28 @@ function ClientDetailView() {
               </label>
             </div>
           </Modal>
+
+          <AddClientIdModal
+            isOpen={showAddIdModal}
+            onClose={() => setShowAddIdModal(false)}
+            clientId={client.id}
+            clientName={client.name}
+            onSuccess={() => {
+              reloadIdAndCollectors()
+              showSuccessToast('ID on File Saved', `Document recorded for ${client.name}`)
+            }}
+          />
+
+          <AddCollectorModal
+            isOpen={showAddCollectorModal}
+            onClose={() => setShowAddCollectorModal(false)}
+            clientId={client.id}
+            clientName={client.name}
+            onSuccess={(col) => {
+              reloadIdAndCollectors()
+              showSuccessToast('Collector Added', `${col.name} added as authorized collector`)
+            }}
+          />
         </>
       )}
 

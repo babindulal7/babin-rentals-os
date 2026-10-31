@@ -21,10 +21,10 @@ business RPCs are still executable by `anon` on live (`adjust_stock`,
 ---
 
 ### T1-01 · Fresh production backup + restore drill            status: todo · size: S · lane A + Babin
-**What** — Babin runs `scripts/backup-db.ps1` per `BACKUP_PROTOCOL.md` §1; the dump is checked with
+**What** — Babin runs `scripts/backup-db.ps1` per [`../archive/BACKUP_PROTOCOL.md`](../archive/BACKUP_PROTOCOL.md) §1; the dump is checked with
 `npm run check:dump`; its SHA-256 is recorded. The restore drill is T1-02 (restoring it into staging).
 **Why** — N-5 backup-first; no live change without a restorable backup.
-**Where** — `BACKUP_PROTOCOL.md`, `scripts/backup-db.ps1`, `scripts/check-dump.mjs`.
+**Where** — [`../archive/BACKUP_PROTOCOL.md`](../archive/BACKUP_PROTOCOL.md), `scripts/backup-db.ps1`, `scripts/check-dump.mjs`.
 **Database** — read-only against live.
 **Done when** — 1) dump file + SHA-256 stored off the laptop (Babin's Drive); 2) `check:dump` passes;
 3) PROGRESS.md records date, size, hash — not the credentials (N-8).
@@ -39,7 +39,7 @@ Claude may create the project through the Supabase connector **after Babin appro
 **Where** — Supabase dashboard / connector; `.env.staging.local` (git-ignored).
 **Database** — staging only.
 **Done when** — 1) staging row counts match the dump for bookings, clients, products, invoices,
-payments; 2) the restore took < 1 hour and the steps are written in `BACKUP_PROTOCOL.md` §2 (this
+payments; 2) the restore took < 1 hour and the steps are written in [`../archive/BACKUP_PROTOCOL.md`](../archive/BACKUP_PROTOCOL.md) §2 (this
 is the restore drill); 3) staging holds real client data, so **only test seats and Babin** can sign
 in (Cloudflare Access on the staging site, T1-07).
 **Needs** — T1-01; Babin approves the project.
@@ -174,7 +174,7 @@ must see no money; create and cancel a test quote).
 recovery) and write it down; add a weekly scripted backup to Babin's Drive; restore into staging
 once a month and record the result.
 **Why** — G10.
-**Where** — `BACKUP_PROTOCOL.md`.
+**Where** — [`../archive/BACKUP_PROTOCOL.md`](../archive/BACKUP_PROTOCOL.md).
 **Database** — read-only on live; restore on staging.
 **Done when** — two weekly backups exist and one monthly restore is logged.
 **Needs** — T1-02.
@@ -203,7 +203,7 @@ screen < 3 s on 4G.
 **Needs** — T1-07.
 
 
-### T1-15 · Switch user with name + PIN            status: todo · size: L · lane A · [go-live]
+### T1-15 · Switch user with name + PIN            status: doing — design phase (lane-a/T1-15-switch-user-with-name-plus-pin: design note written, awaiting Claude check-in review before code) · size: L · lane A · [go-live]
 **What** — On a shared iPad or the counter PC (W52, W53): staff tap their **name**, type their
 **4-digit PIN**, and the device switches to **their own real session** — every action after that is
 theirs. Design first (a one-page note reviewed at a Claude check-in before code), because the

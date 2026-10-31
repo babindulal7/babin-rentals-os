@@ -54,6 +54,12 @@ export interface CrewAssignment {
   cancelled: boolean
   payoutStatus: PayoutStatus
   isInternalStaff: boolean
+  tdsRatePercent?: number | null
+  tdsAmountPaisa?: Paisa | null
+  netPayoutPaisa?: Paisa | null
+  paidAt?: string | null
+  paidBy?: string | null
+  payoutNotes?: string | null
   /**
    * Hover Intel System v2.1 (Crew card) — "Free 28–30 Jul" in the Glance.
    * No availability calendar exists in this build, so this is NOT derived
@@ -658,27 +664,43 @@ export interface PayoutLedger {
   count: number
   grossPaisa: Paisa
   byStatus: Array<{ status: PayoutStatus; count: number; grossPaisa: Paisa }>
-  /** No ruled TDS rate exists — `null` means "not tracked yet", never zero. */
-  tdsPaisa: null
-  /** Cannot be derived without a TDS rate. `null`, never a plausible default. */
-  netPaisa: null
+  /** TDS rate percentage snapshot or configured setting. null when rate not set. (Ruling D25 / O-5) */
+  tdsRatePercent: number | null
+  /** null means "TDS: rate not set", never zero. */
+  tdsPaisa: Paisa | null
+  /** Cannot be derived without a TDS rate. null when rate not set. */
+  netPaisa: Paisa | null
 }
 
 export const PAYOUT_STATUSES: readonly PayoutStatus[] = ['Not due', 'Due', 'Paid'] as const
 
-export function payoutLedger(assignments: CrewAssignment[] = CREW_DATA): PayoutLedger {
+export function payoutLedger(
+  assignments: CrewAssignment[] = CREW_DATA,
+  tdsRatePercent: number | null = null,
+): PayoutLedger {
   // A cancelled assignment is still on file (law 3) but owes nobody anything.
   const live = assignments.filter((a) => !a.cancelled)
   const sum = (rows: CrewAssignment[]) => rows.reduce((t, a) => t + a.totalCostPaisa, 0) as Paisa
+  const gross = sum(live)
+
+  let tdsPaisa: Paisa | null = null
+  let netPaisa: Paisa | null = null
+
+  if (tdsRatePercent !== null && Number.isFinite(tdsRatePercent)) {
+    tdsPaisa = Math.round(gross * (tdsRatePercent / 100)) as Paisa
+    netPaisa = (gross - tdsPaisa) as Paisa
+  }
+
   return {
     count: live.length,
-    grossPaisa: sum(live),
+    grossPaisa: gross,
     byStatus: PAYOUT_STATUSES.map((status) => {
       const rows = live.filter((a) => a.payoutStatus === status)
       return { status, count: rows.length, grossPaisa: sum(rows) }
     }),
-    tdsPaisa: null,
-    netPaisa: null,
+    tdsRatePercent,
+    tdsPaisa,
+    netPaisa,
   }
 }
 

@@ -2993,6 +2993,1022 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L39',
+  title: 'Warehouse cannot read client ID document number or collector ID number; Manager reads unmasked (W50, W34, T2-12)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      const clientId = CLIENT
+      const idNum = 'NP-CITIZEN-123456'
+      const collectorIdNum = 'NP-DL-987654'
+
+      await asOwnerOfTheDatabase(async () => {
+        await q(
+          `insert into client_id_documents (client_uuid, client_id, id_type, id_number, created_by, verified_by)
+           values (gen_random_uuid(), $1, 'citizenship_card', $2, $3, $3)`,
+          [clientId, idNum, U.Owner],
+        )
+        await q(
+          `insert into client_collectors (client_uuid, client_id, name, phone, role_title, id_type, id_number, created_by)
+           values (gen_random_uuid(), $1, 'Sita Gurung', '+9779811223344', '1st AC', 'driving_licence', $2, $3)`,
+          [clientId, collectorIdNum, U.Owner],
+        )
+      })
+
+      // 1. Warehouse direct select on client_id_documents.id_number is refused by column permissions
+      await as('Warehouse', async () => {
+        await q('savepoint wh_id_probe')
+        try {
+          await refuses(
+            'Warehouse direct select on client_id_documents.id_number is refused',
+            `select id_number from client_id_documents where client_id = $1`,
+            [clientId],
+            /permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint wh_id_probe')
+          await q('release savepoint wh_id_probe')
+        }
+      })
+
+      // 2. Warehouse direct select on client_collectors.id_number is refused by column permissions
+      await as('Warehouse', async () => {
+        await q('savepoint wh_coll_probe')
+        try {
+          await refuses(
+            'Warehouse direct select on client_collectors.id_number is refused',
+            `select id_number from client_collectors where client_id = $1`,
+            [clientId],
+            /permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint wh_coll_probe')
+          await q('release savepoint wh_coll_probe')
+        }
+      })
+
+      // 3. Warehouse select on client_id_documents_v returns masked id_number and null evidence_file_id
+      await as('Warehouse', async () => {
+        const rows = (await q(`select id_number, evidence_file_id from client_id_documents_v where client_id = $1`, [clientId])).rows
+        assertEq(rows.length, 1, 'Warehouse finds client ID document')
+        assertEq(rows[0].id_number, '••••-••••-3456', 'Warehouse sees masked client ID document number')
+        assertEq(rows[0].evidence_file_id, null, 'Warehouse sees null evidence file id')
+      })
+
+      // 4. Warehouse select on client_collectors_v returns masked id_number and null evidence_file_id
+      await as('Warehouse', async () => {
+        const rows = (await q(`select name, id_number, evidence_file_id from client_collectors_v where client_id = $1`, [clientId])).rows
+        assertEq(rows.length, 1, 'Warehouse finds client collector')
+        assertEq(rows[0].name, 'Sita Gurung', 'Warehouse sees collector name')
+        assertEq(rows[0].id_number, '••••-••••-7654', 'Warehouse sees masked collector ID number')
+        assertEq(rows[0].evidence_file_id, null, 'Warehouse sees null evidence file id')
+      })
+
+      // 5. Manager select on client_id_documents_v returns unmasked id_number
+      await as('Manager', async () => {
+        const rows = (await q(`select id_number from client_id_documents_v where client_id = $1`, [clientId])).rows
+        assertEq(rows.length, 1, 'Manager finds client ID document')
+        assertEq(rows[0].id_number, idNum, 'Manager sees unmasked client ID document number')
+      })
+
+      // 6. Manager select on client_collectors_v returns unmasked id_number
+      await as('Manager', async () => {
+        const rows = (await q(`select id_number from client_collectors_v where client_id = $1`, [clientId])).rows
+        assertEq(rows.length, 1, 'Manager finds client collector')
+        assertEq(rows[0].id_number, collectorIdNum, 'Manager sees unmasked collector ID number')
+      })
+
+      // 7. Verify helper function client_has_id_on_file
+      await as('Warehouse', async () => {
+        const hasId = await one('select client_has_id_on_file($1)', [clientId])
+        assertEq(Boolean(hasId), true, 'client_has_id_on_file returns true for client with ID')
+      })
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L40',
+  title: 'Self-QC refused without the flag, accepted with it, audited (W43, L7, T2-13)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      await as('Warehouse', async () => {
+        const entryId = crypto.randomUUID()
+        const unitId = UNITS[0]
+        const bookingId = bookingIds.a
+
+        // 1. Insert queue entry for reset
+        await q(
+          `insert into cleaning_queue_entries (id, client_uuid, booking_id, unit_id, state, cleaned_by, clean_completed_at, created_by)
+           values ($1, gen_random_uuid(), $2, $3, 'Cleaning', $4, now(), $4)`,
+          [entryId, bookingId, unitId, U.Warehouse],
+        )
+
+        // 2. Setting qc_by = cleaned_by without qc_self_checked is refused by the check constraint
+        await q('savepoint qc_self_check_probe')
+        try {
+          await refuses(
+            'self-QC without qc_self_checked is refused',
+            `update cleaning_queue_entries
+             set qc_by = $1, qc_at = now(), qc_self_checked = false
+             where id = $2`,
+            [U.Warehouse, entryId],
+            /cleaning_queue_entries_qc_is_a_second_pair_of_eyes/i,
+          )
+        } finally {
+          await q('rollback to savepoint qc_self_check_probe')
+          await q('release savepoint qc_self_check_probe')
+        }
+
+        // 3. Setting qc_by = cleaned_by WITH qc_self_checked = true is accepted
+        await q(
+          `update cleaning_queue_entries
+           set qc_by = $1, qc_at = now(), qc_self_checked = true, state = 'Ready'
+           where id = $2`,
+          [U.Warehouse, entryId],
+        )
+
+        const row = (await q(`select qc_by, cleaned_by, qc_self_checked from cleaning_queue_entries where id = $1`, [entryId])).rows[0]
+        assertEq(row.qc_by, U.Warehouse, 'qc_by matches operator')
+        assertEq(row.cleaned_by, U.Warehouse, 'cleaned_by matches operator')
+        assertEq(row.qc_self_checked, true, 'qc_self_checked is true')
+
+        // 4. Verify audit_events recorded the self-checked QC (Manager+ can view audit log)
+        let audit = null
+        await as('Manager', async () => {
+          audit = (await q(
+            `select new_values from audit_events
+             where table_name = 'cleaning_queue_entries' and record_id = $1 and action = 'Update'
+             order by created_at desc limit 1`,
+            [entryId],
+          )).rows[0]
+        })
+        assert(audit, 'audit event exists for cleaning_queue_entries self-QC')
+        assertEq(audit.new_values.qc_self_checked, true, 'audit record reflects qc_self_checked = true')
+      })
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L41',
+  title: 'Unit with open damage finding cannot be reserved; after repair job closes it can (D4, T2-06)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      const unitId = UNITS[0]
+      const findingId = crypto.randomUUID()
+      const mntId = crypto.randomUUID()
+
+      // 1. Insert a completed cleaning queue entry and unresolved damage finding on the unit
+      const cleanEntryId = crypto.randomUUID()
+      await asOwnerOfTheDatabase(async () => {
+        await q(
+          `insert into cleaning_queue_entries (id, client_uuid, booking_id, unit_id, state, cleaned_by, completed_at, created_by)
+           values ($1, gen_random_uuid(), $2, $3, 'Ready', $4, now(), $4)`,
+          [cleanEntryId, bookingIds.a, unitId, U.Owner],
+        )
+        await q(
+          `insert into damage_findings (id, client_uuid, source, cleaning_queue_entry_id, unit_id, damage_type, description, severity, created_by)
+           values ($1, gen_random_uuid(), 'Cleaning', $2, $3, 'Physical', 'Broken optical filter thread', 'Moderate', $4)`,
+          [findingId, cleanEntryId, unitId, U.Owner],
+        )
+      })
+
+      // 2. An attempt to reserve the unit with open finding is refused by validate_unit_reservability()
+      const lineId = (await q(`select id from booking_lines where booking_id = $1 limit 1`, [bookingIds.a])).rows[0].id
+      await as('Coordinator', async () => {
+        await q('savepoint reserve_damage_probe')
+        try {
+          await refuses(
+            'Unit with open damage finding cannot be reserved',
+            `insert into inventory_reservations (client_uuid, booking_id, booking_line_id, asset_id, period, created_by)
+             values (gen_random_uuid(), $1, $2, $3, tstzrange(now() + interval '1 day', now() + interval '2 days', '[]'), $4)`,
+            [bookingIds.a, lineId, unitId, U.Coordinator],
+            /GATE:unit.reserve.damage_finding/i,
+          )
+        } finally {
+          await q('rollback to savepoint reserve_damage_probe')
+          await q('release savepoint reserve_damage_probe')
+        }
+      })
+
+      // 3. Create a maintenance record linked to the damage finding
+      await asOwnerOfTheDatabase(async () => {
+        await q(
+          `insert into maintenance_records (id, client_uuid, record_no, product_unit_id, damage_finding_id, maintenance_type, priority, status, description, scheduled_date, created_by)
+           values ($1, gen_random_uuid(), 'MT-2026-9999', $2, $3, 'Repair', 'Normal', 'In Progress', 'Replace optical filter thread ring', current_date, $4)`,
+          [mntId, unitId, findingId, U.Owner],
+        )
+      })
+
+      // 4. Warehouse cannot close the maintenance job (42501 permission denied)
+      await as('Warehouse', async () => {
+        await q('savepoint wh_close_probe')
+        try {
+          await refuses(
+            'Warehouse cannot close maintenance jobs',
+            `select close_maintenance_job($1, 'Attempted close by warehouse')`,
+            [mntId],
+            /Permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint wh_close_probe')
+          await q('release savepoint wh_close_probe')
+        }
+      })
+
+      // 5. Technician closes the maintenance job with a required note
+      await as('Technician', async () => {
+        const res = await one(
+          `select close_maintenance_job($1, 'Replaced filter thread ring and tested mount tolerance.', 'Filter ring stripped', 'Replaced ring with OEM part', 2500)`,
+          [mntId],
+        )
+        assertEq(res.success, true, 'close_maintenance_job succeeded for Technician')
+      })
+
+      // 6. Linked damage finding is now marked repaired (repaired_at is set, repaired_by is set)
+      await as('Manager', async () => {
+        const findingRow = (await q(`select repaired_at, repaired_by from damage_findings where id = $1`, [findingId])).rows[0]
+        assert(findingRow, 'damage finding exists')
+        assert(findingRow.repaired_at, 'repaired_at is set on the finding')
+        assert(findingRow.repaired_by, 'repaired_by is recorded')
+      })
+
+      // 7. Unit status is recomputed to In Stock and condition is restored
+      await as('Manager', async () => {
+        const unitRow = (await q(`select status, condition from product_units where id = $1`, [unitId])).rows[0]
+        assertEq(unitRow.condition, 'Good', 'unit condition restored to Good')
+        assertEq(unitRow.status, 'In Stock', 'unit status is In Stock')
+      })
+
+      // 8. Reserving the unit now succeeds
+      await as('Coordinator', async () => {
+        const resId = crypto.randomUUID()
+        await q(
+          `insert into inventory_reservations (id, client_uuid, booking_id, booking_line_id, asset_id, period, created_by)
+           values ($1, gen_random_uuid(), $2, $3, $4, tstzrange(now() + interval '1 day', now() + interval '2 days', '[]'), $5)`,
+          [resId, bookingIds.a, lineId, unitId, U.Coordinator],
+        )
+        const row = (await q(`select id from inventory_reservations where id = $1`, [resId])).rows[0]
+        assertEq(row.id, resId, 'reservation inserted successfully after repair clearance')
+      })
+
+      // 9. Warehouse sees cost as null on maintenance_records_v (Law 6)
+      await as('Warehouse', async () => {
+        const mRow = (await q(`select cost from maintenance_records_v where id = $1`, [mntId])).rows[0]
+        assertEq(mRow.cost, null, 'Warehouse sees null cost on maintenance_records_v')
+      })
+
+      // 10. Manager reads unmasked cost
+      await as('Manager', async () => {
+        const mRow = (await q(`select cost from maintenance_records_v where id = $1`, [mntId])).rows[0]
+        assertEq(Number(mRow.cost), 2500, 'Manager reads unmasked cost')
+      })
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L42',
+  title: 'Team notes on the database: staff create, read, acknowledge, pin, archive; Client/anon denied; direct update/delete blocked; idempotent (S6, T4-04)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      const clientUuid1 = crypto.randomUUID()
+      let note1Id
+      let note2Id
+      let note3Id
+
+      // 1. Warehouse creates note1 with client_uuid; duplicate submission returns same ID (Law 8)
+      await as('Warehouse', async () => {
+        note1Id = await one(
+          `select create_team_note('FX6 cage missing top handle bolt', $1, 'Gear Alert', 'high', 'EQ-SONY-FX6-01', array['EQ-SONY-FX6-01'])`,
+          [clientUuid1],
+        )
+        assert(note1Id, 'create_team_note returned id for Warehouse')
+
+        // Replay with same client_uuid is idempotent
+        const replay = await one(
+          `select create_team_note('FX6 cage missing top handle bolt', $1, 'Gear Alert', 'high', 'EQ-SONY-FX6-01', array['EQ-SONY-FX6-01'])`,
+          [clientUuid1],
+        )
+        assertEq(replay, note1Id, 'replaying client_uuid returns same note ID')
+      })
+
+      // 2. Technician creates note2 (pinned)
+      await as('Technician', async () => {
+        note2Id = await one(
+          `select create_team_note('Replaced top handle bolt on FX6 cage', gen_random_uuid(), 'Gear Alert', 'normal', 'EQ-SONY-FX6-01', array['EQ-SONY-FX6-01'], true)`,
+        )
+        assert(note2Id, 'create_team_note returned id for Technician')
+      })
+
+      // 3. Driver creates note3
+      await as('Driver', async () => {
+        note3Id = await one(
+          `select create_team_note('Balkhu road clear, normal transit route', gen_random_uuid(), 'Logistics & Transport', 'normal')`,
+        )
+        assert(note3Id, 'create_team_note returned id for Driver')
+      })
+
+      // 4. Client cannot create team notes (refused)
+      await as('Client', async () => {
+        await q('savepoint client_create_note')
+        try {
+          await refuses(
+            'Client cannot create team notes',
+            `select create_team_note('Client attempted note', gen_random_uuid())`,
+            [],
+            /insufficient_privilege|Only staff can create team notes/i,
+          )
+        } finally {
+          await q('rollback to savepoint client_create_note')
+          await q('release savepoint client_create_note')
+        }
+      })
+
+      // 5. Client cannot list team notes via RPC (refused)
+      await as('Client', async () => {
+        await q('savepoint client_list_note')
+        try {
+          await refuses(
+            'Client cannot list team notes via RPC',
+            `select * from list_team_notes()`,
+            [],
+            /insufficient_privilege|Only staff can list team notes/i,
+          )
+        } finally {
+          await q('rollback to savepoint client_list_note')
+          await q('release savepoint client_list_note')
+        }
+      })
+
+      // 6. Client direct SELECT from team_notes returns 0 rows (RLS)
+      await as('Client', async () => {
+        const rows = (await q(`select * from team_notes`)).rows
+        assertEq(rows.length, 0, 'Client direct select returns 0 team_notes rows via RLS')
+      })
+
+      // 7. Coordinator acknowledges note1
+      await as('Coordinator', async () => {
+        const ack1 = await one(`select acknowledge_team_note($1)`, [note1Id])
+        assertEq(ack1, true, 'first acknowledge returns true')
+        const ack2 = await one(`select acknowledge_team_note($1)`, [note1Id])
+        assertEq(ack2, false, 'second acknowledge returns false (idempotent)')
+      })
+
+      // 8. Direct UPDATE on team_notes is revoked/refused
+      await as('Warehouse', async () => {
+        await q('savepoint wh_update_note')
+        try {
+          await refuses(
+            'Direct update on team_notes is refused',
+            `update team_notes set body = 'tampered' where id = $1`,
+            [note1Id],
+            /permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint wh_update_note')
+          await q('release savepoint wh_update_note')
+        }
+      })
+
+      // 9. Direct DELETE on team_notes is revoked/refused (Law 3)
+      await as('Warehouse', async () => {
+        await q('savepoint wh_delete_note')
+        try {
+          await refuses(
+            'Direct delete on team_notes is refused',
+            `delete from team_notes where id = $1`,
+            [note1Id],
+            /permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint wh_delete_note')
+          await q('release savepoint wh_delete_note')
+        }
+      })
+
+      // 10. Manager pins note3
+      await as('Manager', async () => {
+        const pinRes = await one(`select pin_team_note($1, true)`, [note3Id])
+        assertEq(pinRes, true, 'pin_team_note returned true')
+      })
+
+      // 11. Coordinator archives note1 (archive, never delete)
+      await as('Coordinator', async () => {
+        const arcRes = await one(`select archive_team_note($1, true)`, [note1Id])
+        assertEq(arcRes, true, 'archive_team_note returned true')
+      })
+
+      // 12. Default list_team_notes excludes archived notes; includes active ones with pinned first
+      await as('Warehouse', async () => {
+        const activeNotes = (await q(`select id, pinned, is_archived from list_team_notes(50, 0, false)`)).rows
+        const note1Active = activeNotes.find((n) => n.id === note1Id)
+        assertEq(note1Active, undefined, 'archived note1 is excluded from default list')
+        const note2Active = activeNotes.find((n) => n.id === note2Id)
+        assert(note2Active, 'active note2 is present in list')
+        const note3Active = activeNotes.find((n) => n.id === note3Id)
+        assert(note3Active, 'active note3 is present in list')
+        assertEq(note3Active.pinned, true, 'note3 is pinned')
+      })
+
+      // 13. list_team_notes with p_include_archived=true includes archived note1
+      await as('Warehouse', async () => {
+        const allNotes = (await q(`select id, is_archived from list_team_notes(50, 0, true)`)).rows
+        const note1Found = allNotes.find((n) => n.id === note1Id)
+        assert(note1Found, 'archived note1 is included when p_include_archived is true')
+        assertEq(note1Found.is_archived, true, 'note1 is_archived is true')
+      })
+
+      // 14. Audit events exist for team_notes mutations
+      await asOwnerOfTheDatabase(async () => {
+        const auditRows = (await q(`select id, action, table_name from audit_events where table_name = 'team_notes'`)).rows
+        assert(auditRows.length >= 3, 'audit_events recorded team_notes mutations')
+      })
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L43',
+  title: 'Shift handover on the database: staff can write/read/acknowledge/archive handovers; Law 6 cash masking; Client is denied; hard delete rejected (0186)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      const handoverId = crypto.randomUUID()
+      const clientUuid1 = crypto.randomUUID()
+      const clientUuid2 = crypto.randomUUID()
+
+      // 1. Warehouse staff writes shift handover from Shift A to Shift B
+      await as('Warehouse', async () => {
+        await q(
+          `insert into shift_handovers (
+            id, client_uuid, shift_code, shift_date, from_user_id, from_user_name, from_user_role,
+            to_user_id, to_user_name, cash_counted_paisa, cash_status, cash_variance_paisa, notes, checklist
+          ) values (
+            $1, $2, 'A', current_date, $3, 'Hari KC', 'Warehouse',
+            $4, 'Raju Thapa', 1840000, 'matched', 0, 'Overlap window open — handed over keys and van',
+            '[{"key":"gear","label":"Out-gear walked through","done":true},{"key":"cash","label":"Cash counted","done":true}]'::jsonb
+          )`,
+          [handoverId, clientUuid1, U.Warehouse, U.Technician],
+        )
+      })
+
+      // 2. Law 6: Warehouse reads null for cash figures in shift_handovers_v
+      await as('Warehouse', async () => {
+        const rows = (await q(`select * from shift_handovers_v where id = $1`, [handoverId])).rows
+        assertEq(rows.length, 1, 'Warehouse reads handover')
+        assertEq(rows[0].shift_code, 'A', 'Shift code matches')
+        assertEq(rows[0].cash_counted_paisa, null, 'Warehouse reads null for cash_counted_paisa (Law 6)')
+        assertEq(rows[0].cash_variance_paisa, null, 'Warehouse reads null for cash_variance_paisa (Law 6)')
+      })
+
+      // 3. Manager reads unmasked cash figures in shift_handovers_v
+      await as('Manager', async () => {
+        const rows = (await q(`select * from shift_handovers_v where id = $1`, [handoverId])).rows
+        assertEq(rows.length, 1, 'Manager reads handover')
+        assertEq(rows[0].cash_counted_paisa, 1840000n, 'Manager reads unmasked cash_counted_paisa')
+        assertEq(rows[0].cash_variance_paisa, 0n, 'Manager reads unmasked cash_variance_paisa')
+      })
+
+      // 4. Technician (incoming shift) acknowledges the handover
+      await as('Technician', async () => {
+        await q(
+          `select acknowledge_shift_handover($1, 'Received keys and counted till', 'Raju Thapa')`,
+          [handoverId],
+        )
+        const row = (await q(`select * from shift_handovers where id = $1`, [handoverId])).rows[0]
+        assertEq(row.status, 'acknowledged', 'Status transitions to acknowledged')
+        assertEq(row.acknowledged_by, U.Technician, 'Acknowledged by Technician')
+        assert(row.acknowledged_at, 'acknowledged_at timestamp is recorded')
+        assertEq(row.acknowledgement_note, 'Received keys and counted till', 'Note matches')
+      })
+
+      // 5. Client role is denied access (RLS returns 0 rows)
+      await as('Client', async () => {
+        const rows = (await q(`select * from shift_handovers where id = $1`, [handoverId])).rows
+        assertEq(rows.length, 0, 'Client cannot read shift handovers (RLS returns 0 rows)')
+      })
+
+      // 6. Client cannot insert shift handovers
+      await as('Client', async () => {
+        await q('savepoint client_handover_probe')
+        try {
+          await refuses(
+            'Client cannot insert shift handovers',
+            `insert into shift_handovers (id, client_uuid, from_user_id, from_user_name, from_user_role)
+             values (gen_random_uuid(), $1, $2, 'Client Renter', 'Client')`,
+            [clientUuid2, U.Client],
+            /violates row-level security policy|permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint client_handover_probe')
+          await q('release savepoint client_handover_probe')
+        }
+      })
+
+      // 7. Hard delete is refused by trigger / permissions (Law 3)
+      await as('Manager', async () => {
+        await q('savepoint manager_delete_probe')
+        try {
+          await refuses(
+            'Hard delete is refused by postgres permissions / trigger',
+            `delete from shift_handovers where id = $1`,
+            [handoverId],
+            /HARD DELETE FORBIDDEN|permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint manager_delete_probe')
+          await q('release savepoint manager_delete_probe')
+        }
+      })
+
+      // 8. Archival via archive_shift_handover RPC
+      await as('Manager', async () => {
+        await q(`select archive_shift_handover($1)`, [handoverId])
+        const row = (await q(`select * from shift_handovers where id = $1`, [handoverId])).rows[0]
+        assertEq(row.status, 'archived', 'Status is archived')
+        assert(row.archived_at, 'archived_at is set')
+      })
+
+      // 9. Idempotent create_shift_handover via client_uuid (Law 8)
+      await as('Coordinator', async () => {
+        const clientUuid3 = crypto.randomUUID()
+        const row1 = (await q(
+          `select * from create_shift_handover(
+            $1, 'B', 'Sita Sharma', 'Coordinator', null, null, 2500000, 'matched', 0, 'Evening handover test'
+          )`,
+          [clientUuid3],
+        )).rows[0]
+        assert(row1.id, 'Row 1 inserted')
+
+        // Duplicate replay returns identical row
+        const row2 = (await q(
+          `select * from create_shift_handover(
+            $1, 'B', 'Sita Sharma', 'Coordinator', null, null, 2500000, 'matched', 0, 'Evening handover test'
+          )`,
+          [clientUuid3],
+        )).rows[0]
+        assertEq(row2.id, row1.id, 'Duplicate client_uuid returns same shift handover row')
+      })
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L44',
+  title: 'Crew payouts and TDS (D25, T8-08): money roles record payout with immutable TDS snapshot; non-money roles denied RPC; views mask TDS/gross/net under Law 6; rate change does not alter past stored payouts',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      // 1. Create a crew member and crew booking as Owner
+      const crewMemberId = crypto.randomUUID()
+      const crewBookingId = crypto.randomUUID()
+      const clientUuidBooking = crypto.randomUUID()
+      const clientUuidPayout = crypto.randomUUID()
+
+      await as('Owner', async () => {
+        await q(
+          `insert into crew_members (id, client_uuid, full_name, position, engagement_type, pan_status, withholding_rate, day_rate, created_by)
+           values ($1, gen_random_uuid(), 'Test Focus Puller', 'Focus Puller', 'freelance', 'registered', 15.00, 5000.00, $2)`,
+          [crewMemberId, U.Owner],
+        )
+
+        await q(
+          `insert into crew_bookings (id, client_uuid, crew_booking_no, crew_member_id, position, day_rate, days, start_date, end_date, state, payout_state, created_by)
+           values ($1, $2, 'CB-2099-0001', $3, 'Focus Puller', 5000.00, 2, '2099-09-10', '2099-09-11', 'Confirmed', 'Due', $4)`,
+          [crewBookingId, clientUuidBooking, crewMemberId, U.Owner],
+        )
+      })
+
+      // 2. Non-money roles (Coordinator, Warehouse, Technician, Driver, Client) are denied record_crew_payout
+      for (const nonMoneyRole of ['Coordinator', 'Warehouse', 'Technician', 'Driver', 'Client']) {
+        await as(nonMoneyRole, async () => {
+          await q('savepoint non_money_payout')
+          try {
+            await refuses(
+              `${nonMoneyRole} cannot record crew payout`,
+              `select record_crew_payout($1, $2, 15.0, 'Attempted payout')`,
+              [crypto.randomUUID(), crewBookingId],
+              /Access denied: crew payouts are restricted to money roles/i,
+            )
+          } finally {
+            await q('rollback to savepoint non_money_payout')
+            await q('release savepoint non_money_payout')
+          }
+        })
+      }
+
+      // 3. Accounts (money role per PERMISSIONS §5) records payout with 15% TDS
+      // Day rate = 5000, days = 2 -> Gross = 10000. 15% TDS = 1500. Net = 8500.
+      await as('Accounts', async () => {
+        const res = await one(
+          `select record_crew_payout($1, $2, 15.0, 'September shoot payout')`,
+          [clientUuidPayout, crewBookingId],
+        )
+        const payout = typeof res === 'string' ? JSON.parse(res) : res
+        assert(payout.ok, 'record_crew_payout returned ok')
+        assertEq(payout.gross, 10000, 'gross payout is 10000')
+        assertEq(payout.tds_rate_percent, 15, 'tds_rate_percent is 15%')
+        assertEq(payout.tds_amount, 1500, 'tds_amount is 1500')
+        assertEq(payout.net_payout, 8500, 'net_payout is 8500')
+
+        // Idempotent replay with same client_uuid
+        const replayRes = await one(
+          `select record_crew_payout($1, $2, 15.0, 'September shoot payout')`,
+          [clientUuidPayout, crewBookingId],
+        )
+        const replay = typeof replayRes === 'string' ? JSON.parse(replayRes) : replayRes
+        assert(replay.ok, 'replay returned ok')
+        assert(replay.idempotent_replay, 'replay flagged as idempotent')
+      })
+
+      // 4. Money role (Manager) sees real figures in crew_bookings_v
+      await as('Manager', async () => {
+        const row = await one(
+          `select jsonb_build_object(
+             'day_rate', day_rate,
+             'tds_rate_percent', tds_rate_percent,
+             'tds_amount', tds_amount,
+             'net_payout', net_payout,
+             'payout_state', payout_state
+           ) from crew_bookings_v where id = $1`,
+          [crewBookingId],
+        )
+        const parsed = typeof row === 'string' ? JSON.parse(row) : row
+        assertEq(parsed.day_rate, 5000, 'day_rate visible to Manager')
+        assertEq(parsed.tds_rate_percent, 15, 'tds_rate_percent visible to Manager')
+        assertEq(parsed.tds_amount, 1500, 'tds_amount visible to Manager')
+        assertEq(parsed.net_payout, 8500, 'net_payout visible to Manager')
+        assertEq(parsed.payout_state, 'Paid', 'payout_state is Paid')
+      })
+
+      // 5. Money-blind role (Warehouse) sees null for day_rate, tds_amount, net_payout under Law 6
+      await as('Warehouse', async () => {
+        const row = await one(
+          `select jsonb_build_object(
+             'day_rate', day_rate,
+             'tds_rate_percent', tds_rate_percent,
+             'tds_amount', tds_amount,
+             'net_payout', net_payout,
+             'payout_state', payout_state
+           ) from crew_bookings_v where id = $1`,
+          [crewBookingId],
+        )
+        const parsed = typeof row === 'string' ? JSON.parse(row) : row
+        assert(parsed.day_rate === null, 'day_rate masked for Warehouse')
+        assert(parsed.tds_rate_percent === null, 'tds_rate_percent masked for Warehouse')
+        assert(parsed.tds_amount === null, 'tds_amount masked for Warehouse')
+        assert(parsed.net_payout === null, 'net_payout masked for Warehouse')
+        assertEq(parsed.payout_state, 'Paid', 'payout_state visible to Warehouse')
+      })
+
+      // 6. Immutability verification: later payout with different rate (or rate change) does not alter past stored payout
+      await as('Owner', async () => {
+        const past = await one(
+          `select tds_amount from crew_bookings where id = $1`,
+          [crewBookingId],
+        )
+        assertEq(Number(past), 1500, 'past payout tds_amount remains 1500')
+      })
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L45',
+  title: 'Delivery dispatch on the database: jobs, driver assignment, transitions, role isolation, idempotency (S6, T4-01)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      // 1. Create a booked delivery booking for testing
+      const bookingKey = crypto.randomUUID()
+      let testBookingId
+      await as('Coordinator', async () => {
+        const res = await q(
+          `insert into bookings (client_uuid, booking_no, client_id, branch_id, pickup_at, return_at, delivery_type, stage, created_by, updated_by)
+           values ($1, '994301', $2, $3, '2099-11-01T04:00:00Z', '2099-11-03T04:00:00Z', 'Babin Delivery', 'Quote', $4, $4)
+           returning id`,
+          [bookingKey, CLIENT, BRANCH, U.Coordinator],
+        )
+        testBookingId = res.rows[0].id
+
+        await q(
+          `insert into booking_lines (client_uuid, booking_id, line_type, product_id, description, qty, days, rate, created_by)
+           values (gen_random_uuid(), $1, 'Equipment', $2, 'Delivery Test Bulk Cable', 1, 2, 250, $3)`,
+          [testBookingId, QTY_PRODUCT, U.Coordinator],
+        )
+
+        await q(
+          `insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at)
+           values (gen_random_uuid(), $1, $2, 'Quote', 'Booked', $3, 'Coordinator', now())`,
+          [testBookingId, BRANCH, U.Coordinator],
+        )
+      })
+
+      // 2. Coordinator creates Outbound delivery job
+      const jobKey = crypto.randomUUID()
+      let jobId
+      await as('Coordinator', async () => {
+        jobId = await one(
+          `select delivery_create_job($1, 'Outbound', '2099-11-01T04:00:00Z'::timestamptz, $2, 'Ba 3 Cha 8821')`,
+          [testBookingId, jobKey],
+        )
+        assert(jobId, 'delivery_create_job returned job ID')
+
+        // Replay with same key returns same ID (idempotency)
+        const replay = await one(
+          `select delivery_create_job($1, 'Outbound', '2099-11-01T04:00:00Z'::timestamptz, $2, 'Ba 3 Cha 8821')`,
+          [testBookingId, jobKey],
+        )
+        assertEq(replay, jobId, 'replaying delivery_create_job returns same job ID')
+      })
+
+      // 3. Driver cannot see unassigned delivery job (RLS read isolation)
+      await as('Driver', async () => {
+        const rows = (await q(`select id from delivery_jobs where id = $1`, [jobId])).rows
+        assertEq(rows.length, 0, 'Driver cannot read unassigned delivery job')
+      })
+
+      // 4. Coordinator assigns Driver to job
+      const assignKey = crypto.randomUUID()
+      await as('Coordinator', async () => {
+        const assignedId = await one(
+          `select delivery_assign_driver($1, $2, $3, 'Ba 3 Cha 8821', 'Ramesh Thapa', '+977 9813009988')`,
+          [jobId, U.Driver, assignKey],
+        )
+        assertEq(assignedId, jobId, 'delivery_assign_driver returned job ID')
+
+        // Replay returns same ID
+        const replayAssign = await one(
+          `select delivery_assign_driver($1, $2, $3, 'Ba 3 Cha 8821', 'Ramesh Thapa', '+977 9813009988')`,
+          [jobId, U.Driver, assignKey],
+        )
+        assertEq(replayAssign, jobId, 'replaying delivery_assign_driver returns same job ID')
+      })
+
+      // 5. Driver CAN now read the assigned job, but no money columns exist on delivery_jobs
+      await as('Driver', async () => {
+        const rows = (await q(`select id, status, vehicle, rider_name from delivery_jobs where id = $1`, [jobId])).rows
+        assertEq(rows.length, 1, 'Driver can read assigned job')
+        assertEq(rows[0].status, 'Scheduled', 'status is Scheduled upon assignment')
+      })
+
+      // 6. Scheduled -> Ready requires outbound booking to be Packed or On Rent
+      // In 'Booked' stage, transition should fail
+      const readyKey = crypto.randomUUID()
+      await as('Warehouse', async () => {
+        await db.exec('savepoint sp_ready_probe;')
+        try {
+          await refuses(
+            'Transition to Ready refused before booking is Packed',
+            `select delivery_transition_job($1, 'Scheduled', 'Ready', $2)`,
+            [jobId, readyKey],
+            /Packing must finish before outbound dispatch/i,
+          )
+        } finally {
+          await db.exec('rollback to savepoint sp_ready_probe;')
+        }
+      })
+
+      // Advance booking stage to 'Packed'
+      await as('Warehouse', async () => {
+        const packSessionId = crypto.randomUUID()
+        await q(
+          `insert into operation_sessions (id, client_uuid, booking_id, operation, session_no, state, warehouse_staff_id, created_by)
+           values ($1, gen_random_uuid(), $2, 'Packing', 1, 'In Progress', $3, $3)`,
+          [packSessionId, testBookingId, U.Warehouse],
+        )
+        await q(
+          `insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at)
+           values (gen_random_uuid(), $1, $2, 'Booked', 'Packed', $3, 'Warehouse', now())`,
+          [testBookingId, BRANCH, U.Warehouse],
+        )
+      })
+
+      // Warehouse marks delivery job Ready
+      await as('Warehouse', async () => {
+        const readyId = await one(
+          `select delivery_transition_job($1, 'Scheduled', 'Ready', $2)`,
+          [jobId, readyKey],
+        )
+        assertEq(readyId, jobId, 'transition to Ready succeeded')
+      })
+
+      // 7. Driver transitions Ready -> In Transit
+      const transitKey = crypto.randomUUID()
+      await as('Driver', async () => {
+        const transitId = await one(
+          `select delivery_transition_job($1, 'Ready', 'In Transit', $2)`,
+          [jobId, transitKey],
+        )
+        assertEq(transitId, jobId, 'transition to In Transit succeeded')
+      })
+
+      // 8. In Transit -> Delivered requires recipient name >= 2 chars
+      const deliverKey = crypto.randomUUID()
+      await as('Driver', async () => {
+        await db.exec('savepoint sp_deliver_probe;')
+        try {
+          await refuses(
+            'Transition to Delivered refused without recipient name',
+            `select delivery_transition_job($1, 'In Transit', 'Delivered', $2, 'A')`,
+            [jobId, deliverKey],
+            /Delivery receipt requires the recipient name/i,
+          )
+        } finally {
+          await db.exec('rollback to savepoint sp_deliver_probe;')
+        }
+
+        // Succeeds with valid recipient
+        const deliveredId = await one(
+          `select delivery_transition_job($1, 'In Transit', 'Delivered', $2, 'Anil Gurung')`,
+          [jobId, deliverKey],
+        )
+        assertEq(deliveredId, jobId, 'transition to Delivered succeeded')
+      })
+
+      // 9. Delivered is a terminal state - cannot transition to Failed or anything else
+      const failKey = crypto.randomUUID()
+      await as('Coordinator', async () => {
+        await db.exec('savepoint sp_fail_probe;')
+        try {
+          await refuses(
+            'Transition from Delivered is refused (terminal state)',
+            `select delivery_transition_job($1, 'Delivered', 'Failed', $2, null, 'Attempting to fail a delivered job')`,
+            [jobId, failKey],
+            /This delivery transition is not permitted/i,
+          )
+        } finally {
+          await db.exec('rollback to savepoint sp_fail_probe;')
+        }
+      })
+
+      // 10. Audit events and event receipts recorded
+      await asOwnerOfTheDatabase(async () => {
+        const events = (await q(`select event_kind, next_status from delivery_job_events where job_id = $1 order by created_at asc`, [jobId])).rows
+        assert(events.length >= 3, 'delivery_job_events recorded transitions')
+        assertEq(events[0].event_kind, 'Created')
+        assertEq(events[events.length - 1].next_status, 'Delivered')
+      })
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L46',
+  title: 'Delivery zones CRUD and permission matrix (T4-07, migration 0189)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      // 1. Coordinator can create a delivery zone
+      const zoneId = await as('Coordinator', async () => {
+        const id = await one(`select create_delivery_zone($1, $2, $3)`, [
+          'Test Valley Zone',
+          'Test zone for lifecycle',
+          350000,
+        ])
+        return id
+      })
+      assert(zoneId, 'create_delivery_zone returns a zone ID')
+
+      // 2. Zone appears in list for all staff roles
+      await as('Warehouse', async () => {
+        const zones = await q(`select * from list_delivery_zones(50, 0, true)`)
+        const found = zones.rows.find((z) => z.id === zoneId)
+        assert(found, 'Warehouse can read active zones')
+        assertEq(found.name, 'Test Valley Zone', 'Zone name matches')
+        assertEq(Number(found.fee_paisa), 350000, 'Zone fee in paisa')
+      })
+
+      // 3. Coordinator can update the zone
+      await as('Coordinator', async () => {
+        const updated = await one(`select update_delivery_zone($1, $2, $3, $4, $5)`, [
+          zoneId,
+          'Test Valley Zone Updated',
+          'Updated description',
+          400000,
+          true,
+        ])
+        assertEq(updated, true, 'update_delivery_zone returns true')
+      })
+
+      // 4. Verify update reflected
+      await as('Manager', async () => {
+        const zone = await one(`select name, fee_paisa from delivery_zones where id = $1`, [zoneId])
+        assertEq(zone.name, 'Test Valley Zone Updated', 'Zone name updated')
+        assertEq(Number(zone.fee_paisa), 400000, 'Zone fee updated')
+      })
+
+      // 5. Warehouse CANNOT create a zone (insufficient privilege)
+      await as('Warehouse', async () => {
+        await q('savepoint wh_create_probe')
+        try {
+          await refuses(
+            'Warehouse cannot create delivery zones',
+            `select create_delivery_zone('WH Zone', 'Should fail', 300000)`,
+            /Only Coordinator\+ can create delivery zones/i,
+          )
+        } finally {
+          await q('rollback to savepoint wh_create_probe')
+          await q('release savepoint wh_create_probe')
+        }
+      })
+
+      // 6. Client CANNOT read zones (RLS denies)
+      await as('Client', async () => {
+        await q('savepoint client_read_probe')
+        try {
+          await refuses(
+            'Client cannot read delivery zones',
+            `select * from list_delivery_zones(50, 0, true)`,
+            /Only staff can list delivery zones/i,
+          )
+        } finally {
+          await q('rollback to savepoint client_read_probe')
+          await q('release savepoint client_read_probe')
+        }
+      })
+
+      // 7. anon CANNOT execute RPCs
+      await as('Anon', async () => {
+        await q('savepoint anon_probe')
+        try {
+          await refuses(
+            'anon cannot list delivery zones',
+            `select * from list_delivery_zones(50, 0, true)`,
+            /insufficient_privilege|permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint anon_probe')
+          await q('release savepoint anon_probe')
+        }
+      })
+
+      // 8. Deactivate (soft delete) by Coordinator
+      await as('Coordinator', async () => {
+        const deactivated = await one(`select deactivate_delivery_zone($1)`, [zoneId])
+        assertEq(deactivated, true, 'deactivate_delivery_zone returns true')
+      })
+
+      // 9. Deactivated zone not in active-only list
+      await as('Coordinator', async () => {
+        const zones = await q(`select * from list_delivery_zones(50, 0, true)`)
+        const found = zones.rows.find((z) => z.id === zoneId)
+        assert(!found, 'Deactivated zone excluded from active-only list')
+      })
+
+      // 10. Deactivated zone still visible with activeOnly=false
+      await as('Manager', async () => {
+        const zones = await q(`select * from list_delivery_zones(50, 0, false)`)
+        const found = zones.rows.find((z) => z.id === zoneId)
+        assert(found, 'Deactivated zone visible with activeOnly=false')
+        assertEq(found.is_active, false, 'Zone is_active is false')
+      })
+
+      // 11. get_delivery_zone_fee works for active zone
+      await as('Coordinator', async () => {
+        const feeZoneId = await one(`select create_delivery_zone($1, $2, $3)`, [
+          'Fee Lookup Zone',
+          'For fee lookup test',
+          500000,
+        ])
+        const fee = await one(`select get_delivery_zone_fee($1)`, ['Fee Lookup Zone'])
+        assertEq(Number(fee), 500000, 'get_delivery_zone_fee returns correct fee')
+      })
+
+      // 12. get_delivery_zone_fee fails for inactive zone
+      await as('Coordinator', async () => {
+        await q('savepoint fee_inactive_probe')
+        try {
+          await refuses(
+            'get_delivery_zone_fee fails for inactive zone',
+            `select get_delivery_zone_fee('Test Valley Zone Updated')`,
+            /Zone not found or inactive/i,
+          )
+        } finally {
+          await q('rollback to savepoint fee_inactive_probe')
+          await q('release savepoint fee_inactive_probe')
+        }
+      })
+
+      // 13. Default Kathmandu zones seeded
+      await as('Coordinator', async () => {
+        const zones = await q(`select name from delivery_zones where is_active = true order by name`)
+        const names = zones.rows.map((r) => r.name)
+        const expectedZones = ['Bhaktapur', 'Boudha', 'Kirtipur', 'Outside Valley', 'Patan', 'Ring Road', 'Swoyambhu']
+        for (const expected of expectedZones) {
+          assert(names.includes(expected), `Default zone "${expected}" is seeded and active`)
+        }
+      })
+    })
+  },
+})
+
 /* ── Run ──────────────────────────────────────────────────────────────────── */
 
 await seed()

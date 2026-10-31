@@ -188,7 +188,7 @@ product "similar" grouping (category + subcategory, or a manual "similar to" lin
 each; the sub-rent line carries supplier and cost (money roles only).
 **Needs** — none.
 
-### T3-14 · Draft invoice at Confirm, number on full payment            status: todo · size: L · lane C · [go-live]
+### T3-14 · Draft invoice at Confirm, number on full payment            status: doing · size: L · lane C · [go-live]
 **What** — 1) **Confirm creates a Draft invoice** (no number) for the booking automatically (W15).
 2) While Draft it **follows the booking** — line, date, discount, crew, delivery, late-fee and damage
 changes regenerate its lines and totals (same engine as the booking; Law 1). 3) It gets its **final

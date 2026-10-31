@@ -57,6 +57,7 @@ const CasesReport       = lazy(() => import('./modules/reports/CasesReport'))
 const CustomReport      = lazy(() => import('./modules/reports/CustomReport'))
 
 const SalesVatReports   = lazy(() => import('./modules/reports/SalesVatReports'))
+const CrewTdsReport    = lazy(() => import('./modules/reports/CrewTdsReport'))
 const ActivityReports   = lazy(() => import('./modules/reports/ActivityReports'))
 const BackupRestore     = lazy(() => import('./modules/admin/BackupRestore'))
 const AuditSettings     = lazy(() => import('./modules/admin/AuditSettings'))
@@ -68,6 +69,7 @@ const WorkingCapital    = lazy(() => import('./modules/reports/WorkingCapitalRep
 const Inventory         = lazy(() => import('./modules/inventory/Inventory'))
 const BundleDetail      = lazy(() => import('./modules/inventory/BundleDetail'))
 const AssetDetail       = lazy(() => import('./modules/inventory/AssetDetail'))
+const MaintenanceJobDetail = lazy(() => import('./modules/inventory/MaintenanceJobDetail'))
 const PurchaseRequests  = lazy(() => import('./modules/inventory/PurchaseRequests'))
 const Calendar          = lazy(() => import('./modules/calendar/Calendar'))
 const OperationsQueues  = lazy(() => import('./modules/operations/OperationsQueues'))
@@ -360,6 +362,16 @@ export default function App() {
           element={
             <Shell crumbs={[{ label: 'Inventory', to: '/inventory' }, { label: 'Purchase Requests' }]} search="Search request, item, supplier…">
               <PurchaseRequests />
+            </Shell>
+          }
+        />
+
+        <Route path="/inventory/maintenance" element={<Navigate to="/inventory?tab=maintenance" replace />} />
+        <Route
+          path="/inventory/maintenance/:id"
+          element={
+            <Shell crumbs={[{ label: 'Inventory', to: '/inventory' }, { label: 'Maintenance', to: '/inventory?tab=maintenance' }, { label: 'Maintenance Job' }]} search="Search equipment, serial, SKU, category…">
+              <MaintenanceJobDetail />
             </Shell>
           }
         />
@@ -687,6 +699,15 @@ export default function App() {
           element={
             <Shell crumbs={[{ label: 'Finance', to: '/finance' }, { label: 'Reports', to: '/finance?tab=reports' }, { label: 'VAT / Tax Reports' }]}>
               <SalesVatReports />
+            </Shell>
+          }
+        />
+
+        <Route
+          path="/reports/tds"
+          element={
+            <Shell crumbs={[{ label: 'Finance', to: '/finance' }, { label: 'Reports', to: '/finance?tab=reports' }, { label: 'Crew TDS Reports' }]}>
+              <CrewTdsReport />
             </Shell>
           }
         />

@@ -6,12 +6,14 @@ import { supabase } from '../../lib/supabase';
 export type CompleteMaintenanceInput = {
   /** `maintenance_records.id` (UUID) or `record_no` (e.g. 'MNT-2026-0001'). */
   id: string;
-  clientUuid?: string;
-  findings?: string;
-  actionsTaken?: string;
-  cost?: number;
-  completedAt?: string;
-  status?: 'Completed' | 'Cancelled';
+  clientUuid?: string | undefined;
+  note?: string | undefined;
+  findings?: string | undefined;
+  actionsTaken?: string | undefined;
+  cost?: number | undefined;
+  completedAt?: string | undefined;
+  status?: 'Completed' | 'Cancelled' | undefined;
+  unitCondition?: 'Good' | 'Excellent' | 'Fair' | undefined;
 };
 
 export type CompleteMaintenanceResult = {
@@ -34,6 +36,10 @@ export const completeMaintenanceConfig: ActionConfig<CompleteMaintenanceInput, C
     }
     if (input.cost !== undefined && input.cost < 0) {
       throw new Error('Cost cannot be negative.');
+    }
+    const note = input.actionsTaken?.trim() || input.note?.trim();
+    if (!note || note.length < 3) {
+      throw new Error('A note/actions taken (minimum 3 characters) is required to close a maintenance job.');
     }
   },
 
@@ -71,19 +77,58 @@ export const completeMaintenanceConfig: ActionConfig<CompleteMaintenanceInput, C
     const actionUuid = input.clientUuid || generateClientUuid();
     const finalStatus = input.status || 'Completed';
     const completedAt = input.completedAt || new Date().toISOString();
+    const note = (input.actionsTaken?.trim() || input.note?.trim())!;
 
+    // Call server RPC if available (Ruling D4: close_maintenance_job marks damage repaired and recomputes status)
+    if (typeof supabase.rpc === 'function') {
+      const { data: rpcData, error: rpcError } = await supabase.rpc('close_maintenance_job', {
+        p_maintenance_id: resolvedId,
+        p_note: note,
+        p_findings: input.findings?.trim() || null,
+        p_actions_taken: note,
+        p_cost: input.cost !== undefined ? Number(input.cost) : null,
+        p_unit_condition: input.unitCondition ?? 'Good',
+        p_client_uuid: actionUuid,
+      });
+
+      if (!rpcError && rpcData) {
+        const events = [
+          {
+            type: EVENT_TYPES.MAINTENANCE_COMPLETED,
+            payload: {
+              id: resolvedId,
+              recordNo,
+              status: finalStatus,
+              completedAt,
+              timestamp: new Date().toISOString(),
+              userId: ctx.userId,
+            },
+          },
+        ];
+
+        return {
+          result: {
+            success: true,
+            id: resolvedId,
+            recordNo,
+            status: finalStatus,
+          },
+          events,
+        };
+      }
+    }
+
+    // Direct fallback path for environments without RPC
     const patch: Record<string, unknown> = {
       status: finalStatus,
       completed_at: completedAt,
+      actions_taken: note,
       updated_at: new Date().toISOString(),
       updated_by: ctx.userId,
     };
 
     if (input.findings !== undefined) {
       patch.findings = input.findings.trim() || null;
-    }
-    if (input.actionsTaken !== undefined) {
-      patch.actions_taken = input.actionsTaken.trim() || null;
     }
     if (input.cost !== undefined) {
       patch.cost = Number(input.cost);

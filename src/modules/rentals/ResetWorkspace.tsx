@@ -48,6 +48,9 @@ import { fetchStaffDirectory } from '../../lib/queries/staff'
 import type { QueueState, ProblemState } from '../../lib/queries/reset'
 import { CompactButton, TapCheckbox, TouchTarget } from '../../components/ui/TouchTarget'
 import { formatGateError } from '../../lib/gates'
+import { FloorOfflineStatus } from '../../components/ui/FloorOfflineStatus'
+import { recordFloorScanEvent } from '../../lib/floorScanStorage'
+import { useBarcodeBurst } from '../../lib/barcodeBurst'
 
 /**
  * **Reset Workspace** — `04 Operations/Cleaning & Reset Workflow.md` v3.1
@@ -196,6 +199,7 @@ interface RowRec {
   cleanedByUserId?: string | undefined
   qcBy?: string | undefined
   qcByUserId?: string | undefined
+  qcSelfChecked?: boolean | undefined
   qcSkipReason?: string | undefined
   qcFailReason?: string | undefined
   problem: ProblemState
@@ -375,22 +379,44 @@ export default function ResetWorkspace({
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [filter, setFilter] = useState<(typeof RESET_FILTERS)[number]>('Needs action')
   const [query, setQuery] = useState('')
+
   const [problemDraft, setProblemDraft] = useState<Record<string, ProblemDraft>>({})
   /*
    * RS-12 — there is no `qcByDraft` any more. It held a typed NAME per row, and
    * a name is not something this screen can record: see `passQc` below.
    */
   const [qcReason, setQcReason] = useState<Record<string, string>>({})
+  const [aloneOnShift, setAloneOnShift] = useState<Record<string, boolean>>({})
   const [batchQcReason, setBatchQcReason] = useState('')
+  const [batchAloneOnShift, setBatchAloneOnShift] = useState<boolean>(false)
   /** Law 12 — a dispatch failure is inline and persistent, never a toast. */
   const [dispatchError, setDispatchError] = useState<string | null>(null)
   const [dispatching, setDispatching] = useState(false)
+  const barcodeInputRef = useRef<HTMLInputElement>(null)
+  useBarcodeBurst({
+    onScan: (code) => setQuery(code.trim()),
+    enabled: Boolean(floor) && !floorLoading && floorError === null && !dispatching,
+    targetInputRef: barcodeInputRef,
+    cooldownMs: 1000,
+  })
   /**
    * Law 8 — the idempotency key for THIS reset session, minted when the
    * booking loads (the point the user starts acting), not at send time. A
    * double-press replays the same key and resolves to the first write.
    */
   const [completionKey, setCompletionKey] = useState(() => newClientUuid())
+  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true)
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
 
   const [staffList, setStaffList] = useState<Array<{ id: string; name: string; role: string }>>([])
   const [selectedCleanerId, setSelectedCleanerId] = useState<string>('')
@@ -741,6 +767,16 @@ export default function ResetWorkspace({
       return
     }
     setDispatchError(null)
+    cleanableRows.forEach((r) => {
+      void recordFloorScanEvent({
+        barcode: r.serial ?? r.name,
+        codeType: 'manual_entry',
+        context: 'reset',
+        bookingId: floor?.id,
+        actorId: user?.id,
+        result: 'accepted',
+      })
+    })
     setMarks((prev) => {
       const next = { ...prev }
       cleanableRows.forEach((r) => {
@@ -767,11 +803,12 @@ export default function ResetWorkspace({
   const batchRequiresSelfCheck = qcEligibleRows.some(
     (r) => (user && recOf(r.key).cleanedByUserId === user.id) || recOf(r.key).cleanedBy === actor,
   )
-  const batchQcBlocked = !actor || (batchRequiresSelfCheck && batchQcReason.trim().length < 5)
+  const batchQcBlocked = !actor || (batchRequiresSelfCheck && !batchAloneOnShift && batchQcReason.trim().length < 5)
 
   const batchPassQc = () => {
     if (!actor || qcEligibleRows.length === 0 || batchQcBlocked) return
     const reason = batchQcReason.trim()
+    const isAlone = Boolean(batchAloneOnShift)
 
     setMarks((prev) => {
       const next = { ...prev }
@@ -783,7 +820,8 @@ export default function ResetWorkspace({
           queueState: 'Ready',
           qcBy: actor,
           qcByUserId: user?.id,
-          qcSkipReason: selfCheck ? reason : undefined,
+          qcSelfChecked: (selfCheck && isAlone) ? true : undefined,
+          qcSkipReason: (selfCheck && !isAlone) ? reason : (reason || undefined),
         }
       })
       return next
@@ -872,6 +910,16 @@ export default function ResetWorkspace({
       return
     }
     setDispatchError(null)
+    selRows.forEach((r) => {
+      void recordFloorScanEvent({
+        barcode: r.serial ?? r.name,
+        codeType: 'manual_entry',
+        context: 'reset',
+        bookingId: floor?.id,
+        actorId: user?.id,
+        result: 'accepted',
+      })
+    })
     const allDone = selRows.every((r) => recOf(r.key).ticks.includes(task))
     setMarks((prev) => {
       const next = { ...prev }
@@ -894,6 +942,17 @@ export default function ResetWorkspace({
       return
     }
     setDispatchError(null)
+    const row = rows.find((r) => r.key === key)
+    if (row) {
+      void recordFloorScanEvent({
+        barcode: row.serial ?? row.name,
+        codeType: 'manual_entry',
+        context: 'reset',
+        bookingId: floor?.id,
+        actorId: user?.id,
+        result: 'accepted',
+      })
+    }
     const rec = recOf(key)
     const ticks = rec.ticks.includes(task) ? rec.ticks.filter((t) => t !== task) : [...rec.ticks, task]
     setRec(key, {
@@ -1002,10 +1061,18 @@ export default function ResetWorkspace({
     }
     const rec = recOf(key)
     const reason = qcReason[key] ?? ''
+    const isAlone = Boolean(aloneOnShift[key])
     const selfCheck = (user && rec.cleanedByUserId === user.id) || actor === rec.cleanedBy
-    if (selfCheck && reason.trim().length < 5) return
+    if (selfCheck && !isAlone && reason.trim().length < 5) return
     setDispatchError(null)
-    setRec(key, { queueState: 'Ready', qcBy: actor, qcByUserId: user?.id, qcSkipReason: selfCheck ? reason.trim() : undefined })
+    const isSelfChecked = selfCheck && isAlone
+    setRec(key, {
+      queueState: 'Ready',
+      qcBy: actor,
+      qcByUserId: user?.id,
+      qcSelfChecked: isSelfChecked || undefined,
+      qcSkipReason: (selfCheck && !isSelfChecked) ? reason.trim() : (reason.trim() || undefined),
+    })
   }
   const failQc = (key: string) => {
     const reason = qcReason[key] ?? ''
@@ -1058,11 +1125,14 @@ export default function ResetWorkspace({
       const skipReason = rec.qcSkipReason?.trim() ?? ''
       const failReason = rec.qcFailReason?.trim() ?? ''
       const problemReason = rec.problemReason?.trim() ?? ''
+      const isSelfChecked = Boolean(rec.qcSelfChecked)
       return {
         ...(r.assetId !== null ? { unitId: r.assetId } : { lineId: r.lineId }),
         ...(cleanedBy === undefined ? {} : { cleanedBy }),
         ...(qcBy === undefined ? {} : { qcBy }),
-        ...(skipReason === '' ? {} : { qcSkipped: true, qcSkipReason: skipReason }),
+        ...(isSelfChecked ? { qcSelfChecked: true } : {}),
+        ...(!isSelfChecked && skipReason !== '' ? { qcSkipped: true, qcSkipReason: skipReason } : {}),
+        ...(isSelfChecked && skipReason !== '' ? { qcSkipReason: skipReason } : {}),
         ...(failReason === '' ? {} : { qcFailReason: failReason }),
         ...(rec.problem === 'No Problems'
           ? {}
@@ -1127,8 +1197,8 @@ export default function ResetWorkspace({
   }
   useEffect(() => {
     onRegisterActions?.({
-      canComplete,
-      blockedReason,
+      canComplete: isOnline && canComplete,
+      blockedReason: !isOnline ? 'Needs connection to complete' : blockedReason,
       dispatching,
       complete: () => completeRef.current(),
       isDirty,
@@ -1139,7 +1209,7 @@ export default function ResetWorkspace({
       progress: { done: readyUnits, total: totalUnits },
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onRegisterActions, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget, persistedMarks, readyUnits, totalUnits])
+  }, [onRegisterActions, isOnline, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget, persistedMarks, readyUnits, totalUnits])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */
 
@@ -1357,6 +1427,7 @@ export default function ResetWorkspace({
                   }}
                 />
                 <input
+                  ref={barcodeInputRef}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search equipment, serial…"
@@ -1423,6 +1494,7 @@ export default function ResetWorkspace({
 
               {/* ── centre — the queue, over the real rows ──────────────────── */}
               <div style={{ minWidth: 0 }}>
+                <FloorOfflineStatus verb="reset" />
                 <Card
                   title="Reset Queue"
                   bodyStyle={{ padding: 0 }}
@@ -1520,6 +1592,8 @@ export default function ResetWorkspace({
                                   userId={user?.id}
                                   reason={qcReason[r.key] ?? ''}
                                   onReasonChange={(v) => setQcReason((pv) => ({ ...pv, [r.key]: v }))}
+                                  aloneOnShift={Boolean(aloneOnShift[r.key])}
+                                  onAloneOnShiftChange={(v) => setAloneOnShift((pv) => ({ ...pv, [r.key]: v }))}
                                   onPass={() => passQc(r.key)}
                                   onFail={() => failQc(r.key)}
                                 />
@@ -1645,9 +1719,11 @@ export default function ResetWorkspace({
                                     <QcRowControls
                                       rec={rec}
                                       actor={actor}
-                                  userId={user?.id}
+                                      userId={user?.id}
                                       reason={qcReason[r.key] ?? ''}
                                       onReasonChange={(v) => setQcReason((pv) => ({ ...pv, [r.key]: v }))}
+                                      aloneOnShift={Boolean(aloneOnShift[r.key])}
+                                      onAloneOnShiftChange={(v) => setAloneOnShift((pv) => ({ ...pv, [r.key]: v }))}
                                       onPass={() => passQc(r.key)}
                                       onFail={() => failQc(r.key)}
                                     />
@@ -2027,10 +2103,31 @@ export default function ResetWorkspace({
                             QC VERDICT FOR {qcEligibleRows.length} SELECTED ITEM{qcEligibleRows.length === 1 ? '' : 'S'}
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {batchRequiresSelfCheck && (
+                              <label
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 6,
+                                  fontSize: 'var(--t-meta)',
+                                  fontWeight: 600,
+                                  color: batchAloneOnShift ? 'var(--st-ready-fg, var(--text))' : 'var(--text)',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={batchAloneOnShift}
+                                  onChange={(e) => setBatchAloneOnShift(e.target.checked)}
+                                  aria-label="Batch: I am alone on shift"
+                                />
+                                <span>I am alone on shift (W43, L7)</span>
+                              </label>
+                            )}
                             <input
                               value={batchQcReason}
                               onChange={(e) => setBatchQcReason(e.target.value)}
-                              placeholder="Self-QC reason (min 5 chars)"
+                              placeholder={batchAloneOnShift ? "Self-QC note / reason (optional)" : "Self-QC reason (min 5 chars)"}
                               aria-label="Batch QC reason"
                               style={{ minHeight: 'var(--tap)', padding: '0 8px', borderRadius: 'var(--r-xs)', border: '1px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontFamily: 'inherit' }}
                             />
@@ -2360,16 +2457,21 @@ export default function ResetWorkspace({
                 <span style={{ marginLeft: 'auto' }}>
                   <button
                     type="button"
-                    disabled={!canComplete}
+                    disabled={!isOnline || !canComplete || dispatching}
                     onClick={completeResetJob}
+                    title={!isOnline ? 'Custody transitions require an internet connection (R-40)' : undefined}
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 7, minHeight: 56, padding: '0 16px', borderRadius: 'var(--r-btn)',
-                      fontSize: 'var(--t-ui)', fontWeight: 600, fontFamily: 'inherit', cursor: canComplete ? 'pointer' : 'not-allowed',
-                      ...(canComplete ? BLUE_PRIMARY : { background: 'var(--card2)', color: 'var(--muted)', border: '1px solid var(--border)' }),
+                      fontSize: 'var(--t-ui)', fontWeight: 600, fontFamily: 'inherit', cursor: isOnline && canComplete ? 'pointer' : 'not-allowed',
+                      ...(isOnline && canComplete ? BLUE_PRIMARY : { background: 'var(--card2)', color: 'var(--muted)', border: '1px solid var(--border)' }),
                     }}
                   >
-                    <Icon name="checklist" size={15} />
-                    {dispatching ? 'Recording…' : 'Complete Reset'}
+                    <Icon name={isOnline ? 'checklist' : 'alert_triangle'} size={15} />
+                    {dispatching
+                      ? 'Recording…'
+                      : !isOnline
+                      ? 'Needs connection to complete'
+                      : 'Complete Reset'}
                   </button>
                 </span>
               </div>
@@ -2430,6 +2532,8 @@ function QcRowControls({
   userId,
   reason,
   onReasonChange,
+  aloneOnShift,
+  onAloneOnShiftChange,
   onPass,
   onFail,
 }: {
@@ -2439,29 +2543,52 @@ function QcRowControls({
   userId?: string | undefined
   reason: string
   onReasonChange: (v: string) => void
+  aloneOnShift: boolean
+  onAloneOnShiftChange: (v: boolean) => void
   onPass: () => void
   onFail: () => void
 }) {
   const selfCheck = actor !== null && ((userId && rec.cleanedByUserId === userId) || actor === rec.cleanedBy)
-  const blocked = actor === null || (selfCheck && reason.trim().length < 5)
+  const isAlone = aloneOnShift
+  const blocked = actor === null || (selfCheck && !isAlone && reason.trim().length < 5)
   const failBlocked = reason.trim().length < 5
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-xs)' }}>
-      {/* RS-12 — the identity this screen can actually write, named before the
-          verdict is given rather than discovered after dispatch. */}
+      {/* RS-12 & T2-13 — the identity and shift state this screen actually writes */}
       <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)', lineHeight: 1.3 }}>
         {actor === null
           ? 'Nobody is signed in, so a QC pass cannot be recorded against anyone.'
           : selfCheck
-            ? `QC will be recorded as ${actor}. Only the signed-in operator can be recorded — there is no staff picker yet, so a check by a second person cannot be attributed here.`
+            ? isAlone
+              ? `QC will be recorded as ${actor} (Self-QC · alone on shift · audited, W43/L7).`
+              : `QC will be recorded as ${actor}. You cleaned this item: there is no staff picker yet, so a second person is required (0003:887), or confirm you are alone on shift (W43, L7).`
             : `QC will be recorded as ${actor} (Verified 2nd-party inspection; cleaned by ${rec.cleanedBy ?? 'colleague'}).`}
       </span>
       {selfCheck && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 'var(--t-meta)',
+              fontWeight: 600,
+              color: isAlone ? 'var(--st-ready-fg, var(--text))' : 'var(--text)',
+              cursor: 'pointer',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={isAlone}
+              onChange={(e) => onAloneOnShiftChange(e.target.checked)}
+              aria-label="I am alone on shift"
+            />
+            <span>I am alone on shift (W43, L7)</span>
+          </label>
           <input
             value={reason}
             onChange={(e) => onReasonChange(e.target.value)}
-            placeholder="Self-QC reason, audited (min 5)"
+            placeholder={isAlone ? "Self-QC note / reason (optional)" : "Self-QC reason, audited (min 5)"}
             aria-label="Reason for self-performed QC"
             style={{ minHeight: 'var(--tap)', padding: '0 8px', borderRadius: 'var(--r-xs)', border: '1px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontFamily: 'inherit' }}
           />
@@ -2489,7 +2616,7 @@ function QcRowControls({
           </div>
           {blocked && (
             <span style={{ fontSize: '11px', color: 'var(--warn-text, #f59e0b)' }}>
-              Enter reason (min 5 chars) or tap a preset to enable Pass
+              Tick "I am alone on shift" or enter reason (min 5 chars) to enable Pass
             </span>
           )}
         </div>

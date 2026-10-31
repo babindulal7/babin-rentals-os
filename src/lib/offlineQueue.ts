@@ -118,6 +118,32 @@ function dedupeKey(table: string, action: QueuedMutation['action'], clientUuid: 
 
 export const db = new OfflineQueueDB()
 
+type QueueChangeListener = () => void
+const queueChangeListeners = new Set<QueueChangeListener>()
+
+/**
+ * Subscribes to outbox mutation changes (add, resolve, fail, drain).
+ */
+export function onQueueChange(listener: QueueChangeListener): () => void {
+  queueChangeListeners.add(listener)
+  return () => {
+    queueChangeListeners.delete(listener)
+  }
+}
+
+/**
+ * Notifies all active queue listeners of outbox mutation updates.
+ */
+export function notifyQueueChange(): void {
+  for (const listener of queueChangeListeners) {
+    try {
+      listener()
+    } catch {
+      // Ignore listener errors
+    }
+  }
+}
+
 /**
  * Enqueues a mutation to be synced later.
  *
@@ -165,6 +191,7 @@ export async function enqueueMutation(
       timestamp: new Date().toISOString(),
       status: 'pending'
     })
+    notifyQueueChange()
     return true
   })
 }
@@ -296,6 +323,7 @@ export async function markMutationSyncing(id: number) {
 export async function markMutationFailed(id: number, error: string) {
   if (!canUseOfflineQueue()) return
   await db.mutations.update(id, { status: 'failed', error })
+  notifyQueueChange()
 }
 
 /**
@@ -304,6 +332,7 @@ export async function markMutationFailed(id: number, error: string) {
 export async function resolveMutation(id: number) {
   if (!canUseOfflineQueue()) return
   await db.mutations.delete(id)
+  notifyQueueChange()
 }
 
 /**
@@ -444,6 +473,7 @@ export async function drainQueue(): Promise<void> {
     })
   } finally {
     draining = false
+    notifyQueueChange()
   }
 }
 

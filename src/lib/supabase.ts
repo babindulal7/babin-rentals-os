@@ -39,7 +39,9 @@ import { getSecureAuthStorage } from './secureStorage'
  *
  * Default is `live` so a production build can never ship mock data by omission.
  */
-export const IS_MOCK = import.meta.env['VITE_DATA_SOURCE'] === 'mock'
+export const IS_MOCK =
+  import.meta.env['VITE_DATA_SOURCE'] === 'mock' ||
+  import.meta.env.MODE === 'mock'
 
 function createLiveClient() {
   const url = import.meta.env['VITE_SUPABASE_URL']

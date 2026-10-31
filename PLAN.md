@@ -2,7 +2,7 @@
 
 **Version 1.3 · 26 Oct 2026 (9 Kartik 2083) · Owner: Babin Dulal · Status: ACTIVE**
 
-*v1.3 (evening): merges the second workflow package (v3: the fuller CI-off check list, T0-10/T0-11, the richer T2-16, T2-17, T9-09, the usability guide) with the v2 lane choices; T2-02 to T2-05 and T2-07 are built on `main`. Babin asked Claude to choose who does what, so [L12](RULINGS-2026-10-26-workflow.md) moves T8 to Codex-1 and keeps two writing cards with Claude.*
+*v1.3 (evening): merges the second workflow package (v3: the fuller CI-off check list, T0-10/T0-11, the richer evidence card (T2-18), T2-17, T9-09, the usability guide) with the v2 lane choices; T2-02 to T2-05 and T2-07 are built on `main`. Babin asked Claude to choose who does what, so [L12](RULINGS-2026-10-26-workflow.md) moves T8 to Codex-1 and keeps two writing cards with Claude.*
 
 *v1.1 (afternoon): Babin's workflow round — [`RULINGS-2026-10-26-workflow.md`](RULINGS-2026-10-26-workflow.md) W1–W91 —
 adds 32 cards to T0–T9, sets the agent lanes (Codex-1 · Gemini · Codex-2, Claude reviews), turns CI off
@@ -82,7 +82,7 @@ What stops go-live today:
    accepted on a hosted project. Never driven on a physical phone, iPad, scanner or offline.
 2. **The floor loop is not finished live.** Camera upload (T2-01), drawn signatures (T2-02), the
    ID-card deposit (T2-03), the Gate 1 override (T2-04) and Technician floor verbs (T2-05) are built
-   on `main` (26 Oct) but not on staging or live; still open: W27 photo rules (T2-16), collectors and
+   on `main` (26 Oct) but not on staging or live; still open: evidence leftovers (T2-18), collectors and
    ID on file (T2-12), repair clearance, printing, offline.
 3. **About 280 "not built / not tracked yet" markers on ~50 screens** (photo upload, printing,
    delivery, maintenance job detail, warehouse transfers, expense reversal …).
@@ -101,7 +101,7 @@ What stops go-live today:
 |---|---|---|---|---|---|
 | [T0](docs/plans/T0_REPO_HYGIENE.md) | Repo & process hygiene | PR/branch triage, doc truth, test runner default (tests never use live settings), CI off, one gate command | Yes (week 1) | A · Codex-1 + Babin | 4 |
 | [T1](docs/plans/T1_RELEASE.md) | Release & infrastructure | Backup, staging, migrations live, hosting, email DNS, monitoring, switch user by PIN | Yes | A · Codex-1 + Babin | 18 |
-| [T2](docs/plans/T2_FLOOR.md) | Floor loop completion | Camera evidence (first part built 26 Oct; T2-16 finishes it), saving a unit's details, signatures, ID deposit, collectors, overrides, Technician, repair clearance, self-QC, Reset priority, printing, scanner, scan → item card, offline, devices | Yes | A · Codex-1 | 33 (5 built) |
+| [T2](docs/plans/T2_FLOOR.md) | Floor loop completion | Camera evidence (first part built 26 Oct; T2-16 and T2-18 finish it), saving a unit's details, signatures, ID deposit, collectors, overrides, Technician, repair clearance, self-QC, Reset priority, printing, scanner, scan → item card, offline, devices | Yes | A · Codex-1 | 33 (5 built) |
 | [T3](docs/plans/T3_BOOKING_MONEY.md) | Booking & money rules | Re-book, paste a list, fully booked options, deposits, cancellation tiers, non-VAT bills, draft invoice at Confirm, change/extend, share, who owes, find/availability, balances, accountant pack, expenses | Yes | C · Codex-2 | 45 |
 | [T4](docs/plans/T4_SHARED_TOOLS.md) | Shared operations tools | Delivery dispatch, zones, rider links, team notes, shift handover, old-data export | Yes | B · Gemini | 17 |
 | [T5](docs/plans/T5_NOTIFICATIONS.md) | Notifications & email | In-app centre, email service, digest, automatic client emails, payment reminders, pop-ups, approvals, role homes | Yes | B · Gemini | 22 |

@@ -1,5 +1,14 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 28 October 2026: switch-user PIN length (T1-15) — TODO(decision)
+
+- The T1-15 card and ruling W53 say "tap name + **4-digit** PIN"; the shipped security
+  parameter in migration `0066` enforces `^[0-9]{6}$` (6 digits, 5-try lockout).
+- B-1 (stricter wins) recommends **keeping 6** and amending the card's wording; relaxing
+  a shipped security parameter is Babin's explicit word, not an agent's edit.
+- Context: `docs/verification/T1-15_DESIGN.md` (the card's design note, awaiting the
+  Claude check-in review). Either answer unblocks the code sessions.
+
 ## 26 October 2026 (afternoon): the workflow round
 
 Babin answered a second round (~100 questions) on the daily workflow and how the build runs:

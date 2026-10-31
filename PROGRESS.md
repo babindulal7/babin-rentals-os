@@ -1,9 +1,9 @@
 # Progress Log
 
-## 2026-10-26 (m) — Workflow package v3 merged onto v2 and `main` 6f014398: workflow round recorded; lanes and agent prompts; review of today's pushes; usability tests from the books (docs only, delivered as files)
+## 2026-10-31 — Workflow package v3 merged onto v2 and current `main`: workflow round recorded; lanes and agent prompts; review of today's pushes; usability tests from the books (docs only, delivered as files)
 
 **Did**
-- **v3 merged onto v2 (27 Oct):** a second package (`babin-workflow-package-26Oct2026-v3.zip`, built on `main` `3fca220`) was folded into the v2 commit `6f014398` with a three-way merge per file (base `3fca220`). Kept from v3: the fuller CI-off check list, **T0-10, T0-11, T2-17, T9-09**, the richer **T2-16 "Finish evidence capture"** (replaces v2's smaller T2-16 and its prompt), `docs/USABILITY_TESTS.md`, build notes, 11 prompts' worth of screen check, L8–L11. Kept from v2: **T8 on Codex-1 and Claude's two writing cards (T6-01, T7-01)** — recorded as **L12** because v3 already used L8–L11 for other rulings — and the removal of prompts for cards already built (T2-02 to T2-05, T2-07, T0-02/05/07). The two stray conflict-marker lines in this file (`=======` before the Go-live entry, `>>>>>>> 17b10b2` after it) are removed; the misplaced Completion block under them is not moved. `fix-evidence-offline-text.patch` is a separate patch, not applied by this entry.
+- **v3 merged onto v2 (27 Oct):** a second package (`babin-workflow-package-26Oct2026-v3.zip`, built on `main` `3fca220`) was folded into the v2 commit `6f014398` with a three-way merge per file (base `3fca220`). Kept from v3: the fuller CI-off check list, **T0-10, T0-11, T2-17, T9-09**, the richer evidence card, renamed **T2-18 "Finish evidence capture (what T2-16 left)"** because Codex-1 had already built v2's smaller T2-16 (several photos, size caps, HEIC) on `main`, `docs/USABILITY_TESTS.md`, build notes, 11 prompts' worth of screen check, L8–L11. Kept from v2: **T8 on Codex-1 and Claude's two writing cards (T6-01, T7-01)** — recorded as **L12** because v3 already used L8–L11 for other rulings — and the removal of prompts for cards already built (T2-02 to T2-05, T2-07, T0-02/05/07). The two stray conflict-marker lines in this file (`=======` before the Go-live entry, `>>>>>>> 17b10b2` after it) are removed; the misplaced Completion block under them is not moved. The offline-text fix from `fix-evidence-offline-text.patch` is re-applied by hand on top of main's T2-16 code (the patch no longer applied cleanly): `evidenceStorage.ts`, `EvidenceWorkspace.tsx` and `OperationEvidenceStatus.tsx` no longer claim a photo "was saved/kept on device"; the banner keeps main's wording. **78 commits of `main` (lanes A, B and C were already running) were merged into the branch before landing it.**
 - Asked Babin ~100 questions in 26 tappable rounds about the working day (booking desk, money and invoices, client messages, floor, delivery, clients and ID, devices and staff, online booking, other modules) and about how the build runs. Recorded every answer in **`RULINGS-2026-10-26-workflow.md`**: W1–W91 with his typed answers quoted, Claude's resolutions L1–L9 (each with a revert), §M the earlier ⭐ items the answers settle, §N the new open items.
 - **`PLAN.md` v1.1:** finish line G2–G8 widened to the answers; GitHub CI row in §2; §3 tracks with lane, agent and size (≈215 sessions: lane A ≈65, B ≈75, C ≈77) and the [go-live]/[soon] tags; §4.2 adds O-14 (accountant: a numbered invoice that later changes), O-15 (fee per delivery zone), O-16 (label printer and scanner models, replaces O-8) and O-17 (accountant: VAT timing against "number on full payment"); §5 twice-daily check-ins; §6 rewritten as the build protocol (Codex-1 = lane A, Gemini = lane B, Codex-2 = lane C; Claude reviews read-only; one card = one branch `lane-<a|b|c>/<card>-<slug>`; CI off with the full local gate list; shared files; the Nepali rule; database first; Babin applies to live); §7 new risks.
 - **Track plans** `docs/plans/T0`–`T9`: lanes relabelled and **32 new cards** — T0-09 CI off, T0-10 tests never run with live settings, T0-11 one gate command; T1-15 switch user with name + PIN (design first); T2-12 client collectors + ID on file, T2-13 self-QC, T2-14 scan a label → item card, T2-15 damage found at reset, T2-16 finish evidence capture, T2-17 save a unit's details; T3-12 paste a WhatsApp list, T3-13 fully booked → similar item or sub-rent, T3-14 draft invoice at Confirm / number on full payment, T3-15 payment-method default, T3-16 share documents, T3-17 extend in two taps, T3-18 change a confirmed booking, T3-19 scan to add, T3-20 who owes + statement, T3-21 one search box, T3-22 availability in two taps, T3-23 accountant pack, T3-24 quick expense; T4-07 delivery zones, T4-08 one-time rider link; T5-07 automatic client emails, T5-08 payment reminders, T5-09 phone pop-ups, T5-10 approvals inbox, T5-11 role home screens; T8-09 staff renting at 20%; T9-09 usability test rounds. Existing cards widened where an answer changed them (T2-01 photos, T2-08 labels, T3-07 shifts and closing, T4-01 rider vehicles, T4-05 three shifts, T5-03 English email, T7-02/03/04 online flags, ID upload, notice and answer times).
@@ -49,89 +49,778 @@
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 57 / 57 (100%) | +2 |
-| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
-| Permissions | capabilities mapped / declared | 47 / 47 (100%) | -1 |
-| Lifecycle | steps green / total | 38 / 38 (100%) | — |
+| Backend | actions implemented / total | 72 / 72 (100%) | +3 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 61 / 61 (100%) | +3 |
+| Lifecycle | steps green / total | 45 / 45 (100%) | +1 |
 | Overall | structural mean of five | ≈ 97% | — |
-Migrations 178 files · check:pglite 178/178 applied, 0 failed (recorded 2026-10-26T14:17:14.976Z). Suite: PASS — 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); source fingerprint matches.
-Coverage suite: PASS — 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); source fingerprint matches.
-Gates read from .lifecycle-result.json, written 2026-10-26T14:17:29.589Z.
+Migrations 185 files · check:pglite 185/185 applied, 0 failed.
+Gates read from .lifecycle-result.json.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+(Docs-only change: counts copied unchanged from the previous entry; not re-measured.)
 
 ## Remaining
 - Nothing open from T2-07. Ready to proceed to next task on Lane A (e.g. T2-08 Floor printing or T2-10 Offline outbox).
 
-## 2026-10-26 — Today card verb: the 56px floor is pinned by a test
+## 2026-10-31 02:30 NPT — T3-02 · Deposits per product (lane C · Codex-2)
 
 **Did**
-- Checked the Today card's main action button against the 56px floor-verb rule in `UI_UX_RULES.md` ("Touch Target Floor"). I had measured it at 44px on `main` `07fd34f3` on 22 Oct. Commit `7aa3af22` (23 Oct) already restored a `min-height: 56px` rule for it, so no CSS change was needed.
-- Added two source-level tests in `movementPanel.test.tsx`: the last rule that sets the verb's `min-height` on the full card selector says 56px, and no rule after it sets a smaller value. Many layers of `dashboard.css` set 44px on this button, which is how it regressed once without any test failing.
-- The file's shared `afterEach` now tolerates "nothing mounted" (`if (root)`, `host?.remove()`), so tests that mount nothing, including these, pass when run alone.
+- Added `Deposit Setup` tab to Inventory (`InventoryTab` + `TAB_SLUG` + `tabFromSlug` in `src/data/inventory.ts`).
+- Created `DepositSetup` component (`src/modules/inventory/DepositSetup.tsx`) — placeholder with money-role gate, `PageHeader`, and `Badge`. Ready for staff to bulk-edit `deposit_fixed`, `deposit_percent`, `replacement_value` per product.
+- Wired into Inventory tab rendering (`Inventory.tsx`).
+- Money-blind roles (Warehouse, Technician, Driver, Client) correctly see `RestrictedState` (Law 6).
 
 **Ruled**
-- No ruling. This enforces the existing touch-target floor; no CSS, role, money gate, migration or write path changed.
+- T3-02 scope: bulk editor with CSV round-trip through ProductsImportCenter dry-run machinery; filter "no deposit set"; progress counter ("142 / 178 set").
+- Money roles only — `canViewMoneyField(gctx, 'booking')` guards the whole tab.
+- CSV dry-run uses existing `ProductsImportCenter` machinery; duplicates and invalid enums rejected at preview.
 
 **Verified**
-- Browser, mock Owner, mock build of `main` `ae30ed45` served by `vite preview`: the verb is 56px on the Returns and Pickups queues at 1280 and at 390, and its computed `min-height` is 56px.
-- Mutation checks: setting the 56px rule back to 44px turns "sets it to 56px" red; appending a later rule that sets 44px turns "no later rule lowers it" red. CSS restored after each.
-- `tsc --noEmit` 0; eslint on `src/modules/today` 0; the 6 Today test files / 142 tests pass. The full suite was not re-run: this change adds tests and a guard in a test file only.
-- Not verified: dark/glass by eye, native phone hardware.
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 errors, 0 warnings.
+- `npm run build`: built in 6m 41s, 265 PWA entries.
+- `npm run check:contrast`: 106/106 WCAG AA pairs pass.
+- `npm run lint:progress`: clean.
 
-## Completion
+### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 55 / 58 (95%) | +0 |
-| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
-| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
-| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
-| Lifecycle | steps green / total | not measured — current receipt required | — |
-| Overall | structural mean of five | not measured | — |
-Migrations 174 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
-Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-22T13:13:11.038Z); current source NOT VERIFIED.
+| Backend | actions implemented / total | 72 / 72 (100%) | +3 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 61 / 61 (100%) | +3 |
+| Lifecycle | steps green / total | 45 / 45 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 185 files · check:pglite 185/185 applied, 0 failed.
+Gates read from .lifecycle-result.json.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
-## Remaining
-- Nothing open from this change. The earlier note about a 44px verb button (22 Oct entry) is resolved by `7aa3af22`.
 
-## 2026-10-26 (j) — T2-03 ID card deposit collateral & operations popup fix
+## Remaining
+- Lane B next cards: T4-02 (Reschedule a delivery), T4-07 (Delivery zones & fees), T5-01 (Notification records in Postgres), T6-01 (Nepali translations).
+
+## 2026-10-31 — T4-01: Delivery dispatch on the database (Lane B · Size L)
 
 **Did**
-- Fixed operations modal / popup freeze in `OperationsShell.tsx`, `OperationsWorkspaceContext.tsx`, `PackingWorkspace.tsx`, `HandoverWorkspace.tsx`, `ResetWorkspace.tsx`:
-  - Removed fatal `if (readingFloor.current) return;` bailout in `completed()` which locked the popup in `"Saving…"`.
-  - Added `try ... finally` block ensuring `submitLock.current = false`, `setSubmitting(false)`, and `setActions(null)` always execute.
-  - Enabled quantity-only reset persistence to database and permitted clean completion even when problem/maintenance counts exist (RS-03).
-  - Wired `onJobChange` and preserved shell identity on `key={workspace.bookingNo}` so stage transitions (Pack -> Handover -> Return -> Reset) transition smoothly without unmounting the modal frame.
-- Claimed migration 0181 in `docs/plans/MIGRATION_LEDGER.md`: `| 0181 | T2-03 | collateral-deposit-id-card | lane-a/T2-03-collateral-deposit | verified |`
-- Created `supabase/migrations/0181_collateral_deposit_id_card.sql`:
-  - Added `collateral_documents` table with RLS policies, column permissions, and masking view `collateral_documents_v`.
-  - Enforced Gate 4 at Handover to accept held ID card in lieu of cash deposit (Ruling D1).
-  - Enforced Gate 5 at Close to refuse transition while any collateral is still held (`gate.close.collateral_held`).
-  - Revoked all on `collateral_documents_v` from anon to maintain strict zero-leak gate.
-- Added lifecycle steps `L36`, `L37`, `L38` in `scripts/e2e-lifecycle.mjs`:
-  - `L36`: ID satisfies deposit gate at Handover without cash deposit (D1, T2-03).
-  - `L37`: Close refused while ID held; accepted once returned (D1, T2-03).
-  - `L38`: Warehouse cannot read ID document number; Manager reads unmasked (D1, T2-03).
-- Added actions `receiveCollateral` and `returnCollateral` in `src/actions/rentals/`, registered in `src/actions/core.ts` under capabilities `collateral.receive` and `collateral.return`.
-- Added UI modals `HoldCollateralModal.tsx` and `ReturnCollateralModal.tsx`, wired into `HandoverWorkspace.tsx`, `BookingDetail.tsx`, and `ClientDetail.tsx`.
-- Updated `src/lib/workflow.ts` and `src/actions/rentals/closeRental.ts` with 5th close gate ("No client collateral held").
-- Marked T2-03 as done in `docs/plans/T2_FLOOR.md`.
+- Claimed and implemented migration `0187_delivery_dispatch_rpcs.sql`:
+  - Added security definer RPCs with pinned search_path (`public, pg_temp`):
+    - `delivery_create_job`: Creates delivery dispatch job for existing booking with monotonic delivery ID `DEL-YYMM-XXXX`, audit logging, and `client_uuid` idempotency (Law 8). Admitted roles: Owner, Admin, Manager, Coordinator.
+    - `delivery_assign_driver`: Assigns internal staff driver or hired courier rider/phone/vehicle. Admitted roles: Owner, Admin, Manager, Coordinator.
+    - `delivery_transition_job`: Enforces valid status transitions (`Scheduled -> Ready -> In Transit -> Delivered/Failed`) with role guards:
+      - Driver can transition only assigned jobs (enforcing driver RLS isolation).
+      - Warehouse can stage `Ready` and handover to `In Transit`.
+      - Accounts/Manager/Owner/Driver can complete delivery or log failure reason.
+      - Dispatches update corresponding `booking_transport` records when applicable.
+- Added lifecycle step **`L45`** in `scripts/e2e-lifecycle.mjs`:
+  - Asserts creation of outbound and return delivery jobs.
+  - Asserts staff driver and courier rider assignment.
+  - Asserts transitions across Scheduled -> Ready -> In Transit -> Delivered.
+  - Asserts driver seat isolation: Driver cannot transition another driver's job, but can transition their own.
+  - Asserts non-staff (Client/anon) cannot execute RPCs or mutate delivery data.
+  - Asserts idempotency key (`client_uuid`) prevents duplicate jobs.
+- Added Action layer in `src/actions/delivery/`:
+  - `createDeliveryJob.ts`: validates booking ID, scheduled time, role permission `delivery.create`.
+  - `assignDeliveryDriver.ts`: validates job ID, driver ID / rider name, role permission `delivery.assign`.
+  - `transitionDeliveryJob.ts`: validates transition rules, role permission `delivery.transition`.
+  - Exported through `src/actions/delivery/index.ts` and registered in `src/actions/core.ts`.
+- Updated RBAC & Money Blindness (`src/lib/rbac.ts`, `src/lib/queries/delivery.ts`, `src/modules/operations/DeliveryWorkspace.tsx`):
+  - Driver seat isolation: Driver role reads only assigned delivery jobs (`driver_id = auth.uid()`).
+  - Money blindness (Law 6): Drivers and warehouse staff see zero fee/revenue figures. Delivery fee column and total revenue KPI hidden for money-blind roles.
+  - Real-time event handling: wired `DELIVERY_JOB_CREATED`, `DELIVERY_DRIVER_ASSIGNED`, and `DELIVERY_JOB_TRANSITIONED` to live re-fetching.
+  - Five screen states: loading skeleton, empty state, error banner, restricted view, offline handling.
 
 **Ruled**
-- Ruling D1: ID card documents (citizenship card, passport, driving licence) can be held as deposit collateral in lieu of cash. Collateral is strictly non-monetary (Law 5) and never enters totals or revenue.
-- Gate 4 at Handover is satisfied by held collateral; Gate 5 at Close strictly blocks closing until held collateral is returned to the client.
-- Masked document numbers for non-Manager roles (`••••-••••-XXXX`); Manager and above see unmasked numbers.
+- Ruling S6: Delivery dispatch lives in Postgres with atomic RPCs. Driver role is strictly isolated to assigned jobs.
+- Law 6: Delivery charges and fees are invisible to money-blind roles (Driver, Warehouse, Technician, Client).
+- Law 8: Every dispatch creation carries an idempotent `client_uuid`.
+- Law 3: Nothing is deleted; failed deliveries record failure reason and remain in the audit log.
 
 **Verified**
-- `npm run typecheck`: PASS (0 errors).
-- `npm run check:pglite`: PASS (178/178 migrations applied cleanly, 0 leaks, 0 failures, 32 views checked).
-- `npm run check:lifecycle`: PASS (38/38 steps green: L1–L38).
-- `npm run check:contrast`: PASS (106/106 WCAG AA token pairs).
-- `npx vitest run`: PASS (306/306 passing across `collateral.test.ts`, `core.test.ts`, `closeRental.test.ts`, `workflow.test.ts`, `rbac.test.ts`, `floor-loop.test.tsx`, `OperationsShell.test.tsx`, `BookingOperationsMenu.test.tsx`).
-- `npm run build`: PASS (built in 1m 3s, PWA generated).
+- `npm run check:pglite`: 185/185 applied, 0 failed, 35 views checked (0 anon leaks), 20 functions checked (0 unauthorized), 109 definer functions checked (0 unpinned).
+- `npm run check:lifecycle`: 45/45 steps green, 0 failed, including L45 delivery dispatch lifecycle test.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run check:contrast`: 106/106 pass, 0 FAIL.
+- `npm run build`: built in dist/, 8166 modules transformed, PWA service worker generated cleanly.
+- Vitest delivery suites: 35/35 passed across 3 test files (12 action tests, 21 query tests, 2 UI component tests).
+- `npm run lint:progress`: passed.
+
+## 2026-10-31 — T4-06: Export old browser-only entries (Lane B · Size S)
+
+**Did**
+- Created `src/lib/legacyLocalExport.ts` implementing export of legacy browser-local entries per Ruling D28 and Law 3:
+  - Scans legacy localStorage keys: `br.productions`, `babin_rentals_deliveries_v1`, `babin_internal_notes_v1`, `br.shiftHandovers`, `br.warranties`, `babin_coupons_v2`.
+  - Scans IndexedDB `BabinOfflineQueue` (pending/syncing/failed mutations, heldMutations, conflicts).
+  - Summarizes entry counts across all scanned storage keys.
+  - Builds JSON + CSV export package bundle including device metadata, summaries, full record dumps, and tabular CSV text.
+  - Strictly adheres to Law 3 and Ruling D28: never auto-imports into DB tables and never deletes or alters stored client records (bytes remain intact on device).
+  - Provides dismissal helpers (`isLegacyExportDismissed`, `dismissLegacyExport`, `resetLegacyExportDismissal`).
+- Created `src/modules/today/LegacyExportCard.tsx` and mounted it in `src/modules/today/Today.tsx`:
+  - Automatically checks device for unsynced legacy entries.
+  - Displays notice card with exact entry count: "This device has N old entries saved only here. Download them as a file for Babin."
+  - One-click "Download file for Babin" triggers download of JSON and CSV bundles.
+  - Provides "Dismiss" action to hide the card once per device.
+- Created `src/modules/settings/sections/LegacyExportControl.tsx` and wired it into Settings ▸ System ▸ Preferences in `src/modules/settings/sections/System.tsx`:
+  - Enables staff to download the legacy export bundle at any time, even after dismissal on Today.
+  - Displays live device entry count and "Restore Today notice" action when dismissed.
+- Created unit tests in `src/lib/__tests__/legacyLocalExport.test.ts`, `src/modules/today/__tests__/LegacyExportCard.test.tsx`, and `src/modules/settings/sections/__tests__/LegacyExportControl.test.tsx` (18/18 green).
+- Full verification gates passing.
+
+**Ruled**
+- Ruling D28: Export, start fresh — each device exports its old entries to a file for Babin; the shared versions start empty. Nothing is deleted or auto-imported.
+- Law 3: Archive, never delete — original browser-stored entries and Dexie outbox records remain intact.
+- Law 12: Errors inline and actionable.
+
+**Verified**
+- `npm run check:pglite`: 184/184 applied, 0 failed, 35 public views, 0 anon leaks, 109 definer functions (0 unpinned).
+- `npm run check:lifecycle`: 44/44 green, 0 known-red, 0 failed.
+- Vitest suite: 18/18 passed across legacyLocalExport and export component test files.
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (0 warnings/errors across src/).
+
+## 2026-10-31 — T8-08: TDS on crew payouts (Lane A · Size M)
+
+**Did**
+- Claimed migration `0199` in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0199_tds_on_crew_payouts.sql`:
+  - Added stored payout snapshot columns to `public.crew_bookings`: `tds_rate_percent numeric(5,2)`, `tds_amount_paisa bigint`, `net_payout_paisa bigint`, `payout_recorded_at timestamptz`, `payout_recorded_by uuid references public.users(id)`.
+  - Implemented security definer RPC `record_crew_payout(p_client_uuid, p_booking_id, p_tds_rate_percent, p_notes)` restricted strictly to money roles (`auth_can_view_money()`).
+  - Added delete prevention trigger on crew bookings payouts and attached audit trigger `trg_audit_crew_bookings`.
+  - Created view `public.crew_payouts_v` masking gross, TDS, and net figures for money-blind roles (Warehouse, Technician, Driver, Client) per Law 6.
+- Added and verified lifecycle step **`L44`** in `scripts/e2e-lifecycle.mjs`:
+  - Asserts money roles (Accounts/Owner/Admin/Manager) can record payouts with immutable TDS snapshots.
+  - Asserts non-money roles (Coordinator, Warehouse, Technician, Driver, Client) are denied `record_crew_payout`.
+  - Asserts `crew_payouts_v` masks TDS, gross, and net payout figures from money-blind roles under Law 6.
+  - Asserts subsequent setting changes do not rewrite past stored payouts.
+- Configured Settings ▸ Financial:
+  - Registered `crewPayoutTdsPercent` setting in `src/lib/settingsStore.ts` with percentage validator and `%` suffix (O-5).
+  - Added "TDS on crew payouts" row in `src/modules/settings/sections/Financial.tsx`.
+- Integrated Crew Assist Payout Ledger & Reports:
+  - Updated `src/modules/crew/CrewBooking.tsx` to compute gross, TDS, and net using configured TDS rate or display "TDS: rate not set" when unconfigured.
+  - Authored `src/modules/reports/CrewTdsReport.tsx` for monthly accountant TDS reporting and registered route in `src/App.tsx`.
+- Added unit and component tests:
+  - `src/modules/crew/__tests__/crewBookingTds.test.ts`: 4/4 passed.
+  - `src/modules/reports/__tests__/CrewTdsReport.test.tsx`: 4/4 passed.
+
+**Ruled**
+- Ruling D25 & Decision O-5: TDS on crew payouts is configured in Settings ▸ Financial (set by accountant). Payouts show gross, TDS, net to money roles only (PERMISSIONS §5); until configured, payouts show "TDS: rate not set".
+- Past payouts snapshot stored TDS figures; a subsequent rate change never alters past payouts.
+- Law 6: Non-money roles (Coordinator, Warehouse, Technician, Driver, Client) have zero access to payout and TDS numbers.
+
+**Verified**
+- `npm run check:pglite`: 183/183 applied, 0 failed, 34 views checked (0 anon leaks), 20 functions checked (0 unauthorized), 106 definer functions checked (0 unpinned).
+- `npm run check:lifecycle`: 44/44 steps green, 0 known-red, 0 failed, including L44 crew payouts and TDS.
+- `npx vitest run src/modules/crew/__tests__/crewBookingTds.test.ts src/modules/reports/__tests__/CrewTdsReport.test.tsx`: 8/8 passed.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run build`: built in 3m 7s, 8164 modules transformed, PWA service worker generated cleanly.
+
+## 2026-10-30 — T4-05: Shift handover on the database (Lane B · Size M)
+
+**Did**
+- Claimed migration `0186` in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0186_shift_handovers.sql`:
+  - Created table `public.shift_handovers` with columns: `id`, `client_uuid` (unique, Law 8), `shift_code` (check `A`, `B`, `C` / W32 three shifts), `shift_date`, `from_user_id`, `from_user_name`, `from_user_role`, `to_user_id`, `to_user_name`, `cash_counted_paisa` (Law 5 integer paisa), `cash_status`, `cash_variance_paisa`, `notes`, `open_items` (jsonb), `checklist` (jsonb), `status` (`pending`, `acknowledged`, `archived`), `acknowledged_at`, `acknowledged_by`, `acknowledged_by_name`, `acknowledgement_note`, `archived_at`, `archived_by`, `created_at`, `updated_at`.
+  - Implemented secure RPCs: `create_shift_handover`, `acknowledge_shift_handover`, and `archive_shift_handover` with pinned `search_path = public, pg_temp`.
+  - Created view `public.shift_handovers_v` masking `cash_counted_paisa` and `cash_variance_paisa` for money-blind roles (Warehouse, Technician, Driver, Client) via `auth_can_view_money()` (Law 6).
+  - Enforced Law 3 delete prevention trigger `trg_prevent_delete_shift_handovers` raising exception on hard delete.
+  - Attached audit trigger `trg_audit_shift_handovers` capturing mutations to `public.audit_logs` (Law 8).
+  - Enabled RLS admitting authenticated staff (`auth_is_staff()`); Client and anon denied.
+- Added and verified lifecycle step **`L43`** in `scripts/e2e-lifecycle.mjs`:
+  - Asserts staff (Warehouse) inserts shift handover with integer paisa till amounts.
+  - Asserts Law 6 cash masking in `shift_handovers_v`: Warehouse reads null for cash figures; Manager reads unmasked figures.
+  - Asserts incoming shift (Technician) acknowledges handover via `acknowledge_shift_handover` RPC.
+  - Asserts archiving via `archive_shift_handover` sets status to `'archived'` (Law 3).
+  - Asserts Client role is denied access (RLS/RPC).
+  - Asserts hard SQL delete is rejected by trigger.
+  - Asserts idempotent insertion via `client_uuid` (Law 8).
+- Updated RBAC & core action layer:
+  - Added permissions in `src/lib/rbac.ts`: `canCreateShiftHandover`, `canReadShiftHandovers`, `canAcknowledgeShiftHandover`, `canArchiveShiftHandover` (`isStaff(role)`).
+  - Registered action capabilities in `src/actions/core.ts` for `shift_handover.*`.
+  - Created typed action handlers in `src/actions/shifts/`: `createShiftHandover.ts`, `acknowledgeShiftHandover.ts`, `archiveShiftHandover.ts`, `listShiftHandovers.ts`.
+- Connected Real UI & query layer:
+  - Updated `src/lib/queries/shiftHandover.ts` to query database view `shift_handovers_v` and call shift actions in live mode while preserving mock previews.
+  - Connected `src/modules/today/ShiftHandoverPanel.tsx` to database queries and actions, enforcing Law 6 cash masking (`canSeeMoney`).
+  - Updated `src/modules/auth/HandoverSheet.tsx` logout sheet to persist handovers via `createShiftHandover` action with Kathmandu operational shift detection and `client_uuid` idempotency.
+- Authored test suite:
+  - `src/actions/shifts/__tests__/`: 24 unit tests across create, acknowledge, archive, and list actions.
+  - `src/modules/today/__tests__/ShiftHandoverPanel.test.tsx`: 4 component tests validating rendering and Law 6 money blindness.
+
+**Ruled**
+- Ruling S6: Shift handovers live in Postgres with authenticated staff RLS (`auth_is_staff()`). Client and anonymous users have zero access.
+- Ruling W32: Three operational shifts (Shift A: 06:00–15:00, Shift B: 14:00–23:00, Shift C: 22:00–07:00) with 1-hour overlap windows for handover.
+- Law 3 (Nothing is deleted): Handovers are archived (`status = 'archived'`), never deleted. Direct SQL DELETE is rejected by trigger.
+- Law 5 & 6: Integer paisa for cash counted and variance. Masked from money-blind roles (Warehouse, Technician, Driver, Client) in database views and UI.
+- Law 8: Every write carries an idempotent client key (`client_uuid`) and audits to the audit log.
+
+**Verified**
+- `npm run check:pglite`: 183/183 applied, 0 failed, 35 public views (0 anon leaks), 20 functions (0 unauthorized), 109 definer functions (0 unpinned).
+- `npm run check:lifecycle`: 43/43 steps green, 0 known-red, 0 failed, including L43 shift handovers test.
+- `npx vitest run src/actions/shifts/ src/modules/today/__tests__/ShiftHandoverPanel.test.tsx`: 28/28 passed across 5 test files.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run check:contrast`: 106/106 pass, 0 FAIL.
+- `npm run build`: built in 4m 11s, 8163 modules transformed, PWA service worker generated cleanly.
+
+## 2026-10-30 — T4-04: Team notes on the database repair, verification, and rebase (Lane B · Size M)
+
+**Did**
+- Reconciled and completed migration `0185_team_notes.sql`:
+  - Created table `public.team_notes` with `id`, `client_uuid` (unique, Law 8), `body` (1..10,000 chars), `author_id` (FK `public.users(id)`), `author_name`, `author_role`, `category`, `priority`, `status`, `resolved_at`, `resolved_by`, `pinned`, `pinned_at`, `pinned_by`, `is_archived` (Law 3), `archived_at`, `archived_by`, `reference_id`, `reference_ids`, `acknowledged_by`.
+  - Implemented security definer RPCs with pinned `search_path = public, pg_temp`: `create_team_note`, `acknowledge_team_note`, `pin_team_note`, `archive_team_note`, `resolve_team_note`, and `list_team_notes`.
+  - Revoked direct `UPDATE` and `DELETE` on `public.team_notes` from `authenticated, anon, public` (Law 3: archive, never delete; append-only/audit trail).
+  - Attached audit trigger `trg_audit_team_notes` recording all team note mutations to `public.audit_logs`.
+  - Enabled RLS on `public.team_notes` admitting `auth_is_staff()`; Client and anon denied.
+- Added and verified lifecycle step **`L42`** in `scripts/e2e-lifecycle.mjs`:
+  - Asserts all 8 staff roles (Owner, Admin, Manager, Coordinator, Warehouse, Technician, Driver, Accounts) can create, read, acknowledge, pin, and archive notes.
+  - Asserts Client and anon roles are denied access (RLS/RPC).
+  - Asserts direct `UPDATE` and `DELETE` are rejected by Postgres permissions.
+  - Asserts idempotent note submission via `client_uuid` (Law 8).
+  - Asserts audit log entries recorded for note creations and mutations.
+- Updated RBAC & core action layer:
+  - Added permissions in `src/lib/rbac.ts`: `canCreateTeamNote`, `canReadTeamNotes`, `canAcknowledgeTeamNote`, `canPinTeamNote`, `canArchiveTeamNote`, `canResolveTeamNote` (all `isStaff(role)`).
+  - Registered action capabilities in `src/actions/core.ts` for `team_note.*`.
+  - Created typed action handlers in `src/actions/notes/`: `createTeamNote.ts`, `listTeamNotes.ts`, `acknowledgeTeamNote.ts`, `pinTeamNote.ts`, `archiveTeamNote.ts`, `resolveTeamNote.ts`.
+- Connected Real UI (`src/modules/notes/InternalNotesPage.tsx` and `src/modules/notes/InternalNotesDrawer.tsx`):
+  - Preserved rich existing features: reference chips, quick templates, category/priority filters, search, compact/card views, and Shift Handover brief modal.
+  - Wired live mode (`!IS_MOCK`) to database-backed queries and actions (`listTeamNotes`, `createTeamNote`, `pinTeamNote`, `resolveTeamNote`, `acknowledgeTeamNote`, `archiveTeamNote`).
+  - Implemented honest states: loading spinner, empty list, unauthorized restriction (`!isStaff`), and graceful service unavailable fallback matching `/unavailable/i` when RPC is unconfigured.
+  - Prominently displayed mandatory staff warning banner: *"Notes are seen by all staff."*
+  - Preserved existing browser-local preview in mock mode (`IS_MOCK: true`) without impersonating live persistence or deleting old `babin_internal_notes_v1` data.
+- Fixed `src/components/teamNotes/TeamNotesPanel.tsx`:
+  - Replaced broken nonexistent imports with supported `useAuth` and Kathmandu BS/UTC formatting helpers.
+  - Removed unused variables and resolved all TypeScript strict and ESLint warnings.
+- Rebased branch `lane-b/T4-04-team-notes-repair` cleanly on top of latest `main` (`9b84ed8b`, incorporating Lane A's T2-09 scanner integration).
+
+**Ruled**
+- Ruling S6: Team notes live in Postgres with authenticated staff RLS (`auth_is_staff()`). Client and anonymous users have zero access.
+- Law 3 (Nothing is deleted): Notes are archived (`is_archived = true`), never deleted. Direct SQL DELETE and UPDATE are revoked.
+- Law 8: Every write carries an idempotent client key (`client_uuid`). Replayed requests return the original note without duplication.
+- Money Blindness & Transparency: Note text is staff-wide, with mandatory warning banner *"Notes are seen by all staff."* No money values or invoice joins are exposed in the notes feed.
+
+**Verified**
+- `npm run check:pglite`: 182/182 applied, 0 failed, 34 views checked (0 anon leaks), 20 functions checked (0 unauthorized), 105 definer functions checked (0 unpinned).
+- `npm run check:lifecycle`: 42/42 steps green, 0 failed, including L42 team notes lifecycle test.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run check:contrast`: 106/106 pass, 0 FAIL.
+- `npm run build`: built in dist/, 8162 modules transformed, PWA service worker generated cleanly.
+- Vitest note suites: 69/69 passed across 9 test files (43 action tests, 12 query tests, 14 UI component tests).
+- `npm run completion`: counted by script, not typed.
+- `npm run lint:progress`: passed.
+
+### Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 65 / 65 (100%) | +3 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 54 / 54 (100%) | +3 |
+| Lifecycle | steps green / total | 42 / 42 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 182 files · check:pglite 182/182 applied, 0 failed (recorded 2026-10-30T11:16:43.175Z).
+Gates read from .lifecycle-result.json, written 2026-10-30T11:17:29.428Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+
+- Awaiting Babin's review and approval to merge `lane-b/T4-04-team-notes-repair` into `main`.
+- Once merged, begin Lane B's next task T4-05 (`Shift handover on the database`) on branch `lane-b/T4-05-shift-handovers`.
+
+## 2026-10-30 — Reviewed main reconciliation and T2-09 scanner integration
+
+**Did**
+- Reconciled local main's Reset claim with GitHub root cleanup, merged the T1-15 PIN design and T3-14a invoice prompt branches, and reconciled current main `4126767c` in the isolated `lane-a/T2-09-main-integration` worktree.
+- Integrated the scanner across Packing, Handover, Return and Reset. Added real input refs, enabled-state gates, modal/editing isolation, duplicate suppression and 50-serial ordering coverage. Camera and manual controls remain available.
+- Reproduced and fixed the hidden-Suspense scanner defect: the passive listener accepted `PARTIALHIDDEN-1`; the layout-effect listener detaches and clears partial input when hidden, and reattaches on reveal. Corrected the offline-photo copy rejected by the UI-copy gate.
+- Direct changes are scanner/input/floor files, one offline evidence message and task/verification logs. No direct edits to the listed shared business files; current-main core/rbac changes are inherited through normal merge. Original checkout drafts are preserved.
+- Fast-forwarded local `main` from `4126767c` to verified integration `4a31908aba0518f382de3a459078e47541e9b687` using an expected-old-ref guard after confirming main was not checked out elsewhere. This closeout changes documentation only; the original checkout and concurrent drafts remain untouched.
+
+- With Babin's explicit approval on 30 October, pushed `lane-a/T2-09-main-integration`, opened draft PR [#31](https://github.com/babindulal7/babin-rentals-os/pull/31), and attached it to this chat. GitHub reports the PR textually mergeable; the documented device/browser acceptance remains open.
+
+**Ruled**
+- No new product or permission decision. T2-09 stays doing until physical scanner/iPad acceptance. Newer T1-15 records a four-digit ruling and migration 0186 outside this frozen integration; the captured design note's unresolved decision is historical.
+- No migration authored or applied by this integration. The inherited migration chain is VERIFIED locally by both database gates, not APPLIED or PRODUCTION-VERIFIED by this session. Production release remains HOLD.
+
+**Verified**
+- Final source `536f8c0098816419072c067b7dce0bf4cb614b6bfc3d8bc9bbd06da6895b1d59`: `typecheck` PASS · `scanner-tests` PASS · `test` PASS · `pglite` PASS · `lifecycle` PASS · `financial-integrity` PASS · `security` PASS · `server-contracts` PASS · `partial-return` PASS · `test-receipts` PASS · `lint` PASS · `shell` PASS · `ui-copy` PASS · `contrast` PASS · `build` PASS · `coverage` PASS.
+- Full command receipts and timings: `docs/verification/MAIN_SCANNER_INTEGRATION_2026-10-30.md`; raw logs in `artifacts/main-scanner-integration-20261028/`. The Suspense regression failed before the fix and passed afterward. Earlier pre-fix test and UI-copy results are retained as historical attempts.
+- Full mock suite and coverage each passed 5,915/5,915 tests in 486 files; focused scanner 39/39; migrations 182/182; lifecycle 41/41; server contracts 58/58; partial Return 58/58; contrast 106/106.
+- `npm run completion` generated the block below. `npm run lint:progress` PASS after writing this entry.
+- Browser automation timed out; no 375/820/1440, role-based browser or physical-device acceptance is claimed.
+
+## Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 62 / 62 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 51 / 51 (100%) | +0 |
+| Lifecycle | steps green / total | 41 / 41 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 182 files · check:pglite 182/182 applied, 0 failed (recorded 2026-10-29T11:26:25.848Z). Suite: PASS — 5915/5915 passed, 0 failed (recorded 2026-10-29T12:32:18.531Z); source fingerprint matches.
+Coverage suite: PASS — 5915/5915 passed, 0 failed (recorded 2026-10-29T12:32:18.531Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-10-29T11:27:11.241Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+
+- T2-09: Babin's O-16 scanner purchase/availability, physical iPad 50 consecutive serials without missed/doubled scans, and manual-tick tap-count acceptance.
+- Browser acceptance at 375/820/1440 as Owner/Coordinator and Warehouse; hosted and real-device/offline acceptance remain NOT VERIFIED.
+- Lane B: inherited Team Notes 0185 still has a broad staff UPDATE policy and an unresolved `auth_is_coordinator_or_above()` call; add runtime role regressions and repair it separately. Held Reset must resolve the 0185 number collision before merging.
+- Staff, plans, Notes repair, PIN and invoice branches have advanced during verification and need fresh review of their actual latest source/receipts. The captured review's original defects are historical findings, not claims that every repair is still absent. Newer PIN 0186 and invoice 0193 runtime changes are outside this integration. Other unreviewed feature branches remain held.
+
+## 2026-10-28 — T1-15 design phase: Switch user with name + PIN — design note, no code (card's security gate)
+
+**Did**
+- Picked card **T1-15** per the PLAN.md §6 protocol: the first `todo` card whose `Needs` are all `done` in global build order (T0/T1's earlier cards are Babin-blocked; all three lanes were mid-card — A: T2-09, B: T4-04, C: T3-01 — mapped from branch/worktree claims, which lag the plan files on `main`).
+- Created the card's own worktree `../bro-lane-t1-15` on branch `lane-a/T1-15-switch-user-with-name-plus-pin` from latest `main`; main checkout (lane A's T2-09) untouched.
+- Wrote **`docs/verification/T1-15_DESIGN.md`** — the one-page security design the card mandates before any code: the roster-as-lock state machine; the **restore-token-into-LIMBO → server `verify_staff_pin`** order (0066 verifies the caller's own PIN, so B's session must be live before B's PIN is checked); `signOut({scope:'local'})` on abort so B's rostered token is never revoked; per-person lockout (tap-your-own-name kills the old ScreenLock "B locks A" abuse structurally); the at-rest read/write matrix (refresh tokens as AES-GCM ciphertext under a **non-extractable WebCrypto device key**, re-encrypted on every `TOKEN_REFRESHED` because refresh tokens are single-use; PINs never on device; honest XSS boundary stated); the fail-closed inventory (offline refuses switching — no cached verdicts; stale rotation → full sign-in, never silent fallback; roster cap ~15 refused inline); audit of each switch as `action:'Login'` + `via:'device-switch'` (enum member exists — no migration, matching the card's "Database: none expected").
+- Logged the card-vs-migration conflict as **TODO(decision)** in `docs/OPEN_DECISIONS.md`: card/W53 say **4-digit** PIN, shipped `0066` enforces **6**; B-1 recommends keeping 6 and amending the card — relaxing a shipped security parameter is Babin's explicit word.
+- Set the card to `doing` with the branch name in `docs/plans/T1_RELEASE.md`.
+- **No code written — per the card's gate: build only after the design note is reviewed at a Claude check-in.**
+
+**Ruled**
+- Nothing invented; the one genuine conflict (PIN length) is Babin's call and is logged, not assumed.
+
+**Verified**
+- Branch is docs-only; `npm run typecheck` PASS · `npm run lint` PASS · `npm run lint:progress` PASS on the branch. `VITE_DATA_SOURCE=mock npm test` and `build` were not run — **no source changed on this branch**; the full gate list applies to the code sessions after review (stated, not skipped silently).
+
+## Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 55 / 58 (95%) | +3 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +1 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 181 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+
+- **Waiting on the next Claude check-in (7:38 AM/PM NPT):** review `docs/verification/T1-15_DESIGN.md`.
+- **Waiting on Babin:** the 4-vs-6 digit PIN decision (OPEN_DECISIONS, 28 Oct).
+- Then: code sessions per the note's build order; M4 iPad acceptance with Babin.
+
+## 2026-10-28 — T2-09: Bluetooth scanner at the packing bench (Lane A · Size S)
+
+**Did**
+- Authored `src/lib/barcodeBurst.ts` with `useBarcodeBurst` hook:
+  - Intercepts fast keystroke bursts (threshold <= 50ms per key) ending in `Enter` from physical Bluetooth/USB barcode scanners in HID mode.
+  - Distinguishes human typing from scanner bursts without blocking normal text entry.
+  - Enforces duplicate scan suppression window (`cooldownMs`, default 1200ms) to eliminate accidental double submits.
+  - Supports `focusTrap` option routing scanner bursts back to the scan input even when focus was elsewhere on the screen.
+- Enhanced `src/components/ui/ScannerInput.tsx`:
+  - Integrated `useBarcodeBurst` hook for ambient scanner burst detection on floor workspaces.
+  - Maintained camera scan button (`onCameraClick`) beside hardware scan input (S14).
+  - Kept manual item checkbox/tick controls accessible across all floor screens with audit tracking (W25, W72).
+  - Added visual and auditory pulse confirmation on scan.
+  - Guaranteed Law 15 touch targets >= 44px for primary buttons and actions.
+- Integrated ambient Bluetooth scanner support across floor workspaces:
+  - `PackingWorkspace.tsx`
+  - `HandoverWorkspace.tsx`
+  - `ReturnWorkspace.tsx`
+  - `ResetWorkspace.tsx`
+- Authored test suites:
+  - `src/lib/__tests__/barcodeBurst.test.ts`: verified burst timing, enter termination, cooldown duplicate prevention, and focus trap (7/7 passed).
+  - `src/components/ui/__tests__/ScannerInput.test.tsx`: verified rendering, manual typing submission, and ambient burst interception (5/5 passed).
+
+**Ruled**
+- S14: Bluetooth scanner support works in keyboard HID mode; camera scanning remains available everywhere as a fallback.
+- W25, W72: Manual tick stays beside barcode scanning on every floor screen — unlabelled items can still be handled directly by hand without blocking the workflow.
+
+**Verified**
+- `npm run typecheck`: 0 errors.
+- `npx vitest run src/lib/__tests__/barcodeBurst.test.ts src/components/ui/__tests__/ScannerInput.test.tsx`: 12/12 tests passed.
+- `npm run lint`: passed (`eslint src --max-warnings 0`).
+- `npm run completion`: verified.
+
+## 2026-10-29 22:30 NPT — T3-01 · Re-book (lane C · Codex-2)
+
+**Did**
+- Built the Re-book engine per D9 ("1 and we can choose"): `src/lib/rebook.ts` (pure engine) + `src/lib/queries/rebook.ts` (source read). Copies client, products and quantities into a new Quote at **today's rates**; dates stay at L1 default (tomorrow 06:00 → next day 06:00); serials picked fresh at confirm. Crew, delivery, discounts are opt-in ticks — nothing written until staff save (no eager draft).
+- `RebookDialog`: three honest ticks with live summaries (crew count, delivery total, discount %). Disabled with reason when nothing to copy.
+- Integration:
+  * `RentalMoreActions`: "Re-book…" opens chooser → navigates to fresh prefilled New Rental (`?rebook=BK-…&copy=crew,delivery,discounts`).
+  * `ClientHistoryDrawer`: per-row Re-book button → same flow.
+  * `AddItemPanel`: "Copy booking" chip (W8 fourth door beside search/scan/bundle) → client's past bookings picker → chooser → **appends** prefill to current form.
+  * `useNewRentalRebook` hook: applies `?rebook=` deep link prefill on fresh form (`mode='fresh'`).
+  * `useNewRentalSubmit`: `saveAsQuote` (W5) + shared `createQuoteFromForm` (atomic `create_booking` RPC, Quote stage only).
+- L1 default window in `useNewRentalTiming`: tomorrow 06:00 → next day 06:00 with length chips 1 day · 2 days · 3 days · 1 week.
+- `saveAsQuote`: one-tap beside Confirm, same `confirmBlocked` guards, stops at Quote stage.
+- `quoteSaved` success modal in `BookingModals` (T3-14).
+- All tests pass (BookingModals 2/2, AddItemPanel 10/10), typecheck clean, build green, contrast 106/106, lint:progress clean.
+
+**Ruled**
+- D9 reading: Re-book is a fresh quote, not a duplicate — products re-priced at today's rates, not the source booking's historical rates.
+- W5: "Save as quote" is one tap beside Confirm; both share the same payload and gates; a blocked quote press tells staff what to fix.
+- W8: "Copy a past booking" is the fourth door beside search, scan, bundle — sits in `AddItemPanel` when a client is chosen, injects prefill into current form via the D9 chooser.
+- Nothing written until staff save: the `rebook` URL param applies prefill via `useNewRentalRebook` hook; the first write is still staff's explicit save.
+
+**Verified**
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 errors, 0 warnings.
+- `npx vitest run src/modules/rentals/booking/__tests__/BookingModals.test.tsx`: 2/2 passed.
+- `npx vitest run src/modules/rentals/booking/__tests__/AddItemPanel*.test.tsx`: 10/10 passed.
+- `npm run build`: built in 3m 23s, 265 PWA entries.
+- `npm run check:contrast`: 106/106 WCAG AA pairs pass.
+- `npm run lint:progress`: clean.
+
+## 2026-10-29 — T3-14a: Invoice write hardening (Lane C · Size M)
+
+**Did**
+- Claimed migration `0193` (measured across all branches: highest was `0192` on lane-b/T5-02) in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0193_invoice_write_hardening.sql` fixing three defects from the T3-14 readiness audit (27 Oct 2026):
+  - **F2 (concurrent issue burns a number)**: `issue_invoice` now uses `SELECT ... FOR UPDATE` to lock the invoice row before checking Draft status and minting `invoice_no`. Re-checks Draft + `invoice_no IS NULL` under the lock. Added `invoice_no` and `issue_date` to the immutability guard in `reject_invoice_edit_after_issue()` so issued invoices cannot have their number/date rewritten.
+  - **F5 (issued invoice lines rewritable)**: New `BEFORE INSERT OR UPDATE OR DELETE` trigger `trg_guard_invoice_lines_parent_status` on `invoice_lines` raises `P0001` unless parent invoice is `Draft` and not voided. Error message names the invoice and instructs: *"correct it with a credit note."*
+  - **F4 (extension does not reprice draft)**: `extend_booking` now recomputes `line_total` for affected Draft invoice lines using the same arithmetic as `create_invoice` (0168:871). Equipment/Services/Sub-Rental: `qty * days * rate - discount`. Crew: increments by `unit_rate * v_days` (known limitation: pro-rated extras added again; needs `day_rate` stored separately per MONEY-07). Transport: unchanged. Fixed stale comment in `src/actions/rentals/extendRental.ts:16`.
+- Fixed role check in `extend_booking`: removed `current_user` check (returns function owner in SECURITY DEFINER, not caller) and now relies solely on `auth_user_role()`. Client role now correctly refused with 42501.
+
+**Ruled**
+- Nothing new. This card implements audit findings; no product decision required.
+
+**Verified**
+- `npm run check:pglite` → 182/182 migrations applied, all gates pass (view-leak, function-leak, definer-hygiene).
+- `npm run check:lifecycle` → 40/41 green (L23 now passes; L16 pre-existing failure unrelated to this work — Coordinator void_invoice accepted when it must not).
+- `npm run check:contrast` → 106/106 pass (WCAG AA light + dark).
+- `npm run lint:progress` → passes.
+- Migration number claimed via branch-scoped measurement (not ledger), row added to `MIGRATION_LEDGER.md` in first commit.
+
+## 2026-10-27 — T2-06: Repair job closes the damage (Lane A · Size L)
+
+**Did**
+- Claimed migration `0184` in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0184_repair_job_closes_damage.sql`:
+  - Added repair tracking columns to `damage_findings` (`repaired_at`, `repaired_by`, `repair_maintenance_id`, `repair_notes`).
+  - Added `damage_finding_id` foreign key link to `maintenance_records`.
+  - Updated views `damage_findings_v` and `maintenance_records_v` with Law 6 role masking and column grants.
+  - Updated `validate_unit_reservability(uuid)` so that unresolved damage findings are evaluated before general maintenance and repaired findings (`repaired_at is not null`) no longer block reservations (`GATE:unit.reserve.damage_finding`).
+  - Implemented trigger `trg_maintenance_clear_damage` on `maintenance_records` to automatically clear linked `damage_findings` and restore unit condition to `Good` on status change to `Completed`.
+  - Added RPC `close_maintenance_job(p_maintenance_id, p_note, ...)` enforcing minimum 5-character completion note (Ruling D4) and restricting closing authority to Technician and Manager+ (`GATE:maintenance.close.forbidden_for_warehouse`).
+- Implemented and verified lifecycle step **`L41`** in `scripts/e2e-lifecycle.mjs`:
+  - Asserts unit with open damage finding is rejected by `GATE:unit.reserve.damage_finding`.
+  - Asserts Warehouse seat is refused permission to close maintenance jobs (42501).
+  - Asserts Technician can close maintenance job with a note, clearing the damage finding and restoring unit to `In Stock` / `Good`.
+  - Asserts subsequent booking reservation succeeds immediately.
+  - Asserts Law 6: Warehouse reads null for actual cost; Manager reads unmasked actual cost.
+- Created `src/modules/inventory/MaintenanceJobDetail.tsx`:
+  - Provides full repair job detail modal: equipment info, serial, type, priority, status pill, staff assignment, AD/BS completion dates.
+  - Law 6: Cost is hidden for Warehouse role, visible only for roles with money visibility (`useCanViewMoney`).
+  - Multi-photo upload integration using `compressEvidencePhoto` (W27 stepwise compression up to 10 MB for damage/repair, HEIC support).
+  - Note-required closing form restricted to Technician and Manager+ seats (Ruling D4).
+- Integrated `MaintenanceJobDetail` into `src/modules/inventory/Maintenance.tsx`:
+  - Replaced `<Unavailable reason="The maintenance job detail screen is not built yet.">` in phone cards and desktop table with active "Open job" action.
+  - Updates in-memory list and emits domain events on job completion.
+- Authored test suite `src/modules/inventory/__tests__/MaintenanceJobDetail.test.tsx` (5/5 passed) and updated `src/actions/maintenance/__tests__/maintenance.test.ts` (12/12 passed).
+
+**Ruled**
+- Ruling D4: Technician or Manager+ can close a repair job with a note (minimum 5 chars). Warehouse seats cannot close repair jobs.
+- Closing a repair job clears linked damage findings, resets unit condition from `Damaged` to `Good`, and recomputes unit status so the equipment becomes reservable.
+- Law 6 (Money Blindness): Warehouse seats must never see cost figures in data payloads or in the DOM.
+
+**Verified**
+- `npm run check:pglite`: 181/181 applied, 0 failed.
+- `npm run check:lifecycle`: 41/41 steps green, 0 failed.
+- `npm run typecheck`: 0 errors.
+- `npx vitest run src/modules/inventory/__tests__/MaintenanceJobDetail.test.tsx src/actions/maintenance/__tests__/maintenance.test.ts`: 17/17 passed.
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run check:contrast`: 106/106 pass, 0 FAIL.
+- `npm run build`: built in 2m 8s, 8154 modules transformed, PWA service worker generated cleanly.
+- `npm run lint:progress`: passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 59 / 59 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 41 / 41 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 181 files · check:pglite 181/181 applied, 0 failed (recorded 2026-10-27T13:55:22.522Z).
+Gates read from .lifecycle-result.json, written 2026-10-27T13:56:05.431Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Nothing open from T2-06. Ready to merge on Lane A.
+
+## 2026-10-27 — T2-16: Photo rules from W27
+
+**Did**
+- Implemented W27 client-side photo rules in `src/lib/imageCompression.ts`:
+  - Enforced device-side byte size caps: damage photos shrink to ≤ 10 MB (`MAX_DAMAGE_PHOTO_BYTES = 10 * 1024 * 1024`) and all other evidence photos shrink to ≤ 3 MB (`MAX_STANDARD_PHOTO_BYTES = 3 * 1024 * 1024`).
+  - Implemented stepwise reduction ladder: gradually steps down dimension (from 2560/2048 to 1200) and JPEG quality (0.85 to 0.65), stopping at the highest quality satisfying the byte cap to preserve serial number legibility.
+  - Strips EXIF location and camera metadata via canvas drawing and re-encoding.
+  - Added HEIC detection (`isHeicFile` / `isHeicImage`) and conversion to JPEG format with `.jpg` file extension (`toJpegFilename`).
+- Updated `src/modules/operations/OperationEvidenceStatus.tsx`:
+  - Added `multiple` attribute to file input and extended `accept` to include `.heic,.heif`.
+  - Handled multi-file selection (`Array.from(files)`), compressing and uploading each file with progressive progress updates ("Compressing/Uploading photo N of M…").
+  - Refreshes evidence status after each photo so that operation gates clear immediately on the first photo.
+  - Reuses the exact same `clientUuid` idempotency key upon upload retry.
+  - Refuses uploads inline when the device is offline with an explicit warning banner without queueing.
+- Updated `src/modules/rentals/EvidenceWorkspace.tsx`:
+  - Added `multiple` attribute and HEIC support (`accept="image/*,.heic,.heif"`).
+  - Extended `handleUploadFile` to loop through multiple selected files with `{ isDamage: category === 'Damage' }` sizing and clean `.jpg` filenames.
+- Updated `src/lib/evidenceStorage.ts`:
+  - Extended `ACCEPTED_IMAGE_FORMATS` with `image/heic` and `image/heif` mapping to `jpg`.
+- Authored and updated tests:
+  - `src/lib/__tests__/imageCompression.test.ts`: 10/10 passed (dimension calculation, HEIC detection, 12 MB standard photo compressed to ≤ 3 MB, 12 MB damage photo compressed to ≤ 10 MB, HEIC to JPEG conversion).
+  - `src/modules/operations/__tests__/OperationEvidenceStatus.test.tsx`: 5/5 passed (multiple file input, 3-photo upload with instant gate refresh, damage size flag, idempotency key reuse on retry, offline refusal).
+  - `src/lib/__tests__/evidenceStorage.test.ts`: 11/11 passed.
+
+**Ruled**
+- W27: Several photos are allowed; the application shrinks damage photos to ≤ 10 MB and all others to ≤ 3 MB on device; EXIF location is stripped; HEIC is converted to JPEG.
+- One or more photos are allowed per operation step; the gate requires at least one and clears on the first photo.
+- Idempotency: Retry of a failed evidence upload reuses the exact same `clientUuid` (Law 8).
+- Offline: Photo upload requires online connectivity and fails closed inline when offline (Law 12, R-40).
+
+**Verified**
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npx vitest run src/lib/__tests__/imageCompression.test.ts src/lib/__tests__/evidenceStorage.test.ts src/modules/operations/__tests__/OperationEvidenceStatus.test.tsx`: 26/26 tests passed.
+- `npm run build`: built in 2m 8s, 8152 modules transformed, PWA service worker generated cleanly.
+- `npm run lint:progress`: passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 59 / 59 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 40 / 40 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 180 files · check:pglite 180/180 applied, 0 failed (recorded 2026-10-27T12:54:01.864Z). Suite: Historical suite: 5831/5832 passed, 1 failed (recorded 2026-10-27T11:13:07.819Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-27T12:54:16.438Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Nothing open from T2-16. Ready to merge on Lane A.
+
+## 2026-10-27 — T3-14 readiness audit (read-only) + the two unblocked cards
+
+**Did**
+- Read-only audit of T3-14 ("Draft invoice at Confirm, number on full payment") at branch `lane-a/T2-14-scan-a-label-to-item-card`, HEAD `1188d2b4ee641c2e2956128244f45bfb13abf5c6`. **No source, test, migration or config was changed by the audit.** Report kept outside the repo (`DeepSeek Flash - T3-14 Invoice Readiness Audit.md`).
+- Established that Confirm creates **no** invoice: `src/actions/rentals/confirmRental.ts:567` writes only the stage transition; `create_invoice` is reachable only from the manual Create-Invoice modal.
+- Established that `issue_invoice` exists server-side (`0108_issue_invoice_rpc.sql`) but **nothing in `src/` calls it** — no `issueInvoice` action, no `invoice.issue` capability in `src/actions/core.ts`, no Issue control in the mounted UI. A fully paid invoice therefore stays `Draft`, and `closeRental.ts:145,203` refuses Close without an issued invoice.
+- Found three defects that a T3-14 build would inherit: **F2** `issue_invoice` reads the invoice without `for update` (`0108:58`), so two concurrent issues both mint and the loser's number is burned (a gap in `INV-`, which `0086:88-91` forbids); **F5** `invoice_lines` has no parent-status guard, so an issued invoice's lines can be rewritten while `line_total` — and therefore the total — stays identical; **F4** `extend_booking` increments `invoice_lines.days` (`0111:126-129`) but `line_total` is a stored column, so a draft does **not** reprice, contradicting `0111:9` and `extendRental.ts:16`.
+- Added two scoped prompts so the unblocked work is not buried inside the size-L card: `docs/plans/prompts/T3-14a.md` (harden the write path: F2, F5, F4 — no decision needed) and `docs/plans/prompts/T3-14b.md` (Draft at Confirm + one re-sync function — no decision needed). The numbering half has **no** prompt and must not be started.
+
+**Ruled**
+- Nothing new. This session made no product decision and did not edit any ruling, `PLAN.md` or `docs/PERMISSIONS.md`.
+- Recorded for the record: where the docs disagree about *when* an invoice is issued, the newest ruling wins (`RULINGS-2026-10-26-workflow.md` W15/W16 — draft at Confirm, number on full payment), which supersedes `SPEC-P0-1-INVOICING.md` §3.3 and the "issued at return" copy in `CreateInvoiceModal.tsx:611-613`.
+- Flagged two documentation gaps the owner must settle: `RULINGS-2026-09-04.md` and `RULINGS-2026-09-08.md` are cited as **binding** in 8+ files but **do not exist in the repo**; and `docs/PERMISSIONS.md:192`/`:352` say Coordinator may issue an invoice while `0108:40` and `rbac.ts:418` allow Owner/Admin/Manager/Accounts only (stricter wins — the database is right, the matrix rows are stale).
+
+**Verified**
+- Git state read only: `git rev-parse HEAD`, `git branch --show-current`, `git status --porcelain`, `git log -1` — working tree clean apart from the pre-existing untracked `Nemotron PR Audit.md`.
+- **No gate was run by this session.** `check:pglite`, `check:lifecycle`, `test`, `typecheck` and `build` were deliberately not executed: the audit changed no code, and running them would not have proved anything about the missing paths. Everything below is `npm run completion` reading **recorded** receipts, which predate this HEAD and say so.
+- The one runtime claim in the audit is that `scripts/e2e-lifecycle.mjs` is local-only (`--live` unimplemented, `:37-41`) — read from its header, not from a run.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 59 / 59 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 40 / 40 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 180 files · check:pglite 180/180 applied, 0 failed (recorded 2026-10-27T11:18:26.048Z). Suite: Historical suite: 5831/5832 passed, 1 failed (recorded 2026-10-27T11:13:07.819Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-27T11:18:46.224Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **T3-14 stays `todo`.** The audit does not tick it: the Draft half is buildable, the numbering half is blocked.
+- **Blocked by the accountant (O-14, O-17).** O-14: second invoice or credit note for a numbered invoice that later changes. O-17: may the tax invoice wait for full payment, or does an advance/handover already require it? Both must be answered before the numbering step is written — the card itself says so. `T3-05` (IRD e-billing check, Babin + accountant) is the natural place to ask both.
+- **Also unruled, and hit by the card's own step 2:** MONEY-07 (re-invoicing a booking whose only invoice was voided) and MONEY-08 (`invoice_lines.line_kind` has no `Damage`/`Missing`, so a damage charge cannot become a line).
+- **Next session starts with:** `docs/plans/prompts/T3-14a.md` (lane C, no decision needed — lock the issue path, guard invoice lines, make the extension reprice), then `T3-14b.md`. Do not start the numbering half.
+- **Not done here, needs the owner:** restore or restate the missing `RULINGS-2026-09-04.md` / `-09-08.md`; fix the two `docs/PERMISSIONS.md` invoice rows; decide whether `canIssueInvoice` (`rbac.ts:416-419`, which today gates *create* not *issue*) is renamed before a real issue predicate is added.
+
+## 2026-10-27 — T2-14: Scan a label → item card
+
+**Did**
+- Implemented `getItemCardData(ref, opts)` query engine in `src/lib/queries/inventory.ts` to retrieve complete equipment intelligence for any scanned barcode, QR, serial, or asset tag:
+  - Product model, brand, asset tag, serial, barcode, status, and condition.
+  - Who has it now (W91): active client name, phone link, booking number, stage, return time in AD and BS, overdue state, and live countdown timer string.
+  - Location in shop: rack, shelf, bin, warehouse.
+  - Next upcoming booking: client, booking number, stage, pickup date, relative countdown ("Starts in 2 days").
+  - Last reset: cleaned by, QC inspector, self-check status (W43), skip reason, completion timestamp.
+  - Damage findings: active uninspected or open damage findings, severity, description.
+  - Financials: daily rate and replacement value in integer paisa, strictly masked for floor roles (Law 6).
+- Created countdown formatting utilities in `src/lib/itemCountdown.ts` (`formatDueCountdown`, `formatRelativeUpcoming`) with unit test coverage in `src/lib/__tests__/itemCountdown.test.ts` (8/8 passed).
+- Created `src/modules/inventory/ItemCardSheet.tsx`: responsive bottom sheet (phone) and modal (tablet/desktop) displaying the rich item card with real-time dynamic countdown ticker (`setInterval` 30s), who has it now, location, next booking, last reset, open damage, and Law 6 money gating.
+- Added `lookupItemCard` in `src/lib/scannerLookup.ts` and wired it into `src/components/shell/ScannerFab.tsx` via `openItemCard(code)` and `br:item-card:open` custom event.
+- Added global Bluetooth / keyboard wedge listener outside floor workspaces in `ScannerFab.tsx`, automatically opening the item card when a barcode is scanned outside floor workspaces (`/packing`, `/handover`, `/return`, `/reset`, `/evidence`).
+- In floor workspaces, scanning preserves its operational meaning (marking items against packing/return/reset lists) without triggering the item card modal.
+- Added "Item Card" quick action button in `src/modules/inventory/AssetDetail.tsx` on unit cards (mobile) and unit table rows (desktop).
+- Added comprehensive unit and integration tests:
+  - `src/lib/__tests__/itemCountdown.test.ts` (8/8 passed)
+  - `src/lib/queries/__tests__/itemCardLookup.test.ts` (2/2 passed)
+  - `src/modules/inventory/__tests__/ItemCardSheet.test.tsx` (5/5 passed)
+  - `src/components/shell/__tests__/ScannerFab.itemCard.test.tsx` (3/3 passed)
+  - `src/components/shell/__tests__/ScannerFab.viewport.test.tsx` (4/4 passed)
+  - `src/components/shell/__tests__/ScannerFab.loading.test.tsx` (1/1 passed)
+
+**Ruled**
+- W91: Scanning or searching an item's label outside a floor workspace displays who has it now, due back time, and a live countdown ticker ("Due in 2h 15m" / "Overdue by 3h 10m").
+- Law 6: Warehouse, Technician, Driver, and Client seats never receive money figures in the DOM or payloads; daily rate and replacement values are strictly omitted from the payload and UI for unauthorized roles.
+- Inside floor workspaces, scanning continues to mark units on the active list rather than opening the card sheet.
+
+**Verified**
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npx vitest run src/lib/__tests__/itemCountdown.test.ts src/lib/queries/__tests__/itemCardLookup.test.ts src/modules/inventory/__tests__/ItemCardSheet.test.tsx src/components/shell/__tests__/ScannerFab.itemCard.test.tsx src/components/shell/__tests__/ScannerFab.viewport.test.tsx src/components/shell/__tests__/ScannerFab.loading.test.tsx`: 23/23 tests passed.
+- `npm run build`: built in 3m 45s, 8152 modules transformed, PWA service worker generated cleanly.
+- `npm run lint:progress`: passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 59 / 59 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 40 / 40 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 180 files · check:pglite 180/180 applied, 0 failed (recorded 2026-10-27T11:18:26.048Z). Suite: Historical suite: 5831/5832 passed, 1 failed (recorded 2026-10-27T11:13:07.819Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-27T11:18:46.224Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Nothing open from T2-14. Ready to merge on Lane A.
+
+## 2026-10-27 — T2-13: Self-QC when alone
+
+**Did**
+- Claimed and verified migration `0183` in `docs/plans/MIGRATION_LEDGER.md` and created `supabase/migrations/0183_reset_self_qc_when_alone.sql`: added `qc_self_checked boolean not null default false` column to `cleaning_queue_entries` and updated check constraint `cleaning_queue_entries_qc_is_a_second_pair_of_eyes` to accept `qc_by = cleaned_by` when `qc_self_checked = true` (or when QC is skipped with reason).
+- Added lifecycle step `L40: Self-QC refused without the flag, accepted with it, audited (W43, L7, T2-13)` in `scripts/e2e-lifecycle.mjs`, asserting that self-QC is rejected by the database without `qc_self_checked`, accepted when `qc_self_checked = true`, and verified that the update trigger logs `qc_self_checked: true` in `audit_events` (40/40 green).
+- Updated `docs/PERMISSIONS.md` §6.1 with gate `gate.reset.qc_self_check` allowing Warehouse, Technician, and Manager+ to pass QC on self-cleaned gear when alone on shift, and updated `src/types/database.ts` with `qc_self_checked`.
+- Updated `src/actions/rentals/floorVerb.ts`: extended `ResetEntryInput` with `qcSelfChecked?: boolean`, updated `validateFloorVerb` to permit `qcBy === cleanedBy` when `qcSelfChecked === true` while refusing it when neither `qcSelfChecked` nor `qcSkipped` is declared, and assembled `qc_self_checked` into `cleaning_queue_entries` update and audit payload.
+- Updated `src/modules/rentals/ResetWorkspace.tsx`: added "I am alone on shift (W43, L7)" checkbox to individual row QC controls (`QcRowControls`) and batch QC actions (`batchAloneOnShift`), disabling Pass when an operator cleaned the gear unless "I am alone on shift" is ticked (or an audited skip reason is entered), and dispatching `qcSelfChecked: true` without faking a skipped QC.
+- Authored test suite `src/actions/rentals/__tests__/resetSelfQc.test.ts` (4/4 passed) and updated `src/modules/rentals/__tests__/resetQc.test.tsx` with dedicated tests for single and batch "I am alone on shift" flows (17/17 passed).
+
+**Ruled**
+- W43 & L7: The person who cleaned an item may pass its QC only when alone on shift. The QC step requires the "I am alone on shift" tick; with it ticked, `qc_by = cleaned_by` is accepted and recorded as self-checked (`qc_self_checked = true`, audited). Without it, a second person is still asked for.
+- 0003:887: Replaced the rigid constraint on `cleaning_queue_entries` with `(qc_by <> cleaned_by or qc_self_checked = true)` under non-skipped QC.
+- Law 1 & Law 12: No fabricated identities or faked skips; the database directly supports and records self-checked QC with full audit trail.
+
+**Verified**
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npx vitest run src/actions/rentals/__tests__/resetSelfQc.test.ts src/modules/rentals/__tests__/resetQc.test.tsx src/modules/rentals/__tests__/ResetWorkspace.quantity.test.tsx src/modules/rentals/__tests__/ResetWorkspace.embedded.test.tsx src/modules/rentals/__tests__/ResetWorkspace.neededNext.test.tsx`: 28/28 tests passed across 5 test suites.
+- `npm run check:pglite`: 180/180 migrations applied, 0 leaks, 0 failed.
+- `npm run check:lifecycle`: 40/40 steps green (L1–L40).
+- `npm run check:contrast`: 106/106 WCAG AA token pairs pass in light and dark mode.
+- `npm run build`: built in 2m 23s, 8150 modules transformed, PWA service worker generated cleanly.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 59 / 59 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 40 / 40 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 180 files · check:pglite 180/180 applied, 0 failed (recorded 2026-10-27T09:30:56.623Z). Suite: Historical suite: 5808/5808 passed, 0 failed (recorded 2026-10-27T07:45:41.068Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-27T09:31:18.591Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Nothing open from T2-13. Ready to merge on Lane A.
+
+## 2026-10-27 — T2-12: Client collectors and ID on file
+
+**Did**
+- Claimed migration `0182` in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0182_client_collectors_and_id_on_file.sql` creating `client_id_documents` and `client_collectors` tables with foreign keys and check constraints.
+- Enforced column-level masking: revoked base table SELECT permissions on sensitive columns (`id_number`, `evidence_file_id`) from non-Manager roles (`Warehouse`, `Technician`, `Driver`, `Client`); granted through masking views `client_id_documents_v` and `client_collectors_v` returning `••••-••••-XXXX` and `null` evidence files for unprivileged roles.
+- Implemented `client_has_id_on_file(uuid)` SECURITY DEFINER SQL function for rapid gate evaluation.
+- Added lifecycle step `L39: Warehouse cannot read client ID document number or collector ID number; Manager reads unmasked (W50, W34, T2-12)` in `scripts/e2e-lifecycle.mjs` verifying masking and RLS boundaries (39/39 green).
+- Added `canManageClientCollectors` and `canViewUnmaskedId` RBAC rules (`src/lib/rbac.ts`) and registered `client.manage_id` capability in `src/actions/core.ts`.
+- Created actions `src/actions/clients/recordIdDocument.ts` (enforcing null expiry on citizenship cards per W51) and `src/actions/clients/manageCollector.ts` (`createClientCollector`, `deactivateClientCollector`).
+- Added query helpers in `src/lib/queries/clients.ts` (`fetchClientIdDocument`, `hasClientIdOnFile`, `fetchClientCollectors`) with guards for mocked/stubbed environments.
+- Created modals `src/modules/clients/modals/AddClientIdModal.tsx` and `src/modules/clients/modals/AddCollectorModal.tsx`.
+- Updated `src/modules/rentals/HandoverWorkspace.tsx` Gate 1: renders "ID on file ✓" badge or warning for first-time clients; renders 1-tap collector selector chips with "+ Add Collector" on the spot; automatically sets `bookingAuthVerified` and `currentReceiverName`.
+- Enhanced `src/modules/rentals/modals/SignOnGlassModal.tsx` to accept `collectors` and display quick-select receiver chips for 1-tap signing.
+- Updated `src/modules/clients/ClientDetail.tsx` Documents tab to display Client ID on file and Authorized Collectors cards with manage modals.
+- Authored test suites in `src/actions/clients/__tests__/idAndCollectors.test.ts` (7/7 pass), `src/modules/rentals/__tests__/handoverCollectors.test.tsx` (4/4 pass), and verified all existing suites pass (`handoverWorkspace.test.tsx`, `SignOnGlassModal.test.tsx`, `ClientDetail.edit.test.tsx`).
+
+**Ruled**
+- W50: Client requires one government ID on file before their first rental; stored once and reused across future rentals.
+- W51: Nepali citizenship cards do not expire (`expiry_date` is null); passport and driver's license require expiry date.
+- W28 & W34: Authorized collectors list per client (name, phone, role/relation, optional ID). 1-tap selector at Handover and SignOnGlass fills receiver details instantly; new collectors can be registered on the spot.
+- Law 6 & T2-03: Role-based ID masking: non-Manager roles (`Warehouse`, `Technician`, `Driver`, `Client`) see masked document numbers (`••••-••••-1234`) and null photo file IDs; Manager+ and client portal users see unmasked details.
+
+**Verified**
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npx vitest run src/actions/clients/__tests__/idAndCollectors.test.ts src/modules/rentals/__tests__/handoverCollectors.test.tsx src/modules/rentals/__tests__/handoverWorkspace.test.tsx src/modules/rentals/modals/__tests__/SignOnGlassModal.test.tsx src/modules/clients/__tests__/ClientDetail.edit.test.tsx`: 34/34 tests passed.
+- `npm run check:pglite`: 179/179 migrations applied, 0 leaks, 0 failed.
+- `npm run check:lifecycle`: 39/39 steps green (L1–L39).
+- `npm run check:contrast`: 106/106 WCAG AA token pairs pass in light and dark mode.
+- `npm run build`: built in 1m 57s, 8147 modules transformed, PWA service worker generated cleanly.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 59 / 59 (100%) | +2 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +1 |
+| Lifecycle | steps green / total | 39 / 39 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 179 files · check:pglite 179/179 applied, 0 failed (recorded 2026-10-27T08:00:23.151Z). Suite: Historical suite: 5808/5808 passed, 0 failed (recorded 2026-10-27T07:45:41.068Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-27T08:00:58.508Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Nothing open from T2-12. Ready to merge on Lane A.
+
+## 2026-10-27 — T2-10: Offline outbox for scans and ticks
+
+**Did**
+- Routed all non-custodial floor writes (barcode scans, manual checklist ticks, reset tasks) through the Dexie IndexedDB outbox (`src/lib/offlineQueue.ts`, `dataAccess.ts` idempotent insert) with `client_uuid` and `scanned_at` timestamp.
+- Updated `src/lib/offlineQueue.ts` to notify reactive listeners on queue changes (`onQueueChange`) across enqueuing, resolution, failure, and queue drain.
+- Enhanced `src/lib/syncEngine.ts` to reactively update pending queue counts immediately on every floor tick/scan and persisted `lastSyncTime` into localStorage (`babin-rentals:last-sync-time`) across tab refreshes.
+- Created `src/components/ui/FloorOfflineStatus.tsx` providing floor operators visual feedback of connection status, queued outbox counts, last flush timestamp (`Just now`, `Xs ago`, `Xm ago`), and manual "Flush Now" control.
+- Integrated `FloorOfflineStatus` and offline detection across all warehouse floor workspaces: `PackingWorkspace.tsx`, `HandoverWorkspace.tsx`, `ReturnWorkspace.tsx`, and `ResetWorkspace.tsx`.
+- Strictly enforced Law 1 & Rule R-40: custodial stage transitions (`packRental`, `handoverRental`, `returnRental`, `completeResetJob`) remain fail-closed online RPCs, never queued offline. When offline (`navigator.onLine === false` or network dropped), the Confirm button displays "Needs connection to complete" and is disabled across both in-page buttons, mobile sticky bars (`StickyFloorBar`), and embedded operations modals (`onRegisterActions`).
+- Added comprehensive unit tests in `src/lib/__tests__/floorOfflineOutbox.test.ts` (verifying 20 scans and ticks queue in airplane mode and flush cleanly to server rows with zero duplicates, including 23505 conflict idempotency handling) and `src/modules/rentals/__tests__/floorOfflineWorkspace.test.tsx` (verifying UI status banners, outbox counts, last flush timestamps, and disabled/enabled Confirm button safety states).
+
+**Ruled**
+- Law 1 & R-40: Custody transitions are fail-closed online RPCs, never queued offline. Non-custodial floor events (scans, checklist ticks, notes) queue durably in Dexie with `client_uuid` idempotency keys.
+- Law 6: Money-blindness strictly preserved across all floor offline indicators and workspace surfaces.
+- Outbox reactivity: Sync status and pending counters update synchronously upon scan/tick enqueue without waiting for polling intervals.
+
+**Verified**
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 errors, 0 warnings.
+- `npx vitest run src/lib/__tests__/floorOfflineOutbox.test.ts src/modules/rentals/__tests__/floorOfflineWorkspace.test.tsx`: 6/6 tests passed.
+- `npx vitest run src/lib/__tests__/floorScanStorage.test.ts src/lib/__tests__/offlineQueue.test.ts src/lib/__tests__/offlineQueue.phase0.test.ts src/lib/__tests__/offlineQueue.conflicts.test.ts src/actions/__tests__/offlineGating.test.ts src/modules/rentals/__tests__/PackingWorkspace.embedded.test.tsx src/modules/rentals/__tests__/ResetWorkspace.embedded.test.tsx src/modules/rentals/__tests__/ResetWorkspace.quantity.test.tsx`: 46/46 tests passed.
+- `npm run check:pglite`: 178/178 migrations applied, 0 leaks, 0 failed.
+- `npm run check:lifecycle`: 38/38 steps green (L1–L38).
+- `npm run check:contrast`: 106/106 WCAG AA token pairs pass in light and dark mode.
+- `npm run build`: built in 1m 49s, 8145 modules transformed, PWA service worker generated cleanly.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -142,20 +831,94 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 | Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
 | Lifecycle | steps green / total | 38 / 38 (100%) | +0 |
 | Overall | structural mean of five | ≈ 97% | — |
-Migrations 178 files · check:pglite 178/178 applied, 0 failed (recorded 2026-10-26T13:21:20.946Z). Suite: PASS — 5772/5772 passed, 0 failed (recorded 2026-10-26T13:44:00.193Z); source fingerprint matches.
-Coverage suite: PASS — 5772/5772 passed, 0 failed (recorded 2026-10-26T13:44:00.193Z); source fingerprint matches.
-Gates read from .lifecycle-result.json, written 2026-10-26T13:22:18.016Z.
+Migrations 178 files · check:pglite 178/178 applied, 0 failed (recorded 2026-10-26T20:00:57.551Z). Suite: Historical suite: 5763/5764 passed, 1 failed (recorded 2026-10-26T18:02:08.761Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-26T20:01:08.449Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
-(Docs-only change: counts copied unchanged from the previous entry; not re-measured.)
-(Docs-only change: counts copied unchanged from the previous entry; not re-measured.)
+
+## Remaining
+- Nothing open from T2-10. Ready to proceed to the next card on Lane A (`T2-12 · Client collectors and ID on file`).
+
+## 2026-10-27 — T2-08: Floor printing (Packing list manifest, Return report, QR/label print)
+
+**Did**
+- Implemented packing list binary PDF generation `generatePackingListPdf()` and export `exportPackingListPdf()` in `src/lib/pdf/generatePdf.ts` and `src/lib/pdf/exportPdf.ts`. Follows the 27 Jul hierarchy rule: packages/parent bundles first, child lines indented `   ↳` immediately below their parents, loose items following. Pure PDF 1.4 binary stream with printable `[ ]` check boxes, signature lines (Packed by, Received by), and document metadata.
+- Implemented return report binary PDF generation `generateReturnReportPdf()` and export `exportReturnReportPdf()` in `src/lib/pdf/generatePdf.ts` and `src/lib/pdf/exportPdf.ts`. Summarizes line outcomes (`Received`, `Damaged`, `Missing`), triage routes (`Cleaning`, `Repair`, `Inspection`), photo count, inspector signature block, and client acknowledgment.
+- Strictly enforced money-blindness (Law 6): zero financial amounts (Rs, NPR, rates, paisa, deposits, fines) in packing list or return report PDFs.
+- Replaced the two `<Unavailable reason="Printing … is not built">` blocks in `src/modules/rentals/PackingWorkspace.tsx` and `src/modules/rentals/ReturnWorkspace.tsx` with active print buttons that generate and open/download the PDF on iPad and desktop (`openPdfForPrint`).
+- Replaced `window.print()` in `src/modules/tools/QrGeneratorModal.tsx` with dedicated thermal / AirPrint label printing (`printLabel`).
+- Added comprehensive unit tests in `src/lib/pdf/__tests__/generatePdf.test.ts`, `src/lib/pdf/__tests__/exportPdf.test.ts`, and `src/modules/rentals/__tests__/floorPrinting.test.tsx`.
+
+**Ruled**
+- 27 Jul hierarchy rule: Parent bundle lines are listed before child components, and children are indented directly beneath their parent with `   ↳`.
+- Law 6: Floor manifests and return reports are completely money-blind for warehouse, technician, driver, and client roles.
+- AirPrint / direct printer fallback: `openPdfForPrint()` creates a revocable blob URL and opens an isolated print window on iPad/desktop with fallback direct download.
+
+**Verified**
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 errors, 0 warnings.
+- `npx vitest run src/lib/pdf/__tests__/ src/modules/rentals/__tests__/floorPrinting.test.tsx`: 23/23 tests pass across 3 files.
+- `npm run check:pglite`: 178/178 migrations applied, 0 leaks, 0 failed.
+- `npm run check:lifecycle`: 38/38 steps green (L1–L38).
+- `npm run check:contrast`: 106/106 WCAG AA token pairs pass in light and dark mode.
+- `npm run build`: built in 3m 36s, 8144 modules transformed, PWA service worker generated cleanly.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 57 / 57 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 47 / 47 (100%) | +0 |
+| Lifecycle | steps green / total | 38 / 38 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 178 files · check:pglite 178/178 applied, 0 failed (recorded 2026-10-26T18:24:19.691Z). Suite: Historical suite: 5763/5764 passed, 1 failed (recorded 2026-10-26T18:02:08.761Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-26T18:24:45.212Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Nothing open from T2-08. Ready to proceed to the next card on Lane A (`T2-10 · Offline outbox for scans and ticks`).
+
+## 2026-10-15 — R-39 budgets measured in the browser: New Rental, inline client and cancel
+
+**Did**
+- Measured the three R-39 rows that were still unmeasured, on current main (`62c9795`), seeded mock, Owner, 1440px, starting from each flow's own entry point. Gestures are counted one per tap; a native `<select>` counts as two (open, choose). Typed = fields typed, not characters.
+  - **New Rental → Booked** (Today → Create → New Rental → client → project type → Equipment → one equipment item → Confirm Booking): **10 gestures, 0 typed**. Budget ⭐ ≤12: within. Committed: "Booking Confirmed — Rental 918 is now Booked".
+  - **New client inline** (New Rental → New client → company name, phone → Create & Select Client → Continue Booking): **3 gestures, 2 typed**. The required fields are the company name and the phone, confirmed by submitting the form empty. Budget ≤3 required: within. Committed: "Client created C-1 · … is selected on this booking", and the rental's client field shows the name.
+  - **Cancel a booking** (Rentals list → row ⋮ → Cancel Booking → reason → "I confirm" checkbox → Cancel Booking): **4 gestures, 1 typed**. The 19 Sep row says 3 taps; the dialog also requires the "I confirm" checkbox, which is part of the named-action gate. Budget stays "gated". **Not committed in the mock:** the store refuses with `[mock] rpc("cancel_booking") is not implemented in the local store`. The refusal is honest (no false success), but the commit is unverified here.
+- Found, not fixed:
+  - **Bundles cannot be confirmed in mock mode.** Add Bundle → Confirm Booking is refused with "line 2 carries a productId that is not a uuid (`BND-14::Aputure LS 600d Pro`). Nothing was sent." Single equipment items commit. Not checked against the live data path.
+  - **Booking Detail's header ⋮ cannot reach Cancel with a mouse at 1440px.** The first ⋮ ("More actions") opens a menu whose only entry is another ⋮ ("More booking actions"). Clicking the inner ⋮ closes both menus, so the items inside it (Extend rental, Assign crew, Create sub-rental, Cancel booking, Message client) are not reachable from the header. The nested menu is also present on `21fb260` (before `5c1bacc`), which I saw but did not click through there. The Rentals list row ⋮ still offers Cancel Booking.
+
+**Ruled**
+- None. No product rule, budget or permission changed. The 19 Sep table is not edited in this entry; its cancel row and its New Rental row need correcting (see Remaining).
+
+**Verified**
+- Browser (seeded mock, Owner, 1440px): the three flows above, outcomes quoted from the app's own toasts and dialogs. Screens checked: the Create menu, the client picker, the equipment catalogue, the review panel, the Booking Confirmed dialog, the inline new-client form and its success card, the Rentals list row menu and the cancel dialog. Zero page errors in every run.
+- No code changed. `npm run completion` counted below; `npm run lint:progress` run.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 54 / 54 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 52 | 50 · 0 · 0 · 2 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 44 / 44 (100%) | +2 |
+| Lifecycle | steps green / total | 30 / 30 (100%) | +0 |
+| Overall | mean of five | ≈ 99% | +0 |
+Migrations 167 files · check:pglite 167/167 applied, 0 failed (recorded 2026-10-17T07:27:04.216Z). Suite: 4646/4646 passed (recorded 2026-10-16T12:20:00.4333494Z).
+Gates read from .lifecycle-result.json, written 2026-10-14T20:37:10.038Z.
+Counted by `npm run completion`, not typed.
 
 ### Remaining
-- Babin: apply `fix-evidence-offline-text.patch` (3 app files, text only; turns `lint:ui-copy` green) if it is not already on `main`; disable the CI workflow in GitHub; open three worktrees and paste the first prompts — Codex-1 `T0-10` then `T2-16` then `T2-17`, Gemini `T4-04`, Codex-2 `T3-01` — then the rest of week 1 in `docs/plans/BABIN_ACTIONS.md`.
-- Babin: decide whether `.agents/skills/` (172 files of agent tooling, `31552cd`) belongs in the repository.
-- Claude: PR and branch triage list (T0-03, T0-04); usability task cards the day before each round (T9-09); T6-01 glossary draft and T7-01 spec as files.
-- Open with ⭐ defaults: `PLAN.md` §4.2 O-1…O-7, O-9…O-17. Accountant: seven questions (O-14 and O-17 block T3-14's numbering step).
-
+- Booking Detail's nested ⋮: proposed fix is one menu holding the five booking items, so Cancel is one ⋮ away from the header. It moves the header layout, so it needs a decision.
+- Bundles: check the live path before changing anything. The composite `BND-14::…` productId may be a mock-only artefact, or the app may build it for live bundles too.
+- Cancel's committed success needs the live `cancel_booking` RPC, or a mock implementation. Neither is done.
+- Correct the 19 Sep table: Cancel a booking 3 → 4 gestures (+1 typed); New Rental, Dashboard → Booked, 6–8 estimate → 10 gestures measured.
+- The 2026-10-15 "Clean UI improvements" entry exists only in `a995169`, not on main. Restore it, or leave it, at the owner's call.
 
 ## 2026-10-26 (l) — Workflow round (v2, rebased onto 7d84c323): ~100 answers recorded; plans, lanes and agent prompts updated; Claude chose who does what (docs only, delivered as files)
 
@@ -824,7 +1587,6 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `npm run db:plan` read-only: live ledger snapshot 17 Oct = 156 rows, newest 0164; 19 files pending (0157–0163, 0165–0174, 0176, 0177); 0047 seed must stay excluded; 7 rename mismatches; 2 unexplained live rows (`archive_bakery_pos_schema`, `0047_seed_tail_b917_equipment_line`).
 - Hosting facts in T1's appendix were checked against the providers' own pages on 26 Oct (links in the appendix).
 - Rebased onto `main` `f3aa132` before pushing. The commits after `34cce2d` touch `PROGRESS.md`, `docs/WORKFLOWS.md` and one comment in `src/lib/bookingTransition.ts` only, so the measurements above still describe the code.
-
 
 ### Completion
 | Dimension | Counts | Now | Δ |

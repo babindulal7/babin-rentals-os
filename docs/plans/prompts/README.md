@@ -32,7 +32,7 @@ Claude reviews the merged work at 7:38 AM and 7:38 PM NPT and tells you what to 
 | [T1-13](T1-13.md) | Real staff accounts on live | S | go-live |
 | [T1-14](T1-14.md) | Performance on real devices | M | go-live |
 | [T1-15](T1-15.md) | Switch user with name + PIN | L | go-live |
-| [T2-16](T2-16.md) | Finish evidence capture | L | go-live |
+| [T2-18](T2-18.md) | Finish evidence capture (what T2-16 left) | L | go-live |
 | [T2-17](T2-17.md) | Save a unit's details | M | go-live |
 | [T2-06](T2-06.md) | Repair job closes the damage | L | go-live |
 | [T2-08](T2-08.md) | Floor printing | M | go-live |
@@ -108,6 +108,9 @@ Claude reviews the merged work at 7:38 AM and 7:38 PM NPT and tells you what to 
 | [T3-12](T3-12.md) | Paste a WhatsApp gear list | M | go-live |
 | [T3-13](T3-13.md) | Fully booked → similar item or sub-rent | M | go-live |
 | [T3-14](T3-14.md) | Draft invoice at Confirm, number on full payment | L | go-live |
+| [T3-14a](T3-14a.md) | Harden the invoice write path (audit F2/F5/F4) — no decision needed | M | go-live |
+| [T3-14b](T3-14b.md) | Confirm creates the Draft, Draft follows the booking — no decision needed | L | go-live |
+| [T3-14c](T3-14c.md) | Number on settlement — **BLOCKED**, do not paste until O-14 + O-17 are answered | L | blocked |
 | [T3-15](T3-15.md) | Payment method default | S | go-live |
 | [T3-16](T3-16.md) | Share documents in one tap | M | go-live |
 | [T3-17](T3-17.md) | Extend in two taps | S | go-live |
@@ -154,4 +157,4 @@ Claude reviews the merged work at 7:38 AM and 7:38 PM NPT and tells you what to 
 - T0-07 · Retire the three dead inspection stubs — done (26 Oct, `3fca220`)
 - T0-08 · Lanes and worktrees in AGENTS.md — done (26 Oct — AGENTS.md on main `3fca220`; lanes, agents and local gates added by the workflow package)
 - T2-02 · T2-03 · T2-04 · T2-05 · T2-07 — built on `main` 26 Oct (T2-02: the receiver picker comes with T2-12)
-- T2-01 · Camera evidence upload — done in part (26 Oct, `3fca220`) — the rest is T2-16
+- T2-01 · Camera evidence upload — done in part (26 Oct, `3fca220`) — the rest is T2-18 (T2-16 built the photo rules)
