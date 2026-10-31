@@ -1,7 +1,10 @@
+import { useEffect, useState } from 'react'
 import Icon from '../../../components/ui/Icon'
 import { Input, Select } from '../../../components/ui'
 import { Field, Section, MoneyRow, inputStyle } from './BookingFormWidgets'
 import { formatMoney, rupees, type Paisa } from '../../../lib/money'
+import { listDeliveryZones, type DeliveryZoneRow } from '../../../actions/deliveryZones/listDeliveryZones'
+import { getDeliveryZoneFee } from '../../../actions/deliveryZones/getDeliveryZoneFee'
 
 const sub = {
   margin: '0 0 8px',
@@ -26,6 +29,8 @@ export interface DeliverySectionProps {
   clientPickup: boolean
   deliveryType: 'Client Pickup' | 'Babin Delivery'
   setDeliveryType: (val: 'Client Pickup' | 'Babin Delivery') => void
+  deliveryZone: string
+  setDeliveryZone: (val: string) => void
   vehicle: string
   setVehicle: (val: string) => void
   numberPlate: string
@@ -90,13 +95,57 @@ export function DeliverySection({
   canBookingMoney,
   title = 'Delivery & Transport',
 }: DeliverySectionProps) {
+  const [zones, setZones] = useState<DeliveryZoneRow[]>([])
+  const [zonesLoading, setZonesLoading] = useState(true)
+  const [zoneError, setZoneError] = useState<string | null>(null)
+
+  // Load active delivery zones on mount
+  useEffect(() => {
+    let mounted = true
+    setZonesLoading(true)
+    listDeliveryZones({ activeOnly: true, limit: 100 })
+      .then((result) => {
+        if (mounted) {
+          setZones(result.zones ?? [])
+          setZoneError(null)
+        }
+      })
+      .catch((err) => {
+        if (mounted) {
+          setZoneError(err instanceof Error ? err.message : 'Failed to load delivery zones')
+          setZones([])
+        }
+      })
+      .finally(() => {
+        if (mounted) setZonesLoading(false)
+      })
+    return () => { mounted = false }
+  }, [])
+
+  // Auto-fill delivery charge when zone changes
+  useEffect(() => {
+    if (!deliveryZone || clientPickup) return
+    let mounted = true
+    getDeliveryZoneFee({ zoneName: deliveryZone })
+      .then((result) => {
+        if (mounted && canBookingMoney) {
+          setDeliveryChargePaisa(result.feePaisa)
+        }
+      })
+      .catch(() => {
+        // Silently fail - user can manually enter fee
+      })
+  }, [deliveryZone, clientPickup, canBookingMoney, setDeliveryChargePaisa])
+
+  const clientPickup = deliveryType === 'Client Pickup'
+
   return (
     <Section
       id="section-4"
       title={title}
       open={open}
       onToggle={onToggle}
-      summary={clientPickup ? 'Client Pickup · Rs 0' : `Babin Delivery · ${canBookingMoney ? formatMoney(transportPaisa) : 'charged'}`}
+      summary={clientPickup ? 'Client Pickup · Rs 0' : `Babin Delivery · ${deliveryZone || 'Select zone'} · ${canBookingMoney ? formatMoney(transportPaisa) : 'charged'}`}
     >
       <div style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : 'repeat(2, minmax(0,1fr))', gap: 'var(--sp-md)' }}>
         {/* Left Column: Delivery Type & Dispatch Details */}
@@ -104,7 +153,13 @@ export function DeliverySection({
           <Field label="Delivery Type">
             <Select
               value={deliveryType}
-              onChange={(e) => setDeliveryType(e.target.value as typeof deliveryType)}
+              onChange={(e) => {
+                const val = e.target.value as typeof deliveryType
+                setDeliveryType(val)
+                if (val === 'Client Pickup') {
+                  setDeliveryZone('')
+                }
+              }}
               style={inputStyle}
             >
               <option>Client Pickup</option>
@@ -138,6 +193,35 @@ export function DeliverySection({
             </div>
           ) : (
             <div style={{ display: 'grid', gap: 9, marginTop: 12 }}>
+              {/* Zone Selection */}
+              <Field label="Delivery Zone">
+                {zonesLoading ? (
+                  <div style={{ ...inputStyle, opacity: 0.6 }}>Loading zones…</div>
+                ) : zoneError ? (
+                  <div style={{ ...inputStyle, color: 'var(--danger-text)', background: 'var(--danger-bg)' }}>
+                    {zoneError}
+                  </div>
+                ) : zones.length === 0 ? (
+                  <div style={{ ...inputStyle, color: 'var(--muted)' }}>
+                    No active zones — configure in Settings ▸ System ▸ Operations
+                  </div>
+                ) : (
+                  <Select
+                    value={deliveryZone}
+                    onChange={(e) => setDeliveryZone(e.target.value)}
+                    style={inputStyle}
+                    disabled={!canBookingMoney}
+                  >
+                    <option value="">Select zone</option>
+                    {zones.map((zone) => (
+                      <option key={zone.id} value={zone.name}>
+                        {zone.name} — {formatMoney(zone.fee_paisa)}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </Field>
+
               <Field label="Vehicle">
                 <Input
                   value={vehicle}
@@ -249,11 +333,17 @@ export function DeliverySection({
                   <Input
                     type="number"
                     min={0}
-                    disabled={clientPickup}
-                    value={clientPickup ? 0 : deliveryChargePaisa / 100}
+                    disabled={clientPickup || !deliveryZone}
+                    value={clientPickup || !deliveryZone ? 0 : deliveryChargePaisa / 100}
                     onChange={(e) => setDeliveryChargePaisa(rupees(Math.max(0, Number(e.target.value) || 0)))}
-                    style={{ ...inputStyle, opacity: clientPickup ? 0.55 : 1, cursor: clientPickup ? 'not-allowed' : 'text' }}
+                    style={{ ...inputStyle, opacity: clientPickup || !deliveryZone ? 0.55 : 1, cursor: clientPickup || !deliveryZone ? 'not-allowed' : 'text' }}
+                    placeholder={!deliveryZone ? 'Select zone first' : undefined}
                   />
+                  {!deliveryZone && !clientPickup && (
+                    <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)', marginTop: 4 }}>
+                      Select a zone to auto-fill the fee
+                    </span>
+                  )}
                 </Field>
                 <Field label="Fuel Charge">
                   <Input

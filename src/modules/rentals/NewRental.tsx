@@ -221,6 +221,8 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
   const {
     deliveryType,
     setDeliveryType,
+    deliveryZone,
+    setDeliveryZone,
     deliveryChargePaisa,
     setDeliveryChargePaisa,
     fuelChargePaisa,

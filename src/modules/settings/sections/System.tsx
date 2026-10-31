@@ -3,6 +3,7 @@ import type { Field, Section } from './shared'
 import { DevicePinControl } from './DevicePin'
 import { PwaInstallControl } from '../../../components/ui/PwaInstallControl'
 import { LegacyExportControl } from './LegacyExportControl'
+import { DeliveryZonesControl } from './DeliveryZonesControl'
 
 /**
  * **Settings ▸ System** — appearance, notifications, preferences, security and
@@ -98,8 +99,8 @@ export const SYSTEM_SECTIONS: Section[] = [
         custom: <PwaInstallControl />,
       },
       {
-        label: 'Legacy device export',
-        note: 'Download old entries saved only on this browser as a file for Babin (Ruling D28, Law 3).',
+        label: 'Legacy data backup',
+        note: 'Download old browser-stored data from this device before starting fresh (Ruling D28, Law 3).',
         custom: <LegacyExportControl />,
       },
       /*
@@ -171,6 +172,12 @@ export const SYSTEM_SECTIONS: Section[] = [
         note: 'How soon a unit\'s next reservation pickup must be to show "Needed next" in the Reset queue and sort to the top. Default 4 hours (Ruling D5).',
         settingKey: 'resetNeededNextHours',
         readBy: 'modules/rentals/ResetWorkspace.tsx',
+      },
+      {
+        label: 'Delivery zones',
+        note: 'Zones and fees for delivery dispatch. Pickup at the shop is always Rs 0. Coordinator+ can create, edit, and deactivate zones.',
+        custom: <DeliveryZonesControl />,
+        readBy: 'lib/queries/delivery.ts, modules/operations/DeliveryWorkspace.tsx',
       },
     ],
   },

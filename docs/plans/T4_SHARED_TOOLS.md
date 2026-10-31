@@ -104,7 +104,7 @@ per device until dismissed; reachable later from Settings ▸ System.
 still present afterwards; a clean device shows nothing.
 **Needs** — none.
 
-### T4-07 · Delivery zones and fees            status: todo · size: S · lane B · [go-live]
+### T4-07 · Delivery zones and fees            status: doing — database, actions, RBAC, lifecycle step, Settings UI, and New Rental zone integration complete (lane-b/T4-07-delivery-zones) · size: S · lane B · [go-live]
 **What** — Settings ▸ Operations ▸ **Delivery zones**: a short table of zones with a fee each.
 Starting zones (L6, researched — Kathmandu services group the valley the same way):
 **Inside Ring Road · Outside Ring Road, inside the valley · Far valley (Bhaktapur town, Godawari,
@@ -115,7 +115,7 @@ the shop stays Rs 0. Replace the fixed Rs 3,500 "Babin Delivery" price.
 **Why** — W48, W85, L6.
 **Where** — `src/lib/settingsStore.ts`, settings table (0158), `src/lib/bookingTransportForm.ts`,
 `NewRental.tsx` transport section, `src/lib/pricingPipeline.ts`.
-**Database** — migration (claim a number) if zones need their own table rather than a settings key.
+**Database** — migration `0189_delivery_zones.sql`: `delivery_zones` table + RPCs + seed data.
 **Done when** — four zones editable by Owner/Admin/Manager; a booking's delivery fee follows its zone;
 Warehouse cannot see fees.
 **Needs** — none.
