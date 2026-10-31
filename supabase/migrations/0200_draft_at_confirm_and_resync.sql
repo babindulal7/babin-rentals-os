@@ -66,13 +66,15 @@ begin
   -- 4. Equipment / Bundle / Accessory / Service / Sub-rental lines
   --    Source: booking_lines (voided_at is null)
   --    Arithmetic mirrors 0168:848-877
+  --    client_uuid is NEW for each line (gen_random_uuid) to avoid unique constraint
+  --    collisions across source tables and on concurrent resyncs.
   insert into invoice_lines (
     client_uuid, invoice_id, line_kind, description,
     quantity, days, unit_rate, line_total, discount_percent, sort_order,
     price_breakdown
   )
   select
-    bl.client_uuid,
+    gen_random_uuid(),
     v_invoice_id,
     (case bl.line_type
        when 'Equipment'   then 'Equipment Rental'
@@ -101,12 +103,14 @@ begin
   --    Arithmetic mirrors 0168:896-912
   --    line_total = day_rate * days + overtime + accommodation + meals
   --    unit_rate = day_rate + (extras / days)
+  --    client_uuid is NEW for each line (gen_random_uuid) to avoid unique constraint
+  --    collisions across source tables and on concurrent resyncs.
   insert into invoice_lines (
     client_uuid, invoice_id, line_kind, description,
     quantity, days, unit_rate, line_total, discount_percent, sort_order
   )
   select
-    cl.client_uuid,
+    gen_random_uuid(),
     v_invoice_id,
     'Crew Charges'::line_kind,
     coalesce(
@@ -131,12 +135,14 @@ begin
   -- 6. Transport lines
   --    Source: booking_transport
   --    Arithmetic mirrors 0168:927-946
+  --    client_uuid is NEW for each line (gen_random_uuid) to avoid unique constraint
+  --    collisions across source tables and on concurrent resyncs.
   insert into invoice_lines (
     client_uuid, invoice_id, line_kind, description,
     quantity, days, unit_rate, line_total, discount_percent, sort_order
   )
   select
-    bt.client_uuid,
+    gen_random_uuid(),
     v_invoice_id,
     'Transport'::line_kind,
     case
