@@ -30,6 +30,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0189 | T4-07 | delivery-zones | lane-b/T4-07-delivery-zones | written |
 | 0193 | T3-14a | invoice-write-hardening | lane-c/T3-14a-invoice-write-hardening | verified |
 | 0199 | T8-08 | tds-on-crew-payouts | lane-a/T8-08-tds-on-crew-payouts | verified |
+| 0200 | T3-14b | draft-at-confirm | lane-c/T3-14b-draft-at-confirm | claimed |
 
 ## Expected migrations (not yet claimed)
 
