@@ -1,5 +1,4 @@
 import { createAction } from '../core';
-import { DomainEvents } from '../../events/eventBus';
 import { supabase } from '../../lib/supabase';
 
 export type DeactivateDeliveryZoneInput = {
@@ -24,6 +23,7 @@ export const deactivateDeliveryZone = createAction<DeactivateDeliveryZoneInput, 
     }
   },
   execute: async (input, ctx) => {
+    void ctx;
     const { data, error } = await supabase.rpc('deactivate_delivery_zone', {
       p_zone_id: input.zoneId,
     });

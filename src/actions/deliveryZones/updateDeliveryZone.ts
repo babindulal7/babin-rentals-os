@@ -1,5 +1,4 @@
 import { createAction } from '../core';
-import { DomainEvents } from '../../events/eventBus';
 import { supabase } from '../../lib/supabase';
 
 export type UpdateDeliveryZoneInput = {
@@ -47,6 +46,7 @@ export const updateDeliveryZone = createAction<UpdateDeliveryZoneInput, UpdateDe
     }
   },
   execute: async (input, ctx) => {
+    void ctx;
     const { data, error } = await supabase.rpc('update_delivery_zone', {
       p_zone_id: input.zoneId,
       p_name: input.name?.trim() ?? null,

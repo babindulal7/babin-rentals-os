@@ -1411,7 +1411,7 @@ function BookingDetailView() {
 
   useEffect(() => {
     let active = true
-    if (stage === 'Quote' && id) {
+    if (booking?.stage === 'Quote' && id) {
       void import('../../lib/queries/smartReservationQueries')
         .then((m) => m.queryBookingAvailability(id))
         .then((res) => {
@@ -1428,7 +1428,7 @@ function BookingDetailView() {
     return () => {
       active = false
     }
-  }, [id, stage, head.lastFetchedAt])
+  }, [id, booking?.stage, head.lastFetchedAt])
 
   const confirmBooking = useCallback(() => {
     const ctx = actionCtx(user)

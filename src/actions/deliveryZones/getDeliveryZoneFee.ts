@@ -19,6 +19,7 @@ export const getDeliveryZoneFee = createAction<GetDeliveryZoneFeeInput, GetDeliv
     }
   },
   execute: async (input, ctx) => {
+    void ctx;
     const { data, error } = await supabase.rpc('get_delivery_zone_fee', {
       p_zone_name: input.zoneName.trim(),
     });

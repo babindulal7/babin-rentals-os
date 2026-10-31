@@ -408,7 +408,7 @@ export function LineItemTree({
           }
 
           const renderedChildren = query ? matchingChildren : children
-          const stock = getStockAvailability(parent, caseIdx)
+          const _stock = getStockAvailability(parent, caseIdx)
 
           return (
             <div
@@ -656,7 +656,6 @@ export function LineItemTree({
                       {/* 2. Nested Child Items */}
                       {renderedChildren.map((child, cIdx) => {
                         const isLastChild = cIdx === renderedChildren.length - 1
-                        const childStock = getStockAvailability(child, cIdx)
                         const qc = getQcStatus(child.productName)
 
                         return (
@@ -824,7 +823,6 @@ export function LineItemTree({
                   if (query && !filterMatches(line.productName) && !filterMatches(line.description)) {
                     return null
                   }
-                  const stock = getStockAvailability(line, idx)
                   return (
                     <tr
                       key={line.id}

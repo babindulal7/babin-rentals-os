@@ -67,6 +67,8 @@ export function DeliverySection({
   clientPickup,
   deliveryType,
   setDeliveryType,
+  deliveryZone,
+  setDeliveryZone,
   vehicle,
   setVehicle,
   numberPlate,
@@ -129,15 +131,13 @@ export function DeliverySection({
     getDeliveryZoneFee({ zoneName: deliveryZone })
       .then((result) => {
         if (mounted && canBookingMoney) {
-          setDeliveryChargePaisa(result.feePaisa)
+          setDeliveryChargePaisa(result.feePaisa as unknown as Paisa)
         }
       })
       .catch(() => {
         // Silently fail - user can manually enter fee
       })
   }, [deliveryZone, clientPickup, canBookingMoney, setDeliveryChargePaisa])
-
-  const clientPickup = deliveryType === 'Client Pickup'
 
   return (
     <Section
@@ -215,7 +215,7 @@ export function DeliverySection({
                     <option value="">Select zone</option>
                     {zones.map((zone) => (
                       <option key={zone.id} value={zone.name}>
-                        {zone.name} — {formatMoney(zone.fee_paisa)}
+                        {zone.name} — {formatMoney(zone.fee_paisa as unknown as Paisa)}
                       </option>
                     ))}
                   </Select>

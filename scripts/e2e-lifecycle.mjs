@@ -3899,7 +3899,7 @@ STEPS.push({
 
       // 4. Verify update reflected
       await as('Manager', async () => {
-        const zone = await one(`select name, fee_paisa from delivery_zones where id = $1`, [zoneId])
+        const zone = (await q(`select name, fee_paisa from delivery_zones where id = $1`, [zoneId])).rows[0]
         assertEq(zone.name, 'Test Valley Zone Updated', 'Zone name updated')
         assertEq(Number(zone.fee_paisa), 400000, 'Zone fee updated')
       })

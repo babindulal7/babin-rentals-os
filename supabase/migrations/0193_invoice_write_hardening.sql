@@ -176,17 +176,70 @@ grant execute on function public.issue_invoice(uuid) to authenticated;
 create or replace function reject_invoice_edit_after_issue()
 returns trigger
 language plpgsql
+security definer
+set search_path = public, pg_temp
 as $$
 begin
-  -- Draft invoices are still being assembled — nothing is "issued" yet to protect.
-  if OLD.status = 'Draft' then
+  -- 1. Voided invoices are completely immutable
+  if OLD.status = 'Void' then
+    raise exception 'GATE:gate.invoice.void_immutable|A voided invoice is immutable and cannot be modified.' using errcode = 'P0001';
+  end if;
+
+  -- 2. Draft invoices can be edited freely (except cannot transition directly to Void without discipline)
+  if OLD.status = 'Draft' and NEW.status <> 'Void' then
     return NEW;
   end if;
 
-  -- The Void + Credit Note path is the one lawful way to touch an issued invoice's own row:
-  -- voided_at/voided_by/void_reason/credit_note_no move together (already required by
-  -- invoices_void_requires_reason above), and the figures must travel unchanged with it.
-  if NEW.voided_at is not null and OLD.voided_at is null then
+  -- 3. Voiding transition: status becomes 'Void'
+  if NEW.status = 'Void' and OLD.status <> 'Void' then
+    -- (a) Role check: Owner, Admin, Manager, Accounts
+    if not (auth_is_finance_or_admin() or coalesce(current_setting('app.override_role', true), '') in ('Owner', 'Admin', 'Manager', 'Accounts')) then
+      raise exception 'GATE:gate.invoice.void_role|Only Owner, Admin, Manager, or Accounts may void an invoice.' using errcode = 'P0001';
+    end if;
+
+    -- (b) Reason check (>= 10 chars)
+    if length(coalesce(btrim(NEW.void_reason), '')) < 10 then
+      raise exception 'GATE:gate.invoice.void_reason|Voiding an invoice requires a reason of at least 10 characters.' using errcode = 'P0001';
+    end if;
+
+    -- Auto-stamp voided_by and voided_at if not set
+    if NEW.voided_by is null then
+      NEW.voided_by := nullif(current_setting('app.current_user_id', true), '')::uuid;
+      if NEW.voided_by is null then
+        begin
+          NEW.voided_by := auth.uid();
+        exception when others then
+          null;
+        end;
+      end if;
+    end if;
+    if NEW.voided_at is null then
+      NEW.voided_at := now();
+    end if;
+
+    if NEW.voided_by is null or NEW.voided_at is null then
+      raise exception 'GATE:gate.invoice.void_reason|Voiding an invoice requires voided_by and voided_at.' using errcode = 'P0001';
+    end if;
+
+    -- (c) If paid_amount > 0, credit note must exist
+    if OLD.paid_amount > 0 then
+      if not exists (
+        select 1 from credit_notes
+        where invoice_id = NEW.id
+      ) then
+        raise exception 'GATE:gate.invoice.void_paid|Cannot void an invoice with payments unless a credit note has been issued.' using errcode = 'P0001';
+      end if;
+
+      if NEW.credit_note_no is null then
+        select credit_note_no into NEW.credit_note_no
+        from credit_notes
+        where invoice_id = NEW.id
+        order by created_at desc
+        limit 1;
+      end if;
+    end if;
+
+    -- Figures must remain unchanged while voiding
     if NEW.subtotal is distinct from OLD.subtotal
       or NEW.discount_amount is distinct from OLD.discount_amount
       or NEW.discount_percent is distinct from OLD.discount_percent
@@ -197,11 +250,18 @@ begin
       or NEW.invoice_no is distinct from OLD.invoice_no
       or NEW.issue_date is distinct from OLD.issue_date
     then
-      raise exception 'Law 4/finance: invoice % cannot change its own figures while being voided — void it as issued, correct with a credit note or a new invoice.', OLD.invoice_no;
+      raise exception 'Law 4/finance: invoice % cannot change its own figures while being voided.', OLD.invoice_no;
     end if;
+
     return NEW;
   end if;
 
+  -- 4. An issued invoice cannot revert to Draft
+  if NEW.status = 'Draft' and OLD.status <> 'Draft' then
+    raise exception 'Law 4/finance: an issued invoice (%) cannot revert to Draft.', OLD.invoice_no;
+  end if;
+
+  -- 5. Figures and invoice_no / issue_date are immutable on issued invoices
   if NEW.subtotal is distinct from OLD.subtotal
     or NEW.discount_amount is distinct from OLD.discount_amount
     or NEW.discount_percent is distinct from OLD.discount_percent

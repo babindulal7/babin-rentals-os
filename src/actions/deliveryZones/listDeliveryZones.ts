@@ -34,6 +34,7 @@ export const listDeliveryZones = createAction<ListDeliveryZonesInput, ListDelive
     }
   },
   execute: async (input, ctx) => {
+    void ctx;
     const limit = input.limit ?? 50;
     const offset = input.offset ?? 0;
     const activeOnly = input.activeOnly ?? true;

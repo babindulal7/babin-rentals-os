@@ -9,15 +9,15 @@ import type { RentalWindow } from '../../../lib/availability'
 export interface BookingConflictModalProps {
   isOpen: boolean
   onClose: () => void
-  bookingNo?: string
-  rentalWindow?: RentalWindow
+  bookingNo?: string | undefined
+  rentalWindow?: RentalWindow | undefined
   conflicts: readonly LineEvaluationResult[]
   onKeepDraft: () => void
-  onReassignUnit?: (lineId: string, unitId: string) => void
-  onSelectSubstitute?: (lineId: string, productId: string) => void
-  onAdjustDates?: (window: FreeDateWindow) => void
-  onRemoveItem?: (lineId: string) => void
-  onSubRent?: (lineId: string) => void
+  onReassignUnit?: ((lineId: string, unitId: string) => void) | undefined
+  onSelectSubstitute?: ((lineId: string, productId: string) => void) | undefined
+  onAdjustDates?: ((window: FreeDateWindow) => void) | undefined
+  onRemoveItem?: ((lineId: string) => void) | undefined
+  onSubRent?: ((lineId: string) => void) | undefined
 }
 
 export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
