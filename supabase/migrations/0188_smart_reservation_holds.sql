@@ -161,11 +161,22 @@ declare
   v_asset_id        uuid;
   v_res_units       int;
   v_res_qty         int;
+  v_actor           uuid;
 begin
   v_role := auth_user_role();
   if v_role not in ('Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse') then
     raise exception 'Permission denied: role % cannot confirm bookings.', v_role
       using errcode = '42501';
+  end if;
+
+  -- A caller-provided actor is never an authorization credential.
+  v_actor := auth_user_id();
+  if v_actor is null or p_actor_id is distinct from v_actor then
+    raise exception 'Permission denied: confirmation actor must match the signed-in staff session.'
+      using errcode = '42501';
+  end if;
+  if p_client_uuid is null then
+    raise exception 'A confirmation idempotency key is required.';
   end if;
 
   v_occurred_at := coalesce(p_occurred_at, now());
@@ -337,6 +348,8 @@ declare
   v_period       tstzrange;
   v_hold_id      uuid;
   v_actor_id     uuid;
+  v_booking      record;
+  v_line         record;
 begin
   v_role := auth_user_role();
   if v_role not in ('Owner', 'Admin', 'Manager', 'Coordinator') then
@@ -344,21 +357,75 @@ begin
       using errcode = '42501';
   end if;
 
-  v_actor_id := coalesce(p_actor_id, auth_user_id());
-  v_expires_at := now() + (coalesce(nullif(p_duration_minutes, 0), 240) || ' minutes')::interval;
-
-  if p_period is null then
-    select tstzrange(pickup_at, return_at, '[)')
-      into v_period
-      from bookings
-     where id = p_booking_id;
-  else
-    v_period := p_period;
+  -- Never trust an actor, product, period, or line identity supplied by the browser.
+  v_actor_id := auth_user_id();
+  if v_actor_id is null or (p_actor_id is not null and p_actor_id is distinct from v_actor_id) then
+    raise exception 'Permission denied: hold actor must match the signed-in staff session.'
+      using errcode = '42501';
+  end if;
+  if p_client_uuid is null then
+    raise exception 'Hold idempotency key is required.';
+  end if;
+  if p_duration_minutes is not null and p_duration_minutes < 1 then
+    raise exception 'Hold duration must be positive.';
+  end if;
+  if p_qty is null or p_qty < 1 then
+    raise exception 'Hold quantity must be positive.';
+  end if;
+  if (p_asset_id is null) = (p_product_id is null) then
+    raise exception 'Hold must reference exactly one asset or product.';
   end if;
 
-  if v_period is null then
-    raise exception 'Cannot create hold: rental period is unknown.';
+  select b.branch_id, b.stage, b.pickup_at, b.return_at
+    into v_booking
+    from bookings b
+   where b.id = p_booking_id
+     for update;
+  if not found then
+    raise exception 'Cannot hold equipment for a missing booking.';
   end if;
+  if v_booking.stage <> 'Quote' then
+    raise exception 'Temporary inventory holds may only be created for a Quote.';
+  end if;
+  if v_role = 'Coordinator' and not exists (
+    select 1 from users u
+    where u.id = v_actor_id and u.branch_id is not distinct from v_booking.branch_id
+  ) then
+    raise exception 'Permission denied: booking belongs to another branch.'
+      using errcode = '42501';
+  end if;
+
+  select bl.product_id, bl.qty
+    into v_line
+    from booking_lines bl
+   where bl.id = p_booking_line_id
+     and bl.booking_id = p_booking_id
+     and bl.voided_at is null;
+  if not found or v_line.product_id is null then
+    raise exception 'Hold line is not an active equipment line on this booking.';
+  end if;
+  if p_qty > v_line.qty then
+    raise exception 'Hold quantity exceeds the booking line quantity.';
+  end if;
+  if p_product_id is not null and p_product_id is distinct from v_line.product_id then
+    raise exception 'Hold product does not match its booking line.';
+  end if;
+  if p_asset_id is not null and not exists (
+    select 1 from product_units pu
+     where pu.id = p_asset_id and pu.product_id = v_line.product_id
+  ) then
+    raise exception 'Hold asset does not belong to its booking line product.';
+  end if;
+
+  if v_booking.pickup_at is null or v_booking.return_at is null
+     or v_booking.return_at <= v_booking.pickup_at then
+    raise exception 'Cannot create hold: booking rental period is incomplete.';
+  end if;
+  v_period := tstzrange(v_booking.pickup_at, v_booking.return_at, '[)');
+  if p_period is not null and p_period <> v_period then
+    raise exception 'Hold period must exactly match the booking rental period.';
+  end if;
+  v_expires_at := now() + (coalesce(p_duration_minutes, 240) || ' minutes')::interval;
 
   -- Reclaim expired holds on this asset/product first
   if p_asset_id is not null then
@@ -435,7 +502,11 @@ security definer
 set search_path = public, pg_temp
 as $$
 declare
-  v_role text;
+  v_role           text;
+  v_actor          uuid;
+  v_hold_state     text;
+  v_booking_stage  text;
+  v_branch_id      uuid;
 begin
   v_role := auth_user_role();
   if v_role not in ('Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse') then
@@ -443,15 +514,47 @@ begin
       using errcode = '42501';
   end if;
 
-  update inventory_reservations
-     set hold_state = 'released',
-         released_at = now(),
-         released_reason = coalesce(p_reason, 'Released manually by staff')
-   where id = p_reservation_id
-     and released_at is null;
+  v_actor := auth_user_id();
+  if v_actor is null or (p_actor_id is not null and p_actor_id is distinct from v_actor) then
+    raise exception 'Permission denied: hold release actor must match the signed-in staff session.'
+      using errcode = '42501';
+  end if;
+
+  -- Lock the reservation before deciding whether it is releasable. This
+  -- endpoint releases temporary Quote holds, NEVER a committed reservation.
+  select r.hold_state, b.stage::text, b.branch_id
+    into v_hold_state, v_booking_stage, v_branch_id
+    from inventory_reservations r
+    join bookings b on b.id = r.booking_id
+   where r.id = p_reservation_id
+     and r.released_at is null
+     for update of r;
 
   if not found then
     return jsonb_build_object('success', false, 'message', 'Hold not found or already released');
+  end if;
+  if v_hold_state <> 'active_hold' or v_booking_stage <> 'Quote' then
+    raise exception 'Committed reservations cannot be manually released through release_hold.'
+      using errcode = '42501';
+  end if;
+  if v_role in ('Coordinator', 'Warehouse') and not exists (
+    select 1 from users u
+     where u.id = v_actor and u.branch_id is not distinct from v_branch_id
+  ) then
+    raise exception 'Permission denied: hold belongs to another branch.'
+      using errcode = '42501';
+  end if;
+
+  update inventory_reservations
+     set hold_state = 'released',
+         released_at = now(),
+         released_reason = coalesce(nullif(btrim(p_reason), ''), 'Released manually by staff')
+   where id = p_reservation_id
+     and hold_state = 'active_hold'
+     and released_at is null;
+
+  if not found then
+    return jsonb_build_object('success', false, 'message', 'Hold was already changed');
   end if;
 
   return jsonb_build_object('success', true, 'reservation_id', p_reservation_id);
