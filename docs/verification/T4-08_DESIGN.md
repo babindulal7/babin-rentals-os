@@ -29,7 +29,7 @@ Babin Rentals frequently hires external delivery riders for single drop-offs and
 ## 3. Data Model & Migration Schema
 
 ### 3.1 Table: `delivery_job_links`
-Claim next free migration number in `docs/plans/MIGRATION_LEDGER.md` (e.g. `0199_one_time_rider_links.sql`).
+Claim next free migration number in `docs/plans/MIGRATION_LEDGER.md` (e.g. `0190_one_time_rider_links.sql`).
 
 ```sql
 CREATE TABLE public.delivery_job_links (

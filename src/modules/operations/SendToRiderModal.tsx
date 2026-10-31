@@ -22,8 +22,8 @@ interface SendToRiderModalProps {
   onClose: () => void
   jobId: string
   bookingNo: string
-  clientName?: string
-  destination?: string
+  clientName?: string | undefined
+  destination?: string | undefined
 }
 
 export function SendToRiderModal({

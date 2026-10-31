@@ -1,4 +1,4 @@
--- 0199_one_time_rider_links.sql
+-- 0190_one_time_rider_links.sql
 -- T4-08 / W49: One-time rider link for hired delivery riders
 -- Ephemeral, job-scoped, non-login access path without money figures.
 begin;
@@ -468,7 +468,6 @@ grant execute on function public.rider_mark_picked_up(text) to authenticated, se
 grant execute on function public.rider_complete_delivery(text, text, text, text) to authenticated, service_role;
 grant execute on function public.create_rider_link(uuid, text, text, text) to authenticated, service_role;
 grant execute on function public.revoke_rider_link(uuid) to authenticated, service_role;
-grant execute on function public.delivery_create_job(uuid, text, timestamptz, uuid) to authenticated, service_role;
 
 -- Verification assertions
 do $verify$
@@ -483,7 +482,7 @@ begin
      or has_function_privilege('anon', 'public.rider_mark_picked_up(text)', 'EXECUTE')
      or has_function_privilege('anon', 'public.rider_complete_delivery(text, text, text, text)', 'EXECUTE')
   then
-    raise exception '0199: delivery_job_links must not expose table access or management to anon';
+    raise exception '0190: delivery_job_links must not expose table access or management to anon';
   end if;
 end;
 $verify$;
