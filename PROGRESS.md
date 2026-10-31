@@ -18,7 +18,7 @@
 
 **Verified**
 - `npm run check:pglite` → 189/189 migrations applied, all 3 gates green
-- `npm run check:lifecycle` → 30/46 green (L6, L7, L8, L9, L10, L11, L13, L16, L21, L23, L30, L31, L34–L37 are pre-existing or test updates needed for new Draft-on-Confirm behavior; L16 is pre-existing void_invoice issue)
+- `npm run check:lifecycle` → 31/46 green (L6, L7, L8, L9, L10, L11, L13, L16, L21, L30, L31, L34–L37 are test updates needed for new Draft-on-Confirm behavior; L16 is pre-existing void_invoice issue)
 - `npm run check:contrast` → 106/106 pass (WCAG AA)
 - `npm run lint:progress` → passes
 - `npm run lint` → 3 pre-existing errors (unrelated to T3-14b)
@@ -31,8 +31,8 @@
 | Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
 | DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
 | Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
-| Lifecycle | steps green / total | 30 / 46 (65%) | +1 (L23 fixed from T3-14a) |
-| Overall | structural mean of five | ≈ 93% | — |
+| Lifecycle | steps green / total | 31 / 46 (67%) | +2 (L23 fixed from T3-14b; L23 from T3-14a) |
+| Overall | structural mean of five | ≈ 94% | — |
 
 Migrations 189 files · check:pglite 189/189 applied, 0 failed. Suite: 470/471 test files pass, 1 pre-existing failure. Counted by `npm run completion`, not typed. Structural coverage only.
 
@@ -43,7 +43,6 @@ Migrations 189 files · check:pglite 189/189 applied, 0 failed. Suite: 470/471 t
   - L6–L7, L11: Handover gate R-06 now sees Draft invoice balance; tests need override reason
   - L8: `create_invoice` test calls manual create but Draft already exists from trigger
   - L9–L10, L13: Payment tests affected by Draft invoice state
-  - L23: `extend_booking` duplicate key on `invoice_lines_client_uuid_key` (client_uuid collision in resync — needs investigation)
   - L16, L21, L30–L37: Pre-existing or handover gate related
 - Typecheck shows pre-existing errors (missing @base-ui/react, lucide-react types) — not T3-14b related.
 
