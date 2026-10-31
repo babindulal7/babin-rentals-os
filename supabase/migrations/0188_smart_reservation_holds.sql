@@ -407,6 +407,9 @@ begin
   if p_qty > v_line.qty then
     raise exception 'Hold quantity exceeds the booking line quantity.';
   end if;
+  if p_asset_id is not null and p_qty <> 1 then
+    raise exception 'A single serialized asset hold must have quantity one.';
+  end if;
   if p_product_id is not null and p_product_id is distinct from v_line.product_id then
     raise exception 'Hold product does not match its booking line.';
   end if;
