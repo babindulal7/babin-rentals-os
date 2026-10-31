@@ -208,6 +208,35 @@ function assert(condition, what) {
   if (!condition) throw new Refused(what)
 }
 
+/** Settle an invoice: issue it if Draft, then record payments to clear outstanding. */
+async function settleInvoice(bookingKey, actorId = U.Accounts) {
+  const invoiceId = await one(
+    'select id from invoices where booking_id = $1 and status in (\'Draft\', \'Sent\')',
+    [bookingIds[bookingKey]]
+  )
+  if (!invoiceId) return
+  // Issue if Draft - run as Accounts
+  const status = await one('select status from invoices where id = $1', [invoiceId])
+  if (status === 'Draft') {
+    await as('Accounts', async () => {
+      await q('select issue_invoice($1::jsonb)', [
+        JSON.stringify({ invoice_id: invoiceId, issued_by: actorId })
+      ])
+    })
+  }
+  // Pay to zero outstanding
+  const outstanding = Number(await one('select outstanding_amount from invoices where id = $1', [invoiceId]))
+  if (outstanding > 0) {
+    await as('Accounts', async () => {
+      await q(
+        `insert into payments (client_uuid, payment_no, booking_id, invoice_id, client_id, branch_id, amount, payment_type, payment_date, received_by)
+         values (gen_random_uuid(), next_document_number('payment'), $1, $2, $3, $4, $5, 'Advance Payment', now(), $6)`,
+        [bookingIds[bookingKey], invoiceId, CLIENT, BRANCH, outstanding, U.Accounts]
+      )
+    })
+  }
+}
+
 function assertEq(actual, expected, what) {
   if (String(actual) !== String(expected)) {
     throw new Refused(`${what} — expected ${String(expected)}, got ${String(actual)}`)
@@ -1132,6 +1161,9 @@ const STEPS = [
           await actionHandoverRental({ key: 'c', actor: 'Warehouse', signerName: 'Lifecycle Client Signer', reason: 'Handover completed with client signature' })
           await actionReturnRental({ key: 'c', actor: 'Warehouse', returnedUnits: [{ id: UNITS[0] }] })
         })
+
+        // Settle invoice before close to satisfy close gate
+        await settleInvoice('c', U.Accounts)
         await as('Coordinator', async () => {
           try {
             await transition('c', 'Returned', 'Closed', 'Coordinator')
@@ -1741,6 +1773,24 @@ const STEPS = [
         )
         await transition('cons', 'Booked', 'Packed', 'Warehouse')
 
+        // Settle invoice before handover to satisfy R-06 gate
+        await as('Accounts', async () => {
+          const draftInvoiceId = await one('select id from invoices where booking_id = $1 and status = \'Draft\'', [bookingIds.cons])
+          if (draftInvoiceId) {
+            await q('select issue_invoice($1::jsonb)', [
+              JSON.stringify({ invoice_id: draftInvoiceId, issued_by: U.Accounts })
+            ])
+            // Pay the outstanding amount
+            const outstanding = Number(await one('select outstanding_amount from invoices where id = $1', [draftInvoiceId]))
+            if (outstanding > 0) {
+              await q(
+                `insert into payments (client_uuid, payment_no, booking_id, invoice_id, client_id, branch_id, amount, payment_type, payment_date, received_by)
+                 values (gen_random_uuid(), next_document_number('payment'), $1, $2, $3, $4, $5, 'Advance Payment', now(), $6)`,
+              [bookingIds.cons, draftInvoiceId, CLIENT, BRANCH, outstanding, U.Accounts])
+            }
+          }
+        })
+
         const handoverSessionId = crypto.randomUUID()
         await q(
           `insert into operation_sessions (id, client_uuid, booking_id, operation, session_no, state, delivery_method, warehouse_staff_id, created_by, government_id_verified, booking_authorization_verified)
@@ -2297,6 +2347,9 @@ const STEPS = [
           await actionReturnRental({ key: 'c', actor: 'Warehouse', returnedUnits: [{ id: UNITS[0] }] })
         })
 
+        // Settle invoice before close to satisfy close gate
+        await settleInvoice('c', U.Accounts)
+
         /* A deposit of 5,000 collected in full and never returned: HELD. */
         await asOwnerOfTheDatabase(async () => {
           await q(
@@ -2646,6 +2699,9 @@ STEPS.push({
         })
       })
 
+      // Settle invoice before handover to satisfy R-06 gate
+      await settleInvoice('l34', U.Accounts)
+
       // Handover session with unverified receiver (verified = false)
       const handoverSessionId = crypto.randomUUID()
       await as('Warehouse', async () => {
@@ -2783,6 +2839,10 @@ STEPS.push({
           units: [{ id: UNITS[0], serial: 'LCSN-001' }],
         })
       })
+
+      // Settle invoice before Technician handover to satisfy R-06 gate
+      await settleInvoice('l35', U.Accounts)
+
       assertEq(await stageOf('l35'), 'Packed', 'Technician advanced booking to Packed')
 
       // Technician performs Handover -> On Rent
@@ -2864,6 +2924,23 @@ STEPS.push({
           actor: 'Warehouse',
           units: [{ id: UNITS[0], serial: 'LCSN-001' }],
         })
+      })
+
+      // Settle invoice before handover to satisfy R-06 gate
+      await as('Accounts', async () => {
+        const draftInvoiceId = await one('select id from invoices where booking_id = $1 and status = \'Draft\'', [bookingIds.l36])
+        if (draftInvoiceId) {
+          await q('select issue_invoice($1::jsonb)', [
+            JSON.stringify({ invoice_id: draftInvoiceId, issued_by: U.Accounts })
+          ])
+          const outstanding = Number(await one('select outstanding_amount from invoices where id = $1', [draftInvoiceId]))
+          if (outstanding > 0) {
+            await q(
+              `insert into payments (client_uuid, payment_no, booking_id, invoice_id, client_id, branch_id, amount, payment_type, payment_date, received_by)
+               values (gen_random_uuid(), next_document_number('payment'), $1, $2, $3, $4, $5, 'Advance Payment', now(), $6)`,
+            [bookingIds.l36, draftInvoiceId, CLIENT, BRANCH, outstanding, U.Accounts])
+          }
+        }
       })
 
       // Setup Handover session
@@ -2989,6 +3066,9 @@ STEPS.push({
         })
       })
       assertEq(await stageOf('l37'), 'Returned', 'booking is Returned')
+
+      // Settle the T3-14b Draft invoice to satisfy close gate
+      await settleInvoice('l37', U.Accounts)
 
       // Provide settled invoice
       await asOwnerOfTheDatabase(async () => {
