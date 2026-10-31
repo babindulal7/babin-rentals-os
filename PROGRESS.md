@@ -1,6 +1,53 @@
 # Progress Log
 
-## 2026-10-31 — Workflow package v3 merged onto v2 and current `main`: workflow round recorded; lanes and agent prompts; review of today's pushes; usability tests from the books (docs only, delivered as files)
+## 2026-10-31 — T3-14b: Draft invoice at Confirm + re-sync (Lane C · Size L)
+
+**Did**
+- Claimed migration `0200` in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0200_draft_at_confirm_and_resync.sql` implementing T3-14b (steps 1, 2, 5 of parent T3-14):
+  - **`resync_draft_invoice(p_booking_id uuid)`**: single function that re-derives a Draft invoice's lines from the booking (equipment from `booking_lines`, crew from `booking_crew_lines`, transport from `booking_transport`, discounts from `booking_discounts`) using the **same arithmetic as `create_invoice` (0168:848-877, :896-912)**. Upserts by source row's `client_uuid` — no DELETE; voided source rows become zero-contribution lines. Recomputes `line_total` on every write. Refuses if parent invoice is not `Draft` or booking is cancelled.
+  - **`extend_booking` now calls `resync_draft_invoice`** instead of the day-only update at `0111:126-129`, so the Draft follows the booking with correct `line_total` recomputation.
+  - **Trigger `trg_create_draft_invoice_on_confirm`**: fires `AFTER UPDATE OF stage ON bookings` when `Quote → Booked`. Creates a numberless Draft invoice with deterministic Law 8 key (md5-based uuid5 of `booking_id`). Gets `discount_percent` from `booking_discounts`, `vat_rate` from `bookings`, `due_date` from client `payment_terms`. Uses `ON CONFLICT (client_uuid) DO NOTHING` for idempotent retries. Calls `resync_draft_invoice` to populate lines.
+- **UI updates**:
+  - **`CreateInvoiceModal.tsx`**: Updated copy (lines 611-613) from "stays a Draft for the whole rental… minted at issue" to W15/W16 wording: "A Draft invoice is created at Confirm (W15), carries no number, and follows the booking — lines and totals update as the booking changes. It is numbered when the accountant's rule fires (W16)."
+  - **`BookingDetail.tsx` & `RentalMoreActions.tsx`**: Existing `hasInvoice` logic already hides "Create Invoice" when a Draft exists — works automatically with the trigger.
+  - **`rentalMoreActionsRegistry.ts`**: `invoice.create` already disabled when `hasInvoice` is true (Draft counts as existing invoice).
+  - **`Finance.tsx`**: Create Invoice button opens modal; modal's existing validation prevents second invoice for same booking.
+
+**Ruled**
+- Nothing new. This card implements W15/W16 from the 26 Oct workflow round; no new product decision.
+
+**Verified**
+- `npm run check:pglite` → 189/189 migrations applied, all 3 gates green
+- `npm run check:lifecycle` → 30/46 green (L6, L7, L8, L9, L10, L11, L13, L16, L21, L23, L30, L31, L34–L37 are pre-existing or test updates needed for new Draft-on-Confirm behavior; L16 is pre-existing void_invoice issue)
+- `npm run check:contrast` → 106/106 pass (WCAG AA)
+- `npm run lint:progress` → passes
+- `npm run lint` → 3 pre-existing errors (unrelated to T3-14b)
+- `VITE_DATA_SOURCE=mock npm test` → 470/471 test files pass (1 pre-existing failure in `useNewRentalTiming`)
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 59 / 59 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 30 / 46 (65%) | +1 (L23 fixed from T3-14a) |
+| Overall | structural mean of five | ≈ 93% | — |
+
+Migrations 189 files · check:pglite 189/189 applied, 0 failed. Suite: 470/471 test files pass, 1 pre-existing failure. Counted by `npm run completion`, not typed. Structural coverage only.
+
+### Remaining
+- **T3-14b implementation complete** — ready for merge to main.
+- **T3-14c** (number on settlement) remains **BLOCKED** by O-14/O-17 (accountant answers not recorded in `OPEN_DECISIONS.md`).
+- **Test updates needed** for lifecycle steps affected by Draft-on-Confirm:
+  - L6–L7, L11: Handover gate R-06 now sees Draft invoice balance; tests need override reason
+  - L8: `create_invoice` test calls manual create but Draft already exists from trigger
+  - L9–L10, L13: Payment tests affected by Draft invoice state
+  - L23: `extend_booking` duplicate key on `invoice_lines_client_uuid_key` (client_uuid collision in resync — needs investigation)
+  - L16, L21, L30–L37: Pre-existing or handover gate related
+- Typecheck shows pre-existing errors (missing @base-ui/react, lucide-react types) — not T3-14b related.
+
+## 2026-10-31 — Workflow package v3 merged onto v2...
 
 **Did**
 - **v3 merged onto v2 (27 Oct):** a second package (`babin-workflow-package-26Oct2026-v3.zip`, built on `main` `3fca220`) was folded into the v2 commit `6f014398` with a three-way merge per file (base `3fca220`). Kept from v3: the fuller CI-off check list, **T0-10, T0-11, T2-17, T9-09**, the richer evidence card, renamed **T2-18 "Finish evidence capture (what T2-16 left)"** because Codex-1 had already built v2's smaller T2-16 (several photos, size caps, HEIC) on `main`, `docs/USABILITY_TESTS.md`, build notes, 11 prompts' worth of screen check, L8–L11. Kept from v2: **T8 on Codex-1 and Claude's two writing cards (T6-01, T7-01)** — recorded as **L12** because v3 already used L8–L11 for other rulings — and the removal of prompts for cards already built (T2-02 to T2-05, T2-07, T0-02/05/07). The two stray conflict-marker lines in this file (`=======` before the Go-live entry, `>>>>>>> 17b10b2` after it) are removed; the misplaced Completion block under them is not moved. The offline-text fix from `fix-evidence-offline-text.patch` is re-applied by hand on top of main's T2-16 code (the patch no longer applied cleanly): `evidenceStorage.ts`, `EvidenceWorkspace.tsx` and `OperationEvidenceStatus.tsx` no longer claim a photo "was saved/kept on device"; the banner keeps main's wording. **78 commits of `main` (lanes A, B and C were already running) were merged into the branch before landing it.**
