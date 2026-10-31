@@ -14,8 +14,9 @@ begin;
 -- =============================================================================
 -- Re-derives a Draft invoice's lines from the booking (equipment, crew,
 -- transport, discounts) using the SAME arithmetic as create_invoice
--- (0168:848-877, :896-912). Upserts by source row's client_uuid — no DELETE.
--- Voided source rows → line keeps its client_uuid but quantity/days zeroed.
+-- (0168:848-877, :896-912). The current implementation rebuilds
+-- Draft invoice lines with DELETE + INSERT and new idempotency keys.
+-- Only internally authorized callers may perform this destructive Draft rewrite.
 -- Refuses if parent invoice is not Draft or booking is cancelled.
 
 create or replace function public.resync_draft_invoice(p_booking_id uuid)
@@ -180,11 +181,15 @@ $$;
 
 comment on function public.resync_draft_invoice(uuid) is
   'Re-derives a Draft invoice''s lines from the booking (equipment, crew, transport). '
-  'Upserts by source row client_uuid. Refuses if invoice is not Draft or booking cancelled. '
+  'Rebuilds Draft lines only. Direct API execute is revoked; internal definer callers only. '
   'Used by Confirm (draft creation) and extend_booking / other booking mutations.';
 
-revoke execute on function public.resync_draft_invoice(uuid) from public;
-grant execute on function public.resync_draft_invoice(uuid) to authenticated;
+-- This is an INTERNAL invoice writer called from SECURITY DEFINER booking
+-- transition/extension functions. It must not be directly callable by any
+-- authenticated user, including money-blind staff or Clients.
+-- The owning definer may still invoke it internally during a valid transition.
+revoke all on function public.resync_draft_invoice(uuid)
+  from public, anon, authenticated;
 
 -- =============================================================================
 -- 2. Modify extend_booking to call resync_draft_invoice instead of day-only update
