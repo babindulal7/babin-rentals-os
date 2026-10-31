@@ -35,8 +35,10 @@ copy-paste prompt in [`prompts/`](prompts/README.md).
 ## Picking the next task
 
 1. Open your lane's tracks. Take the **first card whose status is `todo` and whose `Needs` are all
-   `done`**. Within a track, cards are in build order. Cards tagged **[soon]** come after the
-   untagged and **[go-live]** cards of the same track unless the prompt says otherwise.
+   `done`**. Within a track, cards are in build order. Cards tagged **[go-live] · slips first** (the
+   27 Oct Booqable round) come after the untagged and plain **[go-live]** cards of the same track, and
+   are the first to move after day X if the lane falls behind (B56). Cards tagged **[soon]** come last
+   unless the prompt says otherwise.
 2. Paste the card's prompt from [`prompts/`](prompts/README.md) into your agent.
 3. Set the card's status to `doing` with your branch name in your first commit.
 4. Work in **your own worktree** (`git worktree add ../bro-lane-a lane-a/T2-01-camera-evidence`).
@@ -48,7 +50,7 @@ copy-paste prompt in [`prompts/`](prompts/README.md).
 ```
 ### T2-01 · Camera evidence upload            status: todo · size: L · lane A · [go-live]
 What     — one to three lines.
-Why      — the ruling or lock it serves (RULINGS-2026-10-26 Dx, …-workflow Wx, an older ruling, a law).
+Why      — the ruling or lock it serves (RULINGS-2026-10-26 Dx, …-workflow Wx, …-27-booqable Bx/Kx, an older ruling, a law).
 Where    — files, tables, RPCs.
 Database — "none", or "migration: claim in MIGRATION_LEDGER.md" + what it does.
 Done when — numbered acceptance checks: tests, gates, screens driven, roles tried.
@@ -90,8 +92,10 @@ Then drive the changed screen in `npm run dev:mock` at **375, 820 and 1440 px**,
 card names, and run the **screen check** in [`docs/USABILITY_TESTS.md`](../USABILITY_TESTS.md) §1 —
 which screen, which booking, where am I, the next action, search and exit, nothing claiming a save
 that did not happen, touch, forgiving forms. Write the result in the PROGRESS entry. A card may also
-carry **Build notes** — patterns from the reference books (`docs/USABILITY_TESTS.md` §5). A migration is **Verified** only with both DB gates green in one run; it reaches the
-live project only through Babin's apply batches (N-5).
+carry **Build notes** — patterns from the reference books (`docs/USABILITY_TESTS.md` §5).
+
+A migration is **Verified** only with both DB gates green in one run; it reaches the live project
+only through Babin's apply batches (N-5).
 
 ## Words used in these plans
 

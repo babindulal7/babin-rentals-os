@@ -99,7 +99,7 @@ Supersedes the 21 Jul lock "comms are draft-only, never auto-sent" **for the eve
 | W39 | Who is told as a return gets later | **Everyone at once** (replaces the 28 Jul ladder proposal) | T5-09 |
 | W42 | Who resets | Any floor staff | — |
 | W43 | QC after cleaning | **Same person is OK when alone.** Today the database refuses it (`cleaning_queue_entries` CHECK `qc_by <> cleaned_by`, 0003) | T2-13 |
-| W44 | Damage found at cleaning, client gone | **Claim from the client** by default | T2-16 |
+| W44 | Damage found at cleaning, client gone | **Claim from the client** by default | T2-15 *(card id corrected 31 Oct; was T2-16)* |
 | W45 | Time to reset one booking | Under 30 min — the "Needed next" window stays 4 h ⭐ | — |
 
 ## F. Delivery
