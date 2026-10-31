@@ -3681,6 +3681,186 @@ STEPS.push({
 
 STEPS.push({
   id: 'L45',
+  title: 'Delivery dispatch on the database: jobs, driver assignment, transitions, role isolation, idempotency (S6, T4-01)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      // 1. Create a booked delivery booking for testing
+      const bookingKey = crypto.randomUUID()
+      let testBookingId
+      await as('Coordinator', async () => {
+        const res = await q(
+          `insert into bookings (client_uuid, booking_no, client_id, branch_id, pickup_at, return_at, delivery_type, stage, created_by, updated_by)
+           values ($1, '994301', $2, $3, '2099-11-01T04:00:00Z', '2099-11-03T04:00:00Z', 'Babin Delivery', 'Quote', $4, $4)
+           returning id`,
+          [bookingKey, CLIENT, BRANCH, U.Coordinator],
+        )
+        testBookingId = res.rows[0].id
+
+        await q(
+          `insert into booking_lines (client_uuid, booking_id, line_type, product_id, description, qty, days, rate, created_by)
+           values (gen_random_uuid(), $1, 'Equipment', $2, 'Delivery Test Bulk Cable', 1, 2, 250, $3)`,
+          [testBookingId, QTY_PRODUCT, U.Coordinator],
+        )
+
+        await q(
+          `insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at)
+           values (gen_random_uuid(), $1, $2, 'Quote', 'Booked', $3, 'Coordinator', now())`,
+          [testBookingId, BRANCH, U.Coordinator],
+        )
+      })
+
+      // 2. Coordinator creates Outbound delivery job
+      const jobKey = crypto.randomUUID()
+      let jobId
+      await as('Coordinator', async () => {
+        jobId = await one(
+          `select delivery_create_job($1, 'Outbound', '2099-11-01T04:00:00Z'::timestamptz, $2, 'Ba 3 Cha 8821')`,
+          [testBookingId, jobKey],
+        )
+        assert(jobId, 'delivery_create_job returned job ID')
+
+        // Replay with same key returns same ID (idempotency)
+        const replay = await one(
+          `select delivery_create_job($1, 'Outbound', '2099-11-01T04:00:00Z'::timestamptz, $2, 'Ba 3 Cha 8821')`,
+          [testBookingId, jobKey],
+        )
+        assertEq(replay, jobId, 'replaying delivery_create_job returns same job ID')
+      })
+
+      // 3. Driver cannot see unassigned delivery job (RLS read isolation)
+      await as('Driver', async () => {
+        const rows = (await q(`select id from delivery_jobs where id = $1`, [jobId])).rows
+        assertEq(rows.length, 0, 'Driver cannot read unassigned delivery job')
+      })
+
+      // 4. Coordinator assigns Driver to job
+      const assignKey = crypto.randomUUID()
+      await as('Coordinator', async () => {
+        const assignedId = await one(
+          `select delivery_assign_driver($1, $2, $3, 'Ba 3 Cha 8821', 'Ramesh Thapa', '+977 9813009988')`,
+          [jobId, U.Driver, assignKey],
+        )
+        assertEq(assignedId, jobId, 'delivery_assign_driver returned job ID')
+
+        // Replay returns same ID
+        const replayAssign = await one(
+          `select delivery_assign_driver($1, $2, $3, 'Ba 3 Cha 8821', 'Ramesh Thapa', '+977 9813009988')`,
+          [jobId, U.Driver, assignKey],
+        )
+        assertEq(replayAssign, jobId, 'replaying delivery_assign_driver returns same job ID')
+      })
+
+      // 5. Driver CAN now read the assigned job, but no money columns exist on delivery_jobs
+      await as('Driver', async () => {
+        const rows = (await q(`select id, status, vehicle, rider_name from delivery_jobs where id = $1`, [jobId])).rows
+        assertEq(rows.length, 1, 'Driver can read assigned job')
+        assertEq(rows[0].status, 'Scheduled', 'status is Scheduled upon assignment')
+      })
+
+      // 6. Scheduled -> Ready requires outbound booking to be Packed or On Rent
+      // In 'Booked' stage, transition should fail
+      const readyKey = crypto.randomUUID()
+      await as('Warehouse', async () => {
+        await db.exec('savepoint sp_ready_probe;')
+        try {
+          await refuses(
+            'Transition to Ready refused before booking is Packed',
+            `select delivery_transition_job($1, 'Scheduled', 'Ready', $2)`,
+            [jobId, readyKey],
+            /Packing must finish before outbound dispatch/i,
+          )
+        } finally {
+          await db.exec('rollback to savepoint sp_ready_probe;')
+        }
+      })
+
+      // Advance booking stage to 'Packed'
+      await as('Warehouse', async () => {
+        const packSessionId = crypto.randomUUID()
+        await q(
+          `insert into operation_sessions (id, client_uuid, booking_id, operation, session_no, state, warehouse_staff_id, created_by)
+           values ($1, gen_random_uuid(), $2, 'Packing', 1, 'In Progress', $3, $3)`,
+          [packSessionId, testBookingId, U.Warehouse],
+        )
+        await q(
+          `insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at)
+           values (gen_random_uuid(), $1, $2, 'Booked', 'Packed', $3, 'Warehouse', now())`,
+          [testBookingId, BRANCH, U.Warehouse],
+        )
+      })
+
+      // Warehouse marks delivery job Ready
+      await as('Warehouse', async () => {
+        const readyId = await one(
+          `select delivery_transition_job($1, 'Scheduled', 'Ready', $2)`,
+          [jobId, readyKey],
+        )
+        assertEq(readyId, jobId, 'transition to Ready succeeded')
+      })
+
+      // 7. Driver transitions Ready -> In Transit
+      const transitKey = crypto.randomUUID()
+      await as('Driver', async () => {
+        const transitId = await one(
+          `select delivery_transition_job($1, 'Ready', 'In Transit', $2)`,
+          [jobId, transitKey],
+        )
+        assertEq(transitId, jobId, 'transition to In Transit succeeded')
+      })
+
+      // 8. In Transit -> Delivered requires recipient name >= 2 chars
+      const deliverKey = crypto.randomUUID()
+      await as('Driver', async () => {
+        await db.exec('savepoint sp_deliver_probe;')
+        try {
+          await refuses(
+            'Transition to Delivered refused without recipient name',
+            `select delivery_transition_job($1, 'In Transit', 'Delivered', $2, 'A')`,
+            [jobId, deliverKey],
+            /Delivery receipt requires the recipient name/i,
+          )
+        } finally {
+          await db.exec('rollback to savepoint sp_deliver_probe;')
+        }
+
+        // Succeeds with valid recipient
+        const deliveredId = await one(
+          `select delivery_transition_job($1, 'In Transit', 'Delivered', $2, 'Anil Gurung')`,
+          [jobId, deliverKey],
+        )
+        assertEq(deliveredId, jobId, 'transition to Delivered succeeded')
+      })
+
+      // 9. Delivered is a terminal state - cannot transition to Failed or anything else
+      const failKey = crypto.randomUUID()
+      await as('Coordinator', async () => {
+        await db.exec('savepoint sp_fail_probe;')
+        try {
+          await refuses(
+            'Transition from Delivered is refused (terminal state)',
+            `select delivery_transition_job($1, 'Delivered', 'Failed', $2, null, 'Attempting to fail a delivered job')`,
+            [jobId, failKey],
+            /This delivery transition is not permitted/i,
+          )
+        } finally {
+          await db.exec('rollback to savepoint sp_fail_probe;')
+        }
+      })
+
+      // 10. Audit events and event receipts recorded
+      await asOwnerOfTheDatabase(async () => {
+        const events = (await q(`select event_kind, next_status from delivery_job_events where job_id = $1 order by created_at asc`, [jobId])).rows
+        assert(events.length >= 3, 'delivery_job_events recorded transitions')
+        assertEq(events[0].event_kind, 'Created')
+        assertEq(events[events.length - 1].next_status, 'Delivered')
+      })
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L46',
   title: 'Delivery zones CRUD and permission matrix (T4-07, migration 0189)',
   expect: 'green',
   run: async () => {

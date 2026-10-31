@@ -751,3 +751,112 @@ export function canReadDeliveryZones(role: SystemRole): boolean {
 export function canManageDeliveryZones(role: SystemRole): boolean {
   return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
 }
+
+/**
+ * Pin/unpin a team note — all staff roles (not Client).
+ * Mirrors pin_team_note RPC (migration 0185).
+ */
+export function canPinTeamNote(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Archive a team note — all staff roles (not Client).
+ * Mirrors archive_team_note RPC (migration 0185).
+ */
+export function canArchiveTeamNote(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Resolve/reopen a team note — all staff roles (not Client).
+ * Mirrors resolve_team_note RPC (migration 0185).
+ */
+export function canResolveTeamNote(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Create a shift handover — all staff roles (not Client).
+ * Mirrors create_shift_handover RPC and shift_handovers INSERT policy (migration 0186).
+ */
+export function canCreateShiftHandover(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Read/list shift handovers — all staff roles (not Client).
+ * Mirrors shift_handovers_v SELECT policy (migration 0186).
+ */
+export function canReadShiftHandovers(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Acknowledge a shift handover — all staff roles (not Client).
+ * Mirrors acknowledge_shift_handover RPC (migration 0186).
+ */
+export function canAcknowledgeShiftHandover(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Archive a shift handover — all staff roles (not Client).
+ * Mirrors archive_shift_handover RPC (migration 0186).
+ */
+export function canArchiveShiftHandover(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Delivery job creation — Owner, Admin, Manager, Coordinator (migration 0165/0187).
+ * Mirrors the authorization in `delivery_create_job`.
+ */
+export function canCreateDeliveryJob(role: SystemRole | null | undefined): boolean {
+  if (!role) return false
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+}
+
+/**
+ * Driver assignment to delivery job — Owner, Admin, Manager, Coordinator (migration 0165/0187).
+ * Mirrors the authorization in `delivery_assign_driver`.
+ */
+export function canAssignDeliveryDriver(role: SystemRole | null | undefined): boolean {
+  if (!role) return false
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+}
+
+/**
+ * Delivery job status transition — Owner, Admin, Manager, Coordinator, Warehouse, Driver (migration 0165/0187).
+ * Specific transition rules and assignment checks are enforced inside `delivery_transition_job`.
+ */
+export function canTransitionDeliveryJob(
+  role: SystemRole | null | undefined,
+  _fromStatus?: string,
+  toStatus?: string
+): boolean {
+  if (!role) return false
+  if (role === 'Client') return false
+
+  if (toStatus === 'Ready') {
+    return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator' || role === 'Warehouse'
+  }
+  if (toStatus === 'In Transit') {
+    return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator' || role === 'Warehouse' || role === 'Driver'
+  }
+  if (toStatus === 'Delivered') {
+    return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Driver'
+  }
+  if (toStatus === 'Failed') {
+    return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator' || role === 'Driver'
+  }
+
+  return (
+    role === 'Owner' ||
+    role === 'Admin' ||
+    role === 'Manager' ||
+    role === 'Coordinator' ||
+    role === 'Warehouse' ||
+    role === 'Driver'
+  )
+}
