@@ -1,5 +1,71 @@
 # Progress Log
 
+## 2026-10-31 — Booqable round recorded (B1–B56, K1–K7), plans on `9e219db`, review of 27–31 Oct, and a fix for main's red checks (docs + one code patch, delivered as files)
+
+**Did**
+- **Booqable round (27 Oct).** Compared Babin's Booqable study (`scrape.zip`, 3 Oct: `BOOQABLE-AUDIT/`, `booqable-research/`) with the app; most "must haves" were already built (saved views, client merge, maintenance holds, bundles, pricing structures, reports, audit). Asked Babin 56 questions in 14 rounds about the gaps and recorded every answer in **`RULINGS-2026-10-27-booqable.md`** (B1–B56, typed answers quoted, readings marked; Claude's K1–K7 with reverts).
+- **29 new cards**, 27 tagged **[go-live] · slips first** (B56: if a lane is behind, these move after day X first): T1-17 two-step sign-in for every money role (PIN quick sign-in kept), T1-18 sign-in history + new-device email; T2-19 Return signature on damage, T2-20 floor adds consumables, T2-21 planned downtime with a reason, T2-22 time between rentals (account-wide or per product), T2-23 overbooking per product, T2-24 temporary partner stock; T3-25 booking tags, T3-26 project name and shoot location, T3-27 pro forma, T3-28 rental day start as a setting, T3-29 extension clash → Manager decides, T3-30 consumables (price, restock, low stock), T3-31 counter sale; T4-09 delivery route + Maps links, T4-10 jobs in phone calendars, T4-11 report a problem, T4-12 bulk edit products; T5-12 offer emails with unsubscribe, T5-13 editable email and document texts; T7-12 recommended items, T7-13 options on one page, T7-14 Away switch, T7-15 payment link, T7-16 GA4 + Meta Pixel, T7-17 old store links. Plain **[go-live]**: **T1-16** (six Settings switches that save nothing become "Not built yet") and **T2-25** (the packing list prints every line — today it stops at 16 — and prints from the booking with a QR, B15).
+- **Widened:** T5-07 (thank-you + Google review link after Return, B9), T7-02 (categories, dates first, fresh photos), T7-04 (project and location; the new 0188 holds must not be used for online requests, D31), T7-07 (O-2 steps), T7-10, T7-11 and T9-05 (root domain redirect, old links), T9-01 (no Booqable photos; record old slugs in `external_refs`), T9-08; T10 rows (full website, read-only AI helper). Status fixes: T3-01 done (merged `7250c42`); T3-02 still todo (only an empty tab was merged); T2-18 item 1 done (`622ff11`); review notes on T4-07.
+- **`PLAN.md` v1.4:** header; §2 update from card statuses; §3 rows and sizes recounted by script (≈ 283 open agent sessions: A ≈ 92, B ≈ 85, C ≈ 106; ≈ 68 slips first) and each lane's pace (merged 27–31 Oct: A ≈ 20, B ≈ 12, C ≈ 3); §4.1 the new round; §4.2 O-1, O-2, O-3 closed, **O-18** (switch-user PIN length) and **O-19** (who writes team notes) indexed; §6 lane note (K1); §7 four risks.
+- `docs/PERMISSIONS.md` pending box: 15 rows for this round; D1, D2, D3 and W43 moved out (landed with 0179–0181, 0183); §3.1 W2 and §4.2 `rental.pickup.override_receiver` corrected to the D2 rule already in §6.1 and 0179 (K7); W53 no longer says 4 digits (O-18).
+- `docs/OPEN_DECISIONS.md` (round summary; O-18 note), `MIGRATION_LEDGER.md` (25 expected migrations), `BABIN_ACTIONS.md` (fix patch first, O-18, partners list, Google review link, GA4/Meta IDs, consumables data, authenticator apps, product photos by ⭐ 15 Jan, day-X redirect, first offer email), `docs/plans/README.md` (slips-first order), `AGENTS.md` (order inside a track; fixed a broken `BACKUP_PROTOCOL` link), `README.md` (rulings pointer), `RULINGS-2026-10-26-workflow.md` (W44's card is T2-15, not T2-16).
+- **Prompts regenerated:** 126 written; 16 prompts of done cards removed; T3-14 is pasted as the existing T3-14b / T3-14c (T3-14a done); security cards get a design-note stop (T1-17, T1-18, T4-10, T5-12, T7-15) and engine cards an "engine change" stop (T2-21…T2-24, T3-28, T3-31); card links inside prompts now resolve.
+- **Rebased twice.** Built on `6f01439` (27 Oct); `main` then moved to `bb06a77` and `9e219db` (31 Oct), which brought in the 26 Oct v3 package (T0-10, T0-11, T2-17, T2-18, T9-09, usability guide). Those five items were dropped from this package, the new T2 cards were renumbered T2-19…T2-25 and Claude's rows K1–K7.
+- **Review of `main` 27–31 Oct** (written up in the APPLY note): typecheck 20 errors, lint 3, UI copy 4 on `9e219db`; Booking Detail can crash on a flight-case line (`stock` renamed to `_stock` by `scripts/fix-all-type-errors.mjs` in "mix all"); the zone fee is shown through `price()`; **0189 gives delivery fees to Warehouse, Technician and Driver and lets Coordinator+ delete zones** (T4-07 notes); T3-02 merged as an empty tab; 0193 was edited after it was verified; `ddda296`'s message does not match its files.
+- **`fix-red-checks.patch`** (separate, code, 18 files): fixes the 20 type errors (zone tests' import paths and mock types, the `stock` name, the fee display), the 3 lint errors (Deposit Setup placeholder, a missing cleanup in the New Rental zone-fee lookup), the 4 UI-copy texts, one progress text with developer words, the word "customer" in the conflict window (Law 17 test), and two tests not updated when ruled features landed (06:00 New Rental default, L1; six More-menu groups since Re-book).
+
+**Ruled**
+- `RULINGS-2026-10-27-booqable.md` B1–B56. Headlines: store parity (recommended items auto-filled, options on one page, same categories, old links open the same item, root redirect at day X, Away switch, dates first, project name and shoot location at checkout, review link after return, GA4 + Meta Pixel, no online deposit, O-2 = sub-rent → similar item → full refund or credit); stock tools (planned downtime, prep time switch, overbooking per product, temporary stock with a return task and partner cost, consumables with stock, A4 pick list, bulk edit); bookings and money (tags, project on every invoice, payment link, pro forma, damage-only Return signature, Manager decides extension clashes, at-risk warning at once, day start as a setting for new bookings only, Owner/Admin change it); security (second step for every money role every 30 days, PIN quick sign-in, sign-in history and new-device email for Owner/Admin); team tools (report a problem, phone calendars for every staff, route + Maps links, offer emails at go-live from the app by Owner/Admin/Manager, AI helper after go-live, read-only); B56 extras slip first.
+- Session report (§15.4) — Claude's resolutions; reply with a K-number to flip one:
+
+| # | Gap | Decision | Why | Where | Revert |
+|---|---|---|---|---|---|
+| K1 | Which lane builds the new cards (W90) | Stock tools → lane A; store, money, day start → C; team tools, offers, texts → B | Lane A owns the reservation function; one lane per availability change | PLAN §6 | move a card's track, regenerate its prompt |
+| K2 | Settings switches that flip only a local value | Read-only "Not built yet — <card>" until real (T1-16) | Law 16; the 2FA row claims security that is not there | T1-16 | restore the switches |
+| K3 | Day start as a setting (B24–B26) | Each booking stores its own day start; Owner/Admin only, audited | Old prices never move (B25); B-1 | T3-28 | display-only setting |
+| K4 | Overbooking per product (B12) | Short line, no unit reserved; GiST guard never bypassed | Double bookings stay impossible | T2-23 | reserve past stock |
+| K5 | Phone calendar feed (B28–B29) | Number, time, client name only; revocable link per person | Law 6; a link is readable by whoever holds it | T4-10 | widen the entry |
+| K6 | Offer emails (B31, B34, B43, B50) | Unsubscribe link + one-click header; opted-out never sent; test send first | B34; bulk-sender rules | T5-12 | send without the header |
+| K7 | PERMISSIONS cells that lagged the code | D1–D3, W43 out of the box; W2 / override_receiver match D2 | B-3 | PERMISSIONS | restore the cell texts |
+
+- O-18 raised, not ruled: the switch-user PIN length (card and W53 say 4 digits; 0066 enforces 6). ⭐ keep 6 until Babin answers.
+- O-19 raised, not ruled: who may write team notes (card and 0185: every staff member; `rbac.ts`: Coordinator and above; one test red). ⭐ the narrower rule until Babin answers (B-1).
+- **No permission cell, capability, migration or setting changed by the docs package.** `fix-red-checks.patch` changes text, two type casts, one variable name, one effect cleanup and test files only — no money rule, permission or migration.
+
+**Verified**
+- Base: `origin/main` `9e219db` (fetched 31 Oct ~20:15 NPT). The docs package applies to it with `git am --3way` on a fresh worktree (see the APPLY note); the fix patch too.
+- Gates on `9e219db` **as pushed**: `tsc --noEmit` **20 errors**; `eslint src --max-warnings 0` **3 errors**; `lint:ui-copy` **4 violations**; `check:pglite` **188/188** applied, 0 anon-readable views (35 checked), 20 anon-executable functions 0 unauthorized, 120 definer functions pinned; `check:lifecycle` **46/46** green.
+- With `fix-red-checks.patch`: `tsc` **0**; `eslint` **0**; `lint:ui-copy` **0**; full suite **6,335 / 6,336** in 516 files (`VITE_DATA_SOURCE=mock npm test`); the one red test is `createTeamNote` "allows Warehouse and Driver staff roles to create notes" — red on unpatched `9e219db` too, waiting on O-19. Without the patch, at least 26 tests fail on `9e219db` (checked file by file: five zone action test files whose mock path pointed at a missing module, the New Rental timing test, the Law 17 test, the More-menu test, `createTeamNote`). `check:pglite` 188/188 and `check:lifecycle` 46/46 re-run on the patched tree.
+- Facts re-read in code on `9e219db` for the new cards: `Switch` is local state (`settings/sections/shared.tsx` 529) and the six rows sit at `System.tsx` 82–85 and 183–185; "Allow overbooking" lives in localStorage (`lib/bookingRules.ts`) with a no-op `(allowOverbooking || true)` (`AddItemPanel.tsx` 1836); `prep_time_minutes` / `cleaning_time_minutes` exist on products but no availability code reads them; the packing list stops at 16 lines (`generatePdf.ts` 639); bookings already have `project_type` (0144) but no project name; consumables deduct at Handover (0142); `inventory_reservations` GiST guard now covers 0188 holds; `0188` holds have no screen caller; Booqable ids map through `external_refs` (0040); `client_marketing_consents` exists (0005).
+- Card counts by script: 154 cards; open agent sessions ≈ 283 (A 92 · B 84.5 · C 106), slips first 68. Prompt generator: 126 prompts written, 16 removed.
+- Relative links in the changed Markdown: 252 checked, 1 broken — `README.md` → `../mds and photos/…`, the spec folder outside the repo (as before).
+- BS dates computed with the repo's `src/lib/bs.ts`: 31 Oct 2026 = 14 Kartik 2083; 15 Jan 2027 = 1 Magh (Friday); 20 Jan = 6 Magh (Wednesday).
+- Not run: `build`, `check:contrast` and coverage on the patched tree (the patch changes no style), device checks.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 78 / 78 (100%) | +6 |
+| Real data | DB-only · mixed · seed · none / 62 | 52 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 64 / 64 (100%) | +3 |
+| Lifecycle | steps green / total | 46 / 46 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 188 files · check:pglite 188/188 applied, 0 failed (recorded 2026-10-31T15:15:08.299Z). Suite: NOT PASSING — 6335/6336 passed, 1 failed (recorded 2026-10-31T15:14:43.427Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-10-31T15:15:20.944Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+(Counted on `9e219db` with `fix-red-checks.patch` applied; the docs package changes no code. The one failing test waits on O-19.)
+
+### Remaining
+- Babin: apply `fix-red-checks.patch` first (main does not build today), then the plans patch, then this entry; answer **O-18** (PIN 4 or 6 digits) and **O-19** (who writes team notes).
+- Lane B (Gemini): finish **T4-07** before anything else — fees reach Warehouse, Technician and Driver (Law 6), Coordinator+ can delete zones (Law 3), fee typed in paisa.
+- Lane C (Codex-2): **T3-02** is an empty tab; re-read the **0193** change from "mix all"; then T3-14b.
+- Lane A (Codex-1): T0-10 → T2-18 → T2-17 → T1-16.
+- Archive `scripts/fix-*.mjs` (four regex rewrite scripts from "mix all"; one caused the Booking Detail crash).
+- Open with ⭐ defaults: `PLAN.md` §4.2 O-4…O-19 (O-8 replaced). Accountant: seven questions (O-14 and O-17 block T3-14c).
+
 ## 2026-10-31 — T3-14b: Draft invoice at Confirm + re-sync (Lane C · Size L)
 
 **Did**
