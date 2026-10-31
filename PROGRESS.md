@@ -1,5 +1,46 @@
 # Progress Log
 
+## 2026-11-01 — Audit §15 follow-ups: Law 15 copy fix + the three lint errors — suite down to 4 failing tests
+
+**Did**
+- Committed on main `7ba929c4` (local, not pushed): **T-1** `BookingConflictModal` visible copy "contact customer" → "contact client" (+ its source comment); **L-1/L-2** `DepositSetup` — the *proper* fix after the audit's first suggestion proved wrong: both dead `_embedded`/`_onDone` aliases and their `@ts-ignore` suppressions removed, unused stub props taken as `_props: DepositSetupProps`; **L-3** `DeliverySection` — added the missing effect cleanup `return () => { mounted = false }` (the guard was dead; also stops a state write after unmount/zone change).
+- **Corrected the record:** the audit §15.1 L-1/L-2 row said the `@ts-ignore` comments "suppress nothing". Wrong — removing only the comments turned `typecheck` red with real `TS6133`s; the comments were masking genuine errors. §15.1 corrected, §15.3 added (fixed / discovered).
+- Recorded a new red gate: **`lint:ui-copy` fails on main** — 4 developer-text violations ("Law 3, D28"-style) in lane-B files: `InternalNotesPage.tsx:816`, `LegacyExportControl.tsx:115`, `System.tsx:103`, `LegacyExportCard.tsx:110`. Not fixed here (other lanes' files).
+- An earlier uncommitted version of these edits was swept by the concurrent clean-tree workflow; re-applied and committed so the work survives.
+
+**Ruled**
+- Nothing new. The copy change enforces standing Law 15/17; no product decision was made.
+
+**Verified**
+- `npm run typecheck` — 0 errors.
+- `npm run lint` — 0 errors, 0 warnings (was 3).
+- `VITE_DATA_SOURCE=mock npm test` — **513/516 files, 6,332/6,336 tests** (was 511/516, 6,330/6,336). `law17` (T-1) and `RecordForm` (T-5) now green. Remaining 3 files / 4 tests, all recorded in audit §15.2: registry groups ×2 (T-2/T-3), team-note cell (T-4), `useNewRentalTiming` (T-6).
+- Focused receipts: `law17` + `BookingConflictModal` 5/5; `DeliveryZonesControl` + `DeliveryWorkspace` green.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 78 / 78 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 62 | 52 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 64 / 64 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 189 files · check:pglite Historical, incomplete or failed receipt (2026-10-31T22:17:15.261Z); current source NOT VERIFIED. Suite: NOT PASSING — 6332/6336 passed, 4 failed (recorded 2026-10-31T22:34:22.668Z); source fingerprint matches.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-31T22:18:17.556Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+`npm run completion` exited 1: the suite is not fully passing (4 known tests) and the DB-gate receipts are historical — nothing above was typed by hand.
+
+### Remaining
+- **Rulings needed before the last 4 tests can move:** (1) **team-note create cell** — the test expects all staff, `rbac.canCreateTeamNote` admits Coordinator+, and lifecycle L42 asserts all staff; whichever way it goes needs the B-3 move (PERMISSIONS.md + T-1 fixture + test). (2) **New Rental default pickup time** — 06:00 shipped vs 09:00 expected; R-39 "defaults are doctrine" says the shipped value must be the deliberate one.
+- **T-2/T-3:** the rentals registry returns 6 action groups; the spec matrix expects 5 — the owning lane decides test-vs-code.
+- **`lint:ui-copy`** — 4 developer-text violations in lane-B files (list above).
+- Performance work unchanged: P0 list in `NEMOTRON_PERFORMANCE_AUDIT_02.md` §8.
+- Next session starts with: ask Babin for the two rulings; with either answered, its test is a ten-minute fix.
+
 ## 2026-11-01 — Nemotron Task 02 audit: performance & responsiveness blueprint + live gate receipts (read-only)
 
 **Did**

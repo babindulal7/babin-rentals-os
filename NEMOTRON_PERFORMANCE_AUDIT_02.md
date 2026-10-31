@@ -636,9 +636,26 @@ not a current defect.** The repo advanced again during this work
 | T-5 | `src/components/records/__tests__/RecordForm.test.tsx` | Full run: focus landed on `record-name` instead of `record-pan_vat` after clicking the error summary. **Passes in isolation.** | Order-dependent/flaky — find the inter-test coupling or treat as contention noise from the shared runner; not currently a product defect. | UI kit |
 | T-6 | `src/modules/rentals/booking/__tests__/useNewRentalHooks.test.tsx` (`useNewRentalTiming`) | Default `pickupTime` is **'06:00'**; the test expects **'09:00'**. Known since the T3-14b entry ("1 pre-existing failure in `useNewRentalTiming`"). | Either the shipped default changed deliberately (06:00 matches the operational-day start) or the test is stale. **R-39 "defaults are doctrine" says whichever ships must be the deliberate value** — a one-line decision + matching edit. | New Rental (lane C) |
 
+### 15.3 Fixed / discovered since measurement
+
+- **Fixed 1 Nov (commit `7ba929c4`):** **T-1** (`BookingConflictModal` copy → "contact client"),
+  **L-1/L-2** (proper fix — the aliases and their suppressions removed; §15.1 row corrected),
+  **L-3** (the missing `useEffect` cleanup). Verified: `npm run lint` **0 errors**,
+  `typecheck` **0 errors**, full suite **513/516 files · 6,332/6,336 tests** (was 511/516 ·
+  6,330/6,336 — `law17` and `RecordForm` now green). Remaining 3 files / 4 tests:
+  T-2/T-3 (registry groups), T-4 (team-note cell — needs a ruling) and T-6 (New Rental default
+  time — needs a ruling).
+- **Newly measured: `npm run lint:ui-copy` is RED on main** — 4 developer-text violations
+  (lane-B files, none touched by this audit): `src/modules/notes/InternalNotesPage.tsx:816`,
+  `src/modules/settings/sections/LegacyExportControl.tsx:115`,
+  `src/modules/settings/sections/System.tsx:103`,
+  `src/modules/today/LegacyExportCard.tsx:110` — "(Law 3, D28)"-style references in user-visible
+  copy. For the owning lane.
+
 **Not re-run by this audit** (inherited receipts only, listed so nothing looks verified that is not):
-`check:pglite` (last receipt 189/189 ✔), `check:lifecycle` (last receipt 31/46), financial integrity,
-`check:security`, `test:server-contracts`, `test:partial-return`, `lint:shell`, `lint:ui-copy`,
+`check:pglite` (last receipt 189/189 ✔), `check:lifecycle` (last receipt: partially repaired —
+`debf5305` fixed 6 of the T3-14b failures, "7 failures pre-existing or test setup"), financial
+integrity, `check:security`, `test:server-contracts`, `test:partial-return`, `lint:shell`,
 `check:contrast`, `test:coverage`. The full gate list is `docs/plans/README.md` → "Gates every card
 must pass".
 
