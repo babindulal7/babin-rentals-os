@@ -4,9 +4,6 @@ import { createRoot, type Root } from 'react-dom/client'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { DeliveryZonesControl } from '../DeliveryZonesControl'
 import { listDeliveryZones } from '../../../../actions/deliveryZones/listDeliveryZones'
-import { createDeliveryZone } from '../../../../actions/deliveryZones/createDeliveryZone'
-import { updateDeliveryZone } from '../../../../actions/deliveryZones/updateDeliveryZone'
-import { deactivateDeliveryZone } from '../../../../actions/deliveryZones/deactivateDeliveryZone'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -41,9 +38,6 @@ vi.mock('../../../../components/ui/Toast', () => ({
 }))
 
 const mockListDeliveryZones = vi.mocked(listDeliveryZones)
-const mockCreateDeliveryZone = vi.mocked(createDeliveryZone)
-const mockUpdateDeliveryZone = vi.mocked(updateDeliveryZone)
-const mockDeactivateDeliveryZone = vi.mocked(deactivateDeliveryZone)
 
 describe('DeliveryZonesControl', () => {
   let container: HTMLDivElement | null = null

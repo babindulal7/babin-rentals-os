@@ -408,7 +408,7 @@ export function LineItemTree({
           }
 
           const renderedChildren = query ? matchingChildren : children
-          const _stock = getStockAvailability(parent, caseIdx)
+          const stock = getStockAvailability(parent, caseIdx)
 
           return (
             <div

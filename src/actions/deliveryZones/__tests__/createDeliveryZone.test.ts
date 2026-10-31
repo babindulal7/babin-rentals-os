@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createDeliveryZone } from '../createDeliveryZone';
 import { ActionPermissionError } from '../../core';
-import { supabase } from '../../../../lib/supabase';
+import { supabase } from '../../../lib/supabase';
 
 // Mock supabase
-vi.mock('../../../../lib/supabase', () => ({
+vi.mock('../../../lib/supabase', () => ({
   supabase: {
     rpc: vi.fn(),
   },
@@ -18,7 +18,8 @@ vi.mock('../../../../events/eventBus', () => ({
 }));
 
 describe('createDeliveryZone', () => {
-  const mockRpc = vi.mocked(supabase.rpc);
+  // Plain { data, error } replies, typed loosely as in the other action tests.
+  const mockRpc = vi.mocked(supabase.rpc) as unknown as ReturnType<typeof vi.fn>;
   const coordinatorContext = { userId: 'user-123', role: 'Coordinator' as const };
   const ownerContext = { userId: 'owner-123', role: 'Owner' as const };
   const warehouseContext = { userId: 'warehouse-123', role: 'Warehouse' as const };

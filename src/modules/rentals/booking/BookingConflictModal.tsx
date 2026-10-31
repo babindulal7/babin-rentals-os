@@ -325,7 +325,7 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
                     >
                       <div>
                         <div style={{ fontWeight: 500, fontSize: '0.875rem' }}>
-                          6. Keep draft & contact customer
+                          6. Keep draft & contact the client
                         </div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #6b7280)' }}>
                           Retain original details; create a staff follow-up note.

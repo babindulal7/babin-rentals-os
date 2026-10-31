@@ -21,11 +21,8 @@ export interface DepositSetupProps {
   _onDone?: () => void
 }
 
-export default function DepositSetup({ embedded = false, onDone }: DepositSetupProps = {}) {
-  // @ts-ignore
-  const _embedded = embedded
-  // @ts-ignore
-  const _onDone = onDone
+// The props are kept for the Inventory tab wiring; the placeholder does not use them yet (T3-02).
+export default function DepositSetup(_props: DepositSetupProps = {}) {
   const { user } = useAuth()
   const role = user?.role ?? 'Client'
   const gctx = gateContext(role)

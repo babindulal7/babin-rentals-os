@@ -1,19 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { listDeliveryZones, type DeliveryZoneRow } from '../listDeliveryZones';
-import { ActionPermissionError } from '../../core';
-import { supabase } from '../../../../lib/supabase';
+import { supabase } from '../../../lib/supabase';
 
 // Mock supabase
-vi.mock('../../../../lib/supabase', () => ({
+vi.mock('../../../lib/supabase', () => ({
   supabase: {
     rpc: vi.fn(),
   },
 }));
 
 describe('listDeliveryZones', () => {
-  const mockRpc = vi.mocked(supabase.rpc);
-  const coordinatorContext = { userId: 'user-123', role: 'Coordinator' as const };
-  const clientContext = { userId: 'client-123', role: 'Client' as const };
+  // Plain { data, error } replies, typed loosely as in the other action tests.
+  const mockRpc = vi.mocked(supabase.rpc) as unknown as ReturnType<typeof vi.fn>;
 
   const mockZones: DeliveryZoneRow[] = [
     {

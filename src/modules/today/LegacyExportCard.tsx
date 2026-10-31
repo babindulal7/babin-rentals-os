@@ -107,7 +107,7 @@ export default function LegacyExportCard() {
                 This device has <strong className="font-mono tabular-nums">{count}</strong> old {count === 1 ? 'entry' : 'entries'} saved only here. Download them as a file for Babin.
               </p>
               <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--muted)' }}>
-                Bytes stay on this device — nothing is deleted (Law 3, D28). You can also download this later in Settings ▸ System.
+                The entries also stay on this device — nothing is deleted. You can download them later in Settings ▸ System too.
               </p>
             </div>
           </div>
