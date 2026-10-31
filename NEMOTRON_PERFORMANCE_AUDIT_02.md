@@ -351,12 +351,21 @@ However, the audit reveals **10 high-value optimization opportunities** that wou
 
 ### 9.4 Database
 
+> **Claim the number first** in `docs/plans/MIGRATION_LEDGER.md` (highest file today is `0200`;
+> the ledger header's "Next free number: 0190" is **stale** — flag it when the claim is made).
+> **Use plain `CREATE INDEX IF NOT EXISTS`, not `CONCURRENTLY`:** migration files carry their own
+> `begin;`/`commit;` (`0189_delivery_zones.sql:10`; `scripts/check-pglite.mjs:94` — "Each migration
+> carries its own begin/commit"), and Postgres refuses `CREATE INDEX CONCURRENTLY` inside a
+> transaction. The local gate rebuilds from scratch, so the online-build benefit is not needed;
+> on live, Babin's apply batch runs the same file — a brief write lock on these tables is the
+> correct trade at this data size (246 bookings).
+
 | File | Change |
 |------|--------|
-| `supabase/migrations/XXX_performance_indexes.sql` | `CREATE INDEX CONCURRENTLY idx_bookings_stage_pickup ON bookings(stage, pickup_at) WHERE cancelled_at IS NULL;` |
-| `supabase/migrations/XXX_performance_indexes.sql` | `CREATE INDEX CONCURRENTLY idx_bookings_client_stage ON bookings(client_id, stage) WHERE cancelled_at IS NULL;` |
-| `supabase/migrations/XXX_performance_indexes.sql` | `CREATE INDEX CONCURRENTLY idx_booking_lines_booking_type ON booking_lines(booking_id, line_type) WHERE voided_at IS NULL;` |
-| `supabase/migrations/XXX_performance_indexes.sql` | `CREATE INDEX CONCURRENTLY idx_product_units_product_status ON product_units(product_id, status) WHERE retired_at IS NULL;` |
+| `supabase/migrations/0201_performance_indexes.sql` (claim first) | `CREATE INDEX IF NOT EXISTS idx_bookings_stage_pickup ON bookings(stage, pickup_at) WHERE cancelled_at IS NULL;` |
+| same file | `CREATE INDEX IF NOT EXISTS idx_bookings_client_stage ON bookings(client_id, stage) WHERE cancelled_at IS NULL;` |
+| same file | `CREATE INDEX IF NOT EXISTS idx_booking_lines_booking_type ON booking_lines(booking_id, line_type) WHERE voided_at IS NULL;` |
+| same file | `CREATE INDEX IF NOT EXISTS idx_product_units_product_status ON product_units(product_id, status) WHERE retired_at IS NULL;` |
 
 ---
 
@@ -519,11 +528,45 @@ trade taps for speed. The measured baselines from `PROGRESS.md` 2026-09-19 (d):
 
 ## 14. Next Steps
 
-1. **Immediate (This Week):** Implement P0-1 (AbortController), P0-5 (indexes migration), P1-2 (debounce hook)
+1. **Immediate (This Week):** Implement P0-1 (AbortController), P0-5 (indexes migration), P0-6 (search debounce), fix the lint gate (§15)
 2. **Week 2:** P0-2 (virtualization), P0-3 (client search), P1-1 (shared floor cache)
 3. **Week 3:** P0-4 (merged RPC), P1-3 (autosave throttle), P1-4 (prefetch)
 4. **Device Day:** Run full measurement protocol on physical devices
 5. **Go-Live Gate:** All P0 targets met on real devices with real data volumes
+
+---
+
+## 15. Gate Status & Repo-Health Findings (measured — not estimated)
+
+The mission asked for `typecheck`, `test`, `lint` and `build` to be run where possible. They were, on
+**HEAD `a26bff96`** (`fix(delivery-zones): resolve strict typecheck and test mocks for T4-07`,
+31 Oct 2026 22:25 +0545). **The repository moved while this audit ran** — an earlier HEAD in this
+same session (`9e219db4 "mix all"`) failed `typecheck` with **20 errors** (5 `deliveryZones` test
+files importing `../../../../lib/supabase` — one `../` too far; `LineItemTree.tsx` half-renamed
+`_stock`/`stock`; `DeliveryZonesControl.tsx` calling `price()` (the pricing pipeline, `PriceInput →
+PriceBreakdown`) where it meant `formatMoney(zone.fee_paisa)`). Those 20 were fixed by `a26bff96`
+before this section was written — recorded here because a red `main` window is exactly what the
+"CI is off" gate list (W75 / `docs/plans/README.md`) exists to prevent.
+
+| Gate | Command | Result on `a26bff96` | Evidence |
+|------|---------|----------------------|----------|
+| **Typecheck** | `npm run typecheck` | ✅ **PASS — 0 errors** | `tsc --noEmit`, clean exit |
+| **Lint** | `npm run lint` | ❌ **FAIL — 3 errors** (0 warnings) | `eslint src --max-warnings 0` → exit 1 |
+| **Build** | `npm run build` | *(recorded below)* | `tsc && vite build` |
+| **Tests** | `VITE_DATA_SOURCE=mock npm test` | *(recorded below)* | full suite |
+
+### 15.1 The 3 lint failures — exact fixes (small, independent, no product decision)
+
+| # | File:line | Error | Cause | Minimal fix |
+|---|-----------|-------|-------|-------------|
+| L-1 | `src/modules/inventory/DepositSetup.tsx:25` | `ban-ts-comment` — use `@ts-expect-error` instead of `@ts-ignore` | A `@ts-ignore` on `const _embedded = embedded` — a line with **no type error** for tsc to suppress (`tsc` is clean on this file today; `@ts-expect-error` would itself error here). The file is a T3-02 stub (`// Implementation here`). | Delete the two comment lines (25, 27). Keep the `_`-prefixed aliases (tsc accepts them) or drop both alias pairs and the props when the stub is implemented. |
+| L-2 | `src/modules/inventory/DepositSetup.tsx:27` | same | same | same |
+| L-3 | `src/modules/rentals/booking/DeliverySection.tsx:130` | `prefer-const` — `'mounted' is never reassigned` | The second effect (zone-fee auto-fill) declares `let mounted = true` but **has no cleanup**, unlike the first effect at line 124 which returns `() => { mounted = false }`. The guard `if (mounted && …)` at :133 therefore guards nothing, and the state write can land after unmount. Lint's autofix (`const`) would silence the rule while keeping the dead guard — the real fix is the missing cleanup. | Add `return () => { mounted = false }` to the effect at :128-140. Resolves lint AND makes the guard real. |
+
+> **Process note for Babin:** both failures arrived with recent lane merges (T3-02 `af06b08a`,
+> T4-07 `07731b00`) — exactly the class of defect the "run every gate before you say done" rule
+> (`AGENTS.md` → verification order; `docs/plans/README.md` → gates) catches when followed. The
+> earlier 20-error window was fixed commit-by-commit rather than reverted; no action needed there.
 
 ---
 

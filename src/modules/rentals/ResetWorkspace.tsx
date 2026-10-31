@@ -2317,9 +2317,7 @@ export default function ResetWorkspace({
                       )
                     })}
                   </div>
-                  <p style={{ margin: '9px 0 0', paddingTop: 9, borderTop: '1px solid var(--border)', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
-                    Group counts are derived from the booking&apos;s live lines and always sum to {rows.length}.
-                  </p>
+                  {/* RULING 2026-10-26: the "group counts always sum to N" note was an invariant for developers, not for the floor. */}
                 </Card>
               </OperationAside>
               </div>
@@ -2431,8 +2429,8 @@ export default function ResetWorkspace({
                 ))}
               </div>
               <p style={{ margin: '10px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
-                Ready + Remaining + Exceptions = {counts.Ready + remainingCount + exceptionRows.length} of {rows.length} rows —
-                same population, always reconciles. These figures are this session&apos;s, local until Complete Reset lands.
+                Ready + Remaining + Exceptions = {counts.Ready + remainingCount + exceptionRows.length} of {rows.length} rows.
+                Local to this session until Complete Reset lands.
               </p>
             </Card>
 
