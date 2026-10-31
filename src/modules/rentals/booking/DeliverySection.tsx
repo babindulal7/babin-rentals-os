@@ -137,6 +137,7 @@ export function DeliverySection({
       .catch(() => {
         // Silently fail - user can manually enter fee
       })
+    return () => { mounted = false }
   }, [deliveryZone, clientPickup, canBookingMoney, setDeliveryChargePaisa])
 
   return (
