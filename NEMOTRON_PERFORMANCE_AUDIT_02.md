@@ -38,8 +38,8 @@ However, the audit reveals **10 high-value optimization opportunities** that wou
 | **Initial Load (Today screen, mock)** | < 1.5s | ~2.2s estimated | Bundle analysis |
 | **Initial Load (Rentals List, mock)** | < 2.0s | ~2.8s estimated | Bundle + query |
 | **Time to Interactive (floor screens)** | < 800ms | ~1.1s estimated | Hydration + data |
-| **Search Debounce Latency** | < 200ms | 200ms (Rentals), 0ms (Clients) | Code inspection |
-| **Scan-to-Action Latency** | < 100ms | ~150ms (modal open) | `PackingWorkspace.tsx` |
+| **Search Debounce Latency** | < 250ms | **0ms debounce on Rentals + Inventory** (only `PackingWorkspace` row filter debounces, 200ms) | Code inspection |
+| **Scan-to-Mark Latency (Bluetooth)** | < 100ms | UNVERIFIED — burst path is local (`barcodeBurst` ≤50ms/key + local `marks` state, no network) | `PackingWorkspace.tsx`, `barcodeBurst.ts` |
 | **Table Scroll FPS (200+ rows)** | 60fps | Likely < 30fps | No virtualization |
 | **Bundle Size (main chunk)** | < 200KB gzip | ~280KB gzip estimated | `vite.config.ts` chunks |
 | **Core Web Vitals (LCP/INP/CLS)** | Pass | UNVERIFIED | Needs Lighthouse |
@@ -54,7 +54,7 @@ However, the audit reveals **10 high-value optimization opportunities** that wou
 |---------|---------------|----------|
 | **Two parallel `useList` calls** for pickups & returns fire simultaneously on every filter change | VERIFIED | `Today.tsx:432-433` — `pickups` & `returns` both call `listBookings` |
 | **No request cancellation** — stale responses can overwrite newer ones | VERIFIED | `useList.ts:186-218` — only `cancelled` flag, no `AbortController` |
-| **`businessNowAd()` called per render** — drives `overdue()` filter key stability | VERIFIED | `Today.tsx:1180` — floored to minute, but still per-render |
+| **`businessNowAd()`/`operationalTodayAd()` called per render** — drives filter key stability | VERIFIED | `Today.tsx:400`, `Today.tsx:420,425` — floored to minute inside `toMinute`, but still read on every render |
 | **No virtualization** on movement panels — 50 rows/page but all mounted | VERIFIED | `DashboardMovementPanel.tsx` renders all rows |
 | **Calendar popover portals to `document.body`** — good for stacking | VERIFIED | `Today.tsx:152-225` — `CalendarPortal` uses `createPortal` |
 | **Keyboard shortcuts** (`[`, `]`, `t`, `/`) — excellent for dispatch | VERIFIED | `Today.tsx:507-536` — global keydown handler |
@@ -72,8 +72,9 @@ However, the audit reveals **10 high-value optimization opportunities** that wou
 | **`businessNowAd()` called every render** for `overdue()` anchor | VERIFIED | `RentalsList.tsx:1180` — same pattern as Today |
 | **50 rows/page** but **no virtualization** — all rows in DOM | VERIFIED | `RentalsList.tsx:2237-2360` — `DataTableShell` renders all |
 | **Column chooser** hides columns via CSS — hidden rows still mounted | VERIFIED | `RentalsList.tsx:1487-1489` — `show()` filters but rows exist |
+| **Search is NOT debounced** — every keystroke writes the URL (`useFilters.setSearch`) and re-fires the list query + viewCounts query | VERIFIED | `SearchInput.tsx` has no debounce; `useFilters.ts:353` writes params directly; `RentalsList.tsx:1357` `useList` keys on it |
 
-**Impact:** Search/filter triggers 3-4 sequential queries; large inventories (500+ bookings) cause jank.
+**Impact:** Each keystroke re-fires the list query + the `viewCounts` query (plus a localStorage drafts read) — a 6-character search is ~12–18 network requests; large booking history (500+ rows) also causes table jank (no virtualization).
 
 ### 3.3 Packing / Handover / Return / Reset Workspaces — **FLOOR CRITICAL PATH**
 
@@ -81,23 +82,26 @@ However, the audit reveals **10 high-value optimization opportunities** that wou
 |---------|---------------|----------|
 | **Full booking reload on every mount** — `fetchFloorBooking(id)` per workspace | VERIFIED | All four workspaces: `useEffect` with `[id, reload]` |
 | **No caching of `FloorBooking`** across Packing→Handover→Return navigation | VERIFIED | Each workspace independently fetches; no shared context |
-| **Scanner modal opens on every scan** (camera) — heavy for rapid scanning | VERIFIED | `PackingWorkspace.tsx:1098-1100` — `BarcodeScannerModal` |
-| **Bluetooth scanner burst listener** active but **no debounce on manual input** | VERIFIED | `useBarcodeBurst` threshold 50ms; keyboard input not debounced |
+| **Bluetooth bursts mark directly — no modal** (good); camera modal is continuous-decode, opened once on demand | VERIFIED (good) | `PackingWorkspace.tsx:1085-1090` (`useBarcodeBurst` → `processScannedCode` → `pack()`), `BarcodeScannerModal.tsx:120` (`continuous: true`), 2s same-code cooldown (`:88`) |
+| **⛔ `floorScanStorage` autosave is SYNCHRONOUS and runs on EVERY scan** — full `marks` map `JSON.stringify` + `localStorage.setItem` on the main thread per scan | VERIFIED | `PackingWorkspace.tsx:704-720` (effect deps include `marks`, `scanLog`), `ReturnWorkspace.tsx:703-725` (same); `floorScanStorage.ts` wraps `localStorage` |
 | **`useOperationEvidence`** re-fetches on every workspace mount | VERIFIED | `PackingWorkspace.tsx:611` — `useOperationEvidence(floor?.id ?? null)` |
 | **Local `marks` state** grows with every scan — no cleanup for 100+ units | VERIFIED | `PackingWorkspace.tsx:593` — `Record<string, Mark>` |
+| **zxing scanner dependency** — manual `vendor-scanner` chunk exists; whether it stays out of the main bundle | UNVERIFIED | `vite.config.ts:129` — needs `npm run build` + chunk-size measurement |
 
-**Impact:** Floor staff wait 800-1500ms between Packing→Handover; scanner modal adds 300ms per item.
+**Impact:** Floor staff wait 800-1500ms between Packing→Handover (full `fetchFloorBooking` per workspace); a 50-serial scan session performs 50 synchronous localStorage writes serializing a growing object — jank risk on low-end tablets (UNVERIFIED, needs device Profiler).
 
 ### 3.4 Inventory (`/inventory`) — **LARGE DATASET**
 
 | Finding | Classification | Evidence |
 |---------|---------------|----------|
 | **No virtualization** — `DataTableShell` renders all rows | VERIFIED | `Inventory.tsx:278-300` — `tdFor` but no windowing |
-| **KPI strip fires 6 HEAD queries** on every mount | VERIFIED | `Inventory.tsx:248-256` — `INVENTORY_KPI_FILTERS` with `COUNT_PAGE` |
+| **KPI strip fires 6 HEAD queries** on every mount | VERIFIED | `Inventory.tsx:1528-1533` — six fixed `useList(countFetcher, INVENTORY_KPI_FILTERS.*)` calls |
 | **Unit expansion** loads `listUnits` per product — N+1 potential | VERIFIED | `Inventory.tsx` uses `listUnits` for serial expansion |
-| **Category/condition facets** — client-side only (500 row limit) | VERIFIED | `useClients.ts:33-50` — `NO_FILTERS` + client-side filter |
+| **⛔ Keystroke fan-out: search is NOT debounced** — every keystroke re-fires the main list query **plus a `Promise.all` fan-out of 3 chip-count HEAD queries** (`chipCounts`) | VERIFIED | `Inventory.tsx:1322-1330` (`setSearchTerm`, no debounce → URL param), `:1550` (`useList(countChips, …)` keyed on `searchTerm`), `:1536-1549` (`countChips` = `Promise.all(PRIMARY_EQUIPMENT_CHIPS.map(…))`), `:1308-1310` (3 primary chips) |
+| **Facet counts** — server-side, correctly gated on `filtersOpen` | VERIFIED (good) | `Inventory.tsx:1493-1494` — `useFacetCounts(…, filtersOpen)` |
+| **Search type-ahead** — `SearchInput` has no internal debounce | VERIFIED | `src/components/ui/SearchInput.tsx` — no `debounce`/`setTimeout` |
 
-**Impact:** 1000+ equipment rows cause layout thrash; search limited to 500 rows.
+**Impact:** Typing a 6-character query fires ~24 requests (6 × [1 list + 3 chip counts]); with the filter drawer open, category/status facet probes join on each keystroke. This is the single worst keystroke-amplification surface in the app.
 
 ### 3.5 Clients (`/clients`) — **SEARCH BOTTLENECK**
 
@@ -109,7 +113,7 @@ However, the audit reveals **10 high-value optimization opportunities** that wou
 
 **Impact:** Growing client base (>500) breaks search; no pagination.
 
-### 3.6 Finance / Reports — **MONEY-GATED, HEAGY QUERIES**
+### 3.6 Finance / Reports — **MONEY-GATED, HEAVY QUERIES**
 
 | Finding | Classification | Evidence |
 |---------|---------------|----------|
@@ -126,7 +130,7 @@ However, the audit reveals **10 high-value optimization opportunities** that wou
 | Pattern | Status | Location |
 |---------|--------|----------|
 | **Single query per screen (Law 2)** | ✅ VERIFIED | `queries/bookings.ts`, `queries/inventory.ts`, `queries/finance.ts` |
-| **N+1 in unit expansion** | ⚠️ VERIFIED | `Inventory.tsx` → `listUnits` per product |
+| **Possible N+1 in unit expansion** (per-product `listUnits`) | ⚠️ VERIFIED pattern, impact UNVERIFIED | `Inventory.tsx` → `listUnits` on expansion; count the requests per expanded page |
 | **Parallel independent queries** (pickups + returns) | ✅ VERIFIED | `Today.tsx:432-433` — `Promise.all` not used but concurrent |
 | **Sequential dependent queries** (drafts → bookings → sub-rentals) | ❌ VERIFIED | `RentalsList.tsx:1215-1341` — waterfall |
 | **Duplicate query for sub-rental IDs** | ❌ VERIFIED | `RentalsList.tsx:1059-1076` — separate `subRentalBookingIds()` |
@@ -201,7 +205,7 @@ However, the audit reveals **10 high-value optimization opportunities** that wou
 | Optimization | Needed? | Evidence |
 |--------------|---------|----------|
 | **Table virtualization** (`@tanstack/react-virtual`) | ✅ YES | 50-200 row tables on floor screens; `DataTableShell` renders all |
-| **Search debouncing** (200-300ms) | ✅ PARTIAL | Rentals: 200ms (`Today.tsx:602`); Clients: 0ms |
+| **Search debouncing** (250ms) | ✅ NEEDED | Only `PackingWorkspace` row filter debounces (inline 200ms `setTimeout`, `PackingWorkspace.tsx:601-606`); Rentals, Inventory, Clients: 0ms |
 | **Request cancellation (AbortController)** | ✅ YES | `useList` uses boolean flag only |
 | **Prefetch on route hover** | ✅ PARTIAL | `routePreload` exists but only for core hubs |
 | **React.memo on row components** | ✅ YES | `PackRow`, `ReturnRow` not memoized |
@@ -225,9 +229,9 @@ However, the audit reveals **10 high-value optimization opportunities** that wou
 
 | Viewport | Issues Found | Classification |
 |----------|--------------|----------------|
-| **375px (Mobile)** | Tables become cards — good; but **BottomBar** (56px) + **sticky floor bar** (88px) = 144px chrome | VERIFIED `App.tsx:1218` |
-| **820px (iPad Portrait)** | Sidebar collapses; **rail content reflows below** — correct per rulings | VERIFIED `App.tsx:1070` |
-| **1024px (iPad Landscape)** | Desktop layout but **touch targets 44px** — primary verbs need 56px | VERIFIED `UI_UX_RULES.md:40` |
+| **375px (Mobile)** | Tables become cards — good; but **BottomBar** (58px + safe-area, `BottomBar.tsx:11,37`) + floor-workspace bottom padding (88px, `App.tsx:1218`) = ~146px chrome on floor screens | VERIFIED |
+| **820px (iPad Portrait)** | "tablet" band (768–1279). Sidebar renders as the **compact 64px rail by default** (`Sidebar.tsx:93,105-107` — tablet defaults collapsed); record rails reflow below; Rentals drops `Items` + `Return` columns (`RentalsList.tsx:1487`) | VERIFIED |
+| **1024px (iPad Landscape)** | **Still "tablet"** (<1280) — same compact rail + tablet column set, NOT the desktop layout. The 1280 threshold was chosen for exactly this (1194 iPad Pro 11" must not resolve to desktop — `breakpoints.ts:14-25`) | VERIFIED |
 | **1280px (Laptop)** | Full desktop; sticky right rail — correct | VERIFIED |
 | **1440px+** | Wide tables; **no max-width constraint** on content | VERIFIED `App.tsx:1218` |
 
@@ -245,7 +249,7 @@ However, the audit reveals **10 high-value optimization opportunities** that wou
 
 | Issue | Classification | Evidence |
 |-------|----------------|----------|
-| **No `touch-action: manipulation`** on scanner inputs — 300ms delay | UNVERIFIED | Not found in codebase |
+| **No `touch-action: manipulation`** anywhere (styles + index.html + inputs) — iOS Safari retains the double-tap-zoom tap delay; viewport meta has no `maximum-scale=1` | VERIFIED (absent); delay impact UNVERIFIED on device | `grep touch-action src/styles index.html` → zero hits; `index.html:5` viewport meta |
 | **`position: fixed` portals** may not escape iframe in PWA | UNVERIFIED | `CalendarPortal`, `MenuPortal` use `fixed` |
 | **Service Worker scope** — `/` covers all routes | ✅ VERIFIED | `vite.config.ts:19` — `scope: '/'` |
 | **Offline fonts** — `woff2` in `globPatterns` | ✅ VERIFIED | `vite.config.ts:69` — includes `woff2` |
@@ -270,7 +274,7 @@ However, the audit reveals **10 high-value optimization opportunities** that wou
 | **4** | **AbortController in `useList`** for request cancellation | Eliminates stale overwrites | Low | Low — internal change | PROPOSED |
 | **5** | **Server-side search for Clients** (remove 500-row limit) | Unblocks growth | Medium | Low — new query + UI | PROPOSED |
 | **6** | **Debounce all search inputs** (250ms) | -70% keystroke queries | Low | Low — single hook change | PROPOSED |
-| **7** | **Scanner: skip modal for barcode scans** (direct mark) | -300ms/item scan | Medium | Low — UX change, testable | PROPOSED |
+| **7** | **Throttle `floorScanStorage` autosave** (synchronous localStorage write per scan) | Removes main-thread jank during 50-serial sessions | Low | Low — throttle window bounded, marks survive | PROPOSED |
 | **8** | **Prefetch next floor screen** on Packing complete | -500ms Handover load | Low | Low — `routePreload` pattern | PROPOSED |
 | **9** | **Add composite DB indexes** for queue filters | -40% query time | Low | None — additive | PROPOSED |
 | **10** | **ETag/If-None-Match** on list queries | -90% repeated load bandwidth | Medium | Medium — Supabase config | PROPOSED |
@@ -288,14 +292,15 @@ However, the audit reveals **10 high-value optimization opportunities** that wou
 | **P0-3** | Remove 500-row client limit; add server-side search + pagination | `src/lib/queries/useClients.ts`, `src/modules/clients/ClientsDirectory.tsx` | 1000+ clients searchable |
 | **P0-4** | Merge `fetchRentals` + `refreshSubRentals` into single query | `src/lib/queries/bookings.ts` (new RPC), `src/modules/rentals/RentalsList.tsx` | Single network request on filter |
 | **P0-5** | Add composite indexes for `bookings(stage, pickup_at)`, `bookings(client_id, stage)` | `supabase/migrations/XXX_performance_indexes.sql` | `check:pglite` + `check:lifecycle` green |
+| **P0-6** | **Debounce server-backed search inputs (250ms)** — Inventory is worst (each keystroke = 1 list + 3 chip-count queries); Rentals re-fires list + viewCounts per keystroke | `src/components/ui/SearchInput.tsx` (add `debounceMs`), `src/modules/inventory/Inventory.tsx:1322-1330`, `src/lib/queries/useFilters.ts:353` | Type "camera" → 6 keystrokes ≤ 1 query burst; tap budget unchanged (typing is not taps) |
 
 ### P1 — High Impact, Next Sprint
 
 | # | Task | Files to Modify | Verification |
 |---|------|-----------------|--------------|
 | **P1-1** | Shared `FloorBookingContext` for Packing/Handover/Return/Reset | `src/modules/operations/OperationsWorkspaceContext.tsx` (extend) | Navigate Packing→Handover < 200ms |
-| **P1-2** | Debounce all search inputs to 250ms (unify hook) | `src/lib/queries/useDebouncedSearch.ts` (new), all search inputs | Keystroke→request < 300ms |
-| **P1-3** | Scanner direct-mark mode (bypass modal for barcode) | `src/modules/rentals/PackingWorkspace.tsx`, `HandoverWorkspace.tsx`, `ReturnWorkspace.tsx` | Scan→mark < 100ms |
+| **P1-2** | Unify all search inputs on one debounce hook (P0-6 was the hotfix; this removes the per-screen copies) | `src/lib/queries/useDebouncedSearch.ts` (new), all search inputs | Keystroke→request < 300ms; `PackingWorkspace`'s inline 200ms `setTimeout` replaced (its only copy) |
+| **P1-3** | Throttle `floorScanStorage` autosave (trailing 500ms) — currently synchronous `localStorage` write per scan (Packing + Return only; Handover/Reset do not autosave) | `src/lib/floorScanStorage.ts`, `src/modules/rentals/PackingWorkspace.tsx:704-720`, `ReturnWorkspace.tsx:703-725` | 50-scan burst ≤ 2 localStorage writes; marks survive reload |
 | **P1-4** | Prefetch next floor screen on operation start | `src/lib/routePreload.ts` (extend), `src/modules/operations/OperationsWorkspaceContext.tsx` | Handover loads while Packing |
 | **P1-5** | Add `react-virtual` to `DashboardMovementPanel` (Today) | `src/modules/today/DashboardMovementPanel.tsx` | 50 rows smooth on mobile |
 
@@ -330,16 +335,18 @@ However, the audit reveals **10 high-value optimization opportunities** that wou
 |------|----------|--------|
 | `src/modules/operations/OperationsWorkspaceContext.tsx` | NEW | `FloorBookingProvider` — caches `FloorBooking` by `bookingNo` |
 | `src/modules/rentals/PackingWorkspace.tsx` | `fetchFloorBooking` | Read from context; invalidate on `dispatchPlan` completion |
-| `src/modules/rentals/PackingWorkspace.tsx` | `pack()` | Add `directMark` mode for barcode scans (skip modal) |
-| `src/modules/rentals/PackingWorkspace.tsx` | `useBarcodeBurst` | Add `onDirectMark` callback |
+| `src/modules/rentals/PackingWorkspace.tsx` | autosave effect (`:704-720`) | Throttle `saveFloorScan` (500ms trailing); same in `ReturnWorkspace.tsx:703-725` |
+| `src/lib/floorScanStorage.ts` | `saveFloorScan` | Add throttled writer helper; keep synchronous read path (`loadFloorScan`) |
 
 ### 9.3 UI Components
 
 | File | Function | Change |
 |------|----------|--------|
 | `src/components/ui/DataTable.tsx` | `DataTableShell` | Integrate `@tanstack/react-virtual`; `overscan: 5` |
-| `src/components/ui/SearchInput.tsx` | `SearchInput` | Add `debounceMs` prop (default 250) |
-| `src/components/ui/DashboardMovementPanel.tsx` | `DashboardMovementPanel` | Virtualize rows |
+| `src/components/ui/SearchInput.tsx` | `SearchInput` | Add `debounceMs` prop (default 250) — no internal debounce today |
+| `src/modules/inventory/Inventory.tsx` | `setSearchTerm` (line 1322) | Debounce before URL write; stops the 4-queries-per-keystroke fan-out (`chipCounts` at :1550 + list at :1516) |
+| `src/modules/rentals/RentalsList.tsx` | header `SearchInput` (line 1789) | Debounce before `f.setSearch`; stops list + viewCounts re-fire per keystroke |
+| `src/modules/today/DashboardMovementPanel.tsx` | `DashboardMovementPanel` | Virtualize rows (line 251 `.map()` renders all) |
 | `src/modules/today/Today.tsx` | `pickupFilter`/`returnFilter` | Wrap in `useMemo` with stable deps |
 
 ### 9.4 Database
@@ -362,7 +369,7 @@ However, the audit reveals **10 high-value optimization opportunities** that wou
 | **Merged bookings+subrentals RPC** | Breaks existing `listBookings` callers | `bookings.test.ts` — all existing callers pass; new RPC matches old union |
 | **Server-side client search** | Pagination + search interaction | `ClientsDirectory.search.test.tsx` — search "Karki", page 2, verify results |
 | **FloorBooking cache** | Stale data on concurrent edit | `FloorBookingContext.test.tsx` — two tabs, one edits, other sees refresh |
-| **Scanner direct-mark** | Accidental marks without verification | `PackingWorkspace.scan.test.tsx` — rapid scans, verify all marks correct |
+| **Autosave throttle** | Lost marks if the tablet dies inside the throttle window | `floorScanStorage.throttle.test.tsx` — 10 rapid marks ≤ 2 writes; force-close restores latest marks |
 | **Composite indexes** | Write performance impact | `check:pglite` + `check:lifecycle` — insert/update latency < 5ms |
 | **ETag caching** | Stale cache on mutation | `sw.cache.test.ts` — mutate → navigate back → fresh data |
 
@@ -371,7 +378,7 @@ However, the audit reveals **10 high-value optimization opportunities** that wou
 | Test File | Current Coverage | Add For |
 |-----------|-----------------|---------|
 | `src/__tests__/e2e/tier1-features.test.tsx` | Basic flows | Virtualized table scroll, abort controller |
-| `src/__tests__/e2e/floor-loop.test.tsx` | Pack→Handover→Return | Shared cache, direct-mark scan |
+| `src/__tests__/e2e/floor-loop.test.tsx` | Pack→Handover→Return | Shared cache, autosave throttle |
 | `src/lib/queries/__tests__/bookings.test.ts` | `listBookings` | Merged RPC, sub-rental inclusion |
 | `src/lib/queries/__tests__/useList.test.ts` | `useList` basics | AbortController, ETag |
 
@@ -387,14 +394,14 @@ However, the audit reveals **10 high-value optimization opportunities** that wou
 | `PERF-02` | Virtualize `DataTableShell` | `src/components/ui/DataTable.tsx` | M |
 | `PERF-03` | FloorBooking shared cache context | `src/modules/operations/OperationsWorkspaceContext.tsx` | M |
 | `PERF-04` | Composite DB indexes migration | `supabase/migrations/XXX_performance_indexes.sql` | S |
-| `PERF-05` | Scanner direct-mark mode | `src/modules/rentals/PackingWorkspace.tsx`, `HandoverWorkspace.tsx`, `ReturnWorkspace.tsx` | M |
+| `PERF-05` | Throttle `floorScanStorage` autosave (500ms trailing) | `src/lib/floorScanStorage.ts`, `PackingWorkspace.tsx:704-720`, `ReturnWorkspace.tsx:703-725` (only these two autosave) | S |
 | `PERF-06` | Prefetch next floor screen | `src/lib/routePreload.ts`, `OperationsWorkspaceContext.tsx` | S |
 
 ### For Gemini (Lane B — T4, T5, T6)
 
 | Task ID | Description | Files | Size |
 |---------|-------------|-------|------|
-| `PERF-07` | Debounced search hook + unify all inputs | `src/lib/queries/useDebouncedSearch.ts`, all search inputs | S |
+| `PERF-07` | Debounced search hook + wire into `SearchInput` (Inventory is the critical one) | `src/lib/queries/useDebouncedSearch.ts`, `src/components/ui/SearchInput.tsx`, `src/modules/inventory/Inventory.tsx` | S |
 | `PERF-08` | Server-side client search + pagination | `src/lib/queries/clients.ts`, `useClients.ts`, `ClientsDirectory.tsx` | M |
 | `PERF-09` | Virtualize `DashboardMovementPanel` | `src/modules/today/DashboardMovementPanel.tsx` | S |
 | `PERF-10` | Memoize row components (`React.memo`) | All `*Row` components | S |
@@ -460,7 +467,26 @@ const metrics = {
 | Client search (1000+) | < 300ms | < 200ms | < 200ms |
 | Offline queue drain (50 ops) | < 3s | < 2s | < 2s |
 
-### 12.5 Mock vs Real Data Separation
+### 12.5 R-39 Tap Budgets (Existing Floor — Optimizations Must Not Regress These)
+
+R-39 (19 Sep 2026) is the #1 product priority: fewest taps. Performance work must **never**
+trade taps for speed. The measured baselines from `PROGRESS.md` 2026-09-19 (d):
+
+| Flow | Taps (code-derived baseline) | Budget | Perf rule |
+|------|------------------------------|--------|-----------|
+| Mark one floor item by scan (Pack/Handover/Return) | 1 act (scan commits the mark) | 1 | Direct-mark (P1-3) must keep it at 1 tap — remove the modal, never add a confirm |
+| One floor stage from a Today row (e.g. Packing) | 2 (row action → Confirm) | ≤ 3 | Prefetch (P1-4) must not add a step |
+| Record Payment from booking detail | 3 taps, 1 typed | ≤ 4 | Unchanged by any perf work |
+| Record Payment from the Rentals list | ~5 taps (invoice pick adds one) | ≤ 4 | Merged RPC (P0-4) must not add a pick |
+| Cancel a booking | 3 taps + reason ≥10 chars | gated by design | Never trimmed (B-1) |
+| New client inline inside New Rental | 2 typed fields, no navigation | ≤ 3 required | Unchanged |
+| New Rental, Dashboard → Booked (existing client, 1 item) | ≈ 6–8, dates pre-defaulted | ⭐ ≤ 12 | Debounce must not add a wait-tap |
+
+> Budgets are ⭐ B-5 defaults; a flow over budget is a defect (`CLAUDE.md`). None of the
+> P0/P1 optimizations may add a tap, a confirmation, or a modal step — they remove network
+> waits only.
+
+### 12.6 Mock vs Real Data Separation
 
 | Metric | Mock Source | Real DB Source |
 |--------|-------------|----------------|
@@ -484,7 +510,7 @@ const metrics = {
 | **Large Tables** | Pagination (50/page) | No virtualization anywhere | FPS on device | `@tanstack/react-virtual` |
 | **Supabase Requests** | Single-query discipline | Waterfall: drafts→bookings→subrentals | Network tab | Merged RPC, ETags |
 | **N+1 Queries** | None in list queries | Unit expansion in Inventory | EXPLAIN ANALYZE | Batch unit fetch |
-| **Search/Filter Delay** | 200ms debounce (Rentals) | 0ms debounce (Clients) | Keystroke→response | Unified debounce hook |
+| **Search/Filter Delay** | `PackingWorkspace` row filter debounced 200ms; Today search is Enter-only | **0ms debounce on Rentals + Inventory** (keystroke fan-out: Inventory = 4 queries/keystroke) | Keystroke→response | Debounced `SearchInput` (P0-6), unified hook (P1-2) |
 | **Heavy Modals** | Scanner modal on every scan | Camera modal blocks rapid scan | Interaction latency | Direct-mark for barcode |
 | **Layout Shifts** | DataAgeBadge async | KPI strips, async chips | CLS score | Skeleton placeholders |
 | **Bundle Size** | Manual chunks defined | `vendor-charts` (recharts) eager | `npm run build` analysis | Lazy load charts |
@@ -495,7 +521,7 @@ const metrics = {
 
 1. **Immediate (This Week):** Implement P0-1 (AbortController), P0-5 (indexes migration), P1-2 (debounce hook)
 2. **Week 2:** P0-2 (virtualization), P0-3 (client search), P1-1 (shared floor cache)
-3. **Week 3:** P0-4 (merged RPC), P1-3 (scanner direct-mark), P1-4 (prefetch)
+3. **Week 3:** P0-4 (merged RPC), P1-3 (autosave throttle), P1-4 (prefetch)
 4. **Device Day:** Run full measurement protocol on physical devices
 5. **Go-Live Gate:** All P0 targets met on real devices with real data volumes
 

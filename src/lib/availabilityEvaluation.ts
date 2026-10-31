@@ -34,11 +34,11 @@ export interface EvaluatedHold {
   readonly reservationId: string
   readonly bookingId: string
   readonly bookingNo: string
-  readonly isDraft?: boolean
+  readonly isDraft?: boolean | undefined
   readonly holdState: HoldState
-  readonly expiresAt?: string | null
-  readonly assetId?: string | null
-  readonly productId?: string | null
+  readonly expiresAt?: string | null | undefined
+  readonly assetId?: string | null | undefined
+  readonly productId?: string | null | undefined
   readonly qty: number
   readonly window: RentalWindow
 }
@@ -49,9 +49,9 @@ export interface UnitInventoryCandidate {
   readonly serialNo: string | null
   readonly productId: string
   readonly state: string
-  readonly condition?: string
-  readonly isSubRental?: boolean
-  readonly subRentalCommitted?: boolean
+  readonly condition?: string | undefined
+  readonly isSubRental?: boolean | undefined
+  readonly subRentalCommitted?: boolean | undefined
 }
 
 export interface ProductInventoryDefinition {
@@ -59,7 +59,7 @@ export interface ProductInventoryDefinition {
   readonly name: string
   readonly trackingMode: 'Serialised' | 'Quantity' | 'Consumable'
   readonly totalQuantity: number
-  readonly compatibleProductIds?: readonly string[]
+  readonly compatibleProductIds?: readonly string[] | undefined
 }
 
 export interface LineEvaluationInput {
@@ -68,14 +68,14 @@ export interface LineEvaluationInput {
   readonly productName: string
   readonly requestedQty: number
   readonly window: RentalWindow
-  readonly assignedUnitIds?: readonly string[]
-  readonly isBundle?: boolean
+  readonly assignedUnitIds?: readonly string[] | undefined
+  readonly isBundle?: boolean | undefined
   readonly bundleComponents?: readonly {
     readonly productId: string
     readonly productName: string
     readonly requiredPerBundle: number
     readonly isMandatory: boolean
-  }[]
+  }[] | undefined
 }
 
 export interface FreeDateWindow {
@@ -84,11 +84,11 @@ export interface FreeDateWindow {
 }
 
 export interface SuggestedSolutions {
-  readonly alternativeUnits?: readonly { readonly unitId: string; readonly assetTag: string }[]
-  readonly compatibleSubstitutes?: readonly { readonly productId: string; readonly name: string }[]
-  readonly freeDateWindows?: readonly FreeDateWindow[]
-  readonly canReduceQuantity?: boolean
-  readonly canSubRent?: boolean
+  readonly alternativeUnits?: readonly { readonly unitId: string; readonly assetTag: string }[] | undefined
+  readonly compatibleSubstitutes?: readonly { readonly productId: string; readonly name: string }[] | undefined
+  readonly freeDateWindows?: readonly FreeDateWindow[] | undefined
+  readonly canReduceQuantity?: boolean | undefined
+  readonly canSubRent?: boolean | undefined
 }
 
 export interface LineEvaluationResult {
@@ -98,20 +98,20 @@ export interface LineEvaluationResult {
   readonly requestedQty: number
   readonly availableQty: number
   readonly status: AvailabilityOutcomeStatus
-  readonly unavailablePeriod?: RentalWindow
-  readonly conflictingBookingNo?: string
-  readonly conflictingReason?: string
+  readonly unavailablePeriod?: RentalWindow | undefined
+  readonly conflictingBookingNo?: string | undefined
+  readonly conflictingReason?: string | undefined
   readonly suggestedSolutions: SuggestedSolutions
 }
 
 export interface BookingAvailabilityEvaluation {
-  readonly bookingId?: string
+  readonly bookingId?: string | undefined
   readonly window: RentalWindow
   readonly isAllAvailable: boolean
   readonly hasDraftOverlaps: boolean
   readonly overlappingDraftBookingNos: readonly string[]
   readonly lineResults: readonly LineEvaluationResult[]
-  readonly limitingBundleComponents?: readonly { readonly bundleLineId: string; readonly limitingProductIds: readonly string[] }[]
+  readonly limitingBundleComponents?: readonly { readonly bundleLineId: string; readonly limitingProductIds: readonly string[] }[] | undefined
 }
 
 /**

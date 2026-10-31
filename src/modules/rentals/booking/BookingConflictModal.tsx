@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
-import Modal from '../../../components/ui/Modal'
-import Button from '../../../components/ui/Button'
-import Badge from '../../../components/ui/Badge'
+import { Modal } from '../../../components/ui/Modal'
+import { Button } from '../../../components/ui/Button'
+import { Badge } from '../../../components/ui/Badge'
 import Icon from '../../../components/ui/Icon'
 import type { LineEvaluationResult, FreeDateWindow } from '../../../lib/availabilityEvaluation'
 import type { RentalWindow } from '../../../lib/availability'
@@ -23,7 +23,7 @@ export interface BookingConflictModalProps {
 export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
   isOpen,
   onClose,
-  bookingNo,
+  bookingNo: _bookingNo,
   rentalWindow,
   conflicts,
   onKeepDraft,
@@ -62,7 +62,7 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
-            <Icon name="alert-triangle" size={18} />
+            <Icon name="alert_triangle" size={18} />
             <span>{subtitle}</span>
           </div>
           <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.875rem', opacity: 0.9 }}>
@@ -96,31 +96,16 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
                   onClick={() => setExpandedLineId(isExpanded ? null : item.lineId)}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <Badge variant="danger">{item.status === 'hold_conflict' ? 'Hold Conflict' : 'Unavailable'}</Badge>
+                    <Badge tone="danger" label={item.status === 'hold_conflict' ? 'Hold Conflict' : 'Unavailable'} />
                     <span style={{ fontWeight: 600, fontSize: '1rem' }}>{item.productName}</span>
                     <span style={{ fontSize: '0.875rem', color: 'var(--text-muted, #6b7280)' }}>
-                      (requested {item.requestedQty}, available {item.availableQty})
+                      requested {item.requestedQty}, available {item.availableQty}
                     </span>
                   </div>
-                  <Button variant="ghost" size="sm" type="button">
-                    {isExpanded ? 'Hide solutions' : 'Resolve'}
-                  </Button>
+                  <Icon name={isExpanded ? 'chevron_up' : 'chevron_down'} size={18} />
                 </div>
 
-                {/* Conflict Details */}
-                <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--text-secondary, #4b5563)' }}>
-                  <div>
-                    <strong>Reason:</strong> {item.conflictingReason ?? 'Capacity conflict'}
-                  </div>
-                  {item.unavailablePeriod && (
-                    <div style={{ marginTop: '0.25rem' }}>
-                      <strong>Unavailable period:</strong> {item.unavailablePeriod.fromAd.slice(0, 10)} →{' '}
-                      {item.unavailablePeriod.toAd.slice(0, 10)}
-                    </div>
-                  )}
-                </div>
-
-                {/* Expanded Solutions Drawer */}
+                {/* Conflict Details and Solutions */}
                 {isExpanded && (
                   <div
                     style={{
@@ -132,12 +117,41 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
                       gap: '0.75rem',
                     }}
                   >
-                    <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-primary, inherit)' }}>
-                      Suggested solutions:
+                    {/* Time & Conflict Reason */}
+                    <div
+                      style={{
+                        fontSize: '0.875rem',
+                        lineHeight: 1.5,
+                        backgroundColor: 'var(--surface-subtle, #f3f4f6)',
+                        padding: '0.75rem',
+                        borderRadius: 'var(--radius-sm, 6px)',
+                      }}
+                    >
+                      {rentalWindow && (
+                        <div>
+                          <strong>Requested:</strong> {rentalWindow.fromAd.slice(0, 16).replace('T', ' ')} → {rentalWindow.toAd.slice(0, 16).replace('T', ' ')}
+                        </div>
+                      )}
+                      {item.unavailablePeriod && (
+                        <div>
+                          <strong>Unavailable:</strong> {item.unavailablePeriod.fromAd.slice(0, 16).replace('T', ' ')} →{' '}
+                          {item.unavailablePeriod.toAd.slice(0, 16).replace('T', ' ')}
+                        </div>
+                      )}
+                      <div>
+                        <strong>Reason:</strong>{' '}
+                        {item.conflictingReason ?? (item.conflictingBookingNo ? `Reserved by ${item.conflictingBookingNo}` : 'Physical unit capacity exceeded')}
+                      </div>
+                    </div>
+
+                    {/* Solutions Heading */}
+                    <div style={{ fontWeight: 600, fontSize: '0.875rem', marginTop: '0.25rem' }}>
+                      Suggested Solutions (Select one):
                     </div>
 
                     {/* Solution 1: Assign another same-model unit */}
-                    {item.suggestedSolutions.alternativeUnits && item.suggestedSolutions.alternativeUnits.length > 0 && (
+                    {item.suggestedSolutions.alternativeUnits &&
+                      item.suggestedSolutions.alternativeUnits.length > 0 && (
                       <div
                         style={{
                           padding: '0.75rem',
@@ -207,7 +221,42 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
                         </div>
                       )}
 
-                    {/* Solution 3: Change quantity / remove item */}
+                    {/* Solution 3: Change dates */}
+                    {item.suggestedSolutions.freeDateWindows && item.suggestedSolutions.freeDateWindows.length > 0 && (
+                      <div
+                        style={{
+                          padding: '0.75rem',
+                          borderRadius: 'var(--radius-sm, 6px)',
+                          backgroundColor: 'var(--surface-sunken, #f9fafb)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 500, fontSize: '0.875rem' }}>
+                            3. Adjust dates to open window
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #6b7280)' }}>
+                            Genuinely free dates available for this stock.
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          {item.suggestedSolutions.freeDateWindows.slice(0, 2).map((w, idx) => (
+                            <Button
+                              key={idx}
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => onAdjustDates?.(w)}
+                            >
+                              Shift to {w.fromIso.slice(5, 10)}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Solution 4: Change quantity / remove item */}
                     <div
                       style={{
                         padding: '0.75rem',
@@ -220,7 +269,7 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
                     >
                       <div>
                         <div style={{ fontWeight: 500, fontSize: '0.875rem' }}>
-                          3. Remove item or revise quantity
+                          4. Remove item or revise quantity
                         </div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #6b7280)' }}>
                           Remove conflicting line from draft; quote recalculates.
@@ -235,7 +284,7 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
                       </Button>
                     </div>
 
-                    {/* Solution 4: Arrange sub-rental */}
+                    {/* Solution 5: Arrange sub-rental */}
                     <div
                       style={{
                         padding: '0.75rem',
@@ -248,10 +297,10 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
                     >
                       <div>
                         <div style={{ fontWeight: 500, fontSize: '0.875rem' }}>
-                          4. Arrange partner sub-rental
+                          5. Arrange external sub-rental
                         </div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #6b7280)' }}>
-                          Mark as pending external confirmation until partner commits.
+                          Secure stock from external partner.
                         </div>
                       </div>
                       <Button
@@ -259,7 +308,35 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
                         variant="secondary"
                         onClick={() => onSubRent?.(item.lineId)}
                       >
-                        Request Sub-Rent
+                        Source Sub-rental
+                      </Button>
+                    </div>
+
+                    {/* Solution 6: Keep draft and contact customer */}
+                    <div
+                      style={{
+                        padding: '0.75rem',
+                        borderRadius: 'var(--radius-sm, 6px)',
+                        backgroundColor: 'var(--surface-sunken, #f9fafb)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 500, fontSize: '0.875rem' }}>
+                          6. Keep draft & contact customer
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #6b7280)' }}>
+                          Retain original details; create a staff follow-up note.
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={onKeepDraft}
+                      >
+                        Keep Draft
                       </Button>
                     </div>
                   </div>
@@ -269,37 +346,40 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
           })}
         </div>
 
-        {/* Modal actions footer */}
+        {/* Modal footer actions */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
+            justifyContent: 'flex-end',
+            gap: '0.75rem',
             paddingTop: 'var(--space-md, 1rem)',
             borderTop: '1px solid var(--border-subtle, #e5e7eb)',
           }}
         >
-          <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted, #6b7280)' }}>
-            {bookingNo ? `Booking ${bookingNo}` : 'Rental draft'}
-          </div>
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <Button variant="secondary" onClick={onClose}>
-              View conflict
-            </Button>
+          <Button variant="ghost" onClick={onKeepDraft}>
+            Keep as draft
+          </Button>
+          <Button variant="secondary" onClick={onClose}>
+            View conflict
+          </Button>
+          {conflicts.some((c) => (c.suggestedSolutions.alternativeUnits?.length ?? 0) > 0 || (c.suggestedSolutions.compatibleSubstitutes?.length ?? 0) > 0) && (
             <Button
               variant="primary"
               onClick={() => {
-                onKeepDraft()
-                onClose()
+                const first = conflicts[0]
+                if (first?.suggestedSolutions.alternativeUnits?.[0]) {
+                  onReassignUnit?.(first.lineId, first.suggestedSolutions.alternativeUnits[0].unitId)
+                } else if (first?.suggestedSolutions.compatibleSubstitutes?.[0]) {
+                  onSelectSubstitute?.(first.lineId, first.suggestedSolutions.compatibleSubstitutes[0].productId)
+                }
               }}
             >
-              Keep as draft
+              Find alternatives
             </Button>
-          </div>
+          )}
         </div>
       </div>
     </Modal>
   )
 }
-
-export default BookingConflictModal

@@ -34,18 +34,6 @@ vi.mock('../../supabase', () => ({
 
 import { getSalesVatReport } from '../salesVatReports'
 
-function invoice(id: string, date: string, subtotal: number, vat: number, paid: number, rate = 0.13, status = 'Sent') {
-  return {
-    id, invoice_no: 'INV-' + id, booking_id: 'bk-' + id, client_id: 'cl-' + id,
-    branch_id: 'br-1', issue_date: date, due_date: '2026-10-30',
-    subtotal, discount_amount: 0, taxable_amount: subtotal, vat_rate: rate,
-    vat_amount: vat, total_amount: subtotal + vat,
-    paid_amount: paid, outstanding_amount: subtotal + vat - paid,
-    status, currency: 'NPR', voided_at: null,
-    clients: { name: 'Test client ' + id, pan_vat: '123456789' },
-    bookings: { booking_no: 'BK-' + id },
-  }
-}
 
 describe('WF-01 live financial report truth', () => {
   beforeEach(() => {

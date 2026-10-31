@@ -61,6 +61,17 @@ export const createHoldConfig: ActionConfig<CreateHoldInput, CreateHoldResult> =
         expiresAt: res.expires_at,
         qty: res.qty,
       },
+      events: [
+        {
+          type: 'inventory.hold_created',
+          payload: {
+            reservationId: res.reservation_id,
+            bookingId: input.bookingId,
+            expiresAt: res.expires_at,
+            actorId: ctx.userId,
+          },
+        },
+      ],
     }
   },
 }
@@ -107,6 +118,15 @@ export const releaseHoldConfig: ActionConfig<ReleaseHoldInput, ReleaseHoldResult
         success: true as const,
         reservationId: input.reservationId,
       },
+      events: [
+        {
+          type: 'inventory.hold_released',
+          payload: {
+            reservationId: input.reservationId,
+            actorId: ctx.userId,
+          },
+        },
+      ],
     }
   },
 }

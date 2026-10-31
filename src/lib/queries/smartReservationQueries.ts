@@ -1,9 +1,7 @@
 import { supabase } from '../supabase'
 import {
   readCandidates,
-  readHolds,
   readProductModes,
-  readQuantityHolds,
   parseTstzRange,
 } from './availability'
 import {
@@ -67,8 +65,8 @@ export async function queryBookingAvailability(
   }
 
   const bookingWindow: RentalWindow = {
-    start: pickupAt,
-    end: returnAt,
+    fromAd: pickupAt,
+    toAd: returnAt,
   }
 
   // 1. Read live lines
@@ -108,34 +106,34 @@ export async function queryBookingAvailability(
   ]
 
   // 2. Read product definitions and candidates
-  const [productModes, candidatesMap] = await Promise.all([
+  const [productModes, rawCandidatesMap] = await Promise.all([
     readProductModes(productIds),
     readCandidates(productIds),
   ])
 
-  const productDefs: ProductInventoryDefinition[] = productIds.map((pId) => {
+  const productsMap = new Map<string, ProductInventoryDefinition>()
+  for (const pId of productIds) {
     const mode = productModes.get(pId)
     const line = linesToEval.find((l) => l.productId === pId)
-    return {
+    productsMap.set(pId, {
       productId: pId,
       name: line?.productName ?? 'Item',
       trackingMode: (mode?.trackingMode as 'Serialised' | 'Quantity' | 'Consumable') ?? 'Serialised',
       totalQuantity: mode?.totalQuantity ?? 1,
-    }
-  })
+    })
+  }
 
-  const unitCandidates: UnitInventoryCandidate[] = []
-  for (const [, candidates] of candidatesMap) {
-    for (const c of candidates) {
-      unitCandidates.push({
-        unitId: c.unitId,
-        assetTag: c.assetTag,
-        serialNo: c.serialNo,
-        productId: c.productId,
-        state: c.state,
-        condition: c.condition,
-      })
-    }
+  const unitsByProductMap = new Map<string, UnitInventoryCandidate[]>()
+  for (const [pId, candidates] of rawCandidatesMap) {
+    const list: UnitInventoryCandidate[] = candidates.map((c) => ({
+      unitId: c.unitId,
+      assetTag: c.assetTag,
+      serialNo: c.serialNo,
+      productId: c.productId,
+      state: c.state,
+      condition: c.condition ?? undefined,
+    }))
+    unitsByProductMap.set(pId, list)
   }
 
   // 3. Read holds with hold_state and expires_at
@@ -156,9 +154,9 @@ export async function queryBookingAvailability(
         bookingId: row.booking_id,
         bookingNo: bObj?.booking_no ?? 'Another Booking',
         holdState: (row.hold_state as EvaluatedHold['holdState']) ?? 'confirmed',
-        expiresAt: row.expires_at,
-        assetId: row.asset_id,
-        productId: row.product_id,
+        expiresAt: row.expires_at ?? undefined,
+        assetId: row.asset_id ?? undefined,
+        productId: row.product_id ?? undefined,
         qty: row.qty ?? 1,
         window: w,
       })
@@ -174,53 +172,29 @@ export async function queryBookingAvailability(
     .not('pickup_at', 'is', null)
     .not('return_at', 'is', null)
 
-  const draftBookings: Array<{
-    bookingId: string
-    bookingNo: string
-    window: RentalWindow
-    lineProductIds: readonly string[]
-  }> = []
-
   if (Array.isArray(draftBookingsData) && draftBookingsData.length > 0) {
-    const draftIds = draftBookingsData.map((d) => d.id)
-    const { data: draftLinesData } = await supabase
-      .from('booking_lines')
-      .select('booking_id, product_id')
-      .in('booking_id', draftIds)
-      .is('voided_at', null)
-
-    const productsByDraftId = new Map<string, string[]>()
-    if (Array.isArray(draftLinesData)) {
-      for (const dl of draftLinesData) {
-        if (!dl.product_id) continue
-        const list = productsByDraftId.get(dl.booking_id) ?? []
-        list.push(dl.product_id)
-        productsByDraftId.set(dl.booking_id, list)
-      }
-    }
-
     for (const d of draftBookingsData) {
       if (!d.pickup_at || !d.return_at) continue
-      draftBookings.push({
+      evaluatedHolds.push({
+        reservationId: `draft-${d.id}`,
         bookingId: d.id,
         bookingNo: d.booking_no,
-        window: { start: d.pickup_at, end: d.return_at },
-        lineProductIds: productsByDraftId.get(d.id) ?? [],
+        isDraft: true,
+        holdState: 'none',
+        qty: 1,
+        window: { fromAd: d.pickup_at, toAd: d.return_at },
       })
     }
   }
 
-  // 5. Evaluate availability pure engine
+  // 5. Evaluate availability via pure engine
   const evaluation = evaluateBookingAvailability({
-    bookingWindow,
+    bookingId,
+    window: bookingWindow,
     lines: linesToEval,
+    products: productsMap,
+    unitsByProduct: unitsByProductMap,
     holds: evaluatedHolds,
-    unitCandidates,
-    productDefs,
-    options: {
-      currentBookingId: bookingId,
-      draftBookings,
-    },
   })
 
   return {

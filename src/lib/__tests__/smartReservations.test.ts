@@ -2,9 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   evaluateBookingAvailability,
   calculatePeakOccupancy,
-  isHoldOccupying,
   type EvaluatedHold,
-  type LineEvaluationInput,
   type ProductInventoryDefinition,
   type UnitInventoryCandidate,
 } from '../availabilityEvaluation'
@@ -224,6 +222,26 @@ describe('Smart Reservation & Conflict Resolution Engine', () => {
 
     expect(evalA.isAllAvailable).toBe(true)
     expect(evalA.hasDraftOverlaps).toBe(true)
+
+    // Checking B against A: B is also available because draft A holds no stock
+    const evalB = evaluateBookingAvailability({
+      bookingId: 'booking-b',
+      window: windowB_1Day,
+      lines: [
+        {
+          lineId: 'line-b1',
+          productId: fx3Product.productId,
+          productName: fx3Product.name,
+          requestedQty: 1,
+          window: windowB_1Day,
+        },
+      ],
+      products: productsMap,
+      unitsByProduct: unitsByProductMap,
+      holds: [draftA],
+    })
+    expect(evalB.isAllAvailable).toBe(true)
+    expect(evalB.hasDraftOverlaps).toBe(true)
   })
 
   it('Test 4: A active hold first -> B confirmation blocked until hold released/expired; B draft still saves', () => {

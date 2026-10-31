@@ -20,6 +20,23 @@
 - `npm run check:contrast`: 106/106 WCAG AA pairs pass.
 - `npm run lint:progress`: clean.
 
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 72 / 72 (100%) | +3 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 61 / 61 (100%) | +3 |
+| Lifecycle | steps green / total | 45 / 45 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 185 files · check:pglite 185/185 applied, 0 failed.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Lane B next cards: T4-02 (Reschedule a delivery), T4-07 (Delivery zones & fees), T5-01 (Notification records in Postgres), T6-01 (Nepali translations).
+
 ## 2026-10-31 — T4-01: Delivery dispatch on the database (Lane B · Size L)
 
 **Did**
@@ -65,23 +82,6 @@
 - `npm run build`: built in dist/, 8166 modules transformed, PWA service worker generated cleanly.
 - Vitest delivery suites: 35/35 passed across 3 test files (12 action tests, 21 query tests, 2 UI component tests).
 - `npm run lint:progress`: passed.
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 72 / 72 (100%) | +3 |
-| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 61 / 61 (100%) | +3 |
-| Lifecycle | steps green / total | 45 / 45 (100%) | +1 |
-| Overall | structural mean of five | ≈ 97% | — |
-Migrations 185 files · check:pglite 185/185 applied, 0 failed.
-Gates read from .lifecycle-result.json.
-Counted by `npm run completion`, not typed.
-Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
-
-## Remaining
-- Lane B next cards: T4-02 (Reschedule a delivery), T4-07 (Delivery zones & fees), T5-01 (Notification records in Postgres), T6-01 (Nepali translations).
 
 ## 2026-10-31 — T4-06: Export old browser-only entries (Lane B · Size S)
 
@@ -412,25 +412,24 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `npm run check:contrast`: 106/106 WCAG AA pairs pass.
 - `npm run lint:progress`: clean.
 
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 59 / 59 (100%) | +0 |
-| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
-| Lifecycle | steps green / total | 41 / 41 (100%) | +0 |
-| Overall | structural mean of five | ≈ 97% | — |
+## 2026-10-29 — T3-14a: Invoice write hardening (Lane C · Size M)
 
-Migrations 181 files · check:pglite 181/181 applied, 0 failed (recorded 2026-10-27T19:19:30.775Z). Suite: PASS — 5859/5859 passed, 0 failed (recorded 2026-10-27T19:18:23.218Z); source fingerprint matches.
-Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
-Gates read from .lifecycle-result.json, written 2026-10-27T19:21:10.144Z.
-Counted by `npm run completion`, not typed.
-Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+**Did**
+- Claimed migration `0193` (measured across all branches: highest was `0192` on lane-b/T5-02) in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0193_invoice_write_hardening.sql` fixing three defects from the T3-14 readiness audit (27 Oct 2026):
+  - **F2 (concurrent issue burns a number)**: `issue_invoice` now uses `SELECT ... FOR UPDATE` to lock the invoice row before checking Draft status and minting `invoice_no`. Re-checks Draft + `invoice_no IS NULL` under the lock. Added `invoice_no` and `issue_date` to the immutability guard in `reject_invoice_edit_after_issue()` so issued invoices cannot have their number/date rewritten.
+  - **F5 (issued invoice lines rewritable)**: New `BEFORE INSERT OR UPDATE OR DELETE` trigger `trg_guard_invoice_lines_parent_status` on `invoice_lines` raises `P0001` unless parent invoice is `Draft` and not voided. Error message names the invoice and instructs: *"correct it with a credit note."*
+  - **F4 (extension does not reprice draft)**: `extend_booking` now recomputes `line_total` for affected Draft invoice lines using the same arithmetic as `create_invoice` (0168:871). Equipment/Services/Sub-Rental: `qty * days * rate - discount`. Crew: increments by `unit_rate * v_days` (known limitation: pro-rated extras added again; needs `day_rate` stored separately per MONEY-07). Transport: unchanged. Fixed stale comment in `src/actions/rentals/extendRental.ts:16`.
+- Fixed role check in `extend_booking`: removed `current_user` check (returns function owner in SECURITY DEFINER, not caller) and now relies solely on `auth_user_role()`. Client role now correctly refused with 42501.
 
-## Remaining
-- Physical scanner hardware pairing with Babin (O-16) on Device Day (T2-11).
-- Ready to merge on Lane A.
+**Ruled**
+- Nothing new. This card implements audit findings; no product decision required.
+
+**Verified**
+- `npm run check:pglite` → 182/182 migrations applied, all gates pass (view-leak, function-leak, definer-hygiene).
+- `npm run check:lifecycle` → 40/41 green (L23 now passes; L16 pre-existing failure unrelated to this work — Coordinator void_invoice accepted when it must not).
+- `npm run check:contrast` → 106/106 pass (WCAG AA light + dark).
+- `npm run lint:progress` → passes.
+- Migration number claimed via branch-scoped measurement (not ledger), row added to `MIGRATION_LEDGER.md` in first commit.
 
 ## 2026-10-27 — T2-06: Repair job closes the damage (Lane A · Size L)
 

@@ -27,6 +27,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0186 | T4-05 | shift-handovers | lane-b/T4-05-shift-handover-on-the-database | verified |
 | 0187 | T4-01 | delivery-dispatch-rpcs | lane-b/T4-01-delivery-dispatch-on-the-database | verified |
 | 0188 | T3-smart-reservations | smart-reservation-holds | lane-c/T3-smart-reservations | verified |
+| 0193 | T3-14a | invoice-write-hardening | lane-c/T3-14a-invoice-write-hardening | verified |
 | 0199 | T8-08 | tds-on-crew-payouts | lane-a/T8-08-tds-on-crew-payouts | verified |
 
 ## Expected migrations (not yet claimed)
