@@ -1165,39 +1165,6 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 ## Remaining
 - Nothing open from T2-07. Ready to proceed to next task on Lane A (e.g. T2-08 Floor printing or T2-10 Offline outbox).
 
-## 2026-10-26 — Today card verb: the 56px floor is pinned by a test
-
-**Did**
-- Checked the Today card's main action button against the 56px floor-verb rule in `UI_UX_RULES.md` ("Touch Target Floor"). I had measured it at 44px on `main` `07fd34f3` on 22 Oct. Commit `7aa3af22` (23 Oct) already restored a `min-height: 56px` rule for it, so no CSS change was needed.
-- Added two source-level tests in `movementPanel.test.tsx`: the last rule that sets the verb's `min-height` on the full card selector says 56px, and no rule after it sets a smaller value. Many layers of `dashboard.css` set 44px on this button, which is how it regressed once without any test failing.
-- The file's shared `afterEach` now tolerates "nothing mounted" (`if (root)`, `host?.remove()`), so tests that mount nothing, including these, pass when run alone.
-
-**Ruled**
-- No ruling. This enforces the existing touch-target floor; no CSS, role, money gate, migration or write path changed.
-
-**Verified**
-- Browser, mock Owner, mock build of `main` `ae30ed45` served by `vite preview`: the verb is 56px on the Returns and Pickups queues at 1280 and at 390, and its computed `min-height` is 56px.
-- Mutation checks: setting the 56px rule back to 44px turns "sets it to 56px" red; appending a later rule that sets 44px turns "no later rule lowers it" red. CSS restored after each.
-- `tsc --noEmit` 0; eslint on `src/modules/today` 0; the 6 Today test files / 142 tests pass. The full suite was not re-run: this change adds tests and a guard in a test file only.
-- Not verified: dark/glass by eye, native phone hardware.
-
-## Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 55 / 58 (95%) | +0 |
-| Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
-| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
-| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
-| Lifecycle | steps green / total | not measured — current receipt required | — |
-| Overall | structural mean of five | not measured | — |
-Migrations 174 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
-Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-22T13:13:11.038Z); current source NOT VERIFIED.
-Counted by `npm run completion`, not typed.
-Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
-## Remaining
-- Nothing open from this change. The earlier note about a 44px verb button (22 Oct entry) is resolved by `7aa3af22`.
-
 ## 2026-10-26 (j) — T2-03 ID card deposit collateral & operations popup fix
 
 **Did**
