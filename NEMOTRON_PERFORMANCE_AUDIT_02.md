@@ -619,6 +619,30 @@ Vite also warns of two dual-import chunking inefficiencies (`rbac.ts` dynamic+st
 > (`AGENTS.md` → verification order; `docs/plans/README.md` → gates) catches when followed. The
 > earlier 20-error window was fixed commit-by-commit rather than reverted; no action needed there.
 
+### 15.2 The failing test files — measured, reproduced (1 Nov 2026)
+
+**Full suite** (`VITE_DATA_SOURCE=mock npm test`, started 00:00): **5 files failed / 511 passed (516);
+6 tests failed / 6,330 passed (6,336)** in 1,423 s.
+**Isolated re-run** of exactly those 5 files (00:48, HEAD `c3121769`): **4 of 5 reproduce;
+`RecordForm.test.tsx` passes alone → that one failure is order-dependent (flaky under the full run),
+not a current defect.** The repo advanced again during this work
+(`a26bff96 → 4730a832 "nimtron" → c3121769 "nem"`), and an **uncommitted** edit to
+`scripts/e2e-lifecycle.mjs` was present in the tree — re-verify before acting on any line here.
+
+| # | File | Failure (reproduced) | Reading | Owner |
+|---|------|----------------------|---------|-------|
+| T-1 | `src/lib/__tests__/law17.test.ts` | `BookingConflictModal.tsx:328` contains **"6. Keep draft & contact customer"** — the word "customer" is banned in the UI layer (Law 15 / Law 17; `CLAUDE.md` "the word 'customer' appears nowhere"). | **A product-law violation on `main`, not a stale test.** One-word copy fix: "client". From the smart-availability/conflict-modal work (`eaff8493`). | Rentals (that file's owner) |
+| T-2, T-3 | `src/lib/__tests__/rentalMoreActionsRegistry.test.ts` (2 tests) | The registry returns **6 action groups** where the specification matrix expects 5 (`expect(groups).toHaveLength(5)`). | Either the new group must join the matrix (test update) or it should not exist (code change) — **cannot be decided from the test alone**; the owning lane knows which group it added. | Rentals actions |
+| T-4 | `src/actions/notes/__tests__/createTeamNote.test.ts` | Test expects **Warehouse and Driver** can create notes; current `rbac.canCreateTeamNote` (`rbac.ts:711-713`) admits **Owner/Admin/Manager/Coordinator only** (verified identical at `a26bff96` and HEAD). | The T4-04 PROGRESS entry recorded `isStaff(role)`; the shipped rule is narrower, and the T4-04 lifecycle step (L42) asserts all eight staff roles create notes. **UI ⊆ DB still holds (narrower UI is safe), but test, rbac and the DB gate now disagree on the product cell — needs a ruling + the B-3 move (PERMISSIONS.md + T-1 fixture) once decided.** | Lane B (T4-04) + a ruling |
+| T-5 | `src/components/records/__tests__/RecordForm.test.tsx` | Full run: focus landed on `record-name` instead of `record-pan_vat` after clicking the error summary. **Passes in isolation.** | Order-dependent/flaky — find the inter-test coupling or treat as contention noise from the shared runner; not currently a product defect. | UI kit |
+| T-6 | `src/modules/rentals/booking/__tests__/useNewRentalHooks.test.tsx` (`useNewRentalTiming`) | Default `pickupTime` is **'06:00'**; the test expects **'09:00'**. Known since the T3-14b entry ("1 pre-existing failure in `useNewRentalTiming`"). | Either the shipped default changed deliberately (06:00 matches the operational-day start) or the test is stale. **R-39 "defaults are doctrine" says whichever ships must be the deliberate value** — a one-line decision + matching edit. | New Rental (lane C) |
+
+**Not re-run by this audit** (inherited receipts only, listed so nothing looks verified that is not):
+`check:pglite` (last receipt 189/189 ✔), `check:lifecycle` (last receipt 31/46), financial integrity,
+`check:security`, `test:server-contracts`, `test:partial-return`, `lint:shell`, `lint:ui-copy`,
+`check:contrast`, `test:coverage`. The full gate list is `docs/plans/README.md` → "Gates every card
+must pass".
+
 ---
 
 **End of Audit.** All findings are grounded in source code inspection. Measurements marked UNVERIFIED require execution environment. No production changes proposed without verification.
