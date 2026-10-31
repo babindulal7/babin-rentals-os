@@ -1,5 +1,26 @@
 # Progress Log
 
+## 2026-10-31 — Operations popup: last explanatory sentences in Return and Reset
+
+**Did**
+- Removed Reset's "group counts always sum" note, shortened its reconciliation note, and shortened Return's "keeps this line open" warning (same meaning).
+
+**Ruled**
+- `RULINGS-2026-10-26.md`, three rows. No behaviour, gate, permission, money or migration change.
+
+**Verified**
+- `npx tsc --noEmit` exit 0; `eslint` on both files exit 0; `resetQc`, `ResetWorkspace.embedded` and `ResetWorkspaceExpansion` tests pass.
+- `realWorkspaceGuidance.test.tsx` fails 7/7 with and without these edits (checked by setting the two files aside), so those failures come from newer commits on `main`, not this change.
+- Not driven in the app this time (text-only change).
+
+### Completion
+Not measured this run: `npm run completion` did not return output within its time limit. Nothing was counted by hand.
+
+## Remaining
+
+- `realWorkspaceGuidance.test.tsx` fails 7/7 on `main` and needs its owner.
+- Which other crowded screen to trim next is not chosen.
+
 ## 2026-10-31 — T3-14b: Draft invoice at Confirm + re-sync (Lane C · Size L)
 
 **Did**
