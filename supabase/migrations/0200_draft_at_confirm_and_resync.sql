@@ -177,6 +177,7 @@ comment on function public.resync_draft_invoice(uuid) is
   'Upserts by source row client_uuid. Refuses if invoice is not Draft or booking cancelled. '
   'Used by Confirm (draft creation) and extend_booking / other booking mutations.';
 
+revoke execute on function public.resync_draft_invoice(uuid) from public;
 grant execute on function public.resync_draft_invoice(uuid) to authenticated;
 
 -- =============================================================================
@@ -380,15 +381,13 @@ comment on function public.extend_booking(jsonb) is
 -- 3. Confirm creates Draft invoice inside the transition
 -- =============================================================================
 -- The Confirm action (apply_booking_stage_transition → Quote→Booked) will call
--- a new internal function to create the Draft. This is done via a trigger on
--- bookings after the stage transition to Booked, or via the RPC that performs
--- the transition. We add a post-transition hook here.
-
--- The apply_booking_stage_transition RPC (0150) handles stage transitions.
--- We add a call to create_draft_invoice_on_confirm after a successful
--- Quote→Booked transition. Since we cannot modify 0150 in this migration
--- (it's a different file), we add a trigger on bookings that fires when
--- stage becomes 'Booked' and the old stage was 'Quote'.
+-- a new internal function to create the Draft. We add a trigger on bookings
+-- that fires AFTER the stage transition to Booked is committed.
+-- 
+-- Uses a deterministic Law 8 key: md5(booking_id || 'invoice-creation-namespace')
+-- to ensure a second Confirm press replays rather than creating a second invoice.
+-- PGlite doesn't have uuid_generate_v5, so we use md5-based deterministic UUID.
+-- Discount percent comes from booking_discounts (sum of percent), vat_rate from bookings.
 
 create or replace function public.create_draft_invoice_on_confirm()
 returns trigger
@@ -403,6 +402,12 @@ declare
   v_line_count    integer := 0;
   v_written       integer;
   v_booking       bookings%rowtype;
+  v_discount_pct  numeric := 0;
+  v_vat_rate      numeric(5,4);
+  v_due_date      date;
+  v_terms         text;
+  v_term_days     integer := 0;
+  v_namespace     uuid := '6ba7b810-9dad-11d1-80b4-00c04fd430c8'::uuid; -- DNS namespace for uuid5
 begin
   -- Only fire on Quote -> Booked transition
   if OLD.stage = 'Quote' and NEW.stage = 'Booked' then
@@ -414,26 +419,51 @@ begin
       raise exception 'create_draft_invoice_on_confirm: booking % not found.', v_booking_id;
     end if;
 
-    -- Deterministic Law 8 key: uuid5 of booking id (namespace: invoice creation)
-    -- This ensures a second Confirm press replays rather than creating a second invoice.
-    v_client_uuid := uuid_generate_v5('6ba7b810-9dad-11d1-80b4-00c04fd430c8'::uuid, v_booking_id::text);
+    -- Get discount_percent from booking_discounts (sum of percent)
+    select coalesce(sum(percent), 0) into v_discount_pct
+      from public.booking_discounts where booking_id = v_booking_id;
+
+    -- Get vat_rate from bookings (pinned at booking creation)
+    select vat_rate into v_vat_rate from public.bookings where id = v_booking_id;
+
+    -- Calculate due_date from client's payment_terms (same as create_invoice)
+    select payment_terms::text into v_terms from clients where id = v_booking.client_id;
+    v_term_days := case coalesce(v_terms, 'Immediate')
+                     when '7 days'  then 7
+                     when '15 days' then 15
+                     when '30 days' then 30
+                     else 0
+                   end;
+    v_due_date := current_date + v_term_days;
+
+    -- Deterministic Law 8 key: md5-based UUID (uuid5 equivalent without uuid-ossp)
+    -- uuid_generate_v5(namespace, name) = uuid_from_md5(md5(namespace || name))
+    v_client_uuid := (md5(v_namespace::text || v_booking_id::text))::uuid;
 
     -- Create the invoice row (status = Draft, no number)
+    -- Use ON CONFLICT on client_uuid to handle retries (Law 8 idempotency)
     insert into invoices (
       client_uuid, booking_id, client_id, branch_id,
-      discount_percent, vat_rate,
+      discount_percent, vat_rate, due_date,
       status, created_by, updated_by
     ) values (
       v_client_uuid,
       v_booking_id,
       v_booking.client_id,
       v_booking.branch_id,
-      coalesce(v_booking.discount_percent, 0),
-      coalesce(v_booking.vat_rate, (select vat_rate from vat_settings limit 1)),
+      v_discount_pct,
+      coalesce(v_vat_rate, 0.1300),
+      v_due_date,
       'Draft'::invoice_status,
       NEW.updated_by,
       NEW.updated_by
-    ) returning id into v_invoice_id;
+    ) on conflict (client_uuid) do nothing
+    returning id into v_invoice_id;
+
+    -- If conflict (retry), fetch the existing invoice
+    if v_invoice_id is null then
+      select id into v_invoice_id from invoices where client_uuid = v_client_uuid;
+    end if;
 
     -- Re-sync the lines (this will populate invoice_lines with the correct arithmetic)
     perform public.resync_draft_invoice(v_booking_id);
@@ -457,10 +487,10 @@ begin
       reason
     ) values (
       v_client_uuid,
-      'document created',
+      'money movement',
       'Finance',
-      'Invoices',
-      'Insert',
+      'Finance',
+      'Create',
       'Informational',
       'Success',
       'invoices',
@@ -493,8 +523,10 @@ create trigger trg_create_draft_invoice_on_confirm
 
 comment on trigger trg_create_draft_invoice_on_confirm on bookings is
   'T3-14b: Creates a numberless Draft invoice when a booking transitions Quote→Booked (W15). '
-  'Uses deterministic Law 8 key (uuid5 of booking_id) so retries replay. '
-  'Calls resync_draft_invoice to populate lines with create_invoice arithmetic.';
+  'Uses deterministic Law 8 key (md5-based uuid5 of booking_id) so retries replay. '
+  'Calls resync_draft_invoice to populate lines with create_invoice arithmetic. '
+  'ON CONFLICT on client_uuid ensures idempotent retries. '
+  'discount_percent from booking_discounts, vat_rate from bookings.';
 
 -- =============================================================================
 -- 4. Update existing confirmRental action to NOT create invoice separately
