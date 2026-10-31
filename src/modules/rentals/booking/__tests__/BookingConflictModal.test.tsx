@@ -5,6 +5,9 @@ import { createRoot, type Root } from 'react-dom/client'
 import { BookingConflictModal } from '../BookingConflictModal'
 import type { LineEvaluationResult } from '../../../../lib/availabilityEvaluation'
 
+// @ts-expect-error React 18 act flag
+globalThis.IS_REACT_ACT_ENVIRONMENT = true
+
 describe('BookingConflictModal', () => {
   let container: HTMLDivElement
   let root: Root
@@ -94,6 +97,14 @@ describe('BookingConflictModal', () => {
     })
 
     expect(keepDraftSpy).toHaveBeenCalledTimes(1)
+
+    const viewConflictBtn = buttons.find((b) => b.textContent?.includes('View conflict'))
+    expect(viewConflictBtn).toBeDefined()
+
+    await act(async () => {
+      viewConflictBtn?.click()
+    })
+
     expect(closeSpy).toHaveBeenCalledTimes(1)
   })
 })

@@ -4,6 +4,7 @@ import Icon from '../../components/ui/Icon'
 import { TouchTarget } from '../../components/ui/TouchTarget'
 import type { FloorLine, FloorUnit } from '../../lib/queries/bookings'
 import { isSubRentedLine } from '../../lib/queries/bookings'
+import type { LineEvaluationResult } from '../../lib/availabilityEvaluation'
 
 export interface LineItemTreeProps {
   lines: FloorLine[]
@@ -14,6 +15,7 @@ export interface LineItemTreeProps {
   subRentedRowStyle?: ((line: { lineType?: string }) => React.CSSProperties) | undefined
   isSubRented?: ((line: { lineType?: string }) => boolean) | undefined
   bookingStage?: string | undefined
+  lineAvailability?: ReadonlyMap<string, LineEvaluationResult> | undefined
 }
 
 /** No per-unit QC source is recorded in this projection. */
@@ -32,6 +34,139 @@ function assignmentLabel(line: FloorLine, stage: string) {
   return stage === 'Returned' || stage === 'Closed' ? 'No unit record' : 'Assign during packing'
 }
 
+function renderAvailabilityPill(
+  line: FloorLine,
+  lineAvailability?: ReadonlyMap<string, LineEvaluationResult>,
+) {
+  const evalResult =
+    lineAvailability?.get(line.id) ??
+    (line.productId ? lineAvailability?.get(line.productId) : undefined)
+
+  if (!evalResult) {
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          fontSize: '0.725rem',
+          fontWeight: 600,
+          padding: '1px 6px',
+          borderRadius: 999,
+          background: 'var(--card2)',
+          color: 'var(--muted)',
+        }}
+      >
+        <span>●</span>
+        <span>Availability not checked</span>
+      </span>
+    )
+  }
+
+  if (evalResult.status === 'available') {
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          fontSize: '0.725rem',
+          fontWeight: 600,
+          padding: '1px 6px',
+          borderRadius: 999,
+          background: 'var(--st-in-bg, rgba(34, 197, 94, 0.15))',
+          color: 'var(--st-in-fg, #15803d)',
+        }}
+      >
+        <Icon name="check" size={12} />
+        <span>Available</span>
+      </span>
+    )
+  }
+
+  if (evalResult.status === 'hold_conflict') {
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          fontSize: '0.725rem',
+          fontWeight: 600,
+          padding: '1px 6px',
+          borderRadius: 999,
+          background: 'var(--st-danger-bg, rgba(239, 68, 68, 0.15))',
+          color: 'var(--danger-text, #dc2626)',
+        }}
+      >
+        <Icon name="alert_triangle" size={12} />
+        <span>Hold conflict</span>
+      </span>
+    )
+  }
+
+  if (evalResult.status === 'conflict') {
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          fontSize: '0.725rem',
+          fontWeight: 600,
+          padding: '1px 6px',
+          borderRadius: 999,
+          background: 'var(--st-danger-bg, rgba(239, 68, 68, 0.15))',
+          color: 'var(--danger-text, #dc2626)',
+        }}
+      >
+        <Icon name="alert_triangle" size={12} />
+        <span>Reserved conflict</span>
+      </span>
+    )
+  }
+
+  if (evalResult.status === 'available_with_reassignment') {
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          fontSize: '0.725rem',
+          fontWeight: 600,
+          padding: '1px 6px',
+          borderRadius: 999,
+          background: 'var(--st-progress-bg, rgba(234, 179, 8, 0.15))',
+          color: 'var(--st-progress-fg, #a16207)',
+        }}
+      >
+        <Icon name="alert_triangle" size={12} />
+        <span>Draft overlap</span>
+      </span>
+    )
+  }
+
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        fontSize: '0.725rem',
+        fontWeight: 600,
+        padding: '1px 6px',
+        borderRadius: 999,
+        background: 'var(--card2)',
+        color: 'var(--muted)',
+      }}
+    >
+      <span>●</span>
+      <span>{evalResult.status}</span>
+    </span>
+  )
+}
+
 export function LineItemTree({
   lines,
   canReleaseUnits = false,
@@ -41,6 +176,7 @@ export function LineItemTree({
   subRentedRowStyle,
   isSubRented = isSubRentedLine,
   bookingStage = 'Booked',
+  lineAvailability,
 }: LineItemTreeProps) {
   const [collapsedCases, setCollapsedCases] = useState<Record<string, boolean>>({})
   const [searchQuery, setSearchQuery] = useState('')
@@ -594,28 +730,7 @@ export function LineItemTree({
                             </td>
                             <td style={{ textAlign: 'center', padding: '10px', fontWeight: 600 }}>{child.qty}</td>
                             <td style={{ padding: '10px 12px' }}>
-                              <span
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: 4,
-                                  fontSize: '0.725rem',
-                                  fontWeight: 600,
-                                  padding: '1px 6px',
-                                  borderRadius: 999,
-                                  background:
-                                    childStock.tone === 'warning'
-                                      ? 'rgba(239, 68, 68, 0.1)'
-                                      : 'var(--card2)',
-                                  color:
-                                    childStock.tone === 'warning'
-                                      ? 'var(--danger-text, #dc2626)'
-                                      : 'var(--muted)',
-                                }}
-                              >
-                                <span>●</span>
-                                <span>{'Availability not checked'}</span>
-                              </span>
+                              {renderAvailabilityPill(child, lineAvailability)}
                             </td>
                             <td style={{ padding: '10px 12px' }}>
                               {qc ? (
@@ -743,28 +858,7 @@ export function LineItemTree({
                       </td>
                       <td style={{ textAlign: 'center', padding: '10px', fontWeight: 600 }}>{line.qty}</td>
                       <td style={{ padding: '10px 12px' }}>
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                            fontSize: '0.725rem',
-                            fontWeight: 600,
-                            padding: '1px 6px',
-                            borderRadius: 999,
-                            background:
-                              stock.tone === 'warning'
-                                ? 'rgba(239, 68, 68, 0.1)'
-                                : 'var(--card2)',
-                            color:
-                              stock.tone === 'warning'
-                                ? 'var(--danger-text, #dc2626)'
-                                : 'var(--muted)',
-                          }}
-                        >
-                          <span>●</span>
-                          <span>{'Availability not checked'}</span>
-                        </span>
+                        {renderAvailabilityPill(line, lineAvailability)}
                       </td>
                       <td style={{ padding: '10px 12px', fontSize: '0.75rem', color: 'var(--text2)' }}>
                         {line.units[0]?.location || 'Not recorded'}

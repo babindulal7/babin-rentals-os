@@ -101,6 +101,8 @@ import type { LateFeeOutcome } from '../../lib/lateFee'
 import { ReturnSettlementModal, type ReturnSettlementDamageItem } from './modals/ReturnSettlementModal'
 import { RentalSummaryModal } from './modals/RentalSummaryModal'
 import { RentalMoreActions } from './actions/RentalMoreActions'
+import { BookingConflictModal } from './booking/BookingConflictModal'
+import type { LineEvaluationResult, BookingAvailabilityEvaluation } from '../../lib/availabilityEvaluation'
 
 /**
  * # Booking Detail — live, for ANY `:bookingNo`
@@ -1402,6 +1404,31 @@ function BookingDetailView() {
    */
   const [confirmError, setConfirmError] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
+  const [conflictModalOpen, setConflictModalOpen] = useState(false)
+  const [conflictsList, setConflictsList] = useState<readonly LineEvaluationResult[]>([])
+  const [draftOverlapNotice, setDraftOverlapNotice] = useState<string | null>(null)
+  const [availabilityEvaluation, setAvailabilityEvaluation] = useState<BookingAvailabilityEvaluation | null>(null)
+
+  useEffect(() => {
+    let active = true
+    if (stage === 'Quote' && id) {
+      void import('../../lib/queries/smartReservationQueries')
+        .then((m) => m.queryBookingAvailability(id))
+        .then((res) => {
+          if (active && res.evaluation) {
+            setAvailabilityEvaluation(res.evaluation)
+            const conflicts = res.evaluation.lineResults.filter((r) => r.status !== 'available')
+            if (conflicts.length > 0) {
+              setConflictsList(conflicts)
+            }
+          }
+        })
+        .catch(() => {})
+    }
+    return () => {
+      active = false
+    }
+  }, [id, stage, head.lastFetchedAt])
 
   const confirmBooking = useCallback(() => {
     const ctx = actionCtx(user)
@@ -1414,18 +1441,66 @@ function BookingDetailView() {
     }
     setConfirmError(null)
     setConfirming(true)
-    // Law 8 — minted HERE, at the press, and reused by every retry of this one press.
-    const clientUuid = newClientUuid()
-    void import('../../actions/rentals/confirmRental')
-      .then((m) => m.confirmRental({ id, clientUuid }, ctx))
-      .then((res) => {
+
+    void import('../../lib/queries/smartReservationQueries')
+      .then((m) => m.queryBookingAvailability(id))
+      .then(async (evalRes) => {
+        const evaluation = evalRes.evaluation
+        if (evaluation && !evaluation.isAllAvailable) {
+          const conflicts = evaluation.lineResults.filter((r) => r.status !== 'available')
+          if (conflicts.length > 0) {
+            setConflictsList(conflicts)
+            setConflictModalOpen(true)
+            setConfirming(false)
+            return
+          }
+        }
+
+        const draftOverlaps = evaluation?.overlappingDraftBookingNos ?? []
+        const draftNotice =
+          draftOverlaps.length === 1
+            ? 'There is 1 overlapping draft; confirming this order may make that draft unavailable.'
+            : draftOverlaps.length > 1
+              ? `There are ${draftOverlaps.length} overlapping drafts; confirming this order may make those drafts unavailable.`
+              : null
+
+        // Law 8 — minted HERE, at the press, and reused by every retry of this one press.
+        const clientUuid = newClientUuid()
+        const mod = await import('../../actions/rentals/confirmRental')
+        const res = await mod.confirmRental({ id, clientUuid }, ctx)
+
         showSuccessToast('Booking Confirmed', `${res.bookingNo} is now ${res.stage.to}`)
+        if (draftNotice) {
+          setDraftOverlapNotice(draftNotice)
+        }
         // The stage moved in the database (the trigger is the sole writer of
         // bookings.stage); re-read rather than patch local state.
         refetchHead()
       })
       .catch((err: unknown) => {
-        setConfirmError(formatGateError(err))
+        const formatted = formatGateError(err)
+        if (
+          formatted.toLowerCase().includes('conflict') ||
+          formatted.toLowerCase().includes('stock free') ||
+          formatted.toLowerCase().includes('reserved')
+        ) {
+          void import('../../lib/queries/smartReservationQueries')
+            .then((m) => m.queryBookingAvailability(id))
+            .then((evalRes) => {
+              if (evalRes.evaluation) {
+                const conflicts = evalRes.evaluation.lineResults.filter((r) => r.status !== 'available')
+                if (conflicts.length > 0) {
+                  setConflictsList(conflicts)
+                  setConflictModalOpen(true)
+                  return
+                }
+              }
+              setConfirmError(formatted)
+            })
+            .catch(() => setConfirmError(formatted))
+        } else {
+          setConfirmError(formatted)
+        }
       })
       .finally(() => setConfirming(false))
   }, [id, user, showSuccessToast, refetchHead])
@@ -2240,6 +2315,9 @@ function BookingDetailView() {
               {/* The stage is named by the stepper below ("Closed — current stage"), so no badge here. */}
               {booking.isCancelled && <Badge flag="Cancelled" />}
               {subRental && <SubRentedMark label="Sub-rental" />}
+              {stage === 'Quote' && availabilityEvaluation && !availabilityEvaluation.isAllAvailable && (
+                <Badge tone="danger" label="Needs attention / Availability changed" />
+              )}
               {/* PLAN.md Phase 9 — how old this page is: the OLDER of its two
                   reads (the booking head and its lines), so the badge never
                   claims fresher data than is on screen. */}
@@ -2441,6 +2519,26 @@ function BookingDetailView() {
 
       </div>
 
+      {draftOverlapNotice && (
+        <div
+          role="status"
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 'var(--sp-sm)',
+            padding: '10px 12px',
+            borderRadius: 'var(--r-sm)',
+            border: '1px solid var(--st-progress-fg, #a16207)',
+            background: 'var(--st-progress-bg, rgba(234, 179, 8, 0.15))',
+            fontSize: 'var(--t-meta)',
+            color: 'var(--text)',
+          }}
+        >
+          <Icon name="info" size={14} style={{ flexShrink: 0, marginTop: 2, color: 'var(--st-progress-fg, #a16207)' }} />
+          <span>{draftOverlapNotice}</span>
+        </div>
+      )}
+
       {/* The confirm dispatch's own failure, persistent until the next attempt
           (Law 12 — errors inline, toasts for successes only). */}
       {confirmError && (
@@ -2619,6 +2717,11 @@ function BookingDetailView() {
                   subRentedRowStyle={subRentedRowStyle}
                   isSubRented={isSubRentedLine}
                   bookingStage={stage}
+                  lineAvailability={
+                    availabilityEvaluation
+                      ? new Map(availabilityEvaluation.lineResults.map((r) => [r.lineId, r]))
+                      : undefined
+                  }
                 />
               )}
 
@@ -3480,6 +3583,19 @@ function BookingDetailView() {
           bookingNo={booking.bookingNo}
         />
       )}
+
+      <BookingConflictModal
+        isOpen={conflictModalOpen}
+        onClose={() => setConflictModalOpen(false)}
+        bookingNo={booking.bookingNo}
+        rentalWindow={
+          booking.pickupAtAd && booking.returnAtAd
+            ? { fromAd: booking.pickupAtAd, toAd: booking.returnAtAd }
+            : undefined
+        }
+        conflicts={conflictsList}
+        onKeepDraft={() => setConflictModalOpen(false)}
+      />
     </PageShell>
   )
 }
