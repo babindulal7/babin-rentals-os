@@ -11,12 +11,13 @@ export function assertCompleteRentalWindow(
   bookingNo: string,
   pickupAt: string | null,
   returnAt: string | null,
-): void {
+): { fromAd: string; toAd: string } {
   const start = Date.parse(pickupAt ?? '')
   const end = Date.parse(returnAt ?? '')
   if (!pickupAt || !returnAt || !Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
     throw new Error(`${bookingNo} has an invalid or incomplete rental window; availability could not be checked.`)
   }
+  return { fromAd: pickupAt, toAd: returnAt }
 }
 
 export function assertAvailabilityLine(
