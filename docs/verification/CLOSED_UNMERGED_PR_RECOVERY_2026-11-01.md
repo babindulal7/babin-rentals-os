@@ -52,6 +52,8 @@
 
 **Proposed acceptance steps:** write small chart/data-label PRs against current `main`, keep existing `ReportAreaChart` and `reportRevenueTrend`; validate current vs previous in both cash and invoice count, zero vs missing, month-to-date BS/AD labels, count-exact 500+ row page changes, voids and credit mismatch, and money-blind DOM/HTTP guards. Check 375/820/1440 in both themes with mouse/touch/keyboard. Do not merge #16/#23 full branch.
 
+**Tracked incremental revenue follow-up:** [issue #48](https://github.com/babindulal7/babin-rentals-os/issues/48) — noninvasive partial-month labels and optional comparison overlay; current accounting engine remains authoritative.
+
 ## Required verification before closing recovery
 
 ```bash
