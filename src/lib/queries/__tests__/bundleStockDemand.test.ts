@@ -57,6 +57,27 @@ describe('saved bundle stock demand (availability preview only)', () => {
       .toThrow(/missing required bundle equipment/)
   })
 
+  it('adds requirements for the same mandatory product instead of checking each row separately', () => {
+    const twice: BundleRequirement[] = [
+      { ...expected[0]!, id: 'camera-extra' },
+      expected[0]!,
+      expected[1]!,
+    ]
+    expect(() => buildBookingStockDemand('B-77', [bundle, camera, lens], twice, window))
+      .toThrow(/missing required bundle equipment/)
+    expect(buildBookingStockDemand('B-77', [bundle, { ...camera, qty: 4 }, lens], twice, window))
+      .toHaveLength(2)
+  })
+
+  it('does not demand stock from a deactivated bundle requirement', () => {
+    const withInactive: BundleRequirement[] = [
+      expected[0]!,
+      { ...expected[1]!, is_active: false },
+    ]
+    const demand = buildBookingStockDemand('B-77', [bundle, camera], withInactive, window)
+    expect(demand.map(x => x.productId)).toEqual(['fx3'])
+  })
+
   it('refuses a missing bundle catalogue definition rather than claiming available', () => {
     expect(() => buildBookingStockDemand('B-77', [bundle, camera, lens], [], window))
       .toThrow(/requirements could not be loaded/)
