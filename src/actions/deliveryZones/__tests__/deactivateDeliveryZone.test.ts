@@ -11,7 +11,7 @@ vi.mock('../../../lib/supabase', () => ({
 }));
 
 // Mock DomainEvents
-vi.mock('../../../../events/eventBus', () => ({
+vi.mock('../../../events/eventBus', () => ({
   DomainEvents: {
     emit: vi.fn().mockResolvedValue(undefined),
   },
@@ -60,7 +60,7 @@ describe('deactivateDeliveryZone', () => {
   });
 
   it('deactivates zone successfully for Coordinator', async () => {
-    mockRpc.mockResolvedValue({ data: true, error: null });
+    mockRpc.mockResolvedValue({ data: true, error: null } as any);
 
     const result = await deactivateDeliveryZone(
       { zoneId: '123e4567-e89b-12d3-a456-426614174000' },
@@ -74,7 +74,7 @@ describe('deactivateDeliveryZone', () => {
   });
 
   it('deactivates zone successfully for Owner', async () => {
-    mockRpc.mockResolvedValue({ data: true, error: null });
+    mockRpc.mockResolvedValue({ data: true, error: null } as any);
 
     const result = await deactivateDeliveryZone(
       { zoneId: '123e4567-e89b-12d3-a456-426614174000' },
@@ -85,7 +85,7 @@ describe('deactivateDeliveryZone', () => {
   });
 
   it('returns false when zone not found', async () => {
-    mockRpc.mockResolvedValue({ data: false, error: null });
+    mockRpc.mockResolvedValue({ data: false, error: null } as any);
 
     const result = await deactivateDeliveryZone(
       { zoneId: '123e4567-e89b-12d3-a456-426614174000' },
@@ -96,7 +96,7 @@ describe('deactivateDeliveryZone', () => {
   });
 
   it('throws on RPC error', async () => {
-    mockRpc.mockResolvedValue({ data: null, error: { message: 'Zone not found' } });
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'Zone not found' } } as any);
 
     await expect(
       deactivateDeliveryZone({ zoneId: '123e4567-e89b-12d3-a456-426614174000' }, coordinatorContext)

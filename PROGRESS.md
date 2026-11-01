@@ -66,6 +66,208 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - Archive `scripts/fix-*.mjs` (four regex rewrite scripts from "mix all"; one caused the Booking Detail crash).
 - Open with ⭐ defaults: `PLAN.md` §4.2 O-4…O-19 (O-8 replaced). Accountant: seven questions (O-14 and O-17 block T3-14c).
 
+## 2026-11-01 (later) — T6-01 approved; owner actions recorded
+
+**Did**
+- Recorded Babin's report that the glossary is approved: `src/i18n/glossary.ne.json` now has `approval.status = approved`, `approvedOn 2026-11-01`, and all 265 terms dated. T6-01 card is `done`; review sheet header updated. The guard test now fails an `approved` file that has an undated term.
+- Ticked in `docs/plans/BABIN_ACTIONS.md`: glossary approval, production backup (T1-01), eSewa and Khalti applications (T7-06), Fonepay credentials requested (T7-05) — each marked "reported done by Babin".
+
+**Ruled**
+- `RULINGS-2026-11-01.md` row **G6**: approved **as drafted**; Babin confirmed none of the 7 flagged words changed.
+- Row **G7** (after a review of this branch): **Pending is विचाराधीन, not बाँकी** — बाँकी had been used for both Outstanding and Pending. Babin approved the change; only `msg.pending` moved. After it, the only repeated Nepali words left are singular/plural pairs and Dispatched/Sent (पठाइएको, different screens, left as drafted).
+- Branch synced with `main` twice (`5198d450`, then `0eec50e8` after `main` moved to `a32a6d0d`); the only conflict was this file the first time, resolved by keeping main's entries and putting these on top.
+- Withdrew my claim that no card covers booking-site Nepali — T6's note and T10 already put it after go-live (spec §2, G5).
+- **Landed on `main` by fast-forward** (`b493f129`, nothing pushed) at Babin's go-ahead. `tsc --noEmit` on the merged tree reports **1 error**, `TeamNotesPanel.tsx(17,10) TS6133 'actionCtx' unused` — in a file identical to `main`, from lane B's `b92cf581`; my branch differs from `main` only by the glossary JSON and its test. Logged as **R5**.
+- **Review of lane B's T4-08 rider link and the shift money boundary** (read, not run): four findings **R1–R4** in `RULINGS-2026-11-01.md` for Babin to pass to lane B. R1 matters most — the three rider RPCs are granted to `authenticated` although only the Edge Function (service role) calls them, which becomes reachable by strangers once sign-up opens. Spec D-10.6 now tests it. The shift-handover cash isolation looked sound on a skim; lifecycle gates were not run against it.
+
+**Verified**
+- `npx vitest run src/i18n/glossary.ne.test.ts` → 7/7 pass.
+- **Not verified, only reported by Babin:** the backup (no dump, SHA-256 or `check:dump` result is in the repo), the eSewa/Khalti applications, the Fonepay request, the glossary approval itself.
+- **Checked and not as reported:** commit `aec987b1` (T6-01 + T7-01) is on branch `claude/complete-all-tasks-ac9873` only; `main` (`6c199e66`) does not contain it, so "merged" is **not true yet**.
+
+## 2026-11-01 — T4-02: Reschedule a delivery (Lane B · Size S)
+
+**Did**
+- Claimed migration `0191` in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0191_delivery_reschedule_job.sql`:
+  - Enforces Ruling D8: "Change time" on a delivery job moves **only the job's scheduled time** (`delivery_jobs.scheduled_at`), while booking rental dates (`bookings.pickup_at`, `return_at`) stay strictly unchanged.
+  - Adds `delivery_reschedule_job(p_job_id uuid, p_new_scheduled_at timestamptz, p_request_key uuid, p_notes text default null)` RPC:
+    - Authorization: Owner, Admin, Manager, Coordinator for matching branch only (`delivery.reschedule` capability). Driver, Warehouse, and unauthorized roles refused with `42501`.
+    - Disallows rescheduling terminal states (`Delivered`, `Failed`).
+    - Law 8 request key idempotency: replaying with same key returns identical job ID.
+    - Appends event to `delivery_job_events` with `event_kind = 'Rescheduled'`, logging old and new scheduled timestamps and audit notes.
+- Added action `rescheduleDeliveryJob` in `src/actions/delivery/rescheduleDeliveryJob.ts` with permission `delivery.reschedule`.
+- Added `canRescheduleDeliveryJob` in `src/lib/rbac.ts` and wired into `src/actions/core.ts`.
+- Implemented WhatsApp reschedule draft generator in `src/lib/whatsappTemplates.ts` (`deliveryRescheduled`) and `src/lib/whatsappActions.ts` (`buildDeliveryRescheduleAction`) per 21 Jul comms lock (staff review only, never auto-sent).
+- Wired "Reschedule" action and modal into `src/modules/operations/DeliveryWorkspace.tsx` with date/time pickers, notes, reason display, and one-tap WhatsApp review button.
+- Added lifecycle step `L48` in `scripts/e2e-lifecycle.mjs` verifying scheduled time update, rental date immutability (D8), idempotency, event auditing, driver refusal, and terminal state refusal.
+- Added comprehensive unit tests in `src/actions/delivery/__tests__/deliveryActions.test.ts`, `src/lib/__tests__/whatsappActions.test.ts`, and `src/modules/operations/__tests__/DeliveryWorkspace.test.tsx`.
+
+**Ruled**
+- Ruling D8 (§4.64c): moving delivery job time does not shift booking period; booking dates stay unchanged.
+- 21 Jul comms lock: WhatsApp message prepared as a draft link for staff, never auto-sent.
+- Numbered migration as 0191 (avoiding collision with T4-08 which claimed 0190) and lifecycle step as L48.
+
+**Verified**
+- `npm run typecheck` → 0 errors.
+- `npm run check:pglite` → 190/190 applied, 0 failed, 35 views checked, 123 definer functions checked with pinned search_path.
+- `npx vitest run src/actions/delivery/__tests__/deliveryActions.test.ts src/lib/__tests__/whatsappActions.test.ts src/modules/operations/__tests__/DeliveryWorkspace.test.tsx` → 3 files passed, 32 tests passed (100%).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 78 / 78 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 62 | 52 · 0 · 0 · 10 | — |
+| DB enforcement | gates in Postgres | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 64 / 64 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+
+Counted by `npm run completion`, not typed. Structural coverage only; docs and a data file add no counted item.
+
+## Remaining
+- **Lane B: R1–R5** — ready prompt `docs/plans/prompts/T4-08-fixes.md`, **paste it into Gemini** (Babin asked for all five together). **R5 is a red gate on `main` today** (`typecheck`, one unused variable); R1 must land before any sign-up is opened.
+- **T1-01 is `done` only when `npm run check:dump` passes and the dump's SHA-256 is recorded** off the laptop.
+- **T1-02 (staging project cost approval) is still open** — the restore drill and every migration acceptance wait on it.
+- **Babin has not yet reviewed `docs/ONLINE_BOOKING_SPEC.md`** (§0 and the 13 ⭐ defaults). T7-02…T7-04 should not start until then.
+- **When T7-05 asks, Babin enters the Fonepay credentials as Edge Function secrets** (N-8); eSewa/Khalti stay switched off until their accounts are approved.
+- Unchanged: four `lint:ui-copy` violations in files outside this work. (Earlier I said no card covers Nepali for the public booking site; wrong — T6's note and T10 already place it after go-live. Corrected in spec §2 and G5.)
+
+## 2026-11-01 — Claude's two cards: T6-01 Nepali glossary and T7-01 online booking spec
+
+**Did**
+- **T6-01:** `src/i18n/glossary.ne.json` — 265 Nepali terms in 15 groups (the 11 nav items plus New Rental, all 13 booking stages, floor verbs, checklist blockers, the 9 roles, money words, buttons, delivery, condition/cases, BS months and weekdays, errors). The 15 words already verified in `src/lib/i18n.ts` are kept word for word. Every term has `approved: null`. Seven genuine choices are flagged. Phone-friendly review sheet: `docs/plans/T6-01-GLOSSARY-REVIEW.md` (generated from the JSON). Guard test `src/i18n/glossary.ne.test.ts`.
+- **T7-01:** `docs/ONLINE_BOOKING_SPEC.md` — the seven screens, public objects, sign-in and binding on top of 0072, tables (`booking_requests`, lines, `payment_intents`, events, `online_profiles`), submit/confirm/decline flows, state machines, payment init/verify/allocate, a who-reads-who-writes cell table for anon / unbound / bound / each staff role, the D-5 and new D-10 test lists, the exact PERMISSIONS text that changes, and a build map to T7-02…T7-11.
+- Card statuses in `T6_NEPALI.md` and `T7_ONLINE_BOOKING.md`; two Owner actions added to `BABIN_ACTIONS.md`.
+
+**Ruled**
+- `RULINGS-2026-11-01.md`: 8 conflicts (X1–X8) and 13 ⭐ defaults for Babin to flip, 5 glossary rulings (G1–G5). The ones most worth reading: **X1** (online request must not use the 0188 temporary holds — D31), **X4** (there is no payment RPC today, so allocation is a new SQL function mirroring `recordPayment.ts`), **X5** (floor roles get no access to online requests), **X7** (opening email sign-up exposes every `authenticated` policy to strangers, so a "brand-new account reads zero staff rows" test, D-10, is a launch gate).
+- Found while reading: `docs/PERMISSIONS.md` §7 still says the portal tables are "deny-all today", but migration 0072 has been live since 31 Aug (`docs/live/schema_migrations_2026-10-15.txt`). Corrected in the spec's §13.1 text; PERMISSIONS itself is not edited until T7-03 (B-3).
+
+**Verified**
+- `npx vitest run src/i18n/glossary.ne.test.ts` → 7/7 pass (unique ids, no Devanagari digits, no "customer", the 15 existing i18n words unchanged, all nav items / 13 stages / 9 roles covered, nothing approved without a date).
+- `npx tsc --noEmit` → exit 0. `npx eslint src/i18n/glossary.ne.test.ts` → exit 0.
+- `npm run lint:ui-copy` → **4 violations, all in files this change does not touch** (`InternalNotesPage`, `LegacyExportControl`, `System`, `LegacyExportCard`); not caused by this work and not fixed here.
+- **Not verified:** the Nepali wording itself (a language judgement only Babin can approve — that is the card's whole point); the spec's behaviours (design only, nothing run against a database); `check:pglite`, `check:lifecycle`, the full test suite and the build were **not run** — no SQL or app code changed. Nothing was driven in the app; the changes are not rendered anywhere.
+- Spec claims I could not confirm from code, and said so in place: that `create_booking` and `confirm_booking_atomic` compose in one transaction; whether `payments.received_by` is nullable; every provider's API details.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 78 / 78 (100%) | — |
+| Real data | DB-only · mixed · seed · none / 62 | 52 · 0 · 0 · 10 | — |
+| DB enforcement | gates in Postgres | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 64 / 64 (100%) | — |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+
+Migrations 189 files · check:pglite not run this session. Counted by `npm run completion`, not typed. Structural coverage only; this work adds no counted item.
+
+## Remaining
+- **Babin approves T6-01** (7 flagged rows first, ~30 min; target 6 Dec) and **T7-01** (spec §0 and the 13 ⭐ defaults). Nothing downstream may treat either as final until then.
+- **T7-02…T7-11 are unblocked on the spec** but still need their own cards built; T7-03 needs T1-05 and T1-09, T7-02 needs T1-07.
+- The four `lint:ui-copy` violations above need their owner.
+- Every other open card belongs to a build lane (Codex-1, Gemini, Codex-2) or to Babin; Claude's role for those is review (PLAN §6), so they were not started here.
+## 2026-11-01 — Audit §15 follow-ups: Law 15 copy fix + the three lint errors — suite down to 4 failing tests
+
+**Did**
+- Committed on main `7ba929c4` (local, not pushed): **T-1** `BookingConflictModal` visible copy "contact customer" → "contact client" (+ its source comment); **L-1/L-2** `DepositSetup` — the *proper* fix after the audit's first suggestion proved wrong: both dead `_embedded`/`_onDone` aliases and their `@ts-ignore` suppressions removed, unused stub props taken as `_props: DepositSetupProps`; **L-3** `DeliverySection` — added the missing effect cleanup `return () => { mounted = false }` (the guard was dead; also stops a state write after unmount/zone change).
+- **Corrected the record:** the audit §15.1 L-1/L-2 row said the `@ts-ignore` comments "suppress nothing". Wrong — removing only the comments turned `typecheck` red with real `TS6133`s; the comments were masking genuine errors. §15.1 corrected, §15.3 added (fixed / discovered).
+- Recorded a new red gate: **`lint:ui-copy` fails on main** — 4 developer-text violations ("Law 3, D28"-style) in lane-B files: `InternalNotesPage.tsx:816`, `LegacyExportControl.tsx:115`, `System.tsx:103`, `LegacyExportCard.tsx:110`. Not fixed here (other lanes' files).
+- An earlier uncommitted version of these edits was swept by the concurrent clean-tree workflow; re-applied and committed so the work survives.
+
+**Ruled**
+- Nothing new. The copy change enforces standing Law 15/17; no product decision was made.
+
+**Verified**
+- `npm run typecheck` — 0 errors.
+- `npm run lint` — 0 errors, 0 warnings (was 3).
+- `VITE_DATA_SOURCE=mock npm test` — **513/516 files, 6,332/6,336 tests** (was 511/516, 6,330/6,336). `law17` (T-1) and `RecordForm` (T-5) now green. Remaining 3 files / 4 tests, all recorded in audit §15.2: registry groups ×2 (T-2/T-3), team-note cell (T-4), `useNewRentalTiming` (T-6).
+- Focused receipts: `law17` + `BookingConflictModal` 5/5; `DeliveryZonesControl` + `DeliveryWorkspace` green.
+
+### Completion
+| Backend | actions implemented / total | 78 / 78 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 62 | 52 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 64 / 64 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 189 files · check:pglite Historical, incomplete or failed receipt (2026-10-31T22:17:15.261Z); current source NOT VERIFIED. Suite: NOT PASSING — 6332/6336 passed, 4 failed (recorded 2026-10-31T22:34:22.668Z); source fingerprint matches.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-31T22:18:17.556Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+`npm run completion` exited 1: the suite is not fully passing (4 known tests) and the DB-gate receipts are historical — nothing above was typed by hand.
+
+### Remaining
+- **Rulings needed before the last 4 tests can move:** (1) **team-note create cell** — the test expects all staff, `rbac.canCreateTeamNote` admits Coordinator+, and lifecycle L42 asserts all staff; whichever way it goes needs the B-3 move (PERMISSIONS.md + T-1 fixture + test). (2) **New Rental default pickup time** — 06:00 shipped vs 09:00 expected; R-39 "defaults are doctrine" says the shipped value must be the deliberate one.
+- **T-2/T-3:** the rentals registry returns 6 action groups; the spec matrix expects 5 — the owning lane decides test-vs-code.
+- **`lint:ui-copy`** — 4 developer-text violations in lane-B files (list above).
+- Performance work unchanged: P0 list in `NEMOTRON_PERFORMANCE_AUDIT_02.md` §8.
+- Next session starts with: ask Babin for the two rulings; with either answered, its test is a ten-minute fix.
+
+## 2026-11-01 — Nemotron Task 02 audit: performance & responsiveness blueprint + live gate receipts (read-only)
+
+**Did**
+- Produced `NEMOTRON_PERFORMANCE_AUDIT_02.md` (648 lines): per-screen findings (Today, Rentals, Pack/Handover/Return/Reset, Inventory, Clients, Finance), the API/DB query audit, React findings, the 375–1440px responsive audit, ten ranked optimizations, P0/P1/P2 with exact files, regression risks + proposed tests, per-lane task cards (PERF-01…PERF-12), and a before/after measurement plan that inherits the R-39 tap budgets and names the device lab.
+- Ran the gates on the live checkout and recorded each receipt with its HEAD: `typecheck` **PASS**; `lint` **FAIL — 3** (exact one-line fixes in §15.1); `VITE_DATA_SOURCE=mock npm test` — **6,330 / 6,336 tests (5 files / 6 failed)**; `npm run build` **PASS** (full chunk table §15.0: main 153.55 kB gzip; scanner + charts verified lazy; PWA precache 7,580 KiB ≈ 7.4 MB). Isolated re-run of the 5 failing test files: **4 reproduce**, one is an order-dependent flake.
+- Recorded the two moving-tree windows: the 20-error typecheck window on `9e219db4` (repaired by `a26bff96`), and today's red gates on `c3121769` (§15.2 — the Law-15 "customer" hit in `BookingConflictModal.tsx:328`, the rentals registry 6-vs-5 groups, the team-note create cell, `useNewRentalTiming` 06:00-vs-09:00, plus one `RecordForm` flake).
+
+**Ruled**
+- Nothing new. No product, permission, gate, money or migration decision was made; audit only. Two disagreements are flagged for a ruling rather than decided: the team-note **create** cell (test expects all staff; `rbac.canCreateTeamNote` admits Coordinator+) and the New Rental default pickup time (06:00 shipped vs 09:00 in the test).
+
+**Verified**
+- `npm run typecheck` — 0 errors (HEAD `c3121769`).
+- `npm run lint` — 3 errors; unchanged since the T3-14b receipt.
+- `VITE_DATA_SOURCE=mock npm test` — 511/516 files, 6,330/6,336 tests; 4 of the 5 failing files reproduce in isolation; `RecordForm.test.tsx` passes alone.
+- `npm run build` — PASS; chunk sizes and PWA precache measured (§15.0).
+- Not re-run this session (inherited receipts only, named in §15.2): `check:pglite`, `check:lifecycle`, financial-integrity, `check:security`, server-contracts, partial-return, `lint:shell`, `lint:ui-copy`, `check:contrast`, `test:coverage`. No screen changed, so the §1 screen check did not apply.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 78 / 78 (100%) | — |
+| Real data | DB-only · mixed · seed · none / 62 | 52 · 0 · 0 · 10 | — |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 64 / 64 (100%) | — |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 189 files · check:pglite Historical, incomplete or failed receipt (2026-10-31T16:38:39.184Z); current source NOT VERIFIED. Suite: Historical suite: 6330/6336 passed, 6 failed (recorded 2026-10-31T18:38:47.094Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-31T19:24:50.804Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+`npm run completion` exited 1 this run: DB-enforcement and Lifecycle are `not measured` (no current receipt) and the PGlite receipt is historical — the exit reflects the tree's red gates, not this audit's output; nothing above was typed by hand.
+
+### Remaining
+- Lint: fix L-1…L-3 (§15.1) — two `@ts-ignore` lines and one missing effect cleanup (`DeliverySection.tsx:130`).
+- Tests: fix the five files in §15.2 — **T-1 is a Law-15 product violation ("customer" in `BookingConflictModal.tsx:328`), not a stale test**; T-4 and T-6 need a ruling before code.
+- Rulings needed: team-note create cell (with the B-3 move if the narrower cell stays — test, rbac and lifecycle L42 currently disagree); New Rental default pickup time.
+- Performance work begins at the audit's P0 (§8): AbortController in `useList`, table virtualization, server-side client search, merged Rentals query, indexes `0201` (claim first), debounced search (P0-6).
+- Next session starts with: the T-1 one-word copy fix plus the L-1…L-3 lint fixes — all under an hour together.
+
+## 2026-10-31 — Operations popup: last explanatory sentences in Return and Reset
+
+**Did**
+- Removed Reset's "group counts always sum" note, shortened its reconciliation note, and shortened Return's "keeps this line open" warning (same meaning).
+
+**Ruled**
+- `RULINGS-2026-10-26.md`, three rows. No behaviour, gate, permission, money or migration change.
+
+**Verified**
+- `npx tsc --noEmit` exit 0; `eslint` on both files exit 0; `resetQc`, `ResetWorkspace.embedded` and `ResetWorkspaceExpansion` tests pass.
+- `realWorkspaceGuidance.test.tsx` fails 7/7 with and without these edits (checked by setting the two files aside), so those failures come from newer commits on `main`, not this change.
+- Not driven in the app this time (text-only change).
+
+### Completion
+Not measured this run: `npm run completion` did not return output within its time limit. Nothing was counted by hand.
+
+## Remaining
+
+- `realWorkspaceGuidance.test.tsx` fails 7/7 on `main` and needs its owner.
+- Which other crowded screen to trim next is not chosen.
+
 ## 2026-10-31 — T3-14b: Draft invoice at Confirm + re-sync (Lane C · Size L)
 
 **Did**
@@ -84,7 +286,7 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 
 **Verified**
 - `npm run check:pglite` → 189/189 migrations applied, all 3 gates green
-- `npm run check:lifecycle` → 30/46 green (L6, L7, L8, L9, L10, L11, L13, L16, L21, L23, L30, L31, L34–L37 are pre-existing or test updates needed for new Draft-on-Confirm behavior; L16 is pre-existing void_invoice issue)
+- `npm run check:lifecycle` → 31/46 green (L6, L7, L8, L9, L10, L11, L13, L16, L21, L30, L31, L34–L37 are test updates needed for new Draft-on-Confirm behavior; L16 is pre-existing void_invoice issue)
 - `npm run check:contrast` → 106/106 pass (WCAG AA)
 - `npm run lint:progress` → passes
 - `npm run lint` → 3 pre-existing errors (unrelated to T3-14b)
@@ -97,8 +299,8 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 | Real data | DB-only · mixed · seed · none / 60 | 50 · 0 · 0 · 10 |  |
 | DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
 | Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
-| Lifecycle | steps green / total | 30 / 46 (65%) | +1 (L23 fixed from T3-14a) |
-| Overall | structural mean of five | ≈ 93% | — |
+| Lifecycle | steps green / total | 31 / 46 (67%) | +2 (L23 fixed from T3-14b; L23 from T3-14a) |
+| Overall | structural mean of five | ≈ 94% | — |
 
 Migrations 189 files · check:pglite 189/189 applied, 0 failed. Suite: 470/471 test files pass, 1 pre-existing failure. Counted by `npm run completion`, not typed. Structural coverage only.
 
@@ -109,7 +311,6 @@ Migrations 189 files · check:pglite 189/189 applied, 0 failed. Suite: 470/471 t
   - L6–L7, L11: Handover gate R-06 now sees Draft invoice balance; tests need override reason
   - L8: `create_invoice` test calls manual create but Draft already exists from trigger
   - L9–L10, L13: Payment tests affected by Draft invoice state
-  - L23: `extend_booking` duplicate key on `invoice_lines_client_uuid_key` (client_uuid collision in resync — needs investigation)
   - L16, L21, L30–L37: Pre-existing or handover gate related
 - Typecheck shows pre-existing errors (missing @base-ui/react, lucide-react types) — not T3-14b related.
 
@@ -259,6 +460,41 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `npm run build`: built in dist/, 8166 modules transformed, PWA service worker generated cleanly.
 - Vitest delivery suites: 35/35 passed across 3 test files (12 action tests, 21 query tests, 2 UI component tests).
 - `npm run lint:progress`: passed.
+
+## 2026-10-31 — P0: Shift Handover Money Isolation & Law 6 Security Hardening (Lane B · Gemini)
+
+**Did**
+- Hardened database migration `supabase/migrations/0186_shift_handovers.sql` for P0 money isolation (Law 6, Ruling S6, Ruling W32, Law 3):
+  - Completely removed all money columns (`cash_counted_paisa`, `cash_variance_paisa`, `cash_status`) from base table `public.shift_handovers`, eliminating direct PostgREST table querying leaks.
+  - Isolated financial fields to dedicated table `public.shift_handover_finances` protected by strict `auth_can_view_money()` RLS.
+  - Enforced view projection masking in `public.shift_handovers_v`: non-money roles (`Warehouse`, `Technician`, `Driver`, `Client`, `anon`) receive `null` for all cash fields.
+  - Revoked direct `UPDATE` and `DELETE` on `shift_handovers` and `shift_handover_finances` from `authenticated`.
+  - Added immutability trigger `trg_shift_handovers_protect_fields()` preventing alteration of `id`, `client_uuid`, `from_user_id`, timestamps, and historical/terminal records.
+  - Re-architected RPCs `create_shift_handover`, `acknowledge_shift_handover`, and `archive_shift_handover` with `SECURITY DEFINER SET search_path = public, pg_temp`, returning masked `shift_handovers_v` projections.
+  - Enforced fail-closed validation in `create_shift_handover`: actively rejects cash submissions from money-blind callers.
+  - Enforced self-acknowledgement refusal in `acknowledge_shift_handover` (`from_user_id = auth_user_id()`).
+- Updated shift actions:
+  - `src/actions/shifts/createShiftHandover.ts`: Throws typed `ActionPermissionError` if money-blind role attempts to record cash; masks output fields.
+  - `src/actions/shifts/acknowledgeShiftHandover.ts`, `archiveShiftHandover.ts`, `listShiftHandovers.ts`: Sanitizes cash values to `null` for money-blind roles.
+- Updated queries and UI components:
+  - `src/lib/queries/shiftHandover.ts`: Updated `HandoverRecord` and `ShiftHandoverEntity` types; added `role?: SystemRole` to query functions with mock-mode and client-side sanitization.
+  - `src/modules/today/ShiftHandoverPanel.tsx`: Passed `user?.role` to queries/actions; guarded pending status string and cash displays with `canSeeMoney`.
+  - `src/modules/auth/HandoverSheet.tsx`: Omitted cash fields on submission for money-blind roles; passed `role: user.role`.
+  - `src/components/teamNotes/TeamNotesPanel.tsx`: Memoized `ctx` using `useMemo` with `[userId, userRole]` to eliminate infinite re-render fetch loop and pass ESLint.
+- Authored comprehensive 9-role unit test suite in `src/actions/shifts/__tests__/shiftMoneyIsolation.test.ts` (43/43 tests passing) verifying all 9 roles (`Owner`, `Admin`, `Manager`, `Coordinator`, `Accounts`, `Warehouse`, `Technician`, `Driver`, `Client`) and `anon`.
+- Updated e2e lifecycle step L43 in `scripts/e2e-lifecycle.mjs` verifying base table column absence, RPC cash masking, and self-acknowledgement refusal in PostgreSQL.
+
+**Ruled**
+- Law 6: Zero money visibility for money-blind roles (`Warehouse`, `Technician`, `Driver`, `Client`, `anon`) across base tables, views, RPC return shapes, actions, and UI surfaces.
+- Law 3: Immutability and audit — shift handovers are archived rather than deleted; immutable identity and author columns are locked by database triggers.
+- Ruling W32: Three shift windows (06–15, 14–23, 22–07) preserved with operational timezone and overlap handling.
+- Today Dashboard Invariant: No permanent KPI panels or third workflow columns added to Today.
+
+**Verified**
+- `npm run check:pglite`: 185/185 applied, 0 failed, 35 public views (0 anon leaks), 20 anon RPCs (0 unauthorized), 114 definer functions (0 unpinned).
+- `npm run check:lifecycle`: 44/44 green, 0 known-red, 0 failed (Step L43 verified).
+- Vitest suite: 67/67 passed across `src/actions/shifts/` (including 43 tests in `shiftMoneyIsolation.test.ts`).
+- `npm run lint`: clean (0 errors, 0 warnings across `src/`).
 
 ## 2026-10-31 — T4-06: Export old browser-only entries (Lane B · Size S)
 

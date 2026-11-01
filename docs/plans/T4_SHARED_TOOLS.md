@@ -41,7 +41,7 @@ or any charge; 3) replaying the same `request_key` changes nothing; 4) a deliver
 changes the booking stage (Phase 2 rule).
 **Needs** — T1-05 (Driver seat), Batch 1 on staging.
 
-### T4-02 · Reschedule a delivery            status: todo · size: S · lane B
+### T4-02 · Reschedule a delivery            status: done — awaiting merge (lane-b/T4-02-reschedule-a-delivery) · size: S · lane B
 **What** — "Change time" on a delivery job moves **only the job's scheduled time** — the rental
 dates stay (D8). The change is audited, and a WhatsApp draft ("Your delivery is now at …") is
 prepared for staff to send — never auto-sent (21 Jul comms lock).
@@ -135,7 +135,7 @@ slow reply could overwrite the next zone's fee.
 Warehouse cannot see fees.
 **Needs** — none.
 
-### T4-08 · One-time rider link            status: todo · size: L · lane B · [go-live]
+### T4-08 · One-time rider link            status: doing (lane-b/T4-08-one-time-rider-link) · size: L · lane B · [go-live]
 **What** — For a hired rider (W49): staff tap "Send to rider" on a delivery job, type the rider's
 name and phone, and share a link (WhatsApp/SMS from the staff phone). The link opens **only that
 job**, with **no login and no money**: pickup point, drop address and contact, item count and case

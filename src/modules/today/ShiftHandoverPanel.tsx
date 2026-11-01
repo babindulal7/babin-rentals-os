@@ -116,7 +116,7 @@ export default function ShiftHandoverPanel() {
 
   const loadHandovers = useCallback(async () => {
     try {
-      const data = await fetchShiftHandovers()
+      const data = await fetchShiftHandovers(user?.role)
       setEntities(data)
       setDbUnavailable(false)
     } catch (err) {
@@ -125,7 +125,7 @@ export default function ShiftHandoverPanel() {
       }
       console.error('Failed to load shift handovers:', err)
     }
-  }, [])
+  }, [user?.role])
 
   useEffect(() => {
     void loadHandovers()
@@ -151,6 +151,7 @@ export default function ShiftHandoverPanel() {
         ? item.checklist.length
         : 5
 
+      const showCash = canSeeMoney && item.cash_counted_paisa != null
       return {
         id: idx,
         dbId: item.id,
@@ -159,17 +160,17 @@ export default function ShiftHandoverPanel() {
         shiftCode: item.shift_code,
         from: `${item.from_user_name} (Shift ${item.shift_code})`,
         to: item.to_user_name || 'Next Shift',
-        cashAmount: item.cash_counted_paisa ? Math.round(item.cash_counted_paisa / 100) : 0,
-        cashStatus: item.cash_status,
-        cashDisplay: item.cash_counted_paisa != null
-          ? `Rs ${(item.cash_counted_paisa / 100).toLocaleString('en-IN')} · ${item.cash_status}`
+        cashAmount: showCash ? Math.round(item.cash_counted_paisa! / 100) : 0,
+        cashStatus: canSeeMoney ? item.cash_status : null,
+        cashDisplay: showCash
+          ? `Rs ${(item.cash_counted_paisa! / 100).toLocaleString('en-IN')}${item.cash_status ? ` · ${item.cash_status}` : ''}`
           : '',
         checksCompleted: `${completedCount} / ${totalChecks}`,
         status: isComplete ? 'Complete' : 'Pending',
         notes: item.notes || (item.acknowledgement_note ? `[Ack] ${item.acknowledgement_note}` : ''),
       }
     })
-  }, [entities])
+  }, [entities, canSeeMoney])
 
   const pendingIncoming = useMemo(() => {
     return entities.filter((e) => e.status === 'pending')
@@ -197,6 +198,7 @@ export default function ShiftHandoverPanel() {
         fromUserName: user?.name || 'Staff Member',
         fromUserRole: user?.role || 'Operations',
         notes: 'Handover completed from Today panel checklist.',
+        role: user?.role,
         checklist: SHIFT_CHECKLIST.map((c) => ({
           key: c.key,
           label: c.label,
@@ -217,7 +219,7 @@ export default function ShiftHandoverPanel() {
     if (acknowledging) return
     setAcknowledging(true)
     try {
-      await acknowledgeShiftHandover(handoverId, 'Acknowledged during shift overlap', user?.name)
+      await acknowledgeShiftHandover(handoverId, 'Acknowledged during shift overlap', user?.name, user?.role)
       showSuccessToast('Shift Handover Acknowledged', 'Logged handover acceptance.')
       await loadHandovers()
     } catch (err) {
@@ -320,7 +322,10 @@ export default function ShiftHandoverPanel() {
                     Incoming Handover from {pending.from_user_name} (Shift {pending.shift_code})
                   </div>
                   <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text-muted)', marginTop: 2 }}>
-                    Date: {pending.shift_date} · Status: {pending.cash_status}
+                    Date: {pending.shift_date}
+                    {canSeeMoney && pending.cash_status && (
+                      <> · Status: {pending.cash_status}</>
+                    )}
                     {canSeeMoney && pending.cash_counted_paisa != null && (
                       <> · Cash: Rs {(pending.cash_counted_paisa / 100).toLocaleString('en-IN')}</>
                     )}

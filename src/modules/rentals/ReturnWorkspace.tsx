@@ -2349,9 +2349,8 @@ export default function ReturnWorkspace({
                               <p style={{ margin: '5px 0 0', display: 'flex', gap: 5, alignItems: 'flex-start', fontSize: 'var(--t-meta)', color: 'var(--progress-text)', lineHeight: 1.45 }}>
                                 <Icon name="timer" size={12} style={{ flexShrink: 0, marginTop: 2 }} />
                                 <span>
-                                  “{mark.decision}” keeps this line open, so the booking stays On Rent and a later
-                                  session can receive the item. Choose a decision that ends the line instead if it
-                                  is not coming back.
+                                  “{mark.decision}” keeps this line open and the booking On Rent. Choose a decision
+                                  that ends the line if the item is not coming back.
                                 </span>
                               </p>
                             )}

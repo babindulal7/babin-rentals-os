@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import LiveTransportPlans from './LiveTransportPlans'
+import { SendToRiderModal } from './SendToRiderModal'
 import { DateField } from '../../components/ui/DateField'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
@@ -20,6 +21,7 @@ import {
   canCreateDeliveryJob,
   canAssignDeliveryDriver,
   canTransitionDeliveryJob,
+  canRescheduleDeliveryJob,
 } from '../../lib/rbac'
 import {
   fetchDeliveries,
@@ -31,7 +33,9 @@ import {
   createDeliveryJob,
   assignDeliveryDriver,
   transitionDeliveryJob,
+  rescheduleDeliveryJob,
 } from '../../actions/delivery'
+import { buildDeliveryRescheduleAction } from '../../lib/whatsappActions'
 import { useDomainEvent } from '../../events/useDomainEvent'
 import { EVENT_TYPES } from '../../events/eventBus'
 import { useToast } from '../../components/ui/Toast'
@@ -106,6 +110,13 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
   const [failTarget, setFailTarget] = useState<DeliveryRecord | null>(null)
   const [failReason, setFailReason] = useState('')
 
+  const [rescheduleTarget, setRescheduleTarget] = useState<DeliveryRecord | null>(null)
+  const [rescheduleDate, setRescheduleDate] = useState('')
+  const [rescheduleTime, setRescheduleTime] = useState('')
+  const [rescheduleNotes, setRescheduleNotes] = useState('')
+  const [rescheduleWaLink, setRescheduleWaLink] = useState<{ text: string; href: string | null; unavailable?: string | undefined } | null>(null)
+  const [rescheduleIsSaving, setRescheduleIsSaving] = useState(false)
+
   const [newModalOpen, setNewModalOpen] = useState(false)
   const [newBookingId, setNewBookingId] = useState('')
   const [newBookingNo, setNewBookingNo] = useState('')
@@ -117,6 +128,7 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
   const [newRiderPhone, setNewRiderPhone] = useState('')
 
   const [gatePassSlip, setGatePassSlip] = useState<DeliveryRecord | null>(null)
+  const [riderModalTarget, setRiderModalTarget] = useState<DeliveryRecord | null>(null)
 
   const loadData = useCallback(() => {
     if (readRefusal) return
@@ -144,6 +156,7 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
   useDomainEvent(EVENT_TYPES.RENTAL_PACKED, loadData)
   useDomainEvent(EVENT_TYPES.RENTAL_HANDED_OVER, loadData)
   useDomainEvent(EVENT_TYPES.RENTAL_CONFIRMED, loadData)
+  useDomainEvent(EVENT_TYPES.DELIVERY_JOB_RESCHEDULED, loadData)
 
   const filtered = useMemo(() => {
     return deliveries.filter((d) => {
@@ -324,6 +337,63 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
       loadData()
     } catch (err) {
       setMutationError(err instanceof Error ? err.message : 'Failed to assign driver')
+    }
+  }
+
+  const handleOpenReschedule = (rec: DeliveryRecord) => {
+    setMutationError(null)
+    setRescheduleTarget(rec)
+    setRescheduleDate(rec.scheduledDate || businessDayAd())
+    setRescheduleTime(rec.scheduledTime || '10:00')
+    setRescheduleNotes('')
+    setRescheduleWaLink(null)
+  }
+
+  const handleConfirmReschedule = async () => {
+    if (!rescheduleTarget) return
+    if (!user?.id || !user?.role) {
+      setMutationError('User authentication required')
+      return
+    }
+    if (!rescheduleDate || !rescheduleTime) {
+      setMutationError('Both a valid date and time are required to reschedule.')
+      return
+    }
+    setMutationError(null)
+    setRescheduleIsSaving(true)
+
+    const isoTimestamp = `${rescheduleDate}T${rescheduleTime}:00+05:45`
+
+    try {
+      await rescheduleDeliveryJob(
+        {
+          jobId: rescheduleTarget.id,
+          newScheduledAt: new Date(isoTimestamp).toISOString(),
+          notes: rescheduleNotes.trim() || undefined,
+        },
+        { userId: user.id, role: user.role },
+      )
+
+      const oldDisplayTime = `${rescheduleTarget.scheduledDate} ${rescheduleTarget.scheduledTime}`
+      const newDisplayTime = `${rescheduleDate} ${rescheduleTime}`
+
+      const waAction = buildDeliveryRescheduleAction({
+        clientName: rescheduleTarget.clientName,
+        clientPhone: rescheduleTarget.clientPhone || null,
+        bookingNo: rescheduleTarget.bookingNo,
+        leg: rescheduleTarget.mode === 'Courier / Rider' ? 'Courier Dispatch' : 'Babin Delivery',
+        oldTime: oldDisplayTime,
+        newTime: newDisplayTime,
+        notes: rescheduleNotes.trim() || undefined,
+      })
+
+      setRescheduleWaLink(waAction)
+      showSuccessToast(`Dispatch ${rescheduleTarget.id} rescheduled to ${newDisplayTime}`)
+      loadData()
+    } catch (err) {
+      setMutationError(err instanceof Error ? err.message : 'Failed to reschedule delivery')
+    } finally {
+      setRescheduleIsSaving(false)
     }
   }
 
@@ -586,6 +656,7 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                           const canTransit = canTransitionDeliveryJob(role, 'Ready', 'In Transit')
                           const canDeliver = canTransitionDeliveryJob(role, 'In Transit', 'Delivered')
                           const canFail = canTransitionDeliveryJob(role, d.status, 'Failed')
+                          const canReschedule = canRescheduleDeliveryJob(role) && d.status !== 'Delivered' && d.status !== 'Failed'
                           const hasDriver = !!(d.driverId || d.driverName)
 
                           return (
@@ -661,6 +732,11 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
 
                               <div style={{ borderTop: '1px dashed var(--border)', paddingTop: 8, fontSize: '11px', color: 'var(--text3)' }}>
                                 <div><strong>Scheduled:</strong> {d.scheduledDate} {d.scheduledTime}</div>
+                                {d.notes && (
+                                  <div style={{ marginTop: 3, color: d.status === 'Failed' ? 'var(--st-danger-fg)' : 'var(--text2)', background: 'var(--surface2)', padding: '2px 5px', borderRadius: 3, fontSize: '10.5px' }}>
+                                    {d.status === 'Failed' ? '⚠ ' : '🕒 '}{d.notes}
+                                  </div>
+                                )}
                                 {d.driverName ? (
                                   <div style={{ color: 'var(--text)', marginTop: 2 }}>
                                     <strong>Driver:</strong> {d.driverName} {d.vehiclePlate ? `(${d.vehiclePlate})` : ''}
@@ -683,6 +759,17 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                                       onClick={() => handleOpenAssign(d)}
                                     >
                                       Assign Driver
+                                    </Button>
+                                  )}
+                                  {canAssign && d.status !== 'Delivered' && d.status !== 'Failed' && (
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
+                                      style={{ width: '100%' }}
+                                      onClick={() => setRiderModalTarget(d)}
+                                      title="Generate one-time rider link (T4-08/W49)"
+                                    >
+                                      <Icon name="external_link" size={13} /> Rider Link
                                     </Button>
                                   )}
                                   {canReady && d.status === 'Scheduled' && (
@@ -720,6 +807,17 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                                   )}
                                 </div>
 
+                                {canReschedule && (
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    style={{ width: '100%' }}
+                                    onClick={() => handleOpenReschedule(d)}
+                                  >
+                                    Change Time
+                                  </Button>
+                                )}
+
                                 {canFail && (d.status === 'Scheduled' || d.status === 'Ready' || d.status === 'In Transit') && (
                                   <Button
                                     variant="danger"
@@ -754,6 +852,7 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                 const canTransit = canTransitionDeliveryJob(role, 'Ready', 'In Transit')
                 const canDeliver = canTransitionDeliveryJob(role, 'In Transit', 'Delivered')
                 const canFail = canTransitionDeliveryJob(role, d.status, 'Failed')
+                const canReschedule = canRescheduleDeliveryJob(role) && d.status !== 'Delivered' && d.status !== 'Failed'
                 const hasDriver = !!(d.driverId || d.driverName)
 
                 return (
@@ -890,6 +989,11 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                         <div style={{ fontWeight: 600, color: 'var(--text)', marginTop: 2 }}>
                           {d.scheduledDate} · {d.scheduledTime}
                         </div>
+                        {d.notes && (
+                          <div style={{ fontSize: '11px', color: d.status === 'Failed' ? 'var(--st-danger-fg)' : 'var(--text2)', background: 'var(--surface2)', padding: '2px 5px', borderRadius: 3, marginTop: 4 }}>
+                            {d.status === 'Failed' ? '⚠ ' : '🕒 '}{d.notes}
+                          </div>
+                        )}
                       </div>
                       <div>
                         <div style={{ fontSize: '10.5px', color: 'var(--text3)', textTransform: 'uppercase', fontWeight: 600 }}>
@@ -955,6 +1059,16 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                         )}
                       </div>
 
+                      {canReschedule && (
+                        <Button
+                          variant="secondary"
+                          style={{ minHeight: 44, justifyContent: 'center' }}
+                          onClick={() => handleOpenReschedule(d)}
+                        >
+                          Change Time
+                        </Button>
+                      )}
+
                       {canFail && (d.status === 'Scheduled' || d.status === 'Ready' || d.status === 'In Transit') && (
                         <Button
                           variant="danger"
@@ -1003,6 +1117,7 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                       const canTransit = canTransitionDeliveryJob(role, 'Ready', 'In Transit')
                       const canDeliver = canTransitionDeliveryJob(role, 'In Transit', 'Delivered')
                       const canFail = canTransitionDeliveryJob(role, d.status, 'Failed')
+                      const canReschedule = canRescheduleDeliveryJob(role) && d.status !== 'Delivered' && d.status !== 'Failed'
                       const hasDriver = !!(d.driverId || d.driverName)
 
                       return (
@@ -1169,6 +1284,17 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                                 </Button>
                               )}
 
+                              {canAssign && d.status !== 'Delivered' && d.status !== 'Failed' && (
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => setRiderModalTarget(d)}
+                                  title="Generate one-time rider link (T4-08/W49)"
+                                >
+                                  <Icon name="external_link" size={13} /> Rider
+                                </Button>
+                              )}
+
                               {canReady && d.status === 'Scheduled' && (
                                 <Button
                                   variant="secondary"
@@ -1202,7 +1328,17 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                                 </Button>
                               )}
 
-                              {canFail && (d.status === 'Scheduled' || d.status === 'Ready' || d.status === 'In Transit') && (
+                              {canReschedule && (
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => handleOpenReschedule(d)}
+                                >
+                                  Change Time
+                                </Button>
+                              )}
+
+                      {canFail && (d.status === 'Scheduled' || d.status === 'Ready' || d.status === 'In Transit') && (
                                 <Button
                                   variant="danger"
                                   size="sm"
@@ -1476,6 +1612,177 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
             </Modal>
           )}
 
+          {/* Modal: Reschedule Delivery (T4-02, Ruling D8) */}
+          {rescheduleTarget && (
+            <Modal
+              isOpen
+              onClose={() => setRescheduleTarget(null)}
+              title={`Reschedule Dispatch — ${rescheduleTarget.id}`}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+                {mutationError && <div role="alert" style={{ color: 'var(--st-danger-fg)' }}>{mutationError}</div>}
+
+                <div
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: 'var(--r-md)',
+                    background: 'var(--surface2)',
+                    border: '1px solid var(--border)',
+                    fontSize: '13px',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: 'var(--text)' }}>
+                    <Icon name="timer" size={14} />
+                    Booking #{rescheduleTarget.bookingNo} · {rescheduleTarget.clientName}
+                  </div>
+                  <div style={{ color: 'var(--text3)', fontSize: '12px', marginTop: 4 }}>
+                    Current schedule: <strong>{rescheduleTarget.scheduledDate} at {rescheduleTarget.scheduledTime}</strong>
+                  </div>
+                  <div
+                    style={{
+                      color: 'var(--info)',
+                      fontSize: '11.5px',
+                      marginTop: 6,
+                      padding: '4px 8px',
+                      background: 'var(--surface)',
+                      borderRadius: 4,
+                      border: '1px solid var(--border)',
+                    }}
+                  >
+                    ℹ <strong>Ruling D8:</strong> Rescheduling changes the dispatch departure time only. Booking rental dates and billing remain strictly unchanged.
+                  </div>
+                </div>
+
+                {!rescheduleWaLink ? (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-sm)' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text2)', marginBottom: 4 }}>
+                          New Scheduled Date *
+                        </label>
+                        <input
+                          type="date"
+                          value={rescheduleDate}
+                          onChange={(e) => setRescheduleDate(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            borderRadius: 'var(--r-btn)',
+                            border: '1px solid var(--border)',
+                            background: 'var(--surface)',
+                            color: 'var(--text)',
+                            fontSize: '13px',
+                            fontFamily: 'inherit',
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text2)', marginBottom: 4 }}>
+                          New Scheduled Time *
+                        </label>
+                        <input
+                          type="time"
+                          value={rescheduleTime}
+                          onChange={(e) => setRescheduleTime(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            borderRadius: 'var(--r-btn)',
+                            border: '1px solid var(--border)',
+                            background: 'var(--surface)',
+                            color: 'var(--text)',
+                            fontSize: '13px',
+                            fontFamily: 'inherit',
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text2)', marginBottom: 4 }}>
+                        Reason / Notes (optional)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Client requested 2:30 PM delivery, traffic delay..."
+                        value={rescheduleNotes}
+                        onChange={(e) => setRescheduleNotes(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '8px 10px',
+                          borderRadius: 'var(--r-btn)',
+                          border: '1px solid var(--border)',
+                          background: 'var(--surface)',
+                          color: 'var(--text)',
+                          fontSize: '13px',
+                          fontFamily: 'inherit',
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--sp-sm)', marginTop: 'var(--sp-sm)' }}>
+                      <Button variant="secondary" onClick={() => setRescheduleTarget(null)}>
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="primary"
+                        onClick={handleConfirmReschedule}
+                        disabled={rescheduleIsSaving || !rescheduleDate || !rescheduleTime}
+                      >
+                        {rescheduleIsSaving ? 'Rescheduling...' : 'Confirm Reschedule'}
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', padding: '8px 0' }}>
+                    <div style={{ color: 'var(--st-success-fg)', fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>✓</span> Successfully rescheduled to {rescheduleDate} at {rescheduleTime}
+                    </div>
+
+                    <div style={{ fontSize: '12.5px', color: 'var(--text2)', lineHeight: 1.5 }}>
+                      A WhatsApp draft has been prepared with the updated departure time for staff to review and send (never automatically sent):
+                    </div>
+
+                    {rescheduleWaLink.href ? (
+                      <a
+                        href={rescheduleWaLink.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 8,
+                          padding: '10px 16px',
+                          borderRadius: 'var(--r-btn)',
+                          background: '#25D366',
+                          color: '#ffffff',
+                          textDecoration: 'none',
+                          fontWeight: 600,
+                          fontSize: '13.5px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <span>💬</span> Open WhatsApp Draft ({rescheduleTarget.clientPhone || 'Client'})
+                      </a>
+                    ) : (
+                      <div style={{ fontSize: '12px', color: 'var(--text4)', fontStyle: 'italic' }}>
+                        WhatsApp draft unavailable: {rescheduleWaLink.unavailable}
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--sp-sm)' }}>
+                      <Button variant="secondary" onClick={() => setRescheduleTarget(null)}>
+                        Done
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Modal>
+          )}
+
           {/* Modal: New Delivery Dispatch Order */}
           {newModalOpen && (
             <Modal
@@ -1732,6 +2039,18 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                 </Button>
               </div>
             </Modal>
+          )}
+
+          {/* Modal: Send To Rider (T4-08, W49) */}
+          {riderModalTarget && (
+            <SendToRiderModal
+              isOpen={!!riderModalTarget}
+              onClose={() => setRiderModalTarget(null)}
+              jobId={riderModalTarget.id}
+              bookingNo={riderModalTarget.bookingNo}
+              clientName={riderModalTarget.clientName}
+              destination={riderModalTarget.address}
+            />
           )}
         </div>
       </PageBody>

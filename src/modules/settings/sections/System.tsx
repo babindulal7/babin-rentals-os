@@ -100,7 +100,7 @@ export const SYSTEM_SECTIONS: Section[] = [
       },
       {
         label: 'Legacy data backup',
-        note: 'Download old entries saved only on this browser as a file, before starting fresh. Nothing is deleted.',
+        note: 'Download old browser-stored data from this device before starting fresh.',
         custom: <LegacyExportControl />,
       },
       /*

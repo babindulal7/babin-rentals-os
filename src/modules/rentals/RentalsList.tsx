@@ -2008,16 +2008,12 @@ export default function RentalsList() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <h1 style={{ margin: 0, fontSize: 'var(--t-h3, 18px)', fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
                 Rentals
-                <span style={{ color: 'var(--muted)', fontWeight: 400 }}>•</span>
-                <span style={{ fontSize: 'var(--t-meta, 14px)', fontWeight: 600, color: 'var(--text2)' }}>Management workspace</span>
               </h1>
+              {/* RULING 2026-10-31: "Management workspace", the description line and the "on set" count are gone — the Out on Set tile right below already shows that count. */}
               <span style={{ color: 'var(--muted)', fontSize: '13px' }}>
-                (<strong style={{ color: 'var(--text)' }}>{total ?? list.rows.length}</strong> active bookings · <strong style={{ color: 'var(--text)' }}>{getTabCount('Out', ['On Rent']) ?? 0}</strong> on set)
+                (<strong style={{ color: 'var(--text)' }}>{total ?? list.rows.length}</strong> active bookings)
               </span>
             </div>
-            <p style={{ margin: 0, fontSize: 'var(--t-meta, 13px)', color: 'var(--muted)' }}>
-              A dense table for search, booking status, availability and fast drill-down.
-            </p>
           </div>
         }
         loadedAt={list.lastFetchedAt ?? new Date()}

@@ -55,6 +55,7 @@ export type WaTemplateId =
   | 'daily_digest'
   | 'dispatch_manifest'
   | 'return_receipt'
+  | 'delivery_rescheduled'
 
 /* ────────────────────────────────────────────────────────────────────────────
    Formatting primitives
@@ -158,6 +159,17 @@ export interface WaReturnReceipt extends WaBookingBase {
   readonly depositRefundPaisa?: Paisa | null | undefined
   readonly balanceDuePaisa?: Paisa | null | undefined
   readonly receiptUrl?: string | null | undefined
+}
+
+export interface WaDeliveryRescheduled {
+  readonly clientName: string
+  readonly bookingNo: string
+  readonly startIso?: string | undefined
+  readonly endIso?: string | undefined
+  readonly leg: 'Outbound' | 'Return' | string
+  readonly oldTime: string
+  readonly newTime: string
+  readonly notes?: string | undefined
 }
 
 export interface WaPaymentReceipt {
@@ -336,6 +348,22 @@ export function returnReceipt(i: WaReturnReceipt, b: WaBusiness): string {
     .join('\n')
 }
 
+export function deliveryRescheduled(i: WaDeliveryRescheduled, b: WaBusiness): string {
+  const legLabel = i.leg === 'Return' ? 'pickup return' : 'delivery'
+  return [
+    open(i.clientName),
+    '',
+    `Your ${legLabel} for booking #${i.bookingNo} has been rescheduled to ${i.newTime} (previously ${i.oldTime}).`,
+    i.notes ? `Note: ${i.notes}` : null,
+    '',
+    'If this time does not work for you, please let us know immediately.',
+    '',
+    close(b),
+  ]
+    .filter((line): line is string => line !== null)
+    .join('\n')
+}
+
 export function paymentReceipt(i: WaPaymentReceipt, b: WaBusiness): string {
   const balanceLine =
     i.balance > 0 ? 'Remaining balance: ' + money(i.balance) : 'Status: fully paid ✅'
@@ -411,6 +439,7 @@ const REGISTRY: Readonly<Record<WaTemplateId, WaTemplateMeta>> = {
   daily_digest: { id: 'daily_digest', label: 'Send daily digest', money: true },
   dispatch_manifest: { id: 'dispatch_manifest', label: 'Send dispatch manifest', money: false },
   return_receipt: { id: 'return_receipt', label: 'Send return receipt', money: false },
+  delivery_rescheduled: { id: 'delivery_rescheduled', label: 'Send delivery reschedule update', money: false },
 }
 
 export function templateMeta(id: WaTemplateId): WaTemplateMeta {

@@ -51,14 +51,24 @@ describe('createShiftHandover', () => {
       { shiftCode: 'A', fromUserName: 'Warehouse Op' },
       warehouseContext
     );
-    expect(whResult.handover).toEqual({ id: 'handover-wh' });
+    expect(whResult.handover).toEqual({
+      id: 'handover-wh',
+      cash_counted_paisa: null,
+      cash_status: null,
+      cash_variance_paisa: null,
+    });
 
     mockRpc.mockResolvedValue({ data: { id: 'handover-dr' }, error: null } as any);
     const drResult = await createShiftHandover(
       { shiftCode: 'B', fromUserName: 'Driver Op' },
       driverContext
     );
-    expect(drResult.handover).toEqual({ id: 'handover-dr' });
+    expect(drResult.handover).toEqual({
+      id: 'handover-dr',
+      cash_counted_paisa: null,
+      cash_status: null,
+      cash_variance_paisa: null,
+    });
   });
 
   it('validates cash counted paisa cannot be negative', async () => {

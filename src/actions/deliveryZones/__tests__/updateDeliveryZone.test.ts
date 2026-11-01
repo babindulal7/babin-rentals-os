@@ -11,7 +11,7 @@ vi.mock('../../../lib/supabase', () => ({
 }));
 
 // Mock DomainEvents
-vi.mock('../../../../events/eventBus', () => ({
+vi.mock('../../../events/eventBus', () => ({
   DomainEvents: {
     emit: vi.fn().mockResolvedValue(undefined),
   },
@@ -78,7 +78,7 @@ describe('updateDeliveryZone', () => {
   });
 
   it('updates zone successfully for Coordinator', async () => {
-    mockRpc.mockResolvedValue({ data: true, error: null });
+    mockRpc.mockResolvedValue({ data: true, error: null } as any);
 
     const result = await updateDeliveryZone(
       { zoneId: '123e4567-e89b-12d3-a456-426614174000', name: 'Updated Zone', feePaisa: 400000 },
@@ -96,7 +96,7 @@ describe('updateDeliveryZone', () => {
   });
 
   it('updates zone successfully for Owner', async () => {
-    mockRpc.mockResolvedValue({ data: true, error: null });
+    mockRpc.mockResolvedValue({ data: true, error: null } as any);
 
     const result = await updateDeliveryZone(
       { zoneId: '123e4567-e89b-12d3-a456-426614174000', isActive: false },
@@ -107,7 +107,7 @@ describe('updateDeliveryZone', () => {
   });
 
   it('returns false when zone not found', async () => {
-    mockRpc.mockResolvedValue({ data: false, error: null });
+    mockRpc.mockResolvedValue({ data: false, error: null } as any);
 
     const result = await updateDeliveryZone(
       { zoneId: '123e4567-e89b-12d3-a456-426614174000', name: 'Updated' },
@@ -118,7 +118,7 @@ describe('updateDeliveryZone', () => {
   });
 
   it('throws on RPC error', async () => {
-    mockRpc.mockResolvedValue({ data: null, error: { message: 'Zone not found' } });
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'Zone not found' } } as any);
 
     await expect(
       updateDeliveryZone({ zoneId: '123e4567-e89b-12d3-a456-426614174000', name: 'Updated' }, coordinatorContext)

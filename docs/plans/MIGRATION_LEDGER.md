@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0190**
+**Next free number: 0194**
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
@@ -27,7 +27,10 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0186 | T4-05 | shift-handovers | lane-b/T4-05-shift-handover-on-the-database | verified |
 | 0187 | T4-01 | delivery-dispatch-rpcs | lane-b/T4-01-delivery-dispatch-on-the-database | verified |
 | 0188 | T3-smart-reservations | smart-reservation-holds | lane-c/T3-smart-reservations | verified |
-| 0189 | T4-07 | delivery-zones | lane-b/T4-07-delivery-zones | written |
+| 0189 | T4-07 | delivery-zones | lane-b/T4-07-delivery-zones | verified |
+| 0190 | T4-08 | one-time-rider-link | lane-b/T4-08-one-time-rider-link | verified |
+| 0191 | T4-02 | delivery-reschedule-rpc | lane-b/T4-02-reschedule-a-delivery | verified |
+| 0192 | T5-01 | notification-records | lane-b/T5-01-notification-records | claimed |
 | 0193 | T3-14a | invoice-write-hardening | lane-c/T3-14a-invoice-write-hardening | verified |
 | 0199 | T8-08 | tds-on-crew-payouts | lane-a/T8-08-tds-on-crew-payouts | verified |
 | 0200 | T3-14b | draft-at-confirm | lane-c/T3-14b-draft-at-confirm | claimed |

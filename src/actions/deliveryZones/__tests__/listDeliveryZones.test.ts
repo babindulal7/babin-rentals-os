@@ -10,8 +10,7 @@ vi.mock('../../../lib/supabase', () => ({
 }));
 
 describe('listDeliveryZones', () => {
-  // Plain { data, error } replies, typed loosely as in the other action tests.
-  const mockRpc = vi.mocked(supabase.rpc) as unknown as ReturnType<typeof vi.fn>;
+  const mockRpc = vi.mocked(supabase.rpc);
 
   const mockZones: DeliveryZoneRow[] = [
     {
@@ -61,7 +60,7 @@ describe('listDeliveryZones', () => {
   });
 
   it('lists zones with defaults', async () => {
-    mockRpc.mockResolvedValue({ data: mockZones, error: null });
+    mockRpc.mockResolvedValue({ data: mockZones, error: null } as any);
 
     const result = await listDeliveryZones({}, { userId: 'user-123', role: 'Coordinator' as const });
 
@@ -74,7 +73,7 @@ describe('listDeliveryZones', () => {
   });
 
   it('respects custom limit and offset', async () => {
-    mockRpc.mockResolvedValue({ data: [], error: null });
+    mockRpc.mockResolvedValue({ data: [], error: null } as any);
 
     await listDeliveryZones({ limit: 10, offset: 20 }, { userId: 'user-123', role: 'Coordinator' as const });
 
@@ -86,7 +85,7 @@ describe('listDeliveryZones', () => {
   });
 
   it('respects activeOnly filter', async () => {
-    mockRpc.mockResolvedValue({ data: [], error: null });
+    mockRpc.mockResolvedValue({ data: [], error: null } as any);
 
     await listDeliveryZones({ activeOnly: false }, { userId: 'user-123', role: 'Coordinator' as const });
 
@@ -98,7 +97,7 @@ describe('listDeliveryZones', () => {
   });
 
   it('returns empty array when no zones', async () => {
-    mockRpc.mockResolvedValue({ data: null, error: null });
+    mockRpc.mockResolvedValue({ data: null, error: null } as any);
 
     const result = await listDeliveryZones({}, { userId: 'user-123', role: 'Coordinator' as const });
 
@@ -106,7 +105,7 @@ describe('listDeliveryZones', () => {
   });
 
   it('throws on RPC error', async () => {
-    mockRpc.mockResolvedValue({ data: null, error: { message: 'Permission denied' } });
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'Permission denied' } } as any);
 
     await expect(listDeliveryZones({}, { userId: 'user-123', role: 'Coordinator' as const })).rejects.toThrow('Failed to list delivery zones: Permission denied');
   });

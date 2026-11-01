@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../lib/auth';
 import { listTeamNotes, createTeamNote, acknowledgeTeamNote, type TeamNoteRow } from '../../actions/notes';
-import type { ActionContext } from '../../actions/core';
 import { formatAdDateTime } from '../../lib/bs';
 import { canCreateTeamNote, isStaff as checkIsStaff } from '../../lib/rbac';
 
@@ -14,18 +13,19 @@ export interface TeamNotesPanelProps {
   refreshInterval?: number;
 }
 
-function actionCtx(user: { id: string; role: ActionContext['role'] } | null | undefined): ActionContext | undefined {
-  return user ? { userId: user.id, role: user.role } : undefined;
-}
-
 export function TeamNotesPanel({
   initialLimit = 20,
   autoRefresh = true,
   refreshInterval = 30000,
 }: TeamNotesPanelProps) {
   const { user } = useAuth();
-  const ctx = actionCtx(user);
-  const role = user?.role;
+  const userId = user?.id;
+  const userRole = user?.role;
+  const ctx = useMemo(
+    () => (userId && userRole ? { userId, role: userRole } : undefined),
+    [userId, userRole]
+  );
+  const role = userRole;
   const [notes, setNotes] = useState<TeamNoteRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

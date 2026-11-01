@@ -77,6 +77,7 @@ within each priority.
 | [T4-10](T4-10.md) | Jobs in phone calendars | M | go-live · slips first |
 | [T4-11](T4-11.md) | Report a problem | M | go-live · slips first |
 | [T4-12](T4-12.md) | Bulk edit products | L | go-live · slips first |
+| [T4-08 fixes](T4-08-fixes.md) | Review fixes R1–R5 on the rider link and the red typecheck | S | go-live |
 | [T5-01](T5-01.md) | Notification records | M | go-live |
 | [T5-02](T5-02.md) | Notification centre | M | go-live |
 | [T5-03](T5-03.md) | Email sending service | M | go-live |

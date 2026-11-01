@@ -11,7 +11,7 @@ vi.mock('../../../lib/supabase', () => ({
 }));
 
 // Mock DomainEvents
-vi.mock('../../../../events/eventBus', () => ({
+vi.mock('../../../events/eventBus', () => ({
   DomainEvents: {
     emit: vi.fn().mockResolvedValue(undefined),
   },
@@ -66,7 +66,7 @@ describe('createDeliveryZone', () => {
   });
 
   it('creates zone successfully for Coordinator', async () => {
-    mockRpc.mockResolvedValue({ data: 'zone-uuid-123', error: null });
+    mockRpc.mockResolvedValue({ data: 'zone-uuid-123', error: null } as any);
 
     const result = await createDeliveryZone(
       { name: 'Test Zone', description: 'Test description', feePaisa: 350000 },
@@ -82,7 +82,7 @@ describe('createDeliveryZone', () => {
   });
 
   it('creates zone successfully for Owner', async () => {
-    mockRpc.mockResolvedValue({ data: 'zone-uuid-456', error: null });
+    mockRpc.mockResolvedValue({ data: 'zone-uuid-456', error: null } as any);
 
     const result = await createDeliveryZone(
       { name: 'Owner Zone', description: '', feePaisa: 500000 },
@@ -93,7 +93,7 @@ describe('createDeliveryZone', () => {
   });
 
   it('trims whitespace from name and description', async () => {
-    mockRpc.mockResolvedValue({ data: 'zone-uuid-789', error: null });
+    mockRpc.mockResolvedValue({ data: 'zone-uuid-789', error: null } as any);
 
     await createDeliveryZone(
       { name: '  Trimmed Zone  ', description: '  Desc  ', feePaisa: 400000 },
@@ -108,7 +108,7 @@ describe('createDeliveryZone', () => {
   });
 
   it('throws on RPC error', async () => {
-    mockRpc.mockResolvedValue({ data: null, error: { message: 'DB error' } });
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'DB error' } } as any);
 
     await expect(
       createDeliveryZone({ name: 'Test Zone', description: 'Test', feePaisa: 350000 }, coordinatorContext)

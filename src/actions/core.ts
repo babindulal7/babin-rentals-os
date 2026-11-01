@@ -374,13 +374,15 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'shift_handover.archive':
       return rbac.canArchiveShiftHandover(ctx.role);
 
-    // Delivery dispatch (T4-01, migrations 0165/0187)
+    // Delivery dispatch (T4-01, T4-02, migrations 0165/0187/0191)
     case 'delivery.create':
       return rbac.canCreateDeliveryJob(ctx.role);
     case 'delivery.assign':
       return rbac.canAssignDeliveryDriver(ctx.role);
     case 'delivery.transition':
       return rbac.canTransitionDeliveryJob(ctx.role);
+    case 'delivery.reschedule':
+      return rbac.canRescheduleDeliveryJob(ctx.role);
 
     // Delivery zones (T4-07, migration 0189)
     case 'delivery_zone.create':

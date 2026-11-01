@@ -570,6 +570,21 @@ One page, no routes, sheets only. `auth_is_staff()` = false. Every read is joine
 
 `portal_users`, `portal_sessions`, `portal_auth_challenges` are **deny-all today**. They stay deny-all until the session → `client_id` binding is written and tested (§12 D-5). Guessing it wrong exposes one client's data to another.
 
+### 7.1 Hired Rider Link (non-login access path · W49 · T4-08)
+
+For hired delivery riders who lack staff logins:
+- Staff issue an ephemeral single-job link by entering rider name and phone on a delivery job.
+- Access via 128-bit cryptographically secure raw token stored hashed (SHA-256) in Postgres (`delivery_job_links`). Raw tokens never touch database storage.
+- Non-login public access path via dedicated `/rider/:token` route and Edge Function.
+- **Strictly money-blind (Law 6)**: The rider endpoint and UI receive zero prices, rental rates, delivery charges, deposit requirements, invoice totals, or client financial statuses.
+- **Single-job boundary**: The link resolves exactly one delivery job. Cross-job traversal or enumeration is impossible.
+- **Permitted actions**:
+  1. View pickup location (shop branch) and drop address with contact phone.
+  2. View item summary (equipment descriptions and quantities; zero rates).
+  3. "Picked up from shop" transition (`status` -> `In Transit`).
+  4. "Complete delivery" transition with receiver name, drawn signature, and optional photo (`status` -> `Delivered`).
+- **Fail-closed security**: Once delivered, failed, revoked by staff, or after 24 hours, the link immediately ceases to function. A used link cannot deliver twice. Direct table access is denied to anon and authenticated; all mutations are governed by security-definer RPCs.
+
 ---
 
 ## 8. Parked modules — cells pre-ruled

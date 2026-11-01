@@ -19,18 +19,6 @@ vi.mock('../../../../actions/deliveryZones/listDeliveryZones', () => ({
   listDeliveryZones: vi.fn(),
 }))
 
-vi.mock('../../../../actions/deliveryZones/createDeliveryZone', () => ({
-  createDeliveryZone: vi.fn(),
-}))
-
-vi.mock('../../../../actions/deliveryZones/updateDeliveryZone', () => ({
-  updateDeliveryZone: vi.fn(),
-}))
-
-vi.mock('../../../../actions/deliveryZones/deactivateDeliveryZone', () => ({
-  deactivateDeliveryZone: vi.fn(),
-}))
-
 vi.mock('../../../../components/ui/Toast', () => ({
   useToast: () => ({
     showSuccessToast: vi.fn(),

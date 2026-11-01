@@ -137,7 +137,6 @@ export function DeliverySection({
       .catch(() => {
         // Silently fail - user can manually enter fee
       })
-    // A fee that arrives after the zone changed again must not overwrite the newer one.
     return () => { mounted = false }
   }, [deliveryZone, clientPickup, canBookingMoney, setDeliveryChargePaisa])
 

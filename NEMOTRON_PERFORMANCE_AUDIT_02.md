@@ -41,8 +41,10 @@ However, the audit reveals **10 high-value optimization opportunities** that wou
 | **Search Debounce Latency** | < 250ms | **0ms debounce on Rentals + Inventory** (only `PackingWorkspace` row filter debounces, 200ms) | Code inspection |
 | **Scan-to-Mark Latency (Bluetooth)** | < 100ms | UNVERIFIED — burst path is local (`barcodeBurst` ≤50ms/key + local `marks` state, no network) | `PackingWorkspace.tsx`, `barcodeBurst.ts` |
 | **Table Scroll FPS (200+ rows)** | 60fps | Likely < 30fps | No virtualization |
-| **Bundle Size (main chunk)** | < 200KB gzip | ~280KB gzip estimated | `vite.config.ts` chunks |
-| **Core Web Vitals (LCP/INP/CLS)** | Pass | UNVERIFIED | Needs Lighthouse |
+| **Bundle Size (main chunk)** | < 200KB gzip | **153.55 kB gzip — MEASURED** (`npm run build`, 31 Oct 2026) | §15.0 chunk table |
+| **Entry-graph total** | — | **≈ 338 kB gzip — MEASURED** (main + react + supabase + base-ui + icons; scanner/charts verified lazy) | §15.0 |
+| **PWA install (offline precache)** | — | **265 entries · 7,580 KiB ≈ 7.4 MB — MEASURED** | §15.0 |
+| **Core Web Vitals (LCP/INP/CLS)** | Pass | UNVERIFIED | Needs Lighthouse on device |
 
 ---
 
@@ -97,7 +99,7 @@ However, the audit reveals **10 high-value optimization opportunities** that wou
 | **No virtualization** — `DataTableShell` renders all rows | VERIFIED | `Inventory.tsx:278-300` — `tdFor` but no windowing |
 | **KPI strip fires 6 HEAD queries** on every mount | VERIFIED | `Inventory.tsx:1528-1533` — six fixed `useList(countFetcher, INVENTORY_KPI_FILTERS.*)` calls |
 | **Unit expansion** loads `listUnits` per product — N+1 potential | VERIFIED | `Inventory.tsx` uses `listUnits` for serial expansion |
-| **⛔ Keystroke fan-out: search is NOT debounced** — every keystroke re-fires the main list query **plus a `Promise.all` fan-out of 3 chip-count HEAD queries** (`chipCounts`) | VERIFIED | `Inventory.tsx:1322-1330` (`setSearchTerm`, no debounce → URL param), `:1550` (`useList(countChips, …)` keyed on `searchTerm`), `:1536-1549` (`countChips` = `Promise.all(PRIMARY_EQUIPMENT_CHIPS.map(…))`), `:1308-1310` (3 primary chips) |
+| **⛔ Keystroke fan-out: search is NOT debounced** — every keystroke re-fires the main list query **plus a `Promise.all` fan-out of 3 chip-count HEAD queries** (`chipCounts`) | VERIFIED | `Inventory.tsx:1323-1331` (`setSearchTerm`, no debounce → URL param), `:1551` (`useList(countChips, …)` keyed on `searchTerm`), `:1537-1550` (`countChips` = `Promise.all(PRIMARY_EQUIPMENT_CHIPS.map(…))`), `:1309-1311` (3 primary chips) — line numbers drift as lanes merge; grep the symbols |
 | **Facet counts** — server-side, correctly gated on `filtersOpen` | VERIFIED (good) | `Inventory.tsx:1493-1494` — `useFacetCounts(…, filtersOpen)` |
 | **Search type-ahead** — `SearchInput` has no internal debounce | VERIFIED | `src/components/ui/SearchInput.tsx` — no `debounce`/`setTimeout` |
 
@@ -291,8 +293,8 @@ However, the audit reveals **10 high-value optimization opportunities** that wou
 | **P0-2** | Virtualize `DataTableShell` (floor screens + Rentals + Inventory) | `src/components/ui/DataTable.tsx`, `src/modules/rentals/*`, `src/modules/inventory/Inventory.tsx` | 200 rows @ 60fps on iPad 10th gen |
 | **P0-3** | Remove 500-row client limit; add server-side search + pagination | `src/lib/queries/useClients.ts`, `src/modules/clients/ClientsDirectory.tsx` | 1000+ clients searchable |
 | **P0-4** | Merge `fetchRentals` + `refreshSubRentals` into single query | `src/lib/queries/bookings.ts` (new RPC), `src/modules/rentals/RentalsList.tsx` | Single network request on filter |
-| **P0-5** | Add composite indexes for `bookings(stage, pickup_at)`, `bookings(client_id, stage)` | `supabase/migrations/XXX_performance_indexes.sql` | `check:pglite` + `check:lifecycle` green |
-| **P0-6** | **Debounce server-backed search inputs (250ms)** — Inventory is worst (each keystroke = 1 list + 3 chip-count queries); Rentals re-fires list + viewCounts per keystroke | `src/components/ui/SearchInput.tsx` (add `debounceMs`), `src/modules/inventory/Inventory.tsx:1322-1330`, `src/lib/queries/useFilters.ts:353` | Type "camera" → 6 keystrokes ≤ 1 query burst; tap budget unchanged (typing is not taps) |
+| **P0-5** | Add composite indexes for `bookings(stage, pickup_at)`, `bookings(client_id, stage)` | `supabase/migrations/0201_performance_indexes.sql` (claim first — §9.4) | `check:pglite` + `check:lifecycle` green |
+| **P0-6** | **Debounce server-backed search inputs (250ms)** — Inventory is worst (each keystroke = 1 list + 3 chip-count queries); Rentals re-fires list + viewCounts per keystroke | `src/components/ui/SearchInput.tsx` (add `debounceMs`), `src/modules/inventory/Inventory.tsx:1323-1331`, `src/lib/queries/useFilters.ts:353` | Type "camera" → 6 keystrokes ≤ 1 query burst; tap budget unchanged (typing is not taps) |
 
 ### P1 — High Impact, Next Sprint
 
@@ -312,7 +314,7 @@ However, the audit reveals **10 high-value optimization opportunities** that wou
 | **P2-2** | Memoize row components (`React.memo`) | All `*Row` components in floor screens, Rentals, Inventory | DevTools Profiler: fewer renders |
 | **P2-3** | Stabilize `facets` `Set` objects in `inventoryQuery` | `src/lib/queries/inventory.ts:192-228` | No refetch on facet re-render |
 | **P2-4** | Add `requestIdleCallback` preload for all nav destinations | `src/lib/routePreload.ts:23-41` | All routes warm on idle |
-| **P2-5** | Bundle analysis — split `vendor-charts` (recharts) lazy | `vite.config.ts:132` | Main chunk < 200KB gzip |
+| **P2-5** | Bundle follow-up — **measured**: main is 153.55 kB gzip (under the 200 kB target); `vendor-scanner` + `vendor-charts` verified lazy. Remaining housekeeping: `src/components/shadcn/chart.tsx` imports recharts but has **zero importers** (Law 3: archive, don't delete), and keep main under budget as T3/T4/T5 features land | `src/components/shadcn/chart.tsx` (archive), watch `npm run build` | main chunk stays < 200 kB gzip; no new eager import of zxing/recharts |
 
 ---
 
@@ -344,19 +346,28 @@ However, the audit reveals **10 high-value optimization opportunities** that wou
 |------|----------|--------|
 | `src/components/ui/DataTable.tsx` | `DataTableShell` | Integrate `@tanstack/react-virtual`; `overscan: 5` |
 | `src/components/ui/SearchInput.tsx` | `SearchInput` | Add `debounceMs` prop (default 250) — no internal debounce today |
-| `src/modules/inventory/Inventory.tsx` | `setSearchTerm` (line 1322) | Debounce before URL write; stops the 4-queries-per-keystroke fan-out (`chipCounts` at :1550 + list at :1516) |
+| `src/modules/inventory/Inventory.tsx` | `setSearchTerm` (≈line 1323) | Debounce before URL write; stops the 4-queries-per-keystroke fan-out (`chipCounts` at ≈:1551 + list at ≈:1516) |
 | `src/modules/rentals/RentalsList.tsx` | header `SearchInput` (line 1789) | Debounce before `f.setSearch`; stops list + viewCounts re-fire per keystroke |
 | `src/modules/today/DashboardMovementPanel.tsx` | `DashboardMovementPanel` | Virtualize rows (line 251 `.map()` renders all) |
 | `src/modules/today/Today.tsx` | `pickupFilter`/`returnFilter` | Wrap in `useMemo` with stable deps |
 
 ### 9.4 Database
 
+> **Claim the number first** in `docs/plans/MIGRATION_LEDGER.md` (highest file today is `0200`;
+> the ledger header's "Next free number: 0190" is **stale** — flag it when the claim is made).
+> **Use plain `CREATE INDEX IF NOT EXISTS`, not `CONCURRENTLY`:** migration files carry their own
+> `begin;`/`commit;` (`0189_delivery_zones.sql:10`; `scripts/check-pglite.mjs:94` — "Each migration
+> carries its own begin/commit"), and Postgres refuses `CREATE INDEX CONCURRENTLY` inside a
+> transaction. The local gate rebuilds from scratch, so the online-build benefit is not needed;
+> on live, Babin's apply batch runs the same file — a brief write lock on these tables is the
+> correct trade at this data size (246 bookings).
+
 | File | Change |
 |------|--------|
-| `supabase/migrations/XXX_performance_indexes.sql` | `CREATE INDEX CONCURRENTLY idx_bookings_stage_pickup ON bookings(stage, pickup_at) WHERE cancelled_at IS NULL;` |
-| `supabase/migrations/XXX_performance_indexes.sql` | `CREATE INDEX CONCURRENTLY idx_bookings_client_stage ON bookings(client_id, stage) WHERE cancelled_at IS NULL;` |
-| `supabase/migrations/XXX_performance_indexes.sql` | `CREATE INDEX CONCURRENTLY idx_booking_lines_booking_type ON booking_lines(booking_id, line_type) WHERE voided_at IS NULL;` |
-| `supabase/migrations/XXX_performance_indexes.sql` | `CREATE INDEX CONCURRENTLY idx_product_units_product_status ON product_units(product_id, status) WHERE retired_at IS NULL;` |
+| `supabase/migrations/0201_performance_indexes.sql` (claim first) | `CREATE INDEX IF NOT EXISTS idx_bookings_stage_pickup ON bookings(stage, pickup_at) WHERE cancelled_at IS NULL;` |
+| same file | `CREATE INDEX IF NOT EXISTS idx_bookings_client_stage ON bookings(client_id, stage) WHERE cancelled_at IS NULL;` |
+| same file | `CREATE INDEX IF NOT EXISTS idx_booking_lines_booking_type ON booking_lines(booking_id, line_type) WHERE voided_at IS NULL;` |
+| same file | `CREATE INDEX IF NOT EXISTS idx_product_units_product_status ON product_units(product_id, status) WHERE retired_at IS NULL;` |
 
 ---
 
@@ -393,7 +404,7 @@ However, the audit reveals **10 high-value optimization opportunities** that wou
 | `PERF-01` | Add `AbortController` to `useList` | `src/lib/queries/useList.ts` | S |
 | `PERF-02` | Virtualize `DataTableShell` | `src/components/ui/DataTable.tsx` | M |
 | `PERF-03` | FloorBooking shared cache context | `src/modules/operations/OperationsWorkspaceContext.tsx` | M |
-| `PERF-04` | Composite DB indexes migration | `supabase/migrations/XXX_performance_indexes.sql` | S |
+| `PERF-04` | Composite DB indexes migration | `supabase/migrations/0201_performance_indexes.sql` (claim in ledger first — §9.4) | S |
 | `PERF-05` | Throttle `floorScanStorage` autosave (500ms trailing) | `src/lib/floorScanStorage.ts`, `PackingWorkspace.tsx:704-720`, `ReturnWorkspace.tsx:703-725` (only these two autosave) | S |
 | `PERF-06` | Prefetch next floor screen | `src/lib/routePreload.ts`, `OperationsWorkspaceContext.tsx` | S |
 
@@ -406,7 +417,7 @@ However, the audit reveals **10 high-value optimization opportunities** that wou
 | `PERF-09` | Virtualize `DashboardMovementPanel` | `src/modules/today/DashboardMovementPanel.tsx` | S |
 | `PERF-10` | Memoize row components (`React.memo`) | All `*Row` components | S |
 | `PERF-11` | Stabilize `facets` in `inventoryQuery` | `src/lib/queries/inventory.ts` | S |
-| `PERF-12` | Bundle analysis — lazy load `recharts` | `vite.config.ts`, `RevenueReport.tsx` | S |
+| `PERF-12` | Bundle housekeeping — archive dead `shadcn/chart.tsx` (zero importers); keep main < 200 kB gzip (currently 153.55 kB) | `src/components/shadcn/chart.tsx` → `src/archive/ui/`, watch `npm run build` | S |
 
 ---
 
@@ -474,7 +485,7 @@ trade taps for speed. The measured baselines from `PROGRESS.md` 2026-09-19 (d):
 
 | Flow | Taps (code-derived baseline) | Budget | Perf rule |
 |------|------------------------------|--------|-----------|
-| Mark one floor item by scan (Pack/Handover/Return) | 1 act (scan commits the mark) | 1 | Direct-mark (P1-3) must keep it at 1 tap — remove the modal, never add a confirm |
+| Mark one floor item by scan (Pack/Handover/Return) | 1 act (scan commits the mark) | 1 | The debounce (P0-6) applies to SEARCH only — scans are never debounced (usability doc §5); never add a confirm to a scan |
 | One floor stage from a Today row (e.g. Packing) | 2 (row action → Confirm) | ≤ 3 | Prefetch (P1-4) must not add a step |
 | Record Payment from booking detail | 3 taps, 1 typed | ≤ 4 | Unchanged by any perf work |
 | Record Payment from the Rentals list | ~5 taps (invoice pick adds one) | ≤ 4 | Merged RPC (P0-4) must not add a pick |
@@ -511,19 +522,142 @@ trade taps for speed. The measured baselines from `PROGRESS.md` 2026-09-19 (d):
 | **Supabase Requests** | Single-query discipline | Waterfall: drafts→bookings→subrentals | Network tab | Merged RPC, ETags |
 | **N+1 Queries** | None in list queries | Unit expansion in Inventory | EXPLAIN ANALYZE | Batch unit fetch |
 | **Search/Filter Delay** | `PackingWorkspace` row filter debounced 200ms; Today search is Enter-only | **0ms debounce on Rentals + Inventory** (keystroke fan-out: Inventory = 4 queries/keystroke) | Keystroke→response | Debounced `SearchInput` (P0-6), unified hook (P1-2) |
-| **Heavy Modals** | Scanner modal on every scan | Camera modal blocks rapid scan | Interaction latency | Direct-mark for barcode |
+| **Main-thread writes** | Bluetooth bursts mark locally (no network) | Synchronous `localStorage` autosave per scan (Packing/Return) | Device Profiler (jank) | Throttle to 500ms trailing (P1-3) |
 | **Layout Shifts** | DataAgeBadge async | KPI strips, async chips | CLS score | Skeleton placeholders |
-| **Bundle Size** | Manual chunks defined | `vendor-charts` (recharts) eager | `npm run build` analysis | Lazy load charts |
+| **Bundle Size** | **MEASURED**: main 153.55 kB gzip; scanner + charts verified lazy; Today route only 9.64 kB gzip | — (Vite >500 kB raw warning only; not a gzip problem) | Field Lighthouse; entry total ≈338 kB gzip | P2-5: archive dead `shadcn/chart.tsx`, hold the budget |
 
 ---
 
 ## 14. Next Steps
 
-1. **Immediate (This Week):** Implement P0-1 (AbortController), P0-5 (indexes migration), P1-2 (debounce hook)
+1. **Immediate (This Week):** Implement P0-1 (AbortController), P0-5 (indexes migration), P0-6 (search debounce), fix the lint gate (§15)
 2. **Week 2:** P0-2 (virtualization), P0-3 (client search), P1-1 (shared floor cache)
 3. **Week 3:** P0-4 (merged RPC), P1-3 (autosave throttle), P1-4 (prefetch)
 4. **Device Day:** Run full measurement protocol on physical devices
 5. **Go-Live Gate:** All P0 targets met on real devices with real data volumes
+
+---
+
+## 15. Gate Status & Repo-Health Findings (measured — not estimated)
+
+The mission asked for `typecheck`, `test`, `lint` and `build` to be run where possible. They were, on
+**HEAD `a26bff96`** (`fix(delivery-zones): resolve strict typecheck and test mocks for T4-07`,
+31 Oct 2026 22:25 +0545). **The repository moved while this audit ran** — an earlier HEAD in this
+same session (`9e219db4 "mix all"`) failed `typecheck` with **20 errors** (5 `deliveryZones` test
+files importing `../../../../lib/supabase` — one `../` too far; `LineItemTree.tsx` half-renamed
+`_stock`/`stock`; `DeliveryZonesControl.tsx` calling `price()` (the pricing pipeline, `PriceInput →
+PriceBreakdown`) where it meant `formatMoney(zone.fee_paisa)`). Those 20 were fixed by `a26bff96`
+before this section was written — recorded here because a red `main` window is exactly what the
+"CI is off" gate list (W75 / `docs/plans/README.md`) exists to prevent.
+
+| Gate | Command | Result on `a26bff96` | Evidence |
+|------|---------|----------------------|----------|
+| **Typecheck** | `npm run typecheck` | ✅ **PASS — 0 errors** | `tsc --noEmit`, clean exit |
+| **Lint** | `npm run lint` | ❌ **FAIL — 3 errors** (0 warnings) | `eslint src --max-warnings 0` → exit 1 |
+| **Build** | `npm run build` | ✅ **PASS** — 8,286 modules, built in 19m 24s | `tsc && vite build` → `dist/`; chunk table below |
+| **Tests** | `VITE_DATA_SOURCE=mock npm test` | ❌ **5 files failed / 511 passed (516); 6 tests failed / 6,330 passed (6,336)** — 1,423s (23.7 min). One failure is a **Law 15 violation**: the banned word "customer" in `BookingConflictModal.tsx:328` | §15.2 below |
+| **Lifecycle** | `npm run check:lifecycle` | ❌ **RED — 31/46** per the T3-14b PROGRESS entry (31 Oct) — steps L6–L11, L13, L16, L21, L30, L31, L34–L37 "are test updates needed for new Draft-on-Confirm behaviour; L16 is a pre-existing void_invoice issue" | NOT re-run by this audit (inherited receipt — `PROGRESS.md`, T3-14b entry) |
+| **Unit tests (prior receipt)** | `VITE_DATA_SOURCE=mock npm test` | ⚠️ **1 known failing file** per T3-14b: `useNewRentalTiming`; the newest entry adds `realWorkspaceGuidance.test.tsx` **7/7 failing on `main`** | Inherited receipts (`PROGRESS.md`, 31 Oct) — this audit re-runs the suite; result below |
+| **DB rebuild** | `npm run check:pglite` | ✅ **189/189 applied, 0 failed** per T3-14b | Inherited receipt — not re-run here |
+
+### 15.0 Measured production bundle (replaces the estimates in §2)
+
+`vite build` output, 31 Oct 2026, `a26bff96` — raw / **gzip**:
+
+| Chunk | Raw | gzip | Notes |
+|-------|-----|------|-------|
+| `main-*.js` | 543.80 kB | **153.55 kB** | ⚠️ >500 kB post-minify warning from Vite |
+| `vendor-scanner` (zxing) | 453.49 kB | **117.44 kB** | Separate chunk — must stay lazy (scanner modal only) |
+| `vendor-charts` (recharts) | 365.48 kB | **107.40 kB** | Separate chunk — report routes only |
+| `NewRental` | 289.37 kB | **79.67 kB** | Heaviest route chunk |
+| `vendor-supabase` | 218.41 kB | 57.01 kB | Entry graph |
+| `vendor-react` | 180.07 kB | 59.20 kB | Entry graph |
+| `vendor-base-ui` | 178.35 kB | 61.30 kB | Entry graph |
+| `Settings` | 169.07 kB | 44.67 kB | Route chunk |
+| `Inventory` | 160.70 kB | 44.62 kB | Route chunk |
+| `Finance` | 143.37 kB | 39.59 kB | Route chunk |
+| `Clients` | 130.67 kB | 37.88 kB | Route chunk |
+| `BookingDetail` | 129.67 kB | 33.72 kB | Route chunk |
+| `vendor-dexie` | 96.36 kB | 32.43 kB | Outbox only |
+| `Calendar` | 90.34 kB | 23.92 kB | Route chunk |
+| `RentalsList` | 85.25 kB | 24.89 kB | Route chunk |
+| `PackingWorkspace` | 51.61 kB | 15.02 kB | Route chunk |
+| `Today` | 28.27 kB | **9.64 kB** | Route chunk — code-splitting works |
+| `main-*.css` | 86.70 kB | 19.70 kB | |
+| `Today-*.css` | 70.30 kB | 10.08 kB | Largest route stylesheet |
+
+**Entry-graph total** (main + react + supabase + base-ui + icons): **≈ 338 kB gzip** — the
+number a cold warehouse-tablet load pays before any route chunk. Measurements pending on a
+real device + network (Lighthouse); the numbers above are build-time facts, not field data.
+Vite also warns of two dual-import chunking inefficiencies (`rbac.ts` dynamic+static,
+`localStore.ts` dynamic+static) — harmless but explains why those modules cannot be split.
+
+**Lazy-load verification (checked, not assumed):**
+- `vendor-scanner` (117.44 kB gzip) — **lazy**. `ScannerFab.tsx:3-4` imports zxing as
+  **type-only** and loads the runtime with `import('@zxing/browser')` inside the scan handler
+  (`ScannerFab.tsx:175`); `BarcodeScannerModal` (the only static importer) sits behind lazy
+  floor routes. ZXing never loads on a cold `/today`.
+- `vendor-charts` (107.40 kB gzip) — **lazy**. Only `ReportChartCard → ReportChart` imports
+  recharts, and every importer of that card is a lazy report route (`RevenueReport`,
+  `InventoryReports`, …). `components/shadcn/chart.tsx` imports recharts too but has **no
+  importers** in `src/` (dead file — candidate for Law-3 archive, not deletion).
+- **PWA precache:** `265 entries (7,580.21 KiB ≈ 7.4 MB)` — the full offline install cost,
+  deliberately cache-first so the warehouse works with no signal (`vite.config.ts` — fonts
+  in `globPatterns`). Includes both Devanagari families (~540 KB raw: Asar 294 KB + Hind
+  ~218 KB) — intended, English-only users still download them at install.
+
+### 15.1 The 3 lint failures — exact fixes (small, independent, no product decision)
+
+| # | File:line | Error | Cause | Minimal fix |
+|---|-----------|-------|-------|-------------|
+| L-1, L-2 | `src/modules/inventory/DepositSetup.tsx:25,27` | `ban-ts-comment` — use `@ts-expect-error` instead of `@ts-ignore` | **Corrected 1 Nov while applying the fix:** the two `@ts-ignore` comments **were** suppressing real errors — `TS6133: '_embedded'/'_onDone' is declared but its value is never read` (proven when removing only the comments turned `typecheck` red). The original "suppresses nothing" reading was wrong; `tsc` passed *because of* the suppressions. The file is a T3-02 stub (`// Implementation here`). | **Applied (committed):** delete both dead aliases and the two `_*-` interface members they served; take the unused props as `_props: DepositSetupProps` (`_`-prefixed params are exempt from `noUnusedParameters` — the same convention as `LineItemTree.tsx:24`'s `_name`). Caller `<DepositSetup embedded />` (`Inventory.tsx:1896`) is unaffected; the props stay in the interface for the T3-02 implementation. |
+| L-3 | `src/modules/rentals/booking/DeliverySection.tsx:130` | `prefer-const` — `'mounted' is never reassigned` | The second effect (zone-fee auto-fill) declares `let mounted = true` but **has no cleanup**, unlike the first effect at line 124 which returns `() => { mounted = false }`. The guard `if (mounted && …)` at :133 therefore guards nothing, and the state write can land after unmount. Lint's autofix (`const`) would silence the rule while keeping the dead guard — the real fix is the missing cleanup. | Add `return () => { mounted = false }` to the effect at :128-140. Resolves lint AND makes the guard real. |
+
+> **Process note for Babin:** both failures arrived with recent lane merges (T3-02 `af06b08a`,
+> T4-07 `07731b00`) — exactly the class of defect the "run every gate before you say done" rule
+> (`AGENTS.md` → verification order; `docs/plans/README.md` → gates) catches when followed. The
+> earlier 20-error window was fixed commit-by-commit rather than reverted; no action needed there.
+
+### 15.2 The failing test files — measured, reproduced (1 Nov 2026)
+
+**Full suite** (`VITE_DATA_SOURCE=mock npm test`, started 00:00): **5 files failed / 511 passed (516);
+6 tests failed / 6,330 passed (6,336)** in 1,423 s.
+**Isolated re-run** of exactly those 5 files (00:48, HEAD `c3121769`): **4 of 5 reproduce;
+`RecordForm.test.tsx` passes alone → that one failure is order-dependent (flaky under the full run),
+not a current defect.** The repo advanced again during this work
+(`a26bff96 → 4730a832 "nimtron" → c3121769 "nem"`), and an **uncommitted** edit to
+`scripts/e2e-lifecycle.mjs` was present in the tree — re-verify before acting on any line here.
+
+| # | File | Failure (reproduced) | Reading | Owner |
+|---|------|----------------------|---------|-------|
+| T-1 | `src/lib/__tests__/law17.test.ts` | `BookingConflictModal.tsx:328` contains **"6. Keep draft & contact customer"** — the word "customer" is banned in the UI layer (Law 15 / Law 17; `CLAUDE.md` "the word 'customer' appears nowhere"). | **A product-law violation on `main`, not a stale test.** One-word copy fix: "client". From the smart-availability/conflict-modal work (`eaff8493`). | Rentals (that file's owner) |
+| T-2, T-3 | `src/lib/__tests__/rentalMoreActionsRegistry.test.ts` (2 tests) | The registry returns **6 action groups** where the specification matrix expects 5 (`expect(groups).toHaveLength(5)`). | Either the new group must join the matrix (test update) or it should not exist (code change) — **cannot be decided from the test alone**; the owning lane knows which group it added. | Rentals actions |
+| T-4 | `src/actions/notes/__tests__/createTeamNote.test.ts` | Test expects **Warehouse and Driver** can create notes; current `rbac.canCreateTeamNote` (`rbac.ts:711-713`) admits **Owner/Admin/Manager/Coordinator only** (verified identical at `a26bff96` and HEAD). | The T4-04 PROGRESS entry recorded `isStaff(role)`; the shipped rule is narrower, and the T4-04 lifecycle step (L42) asserts all eight staff roles create notes. **UI ⊆ DB still holds (narrower UI is safe), but test, rbac and the DB gate now disagree on the product cell — needs a ruling + the B-3 move (PERMISSIONS.md + T-1 fixture) once decided.** | Lane B (T4-04) + a ruling |
+| T-5 | `src/components/records/__tests__/RecordForm.test.tsx` | Full run: focus landed on `record-name` instead of `record-pan_vat` after clicking the error summary. **Passes in isolation.** | Order-dependent/flaky — find the inter-test coupling or treat as contention noise from the shared runner; not currently a product defect. | UI kit |
+| T-6 | `src/modules/rentals/booking/__tests__/useNewRentalHooks.test.tsx` (`useNewRentalTiming`) | Default `pickupTime` is **'06:00'**; the test expects **'09:00'**. Known since the T3-14b entry ("1 pre-existing failure in `useNewRentalTiming`"). | Either the shipped default changed deliberately (06:00 matches the operational-day start) or the test is stale. **R-39 "defaults are doctrine" says whichever ships must be the deliberate value** — a one-line decision + matching edit. | New Rental (lane C) |
+
+### 15.3 Fixed / discovered since measurement
+
+- **Fixed 1 Nov (commit `7ba929c4`):** **T-1** (`BookingConflictModal` copy → "contact client"),
+  **L-1/L-2** (proper fix — the aliases and their suppressions removed; §15.1 row corrected),
+  **L-3** (the missing `useEffect` cleanup). Verified: `npm run lint` **0 errors**,
+  `typecheck` **0 errors**, full suite **513/516 files · 6,332/6,336 tests** (was 511/516 ·
+  6,330/6,336 — `law17` and `RecordForm` now green). Remaining 3 files / 4 tests:
+  T-2/T-3 (registry groups), T-4 (team-note cell — needs a ruling) and T-6 (New Rental default
+  time — needs a ruling).
+- **Newly measured: `npm run lint:ui-copy` is RED on main** — 4 developer-text violations
+  (lane-B files, none touched by this audit): `src/modules/notes/InternalNotesPage.tsx:816`,
+  `src/modules/settings/sections/LegacyExportControl.tsx:115`,
+  `src/modules/settings/sections/System.tsx:103`,
+  `src/modules/today/LegacyExportCard.tsx:110` — "(Law 3, D28)"-style references in user-visible
+  copy. For the owning lane.
+
+**Not re-run by this audit** (inherited receipts only, listed so nothing looks verified that is not):
+`check:pglite` (last receipt 189/189 ✔), `check:lifecycle` (last receipt: partially repaired —
+`debf5305` fixed 6 of the T3-14b failures, "7 failures pre-existing or test setup"), financial
+integrity, `check:security`, `test:server-contracts`, `test:partial-return`, `lint:shell`,
+`check:contrast`, `test:coverage`. The full gate list is `docs/plans/README.md` → "Gates every card
+must pass".
 
 ---
 

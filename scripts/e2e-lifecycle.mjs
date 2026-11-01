@@ -64,6 +64,7 @@ import { PGlite } from '@electric-sql/pglite'
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto'
 import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist'
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { beginVerification, finishVerification } from './test-receipt.mjs'
@@ -206,6 +207,35 @@ async function refuses(what, text, params, matcher) {
 
 function assert(condition, what) {
   if (!condition) throw new Refused(what)
+}
+
+/** Settle an invoice: issue it if Draft, then record payments to clear outstanding. */
+async function settleInvoice(bookingKey, actorId = U.Accounts) {
+  const invoiceId = await one(
+    'select id from invoices where booking_id = $1 and status in (\'Draft\', \'Sent\')',
+    [bookingIds[bookingKey]]
+  )
+  if (!invoiceId) return
+  // Issue if Draft - run as Accounts
+  const status = await one('select status from invoices where id = $1', [invoiceId])
+  if (status === 'Draft') {
+    await as('Accounts', async () => {
+      await q('select issue_invoice($1::jsonb)', [
+        JSON.stringify({ invoice_id: invoiceId, issued_by: actorId })
+      ])
+    })
+  }
+  // Pay to zero outstanding
+  const outstanding = Number(await one('select outstanding_amount from invoices where id = $1', [invoiceId]))
+  if (outstanding > 0) {
+    await as('Accounts', async () => {
+      await q(
+        `insert into payments (client_uuid, payment_no, booking_id, invoice_id, client_id, branch_id, amount, payment_type, payment_date, received_by)
+         values (gen_random_uuid(), next_document_number('payment'), $1, $2, $3, $4, $5, 'Advance Payment', now(), $6)`,
+        [bookingIds[bookingKey], invoiceId, CLIENT, BRANCH, outstanding, U.Accounts]
+      )
+    })
+  }
 }
 
 function assertEq(actual, expected, what) {
@@ -434,7 +464,7 @@ async function actionPackRental({ key, actor, units }) {
   return { sessionId: packingSessionId }
 }
 
-async function actionHandoverRental({ key, actor, signerName = 'Lifecycle Client Signer', deliveryMethod = 'Client Pickup', verified = true }) {
+async function actionHandoverRental({ key, actor, signerName = 'Lifecycle Client Signer', deliveryMethod = 'Client Pickup', verified = true, reason = 'Handover completed with client signature' }) {
   const bookingId = bookingIds[key]
   const currentStage = await stageOf(key)
   assert(currentStage === 'Packed', `actionHandoverRental: booking ${key} must be Packed, got ${currentStage}`)
@@ -454,7 +484,7 @@ async function actionHandoverRental({ key, actor, signerName = 'Lifecycle Client
      values (gen_random_uuid(), $1, 'Receiver', $2, now(), 'iPad-1', true, $3)`,
     [handoverSessionId, signerName, U[actor]],
   )
-  await transition(key, 'Packed', 'On Rent', actor)
+  await transition(key, 'Packed', 'On Rent', actor, { reason })
   await q(`update operation_sessions set state = 'Completed' where id = $1`, [handoverSessionId])
   return { sessionId: handoverSessionId }
 }
@@ -576,7 +606,7 @@ const STEPS = [
               description: 'Lifecycle Serialised Camera',
               qty: 1,
               days: 2,
-              rate: 3500,
+              rate: 350000,
               units: [UNITS[0]],
             },
           ],
@@ -644,7 +674,7 @@ const STEPS = [
               description: 'Lifecycle Serialised Camera',
               qty: 1,
               days: 2,
-              rate: 3500,
+              rate: 350000,
               units: [UNITS[0]],
             },
           ],
@@ -686,7 +716,7 @@ const STEPS = [
               description: 'Lifecycle Serialised Camera',
               qty: 1,
               days: 2,
-              rate: 3500,
+              rate: 350000,
               units: [UNITS[0]],
             },
           ],
@@ -792,6 +822,7 @@ const STEPS = [
           key: 'a',
           actor: 'Warehouse',
           signerName: 'Lifecycle Client Signer',
+          reason: 'Handover completed with client signature',
         })
       })
 
@@ -846,41 +877,29 @@ const STEPS = [
     title: 'Accounts raises and issues the invoice: figures snapshot and become immutable (R-15, Law 4)',
     expect: 'green',
     async run() {
-      await as('Accounts', async () => {
-        const result = await one('select create_invoice($1::jsonb)', [
-          JSON.stringify({
-            client_uuid: crypto.randomUUID(),
-            created_by: U.Accounts,
-            booking_id: bookingIds.a,
-            vat_rate: 0.13,
-          }),
-        ])
-        invoiceId = result.invoice_id
-        assert(invoiceId !== undefined && invoiceId !== null, 'create_invoice returned no invoice id')
-      })
-
+      // Since T3-14b creates a Draft invoice on Confirm, the invoice already exists.
+      // Query the existing Draft invoice for booking 'a'.
       await asOwnerOfTheDatabase(async () => {
         const row = (
           await q(
-            'select subtotal, discount_amount, taxable_amount, vat_amount, total_amount, status::text from invoices where id = $1',
-            [invoiceId],
+            'select id, subtotal, discount_amount, taxable_amount, vat_amount, total_amount, status::text from invoices where booking_id = $1 and status = \'Draft\'',
+            [bookingIds.a],
           )
         ).rows[0]
+        invoiceId = row.id
+        assert(invoiceId !== undefined && invoiceId !== null, 'Draft invoice exists for booking a')
 
-        /* Recomputed here from rate x qty x days, never read back and compared
-           with itself — R-27. 1 x 2 x 3500 = 7000; 10% of that is 700; 13% of
-           6300 is 819; the total is 7119. */
-        const subtotal = 1 * 2 * 3500
-        const discount = Math.round(subtotal * 0.1)
-        const taxable = subtotal - discount
-        const vat = Math.round(taxable * 0.13)
+        assertEq(row.status, 'Draft', 'invoice is in Draft status')
+        assertEq(Number(row.subtotal), 700000, 'subtotal = 1 unit × 2 days × 350000 = 700000 (before discount)')
+        assertEq(Number(row.discount_amount), 70000, 'discount = 10% of 700000 = 70000')
+        assertEq(Number(row.taxable_amount), 630000, 'taxable = 700000 - 70000 = 630000')
+        assertEq(Number(row.vat_amount), 81900, 'vat = 13% of 630000 = 81900')
+        assertEq(Number(row.total_amount), 711900, 'total = 630000 + 81900 = 711900')
 
-        assertEq(Number(row.subtotal), subtotal, 'invoice subtotal')
-        assertEq(Number(row.discount_amount), discount, 'invoice discount')
-        assertEq(Number(row.taxable_amount), taxable, 'invoice taxable amount')
-        assertEq(Number(row.vat_amount), vat, 'invoice VAT')
-        assertEq(Number(row.total_amount), taxable + vat, 'invoice total')
-        assertEq(row.status, 'Draft', 'a new invoice is a Draft')
+        // Draft invoices are mutable - changing notes should succeed
+        await q('update invoices set notes = \'Test note\' where id = $1', [invoiceId])
+        const updated = await one('select notes from invoices where id = $1', [invoiceId])
+        assertEq(updated, 'Test note', 'Draft invoice notes can be changed')
       })
 
       /* Issue the invoice: mints invoice_no (R-15), sets issue_date, and advances status to Sent */
@@ -971,7 +990,7 @@ const STEPS = [
     expect: 'green',
     async run() {
       await as('Accounts', async () => {
-        for (const amount of [3000, 4119]) {
+        for (const amount of [300000, 411900]) {
           await q(
             `insert into payments
                (client_uuid, payment_no, booking_id, invoice_id, client_id, branch_id, amount, payment_type, payment_date, received_by)
@@ -985,7 +1004,7 @@ const STEPS = [
         const row = (
           await q('select paid_amount, outstanding_amount, status::text from invoices where id = $1', [invoiceId])
         ).rows[0]
-        assertEq(Number(row.paid_amount), 7119, 'paid_amount')
+        assertEq(Number(row.paid_amount), 711900, 'paid_amount (paisa)')
         assertEq(Number(row.outstanding_amount), 0, 'outstanding_amount')
         assertEq(row.status, 'Paid', 'invoice status is Paid')
       })
@@ -1030,15 +1049,17 @@ const STEPS = [
         'closed_at was set by the transition',
       )
 
-      /* The REFUSED half, on booking `c` — Booked, and never invoiced. Undone,
+      /* The REFUSED half, on booking `c` — Booked, and never invoiced/settled. Undone,
          because walking a second booking to Closed for the sake of an assertion
          would leave a closed booking in the corpus and Closed is final. */
       const closedWithNoInvoice = await undone(async () => {
         await as('Warehouse', async () => {
           await actionPackRental({ key: 'c', actor: 'Warehouse', units: [{ id: UNITS[0], serial: 'SN-C1' }] })
-          await actionHandoverRental({ key: 'c', actor: 'Warehouse', signerName: 'Lifecycle Client Signer' })
+          await actionHandoverRental({ key: 'c', actor: 'Warehouse', signerName: 'Lifecycle Client Signer', reason: 'Handover completed with client signature' })
           await actionReturnRental({ key: 'c', actor: 'Warehouse', returnedUnits: [{ id: UNITS[0] }] })
         })
+
+        // Settle invoice is NOT called here because we are verifying that an unsettled booking CANNOT close!
         await as('Coordinator', async () => {
           try {
             await transition('c', 'Returned', 'Closed', 'Coordinator')
@@ -1457,7 +1478,7 @@ const STEPS = [
                 description: 'Schedule ownership camera',
                 qty: 1,
                 days: 2,
-                rate: 3500,
+                rate: 350000,
                 units: [UNITS[1]],
               },
             ],
@@ -1535,7 +1556,7 @@ const STEPS = [
       await undone(async () => {
         await as('Manager', async () => {
           const paymentId = await one(
-            `select id from payments where booking_id = $1 and amount = 3000 order by created_at limit 1`,
+            `select id from payments where booking_id = $1 and amount = 300000 order by created_at limit 1`,
             [bookingIds.a],
           )
           assert(paymentId !== null, 'L19 needs L10\'s Rs 3,000 receipt.')
@@ -1543,7 +1564,7 @@ const STEPS = [
           await q(
             `insert into payment_reversals
                (client_uuid, reversal_no, original_payment_id, amount, reason, reversed_by, approved_by)
-             values (gen_random_uuid(), 'REV-L19-0001', $1, 2500, 'Lifecycle partial correction', $2, $2)`,
+             values (gen_random_uuid(), 'REV-L19-0001', $1, 250000, 'Lifecycle partial correction', $2, $2)`,
             [paymentId, U.Manager],
           )
 
@@ -1551,7 +1572,7 @@ const STEPS = [
             'a second partial reversal beyond the remaining Rs 500',
             `insert into payment_reversals
                (client_uuid, reversal_no, original_payment_id, amount, reason, reversed_by, approved_by)
-             values (gen_random_uuid(), 'REV-L19-0002', $1, 501, 'Lifecycle excess correction', $2, $2)`,
+             values (gen_random_uuid(), 'REV-L19-0002', $1, 50100, 'Lifecycle excess correction', $2, $2)`,
             [paymentId, U.Manager],
             /remaining reversible amount|exceeds/i,
           )
@@ -1618,7 +1639,7 @@ const STEPS = [
               description: 'Consumable-probe camera',
               qty: 1,
               days: 2,
-              rate: 3500,
+              rate: 350000,
               units: [UNITS[2]],
             },
             {
@@ -1647,7 +1668,27 @@ const STEPS = [
           [packingSessionId, bookingIds.cons, SERIAL_PRODUCT, UNITS[2], U.Warehouse],
         )
         await transition('cons', 'Booked', 'Packed', 'Warehouse')
+      })
 
+      // Settle invoice before handover to satisfy R-06 gate (run independently so role is not clobbered)
+      await as('Accounts', async () => {
+        const draftInvoiceId = await one('select id from invoices where booking_id = $1 and status = \'Draft\'', [bookingIds.cons])
+        if (draftInvoiceId) {
+          await q('select issue_invoice($1::jsonb)', [
+            JSON.stringify({ invoice_id: draftInvoiceId, issued_by: U.Accounts })
+          ])
+          // Pay the outstanding amount
+          const outstanding = Number(await one('select outstanding_amount from invoices where id = $1', [draftInvoiceId]))
+          if (outstanding > 0) {
+            await q(
+              `insert into payments (client_uuid, payment_no, booking_id, invoice_id, client_id, branch_id, amount, payment_type, payment_date, received_by)
+               values (gen_random_uuid(), next_document_number('payment'), $1, $2, $3, $4, $5, 'Advance Payment', now(), $6)`,
+            [bookingIds.cons, draftInvoiceId, CLIENT, BRANCH, outstanding, U.Accounts])
+          }
+        }
+      })
+
+      await as('Warehouse', async () => {
         const handoverSessionId = crypto.randomUUID()
         await q(
           `insert into operation_sessions (id, client_uuid, booking_id, operation, session_no, state, delivery_method, warehouse_staff_id, created_by, government_id_verified, booking_authorization_verified)
@@ -1827,7 +1868,7 @@ const STEPS = [
               description: 'Extension Lifecycle Test Camera',
               qty: 1,
               days: 2,
-              rate: 3500,
+              rate: 350000,
               units: [UNITS[2]],
             },
           ],
@@ -2200,9 +2241,12 @@ const STEPS = [
       const result = await undone(async () => {
         await as('Warehouse', async () => {
           await actionPackRental({ key: 'c', actor: 'Warehouse', units: [{ id: UNITS[0], serial: 'SN-C1' }] })
-          await actionHandoverRental({ key: 'c', actor: 'Warehouse', signerName: 'Lifecycle Client Signer' })
+          await actionHandoverRental({ key: 'c', actor: 'Warehouse', signerName: 'Lifecycle Client Signer', reason: 'Handover completed with client signature' })
           await actionReturnRental({ key: 'c', actor: 'Warehouse', returnedUnits: [{ id: UNITS[0] }] })
         })
+
+        // Settle invoice before close to satisfy close gate
+        await settleInvoice('c', U.Accounts)
 
         /* A deposit of 5,000 collected in full and never returned: HELD. */
         await asOwnerOfTheDatabase(async () => {
@@ -2332,7 +2376,7 @@ STEPS.push({
     await undone(async () => {
       await as('Warehouse', async () => {
         await actionPackRental({ key: 'c', actor: 'Warehouse', units: [{ id: UNITS[0], serial: 'SN-C1' }] })
-        await actionHandoverRental({ key: 'c', actor: 'Warehouse', signerName: 'Lifecycle Client Signer' })
+        await actionHandoverRental({ key: 'c', actor: 'Warehouse', signerName: 'Lifecycle Client Signer', reason: 'Handover completed with client signature' })
       })
       const request = { booking_id: bookingIds.c, client_uuid: crypto.randomUUID(), action: 'revert', target_stage: 'Booked', reason: 'Attempt after equipment handed over' }
       await reject('Manager', 'cannot reverse custody', 'select manage_rental_lifecycle($1::jsonb)', [JSON.stringify(request)], /before handover/i)
@@ -2533,7 +2577,7 @@ STEPS.push({
               description: 'Lifecycle Serialised Camera',
               qty: 1,
               days: 2,
-              rate: 3500,
+              rate: 350000,
               units: [UNITS[0]],
             },
           ],
@@ -2552,6 +2596,9 @@ STEPS.push({
           units: [{ id: UNITS[0], serial: 'LCSN-001' }],
         })
       })
+
+      // Settle invoice before handover to satisfy R-06 gate
+      await settleInvoice('l34', U.Accounts)
 
       // Handover session with unverified receiver (verified = false)
       const handoverSessionId = crypto.randomUUID()
@@ -2655,7 +2702,7 @@ STEPS.push({
               description: 'Lifecycle Camera for Technician',
               qty: 1,
               days: 2,
-              rate: 3500,
+              rate: 350000,
               units: [UNITS[0]],
             },
           ],
@@ -2690,6 +2737,10 @@ STEPS.push({
           units: [{ id: UNITS[0], serial: 'LCSN-001' }],
         })
       })
+
+      // Settle invoice before Technician handover to satisfy R-06 gate
+      await settleInvoice('l35', U.Accounts)
+
       assertEq(await stageOf('l35'), 'Packed', 'Technician advanced booking to Packed')
 
       // Technician performs Handover -> On Rent
@@ -2700,6 +2751,7 @@ STEPS.push({
           signerName: 'Tech Handover Client',
           deliveryMethod: 'Client Pickup',
           verified: true,
+          reason: 'Handover completed with client signature',
         })
       })
       assertEq(await stageOf('l35'), 'On Rent', 'Technician advanced booking to On Rent')
@@ -2743,7 +2795,7 @@ STEPS.push({
               description: 'Lifecycle Camera for Collateral Deposit',
               qty: 1,
               days: 2,
-              rate: 3500,
+              rate: 350000,
               units: [UNITS[0]],
             },
           ],
@@ -2770,6 +2822,23 @@ STEPS.push({
           actor: 'Warehouse',
           units: [{ id: UNITS[0], serial: 'LCSN-001' }],
         })
+      })
+
+      // Settle invoice before handover to satisfy R-06 gate
+      await as('Accounts', async () => {
+        const draftInvoiceId = await one('select id from invoices where booking_id = $1 and status = \'Draft\'', [bookingIds.l36])
+        if (draftInvoiceId) {
+          await q('select issue_invoice($1::jsonb)', [
+            JSON.stringify({ invoice_id: draftInvoiceId, issued_by: U.Accounts })
+          ])
+          const outstanding = Number(await one('select outstanding_amount from invoices where id = $1', [draftInvoiceId]))
+          if (outstanding > 0) {
+            await q(
+              `insert into payments (client_uuid, payment_no, booking_id, invoice_id, client_id, branch_id, amount, payment_type, payment_date, received_by)
+               values (gen_random_uuid(), next_document_number('payment'), $1, $2, $3, $4, $5, 'Advance Payment', now(), $6)`,
+            [bookingIds.l36, draftInvoiceId, CLIENT, BRANCH, outstanding, U.Accounts])
+          }
+        }
       })
 
       // Setup Handover session
@@ -2852,7 +2921,7 @@ STEPS.push({
               description: 'Lifecycle Camera for Collateral Close Gate',
               qty: 1,
               days: 2,
-              rate: 3500,
+              rate: 350000,
               units: [UNITS[0]],
             },
           ],
@@ -2881,6 +2950,7 @@ STEPS.push({
           signerName: 'Passport Signer',
           deliveryMethod: 'Client Pickup',
           verified: true,
+          reason: 'Handover completed with client signature',
         })
       })
       assertEq(await stageOf('l37'), 'On Rent', 'booking is On Rent')
@@ -2894,6 +2964,9 @@ STEPS.push({
         })
       })
       assertEq(await stageOf('l37'), 'Returned', 'booking is Returned')
+
+      // Settle the T3-14b Draft invoice to satisfy close gate
+      await settleInvoice('l37', U.Accounts)
 
       // Provide settled invoice
       await asOwnerOfTheDatabase(async () => {
@@ -3439,48 +3512,132 @@ STEPS.push({
   expect: 'green',
   run: async () => {
     await undone(async () => {
-      const handoverId = crypto.randomUUID()
       const clientUuid1 = crypto.randomUUID()
       const clientUuid2 = crypto.randomUUID()
+      const clientUuidWh = crypto.randomUUID()
 
-      // 1. Warehouse staff writes shift handover from Shift A to Shift B
+      // 1. Law 6: Warehouse (money-blind) is REFUSED from recording cash figures in create_shift_handover RPC
       await as('Warehouse', async () => {
-        await q(
-          `insert into shift_handovers (
-            id, client_uuid, shift_code, shift_date, from_user_id, from_user_name, from_user_role,
-            to_user_id, to_user_name, cash_counted_paisa, cash_status, cash_variance_paisa, notes, checklist
-          ) values (
-            $1, $2, 'A', current_date, $3, 'Hari KC', 'Warehouse',
-            $4, 'Raju Thapa', 1840000, 'matched', 0, 'Overlap window open — handed over keys and van',
-            '[{"key":"gear","label":"Out-gear walked through","done":true},{"key":"cash","label":"Cash counted","done":true}]'::jsonb
-          )`,
-          [handoverId, clientUuid1, U.Warehouse, U.Technician],
-        )
+        await q('savepoint wh_cash_probe')
+        try {
+          await refuses(
+            'Warehouse cannot record cash counted or variance in shift handover',
+            `select create_shift_handover(
+              $1, 'A', 'Hari KC', 'Warehouse', $2, 'Raju Thapa',
+              1840000, 'matched', 0, 'Overlap window open — keys and van'
+            )`,
+            [clientUuidWh, U.Technician],
+            /FORBIDDEN \(Law 6\): Money-blind role/i,
+          )
+        } finally {
+          await q('rollback to savepoint wh_cash_probe')
+          await q('release savepoint wh_cash_probe')
+        }
       })
 
-      // 2. Law 6: Warehouse reads null for cash figures in shift_handovers_v
+      // 2. Base table isolation: shift_handovers table contains NO cash columns
+      await as('Warehouse', async () => {
+        await q('savepoint col_probe')
+        try {
+          await refuses(
+            'cash_counted_paisa column does not exist on base table shift_handovers',
+            `select cash_counted_paisa from shift_handovers limit 1`,
+            [],
+            /column "cash_counted_paisa" does not exist/i,
+          )
+        } finally {
+          await q('rollback to savepoint col_probe')
+          await q('release savepoint col_probe')
+        }
+      })
+
+      // 3. Coordinator (money-seeing role) creates handover with cash figures via create_shift_handover RPC
+      let handoverId
+      await as('Coordinator', async () => {
+        const rows = (await q(
+          `select * from create_shift_handover(
+            $1, 'A', 'Sita Sharma', 'Coordinator', $2, 'Raju Thapa',
+            1840000, 'matched', 0, 'Overlap window open — handed over keys and van',
+            '[]'::jsonb,
+            '[{"key":"gear","label":"Out-gear walked through","done":true},{"key":"cash","label":"Cash counted","done":true}]'::jsonb
+          )`,
+          [clientUuid1, U.Technician],
+        )).rows
+        assertEq(rows.length, 1, 'Coordinator created shift handover')
+        handoverId = rows[0].id
+        assert(handoverId, 'Handover ID generated')
+        assertEq(rows[0].cash_counted_paisa, 1840000n, 'Coordinator receives cash figures in return')
+        assertEq(rows[0].cash_status, 'matched', 'Coordinator receives cash status in return')
+      })
+
+      // 4. Law 6: Warehouse reads null for cash figures and cash_status in shift_handovers_v
       await as('Warehouse', async () => {
         const rows = (await q(`select * from shift_handovers_v where id = $1`, [handoverId])).rows
         assertEq(rows.length, 1, 'Warehouse reads handover')
         assertEq(rows[0].shift_code, 'A', 'Shift code matches')
         assertEq(rows[0].cash_counted_paisa, null, 'Warehouse reads null for cash_counted_paisa (Law 6)')
         assertEq(rows[0].cash_variance_paisa, null, 'Warehouse reads null for cash_variance_paisa (Law 6)')
+        assertEq(rows[0].cash_status, null, 'Warehouse reads null for cash_status (Law 6)')
       })
 
-      // 3. Manager reads unmasked cash figures in shift_handovers_v
+      // 5. Law 6: Warehouse direct query on shift_handover_finances table returns 0 rows (RLS denied)
+      await as('Warehouse', async () => {
+        const rows = (await q(`select * from shift_handover_finances where handover_id = $1`, [handoverId])).rows
+        assertEq(rows.length, 0, 'Warehouse direct select on shift_handover_finances returns 0 rows')
+      })
+
+      // 6. Law 6: Warehouse cannot insert directly into shift_handover_finances (RLS denied)
+      await as('Warehouse', async () => {
+        await q('savepoint wh_finance_insert_probe')
+        try {
+          await refuses(
+            'Warehouse cannot insert into shift_handover_finances',
+            `insert into shift_handover_finances (handover_id, cash_counted_paisa) values ($1, 999900)`,
+            [handoverId],
+            /violates row-level security policy|permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint wh_finance_insert_probe')
+          await q('release savepoint wh_finance_insert_probe')
+        }
+      })
+
+      // 7. Manager reads unmasked cash figures in shift_handovers_v
       await as('Manager', async () => {
         const rows = (await q(`select * from shift_handovers_v where id = $1`, [handoverId])).rows
         assertEq(rows.length, 1, 'Manager reads handover')
         assertEq(rows[0].cash_counted_paisa, 1840000n, 'Manager reads unmasked cash_counted_paisa')
+        assertEq(rows[0].cash_status, 'matched', 'Manager reads unmasked cash_status')
         assertEq(rows[0].cash_variance_paisa, 0n, 'Manager reads unmasked cash_variance_paisa')
       })
 
-      // 4. Technician (incoming shift) acknowledges the handover
+      // 8. Self-acknowledgement is REFUSED: author (Coordinator) cannot acknowledge own handover
+      await as('Coordinator', async () => {
+        await q('savepoint self_ack_probe')
+        try {
+          await refuses(
+            'Staff cannot acknowledge their own shift handover',
+            `select acknowledge_shift_handover($1, 'Self ack attempt', 'Sita Sharma')`,
+            [handoverId],
+            /Staff cannot acknowledge their own shift handover/i,
+          )
+        } finally {
+          await q('rollback to savepoint self_ack_probe')
+          await q('release savepoint self_ack_probe')
+        }
+      })
+
+      // 9. Technician (incoming shift) acknowledges the handover; returns role-safe masked projection
       await as('Technician', async () => {
-        await q(
-          `select acknowledge_shift_handover($1, 'Received keys and counted till', 'Raju Thapa')`,
+        const ackRows = (await q(
+          `select * from acknowledge_shift_handover($1, 'Received keys and counted till', 'Raju Thapa')`,
           [handoverId],
-        )
+        )).rows
+        assertEq(ackRows.length, 1, 'Acknowledge RPC succeeds')
+        assertEq(ackRows[0].status, 'acknowledged', 'Status transitions to acknowledged')
+        assertEq(ackRows[0].cash_counted_paisa, null, 'Technician return payload masks cash_counted_paisa')
+        assertEq(ackRows[0].cash_status, null, 'Technician return payload masks cash_status')
+
         const row = (await q(`select * from shift_handovers where id = $1`, [handoverId])).rows[0]
         assertEq(row.status, 'acknowledged', 'Status transitions to acknowledged')
         assertEq(row.acknowledged_by, U.Technician, 'Acknowledged by Technician')
@@ -3488,13 +3645,29 @@ STEPS.push({
         assertEq(row.acknowledgement_note, 'Received keys and counted till', 'Note matches')
       })
 
-      // 5. Client role is denied access (RLS returns 0 rows)
+      // 10. Direct UPDATE on shift_handovers is REVOKED
+      await as('Technician', async () => {
+        await q('savepoint direct_update_probe')
+        try {
+          await refuses(
+            'Direct update on shift_handovers is revoked',
+            `update shift_handovers set notes = 'tampered' where id = $1`,
+            [handoverId],
+            /permission denied for table shift_handovers/i,
+          )
+        } finally {
+          await q('rollback to savepoint direct_update_probe')
+          await q('release savepoint direct_update_probe')
+        }
+      })
+
+      // 11. Client role is denied access (RLS returns 0 rows)
       await as('Client', async () => {
         const rows = (await q(`select * from shift_handovers where id = $1`, [handoverId])).rows
         assertEq(rows.length, 0, 'Client cannot read shift handovers (RLS returns 0 rows)')
       })
 
-      // 6. Client cannot insert shift handovers
+      // 12. Client cannot insert shift handovers
       await as('Client', async () => {
         await q('savepoint client_handover_probe')
         try {
@@ -3511,7 +3684,7 @@ STEPS.push({
         }
       })
 
-      // 7. Hard delete is refused by trigger / permissions (Law 3)
+      // 13. Hard delete is refused by trigger / permissions (Law 3)
       await as('Manager', async () => {
         await q('savepoint manager_delete_probe')
         try {
@@ -3527,7 +3700,7 @@ STEPS.push({
         }
       })
 
-      // 8. Archival via archive_shift_handover RPC
+      // 14. Archival via archive_shift_handover RPC
       await as('Manager', async () => {
         await q(`select archive_shift_handover($1)`, [handoverId])
         const row = (await q(`select * from shift_handovers where id = $1`, [handoverId])).rows[0]
@@ -3535,7 +3708,7 @@ STEPS.push({
         assert(row.archived_at, 'archived_at is set')
       })
 
-      // 9. Idempotent create_shift_handover via client_uuid (Law 8)
+      // 15. Idempotent create_shift_handover via client_uuid (Law 8)
       await as('Coordinator', async () => {
         const clientUuid3 = crypto.randomUUID()
         const row1 = (await q(
@@ -4003,6 +4176,345 @@ STEPS.push({
         const expectedZones = ['Bhaktapur', 'Boudha', 'Kirtipur', 'Outside Valley', 'Patan', 'Ring Road', 'Swoyambhu']
         for (const expected of expectedZones) {
           assert(names.includes(expected), `Default zone "${expected}" is seeded and active`)
+        }
+      })
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L47',
+  title: 'One-time rider link: staff-issued, hashed-token, money-blind read, pickup and delivery verbs, 24h expiration and revocation guards (T4-08/W49)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      const refusesSavepoint = async (what, sql, params, matcher) => {
+        await db.exec('savepoint rider_probe;')
+        try {
+          await refuses(what, sql, params, matcher)
+        } finally {
+          await db.exec('rollback to savepoint rider_probe; release savepoint rider_probe;')
+        }
+      }
+
+      // 1. Setup a delivery job for booking a
+      const jobId = '00000000-0000-4000-8000-00000000b991'
+      await q(`
+        insert into delivery_jobs (
+          id, client_uuid, booking_id, branch_id, leg, scheduled_at, status, created_by, updated_by
+        ) values (
+          $1, gen_random_uuid(), $2, $3, 'Outbound', now() + interval '2 hours', 'Scheduled', $4, $4
+        )
+      `, [jobId, bookingIds.a, BRANCH, U.Coordinator])
+
+      // Generate token and hash (SHA-256)
+      const rawToken = 'rider_sec_tok_128bit_test_payload_12345'
+      const tokenHash = createHash('sha256').update(rawToken).digest('hex')
+
+      // 2. Security: Unauthorized role (Client) cannot create rider link
+      await as('Client', async () => {
+        await refusesSavepoint(
+          'Client attempting to create rider link',
+          `select create_rider_link($1, $2, 'Ram Rider', '9801234567')`,
+          [jobId, tokenHash],
+          /Unauthorized|42501/i,
+        )
+      })
+
+      // 3. Coordinator creates the rider link
+      let linkId
+      await as('Coordinator', async () => {
+        linkId = (await q(
+          `select create_rider_link($1, $2, 'Ram Rider', '9801234567') as id`,
+          [jobId, tokenHash],
+        )).rows[0].id
+        assert(linkId, 'Rider link created successfully')
+      })
+
+      // 4. Money blindness (Law 6) & payload structure for rider
+      const jobData = (await q(`select get_rider_job_by_token($1) as data`, [tokenHash])).rows[0].data
+      assertEq(jobData.job_id, jobId, 'Job data contains correct job_id')
+      assertEq(jobData.rider_name, 'Ram Rider', 'Job data contains rider name')
+      assertEq(jobData.rider_phone, '9801234567', 'Job data contains rider phone')
+      assertEq(jobData.status, 'Scheduled', 'Initial status is Scheduled')
+      assert(jobData.pickup_address, 'Pickup address is provided')
+      assert(jobData.delivery_address, 'Delivery address is provided')
+      assert(jobData.contact_name, 'Contact name is provided')
+
+      // Assert NO money leakage in jobData
+      const rawJson = JSON.stringify(jobData).toLowerCase()
+      const forbiddenTerms = ['paisa', 'price', 'rate', 'deposit', 'total_amount', 'discount', 'invoice', 'credit']
+      for (const term of forbiddenTerms) {
+        assert(!rawJson.includes(`"${term}"`), `Law 6 violation: rider job payload contains money term "${term}"`)
+      }
+
+      // 5. Rider verb: mark picked up
+      const pickupRes = (await q(`select rider_mark_picked_up($1) as res`, [tokenHash])).rows[0].res
+      assertEq(pickupRes.status, 'In Transit', 'Rider marked job picked up')
+      const statusAfterPickup = await one(`select status from delivery_jobs where id = $1`, [jobId])
+      assertEq(statusAfterPickup, 'In Transit', 'delivery_jobs status updated to In Transit')
+
+      // 6. Rider verb: complete delivery with receiver name, signature, and photo
+      const completeRes = (await q(
+        `select rider_complete_delivery($1, 'Suman Receiver', '<svg>sig</svg>', 'https://minio/proof.jpg') as res`,
+        [tokenHash],
+      )).rows[0].res
+      assertEq(completeRes.status, 'Delivered', 'Rider marked delivery complete')
+      assertEq(completeRes.received_by, 'Suman Receiver', 'Receiver recorded')
+
+      const jobAfterDelivered = (await q(`select status, received_by, delivered_at from delivery_jobs where id = $1`, [jobId])).rows[0]
+      assertEq(jobAfterDelivered.status, 'Delivered', 'Job status is Delivered')
+      assertEq(jobAfterDelivered.received_by, 'Suman Receiver', 'Received by stored on job')
+      assert(jobAfterDelivered.delivered_at, 'Delivered at recorded')
+
+      // 7. Token ceases working once completed (W49)
+      await refusesSavepoint(
+        'Re-reading completed rider job',
+        `select get_rider_job_by_token($1)`,
+        [tokenHash],
+        /already been completed|no longer active/i,
+      )
+      await refusesSavepoint(
+        'Delivering already completed job',
+        `select rider_complete_delivery($1, 'Another Person')`,
+        [tokenHash],
+        /already been completed|already marked as Delivered/i,
+      )
+
+      // 8. Revocation test (W49)
+      const jobId2 = '00000000-0000-4000-8000-00000000b992'
+      await q(`
+        insert into delivery_jobs (
+          id, client_uuid, booking_id, branch_id, leg, scheduled_at, status, created_by, updated_by
+        ) values (
+          $1, gen_random_uuid(), $2, $3, 'Return', now() + interval '4 hours', 'Scheduled', $4, $4
+        )
+      `, [jobId2, bookingIds.a, BRANCH, U.Coordinator])
+
+      const rawToken2 = 'rider_sec_tok_second_test_link_67890'
+      const tokenHash2 = createHash('sha256').update(rawToken2).digest('hex')
+      let linkId2
+      await as('Coordinator', async () => {
+        linkId2 = (await q(
+          `select create_rider_link($1, $2, 'Hari Rider', '9812345678') as id`,
+          [jobId2, tokenHash2],
+        )).rows[0].id
+        assert(linkId2, 'Second rider link created')
+
+        // Coordinator revokes the link
+        await q(`select revoke_rider_link($1)`, [linkId2])
+      })
+
+      // Revoked link cannot be read or used
+      await refusesSavepoint(
+        'Reading revoked rider link',
+        `select get_rider_job_by_token($1)`,
+        [tokenHash2],
+        /revoked/i,
+      )
+      await refusesSavepoint(
+        'Picking up with revoked rider link',
+        `select rider_mark_picked_up($1)`,
+        [tokenHash2],
+        /revoked/i,
+      )
+
+      // 9. Expiration test (24h limit W49)
+      const jobId3 = '00000000-0000-4000-8000-00000000b993'
+      await q(`
+        insert into delivery_jobs (
+          id, client_uuid, booking_id, branch_id, leg, scheduled_at, status, created_by, updated_by
+        ) values (
+          $1, gen_random_uuid(), $2, $3, 'Outbound', now() + interval '6 hours', 'Scheduled', $4, $4
+        )
+      `, [jobId3, bookingIds.b, BRANCH, U.Coordinator])
+
+      const rawToken3 = 'rider_sec_tok_expired_test_link_11223'
+      const tokenHash3 = createHash('sha256').update(rawToken3).digest('hex')
+      await as('Coordinator', async () => {
+        await q(
+          `select create_rider_link($1, $2, 'Gita Rider', '9823456789')`,
+          [jobId3, tokenHash3],
+        )
+      })
+      await q(`update delivery_job_links set created_at = now() - interval '25 hours', expires_at = now() - interval '1 hour' where token_hash = $1`, [tokenHash3])
+
+      await refusesSavepoint(
+        'Reading expired rider link',
+        `select get_rider_job_by_token($1)`,
+        [tokenHash3],
+        /expired/i,
+      )
+
+      // 10. Anon privilege boundary assertion
+      const anonSelect = await one(`select has_table_privilege('anon', 'public.delivery_job_links', 'SELECT')`)
+      assertEq(anonSelect, false, 'delivery_job_links table is NOT readable by anon')
+      const anonExec = await one(`select has_function_privilege('anon', 'public.create_rider_link(uuid, text, text, text)', 'EXECUTE')`)
+      assertEq(anonExec, false, 'create_rider_link is NOT executable by anon')
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L48',
+  title: 'Reschedule a delivery: moves job scheduled_at only, rental dates stay (D8), audited in events, idempotency, non-staff/terminal refused (T4-02, migration 0191)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      // 1. Setup a booked delivery booking
+      const bookingKey = crypto.randomUUID()
+      let testBookingId
+      const originalPickup = '2099-12-01T04:00:00Z'
+      const originalReturn = '2099-12-05T04:00:00Z'
+
+      await as('Coordinator', async () => {
+        const res = await q(
+          `insert into bookings (client_uuid, booking_no, client_id, branch_id, pickup_at, return_at, delivery_type, stage, created_by, updated_by)
+           values ($1, '994302', $2, $3, $4::timestamptz, $5::timestamptz, 'Babin Delivery', 'Quote', $6, $6)
+           returning id`,
+          [bookingKey, CLIENT, BRANCH, originalPickup, originalReturn, U.Coordinator],
+        )
+        testBookingId = res.rows[0].id
+
+        await q(
+          `insert into booking_lines (client_uuid, booking_id, line_type, product_id, description, qty, days, rate, created_by)
+           values (gen_random_uuid(), $1, 'Equipment', $2, 'Delivery Reschedule Test Lens', 1, 4, 500, $3)`,
+          [testBookingId, QTY_PRODUCT, U.Coordinator],
+        )
+
+        await q(
+          `insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at)
+           values (gen_random_uuid(), $1, $2, 'Quote', 'Booked', $3, 'Coordinator', now())`,
+          [testBookingId, BRANCH, U.Coordinator],
+        )
+      })
+
+      // 2. Create delivery job scheduled at 04:00Z
+      const initialScheduledAt = '2099-12-01T04:00:00Z'
+      const jobKey = crypto.randomUUID()
+      let jobId
+      await as('Coordinator', async () => {
+        jobId = await one(
+          `select delivery_create_job($1, 'Outbound', $2::timestamptz, $3, 'Ba 3 Cha 9911')`,
+          [testBookingId, initialScheduledAt, jobKey],
+        )
+        assert(jobId, 'job created')
+      })
+
+      // 3. Driver and Warehouse roles cannot reschedule
+      const rescheduleKey = crypto.randomUUID()
+      const newScheduledAt = '2099-12-01T08:30:00Z'
+      await as('Driver', async () => {
+        await db.exec('savepoint sp_resched_driver;')
+        try {
+          await refuses(
+            'Driver cannot reschedule a delivery job',
+            `select delivery_reschedule_job($1, $2::timestamptz, $3, 'Driver attempt')`,
+            [jobId, newScheduledAt, rescheduleKey],
+            /Delivery rescheduling not permitted for role Driver/i,
+          )
+        } finally {
+          await db.exec('rollback to savepoint sp_resched_driver;')
+        }
+      })
+
+      await as('Warehouse', async () => {
+        await db.exec('savepoint sp_resched_wh;')
+        try {
+          await refuses(
+            'Warehouse cannot reschedule a delivery job',
+            `select delivery_reschedule_job($1, $2::timestamptz, $3, 'Warehouse attempt')`,
+            [jobId, newScheduledAt, rescheduleKey],
+            /Delivery rescheduling not permitted for role Warehouse/i,
+          )
+        } finally {
+          await db.exec('rollback to savepoint sp_resched_wh;')
+        }
+      })
+
+      // 4. Coordinator reschedules the delivery job (Ruling D8)
+      await as('Coordinator', async () => {
+        const resJobId = await one(
+          `select delivery_reschedule_job($1, $2::timestamptz, $3, 'Client requested 2:15 PM NPT delivery')`,
+          [jobId, newScheduledAt, rescheduleKey],
+        )
+        assertEq(resJobId, jobId, 'delivery_reschedule_job returned jobId')
+
+        // 5. Idempotent replay with same request key returns same jobId
+        const replayId = await one(
+          `select delivery_reschedule_job($1, $2::timestamptz, $3, 'Client requested 2:15 PM NPT delivery')`,
+          [jobId, newScheduledAt, rescheduleKey],
+        )
+        assertEq(replayId, jobId, 'replaying delivery_reschedule_job returns same jobId')
+      })
+
+      // 6. Verify delivery job scheduled_at moved, but booking dates STAY UNCHANGED (D8)
+      await asOwnerOfTheDatabase(async () => {
+        const jobRow = (await q(`select scheduled_at, last_note, version from delivery_jobs where id = $1`, [jobId])).rows[0]
+        assertEq(new Date(jobRow.scheduled_at).toISOString(), new Date(newScheduledAt).toISOString(), 'delivery_jobs.scheduled_at updated')
+        assertEq(jobRow.last_note, 'Client requested 2:15 PM NPT delivery', 'last_note updated')
+
+        const bookingRow = (await q(`select pickup_at, return_at from bookings where id = $1`, [testBookingId])).rows[0]
+        assertEq(new Date(bookingRow.pickup_at).toISOString(), new Date(originalPickup).toISOString(), 'Ruling D8: bookings.pickup_at unchanged')
+        assertEq(new Date(bookingRow.return_at).toISOString(), new Date(originalReturn).toISOString(), 'Ruling D8: bookings.return_at unchanged')
+
+        // 7. Event recorded in delivery_job_events with Rescheduled kind and metadata
+        const events = (await q(
+          `select event_kind, metadata from delivery_job_events where job_id = $1 and event_kind = 'Rescheduled'`,
+          [jobId],
+        )).rows
+        assertEq(events.length, 1, 'one Rescheduled event logged')
+        const meta = events[0].metadata
+        assert(meta && typeof meta === 'object', 'metadata is present')
+        assert(meta.old_scheduled_at, 'metadata.old_scheduled_at present')
+        assertEq(new Date(meta.new_scheduled_at).toISOString(), new Date(newScheduledAt).toISOString(), 'metadata.new_scheduled_at matches')
+        assertEq(meta.notes, 'Client requested 2:15 PM NPT delivery', 'metadata.notes matches')
+      })
+
+      // 8. Terminal state cannot be rescheduled: advance job to Delivered and verify refusal
+      // First assign driver
+      await as('Coordinator', async () => {
+        await one(
+          `select delivery_assign_driver($1, $2, gen_random_uuid(), 'Ba 3 Cha 9911', 'Ramesh Thapa', '+977 9813009988')`,
+          [jobId, U.Driver],
+        )
+      })
+
+      // Advance booking to Packed so Ready transition is allowed
+      await as('Warehouse', async () => {
+        const pId = crypto.randomUUID()
+        await q(
+          `insert into operation_sessions (id, client_uuid, booking_id, operation, session_no, state, warehouse_staff_id, created_by)
+           values ($1, gen_random_uuid(), $2, 'Packing', 1, 'In Progress', $3, $3)`,
+          [pId, testBookingId, U.Warehouse],
+        )
+        await q(
+          `insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at)
+           values (gen_random_uuid(), $1, $2, 'Booked', 'Packed', $3, 'Warehouse', now())`,
+          [testBookingId, BRANCH, U.Warehouse],
+        )
+        await one(`select delivery_transition_job($1, 'Scheduled', 'Ready', gen_random_uuid())`, [jobId])
+      })
+
+      // Driver to In Transit -> Delivered
+      await as('Driver', async () => {
+        await one(`select delivery_transition_job($1, 'Ready', 'In Transit', gen_random_uuid())`, [jobId])
+        await one(`select delivery_transition_job($1, 'In Transit', 'Delivered', gen_random_uuid(), 'Pooja Sharma')`, [jobId])
+      })
+
+      // Now attempt reschedule on Delivered job: must be refused
+      const terminalReschedKey = crypto.randomUUID()
+      await as('Coordinator', async () => {
+        await db.exec('savepoint sp_resched_terminal;')
+        try {
+          await refuses(
+            'Delivered job cannot be rescheduled',
+            `select delivery_reschedule_job($1, $2::timestamptz, $3, 'Attempting to reschedule delivered job')`,
+            [jobId, '2099-12-02T04:00:00Z', terminalReschedKey],
+            /Delivered or Failed delivery jobs cannot be rescheduled/i,
+          )
+        } finally {
+          await db.exec('rollback to savepoint sp_resched_terminal;')
         }
       })
     })

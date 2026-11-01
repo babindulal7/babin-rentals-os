@@ -17,11 +17,8 @@ import './inventory.css'
 export interface DepositSetupProps {
   embedded?: boolean
   onDone?: () => void
-  _embedded?: boolean
-  _onDone?: () => void
 }
 
-// The props are kept for the Inventory tab wiring; the placeholder does not use them yet (T3-02).
 export default function DepositSetup(_props: DepositSetupProps = {}) {
   const { user } = useAuth()
   const role = user?.role ?? 'Client'
