@@ -1949,7 +1949,8 @@
       "id": "msg.pending",
       "group": "msg",
       "en": "Pending",
-      "ne": "बाँकी",
+      "ne": "विचाराधीन",
+      "note": "Waiting for a decision. Not बाँकी, which is Outstanding (money owed) — changed 2026-11-01, RULINGS-2026-11-01 G7.",
       "approved": "2026-11-01"
     },
     {

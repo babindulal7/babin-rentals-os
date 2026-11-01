@@ -7,7 +7,9 @@
 - Ticked in `docs/plans/BABIN_ACTIONS.md`: glossary approval, production backup (T1-01), eSewa and Khalti applications (T7-06), Fonepay credentials requested (T7-05) — each marked "reported done by Babin".
 
 **Ruled**
-- `RULINGS-2026-11-01.md` row **G6**: approved **as drafted**. Babin said "1 is done" without saying whether any of the 7 flagged words changed; I took no change. If one did, it needs a new dated row.
+- `RULINGS-2026-11-01.md` row **G6**: approved **as drafted**; Babin confirmed none of the 7 flagged words changed.
+- Row **G7** (after a review of this branch): **Pending is विचाराधीन, not बाँकी** — बाँकी had been used for both Outstanding and Pending. Babin approved the change; only `msg.pending` moved. After it, the only repeated Nepali words left are singular/plural pairs and Dispatched/Sent (पठाइएको, different screens, left as drafted).
+- Branch synced with `main` (`5198d450`); the only conflict was this file, resolved by keeping main's entries and putting these on top.
 
 **Verified**
 - `npx vitest run src/i18n/glossary.ne.test.ts` → 7/7 pass.

@@ -388,7 +388,7 @@ Errors sit inline beside the field; toasts are for successes only (Law 12). Word
 | `msg.syncing` | Syncing | सिङ्क हुँदैछ |  |
 | `msg.notSaved` | Not saved | सुरक्षित भएन | Shown when a write failed or is still queued — never a "saved" claim. |
 | `msg.unsaved` | Unsaved changes | सुरक्षित नगरिएको परिवर्तन |  |
-| `msg.pending` | Pending | बाँकी |  |
+| `msg.pending` | Pending | विचाराधीन | Waiting for a decision. Not बाँकी (Outstanding) — changed 1 Nov 2026, RULINGS G7. |
 | `msg.blocked` | Blocked | रोकिएको |  |
 | `msg.yes` | Yes | हो |  |
 | `msg.no` | No | होइन |  |
