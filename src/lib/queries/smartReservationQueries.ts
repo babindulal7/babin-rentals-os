@@ -14,6 +14,7 @@ import {
   type ProductInventoryDefinition,
 } from '../availabilityEvaluation'
 import type { RentalWindow } from '../availability'
+import { assertCompleteRentalWindow, assertAvailabilityLine, requireVerifiedProductMode, assertLiveReservation } from './availabilityIntegrity'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -48,9 +49,7 @@ export async function queryBookingAvailability(
   const pickupAt = bData.pickup_at as string | null
   const returnAt = bData.return_at as string | null
 
-  if (!pickupAt || !returnAt) {
-    throw new Error(`${bookingNo} has no complete rental window; availability could not be checked.`)
-  }
+  assertCompleteRentalWindow(bookingNo, pickupAt, returnAt)
 
   const bookingWindow: RentalWindow = {
     fromAd: pickupAt,
@@ -74,6 +73,7 @@ export async function queryBookingAvailability(
   if (lData.length === 0) {
     throw new Error(`${bookingNo} has no live lines; availability cannot be certified.`)
   }
+  for (const line of lData) assertAvailabilityLine(bookingNo, line)
 
   const linesToEval: LineEvaluationInput[] = lData.map((row) => ({
     lineId: row.id,
@@ -95,13 +95,13 @@ export async function queryBookingAvailability(
 
   const productsMap = new Map<string, ProductInventoryDefinition>()
   for (const pId of productIds) {
-    const mode = productModes.get(pId)
+    const mode = requireVerifiedProductMode(pId, productModes.get(pId))
     const line = linesToEval.find((l) => l.productId === pId)
     productsMap.set(pId, {
       productId: pId,
       name: line?.productName ?? 'Item',
-      trackingMode: (mode?.trackingMode as 'Serialised' | 'Quantity' | 'Consumable') ?? 'Serialised',
-      totalQuantity: mode?.totalQuantity ?? 1,
+      trackingMode: mode.trackingMode,
+      totalQuantity: mode.totalQuantity,
     })
   }
 
@@ -139,11 +139,9 @@ export async function queryBookingAvailability(
 
   const evaluatedHolds: EvaluatedHold[] = []
   for (const row of resData) {
+    assertLiveReservation(row)
     const w = parseTstzRange(row.period)
     if (!w) throw new Error('A reservation has an unreadable period; availability could not be checked.')
-    if (!Number.isSafeInteger(row.qty) || row.qty < 1) {
-      throw new Error('A reservation has an invalid quantity; availability could not be checked.')
-    }
     const bObj = Array.isArray(row.bookings) ? row.bookings[0] : row.bookings
     evaluatedHolds.push({
       reservationId: row.id,
@@ -176,7 +174,7 @@ export async function queryBookingAvailability(
 
   if (draftBookingsData.length > 0) {
     for (const d of draftBookingsData) {
-      if (!d.pickup_at || !d.return_at) continue
+      assertCompleteRentalWindow(d.booking_no, d.pickup_at, d.return_at)
       evaluatedHolds.push({
         reservationId: `draft-${d.id}`,
         bookingId: d.id,
