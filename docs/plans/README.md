@@ -60,7 +60,10 @@ run that ends in a branch ready to merge and a PROGRESS.md entry.
 
 ## Gates every card must pass (CI is off — these are the gate, W75)
 
-The same steps `.github/workflows/ci.yml` ran, in its order (T0-11 turns this into one command).
+Run `npm run gates` on the T0-11 branch (stacked on T0-10) to execute the same CI verification
+commands in their exact order, stop on failure and print timings. It checks workflow drift first,
+and fails closed if the command list differs. `npm run gates -- --quick` skips **only** coverage
+(quick green is not a full release gate). These are the underlying commands for reference:
 A gate that is skipped is how a red check reaches `main` — on 26 Oct the UI-copy check went red
 that way.
 
@@ -83,7 +86,7 @@ npm run build
 npm run test:coverage                # before each live batch (long); mock by default
 ```
 
-PowerShell and Git Bash use the same commands. `npm test` and `npm run test:coverage` default to
+The new `npm run gates` is identical in Git Bash and PowerShell. Run `node --test scripts/run-gates.test.mjs` to test fail-fast and CI parity separately. PowerShell and Git Bash use the same commands. `npm test` and `npm run test:coverage` default to
 mock even with a live URL in `.env.local`. `npm test -- --live` is an explicit real-backend opt-in;
 never use it for normal gates. Runner regression tests: `node --test scripts/test-data-source.test.mjs`.
 
