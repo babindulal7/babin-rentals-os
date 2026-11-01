@@ -50,7 +50,7 @@
     "test:server-contracts": "node scripts/test-unit-lifecycle-and-contracts.mjs",
     "test:partial-return": "node scripts/test-partial-return-reservation-release.mjs",
     "check:fixtures": "node scripts/check-no-fixtures.mjs",
-    "check:security": "node scripts/check-astra-phase0.mjs && npm run test:operations-grants && node scripts/test-reset-branch-boundary.mjs"
+    "check:security": "node scripts/check-astra-phase0.mjs && npm run test:operations-grants && node scripts/test-reset-branch-boundary.mjs && node scripts/test-temporary-hold-auth.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
