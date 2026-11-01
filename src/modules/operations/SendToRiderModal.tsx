@@ -4,11 +4,12 @@
  * Modal for staff to generate, copy, share, and revoke One-Time Rider Links (T4-08, W49).
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Modal } from '../../components/ui/Modal'
 import { Button } from '../../components/ui/Page'
 import Icon from '../../components/ui/Icon'
 import { useAuth } from '../../lib/auth'
+import { newClientUuid } from '../../lib/supabase'
 import { useToast } from '../../components/ui/Toast'
 import {
   createRiderLink,
@@ -45,6 +46,7 @@ export function SendToRiderModal({
   const [copied, setCopied] = useState(false)
   const [activeLinks, setActiveLinks] = useState<DeliveryJobLinkRecord[]>([])
   const [revokingId, setRevokingId] = useState<string | null>(null)
+  const clientUuidRef = useRef<string>(newClientUuid())
 
   const loadLinks = useCallback(async () => {
     if (!jobId) return
@@ -58,6 +60,7 @@ export function SendToRiderModal({
 
   useEffect(() => {
     if (isOpen) {
+      clientUuidRef.current = newClientUuid()
       void loadLinks()
       setGeneratedLink(null)
       setError(null)
@@ -76,11 +79,18 @@ export function SendToRiderModal({
     try {
       setLoading(true)
       setError(null)
-      const res = await createRiderLink(jobId, riderName, riderPhone, user?.role)
+      const res = await createRiderLink(jobId, riderName, riderPhone, user?.role, clientUuidRef.current)
+      if (res.alreadyIssued) {
+        setError('Link already created — revoke it to issue a new one.')
+        await loadLinks()
+        return
+      }
+
+      clientUuidRef.current = newClientUuid()
       setGeneratedLink({
-        url: res.linkUrl,
-        rawToken: res.rawToken,
-        expiresAt: res.expiresAt,
+        url: res.linkUrl || '',
+        rawToken: res.rawToken || '',
+        expiresAt: res.expiresAt || '',
       })
       showSuccessToast('Rider link created successfully.')
       await loadLinks()
@@ -271,7 +281,14 @@ export function SendToRiderModal({
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
-              <Button type="button" variant="outline" onClick={() => setGeneratedLink(null)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  clientUuidRef.current = newClientUuid()
+                  setGeneratedLink(null)
+                }}
+              >
                 Generate Another
               </Button>
             </div>

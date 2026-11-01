@@ -21,7 +21,8 @@ describe('rentalMoreActionsRegistry — Specification Matrix & Capabilities', ()
     outstandingAmount: 2500000,
   }
 
-  describe('Section 1 & 7: 6 Primary Action Groups (including T3-01 Re-book)', () => {
+  // T3-01 (D9, merged 31 Oct) added the Re-book group, so there are six groups now.
+  describe('Section 1 & 7: 6 Primary Action Groups', () => {
     it('returns all 6 action groups for Owner on a Confirmed booking', () => {
       const groups = evaluateRentalSecondaryActions({
         booking: baseBooking,

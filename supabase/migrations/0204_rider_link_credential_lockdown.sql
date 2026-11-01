@@ -1,4 +1,4 @@
--- 0192_rider_link_credential_lockdown.sql
+-- 0204_rider_link_credential_lockdown.sql
 -- Review finding SEC-1 (CLAUDE_PR35_SECURITY_REVIEW.md): the rider token hash was a working credential.
 --
 -- Before: 0190 granted SELECT on delivery_job_links to `authenticated` (including the token_hash column)
@@ -165,14 +165,14 @@ begin
      or has_function_privilege('anon', 'public.rider_mark_picked_up(text)', 'EXECUTE')
      or has_function_privilege('anon', 'public.rider_complete_delivery(text, text, text, text)', 'EXECUTE')
   then
-    raise exception '0192: rider RPCs must be executable by service_role only';
+    raise exception '0204: rider RPCs must be executable by service_role only';
   end if;
 
   if not (has_function_privilege('service_role', 'public.get_rider_job_by_token(text)', 'EXECUTE')
           and has_function_privilege('service_role', 'public.rider_mark_picked_up(text)', 'EXECUTE')
           and has_function_privilege('service_role', 'public.rider_complete_delivery(text, text, text, text)', 'EXECUTE'))
   then
-    raise exception '0192: service_role must keep EXECUTE on the rider RPCs (the Edge Function needs it)';
+    raise exception '0204: service_role must keep EXECUTE on the rider RPCs (the Edge Function needs it)';
   end if;
 
   if has_column_privilege('authenticated', 'public.delivery_job_links', 'token_hash', 'SELECT')
@@ -181,11 +181,11 @@ begin
      or has_table_privilege('authenticated', 'public.delivery_job_links', 'UPDATE')
      or has_table_privilege('authenticated', 'public.delivery_job_links', 'DELETE')
   then
-    raise exception '0192: authenticated must not read token_hash or hold table-wide privileges on delivery_job_links';
+    raise exception '0204: authenticated must not read token_hash or hold table-wide privileges on delivery_job_links';
   end if;
 
   if not has_column_privilege('authenticated', 'public.delivery_job_links', 'job_id', 'SELECT') then
-    raise exception '0192: authenticated must keep SELECT on the non-secret columns of delivery_job_links';
+    raise exception '0204: authenticated must keep SELECT on the non-secret columns of delivery_job_links';
   end if;
 end;
 $verify$;

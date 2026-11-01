@@ -117,7 +117,7 @@ rate change must not rewrite past payouts).
 does not alter it.
 **Needs** — accountant's rate (O-5).
 
-### T8-09 · Staff renting gear            status: todo · size: S · lane A · [go-live]
+### T8-09 · Staff renting gear            status: done — awaiting merge (lane-a/T8-09-staff-renting-gear-finish) · size: S · lane A · [go-live]
 **What** — A client can be marked **Staff** (linked to the staff member's user). A Staff client's
 bookings get a **20% staff discount** line automatically (W68), shown and removable like any other
 discount (Law 10 — no approval gate). Everything else is a normal client booking: deposit, ID on

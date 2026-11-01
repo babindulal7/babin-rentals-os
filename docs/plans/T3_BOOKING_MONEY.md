@@ -2,7 +2,7 @@
 
 **Goal:** the desk can book, re-book, cancel and bill exactly as Babin ruled, with deposits set per
 product, non-VAT bills told apart, and a daily closing that knows the real cash and bank balance.
-**Lane C · Codex-2.** Rulings: D6, D7, D9–D15, D19; W5–W19, W36–W41, W59, W68, W81–W91; Laws 1, 4, 5, 6, 7, 10.
+**Lane C · Codex-2.** Rulings: D6, D7, D9–D15, D19; W5–W19, W36–W41, W59, W68, W81–W91; B14, B16, B18, B24–B26, B39, B41, B42, B46, B51, B52, K3 (27 Oct); Laws 1, 4, 5, 6, 7, 10.
 
 **Exit (G3):** on staging and live: re-book creates a quote in ≤ 3 taps; every active product has a
 deposit rule; a cancellation after an advance suggests the right tier; the VAT register shows
@@ -16,7 +16,7 @@ done by day X; **[soon]** cards go in if time allows, otherwise in the first two
 
 ---
 
-### T3-01 · Re-book            status: todo · size: M · lane C
+### T3-01 · Re-book            status: done (merged 31 Oct, `7250c42`) · size: M · lane C
 **What** — "Re-book" on Booking Detail (⋯ menu) and on the client's history. Default copy: client,
 products and quantities as a **new Quote** at **today's rates**, empty dates, serials picked fresh
 at confirm. A small chooser lets staff also tick **crew, delivery, discounts** (D9 "1 and we can
@@ -33,7 +33,7 @@ discounts copied only when ticked; 3) retired or deactivated products are listed
 available any more" and left out; 4) tap count recorded against R-39.
 **Needs** — none.
 
-### T3-02 · Deposits per product, entered before go-live            status: todo · size: M · lane C + staff
+### T3-02 · Deposits per product, entered before go-live            status: todo — only an empty tab is on `main` (`af06b08`, merged 31 Oct); the editor below is not built · size: M · lane C + staff
 **What** — A bulk editor for `products.deposit_fixed` / `deposit_percent` (and `replacement_value`
 where missing): an Inventory view "Deposit setup" listing every active product with its rule, inline
 edit, filter "no deposit set", and CSV round-trip through the products import (dry run first).
@@ -44,6 +44,9 @@ Staff fill all ~180 products before the trial; the screen shows progress ("142 /
 **Database** — none (columns exist); writes through existing equipment update RPC.
 **Done when** — money roles edit; Warehouse cannot see the view (Law 6); CSV dry run reports changes
 before applying; progress counter correct.
+**Build notes** — `src/modules/inventory/DepositSetup.tsx` on `main` is a placeholder (a page header and
+nothing under it); build the editor in it. Its two `// @ts-ignore` lines fail `npm run lint`
+until Claude's `fix-red-checks.patch` (31 Oct) or this card removes them.
 **Needs** — none. Data entry: BABIN_ACTIONS (staff, December).
 
 ### T3-03 · Cancellation fee tiers            status: todo · size: M · lane C + Babin
@@ -342,3 +345,142 @@ rules unchanged (`gate.expense.approve`). Replaces "Receipt upload is not built 
 **Database** — none expected (`expenses.receipt_url` exists).
 **Done when** — an expense with a photo is saved from an iPhone; the photo appears in the monthly pack.
 **Needs** — T2-01.
+
+### T3-25 · Tags on bookings            status: todo · size: S · lane C · [go-live] · slips first
+**What** — Free tags on a booking (B16): type a new one or pick one already used ("wedding",
+"repeat", "festival"); several per booking; chips on Booking Detail and the booking list; the list and
+saved views (0159, `SavedViewsMenu`) filter by tag; search (T3-21) finds by tag. Booking-desk roles add
+and remove tags; floor roles see them (a tag carries no money). Tags are trimmed, case-insensitive,
+⭐ up to 30 characters.
+**Why** — B16, B55.
+**Where** — `BookingDetail.tsx`, `RentalsList.tsx`, `src/lib/queries/*`, saved views, new
+`src/actions/rentals/setBookingTags.ts`.
+**Database** — migration (claim a number): `bookings.tags text[] not null default '{}'` (like
+`clients.tags`, 0005) with a GIN index; written through a function with `client_uuid` and an audit
+row; lifecycle "tags never change a booking's stage or money".
+**Done when** — two tags in ≤ 3 taps; filter the list by a tag and save the view; Warehouse sees tags
+and no money; screen check.
+**Needs** — none (if T7-04 is open, coordinate on `RentalsList.tsx`).
+
+### T3-26 · Project name and shoot location on every booking            status: todo · size: S · lane C · [go-live] · slips first
+**What** — Two fields on every booking (B8, B52): **Project / production name** (e.g. "Kathmandu
+Diaries — music video") and **Shoot location** (e.g. "Pokhara, Phewa lake"), ⭐ up to 120 characters
+each. They sit beside the existing **project type** (0144 — Feature Film, Commercial / Advertisement,
+Music Video …), which stays as it is: the type says what kind of job it is, the name says which job.
+New Rental asks for both right after the client, offering the client's last five as one-tap
+chips (⭐ not required — a quick re-book or a counter sale may leave them blank). Shown on Booking
+Detail, the booking list (project), the pick list (T2-08), the online request (T7-04) — and the
+**project name is printed on every invoice** and pro forma (B52). An issued invoice keeps the name it
+was issued with.
+**Why** — B8, B52.
+**Where** — `NewRental.tsx`, `BookingDetail.tsx`, `create_booking(jsonb)`, the invoice and pro forma
+PDFs (`src/lib/pdf/*`), T7-04's request form.
+**Database** — migration (claim a number): `bookings.project_name`, `bookings.shoot_location` (text,
+nullable, length checks); `create_booking` accepts both; the invoice snapshot carries the project
+name; lifecycle "create_booking stores both".
+**Done when** — a booking with both fields shows them on detail, list and invoice; the invoice PDF
+prints the project name; screen check.
+**Needs** — none.
+
+### T3-27 · Pro forma invoice from the draft            status: todo · size: S · lane C · [go-live] · slips first
+**What** — On a booking with a draft invoice (T3-14), "**Pro forma**" makes a PDF from the draft
+(B18): titled **"PRO FORMA INVOICE — not a tax invoice"**, **no invoice number** (it names the booking
+number), the project name (T3-26), lines, VAT shown as an estimate, the advance due, payment details,
+and ⭐ "valid for 7 days". It never takes a number from `next_document_number()` (Law 7), never
+counts in sales or VAT reports, and is kept as a document record so it can be shared (T3-16) and
+re-sent; each pro forma is kept with its date.
+**Why** — B18, B55; Law 7; O-17 (when the tax invoice is due stays the accountant's question — a pro
+forma is not a tax invoice).
+**Where** — `src/lib/pdf/*`, `BookingDetail.tsx`, `src/actions/documents/*`, the T3-16 share sheet.
+**Database** — migration (claim a number): add `Pro Forma` to `document_type` (adding a value only —
+N-6); lifecycle "a pro forma takes no document number and stays out of the VAT register".
+**Done when** — pro forma in ≤ 2 taps from a draft; the next real invoice number is unchanged; not in
+VAT or sales reports; Warehouse cannot open it (money); screen check.
+**Needs** — T3-14, T3-26.
+
+### T3-28 · Rental day start as a setting            status: todo · size: L · lane C · [go-live] · slips first
+**What** — The 06:00 → 06:00 rental day becomes a setting (B24): Settings ▸ Operations rules ▸
+**"Rental day starts at"** (⭐ 06:00; quarter hours). **Owner and Admin** change it (B26), enforced in
+Postgres, with an audit row. **Design note first** — an engine change: today the boundary is the
+constant `KATHMANDU_SHIFT_OFFSET_MS` in `src/lib/rentalDays.ts`, and it decides billed days, Today,
+overdue and daily closing. Rules (K3):
+1) each booking **stores the day start it was made with**; its days and prices never change afterwards
+   (B25) — re-pricing, extension (T3-17) and change (T3-18) use the booking's own value;
+2) a change applies to bookings created after it, from the next day start;
+3) the operational day (Today, overdue, daily closing) follows the setting from the next day start;
+4) the late grace (W38) and reminders (W37) count from each booking's own times, unchanged.
+**Why** — B24, B25, B26, K3.
+**Where** — `src/lib/rentalDays.ts`, `src/lib/pricingPipeline.ts` (shared file — say so),
+`NewRental.tsx`, `create_booking`, the settings table (0158), Today, daily closing.
+**Database** — migration (claim a number): `bookings.rental_day_start` (minutes after midnight NPT, not
+null; 360 for every existing booking); the setting row writable by Owner and Admin only; any
+server-side day count reads the booking's own value; lifecycle "an existing booking's days and total
+are unchanged after the setting moves", "a new booking uses the new start".
+**Done when** — 1) the design note is reviewed; 2) the §2.8 reference case still passes at 06:00;
+3) at 08:00 a new 08:00 → 08:00 booking is 1 day while an existing 06:00 booking keeps its days and
+total; 4) Manager cannot change it (the database refuses); 5) Today and daily closing switch at the next
+day start; 6) all gates green, financial integrity included.
+**Needs** — T3-14 and T3-18 merged first (both price bookings).
+
+### T3-29 · Extension clash: the Manager decides            status: todo · size: M · lane C · [go-live] · slips first
+**What** — When an extension (T3-17) needs a unit that the next booking already holds (B41), the desk
+neither refuses nor overrides alone: the request goes to a **Manager decision** (Owner · Admin ·
+Manager), one tap each with a reason, audited: **a)** extend, and move the next booking to a similar
+unit or a sub-rent (T3-13); **b)** extend, and mark the next booking **At risk**; **c)** refuse — the
+client returns on time. The same happens when a return is late (or staff mark "will be late") and
+the next booking of that unit starts within ⭐ 24 hours. **At risk** shows **at once** (B42) on that
+booking, on Today and in the approvals inbox (T5-10) for booking-desk roles, with the O-2 steps (B39):
+1) sub-rent; 2) offer the nearest similar item; 3) a full refund — or account credit, the client's
+choice — and a WhatsApp/email draft to tell the client. An at-risk booking cannot reach Pack until it
+is covered or the client agrees to a change.
+**Why** — B39, B41, B42; W10.
+**Where** — `src/actions/rentals/extendRental.ts`, `BookingDetail.tsx`, Today, T5-10, the T3-13
+choices, the `extend_booking` RPC.
+**Database** — migration (claim a number): an at-risk record (booking, cause, raised at, resolved
+at/how); a clashing extension needs a Manager decision row in Postgres (`gate.extend.clash` — add it to
+PERMISSIONS §6.1 in the same commit); lifecycle "a clashing extension without a decision is refused",
+"decision b) marks the next booking at risk".
+**Done when** — 1) a clashing extension shows the three choices to a Manager only, and "sent to a
+Manager" to a Coordinator; 2) choice b) flags the next booking at once (Today shows it); 3) the O-2
+steps are offered; 4) a refund is a reversal row and "keep as credit" adds account credit, both
+audited; 5) no double booking at any point.
+**Needs** — T3-17, T3-13; T5-10 for the inbox (until then the Today card).
+
+### T3-30 · Consumables: unit price, add at the desk, restock, low stock            status: todo · size: M · lane C · [go-live] · slips first
+**What** — Consumables (tracking mode `Consumable`: tape, gels, batteries) are already deducted at
+Handover (0142) and need no return (0141). Finish them (B14, B35): 1) a **sale price per unit** — the
+line is quantity × unit price, never × days (pricing pipeline); 2) the desk adds them in New Rental and
+on Booking Detail; the floor adds them in T2-20 through the same action (`addConsumableLine`, which
+returns no price to floor roles); 3) **Restock** — "Add stock" on the product (quantity, supplier,
+cost for money roles) as an append-only movement like 0142's; 4) **Low stock** — below
+`reorder_level` (already on products) shows on Today for Warehouse and Manager and in the morning
+digest (T5-04), replacing the T1-16 placeholder; 5) VAT as on other lines.
+**Why** — B14, B35, B54; OPEN_DECISIONS §4 (Option A confirmed).
+**Where** — `src/lib/pricingPipeline.ts` (shared file — say so), `AddItemPanel.tsx`, `BookingDetail.tsx`,
+`src/actions/rentals/*`, the product page, Today.
+**Database** — migration (claim a number): `products.unit_sale_price` (paisa) for consumables; restock
+movements; an `add_consumable_line` function floor roles may call; lifecycle "a 3-day booking with 2
+tape rolls charges 2 × unit price", "restock adds and handover deducts, both logged".
+**Done when** — 1) 2 tape rolls on a 3-day booking cost 2 × the unit price; 2) restock 10 → stock +10
+with a movement row; 3) dropping below the reorder level shows on Today; 4) Warehouse sees quantities,
+never prices; 5) screen check.
+**Needs** — none.
+
+### T3-31 · Counter sale            status: todo · size: M · lane C · [go-live] · slips first
+**What** — A walk-in buys consumables without renting (B46). Anyone can start it (B51): **floor roles**
+pick the items and quantities (no prices shown, Law 6) and hand them over; **the desk** takes payment.
+"Counter sale" on Today and in New Rental. One atomic server action creates the sale, deducts stock and
+drafts the invoice; the desk records payment, and on full payment the invoice is numbered (W16,
+T3-14). No Pack, Handover or Return steps or photos — nothing comes back. A sale is never deleted:
+before payment it can be **Cancelled** (a named terminal action; a reversing stock movement). **Design
+note first** — it picks between a booking of kind "Counter sale" that skips the custody stages and its
+own `sales` table; either way it reuses the invoice and payment paths.
+**Why** — B46, B51; R-39.
+**Where** — a mode of New Rental or new `src/modules/sales/*`, `src/actions/*`, T3-30's lines, invoices.
+**Database** — migration (claim a number): `create_counter_sale(jsonb)` (atomic, like `create_booking`
+— R-43), stock movements, the invoice draft; floor roles may create, money roles take payment;
+lifecycle "a counter sale deducts stock once, invoices once and appears in daily closing".
+**Done when** — a walk-in buys 3 batteries in ≤ 5 taps on the floor plus payment at the desk; stock
+drops by 3; the invoice is numbered on payment; Warehouse never sees a price; daily closing shows the
+money; cancel before payment restores the stock.
+**Needs** — T3-30, T3-14.

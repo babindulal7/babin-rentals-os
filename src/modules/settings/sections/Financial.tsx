@@ -161,6 +161,12 @@ export const FINANCIAL_SECTIONS: Section[] = [
     icon: 'lock',
     fields: [
       {
+        label: 'Staff rental discount',
+        note: 'Automatic discount percentage applied on bookings for clients marked as Staff. Default 20%. Staff can change or remove it on each booking.',
+        settingKey: 'staffDiscountPercent',
+        readBy: 'New Rental pricing pipeline',
+      },
+      {
         label: 'Allow overbooking',
         note: 'Off by default. When on, a booked/maintenance chip in Add Item becomes tappable and opens an override — sub-rent (preferred) or book anyway, both requiring a written reason and a named approver.',
         on: false,

@@ -27,10 +27,8 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 })
 
-// A real SystemRole, switchable per test. Coordinator is the lowest role that may post (R-0111-1).
-const authState = vi.hoisted(() => ({ role: 'Coordinator' as string }))
 vi.mock('../../../lib/auth', () => ({
-  useAuth: () => ({ user: { id: 'usr-1', name: 'Babin Dulal', role: authState.role } }),
+  useAuth: () => ({ user: { id: 'usr-1', name: 'Babin Dulal', role: 'Operations Lead' } }),
 }))
 
 vi.mock('../../../components/ui/Toast', () => ({
@@ -55,7 +53,6 @@ function render(ui: React.ReactNode) {
 describe('InternalNotesPage', () => {
   beforeEach(() => {
     localStorage.clear()
-    authState.role = 'Coordinator'
   })
 
   afterEach(() => {
@@ -66,36 +63,6 @@ describe('InternalNotesPage', () => {
       root = null
     }
     document.body.innerHTML = ''
-  })
-
-  it.each(['Warehouse', 'Technician', 'Driver', 'Accounts'])(
-    'shows a read-and-acknowledge notice instead of the composer for %s (R-0111-1)',
-    (role) => {
-      authState.role = role
-      const container = render(
-        <MemoryRouter>
-          <InternalNotesPage />
-        </MemoryRouter>,
-      )
-
-      expect(container.querySelector('[data-testid="note-composer-restricted"]')).not.toBeNull()
-      expect(container.textContent).toContain('Read and acknowledge only.')
-      expect(container.textContent).not.toContain('Post Internal Dispatch Note')
-      expect(container.querySelector('textarea[aria-label="Internal note draft"]')).toBeNull()
-    },
-  )
-
-  it.each(['Coordinator', 'Manager', 'Admin', 'Owner'])('shows the composer for %s', (role) => {
-    authState.role = role
-    const container = render(
-      <MemoryRouter>
-        <InternalNotesPage />
-      </MemoryRouter>,
-    )
-
-    expect(container.querySelector('[data-testid="note-composer-restricted"]')).toBeNull()
-    expect(container.textContent).toContain('Post Internal Dispatch Note')
-    expect(container.querySelector('textarea[aria-label="Internal note draft"]')).not.toBeNull()
   })
 
   it('renders the header title and ops metrics', () => {

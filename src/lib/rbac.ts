@@ -388,7 +388,11 @@ export function canApproveDiscount(_role: SystemRole, percent: number, _isOnline
 /** Check if role can void an invoice */
 export function canVoidInvoice(role: SystemRole, isOnline: boolean = true): boolean {
   if (!isOnline) return false // Money action blocked offline
-  return role === 'Owner' || role === 'Accounts'
+  // RULING 2026-11-01 (R-3): Owner · Admin · Manager · Accounts — Babin: "1 yes". This is R-05 /
+  // PERMISSIONS `invoice.void` and exactly the database gate `auth_is_finance_or_admin()`. Coordinator
+  // is excluded (PERMISSIONS C6: cannot void). Commit 68485549 had added Coordinator; that is undone.
+  // Revert = `role === 'Owner' || role === 'Accounts'` (and the three test files named in R-3).
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Accounts'
 }
 
 /**
@@ -706,12 +710,13 @@ export function canExportClientPii(role: SystemRole): boolean {
 }
 
 /**
- * Create a team note — Coordinator and above (Owner, Admin, Manager, Coordinator).
- * Mirrors the RLS policy on `team_notes` INSERT and `create_team_note()` (migration 0191).
- * RULING 2026-11-01: "Coordinator and up". Revert = add Warehouse/Technician/Driver here and restore 0185's policy.
+ * Create a team note — every staff role (not Client).
+ * Mirrors the RLS policy on `team_notes` INSERT (migration 0185, `auth_is_staff()`).
+ * RULING 2026-11-01 (O-19): Babin — "all staff yes". Was Coordinator and above; widened to match the
+ * database, which already allowed every staff member. Revert = restore the four-role comparison.
  */
 export function canCreateTeamNote(role: SystemRole): boolean {
-  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+  return isStaff(role)
 }
 
 /**
@@ -862,3 +867,13 @@ export function canTransitionDeliveryJob(
     role === 'Driver'
   )
 }
+
+/**
+ * Reschedule delivery job — Owner, Admin, Manager, Coordinator (migration 0191, T4-02, Ruling D8).
+ * Mirrors the authorization in `delivery_reschedule_job`.
+ */
+export function canRescheduleDeliveryJob(role: SystemRole | null | undefined): boolean {
+  if (!role) return false
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+}
+

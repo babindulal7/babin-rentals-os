@@ -14,6 +14,7 @@ React 18 · TS 5.7 strict · Vite 5 · Tailwind v4 · Supabase Postgres + RLS ·
 - **Lanes:** **Codex-1 = lane A** (T0, T1 code, T2 floor, T9 cutover, then T8) · **Gemini = lane B** (T4, T5, then T6 Nepali) · **Codex-2 = lane C** (T3 booking & money, T7 online booking). Claude reviews at 7:38 AM and 7:38 PM NPT and never pushes; Babin merges locally.
 - **One agent per checkout.** Each lane works in its own git worktree on its own branch: `lane-<a|b|c>/<card-id>-<slug>` (e.g. `lane-a/T2-01-camera-evidence`). Never edit another lane's open card files.
 - **Your task is a card** in `docs/plans/T*.md`; its prompt is `docs/plans/prompts/<card-id>.md`. Set the card to `doing` in your first commit and tick it when done.
+- **Order inside a track:** untagged and plain `[go-live]` cards first, then `[go-live] · slips first` (the 27 Oct Booqable round — the first to move after day X if the lane is behind, B56), then `[soon]`.
 - **Migrations:** claim the next free number in `docs/plans/MIGRATION_LEDGER.md` in your first commit. Never apply anything to live Supabase (N-5).
 - **Shared files** (`PLAN.md`, `docs/PERMISSIONS.md`, `src/lib/rbac.ts`, `src/actions/core.ts`, `src/lib/money.ts`, `src/lib/pricingPipeline.ts`): change one only when your card says so, and say so in your report.
 - **Nepali (T6)** converts a module only when no open lane A or C card touches that module.
@@ -50,7 +51,7 @@ npm run db:types            # regen src/types/database.ts
 
 ## Hard prohibitions
 
-- **N-5: never push a migration to live Supabase.** `supabase db push` (any spelling) and `npm run db:apply --remote` are denied in `opencode.jsonc`. Write it, number it (`supabase/migrations/`), verify locally (`check:pglite` + `check:lifecycle` both green = `Verified` per R-35) — Babin applies after [`../archive/BACKUP_PROTOCOL.md`](../archive/BACKUP_PROTOCOL.md). Never `supabase db reset` against production. `PROGRESS.md` must say WRITTEN vs VERIFIED vs APPLIED vs PRODUCTION-VERIFIED.
+- **N-5: never push a migration to live Supabase.** `supabase db push` (any spelling) and `npm run db:apply --remote` are denied in `opencode.jsonc`. Write it, number it (`supabase/migrations/`), verify locally (`check:pglite` + `check:lifecycle` both green = `Verified` per R-35) — Babin applies after [`../archive/BACKUP_PROTOCOL.md`](docs/archive/BACKUP_PROTOCOL.md). Never `supabase db reset` against production. `PROGRESS.md` must say WRITTEN vs VERIFIED vs APPLIED vs PRODUCTION-VERIFIED.
 - **Anon key only in the client.** Every `VITE_*` var is inlined into the bundle at build time and is public (View Source). Never a service key, JWT secret, or credential in code, logs, or commits (N-8). `docker run -e` on a built image does nothing — values must exist at `npm run build`.
 - Env changes require a Vite restart. `VITE_DEV_AUTH_BYPASS=true` skips login as seeded Owner but is double-gated on `import.meta.env.DEV` (dead code in prod).
 - No `any` in `src/` (`@typescript-eslint/no-explicit-any: error`); relaxed only in `*.test.*`. `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes` are on — index access needs guards.

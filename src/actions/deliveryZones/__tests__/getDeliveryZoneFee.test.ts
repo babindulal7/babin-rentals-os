@@ -11,7 +11,8 @@ vi.mock('../../../lib/supabase', () => ({
 }));
 
 describe('getDeliveryZoneFee', () => {
-  const mockRpc = vi.mocked(supabase.rpc);
+  // Plain { data, error } replies, typed loosely as in the other action tests.
+  const mockRpc = vi.mocked(supabase.rpc) as unknown as ReturnType<typeof vi.fn>;
   const coordinatorContext = { userId: 'user-123', role: 'Coordinator' as const };
   const clientContext = { userId: 'client-123', role: 'Client' as const };
 

@@ -84,6 +84,7 @@ vi.mock('../../../actions/delivery', () => ({
   createDeliveryJob: vi.fn().mockResolvedValue({ jobId: 'DEL-NEW' }),
   assignDeliveryDriver: vi.fn().mockResolvedValue({ jobId: 'DEL-003' }),
   transitionDeliveryJob: vi.fn().mockResolvedValue({ jobId: 'DEL-001' }),
+  rescheduleDeliveryJob: vi.fn().mockResolvedValue({ jobId: 'DEL-003', newScheduledAt: '2026-10-31T15:00:00.000Z' }),
 }))
 
 // Stand-in for the real modal so the test can see which job id the workspace hands it.
@@ -134,10 +135,11 @@ describe('DeliveryWorkspace (T4-01)', () => {
     expect(container.textContent).not.toContain('3,500')
     expect(container.textContent).not.toContain('FEE')
 
-    // Driver cannot create new dispatches, assign driver, or mark failed
+    // Driver cannot create new dispatches, assign driver, mark failed, or reschedule
     expect(container.textContent).not.toContain('+ New Dispatch')
     expect(container.textContent).not.toContain('Assign Driver')
     expect(container.textContent).not.toContain('Mark Failed')
+    expect(container.textContent).not.toContain('Change Time')
 
     // Driver can see primary verb Dispatch Now for their Ready job
     const dispatchBtn = Array.from(container.querySelectorAll('button')).find(
@@ -170,10 +172,10 @@ describe('DeliveryWorkspace (T4-01)', () => {
     expect(container.textContent).toContain('+ New Dispatch')
     expect(container.textContent).toContain('Assign')
     expect(container.textContent).toContain('Fail')
+    expect(container.textContent).toContain('Change Time')
   })
 
-  // T4-08 / INT-1: rider links belong to delivery jobs; the id handed to the modal must be the job id.
-  it('Send to Rider hands the real delivery job id to the modal and is hidden from Drivers', async () => {
+  it('Rescheduling a delivery moves scheduled time only, enforces Ruling D8, and prepares WhatsApp draft', async () => {
     mockCurrentUser = { id: 'usr-coord-1', name: 'Sita Coordinator', role: 'Coordinator' }
 
     await act(async () => {
@@ -184,8 +186,62 @@ describe('DeliveryWorkspace (T4-01)', () => {
       )
     })
 
+    // Find and click the first "Change Time" button
+    const changeTimeBtns = Array.from(container.querySelectorAll('button')).filter(
+      (b) => b.textContent?.includes('Change Time'),
+    )
+    expect(changeTimeBtns.length).toBeGreaterThan(0)
+
+    await act(async () => {
+      changeTimeBtns[0]?.click()
+    })
+
+    // Modal is opened
+    expect(container.textContent).toContain('Reschedule Dispatch')
+    expect(container.textContent).toContain('Ruling D8')
+    expect(container.textContent).toContain('Rescheduling changes the dispatch departure time only. Booking rental dates and billing remain strictly unchanged.')
+
+    // Fill in date, time, and confirm
+    const confirmBtn = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent?.includes('Confirm Reschedule'),
+    )
+    expect(confirmBtn).toBeTruthy()
+
+    await act(async () => {
+      confirmBtn?.click()
+    })
+
+    // Shows success state and WhatsApp draft link
+    expect(container.textContent).toContain('Successfully rescheduled')
+    expect(container.textContent).toContain('Open WhatsApp Draft')
+
+    const waDraftLink = container.querySelector('a[href^="https://wa.me/"]')
+    expect(waDraftLink).toBeTruthy()
+    expect(waDraftLink?.getAttribute('href')).toContain('https://wa.me/977980')
+  })
+
+  // T4-08 / INT-1: rider links belong to delivery jobs; the id handed to the modal must be the job id.
+  it('Rider Link (dispatch board view) hands the real delivery job id to the modal', async () => {
+    mockCurrentUser = { id: 'usr-coord-1', name: 'Sita Coordinator', role: 'Coordinator' }
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <DeliveryWorkspace />
+        </MemoryRouter>,
+      )
+    })
+
+    // The rider entry exists in the dispatch board (card) view only; the table view is the default.
+    const boardToggle = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Dispatch Board'),
+    )
+    await act(async () => {
+      boardToggle?.click()
+    })
+
     const riderButtons = Array.from(container.querySelectorAll('button')).filter((b) =>
-      b.textContent?.includes('Send to Rider'),
+      b.textContent?.includes('Rider Link'),
     )
     expect(riderButtons.length).toBeGreaterThan(0)
     expect(container.querySelector('[data-testid="rider-modal"]')).toBeNull()
@@ -200,7 +256,7 @@ describe('DeliveryWorkspace (T4-01)', () => {
     expect(MOCK_JOBS.map((j) => j.bookingNo)).toContain(modal?.getAttribute('data-booking-no'))
   })
 
-  it('does not offer Send to Rider to a Driver', async () => {
+  it('does not offer a Rider Link to a Driver', async () => {
     mockCurrentUser = { id: 'usr-driver-1', name: 'Ramesh Thapa', role: 'Driver' }
 
     await act(async () => {
@@ -211,6 +267,7 @@ describe('DeliveryWorkspace (T4-01)', () => {
       )
     })
 
+    expect(container.textContent).not.toContain('Rider Link')
     expect(container.textContent).not.toContain('Send to Rider')
   })
 })

@@ -139,6 +139,25 @@ export function ClientQuickView({
             * was 20px at radius 999, the other 18px at radius 999, neither
             * matching §4's block.
             */}
+          {(client.isStaff || client.isStaffClient) && (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '2px 7px',
+                borderRadius: 'var(--r-chip)',
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border)',
+                color: 'var(--info-text, var(--text))',
+                fontSize: 'var(--t-th)',
+                fontWeight: 700,
+                letterSpacing: '0.02em',
+              }}
+            >
+              Staff
+            </span>
+          )}
           {client.isVip && <span
                     style={{
                       display: 'inline-flex',

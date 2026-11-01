@@ -135,7 +135,7 @@ export function OperationEvidenceStatus({
 
     setIsUploading(true)
     setUploadError(null)
-    setUploadProgress('Retrying photo upload with same idempotency key…')
+    setUploadProgress('Trying the upload again…')
 
     try {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {

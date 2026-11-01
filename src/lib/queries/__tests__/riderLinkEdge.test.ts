@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-// Production mode: the rider path is the rider-link Edge Function only (SEC-2, migration 0192).
+// Production mode: the rider path is the rider-link Edge Function only (lane B R1+R3; migration 0204 makes the RPCs service_role-only).
 const invoke = vi.fn()
 const rpc = vi.fn()
 vi.mock('../../supabase', () => ({
@@ -66,10 +66,10 @@ describe('riderLink talks to the Edge Function only (SEC-2)', () => {
     expect(rpc).not.toHaveBeenCalled()
   })
 
-  it('deliver: a network failure gives a plain message and the write is sent exactly once', async () => {
+  it('deliver: a network failure gives the plain default message and the write is sent exactly once', async () => {
     invoke.mockResolvedValue(networkError)
     await expect(riderCompleteJobDelivery('tok-1', 'Suman Receiver', '<svg/>', undefined)).rejects.toThrow(
-      /could not reach the delivery service/i,
+      'Failed to complete delivery.',
     )
     expect(invoke).toHaveBeenCalledTimes(1)
     expect(invoke).toHaveBeenCalledWith('rider-link', {
@@ -90,7 +90,7 @@ describe('riderLink talks to the Edge Function only (SEC-2)', () => {
       data: null,
       error: { name: 'FunctionsHttpError', message: 'x', context: new Response('<html>gateway</html>', { status: 502 }) },
     })
-    await expect(riderMarkJobPickedUp('tok-1')).rejects.toThrow(/could not reach the delivery service/i)
+    await expect(riderMarkJobPickedUp('tok-1')).rejects.toThrow('Failed to update delivery status.')
   })
 
   it('does not hash on the client: the Edge path works where subtle crypto is unavailable', async () => {

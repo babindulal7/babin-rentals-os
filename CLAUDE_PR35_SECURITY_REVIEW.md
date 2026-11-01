@@ -3,6 +3,16 @@
 Reviewer: Claude (read-only on GitHub; nothing pushed, merged, commented or deployed; live Supabase untouched).
 Review date: 1 Nov 2026. Evidence labels: **VERIFIED** (read in source and/or executed), **FAILED**, **UNVERIFIED**, **PROPOSED**.
 
+> ## Update — 2 Nov 2026, after merging `origin/main` (`9ad7785f`) into the review branch
+>
+> `main` moved on while this review was being worked, so several findings were overtaken. What stands now:
+>
+> - **Team-note rule:** `main` records **O-19 — every staff member may write team notes** (Babin, "all staff yes"). The Coordinator-and-up change (migration 0191, `rbac`, tests, composer hiding) made earlier on this branch was **dropped**; `main`'s version is kept.
+> - **SEC-2 (RPC fallback)** and **INT-1 (T4-01 dispatch wiring)** were fixed on `main` by lane B (T4-08 R1+R3, T4-02 merge `ca73e667`). Lane B's code was kept; my duplicate versions were dropped. My Edge-path tests (`riderLinkEdge.test.ts`) were adapted to lane B's messages and remain as regression coverage.
+> - **Still from this branch:** SEC-1 as migration **`0204_rider_link_credential_lockdown.sql`** (renumbered from 0192, which `main` uses for notification records) with lifecycle L47 steps 11–12; SEC-3 (`monitoring.ts` token redaction); FUNC-1 (no re-fetch after delivery); the fail-closed rider crypto from PR #35 (`main` still has the `Math.random` / weak-hash fallbacks) plus `riderLinkProduction.test.ts`; and the `LiveTransportPlans.tsx` rider buttons removed (they pass a `booking_transport` id that `create_rider_link` cannot find).
+> - **Gaps found in lane B's files, not changed here:** the dispatch **table view (the default) has no rider-link entry** — "Rider Link" exists only in the card view of `DeliveryWorkspace.tsx`; and `main`'s `riderLink.ts` still contained the weak-hash fallback until this branch.
+> - Line numbers and migration numbers in the sections below refer to the code as it was when each finding was written.
+
 ## 0. Facts refreshed at start of review
 
 | Item | Value | Label |

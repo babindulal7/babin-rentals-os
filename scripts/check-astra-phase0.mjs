@@ -103,6 +103,10 @@ try {
     await actor(operator)
     assert.deepEqual(await rows('select id from bookings'),[{id:booking.id}])
     assert.deepEqual(await rows('select id from clients'),[])
+    // Recreated owner-rights masking views must not bypass the Driver exclusion,
+    // even while the Driver is assigned to a currently open delivery job.
+    assert.equal((await rows('select count(*)::int n from clients_v'))[0].n,0,'Driver cannot read clients_v while assigned')
+    assert.equal((await rows('select count(*)::int n from client_directory_v'))[0].n,0,'Driver cannot read client_directory_v while assigned')
     const trip=(await rows('select driver_trip_context($1) trip',[booking.id]))[0].trip
     assert.equal(trip.bookingId,booking.id)
     assert.ok(!JSON.stringify(trip).match(/government_id|pan_vat|billing|rate|amount|total/i))
@@ -112,7 +116,13 @@ try {
     assert.equal((await rows('select count(*)::int n from bookings'))[0].n,0)
     await denied('select driver_trip_context($1)',[booking.id])
     assert.equal((await rows('select count(*)::int n from clients_v'))[0].n,0)
+    assert.equal((await rows('select count(*)::int n from client_directory_v'))[0].n,0)
     assert.equal((await rows('select count(*)::int n from booking_lines_v'))[0].n,0)
+    // 0202 must not break authorized users or remove W68's Staff client fields.
+    await actor(owner)
+    assert.ok((await rows('select count(*)::int n from clients_v'))[0].n>0,'Owner can read client directory')
+    const visible=(await rows('select is_staff,staff_user_id from clients_v limit 1'))[0]
+    assert.ok(visible && Object.hasOwn(visible,'is_staff') && Object.hasOwn(visible,'staff_user_id'),'Staff client metadata retained')
   })
   await test('SEC-01: orphan documents unreadable and immutable for authenticated Client',async()=>{
     await db.exec("reset role; select set_config('app.current_user_id','',false),set_config('request.jwt.claim.sub','',false)"); await db.query("update users set primary_role='Client',email='phase0-portal@example.test' where id=$1",[operator]); await actor(operator)

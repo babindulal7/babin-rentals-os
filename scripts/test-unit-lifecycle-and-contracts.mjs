@@ -189,7 +189,9 @@ await expectThrows(
   'Retirement reason < 10 chars is rejected'
 )
 
-// 2.3 Refusal when unit has active reservation
+// 2.3 Refusal when unit is reserved by an active booking.
+// Reservation triggers set the unit status to Reserved; the active-status gate
+// runs before the explicit active-reservation gate. Both prevent retirement.
 // Create a booking holding unitHeldId
 const bkRes = await sql(`insert into bookings
   (client_uuid, booking_no, client_id, branch_id, stage, pickup_at, return_at, delivery_type, created_by, updated_by)
@@ -208,14 +210,10 @@ await sql(`insert into inventory_reservations
   values (gen_random_uuid(), $1, $2, $3, tstzrange('2026-11-01 10:00:00+00', '2026-11-05 10:00:00+00', '[)'), $4)`,
   [bookingId, bookingLineId, unitHeldId, ownerId])
 
-// Since 0188 (smart reservation holds) a reservation moves its unit to 'Reserved', so the status
-// gate in retire_equipment_unit() answers first. The reservation gate in 0173 stays as a second layer
-// but cannot be reached without writing unit status directly, which the database refuses
-// (GATE:gate.unit_status.direct_write) — so it is deliberately not exercised here.
 await expectThrows(
   () => sql(`select retire_equipment_unit($1, 'Damaged beyond repair in transit', $2)`, [unitHeldId, crypto.randomUUID()]),
   'GATE:unit.retire.active_status',
-  'Cannot retire unit with active reservation hold (unit is Reserved)'
+  'Cannot retire a Reserved unit with an active booking hold'
 )
 
 // 2.4 Successfully retire unheld unit

@@ -2,7 +2,7 @@
 
 **Goal:** a live database that matches the verified source, a staging copy to rehearse on, hosting,
 email, monitoring and backups — so every other track can be accepted on staging and shipped to
-live in small, reversible batches. **Lane A · Codex-1 (code) + Babin.** Rulings: S10, S12, S13, S15, D27, D33, W53, W56, W74, W75; N-5, N-8.
+live in small, reversible batches. **Lane A · Codex-1 (code) + Babin.** Rulings: S10, S12, S13, S15, D27, D33, W53, W56, W74, W75; B21–B23, B40, K2 (27 Oct); N-5, N-8.
 
 **Exit (G1, G10):** live carries every verified migration through three Babin-applied batches;
 nine role seats pass on staging; Storage scoping accepted with Client A / Client B; the staff app
@@ -217,12 +217,84 @@ name list; 5) "Remove me from this device" and an Owner/Admin "forget this devic
 6) at most ⭐ 15 people per device.
 **Why** — W53, W56 (more than 10 staff, shared devices); every write must carry the right person.
 **Where** — `src/lib/auth.tsx`, `src/modules/auth/*`, `src/lib/secureStorage.ts`, header user menu.
-**Database** — none expected (PIN rows and lockout exist in 0066); add an audit event for each switch.
+**Database** — one migration (claim its number in `docs/plans/MIGRATION_LEDGER.md` first; write and test it locally, never apply it live): move the PIN rule in `0066` from 6 digits to **4** (O-18, ruled 1 Nov) and keep the weak-PIN list and the 5-try lockout. The screens that say "six-digit" (`DevicePin.tsx`, `auth.tsx` comment) change in the same commit. Add an audit event for each switch.
 **Done when** — on the M4 iPad: A signs in, B signs in, switching A → B → A takes ≤ 3 taps + PIN each
 time; rows written after a switch carry the new person; 5 wrong PINs lock that person only; a token
 copied off the device does not work elsewhere without the device key; Claude has reviewed the
 design note and the code.
 **Needs** — none.
+
+### T1-16 · Settings switches that save nothing            status: todo · size: S · lane A · [go-live]
+**What** — Six rows in Settings look like working switches but only flip a value on the screen
+(`Switch` in `src/modules/settings/sections/shared.tsx` keeps a local `useState`): **Return
+reminders, Payment reminders, Low stock alerts, Daily digest** (`System.tsx` ~line 82), and
+**"Two-factor authentication — Required for Owner and Admin roles"** and **Shared-device screen lock**
+(~line 183). Until the card that makes each one real lands, show the row read-only with "Not built
+yet — arrives with <card>" and no switch: reminders → T5-07 / T5-08, low stock → T3-30, daily digest
+→ T5-04, two-step sign-in → T1-17, screen lock → T1-15. The **"Allow overbooking"** switch is kept in
+one browser's storage only (`src/lib/bookingRules.ts`): label it "This device only — replaced by the
+switch on each product (T2-23)". Reuse the existing read-only row pattern (`readOnlyWhy`); no new
+component.
+**Why** — K2 (`RULINGS-2026-10-27-booqable.md`); Law 16 — a switch that says two-step sign-in is on
+while it is not is a false security claim.
+**Where** — `src/modules/settings/sections/System.tsx`, `src/modules/settings/sections/shared.tsx`,
+`src/lib/bookingRules.ts` (label only).
+**Database** — none.
+**Done when** — 1) none of the six rows can be flipped and each names its card; 2) the overbooking row
+says "this device only"; 3) a test fails if a `Switch` renders with neither a setting key nor a real
+save handler; 4) screen check at 375 / 820 / 1440.
+**Needs** — none.
+
+### T1-17 · Two-step sign-in for every money role            status: todo · size: L · lane A · [go-live] · slips first
+**What** — Every role that sees money — **Owner, Admin, Manager, Coordinator, Accounts**
+(PERMISSIONS §5) — signs in with the password **plus a 6-digit code from an authenticator app**
+(Supabase Auth MFA, TOTP) (B21). On a device where that person has done this, the **PIN of T1-15**
+(4 digits — O-18, answered 1 Nov) **stays the quick way back in for 30 days**; after 30 days, or on a new device, the code is asked
+again (B40). Warehouse, Technician and Driver are not asked (they see no money) and keep password +
+PIN. **Design note first** (security card). Steps:
+1) Enrolment: scan a QR code, type a code, done; a lost phone is reset by Owner (any account) or
+   Admin (up to Manager, as AD2) — audited; nobody removes their own factor without a code.
+2) **Enforced in Postgres:** while the setting "two-step sign-in required" is armed, a money role
+   whose session is not `aal2` (`auth.jwt() ->> 'aal'`) gets **no money rows and cannot write money**
+   — `auth_can_view_money()` and the money-write checks test it — so a stolen password alone shows no
+   figures. Roll out in two steps: (a) enrolment plus a banner "set up two-step sign-in by <date>";
+   (b) Babin arms it in a live batch once every money user has enrolled (N-5).
+3) Settings ▸ Access shows the real state per person ("On since …" / "Not set up") and replaces the
+   T1-16 placeholder; Owner/Admin see who has not enrolled.
+**Why** — B21, B40; K2; P3 / N-3 (the database, not the screen, decides who sees money).
+**Where** — `src/lib/auth.tsx`, `src/modules/auth/*`, `src/modules/settings/sections/System.tsx`
+(Access), `auth_can_view_money()` (0018 and later), the T1-15 PIN flow.
+**Database** — migration (claim a number): the `aal2` test inside `auth_can_view_money()` and the
+money-write checks, behind an Owner-only setting; audit rows for enrol and reset; lifecycle steps "a
+money role at aal1 reads zero payment rows while armed", "at aal2 it reads them", "Warehouse is
+unchanged".
+**Done when** — 1) the design note is reviewed at a check-in; 2) on staging a Coordinator signs in
+with password + code and sees money; once armed, with the password only, sees zero payment rows and
+the app says why; 3) the PIN switch on a trusted device works for 30 days, then asks for the code;
+4) a new device asks for the code; 5) a lost-phone reset by Owner works and is audited; 6) Warehouse
+is never asked for a code and still sees no money; 7) the Settings row shows the real state.
+**Needs** — T1-15, T1-05 (role seats on staging), T1-16.
+
+### T1-18 · Sign-in history and new-device email            status: todo · size: M · lane A · [go-live] · slips first
+**What** — 1) **Sign-in history**, Owner and Admin only (B22), in Settings ▸ People & Access: time,
+person, device (browser and system), IP address, success or failed attempt, and the PIN switches of
+T1-15. Sign-ins come from records written on the server (Supabase Auth's own audit log, read through a
+function only Owner and Admin can call) — never from what a browser reports. 2) **New-device email**
+for **Owner and Admin accounts only** (B23): the first sign-in from a device that account has not used
+before sends one email to that account — when, which device, "if this was not you, tell Babin and
+change your password". The device is recognised by the T1-15 device key (a random id kept on the
+device). **Design note first** (security card).
+**Why** — B22, B23, B54.
+**Where** — `src/modules/settings/*` (People & Access), `src/lib/auth.tsx`, `supabase/functions/send-email/` (T5-03).
+**Database** — migration (claim a number): `sign_in_events` (user, device id, user agent, IP from the
+request, kind: sign-in · failed · PIN switch · new device) written only by a SECURITY DEFINER function,
+readable by Owner and Admin only; never a password, token or code (N-8); lifecycle "Manager reads no
+sign-in rows".
+**Done when** — 1) Owner sees the last 50 sign-ins with device and time; Manager cannot (the database
+refuses); 2) an Admin signing in from a new browser gets one email, and a second sign-in there sends
+none; 3) a Coordinator's new device sends no email (B23); 4) failed attempts show as failed; 5) no
+secret appears in any row or log.
+**Needs** — T1-15 (device key), T5-03 and T1-09 (email).
 
 ---
 

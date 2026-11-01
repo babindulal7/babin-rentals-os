@@ -14,34 +14,7 @@ import { Button } from '../../components/ui/Button'
 import { useAuth } from '../../lib/auth'
 import { IS_MOCK, supabase } from '../../lib/supabase'
 import { useOptionalToast } from '../../components/ui/Toast'
-import { canCreateTeamNote, canReadTeamNotes } from '../../lib/rbac'
-
-// RULING 2026-11-01 (R-0111-1): only Coordinator and above post notes; everyone else reads and acknowledges.
-function ComposerRestricted() {
-  return (
-    <div
-      role="note"
-      data-testid="note-composer-restricted"
-      style={{
-        padding: '12px 20px',
-        borderBottom: '1px solid var(--border)',
-        background: 'var(--surface-2)',
-        fontSize: '12px',
-        color: 'var(--text2)',
-        lineHeight: 1.5,
-        display: 'flex',
-        gap: 8,
-        alignItems: 'flex-start',
-      }}
-    >
-      <Icon name="info" size={14} />
-      <span>
-        <strong style={{ color: 'var(--text)' }}>Read and acknowledge only.</strong>{' '}
-        Coordinators and above post notes.
-      </span>
-    </div>
-  )
-}
+import { canReadTeamNotes } from '../../lib/rbac'
 import {
   listTeamNotes,
   createTeamNote,
@@ -106,7 +79,6 @@ export default function InternalNotesDrawer(props: InternalNotesDrawerProps) {
 
 function InternalNotesLiveDrawer({ isOpen, onClose, initialReference }: InternalNotesDrawerProps) {
   const { user } = useAuth()
-  const canPost = user?.role ? canCreateTeamNote(user.role) : false
   const toast = useOptionalToast()
   const navigate = useNavigate()
   const ctx = useMemo(
@@ -223,7 +195,6 @@ function InternalNotesLiveDrawer({ isOpen, onClose, initialReference }: Internal
       </div>
 
       {/* Note Composer */}
-      {!canPost ? <ComposerRestricted /> : (
       <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'var(--card)' }}>
         <form onSubmit={handlePost} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <textarea
@@ -323,7 +294,6 @@ function InternalNotesLiveDrawer({ isOpen, onClose, initialReference }: Internal
           </div>
         </form>
       </div>
-      )}
 
       {/* Filter Categories */}
       <div
@@ -546,7 +516,6 @@ function InternalNotesLiveDrawer({ isOpen, onClose, initialReference }: Internal
 
 function InternalNotesPreview({ isOpen, onClose, initialReference }: InternalNotesDrawerProps) {
   const { user } = useAuth()
-  const canPost = user?.role ? canCreateTeamNote(user.role) : false
   const toast = useOptionalToast()
   const navigate = useNavigate()
   const [notes, setNotes] = useState<InternalNote[]>(() => listInternalNotes())
@@ -632,7 +601,6 @@ function InternalNotesPreview({ isOpen, onClose, initialReference }: InternalNot
       title="Team Internal Notes" description="Shift handover scratchpad & equipment advisories" keepMounted>
       <Button onClick={() => { onClose(); navigate('/notes') }}>Open Team Notes page</Button>
         {/* Note Composer */}
-        {!canPost ? <ComposerRestricted /> : (
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'var(--card)' }}>
           <form onSubmit={handlePost} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <textarea
@@ -729,7 +697,6 @@ function InternalNotesPreview({ isOpen, onClose, initialReference }: InternalNot
             </div>
           </form>
         </div>
-        )}
 
         {/* Filter Categories */}
         <div

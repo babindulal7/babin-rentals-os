@@ -12963,6 +12963,7 @@ export type Database = {
         | "Student"
         | "College"
         | "Named-client rates"
+        | "Staff"
       document_delivery_event: "Sent" | "Viewed" | "Downloaded"
       document_expiry_type:
         | "Quotation"
@@ -14424,6 +14425,7 @@ export const Constants = {
         "Student",
         "College",
         "Named-client rates",
+        "Staff",
       ],
       document_delivery_event: ["Sent", "Viewed", "Downloaded"],
       document_expiry_type: [

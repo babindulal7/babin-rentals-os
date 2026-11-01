@@ -3,7 +3,7 @@
 **Goal:** the warehouse can run a real rental end to end on a phone or iPad — book → pack →
 hand over → return → reset — with photos, signatures and every gate working against the live
 database. **Lane A · Codex-1.** Rulings: S5, S14, D1–D5; W27–W45, W50–W55, W91
-(`RULINGS-2026-10-26-workflow.md`); §4.31 photo rule; Laws 5, 6, 8, 13; R-40 (custody is online
+(`RULINGS-2026-10-26-workflow.md`); B10–B15, B19, B35, B36, B47, K4 (`RULINGS-2026-10-27-booqable.md`); §4.31 photo rule; Laws 5, 6, 8, 13; R-40 (custody is online
 and fail-closed).
 
 **Exit (G2):** on staging, then live: a booking goes through all four floor verbs on the iPhone 17
@@ -63,7 +63,7 @@ compressed on the device (1600 px, JPEG 0.8, EXIF stripped), retry with the same
    queue may come later; a false "saved" may not (Law 16: every action is an authentic operation).
    **Claude sent this wording as `fix-evidence-offline-text.patch` on 26 Oct** (it also removes the
    "(Law 12 / R-40)" developer text that turned `lint:ui-copy` red on `3fca220`); if it is on `main`,
-   this item is done.
+   this item is done. **Done: on `main` since 31 Oct (`622ff11`).**
 2) **A damage photo per flagged unit at Return** (21 Jul return-flag lock): each flagged unit row
    gets its own photo button that passes `itemId`; Return cannot complete while a flagged unit has
    no photo. Today `ReturnWorkspace.tsx` passes no `itemId`.
@@ -349,6 +349,153 @@ on retry; offline still refuses inline.
 **Done when** — a 12 MB phone photo ends ≤ 3 MB, a damage photo ≤ 10 MB, three photos attach to one
 step and the gate passes on the first, a HEIC file uploads as JPEG, retry reuses the uuid.
 **Needs** — T2-01 (done).
+
+### T2-25 · Print every line; the pick list from the booking            status: todo · size: S · lane A · [go-live]
+**What** — T2-08 (done) prints the packing list from Pack and the return report from Return. Two gaps:
+1) **Long bookings are cut short on paper.** The packing list stops after 16 lines ("…and N more
+   equipment lines listed on digital manifest"), the return report after 14 and the document PDF after
+   12 (`src/lib/pdf/generatePdf.ts` ~lines 260, 639, 858). Print **every** line, on as many A4 pages as
+   it takes, with "page 2 of 3" and the booking number on each page — staff tick the paper at the shelf.
+2) **The pick list (B15 — A4, one per booking):** the packing list also prints from **Booking Detail**
+   ("Print pick list"), with the booking number as a **QR code** at the top (scanning it opens the
+   booking, T2-14), client, project (T3-26, once it exists) and pickup date and time; each line keeps
+   its asset code, tick box and shelf location, parent-first with children nested (27 Jul rule).
+Warehouse versions carry no prices.
+**Why** — the 21 Jul lock (the OS prints the packing list; staff hand paper to drivers); B15.
+**Where** — `src/lib/pdf/generatePdf.ts`, `src/lib/pdf/exportPdf.ts`, `BookingDetail.tsx`,
+`PackingWorkspace.tsx`.
+**Database** — none.
+**Done when** — a 40-line booking prints all 40 lines over two pages; the pick list prints from
+Booking Detail and from Pack on the iPad; scanning its QR opens that booking; Warehouse sees no price
+in either PDF; screen check.
+**Needs** — none (T3-26 adds the project line when it lands).
+
+### T2-19 · Signature at Return when damage is found            status: todo · size: S · lane A · [go-live] · slips first
+**What** — At Return, when at least one unit is flagged damaged or missing, the person returning the
+gear signs once under the list of flagged items ("returned by <name> for <client>; the flagged items
+are as shown") before Return can complete (B19). With no flags, no signature is asked (R-39). Reuse the
+T2-02 drawn-signature modal and the `signatures` table; the signature joins the Return session and
+shows on the Return report (T2-08) and the damage notice (T5-07 item 6). If the person will not sign,
+staff tick "Refused to sign" with a reason of at least 10 characters — recorded and audited, and Return
+can complete ⭐ (the gear is back; blocking would stall the floor).
+**Why** — B19; the 21 Jul return-flag lock; W23 (damage notice).
+**Where** — `src/modules/rentals/ReturnWorkspace.tsx`, the T2-02 signature modal,
+`src/actions/rentals/floorVerb.ts` (Return), the Return gate in Postgres.
+**Database** — migration (claim a number): Return refuses to complete while a flagged line has neither
+a signature nor a recorded refusal (`gate.return.damage_unsigned` — add the row to PERMISSIONS §6.1 in
+the same commit, B-3); lifecycle "a flagged return without signature is refused", "a clean return
+needs none".
+**Done when** — 1) a return with no flags completes with no signature; 2) a return with a flagged unit
+cannot complete until signed or the refusal is recorded; 3) the signature is on the Return report;
+4) Warehouse and Technician can do it; 5) screen check.
+**Needs** — T2-02 (done), T2-18 (damage photo per flagged unit).
+
+### T2-20 · Floor adds consumables at Pack and Handover            status: todo · size: S · lane A · [go-live] · slips first
+**What** — On Pack and Handover, "**Add consumables**" lists the consumable products (tape, gels,
+batteries) with a quantity stepper (B35). Adding writes a consumable line to the booking through
+T3-30's action: the price comes from the server and floor roles never receive it (Law 6). Stock goes
+down at Handover as today (0142). A line added on the floor shows "added by <name> at Pack" on the
+booking, so the desk sees it before invoicing.
+**Why** — B35, B14.
+**Where** — `src/modules/rentals/PackingWorkspace.tsx`, `HandoverWorkspace.tsx`, T3-30's `addConsumableLine` action.
+**Database** — none beyond T3-30 (its function admits floor roles for consumable lines only, and
+returns no price to them).
+**Done when** — 1) Warehouse adds 2 rolls of gaffer tape at Pack; the desk sees the line with its
+price; Warehouse has no price in the DOM or the payload; 2) Handover deducts the stock once; 3) the
+same `client_uuid` twice adds one line; 4) screen check.
+**Needs** — T3-30.
+
+### T2-21 · Planned downtime with a reason            status: todo · size: M · lane A · [go-live] · slips first
+**What** — Block a unit (or part of a quantity-tracked product) for **dates you know in advance**, with
+a **reason from a list** (B10): ⭐ **Repair · Service or calibration · Our own shoot · Lent to a
+partner · Marketing shoot · Other (type it)**. In that range the unit cannot be booked — New Rental,
+the public site (T7-02), availability (T3-22) — and the calendar shows a grey bar with the reason
+(icon + text). If a booking already holds the unit in that range the downtime is refused with the
+booking named ("BK-1234 has it on those dates"). Downtime ends on its end date or by "**End now**"
+(a named terminal action, Law 3); nothing is deleted. Who: the roles that may create a maintenance job
+today (`maintenance.create`, C+ · Floor, PERMISSIONS §4.3).
+**Why** — B10, B53.
+**Where** — `src/lib/availability.ts`, `src/lib/queries/availability.ts`, `src/modules/inventory/AssetDetail.tsx`,
+`src/modules/calendar/Calendar.tsx`, new `src/actions/inventory/planDowntime.ts`.
+**Database** — migration (claim a number). **The design note picks one:** a `Downtime` hold inside
+`inventory_reservations` (then `booking_id` may be empty for that kind only, and the existing GiST
+guard covers both directions), or its own table checked by the reservation function and by the
+downtime insert. Since 31 Oct the guard also covers the 4-hour holds of `0188` (`hold_state`,
+`confirm_booking_atomic`, `create_or_extend_hold`) — the note must say how downtime meets them. Either way: `client_uuid`, reason, who, ended at/by; `public_availability` honours it;
+lifecycle "a booking over a downtime is refused", "a downtime over a booking is refused", "an ended
+downtime frees the dates".
+**Done when** — 1) block a camera for 3 days; New Rental and the public site show it unavailable on
+those days only; 2) a downtime over an existing booking is refused with the booking number; 3) End now
+frees the dates at once; 4) the calendar bar shows the reason to every staff role; 5) screen check.
+**Needs** — T3-22 merged first if it is open (both change `src/lib/queries/availability.ts`).
+
+### T2-22 · Time between rentals: account-wide or per product            status: todo · size: M · lane A · [go-live] · slips first
+**What** — Settings ▸ Operations rules gets "**Time between rentals: Account-wide · Per product**"
+(B11, reading). *Account-wide* is today's `rentalTurnaround` setting. *Per product* uses each product's
+**prep minutes before pickup** and **cleaning minutes after return** — `products.prep_time_minutes` and
+`cleaning_time_minutes`, already on the equipment form (Maintenance section) but read by nothing for
+availability today. In per-product mode, a unit returned at 18:00 with 120 cleaning minutes is free
+from 20:00, and a 09:00 pickup with 60 prep minutes needs the unit back by 08:00. Today the turnaround
+is applied by the screen only (`src/lib/queries/availability.ts`); move the rule to where reservations
+are made, so the database refuses a booking that is too close. Existing reservations are not changed.
+**Why** — B11, B53.
+**Where** — `src/modules/settings/sections/System.tsx` (Operations rules), `src/lib/availability.ts`,
+`src/lib/availabilityEvaluation.ts`, `src/lib/queries/availability.ts`, the reserved range in
+`apply_booking_stage_transition()` and in `confirm_booking_atomic()` / `create_or_extend_hold()` (0188).
+**Database** — migration (claim a number): the reservation check widens the range by the turnaround
+(account-wide) or by the product's prep/cleaning minutes (per product); lifecycle "per product: a
+pickup inside the cleaning window is refused", "account-wide mode behaves as before".
+**Done when** — 1) per-product mode refuses a pickup 1 hour after a return when cleaning is 2 hours,
+on screen and in the database; 2) account-wide mode is unchanged; 3) the equipment form says the
+minutes are used only in per-product mode; 4) screen check.
+**Needs** — T2-21 (same availability change).
+
+### T2-23 · Allow overbooking on chosen products            status: todo · size: M · lane A · [go-live] · slips first
+**What** — Each product gets an **"Allow overbooking"** switch, **off by default** (B12), on the
+equipment form (product edit: Owner · Admin · Manager) and in bulk edit (T4-12). When it is on and a
+booking asks for more than is free, Confirm still succeeds: the extra quantity becomes a **short**
+line — **no unit is reserved for it** — and the booking, Today and the booking list show "**1 short —
+sub-rent or swap**" with the T3-13 choices until it is covered (K4). The database guard against two
+bookings on one unit stays exactly as it is. Pack refuses a short line until it is covered. Remove the
+device-only "Allow overbooking" setting (`src/lib/bookingRules.ts`, localStorage) and the
+`(allowOverbooking || true)` no-op in `AddItemPanel.tsx` (~line 1836).
+**Why** — B12, B53, K4; Law 16 (a setting that lives in one browser).
+**Where** — equipment form, `src/modules/rentals/booking/AddItemPanel.tsx`,
+`src/modules/rentals/booking/BookingConflictModal.tsx`, `src/lib/availability.ts`,
+`src/lib/availabilityEvaluation.ts`, Confirm (`create_booking`, `confirm_booking_atomic` — 0188) in
+Postgres, the Today card, `src/lib/bookingRules.ts`.
+**Database** — migration (claim a number): `products.allow_overbooking boolean not null default false`;
+a short quantity on the line, set by Confirm only for products that allow it; the GiST guard untouched;
+lifecycle "past stock without the switch is refused (as today)", "with the switch: confirmed with a
+short line and no reservation", "Pack refuses a short line".
+**Done when** — 1) with the switch off nothing changes; 2) on: booking 3 of a product with 2 free
+confirms with "1 short"; 3) Today shows the short line to desk roles and to Warehouse (no money);
+4) a sub-rent line clears it; 5) the device-only setting is gone; 6) screen check.
+**Needs** — T3-13 (the similar / sub-rent choices); T2-21 (same availability files).
+
+### T2-24 · Temporary stock from partners            status: todo · size: L · lane A · [go-live] · slips first
+**What** — Add partner gear to our stock **for a period** (B13): the partner (a `suppliers` record, as
+for sub-rents), the product (an existing one, or a new "partner only" product), the units (asset codes;
+labels printed with "PARTNER" ⭐) or a quantity, **from – until**, and **what the partner charges: per
+day or a fixed amount** (B47 — money roles only, Law 6). Inside the period the units are bookable like
+our own; outside it they do not exist for availability, and no booking may run past the end. They never
+count in owned stock, ROI or depreciation. At the end date a **"Return to partner" task** appears in
+the floor queue (B36) listing the units; completing it (scan each unit, photo optional) ends the
+temporary stock — "Returned to partner", a named terminal action (Law 3). The partner cost shows in
+the booking's profit and the sub-rent report (money roles). **Design note first** (availability change).
+**Why** — B13, B36, B47, B53.
+**Where** — new `src/modules/inventory/TemporaryStock*.tsx`, `src/actions/inventory/*`,
+`src/lib/availability.ts`, the floor task queue, the sub-rent report.
+**Database** — migration (claim a number): `temporary_stock` (supplier, product, quantity, from, until,
+cost kind, cost in paisa, status, `client_uuid`) with partner units as `product_units` tied to it;
+availability counts them only inside the window, in the same place T2-21 puts downtime; the cost is
+money-masked like the 0062 column grants; lifecycle "a booking outside the window cannot reserve a
+partner unit", "the end task appears and closes the stock".
+**Done when** — 1) add 2 partner lenses for 5 days; New Rental books them inside the window only;
+2) Warehouse sees the units and the task but no cost; 3) Owner sees the cost in the booking's profit;
+4) at the end date the task lists both lenses, and completing it takes them out of availability;
+5) nothing is deleted; 6) screen check.
+**Needs** — T2-21, T2-08 (labels), T3-13 (the partner list in the sub-rent flow).
 
 ### T2-11 · Device day            status: todo · size: M · lane A + Babin + staff
 **What** — One supervised session on the **iPhone 17 Pro, M4 iPad Pro and the Bluetooth scanner**
