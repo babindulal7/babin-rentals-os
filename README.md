@@ -1,6 +1,6 @@
 # Babin Rentals OS
 
-> **Current status (26 Oct 2026):** Active build on the road to go-live by 1 Feb 2027. Full roadmap is in [`PLAN.md`](PLAN.md); verified gate measurements are in [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md); rulings are in [`RULINGS-2026-10-26.md`](RULINGS-2026-10-26.md). Live release is on HOLD pending backup and staging rehearsal (Rule N-5).
+> **Current status (26 Oct 2026):** Active build on the road to go-live by 1 Feb 2027. Full roadmap is in [`PLAN.md`](PLAN.md); verified gate measurements are in [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md); rulings are in [`RULINGS-2026-10-26.md`](RULINGS-2026-10-26.md), [`RULINGS-2026-10-26-workflow.md`](RULINGS-2026-10-26-workflow.md) and [`RULINGS-2026-10-27-booqable.md`](RULINGS-2026-10-27-booqable.md). Live release is on HOLD pending backup and staging rehearsal (Rule N-5).
 
 React 18 · TypeScript · Vite · Tailwind v4 · Supabase
 

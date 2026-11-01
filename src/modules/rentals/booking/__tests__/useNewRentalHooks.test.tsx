@@ -38,7 +38,7 @@ describe('useNewRentalTiming', () => {
 
       expect(timingResult.pickup).toBe('2026-11-01')
       expect(timingResult.ret).toBe('2026-11-04')
-      // L1 operational rental day: the default interval is 06:00 to 06:00.
+      // L1 (RULINGS-2026-10-26-workflow.md): the rental day runs 06:00 → 06:00, so both default times are 06:00.
       expect(timingResult.pickupTime).toBe('06:00')
       expect(timingResult.returnTime).toBe('06:00')
       expect(timingResult.days).toBeGreaterThanOrEqual(1)

@@ -2,7 +2,7 @@
 
 **Goal:** staff learn about the work that needs them without opening every screen: an in-app
 notification centre, and a morning digest by email from `@babinrentals.com`. **Lane B · Gemini.**
-Rulings: S6, S13, D8, O-4; W18–W23, W37–W39, W57–W62, W79, W80; 21 Jul locks (in-app + email,
+Rulings: S6, S13, D8, O-4; W18–W23, W37–W39, W57–W62, W79, W80; B9, B20, B31, B34, B43, B50, K6 (27 Oct); 21 Jul locks (in-app + email,
 role-based defaults, morning digest at day start); Law 6. **Changed 26 Oct (W21, W18b):** the client
 emails listed in T5-07 and T5-08 are **automatic**; WhatsApp stays a draft staff send (no WhatsApp
 Business API — W60).
@@ -20,7 +20,7 @@ receive an amount in any notification or email.
 
 ---
 
-### T5-01 · Notification records            status: todo · size: M · lane B
+### T5-01 · Notification records            status: done — awaiting merge (lane-b/T5-01-notification-records) · size: M · lane B
 **What** — A `notifications` table: recipient user, type, title, body (no money for money-blind
 recipients — the row is written per recipient, so the text is built for that role), link to the
 entity, created at, read at. Rows are written **by the database** when the event happens (trigger
@@ -98,15 +98,18 @@ default. Role defaults from the 21 Jul lock apply to new users.
 6. **Damage / loss notice** — when a damage or missing case opens: what was found, photos, **no
    amount**; a second email with the charge only after a Manager (< Rs 25,000) or Owner
    (≥ Rs 25,000) approves it (W23, PERMISSIONS §7 P1).
+7. **Thank you + Google review link** — after Return completes with no open damage or missing case (if
+   there is one, after it closes): one short thank-you with the Google review link Babin supplies
+   (B9; BABIN_ACTIONS). Once per booking; it is a service email and carries no offer.
 A client with **no email** gets none of these by email; instead staff get a **WhatsApp draft task**
 with the same text, one tap to send (W22). Each message is sent once (idempotent on booking +
 event); a cancelled booking stops its pending reminders.
-**Why** — W21, W22, W23, W37, W38, W80.
+**Why** — W21, W22, W23, W37, W38, W80; B9.
 **Where** — `supabase/functions/send-email/`, new templates, pg_cron jobs, `src/lib/whatsappTemplates.ts`.
 **Database** — migration (claim a number): `client_message_events` (booking, event, due at, sent at,
 channel) + cron job; RLS staff read, no client write; lifecycle step "a late-return email is due at
 +30 min and sent once".
-**Done when** — on staging a test booking produces all six emails at the right times with correct
+**Done when** — on staging a test booking produces all seven emails at the right times with correct
 content; a no-email client produces WhatsApp draft tasks instead; no amount ever leaves before
 approval.
 **Needs** — T5-03, T1-09.
@@ -179,3 +182,42 @@ is always a draft staff send (W60).
 **Database** — none.
 **Done when** — the register matches the code; the test passes.
 **Needs** — T5-07, T5-08, T7-04.
+
+### T5-12 · Offer emails to clients            status: todo · size: L · lane B · [go-live] · slips first
+**What** — Owner, Admin and Manager (B43) write and send an **offer email from the app** (B50) to
+**every client with an email who has not unsubscribed** (B34), or to a filtered group (tag, last rental,
+membership ⭐). Write (subject, text, ⭐ one image, a button to `book.babinrentals.com`) → preview →
+**test send to yourself** → "will go to N clients" → Send. Sending is queued and paced to the email
+service's limits (T5-03). Every email carries an **unsubscribe link** and the one-click
+`List-Unsubscribe` header (K6); the link opens a page that marks the client's email consent **Opted
+out** (`client_marketing_consents`, 0005) at once, without signing in. Opted-out, Do Not Disturb and
+bounced addresses are never sent to. Each send is kept (who, when, how many, the text). WhatsApp offers
+stay draft-only (21 Jul rule). English (W80). **Design note first** (it writes to every client).
+**Why** — B31, B34, B43, B50, K6.
+**Where** — new offers screen in the communication module, `supabase/functions/send-email/` (T5-03)
+plus an unsubscribe function, `client_marketing_consents`.
+**Database** — migration (claim a number): `offer_campaigns` and their recipients (sent · failed ·
+bounced), Owner/Admin/Manager only; the recipient list is built in Postgres from consent, never in the
+browser; a per-recipient unsubscribe token; lifecycle "an opted-out client is never a recipient",
+"Coordinator cannot send".
+**Done when** — 1) Owner sends a test, then an offer to 3 staging clients; 2) one unsubscribes and the
+next offer skips them; 3) Coordinator and Warehouse cannot send (the database refuses); 4) each email
+shows the link and has the header; 5) a double tap on Send sends once.
+**Needs** — T5-03, T1-09.
+
+### T5-13 · Edit email and document texts            status: todo · size: M · lane B · [go-live] · slips first
+**What** — Settings ▸ **Texts**, Owner and Admin only (B20): edit the wording of the automatic client
+emails (T5-07), payment reminders (T5-08), the offer email footer (T5-12) and the fixed texts on
+documents (invoice footer, the pro forma note, the rental agreement terms — O-11 — and the packing list
+footer). Placeholders show as chips (client name, booking number, pickup time, link …); **amounts appear
+only as placeholders filled by the server**, never typed. Each save is a **new version** (old ones kept,
+Law 3) with who and when; "Preview with a real booking"; "Restore this version". Legal parts — invoice
+number, PAN, VAT lines (Law 7) — are not editable.
+**Why** — B20; O-11.
+**Where** — `src/modules/settings/*` (new Texts section), the `send-email` templates, `src/lib/pdf/*`.
+**Database** — migration (claim a number): `message_templates` (key, version, body, created by/at,
+active); Owner/Admin write; the sender and the PDF builder read the active version; lifecycle "Manager
+cannot change a text", "an unknown placeholder is refused on save".
+**Done when** — Owner edits the pickup reminder, previews it with a real booking, saves; the next
+reminder uses it; restoring the old version works; Manager sees no Texts section; screen check.
+**Needs** — T5-07; T3-06 and T3-27 for the document texts.

@@ -1,7 +1,7 @@
 # T9 — Booqable cutover
 
 **Goal:** move the business from Booqable to the OS without a double booking or a lost rupee, and
-cancel Booqable before it renews. **Lane A · Codex-1 + Babin + staff.** Rulings: S7, S8, S9, D20, D28; 19 Aug
+cancel Booqable before it renews. **Lane A · Codex-1 + Babin + staff.** Rulings: S7, S8, S9, D20, D28; B4, B5, B45, B49 (27 Oct); 19 Aug
 money ruling (imported history keeps Booqable's figures; new bookings use the OS's whole-rupee
 model); 1 Sep bridge rulings (the OS is the terminal system).
 
@@ -29,8 +29,10 @@ structures** ("Babin Daily", "Days wise discount", "Rental Rate Card", … — 0
 seasonal rules** (SUMMER25, New Year, Christmas ×2) **with their end dates** so they expire on their
 own (D20). Dry run first; a match report (new / updated / unchanged / conflict) for Babin to
 approve; then load through the existing import centres and pricing tables on staging, then live.
-Imported history keeps Booqable's figures (19 Aug ruling).
-**Why** — S7; D20.
+Imported history keeps Booqable's figures (19 Aug ruling). **Product photos are not imported** (B45) —
+the official photos Babin picks (B49) go in through T7-02. **Record each product's Booqable id and store
+slug** in `external_refs` (0040) so old store links keep working (T7-17).
+**Why** — S7; D20; B45, B4.
 **Where** — `src/modules/clients/ImportCenter`, `src/modules/inventory/ProductsImportCenter.tsx`,
 `src/lib/clientImport.ts`, `src/lib/productImport.ts`, `pricing_rulesets` / pricing structure tables.
 **Database** — data, through the app's import paths (no raw SQL on live).
@@ -77,8 +79,9 @@ Any "no" moves X by one week (latest 15 Feb — PLAN §5 slack).
 ### T9-05 · Day X            status: todo · size: S · Babin + staff + lane A
 **What** — **Mon 1 Feb 2027 (18 Magh 2083).** From opening: every new rental in the OS only;
 `book.babinrentals.com` live (T7-11); in Booqable, stop new bookings (turn off online booking on
-the store; staff stop creating orders). Booqable stays open for the run-off only. Message clients
-who book online often (WhatsApp draft) with the new link.
+the store; staff stop creating orders); point `babinrentals.com` to `book.babinrentals.com` with one
+Cloudflare redirect rule that keeps the path (O-1, B5 — old links then reach T7-17). Booqable stays
+open for the run-off only. Message clients who book online often (WhatsApp draft) with the new link.
 **Done when** — no new Booqable order is created after X (checked daily in Booqable's list).
 **Needs** — T9-04 "go"; T7-10.
 
@@ -101,8 +104,8 @@ one-page cheat sheet in English and Nepali.
 **What** — After the run-off: export everything from Booqable (orders, customers, products, invoices,
 quotes, contracts as PDF, payments, reports) to Babin's Drive and record the export date and file
 list. Check Booqable's cancellation notice terms in Account & billing **by 1 Feb**. Cancel by
-**10 Mar 2027 (26 Falgun)** — the renewal is 20 Mar. Then answer O-1 and point `babinrentals.com`
-at its new home.
+**10 Mar 2027 (26 Falgun)** — the renewal is 20 Mar. The root domain already redirects to the
+booking site since day X (O-1, B5; T9-05); a full company website follows after go-live (T10).
 **Why** — S8; Law 3 spirit (history kept).
 **Done when** — archive files listed in `docs/live/BOOQABLE_ARCHIVE_<date>.md`; cancellation
 confirmation saved; the root domain no longer shows the Booqable store.
