@@ -37,12 +37,12 @@ Also stop staff reading the credential: the staff SELECT policy on `delivery_job
 take the hash as the credential. Expose staff the link without the hash (a column-level grant that omits `token_hash`,
 or a view `delivery_job_links_staff_v` without it — your choice, but a direct `select token_hash` as Coordinator or Warehouse must be refused).
 Update the post-condition block at the end of 0190 so it also asserts `authenticated` cannot execute the three rider RPCs.
-Update **L47** accordingly (it currently calls the rider RPCs as an ordinary session).
+Update **L47** accordingly: it currently calls the rider RPCs as an ordinary signed-in session, which will now be refused. The harness's `as(role, fn)` only does `set role authenticated`, so it has no service-role mode — **first check whether a `service_role` role exists in the PGlite harness** (0190 already grants to it and passes, so it probably does). If it does, add a small `asService(fn)` helper (`set role service_role`) and run the rider flow through it; either way assert the grants directly with `has_function_privilege('authenticated', …, 'EXECUTE') = false` and `has_function_privilege('service_role', …, 'EXECUTE') = true`.
 
 **R3 — the server makes the token.** Today `generateRiderRawToken()` runs in the browser and only its hash is sent, so the server
-cannot know the token is strong. Change `create_rider_link` to **generate the token itself** with `gen_random_bytes(16)`
-(128 bits), store only its SHA-256, and **return the raw token once** in the result; the browser builds
-`/rider/<rawToken>` from that and never generates or hashes anything. Remove `generateRiderRawToken`/`hashRiderToken`
+cannot know the token is strong. Change `create_rider_link` to **generate the token itself**, store only its SHA-256, and **return the raw token once** in the result. **Use core functions, not pgcrypto:** `pgcrypto` lives in the `extensions` schema (migration 0041) and these functions run with `search_path = public, pg_temp`, so an unqualified `gen_random_bytes()` will not resolve. Build the token as `replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '')` (well over 128 bits) and hash it as `encode(sha256(convert_to(v_token, 'UTF8')), 'hex')` — that is byte-for-byte what the Edge Function and the lifecycle test already compute with SHA-256 hex. (If you prefer pgcrypto, call it as `extensions.gen_random_bytes`.)
+The browser then builds
+`/rider/<rawToken>` from that result and never generates or hashes anything. Remove `generateRiderRawToken`/`hashRiderToken`
 from the real path (the mock path may keep a local generator). The raw token must not be written to any table, `audit_events` or log.
 
 **R2 — `client_uuid` (Law 8).** Add `client_uuid uuid not null unique` to `delivery_job_links` and a `p_client_uuid` argument to
@@ -51,8 +51,7 @@ from the real path (the mock path may keep a local generator). The raw token mus
 "Link already created — revoke it to issue a new one". Two taps on the button must give one live link.
 
 **R4 — optional, only if cheap.** The rider-facing RPCs raise different messages for unknown / revoked / expired / completed
-links. Return one generic message to the rider ("This link is no longer valid") and keep the specific reason in the audit row. Skip
-it if it touches more than the three RPCs.
+links. Do this **in the `rider-link` Edge Function, not in SQL**: map every `42501` from these RPCs to one generic message for the rider ("This link is no longer valid") and log the specific reason server-side with the link id only — **never the token, hash, phone or name**. Do not try to write an audit row from inside the RPC for these refusals: a `raise exception` rolls back anything written in the same transaction, so the row would never exist. Skip this if it needs more than the Edge Function.
 
 **Migration:** `0190` has not been applied to live (live tops out at `0156` — check `docs/live/schema_migrations_*.txt`).
 If that is still true, **edit `0190` in place** rather than adding a number; if anything shows it was applied
