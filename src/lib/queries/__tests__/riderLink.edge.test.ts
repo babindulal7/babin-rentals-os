@@ -113,7 +113,9 @@ describe('one-time rider link — Edge-only production boundary (0191)', () => {
         rider_phone: '9800000000',
         request_key: '44444444-4444-4444-8444-444444444444',
       } })
-      const sent = edge.invoke.mock.calls[0][1].body
+      expect(edge.invoke).toHaveBeenCalledTimes(1)
+      const sent = edge.invoke.mock.calls[0]?.[1]?.body
+      expect(sent).toBeDefined()
       expect(sent).not.toHaveProperty('token_hash')
       expect(sent).not.toHaveProperty('token')
       expect(edge.rpc).not.toHaveBeenCalled()
