@@ -419,3 +419,9 @@ enabled = true
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# Hired rider links are intentionally accessible without a staff session.
+# The 128-bit bearer token is checked by the service-role Edge handler and
+# job-scoped database functions. Never expose token RPCs to anon/authenticated.
+[functions.rider-link]
+verify_jwt = false
