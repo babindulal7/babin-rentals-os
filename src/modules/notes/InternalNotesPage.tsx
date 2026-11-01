@@ -17,7 +17,7 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { useAuth } from '../../lib/auth'
 import { useOptionalToast } from '../../components/ui/Toast'
 import { toBs, formatBs, formatAd } from '../../lib/bs'
-import { canReadTeamNotes } from '../../lib/rbac'
+import { canCreateTeamNote, canReadTeamNotes } from '../../lib/rbac'
 import {
   listTeamNotes,
   createTeamNote,
@@ -386,6 +386,8 @@ function NotesWorkspace({
   onUpdateNote,
 }: NotesWorkspaceProps) {
   const { user } = useAuth()
+  // RULING 2026-11-01 (R-0111-1): only Coordinator and above post notes; everyone else reads and acknowledges.
+  const canPost = user?.role ? canCreateTeamNote(user.role) : false
   const toast = useOptionalToast()
   const [draft, setDraft] = useState('')
   const [category, setCategory] = useState<NoteCategory>('General')
@@ -1880,6 +1882,30 @@ function NotesWorkspace({
         {/* Right Column: Note Composer & Entity Picker */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Note Composer Card */}
+          {!canPost ? (
+            <div
+              role="note"
+              data-testid="note-composer-restricted"
+              style={{
+                background: 'var(--surface-2)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--r-card)',
+                padding: '14px 16px',
+                fontSize: '13px',
+                color: 'var(--text2)',
+                lineHeight: 1.5,
+                display: 'flex',
+                gap: 8,
+                alignItems: 'flex-start',
+              }}
+            >
+              <Icon name="info" size={16} />
+              <span>
+                <strong style={{ color: 'var(--text)' }}>Read and acknowledge only.</strong>{' '}
+                Coordinators and above post notes. Ask one of them to add yours.
+              </span>
+            </div>
+          ) : (
           <div
             style={{
               background: 'var(--card)',
@@ -2104,6 +2130,7 @@ function NotesWorkspace({
               </Button>
             </form>
           </div>
+          )}
 
           {/* Guidelines Box */}
           <div

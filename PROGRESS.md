@@ -5,6 +5,16 @@
 **Did (team-note create ruling — added after the first commit)**
 - Babin ruled **R-0111-1: team notes are created by "Coordinator and up"** (Owner, Admin, Manager, Coordinator). This closes the T-4 test/rbac/DB disagreement. Migration **`0191_team_note_create_coordinator_up.sql`** (WRITTEN + VERIFIED locally, NOT APPLIED to any hosted project, N-5) tightens the `team_notes` insert policy and `create_team_note()`; before it, 0185 let every staff role insert, so rbac was stricter than the database. Aligned in the same change (B-3): `createTeamNote.test.ts` (floor roles refused before any RPC; Coordinator/Manager/Admin/Owner allowed), lifecycle L42 (Coordinator/Manager/Admin create; Warehouse/Technician/Driver/Accounts refused through the RPC; Warehouse refused through a direct insert), `roleSecurityMatrix.test.ts` fixture, `docs/PERMISSIONS.md` §4.2 `team_note.create`, `rbac.ts` comment, `MIGRATION_LEDGER.md` (0191 verified, next free 0192), `RULINGS-2026-11-01.md`.
 
+**Did (note composer hidden from roles that cannot post — follow-up to R-0111-1)**
+- `InternalNotesPage.tsx` (right-rail composer card) and both composers in `InternalNotesDrawer.tsx` (live and mock-preview) now render a "Read and acknowledge only. Coordinators and above post notes." notice (icon + text, `role="note"`, `data-testid="note-composer-restricted"`) when `canCreateTeamNote(role)` is false. The feed, filters and acknowledge actions are untouched. The live drawer branch shares the same `ComposerRestricted` component but has no test of its own.
+- The two notes UI test files mocked a role `'Operations Lead'`, which is not a `SystemRole`, so every test ran as an unprivileged user. Replaced with a switchable real role (default Coordinator).
+
+**Verified (composer)**
+- `vitest run src/modules/notes` — 2 files, 28 tests pass (12 existing + 16 new: Warehouse/Technician/Driver/Accounts see the notice and no textarea; Coordinator/Manager/Admin/Owner see the composer).
+- `tsc --noEmit` — exit 0. `eslint --max-warnings 0 src/modules/notes src/lib/rbac.ts src/actions/notes` — clean.
+- Driven in a real browser (mock-mode build from a clean scratch copy, `vite build --mode mock` exit 0): signed in as the mock Warehouse user (Ram Thapa), opened `/notes` — the six notes render, the composer, textarea and "Post to Dispatch Log" button are absent, the restricted notice is present. The Coordinator-and-up state is covered by the jsdom tests only (mock quick sign-ins offer Owner, Warehouse and Accounts, not Coordinator).
+- The worktree's own `node_modules` is corrupt from a failed install (`es-toolkit` incomplete), so builds and the browser run used a clean scratch copy with the main checkout's `node_modules`.
+
 **Verified (ruling)**
 - `node scripts/check-pglite.mjs` — 191/191 applied, 0 failed, 0 anon-readable views, 0 unauthorized anon RPCs, 128 definer functions pinned.
 - `node scripts/e2e-lifecycle.mjs` — 47/47 green, 0 known-red (L42 rewritten and passing). Both gates ran back to back on the same source, so 0191 is **Verified** under R-35.
@@ -36,7 +46,7 @@
 
 ### Remaining
 - Run the rest of the local gates on this branch: lint, `VITE_DATA_SOURCE=mock npm test`, `check:pglite`, `check:lifecycle`, financial integrity, `check:security`, `vite build`.
-- **Hide the note composer from roles that cannot post** (`InternalNotesPage.tsx` right rail ~L1880, `InternalNotesDrawer.tsx` ~L197 and ~L603): floor roles can still open it and only learn they cannot post when the action refuses. UI follow-up to R-0111-1; the action and database already refuse.
+- Not reviewed: the notes feed still shows **Edit** on every note to a Warehouse user (seen in the browser check). Whether editing is allowed for floor roles is a separate question from R-0111-1.
 - Apply 0191 to hosted Supabase only after Babin's backup step (N-5); not done.
 - PR #35: resolve the 3 copy conflicts to the PR side, add the fail-closed hash test (`CLAUDE_PR35_SECURITY_REVIEW.md` §7).
 - Rider-link P1s: SEC-1, SEC-2, SEC-3, FUNC-1 (review §8, tasks A–D) before rider links are released.

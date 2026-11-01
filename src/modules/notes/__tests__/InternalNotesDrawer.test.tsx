@@ -12,8 +12,10 @@ vi.mock('../../../lib/supabase', () => ({
   supabase: {},
 }))
 
+// A real SystemRole, switchable per test. Coordinator is the lowest role that may post (R-0111-1).
+const authState = vi.hoisted(() => ({ role: 'Coordinator' as string }))
 vi.mock('../../../lib/auth', () => ({
-  useAuth: () => ({ user: { id: 'usr-1', name: 'Babin Dulal', role: 'Operations Lead' } }),
+  useAuth: () => ({ user: { id: 'usr-1', name: 'Babin Dulal', role: authState.role } }),
 }))
 
 vi.mock('../../../components/ui/Toast', () => ({
@@ -38,6 +40,7 @@ function render(ui: React.ReactNode) {
 describe('InternalNotesDrawer', () => {
   beforeEach(() => {
     localStorage.clear()
+    authState.role = 'Coordinator'
   })
 
   afterEach(() => {
@@ -48,6 +51,32 @@ describe('InternalNotesDrawer', () => {
       root = null
     }
     document.body.innerHTML = ''
+  })
+
+  it.each(['Warehouse', 'Technician', 'Driver', 'Accounts'])(
+    'shows a read-and-acknowledge notice instead of the composer for %s (R-0111-1)',
+    (role) => {
+      authState.role = role
+      render(
+        <MemoryRouter>
+          <InternalNotesDrawer isOpen={true} onClose={vi.fn()} />
+        </MemoryRouter>,
+      )
+      expect(document.querySelector('[data-testid="note-composer-restricted"]')).not.toBeNull()
+      expect(document.body.textContent).toContain('Read and acknowledge only.')
+      expect(document.querySelector('textarea')).toBeNull()
+    },
+  )
+
+  it.each(['Coordinator', 'Manager', 'Admin', 'Owner'])('shows the composer for %s', (role) => {
+    authState.role = role
+    render(
+      <MemoryRouter>
+        <InternalNotesDrawer isOpen={true} onClose={vi.fn()} />
+      </MemoryRouter>,
+    )
+    expect(document.querySelector('[data-testid="note-composer-restricted"]')).toBeNull()
+    expect(document.querySelector('textarea')).not.toBeNull()
   })
 
   it('keeps its draft mounted but hidden when isOpen is false', () => {
