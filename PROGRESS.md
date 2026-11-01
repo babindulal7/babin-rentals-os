@@ -11,6 +11,7 @@
 - Row **G7** (after a review of this branch): **Pending is विचाराधीन, not बाँकी** — बाँकी had been used for both Outstanding and Pending. Babin approved the change; only `msg.pending` moved. After it, the only repeated Nepali words left are singular/plural pairs and Dispatched/Sent (पठाइएको, different screens, left as drafted).
 - Branch synced with `main` twice (`5198d450`, then `0eec50e8` after `main` moved to `a32a6d0d`); the only conflict was this file the first time, resolved by keeping main's entries and putting these on top.
 - Withdrew my claim that no card covers booking-site Nepali — T6's note and T10 already put it after go-live (spec §2, G5).
+- **Landed on `main` by fast-forward** (`b493f129`, nothing pushed) at Babin's go-ahead. `tsc --noEmit` on the merged tree reports **1 error**, `TeamNotesPanel.tsx(17,10) TS6133 'actionCtx' unused` — in a file identical to `main`, from lane B's `b92cf581`; my branch differs from `main` only by the glossary JSON and its test. Logged as **R5**.
 - **Review of lane B's T4-08 rider link and the shift money boundary** (read, not run): four findings **R1–R4** in `RULINGS-2026-11-01.md` for Babin to pass to lane B. R1 matters most — the three rider RPCs are granted to `authenticated` although only the Edge Function (service role) calls them, which becomes reachable by strangers once sign-up opens. Spec D-10.6 now tests it. The shift-handover cash isolation looked sound on a skim; lifecycle gates were not run against it.
 
 **Verified**
@@ -31,7 +32,7 @@
 Counted by `npm run completion`, not typed. Structural coverage only; docs and a data file add no counted item.
 
 ## Remaining
-- **Lane B: R1–R4 on T4-08** (`RULINGS-2026-11-01.md`), R1 before any sign-up is opened.
+- **Lane B: R1–R5** (`RULINGS-2026-11-01.md`). **R5 is a red gate on `main` today** (`typecheck`, one unused variable); R1 must land before any sign-up is opened.
 - **T1-01 is `done` only when `npm run check:dump` passes and the dump's SHA-256 is recorded** off the laptop.
 - **T1-02 (staging project cost approval) is still open** — the restore drill and every migration acceptance wait on it.
 - **Babin has not yet reviewed `docs/ONLINE_BOOKING_SPEC.md`** (§0 and the 13 ⭐ defaults). T7-02…T7-04 should not start until then.
