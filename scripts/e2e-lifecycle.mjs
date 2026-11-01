@@ -4385,6 +4385,79 @@ STEPS.push({
       assertEq(anonSelect, false, 'delivery_job_links table is NOT readable by anon')
       const anonExec = await one(`select has_function_privilege('anon', 'public.create_rider_link(uuid, text, text, text)', 'EXECUTE')`)
       assertEq(anonExec, false, 'create_rider_link is NOT executable by anon')
+
+      // 11. SEC-1 (0192): the token hash is not a credential. Nobody signed in may call the rider RPCs
+      //     (the rider-link Edge Function does, as service_role) or read token_hash.
+      const riderRpcs = [
+        ['get_rider_job_by_token', `select get_rider_job_by_token($1)`],
+        ['rider_mark_picked_up', `select rider_mark_picked_up($1)`],
+        ['rider_complete_delivery', `select rider_complete_delivery($1, 'Impostor Receiver')`],
+      ]
+      for (const role of ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Driver', 'Accounts', 'Client']) {
+        await as(role, async () => {
+          for (const [fn, text] of riderRpcs) {
+            await q('savepoint rider_rpc_probe')
+            try {
+              await refuses(`${role} cannot execute ${fn}`, text, [tokenHash], /permission denied for function/i)
+            } finally {
+              await q('rollback to savepoint rider_rpc_probe')
+              await q('release savepoint rider_rpc_probe')
+            }
+          }
+        })
+      }
+      for (const fn of ['get_rider_job_by_token(text)', 'rider_mark_picked_up(text)', 'rider_complete_delivery(text, text, text, text)']) {
+        const exec = await one(`select has_function_privilege('service_role', 'public.${fn}', 'EXECUTE')`)
+        assertEq(exec, true, `service_role keeps EXECUTE on ${fn}`)
+      }
+
+      for (const role of ['Owner', 'Coordinator', 'Warehouse']) {
+        await as(role, async () => {
+          for (const [what, text] of [
+            ['token_hash column', `select token_hash from delivery_job_links`],
+            ['select *', `select * from delivery_job_links`],
+          ]) {
+            await q('savepoint rider_hash_probe')
+            try {
+              await refuses(`${role} cannot read delivery_job_links via ${what}`, text, [], /permission denied for (table|column)/i)
+            } finally {
+              await q('rollback to savepoint rider_hash_probe')
+              await q('release savepoint rider_hash_probe')
+            }
+          }
+          const listed = (await q(
+            `select id, job_id, rider_name, rider_phone, created_at, expires_at, revoked_at, completed_at
+               from delivery_job_links where job_id = $1`,
+            [jobId],
+          )).rows
+          assertEq(listed.length, 1, `${role} can still list a job's rider links without the hash`)
+        })
+      }
+
+      // 12. SEC-1 (0192): a delivery completed through a rider link is audited with the issuer's real role
+      //     and marked as rider-link activity (0190 hard-coded 'Coordinator').
+      const jobId4 = '00000000-0000-4000-8000-00000000b994'
+      await q(`
+        insert into delivery_jobs (
+          id, client_uuid, booking_id, branch_id, leg, scheduled_at, status, created_by, updated_by
+        ) values (
+          $1, gen_random_uuid(), $2, $3, 'Return', now() + interval '3 hours', 'Scheduled', $4, $4
+        )
+      `, [jobId4, bookingIds.b, BRANCH, U.Coordinator])
+      const tokenHash4 = createHash('sha256').update('rider_sec_tok_audit_role_test_link_44556').digest('hex')
+      await as('Owner', async () => {
+        await q(`select create_rider_link($1, $2, 'Mina Rider', '9834567890')`, [jobId4, tokenHash4])
+      })
+      await q(`select rider_complete_delivery($1, 'Receiver Four')`, [tokenHash4])
+      const auditRows = (await q(
+        `select actor_role::text as role, new_values->>'acted_via' as via
+           from audit_events
+          where table_name = 'delivery_jobs' and record_id = $1 and new_values->>'receiver_name' = 'Receiver Four'`,
+        [jobId4],
+      )).rows
+      assertEq(auditRows.length, 1, 'rider delivery wrote exactly one delivery_jobs audit row')
+      assertEq(auditRows[0].role, 'Owner', 'audit role is the link issuer\'s real role, not a hard-coded Coordinator')
+      assertEq(auditRows[0].via, 'rider_link', 'audit row is marked as rider-link activity')
     })
   },
 })

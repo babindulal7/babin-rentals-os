@@ -569,7 +569,7 @@ For hired delivery riders who lack staff logins:
   2. View item summary (equipment descriptions and quantities; zero rates).
   3. "Picked up from shop" transition (`status` -> `In Transit`).
   4. "Complete delivery" transition with receiver name, drawn signature, and optional photo (`status` -> `Delivered`).
-- **Fail-closed security**: Once delivered, failed, revoked by staff, or after 24 hours, the link immediately ceases to function. A used link cannot deliver twice. Direct table access is denied to anon and authenticated; all mutations are governed by security-definer RPCs.
+- **Fail-closed security**: Once delivered, failed, revoked by staff, or after 24 hours, the link immediately ceases to function. A used link cannot deliver twice. **Migration 0192 (RULING 2026-11-01):** the three rider RPCs (`get_rider_job_by_token`, `rider_mark_picked_up`, `rider_complete_delivery`) are executable by `service_role` only — the rider-link Edge Function; no signed-in role can call them. Signed-in staff may read `delivery_job_links` rows their branch policy admits, **without** the `token_hash` column (column-level grant); anon has no access. Staff who create or revoke links still use `create_rider_link` / `revoke_rider_link`. Mutations are governed by security-definer RPCs; a delivery completed through a link is audited under the issuing staff member's real role and marked `acted_via: rider_link`.
 
 ---
 

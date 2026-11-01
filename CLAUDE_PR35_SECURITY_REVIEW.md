@@ -124,7 +124,7 @@ No unauthenticated-attacker P0 was found. Ranking assumes the feature is not yet
 
 | ID | Defect | Evidence | Class |
 |---|---|---|---|
-| **SEC-1** | `token_hash` is a credential: readable by staff (`0190:32–45`) and accepted by `authenticated`-executable rider RPCs (`0190:466–468`); actions are audited as the link creator with role `'Coordinator'` (`0190:338, 439–440`). Contradicts PERMISSIONS §7.1. | Read | VERIFIED |
+| **SEC-1** | **FIXED on branch `claude/pr35-rider-link-security-8bf9b6` by migration 0192 (written + verified locally, not applied): rider RPCs `service_role` only, `token_hash` unreadable by `authenticated`, audit role is the issuer's real role. Lifecycle L47 steps 11–12 fail without it. As found:** `token_hash` is a credential: readable by staff (`0190:32–45`) and accepted by `authenticated`-executable rider RPCs (`0190:466–468`); actions are audited as the link creator with role `'Coordinator'` (`0190:338, 439–440`). Contradicts PERMISSIONS §7.1. | Read | VERIFIED |
 | **SEC-2** | Client falls back to direct RPC when the Edge Function fails (`riderLink.ts:345–354, 383–389, 436–446`): replays writes, masks the real reason, and is dead code for a signed-out rider. | Probes P3–P5 executed | VERIFIED |
 | **SEC-3** | Rider token reaches Sentry via the page path (`monitoring.ts:162, 236`). | Read | VERIFIED |
 | **FUNC-1** | Rider sees "Delivery Link Inactive" after a successful delivery (`RiderDeliveryPage.tsx:148, 175, 193`). | Executed | VERIFIED |
