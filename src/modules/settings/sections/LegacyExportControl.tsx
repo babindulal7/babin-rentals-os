@@ -112,7 +112,7 @@ export function LegacyExportControl() {
         </div>
       </div>
       <div style={{ fontSize: '11px', color: 'var(--muted)' }}>
-        Exports JSON + CSV bundle. Data stays on this device — nothing is deleted or auto-imported (Law 3, D28).
+        Exports a JSON + CSV bundle. Data stays on this device and is never deleted or imported automatically.
       </div>
     </div>
   )
