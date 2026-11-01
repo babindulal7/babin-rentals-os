@@ -1,7 +1,7 @@
 # T8 — Membership & crew
 
 **Goal:** memberships are live on day one with Babin's real plans, fair plan changes and renewals;
-crew bookings bill and pay overtime and withhold TDS. **Lane A · Codex-1 (moved from Gemini, L8).** Rulings: D21–D25, D32, W68; 21 Jul and
+crew bookings bill and pay overtime and withhold TDS. **Lane A · Codex-1 (moved from Gemini, L12).** Rulings: D21–D25, D32, W68; 21 Jul and
 28 Jul membership locks (discount %, priority booking, pay-later credit, benefits vary by level);
 Law 10 (discounts ungated); PERMISSIONS §5 (crew payout rates and TDS: Owner, Admin, Manager,
 Accounts only).
@@ -105,7 +105,7 @@ overtime days. Hours stay visible as information only.
 **Done when** — no "Estimated pay" label remains; totals match Crew Assist payouts.
 **Needs** — T8-06.
 
-### T8-08 · TDS on crew payouts            status: todo · size: M · lane A + accountant
+### T8-08 · TDS on crew payouts            status: done — awaiting merge (lane-a/T8-08-tds-on-crew-payouts) · size: M · lane A + accountant
 **What** — Settings ▸ Financial ▸ "TDS on crew payouts" (rate set by the accountant — O-5). Crew
 payouts show **gross, TDS, net**; a TDS report per month for the accountant. Until a rate is set,
 payouts show "TDS: rate not set". Money roles only (PERMISSIONS §5).
@@ -117,7 +117,7 @@ rate change must not rewrite past payouts).
 does not alter it.
 **Needs** — accountant's rate (O-5).
 
-### T8-09 · Staff renting gear            status: todo · size: S · lane A · [go-live]
+### T8-09 · Staff renting gear            status: done — awaiting merge (lane-a/T8-09-staff-renting-gear-finish) · size: S · lane A · [go-live]
 **What** — A client can be marked **Staff** (linked to the staff member's user). A Staff client's
 bookings get a **20% staff discount** line automatically (W68), shown and removable like any other
 discount (Law 10 — no approval gate). Everything else is a normal client booking: deposit, ID on

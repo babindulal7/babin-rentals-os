@@ -20,6 +20,8 @@ export interface UseNewRentalLogisticsResult {
   // Delivery & Return
   deliveryType: 'Client Pickup' | 'Babin Delivery'
   setDeliveryType: Dispatch<SetStateAction<'Client Pickup' | 'Babin Delivery'>>
+  deliveryZone: string
+  setDeliveryZone: Dispatch<SetStateAction<string>>
   deliveryChargePaisa: Paisa
   setDeliveryChargePaisa: Dispatch<SetStateAction<Paisa>>
   fuelChargePaisa: Paisa
@@ -73,6 +75,7 @@ export function useNewRentalLogistics({
 }: UseNewRentalLogisticsOptions): UseNewRentalLogisticsResult {
   // Delivery & Outgoing Transport
   const [deliveryType, setDeliveryType] = useState<'Client Pickup' | 'Babin Delivery'>('Client Pickup')
+  const [deliveryZone, setDeliveryZone] = useState('')
   const [deliveryChargePaisa, setDeliveryChargePaisa] = useState<Paisa>(rupees(0) as Paisa)
   const [fuelChargePaisa, setFuelChargePaisa] = useState<Paisa>(rupees(0) as Paisa)
   const [vehicle, setVehicle] = useState('')
@@ -137,6 +140,7 @@ export function useNewRentalLogistics({
     () => ({
       clientPickup,
       deliveryType,
+      deliveryZone,
       vehicle,
       numberPlate,
       driverContact,
@@ -154,6 +158,7 @@ export function useNewRentalLogistics({
     [
       clientPickup,
       deliveryType,
+      deliveryZone,
       vehicle,
       numberPlate,
       driverContact,
@@ -176,6 +181,7 @@ export function useNewRentalLogistics({
     } else if (updates.clientPickup !== undefined) {
       setDeliveryType(updates.clientPickup ? 'Client Pickup' : 'Babin Delivery')
     }
+    if (updates.deliveryZone !== undefined) setDeliveryZone(updates.deliveryZone)
     if (updates.vehicle !== undefined) setVehicle(updates.vehicle)
     if (updates.numberPlate !== undefined) setNumberPlate(updates.numberPlate)
     if (updates.driverContact !== undefined) setDriverContact(updates.driverContact)
@@ -193,6 +199,8 @@ export function useNewRentalLogistics({
   return {
     deliveryType,
     setDeliveryType,
+    deliveryZone,
+    setDeliveryZone,
     deliveryChargePaisa,
     setDeliveryChargePaisa,
     fuelChargePaisa,

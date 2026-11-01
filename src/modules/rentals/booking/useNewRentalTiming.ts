@@ -40,6 +40,27 @@ export interface UseNewRentalTimingResult {
  * Encapsulates rental window timing, Kathmandu business day defaults,
  * calendar conversion (AD/BS), and fast shoot duration presets.
  */
+/**
+ * L1 (RULINGS-2026-10-26-workflow.md): New Rental opens with
+ * **tomorrow 06:00 → the next day 06:00** and quick length chips
+ * 1 day · 2 days · 3 days · 1 week (those chips already live in
+ * `DatePresets.DEFAULT_PRESETS`). The 06:00 pair is the operational-day
+ * boundary, so the default window measures exactly one rental day —
+ * R-39's "defaults are doctrine": the most common booking is opened ready
+ * to confirm, not today-09:00-back-to-front as before.
+ */
+const RENTAL_DAY_CLOCK = '06:00'
+
+/** The L1 default pickup date: tomorrow's business date (Kathmandu civil). */
+function defaultPickupIso(): string {
+  return new Date(getBusinessToday().getTime() + DAY).toISOString().slice(0, 10)
+}
+
+/** The L1 default return date: one day after a pickup date. */
+function defaultReturnIso(pickupIso: string): string {
+  return new Date(new Date(`${pickupIso}T12:00:00.000Z`).getTime() + DAY).toISOString().slice(0, 10)
+}
+
 export function useNewRentalTiming({
   searchParams,
 }: UseNewRentalTimingOptions): UseNewRentalTimingResult {
@@ -49,15 +70,19 @@ export function useNewRentalTiming({
   const [pickup, setPickup] = useState(() =>
     fromParam && !Number.isNaN(Date.parse(fromParam))
       ? fromParam
-      : getBusinessToday().toISOString().slice(0, 10),
+      : defaultPickupIso(),
   )
-  const [ret, setRet] = useState(() =>
-    toParam && !Number.isNaN(Date.parse(toParam))
-      ? toParam
-      : new Date(getBusinessToday().getTime() + DAY).toISOString().slice(0, 10),
-  )
-  const [pickupTime, setPickupTime] = useState('09:00')
-  const [returnTime, setReturnTime] = useState('18:00')
+  const [ret, setRet] = useState(() => {
+    if (toParam && !Number.isNaN(Date.parse(toParam))) return toParam
+    /* When only the pickup came in, the default return keeps the window
+       anchored to THAT pickup (from + 1 day), not to today — a return
+       measured from a different day than its pickup is never what staff
+       meant. */
+    const base = fromParam && !Number.isNaN(Date.parse(fromParam)) ? fromParam : defaultPickupIso()
+    return defaultReturnIso(base)
+  })
+  const [pickupTime, setPickupTime] = useState(RENTAL_DAY_CLOCK)
+  const [returnTime, setReturnTime] = useState(RENTAL_DAY_CLOCK)
 
   const pickupAt = useMemo(() => bookingInstant(pickup, pickupTime), [pickup, pickupTime])
   const returnAt = useMemo(() => bookingInstant(ret, returnTime), [ret, returnTime])

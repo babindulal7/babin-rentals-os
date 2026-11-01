@@ -13,24 +13,37 @@ vi.mock('../../../lib/supabase', () => ({
 describe('listTeamNotes', () => {
   const mockRpc = vi.mocked(supabase.rpc);
   const validContext = { userId: 'user-123', role: 'Coordinator' as const };
+  const warehouseContext = { userId: 'warehouse-123', role: 'Warehouse' as const };
   const clientContext = { userId: 'client-123', role: 'Client' as const };
-
-  const rpcOk = (data: unknown) => ({ data, error: null, count: null, status: 200, statusText: 'OK' } as any);
-  const rpcErr = (message: string) => ({ data: null, error: { message, details: '', hint: '', code: '42000', name: 'PostgrestError', toJSON: () => ({}) }, count: null, status: 400, statusText: 'Error' } as any);
 
   const mockNotes: TeamNoteRow[] = [
     {
-      id: '111e4567-e89b-12d3-a456-426614174000',
-      body: 'First note',
-      author_id: 'author-1',
-      created_at: '2026-10-28T10:00:00Z',
-      acknowledged_by: ['user-123'],
+      id: '123e4567-e89b-12d3-a456-426614174000',
+      client_uuid: '123e4567-e89b-12d3-a456-426614174001',
+      body: 'Note 1',
+      author_id: 'user-1',
+      author_name: 'Babin Dulal',
+      author_role: 'Operations Lead',
+      created_at: '2026-10-28T12:00:00Z',
+      category: 'Shift Handover',
+      priority: 'high',
+      status: 'open',
+      pinned: true,
+      is_archived: false,
+      acknowledged_by: ['user-1'],
     },
     {
-      id: '222e4567-e89b-12d3-a456-426614174000',
-      body: 'Second note',
-      author_id: 'author-2',
-      created_at: '2026-10-28T09:00:00Z',
+      id: '123e4567-e89b-12d3-a456-426614174002',
+      body: 'Note 2',
+      author_id: 'user-2',
+      author_name: 'Rita Manandhar',
+      author_role: 'Technician',
+      created_at: '2026-10-28T11:00:00Z',
+      category: 'Equipment Alert',
+      priority: 'urgent',
+      status: 'open',
+      pinned: false,
+      is_archived: false,
       acknowledged_by: [],
     },
   ];
@@ -46,7 +59,15 @@ describe('listTeamNotes', () => {
   });
 
   it('throws ActionPermissionError for Client role', async () => {
-    await expect(listTeamNotes({}, clientContext)).rejects.toThrow(ActionPermissionError);
+    await expect(listTeamNotes({}, clientContext)).rejects.toThrow(
+      ActionPermissionError
+    );
+  });
+
+  it('allows all staff roles to list notes', async () => {
+    mockRpc.mockResolvedValue({ data: mockNotes, error: null } as any);
+    const result = await listTeamNotes({}, warehouseContext);
+    expect(result.notes).toEqual(mockNotes);
   });
 
   it('throws validation error for limit < 1', async () => {
@@ -62,7 +83,7 @@ describe('listTeamNotes', () => {
   });
 
   it('lists notes with defaults', async () => {
-    mockRpc.mockResolvedValue(rpcOk(mockNotes));
+    mockRpc.mockResolvedValue({ data: mockNotes, error: null } as any);
 
     const result = await listTeamNotes({}, validContext);
 
@@ -70,22 +91,31 @@ describe('listTeamNotes', () => {
     expect(mockRpc).toHaveBeenCalledWith('list_team_notes', {
       p_limit: 50,
       p_offset: 0,
+      p_include_archived: false,
+      p_category: null,
+      p_reference_id: null,
     });
   });
 
-  it('respects custom limit and offset', async () => {
-    mockRpc.mockResolvedValue(rpcOk([]));
+  it('respects custom limit, offset, and filters', async () => {
+    mockRpc.mockResolvedValue({ data: [], error: null } as any);
 
-    await listTeamNotes({ limit: 10, offset: 20 }, validContext);
+    await listTeamNotes(
+      { limit: 10, offset: 20, includeArchived: true, category: 'Equipment Alert', referenceId: 'BR-2613' },
+      validContext
+    );
 
     expect(mockRpc).toHaveBeenCalledWith('list_team_notes', {
       p_limit: 10,
       p_offset: 20,
+      p_include_archived: true,
+      p_category: 'Equipment Alert',
+      p_reference_id: 'BR-2613',
     });
   });
 
-  it('returns empty array when no notes', async () => {
-    mockRpc.mockResolvedValue(rpcOk(null));
+  it('returns empty array when data is null', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: null } as any);
 
     const result = await listTeamNotes({}, validContext);
 
@@ -93,7 +123,7 @@ describe('listTeamNotes', () => {
   });
 
   it('throws on RPC error', async () => {
-    mockRpc.mockResolvedValue(rpcErr('Permission denied'));
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'Permission denied' } } as any);
 
     await expect(listTeamNotes({}, validContext)).rejects.toThrow('Failed to list team notes: Permission denied');
   });

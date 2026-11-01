@@ -766,7 +766,7 @@ function ClientOptionRow({
       role="option"
       aria-selected={selected}
       // The health reaches assistive tech as words, never as a colour.
-      aria-label={`${healthAccessibleName(client, verdict)}${client.isVip ? '. VIP client' : ''}${
+      aria-label={`${healthAccessibleName(client, verdict)}${client.isStaff || client.isStaffClient ? '. Staff client' : ''}${client.isVip ? '. VIP client' : ''}${
         outstanding ? `. ${outstanding}` : ''
       }. Phone ${client.phone}`}
       onMouseMove={onHover}
@@ -821,6 +821,25 @@ function ClientOptionRow({
           * The old comment cited "Foundation §4.2". That document is
           * superseded; v4.1 §2/§4 is the standing rule and is what this reads.
           */}
+        {(client.isStaff || client.isStaffClient) && (
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: '2px 7px',
+              borderRadius: 'var(--r-chip)',
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border)',
+              color: 'var(--info-text, var(--text))',
+              fontSize: 'var(--t-th)',
+              fontWeight: 700,
+              letterSpacing: '0.02em',
+            }}
+          >
+            Staff
+          </span>
+        )}
         {client.isVip && <span
                     style={{
                       display: 'inline-flex',

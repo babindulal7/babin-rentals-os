@@ -72,7 +72,7 @@ export async function getClientReportsSummary(
   options: ReportFilterOptions = {},
   { includeMoney = true, now = new Date() }: { includeMoney?: boolean; now?: Date } = {},
 ): Promise<ClientReportsSummary> {
-  let bookingsQ = supabase.from('bookings').select('id, client_id').is('cancelled_at', null)
+  let bookingsQ = supabase.from('bookings').select('id, client_id').is('cancelled_at', null).neq('stage', 'Quote')
   if (options.from) bookingsQ = bookingsQ.gte('pickup_at', options.from)
   if (options.to) bookingsQ = bookingsQ.lte('pickup_at', options.to)
   if (options.branchId) bookingsQ = bookingsQ.eq('branch_id', options.branchId)

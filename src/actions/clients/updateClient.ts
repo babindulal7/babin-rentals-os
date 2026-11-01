@@ -141,6 +141,11 @@ export const updateClientConfig: ActionConfig<UpdateClientInput, UpdateClientRes
     if ('org_subtype' in patch) clientPayload.org_subtype = patch.org_subtype ?? null
     if ('portal_default_language' in patch) clientPayload.portal_default_language = patch.portal_default_language
     if ('preferred_contact_channels' in patch) clientPayload.preferred_contact_channels = patch.preferred_contact_channels
+    if ('is_staff' in patch) clientPayload.is_staff = Boolean(patch.is_staff)
+    if ('isStaff' in patch) clientPayload.is_staff = Boolean(patch.isStaff)
+    if ('isStaffClient' in patch) clientPayload.is_staff = Boolean(patch.isStaffClient)
+    if ('staff_user_id' in patch) clientPayload.staff_user_id = patch.staff_user_id ?? null
+    if ('staffUserId' in patch) clientPayload.staff_user_id = patch.staffUserId ?? null
 
     const hasContactFields = 'contact_name' in patch || 'contact_designation' in patch || 'contact_phone' in patch
     if (hasContactFields) {

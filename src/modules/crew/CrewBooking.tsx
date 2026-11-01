@@ -13,6 +13,7 @@ import { EmptyState } from '../../components/ui/StateViews'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
 import { formatMoney } from '../../lib/money'
+import { getCrewPayoutTdsPercent } from '../../lib/settingsStore'
 import { useAuth } from '../../lib/auth'
 import { gateContext, canViewMoneyField, canViewPII } from '../../lib/fieldGating'
 import { IntelCard } from '../../components/ui/IntelCard'
@@ -251,7 +252,8 @@ export function CrewBooking() {
   const fill = useMemo(() => fillRate(crewAssignments, openRoleRequests), [crewAssignments, openRoleRequests])
 
   const crewBookedToday = useMemo(() => crewAssignments.filter((a) => onShootToday(a)).length, [crewAssignments])
-  const ledger = useMemo(() => payoutLedger(crewAssignments), [crewAssignments])
+  const tdsRatePercent = useMemo(() => getCrewPayoutTdsPercent(), [])
+  const ledger = useMemo(() => payoutLedger(crewAssignments, tdsRatePercent), [crewAssignments, tdsRatePercent])
 
   const chipCounts = useMemo(() => rosterChipCounts(crewMembers), [crewMembers])
   const roles = useMemo(() => [...new Set([...crewMembers.map((member) => member.role), ...crewAssignments.map((assignment) => assignment.role)])].sort(), [crewMembers, crewAssignments])
@@ -325,20 +327,29 @@ export function CrewBooking() {
 
       {/* §6.1's PAYOUT LEDGER — "(money roles only)", so it is OMITTED rather
           than masked for a money-blind role (Law 6). Gross is real; TDS and net
-          are `null` in the engine because no rate is ruled (PLAN.md §4.12), and
-          the card says "not tracked yet" rather than seeding a plausible one. */}
+          derive from the configured rate in Settings ▸ Financial (Ruling D25 / O-5).
+          Until a rate is configured, payouts show "TDS: rate not set". */}
       {canCrewMoney && (
         <RailSection title="Payout ledger" badge={`${ledger.count} assignment${ledger.count === 1 ? '' : 's'}`}>
           <SummaryRows
             rows={[
               { label: 'Gross', value: formatMoney(ledger.grossPaisa) },
               ...ledger.byStatus.map((s) => ({ label: s.status, value: `${s.count} · ${formatMoney(s.grossPaisa)}` })),
-              { label: 'TDS withheld', value: 'Not tracked yet' },
-              { label: 'Net payable', value: 'Not tracked yet' },
+              {
+                label: ledger.tdsRatePercent !== null ? `TDS withheld (${ledger.tdsRatePercent}%)` : 'TDS withheld',
+                value: ledger.tdsPaisa !== null ? formatMoney(ledger.tdsPaisa) : 'TDS: rate not set',
+              },
+              {
+                label: 'Net payable',
+                value: ledger.netPaisa !== null ? formatMoney(ledger.netPaisa) : 'TDS: rate not set',
+              },
             ]}
           />
           <div style={{ marginTop: 8, fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-            {/* TDS needs a ruled rate — PLAN.md §4.12. Never derived from an assumed one. */}Tax deductions are not tracked yet. </div>
+            {ledger.tdsRatePercent !== null
+              ? `TDS calculated at ${ledger.tdsRatePercent}% per Settings ▸ Financial.`
+              : 'TDS: rate not set. Configure in Settings ▸ Financial.'}
+          </div>
         </RailSection>
       )}
 

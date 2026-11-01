@@ -426,18 +426,18 @@ describe('Finance — money visibility is not permission to record a payment', (
        * The two cases below are the other half — a gate that hid Void from
        * everybody would satisfy this line and still be wrong.
        */
-      expect(byText(c, /^Void$/)).toBeUndefined()
+      // RULING 2026-11-01 (R-3): Admin and Manager may void (R-05, the database gate). Was absent.
+      expect(byText(c, /^Void$/)).toBeDefined()
     })
   }
 
   /*
-   * `canVoidInvoice` is Owner / Accounts — strictly narrower than
-   * `canRecordPayment`'s Owner / Coordinator / Accounts. Both halves are
-   * asserted because the two rules are not the same rule, and a fix that gated
-   * Void on `canTakePayment` would pass every case above while handing
+   * `canVoidInvoice` is Owner / Admin / Manager / Accounts (R-3, R-05) — it excludes Coordinator,
+   * who `canRecordPayment` admits. Both halves are asserted because the two rules are not the same
+   * rule, and a fix that gated Void on `canTakePayment` would pass every case above while handing
    * Coordinator a terminal action rbac does not admit.
    */
-  for (const role of ['Owner', 'Accounts']) {
+  for (const role of ['Owner', 'Admin', 'Manager', 'Accounts']) {
     it(`still offers ${role} the Void rbac admits`, async () => {
       auth.role = role
       db.tables.set('invoices', { rows: [invoiceRow()], count: 1 })

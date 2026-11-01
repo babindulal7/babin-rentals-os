@@ -15,6 +15,7 @@ import { useDomainEvent } from '../../events/useDomainEvent'
 import { EVENT_TYPES } from '../../events/eventBus'
 import { useToast } from '../../components/ui/Toast'
 import { DriverHandoverModal } from './DriverHandoverModal'
+import { SendToRiderModal } from './SendToRiderModal'
 import {
   getLiveTransportPlans,
   liveTransportReadRefusal,
@@ -34,6 +35,7 @@ export default function LiveTransportPlans() {
   const [search, setSearch] = useState('')
   const [methodFilter, setMethodFilter] = useState<'All' | string>('All')
   const [handoverTarget, setHandoverTarget] = useState<LiveTransportPlan | null>(null)
+  const [riderModalTarget, setRiderModalTarget] = useState<LiveTransportPlan | null>(null)
   const { showSuccessToast } = useToast()
 
   const loadData = useCallback(() => {
@@ -345,22 +347,39 @@ export default function LiveTransportPlans() {
                     </div>
                   )}
 
-                  {/* Action CTA */}
-                  <Button
-                    variant="primary"
-                    icon="truck"
-                    onClick={() => setHandoverTarget(item)}
-                    aria-label={`Deliver and sign for booking ${item.bookingNo}`}
-                    style={{
-                      minHeight: 48,
-                      width: '100%',
-                      fontSize: 'var(--t-ui, 14px)',
-                      fontWeight: 600,
-                      justifyContent: 'center',
-                    }}
-                  >
-                    Deliver & Sign
-                  </Button>
+                  {/* Action CTAs */}
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <Button
+                      variant="primary"
+                      icon="truck"
+                      onClick={() => setHandoverTarget(item)}
+                      aria-label={`Deliver and sign for booking ${item.bookingNo}`}
+                      style={{
+                        minHeight: 48,
+                        flex: 1,
+                        fontSize: 'var(--t-ui, 14px)',
+                        fontWeight: 600,
+                        justifyContent: 'center',
+                      }}
+                    >
+                      Deliver & Sign
+                    </Button>
+                    <Button
+                      variant="outline"
+                      icon="external_link"
+                      onClick={() => setRiderModalTarget(item)}
+                      aria-label={`Send booking ${item.bookingNo} to hired rider`}
+                      style={{
+                        minHeight: 48,
+                        flex: 1,
+                        fontSize: 'var(--t-ui, 14px)',
+                        fontWeight: 600,
+                        justifyContent: 'center',
+                      }}
+                    >
+                      Send to Rider
+                    </Button>
+                  </div>
                 </article>
               ))}
             </div>
@@ -449,15 +468,26 @@ export default function LiveTransportPlans() {
                           </td>
                         )}
                         <td style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>
-                          <Button
-                            variant="primary"
-                            icon="truck"
-                            onClick={() => setHandoverTarget(item)}
-                            aria-label={`Deliver and sign for booking ${item.bookingNo}`}
-                            style={{ minHeight: 44, padding: '0 12px' }}
-                          >
-                            Deliver & Sign
-                          </Button>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <Button
+                              variant="primary"
+                              icon="truck"
+                              onClick={() => setHandoverTarget(item)}
+                              aria-label={`Deliver and sign for booking ${item.bookingNo}`}
+                              style={{ minHeight: 44, padding: '0 12px' }}
+                            >
+                              Deliver & Sign
+                            </Button>
+                            <Button
+                              variant="outline"
+                              icon="external_link"
+                              onClick={() => setRiderModalTarget(item)}
+                              aria-label={`Send booking ${item.bookingNo} to hired rider`}
+                              style={{ minHeight: 44, padding: '0 10px' }}
+                            >
+                              Send to Rider
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -483,6 +513,18 @@ export default function LiveTransportPlans() {
               setHandoverTarget(null)
               loadData()
             }}
+          />
+        )}
+
+        {/* Send to Rider Modal (T4-08, W49) */}
+        {riderModalTarget && (
+          <SendToRiderModal
+            isOpen={true}
+            onClose={() => setRiderModalTarget(null)}
+            jobId={riderModalTarget.id}
+            bookingNo={riderModalTarget.bookingNo}
+            clientName={riderModalTarget.clientName}
+            destination={riderModalTarget.handoverLocation ?? undefined}
           />
         )}
       </PageBody>

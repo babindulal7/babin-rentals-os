@@ -14,9 +14,12 @@ React 18 · TS 5.7 strict · Vite 5 · Tailwind v4 · Supabase Postgres + RLS ·
 - **Lanes:** **Codex-1 = lane A** (T0, T1 code, T2 floor, T9 cutover, then T8) · **Gemini = lane B** (T4, T5, then T6 Nepali) · **Codex-2 = lane C** (T3 booking & money, T7 online booking). Claude reviews at 7:38 AM and 7:38 PM NPT and never pushes; Babin merges locally.
 - **One agent per checkout.** Each lane works in its own git worktree on its own branch: `lane-<a|b|c>/<card-id>-<slug>` (e.g. `lane-a/T2-01-camera-evidence`). Never edit another lane's open card files.
 - **Your task is a card** in `docs/plans/T*.md`; its prompt is `docs/plans/prompts/<card-id>.md`. Set the card to `doing` in your first commit and tick it when done.
+- **Order inside a track:** untagged and plain `[go-live]` cards first, then `[go-live] · slips first` (the 27 Oct Booqable round — the first to move after day X if the lane is behind, B56), then `[soon]`.
 - **Migrations:** claim the next free number in `docs/plans/MIGRATION_LEDGER.md` in your first commit. Never apply anything to live Supabase (N-5).
 - **Shared files** (`PLAN.md`, `docs/PERMISSIONS.md`, `src/lib/rbac.ts`, `src/actions/core.ts`, `src/lib/money.ts`, `src/lib/pricingPipeline.ts`): change one only when your card says so, and say so in your report.
 - **Nepali (T6)** converts a module only when no open lane A or C card touches that module.
+- **Database first:** a permission or gate changes in Postgres (migration + lifecycle step) before the UI offers it (P2, P3, N-3).
+- **Done means:** real data, permissions enforced in the database, five screen states (loading, empty, error, restricted, offline), phone/tablet/desktop, the screen check in `docs/USABILITY_TESTS.md` §1 passed on every changed screen, local gates green, merged by Babin, PROGRESS logged. A screen that only looks finished is not done (Law 16).
 
 ## Commands
 
@@ -27,21 +30,12 @@ npm run dev:mock             # vite --mode mock, VITE_DATA_SOURCE=mock local cor
 npm run dev:local            # vite --mode localdb
 npm run typecheck            # tsc --noEmit
 npm run lint                 # eslint src --max-warnings 0 (src only; archive/scripts/supabase excluded)
-npm test                     # vitest run (full suite) — auto-detects mock mode if VITE_SUPABASE_URL and VITE_DATA_SOURCE are unset (T0-02)
+npm test                     # vitest run (full suite) — mock mode only if no VITE_SUPABASE_URL is found, and it reads .env.local (T0-02); run VITE_DATA_SOURCE=mock npm test until T0-10
 npx vitest run <path>        # single file, e.g. npx vitest run src/__tests__/e2e/tier1-features.test.tsx
 npm run build                # tsc --noEmit && vite build → dist/
 ```
 
-Verification order for any change: `typecheck → test → check:pglite + check:lifecycle → build`. **GitHub CI is off since 26 Oct 2026** (billing; Babin ruled W75 — `RULINGS-2026-10-26-workflow.md`): run the same list it ran yourself before you report a card done, and paste the results into PROGRESS.md — typecheck, `VITE_DATA_SOURCE=mock npm test`, `check:pglite`, `check:lifecycle`, `lint`, `lint:progress`, `check:contrast`, build. The workflow file `.github/workflows/ci.yml` stays as the reference list.
-
-## Parallel lanes and worktrees (PLAN.md §6)
-
-- **Three lanes, one writer each:** Lane A = T0, T1, T2, T9, T8. Lane B = T4, T5, T6. Lane C = T3, T7. Non-Claude agents (Codex, Gemini, Antigravity) follow this protocol.
-- **One task = one branch = one PR:** Branch name `lane-<a|b|c>/<task-id>-<slug>`, e.g. `lane-a/T2-01-camera-evidence`. Merge to `main` only with CI green.
-- **Migration numbers are claimed, not guessed:** Before writing SQL, claim the next free number in `docs/plans/MIGRATION_LEDGER.md` in the branch's first commit.
-- **Database first:** A permission or gate changes in Postgres (migration + lifecycle step) before the UI offers it (P2, P3, N-3).
-- **Session end:** Update `PROGRESS.md` (Did / Ruled / Verified) with `## Completion` (run `npm run completion`, never hand-type) and `## Remaining`. `npm run lint:progress` enforces the format. Tick task card in `docs/plans/`.
-- **Done means:** Real data, permissions enforced in the database, five screen states (loading, empty, error, restricted, offline), phone/tablet/desktop, tests passing, PR merged, PROGRESS logged. A screen that only looks finished is not done (Law 16).
+Verification order for any change: `typecheck → test → check:pglite + check:lifecycle → build`. **GitHub CI is off since 26 Oct 2026** (billing; Babin ruled W75 — `RULINGS-2026-10-26-workflow.md`): run **every step it ran, in its order**, yourself before you report a card done, and paste the results into PROGRESS.md — the list is in `docs/plans/README.md` ("Gates every card must pass"): typecheck, lint, `VITE_DATA_SOURCE=mock npm test` (keep the variable until T0-10 — with a live URL in `.env.local` the runner uses live settings), `check:pglite`, financial integrity, `check:security`, `check:lifecycle`, `test:server-contracts`, `test:partial-return`, `lint:progress`, the receipt test, `lint:shell`, `lint:ui-copy`, `check:contrast`, build (coverage before each live batch). The workflow file `.github/workflows/ci.yml` stays as the reference list.
 
 DB / lifecycle gates (allowed in `opencode.jsonc`, never prompt-blocked):
 ```bash
@@ -57,7 +51,7 @@ npm run db:types            # regen src/types/database.ts
 
 ## Hard prohibitions
 
-- **N-5: never push a migration to live Supabase.** `supabase db push` (any spelling) and `npm run db:apply --remote` are denied in `opencode.jsonc`. Write it, number it (`supabase/migrations/`), verify locally (`check:pglite` + `check:lifecycle` both green = `Verified` per R-35) — Babin applies after [`../archive/BACKUP_PROTOCOL.md`](../archive/BACKUP_PROTOCOL.md). Never `supabase db reset` against production. `PROGRESS.md` must say WRITTEN vs VERIFIED vs APPLIED vs PRODUCTION-VERIFIED.
+- **N-5: never push a migration to live Supabase.** `supabase db push` (any spelling) and `npm run db:apply --remote` are denied in `opencode.jsonc`. Write it, number it (`supabase/migrations/`), verify locally (`check:pglite` + `check:lifecycle` both green = `Verified` per R-35) — Babin applies after [`../archive/BACKUP_PROTOCOL.md`](docs/archive/BACKUP_PROTOCOL.md). Never `supabase db reset` against production. `PROGRESS.md` must say WRITTEN vs VERIFIED vs APPLIED vs PRODUCTION-VERIFIED.
 - **Anon key only in the client.** Every `VITE_*` var is inlined into the bundle at build time and is public (View Source). Never a service key, JWT secret, or credential in code, logs, or commits (N-8). `docker run -e` on a built image does nothing — values must exist at `npm run build`.
 - Env changes require a Vite restart. `VITE_DEV_AUTH_BYPASS=true` skips login as seeded Owner but is double-gated on `import.meta.env.DEV` (dead code in prod).
 - No `any` in `src/` (`@typescript-eslint/no-explicit-any: error`); relaxed only in `*.test.*`. `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes` are on — index access needs guards.

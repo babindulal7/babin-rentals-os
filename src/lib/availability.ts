@@ -483,6 +483,12 @@ export function selectUnitsForLine(input: SelectUnitsInput): AssignmentOutcome {
       continue
     }
 
+    // Check condition BEFORE cleaning — Damaged/Lost must report as condition, not as "cleaning"
+    if (unit.safetyHold || unit.condition === 'Damaged' || unit.condition === 'Lost') {
+      rejected.push({ unitId: unit.unitId, assetTag: unit.assetTag, reason: { kind: 'condition', condition: unit.safetyHold ?? unit.condition! } })
+      continue
+    }
+
     // RULING 2026-10-24: queue tasks do not block; real damage/loss still does.
     if (unit.safetyHold || unit.condition === 'Damaged' || unit.condition === 'Lost') {
       rejected.push({ unitId: unit.unitId, assetTag: unit.assetTag, reason: { kind: 'condition', condition: unit.safetyHold ?? unit.condition! } })

@@ -28,6 +28,7 @@ const sampleCrew: CrewLine[] = [
 const sampleTransport: TransportDetails = {
   clientPickup: false,
   deliveryType: 'Babin Delivery',
+  deliveryZone: 'Kathmandu Ring Road',
   vehicle: 'Toyota HiAce',
   numberPlate: 'BA 2 JA 1234',
   driverContact: '9851011122',

@@ -8,7 +8,7 @@
 > **5,739 / 5,739** in 463 files with `VITE_DATA_SOURCE=mock` (as CI runs it; without it 132 files
 > fail on missing environment, not on code) · completion counter: actions 55/58, routes on the
 > database 50/60, capabilities 48/48. Not run: lint, contrast, build, coverage. **GitHub CI has not
-> passed since 15 Oct 19:23** — the run on PR #29 shows GitHub refusing to start the job for a billing
+> passed since 15 Oct 19:23 UTC** — the run on PR #29 shows GitHub refusing to start the job for a billing
 > reason; Babin ruled CI stays off and local checks are the gate (`RULINGS-2026-10-26-workflow.md` W75). Release stays
 > **HOLD**: per the 17 Oct ledger, live stops at 0164 with 19 files pending. **The plan to go-live by
 > 1 Feb 2027 (Booqable off before its 20 Mar renewal) is [`PLAN.md`](../PLAN.md); Babin's rulings

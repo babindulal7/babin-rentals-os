@@ -68,6 +68,12 @@ export interface ClientHistoryDrawerProps {
   bookings?: readonly ClientBookingSummary[]
   /** Opening a booking is an explicit choice; the page decides how (route or tab). */
   onOpenBooking?: (bookingNo: string) => void
+  /**
+   * T3-01 · D9: when passed, each booking row carries a one-tap Re-book
+   * action. The page owns what the tap does (open the D9 chooser); this
+   * drawer never navigates on its own.
+   */
+  onRebookBooking?: (bookingNo: string) => void
   /** Escape hatch to the full client record. The page routes; this never does. */
   onViewClient?: (client: ClientRecord) => void
   /** Pass the page's `canViewMoneyField(gctx, 'client-balance')`. */
@@ -88,6 +94,7 @@ export function ClientHistoryDrawer({
   onClose,
   bookings,
   onOpenBooking,
+  onRebookBooking,
   onViewClient,
   showMoney = true,
   signals,
@@ -233,43 +240,78 @@ export function ClientHistoryDrawer({
               )
               return (
                 <li key={b.bookingNo}>
-                  {onOpenBooking ? (
-                    <button
-                      type="button"
-                      className="press"
-                      onClick={() => onOpenBooking(b.bookingNo)}
-                      style={{
-                        display: 'grid',
-                        gap: 2,
-                        width: '100%',
-                        minHeight: TOUCH,
-                        padding: '8px 10px',
-                        textAlign: 'left',
-                        borderRadius: 'var(--r-btn)',
-                        border: '1px solid var(--border)',
-                        background: 'var(--card)',
-                        color: 'var(--text)',
-                        fontFamily: 'inherit',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {inner}
-                    </button>
-                  ) : (
-                    <div
-                      style={{
-                        display: 'grid',
-                        gap: 2,
-                        minHeight: TOUCH,
-                        padding: '8px 10px',
-                        borderRadius: 'var(--r-btn)',
-                        border: '1px solid var(--border)',
-                        background: 'var(--card)',
-                      }}
-                    >
-                      {inner}
-                    </div>
-                  )}
+                  {/* T3-01: the row keeps its one-tap open; Re-book is a second
+                      one-tap action on the same row, right-aligned. The main
+                      button keeps its own full-width hit area — a second action
+                      never shrinks the first below the 44px law. */}
+                  <div style={{ display: 'flex', alignItems: 'stretch', gap: 6 }}>
+                    {onOpenBooking ? (
+                      <button
+                        type="button"
+                        className="press"
+                        onClick={() => onOpenBooking(b.bookingNo)}
+                        style={{
+                          display: 'grid',
+                          gap: 2,
+                          flex: 1,
+                          minWidth: 0,
+                          minHeight: TOUCH,
+                          padding: '8px 10px',
+                          textAlign: 'left',
+                          borderRadius: 'var(--r-btn)',
+                          border: '1px solid var(--border)',
+                          background: 'var(--card)',
+                          color: 'var(--text)',
+                          fontFamily: 'inherit',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {inner}
+                      </button>
+                    ) : (
+                      <div
+                        style={{
+                          display: 'grid',
+                          gap: 2,
+                          flex: 1,
+                          minWidth: 0,
+                          minHeight: TOUCH,
+                          padding: '8px 10px',
+                          borderRadius: 'var(--r-btn)',
+                          border: '1px solid var(--border)',
+                          background: 'var(--card)',
+                        }}
+                      >
+                        {inner}
+                      </div>
+                    )}
+                    {onRebookBooking && (
+                      <button
+                        type="button"
+                        className="press"
+                        aria-label={`Re-book ${b.bookingNo}`}
+                        title={`Re-book ${b.bookingNo}`}
+                        onClick={() => onRebookBooking(b.bookingNo)}
+                        style={{
+                          display: 'grid',
+                          placeItems: 'center',
+                          minWidth: 44,
+                          minHeight: 44,
+                          padding: '0 10px',
+                          borderRadius: 'var(--r-btn)',
+                          border: '1px solid var(--border)',
+                          background: 'var(--card)',
+                          color: 'var(--text2)',
+                          fontFamily: 'inherit',
+                          fontSize: 'var(--t-meta)',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <Icon name="refresh" size={16} />
+                      </button>
+                    )}
+                  </div>
                 </li>
               )
             })}

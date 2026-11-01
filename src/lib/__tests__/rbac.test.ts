@@ -130,9 +130,12 @@ describe('canApproveDiscount — ungated (D3, Babin 31 Aug: "don\'t put any gate
 /* ── money actions ──────────────────────────────────────────────────────── */
 
 describe('canVoidInvoice', () => {
-  it('is Owner and Accounts only', () => {
+  // RULING 2026-11-01 (R-3): Owner · Admin · Manager · Accounts = the database gate
+  // `auth_is_finance_or_admin()` (R-05). Coordinator is excluded (PERMISSIONS C6).
+  it('is Owner · Admin · Manager · Accounts — not Coordinator', () => {
     const allowed = ALL_ROLES.filter((r) => canVoidInvoice(r))
-    expect(allowed).toEqual(['Owner', 'Accounts'])
+    expect([...allowed].sort()).toEqual(['Accounts', 'Admin', 'Manager', 'Owner'])
+    expect(canVoidInvoice('Coordinator')).toBe(false)
   })
 
   it('is blocked offline — a void is a money action', () => {

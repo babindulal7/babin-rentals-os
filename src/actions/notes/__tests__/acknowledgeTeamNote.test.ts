@@ -20,24 +20,22 @@ vi.mock('../../../events/eventBus', () => ({
 describe('acknowledgeTeamNote', () => {
   const mockRpc = vi.mocked(supabase.rpc);
   const validContext = { userId: 'user-123', role: 'Coordinator' as const };
+  const warehouseContext = { userId: 'warehouse-123', role: 'Warehouse' as const };
   const clientContext = { userId: 'client-123', role: 'Client' as const };
-
-  const rpcOk = (data: unknown) => ({ data, error: null, count: null, status: 200, statusText: 'OK' } as any);
-  const rpcErr = (message: string) => ({ data: null, error: { message, details: '', hint: '', code: '42000', name: 'PostgrestError', toJSON: () => ({}) }, count: null, status: 400, statusText: 'Error' } as any);
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('throws when called without context', async () => {
-    await expect(acknowledgeTeamNote({ noteId: 'note-uuid' })).rejects.toThrow(
+    await expect(acknowledgeTeamNote({ noteId: '123e4567-e89b-12d3-a456-426614174000' })).rejects.toThrow(
       'was called without a session context'
     );
   });
 
   it('throws ActionPermissionError for Client role', async () => {
     await expect(
-      acknowledgeTeamNote({ noteId: 'note-uuid' }, clientContext)
+      acknowledgeTeamNote({ noteId: '123e4567-e89b-12d3-a456-426614174000' }, clientContext)
     ).rejects.toThrow(ActionPermissionError);
   });
 
@@ -53,12 +51,12 @@ describe('acknowledgeTeamNote', () => {
     ).rejects.toThrow('Invalid note ID format');
   });
 
-  it('acknowledges successfully for staff roles', async () => {
-    mockRpc.mockResolvedValue(rpcOk(true));
+  it('acknowledges successfully for staff roles (Coordinator and Warehouse)', async () => {
+    mockRpc.mockResolvedValue({ data: true, error: null } as any);
 
     const result = await acknowledgeTeamNote(
       { noteId: '123e4567-e89b-12d3-a456-426614174000' },
-      validContext
+      warehouseContext
     );
 
     expect(result).toEqual({ acknowledged: true });
@@ -68,7 +66,7 @@ describe('acknowledgeTeamNote', () => {
   });
 
   it('returns false when already acknowledged', async () => {
-    mockRpc.mockResolvedValue(rpcOk(false));
+    mockRpc.mockResolvedValue({ data: false, error: null } as any);
 
     const result = await acknowledgeTeamNote(
       { noteId: '123e4567-e89b-12d3-a456-426614174000' },
@@ -79,7 +77,7 @@ describe('acknowledgeTeamNote', () => {
   });
 
   it('throws on RPC error', async () => {
-    mockRpc.mockResolvedValue(rpcErr('Note not found'));
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'Note not found' } } as any);
 
     await expect(
       acknowledgeTeamNote(
