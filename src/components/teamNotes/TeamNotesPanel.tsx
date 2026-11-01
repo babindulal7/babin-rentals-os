@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../lib/auth';
 import { listTeamNotes, createTeamNote, acknowledgeTeamNote, type TeamNoteRow } from '../../actions/notes';
-import type { ActionContext } from '../../actions/core';
 import { formatAdDateTime } from '../../lib/bs';
 import { canCreateTeamNote, isStaff as checkIsStaff } from '../../lib/rbac';
 
@@ -12,10 +11,6 @@ export interface TeamNotesPanelProps {
   autoRefresh?: boolean;
   /** Refresh interval in ms */
   refreshInterval?: number;
-}
-
-function actionCtx(user: { id: string; role: ActionContext['role'] } | null | undefined): ActionContext | undefined {
-  return user ? { userId: user.id, role: user.role } : undefined;
 }
 
 export function TeamNotesPanel({
