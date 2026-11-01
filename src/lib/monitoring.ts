@@ -31,7 +31,7 @@
  * ## What is sent, and what is deliberately not
  *
  * Error name, message, stack, the build's release tag, and `location.pathname`
- * — **path only**. The query string and hash are dropped: search boxes and
+ * — **path only**, with bearer tokens redacted (`/rider/<token>` is sent as `/rider/[redacted]`). The query string and hash are dropped: search boxes and
  * filter state end up there, and PLAN.md's privacy posture does not put client
  * data into a third-party log because a URL happened to carry it.
  *
@@ -156,10 +156,34 @@ function describe(err: unknown): Described {
   }
 }
 
-/** Path only — never `search` or `hash`. See the header note on privacy. */
+/** Route prefixes whose next path segment is a bearer credential (a one-time link). */
+const BEARER_ROUTE_PREFIXES = ['rider']
+
+/** A long run of hex — the shape of a raw rider token (32) or a SHA-256 hash (64) — is never worth reporting. */
+const OPAQUE_HEX_SEGMENT = /^[0-9a-f]{32,}$/i
+
+/**
+ * A rider URL (`/rider/<token>`) is a bearer credential: whoever holds it can act on a delivery. The path is
+ * sent to a third-party error log, so the token must not be in it (SEC-3, CLAUDE_PR35_SECURITY_REVIEW.md).
+ * React Router matches paths case-insensitively, so the prefix is matched the same way; any other segment
+ * that is a long run of hex is redacted as well, so a future bearer route is safe by default. UUIDs contain
+ * dashes and are left alone — booking and record ids stay useful for finding a bug.
+ */
+export function redactSensitivePath(pathname: string): string {
+  const segments = pathname.split('/')
+  let redactNext = false
+  const cleaned = segments.map((segment) => {
+    const redact = redactNext || OPAQUE_HEX_SEGMENT.test(segment)
+    redactNext = BEARER_ROUTE_PREFIXES.includes(segment.toLowerCase())
+    return redact && segment !== '' ? '[redacted]' : segment
+  })
+  return cleaned.join('/')
+}
+
+/** Path only — never `search` or `hash` — with bearer tokens redacted. See the header note on privacy. */
 function pagePath(): string {
   try {
-    return typeof location !== 'undefined' ? location.pathname : ''
+    return typeof location !== 'undefined' ? redactSensitivePath(location.pathname) : ''
   } catch {
     return ''
   }
