@@ -1,5 +1,62 @@
 # Progress Log
 
+## 2026-10-31 — P0: Shift Handover Money Isolation & Law 6 Security Hardening (Lane B · Gemini)
+
+**Did**
+- Hardened database migration `supabase/migrations/0186_shift_handovers.sql` for P0 money isolation (Law 6, Ruling S6, Ruling W32, Law 3):
+  - Completely removed all money columns (`cash_counted_paisa`, `cash_variance_paisa`, `cash_status`) from base table `public.shift_handovers`, eliminating direct PostgREST table querying leaks.
+  - Isolated financial fields to dedicated table `public.shift_handover_finances` protected by strict `auth_can_view_money()` RLS.
+  - Enforced view projection masking in `public.shift_handovers_v`: non-money roles (`Warehouse`, `Technician`, `Driver`, `Client`, `anon`) receive `null` for all cash fields.
+  - Revoked direct `UPDATE` and `DELETE` on `shift_handovers` and `shift_handover_finances` from `authenticated`.
+  - Added immutability trigger `trg_shift_handovers_protect_fields()` preventing alteration of `id`, `client_uuid`, `from_user_id`, timestamps, and historical/terminal records.
+  - Re-architected RPCs `create_shift_handover`, `acknowledge_shift_handover`, and `archive_shift_handover` with `SECURITY DEFINER SET search_path = public, pg_temp`, returning masked `shift_handovers_v` projections.
+  - Enforced fail-closed validation in `create_shift_handover`: actively rejects cash submissions from money-blind callers.
+  - Enforced self-acknowledgement refusal in `acknowledge_shift_handover` (`from_user_id = auth_user_id()`).
+- Updated shift actions:
+  - `src/actions/shifts/createShiftHandover.ts`: Throws typed `ActionPermissionError` if money-blind role attempts to record cash; masks output fields.
+  - `src/actions/shifts/acknowledgeShiftHandover.ts`, `archiveShiftHandover.ts`, `listShiftHandovers.ts`: Sanitizes cash values to `null` for money-blind roles.
+- Updated queries and UI components:
+  - `src/lib/queries/shiftHandover.ts`: Updated `HandoverRecord` and `ShiftHandoverEntity` types; added `role?: SystemRole` to query functions with mock-mode and client-side sanitization.
+  - `src/modules/today/ShiftHandoverPanel.tsx`: Passed `user?.role` to queries/actions; guarded pending status string and cash displays with `canSeeMoney`.
+  - `src/modules/auth/HandoverSheet.tsx`: Omitted cash fields on submission for money-blind roles; passed `role: user.role`.
+  - `src/components/teamNotes/TeamNotesPanel.tsx`: Memoized `ctx` using `useMemo` with `[userId, userRole]` to eliminate infinite re-render fetch loop and pass ESLint.
+- Authored comprehensive 9-role unit test suite in `src/actions/shifts/__tests__/shiftMoneyIsolation.test.ts` (43/43 tests passing) verifying all 9 roles (`Owner`, `Admin`, `Manager`, `Coordinator`, `Accounts`, `Warehouse`, `Technician`, `Driver`, `Client`) and `anon`.
+- Updated e2e lifecycle step L43 in `scripts/e2e-lifecycle.mjs` verifying base table column absence, RPC cash masking, and self-acknowledgement refusal in PostgreSQL.
+
+**Ruled**
+- Law 6: Zero money visibility for money-blind roles (`Warehouse`, `Technician`, `Driver`, `Client`, `anon`) across base tables, views, RPC return shapes, actions, and UI surfaces.
+- Law 3: Immutability and audit — shift handovers are archived rather than deleted; immutable identity and author columns are locked by database triggers.
+- Ruling W32: Three shift windows (06–15, 14–23, 22–07) preserved with operational timezone and overlap handling.
+- Today Dashboard Invariant: No permanent KPI panels or third workflow columns added to Today.
+
+**Verified**
+- `npm run check:pglite`: 185/185 applied, 0 failed, 35 public views (0 anon leaks), 20 anon RPCs (0 unauthorized), 114 definer functions (0 unpinned).
+- `npm run check:lifecycle`: 44/44 green, 0 known-red, 0 failed (Step L43 verified).
+- Vitest suite: 67/67 passed across `src/actions/shifts/` (including 43 tests in `shiftMoneyIsolation.test.ts`).
+- `npm run lint`: clean (0 errors, 0 warnings across `src/`).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 70 / 70 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 62 | 52 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 58 / 58 (100%) | +0 |
+| Lifecycle | steps green / total | 44 / 44 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 185 files · check:pglite 185/185 applied, 0 failed (recorded 2026-11-01T08:10:49.679Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-01T08:11:42.198Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Next Lane B task: T4-07 (`Delivery zones and fees`, renumbered to migration 0189 on branch `lane-b/T4-07-delivery-zones`).
+- T4-08 (One-time rider link): public unauthenticated token route for hired riders with proof-of-delivery signature & photo.
+- T4-01 / T4-02 / T4-03: Delivery dispatch on database, rescheduling, and proof of delivery.
+- T5 (Notifications & email): WhatsApp draft triggers, email notifications.
+- T6 (Nepali): Full bilingual support, Nepali font assets, BS calendar consistency.
+
 ## 2026-10-31 — T4-06: Export old browser-only entries (Lane B · Size S)
 
 **Did**

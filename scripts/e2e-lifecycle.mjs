@@ -3439,48 +3439,132 @@ STEPS.push({
   expect: 'green',
   run: async () => {
     await undone(async () => {
-      const handoverId = crypto.randomUUID()
       const clientUuid1 = crypto.randomUUID()
       const clientUuid2 = crypto.randomUUID()
+      const clientUuidWh = crypto.randomUUID()
 
-      // 1. Warehouse staff writes shift handover from Shift A to Shift B
+      // 1. Law 6: Warehouse (money-blind) is REFUSED from recording cash figures in create_shift_handover RPC
       await as('Warehouse', async () => {
-        await q(
-          `insert into shift_handovers (
-            id, client_uuid, shift_code, shift_date, from_user_id, from_user_name, from_user_role,
-            to_user_id, to_user_name, cash_counted_paisa, cash_status, cash_variance_paisa, notes, checklist
-          ) values (
-            $1, $2, 'A', current_date, $3, 'Hari KC', 'Warehouse',
-            $4, 'Raju Thapa', 1840000, 'matched', 0, 'Overlap window open — handed over keys and van',
-            '[{"key":"gear","label":"Out-gear walked through","done":true},{"key":"cash","label":"Cash counted","done":true}]'::jsonb
-          )`,
-          [handoverId, clientUuid1, U.Warehouse, U.Technician],
-        )
+        await q('savepoint wh_cash_probe')
+        try {
+          await refuses(
+            'Warehouse cannot record cash counted or variance in shift handover',
+            `select create_shift_handover(
+              $1, 'A', 'Hari KC', 'Warehouse', $2, 'Raju Thapa',
+              1840000, 'matched', 0, 'Overlap window open — keys and van'
+            )`,
+            [clientUuidWh, U.Technician],
+            /FORBIDDEN \(Law 6\): Money-blind role/i,
+          )
+        } finally {
+          await q('rollback to savepoint wh_cash_probe')
+          await q('release savepoint wh_cash_probe')
+        }
       })
 
-      // 2. Law 6: Warehouse reads null for cash figures in shift_handovers_v
+      // 2. Base table isolation: shift_handovers table contains NO cash columns
+      await as('Warehouse', async () => {
+        await q('savepoint col_probe')
+        try {
+          await refuses(
+            'cash_counted_paisa column does not exist on base table shift_handovers',
+            `select cash_counted_paisa from shift_handovers limit 1`,
+            [],
+            /column "cash_counted_paisa" does not exist/i,
+          )
+        } finally {
+          await q('rollback to savepoint col_probe')
+          await q('release savepoint col_probe')
+        }
+      })
+
+      // 3. Coordinator (money-seeing role) creates handover with cash figures via create_shift_handover RPC
+      let handoverId
+      await as('Coordinator', async () => {
+        const rows = (await q(
+          `select * from create_shift_handover(
+            $1, 'A', 'Sita Sharma', 'Coordinator', $2, 'Raju Thapa',
+            1840000, 'matched', 0, 'Overlap window open — handed over keys and van',
+            '[]'::jsonb,
+            '[{"key":"gear","label":"Out-gear walked through","done":true},{"key":"cash","label":"Cash counted","done":true}]'::jsonb
+          )`,
+          [clientUuid1, U.Technician],
+        )).rows
+        assertEq(rows.length, 1, 'Coordinator created shift handover')
+        handoverId = rows[0].id
+        assert(handoverId, 'Handover ID generated')
+        assertEq(rows[0].cash_counted_paisa, 1840000n, 'Coordinator receives cash figures in return')
+        assertEq(rows[0].cash_status, 'matched', 'Coordinator receives cash status in return')
+      })
+
+      // 4. Law 6: Warehouse reads null for cash figures and cash_status in shift_handovers_v
       await as('Warehouse', async () => {
         const rows = (await q(`select * from shift_handovers_v where id = $1`, [handoverId])).rows
         assertEq(rows.length, 1, 'Warehouse reads handover')
         assertEq(rows[0].shift_code, 'A', 'Shift code matches')
         assertEq(rows[0].cash_counted_paisa, null, 'Warehouse reads null for cash_counted_paisa (Law 6)')
         assertEq(rows[0].cash_variance_paisa, null, 'Warehouse reads null for cash_variance_paisa (Law 6)')
+        assertEq(rows[0].cash_status, null, 'Warehouse reads null for cash_status (Law 6)')
       })
 
-      // 3. Manager reads unmasked cash figures in shift_handovers_v
+      // 5. Law 6: Warehouse direct query on shift_handover_finances table returns 0 rows (RLS denied)
+      await as('Warehouse', async () => {
+        const rows = (await q(`select * from shift_handover_finances where handover_id = $1`, [handoverId])).rows
+        assertEq(rows.length, 0, 'Warehouse direct select on shift_handover_finances returns 0 rows')
+      })
+
+      // 6. Law 6: Warehouse cannot insert directly into shift_handover_finances (RLS denied)
+      await as('Warehouse', async () => {
+        await q('savepoint wh_finance_insert_probe')
+        try {
+          await refuses(
+            'Warehouse cannot insert into shift_handover_finances',
+            `insert into shift_handover_finances (handover_id, cash_counted_paisa) values ($1, 999900)`,
+            [handoverId],
+            /violates row-level security policy|permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint wh_finance_insert_probe')
+          await q('release savepoint wh_finance_insert_probe')
+        }
+      })
+
+      // 7. Manager reads unmasked cash figures in shift_handovers_v
       await as('Manager', async () => {
         const rows = (await q(`select * from shift_handovers_v where id = $1`, [handoverId])).rows
         assertEq(rows.length, 1, 'Manager reads handover')
         assertEq(rows[0].cash_counted_paisa, 1840000n, 'Manager reads unmasked cash_counted_paisa')
+        assertEq(rows[0].cash_status, 'matched', 'Manager reads unmasked cash_status')
         assertEq(rows[0].cash_variance_paisa, 0n, 'Manager reads unmasked cash_variance_paisa')
       })
 
-      // 4. Technician (incoming shift) acknowledges the handover
+      // 8. Self-acknowledgement is REFUSED: author (Coordinator) cannot acknowledge own handover
+      await as('Coordinator', async () => {
+        await q('savepoint self_ack_probe')
+        try {
+          await refuses(
+            'Staff cannot acknowledge their own shift handover',
+            `select acknowledge_shift_handover($1, 'Self ack attempt', 'Sita Sharma')`,
+            [handoverId],
+            /Staff cannot acknowledge their own shift handover/i,
+          )
+        } finally {
+          await q('rollback to savepoint self_ack_probe')
+          await q('release savepoint self_ack_probe')
+        }
+      })
+
+      // 9. Technician (incoming shift) acknowledges the handover; returns role-safe masked projection
       await as('Technician', async () => {
-        await q(
-          `select acknowledge_shift_handover($1, 'Received keys and counted till', 'Raju Thapa')`,
+        const ackRows = (await q(
+          `select * from acknowledge_shift_handover($1, 'Received keys and counted till', 'Raju Thapa')`,
           [handoverId],
-        )
+        )).rows
+        assertEq(ackRows.length, 1, 'Acknowledge RPC succeeds')
+        assertEq(ackRows[0].status, 'acknowledged', 'Status transitions to acknowledged')
+        assertEq(ackRows[0].cash_counted_paisa, null, 'Technician return payload masks cash_counted_paisa')
+        assertEq(ackRows[0].cash_status, null, 'Technician return payload masks cash_status')
+
         const row = (await q(`select * from shift_handovers where id = $1`, [handoverId])).rows[0]
         assertEq(row.status, 'acknowledged', 'Status transitions to acknowledged')
         assertEq(row.acknowledged_by, U.Technician, 'Acknowledged by Technician')
@@ -3488,13 +3572,29 @@ STEPS.push({
         assertEq(row.acknowledgement_note, 'Received keys and counted till', 'Note matches')
       })
 
-      // 5. Client role is denied access (RLS returns 0 rows)
+      // 10. Direct UPDATE on shift_handovers is REVOKED
+      await as('Technician', async () => {
+        await q('savepoint direct_update_probe')
+        try {
+          await refuses(
+            'Direct update on shift_handovers is revoked',
+            `update shift_handovers set notes = 'tampered' where id = $1`,
+            [handoverId],
+            /permission denied for table shift_handovers/i,
+          )
+        } finally {
+          await q('rollback to savepoint direct_update_probe')
+          await q('release savepoint direct_update_probe')
+        }
+      })
+
+      // 11. Client role is denied access (RLS returns 0 rows)
       await as('Client', async () => {
         const rows = (await q(`select * from shift_handovers where id = $1`, [handoverId])).rows
         assertEq(rows.length, 0, 'Client cannot read shift handovers (RLS returns 0 rows)')
       })
 
-      // 6. Client cannot insert shift handovers
+      // 12. Client cannot insert shift handovers
       await as('Client', async () => {
         await q('savepoint client_handover_probe')
         try {
@@ -3511,7 +3611,7 @@ STEPS.push({
         }
       })
 
-      // 7. Hard delete is refused by trigger / permissions (Law 3)
+      // 13. Hard delete is refused by trigger / permissions (Law 3)
       await as('Manager', async () => {
         await q('savepoint manager_delete_probe')
         try {
@@ -3527,7 +3627,7 @@ STEPS.push({
         }
       })
 
-      // 8. Archival via archive_shift_handover RPC
+      // 14. Archival via archive_shift_handover RPC
       await as('Manager', async () => {
         await q(`select archive_shift_handover($1)`, [handoverId])
         const row = (await q(`select * from shift_handovers where id = $1`, [handoverId])).rows[0]
@@ -3535,7 +3635,7 @@ STEPS.push({
         assert(row.archived_at, 'archived_at is set')
       })
 
-      // 9. Idempotent create_shift_handover via client_uuid (Law 8)
+      // 15. Idempotent create_shift_handover via client_uuid (Law 8)
       await as('Coordinator', async () => {
         const clientUuid3 = crypto.randomUUID()
         const row1 = (await q(

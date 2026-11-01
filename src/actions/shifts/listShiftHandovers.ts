@@ -1,5 +1,6 @@
 import { createAction } from '../core';
 import { supabase } from '../../lib/supabase';
+import { canViewMoney } from '../../lib/rbac';
 
 export type ListShiftHandoversInput = {
   limit?: number | undefined;
@@ -15,7 +16,7 @@ export const listShiftHandovers = createAction<ListShiftHandoversInput, ListShif
   permissions: ['shift_handover.read'],
   implemented: true,
   validate: () => {},
-  execute: async (input) => {
+  execute: async (input, ctx) => {
     const limit = input.limit ?? 50;
     const offset = input.offset ?? 0;
 
@@ -30,8 +31,17 @@ export const listShiftHandovers = createAction<ListShiftHandoversInput, ListShif
       throw new Error(`Failed to list shift handovers: ${error.message}`);
     }
 
+    const rows = (data as Array<Record<string, unknown>>) ?? [];
+    if (ctx.role && !canViewMoney(ctx.role)) {
+      for (const row of rows) {
+        row.cash_counted_paisa = null;
+        row.cash_status = null;
+        row.cash_variance_paisa = null;
+      }
+    }
+
     return {
-      result: { handovers: (data as Array<Record<string, unknown>>) ?? [] },
+      result: { handovers: rows },
       events: [],
     };
   },

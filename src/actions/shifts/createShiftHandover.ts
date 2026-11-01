@@ -1,5 +1,6 @@
-import { createAction } from '../core';
+import { createAction, ActionPermissionError } from '../core';
 import { supabase } from '../../lib/supabase';
+import { canViewMoney } from '../../lib/rbac';
 
 export type CreateShiftHandoverInput = {
   clientUuid?: string | undefined;
@@ -30,17 +31,31 @@ export const createShiftHandover = createAction<CreateShiftHandoverInput, Create
     }
   },
   execute: async (input, ctx) => {
+    const role = ctx.role;
+    const isMoneyRole = role ? canViewMoney(role) : false;
+
+    // Law 6: Money-blind roles cannot record cash figures
+    if (role && !isMoneyRole) {
+      if (
+        (input.cashCountedPaisa !== undefined && input.cashCountedPaisa !== null && input.cashCountedPaisa > 0) ||
+        (input.cashVariancePaisa !== undefined && input.cashVariancePaisa !== null && input.cashVariancePaisa !== 0) ||
+        (input.cashStatus !== undefined && input.cashStatus !== null && input.cashStatus !== 'matched')
+      ) {
+        throw new ActionPermissionError('createShiftHandover', 'record cash values in shift handover (Law 6)', role);
+      }
+    }
+
     const clientUuid = input.clientUuid ?? crypto.randomUUID();
     const { data, error } = await supabase.rpc('create_shift_handover', {
       p_client_uuid: clientUuid,
       p_shift_code: input.shiftCode ?? 'A',
       p_from_user_name: input.fromUserName ?? 'Staff Member',
-      p_from_user_role: input.fromUserRole ?? ctx.role ?? 'Operations',
+      p_from_user_role: input.fromUserRole ?? role ?? 'Operations',
       p_to_user_id: input.toUserId ?? null,
       p_to_user_name: input.toUserName ?? null,
-      p_cash_counted_paisa: input.cashCountedPaisa ?? 0,
-      p_cash_status: input.cashStatus ?? 'matched',
-      p_cash_variance_paisa: input.cashVariancePaisa ?? 0,
+      p_cash_counted_paisa: isMoneyRole ? (input.cashCountedPaisa ?? 0) : null,
+      p_cash_status: isMoneyRole ? (input.cashStatus ?? 'matched') : null,
+      p_cash_variance_paisa: isMoneyRole ? (input.cashVariancePaisa ?? 0) : null,
       p_notes: input.notes ?? '',
       p_open_items: input.openItems ?? [],
       p_checklist: input.checklist ?? [],
@@ -51,6 +66,12 @@ export const createShiftHandover = createAction<CreateShiftHandoverInput, Create
     }
 
     const handover = (data as Record<string, unknown>) ?? {};
+    if (!isMoneyRole) {
+      handover.cash_counted_paisa = null;
+      handover.cash_status = null;
+      handover.cash_variance_paisa = null;
+    }
+
     return {
       result: { handover },
       events: [
