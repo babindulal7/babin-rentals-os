@@ -35,7 +35,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0199 | T8-08 | tds-on-crew-payouts | lane-a/T8-08-tds-on-crew-payouts | verified |
 | 0200 | T3-14b | draft-at-confirm | lane-c/T3-14b-draft-at-confirm | claimed |
 | 0201 | T2-03 | fix-collateral-masking-chars | existing main migration | present on main; verify ledger status |
-| 0202 | SEC-05 / W68 | restore-driver-client-view-scopes | fix/2026-11-01-driver-client-view-rls-regression | claimed; staging/hosted JWT HOLD |
+| 0202 | SEC-05 / W68 | restore-driver-client-view-scopes | fix/2026-11-01-driver-client-view-rls-regression | written; staging/hosted JWT HOLD |
 
 ## Expected migrations (not yet claimed)
 
