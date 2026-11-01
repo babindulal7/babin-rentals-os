@@ -57,7 +57,7 @@ function assertUuid(value: string, label: string): void {
 
 function assertStorageAvailable(): void {
   if (typeof window !== 'undefined' && typeof window.navigator !== 'undefined' && window.navigator.onLine === false) {
-    throw new Error('Device is offline. Photo was kept on device and will upload when connectivity is restored.')
+    throw new Error('You are offline. This photo was not saved — take it again when you are back online.')
   }
   if (!supabase?.storage || typeof supabase.storage.from !== 'function') {
     throw new Error('Evidence storage is unavailable')

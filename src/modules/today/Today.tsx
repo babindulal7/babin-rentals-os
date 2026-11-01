@@ -19,6 +19,7 @@ import { useViewport } from '../../lib/device'
 import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext'
 import type { BookingStatus } from '../../lib/workflow'
 import RawDashboardMovementPanel from './DashboardMovementPanel'
+import LegacyExportCard from './LegacyExportCard'
 import './dashboard.css'
 
 const DashboardMovementPanel = RawDashboardMovementPanel as React.ComponentType<
@@ -654,6 +655,8 @@ export default function Today() {
           />
         </div>
       </div>
+
+      <LegacyExportCard />
 
       {/* RULING 2026-10-23: Today contains movement queues only; totals come from the same queries. */}
       <section className="dispatch-summaries" aria-label="Movement totals">

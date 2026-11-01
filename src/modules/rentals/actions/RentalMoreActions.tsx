@@ -35,11 +35,13 @@ import {
 } from '../../../lib/rentalMoreActionsRegistry'
 import { CancelRentalDialog } from './CancelRentalDialog'
 import { DuplicateRentalDialog } from './DuplicateRentalDialog'
+import { RebookDialog } from './RebookDialog'
 import { RentalAuditDrawer, type AuditCategoryFilter } from './RentalAuditDrawer'
 import { QuotePreviewModal } from './QuoteActionsMenu'
 import { InvoicePaymentStatusModal } from './InvoiceActionsMenu'
 import { CreateInvoiceModal } from '../../finance/modals/CreateInvoiceModal'
 import { canManageRentalLifecycle } from '../../../lib/rbac'
+import { formatRebookCopyOptions } from '../../../lib/rebook'
 import { rentalCanArchive, rentalRevertTargets } from '../../../lib/rentalLifecycle'
 import { RentalLifecycleDialog } from './RentalLifecycleDialog'
 
@@ -98,6 +100,7 @@ export function RentalMoreActions({
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
   const [lifecycleAction, setLifecycleAction] = useState<'revert' | 'archive' | null>(null)
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false)
+  const [rebookDialogOpen, setRebookDialogOpen] = useState(false)
   const [auditDrawerOpen, setAuditDrawerOpen] = useState(false)
   const [auditInitialCategory, setAuditInitialCategory] = useState<AuditCategoryFilter>('all')
   const [quotePreviewOpen, setQuotePreviewOpen] = useState(false)
@@ -162,6 +165,9 @@ export function RentalMoreActions({
       case 'rental.duplicate':
         setDuplicateDialogOpen(true)
         break
+      case 'rental.rebook':
+        setRebookDialogOpen(true)
+        break
       case 'audit.full':
         setAuditInitialCategory('all')
         setAuditDrawerOpen(true)
@@ -212,6 +218,7 @@ export function RentalMoreActions({
   const quoteGroup = groups.find((g) => g.id === 'quote')
   const invoiceGroup = groups.find((g) => g.id === 'invoice')
   const duplicateGroup = groups.find((g) => g.id === 'duplicate')
+  const rebookGroup = groups.find((g) => g.id === 'rebook')
   const auditGroup = groups.find((g) => g.id === 'audit')
   const cancelGroup = groups.find((g) => g.id === 'cancel')
 
@@ -616,6 +623,41 @@ export function RentalMoreActions({
                 </button>
               )}
 
+              {/* 3b. RE-BOOK (T3-01 · D9) */}
+              {rebookGroup && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  disabled={rebookGroup.disabled}
+                  title={rebookGroup.disabledReason}
+                  onClick={() => {
+                    if (rebookGroup.disabled) return
+                    closeMenu()
+                    setRebookDialogOpen(true)
+                  }}
+                  style={{
+                    minHeight: 44,
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '0 10px',
+                    borderRadius: 'var(--r-sm, 6px)',
+                    border: 'none',
+                    background: 'transparent',
+                    color: rebookGroup.disabled ? 'var(--muted)' : 'var(--text)',
+                    fontSize: 'var(--t-meta, 13px)',
+                    fontWeight: 500,
+                    cursor: rebookGroup.disabled ? 'not-allowed' : 'pointer',
+                    textAlign: 'left',
+                    opacity: rebookGroup.disabled ? 0.6 : 1,
+                  }}
+                >
+                  <Icon name="refresh" size={15} style={{ color: 'var(--text2)' }} />
+                  <span>Re-book…</span>
+                </button>
+              )}
+
               {/* 4. AUDIT HISTORY */}
               {auditGroup && (
                 <button
@@ -733,6 +775,22 @@ export function RentalMoreActions({
               navigate(`/rentals?action=new&draft=${draftId}`)
             }}
           />
+
+          {/* T3-01 · D9: nothing is written here — the confirm navigates to a
+              prefilled New Rental and the first write happens on staff save. */}
+          <RebookDialog
+            isOpen={rebookDialogOpen}
+            onClose={() => setRebookDialogOpen(false)}
+            bookingNo={booking.bookingNo}
+            confirmLabel="Open in New Rental"
+            onConfirm={(options) => {
+              setRebookDialogOpen(false)
+              const copy = formatRebookCopyOptions(options)
+              navigate(
+                `/rentals?action=new&rebook=${encodeURIComponent(booking.bookingNo)}` +
+                (copy ? `&copy=${encodeURIComponent(copy)}` : ''),
+              )
+            }}          />
 
           <RentalAuditDrawer
             isOpen={auditDrawerOpen}

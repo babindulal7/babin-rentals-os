@@ -13,7 +13,8 @@ import { supabase } from '../../lib/supabase'
  *   GiST exclusion constraint (`no_double_booking`) and capacity ceiling.
  *   If another client booked the same gear during the extended dates, the
  *   database will refuse the extension with an exclusion violation.
- * - Reprices any draft invoice via `recalculate_invoice_totals`.
+ * - Recomputes `line_total` on any Draft invoice lines and fires
+   *   `recalculate_invoice_totals` so the draft follows the booking.
  * - Stated reason of >= 10 characters required.
  * - Records an immutable entry in `audit_events`.
  *

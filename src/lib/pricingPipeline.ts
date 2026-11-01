@@ -52,15 +52,18 @@ export interface PromoCodeDefinition {
 }
 
 export interface DiscountDetails {
-  membershipPercent?: number
-  durationPercent?: number
-  bundleSavingPercent?: number
-  womenDopEligible?: boolean
-  promoCode?: PromoCodeDefinition | null
-  manualDiscountPercent?: number
-  manualDiscountReason?: string | null
-  manualDiscountAuthorizedBy?: string | null
-  isStudentBundle?: boolean
+  membershipPercent?: number | undefined
+  durationPercent?: number | undefined
+  bundleSavingPercent?: number | undefined
+  womenDopEligible?: boolean | undefined
+  promoCode?: PromoCodeDefinition | null | undefined
+  manualDiscountPercent?: number | undefined
+  manualDiscountReason?: string | null | undefined
+  manualDiscountAuthorizedBy?: string | null | undefined
+  isStudentBundle?: boolean | undefined
+  isStaffClient?: boolean | undefined
+  staffDiscountPercent?: number | undefined
+  staffDiscountRemoved?: boolean | undefined
 }
 
 /* RULING 2026-10-07: the hard-coded PROMO_CODES demo table is deleted. A code exists only as a
@@ -96,7 +99,7 @@ export interface AppliedDiscountBreakdown {
     percent: number
     applied: boolean
     /** Database provenance; create_booking must preserve this source. */
-    discountSource?: 'Manual' | 'Membership' | 'Coupon' | 'Women-DoP 5%' | 'Student' | 'College' | 'Named-client rates'
+    discountSource?: 'Manual' | 'Membership' | 'Coupon' | 'Women-DoP 5%' | 'Student' | 'College' | 'Named-client rates' | 'Staff'
     couponId?: string
     /** Actual percentage after stacking, as stored in booking_discounts. */
     effectivePercent?: number
@@ -259,8 +262,37 @@ export function evaluateDiscounts(
         exclusionReason: 'Student bundles do not stack with manual discounts',
       })
     }
+    if (discounts.isStaffClient) {
+      const staffPct = discounts.staffDiscountPercent ?? 20
+      sources.push({
+        name: `Staff Discount (${staffPct}%)`,
+        discountSource: 'Staff',
+        percent: staffPct,
+        applied: false,
+        exclusionReason: 'Student bundles do not stack with staff discounts',
+      })
+    }
   } else {
     // Normal discount stacking
+    if (discounts.isStaffClient) {
+      const staffPct = discounts.staffDiscountPercent ?? 20
+      if (discounts.staffDiscountRemoved) {
+        sources.push({
+          name: `Staff Discount (${staffPct}%)`,
+          discountSource: 'Staff',
+          percent: staffPct,
+          applied: false,
+          exclusionReason: 'Staff discount removed',
+        })
+      } else {
+        sources.push({
+          name: `Staff Discount (${staffPct}%)`,
+          discountSource: 'Staff',
+          percent: staffPct,
+          applied: true,
+        })
+      }
+    }
     if (discounts.membershipPercent && discounts.membershipPercent > 0) {
       sources.push({
         name: 'Membership Discount',

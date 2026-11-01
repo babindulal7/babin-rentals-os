@@ -38,6 +38,7 @@ import { Bundles } from './Bundles'
 import { SubRental } from '../operations/SubRental'
 import { Maintenance } from './Maintenance'
 import StockCheck from './StockCheck'
+import DepositSetup from './DepositSetup'
 import { LoadingSkeleton } from '../../components/ui/StateViews'
 const AddEquipment = lazy(() => import('./AddEquipment'))
 // BQ-407 (Booqable adoption): catalogue CSV import with a mandatory dry-run.
@@ -1891,6 +1892,8 @@ export default function Inventory() {
          * above it; nothing else differs.
          */
         <StockCheck embedded />
+      ) : tab === 'Deposit Setup' ? (
+        <DepositSetup embedded />
       ) : (
         <ListWorkspace className="inventory-v2">
           {showStats && (

@@ -134,6 +134,8 @@ interface DirectoryRow {
    * mean the column was not selected.
    */
   is_blocked: boolean | null
+  is_staff?: boolean | null
+  staff_user_id?: string | null
 }
 
 /** numeric (rupees) -> Paisa, preserving null rather than collapsing it to 0. */
@@ -169,7 +171,8 @@ const DIRECTORY_COLUMNS =
   'outstanding_amount, deposit_held_amount, total_paid_amount, ' +
   'active_bookings_count, total_bookings_count, last_pickup_at, ' +
   'contact_name, contact_designation, contact_phone, membership_level, ' +
-  'kyc_docs_count, kyc_verified_count, is_blocked, deactivated_at, created_at'
+  'kyc_docs_count, kyc_verified_count, is_blocked, deactivated_at, created_at, ' +
+  'is_staff, staff_user_id'
 
 /**
  * Directory row -> the `ClientRecord` every clients surface already consumes.
@@ -207,6 +210,9 @@ export function toClientRecord(row: DirectoryRow): ClientRecord {
     id: row.client_code,
     dbId: row.id,
     name: row.name,
+    isStaff: Boolean(row.is_staff),
+    isStaffClient: Boolean(row.is_staff),
+    ...(row.staff_user_id ? { staffUserId: row.staff_user_id } : {}),
     clientType: (row.type_parent as ClientRecord['clientType']) ?? 'Unassigned',
     // ⚠ A `null` here means the client has NO membership row — see
     // `UNJOINED_MEMBERSHIP_PLACEHOLDER`. The placeholder is a type obligation,

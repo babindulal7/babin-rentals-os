@@ -38,8 +38,9 @@ describe('useNewRentalTiming', () => {
 
       expect(timingResult.pickup).toBe('2026-11-01')
       expect(timingResult.ret).toBe('2026-11-04')
-      expect(timingResult.pickupTime).toBe('09:00')
-      expect(timingResult.returnTime).toBe('18:00')
+      // L1 (RULINGS-2026-10-26-workflow.md): the rental day runs 06:00 → 06:00, so both default times are 06:00.
+      expect(timingResult.pickupTime).toBe('06:00')
+      expect(timingResult.returnTime).toBe('06:00')
       expect(timingResult.days).toBeGreaterThanOrEqual(1)
       expect(timingResult.dayWord).toBe('days')
       expect(timingResult.bookingWindow.pickupAd).not.toBeNull()

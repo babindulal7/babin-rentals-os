@@ -266,4 +266,12 @@ export type {
   UseNewRentalNavigationResult,
 } from './useNewRentalNavigation'
 
+export { useNewRentalRebook } from './useNewRentalRebook'
+export type {
+  ApplyRebookMode,
+  RebookNotice,
+  UseNewRentalRebookOptions,
+  UseNewRentalRebookResult,
+} from './useNewRentalRebook'
+
 

@@ -50,6 +50,7 @@ import { CompactButton, TapCheckbox, TouchTarget } from '../../components/ui/Tou
 import { formatGateError } from '../../lib/gates'
 import { FloorOfflineStatus } from '../../components/ui/FloorOfflineStatus'
 import { recordFloorScanEvent } from '../../lib/floorScanStorage'
+import { useBarcodeBurst } from '../../lib/barcodeBurst'
 
 /**
  * **Reset Workspace** — `04 Operations/Cleaning & Reset Workflow.md` v3.1
@@ -378,6 +379,7 @@ export default function ResetWorkspace({
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [filter, setFilter] = useState<(typeof RESET_FILTERS)[number]>('Needs action')
   const [query, setQuery] = useState('')
+
   const [problemDraft, setProblemDraft] = useState<Record<string, ProblemDraft>>({})
   /*
    * RS-12 — there is no `qcByDraft` any more. It held a typed NAME per row, and
@@ -390,6 +392,13 @@ export default function ResetWorkspace({
   /** Law 12 — a dispatch failure is inline and persistent, never a toast. */
   const [dispatchError, setDispatchError] = useState<string | null>(null)
   const [dispatching, setDispatching] = useState(false)
+  const barcodeInputRef = useRef<HTMLInputElement>(null)
+  useBarcodeBurst({
+    onScan: (code) => setQuery(code.trim()),
+    enabled: Boolean(floor) && !floorLoading && floorError === null && !dispatching,
+    targetInputRef: barcodeInputRef,
+    cooldownMs: 1000,
+  })
   /**
    * Law 8 — the idempotency key for THIS reset session, minted when the
    * booking loads (the point the user starts acting), not at send time. A
@@ -1418,6 +1427,7 @@ export default function ResetWorkspace({
                   }}
                 />
                 <input
+                  ref={barcodeInputRef}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search equipment, serial…"
@@ -2307,9 +2317,7 @@ export default function ResetWorkspace({
                       )
                     })}
                   </div>
-                  <p style={{ margin: '9px 0 0', paddingTop: 9, borderTop: '1px solid var(--border)', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
-                    Group counts are derived from the booking&apos;s live lines and always sum to {rows.length}.
-                  </p>
+                  {/* RULING 2026-10-26: the "group counts always sum to N" note was an invariant for developers, not for the floor. */}
                 </Card>
               </OperationAside>
               </div>
@@ -2421,8 +2429,8 @@ export default function ResetWorkspace({
                 ))}
               </div>
               <p style={{ margin: '10px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
-                Ready + Remaining + Exceptions = {counts.Ready + remainingCount + exceptionRows.length} of {rows.length} rows —
-                same population, always reconciles. These figures are this session&apos;s, local until Complete Reset lands.
+                Ready + Remaining + Exceptions = {counts.Ready + remainingCount + exceptionRows.length} of {rows.length} rows.
+                Local to this session until Complete Reset lands.
               </p>
             </Card>
 

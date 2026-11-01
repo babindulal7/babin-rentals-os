@@ -1,9 +1,14 @@
 # Babin Rentals OS — Open Decisions Register
 
-## 28 October 2026: switch-user PIN length (T1-15) — RESOLVED by Babin: **4 digits**
+## 28 October 2026: switch-user PIN length (T1-15) — ANSWERED 1 Nov: 4 digits (O-18)
 
+**Answered 1 Nov 2026 by Babin ("4 pin"): the switch-user PIN is 4 digits.** T1-15 carries the migration
+that moves `0066` from 6 to 4; see `RULINGS-2026-11-01.md` (R-1). Below: what the migration does, then the original
+question, kept for the record.
+
+**What the migration does:**
 - Babin answered **"4 pin"** on 28 Oct 2026. The shipped 6-digit parameter in migration `0066` is
-  relaxed by his explicit instruction — migration **`0186_staff_pin_four_digits.sql`** (claimed in
+  relaxed by his explicit instruction — migration **`0204_staff_pin_four_digits.sql`** (claimed in
   the MIGRATION_LEDGER, written on `lane-a/T1-15-switch-user-with-name-plus-pin`): `set_staff_pin`
   enforces exactly 4 from now on; `verify_staff_pin` accepts 4 **or** 6 during the transition so
   hashes enrolled before the ruling keep verifying until their owners rotate them.
@@ -12,7 +17,6 @@
 - The honest cost is stated in the migration header: the space drops to 10^4; the 5-try/15-minute
   lockout makes an even-odds continuous attack take ~10.4 days of uninterrupted tries.
 
-## 28 October 2026: switch-user PIN length (T1-15) — TODO(decision)
 
 - The T1-15 card and ruling W53 say "tap name + **4-digit** PIN"; the shipped security
   parameter in migration `0066` enforces `^[0-9]{6}$` (6 digits, 5-try lockout).
@@ -20,12 +24,43 @@
   a shipped security parameter is Babin's explicit word, not an agent's edit.
 - Context: `docs/verification/T1-15_DESIGN.md` (the card's design note, awaiting the
   Claude check-in review). Either answer unblocks the code sessions.
+- Indexed as **O-18** in `PLAN.md` §4.2 on 31 Oct (⭐ keep 6 digits until Babin answers). Commit
+  `ddda296` (29 Oct) says "staff PIN is 4 digits (Babin 28 Oct)", but its files are equipment-preview
+  code and no ruling file records that answer, so the question stays open until Babin confirms.
+
+## 31 October 2026: who may write team notes (T4-04) — ANSWERED 1 Nov: every staff member (O-19)
+
+**Answered 1 Nov 2026 by Babin ("all staff yes"): every staff member may write team notes.**
+`rbac.canCreateTeamNote` now allows every staff role and the red test is green; see
+`RULINGS-2026-11-01.md` (R-2). The text below is the original question, kept for the record.
+
+- The T4-04 card and migration `0185` let **every staff member** write a team note (`auth_is_staff()`);
+  `src/lib/rbac.ts` `canCreateTeamNote` allows **Coordinator and above** only, so Warehouse, Technician
+  and Driver cannot write one in the app; `src/actions/notes/__tests__/createTeamNote.test.ts` expects
+  every staff member and is red on `main` `9e219db`.
+- ⭐ Until Babin answers, the app's narrower rule stands (CLAUDE.md B-1: a conflict is never resolved by
+  widening). Indexed as **O-19** in `PLAN.md` §4.2. Either answer is one line in `rbac.ts` (or the
+  policy in `0185`) plus the test.
+
+## 27 October 2026: the Booqable round
+
+Babin answered 56 questions on what to take from his Booqable study:
+[`RULINGS-2026-10-27-booqable.md`](../RULINGS-2026-10-27-booqable.md) (B1–B56, Claude's resolutions
+K1–K7). It closed:
+- **O-1** — `babinrentals.com` redirects to `book.babinrentals.com` from day X; a full company website
+  comes after go-live (B5).
+- **O-2** — when a paid booking cannot go ahead: sub-rent, then the nearest similar item, then a full
+  refund or account credit, the client's choice (B39).
+- **O-3** — no security deposit online; it is taken at handover (B38).
+- **§4 below (consumables)** — Option A stays, with a stock count (B14); 0141/0142 are kept.
+
+Nothing new is open: every answer had a ruling or a stated reading. PLAN.md §4.2 keeps O-4 … O-17.
 
 ## 26 October 2026 (afternoon): the workflow round
 
 Babin answered a second round (~100 questions) on the daily workflow and how the build runs:
 [`RULINGS-2026-10-26-workflow.md`](../RULINGS-2026-10-26-workflow.md) (W1–W91, Claude's resolutions
-L1–L7). It also settled these earlier ⭐ items: daily volume (10–20 pickups and returns, W3); a fully
+L1–L12). It also settled these earlier ⭐ items: daily volume (10–20 pickups and returns, W3); a fully
 booked item offers both a similar owned item and a sub-rent (W10); overdue escalation = everyone at
 once (W39); the cleaner may QC their own work when alone (W43); damage found after the client left is
 claimed from the client by default (W44).
@@ -158,7 +193,7 @@ Available physical devices are iPhone 17 Pro and M4 iPad Pro. Device acceptance 
 - **Proposed Options:**
   - Option A: Treat consumables as non-returnable expense lines that auto-resolve upon Handover.
   - Option B: Track returned unused bulk quantity and credit the difference.
-- **Current Status:** Resolved as Option A (29 Sep 2026, spec addendum Trial 13 gaps #3/#5): Consumable-tracked lines are exempt from the Return receipt gate (0141, verb + workspace agree) and deplete `products.total_quantity` automatically at Handover into append-only `consumable_stock_movements` (0142). WRITTEN + VERIFIED locally, NOT APPLIED to production — Babin may still flip to Option B before the production apply, which would replace 0141/0142.
+- **Current Status:** Confirmed by Babin on 27 Oct 2026 (B14: consumables with a stock count — Option A stays). Resolved as Option A (29 Sep 2026, spec addendum Trial 13 gaps #3/#5): Consumable-tracked lines are exempt from the Return receipt gate (0141, verb + workspace agree) and deplete `products.total_quantity` automatically at Handover into append-only `consumable_stock_movements` (0142). WRITTEN + VERIFIED locally, NOT APPLIED to production — Babin may still flip to Option B before the production apply, which would replace 0141/0142.
 
 ---
 

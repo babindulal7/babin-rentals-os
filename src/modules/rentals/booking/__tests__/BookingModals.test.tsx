@@ -78,6 +78,8 @@ describe('BookingModals', () => {
               onReloadQuote={vi.fn()}
               confirmedSuccess={{ bookingId: 'bk-1', bookingNo: 'BK-2026-0099' }}
               setConfirmedSuccess={vi.fn()}
+              quoteSaved={null}
+              setQuoteSaved={vi.fn()}
             />
           </MemoryRouter>,
         )
@@ -129,6 +131,8 @@ describe('BookingModals', () => {
               onReloadQuote={vi.fn()}
               confirmedSuccess={null}
               setConfirmedSuccess={vi.fn()}
+              quoteSaved={null}
+              setQuoteSaved={vi.fn()}
             />
           </MemoryRouter>,
         )

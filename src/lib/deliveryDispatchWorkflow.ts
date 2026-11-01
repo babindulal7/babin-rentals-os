@@ -12,6 +12,7 @@ export interface DispatchState {
   status: DispatchStatus
   leg: DispatchLeg
   assignedDriverId: string | null
+  riderName?: string | null
   bookingStage: string
   cancelled: boolean
 }
@@ -58,8 +59,8 @@ export function checkDispatchTransition(
     && !['Packed', 'On Rent'].includes(state.bookingStage)) {
     return 'Finish packing before dispatching outbound equipment.'
   }
-  if (request.next === 'In Transit' && !state.assignedDriverId) {
-    return 'Assign an active driver before marking In Transit.'
+  if (request.next === 'In Transit' && !state.assignedDriverId && !state.riderName?.trim()) {
+    return 'Assign an active driver or hired rider before marking In Transit.'
   }
   if (request.next === 'Delivered' && (request.recipientName?.trim().length ?? 0) < 2) {
     return 'Record the receiver name as proof of delivery.'

@@ -57,6 +57,7 @@ const CasesReport       = lazy(() => import('./modules/reports/CasesReport'))
 const CustomReport      = lazy(() => import('./modules/reports/CustomReport'))
 
 const SalesVatReports   = lazy(() => import('./modules/reports/SalesVatReports'))
+const CrewTdsReport    = lazy(() => import('./modules/reports/CrewTdsReport'))
 const ActivityReports   = lazy(() => import('./modules/reports/ActivityReports'))
 const BackupRestore     = lazy(() => import('./modules/admin/BackupRestore'))
 const AuditSettings     = lazy(() => import('./modules/admin/AuditSettings'))
@@ -86,6 +87,7 @@ const ProductionsList   = lazy(() => import('./modules/rentals/ProductionsList')
 const WarrantyTracker   = lazy(() => import('./modules/inventory/WarrantyTracker'))
 const QrLabels          = lazy(() => import('./modules/inventory/QrLabels'))
 const InternalNotesPage = lazy(() => import('./modules/notes/InternalNotesPage'))
+const RiderDeliveryPage = lazy(() => import('./modules/operations/RiderDeliveryPage'))
 
 function FinanceTabRedirect({ tab }: { tab: FinanceTabSlug }) {
   const { search, hash } = useLocation()
@@ -146,6 +148,9 @@ export default function App() {
         */}
         <Route path="/forgot-password" element={<Suspense fallback={AuthFallback}><ForgotPassword /></Suspense>} />
         <Route path="/reset-password" element={<Suspense fallback={AuthFallback}><ResetPassword /></Suspense>} />
+        {/* Public Rider Link route (T4-08, W49): unauthenticated, token-hashed job view */}
+        <Route path="/rider/:token" element={<Suspense fallback={AuthFallback}><RiderDeliveryPage /></Suspense>} />
+        <Route path="/rider" element={<Suspense fallback={AuthFallback}><RiderDeliveryPage /></Suspense>} />
         <Route path="/" element={<Navigate to={user ? "/today" : "/login"} replace />} />
 
         {/*
@@ -698,6 +703,15 @@ export default function App() {
           element={
             <Shell crumbs={[{ label: 'Finance', to: '/finance' }, { label: 'Reports', to: '/finance?tab=reports' }, { label: 'VAT / Tax Reports' }]}>
               <SalesVatReports />
+            </Shell>
+          }
+        />
+
+        <Route
+          path="/reports/tds"
+          element={
+            <Shell crumbs={[{ label: 'Finance', to: '/finance' }, { label: 'Reports', to: '/finance?tab=reports' }, { label: 'Crew TDS Reports' }]}>
+              <CrewTdsReport />
             </Shell>
           }
         />

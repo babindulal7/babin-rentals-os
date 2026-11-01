@@ -4,6 +4,7 @@ import Icon from '../../components/ui/Icon'
 import { TouchTarget } from '../../components/ui/TouchTarget'
 import type { FloorLine, FloorUnit } from '../../lib/queries/bookings'
 import { isSubRentedLine } from '../../lib/queries/bookings'
+import type { LineEvaluationResult } from '../../lib/availabilityEvaluation'
 
 export interface LineItemTreeProps {
   lines: FloorLine[]
@@ -14,6 +15,7 @@ export interface LineItemTreeProps {
   subRentedRowStyle?: ((line: { lineType?: string }) => React.CSSProperties) | undefined
   isSubRented?: ((line: { lineType?: string }) => boolean) | undefined
   bookingStage?: string | undefined
+  lineAvailability?: ReadonlyMap<string, LineEvaluationResult> | undefined
 }
 
 /** No per-unit QC source is recorded in this projection. */
@@ -22,14 +24,144 @@ function getQcStatus(_name: string | null): { label: string; passed: boolean } |
 /** Asset tags identify equipment; they are not evidence of a flight-case tag. */
 function getCaseTag(_parentLine: FloorLine, _index: number): string { return 'No case tag recorded' }
 
-/** Availability must come from the windowed inventory query, never equipment names. */
-function getStockAvailability(_line: FloorLine, _index: number): { count: null; tone: 'warning' | 'success' | 'neutral' } { return { count: null, tone: 'neutral' } }
-
 // Ruling 7 Oct: a stage transition is not evidence of a per-unit scan or QC.
 function assignmentLabel(line: FloorLine, stage: string) {
   if (line.trackingMode === 'Quantity' || line.trackingMode === 'Consumable') return 'Quantity tracked'
   if (line.lineType !== 'Equipment' && line.lineType !== 'Bundle') return 'No serial required'
   return stage === 'Returned' || stage === 'Closed' ? 'No unit record' : 'Assign during packing'
+}
+
+function renderAvailabilityPill(
+  line: FloorLine,
+  lineAvailability?: ReadonlyMap<string, LineEvaluationResult>,
+) {
+  const evalResult =
+    lineAvailability?.get(line.id) ??
+    (line.productId ? lineAvailability?.get(line.productId) : undefined)
+
+  if (!evalResult) {
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          fontSize: '0.725rem',
+          fontWeight: 600,
+          padding: '1px 6px',
+          borderRadius: 999,
+          background: 'var(--card2)',
+          color: 'var(--muted)',
+        }}
+      >
+        <span>●</span>
+        <span>Availability not checked</span>
+      </span>
+    )
+  }
+
+  if (evalResult.status === 'available') {
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          fontSize: '0.725rem',
+          fontWeight: 600,
+          padding: '1px 6px',
+          borderRadius: 999,
+          background: 'var(--st-in-bg, rgba(34, 197, 94, 0.15))',
+          color: 'var(--st-in-fg, #15803d)',
+        }}
+      >
+        <Icon name="check" size={12} />
+        <span>Available</span>
+      </span>
+    )
+  }
+
+  if (evalResult.status === 'hold_conflict') {
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          fontSize: '0.725rem',
+          fontWeight: 600,
+          padding: '1px 6px',
+          borderRadius: 999,
+          background: 'var(--st-danger-bg, rgba(239, 68, 68, 0.15))',
+          color: 'var(--danger-text, #dc2626)',
+        }}
+      >
+        <Icon name="alert_triangle" size={12} />
+        <span>Hold conflict</span>
+      </span>
+    )
+  }
+
+  if (evalResult.status === 'conflict') {
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          fontSize: '0.725rem',
+          fontWeight: 600,
+          padding: '1px 6px',
+          borderRadius: 999,
+          background: 'var(--st-danger-bg, rgba(239, 68, 68, 0.15))',
+          color: 'var(--danger-text, #dc2626)',
+        }}
+      >
+        <Icon name="alert_triangle" size={12} />
+        <span>Reserved conflict</span>
+      </span>
+    )
+  }
+
+  if (evalResult.status === 'available_with_reassignment') {
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          fontSize: '0.725rem',
+          fontWeight: 600,
+          padding: '1px 6px',
+          borderRadius: 999,
+          background: 'var(--st-progress-bg, rgba(234, 179, 8, 0.15))',
+          color: 'var(--st-progress-fg, #a16207)',
+        }}
+      >
+        <Icon name="alert_triangle" size={12} />
+        <span>Draft overlap</span>
+      </span>
+    )
+  }
+
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        fontSize: '0.725rem',
+        fontWeight: 600,
+        padding: '1px 6px',
+        borderRadius: 999,
+        background: 'var(--card2)',
+        color: 'var(--muted)',
+      }}
+    >
+      <span>●</span>
+      <span>{evalResult.status}</span>
+    </span>
+  )
 }
 
 export function LineItemTree({
@@ -41,6 +173,7 @@ export function LineItemTree({
   subRentedRowStyle,
   isSubRented = isSubRentedLine,
   bookingStage = 'Booked',
+  lineAvailability,
 }: LineItemTreeProps) {
   const [collapsedCases, setCollapsedCases] = useState<Record<string, boolean>>({})
   const [searchQuery, setSearchQuery] = useState('')
@@ -248,7 +381,7 @@ export function LineItemTree({
 
       {/* ── 1. Nested Flight Cases ── */}
       {(activeFilter === 'all' || activeFilter === 'cases') &&
-        cases.map(({ parent, caseTag, children }, caseIdx) => {
+        cases.map(({ parent, caseTag, children }) => {
           const isCollapsed = Boolean(collapsedCases[parent.id])
           const allUnits = [
             ...parent.units,
@@ -272,7 +405,6 @@ export function LineItemTree({
           }
 
           const renderedChildren = query ? matchingChildren : children
-          const stock = getStockAvailability(parent, caseIdx)
 
           return (
             <div
@@ -365,34 +497,8 @@ export function LineItemTree({
                         <span>{caseTag}</span>
                       </span>
 
-                      {/* Booqable Stock Availability Badge */}
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 4,
-                          fontSize: '0.725rem',
-                          fontWeight: 600,
-                          padding: '1px 7px',
-                          borderRadius: 999,
-                          background:
-                            stock.tone === 'warning'
-                              ? 'rgba(239, 68, 68, 0.12)'
-                              : stock.tone === 'neutral'
-                              ? 'rgba(245, 158, 11, 0.12)'
-                              : 'rgba(16, 185, 129, 0.12)',
-                          color:
-                            stock.tone === 'warning'
-                              ? 'var(--danger-text, #dc2626)'
-                              : stock.tone === 'neutral'
-                              ? 'var(--warning-text, #d97706)'
-                              : 'var(--muted)',
-                        }}
-                        title="Warehouse Stock Status"
-                      >
-                        <span style={{ fontSize: 9 }}>●</span>
-                        <span>{'Availability not checked'}</span>
-                      </span>
+                      {/* Availability Badge */}
+                      {renderAvailabilityPill(parent, lineAvailability)}
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2, fontSize: '0.775rem', color: 'var(--text2)' }}>
@@ -520,7 +626,6 @@ export function LineItemTree({
                       {/* 2. Nested Child Items */}
                       {renderedChildren.map((child, cIdx) => {
                         const isLastChild = cIdx === renderedChildren.length - 1
-                        const childStock = getStockAvailability(child, cIdx)
                         const qc = getQcStatus(child.productName)
 
                         return (
@@ -594,28 +699,7 @@ export function LineItemTree({
                             </td>
                             <td style={{ textAlign: 'center', padding: '10px', fontWeight: 600 }}>{child.qty}</td>
                             <td style={{ padding: '10px 12px' }}>
-                              <span
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: 4,
-                                  fontSize: '0.725rem',
-                                  fontWeight: 600,
-                                  padding: '1px 6px',
-                                  borderRadius: 999,
-                                  background:
-                                    childStock.tone === 'warning'
-                                      ? 'rgba(239, 68, 68, 0.1)'
-                                      : 'var(--card2)',
-                                  color:
-                                    childStock.tone === 'warning'
-                                      ? 'var(--danger-text, #dc2626)'
-                                      : 'var(--muted)',
-                                }}
-                              >
-                                <span>●</span>
-                                <span>{'Availability not checked'}</span>
-                              </span>
+                              {renderAvailabilityPill(child, lineAvailability)}
                             </td>
                             <td style={{ padding: '10px 12px' }}>
                               {qc ? (
@@ -709,7 +793,6 @@ export function LineItemTree({
                   if (query && !filterMatches(line.productName) && !filterMatches(line.description)) {
                     return null
                   }
-                  const stock = getStockAvailability(line, idx)
                   return (
                     <tr
                       key={line.id}
@@ -743,28 +826,7 @@ export function LineItemTree({
                       </td>
                       <td style={{ textAlign: 'center', padding: '10px', fontWeight: 600 }}>{line.qty}</td>
                       <td style={{ padding: '10px 12px' }}>
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                            fontSize: '0.725rem',
-                            fontWeight: 600,
-                            padding: '1px 6px',
-                            borderRadius: 999,
-                            background:
-                              stock.tone === 'warning'
-                                ? 'rgba(239, 68, 68, 0.1)'
-                                : 'var(--card2)',
-                            color:
-                              stock.tone === 'warning'
-                                ? 'var(--danger-text, #dc2626)'
-                                : 'var(--muted)',
-                          }}
-                        >
-                          <span>●</span>
-                          <span>{'Availability not checked'}</span>
-                        </span>
+                        {renderAvailabilityPill(line, lineAvailability)}
                       </td>
                       <td style={{ padding: '10px 12px', fontSize: '0.75rem', color: 'var(--text2)' }}>
                         {line.units[0]?.location || 'Not recorded'}

@@ -80,13 +80,13 @@ the existing CSP and stays a separate concern.
 
 1. ~~**4 vs 6 digits — the card and the shipped security parameter disagree.**~~
    **RESOLVED by Babin, 28 Oct: 4 digits.** W53 and the card stood; the shipped `0066`
-   parameter is relaxed by his explicit instruction in migration **0186** (claimed in the
+   parameter is relaxed by his explicit instruction in migration **0204** (claimed in the
    ledger, written on this branch): `set_staff_pin` enforces exactly 4 (weak rules
    re-scaled: four identical, four sequential, last-4-of-mobile — which for a 4-digit PIN
    compares the whole PIN); `verify_staff_pin` accepts 4 **or** 6 during the transition so
    pre-ruling hashes keep verifying until rotated. The honest cost is in the migration
    header: 10^4 space, lockout makes an even-odds continuous attack ~10.4 days.
-   Follow-up scheduled: tighten verify to 4-only after the live roster rotates.
+   Ruled O-18, 1 Nov (RULINGS-2026-11-01.md). Follow-up scheduled: tighten verify to 4-only after the live roster rotates.
    The UI (PinPad) moves to 4 in the build phase — server first (P2/P3).
 2. **Mock mode:** the mock auth stub needs a session-store equivalent so
    `dev:mock` exercises the roster→PIN→switch flow for screens and tests (the mock

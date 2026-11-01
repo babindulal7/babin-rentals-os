@@ -30,6 +30,7 @@ export type SecondaryActionGroupId =
   | 'quote'
   | 'invoice'
   | 'duplicate'
+  | 'rebook'
   | 'audit'
   | 'cancel'
 
@@ -55,6 +56,8 @@ export type SecondaryActionId =
   | 'invoice.corrections'
   // Duplicate group
   | 'rental.duplicate'
+  // Re-book group (T3-01, D9)
+  | 'rental.rebook'
   // Audit group
   | 'audit.full'
   | 'audit.operational'
@@ -522,6 +525,40 @@ export function evaluateRentalSecondaryActions(
   }
 
   // ───────────────────────────────────────────────────────────────────────────
+  // 3b. RE-BOOK (T3-01 · D9 — "1 and we can choose"). Copies client, products
+  //     and quantities into a new Quote at today's rates; crew/delivery/
+  //     discounts are ticked in a follow-up chooser. Booking-desk only: the
+  //     verb opens New Rental, which money-blind roles cannot act in.
+  // ───────────────────────────────────────────────────────────────────────────
+  const rebookDisabled = !isSingle || !deskWriter
+  const rebookReason = !isSingle
+    ? 'Select a rental to re-book'
+    : !deskWriter
+      ? 'Re-booking is a booking-desk action'
+      : undefined
+
+  const rebookItem: SecondaryActionItem = {
+    id: 'rental.rebook',
+    groupId: 'rebook',
+    label: 'Re-book…',
+    icon: 'refresh',
+    visible: true,
+    disabled: rebookDisabled,
+    disabledReason: rebookReason,
+  }
+
+  const rebookGroup: SecondaryActionGroup = {
+    id: 'rebook',
+    label: 'Re-book',
+    icon: 'refresh',
+    visible: true,
+    disabled: rebookDisabled,
+    disabledReason: rebookReason,
+    isSubmenu: false,
+    items: [rebookItem],
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
   // 4. AUDIT HISTORY
   // ───────────────────────────────────────────────────────────────────────────
   const auditItems: SecondaryActionItem[] = [
@@ -635,6 +672,7 @@ export function evaluateRentalSecondaryActions(
     quoteGroup,
     invoiceGroup,
     duplicateGroup,
+    rebookGroup,
     auditGroup,
     cancelGroup,
   ]

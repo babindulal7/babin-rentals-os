@@ -115,6 +115,12 @@ export type CreateClientInput = {
   /** `clients.pan_vat` — CHECK: exactly nine digits, or absent. */
   panVat?: string | undefined
   notes?: string | undefined
+  /** Ruling W68: mark this client as a staff member for automatic staff discount on bookings. */
+  isStaff?: boolean | undefined
+  /** Alias for isStaff — accepted for compatibility with existing callers. */
+  isStaffClient?: boolean | undefined
+  /** The user ID of the staff member this client is linked to. */
+  staffUserId?: string | undefined
   /**
    * **Law 8.** Minted once where the operator pressed Save (`newClientUuid()`
    * in `lib/supabase`) and reused across every retry of that one press, so a
@@ -161,6 +167,8 @@ type ClientInsertPayload = {
   country: string
   pan_vat: string | null
   notes: string | null
+  is_staff?: boolean
+  staff_user_id?: string | null
   created_by: string
 }
 
@@ -351,6 +359,10 @@ export const createClientConfig: ActionConfig<CreateClientInput, CreateClientRes
       country: input.country?.trim() || 'Nepal',
       pan_vat: orNull(input.panVat),
       notes: orNull(input.notes),
+      ...(input.isStaff !== undefined || input.isStaffClient !== undefined
+        ? { is_staff: Boolean(input.isStaff || input.isStaffClient) }
+        : {}),
+      ...(input.staffUserId ? { staff_user_id: input.staffUserId } : {}),
       created_by: ctx.userId,
       /*
        * Deliberately NOT written, each for a stated reason:
