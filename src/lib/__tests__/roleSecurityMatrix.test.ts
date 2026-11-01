@@ -1,6 +1,28 @@
 import { describe, it, expect } from 'vitest'
+import { canCreateTeamNote, canReadTeamNotes, canAcknowledgeTeamNote } from '../rbac'
 
 describe('Role Security Matrix — Contract (Documentation)', () => {
+  describe('Team Notes — enforceable owner ruling (1 Nov 2026)', () => {
+    const staffRoles = [
+      'Owner', 'Admin', 'Manager', 'Coordinator',
+      'Warehouse', 'Technician', 'Accounts', 'Driver',
+    ] as const
+
+    for (const role of staffRoles) {
+      it(`${role} may create, read and acknowledge shared team notes`, () => {
+        expect(canCreateTeamNote(role)).toBe(true)
+        expect(canReadTeamNotes(role)).toBe(true)
+        expect(canAcknowledgeTeamNote(role)).toBe(true)
+      })
+    }
+
+    it('Client cannot create, read or acknowledge staff notes', () => {
+      expect(canCreateTeamNote('Client')).toBe(false)
+      expect(canReadTeamNotes('Client')).toBe(false)
+      expect(canAcknowledgeTeamNote('Client')).toBe(false)
+    })
+  })
+
   describe('Money-Blind Roles (Law 6)', () => {
     const moneyBlindRoles = ['Warehouse', 'Technician', 'Driver', 'Client']
     const moneyTables = ['invoices', 'payments', 'security_deposits', 'deposit_movements', 'expenses']
@@ -59,7 +81,7 @@ describe('Role Security Matrix — Contract (Documentation)', () => {
       'closing.approve': ['Owner', 'Admin', 'Manager', 'Accounts'],
       'case.resolve': ['Owner', 'Manager'],
       'purchase.approve': ['Owner', 'Manager'],
-      'team_note.*': ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts'],
+      'team_note.*': ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts', 'Driver'],
       'shift_handover.*': ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts'],
       'collateral.receive/return': ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician'],
     }
