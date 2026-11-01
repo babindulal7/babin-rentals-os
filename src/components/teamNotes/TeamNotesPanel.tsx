@@ -14,10 +14,6 @@ export interface TeamNotesPanelProps {
   refreshInterval?: number;
 }
 
-function actionCtx(user: { id: string; role: ActionContext['role'] } | null | undefined): ActionContext | undefined {
-  return user ? { userId: user.id, role: user.role } : undefined;
-}
-
 export function TeamNotesPanel({
   initialLimit = 20,
   autoRefresh = true,
