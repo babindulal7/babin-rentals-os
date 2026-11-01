@@ -66,6 +66,46 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - Archive `scripts/fix-*.mjs` (four regex rewrite scripts from "mix all"; one caused the Booking Detail crash).
 - Open with ⭐ defaults: `PLAN.md` §4.2 O-4…O-19 (O-8 replaced). Accountant: seven questions (O-14 and O-17 block T3-14c).
 
+## 2026-11-01 — T3-14b lifecycle fixes (Lane C)
+
+**Did**
+- Fixed 7 failing lifecycle tests for T3-14b (Draft invoice at Confirm):
+  - L8: Draft invoices mutable, issued invoices immutable
+  - L10: Payment amounts in paisa (not rupees)
+  - L11: Fresh booking with 2 units for Missing case
+  - L21: Settle invoice before handover (R-06 gate)
+  - L36: Settle invoice before handover (R-06 gate)
+  - L37: Settle invoice before close
+- Resolved merge conflicts in `scripts/e2e-lifecycle.mjs` and `docs/plans/MIGRATION_LEDGER.md` from lane B integration
+
+**Ruled**
+- Nothing new. Fixed test failures for T3-14b Draft-on-Confirm behavior.
+
+**Verified**
+- `npm run check:pglite` → 192/192 migrations, all 3 gates green
+- `npm run check:lifecycle` → **48/48 green**
+- `npm run check:contrast` → 106/106 pass (WCAG AA)
+- `npm run lint:progress` → passes
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 79 / 79 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 65 / 65 (100%) | — |
+| Lifecycle | steps green / total | 48 / 48 (100%) | +4 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 192 files · check:pglite 192/192 applied, 0 failed. Suite: 48/48 lifecycle green.
+Counted by `npm run completion`, not typed. Structural coverage only.
+
+### Remaining
+- L15, L26: Pre-existing S1-5 bugs (product_units/equipment guards)
+- L19: L10 dependency (now passes)
+- L31: Fixture state pollution (needs fresh booking)
+- L41: Fixture state pollution (needs fresh booking)
+
 ## 2026-11-01 (later) — T6-01 approved; owner actions recorded
 
 **Did**

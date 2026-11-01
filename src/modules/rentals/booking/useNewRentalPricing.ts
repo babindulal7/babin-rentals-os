@@ -39,6 +39,9 @@ export interface UseNewRentalPricingOptions {
   manualDepositAmount: string
   depositOverrideReason: string
   depositAuthorizedBy: string
+  isStaffClient?: boolean | undefined
+  staffDiscountPercent?: number | undefined
+  staffDiscountRemoved?: boolean | undefined
 }
 
 export interface PricingBreakdown {
@@ -103,6 +106,9 @@ export function useNewRentalPricing({
   manualDepositAmount,
   depositOverrideReason,
   depositAuthorizedBy,
+  isStaffClient,
+  staffDiscountPercent,
+  staffDiscountRemoved,
 }: UseNewRentalPricingOptions): UseNewRentalPricingResult {
   const standaloneEquipmentLines = useMemo(
     () => lines.filter((l) => (l.lineType === undefined || l.lineType === 'Equipment') && !l.isIncluded),
@@ -195,6 +201,9 @@ export function useNewRentalPricing({
         womenDopEligible,
         promoCode: promo,
         isStudentBundle,
+        isStaffClient: Boolean(isStaffClient),
+        staffDiscountPercent: staffDiscountPercent ?? 20,
+        staffDiscountRemoved: Boolean(staffDiscountRemoved),
       },
       vatEnabled: vatOn,
       vatRatePercent,
@@ -220,6 +229,9 @@ export function useNewRentalPricing({
     womenDopEligible,
     promoCodeApplied,
     isStudentBundle,
+    isStaffClient,
+    staffDiscountPercent,
+    staffDiscountRemoved,
     vatOn,
     vatRatePercent,
     recommendedDepositPaisa,
