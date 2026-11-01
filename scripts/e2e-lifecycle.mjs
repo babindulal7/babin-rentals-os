@@ -4211,25 +4211,27 @@ STEPS.push({
       const rawToken = 'rider_sec_tok_128bit_test_payload_12345'
       const tokenHash = createHash('sha256').update(rawToken).digest('hex')
 
-      // 2. Security: Unauthorized role (Client) cannot create rider link
-      await as('Client', async () => {
-        await refusesSavepoint(
-          'Client attempting to create rider link',
-          `select create_rider_link($1, $2, 'Ram Rider', '9801234567')`,
-          [jobId, tokenHash],
-          /Unauthorized|42501/i,
-        )
-      })
+      // 2. Migration 0192 revokes the legacy browser-chosen token-hash issuer.
+      // Both Client and Coordinator must be denied at the EXECUTE privilege
+      // boundary. The lifecycle harness tests the new trusted path as DB owner,
+      // matching the Edge Function's service-role invocation after JWT review.
+      for (const role of ['Client', 'Coordinator']) {
+        await as(role, async () => {
+          await refusesSavepoint(
+            `${role} attempting legacy create_rider_link`,
+            `select create_rider_link($1, $2, 'Ram Rider', '9801234567')`,
+            [jobId, tokenHash],
+            /permission denied for function create_rider_link|Unauthorized|42501/i,
+          )
+        })
+      }
 
-      // 3. Coordinator creates the rider link
-      let linkId
-      await as('Coordinator', async () => {
-        linkId = (await q(
-          `select create_rider_link($1, $2, 'Ram Rider', '9801234567') as id`,
-          [jobId, tokenHash],
-        )).rows[0].id
-        assert(linkId, 'Rider link created successfully')
-      })
+      // 3. Trusted issuer creates the link on behalf of verified Coordinator.
+      const firstIssue = (await q(
+        `select * from issue_rider_link_server($1, $2, 'Ram Rider', '9801234567', $3, $4)`,
+        [jobId, tokenHash, U.Coordinator, '00000000-0000-4000-8000-00000000c991'],
+      )).rows[0]
+      assert(firstIssue.was_created === true && firstIssue.link_id, 'Server issued rider link successfully')
 
       // 4. Money blindness (Law 6) & payload structure for rider
       const jobData = (await q(`select get_rider_job_by_token($1) as data`, [tokenHash])).rows[0].data
@@ -4293,16 +4295,14 @@ STEPS.push({
 
       const rawToken2 = 'rider_sec_tok_second_test_link_67890'
       const tokenHash2 = createHash('sha256').update(rawToken2).digest('hex')
-      let linkId2
+      const secondIssue = (await q(
+        `select * from issue_rider_link_server($1, $2, 'Hari Rider', '9812345678', $3, $4)`,
+        [jobId2, tokenHash2, U.Coordinator, '00000000-0000-4000-8000-00000000c992'],
+      )).rows[0]
+      assert(secondIssue.was_created === true && secondIssue.link_id, 'Second server-issued rider link created')
       await as('Coordinator', async () => {
-        linkId2 = (await q(
-          `select create_rider_link($1, $2, 'Hari Rider', '9812345678') as id`,
-          [jobId2, tokenHash2],
-        )).rows[0].id
-        assert(linkId2, 'Second rider link created')
-
-        // Coordinator revokes the link
-        await q(`select revoke_rider_link($1)`, [linkId2])
+        // Authenticated staff can revoke a link after trusted issuance.
+        await q(`select revoke_rider_link($1)`, [secondIssue.link_id])
       })
 
       // Revoked link cannot be read or used
@@ -4331,12 +4331,11 @@ STEPS.push({
 
       const rawToken3 = 'rider_sec_tok_expired_test_link_11223'
       const tokenHash3 = createHash('sha256').update(rawToken3).digest('hex')
-      await as('Coordinator', async () => {
-        await q(
-          `select create_rider_link($1, $2, 'Gita Rider', '9823456789')`,
-          [jobId3, tokenHash3],
-        )
-      })
+      const thirdIssue = (await q(
+        `select * from issue_rider_link_server($1, $2, 'Gita Rider', '9823456789', $3, $4)`,
+        [jobId3, tokenHash3, U.Coordinator, '00000000-0000-4000-8000-00000000c993'],
+      )).rows[0]
+      assert(thirdIssue.was_created === true && thirdIssue.link_id, 'Third server-issued rider link created')
       await q(`update delivery_job_links set created_at = now() - interval '25 hours', expires_at = now() - interval '1 hour' where token_hash = $1`, [tokenHash3])
 
       await refusesSavepoint(
