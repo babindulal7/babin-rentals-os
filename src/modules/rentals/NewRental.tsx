@@ -65,6 +65,7 @@ export { lineAmountPaisa, confirmWriteRefusals }
 
 import {
   readVatRatePercent,
+  readStaffDiscountPercent,
   bookingInstant,
   bookingDays,
 } from './booking/newRentalUtils'
@@ -289,6 +290,14 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     showSuccessToast,
   })
 
+  const [staffDiscountPercent] = useState(() => readStaffDiscountPercent())
+  const [staffDiscountRemoved, setStaffDiscountRemoved] = useState(false)
+  const isStaffClient = Boolean(client?.isStaff)
+
+  useEffect(() => {
+    setStaffDiscountRemoved(false)
+  }, [client?.id])
+
   /* §5 draft-email — the "Send Quote" split button was removed (NR-12).
      The modal is kept for future wiring when an email backend exists.
      Currently disabled; leaving the state avoids a breaking refactor of the
@@ -462,6 +471,9 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     manualDepositAmount,
     depositOverrideReason,
     depositAuthorizedBy,
+    isStaffClient,
+    staffDiscountPercent,
+    staffDiscountRemoved,
   })
 
   /* ── §12 alerts. Critical blocks Confirm; Warning blocks Handover. ─────── */
@@ -1378,6 +1390,10 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
               setManualDiscountAuthorizedBy={setManualDiscountAuthorizedBy}
               womenDopEligible={womenDopEligible}
               setWomenDopEligible={setWomenDopEligible}
+              isStaffClient={isStaffClient}
+              staffDiscountPercent={staffDiscountPercent}
+              staffDiscountRemoved={staffDiscountRemoved}
+              onToggleStaffDiscount={setStaffDiscountRemoved}
               isStudentBundle={isStudentBundle}
               promoCodeInput={promoCodeInput}
               setPromoCodeInput={setPromoCodeInput}

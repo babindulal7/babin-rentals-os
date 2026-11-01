@@ -209,4 +209,69 @@ describe('RentalPricingSection', () => {
       host.remove()
     }
   })
+
+  it('renders staff discount banner and toggles removal without approval gate (W68 / Law 10)', async () => {
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const root = createRoot(host)
+    const onToggleStaffDiscount = vi.fn()
+
+    try {
+      await act(async () => {
+        root.render(
+          <RentalPricingSection
+            open={true}
+            onToggle={vi.fn()}
+            isDesktop={true}
+            pricing={mockPricing}
+            canCrewMoney={true}
+            vatOn={true}
+            setVatOn={vi.fn()}
+            vatRatePercent={13}
+            discountPct={0}
+            setDiscountPct={vi.fn()}
+            manualDiscountReason=""
+            setManualDiscountReason={vi.fn()}
+            manualDiscountAuthorizedBy=""
+            setManualDiscountAuthorizedBy={vi.fn()}
+            womenDopEligible={false}
+            setWomenDopEligible={vi.fn()}
+            isStaffClient={true}
+            staffDiscountPercent={20}
+            staffDiscountRemoved={false}
+            onToggleStaffDiscount={onToggleStaffDiscount}
+            isStudentBundle={false}
+            promoCodeInput=""
+            setPromoCodeInput={vi.fn()}
+            promoCodeApplied={null}
+            setPromoCodeApplied={vi.fn()}
+            promoNotice={null}
+            setPromoNotice={vi.fn()}
+            pickupAt={new Date('2026-10-10')}
+            manualDepositOverride={false}
+            setManualDepositOverride={vi.fn()}
+            manualDepositAmount=""
+            setManualDepositAmount={vi.fn()}
+            depositOverrideReason=""
+            setDepositOverrideReason={vi.fn()}
+            depositAuthorizedBy=""
+            setDepositAuthorizedBy={vi.fn()}
+          />,
+        )
+      })
+
+      expect(host.textContent).toContain('Staff Rental Discount (20%)')
+      expect(host.textContent).toContain('Automatically applied for staff client')
+      const removeBtn = Array.from(host.querySelectorAll('button')).find((b) => b.textContent?.includes('Remove'))
+      expect(removeBtn).toBeDefined()
+
+      await act(async () => {
+        removeBtn?.click()
+      })
+      expect(onToggleStaffDiscount).toHaveBeenCalledWith(true)
+    } finally {
+      await act(async () => root.unmount())
+      host.remove()
+    }
+  })
 })

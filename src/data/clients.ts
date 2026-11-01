@@ -127,8 +127,11 @@ export interface ClientRecord {
   membership: MembershipTier
   phone: string
   email: string
-  pan?: string
-  isVip?: boolean
+  pan?: string | undefined
+  isVip?: boolean | undefined
+  isStaff?: boolean | undefined
+  isStaffClient?: boolean | undefined
+  staffUserId?: string | undefined
   isVerified?: boolean
   isBlocked?: boolean
   blockReason?: string
@@ -287,6 +290,8 @@ export const CLIENTS_DATA: ClientRecord[] = [
     id: 'C-3',
     name: 'Bikram Rai',
     clientType: 'Individual',
+    isStaff: true,
+    isStaffClient: true,
     profession: ['Cinematographer'],
     membership: 'Cinematographer',
     phone: '+977 984-1827364',
