@@ -29,7 +29,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0188 | T3-smart-reservations | smart-reservation-holds | lane-c/T3-smart-reservations | verified |
 | 0189 | T4-07 | delivery-zones | lane-b/T4-07-delivery-zones | written |
 | 0190 | T4-08 | one-time-rider-links | lane-b/T4-08-one-time-rider-link | claimed |
-| 0191 | T4-08 R1 | rider-token-privilege-lockdown | security/2026-11-01-rider-token-privilege-lockdown | claimed |
+| 0191 | T4-08 R1 | rider-token-privilege-lockdown | security/2026-11-01-rider-token-privilege-lockdown | written (unverified) |
 | 0193 | T3-14a | invoice-write-hardening | lane-c/T3-14a-invoice-write-hardening | verified |
 | 0199 | T8-08 | tds-on-crew-payouts | lane-a/T8-08-tds-on-crew-payouts | verified |
 | 0200 | T3-14b | draft-at-confirm | lane-c/T3-14b-draft-at-confirm | claimed |
