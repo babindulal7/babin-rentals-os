@@ -241,6 +241,8 @@ describe('RecordForm - shared client form (Add)', () => {
       .find((b) => b.textContent?.trim() === 'Back to editing')
     expect(back).toBeDefined()
     await click(back)
+    // Shared Modal retains content for the 200 ms close animation.
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 260)) })
     expect(document.body.textContent).not.toContain('Unsaved preview. No equipment')
     expect(field('name')?.value).toBe('Unsaved Cinema Camera')
     expect(saveRecord).not.toHaveBeenCalled()
