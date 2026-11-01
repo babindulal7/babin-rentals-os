@@ -38,8 +38,9 @@ describe('useNewRentalTiming', () => {
 
       expect(timingResult.pickup).toBe('2026-11-01')
       expect(timingResult.ret).toBe('2026-11-04')
-      expect(timingResult.pickupTime).toBe('09:00')
-      expect(timingResult.returnTime).toBe('18:00')
+      // L1 operational rental day: the default interval is 06:00 to 06:00.
+      expect(timingResult.pickupTime).toBe('06:00')
+      expect(timingResult.returnTime).toBe('06:00')
       expect(timingResult.days).toBeGreaterThanOrEqual(1)
       expect(timingResult.dayWord).toBe('days')
       expect(timingResult.bookingWindow.pickupAd).not.toBeNull()
