@@ -17,11 +17,11 @@ editing this file or telling Claude at a check-in.
 - [ ] Apply Claude's `fix-evidence-offline-text.patch` (offline text; turns the red UI-copy check green).
 - [ ] From now on, run the **full check list** (`docs/plans/README.md`) before every push — CI no longer
       catches anything (T0-11 makes it one command).
-- [ ] Take a production backup — `scripts/backup-db.ps1`, ~30 min (T1-01).
+- [x] Take a production backup — `scripts/backup-db.ps1`, ~30 min (T1-01). *Reported done by Babin 1 Nov 2026; T1-01 is `done` only once `npm run check:dump` passes and the SHA-256 is recorded.*
 - [ ] Approve the cost of a second Supabase project for staging (T1-02).
 - [ ] Create a Cloudflare account; later add three DNS records when asked: `app.`, `book.`, `staging-app.` (T1-07).
-- [ ] **Apply for eSewa and Khalti merchant accounts** — onboarding time is unknown, so start now (T7-06).
-- [ ] Ask your bank for the **Fonepay merchant API / dynamic QR credentials** for online payments (T7-05).
+- [x] **Apply for eSewa and Khalti merchant accounts** — onboarding time is unknown, so start now (T7-06). *Reported done by Babin 1 Nov 2026.*
+- [x] Ask your bank for the **Fonepay merchant API / dynamic QR credentials** for online payments (T7-05). *Reported done by Babin 1 Nov 2026. Enter them only as Edge Function secrets when T7-05 asks (N-8) — never in chat or the repo.*
 - [ ] **Do not switch on email sign-up in Supabase Auth** until T7-10 says go; then, in the dashboard, turn
       on **CAPTCHA (Cloudflare Turnstile)** *first*, set the email code expiry to 10 minutes, and only then
       allow sign-ups (`docs/ONLINE_BOOKING_SPEC.md` §4 step 7 and §11 — an Owner action, N-7).
@@ -58,8 +58,8 @@ editing this file or telling Claude at a check-in.
 
 ## By Sun 6 Dec (20 Mangsir)
 
-- [ ] Approve the **Nepali glossary** (265 terms, 7 flagged choices first, one sitting) — sheet:
-      `docs/plans/T6-01-GLOSSARY-REVIEW.md` (T6-01).
+- [x] Approve the **Nepali glossary** (265 terms, 7 flagged choices first, one sitting) — sheet:
+      `docs/plans/T6-01-GLOSSARY-REVIEW.md` (T6-01). *Approved as drafted, 1 Nov 2026.*
 - [ ] Read and approve the **online booking spec**, esp. §0 and the 13 ⭐ defaults in §13.2 —
       `docs/ONLINE_BOOKING_SPEC.md` (T7-01).
 - [ ] **Live batch 1** — about an hour: fresh backup, then run the prepared apply script (T1-10).

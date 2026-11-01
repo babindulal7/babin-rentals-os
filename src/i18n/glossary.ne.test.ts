@@ -69,6 +69,10 @@ describe('Nepali glossary (T6-01)', () => {
     if (glossary.approval.status === 'draft') {
       expect(terms.every((t) => t.approved === null)).toBe(true)
     }
+    if (glossary.approval.status === 'approved') {
+      expect(glossary.approval.approvedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      expect(terms.every((t) => t.approved !== null), 'approved file with an undated term').toBe(true)
+    }
     expect(byId.size).toBeGreaterThan(200)
   })
 })

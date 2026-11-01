@@ -1,5 +1,39 @@
 # Progress Log
 
+## 2026-11-01 (later) — T6-01 approved; owner actions recorded
+
+**Did**
+- Recorded Babin's report that the glossary is approved: `src/i18n/glossary.ne.json` now has `approval.status = approved`, `approvedOn 2026-11-01`, and all 265 terms dated. T6-01 card is `done`; review sheet header updated. The guard test now fails an `approved` file that has an undated term.
+- Ticked in `docs/plans/BABIN_ACTIONS.md`: glossary approval, production backup (T1-01), eSewa and Khalti applications (T7-06), Fonepay credentials requested (T7-05) — each marked "reported done by Babin".
+
+**Ruled**
+- `RULINGS-2026-11-01.md` row **G6**: approved **as drafted**. Babin said "1 is done" without saying whether any of the 7 flagged words changed; I took no change. If one did, it needs a new dated row.
+
+**Verified**
+- `npx vitest run src/i18n/glossary.ne.test.ts` → 7/7 pass.
+- **Not verified, only reported by Babin:** the backup (no dump, SHA-256 or `check:dump` result is in the repo), the eSewa/Khalti applications, the Fonepay request, the glossary approval itself.
+- **Checked and not as reported:** commit `aec987b1` (T6-01 + T7-01) is on branch `claude/complete-all-tasks-ac9873` only; `main` (`6c199e66`) does not contain it, so "merged" is **not true yet**.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 78 / 78 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 62 | 52 · 0 · 0 · 10 | — |
+| DB enforcement | gates in Postgres | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 64 / 64 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+
+Counted by `npm run completion`, not typed. Structural coverage only; docs and a data file add no counted item.
+
+## Remaining
+- **Merge `claude/complete-all-tasks-ac9873` into `main`** (Babin merges locally) — it holds T6-01, T7-01 and today's rulings.
+- **T1-01 is `done` only when `npm run check:dump` passes and the dump's SHA-256 is recorded** off the laptop.
+- **T1-02 (staging project cost approval) is still open** — the restore drill and every migration acceptance wait on it.
+- **Babin has not yet reviewed `docs/ONLINE_BOOKING_SPEC.md`** (§0 and the 13 ⭐ defaults). T7-02…T7-04 should not start until then.
+- **When T7-05 asks, Babin enters the Fonepay credentials as Edge Function secrets** (N-8); eSewa/Khalti stay switched off until their accounts are approved.
+- Unchanged: no card for Nepali on the public booking site; four `lint:ui-copy` violations in files outside this work.
+
 ## 2026-11-01 — Claude's two cards: T6-01 Nepali glossary and T7-01 online booking spec
 
 **Did**

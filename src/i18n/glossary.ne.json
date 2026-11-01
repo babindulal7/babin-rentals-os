@@ -1,11 +1,11 @@
 {
-  "$comment": "T6-01 — Nepali glossary, wave 1. DRAFT written by Claude (RULINGS-2026-10-26 S11). Nothing here ships as Nepali until Babin sets `approved` to a date. Later waves (T6-02+) must reuse these exact terms.",
+  "$comment": "T6-01 — Nepali glossary, wave 1. Drafted by Claude (RULINGS-2026-10-26 S11); approved by Babin 2026-11-01 as drafted, as reported in chat — all 265 terms, including the 7 flagged choices at their drafted wording. Later waves (T6-02+) must reuse these exact terms; changing one needs a new dated ruling.",
   "version": 1,
   "drafted": "2026-11-01",
   "approval": {
-    "status": "draft",
-    "approvedBy": null,
-    "approvedOn": null,
+    "status": "approved",
+    "approvedBy": "Babin",
+    "approvedOn": "2026-11-01",
     "rule": "A term is usable only when its own `approved` is a YYYY-MM-DD date. `null` means not approved."
   },
   "neverTranslate": [
@@ -27,7 +27,7 @@
       "group": "nav",
       "en": "New Rental",
       "ne": "नयाँ भाडा",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "nav.today",
@@ -36,7 +36,7 @@
       "ne": "आज",
       "note": "Already in i18n.ts.",
       "catalogueKey": "nav.today",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "nav.operations",
@@ -44,7 +44,7 @@
       "en": "Operations",
       "ne": "सञ्चालन",
       "note": "The floor queues (Pack, Handover, Return, Reset).",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "nav.rentals",
@@ -53,7 +53,7 @@
       "ne": "भाडा",
       "note": "Already in i18n.ts.",
       "catalogueKey": "nav.rentals",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "nav.calendar",
@@ -62,7 +62,7 @@
       "ne": "पात्रो",
       "note": "पात्रो is the Nepali calendar specifically — right for a BS-first screen.",
       "catalogueKey": "nav.calendar",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "nav.crewAssist",
@@ -73,7 +73,7 @@
       "alt": [
         "दल सहायता"
       ],
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "nav.inventory",
@@ -82,7 +82,7 @@
       "ne": "मौज्दात",
       "note": "Stock on hand. Already in i18n.ts.",
       "catalogueKey": "nav.inventory",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "nav.clients",
@@ -91,7 +91,7 @@
       "ne": "ग्राहक",
       "note": "Law 15 forbids \"customer\" in English; ग्राहक covers both in Nepali. Already in i18n.ts.",
       "catalogueKey": "nav.clients",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "nav.finance",
@@ -100,7 +100,7 @@
       "ne": "वित्त",
       "note": "Already in i18n.ts.",
       "catalogueKey": "nav.finance",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "nav.tools",
@@ -108,7 +108,7 @@
       "en": "Tools",
       "ne": "औजार",
       "note": "Not उपकरण — that word is Equipment.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "nav.settings",
@@ -117,7 +117,7 @@
       "ne": "सेटिङ",
       "note": "Already in i18n.ts.",
       "catalogueKey": "nav.settings",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "nav.more",
@@ -125,7 +125,7 @@
       "en": "More",
       "ne": "थप",
       "note": "Phone bottom-bar slot.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "nav.scan",
@@ -133,7 +133,7 @@
       "en": "Scan",
       "ne": "स्क्यान",
       "note": "Phone bottom-bar centre slot.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "stage.quote",
@@ -144,7 +144,7 @@
       "alt": [
         "मूल्य प्रस्ताव"
       ],
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "stage.draft",
@@ -153,28 +153,28 @@
       "ne": "मस्यौदा",
       "note": "Already in i18n.ts.",
       "catalogueKey": "status.draft",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "stage.confirmed",
       "group": "stage",
       "en": "Confirmed",
       "ne": "पुष्टि भएको",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "stage.preparing",
       "group": "stage",
       "en": "Preparing",
       "ne": "तयारीमा",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "stage.ready",
       "group": "stage",
       "en": "Ready",
       "ne": "तयार",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "stage.dispatched",
@@ -183,7 +183,7 @@
       "ne": "पठाइएको",
       "note": "Left the warehouse, not yet with the client.",
       "check": "Is \"पठाइएको\" clear on a pickup (no courier) booking?",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "stage.onRent",
@@ -192,35 +192,35 @@
       "ne": "भाडामा",
       "note": "Already in i18n.ts.",
       "catalogueKey": "status.onRent",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "stage.returnDue",
       "group": "stage",
       "en": "Return Due",
       "ne": "फिर्ता हुनुपर्ने",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "stage.inspection",
       "group": "stage",
       "en": "Inspection",
       "ne": "जाँच",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "stage.cleaning",
       "group": "stage",
       "en": "Cleaning",
       "ne": "सफाइ",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "stage.completed",
       "group": "stage",
       "en": "Completed",
       "ne": "सम्पन्न",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "stage.closed",
@@ -228,14 +228,14 @@
       "en": "Closed",
       "ne": "बन्द",
       "note": "Terminal state of a finished booking.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "stage.cancelled",
       "group": "stage",
       "en": "Cancelled",
       "ne": "रद्द भएको",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "stage.booked",
@@ -244,7 +244,7 @@
       "ne": "बुक भएको",
       "note": "Already in i18n.ts.",
       "catalogueKey": "status.booked",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "stage.returned",
@@ -253,7 +253,7 @@
       "ne": "फिर्ता भयो",
       "note": "Already in i18n.ts.",
       "catalogueKey": "status.returned",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "stage.overdue",
@@ -262,49 +262,49 @@
       "ne": "म्याद नाघेको",
       "note": "Already in i18n.ts. Also used for invoices.",
       "catalogueKey": "status.overdue",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "category.neutral",
       "group": "category",
       "en": "Neutral",
       "ne": "सामान्य",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "category.actionRequired",
       "group": "category",
       "en": "Action Required",
       "ne": "कारबाही आवश्यक",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "category.inProgress",
       "group": "category",
       "en": "In Progress",
       "ne": "प्रक्रियामा",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "category.waiting",
       "group": "category",
       "en": "Waiting",
       "ne": "प्रतीक्षामा",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "category.success",
       "group": "category",
       "en": "Success",
       "ne": "सफल",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "category.danger",
       "group": "category",
       "en": "Danger",
       "ne": "जोखिम",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "verb.pack",
@@ -312,7 +312,7 @@
       "en": "Pack",
       "ne": "प्याक गर्नुहोस्",
       "note": "Button.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "verb.packNoun",
@@ -320,7 +320,7 @@
       "en": "Packing",
       "ne": "प्याकिङ",
       "note": "Workspace heading.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "verb.handover",
@@ -328,7 +328,7 @@
       "en": "Handover",
       "ne": "हस्तान्तरण",
       "note": "Heading. Button: हस्तान्तरण गर्नुहोस्.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "verb.handoverVerb",
@@ -336,7 +336,7 @@
       "en": "Hand over",
       "ne": "हस्तान्तरण गर्नुहोस्",
       "note": "Button.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "verb.return",
@@ -344,7 +344,7 @@
       "en": "Return",
       "ne": "फिर्ता",
       "note": "Heading.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "verb.returnVerb",
@@ -352,7 +352,7 @@
       "en": "Receive return",
       "ne": "फिर्ता लिनुहोस्",
       "note": "Button. Not the same as the status फिर्ता भयो.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "verb.reset",
@@ -364,7 +364,7 @@
         "रिसेट"
       ],
       "check": "Floor staff may say \"रिसेट\" aloud. Pick one; the screen must match.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "verb.resetVerb",
@@ -373,7 +373,7 @@
       "ne": "पुनः तयार गर्नुहोस्",
       "note": "Button.",
       "check": "Same decision as Reset.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "verb.evidence",
@@ -381,21 +381,21 @@
       "en": "Evidence",
       "ne": "प्रमाण",
       "note": "The photo step.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "verb.scanEquipment",
       "group": "verb",
       "en": "Scan equipment",
       "ne": "उपकरण स्क्यान गर्नुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "verb.takePhoto",
       "group": "verb",
       "en": "Take photo",
       "ne": "फोटो खिच्नुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "verb.checklist",
@@ -403,14 +403,14 @@
       "en": "Checklist",
       "ne": "जाँचसूची",
       "note": "What the app calls a \"gate\" is shown to staff as the checklist.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "verb.stockCheck",
       "group": "verb",
       "en": "Stock Check",
       "ne": "मौज्दात जाँच",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "verb.queue",
@@ -418,119 +418,119 @@
       "en": "Queue",
       "ne": "पङ्क्ति",
       "note": "Operations queue.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "gate.paymentRequired",
       "group": "gate",
       "en": "Payment required",
       "ne": "भुक्तानी आवश्यक",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "gate.agreementUnsigned",
       "group": "gate",
       "en": "Agreement not signed",
       "ne": "सम्झौतामा हस्ताक्षर बाँकी",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "gate.receiverUnverified",
       "group": "gate",
       "en": "Receiver not verified",
       "ne": "प्राप्तकर्ता प्रमाणित भएको छैन",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "gate.unitsUnassigned",
       "group": "gate",
       "en": "Units not assigned",
       "ne": "एकाइ तोकिएको छैन",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "gate.unitsUnpacked",
       "group": "gate",
       "en": "Units not packed",
       "ne": "एकाइ प्याक भएको छैन",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "gate.unitsUnhanded",
       "group": "gate",
       "en": "Units not handed over",
       "ne": "एकाइ हस्तान्तरण भएको छैन",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "gate.unitsUnaccounted",
       "group": "gate",
       "en": "Units not accounted for",
       "ne": "एकाइको हिसाब मिलेको छैन",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "gate.damagePending",
       "group": "gate",
       "en": "Damage decision pending",
       "ne": "क्षतिको निर्णय बाँकी",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "gate.depositUnresolved",
       "group": "gate",
       "en": "Deposit not settled",
       "ne": "धरौटी टुङ्गिएको छैन",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "gate.invoiceUnsettled",
       "group": "gate",
       "en": "Invoice not settled",
       "ne": "बिल चुक्ता भएको छैन",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "gate.openCase",
       "group": "gate",
       "en": "Open case",
       "ne": "खुला केस",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "gate.reasonRequired",
       "group": "gate",
       "en": "Reason required",
       "ne": "कारण आवश्यक छ",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "role.owner",
       "group": "role",
       "en": "Owner",
       "ne": "मालिक",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "role.admin",
       "group": "role",
       "en": "Admin",
       "ne": "प्रशासक",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "role.manager",
       "group": "role",
       "en": "Manager",
       "ne": "व्यवस्थापक",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "role.coordinator",
       "group": "role",
       "en": "Coordinator",
       "ne": "समन्वयकर्ता",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "role.warehouse",
@@ -538,49 +538,49 @@
       "en": "Warehouse",
       "ne": "गोदाम",
       "note": "Role label; the place is the same word.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "role.technician",
       "group": "role",
       "en": "Technician",
       "ne": "प्राविधिक",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "role.accounts",
       "group": "role",
       "en": "Accounts",
       "ne": "लेखा",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "role.driver",
       "group": "role",
       "en": "Driver",
       "ne": "चालक",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "role.client",
       "group": "role",
       "en": "Client",
       "ne": "ग्राहक",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "role.staff",
       "group": "role",
       "en": "Staff",
       "ne": "कर्मचारी",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.rentalTotal",
       "group": "money",
       "en": "Rental Total",
       "ne": "भाडा जम्मा",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.advance",
@@ -592,7 +592,7 @@
         "अग्रिम"
       ],
       "check": "पेशकी (everyday) or अग्रिम (formal)?",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.deposit",
@@ -604,7 +604,7 @@
         "जमानत"
       ],
       "check": "धरौटी or जमानत for security deposit?",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.outstanding",
@@ -612,28 +612,28 @@
       "en": "Outstanding",
       "ne": "बाँकी",
       "note": "What the client still owes on the rental.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.balance",
       "group": "money",
       "en": "Balance",
       "ne": "बाँकी रकम",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.payment",
       "group": "money",
       "en": "Payment",
       "ne": "भुक्तानी",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.recordPayment",
       "group": "money",
       "en": "Record payment",
       "ne": "भुक्तानी दर्ता गर्नुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.paid",
@@ -641,35 +641,35 @@
       "en": "Paid",
       "ne": "चुक्ता",
       "note": "Invoice status.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.unpaid",
       "group": "money",
       "en": "Unpaid",
       "ne": "भुक्तानी बाँकी",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.partiallyPaid",
       "group": "money",
       "en": "Partially Paid",
       "ne": "आंशिक भुक्तानी",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.invoice",
       "group": "money",
       "en": "Invoice",
       "ne": "बिल",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.receipt",
       "group": "money",
       "en": "Receipt",
       "ne": "रसिद",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.refund",
@@ -677,7 +677,7 @@
       "en": "Refund",
       "ne": "रकम फिर्ता",
       "note": "A payment going back to the client.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.release",
@@ -685,7 +685,7 @@
       "en": "Release",
       "ne": "फिर्ता दिइएको",
       "note": "Deposit released to the client — a different thing from a refund.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.applied",
@@ -693,14 +693,14 @@
       "en": "Applied",
       "ne": "समायोजन गरिएको",
       "note": "Deposit applied against a charge.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.discount",
       "group": "money",
       "en": "Discount",
       "ne": "छुट",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.vat",
@@ -708,63 +708,63 @@
       "en": "VAT",
       "ne": "भ्याट",
       "note": "Long form: मूल्य अभिवृद्धि कर.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.subtotal",
       "group": "money",
       "en": "Subtotal",
       "ne": "उप-जम्मा",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.total",
       "group": "money",
       "en": "Total",
       "ne": "जम्मा",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.amount",
       "group": "money",
       "en": "Amount",
       "ne": "रकम",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.rate",
       "group": "money",
       "en": "Rate",
       "ne": "दर",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.dailyRate",
       "group": "money",
       "en": "Daily rate",
       "ne": "दैनिक दर",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.lateFee",
       "group": "money",
       "en": "Late fee",
       "ne": "ढिलाइ शुल्क",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.damageCharge",
       "group": "money",
       "en": "Damage charge",
       "ne": "क्षति शुल्क",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.creditNote",
       "group": "money",
       "en": "Credit note",
       "ne": "क्रेडिट नोट",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.void",
@@ -772,7 +772,7 @@
       "en": "Void",
       "ne": "खारेज",
       "note": "Invoice status — cancelled with a reason, never deleted.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.reversal",
@@ -780,14 +780,14 @@
       "en": "Reversal",
       "ne": "भुक्तानी उल्टाइएको",
       "note": "Payments are never edited; a reversal row corrects them.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.expense",
       "group": "money",
       "en": "Expense",
       "ne": "खर्च",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.payout",
@@ -795,112 +795,112 @@
       "en": "Payout",
       "ne": "भुक्तानी दिइएको",
       "note": "Crew payout.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.tds",
       "group": "money",
       "en": "TDS",
       "ne": "टीडीएस",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.pan",
       "group": "money",
       "en": "PAN",
       "ne": "प्यान",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "money.requiredAdvance",
       "group": "money",
       "en": "Advance required",
       "ne": "पेशकी चाहिने",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "invoice.sent",
       "group": "invoice",
       "en": "Sent",
       "ne": "पठाइएको",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "invoice.received",
       "group": "invoice",
       "en": "Received",
       "ne": "प्राप्त",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "invoice.refunded",
       "group": "invoice",
       "en": "Refunded",
       "ne": "फिर्ता गरिएको",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "invoice.failed",
       "group": "invoice",
       "en": "Failed",
       "ne": "असफल",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "invoice.depositRequired",
       "group": "invoice",
       "en": "Deposit required",
       "ne": "धरौटी आवश्यक",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "invoice.depositPending",
       "group": "invoice",
       "en": "Deposit pending",
       "ne": "धरौटी बाँकी",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "payMethod.cash",
       "group": "payMethod",
       "en": "Cash",
       "ne": "नगद",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "payMethod.bank",
       "group": "payMethod",
       "en": "Bank",
       "ne": "बैंक",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "payMethod.wallet",
       "group": "payMethod",
       "en": "Digital wallets",
       "ne": "डिजिटल वालेट",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "payMethod.cards",
       "group": "payMethod",
       "en": "Cards",
       "ne": "कार्ड",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "payMethod.cheque",
       "group": "payMethod",
       "en": "Cheque",
       "ne": "चेक",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "payMethod.other",
       "group": "payMethod",
       "en": "Other",
       "ne": "अन्य",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "payMethod.fonepay",
@@ -908,7 +908,7 @@
       "en": "Fonepay",
       "ne": "Fonepay",
       "note": "Brand — stays Latin.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "payMethod.esewa",
@@ -916,7 +916,7 @@
       "en": "eSewa",
       "ne": "eSewa",
       "note": "Brand — stays Latin.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "payMethod.khalti",
@@ -924,7 +924,7 @@
       "en": "Khalti",
       "ne": "Khalti",
       "note": "Brand — stays Latin.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.save",
@@ -933,7 +933,7 @@
       "ne": "सुरक्षित गर्नुहोस्",
       "note": "Already in i18n.ts.",
       "catalogueKey": "action.save",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.cancel",
@@ -942,7 +942,7 @@
       "ne": "रद्द गर्नुहोस्",
       "note": "Already in i18n.ts. Dismisses a dialog; booking cancellation uses the same word with its own confirmation.",
       "catalogueKey": "action.cancel",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.edit",
@@ -951,42 +951,42 @@
       "ne": "सम्पादन गर्नुहोस्",
       "note": "Already in i18n.ts.",
       "catalogueKey": "action.edit",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.confirm",
       "group": "action",
       "en": "Confirm",
       "ne": "पुष्टि गर्नुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.back",
       "group": "action",
       "en": "Back",
       "ne": "पछाडि",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.next",
       "group": "action",
       "en": "Next",
       "ne": "अर्को",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.retry",
       "group": "action",
       "en": "Try again",
       "ne": "फेरि प्रयास गर्नुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.add",
       "group": "action",
       "en": "Add",
       "ne": "थप्नुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.remove",
@@ -994,7 +994,7 @@
       "en": "Remove",
       "ne": "हटाउनुहोस्",
       "note": "Takes a line off a form. Nothing in the app deletes a record.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.close",
@@ -1002,112 +1002,112 @@
       "en": "Close",
       "ne": "बन्द गर्नुहोस्",
       "note": "Closes a dialog, or closes a booking.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.reopen",
       "group": "action",
       "en": "Reopen",
       "ne": "पुनः खोल्नुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.create",
       "group": "action",
       "en": "Create",
       "ne": "सिर्जना गर्नुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.view",
       "group": "action",
       "en": "View",
       "ne": "हेर्नुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.search",
       "group": "action",
       "en": "Search",
       "ne": "खोज्नुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.filter",
       "group": "action",
       "en": "Filter",
       "ne": "फिल्टर",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.clear",
       "group": "action",
       "en": "Clear",
       "ne": "खाली गर्नुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.apply",
       "group": "action",
       "en": "Apply",
       "ne": "लागू गर्नुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.send",
       "group": "action",
       "en": "Send",
       "ne": "पठाउनुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.print",
       "group": "action",
       "en": "Print",
       "ne": "छाप्नुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.download",
       "group": "action",
       "en": "Download",
       "ne": "डाउनलोड गर्नुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.upload",
       "group": "action",
       "en": "Upload",
       "ne": "अपलोड गर्नुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.export",
       "group": "action",
       "en": "Export",
       "ne": "निर्यात गर्नुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.import",
       "group": "action",
       "en": "Import",
       "ne": "आयात गर्नुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.share",
       "group": "action",
       "en": "Share",
       "ne": "साझा गर्नुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.refresh",
       "group": "action",
       "en": "Refresh",
       "ne": "ताजा गर्नुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.signIn",
@@ -1117,7 +1117,7 @@
       "alt": [
         "लगइन गर्नुहोस्"
       ],
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.signOut",
@@ -1127,91 +1127,91 @@
       "alt": [
         "लगआउट गर्नुहोस्"
       ],
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.done",
       "group": "action",
       "en": "Done",
       "ne": "भयो",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.submit",
       "group": "action",
       "en": "Submit",
       "ne": "बुझाउनुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.addNote",
       "group": "action",
       "en": "Add note",
       "ne": "टिप्पणी थप्नुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.assign",
       "group": "action",
       "en": "Assign",
       "ne": "तोक्नुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.cancelBooking",
       "group": "action",
       "en": "Cancel booking",
       "ne": "बुकिङ रद्द गर्नुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "action.markAsPaid",
       "group": "action",
       "en": "Mark as paid",
       "ne": "चुक्ता भएको जनाउनुहोस्",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.booking",
       "group": "noun",
       "en": "Booking",
       "ne": "बुकिङ",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.rental",
       "group": "noun",
       "en": "Rental",
       "ne": "भाडा",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.equipment",
       "group": "noun",
       "en": "Equipment",
       "ne": "उपकरण",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.product",
       "group": "noun",
       "en": "Product",
       "ne": "सामग्री",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.bundle",
       "group": "noun",
       "en": "Bundle",
       "ne": "बन्डल",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.accessory",
       "group": "noun",
       "en": "Accessory",
       "ne": "सहायक सामग्री",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.unit",
@@ -1219,91 +1219,91 @@
       "en": "Unit",
       "ne": "एकाइ",
       "note": "One physical item with its own serial number.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.serialNumber",
       "group": "noun",
       "en": "Serial number",
       "ne": "सिरियल नम्बर",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.category",
       "group": "noun",
       "en": "Category",
       "ne": "वर्ग",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.quantity",
       "group": "noun",
       "en": "Quantity",
       "ne": "मात्रा",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.item",
       "group": "noun",
       "en": "Item",
       "ne": "वस्तु",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.note",
       "group": "noun",
       "en": "Note",
       "ne": "टिप्पणी",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.reason",
       "group": "noun",
       "en": "Reason",
       "ne": "कारण",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.status",
       "group": "noun",
       "en": "Status",
       "ne": "अवस्था",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.stage",
       "group": "noun",
       "en": "Stage",
       "ne": "चरण",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.branch",
       "group": "noun",
       "en": "Branch",
       "ne": "शाखा",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.location",
       "group": "noun",
       "en": "Location",
       "ne": "स्थान",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.crew",
       "group": "noun",
       "en": "Crew",
       "ne": "क्रु",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.company",
       "group": "noun",
       "en": "Company",
       "ne": "कम्पनी",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.client1",
@@ -1311,35 +1311,35 @@
       "en": "Client",
       "ne": "ग्राहक",
       "note": "Singular.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.name",
       "group": "noun",
       "en": "Name",
       "ne": "नाम",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.phone",
       "group": "noun",
       "en": "Phone",
       "ne": "फोन",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.email",
       "group": "noun",
       "en": "Email",
       "ne": "इमेल",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.address",
       "group": "noun",
       "en": "Address",
       "ne": "ठेगाना",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.receiver",
@@ -1347,49 +1347,49 @@
       "en": "Receiver",
       "ne": "प्राप्तकर्ता",
       "note": "The person who takes the gear at handover.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.agreement",
       "group": "noun",
       "en": "Agreement",
       "ne": "सम्झौता",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.document",
       "group": "noun",
       "en": "Document",
       "ne": "कागजात",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.photo",
       "group": "noun",
       "en": "Photo",
       "ne": "फोटो",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.idDocument",
       "group": "noun",
       "en": "ID document",
       "ne": "परिचयपत्र",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.report",
       "group": "noun",
       "en": "Report",
       "ne": "प्रतिवेदन",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.membership",
       "group": "noun",
       "en": "Membership",
       "ne": "सदस्यता",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.subRental",
@@ -1397,70 +1397,70 @@
       "en": "Sub-Rental",
       "ne": "उप-भाडा",
       "note": "Gear hired in from another supplier to fill a booking.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.services",
       "group": "noun",
       "en": "Services",
       "ne": "सेवा",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.crewCharges",
       "group": "noun",
       "en": "Crew charges",
       "ne": "क्रु शुल्क",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "noun.transport",
       "group": "noun",
       "en": "Transport",
       "ne": "यातायात",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "delivery.clientPickup",
       "group": "delivery",
       "en": "Client pickup",
       "ne": "ग्राहक आफैं लिने",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "delivery.babinDelivery",
       "group": "delivery",
       "en": "Babin delivery",
       "ne": "बबिनबाट ढुवानी",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "delivery.courier",
       "group": "delivery",
       "en": "Courier",
       "ne": "कुरियर",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "delivery.thirdParty",
       "group": "delivery",
       "en": "Third party",
       "ne": "तेस्रो पक्ष",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "delivery.delivery",
       "group": "delivery",
       "en": "Delivery",
       "ne": "ढुवानी",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "delivery.pickup",
       "group": "delivery",
       "en": "Pickup",
       "ne": "लिने",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "delivery.trip",
@@ -1471,49 +1471,49 @@
         "फेरो"
       ],
       "check": "यात्रा or फेरो for a driver's trip?",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "condition.excellent",
       "group": "condition",
       "en": "Excellent",
       "ne": "उत्कृष्ट",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "condition.good",
       "group": "condition",
       "en": "Good",
       "ne": "राम्रो",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "condition.fair",
       "group": "condition",
       "en": "Fair",
       "ne": "मध्यम",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "condition.damaged",
       "group": "condition",
       "en": "Damaged",
       "ne": "क्षतिग्रस्त",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "condition.lost",
       "group": "condition",
       "en": "Lost",
       "ne": "हराएको",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "condition.damage",
       "group": "condition",
       "en": "Damage",
       "ne": "क्षति",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "condition.missing",
@@ -1522,161 +1522,161 @@
       "ne": "हराइरहेको",
       "note": "A unit not returned and not yet declared lost.",
       "check": "हराइरहेको vs हराएको (Lost) — close in sound; confirm the difference reads clearly.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "condition.theft",
       "group": "condition",
       "en": "Theft",
       "ne": "चोरी",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "condition.dispute",
       "group": "condition",
       "en": "Dispute",
       "ne": "विवाद",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "condition.vendor",
       "group": "condition",
       "en": "Vendor",
       "ne": "आपूर्तिकर्ता",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "condition.case",
       "group": "condition",
       "en": "Case",
       "ne": "केस",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "condition.open",
       "group": "condition",
       "en": "Open",
       "ne": "खुला",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "condition.underReview",
       "group": "condition",
       "en": "Under Review",
       "ne": "समीक्षामा",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "condition.awaitingDecision",
       "group": "condition",
       "en": "Awaiting Decision",
       "ne": "निर्णयको प्रतीक्षामा",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "condition.resolved",
       "group": "condition",
       "en": "Resolved",
       "ne": "समाधान भएको",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "condition.chargeClient",
       "group": "condition",
       "en": "Charge client",
       "ne": "ग्राहकलाई शुल्क लगाउने",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "condition.absorb",
       "group": "condition",
       "en": "Absorb",
       "ne": "आफैं बेहोर्ने",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "condition.deferInsurance",
       "group": "condition",
       "en": "Defer to insurance",
       "ne": "बीमामा पठाउने",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "condition.maintenance",
       "group": "condition",
       "en": "Maintenance",
       "ne": "मर्मत",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.date",
       "group": "date",
       "en": "Date",
       "ne": "मिति",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.time",
       "group": "date",
       "en": "Time",
       "ne": "समय",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.startDate",
       "group": "date",
       "en": "Start date",
       "ne": "सुरु मिति",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.returnDate",
       "group": "date",
       "en": "Return date",
       "ne": "फिर्ता मिति",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.duration",
       "group": "date",
       "en": "Duration",
       "ne": "अवधि",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.day",
       "group": "date",
       "en": "Day",
       "ne": "दिन",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.week",
       "group": "date",
       "en": "Week",
       "ne": "हप्ता",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.month",
       "group": "date",
       "en": "Month",
       "ne": "महिना",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.tomorrow",
       "group": "date",
       "en": "Tomorrow",
       "ne": "भोलि",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.yesterday",
       "group": "date",
       "en": "Yesterday",
       "ne": "हिजो",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.bs",
@@ -1684,14 +1684,14 @@
       "en": "BS",
       "ne": "वि.सं.",
       "note": "Bikram Sambat. Leads in the Nepali view.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.ad",
       "group": "date",
       "en": "AD",
       "ne": "ई.सं.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.bsMonth1",
@@ -1699,7 +1699,7 @@
       "en": "Baisakh",
       "ne": "बैशाख",
       "note": "BS month 1.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.bsMonth2",
@@ -1707,7 +1707,7 @@
       "en": "Jestha",
       "ne": "जेठ",
       "note": "BS month 2.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.bsMonth3",
@@ -1715,7 +1715,7 @@
       "en": "Ashadh",
       "ne": "असार",
       "note": "BS month 3.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.bsMonth4",
@@ -1723,7 +1723,7 @@
       "en": "Shrawan",
       "ne": "श्रावण",
       "note": "BS month 4.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.bsMonth5",
@@ -1731,7 +1731,7 @@
       "en": "Bhadra",
       "ne": "भदौ",
       "note": "BS month 5.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.bsMonth6",
@@ -1739,7 +1739,7 @@
       "en": "Ashwin",
       "ne": "असोज",
       "note": "BS month 6.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.bsMonth7",
@@ -1747,7 +1747,7 @@
       "en": "Kartik",
       "ne": "कार्तिक",
       "note": "BS month 7.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.bsMonth8",
@@ -1755,7 +1755,7 @@
       "en": "Mangsir",
       "ne": "मंसिर",
       "note": "BS month 8.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.bsMonth9",
@@ -1763,7 +1763,7 @@
       "en": "Poush",
       "ne": "पौष",
       "note": "BS month 9.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.bsMonth10",
@@ -1771,7 +1771,7 @@
       "en": "Magh",
       "ne": "माघ",
       "note": "BS month 10.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.bsMonth11",
@@ -1779,7 +1779,7 @@
       "en": "Falgun",
       "ne": "फागुन",
       "note": "BS month 11.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.bsMonth12",
@@ -1787,70 +1787,70 @@
       "en": "Chaitra",
       "ne": "चैत",
       "note": "BS month 12.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.weekday0",
       "group": "date",
       "en": "Sunday",
       "ne": "आइतबार",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.weekday1",
       "group": "date",
       "en": "Monday",
       "ne": "सोमबार",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.weekday2",
       "group": "date",
       "en": "Tuesday",
       "ne": "मङ्गलबार",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.weekday3",
       "group": "date",
       "en": "Wednesday",
       "ne": "बुधबार",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.weekday4",
       "group": "date",
       "en": "Thursday",
       "ne": "बिहीबार",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.weekday5",
       "group": "date",
       "en": "Friday",
       "ne": "शुक्रबार",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "date.weekday6",
       "group": "date",
       "en": "Saturday",
       "ne": "शनिबार",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "msg.error",
       "group": "msg",
       "en": "Error",
       "ne": "त्रुटि",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "msg.warning",
       "group": "msg",
       "en": "Warning",
       "ne": "चेतावनी",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "msg.saved",
@@ -1858,77 +1858,77 @@
       "en": "Saved",
       "ne": "सुरक्षित भयो",
       "note": "Only ever shown after the server confirmed the write.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "msg.somethingWrong",
       "group": "msg",
       "en": "Something went wrong",
       "ne": "केही गडबड भयो",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "msg.notAllowed",
       "group": "msg",
       "en": "You are not allowed to do this",
       "ne": "तपाईंलाई यो गर्ने अनुमति छैन",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "msg.notFound",
       "group": "msg",
       "en": "Not found",
       "ne": "फेला परेन",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "msg.noResults",
       "group": "msg",
       "en": "No results",
       "ne": "कुनै नतिजा छैन",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "msg.required",
       "group": "msg",
       "en": "This field is required",
       "ne": "यो खाली छोड्न मिल्दैन",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "msg.invalid",
       "group": "msg",
       "en": "Invalid",
       "ne": "अमान्य",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "msg.alreadyExists",
       "group": "msg",
       "en": "Already exists",
       "ne": "पहिले नै छ",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "msg.loading",
       "group": "msg",
       "en": "Loading",
       "ne": "लोड हुँदैछ",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "msg.offline",
       "group": "msg",
       "en": "Offline",
       "ne": "अफलाइन",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "msg.syncing",
       "group": "msg",
       "en": "Syncing",
       "ne": "सिङ्क हुँदैछ",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "msg.notSaved",
@@ -1936,63 +1936,63 @@
       "en": "Not saved",
       "ne": "सुरक्षित भएन",
       "note": "Shown when a write failed or is still queued — never a \"saved\" claim.",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "msg.unsaved",
       "group": "msg",
       "en": "Unsaved changes",
       "ne": "सुरक्षित नगरिएको परिवर्तन",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "msg.pending",
       "group": "msg",
       "en": "Pending",
       "ne": "बाँकी",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "msg.blocked",
       "group": "msg",
       "en": "Blocked",
       "ne": "रोकिएको",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "msg.yes",
       "group": "msg",
       "en": "Yes",
       "ne": "हो",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "msg.no",
       "group": "msg",
       "en": "No",
       "ne": "होइन",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "msg.all",
       "group": "msg",
       "en": "All",
       "ne": "सबै",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "msg.none",
       "group": "msg",
       "en": "None",
       "ne": "कुनै छैन",
-      "approved": null
+      "approved": "2026-11-01"
     },
     {
       "id": "msg.language",
       "group": "msg",
       "en": "Language",
       "ne": "भाषा",
-      "approved": null
+      "approved": "2026-11-01"
     }
   ]
 }

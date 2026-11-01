@@ -1,6 +1,6 @@
 # T6-01 — Nepali glossary: review sheet
 
-**Status:** draft for Babin · **Drafted:** 1 Nov 2026 · **Terms:** 265 · **Target approval:** 6 Dec 2026 (20 Mangsir 2083)
+**Status:** ✅ **approved by Babin, 1 Nov 2026, as drafted** (reported in chat; the 7 flagged rows stand at their drafted wording) · **Drafted:** 1 Nov 2026 · **Terms:** 265 · **Target approval:** 6 Dec 2026 (20 Mangsir 2083)
 
 The source of truth is [`src/i18n/glossary.ne.json`](../../src/i18n/glossary.ne.json). This sheet is generated from it — change the JSON, not this file.
 
