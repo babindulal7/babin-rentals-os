@@ -4255,6 +4255,90 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L48',
+  title: 'Notification records: triggers create notifications; Warehouse sees no money; Client reads none; delete forbidden (T5-01, 0192)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      // 1. Get an existing booking number
+      const bookingRow = (await q(`select id, booking_no from bookings limit 1`)).rows[0]
+      const bookingNo = bookingRow ? bookingRow.booking_no : 'BK-9999'
+
+      // Broadcast an online payment notification via notify_staff
+      await q(`
+        select notify_staff(
+          'online_payment'::text,
+          'Payment received'::text,
+          ('Received Rs 15,000 for ' || $1)::text,
+          ('Payment confirmed for ' || $1)::text,
+          ('/rentals/' || $1)::text,
+          'payment'::text,
+          gen_random_uuid()::text
+        )
+      `, [bookingNo])
+
+      // 2. Accounts reads notification containing the amount
+      let accountsNotif
+      await as('Accounts', async () => {
+        const rows = (await q(`
+          select * from notifications_v
+          where type = 'online_payment'
+          order by created_at desc
+          limit 1
+        `)).rows
+        assert(rows.length > 0, 'Accounts receives payment notification')
+        accountsNotif = rows[0]
+        assert(accountsNotif.message.includes('Rs 15,000') || accountsNotif.body?.includes('Rs 15,000'), `Accounts body includes money amount, got: ${accountsNotif.message}`)
+        assertEq(accountsNotif.is_read, false, 'Notification is unread initially')
+
+        // Mark read
+        await q(`select mark_notification_read($1)`, [accountsNotif.id])
+        const updated = (await q(`select is_read from notifications where id = $1`, [accountsNotif.id])).rows[0]
+        assertEq(updated.is_read, true, 'Notification marked as read')
+      })
+
+      // 3. Warehouse notification for an online payment carries NO AMOUNT (Law 6)
+      await as('Warehouse', async () => {
+        const rows = (await q(`
+          select * from notifications_v
+          where type = 'online_payment'
+          order by created_at desc
+          limit 1
+        `)).rows
+        assert(rows.length > 0, 'Warehouse receives payment notification')
+        const whNotif = rows[0]
+        const msg = whNotif.message || whNotif.body || ''
+        assert(!msg.includes('15,000'), `Warehouse body MUST NOT contain money figure (Law 6), got: ${msg}`)
+        assert(!msg.includes('Rs'), `Warehouse body MUST NOT contain Rs (Law 6), got: ${msg}`)
+        assert(msg.includes('Payment confirmed'), `Warehouse body carries non-financial confirmation, got: ${msg}`)
+      })
+
+      // 4. Client reads 0 notifications from notifications_v
+      await as('Client', async () => {
+        const rows = (await q(`select * from notifications_v`)).rows
+        assertEq(rows.length, 0, 'Client reads 0 rows from notifications_v')
+      })
+
+      // 5. Hard delete is forbidden (Law 3)
+      await as('Owner', async () => {
+        await q('savepoint notif_del_probe')
+        try {
+          await refuses(
+            'Hard delete forbidden on notifications',
+            `delete from notifications where id = $1`,
+            [accountsNotif.id],
+            /HARD DELETE FORBIDDEN|55000/i,
+          )
+        } finally {
+          await q('rollback to savepoint notif_del_probe')
+          await q('release savepoint notif_del_probe')
+        }
+      })
+    })
+  },
+})
+
 /* ── Run ──────────────────────────────────────────────────────────────────── */
 
 await seed()
