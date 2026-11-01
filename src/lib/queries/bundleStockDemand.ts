@@ -23,6 +23,7 @@ export interface BundleRequirement {
   product_id: string
   quantity: number
   is_mandatory: boolean
+  is_active?: boolean
 }
 
 export function buildBookingStockDemand(
@@ -62,7 +63,7 @@ export function buildBookingStockDemand(
     if (children.length === 0) {
       throw new Error(`${bookingNo} has a bundle with no saved equipment components; availability cannot be certified.`)
     }
-    const expected = requirements.filter(item => item.bundle_id === parent.bundle_id)
+    const expected = requirements.filter(item => item.bundle_id === parent.bundle_id && item.is_active !== false)
     if (expected.length === 0) {
       throw new Error(`${bookingNo} has a bundle whose component requirements could not be loaded; availability cannot be certified.`)
     }
@@ -70,11 +71,18 @@ export function buildBookingStockDemand(
     for (const child of children) {
       actual.set(child.product_id!, (actual.get(child.product_id!) ?? 0) + child.qty)
     }
+    const mandatory = new Map<string, number>()
     for (const item of expected) {
-      if (!Number.isSafeInteger(item.quantity) || item.quantity < 1 || !item.product_id) {
+      if (!Number.isSafeInteger(item.quantity) || item.quantity < 1 || !item.product_id ||
+          typeof item.is_mandatory !== 'boolean') {
         throw new Error(`${bookingNo} has an invalid bundle component requirement; availability cannot be certified.`)
       }
-      if (item.is_mandatory && (actual.get(item.product_id) ?? 0) < item.quantity * parent.qty) {
+      if (item.is_mandatory) {
+        mandatory.set(item.product_id, (mandatory.get(item.product_id) ?? 0) + item.quantity * parent.qty)
+      }
+    }
+    for (const [productId, requiredQty] of mandatory) {
+      if ((actual.get(productId) ?? 0) < requiredQty) {
         throw new Error(`${bookingNo} is missing required bundle equipment; availability cannot be certified.`)
       }
     }
