@@ -1,4 +1,4 @@
-import { supabase } from '../supabase'
+import { IS_MOCK, supabase } from '../supabase'
 import { formatAd, formatBsOrAd, getBusinessToday } from '../bs'
 import { rupees, type Paisa } from '../money'
 import type { MembershipTier } from '../../data/clients'
@@ -197,6 +197,10 @@ export async function fetchClientActiveMembership(
       // Fallback to sample or tier mapping
     }
   }
+
+  // The demo corpus only (Law 16): a live client whose read failed, or whose
+  // plan is not on file, must never have benefits fabricated from sample rows.
+  if (!IS_MOCK) return null
 
   // 2. Sample data fallback (MEMBERS array from data/membership)
   const clientName = client.name?.toLowerCase().trim()

@@ -1,5 +1,46 @@
 # Progress Log
 
+## 2026-11-02 — T8-05 review: member benefits at booking verified + demo-fallback hardening (Lane A · Size M)
+
+**Did**
+- Reviewed the as-received T8-05 tip (4f35d455) against the card's Done-when and fixed the one red found — a Law 16 honesty gap:
+  - `fetchClientActiveMembership`'s demo-corpus fallback could fabricate benefits for a LIVE client whose membership read failed (or whose plan is not on file) if the client's id/name matched a sample member. The fallback is now mock-mode only (`IS_MOCK`); live reads return null instead of sample rows.
+- Verified the card's Done-when against the code and the suites:
+  - Member individual % lines on items and bundle % on bundles (21 Jul bundle lock): the pipeline blends both by subtotal weight into one effective percent, or emits separate lines when only one side applies — `pricingPipeline.test.ts`.
+  - The member discount is one line staff can see and remove (Law 10, no approval): `memberDiscountRemoved` wiring + Apply/Remove toggle — `RentalPricingSection.test.tsx`.
+  - Monthly booking limit and simultaneous rental limit warn at confirm without blocking (`Review Limit`) — `newRentalGuards.ts`, `newRentalGuards.test.ts`.
+  - Priority Booking badge comes from the plan's perks — `BookingClientSection.test.tsx`.
+  - Lapsed members show no benefits (`benefitsActive` gated in the pricing hook).
+- `src/lib/pricingPipeline.ts` is a shared file per the lane rules; this card is its declared owner.
+
+**Ruled**
+- No new product decisions — implementation per the 21 Jul / 28 Jul membership locks. The custom-fee question is O-20, carried by the T8-03/T8-04 branches.
+
+**Verified**
+- `npm run typecheck`: clean, 0 errors.
+- Focused: 69/69 across the six suites this card adds or touches.
+- `npm test -- --no-file-parallelism`: 485/485 files, 5919/5919 tests passed — receipt `artifacts/test-run-26600638-a756-4c41-80e7-732140ae8469.json`, fingerprint matches.
+- `npm run check:pglite`: 186/186 applied, 0 failed. `npm run check:lifecycle`: 46/46 green (L44–L46).
+- `npm run lint`: clean (exit 0). `npm run check:contrast`: 106/106. `npm run build`: exit 0, PWA generated (268 precache entries).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 63 / 63 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 49 / 49 (100%) | +0 |
+| Lifecycle | steps green / total | 46 / 46 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 186 files · check:pglite 186/186 applied, 0 failed. Suite: PASS — 5919/5919 passed, 0 failed; source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- VERIFIED locally; not pushed. Chain note: this branch sits on the pre-integration base (816b722d-era numbering: 0188/0189; steps L45/L46). T8-03's and T8-04's review commits carry the money-gate fixes (and the integrated tip renumbers migrations 0195–0199 and steps L52/L53); merge T8-05 after or onto the reviewed chain so it ships with those fixes.
+
 ## 2026-10-28 — T8-05: Member benefits at booking (Lane A · Size M)
 
 **Did**
