@@ -4382,6 +4382,27 @@ STEPS.push({
       assertEq(authIssueNew, false, 'authenticated cannot invoke privileged server issuance')
       assertEq(serviceIssueNew, true, 'service_role can issue a server-minted rider token')
 
+      // The booking/leg unique constraint allows only one Outbound job for
+      // each booking. Earlier in L47, booking a already received its Outbound
+      // job, so the issuance/idempotency scenario needs a separate booking.
+      const issueBookingKey = 'rider_server_issuance'
+      await as('Coordinator', async () => {
+        await createBooking({
+          key: issueBookingKey,
+          window: ['2106-01-05T04:00:00Z', '2106-01-07T04:00:00Z'],
+          actor: 'Coordinator',
+          lines: [{
+            productId: QTY_PRODUCT,
+            description: 'Rider issuance test fixture',
+            qty: 1,
+            days: 2,
+            rate: 250,
+          }],
+        })
+        await transition(issueBookingKey, 'Quote', 'Booked', 'Coordinator')
+      })
+      assertEq(await stageOf(issueBookingKey), 'Booked', 'Rider issuance test has a distinct booked rental')
+
       const issueJob = '00000000-0000-4000-8000-00000000b994'
       const issueKey = '00000000-0000-4000-8000-00000000c994'
       await q(`
@@ -4390,7 +4411,7 @@ STEPS.push({
         ) values (
           $1, gen_random_uuid(), $2, $3, 'Outbound', now() + interval '2 hours', 'Scheduled', $4, $4
         )
-      `, [issueJob, bookingIds.a, BRANCH, U.Coordinator])
+      `, [issueJob, bookingIds[issueBookingKey], BRANCH, U.Coordinator])
       const serverHash = createHash('sha256').update('server-generated-rider-token-for-test').digest('hex')
       const issued = (await q(
         `select * from issue_rider_link_server($1, $2, 'Test Rider', '9801234567', $3, $4)`,
