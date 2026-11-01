@@ -9,9 +9,12 @@ import * as riderQuery from '../../../lib/queries/riderLink'
 ;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
 
 // The real rider query layer in its mock mode, regardless of how the suite is launched.
+let uuidCounter = 0
 vi.mock('../../../lib/supabase', () => ({
   IS_MOCK: true,
   supabase: {},
+  // riderLink.ts takes its idempotency key from here (lane B R2); unique per call is all the tests need.
+  newClientUuid: () => `test-client-uuid-${++uuidCounter}`,
 }))
 
 const RECEIVER_PLACEHOLDER = 'input[placeholder="Name of person receiving the gear"]'
