@@ -277,6 +277,38 @@ export async function getJobRiderLinks(jobId: string): Promise<DeliveryJobLinkRe
   })
 }
 
+const RIDER_LINK_FUNCTION = 'rider-link'
+const RIDER_SERVICE_UNREACHABLE = 'Could not reach the delivery service. Check your connection and try again.'
+
+/**
+ * The rider path is the `rider-link` Edge Function and nothing else (PERMISSIONS 7.1, migration 0192).
+ * The rider RPCs are executable by service_role only, so there is no direct-RPC fallback: a failed call
+ * surfaces the function's own reason (revoked, expired, already completed) or a plain network message,
+ * and a write is never replayed behind the rider's back.
+ */
+async function invokeRiderLink<T = unknown>(body: Record<string, unknown>): Promise<T> {
+  const { data, error } = await supabase.functions.invoke(RIDER_LINK_FUNCTION, { body })
+  if (error) {
+    throw new Error(await riderLinkErrorMessage(error))
+  }
+  return data as T
+}
+
+async function riderLinkErrorMessage(error: unknown): Promise<string> {
+  const context = (error as { context?: unknown } | null)?.context
+  if (context && typeof (context as { json?: unknown }).json === 'function') {
+    try {
+      const payload = (await (context as { json: () => Promise<unknown> }).json()) as { error?: unknown } | null
+      if (payload && typeof payload.error === 'string' && payload.error.trim()) {
+        return payload.error
+      }
+    } catch {
+      // Body was not JSON: fall through to the generic message.
+    }
+  }
+  return RIDER_SERVICE_UNREACHABLE
+}
+
 /**
  * Rider API: Retrieve job details by raw token (no login).
  */
@@ -327,31 +359,11 @@ export async function fetchRiderJobByToken(rawToken: string): Promise<RiderJobDa
     }
   }
 
-  const tokenHash = await hashRiderToken(token)
-
-  // Try via Edge Function first
-  try {
-    const { data: edgeData, error: edgeError } = await supabase.functions.invoke('rider-link', {
-      body: { action: 'get_job', token },
-    })
-
-    if (!edgeError && edgeData?.data) {
-      return edgeData.data as RiderJobData
-    }
-  } catch {
-    // Edge function unavailable in test or local environment; fall through to RPC
+  const result = await invokeRiderLink<{ data?: RiderJobData | null }>({ action: 'get_job', token })
+  if (!result?.data) {
+    throw new Error('Delivery link is invalid, expired, or completed.')
   }
-
-  // Fallback to direct RPC
-  const { data, error } = await supabase.rpc('get_rider_job_by_token', {
-    p_token_hash: tokenHash,
-  })
-
-  if (error || !data) {
-    throw new Error(error?.message || 'Delivery link is invalid, expired, or completed.')
-  }
-
-  return data as unknown as RiderJobData
+  return result.data
 }
 
 /**
@@ -369,24 +381,7 @@ export async function riderMarkJobPickedUp(rawToken: string): Promise<void> {
     return
   }
 
-  const tokenHash = await hashRiderToken(token)
-
-  try {
-    const { error: edgeError } = await supabase.functions.invoke('rider-link', {
-      body: { action: 'pickup', token },
-    })
-    if (!edgeError) return
-  } catch {
-    // Fall through
-  }
-
-  const { error } = await supabase.rpc('rider_mark_picked_up', {
-    p_token_hash: tokenHash,
-  })
-
-  if (error) {
-    throw new Error(error.message || 'Failed to update delivery status.')
-  }
+  await invokeRiderLink({ action: 'pickup', token })
 }
 
 /**
@@ -416,31 +411,11 @@ export async function riderCompleteJobDelivery(
     return
   }
 
-  const tokenHash = await hashRiderToken(token)
-
-  try {
-    const { error: edgeError } = await supabase.functions.invoke('rider-link', {
-      body: {
-        action: 'deliver',
-        token,
-        receiver_name: cleanReceiver,
-        signature_svg: signatureSvg || null,
-        photo_url: photoUrl || null,
-      },
-    })
-    if (!edgeError) return
-  } catch {
-    // Fall through
-  }
-
-  const { error } = await supabase.rpc('rider_complete_delivery', {
-    p_token_hash: tokenHash,
-    p_receiver_name: cleanReceiver,
-    p_signature_svg: signatureSvg || null,
-    p_photo_url: photoUrl || null,
+  await invokeRiderLink({
+    action: 'deliver',
+    token,
+    receiver_name: cleanReceiver,
+    signature_svg: signatureSvg || null,
+    photo_url: photoUrl || null,
   })
-
-  if (error) {
-    throw new Error(error.message || 'Failed to complete delivery.')
-  }
 }
