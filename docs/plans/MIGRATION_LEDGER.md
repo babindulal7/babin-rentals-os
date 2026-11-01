@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0204**
+**Next free number: 0205**
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
@@ -37,6 +37,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0201 | T8-09 | collateral-masking-chars | (main, 1 Nov) | written |
 | 0202 | T8-09 | staff-discount-is-money-setting | claude/file-update-d4b7b1 | verified |
 | 0203 | SEC-05/W68 | restore-driver-client-view-scopes | fix/2026-11-01-driver-client-view-scope-0203 | written; staging required |
+| 0204 | SEC-HOLD | secure-temporary-hold-rpcs | fix/2026-11-02-hold-auth-0204 | written; PGlite and staging required |
 
 ## Expected migrations (not yet claimed)
 
