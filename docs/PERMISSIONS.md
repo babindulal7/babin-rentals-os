@@ -568,7 +568,7 @@ For hired delivery riders who lack staff logins:
   2. View item summary (equipment descriptions and quantities; zero rates).
   3. "Picked up from shop" transition (`status` -> `In Transit`).
   4. "Complete delivery" transition with receiver name, drawn signature, and optional photo (`status` -> `Delivered`).
-- **Fail-closed security**: Once delivered, failed, revoked by staff, or after 24 hours, the link immediately ceases to function. A used link cannot deliver twice. Direct table access is denied to anon and authenticated; all mutations are governed by security-definer RPCs.
+- **Fail-closed security**: Once delivered, failed, revoked by staff, or after 24 hours, the link immediately ceases to function. A used link cannot deliver twice. Anonymous clients have no direct table access. Authenticated staff can read only RLS-scoped link **metadata**, never `token_hash`. Rider token RPCs (read/pickup/deliver) are executable only by the Edge Function's `service_role`; create/revoke RPCs remain staff-role gated. Migration 0191 proposes this tightened grant model and must be staged, tested and approved before release.
 
 ---
 
