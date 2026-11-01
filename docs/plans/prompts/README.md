@@ -71,6 +71,7 @@ Claude reviews the merged work at 7:38 AM and 7:38 PM NPT and tells you what to 
 | [T4-06](T4-06.md) | Export old browser-only entries | S | go-live |
 | [T4-07](T4-07.md) | Delivery zones and fees | S | go-live |
 | [T4-08](T4-08.md) | One-time rider link | L | go-live |
+| [T4-08 fixes](T4-08-fixes.md) | Review fixes R1–R5 on the rider link and the red typecheck | S | go-live |
 | [T5-01](T5-01.md) | Notification records | M | go-live |
 | [T5-02](T5-02.md) | Notification centre | M | go-live |
 | [T5-03](T5-03.md) | Email sending service | M | go-live |

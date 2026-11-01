@@ -32,7 +32,7 @@
 Counted by `npm run completion`, not typed. Structural coverage only; docs and a data file add no counted item.
 
 ## Remaining
-- **Lane B: R1–R5** (`RULINGS-2026-11-01.md`). **R5 is a red gate on `main` today** (`typecheck`, one unused variable); R1 must land before any sign-up is opened.
+- **Lane B: R1–R5** — ready prompt `docs/plans/prompts/T4-08-fixes.md`, **paste it into Gemini** (Babin asked for all five together). **R5 is a red gate on `main` today** (`typecheck`, one unused variable); R1 must land before any sign-up is opened.
 - **T1-01 is `done` only when `npm run check:dump` passes and the dump's SHA-256 is recorded** off the laptop.
 - **T1-02 (staging project cost approval) is still open** — the restore drill and every migration acceptance wait on it.
 - **Babin has not yet reviewed `docs/ONLINE_BOOKING_SPEC.md`** (§0 and the 13 ⭐ defaults). T7-02…T7-04 should not start until then.
