@@ -388,7 +388,11 @@ export function canApproveDiscount(_role: SystemRole, percent: number, _isOnline
 /** Check if role can void an invoice */
 export function canVoidInvoice(role: SystemRole, isOnline: boolean = true): boolean {
   if (!isOnline) return false // Money action blocked offline
-  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Accounts' || role === 'Coordinator'
+  // RULING 2026-11-01: restored to Owner · Accounts. Commit 68485549 ("delivry") widened this to
+  // Admin, Manager and Coordinator; PERMISSIONS C6 says Coordinator cannot void, and
+  // rbac.test.ts + the Finance tests expect Owner · Accounts only (B-1: stricter wins).
+  // Revert = re-add the three roles.
+  return role === 'Owner' || role === 'Accounts'
 }
 
 /**
