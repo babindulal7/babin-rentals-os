@@ -136,7 +136,7 @@ without signing in until batch 0); B-1 (the safer default wins).
 passes; 2) `npm test -- --live` prints "data source=live"; 3) the docs show plain `npm test`.
 **Needs** — none.
 
-### T0-11 · One command for the local gate            status: todo · size: S · lane A · [go-live]
+### T0-11 · One command for the local gate            status: doing (draft on lane-a/T0-11-local-gates; isolated Node tests pass, full repo gates and merge pending) · size: S · lane A · [go-live]
 **What** — Add `npm run gates`: runs every step of `.github/workflows/ci.yml` in its order (the list
 in `docs/plans/README.md`), with mock data for the tests, stops at the first red step, and ends with
 a one-screen summary (step · pass/fail · time). `npm run gates -- --quick` skips coverage. Then the
