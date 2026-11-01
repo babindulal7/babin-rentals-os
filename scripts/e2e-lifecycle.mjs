@@ -4520,7 +4520,7 @@ STEPS.push({
 })
 
 STEPS.push({
-  id: 'L49',
+  id: 'L56',
   title: 'Damage found during reset opens a case on the booking, defaulting to client claim and unpriced (W44, W23, T2-15)',
   expect: 'green',
   run: async () => {

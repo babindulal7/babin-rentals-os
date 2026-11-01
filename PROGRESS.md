@@ -45,7 +45,7 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 **Did**
 - Merged `main` into `lane-a/T2-15-damage-found-during-reset` (local merge, not pushed). The branch forked before main's `0185`–`0201`, so its `0185_reset_damage_opens_case.sql` collided with main's `0185_team_notes.sql`.
 - Renamed the file to `supabase/migrations/0194_reset_damage_opens_case.sql` (ledger rule 4: the later merge renumbers). Updated the ledger row to `0194` (`verified`) and "Next free number" to `0195`; updated the number cited in the SQL header and in `src/actions/rentals/floorVerb.ts`. The file content is otherwise unchanged.
-- The lifecycle step for T2-15 was `L42`, which main already uses for team notes; it is now `L49` (main's last step was `L48`).
+- The lifecycle step for T2-15 was `L42`, which main already uses for team notes; it is now `L56` (main's last step was `L48`).
 - Conflicts in `PROGRESS.md`, `MIGRATION_LEDGER.md` and `scripts/e2e-lifecycle.mjs` resolved by taking main's version and re-adding the T2-15 content; nothing of main's was dropped.
 - The same `0185` file also sits inside `lane-a/T8-04-…` and `lane-a/T8-05-…`. Those branches still carry the old name and must be rebased onto this one (or renumber the same file identically) before they merge.
 
@@ -55,7 +55,7 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 **Verified** (in `bro-lane-t2-15`, `node_modules` junctioned from the main checkout — identical lockfile)
 - `npm run typecheck` → exit 0.
 - `npm run check:pglite` → 195/195 applied, 0 failed; view, function and definer gates clean.
-- `npm run check:lifecycle` → 49/49 green, including `L49` (damage found during reset). Same run as pglite, so `0194` is Verified under R-35.
+- `npm run check:lifecycle` → 49/49 green, including `L56` (damage found during reset). Same run as pglite, so `0194` is Verified under R-35. Re-run on 2 Nov after the step was re-id'd to `L56`: `check:pglite` 195/195 and `check:lifecycle` 49/49, same run.
 - `vitest` on `createCase.test.ts` + `damage.test.ts` → 27/27. The full suite was **not** run.
 - `npm run lint:progress` → passes.
 - Not done: no UI drive of the Reset workspace; nothing applied to any Supabase project (N-5).
