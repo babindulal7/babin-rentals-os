@@ -41,9 +41,82 @@ Deno.serve(async (req: Request) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const body = await req.json().catch(() => ({}))
-    const token = body.token || new URL(req.url).searchParams.get('token')
-    const action = body.action || (req.method === 'GET' ? 'get_job' : 'get_job')
+    const action = body.action || 'get_job'
 
+    if (action === 'issue') {
+      // Public token endpoints are no-login; issuance is NOT. Verify the
+      // calling user's JWT explicitly before any service-role database call.
+      if (req.method !== 'POST') {
+        return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+          status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const bearer = req.headers.get('authorization')?.match(/^Bearer\\s+([^\\s]+)$/i)?.[1]
+      if (!bearer) {
+        return new Response(JSON.stringify({ error: 'Staff sign-in required' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const { data: verified, error: authError } = await supabase.auth.getUser(bearer)
+      if (authError || !verified.user) {
+        return new Response(JSON.stringify({ error: 'Staff sign-in required' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const { job_id, rider_name, rider_phone, request_key } = body
+      const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      if (typeof job_id !== 'string' || !uuid.test(job_id) ||
+          typeof request_key !== 'string' || !uuid.test(request_key) ||
+          typeof rider_name !== 'string' || rider_name.trim().length < 2 ||
+          typeof rider_phone !== 'string' || rider_phone.trim().length < 7) {
+        return new Response(JSON.stringify({ error: 'Invalid rider issuance request' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      // Only this trusted Edge function mints the raw 128-bit bearer token.
+      // Never persist/log the raw token and never accept a client-selected hash.
+      const bytes = crypto.getRandomValues(new Uint8Array(16))
+      const rawToken = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
+      const tokenHash = await sha256Hex(rawToken)
+      const { data, error } = await supabase.rpc('issue_rider_link_server', {
+        p_job_id: job_id,
+        p_token_hash: tokenHash,
+        p_rider_name: rider_name.trim(),
+        p_rider_phone: rider_phone.trim(),
+        p_actor_id: verified.user.id,
+        p_request_key: request_key,
+      })
+
+      if (error) {
+        // Do not leak branch membership, client/job existence or DB internals.
+        return new Response(JSON.stringify({ error: 'Rider link could not be issued. Check permissions or existing links.' }), {
+          status: 409,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+        })
+      }
+
+      const issued = Array.isArray(data) ? data[0] : null
+      if (!issued || issued.was_created !== true || !issued.link_id || !issued.link_expires_at) {
+        // A replay returns only metadata from Postgres, never a second token.
+        return new Response(JSON.stringify({ error: 'Link already issued. Revoke the existing link before trying again.' }), {
+          status: 409,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+        })
+      }
+
+      return new Response(JSON.stringify({
+        data: { linkId: issued.link_id, rawToken, expiresAt: issued.link_expires_at },
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      })
+    }
+
+    const token = body.token || new URL(req.url).searchParams.get('token')
     if (!token || typeof token !== 'string') {
       return new Response(
         JSON.stringify({ error: 'A valid rider delivery token is required.' }),
