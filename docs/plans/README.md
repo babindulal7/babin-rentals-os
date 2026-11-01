@@ -64,6 +64,7 @@ Run `npm run gates` on the T0-11 branch (stacked on T0-10) to execute the same C
 commands in their exact order, stop on failure and print timings. It checks workflow drift first,
 and fails closed if the command list differs. `npm run gates -- --quick` skips **only** coverage
 (quick green is not a full release gate). These are the underlying commands for reference:
+
 A gate that is skipped is how a red check reaches `main` — on 26 Oct the UI-copy check went red
 that way.
 
