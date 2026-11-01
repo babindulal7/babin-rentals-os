@@ -95,9 +95,10 @@ export default function HandoverSheet({
         toUserId: toUserId || null,
         toUserName: selectedColleague?.name || null,
         cashCountedPaisa: canSeeMoney && cashPaisa > 0 ? cashPaisa : null,
-        cashStatus: 'matched',
-        cashVariancePaisa: 0,
+        cashStatus: canSeeMoney ? 'matched' : null,
+        cashVariancePaisa: canSeeMoney ? 0 : null,
         notes: note.trim(),
+        role: user.role,
         checklist: SHIFT_CHECKLIST.map((item) => ({
           key: item.key,
           label: item.label,

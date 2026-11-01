@@ -14,6 +14,7 @@
  */
 
 import { supabase, IS_MOCK } from '../supabase'
+import { canViewMoney, type SystemRole } from '../rbac'
 
 // ── Three Shifts (Ruling W32) ────────────────────────────────────────
 
@@ -107,7 +108,7 @@ export interface ShiftHandoverEntity {
   to_user_id: string | null
   to_user_name: string | null
   cash_counted_paisa: number | null
-  cash_status: CashStatus
+  cash_status: CashStatus | null
   cash_variance_paisa: number | null
   notes: string
   open_items: Array<{ key?: string | undefined; label?: string | undefined; text?: string | undefined }>
@@ -131,7 +132,7 @@ export interface HandoverRecord {
   from: string        // e.g. 'Hari KC (A)'
   to: string          // e.g. 'Raju Thapa (B)'
   cashAmount: number
-  cashStatus: CashStatus
+  cashStatus: CashStatus | null
   cashDisplay: string // e.g. 'Rs 18,400 · matched'
   checksCompleted: string // e.g. '5 / 5'
   status: HandoverStatus
@@ -220,8 +221,10 @@ function readMockLocalStorageRecords(): HandoverRecord[] {
 /**
  * Fetch shift handovers from the database view `shift_handovers_v`.
  * Falls back to localStorage and seed records in mock mode.
+ * Enforces Law 6: cash counted, status and variance are masked to null for money-blind roles.
  */
-export async function fetchShiftHandovers(): Promise<ShiftHandoverEntity[]> {
+export async function fetchShiftHandovers(role?: SystemRole): Promise<ShiftHandoverEntity[]> {
+  const isMoneyBlind = role ? !canViewMoney(role) : false
   if (IS_MOCK) {
     const local = readMockLocalStorageRecords()
     return local.map((r) => ({
@@ -234,9 +237,9 @@ export async function fetchShiftHandovers(): Promise<ShiftHandoverEntity[]> {
       from_user_role: 'Warehouse',
       to_user_id: null,
       to_user_name: r.to,
-      cash_counted_paisa: r.cashAmount * 100,
-      cash_status: r.cashStatus,
-      cash_variance_paisa: 0,
+      cash_counted_paisa: isMoneyBlind ? null : r.cashAmount * 100,
+      cash_status: isMoneyBlind ? null : r.cashStatus,
+      cash_variance_paisa: isMoneyBlind ? null : 0,
       notes: r.notes,
       open_items: [],
       checklist: SHIFT_CHECKLIST.map((c) => ({ key: c.key, label: c.label, done: true })),
@@ -265,7 +268,16 @@ export async function fetchShiftHandovers(): Promise<ShiftHandoverEntity[]> {
     throw error
   }
 
-  return (data as ShiftHandoverEntity[]) ?? []
+  const entities = (data as ShiftHandoverEntity[]) ?? []
+  if (isMoneyBlind) {
+    for (const e of entities) {
+      e.cash_counted_paisa = null
+      e.cash_status = null
+      e.cash_variance_paisa = null
+    }
+  }
+
+  return entities
 }
 
 export interface CreateShiftHandoverParams {
@@ -275,20 +287,24 @@ export interface CreateShiftHandoverParams {
   toUserId?: string | null | undefined
   toUserName?: string | null | undefined
   cashCountedPaisa?: number | null | undefined
-  cashStatus?: CashStatus | undefined
+  cashStatus?: CashStatus | null | undefined
   cashVariancePaisa?: number | null | undefined
   notes?: string | undefined
   openItems?: Array<{ key?: string | undefined; label?: string | undefined; text?: string | undefined }> | undefined
   checklist?: Array<{ key: string; label: string; done?: boolean | undefined }> | undefined
+  role?: SystemRole | undefined
 }
 
 /**
  * Creates a shift handover record in the database using RPC `create_shift_handover`.
  */
 export async function submitShiftHandover(
-  params: CreateShiftHandoverParams
+  params: CreateShiftHandoverParams,
+  role?: SystemRole
 ): Promise<ShiftHandoverEntity> {
   const clientUuid = crypto.randomUUID()
+  const effectiveRole = role ?? params.role
+  const isMoneyBlind = effectiveRole ? !canViewMoney(effectiveRole) : false
 
   if (IS_MOCK) {
     const existing = readMockLocalStorageRecords()
@@ -303,7 +319,7 @@ export async function submitShiftHandover(
       to: params.toUserName || 'Next Shift',
       cashAmount: Math.round((params.cashCountedPaisa ?? 0) / 100),
       cashStatus: params.cashStatus ?? 'matched',
-      cashDisplay: params.cashCountedPaisa != null ? `Rs ${(params.cashCountedPaisa / 100).toLocaleString('en-IN')} · ${params.cashStatus ?? 'matched'}` : 'Counted',
+      cashDisplay: !isMoneyBlind && params.cashCountedPaisa != null ? `Rs ${(params.cashCountedPaisa / 100).toLocaleString('en-IN')} · ${params.cashStatus ?? 'matched'}` : '',
       checksCompleted: `${(params.checklist ?? []).filter((c) => c.done).length} / 5`,
       status: 'Pending',
       notes: params.notes || '',
@@ -323,9 +339,9 @@ export async function submitShiftHandover(
       from_user_role: params.fromUserRole,
       to_user_id: params.toUserId ?? null,
       to_user_name: params.toUserName ?? null,
-      cash_counted_paisa: params.cashCountedPaisa ?? null,
-      cash_status: params.cashStatus ?? 'matched',
-      cash_variance_paisa: params.cashVariancePaisa ?? 0,
+      cash_counted_paisa: isMoneyBlind ? null : (params.cashCountedPaisa ?? null),
+      cash_status: isMoneyBlind ? null : (params.cashStatus ?? 'matched'),
+      cash_variance_paisa: isMoneyBlind ? null : (params.cashVariancePaisa ?? 0),
       notes: params.notes ?? '',
       open_items: params.openItems ?? [],
       checklist: params.checklist ?? [],
@@ -351,9 +367,9 @@ export async function submitShiftHandover(
     p_from_user_role: params.fromUserRole,
     p_to_user_id: params.toUserId ?? null,
     p_to_user_name: params.toUserName ?? null,
-    p_cash_counted_paisa: params.cashCountedPaisa ?? 0,
-    p_cash_status: params.cashStatus ?? 'matched',
-    p_cash_variance_paisa: params.cashVariancePaisa ?? 0,
+    p_cash_counted_paisa: isMoneyBlind ? null : (params.cashCountedPaisa ?? null),
+    p_cash_status: isMoneyBlind ? null : (params.cashStatus ?? null),
+    p_cash_variance_paisa: isMoneyBlind ? null : (params.cashVariancePaisa ?? null),
     p_notes: params.notes ?? '',
     p_open_items: params.openItems ?? [],
     p_checklist: params.checklist ?? [],
@@ -365,7 +381,13 @@ export async function submitShiftHandover(
   }
 
   notifyHandoversUpdated()
-  return data as ShiftHandoverEntity
+  const result = data as ShiftHandoverEntity
+  if (isMoneyBlind && result) {
+    result.cash_counted_paisa = null
+    result.cash_status = null
+    result.cash_variance_paisa = null
+  }
+  return result
 }
 
 /**
@@ -374,8 +396,11 @@ export async function submitShiftHandover(
 export async function acknowledgeShiftHandover(
   handoverId: string,
   note?: string | null | undefined,
-  operatorName?: string | null | undefined
+  operatorName?: string | null | undefined,
+  role?: SystemRole
 ): Promise<ShiftHandoverEntity> {
+  const isMoneyBlind = role ? !canViewMoney(role) : false
+
   if (IS_MOCK) {
     const existing = readMockLocalStorageRecords()
     const found = existing.find((r) => r.dbId === handoverId || String(r.id) === handoverId)
@@ -397,9 +422,9 @@ export async function acknowledgeShiftHandover(
       from_user_role: 'Operations',
       to_user_id: null,
       to_user_name: operatorName ?? 'Staff',
-      cash_counted_paisa: (found?.cashAmount ?? 0) * 100,
-      cash_status: found?.cashStatus ?? 'matched',
-      cash_variance_paisa: 0,
+      cash_counted_paisa: isMoneyBlind ? null : (found?.cashAmount ?? 0) * 100,
+      cash_status: isMoneyBlind ? null : (found?.cashStatus ?? 'matched'),
+      cash_variance_paisa: isMoneyBlind ? null : 0,
       notes: found?.notes ?? '',
       open_items: [],
       checklist: [],
@@ -430,13 +455,21 @@ export async function acknowledgeShiftHandover(
   }
 
   notifyHandoversUpdated()
-  return data as ShiftHandoverEntity
+  const result = data as ShiftHandoverEntity
+  if (isMoneyBlind && result) {
+    result.cash_counted_paisa = null
+    result.cash_status = null
+    result.cash_variance_paisa = null
+  }
+  return result
 }
 
 /**
  * Archives a shift handover using RPC `archive_shift_handover`.
  */
-export async function archiveShiftHandover(handoverId: string): Promise<ShiftHandoverEntity> {
+export async function archiveShiftHandover(handoverId: string, role?: SystemRole): Promise<ShiftHandoverEntity> {
+  const isMoneyBlind = role ? !canViewMoney(role) : false
+
   if (IS_MOCK) {
     const existing = readMockLocalStorageRecords().filter((r) => r.dbId !== handoverId && String(r.id) !== handoverId)
     if (typeof localStorage !== 'undefined') {
@@ -460,7 +493,13 @@ export async function archiveShiftHandover(handoverId: string): Promise<ShiftHan
   }
 
   notifyHandoversUpdated()
-  return data as ShiftHandoverEntity
+  const result = data as ShiftHandoverEntity
+  if (isMoneyBlind && result) {
+    result.cash_counted_paisa = null
+    result.cash_status = null
+    result.cash_variance_paisa = null
+  }
+  return result
 }
 
 // ── Backward-Compatible Legacy Helpers ───────────────────────────────

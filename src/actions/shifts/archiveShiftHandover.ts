@@ -1,5 +1,6 @@
 import { createAction } from '../core';
 import { supabase } from '../../lib/supabase';
+import { canViewMoney } from '../../lib/rbac';
 
 export type ArchiveShiftHandoverInput = {
   handoverId: string;
@@ -19,6 +20,9 @@ export const archiveShiftHandover = createAction<ArchiveShiftHandoverInput, Arch
     }
   },
   execute: async (input, ctx) => {
+    const role = ctx.role;
+    const isMoneyRole = role ? canViewMoney(role) : false;
+
     const { data, error } = await supabase.rpc('archive_shift_handover', {
       p_handover_id: input.handoverId,
     });
@@ -28,6 +32,12 @@ export const archiveShiftHandover = createAction<ArchiveShiftHandoverInput, Arch
     }
 
     const handover = (data as Record<string, unknown>) ?? {};
+    if (!isMoneyRole) {
+      handover.cash_counted_paisa = null;
+      handover.cash_status = null;
+      handover.cash_variance_paisa = null;
+    }
+
     return {
       result: { handover },
       events: [

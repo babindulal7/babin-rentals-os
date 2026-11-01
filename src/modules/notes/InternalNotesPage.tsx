@@ -813,7 +813,7 @@ function NotesWorkspace({
           <Icon name="info" size={16} />
           <span style={{ fontWeight: 600 }}>Notes are seen by all staff.</span>
           <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--muted)' }}>
-            Database Live Sync · Law 3 Archive
+            Database Live Sync · Archive
           </span>
         </div>
       )}

@@ -1,5 +1,6 @@
 import { createAction } from '../core';
 import { supabase } from '../../lib/supabase';
+import { canViewMoney } from '../../lib/rbac';
 
 export type AcknowledgeShiftHandoverInput = {
   handoverId: string;
@@ -21,6 +22,9 @@ export const acknowledgeShiftHandover = createAction<AcknowledgeShiftHandoverInp
     }
   },
   execute: async (input, ctx) => {
+    const role = ctx.role;
+    const isMoneyRole = role ? canViewMoney(role) : false;
+
     const { data, error } = await supabase.rpc('acknowledge_shift_handover', {
       p_handover_id: input.handoverId,
       p_acknowledgement_note: input.note ?? null,
@@ -32,6 +36,12 @@ export const acknowledgeShiftHandover = createAction<AcknowledgeShiftHandoverInp
     }
 
     const handover = (data as Record<string, unknown>) ?? {};
+    if (!isMoneyRole) {
+      handover.cash_counted_paisa = null;
+      handover.cash_status = null;
+      handover.cash_variance_paisa = null;
+    }
+
     return {
       result: { handover },
       events: [

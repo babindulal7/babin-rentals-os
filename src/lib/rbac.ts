@@ -22,6 +22,7 @@
 import type { SystemRole } from '../types/database'
 
 export type Role = SystemRole
+export type { SystemRole }
 
 export interface UserSession {
   id: string
