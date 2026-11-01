@@ -861,3 +861,13 @@ export function canTransitionDeliveryJob(
     role === 'Driver'
   )
 }
+
+/**
+ * Reschedule delivery job — Owner, Admin, Manager, Coordinator (migration 0191, T4-02, Ruling D8).
+ * Mirrors the authorization in `delivery_reschedule_job`.
+ */
+export function canRescheduleDeliveryJob(role: SystemRole | null | undefined): boolean {
+  if (!role) return false
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+}
+

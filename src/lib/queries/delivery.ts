@@ -255,6 +255,29 @@ export function assignDeliveryRider(
   return next
 }
 
+export function rescheduleDeliveryRecord(
+  id: string,
+  newScheduledAt: string,
+  context: DeliveryWriteContext,
+  notes?: string
+): DeliveryRecord[] {
+  requireDeliveryMutation(context)
+  const current = getDeliveries(context.role)
+  const datePart = newScheduledAt.slice(0, 10)
+  const timePart = newScheduledAt.slice(11, 16) || '10:00'
+  const next = current.map((d) => {
+    if (d.id !== id) return d
+    return {
+      ...d,
+      scheduledDate: datePart,
+      scheduledTime: timePart,
+      notes: notes ? (d.notes ? `${d.notes} · ${notes}` : notes) : d.notes,
+    }
+  })
+  saveDeliveries(next, context)
+  return next
+}
+
 function nextDeliveryId(existing: readonly DeliveryRecord[]): string {
   let highest = 2600
   for (const d of existing) {

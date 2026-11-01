@@ -4355,6 +4355,172 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L48',
+  title: 'Reschedule a delivery: moves job scheduled_at only, rental dates stay (D8), audited in events, idempotency, non-staff/terminal refused (T4-02, migration 0191)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      // 1. Setup a booked delivery booking
+      const bookingKey = crypto.randomUUID()
+      let testBookingId
+      const originalPickup = '2099-12-01T04:00:00Z'
+      const originalReturn = '2099-12-05T04:00:00Z'
+
+      await as('Coordinator', async () => {
+        const res = await q(
+          `insert into bookings (client_uuid, booking_no, client_id, branch_id, pickup_at, return_at, delivery_type, stage, created_by, updated_by)
+           values ($1, '994302', $2, $3, $4::timestamptz, $5::timestamptz, 'Babin Delivery', 'Quote', $6, $6)
+           returning id`,
+          [bookingKey, CLIENT, BRANCH, originalPickup, originalReturn, U.Coordinator],
+        )
+        testBookingId = res.rows[0].id
+
+        await q(
+          `insert into booking_lines (client_uuid, booking_id, line_type, product_id, description, qty, days, rate, created_by)
+           values (gen_random_uuid(), $1, 'Equipment', $2, 'Delivery Reschedule Test Lens', 1, 4, 500, $3)`,
+          [testBookingId, QTY_PRODUCT, U.Coordinator],
+        )
+
+        await q(
+          `insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at)
+           values (gen_random_uuid(), $1, $2, 'Quote', 'Booked', $3, 'Coordinator', now())`,
+          [testBookingId, BRANCH, U.Coordinator],
+        )
+      })
+
+      // 2. Create delivery job scheduled at 04:00Z
+      const initialScheduledAt = '2099-12-01T04:00:00Z'
+      const jobKey = crypto.randomUUID()
+      let jobId
+      await as('Coordinator', async () => {
+        jobId = await one(
+          `select delivery_create_job($1, 'Outbound', $2::timestamptz, $3, 'Ba 3 Cha 9911')`,
+          [testBookingId, initialScheduledAt, jobKey],
+        )
+        assert(jobId, 'job created')
+      })
+
+      // 3. Driver and Warehouse roles cannot reschedule
+      const rescheduleKey = crypto.randomUUID()
+      const newScheduledAt = '2099-12-01T08:30:00Z'
+      await as('Driver', async () => {
+        await db.exec('savepoint sp_resched_driver;')
+        try {
+          await refuses(
+            'Driver cannot reschedule a delivery job',
+            `select delivery_reschedule_job($1, $2::timestamptz, $3, 'Driver attempt')`,
+            [jobId, newScheduledAt, rescheduleKey],
+            /Delivery rescheduling not permitted for role Driver/i,
+          )
+        } finally {
+          await db.exec('rollback to savepoint sp_resched_driver;')
+        }
+      })
+
+      await as('Warehouse', async () => {
+        await db.exec('savepoint sp_resched_wh;')
+        try {
+          await refuses(
+            'Warehouse cannot reschedule a delivery job',
+            `select delivery_reschedule_job($1, $2::timestamptz, $3, 'Warehouse attempt')`,
+            [jobId, newScheduledAt, rescheduleKey],
+            /Delivery rescheduling not permitted for role Warehouse/i,
+          )
+        } finally {
+          await db.exec('rollback to savepoint sp_resched_wh;')
+        }
+      })
+
+      // 4. Coordinator reschedules the delivery job (Ruling D8)
+      await as('Coordinator', async () => {
+        const resJobId = await one(
+          `select delivery_reschedule_job($1, $2::timestamptz, $3, 'Client requested 2:15 PM NPT delivery')`,
+          [jobId, newScheduledAt, rescheduleKey],
+        )
+        assertEq(resJobId, jobId, 'delivery_reschedule_job returned jobId')
+
+        // 5. Idempotent replay with same request key returns same jobId
+        const replayId = await one(
+          `select delivery_reschedule_job($1, $2::timestamptz, $3, 'Client requested 2:15 PM NPT delivery')`,
+          [jobId, newScheduledAt, rescheduleKey],
+        )
+        assertEq(replayId, jobId, 'replaying delivery_reschedule_job returns same jobId')
+      })
+
+      // 6. Verify delivery job scheduled_at moved, but booking dates STAY UNCHANGED (D8)
+      await asOwnerOfTheDatabase(async () => {
+        const jobRow = (await q(`select scheduled_at, last_note, version from delivery_jobs where id = $1`, [jobId])).rows[0]
+        assertEq(new Date(jobRow.scheduled_at).toISOString(), new Date(newScheduledAt).toISOString(), 'delivery_jobs.scheduled_at updated')
+        assertEq(jobRow.last_note, 'Client requested 2:15 PM NPT delivery', 'last_note updated')
+
+        const bookingRow = (await q(`select pickup_at, return_at from bookings where id = $1`, [testBookingId])).rows[0]
+        assertEq(new Date(bookingRow.pickup_at).toISOString(), new Date(originalPickup).toISOString(), 'Ruling D8: bookings.pickup_at unchanged')
+        assertEq(new Date(bookingRow.return_at).toISOString(), new Date(originalReturn).toISOString(), 'Ruling D8: bookings.return_at unchanged')
+
+        // 7. Event recorded in delivery_job_events with Rescheduled kind and metadata
+        const events = (await q(
+          `select event_kind, metadata from delivery_job_events where job_id = $1 and event_kind = 'Rescheduled'`,
+          [jobId],
+        )).rows
+        assertEq(events.length, 1, 'one Rescheduled event logged')
+        const meta = events[0].metadata
+        assert(meta && typeof meta === 'object', 'metadata is present')
+        assert(meta.old_scheduled_at, 'metadata.old_scheduled_at present')
+        assertEq(new Date(meta.new_scheduled_at).toISOString(), new Date(newScheduledAt).toISOString(), 'metadata.new_scheduled_at matches')
+        assertEq(meta.notes, 'Client requested 2:15 PM NPT delivery', 'metadata.notes matches')
+      })
+
+      // 8. Terminal state cannot be rescheduled: advance job to Delivered and verify refusal
+      // First assign driver
+      await as('Coordinator', async () => {
+        await one(
+          `select delivery_assign_driver($1, $2, gen_random_uuid(), 'Ba 3 Cha 9911', 'Ramesh Thapa', '+977 9813009988')`,
+          [jobId, U.Driver],
+        )
+      })
+
+      // Advance booking to Packed so Ready transition is allowed
+      await as('Warehouse', async () => {
+        const pId = crypto.randomUUID()
+        await q(
+          `insert into operation_sessions (id, client_uuid, booking_id, operation, session_no, state, warehouse_staff_id, created_by)
+           values ($1, gen_random_uuid(), $2, 'Packing', 1, 'In Progress', $3, $3)`,
+          [pId, testBookingId, U.Warehouse],
+        )
+        await q(
+          `insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at)
+           values (gen_random_uuid(), $1, $2, 'Booked', 'Packed', $3, 'Warehouse', now())`,
+          [testBookingId, BRANCH, U.Warehouse],
+        )
+        await one(`select delivery_transition_job($1, 'Scheduled', 'Ready', gen_random_uuid())`, [jobId])
+      })
+
+      // Driver to In Transit -> Delivered
+      await as('Driver', async () => {
+        await one(`select delivery_transition_job($1, 'Ready', 'In Transit', gen_random_uuid())`, [jobId])
+        await one(`select delivery_transition_job($1, 'In Transit', 'Delivered', gen_random_uuid(), 'Pooja Sharma')`, [jobId])
+      })
+
+      // Now attempt reschedule on Delivered job: must be refused
+      const terminalReschedKey = crypto.randomUUID()
+      await as('Coordinator', async () => {
+        await db.exec('savepoint sp_resched_terminal;')
+        try {
+          await refuses(
+            'Delivered job cannot be rescheduled',
+            `select delivery_reschedule_job($1, $2::timestamptz, $3, 'Attempting to reschedule delivered job')`,
+            [jobId, '2099-12-02T04:00:00Z', terminalReschedKey],
+            /Delivered or Failed delivery jobs cannot be rescheduled/i,
+          )
+        } finally {
+          await db.exec('rollback to savepoint sp_resched_terminal;')
+        }
+      })
+    })
+  },
+})
+
 /* ── Run ──────────────────────────────────────────────────────────────────── */
 
 await seed()
