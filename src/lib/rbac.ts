@@ -707,7 +707,8 @@ export function canExportClientPii(role: SystemRole): boolean {
 
 /**
  * Create a team note — Coordinator and above (Owner, Admin, Manager, Coordinator).
- * Mirrors the RLS policy on `team_notes` INSERT (migration 0185).
+ * Mirrors the RLS policy on `team_notes` INSERT and `create_team_note()` (migration 0191).
+ * RULING 2026-11-01: "Coordinator and up". Revert = add Warehouse/Technician/Driver here and restore 0185's policy.
  */
 export function canCreateTeamNote(role: SystemRole): boolean {
   return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'

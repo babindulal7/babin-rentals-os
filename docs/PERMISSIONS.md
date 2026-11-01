@@ -248,6 +248,7 @@ Ladder shorthand: `M+` = Owner · Admin · Manager. `C+` = M+ · Coordinator. `F
 | `rental.return` (triage) | C+ · Floor | shared triage (21 Jul) | ✓ |
 | `rental.reset` | C+ · Floor | non-blocking stage | ○ (completeReset) |
 | `inspection.record` | C+ · Floor | condition, evidence, severity — **no cost** for Floor | ✓ (`inspection.*`) |
+| `team_note.create` | C+ | RULING 2026-11-01 (0191): Coordinator and above create; Warehouse · Technician · Driver · Accounts do not. Read and acknowledge stay with all staff (`team_note.read`, `team_note.acknowledge`) | ✓ |
 | `evidence.capture` | all staff on the job | mandatory on Damaged/Lost lines | ○ |
 | `evidence.review` (accept/reject match, archive with reason) | M+ | soft-delete only | ✓ |
 | `scan` | all staff | identity by PIN (P8) | ○ |

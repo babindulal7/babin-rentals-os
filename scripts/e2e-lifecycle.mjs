@@ -3346,7 +3346,7 @@ STEPS.push({
 
 STEPS.push({
   id: 'L42',
-  title: 'Team notes on the database: staff create, read, acknowledge, pin, archive; Client/anon denied; direct update/delete blocked; idempotent (S6, T4-04)',
+  title: 'Team notes on the database: Coordinator+ create (RULING 2026-11-01, 0191), staff read and acknowledge, pin, archive; floor roles and Client denied create; direct update/delete blocked; idempotent (S6, T4-04)',
   expect: 'green',
   run: async () => {
     await undone(async () => {
@@ -3355,13 +3355,13 @@ STEPS.push({
       let note2Id
       let note3Id
 
-      // 1. Warehouse creates note1 with client_uuid; duplicate submission returns same ID (Law 8)
-      await as('Warehouse', async () => {
+      // 1. Coordinator creates note1 with client_uuid; duplicate submission returns same ID (Law 8)
+      await as('Coordinator', async () => {
         note1Id = await one(
           `select create_team_note('FX6 cage missing top handle bolt', $1, 'Gear Alert', 'high', 'EQ-SONY-FX6-01', array['EQ-SONY-FX6-01'])`,
           [clientUuid1],
         )
-        assert(note1Id, 'create_team_note returned id for Warehouse')
+        assert(note1Id, 'create_team_note returned id for Coordinator')
 
         // Replay with same client_uuid is idempotent
         const replay = await one(
@@ -3371,20 +3371,54 @@ STEPS.push({
         assertEq(replay, note1Id, 'replaying client_uuid returns same note ID')
       })
 
-      // 2. Technician creates note2 (pinned)
-      await as('Technician', async () => {
+      // 2. Manager creates note2 (pinned)
+      await as('Manager', async () => {
         note2Id = await one(
           `select create_team_note('Replaced top handle bolt on FX6 cage', gen_random_uuid(), 'Gear Alert', 'normal', 'EQ-SONY-FX6-01', array['EQ-SONY-FX6-01'], true)`,
         )
-        assert(note2Id, 'create_team_note returned id for Technician')
+        assert(note2Id, 'create_team_note returned id for Manager')
       })
 
-      // 3. Driver creates note3
-      await as('Driver', async () => {
+      // 3. Admin creates note3
+      await as('Admin', async () => {
         note3Id = await one(
           `select create_team_note('Balkhu road clear, normal transit route', gen_random_uuid(), 'Logistics & Transport', 'normal')`,
         )
-        assert(note3Id, 'create_team_note returned id for Driver')
+        assert(note3Id, 'create_team_note returned id for Admin')
+      })
+
+      // 3b. RULING 2026-11-01 (0191): Warehouse, Technician, Driver and Accounts cannot create
+      for (const floorRole of ['Warehouse', 'Technician', 'Driver', 'Accounts']) {
+        await as(floorRole, async () => {
+          await q('savepoint below_coordinator_create_note')
+          try {
+            await refuses(
+              `${floorRole} cannot create team notes`,
+              `select create_team_note('${floorRole} attempted note', gen_random_uuid())`,
+              [],
+              /Only Coordinator and above can create team notes/i,
+            )
+          } finally {
+            await q('rollback to savepoint below_coordinator_create_note')
+            await q('release savepoint below_coordinator_create_note')
+          }
+        })
+      }
+
+      // 3c. The direct-insert path is closed to Warehouse as well (RLS, not just the RPC)
+      await as('Warehouse', async () => {
+        await q('savepoint below_coordinator_direct_note')
+        try {
+          await refuses(
+            'Warehouse cannot insert into team_notes directly',
+            `insert into team_notes (body, author_id) values ('direct attempt', $1)`,
+            [U.Warehouse],
+            /row-level security|violates/i,
+          )
+        } finally {
+          await q('rollback to savepoint below_coordinator_direct_note')
+          await q('release savepoint below_coordinator_direct_note')
+        }
       })
 
       // 4. Client cannot create team notes (refused)

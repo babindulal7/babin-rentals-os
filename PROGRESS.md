@@ -1,8 +1,18 @@
 # Progress Log
 
-## 2026-11-01 — Restore green typecheck on main (BLD-1) + PR #35 security review
+## 2026-11-01 — Restore green typecheck on main (BLD-1), team-note create ruling, PR #35 security review
 
-**Did**
+**Did (team-note create ruling — added after the first commit)**
+- Babin ruled **R-0111-1: team notes are created by "Coordinator and up"** (Owner, Admin, Manager, Coordinator). This closes the T-4 test/rbac/DB disagreement. Migration **`0191_team_note_create_coordinator_up.sql`** (WRITTEN + VERIFIED locally, NOT APPLIED to any hosted project, N-5) tightens the `team_notes` insert policy and `create_team_note()`; before it, 0185 let every staff role insert, so rbac was stricter than the database. Aligned in the same change (B-3): `createTeamNote.test.ts` (floor roles refused before any RPC; Coordinator/Manager/Admin/Owner allowed), lifecycle L42 (Coordinator/Manager/Admin create; Warehouse/Technician/Driver/Accounts refused through the RPC; Warehouse refused through a direct insert), `roleSecurityMatrix.test.ts` fixture, `docs/PERMISSIONS.md` §4.2 `team_note.create`, `rbac.ts` comment, `MIGRATION_LEDGER.md` (0191 verified, next free 0192), `RULINGS-2026-11-01.md`.
+
+**Verified (ruling)**
+- `node scripts/check-pglite.mjs` — 191/191 applied, 0 failed, 0 anon-readable views, 0 unauthorized anon RPCs, 128 definer functions pinned.
+- `node scripts/e2e-lifecycle.mjs` — 47/47 green, 0 known-red (L42 rewritten and passing). Both gates ran back to back on the same source, so 0191 is **Verified** under R-35.
+- `vitest run src/actions/notes src/components/teamNotes src/lib/__tests__/roleSecurityMatrix.test.ts src/lib/__tests__/rbac` — 7 files, 218 tests pass.
+- `node node_modules/typescript/bin/tsc --noEmit` after the ruling edits — exit 0.
+- NOT RUN: lint, full suite, financial integrity, `check:security`, `vite build`.
+
+**Did (typecheck fix)**
 - Deleted the unused `actionCtx` helper and its orphaned `ActionContext` import from `src/components/teamNotes/TeamNotesPanel.tsx`. Commit `b92cf581` (shift-money hardening) replaced the call with an inline `useMemo` and left the helper behind, so `tsc --noEmit` failed with `TS6133` on main `a32a6d0d` and `npm run build` could not start. Branch `claude/pr35-rider-link-security-8bf9b6`; not on main, not pushed.
 - Added `CLAUDE_PR35_SECURITY_REVIEW.md` (read-only review of PR #35, rider-link security and the shift-handover merge). Nothing in the review's P1 list (SEC-1/2/3, FUNC-1) was fixed here.
 
@@ -13,7 +23,7 @@
 - `node node_modules/typescript/bin/tsc --noEmit` on this branch after the edit — exit 0 (19m26s; machine saturated).
 - Before the edit, the same command on the merged scratch tree failed with exactly one error: `TeamNotesPanel.tsx(17,10): TS6133`.
 - NOT RUN: lint, full suite, `check:pglite`, `check:lifecycle`, financial integrity, `check:security`, `vite build`.
-- Discovered, not caused by this change (identical failure on an untouched main export): `src/actions/notes` — `createTeamNote > allows Warehouse and Driver staff roles to create notes` fails with `ActionPermissionError … requires team_note.create`; `rbac.canCreateTeamNote` admits Owner/Admin/Manager/Coordinator only. This is the open team-note cell ruling already recorded below (T-4); stricter wins (B-1), so it was left alone.
+- Discovered while verifying the typecheck fix: `src/actions/notes` — `createTeamNote > allows Warehouse and Driver staff roles to create notes` failed identically on an untouched main export (the T-4 cell). Resolved by the ruling above.
 
 ### Completion
 | Backend | not measured | — | — |
@@ -26,7 +36,8 @@
 
 ### Remaining
 - Run the rest of the local gates on this branch: lint, `VITE_DATA_SOURCE=mock npm test`, `check:pglite`, `check:lifecycle`, financial integrity, `check:security`, `vite build`.
-- Team-note create cell ruling (see T-4 entry below); a B-3 move if the answer is "all staff".
+- **Hide the note composer from roles that cannot post** (`InternalNotesPage.tsx` right rail ~L1880, `InternalNotesDrawer.tsx` ~L197 and ~L603): floor roles can still open it and only learn they cannot post when the action refuses. UI follow-up to R-0111-1; the action and database already refuse.
+- Apply 0191 to hosted Supabase only after Babin's backup step (N-5); not done.
 - PR #35: resolve the 3 copy conflicts to the PR side, add the fail-closed hash test (`CLAUDE_PR35_SECURITY_REVIEW.md` §7).
 - Rider-link P1s: SEC-1, SEC-2, SEC-3, FUNC-1 (review §8, tasks A–D) before rider links are released.
 

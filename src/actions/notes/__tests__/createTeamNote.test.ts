@@ -42,14 +42,24 @@ describe('createTeamNote', () => {
     );
   });
 
-  it('allows Warehouse and Driver staff roles to create notes', async () => {
-    mockRpc.mockResolvedValue({ data: 'note-uuid-wh', error: null } as any);
-    const whResult = await createTeamNote({ body: 'Gear needs QC' }, warehouseContext);
-    expect(whResult.noteId).toBe('note-uuid-wh');
+  // RULING 2026-11-01: team notes are created by Coordinator and above only (0191).
+  it('refuses Warehouse and Driver roles before any database call', async () => {
+    mockRpc.mockClear();
+    await expect(createTeamNote({ body: 'Gear needs QC' }, warehouseContext)).rejects.toThrow(
+      ActionPermissionError,
+    );
+    await expect(createTeamNote({ body: 'Traffic delay on Ring Road' }, driverContext)).rejects.toThrow(
+      ActionPermissionError,
+    );
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
 
-    mockRpc.mockResolvedValue({ data: 'note-uuid-dr', error: null } as any);
-    const drResult = await createTeamNote({ body: 'Traffic delay on Ring Road' }, driverContext);
-    expect(drResult.noteId).toBe('note-uuid-dr');
+  it('allows Coordinator, Manager, Admin and Owner to create notes', async () => {
+    for (const role of ['Coordinator', 'Manager', 'Admin', 'Owner'] as const) {
+      mockRpc.mockResolvedValue({ data: `note-uuid-${role}`, error: null } as any);
+      const result = await createTeamNote({ body: 'Gear needs QC' }, { userId: `user-${role}`, role });
+      expect(result.noteId).toBe(`note-uuid-${role}`);
+    }
   });
 
   it('throws ActionPermissionError for Client role', async () => {

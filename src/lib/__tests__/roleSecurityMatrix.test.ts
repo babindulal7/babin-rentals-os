@@ -59,7 +59,9 @@ describe('Role Security Matrix — Contract (Documentation)', () => {
       'closing.approve': ['Owner', 'Admin', 'Manager', 'Accounts'],
       'case.resolve': ['Owner', 'Manager'],
       'purchase.approve': ['Owner', 'Manager'],
-      'team_note.*': ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts'],
+      // RULING 2026-11-01 (0191): create is Coordinator and above; read/acknowledge stay with all staff.
+      'team_note.create': ['Owner', 'Admin', 'Manager', 'Coordinator'],
+      'team_note.read/acknowledge': ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts'],
       'shift_handover.*': ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts'],
       'collateral.receive/return': ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician'],
     }
@@ -78,7 +80,8 @@ describe('Role Security Matrix — Contract (Documentation)', () => {
   })
 
   describe('New Migrations on Branch (Gemini T4)', () => {
-    it('0185_team_notes: Staff create/read/ack/pin/archive/resolve; Client/anon denied', () => { expect(true).toBe(true) })
+    it('0185_team_notes: Staff read/ack/pin/archive/resolve; Client/anon denied', () => { expect(true).toBe(true) })
+    it('0191_team_note_create_coordinator_up: create is Owner/Admin/Manager/Coordinator only (policy + RPC)', () => { expect(true).toBe(true) })
     it('0186_shift_handovers: Staff write/read/ack/archive; Law 6 cash masking; hard delete rejected', () => { expect(true).toBe(true) })
   })
 
