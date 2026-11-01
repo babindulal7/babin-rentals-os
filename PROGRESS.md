@@ -1,5 +1,41 @@
 # Progress Log
 
+## 2026-11-01 (evening) — R-3 Admin and Manager may void; R-4 staff discount is a money setting (0202); main's reds fixed; database checks green
+
+**Did**
+- **R-3:** `canVoidInvoice` = Owner · Admin · Manager · Accounts (R-05, PERMISSIONS `invoice.void`, the database gate `auth_is_finance_or_admin()`); Coordinator stays excluded. `rbac.test.ts` and `Finance.restricted.test.tsx` updated (Admin and Manager now see Void).
+- **R-4:** migration `0202_staff_discount_is_money_setting.sql` adds `staffDiscountPercent` to `settings_is_money_key()` so Warehouse, Technician and Driver cannot read it (Law 6). Ledger row added and `Next free number` corrected to 0203. **Not applied to live (N-5).**
+- Fixed reds that arrived from other lanes' commits: `riderLink.ts` import + replay shape, duplicate `newClientUuid` import in `SendToRiderModal.tsx`, BOM before the shebang in `scripts/e2e-lifecycle.mjs`; `canVoidInvoice` undone from `68485549`'s Coordinator addition.
+- O-18 (PIN 4 digits) re-confirmed ("3 4"): docs only; T1-15 still carries the `0066` migration. Not started here.
+
+**Ruled** (Babin, chat, 1 Nov: "1 yes 2 yes 3 4, 4 check") — R-3 and R-4 in `RULINGS-2026-11-01.md`, mirrored by `// RULING 2026-11-01` comments at `canVoidInvoice` and `staffDiscountPercent`. Revert R-3: two roles back out, three test edits. Revert R-4: re-create the function without the key (0202 header).
+
+**Verified**
+- `check:pglite` 195/195 applied, 0 failed, and `check:lifecycle` 48/48 green — **in the same run**, so 0202 is `verified` (R-35). Neither run has a step that reads `staffDiscountPercent` as Warehouse; the function change is proven to build and not to break any existing step, not proven by its own assertion.
+- 271 tests pass (rbac, Finance, settings); typecheck, lint, `lint:ui-copy`, `lint:progress` green on the tree before the last merge.
+- Not run: a full `npm test` on this commit (last full run: 6,422 of 6,423, the one failure since fixed), `build`, device checks.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 79 / 79 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 65 / 65 (100%) | +0 |
+| Lifecycle | steps green / total | 48 / 48 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 195 files · check:pglite 195/195 applied, 0 failed (recorded 2026-11-01T17:35:45.966Z). Suite: Historical suite: 6422/6423 passed, 1 failed (recorded 2026-11-01T16:35:51.811Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-01T17:36:46.598Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Lane A (T1-15): claim a migration number, move the PIN rule in `0066` from 6 to 4 digits, change "six-digit" in `DevicePin.tsx` and the `auth.tsx` comment.
+- Add a lifecycle step proving a Warehouse seat cannot read `staffDiscountPercent`.
+- Run a full `npm test` on `main`; `origin/main` has not been pushed from this session.
+- Babin: other items in `docs/plans/BABIN_ACTIONS.md`.
+
 ## 2026-11-01 — O-18 (PIN 4 digits) and O-19 (all staff write team notes) ruled; Booqable package landed on main
 
 **Did**

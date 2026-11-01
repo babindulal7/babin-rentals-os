@@ -193,8 +193,8 @@ export const SETTING_SPECS: Record<SettingKey, SettingSpec> = {
     },
   },
   /* W68 / Law 10 — T8-09 reads this in the New Rental pricing pipeline; 20 is the figure it already assumed.
-     TODO(decision): `settings_is_money_key()` (0158) does not list it, so the database would let
-     money-blind roles read it. Adding it is a migration — T8-09 / Babin to decide. */
+     RULING 2026-11-01 (R-4): a money setting — migration 0202 adds it to `settings_is_money_key()`, so
+     the database withholds it from Warehouse, Technician and Driver (Law 6). */
   staffDiscountPercent: {
     default: 20,
     kind: 'number',
