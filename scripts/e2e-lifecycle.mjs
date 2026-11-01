@@ -4346,7 +4346,30 @@ STEPS.push({
         /expired/i,
       )
 
-      // 10. Anon privilege boundary assertion
+      // 10. R1: Rider token RPCs are usable only by service_role.
+      // The harness's other rider verbs above execute as test DB owner.
+      // Privilege assertions below prove authenticated users cannot reuse
+      // a token hash to bypass the Edge Function. Real JWT/Edge integration
+      // is separately required before rollout.
+      for (const signature of [
+        'public.get_rider_job_by_token(text)',
+        'public.rider_mark_picked_up(text)',
+        'public.rider_complete_delivery(text,text,text,text)',
+      ]) {
+        const authExec = await one('select has_function_privilege(\'authenticated\', $1, \'EXECUTE\')', [signature])
+        const anonRiderExec = await one('select has_function_privilege(\'anon\', $1, \'EXECUTE\')', [signature])
+        const serviceExec = await one('select has_function_privilege(\'service_role\', $1, \'EXECUTE\')', [signature])
+        assertEq(authExec, false, signature + ' is not executable by authenticated')
+        assertEq(anonRiderExec, false, signature + ' is not executable by anon')
+        assertEq(serviceExec, true, signature + ' remains executable by Edge service_role')
+      }
+
+      const hashVisibleToStaff = await one(`select has_column_privilege('authenticated', 'public.delivery_job_links', 'token_hash', 'SELECT')`)
+      assertEq(hashVisibleToStaff, false, 'staff cannot SELECT the rider credential token_hash')
+      const metadataReadableToStaff = await one(`select has_column_privilege('authenticated', 'public.delivery_job_links', 'rider_name', 'SELECT')`)
+      assertEq(metadataReadableToStaff, true, 'staff can still read RLS-scoped rider metadata')
+
+      // 11. Anon table and management privilege boundary assertion
       const anonSelect = await one(`select has_table_privilege('anon', 'public.delivery_job_links', 'SELECT')`)
       assertEq(anonSelect, false, 'delivery_job_links table is NOT readable by anon')
       const anonExec = await one(`select has_function_privilege('anon', 'public.create_rider_link(uuid, text, text, text)', 'EXECUTE')`)
