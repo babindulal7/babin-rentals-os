@@ -89,13 +89,22 @@ const line = (await db.query(
   [quote.id, product.id, owner],
 )).rows[0]
 await asActor(staff)
+const holdKey = await uuid()
 const held = (await db.query(
   `select create_or_extend_hold($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::int,$6::tstzrange,$7::int,$8::uuid,$9::uuid) as data`,
-  [quote.id, line.id, null, product.id, 1, null, 30, await uuid(), staff],
+  [quote.id, line.id, null, product.id, 1, null, 30, holdKey, staff],
 )).rows[0].data
 assert.equal(held.success, true, 'same-branch Coordinator can create hold')
 assert.equal(held.hold_state, 'active_hold')
 console.log('PASS same-branch Coordinator can create a valid hold')
+const replay = (await db.query(
+  `select create_or_extend_hold($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::int,$6::tstzrange,$7::int,$8::uuid,$9::uuid) as data`,
+  [quote.id, line.id, null, product.id, 1, null, 30, holdKey, staff],
+)).rows[0].data
+assert.equal(replay.success, true, 'idempotent retry succeeds')
+assert.equal(replay.reservation_id, held.reservation_id, 'idempotent retry returns the original reservation')
+assert.equal(replay.already_held, true, 'replay is explicit')
+console.log('PASS duplicate hold request cannot reserve stock twice')
 const released = (await db.query(
   'select release_hold($1::uuid,$2::text,$3::uuid) as data',
   [held.reservation_id, 'Valid staff release', staff],
@@ -107,6 +116,12 @@ const noRepeat = (await db.query(
 )).rows[0].data
 assert.equal(noRepeat.success, false, 'second release cannot delete or re-release a hold')
 console.log('PASS active Quote hold release succeeds once and double-release is refused')
+await refused(
+  'released idempotency key cannot recreate a reservation',
+  `select create_or_extend_hold($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::int,$6::tstzrange,$7::int,$8::uuid,$9::uuid)`,
+  [quote.id, line.id, null, product.id, 1, null, 30, holdKey, staff],
+  /idempotency key was already consumed/i,
+)
 
 await db.exec("reset role; select set_config('app.current_user_id','',false),set_config('request.jwt.claim.sub','',false)")
 await db.query('update users set branch_id=$1 where id=$2', [booking.branch_id, staff])
