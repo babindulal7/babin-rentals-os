@@ -20,7 +20,7 @@ receive an amount in any notification or email.
 
 ---
 
-### T5-01 · Notification records            status: todo · size: M · lane B
+### T5-01 · Notification records            status: done — awaiting merge (lane-b/T5-01-notification-records) · size: M · lane B
 **What** — A `notifications` table: recipient user, type, title, body (no money for money-blind
 recipients — the row is written per recipient, so the text is built for that role), link to the
 entity, created at, read at. Rows are written **by the database** when the event happens (trigger
