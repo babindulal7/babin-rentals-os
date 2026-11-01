@@ -3,12 +3,13 @@
  *
  * Universal Secondary Header Actions Registry & Evaluator.
  *
- * Implements the 5 primary action groups for the Rentals header More (⋯) menu:
+ * Implements the 6 primary action groups for the Rentals header More (⋯) menu:
  * 1. Quote (Drafting, preview, PDF, delivery, revision versioning)
  * 2. Invoice (Drafting, payment status, PDF, duplicate prevention, financial gate)
  * 3. Duplicate Rental (Independent draft creation with sanitized copy & availability check)
- * 4. Audit History (Append-only immutable audit viewer with category filters & export)
- * 5. Cancel Rental (Pre-handover lifecycle cancellation with packing warnings & reservation release)
+ * 4. Re-book (T3-01: copy eligible booking details to a new quote)
+ * 5. Audit History (Append-only immutable audit viewer with category filters & export)
+ * 6. Cancel Rental (Pre-handover lifecycle cancellation with packing warnings & reservation release)
  *
  * Enforces:
  * - Lifecycle-stage matrix from specification Section 7.
