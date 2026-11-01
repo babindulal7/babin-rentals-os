@@ -32,9 +32,12 @@ npm run lint                 # eslint src --max-warnings 0 (src only; archive/sc
 npm test                     # full suite: forces mock transport and masks any live .env.local credentials (T0-10); -- --live requires explicit intent
 npx vitest run <path>        # single file, e.g. npx vitest run src/__tests__/e2e/tier1-features.test.tsx
 npm run build                # tsc --noEmit && vite build → dist/
+npm run gates               # every CI verification gate, same order; fail fast, print summary
+npm run gates -- --quick    # same checks except coverage; not a full release gate
+node --test scripts/run-gates.test.mjs  # isolated regression tests for the gate runner
 ```
 
-Verification order for any change: `typecheck → test → check:pglite + check:lifecycle → build`. **GitHub CI is off since 26 Oct 2026** (billing; Babin ruled W75 — `RULINGS-2026-10-26-workflow.md`): run **every step it ran, in its order**, yourself before you report a card done, and paste the results into PROGRESS.md — the list is in `docs/plans/README.md` ("Gates every card must pass"): typecheck, lint, `npm test` (T0-10 makes mock the default even when `.env.local` points at live; do not use `--live` for ordinary gates), `check:pglite`, financial integrity, `check:security`, `check:lifecycle`, `test:server-contracts`, `test:partial-return`, `lint:progress`, the receipt test, `lint:shell`, `lint:ui-copy`, `check:contrast`, build (coverage before each live batch). The workflow file `.github/workflows/ci.yml` stays as the reference list.
+Verification order for any change: `typecheck → test → check:pglite + check:lifecycle → build`. **GitHub CI is off since 26 Oct 2026** (billing; Babin ruled W75 — `RULINGS-2026-10-26-workflow.md`): run **every step it ran, in its order**, yourself before you report a card done, and paste the results into PROGRESS.md — run `npm run gates` (T0-11 draft; local command verifies its ordered list still matches `.github/workflows/ci.yml`; `-- --quick` skips only coverage), with the list in `docs/plans/README.md` ("Gates every card must pass"): typecheck, lint, `npm test` (T0-10 makes mock the default even when `.env.local` points at live; do not use `--live` for ordinary gates), `check:pglite`, financial integrity, `check:security`, `check:lifecycle`, `test:server-contracts`, `test:partial-return`, `lint:progress`, the receipt test, `lint:shell`, `lint:ui-copy`, `check:contrast`, build (coverage before each live batch). The workflow file `.github/workflows/ci.yml` stays as the reference list.
 
 DB / lifecycle gates (allowed in `opencode.jsonc`, never prompt-blocked):
 ```bash
