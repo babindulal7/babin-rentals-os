@@ -1,5 +1,66 @@
 # Progress Log
 
+## 2026-11-02 — 0203 locally verified; live migration reconciliation and staging HOLD
+
+**Did**
+- Extended the disposable SEC-05 regression to assert zero `clients_v`, `client_directory_v` and
+  `booking_lines_v` rows for an unassigned Driver, and no booking/view/trip-context access after
+  either terminal delivery status (`Failed` or `Delivered`; there is no `Completed` status in the
+  delivery-job schema).
+- Updated T1-03/T1-05 and the migration ledger to require a complete source-to-live crosswalk,
+  dependency-ordered fresh and upgraded staging tests, and real-role JWT/PostgREST verification.
+  Migration 0203 is locally verified, not staged or applied.
+- Recorded the audit facts supplied with issue #56. This checkout did not connect to live Supabase
+  or independently inspect hosted objects. The report says 156 recorded migrations through 0164;
+  49 non-exact filename matches (34 prefixed 0165–0203), without proving those files are all
+  pending. It reports no separate staging branch and no recorded 0170, either 0188, or 0203.
+- Maintained the production HOLD: staging cost was quoted at US$0.01344/hour (subject to
+  confirmation) and has not been approved; no staging creation, hosted DDL, grants, deployment,
+  backup, or feature launch was performed.
+
+**Ruled**
+- No new product or permission decision. Do not treat filename/version mismatches as proof of
+  unapplied migrations; do not apply 0203 standalone. The `staff_directory_v` advisor warning is a
+  structural finding, not proof of unauthorized data access; leave its masks and grants unchanged
+  pending effective-role tests on staging.
+
+**Verified**
+- `npm run check:pglite` — 196/196 applied, 0 failures; 36 public views, 0 anon-readable; 20 public
+  functions, 0 unauthorized anon executable; 137 definer functions pinned.
+- `npm run check:lifecycle` — 66/66 green, 0 failed, in the same shell run as `check:pglite`;
+  migration 0203 meets the local R-35 verification bar only.
+- `npm run check:security` — 18 Phase 0 SQL regressions, operations-grant checks, and 14/14 Reset
+  branch regression groups passed; new SEC-05 assertions passed in the harness.
+- GitHub Actions run `41351077728` on `main` SHA `315ba2a` passed through Build but was still in
+  Coverage when checked. Run `41345532036` completed successfully at earlier SHA `94f07ce`; neither
+  run certifies this branch's new test assertion. The active run must be rechecked before closing.
+- `npm run completion` printed the following counts and exited 1 because the Vitest suite was not
+  run this session and its coverage receipt is invalid:
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 79 / 79 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 65 / 65 (100%) | +0 |
+| Lifecycle | steps green / total | 66 / 66 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 196 files · `check:pglite` 196/196, 0 failed (recorded 2026-11-01T21:34:44.819Z). Suite: NOT RUN this session. Coverage suite: NOT VERIFIED — invalid receipt. Gates read from `.lifecycle-result.json`, written 2026-11-01T21:34:57.834Z. Counted by `npm run completion`, not typed. Structural coverage only; hosted/integration acceptance NOT VERIFIED.
+
+### Remaining
+- Owner approval of staging cost, then an independent/restored staging database and complete
+  source-to-live migration crosswalk (including renames, duplicates, skipped 0175, and 0191–0203).
+- Compare the live/staging objects, policies, grants, functions and view columns; rebuild fresh and
+  rehearse the upgraded schema in dependency order (`0170` → `0188` → `0203`).
+- Run actual Driver, Client, Warehouse, Owner and Admin JWT/PostgREST probes across the views,
+  bookings, line views, financial fields and trip-context RPC; verify failed/delivered scope and
+  W68 fields. Check effective roles and predicates for `staff_directory_v` advisor warning.
+- Complete authorized backup/rollback planning, deployment/schema reconciliation, and pickup,
+  return, financial report, and Equipment Preview smoke tests only after staging acceptance.
+- Recheck full same-head CI after this change; current main CI had not yet completed Coverage when
+  last queried. No production apply until all staging checks and explicit approval are complete.
+
 ## 2026-11-02 — Verification pass: every gate green except one flaky file; rider-link live contract mismatch found (P0)
 
 **Did**

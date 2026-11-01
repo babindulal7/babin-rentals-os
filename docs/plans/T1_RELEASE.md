@@ -18,6 +18,17 @@ business RPCs are still executable by `anon` on live (`adjust_stock`,
 `portal_claim_by_verified_email`, `read_quote_editor`, `set_staff_active`, `set_staff_role`,
 `update_rental_quote`) — 0163 closes them.
 
+**Read-only release update, 2 Nov:** the connected-live audit reports 156 history rows, newest
+`0164`, and no recorded `0170`, either `0188` filename, or `0203`. It reports 49 non-exact filename
+matches against the 196 source migrations (34 have prefixes 0165–0203). These are reconciliation
+inputs, **not** a list of migrations to apply: renamed and special-case history must be mapped by
+recorded version/name and actual object definitions. The migration history has not yet been
+reconciled. Live `clients_v` and `client_directory_v` lack the Driver exclusion and W68
+`staff_user_id`; `0203` depends on the `0170` → `0188` sequence and is never a standalone apply.
+No independent staging branch exists. The quoted branch cost ($0.01344/hour, subject to
+confirmation) is not approved; do not create staging or perform hosted DDL before explicit Owner
+acceptance. `0203` remains written locally and staging-required.
+
 ---
 
 ### T1-01 · Fresh production backup + restore drill            status: todo · size: S · lane A + Babin
@@ -45,16 +56,20 @@ in (Cloudflare Access on the staging site, T1-07).
 **Needs** — T1-01; Babin approves the project.
 
 ### T1-03 · Settle the ledger before anything is applied            status: todo · size: M · lane A
-**What** — Refresh the live ledger read-only (`npm run db:plan -- --sql`, run in the SQL editor,
-save `docs/live/schema_migrations_<date>.txt`). For each of the 7 renames decide "same migration,
-renamed" vs "different migration" by comparing the live function/policy bodies with the local
-file; record each decision; re-run with `--accept-rename`. Read the 2 unexplained live rows out of
-the SQL editor and record what they are (the bakery schema likely belongs to the Miraz POS work
-and shares this project — confirm, and record whether its tables stay).
-**Why** — `schema_migrations` keys on name; a misread rename re-runs a policy migration on live.
+**What** — Refresh the live migration history read-only and build a complete crosswalk from every
+source filename to the recorded version/name. The 2 Nov audit reports 156 live rows, newest `0164`,
+49 non-exact names among 196 source files (34 prefixed 0165–0203), and no recorded `0170`, either
+`0188` filename, or `0203`. Reconcile every mismatch, duplicate, skipped `0175`, `0191–0203`, and
+object dependency by comparing the actual live schema and definitions; do not infer pending work
+from filename/version differences. Record unexplained rows and each rename/special-case decision.
+**Why** — migration names and version numbers are not proof that DDL ran; a false rename match or
+bulk apply can replay a policy migration against production.
 **Where** — `scripts/plan-migrations.mjs`, `docs/live/`.
 **Database** — read-only.
-**Done when** — `npm run db:plan` prints **no blockers** and a numbered apply list.
+**Done when** — the crosswalk covers every source and recorded row, definitions and dependencies
+are reconciled, `npm run db:plan` prints **no blockers**, and an ordered rehearsal list is ready.
+Rebuild a fresh staging database and rehearse the upgraded copy; never apply 0203 alone, and test it
+only after its verified `0170` and `0188` prerequisites on staging.
 **Needs** — T1-02 (so the comparison can also be run on the restored copy).
 
 ### T1-04 · Batch 0 — close the six anonymous RPCs first            status: todo · size: S · lane A + Babin
@@ -77,7 +92,13 @@ real PostgREST, not only PGlite.
 **Where** — `scripts/verify-staging-readonly.mjs`, `scripts/check-db.mjs`, `docs/PERMISSIONS.md` §12.
 **Database** — staging users only.
 **Done when** — harness exits 0: money-blind roles read `null` / zero rows on money columns and
-tables; Client reads only its own rows; `anon` reads nothing internal.
+tables; Client reads only its own rows; `anon` reads nothing internal. With actual JWTs, Driver
+returns zero rows from `clients_v` and `client_directory_v` while unassigned, during an assigned
+open trip, and after `Failed` or `Delivered`; it sees only the assigned booking/trip context while
+open, with no financial columns or data. Check `bookings`, `booking_lines_v`, the trip-context RPC,
+and W68 `staff_user_id` masking/visibility as Driver, Client, Warehouse, Owner, and Admin. Inspect
+the effective predicate and permissions for `staff_directory_v` (the advisor finding alone does
+not prove unauthorized access).
 **Needs** — T1-02.
 
 ### T1-06 · Storage scoping accepted on staging            status: todo · size: M · lane A

@@ -12,6 +12,12 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
+**Release HOLD, 2 Nov:** the connected-live audit reports no recorded `0170`, either `0188`
+filename, or `0203`, plus 49 non-exact source/live filename matches. The full source-to-live
+crosswalk is not complete; these differences do not by themselves identify unapplied migrations.
+`written; staging required` is local status only. Staging cost acceptance and the ordered schema,
+JWT, and PostgREST checks are still required before any production DDL.
+
 **Next free number: 0204**
 
 | Number | Task | Slug | Branch | Status |
@@ -36,7 +42,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0200 | T3-14b | draft-at-confirm | lane-c/T3-14b-draft-at-confirm | claimed |
 | 0201 | T8-09 | collateral-masking-chars | (main, 1 Nov) | written |
 | 0202 | T8-09 | staff-discount-is-money-setting | claude/file-update-d4b7b1 | verified |
-| 0203 | SEC-05/W68 | restore-driver-client-view-scopes | fix/2026-11-01-driver-client-view-scope-0203 | written; staging required |
+| 0203 | SEC-05/W68 | restore-driver-client-view-scopes | fix/2026-11-01-driver-client-view-scope-0203 | verified locally; staging required |
 
 ## Expected migrations (not yet claimed)
 

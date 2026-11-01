@@ -1,5 +1,23 @@
 # Babin Rentals OS — Current State
 
+> **2 November 2026 — Driver RLS and migration release HOLD.** The read-only audit supplied with
+> issue #56 reports that live Supabase has 156 recorded migrations through `0164`, while source has
+> 196 migration files; 49 names are not exact matches, including 34 with prefixes 0165–0203. This
+> does **not** prove that all mismatches are unapplied. No complete source-to-live crosswalk or
+> independent staging branch is available. Staging creation is blocked on explicit Owner cost
+> acceptance (quoted US$0.01344/hour, subject to confirmation). Do not apply migration 0203 by
+> itself: reconcile its `0170` → `0188` dependencies, rehearse on staging, and verify real JWT /
+> PostgREST Driver, Client, Warehouse, Owner and Admin behavior first. The live view observations
+> and `staff_directory_v` advisor finding are structural, read-only findings—not hosted role
+> acceptance. No live schema, grant, deployment, or feature launch was performed.
+>
+> `0203` now passes the local migration rebuild (196/196) and lifecycle (66/66) gates in the same
+> run, so it is **verified locally, staging required**. The PGlite SEC-05 harness also passes for
+> unassigned/assigned Driver reads, both client masking views, terminal `Failed`/`Delivered`
+> delivery scope, trip-context masking, and W68 staff-client fields; this does not substitute for
+> hosted JWT/PostgREST verification. On 2 Nov the current `main` CI run `41351077728` at `315ba2a`
+> had passed through Build and was still running Coverage when checked.
+
 > **26 October 2026 — shadcn on main:** committed integration `2a4b032d` matches the isolated candidate with all 14 local gates passing: 5739 tests with V8 coverage in 463 files, 174 migrations, 33 lifecycle steps, 58 RPC contracts and 58 partial Return assertions; security, financial integrity, lint, 106 contrast pairs and production build/PWA pass. Source `b594f9948385f7426d5c39fc43889a2f4629bbf0fb798daf3d0db3592a03ed42`. Unrelated uncommitted primary drafts are outside this proof. Return migrations 0176/0177 are WRITTEN + VERIFIED locally only; hosted/device/offline acceptance and production HOLD remain. [Integration report](verification/SHADCN_MAIN_INTEGRATION_2026-10-26.md).
 
 > **26 October 2026 — fresh measurement on a clean clone of `main` `34cce2d` (Linux, Node 22), and a
