@@ -86,6 +86,13 @@ vi.mock('../../../actions/delivery', () => ({
   transitionDeliveryJob: vi.fn().mockResolvedValue({ jobId: 'DEL-001' }),
 }))
 
+// Stand-in for the real modal so the test can see which job id the workspace hands it.
+vi.mock('../SendToRiderModal', () => ({
+  SendToRiderModal: (props: { jobId: string; bookingNo: string }) => (
+    <div data-testid="rider-modal" data-job-id={props.jobId} data-booking-no={props.bookingNo} />
+  ),
+}))
+
 describe('DeliveryWorkspace (T4-01)', () => {
   let container: HTMLDivElement
   let root: Root
@@ -163,5 +170,47 @@ describe('DeliveryWorkspace (T4-01)', () => {
     expect(container.textContent).toContain('+ New Dispatch')
     expect(container.textContent).toContain('Assign')
     expect(container.textContent).toContain('Fail')
+  })
+
+  // T4-08 / INT-1: rider links belong to delivery jobs; the id handed to the modal must be the job id.
+  it('Send to Rider hands the real delivery job id to the modal and is hidden from Drivers', async () => {
+    mockCurrentUser = { id: 'usr-coord-1', name: 'Sita Coordinator', role: 'Coordinator' }
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <DeliveryWorkspace />
+        </MemoryRouter>,
+      )
+    })
+
+    const riderButtons = Array.from(container.querySelectorAll('button')).filter((b) =>
+      b.textContent?.includes('Send to Rider'),
+    )
+    expect(riderButtons.length).toBeGreaterThan(0)
+    expect(container.querySelector('[data-testid="rider-modal"]')).toBeNull()
+
+    await act(async () => {
+      riderButtons[0]?.click()
+    })
+
+    const modal = container.querySelector('[data-testid="rider-modal"]')
+    expect(modal).not.toBeNull()
+    expect(MOCK_JOBS.map((j) => j.id)).toContain(modal?.getAttribute('data-job-id'))
+    expect(MOCK_JOBS.map((j) => j.bookingNo)).toContain(modal?.getAttribute('data-booking-no'))
+  })
+
+  it('does not offer Send to Rider to a Driver', async () => {
+    mockCurrentUser = { id: 'usr-driver-1', name: 'Ramesh Thapa', role: 'Driver' }
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <DeliveryWorkspace />
+        </MemoryRouter>,
+      )
+    })
+
+    expect(container.textContent).not.toContain('Send to Rider')
   })
 })
