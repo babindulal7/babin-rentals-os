@@ -42,14 +42,15 @@ describe('createTeamNote', () => {
     );
   });
 
-  it('allows Warehouse and Driver staff roles to create notes', async () => {
-    mockRpc.mockResolvedValue({ data: 'note-uuid-wh', error: null } as any);
-    const whResult = await createTeamNote({ body: 'Gear needs QC' }, warehouseContext);
-    expect(whResult.noteId).toBe('note-uuid-wh');
-
-    mockRpc.mockResolvedValue({ data: 'note-uuid-dr', error: null } as any);
-    const drResult = await createTeamNote({ body: 'Traffic delay on Ring Road' }, driverContext);
-    expect(drResult.noteId).toBe('note-uuid-dr');
+  it('refuses Warehouse and Driver note creation under the current Coordinator+ capability gate', async () => {
+    // B-1 stricter-wins: do not silently widen the action role gate to match
+    // migration 0185's broader staff policy. Reconcile the DB in a reviewed
+    // security migration before claiming end-to-end parity.
+    await expect(createTeamNote({ body: 'Gear needs QC' }, warehouseContext))
+      .rejects.toThrow(ActionPermissionError);
+    await expect(createTeamNote({ body: 'Traffic delay on Ring Road' }, driverContext))
+      .rejects.toThrow(ActionPermissionError);
+    expect(mockRpc).not.toHaveBeenCalled();
   });
 
   it('throws ActionPermissionError for Client role', async () => {
