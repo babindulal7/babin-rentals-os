@@ -36,6 +36,14 @@ describe('RiderDeliveryPage end-to-end flow (FUNC-1)', () => {
     vi.restoreAllMocks()
   })
 
+  // createRiderLink may return no raw token when it replays an earlier request (client_uuid idempotency);
+  // a fresh link always has one.
+  async function issueLink(jobId: string, name: string, phone: string): Promise<string> {
+    const { rawToken } = await riderQuery.createRiderLink(jobId, name, phone, 'Owner')
+    if (!rawToken) throw new Error('expected a raw token for a newly issued link')
+    return rawToken
+  }
+
   const button = (text: string) =>
     Array.from(document.querySelectorAll('button')).find((b) => b.textContent?.includes(text)) as HTMLButtonElement
 
@@ -60,7 +68,7 @@ describe('RiderDeliveryPage end-to-end flow (FUNC-1)', () => {
   }
 
   it('shows "Delivery Complete" after a real pickup then delivery, not the inactive-link screen', async () => {
-    const { rawToken } = await riderQuery.createRiderLink('job-1', 'Ram Rider', '9801234567', 'Owner')
+    const rawToken = await issueLink('job-1', 'Ram Rider', '9801234567')
     await openAsRider(rawToken)
 
     await act(async () => {
@@ -116,7 +124,7 @@ describe('RiderDeliveryPage end-to-end flow (FUNC-1)', () => {
   })
 
   it('a failed delivery keeps the rider on the job screen so they can retry', async () => {
-    const { rawToken } = await riderQuery.createRiderLink('job-2', 'Hari Rider', '9812345678', 'Owner')
+    const rawToken = await issueLink('job-2', 'Hari Rider', '9812345678')
     vi.spyOn(riderQuery, 'riderCompleteJobDelivery').mockRejectedValue(new Error('Could not reach the delivery service.'))
     const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
 
