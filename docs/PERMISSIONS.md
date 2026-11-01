@@ -387,6 +387,18 @@ model**. Nothing is stored: `product_units_service_v` derives it at read time.
 | `comms.settings` (channels, credentials, quiet hours) | Owner · Admin | credentials write-once, masked | ○ |
 | OTP bodies | **nobody** — masked for every role incl. Owner | | ○ |
 
+### 4.8.1 Team Notes (active — T4-04)
+
+**Owner ruling, 1 November 2026:** Every authenticated **internal staff** role may post and read shared operational Team Notes: Owner, Admin, Manager, Coordinator, Warehouse, Technician, Accounts and Driver. External Client and anonymous sessions are denied. Every writer sees the warning that notes are visible to all staff; notes must not contain financial amounts or private details that the recipient roles are otherwise forbidden to see.
+
+| Capability | Roles | Database enforcement | Code |
+|---|---|---|---|
+| `team_note.create` | All eight internal staff; **Client denied** | `0185_team_notes.sql`: `create_team_note()` uses `auth_is_staff()`; `team_notes_insert_staff` INSERT RLS matches authenticated staff and `author_id` identity | ✓ |
+| `team_note.read` | All eight internal staff; **Client denied** | `list_team_notes()` requires staff; `team_notes_select_staff` SELECT RLS | ✓ |
+| `team_note.acknowledge` | All eight internal staff; **Client denied** | `acknowledge_team_note()` requires staff; direct UPDATE/DELETE remain revoked | ✓ |
+
+**Verification boundary:** `scripts/e2e-lifecycle.mjs` L42 tests all eight staff creating notes, Client RPC denial and direct INSERT denial. The existing migration already implements this role policy; no permission-widening SQL change is required. Site/JWT acceptance and an unexpired authenticated session still require staging tests. Archive/pin/resolve privileges and immutable history are unchanged.
+
 ### 4.9 Automation (parked)
 
 | Capability | Roles | Notes | Code |
