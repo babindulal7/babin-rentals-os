@@ -144,8 +144,10 @@ export default function RiderDeliveryPage() {
         signatureSvg || undefined,
         photoUrl || undefined
       )
+      // Do not reload the job here: the link is now completed, so the server refuses to serve it again
+      // ("already completed") and a re-fetch would replace this success screen with the inactive-link
+      // error. Everything the success screen shows is already in memory (FUNC-1).
       setDeliverySuccess(true)
-      await loadJob()
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Could not complete delivery.')
     } finally {
