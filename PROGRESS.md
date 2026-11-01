@@ -73,8 +73,13 @@ Coverage suite: NOT VERIFIED — invalid test receipt.
 Gates read from .lifecycle-result.json, written 2026-11-01T13:08:20.074Z.
 Counted by `npm run completion`, not typed. Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
+**Investigated — the two `DeliveryWorkspace` (T4-01) failures are a regression, not a stale test**
+- Both tests pass at T4-01 `65cc99b8` and fail from `0168a0c6` ("claim(migration): 0190 for T4-08", merged `7267c167`) onward. That commit rewrote `DeliveryWorkspace.tsx` and removed `fetchDeliveries`, `createDeliveryJob`, `assignDeliveryDriver`, `transitionDeliveryJob` and the loading state; nothing in `src` calls those any more. The component is now `IS_MOCK ? MockDeliveryWorkspace : LiveTransportPlans`, so under mock mode the test renders the local preview (Driver refused, no `DEL-001`), and live mode reads `booking_transport_v`, not `delivery_jobs`.
+- Consequence for rider links: `LiveTransportPlans.tsx:521–524` passes a `booking_transport` id as `jobId`; `create_rider_link` looks it up in `delivery_jobs` and would refuse it. By reading only; not run against a hosted project. Not fixed here — lane B's files; details in `CLAUDE_PR35_SECURITY_REVIEW.md` INT-1 and task H.
+
 ### Remaining
-- **Suite is not green:** merge PR #35 (clears 3); investigate `DeliveryWorkspace` Coordinator/Driver tests (2); `realWorkspaceGuidance` needs a quiet machine to confirm (7, passes alone).
+- **Restore the T4-01 dispatch UI** (INT-1): re-apply the `65cc99b8` wiring to `DeliveryWorkspace.tsx`, keep the T4-08 Send-to-rider entry, pass a real `delivery_jobs.id`. Clears the 2 `DeliveryWorkspace` failures.
+- **Suite is not green:** merge PR #35 (clears 3); the 2 `DeliveryWorkspace` tests (above); `realWorkspaceGuidance` needs a quiet machine to confirm (7, passes alone).
 - **`test:server-contracts`:** decide test-vs-gate-order for the retire-while-reserved assertion.
 - Run `test:coverage` before any live batch.
 - Not reviewed: the notes feed still shows **Edit** on every note to a Warehouse user (seen in the browser check). Whether editing is allowed for floor roles is a separate question from R-0111-1.
