@@ -279,6 +279,41 @@ export async function getJobRiderLinks(jobId: string): Promise<DeliveryJobLinkRe
 }
 
 /**
+ * Rider actions are exclusively mediated by the Edge Function's service-role
+ * caller. Migration 0191 deliberately revokes direct token-RPC execution from
+ * browser sessions. Never retry via a SECURITY DEFINER RPC on failure.
+ */
+type RiderEdgeAction = 'get_job' | 'pickup' | 'deliver'
+interface RiderEdgeResponse {
+  data?: RiderJobData
+  success?: boolean
+  error?: string
+}
+
+async function invokeRiderEdge(
+  body: {
+    action: RiderEdgeAction
+    token: string
+    receiver_name?: string
+    signature_svg?: string | null
+    photo_url?: string | null
+  },
+): Promise<RiderEdgeResponse> {
+  let result: Awaited<ReturnType<typeof supabase.functions.invoke>>
+  try {
+    result = await supabase.functions.invoke('rider-link', { body })
+  } catch {
+    throw new Error('Unable to verify the rider link. Please try again or contact shop staff.')
+  }
+
+  const response = result.data as RiderEdgeResponse | null
+  if (result.error || !response || response.error) {
+    throw new Error('Unable to verify the rider link. Please try again or contact shop staff.')
+  }
+  return response
+}
+
+/**
  * Rider API: Retrieve job details by raw token (no login).
  */
 export async function fetchRiderJobByToken(rawToken: string): Promise<RiderJobData> {
@@ -328,31 +363,11 @@ export async function fetchRiderJobByToken(rawToken: string): Promise<RiderJobDa
     }
   }
 
-  const tokenHash = await hashRiderToken(token)
-
-  // Try via Edge Function first
-  try {
-    const { data: edgeData, error: edgeError } = await supabase.functions.invoke('rider-link', {
-      body: { action: 'get_job', token },
-    })
-
-    if (!edgeError && edgeData?.data) {
-      return edgeData.data as RiderJobData
-    }
-  } catch {
-    // Edge function unavailable in test or local environment; fall through to RPC
+  const response = await invokeRiderEdge({ action: 'get_job', token })
+  if (!response.data) {
+    throw new Error('Unable to verify the rider link. Please try again or contact shop staff.')
   }
-
-  // Fallback to direct RPC
-  const { data, error } = await supabase.rpc('get_rider_job_by_token', {
-    p_token_hash: tokenHash,
-  })
-
-  if (error || !data) {
-    throw new Error(error?.message || 'Delivery link is invalid, expired, or completed.')
-  }
-
-  return data as unknown as RiderJobData
+  return response.data
 }
 
 /**
@@ -360,6 +375,9 @@ export async function fetchRiderJobByToken(rawToken: string): Promise<RiderJobDa
  */
 export async function riderMarkJobPickedUp(rawToken: string): Promise<void> {
   const token = rawToken.trim()
+  if (!token) {
+    throw new Error('A valid rider delivery token is required.')
+  }
   if (IS_MOCK) {
     const links = getMockLinks()
     const match = links.find((l) => l.rawToken === token)
@@ -370,23 +388,9 @@ export async function riderMarkJobPickedUp(rawToken: string): Promise<void> {
     return
   }
 
-  const tokenHash = await hashRiderToken(token)
-
-  try {
-    const { error: edgeError } = await supabase.functions.invoke('rider-link', {
-      body: { action: 'pickup', token },
-    })
-    if (!edgeError) return
-  } catch {
-    // Fall through
-  }
-
-  const { error } = await supabase.rpc('rider_mark_picked_up', {
-    p_token_hash: tokenHash,
-  })
-
-  if (error) {
-    throw new Error(error.message || 'Failed to update delivery status.')
+  const response = await invokeRiderEdge({ action: 'pickup', token })
+  if (response.success !== true) {
+    throw new Error('Unable to verify the rider link. Please try again or contact shop staff.')
   }
 }
 
@@ -401,7 +405,9 @@ export async function riderCompleteJobDelivery(
 ): Promise<void> {
   const token = rawToken.trim()
   const cleanReceiver = receiverName.trim()
-
+  if (!token) {
+    throw new Error('A valid rider delivery token is required.')
+  }
   if (cleanReceiver.length < 2) {
     throw new Error('Receiver name is required (minimum 2 characters).')
   }
@@ -417,31 +423,14 @@ export async function riderCompleteJobDelivery(
     return
   }
 
-  const tokenHash = await hashRiderToken(token)
-
-  try {
-    const { error: edgeError } = await supabase.functions.invoke('rider-link', {
-      body: {
-        action: 'deliver',
-        token,
-        receiver_name: cleanReceiver,
-        signature_svg: signatureSvg || null,
-        photo_url: photoUrl || null,
-      },
-    })
-    if (!edgeError) return
-  } catch {
-    // Fall through
-  }
-
-  const { error } = await supabase.rpc('rider_complete_delivery', {
-    p_token_hash: tokenHash,
-    p_receiver_name: cleanReceiver,
-    p_signature_svg: signatureSvg || null,
-    p_photo_url: photoUrl || null,
+  const response = await invokeRiderEdge({
+    action: 'deliver',
+    token,
+    receiver_name: cleanReceiver,
+    signature_svg: signatureSvg || null,
+    photo_url: photoUrl || null,
   })
-
-  if (error) {
-    throw new Error(error.message || 'Failed to complete delivery.')
+  if (response.success !== true) {
+    throw new Error('Unable to verify the rider link. Please try again or contact shop staff.')
   }
 }
