@@ -14,8 +14,9 @@ begin;
 -- =============================================================================
 -- Re-derives a Draft invoice's lines from the booking (equipment, crew,
 -- transport, discounts) using the SAME arithmetic as create_invoice
--- (0168:848-877, :896-912). Upserts by source row's client_uuid — no DELETE.
--- Voided source rows → line keeps its client_uuid but quantity/days zeroed.
+-- (0168:848-877, :896-912). The current implementation rebuilds
+-- Draft invoice lines with DELETE + INSERT and new idempotency keys.
+-- Only internally authorized callers may perform this destructive Draft rewrite.
 -- Refuses if parent invoice is not Draft or booking is cancelled.
 
 create or replace function public.resync_draft_invoice(p_booking_id uuid)
@@ -180,11 +181,15 @@ $$;
 
 comment on function public.resync_draft_invoice(uuid) is
   'Re-derives a Draft invoice''s lines from the booking (equipment, crew, transport). '
-  'Upserts by source row client_uuid. Refuses if invoice is not Draft or booking cancelled. '
+  'Rebuilds Draft lines only. Direct API execute is revoked; internal definer callers only. '
   'Used by Confirm (draft creation) and extend_booking / other booking mutations.';
 
-revoke execute on function public.resync_draft_invoice(uuid) from public;
-grant execute on function public.resync_draft_invoice(uuid) to authenticated;
+-- This is an INTERNAL invoice writer called from SECURITY DEFINER booking
+-- transition/extension functions. It must not be directly callable by any
+-- authenticated user, including money-blind staff or Clients.
+-- The owning definer may still invoke it internally during a valid transition.
+revoke all on function public.resync_draft_invoice(uuid)
+  from public, anon, authenticated;
 
 -- =============================================================================
 -- 2. Modify extend_booking to call resync_draft_invoice instead of day-only update
@@ -202,7 +207,10 @@ declare
   v_booking_id    uuid := (p_payload ->> 'booking_id')::uuid;
   v_days          integer := coalesce((p_payload ->> 'days')::integer, (p_payload ->> 'extension_days')::integer, 0);
   v_reason        text := btrim(coalesce(p_payload ->> 'reason', ''));
-  v_actor         uuid := nullif(coalesce(p_payload ->> 'actor_id', p_payload ->> 'extended_by', ''), '')::uuid;
+  -- Payload identities are untrusted hints; the audit actor must be the session.
+  v_actor         uuid;
+  v_claimed_actor uuid := nullif(p_payload ->> 'actor_id', '')::uuid;
+  v_claimed_by    uuid := nullif(p_payload ->> 'extended_by', '')::uuid;
   v_role          system_role;
   v_booking       bookings%rowtype;
   v_now           timestamptz := now();
@@ -256,21 +264,29 @@ begin
       using errcode = '42501';
   end if;
 
-  -- 3. Resolve actor
-  v_actor := coalesce(v_actor, auth.uid());
+  -- 3. Resolve actor from the same authenticated session used by the role gate.
+  -- A caller cannot attribute an extension or its money recalculation to
+  -- another user. The old fallback to the first active staff account is unsafe.
+  v_actor := auth_user_id();
   if v_actor is null then
-    select id into v_actor
-      from users
-     where primary_role in ('Owner', 'Admin', 'Manager', 'Coordinator')
-       and is_active
-     order by created_at
-     limit 1;
+    raise exception 'extend_booking: an authenticated staff user is required.'
+      using errcode = '42501';
+  end if;
+  if (v_claimed_actor is not null and v_claimed_actor is distinct from v_actor)
+     or (v_claimed_by is not null and v_claimed_by is distinct from v_actor) then
+    raise exception 'extend_booking: supplied actor does not match the authenticated session.'
+      using errcode = '42501';
   end if;
 
-  if v_role is null and v_actor is not null then
-    select primary_role into v_role from users where id = v_actor;
+  -- The Coordinator's booking-desk authority is site-scoped. SECURITY DEFINER
+  -- bypasses row RLS, so verify booking ownership before any date, reservation,
+  -- invoice, or audit writes. Owner/Admin retain their documented global scope.
+  if v_role = 'Coordinator'
+     and (auth_user_branch_id() is null
+          or v_booking.branch_id is distinct from auth_user_branch_id()) then
+    raise exception 'extend_booking: booking belongs to another branch.'
+      using errcode = '42501';
   end if;
-  v_role := coalesce(v_role, 'Coordinator');
 
   -- 4. Calculate new return timestamp
   v_old_return := v_booking.return_at;
