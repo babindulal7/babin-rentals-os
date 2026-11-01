@@ -96,7 +96,7 @@ describe('RentalMoreActions', () => {
     expect(document.querySelector('[role="menu"]')?.textContent).not.toContain('Archive booking')
   })
 
-  it('opens menu with 5 action groups when clicked by Owner', async () => {
+  it('opens menu with the six action groups when clicked by Owner', async () => {
     await mount(booking, 'Owner')
     const trigger = container.querySelector('button[aria-haspopup="menu"]') as HTMLButtonElement
 

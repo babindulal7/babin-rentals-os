@@ -205,6 +205,8 @@ Probe tests I executed in scratch copies (not committed, not part of the repo):
 
 ## 7. Minimal conflict-resolution patch instructions (for the implementation agent) — PROPOSED
 
+> **Executed locally afterwards:** PR #35 head `17e4f1e7` was merged into `claude/pr35-rider-link-security-8bf9b6` with the three conflicts resolved per hunk to the PR side, the missing fail-closed hash test added (`riderLinkProduction.test.ts`) and the stale wording fixed. Focused tests 1,008/1,008, `tsc` 0, ui-copy 0, eslint clean. Full gates not yet re-run on the merged result. Nothing pushed.
+
 Work in a fresh worktree/branch; do not edit `main`.
 
 ```bash
