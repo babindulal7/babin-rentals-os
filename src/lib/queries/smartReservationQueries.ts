@@ -8,13 +8,13 @@ import {
 import {
   evaluateBookingAvailability,
   type BookingAvailabilityEvaluation,
-  type LineEvaluationInput,
   type EvaluatedHold,
   type UnitInventoryCandidate,
   type ProductInventoryDefinition,
 } from '../availabilityEvaluation'
 import type { RentalWindow } from '../availability'
-import { assertCompleteRentalWindow, assertAvailabilityLine, requireVerifiedProductMode, assertLiveReservation } from './availabilityIntegrity'
+import { assertCompleteRentalWindow, requireVerifiedProductMode, assertLiveReservation } from './availabilityIntegrity'
+import { buildBookingStockDemand, type BundleRequirement, type SavedStockLine } from './bundleStockDemand'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -52,14 +52,9 @@ export async function queryBookingAvailability(
   const bookingWindow: RentalWindow = assertCompleteRentalWindow(bookingNo, pickupAt, returnAt)
 
   // 1. Read live lines
-  const lData = await readCompleteAvailability<{
-    id: string
-    product_id: string | null
-    description: string | null
-    qty: number
-  }>((from, to) => supabase
+  const lData = await readCompleteAvailability<SavedStockLine>((from, to) => supabase
     .from('booking_lines')
-    .select('id, product_id, description, qty')
+    .select('id, line_type, product_id, bundle_id, parent_line_id, description, qty')
     .eq('booking_id', bookingId)
     .is('voided_at', null)
     .order('id', { ascending: true })
@@ -68,15 +63,21 @@ export async function queryBookingAvailability(
   if (lData.length === 0) {
     throw new Error(`${bookingNo} has no live lines; availability cannot be certified.`)
   }
-  for (const line of lData) assertAvailabilityLine(bookingNo, line)
-
-  const linesToEval: LineEvaluationInput[] = lData.map((row) => ({
-    lineId: row.id,
-    productId: row.product_id || row.id,
-    productName: row.description || 'Equipment',
-    requestedQty: row.qty ?? 1,
-    window: bookingWindow,
-  }))
+  // Bundle parents carry the rate, not physical stock. Verify each saved
+  // mandatory component against the catalogue, then check the stored child
+  // lines as physical demand (including repeated models across bundles).
+  const bundleIds = [...new Set(lData.filter(line => line.line_type === 'Bundle')
+    .map(line => line.bundle_id).filter((id): id is string => !!id))]
+  const bundleRequirements = bundleIds.length === 0 ? [] : await readCompleteAvailability<BundleRequirement>(
+    (from, to) => supabase
+      .from('bundle_items')
+      .select('id, bundle_id, product_id, quantity, is_mandatory')
+      .in('bundle_id', bundleIds)
+      .order('id', { ascending: true })
+      .range(from, to),
+    'bundle component requirements',
+  )
+  const linesToEval = buildBookingStockDemand(bookingNo, lData, bundleRequirements, bookingWindow)
 
   const productIds = [
     ...new Set(linesToEval.map((l) => l.productId).filter(Boolean)),
