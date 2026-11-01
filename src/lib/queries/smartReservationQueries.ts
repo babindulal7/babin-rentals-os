@@ -49,12 +49,7 @@ export async function queryBookingAvailability(
   const pickupAt = bData.pickup_at as string | null
   const returnAt = bData.return_at as string | null
 
-  assertCompleteRentalWindow(bookingNo, pickupAt, returnAt)
-
-  const bookingWindow: RentalWindow = {
-    fromAd: pickupAt,
-    toAd: returnAt,
-  }
+  const bookingWindow: RentalWindow = assertCompleteRentalWindow(bookingNo, pickupAt, returnAt)
 
   // 1. Read live lines
   const lData = await readCompleteAvailability<{
@@ -174,7 +169,7 @@ export async function queryBookingAvailability(
 
   if (draftBookingsData.length > 0) {
     for (const d of draftBookingsData) {
-      assertCompleteRentalWindow(d.booking_no, d.pickup_at, d.return_at)
+      const draftWindow = assertCompleteRentalWindow(d.booking_no, d.pickup_at, d.return_at)
       evaluatedHolds.push({
         reservationId: `draft-${d.id}`,
         bookingId: d.id,
@@ -182,7 +177,7 @@ export async function queryBookingAvailability(
         isDraft: true,
         holdState: 'none',
         qty: 1,
-        window: { fromAd: d.pickup_at, toAd: d.return_at },
+        window: draftWindow,
       })
     }
   }
