@@ -812,7 +812,7 @@ export function fieldValue(f: Field, settings: SettingsRecord): string {
      for a setting the operator changed. */
   if (f.settingKey) return formatSetting(f.settingKey, settings[f.settingKey])
   if (f.value !== undefined) return f.value
-  if (f.on !== undefined) return f.on ? 'On' : 'Off'
+  if (f.readOnlyWhy) return f.readOnlyWhy
   if (f.dest === undefined) return '—'
   if (f.dest.kind === 'route') return f.dest.to
   if (f.dest.kind === 'tab') return `Settings ▸ ${f.dest.tab}`
