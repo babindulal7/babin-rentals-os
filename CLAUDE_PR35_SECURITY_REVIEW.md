@@ -187,7 +187,7 @@ GitHub Actions run 41290665633: **UNVERIFIED** (HTTP 404; `gh` unauthenticated).
 
 **Re-run on `5046a9af` (after the INT-1 fix):** every gate above is unchanged except the suite — the 2 `DeliveryWorkspace` failures are gone (6401/6415: 3 are PR #35's repairs, 11 are load timeouts in `listPageToolbars.render` and `realWorkspaceGuidance` that pass 15/15 twice when re-run on the same commit). `test:server-contracts` still fails on the same single assertion. The suite was not seen fully green in one run, so "all gates green" is still not claimable.
 
-So on top of what this review found, **`main` already has two red gates unrelated to PR #35**: `test:server-contracts` and the two `DeliveryWorkspace` tests. The `DeliveryWorkspace` failure was investigated afterwards and is **not a stale test**: it is a real regression that also affects rider links (INT-1, §4). `test:server-contracts` remains an undecided test-vs-gate-order question. "All gates green" cannot be claimed for `main` today. PR #35 itself was **not** re-run through the full suite (only its targeted files, §6 table above).
+So on top of what this review found, **`main` already has two red gates unrelated to PR #35**: `test:server-contracts` and the two `DeliveryWorkspace` tests. The `DeliveryWorkspace` failure was investigated afterwards and is **not a stale test**: it is a real regression that also affects rider links (INT-1, §4). `test:server-contracts` was a stale assertion (migration 0188 makes the status gate answer first); Babin ruled "fix the test" and it now passes 58/58 on the branch. "All gates green" cannot be claimed for `main` today. PR #35 itself was **not** re-run through the full suite (only its targeted files, §6 table above).
 
 Why so many NOT RUN above (earlier, before §6b): the review machine was saturated by other sessions (a fresh `npm ci` in the review worktree failed twice with `ENOTEMPTY`; I fell back to the parent checkout's `node_modules` via a junction, vitest 3.2.7). A full-repo `tsc` took over ten minutes. "NOT RUN" means exactly that — it is not a pass. **No gate in this table that reads NOT RUN or UNVERIFIED may be cited as green.**
 
@@ -263,7 +263,7 @@ Remaining release blockers (all independent of PR #35 unless noted):
 4. FUNC-1 — success shown as failure (task C).
 4b. INT-1 — the live UI creates no `delivery_jobs` and hands the rider modal a non-job id, so rider links cannot be issued end to end (task H).
 5. Migration 0190 is "claimed" in the ledger, not applied, not confirmed in PROGRESS; the Edge Function deployment is unconfirmed.
-6. The full gate list was run on branch `c3cb9429` (§6b) but **not** on the merged PR #35 result: re-run it after the PR is rebased. Two gates are red on `main` independent of the PR: `test:server-contracts` (1 assertion) and 2 `DeliveryWorkspace` tests. `test:coverage` was not run.
+6. The full gate list was run on branch `c3cb9429` (§6b) but **not** on the merged PR #35 result: re-run it after the PR is rebased. On `main` itself two gates are red independent of the PR (`test:server-contracts`, 2 `DeliveryWorkspace` tests); both are fixed on the branch. `test:coverage` was not run.
 7. Production build: BLD-1 is fixed on `c3cb9429` and `npm run build` exits 0 there; it is still not on `main`. Whether `import('node:crypto')` is removed from a production-mode bundle remains unverified.
 8. Hosted/device/offline acceptance remain open per `docs/CURRENT_STATE.md`; production stays HOLD.
 

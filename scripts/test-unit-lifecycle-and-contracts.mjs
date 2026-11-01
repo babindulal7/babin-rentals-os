@@ -208,10 +208,14 @@ await sql(`insert into inventory_reservations
   values (gen_random_uuid(), $1, $2, $3, tstzrange('2026-11-01 10:00:00+00', '2026-11-05 10:00:00+00', '[)'), $4)`,
   [bookingId, bookingLineId, unitHeldId, ownerId])
 
+// Since 0188 (smart reservation holds) a reservation moves its unit to 'Reserved', so the status
+// gate in retire_equipment_unit() answers first. The reservation gate in 0173 stays as a second layer
+// but cannot be reached without writing unit status directly, which the database refuses
+// (GATE:gate.unit_status.direct_write) — so it is deliberately not exercised here.
 await expectThrows(
   () => sql(`select retire_equipment_unit($1, 'Damaged beyond repair in transit', $2)`, [unitHeldId, crypto.randomUUID()]),
-  'GATE:unit.retire.active_reservation',
-  'Cannot retire unit with active reservation hold'
+  'GATE:unit.retire.active_status',
+  'Cannot retire unit with active reservation hold (unit is Reserved)'
 )
 
 // 2.4 Successfully retire unheld unit

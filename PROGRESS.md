@@ -103,9 +103,12 @@ Counted by `npm run completion`, not typed. Structural coverage only. Functional
 - `tsc --noEmit` exit 0; eslint `--max-warnings 0` on the three changed files clean.
 - Driven in a real browser (mock-mode build from a clean scratch copy, `vite build` exit 0, signed in as the mock Warehouse user): `/operations/delivery` shows the status KPIs and the Dispatch Board with Stage Ready, Dispatch and Send to Rider on every non-delivered job, none on the delivered one, and no revenue figure for the money-blind role. Not run: a hosted database, so a real `create_rider_link` call for a UI-created job is untested; the full suite was not re-run after this change.
 
+**Did (`test:server-contracts` fixed — Babin ruled "fix the test")**
+- `scripts/test-unit-lifecycle-and-contracts.mjs`: the retire-while-reserved assertion now expects `GATE:unit.retire.active_status`. Migration 0188 (smart reservation holds) moves a unit to `Reserved` when it is reserved, so the status gate in `retire_equipment_unit()` (0173) answers before the reservation gate. The reservation gate remains as a second layer; it cannot be reached without writing unit status directly, which the database refuses (`GATE:gate.unit_status.direct_write`), so it is deliberately not exercised. A first attempt to cover it by forcing the status back failed on exactly that refusal and was removed. Gate order unchanged. Revert = restore `active_reservation` in that one assertion.
+- Verified: `node scripts/test-unit-lifecycle-and-contracts.mjs` — all 58 integration assertions pass, exit 0 (was 1 failing). Other gates not re-run for this one-assertion test change.
+
 ### Remaining
 - **Suite is not green in a single run:** merge PR #35 (clears 3), then re-run the full suite on a quiet machine to confirm the 11 load-sensitive tests (`listPageToolbars.render`, `realWorkspaceGuidance`) pass in one pass; consider a longer timeout or serial run for those two files — they take 40–170 s on this machine.
-- **`test:server-contracts`:** decide test-vs-gate-order for the retire-while-reserved assertion.
 - Run `test:coverage` before any live batch.
 - Not reviewed: the notes feed still shows **Edit** on every note to a Warehouse user (seen in the browser check). Whether editing is allowed for floor roles is a separate question from R-0111-1.
 - Apply 0191 to hosted Supabase only after Babin's backup step (N-5); not done.
