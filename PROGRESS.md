@@ -1,5 +1,56 @@
 # Progress Log
 
+## 2026-11-02 — Rider-link security review fixes (SEC-1, SEC-3, FUNC-1) merged onto main; lane B overlap reconciled
+
+**Did** (branch `claude/pr35-rider-link-security-8bf9b6`, from `CLAUDE_PR35_SECURITY_REVIEW.md`; nothing applied to any hosted project)
+- **SEC-1 — the rider token hash is no longer a credential:** migration `0204_rider_link_credential_lockdown.sql` (renumbered from 0192, which `main` uses for notification records). The three rider RPCs (`get_rider_job_by_token`, `rider_mark_picked_up`, `rider_complete_delivery`) become executable by `service_role` only (the rider-link Edge Function); `authenticated` keeps every `delivery_job_links` column except `token_hash` (column-level grant, row policy unchanged); `rider_complete_delivery` audits under the issuing staff member's real role with `acted_via: rider_link` instead of a hard-coded `'Coordinator'`. Applies `PERMISSIONS.md` §7.1 as written (B-1); no role widened. Lifecycle **L47 steps 11–12** assert nine roles are refused on all three RPCs, `token_hash` and `select *` are refused to Owner/Coordinator/Warehouse while the non-secret listing still works, and the audit role and marker; with the migration moved aside the new assertion fails. WRITTEN + VERIFIED locally (`check:pglite` 197/197 and `check:lifecycle` 66/66 in the same run), NOT APPLIED. It must reach the database before or with the Edge Function.
+- **SEC-3 — the rider token no longer reaches the error log:** `monitoring.ts` sent `location.pathname` (`/rider/<token>`) to the third-party error endpoint. New exported `redactSensitivePath` redacts the segment after `/rider/` (case-insensitive, as the router matches) and any other 32+ hex segment; UUIDs are untouched. `monitoring.redaction.test.ts` (7 tests, including an end-to-end `captureError` body check) fails 6 of 7 on the old module.
+- **FUNC-1 — "Delivery Complete" after a successful delivery:** `RiderDeliveryPage.tsx` re-fetched a link that was by then completed and showed "Delivery Link Inactive"; the re-fetch is removed. `RiderDeliveryPage.flow.test.tsx` (3 tests, real mock query layer) fails 2 of 3 on the old page; driven in a real browser.
+- **Fail-closed rider crypto (PR #35's change; `main` still had the `Math.random` token fallback and a weak-hash fallback):** `generateRiderRawToken` refuses without secure randomness and `hashRiderToken` refuses without SHA-256; `riderLinkProduction.test.ts` covers the `IS_MOCK=false` branch that the PR's own test did not. PR #35's staff-facing copy cleanup is included.
+- **`LiveTransportPlans.tsx`:** the two "Send to Rider" buttons and the modal are removed. That screen lists `booking_transport` rows, so `create_rider_link` (which looks the id up in `delivery_jobs`) could never accept the id.
+
+**Reconciled with `main`** (merged `9ad7785f`; `main` had moved about 90 commits)
+- **Team notes:** `main`'s **O-19 (every staff member may write team notes)** stands. A Coordinator-and-up change made earlier on this branch (migration 0191, `rbac`, tests, lifecycle, composer hiding) was dropped; `main`'s versions are kept.
+- **Lane B (T4-08 R1–R3, T4-02):** `main` already has Edge-only rider calls and the restored T4-01 dispatch wiring plus reschedule. Lane B's code was kept and my duplicate SEC-2 and INT-1 versions were dropped. My Edge-path tests (`riderLinkEdge.test.ts`) and a `DeliveryWorkspace` rider-entry test were adapted to lane B's messages and "Rider Link" label and stay as regression coverage.
+- Registry, new-rental timing and server-contracts test fixes: `main`'s versions kept.
+
+**Ruled**
+- Nothing new from Babin beyond O-19 standing. Claude build-time decision **B-0111-2** (stricter wins) is logged in `RULINGS-2026-11-01.md`, migration row 0204 is in `docs/plans/MIGRATION_LEDGER.md` (next free 0205), and `PERMISSIONS.md` §7.1 is updated.
+
+**Verified** (clean shared clone of this branch on a case-insensitive Windows filesystem; the clone's `node_modules` link was recreated by the driver when the environment removed it mid-run)
+
+| Gate | Result |
+|---|---|
+| `npm run lint` | PASS |
+| `lint:shell`, `lint:ui-copy`, `check:contrast` | PASS (run on merge commit `3ba63ba4`) |
+| `check:pglite` | PASS — 197/197 applied, 0 failed |
+| `check:lifecycle` | PASS — 66/66 |
+| financial integrity, `check:security`, `test:server-contracts`, `test:partial-return`, receipt test | PASS |
+| `npm run typecheck` / `npm run build` | **FAIL — 3 errors, none in this branch's files, identical on untouched `main` `9ad7785f`:** `src/components/records/EquipmentDraftPreview.tsx` and `equipmentDraftPreview.ts` (from #51) differ only by case, which a case-insensitive filesystem cannot tell apart (TS1149, TS2724, TS1261 in `RecordForm.tsx` and `equipmentDraftPreview.test.ts`) |
+| `VITE_DATA_SOURCE=mock npm run test:coverage` | **6449 / 6451** — one failure is `RecordForm … previews the unsaved equipment draft` (same casing clash; fails identically on untouched `main`, run alone); the other, `RecordForm … refuses an invalid save`, is a load flake (passes alone on both trees) |
+
+Order note: the database and lifecycle gates, lint, typecheck and coverage ran on the final code. `lint:shell`, `lint:ui-copy`, `check:contrast`, financial, `server_contracts`, `partial_return` and the receipt test ran on `3ba63ba4`, which differs from the final commit only by the typing and mock fixes in `RiderDeliveryPage.flow.test.tsx`. `npm run build` could not be shown green on this machine, and it is not green on `main` either.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 79 / 79 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 65 / 65 (100%) | +0 |
+| Lifecycle | steps green / total | 66 / 66 (100%) | +18 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 197 files · check:pglite 197/197 applied, 0 failed (recorded 2026-11-01T20:35:47.979Z). Suite: NOT PASSING — 6449/6451 passed, 2 failed (recorded 2026-11-01T20:34:11.472Z); source fingerprint matches.
+Coverage suite: NOT PASSING — 6449/6451 passed, 2 failed (recorded 2026-11-01T20:34:11.472Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-01T20:36:05.728Z.
+Counted by `npm run completion`, not typed. Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **`main` is red on case-insensitive filesystems (not this branch):** `EquipmentDraftPreview.tsx` and `equipmentDraftPreview.ts` (#51) break `typecheck`, `build` and one `RecordForm` test. Rename one of the two files (for example the `.ts` to `equipmentDraftPreviewModel.ts`) and update its imports; the lane that owns #51 should do it.
+- **Lane B, `DeliveryWorkspace.tsx`:** "Rider Link" exists only in the card view; the table view, which is the default, has no rider-link entry.
+- Apply 0204 to hosted Supabase only after Babin's backup step (N-5), before or with the Edge Function; apply order with 0191–0203 is unchanged.
+- Rider page and Edge Function P2s from the review are not touched: `alert()` errors, a hard-coded and inconsistent shop phone, a photo that is a `blob:` URL and never uploaded, raw database errors returned by the Edge Function, an unpinned `esm.sh` import, unbounded signature and photo size, and no state precondition on pickup or deliver.
+
 ## 2026-11-01 (evening) — R-3 Admin and Manager may void; R-4 staff discount is a money setting (0202); main's reds fixed; database checks green
 
 **Did**
