@@ -19,7 +19,7 @@ across the waves below.
 
 ---
 
-### T6-01 · Glossary first            status: todo · size: S · Claude drafts (arrives as a file) · Babin approves
+### T6-01 · Glossary first            status: drafted 1 Nov 2026 — 265 terms in `src/i18n/glossary.ne.json`, review sheet `docs/plans/T6-01-GLOSSARY-REVIEW.md`; awaiting Babin's approval · size: S · Claude drafts (arrives as a file) · Babin approves
 **What** — Draft Nepali for ~200 core terms used everywhere: the 11 nav items, the six booking
 statuses and flags, the four floor verbs, gate names, roles, money words (advance, deposit,
 outstanding, VAT), common buttons (Save, Cancel, Confirm, Back, Retry), date words, error words.

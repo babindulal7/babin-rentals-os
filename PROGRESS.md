@@ -1,5 +1,42 @@
 # Progress Log
 
+## 2026-11-01 — Claude's two cards: T6-01 Nepali glossary and T7-01 online booking spec
+
+**Did**
+- **T6-01:** `src/i18n/glossary.ne.json` — 265 Nepali terms in 15 groups (the 11 nav items plus New Rental, all 13 booking stages, floor verbs, checklist blockers, the 9 roles, money words, buttons, delivery, condition/cases, BS months and weekdays, errors). The 15 words already verified in `src/lib/i18n.ts` are kept word for word. Every term has `approved: null`. Seven genuine choices are flagged. Phone-friendly review sheet: `docs/plans/T6-01-GLOSSARY-REVIEW.md` (generated from the JSON). Guard test `src/i18n/glossary.ne.test.ts`.
+- **T7-01:** `docs/ONLINE_BOOKING_SPEC.md` — the seven screens, public objects, sign-in and binding on top of 0072, tables (`booking_requests`, lines, `payment_intents`, events, `online_profiles`), submit/confirm/decline flows, state machines, payment init/verify/allocate, a who-reads-who-writes cell table for anon / unbound / bound / each staff role, the D-5 and new D-10 test lists, the exact PERMISSIONS text that changes, and a build map to T7-02…T7-11.
+- Card statuses in `T6_NEPALI.md` and `T7_ONLINE_BOOKING.md`; two Owner actions added to `BABIN_ACTIONS.md`.
+
+**Ruled**
+- `RULINGS-2026-11-01.md`: 8 conflicts (X1–X8) and 13 ⭐ defaults for Babin to flip, 5 glossary rulings (G1–G5). The ones most worth reading: **X1** (online request must not use the 0188 temporary holds — D31), **X4** (there is no payment RPC today, so allocation is a new SQL function mirroring `recordPayment.ts`), **X5** (floor roles get no access to online requests), **X7** (opening email sign-up exposes every `authenticated` policy to strangers, so a "brand-new account reads zero staff rows" test, D-10, is a launch gate).
+- Found while reading: `docs/PERMISSIONS.md` §7 still says the portal tables are "deny-all today", but migration 0072 has been live since 31 Aug (`docs/live/schema_migrations_2026-10-15.txt`). Corrected in the spec's §13.1 text; PERMISSIONS itself is not edited until T7-03 (B-3).
+
+**Verified**
+- `npx vitest run src/i18n/glossary.ne.test.ts` → 7/7 pass (unique ids, no Devanagari digits, no "customer", the 15 existing i18n words unchanged, all nav items / 13 stages / 9 roles covered, nothing approved without a date).
+- `npx tsc --noEmit` → exit 0. `npx eslint src/i18n/glossary.ne.test.ts` → exit 0.
+- `npm run lint:ui-copy` → **4 violations, all in files this change does not touch** (`InternalNotesPage`, `LegacyExportControl`, `System`, `LegacyExportCard`); not caused by this work and not fixed here.
+- **Not verified:** the Nepali wording itself (a language judgement only Babin can approve — that is the card's whole point); the spec's behaviours (design only, nothing run against a database); `check:pglite`, `check:lifecycle`, the full test suite and the build were **not run** — no SQL or app code changed. Nothing was driven in the app; the changes are not rendered anywhere.
+- Spec claims I could not confirm from code, and said so in place: that `create_booking` and `confirm_booking_atomic` compose in one transaction; whether `payments.received_by` is nullable; every provider's API details.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 78 / 78 (100%) | — |
+| Real data | DB-only · mixed · seed · none / 62 | 52 · 0 · 0 · 10 | — |
+| DB enforcement | gates in Postgres | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 64 / 64 (100%) | — |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+
+Migrations 189 files · check:pglite not run this session. Counted by `npm run completion`, not typed. Structural coverage only; this work adds no counted item.
+
+## Remaining
+- **Babin approves T6-01** (7 flagged rows first, ~30 min; target 6 Dec) and **T7-01** (spec §0 and the 13 ⭐ defaults). Nothing downstream may treat either as final until then.
+- **T7-02…T7-11 are unblocked on the spec** but still need their own cards built; T7-03 needs T1-05 and T1-09, T7-02 needs T1-07.
+- **No card schedules Nepali for the public booking site** (T6 is staff screens only) — needs a card after T6-09.
+- The four `lint:ui-copy` violations above need their owner.
+- Every other open card belongs to a build lane (Codex-1, Gemini, Codex-2) or to Babin; Claude's role for those is review (PLAN §6), so they were not started here.
+
 ## 2026-10-31 — Operations popup: last explanatory sentences in Return and Reset
 
 **Did**

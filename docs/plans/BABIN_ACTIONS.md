@@ -22,6 +22,9 @@ editing this file or telling Claude at a check-in.
 - [ ] Create a Cloudflare account; later add three DNS records when asked: `app.`, `book.`, `staging-app.` (T1-07).
 - [ ] **Apply for eSewa and Khalti merchant accounts** — onboarding time is unknown, so start now (T7-06).
 - [ ] Ask your bank for the **Fonepay merchant API / dynamic QR credentials** for online payments (T7-05).
+- [ ] **Do not switch on email sign-up in Supabase Auth** until T7-10 says go; then, in the dashboard, turn
+      on **CAPTCHA (Cloudflare Turnstile)** *first*, set the email code expiry to 10 minutes, and only then
+      allow sign-ups (`docs/ONLINE_BOOKING_SPEC.md` §4 step 7 and §11 — an Owner action, N-7).
 - [ ] Create the email-service account Claude recommends — plan for **~3,000–4,000 emails a month**
       (automatic client emails) — and add its DNS records to `babinrentals.com` (T1-09).
 - [ ] Send the **membership plan table** (template below) (T8-01).
@@ -55,7 +58,10 @@ editing this file or telling Claude at a check-in.
 
 ## By Sun 6 Dec (20 Mangsir)
 
-- [ ] Approve the **Nepali glossary** (~200 words, one sitting) (T6-01).
+- [ ] Approve the **Nepali glossary** (265 terms, 7 flagged choices first, one sitting) — sheet:
+      `docs/plans/T6-01-GLOSSARY-REVIEW.md` (T6-01).
+- [ ] Read and approve the **online booking spec**, esp. §0 and the 13 ⭐ defaults in §13.2 —
+      `docs/ONLINE_BOOKING_SPEC.md` (T7-01).
 - [ ] **Live batch 1** — about an hour: fresh backup, then run the prepared apply script (T1-10).
 - [ ] Turn on `pg_cron` in the Supabase dashboard when asked (T5-04, T5-07).
 
