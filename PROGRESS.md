@@ -85,7 +85,7 @@ The 14 suite failures, all accounted for:
 | Lifecycle | steps green / total | 47 / 47 (100%) | +0 |
 | Overall | structural mean of five | ≈ 97% | — |
 Migrations 192 files · check:pglite 192/192 applied, 0 failed (recorded 2026-11-01T18:50:22.598Z). Suite: PASS — 6438/6438 passed, 0 failed (recorded 2026-11-01T19:20:45.857Z); source fingerprint matches.
-Coverage suite: NOT VERIFIED — invalid test receipt.
+Coverage suite: PASS — 6438/6438 passed, 0 failed (recorded 2026-11-01T19:37:26.916Z); source fingerprint matches.
 Gates read from .lifecycle-result.json, written 2026-11-01T13:08:20.074Z.
 Counted by `npm run completion`, not typed. Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
@@ -112,7 +112,7 @@ Counted by `npm run completion`, not typed. Structural coverage only. Functional
 | `test:server-contracts` | **PASS** (was the one pre-existing red; fixed by the 8b7ddd21 assertion change) |
 | `npm run build` (`tsc --noEmit && vite build`) | PASS |
 | `VITE_DATA_SOURCE=mock npm test` | **PASS — 6438 / 6438 tests in 523 files** (first time green in one run on this branch) |
-| `test:coverage` | NOT RUN (long; required before a live batch) |
+| `test:coverage` (`VITE_DATA_SOURCE=mock npm run test:coverage`) | **PASS — 6438 / 6438 in 523 files, exit 0, 540 s**; `src/lib` coverage measured at 67.27% statements, 75.22% branches, 51.29% functions, 67.21% lines (a measurement, not a target; no threshold was applied here) |
 
 How the run was assembled, for honesty: the gate copy's `node_modules` junction was removed by the environment partway through one run, which made `server_contracts`, `partial_return`, `build` and the suite fail instantly on a missing package (not code). Those four were re-run on the same `df7d6bff` copy with a driver that recreates the junction; the full suite ran once more alone and passed in 614 s on a quiet machine. The lint/database gates before the interruption are from the same source. The previous run's 11 "load timeout" failures (`listPageToolbars.render`, `realWorkspaceGuidance`) did not recur.
 
@@ -150,7 +150,7 @@ How the run was assembled, for honesty: the gate copy's `node_modules` junction 
 - Verified: `node scripts/test-unit-lifecycle-and-contracts.mjs` — all 58 integration assertions pass, exit 0 (was 1 failing). Other gates not re-run for this one-assertion test change.
 
 ### Remaining
-- `test:coverage` has not been run on this branch (`npm run completion` therefore still exits 1: "Coverage suite: NOT VERIFIED"). `listPageToolbars.render` and `realWorkspaceGuidance` take 40–170 s on a loaded machine; consider a longer timeout or serial run for them.
+- `listPageToolbars.render` and `realWorkspaceGuidance` take 40–170 s on a loaded machine; consider a longer timeout or serial run for them. `npm run completion` now exits 0 on this branch.
 - Run `test:coverage` before any live batch.
 - Not reviewed: the notes feed still shows **Edit** on every note to a Warehouse user (seen in the browser check). Whether editing is allowed for floor roles is a separate question from R-0111-1.
 - Apply 0191 and 0192 to hosted Supabase only after Babin's backup step (N-5); not done. 0192 must reach the database before or with the Edge Function that calls the RPCs as `service_role`.

@@ -185,7 +185,7 @@ GitHub Actions run 41290665633: **UNVERIFIED** (HTTP 404; `gh` unauthenticated).
 | Full mock suite | **FAIL — 6401/6413**: 3 are PR #35's own repairs; 2 `DeliveryWorkspace` (T4-01) fail identically on untouched `main`; 7 `realWorkspaceGuidance` are load timeouts that pass alone |
 | `test:coverage` | NOT RUN |
 
-**Latest run — `df7d6bff` (PR #35 merged, SEC-1/2/3, FUNC-1, INT-1, 0191, 0192): every gate in the list PASSES, including `test:server-contracts` and the full suite (6438/6438); `test:coverage` NOT RUN.** Nothing was pushed, and 0191/0192 are written and verified locally only (not applied). The paragraph below is the earlier run, kept as history.
+**Latest run — `df7d6bff` (PR #35 merged, SEC-1/2/3, FUNC-1, INT-1, 0191, 0192): every gate in the list PASSES, including `test:server-contracts`, the full suite (6438/6438) and `test:coverage` (6438/6438, exit 0); `npm run completion` exits 0.** Nothing was pushed, and 0191/0192 are written and verified locally only (not applied). The paragraph below is the earlier run, kept as history.
 
 **Re-run on `5046a9af` (after the INT-1 fix):** every gate above is unchanged except the suite — the 2 `DeliveryWorkspace` failures are gone (6401/6415: 3 are PR #35's repairs, 11 are load timeouts in `listPageToolbars.render` and `realWorkspaceGuidance` that pass 15/15 twice when re-run on the same commit). `test:server-contracts` still fails on the same single assertion. The suite was not seen fully green in one run, so "all gates green" is still not claimable.
 
