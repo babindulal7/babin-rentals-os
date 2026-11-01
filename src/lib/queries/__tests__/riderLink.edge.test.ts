@@ -4,6 +4,7 @@ import {
   fetchRiderJobByToken,
   riderMarkJobPickedUp,
   riderCompleteJobDelivery,
+  createRiderLink,
 } from '../riderLink'
 
 const edge = vi.hoisted(() => ({
@@ -82,6 +83,75 @@ describe('one-time rider link — Edge-only production boundary (0191)', () => {
       },
     })
     expect(edge.rpc).not.toHaveBeenCalled()
+  })
+
+  it('issues a live rider link only through Edge with a request key, never a client-generated hash', async () => {
+    vi.stubGlobal('crypto', { randomUUID: () => '44444444-4444-4444-8444-444444444444' })
+    try {
+      edge.invoke.mockResolvedValue({
+        data: { data: {
+          linkId: 'link-101',
+          rawToken: 'a'.repeat(32),
+          expiresAt: '2026-11-02T00:00:00Z',
+        } },
+        error: null,
+      })
+
+      const issued = await createRiderLink(
+        '00000000-0000-4000-8000-000000000101',
+        'Ram Rider',
+        '9800000000',
+        'Coordinator',
+      )
+      expect(issued.rawToken).toBe('a'.repeat(32))
+      expect(issued.linkId).toBe('link-101')
+      expect(issued.linkUrl).toContain('/rider/' + 'a'.repeat(32))
+      expect(edge.invoke).toHaveBeenCalledWith('rider-link', { body: {
+        action: 'issue',
+        job_id: '00000000-0000-4000-8000-000000000101',
+        rider_name: 'Ram Rider',
+        rider_phone: '9800000000',
+        request_key: '44444444-4444-4444-8444-444444444444',
+      } })
+      const sent = edge.invoke.mock.calls[0][1].body
+      expect(sent).not.toHaveProperty('token_hash')
+      expect(sent).not.toHaveProperty('token')
+      expect(edge.rpc).not.toHaveBeenCalled()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('fails closed when a live link cannot be issued and never retries via database RPC', async () => {
+    vi.stubGlobal('crypto', { randomUUID: () => '55555555-5555-4555-8555-555555555555' })
+    try {
+      edge.invoke.mockResolvedValue({ data: { error: 'Already issued' }, error: new Error('Conflict') })
+      await expect(createRiderLink(
+        '00000000-0000-4000-8000-000000000101',
+        'Ram Rider',
+        '9800000000',
+        'Coordinator',
+      )).rejects.toThrow(/Could not issue a rider link/)
+      expect(edge.rpc).not.toHaveBeenCalled()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('cannot issue a live token without secure request identity', async () => {
+    vi.stubGlobal('crypto', undefined)
+    try {
+      await expect(createRiderLink(
+        '00000000-0000-4000-8000-000000000101',
+        'Ram Rider',
+        '9800000000',
+        'Coordinator',
+      )).rejects.toThrow(/Secure request identity is unavailable/)
+      expect(edge.invoke).not.toHaveBeenCalled()
+      expect(edge.rpc).not.toHaveBeenCalled()
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 
   it('rejects empty tokens before contacting the Edge Function', async () => {
