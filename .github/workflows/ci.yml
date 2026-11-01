@@ -22,7 +22,10 @@ jobs:
   verify:
     name: typecheck · test · build
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # The full mock suite + PGlite gates consume about 15 minutes before
+    # coverage begins. A 20-minute cap cancelled otherwise-green CI during
+    # coverage on run #735. Keep every gate and allow coverage to finish.
+    timeout-minutes: 40
 
     steps:
       - name: Checkout
