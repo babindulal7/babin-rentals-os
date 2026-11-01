@@ -168,8 +168,7 @@ export const FINANCIAL_SECTIONS: Section[] = [
       },
       {
         label: 'Allow overbooking',
-        note: 'Off by default. When on, a booked/maintenance chip in Add Item becomes tappable and opens an override — sub-rent (preferred) or book anyway, both requiring a written reason and a named approver.',
-        on: false,
+        note: 'This device only — replaced by a per-product switch in T2-23. Off by default. When on here, a booked/maintenance chip in Add Item opens an override (sub-rent preferred); no shared or server-side policy is changed.',
       },
     ],
   },
