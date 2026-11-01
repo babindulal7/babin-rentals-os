@@ -4381,15 +4381,18 @@ STEPS.push({
       assertEq(authIssueNew, false, 'authenticated cannot invoke privileged server issuance')
       assertEq(serviceIssueNew, true, 'service_role can issue a server-minted rider token')
 
+      // The earlier L47 fixture already uses Outbound for booking a and b
+      // and Return for booking a. Use Return for booking b so this probe
+      // exercises rider issuance, not the one-leg-per-booking uniqueness gate.
       const issueJob = '00000000-0000-4000-8000-00000000b994'
       const issueKey = '00000000-0000-4000-8000-00000000c994'
       await q(`
         insert into delivery_jobs (
           id, client_uuid, booking_id, branch_id, leg, scheduled_at, status, created_by, updated_by
         ) values (
-          $1, gen_random_uuid(), $2, $3, 'Outbound', now() + interval '2 hours', 'Scheduled', $4, $4
+          $1, gen_random_uuid(), $2, $3, 'Return', now() + interval '2 hours', 'Scheduled', $4, $4
         )
-      `, [issueJob, bookingIds.a, BRANCH, U.Coordinator])
+      `, [issueJob, bookingIds.b, BRANCH, U.Coordinator])
       const serverHash = createHash('sha256').update('server-generated-rider-token-for-test').digest('hex')
       const issued = (await q(
         `select * from issue_rider_link_server($1, $2, 'Test Rider', '9801234567', $3, $4)`,
