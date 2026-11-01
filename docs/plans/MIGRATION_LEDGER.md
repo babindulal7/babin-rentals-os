@@ -36,7 +36,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0200 | T3-14b | draft-at-confirm | lane-c/T3-14b-draft-at-confirm | claimed |
 | 0201 | T8-09 | collateral-masking-chars | (main, 1 Nov) | written |
 | 0202 | T8-09 | staff-discount-is-money-setting | claude/file-update-d4b7b1 | verified |
-| 0203 | SEC-05/W68 | restore-driver-client-view-scopes | fix/2026-11-01-driver-client-view-scope-0203 | claimed; staging required |
+| 0203 | SEC-05/W68 | restore-driver-client-view-scopes | fix/2026-11-01-driver-client-view-scope-0203 | written; staging required |
 
 ## Expected migrations (not yet claimed)
 
