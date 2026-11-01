@@ -100,7 +100,7 @@ export const SYSTEM_SECTIONS: Section[] = [
       },
       {
         label: 'Legacy data backup',
-        note: 'Download old browser-stored data from this device before starting fresh (Ruling D28, Law 3).',
+        note: 'Download old browser-stored data from this device before starting fresh.',
         custom: <LegacyExportControl />,
       },
       /*
