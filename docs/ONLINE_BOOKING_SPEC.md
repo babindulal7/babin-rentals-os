@@ -588,6 +588,7 @@ replaced by this list.
 | D-10.3 | brand-new account | `auth_is_staff()`, `auth_user_role()` | `false`, `Client` |
 | D-10.4 | brand-new account | call `portal_claim_by_verified_email()` twice | idempotent, binds nothing, one link request |
 | D-10.5 | brand-new account | direct REST `POST /auth/v1/otp` **without** a Turnstile token | refused (CAPTCHA on in Auth) |
+| D-10.6 | brand-new account | call each **token-gated** RPC directly with a made-up hash — today `get_rider_job_by_token`, `rider_mark_picked_up`, `rider_complete_delivery` (migration 0190) | refused at the **grant** (service role only), not merely by "invalid token"; requires finding R1 in `RULINGS-2026-11-01.md` to be fixed first |
 
 **Anonymous**
 
