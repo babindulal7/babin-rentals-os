@@ -71,6 +71,88 @@ Migrations 189 files · check:pglite not run this session. Counted by `npm run c
 - The four `lint:ui-copy` violations above need their owner.
 - Every other open card belongs to a build lane (Codex-1, Gemini, Codex-2) or to Babin; Claude's role for those is review (PLAN §6), so they were not started here.
 
+## 2026-11-01 — Audit §15 follow-ups: Law 15 copy fix + the three lint errors — suite down to 4 failing tests
+
+**Did**
+- Committed on main `7ba929c4` (local, not pushed): **T-1** `BookingConflictModal` visible copy "contact customer" → "contact client" (+ its source comment); **L-1/L-2** `DepositSetup` — the *proper* fix after the audit's first suggestion proved wrong: both dead `_embedded`/`_onDone` aliases and their `@ts-ignore` suppressions removed, unused stub props taken as `_props: DepositSetupProps`; **L-3** `DeliverySection` — added the missing effect cleanup `return () => { mounted = false }` (the guard was dead; also stops a state write after unmount/zone change).
+- **Corrected the record:** the audit §15.1 L-1/L-2 row said the `@ts-ignore` comments "suppress nothing". Wrong — removing only the comments turned `typecheck` red with real `TS6133`s; the comments were masking genuine errors. §15.1 corrected, §15.3 added (fixed / discovered).
+- Recorded a new red gate: **`lint:ui-copy` fails on main** — 4 developer-text violations ("Law 3, D28"-style) in lane-B files: `InternalNotesPage.tsx:816`, `LegacyExportControl.tsx:115`, `System.tsx:103`, `LegacyExportCard.tsx:110`. Not fixed here (other lanes' files).
+- An earlier uncommitted version of these edits was swept by the concurrent clean-tree workflow; re-applied and committed so the work survives.
+
+**Ruled**
+- Nothing new. The copy change enforces standing Law 15/17; no product decision was made.
+
+**Verified**
+- `npm run typecheck` — 0 errors.
+- `npm run lint` — 0 errors, 0 warnings (was 3).
+- `VITE_DATA_SOURCE=mock npm test` — **513/516 files, 6,332/6,336 tests** (was 511/516, 6,330/6,336). `law17` (T-1) and `RecordForm` (T-5) now green. Remaining 3 files / 4 tests, all recorded in audit §15.2: registry groups ×2 (T-2/T-3), team-note cell (T-4), `useNewRentalTiming` (T-6).
+- Focused receipts: `law17` + `BookingConflictModal` 5/5; `DeliveryZonesControl` + `DeliveryWorkspace` green.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 78 / 78 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 62 | 52 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 64 / 64 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 189 files · check:pglite Historical, incomplete or failed receipt (2026-10-31T22:17:15.261Z); current source NOT VERIFIED. Suite: NOT PASSING — 6332/6336 passed, 4 failed (recorded 2026-10-31T22:34:22.668Z); source fingerprint matches.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-31T22:18:17.556Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+`npm run completion` exited 1: the suite is not fully passing (4 known tests) and the DB-gate receipts are historical — nothing above was typed by hand.
+
+### Remaining
+- **Rulings needed before the last 4 tests can move:** (1) **team-note create cell** — the test expects all staff, `rbac.canCreateTeamNote` admits Coordinator+, and lifecycle L42 asserts all staff; whichever way it goes needs the B-3 move (PERMISSIONS.md + T-1 fixture + test). (2) **New Rental default pickup time** — 06:00 shipped vs 09:00 expected; R-39 "defaults are doctrine" says the shipped value must be the deliberate one.
+- **T-2/T-3:** the rentals registry returns 6 action groups; the spec matrix expects 5 — the owning lane decides test-vs-code.
+- **`lint:ui-copy`** — 4 developer-text violations in lane-B files (list above).
+- Performance work unchanged: P0 list in `NEMOTRON_PERFORMANCE_AUDIT_02.md` §8.
+- Next session starts with: ask Babin for the two rulings; with either answered, its test is a ten-minute fix.
+
+## 2026-11-01 — Nemotron Task 02 audit: performance & responsiveness blueprint + live gate receipts (read-only)
+
+**Did**
+- Produced `NEMOTRON_PERFORMANCE_AUDIT_02.md` (648 lines): per-screen findings (Today, Rentals, Pack/Handover/Return/Reset, Inventory, Clients, Finance), the API/DB query audit, React findings, the 375–1440px responsive audit, ten ranked optimizations, P0/P1/P2 with exact files, regression risks + proposed tests, per-lane task cards (PERF-01…PERF-12), and a before/after measurement plan that inherits the R-39 tap budgets and names the device lab.
+- Ran the gates on the live checkout and recorded each receipt with its HEAD: `typecheck` **PASS**; `lint` **FAIL — 3** (exact one-line fixes in §15.1); `VITE_DATA_SOURCE=mock npm test` — **6,330 / 6,336 tests (5 files / 6 failed)**; `npm run build` **PASS** (full chunk table §15.0: main 153.55 kB gzip; scanner + charts verified lazy; PWA precache 7,580 KiB ≈ 7.4 MB). Isolated re-run of the 5 failing test files: **4 reproduce**, one is an order-dependent flake.
+- Recorded the two moving-tree windows: the 20-error typecheck window on `9e219db4` (repaired by `a26bff96`), and today's red gates on `c3121769` (§15.2 — the Law-15 "customer" hit in `BookingConflictModal.tsx:328`, the rentals registry 6-vs-5 groups, the team-note create cell, `useNewRentalTiming` 06:00-vs-09:00, plus one `RecordForm` flake).
+
+**Ruled**
+- Nothing new. No product, permission, gate, money or migration decision was made; audit only. Two disagreements are flagged for a ruling rather than decided: the team-note **create** cell (test expects all staff; `rbac.canCreateTeamNote` admits Coordinator+) and the New Rental default pickup time (06:00 shipped vs 09:00 in the test).
+
+**Verified**
+- `npm run typecheck` — 0 errors (HEAD `c3121769`).
+- `npm run lint` — 3 errors; unchanged since the T3-14b receipt.
+- `VITE_DATA_SOURCE=mock npm test` — 511/516 files, 6,330/6,336 tests; 4 of the 5 failing files reproduce in isolation; `RecordForm.test.tsx` passes alone.
+- `npm run build` — PASS; chunk sizes and PWA precache measured (§15.0).
+- Not re-run this session (inherited receipts only, named in §15.2): `check:pglite`, `check:lifecycle`, financial-integrity, `check:security`, server-contracts, partial-return, `lint:shell`, `lint:ui-copy`, `check:contrast`, `test:coverage`. No screen changed, so the §1 screen check did not apply.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 78 / 78 (100%) | — |
+| Real data | DB-only · mixed · seed · none / 62 | 52 · 0 · 0 · 10 | — |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 64 / 64 (100%) | — |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 189 files · check:pglite Historical, incomplete or failed receipt (2026-10-31T16:38:39.184Z); current source NOT VERIFIED. Suite: Historical suite: 6330/6336 passed, 6 failed (recorded 2026-10-31T18:38:47.094Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-10-31T19:24:50.804Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+`npm run completion` exited 1 this run: DB-enforcement and Lifecycle are `not measured` (no current receipt) and the PGlite receipt is historical — the exit reflects the tree's red gates, not this audit's output; nothing above was typed by hand.
+
+### Remaining
+- Lint: fix L-1…L-3 (§15.1) — two `@ts-ignore` lines and one missing effect cleanup (`DeliverySection.tsx:130`).
+- Tests: fix the five files in §15.2 — **T-1 is a Law-15 product violation ("customer" in `BookingConflictModal.tsx:328`), not a stale test**; T-4 and T-6 need a ruling before code.
+- Rulings needed: team-note create cell (with the B-3 move if the narrower cell stays — test, rbac and lifecycle L42 currently disagree); New Rental default pickup time.
+- Performance work begins at the audit's P0 (§8): AbortController in `useList`, table virtualization, server-side client search, merged Rentals query, indexes `0201` (claim first), debounced search (P0-6).
+- Next session starts with: the T-1 one-word copy fix plus the L-1…L-3 lint fixes — all under an hour together.
+
 ## 2026-10-31 — Operations popup: last explanatory sentences in Return and Reset
 
 **Did**

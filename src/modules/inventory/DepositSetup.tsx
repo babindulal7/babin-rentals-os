@@ -17,15 +17,9 @@ import './inventory.css'
 export interface DepositSetupProps {
   embedded?: boolean
   onDone?: () => void
-  _embedded?: boolean
-  _onDone?: () => void
 }
 
-export default function DepositSetup({ embedded = false, onDone }: DepositSetupProps = {}) {
-  // @ts-ignore
-  const _embedded = embedded
-  // @ts-ignore
-  const _onDone = onDone
+export default function DepositSetup(_props: DepositSetupProps = {}) {
   const { user } = useAuth()
   const role = user?.role ?? 'Client'
   const gctx = gateContext(role)

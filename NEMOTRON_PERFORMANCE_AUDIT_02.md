@@ -610,14 +610,54 @@ Vite also warns of two dual-import chunking inefficiencies (`rbac.ts` dynamic+st
 
 | # | File:line | Error | Cause | Minimal fix |
 |---|-----------|-------|-------|-------------|
-| L-1 | `src/modules/inventory/DepositSetup.tsx:25` | `ban-ts-comment` — use `@ts-expect-error` instead of `@ts-ignore` | A `@ts-ignore` on `const _embedded = embedded` — a line with **no type error** for tsc to suppress (`tsc` is clean on this file today; `@ts-expect-error` would itself error here). The file is a T3-02 stub (`// Implementation here`). | Delete the two comment lines (25, 27). Keep the `_`-prefixed aliases (tsc accepts them) or drop both alias pairs and the props when the stub is implemented. |
-| L-2 | `src/modules/inventory/DepositSetup.tsx:27` | same | same | same |
+| L-1, L-2 | `src/modules/inventory/DepositSetup.tsx:25,27` | `ban-ts-comment` — use `@ts-expect-error` instead of `@ts-ignore` | **Corrected 1 Nov while applying the fix:** the two `@ts-ignore` comments **were** suppressing real errors — `TS6133: '_embedded'/'_onDone' is declared but its value is never read` (proven when removing only the comments turned `typecheck` red). The original "suppresses nothing" reading was wrong; `tsc` passed *because of* the suppressions. The file is a T3-02 stub (`// Implementation here`). | **Applied (committed):** delete both dead aliases and the two `_*-` interface members they served; take the unused props as `_props: DepositSetupProps` (`_`-prefixed params are exempt from `noUnusedParameters` — the same convention as `LineItemTree.tsx:24`'s `_name`). Caller `<DepositSetup embedded />` (`Inventory.tsx:1896`) is unaffected; the props stay in the interface for the T3-02 implementation. |
 | L-3 | `src/modules/rentals/booking/DeliverySection.tsx:130` | `prefer-const` — `'mounted' is never reassigned` | The second effect (zone-fee auto-fill) declares `let mounted = true` but **has no cleanup**, unlike the first effect at line 124 which returns `() => { mounted = false }`. The guard `if (mounted && …)` at :133 therefore guards nothing, and the state write can land after unmount. Lint's autofix (`const`) would silence the rule while keeping the dead guard — the real fix is the missing cleanup. | Add `return () => { mounted = false }` to the effect at :128-140. Resolves lint AND makes the guard real. |
 
 > **Process note for Babin:** both failures arrived with recent lane merges (T3-02 `af06b08a`,
 > T4-07 `07731b00`) — exactly the class of defect the "run every gate before you say done" rule
 > (`AGENTS.md` → verification order; `docs/plans/README.md` → gates) catches when followed. The
 > earlier 20-error window was fixed commit-by-commit rather than reverted; no action needed there.
+
+### 15.2 The failing test files — measured, reproduced (1 Nov 2026)
+
+**Full suite** (`VITE_DATA_SOURCE=mock npm test`, started 00:00): **5 files failed / 511 passed (516);
+6 tests failed / 6,330 passed (6,336)** in 1,423 s.
+**Isolated re-run** of exactly those 5 files (00:48, HEAD `c3121769`): **4 of 5 reproduce;
+`RecordForm.test.tsx` passes alone → that one failure is order-dependent (flaky under the full run),
+not a current defect.** The repo advanced again during this work
+(`a26bff96 → 4730a832 "nimtron" → c3121769 "nem"`), and an **uncommitted** edit to
+`scripts/e2e-lifecycle.mjs` was present in the tree — re-verify before acting on any line here.
+
+| # | File | Failure (reproduced) | Reading | Owner |
+|---|------|----------------------|---------|-------|
+| T-1 | `src/lib/__tests__/law17.test.ts` | `BookingConflictModal.tsx:328` contains **"6. Keep draft & contact customer"** — the word "customer" is banned in the UI layer (Law 15 / Law 17; `CLAUDE.md` "the word 'customer' appears nowhere"). | **A product-law violation on `main`, not a stale test.** One-word copy fix: "client". From the smart-availability/conflict-modal work (`eaff8493`). | Rentals (that file's owner) |
+| T-2, T-3 | `src/lib/__tests__/rentalMoreActionsRegistry.test.ts` (2 tests) | The registry returns **6 action groups** where the specification matrix expects 5 (`expect(groups).toHaveLength(5)`). | Either the new group must join the matrix (test update) or it should not exist (code change) — **cannot be decided from the test alone**; the owning lane knows which group it added. | Rentals actions |
+| T-4 | `src/actions/notes/__tests__/createTeamNote.test.ts` | Test expects **Warehouse and Driver** can create notes; current `rbac.canCreateTeamNote` (`rbac.ts:711-713`) admits **Owner/Admin/Manager/Coordinator only** (verified identical at `a26bff96` and HEAD). | The T4-04 PROGRESS entry recorded `isStaff(role)`; the shipped rule is narrower, and the T4-04 lifecycle step (L42) asserts all eight staff roles create notes. **UI ⊆ DB still holds (narrower UI is safe), but test, rbac and the DB gate now disagree on the product cell — needs a ruling + the B-3 move (PERMISSIONS.md + T-1 fixture) once decided.** | Lane B (T4-04) + a ruling |
+| T-5 | `src/components/records/__tests__/RecordForm.test.tsx` | Full run: focus landed on `record-name` instead of `record-pan_vat` after clicking the error summary. **Passes in isolation.** | Order-dependent/flaky — find the inter-test coupling or treat as contention noise from the shared runner; not currently a product defect. | UI kit |
+| T-6 | `src/modules/rentals/booking/__tests__/useNewRentalHooks.test.tsx` (`useNewRentalTiming`) | Default `pickupTime` is **'06:00'**; the test expects **'09:00'**. Known since the T3-14b entry ("1 pre-existing failure in `useNewRentalTiming`"). | Either the shipped default changed deliberately (06:00 matches the operational-day start) or the test is stale. **R-39 "defaults are doctrine" says whichever ships must be the deliberate value** — a one-line decision + matching edit. | New Rental (lane C) |
+
+### 15.3 Fixed / discovered since measurement
+
+- **Fixed 1 Nov (commit `7ba929c4`):** **T-1** (`BookingConflictModal` copy → "contact client"),
+  **L-1/L-2** (proper fix — the aliases and their suppressions removed; §15.1 row corrected),
+  **L-3** (the missing `useEffect` cleanup). Verified: `npm run lint` **0 errors**,
+  `typecheck` **0 errors**, full suite **513/516 files · 6,332/6,336 tests** (was 511/516 ·
+  6,330/6,336 — `law17` and `RecordForm` now green). Remaining 3 files / 4 tests:
+  T-2/T-3 (registry groups), T-4 (team-note cell — needs a ruling) and T-6 (New Rental default
+  time — needs a ruling).
+- **Newly measured: `npm run lint:ui-copy` is RED on main** — 4 developer-text violations
+  (lane-B files, none touched by this audit): `src/modules/notes/InternalNotesPage.tsx:816`,
+  `src/modules/settings/sections/LegacyExportControl.tsx:115`,
+  `src/modules/settings/sections/System.tsx:103`,
+  `src/modules/today/LegacyExportCard.tsx:110` — "(Law 3, D28)"-style references in user-visible
+  copy. For the owning lane.
+
+**Not re-run by this audit** (inherited receipts only, listed so nothing looks verified that is not):
+`check:pglite` (last receipt 189/189 ✔), `check:lifecycle` (last receipt: partially repaired —
+`debf5305` fixed 6 of the T3-14b failures, "7 failures pre-existing or test setup"), financial
+integrity, `check:security`, `test:server-contracts`, `test:partial-return`, `lint:shell`,
+`check:contrast`, `test:coverage`. The full gate list is `docs/plans/README.md` → "Gates every card
+must pass".
 
 ---
 
