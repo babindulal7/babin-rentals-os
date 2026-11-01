@@ -3403,6 +3403,36 @@ STEPS.push({
         })
       }
 
+      // Staff sessions can execute the RPC; anonymous sessions cannot.
+      const createTeamNoteSignature = 'public.create_team_note(text,uuid,text,text,text,text[],boolean)'
+      const staffCanExecute = await one(
+        `select has_function_privilege('authenticated', $1, 'EXECUTE')`,
+        [createTeamNoteSignature],
+      )
+      const anonCanExecute = await one(
+        `select has_function_privilege('anon', $1, 'EXECUTE')`,
+        [createTeamNoteSignature],
+      )
+      assertEq(staffCanExecute, true, 'authenticated users have the team-note RPC grant (role checked inside)')
+      assertEq(anonCanExecute, false, 'anonymous users have no team-note RPC grant')
+
+      // An internal staff member cannot forge another staff author's identity
+      // through the table, even though direct INSERT is allowed by policy.
+      await as('Driver', async () => {
+        await q('savepoint forged_note_author')
+        try {
+          await refuses(
+            'Driver cannot forge Owner as Team Note author',
+            `insert into team_notes(body, author_id) values ('Impersonated note', $1)`,
+            [U.Owner],
+            /row-level security|permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint forged_note_author')
+          await q('release savepoint forged_note_author')
+        }
+      })
+
       // 4. Client cannot create team notes (refused)
       await as('Client', async () => {
         await q('savepoint client_create_note')
