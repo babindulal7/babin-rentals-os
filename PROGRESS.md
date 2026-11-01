@@ -31,9 +31,10 @@
   migration 0203 meets the local R-35 verification bar only.
 - `npm run check:security` — 18 Phase 0 SQL regressions, operations-grant checks, and 14/14 Reset
   branch regression groups passed; new SEC-05 assertions passed in the harness.
-- GitHub Actions run `41351077728` on `main` SHA `315ba2a` passed through Build but was still in
-  Coverage when checked. Run `41345532036` completed successfully at earlier SHA `94f07ce`; neither
-  run certifies this branch's new test assertion. The active run must be rechecked before closing.
+- GitHub Actions run `41351077728` on `main` SHA `315ba2a` passed through Build but remains in
+  Coverage when rechecked. Run `41345532036` completed successfully at earlier SHA `94f07ce`.
+  This branch's push and PR runs (`41352962748`, `41352967825`) are `action_required`; no full CI
+  result yet certifies commit `5c20f9a`.
 - `npm run completion` printed the following counts and exited 1 because the Vitest suite was not
   run this session and its coverage receipt is invalid:
 
@@ -58,8 +59,8 @@ Migrations 196 files · `check:pglite` 196/196, 0 failed (recorded 2026-11-01T21
   W68 fields. Check effective roles and predicates for `staff_directory_v` advisor warning.
 - Complete authorized backup/rollback planning, deployment/schema reconciliation, and pickup,
   return, financial report, and Equipment Preview smoke tests only after staging acceptance.
-- Recheck full same-head CI after this change; current main CI had not yet completed Coverage when
-  last queried. No production apply until all staging checks and explicit approval are complete.
+- Complete full same-head CI; main run 413510 is still in Coverage and this branch's CI requires
+  action/approval. No production apply until all staging checks and explicit approval are complete.
 
 ## 2026-11-02 — Verification pass: every gate green except one flaky file; rider-link live contract mismatch found (P0)
 
