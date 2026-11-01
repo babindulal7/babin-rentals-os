@@ -21,8 +21,10 @@ describe('createTeamNote', () => {
   const mockRpc = vi.mocked(supabase.rpc);
   const validContext = { userId: 'user-123', role: 'Coordinator' as const };
   const ownerContext = { userId: 'owner-123', role: 'Owner' as const };
-  const warehouseContext = { userId: 'warehouse-123', role: 'Warehouse' as const };
-  const driverContext = { userId: 'driver-123', role: 'Driver' as const };
+  const staffRoles = [
+    'Owner', 'Admin', 'Manager', 'Coordinator',
+    'Warehouse', 'Technician', 'Accounts', 'Driver',
+  ] as const;
   const clientContext = { userId: 'client-123', role: 'Client' as const };
 
   beforeEach(() => {
@@ -42,21 +44,22 @@ describe('createTeamNote', () => {
     );
   });
 
-  it('refuses Warehouse and Driver note creation under the current Coordinator+ capability gate', async () => {
-    // B-1 stricter-wins: do not silently widen the action role gate to match
-    // migration 0185's broader staff policy. Reconcile the DB in a reviewed
-    // security migration before claiming end-to-end parity.
-    await expect(createTeamNote({ body: 'Gear needs QC' }, warehouseContext))
-      .rejects.toThrow(ActionPermissionError);
-    await expect(createTeamNote({ body: 'Traffic delay on Ring Road' }, driverContext))
-      .rejects.toThrow(ActionPermissionError);
-    expect(mockRpc).not.toHaveBeenCalled();
+  it.each(staffRoles)('allows authenticated internal staff role %s to create a note', async (role) => {
+    // RULING 2026-11-01: all eight internal seats, including floor and Driver,
+    // may post operational notes. The RPC remains protected by staff-only SQL.
+    mockRpc.mockResolvedValue({ data: 'note-uuid-staff', error: null } as any);
+    const result = await createTeamNote({ body: 'Shift update' }, { userId: `user-${role}`, role });
+    expect(result.noteId).toBe('note-uuid-staff');
+    expect(mockRpc).toHaveBeenCalledWith('create_team_note', expect.objectContaining({
+      p_body: 'Shift update',
+    }));
   });
 
-  it('throws ActionPermissionError for Client role', async () => {
+  it('rejects Client before any database RPC can run', async () => {
     await expect(
       createTeamNote({ body: 'Test note' }, clientContext)
     ).rejects.toThrow(ActionPermissionError);
+    expect(mockRpc).not.toHaveBeenCalled();
   });
 
   it('throws validation error for empty body', async () => {
