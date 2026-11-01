@@ -41,6 +41,7 @@ export type SettingKey =
   | 'paymentTermsDays'
   | 'overdueStopDays'
   | 'latePaymentPercentPerMonth'
+  | 'staffDiscountPercent'
   | 'allowDepositSkipOnClose'
   | 'sessionTimeoutMinutes'
   | 'passwordPolicy'
@@ -190,6 +191,15 @@ export const SETTING_SPECS: Record<SettingKey, SettingSpec> = {
       if (n > 365) return 'Past a year this is a write-off decision, not a stop threshold.'
       return null
     },
+  },
+  /* W68 / Law 10 — T8-09 reads this in the New Rental pricing pipeline; 20 is the figure it already assumed.
+     TODO(decision): `settings_is_money_key()` (0158) does not list it, so the database would let
+     money-blind roles read it. Adding it is a migration — T8-09 / Babin to decide. */
+  staffDiscountPercent: {
+    default: 20,
+    kind: 'number',
+    suffix: '%',
+    validate: (v) => percent(v, 'Staff discount'),
   },
   latePaymentPercentPerMonth: {
     default: 1.5,

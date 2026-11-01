@@ -167,7 +167,7 @@ export function RentalPricingSection({
                   <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
                     {staffDiscountRemoved
                       ? 'Removed — standard rates apply'
-                      : 'Automatically applied for staff client (Law 10 — removable)'}
+                      : 'Automatically applied for staff client — you can remove it'}
                   </div>
                 </div>
                 <Button

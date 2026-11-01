@@ -162,7 +162,7 @@ export const FINANCIAL_SECTIONS: Section[] = [
     fields: [
       {
         label: 'Staff rental discount',
-        note: 'Automatic discount percentage applied on bookings for clients marked as Staff. Default 20%. Editable and removable per booking (W68, Law 10).',
+        note: 'Automatic discount percentage applied on bookings for clients marked as Staff. Default 20%. Staff can change or remove it on each booking.',
         settingKey: 'staffDiscountPercent',
         readBy: 'New Rental pricing pipeline',
       },
