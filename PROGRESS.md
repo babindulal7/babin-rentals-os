@@ -1,5 +1,36 @@
 # Progress Log
 
+## 2026-11-01 — Team Notes all-internal-staff policy alignment (draft PR #38)
+
+**Did**
+- Prepared draft source-only review branch `fix/2026-11-01-team-notes-all-internal-staff`; it includes CI repair work from an earlier PR #36 head (not merged).
+- Changed `canCreateTeamNote` to use the same `isStaff` check as read/acknowledge. Existing TeamNotesPanel UI and action dispatcher use this predicate.
+- Added positive `createTeamNote` action tests for all eight internal staff roles, negative Client-before-RPC test, real role-matrix predicates, and PGlite lifecycle L42 checks for staff RPC writes, author snapshots, Client direct-INSERT/RPC denial, anon EXECUTE denial, and forged-author rejection.
+- Documented the decision in `RULINGS-2026-11-01.md` and `docs/PERMISSIONS.md`. **No SQL migration**: migration 0185's existing `auth_is_staff()` checks already allow exactly these staff roles and deny Clients.
+
+**Ruled**
+- **Owner, 2026-11-01:** All authenticated internal staff — Owner, Admin, Manager, Coordinator, Warehouse, Technician, Accounts and Driver — may create Team Notes. Client and anonymous are excluded. All notes are visible to staff; sensitive financial information and protected fields must not be included in notes. Direct UPDATE/DELETE remains blocked.
+- Do not silently restore Coordinator-only `team_note.create` tests or alter the 0185 DB grants. Any future reversal needs updated UI, action, matrix, DB and role tests together.
+
+**Verified**
+- **Observed:** GitHub connector wrote the source and documentation changes on the draft branch; unchanged baseline migration 0185 was inspected and the existing L42 behavior reviewed.
+- **NOT VERIFIED:** Local npm typecheck/lint/Vitest, PGlite/lifecycle, JWT staging roles, cross-device UI, build, deployment. A GitHub Actions run was triggered for draft PR #38 but no passing results are asserted by this entry. No live Supabase touched.
+
+## Completion
+- Backend: not measured
+- Real data: not measured
+- DB enforcement: not measured
+- Permissions: not measured
+- Lifecycle: not measured
+- Overall: not measured; `npm run completion` has not been executed against this source tree. Never treat draft-file changes as a release receipt.
+
+## Remaining
+- Check PR #38's CI and full local gates, especially `npm run check:pglite` and `npm run check:lifecycle` in the same run; run `npm run completion` and replace measurements with actual output.
+- Verify eight staff seats and Client with real JWT/staging, including that inactive/unbound identities cannot act as staff; verify cross-device sync and money-blind note content.
+- Coordinate overlapping PR #36 repairs and PR #37 rider-token security before merge. No automatic merge/deployment/live schema edits.
+
+---
+
 ## 2026-11-01 (later) — T6-01 approved; owner actions recorded
 
 **Did**
