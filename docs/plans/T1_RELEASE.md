@@ -217,7 +217,7 @@ name list; 5) "Remove me from this device" and an Owner/Admin "forget this devic
 6) at most ⭐ 15 people per device.
 **Why** — W53, W56 (more than 10 staff, shared devices); every write must carry the right person.
 **Where** — `src/lib/auth.tsx`, `src/modules/auth/*`, `src/lib/secureStorage.ts`, header user menu.
-**Database** — none expected (PIN rows and lockout exist in 0066); add an audit event for each switch.
+**Database** — one migration (claim its number in `docs/plans/MIGRATION_LEDGER.md` first; write and test it locally, never apply it live): move the PIN rule in `0066` from 6 digits to **4** (O-18, ruled 1 Nov) and keep the weak-PIN list and the 5-try lockout. The screens that say "six-digit" (`DevicePin.tsx`, `auth.tsx` comment) change in the same commit. Add an audit event for each switch.
 **Done when** — on the M4 iPad: A signs in, B signs in, switching A → B → A takes ≤ 3 taps + PIN each
 time; rows written after a switch carry the new person; 5 wrong PINs lock that person only; a token
 copied off the device does not work elsewhere without the device key; Claude has reviewed the
@@ -249,7 +249,7 @@ save handler; 4) screen check at 375 / 820 / 1440.
 **What** — Every role that sees money — **Owner, Admin, Manager, Coordinator, Accounts**
 (PERMISSIONS §5) — signs in with the password **plus a 6-digit code from an authenticator app**
 (Supabase Auth MFA, TOTP) (B21). On a device where that person has done this, the **PIN of T1-15**
-(4 or 6 digits — O-18) **stays the quick way back in for 30 days**; after 30 days, or on a new device, the code is asked
+(4 digits — O-18, answered 1 Nov) **stays the quick way back in for 30 days**; after 30 days, or on a new device, the code is asked
 again (B40). Warehouse, Technician and Driver are not asked (they see no money) and keep password +
 PIN. **Design note first** (security card). Steps:
 1) Enrolment: scan a QR code, type a code, done; a lost phone is reset by Owner (any account) or

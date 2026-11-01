@@ -1,5 +1,45 @@
 # Progress Log
 
+## 2026-11-01 — O-18 (PIN 4 digits) and O-19 (all staff write team notes) ruled; Booqable package landed on main
+
+**Did**
+- **Landed the 31 Oct Booqable package on `main`** (rulings B1–B56/K1–K7, 29 cards, PLAN v1.4, red-checks fix): merged `main` three times as lanes kept moving; `PROGRESS.md` conflicts resolved by taking `main`'s file and re-inserting the package entry; nine source conflicts resolved to `main`'s versions (it had fixed the same things).
+- **Fixed two reds that arrived from T8-09, not from the package:** `staffDiscountPercent` registered in `src/lib/settingsStore.ts` (2 type errors); "Law 10" / "W68" removed from two staff-facing texts (`lint:ui-copy`).
+- **O-19:** `canCreateTeamNote` now allows every staff role (`src/lib/rbac.ts`), matching `0185`.
+- **O-18:** recorded as 4 digits across PLAN §4.2, OPEN_DECISIONS, the owner checklist, T1-15 / T1-17 cards, the T1-15 prompt and design note. T1-15 now says it carries the migration from 6 to 4. No SQL written or applied.
+
+**Ruled** (Babin, chat, 1 Nov: "4 pin all staff yes") — logged as R-1 and R-2 in `RULINGS-2026-11-01.md`, mirrored in the docs above and by a `// RULING 2026-11-01` comment at `canCreateTeamNote`. Revert for R-2: restore the four-role comparison. Revert for R-1: say "6" — only docs moved.
+
+**Verified**
+- `typecheck`, `lint`, `lint:ui-copy`, `lint:progress` exit 0 on the merged tree.
+- 110 tests pass in `src/actions/notes`, `src/components/teamNotes` and the rbac tests, including the previously red `createTeamNote` case; 1,817 pass in the lib, settings and pricing folders (before the final merges).
+- A full-suite run on the patched branch gave 6,324 passed / 5 failed. Four of those (`listPageToolbars`, `realWorkspaceGuidance`) fail the same way on unpatched `main` here (cold-start timeouts); `createTeamNote` was the O-19 case, now fixed.
+- Not run: full suite on the final commit, `build`, `check:pglite`, `check:lifecycle`, device checks.
+
+**Blocked / open**
+- `staffDiscountPercent` is not in `settings_is_money_key()` (`0158`): money-blind roles could read it. Adding it is a migration — TODO(decision) at `settingsStore.ts`, for T8-09 / Babin.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 79 / 79 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 65 / 65 (100%) | +1 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 193 files · check:pglite not run this session (pass --migrations to run). Suite: Historical suite: 6324/6336 passed, 5 failed (recorded 2026-10-31T17:39:19.683Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Lane A (T1-15): claim a migration number in `MIGRATION_LEDGER.md`, move the PIN rule in `0066` from 6 to 4 digits (keep weak-PIN list and lockout), change "six-digit" in `DevicePin.tsx` and the `auth.tsx` comment; run `check:pglite` and `check:lifecycle` before calling it verified.
+- T8-09 / Babin: decide whether `staffDiscountPercent` is a money setting (migration to `settings_is_money_key()`).
+- Run `check:pglite` + `check:lifecycle` and a full `npm test` on `main` — none were run on the final commit.
+- Babin: other items in `docs/plans/BABIN_ACTIONS.md`.
+
 ## 2026-10-31 — Booqable round recorded (B1–B56, K1–K7), plans on `9e219db`, review of 27–31 Oct, and a fix for main's red checks (docs + one code patch, delivered as files)
 
 **Did**

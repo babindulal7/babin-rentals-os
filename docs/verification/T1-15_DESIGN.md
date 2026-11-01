@@ -82,7 +82,7 @@ the existing CSP and stays a separate concern.
    the card say "4-digit PIN"; `0066` enforces `^[0-9]{6}$`. B-1 (stricter wins):
    **recommend keeping 6** and amending the card's wording. Relaxing a shipped
    security parameter to 4 digits is Babin's explicit word, not an agent's edit.
-   TODO(decision) — logged in OPEN_DECISIONS.
+   ANSWERED 1 Nov: Babin ruled 4 digits (O-18) — see RULINGS-2026-11-01.md; the migration moves 0066 to 4.
 2. **Mock mode:** the mock auth stub needs a session-store equivalent so
    `dev:mock` exercises the roster→PIN→switch flow for screens and tests (the mock
    already answers `set_staff_pin`/`verify_staff_pin`).

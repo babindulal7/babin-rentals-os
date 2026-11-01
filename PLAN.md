@@ -196,8 +196,8 @@ stay in [`docs/OPEN_DECISIONS.md`](docs/OPEN_DECISIONS.md).
 | O-15 | Fee for each delivery zone (W48, L6). | Rs 3,500 for each valley zone; outside the valley quoted | T4-07 |
 | O-16 | Label printer and Bluetooth scanner models (W54, S14). | Claude proposes 2–3 of each with Nepal prices at a check-in; Babin buys | T2-08, T2-09 |
 | O-17 | VAT timing: may the tax invoice wait until the client pays in full (W16), even for credit clients who pay weeks later? [VAT Act 2052 §6](https://nepallaws.com/Laws/value-added-tax-act-2052/section-6-place-and-time-of-supply/) puts the time of a supply at the earliest of invoice, service or payment, with its own rule for part payments | As ruled (number on full payment) until the accountant answers; if the invoice must come earlier, the numbering moment becomes one setting. The numbering step ships only after the answer | T3-14 |
-| O-18 | Switch-user PIN length: the card and W53 say 4 digits; the shipped `0066` enforces 6 (T1-15 design note, 28 Oct). Commit `ddda296` mentions "4 digits (Babin 28 Oct)" but no ruling records it | Keep 6 digits until Babin confirms (B-1) | T1-15 code |
-| O-19 | Who may write **team notes** (T4-04)? The card and `0185` (`auth_is_staff()`) say every staff member; `rbac.canCreateTeamNote` allows Coordinator and above, and `createTeamNote.test.ts` expects every staff member (red on `9e219db`) | The app's narrower rule (B-1: a conflict is not resolved by widening) | T4-04 follow-up |
+| O-18 | **Answered 1 Nov (Babin: "4 pin"):** the switch-user PIN is **4 digits**. The shipped `0066` still enforces 6, so T1-15 includes the migration that moves it to 4 (stricter rules kept: weak-PIN list, lockout) | 4 digits | T1-15 code |
+| O-19 | **Answered 1 Nov (Babin: "all staff yes"):** every staff member may write team notes. `rbac.canCreateTeamNote` now matches `0185` | Every staff role (not Client) | T4-04 — done |
 
 ### §4.3 How a new decision gets in
 

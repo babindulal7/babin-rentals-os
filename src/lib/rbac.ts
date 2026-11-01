@@ -706,11 +706,13 @@ export function canExportClientPii(role: SystemRole): boolean {
 }
 
 /**
- * Create a team note — Coordinator and above (Owner, Admin, Manager, Coordinator).
- * Mirrors the RLS policy on `team_notes` INSERT (migration 0185).
+ * Create a team note — every staff role (not Client).
+ * Mirrors the RLS policy on `team_notes` INSERT (migration 0185, `auth_is_staff()`).
+ * RULING 2026-11-01 (O-19): Babin — "all staff yes". Was Coordinator and above; widened to match the
+ * database, which already allowed every staff member. Revert = restore the four-role comparison.
  */
 export function canCreateTeamNote(role: SystemRole): boolean {
-  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+  return isStaff(role)
 }
 
 /**

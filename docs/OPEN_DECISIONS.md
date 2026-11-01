@@ -1,6 +1,10 @@
 # Babin Rentals OS — Open Decisions Register
 
-## 28 October 2026: switch-user PIN length (T1-15) — TODO(decision)
+## 28 October 2026: switch-user PIN length (T1-15) — ANSWERED 1 Nov: 4 digits (O-18)
+
+**Answered 1 Nov 2026 by Babin ("4 pin"): the switch-user PIN is 4 digits.** T1-15 carries the migration
+that moves `0066` from 6 to 4; see `RULINGS-2026-11-01.md` (R-1). The text below is the original
+question, kept for the record.
 
 - The T1-15 card and ruling W53 say "tap name + **4-digit** PIN"; the shipped security
   parameter in migration `0066` enforces `^[0-9]{6}$` (6 digits, 5-try lockout).
@@ -12,7 +16,11 @@
   `ddda296` (29 Oct) says "staff PIN is 4 digits (Babin 28 Oct)", but its files are equipment-preview
   code and no ruling file records that answer, so the question stays open until Babin confirms.
 
-## 31 October 2026: who may write team notes (T4-04) — TODO(decision)
+## 31 October 2026: who may write team notes (T4-04) — ANSWERED 1 Nov: every staff member (O-19)
+
+**Answered 1 Nov 2026 by Babin ("all staff yes"): every staff member may write team notes.**
+`rbac.canCreateTeamNote` now allows every staff role and the red test is green; see
+`RULINGS-2026-11-01.md` (R-2). The text below is the original question, kept for the record.
 
 - The T4-04 card and migration `0185` let **every staff member** write a team note (`auth_is_staff()`);
   `src/lib/rbac.ts` `canCreateTeamNote` allows **Coordinator and above** only, so Warehouse, Technician

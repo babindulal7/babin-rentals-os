@@ -19,10 +19,10 @@ editing this file or telling Claude at a check-in.
 - [ ] Apply Claude's `fix-red-checks.patch` (31 Oct) **first**: on `main` `9e219db` the typecheck (20
       errors — so `npm run build` fails), lint (3) and UI-copy (4) checks are red, and one error can crash
       Booking Detail. The patch turns them green.
-- [ ] Answer **O-18**: should the switch-user PIN be **4 or 6 digits**? (T1-15 waits on it; the 0066
-      database rule is 6 today.)
-- [ ] Answer **O-19**: may **every staff member** write team notes, or only Coordinator and above? (One
-      test on `main` is red until you say.)
+- [x] Answer **O-18** — answered 1 Nov: **4 digits** (T1-15 changes the 0066
+      database rule from 6 to 4).
+- [x] Answer **O-19** — answered 1 Nov: **every staff member** may write team notes (the
+      red test is fixed).
 - [ ] From now on, run the **full check list** (`docs/plans/README.md`) before every push — CI no longer
       catches anything (T0-11 makes it one command).
 - [x] Take a production backup — `scripts/backup-db.ps1`, ~30 min (T1-01). *Reported done by Babin 1 Nov 2026; T1-01 is `done` only once `npm run check:dump` passes and the SHA-256 is recorded.*
@@ -102,8 +102,8 @@ editing this file or telling Claude at a check-in.
 - [ ] **Usability round 1** the same day: watch three staff (floor, desk, someone new) do the task cards
       in `docs/USABILITY_TESTS.md`; rank the ten worst problems before you go home (T9-09). Claude sends
       the task cards with real staging booking numbers the day before.
-- [ ] Every staff member signs in once on each shared device and sets a **PIN** (T1-15, T1-13; 4 or 6
-      digits — O-18).
+- [ ] Every staff member signs in once on each shared device and sets a **4-digit PIN** (T1-15, T1-13;
+      O-18 answered 1 Nov).
 - [ ] By **Fri 15 Jan (1 Magh)** ⭐: pick **official product photos** online for every product shown online —
       the maker's press images, or your own photos; note where each came from. No photos from other
       rental shops (B45, B49, T7-02).
