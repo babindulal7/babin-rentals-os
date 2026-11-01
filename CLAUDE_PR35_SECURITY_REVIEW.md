@@ -172,7 +172,21 @@ GitHub Actions run 41290665633: **UNVERIFIED** (HTTP 404; `gh` unauthenticated).
 
 **The typecheck failure is on `main`, not caused by PR #35.** `TeamNotesPanel.tsx` is not in the PR's file list; the merged tree's copy is byte-identical to `main`'s, so `main` `a32a6d0d` fails the same way. Cause: commit `b92cf581` (shift-money hardening) replaced the call `actionCtx(user)` with an inline `useMemo` but left the now-unused helper at `TeamNotesPanel.tsx:17–19`. The repo's own rule B-4 ("tsc 0 … a ruling that breaks a gate is not a ruling, it is a bug") applies: `main` currently cannot pass `npm run build`. **P1 / BLD-1.** Fix: delete lines 17–19 and the orphaned `ActionContext` import. **Applied afterwards on branch `claude/pr35-rider-link-security-8bf9b6` (not on `main`, not pushed); `tsc --noEmit` exits 0 there (executed).** It still has to be merged to `main` by you. Side finding from the same run, present on an untouched `main` export: `src/actions/notes` test "allows Warehouse and Driver staff roles to create notes" fails because `rbac.canCreateTeamNote` (`rbac.ts:713`) admits only Owner/Admin/Manager/Coordinator — the open team-note ruling (T-4). **Resolved afterwards:** Babin ruled "Coordinator and up" (`RULINGS-2026-11-01.md` R-0111-1); migration 0191 plus test, lifecycle L42, fixture and PERMISSIONS aligned on this branch (`check:pglite` 191/191 and `check:lifecycle` 47/47 green in the same run).
 
-Why so many NOT RUN: the review machine was saturated by other sessions (a fresh `npm ci` in the review worktree failed twice with `ENOTEMPTY`; I fell back to the parent checkout's `node_modules` via a junction, vitest 3.2.7). A full-repo `tsc` took over ten minutes. "NOT RUN" means exactly that — it is not a pass. **No gate in this table that reads NOT RUN or UNVERIFIED may be cited as green.**
+**6b. Full gate run afterwards — branch `c3cb9429` (= `main` `a32a6d0d` + the BLD-1 fix, team-note ruling and composer change; PR #35 is *not* in it), clean copy, executed:**
+
+| Gate | Result |
+|---|---|
+| typecheck / `npm run build` | **PASS** (BLD-1 fixed; build exit 0) |
+| lint, `lint:progress`, `lint:shell`, `lint:ui-copy`, `check:contrast` | **PASS** |
+| `check:pglite` 191/191, `check:lifecycle` 47/47 (same run) | **PASS** |
+| financial integrity, `check:security`, `test:partial-return` 58/58, receipt test | **PASS** |
+| `test:server-contracts` | **FAIL** — 1 assertion; identical on untouched `main` (expects `GATE:unit.retire.active_reservation`, DB raises `…active_status`) |
+| Full mock suite | **FAIL — 6401/6413**: 3 are PR #35's own repairs; 2 `DeliveryWorkspace` (T4-01) fail identically on untouched `main`; 7 `realWorkspaceGuidance` are load timeouts that pass alone |
+| `test:coverage` | NOT RUN |
+
+So on top of what this review found, **`main` already has two red gates unrelated to PR #35 or rider links**: `test:server-contracts` and the two `DeliveryWorkspace` tests. They are not in §4 because they are not security defects; they do mean "all gates green" cannot be claimed for `main` today. PR #35 itself was **not** re-run through the full suite (only its targeted files, §6 table above).
+
+Why so many NOT RUN above (earlier, before §6b): the review machine was saturated by other sessions (a fresh `npm ci` in the review worktree failed twice with `ENOTEMPTY`; I fell back to the parent checkout's `node_modules` via a junction, vitest 3.2.7). A full-repo `tsc` took over ten minutes. "NOT RUN" means exactly that — it is not a pass. **No gate in this table that reads NOT RUN or UNVERIFIED may be cited as green.**
 
 Probe tests I executed in scratch copies (not committed, not part of the repo):
 
@@ -244,8 +258,8 @@ Remaining release blockers (all independent of PR #35 unless noted):
 3. SEC-3 — token to Sentry (task D).
 4. FUNC-1 — success shown as failure (task C).
 5. Migration 0190 is "claimed" in the ledger, not applied, not confirmed in PROGRESS; the Edge Function deployment is unconfirmed.
-6. Remaining local gates (lint, full suite, `check:pglite`, `check:lifecycle`, financial integrity, `check:security`) were not run in this review (§6) and must be run on the merged result after BLD-1 is fixed.
-7. Production build FAILS on `main` today (BLD-1); whether `import('node:crypto')` is removed from the browser bundle is therefore still unverified.
+6. The full gate list was run on branch `c3cb9429` (§6b) but **not** on the merged PR #35 result: re-run it after the PR is rebased. Two gates are red on `main` independent of the PR: `test:server-contracts` (1 assertion) and 2 `DeliveryWorkspace` tests. `test:coverage` was not run.
+7. Production build: BLD-1 is fixed on `c3cb9429` and `npm run build` exits 0 there; it is still not on `main`. Whether `import('node:crypto')` is removed from a production-mode bundle remains unverified.
 8. Hosted/device/offline acceptance remain open per `docs/CURRENT_STATE.md`; production stays HOLD.
 
 ### What I did not do

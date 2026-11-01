@@ -35,17 +35,48 @@
 - NOT RUN: lint, full suite, `check:pglite`, `check:lifecycle`, financial integrity, `check:security`, `vite build`.
 - Discovered while verifying the typecheck fix: `src/actions/notes` — `createTeamNote > allows Warehouse and Driver staff roles to create notes` failed identically on an untouched main export (the T-4 cell). Resolved by the ruling above.
 
+**Verified (full local gate run on `c3cb9429`, in a clean copy of that commit — the worktree's own `node_modules` is corrupt)**
+| Gate | Result |
+|---|---|
+| typecheck | PASS — `tsc --noEmit` exit 0 (also the first step of `build`) |
+| `npm run lint` | PASS — eslint src, 0 warnings |
+| `VITE_DATA_SOURCE=mock npm test` | **FAIL — 6401 / 6413 passed, 12 failed in 4 files** (see below) |
+| `check:pglite` | PASS — 191/191 applied, 0 anon-readable views, 0 unauthorized anon RPCs, 128 definer functions pinned |
+| `node scripts/test-booking-financial-integrity.mjs` | PASS |
+| `check:security` | PASS — incl. 14/14 Reset branch regression groups |
+| `check:lifecycle` | PASS — 47/47, 0 known-red |
+| `test:server-contracts` | **FAIL** — 1 assertion, pre-existing on untouched main |
+| `test:partial-return` | PASS — 58/58 |
+| `node --test scripts/test-receipt.test.mjs` | PASS |
+| `lint:progress` / `lint:shell` / `lint:ui-copy` / `check:contrast` | PASS / PASS (847 files) / PASS / PASS (106/106) |
+| `npm run build` (`tsc --noEmit && vite build`) | PASS — exit 0 |
+| `test:coverage` | NOT RUN (long; required before a live batch) |
+
+The 12 suite failures, all accounted for and none introduced by this branch:
+- **3 — PR #35's repairs** (`rentalMoreActionsRegistry` ×2 expecting 5 groups, `useNewRentalTiming` expecting 09:00). The branch is cut from main without PR #35; the PR's 9 files fix all three (46/46 on the PR head).
+- **2 — `DeliveryWorkspace` (T4-01)** Coordinator and Driver seat tests: pre-existing, identical on an untouched main export ("Could not load records" / "Your role cannot change delivery records" where `DEL-001` is expected). Not investigated further.
+- **7 — `realWorkspaceGuidance`**: load timeouts in the full run (one at 30 s on a saturated machine); the file passes when run alone, on main and on this branch.
+- Pre-existing, outside the suite: `test:server-contracts` expects `GATE:unit.retire.active_reservation` for retiring a unit held by a reservation; the database raises `GATE:unit.retire.active_status` first because the unit is already `Reserved` (identical on untouched main). Whether the test or the gate order is right is not decided here.
+- Two scripts (`check:pglite`/`check:lifecycle`/`npm test`) call `git`; the clean copy needed a throwaway git repo (outside this repository) for them to run.
+
 ### Completion
-| Backend | not measured | — | — |
-| Real data | not measured | — | — |
-| DB enforcement | not measured | — | — |
-| Permissions | not measured | — | — |
-| Lifecycle | not measured | — | — |
-| Overall | not measured | — | — |
-`npm run completion` was not run this session (DB-gate receipts need a quiet machine); no figure above was typed by hand.
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 78 / 78 (100%) | — |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 64 / 64 (100%) | — |
+| Lifecycle | steps green / total | 47 / 47 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 191 files · check:pglite 191/191 applied, 0 failed (recorded 2026-11-01T13:07:17.701Z). Suite: NOT PASSING — 6401/6413 passed, 12 failed (recorded 2026-11-01T13:36:54.581Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-01T13:08:20.074Z.
+Counted by `npm run completion`, not typed. Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Run the rest of the local gates on this branch: lint, `VITE_DATA_SOURCE=mock npm test`, `check:pglite`, `check:lifecycle`, financial integrity, `check:security`, `vite build`.
+- **Suite is not green:** merge PR #35 (clears 3); investigate `DeliveryWorkspace` Coordinator/Driver tests (2); `realWorkspaceGuidance` needs a quiet machine to confirm (7, passes alone).
+- **`test:server-contracts`:** decide test-vs-gate-order for the retire-while-reserved assertion.
+- Run `test:coverage` before any live batch.
 - Not reviewed: the notes feed still shows **Edit** on every note to a Warehouse user (seen in the browser check). Whether editing is allowed for floor roles is a separate question from R-0111-1.
 - Apply 0191 to hosted Supabase only after Babin's backup step (N-5); not done.
 - PR #35: resolve the 3 copy conflicts to the PR side, add the fail-closed hash test (`CLAUDE_PR35_SECURITY_REVIEW.md` §7).
