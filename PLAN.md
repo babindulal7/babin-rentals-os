@@ -39,7 +39,7 @@ The #1 product priority stays **ease of use — fewest taps (R-39)**. Every task
 ## §1 The finish line
 
 **Go-live (day X)** = the day staff take **every new rental** in the OS. **Switch-off** = Booqable
-cancelled **before its renewal on 20 Mar 2027 (6 Chaitra 2083)** (S8).
+cancelled **before its renewal on 18 Feb 2027 (29 Magh 2083)** (S8).
 
 Go-live happens only when all ten are true:
 
@@ -221,7 +221,7 @@ Dates in AD with BS (computed with `src/lib/bs.ts`).
 | **Go / no-go** | 29 Jan · 15 Magh | Babin decides against the §1 list. Nepali 100% approved. |
 | **X — go-live** | **Mon 1 Feb · 18 Magh** | New rentals OS-only; online booking live; Booqable store stops taking bookings. |
 | **M6** | 1 Mar · 17 Falgun | Last Booqable rental returned and closed; Booqable data archived. |
-| **M7** | 10 Mar · 26 Falgun | Booqable cancelled — 10 days before the 20 Mar renewal. |
+| **M7** | 8 Feb · 24 Magh | Booqable cancelled — 10 days before the 18 Feb renewal. |
 
 **Every day:** Claude check-ins at **7:38 AM and 7:38 PM** NPT (W77 — Babin asked for 8; the scheduler runs slightly early) — what changed on GitHub, the fast
 checks re-run on `main`, what looks wrong, and the next prompt to paste.

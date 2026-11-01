@@ -48,10 +48,19 @@ export interface DeliveryJobLinkRecord {
   is_active: boolean
 }
 
+export interface CreateRiderLinkResult {
+  linkId: string
+  rawToken?: string | null
+  linkUrl?: string | null
+  expiresAt: string
+  alreadyIssued: boolean
+}
+
 const MOCK_LINKS_KEY = 'babin_mock_rider_links'
 
 interface MockLinkEntry {
   id: string
+  clientUuid?: string
   jobId: string
   rawToken: string
   tokenHash: string
@@ -82,7 +91,7 @@ function saveMockLinks(links: MockLinkEntry[]) {
 }
 
 /**
- * Generate a 128-bit cryptographically secure raw token.
+ * Generate a 128-bit cryptographically secure raw token (mock fallback only).
  */
 export function generateRiderRawToken(): string {
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
@@ -97,7 +106,7 @@ export function generateRiderRawToken(): string {
 }
 
 /**
- * Calculate SHA-256 hex string for a token.
+ * Calculate SHA-256 hex string for a token (mock fallback only).
  */
 export async function hashRiderToken(rawToken: string): Promise<string> {
   const trimmed = rawToken.trim()
@@ -135,13 +144,16 @@ export function canIssueRiderLink(role: Role | null | undefined): boolean {
 
 /**
  * Create a new rider link for a delivery job.
+ * R2: Law 8 client_uuid idempotency.
+ * R3: Server mints token and returns rawToken once.
  */
 export async function createRiderLink(
   jobId: string,
   riderName: string,
   riderPhone: string,
-  role: Role | null | undefined
-): Promise<{ linkId: string; rawToken: string; linkUrl: string; expiresAt: string }> {
+  role: Role | null | undefined,
+  clientUuid?: string
+): Promise<CreateRiderLinkResult> {
   if (!canIssueRiderLink(role)) {
     throw new Error('Your role is not authorized to create rider links.')
   }
@@ -156,18 +168,30 @@ export async function createRiderLink(
     throw new Error('Rider phone must be at least 7 characters.')
   }
 
-  const rawToken = generateRiderRawToken()
-  const tokenHash = await hashRiderToken(rawToken)
+  const key = clientUuid || newClientUuid()
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://app.babinrentals.com'
-  const linkUrl = `${origin}/rider/${rawToken}`
   const now = new Date()
   const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString()
 
   if (IS_MOCK) {
-    const linkId = `mock-link-${Date.now()}`
     const mockLinks = getMockLinks()
+    const existing = mockLinks.find((l) => l.clientUuid === key)
+    if (existing) {
+      return {
+        linkId: existing.id,
+        rawToken: null,
+        linkUrl: null,
+        expiresAt: existing.expiresAt,
+        alreadyIssued: true,
+      }
+    }
+
+    const linkId = `mock-link-${Date.now()}`
+    const rawToken = generateRiderRawToken()
+    const tokenHash = await hashRiderToken(rawToken)
     mockLinks.push({
       id: linkId,
+      clientUuid: key,
       jobId,
       rawToken,
       tokenHash,
@@ -179,12 +203,18 @@ export async function createRiderLink(
       completedAt: null,
     })
     saveMockLinks(mockLinks)
-    return { linkId, rawToken, linkUrl, expiresAt }
+    return {
+      linkId,
+      rawToken,
+      linkUrl: `${origin}/rider/${rawToken}`,
+      expiresAt,
+      alreadyIssued: false,
+    }
   }
 
   const { data, error } = await supabase.rpc('create_rider_link', {
+    p_client_uuid: key,
     p_job_id: jobId,
-    p_token_hash: tokenHash,
     p_rider_name: cleanName,
     p_rider_phone: cleanPhone,
   })
@@ -193,11 +223,29 @@ export async function createRiderLink(
     throw new Error(error?.message || 'Failed to create rider link on database.')
   }
 
+  const res = data as {
+    link_id: string
+    raw_token: string | null
+    already_issued: boolean
+  }
+
+  if (res.already_issued) {
+    return {
+      linkId: res.link_id,
+      rawToken: null,
+      linkUrl: null,
+      expiresAt: '',
+      alreadyIssued: true,
+    }
+  }
+
+  const rawToken = res.raw_token || ''
   return {
-    linkId: data as string,
+    linkId: res.link_id,
     rawToken,
-    linkUrl,
+    linkUrl: `${origin}/rider/${rawToken}`,
     expiresAt,
+    alreadyIssued: false,
   }
 }
 
@@ -328,31 +376,29 @@ export async function fetchRiderJobByToken(rawToken: string): Promise<RiderJobDa
     }
   }
 
-  const tokenHash = await hashRiderToken(token)
-
-  // Try via Edge Function first
-  try {
-    const { data: edgeData, error: edgeError } = await supabase.functions.invoke('rider-link', {
-      body: { action: 'get_job', token },
-    })
-
-    if (!edgeError && edgeData?.data) {
-      return edgeData.data as RiderJobData
-    }
-  } catch {
-    // Edge function unavailable in test or local environment; fall through to RPC
-  }
-
-  // Fallback to direct RPC
-  const { data, error } = await supabase.rpc('get_rider_job_by_token', {
-    p_token_hash: tokenHash,
+  // R1 + R3: Access mediated exclusively through Edge Function (service role)
+  const { data: edgeData, error: edgeError } = await supabase.functions.invoke('rider-link', {
+    body: { action: 'get_job', token },
   })
 
-  if (error || !data) {
-    throw new Error(error?.message || 'Delivery link is invalid, expired, or completed.')
+  if (edgeError) {
+    let msg = 'Delivery link is invalid, expired, or completed.'
+    try {
+      if ('context' in edgeError && typeof (edgeError as { context?: { json?: () => Promise<{ error?: string }> } }).context?.json === 'function') {
+        const body = await (edgeError as { context: { json: () => Promise<{ error?: string }> } }).context.json()
+        if (body?.error) msg = body.error
+      }
+    } catch {
+      // ignore
+    }
+    throw new Error(msg)
   }
 
-  return data as unknown as RiderJobData
+  if (!edgeData?.data) {
+    throw new Error('Delivery link is invalid, expired, or completed.')
+  }
+
+  return edgeData.data as unknown as RiderJobData
 }
 
 /**
@@ -370,23 +416,21 @@ export async function riderMarkJobPickedUp(rawToken: string): Promise<void> {
     return
   }
 
-  const tokenHash = await hashRiderToken(token)
-
-  try {
-    const { error: edgeError } = await supabase.functions.invoke('rider-link', {
-      body: { action: 'pickup', token },
-    })
-    if (!edgeError) return
-  } catch {
-    // Fall through
-  }
-
-  const { error } = await supabase.rpc('rider_mark_picked_up', {
-    p_token_hash: tokenHash,
+  const { error: edgeError } = await supabase.functions.invoke('rider-link', {
+    body: { action: 'pickup', token },
   })
 
-  if (error) {
-    throw new Error(error.message || 'Failed to update delivery status.')
+  if (edgeError) {
+    let msg = 'Failed to update delivery status.'
+    try {
+      if ('context' in edgeError && typeof (edgeError as { context?: { json?: () => Promise<{ error?: string }> } }).context?.json === 'function') {
+        const body = await (edgeError as { context: { json: () => Promise<{ error?: string }> } }).context.json()
+        if (body?.error) msg = body.error
+      }
+    } catch {
+      // ignore
+    }
+    throw new Error(msg)
   }
 }
 
@@ -417,31 +461,26 @@ export async function riderCompleteJobDelivery(
     return
   }
 
-  const tokenHash = await hashRiderToken(token)
-
-  try {
-    const { error: edgeError } = await supabase.functions.invoke('rider-link', {
-      body: {
-        action: 'deliver',
-        token,
-        receiver_name: cleanReceiver,
-        signature_svg: signatureSvg || null,
-        photo_url: photoUrl || null,
-      },
-    })
-    if (!edgeError) return
-  } catch {
-    // Fall through
-  }
-
-  const { error } = await supabase.rpc('rider_complete_delivery', {
-    p_token_hash: tokenHash,
-    p_receiver_name: cleanReceiver,
-    p_signature_svg: signatureSvg || null,
-    p_photo_url: photoUrl || null,
+  const { error: edgeError } = await supabase.functions.invoke('rider-link', {
+    body: {
+      action: 'deliver',
+      token,
+      receiver_name: cleanReceiver,
+      signature_svg: signatureSvg || null,
+      photo_url: photoUrl || null,
+    },
   })
 
-  if (error) {
-    throw new Error(error.message || 'Failed to complete delivery.')
+  if (edgeError) {
+    let msg = 'Failed to complete delivery.'
+    try {
+      if ('context' in edgeError && typeof (edgeError as { context?: { json?: () => Promise<{ error?: string }> } }).context?.json === 'function') {
+        const body = await (edgeError as { context: { json: () => Promise<{ error?: string }> } }).context.json()
+        if (body?.error) msg = body.error
+      }
+    } catch {
+      // ignore
+    }
+    throw new Error(msg)
   }
 }

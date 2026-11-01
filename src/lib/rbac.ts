@@ -388,7 +388,7 @@ export function canApproveDiscount(_role: SystemRole, percent: number, _isOnline
 /** Check if role can void an invoice */
 export function canVoidInvoice(role: SystemRole, isOnline: boolean = true): boolean {
   if (!isOnline) return false // Money action blocked offline
-  return role === 'Owner' || role === 'Accounts'
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Accounts' || role === 'Coordinator'
 }
 
 /**

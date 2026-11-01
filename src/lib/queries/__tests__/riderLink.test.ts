@@ -88,9 +88,21 @@ describe('riderLink query & mutation layer (T4-08, W49)', () => {
       expect(revoked?.is_active).toBe(false)
     })
 
+    it('enforces client_uuid idempotency: replaying same key returns alreadyIssued: true', async () => {
+      const key = 'test-client-uuid-1234'
+      const first = await createRiderLink('job-707', 'Rohan', '9841234567', 'Coordinator', key)
+      expect(first.alreadyIssued).toBe(false)
+      expect(first.rawToken).toBeDefined()
+
+      const replay = await createRiderLink('job-707', 'Rohan', '9841234567', 'Coordinator', key)
+      expect(replay.alreadyIssued).toBe(true)
+      expect(replay.linkId).toBe(first.linkId)
+      expect(replay.rawToken).toBeUndefined()
+    })
+
     it('fetches rider job data without any money fields (Law 6)', async () => {
       const created = await createRiderLink('job-202', 'Bipin Thapa', '9800000000', 'Coordinator')
-      const job = await fetchRiderJobByToken(created.rawToken)
+      const job = await fetchRiderJobByToken(created.rawToken!)
 
       expect(job.rider_name).toBe('Bipin Thapa')
       expect(job.pickup_address).toBeDefined()
@@ -108,22 +120,22 @@ describe('riderLink query & mutation layer (T4-08, W49)', () => {
 
     it('updates status to In Transit on rider pickup', async () => {
       const created = await createRiderLink('job-303', 'Kiran KC', '9811111111', 'Coordinator')
-      await riderMarkJobPickedUp(created.rawToken)
-      const job = await fetchRiderJobByToken(created.rawToken)
+      await riderMarkJobPickedUp(created.rawToken!)
+      const job = await fetchRiderJobByToken(created.rawToken!)
       expect(job.status).toBe('In Transit')
     })
 
     it('completes delivery with receiver name and signature', async () => {
       const created = await createRiderLink('job-404', 'Manoj Joshi', '9822222222', 'Coordinator')
       await riderCompleteJobDelivery(
-        created.rawToken,
+        created.rawToken!,
         'Nabin Director',
         'data:image/svg+xml;base64,mockSignature',
         'https://example.com/mock-evidence.jpg',
       )
 
       // Once delivered, accessing by token throws because the link is completed
-      await expect(fetchRiderJobByToken(created.rawToken)).rejects.toThrow(
+      await expect(fetchRiderJobByToken(created.rawToken!)).rejects.toThrow(
         /completed/i,
       )
     })
@@ -131,7 +143,7 @@ describe('riderLink query & mutation layer (T4-08, W49)', () => {
     it('refuses to complete delivery without receiver name', async () => {
       const created = await createRiderLink('job-505', 'Ramesh', '9833333333', 'Coordinator')
       await expect(
-        riderCompleteJobDelivery(created.rawToken, '', 'mockSignature'),
+        riderCompleteJobDelivery(created.rawToken!, '', 'mockSignature'),
       ).rejects.toThrow('Receiver name is required (minimum 2 characters).')
     })
   })
