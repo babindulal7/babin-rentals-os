@@ -1459,6 +1459,7 @@ export function ClientsDirectory({
 
                       <div className="client-card-tags">
                         <Tone text={client.membership} tone={TIER_TONE[client.membership]} />
+                        {(client.isStaff || client.isStaffClient) && <Tone text="Staff" entity />}
                         {client.isVip && <Tone text="VIP" entity />}
                         {client.isBlocked && <Tone text="Blocked" tone="danger" />}
                         {/* Rulings §11.2.5 — icon + label + colour, and the
@@ -1642,6 +1643,7 @@ export function ClientsDirectory({
                                     <span data-intel-identifier style={{ fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--text)' }}>
                                       {client.name}
                                     </span>
+                                    {(client.isStaff || client.isStaffClient) && <Tone text="Staff" entity />}
                                     {client.isVip && <Tone text="VIP" entity />}
                                     {client.isVerified && (
                                       <span
@@ -1940,6 +1942,7 @@ export function ClientsDirectory({
                     <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text)', margin: 0 }}>
                       {selectedClient.name}
                     </h2>
+                    {(selectedClient.isStaff || selectedClient.isStaffClient) && <Tone text="Staff" entity />}
                     {selectedClient.isVip && <Tone text="VIP" entity />}
                     {selectedClient.isVerified && (
                       <span title="KYC and PAN verified" style={{ color: 'var(--success-text)', display: 'inline-flex' }}>

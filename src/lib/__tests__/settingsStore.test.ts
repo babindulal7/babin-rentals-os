@@ -20,6 +20,7 @@ import {
   validateSetting,
   formatSetting,
   resetSettings,
+  getCrewPayoutTdsPercent,
 } from '../settingsStore'
 import { toRupees } from '../money'
 import { FEE_PER_CREW_DAY_PAISA } from '../../data/crew'
@@ -135,6 +136,24 @@ describe('settingsStore — rendering and reset', () => {
     expect(formatSetting('vatRatePercent', 13)).toBe('13%')
     expect(formatSetting('paymentTermsDays', 14)).toBe('14 days')
     expect(formatSetting('passwordPolicy', 'Strict')).toBe('Strict')
+    expect(formatSetting('crewPayoutTdsPercent', '')).toBe('Rate not set')
+    expect(formatSetting('crewPayoutTdsPercent', '15')).toBe('15%')
+  })
+
+  it('TDS on crew payouts (Ruling D25 / O-5): defaults to unconfigured, validates numbers 0..100', () => {
+    expect(SETTINGS_DEFAULTS.crewPayoutTdsPercent).toBe('')
+    expect(getCrewPayoutTdsPercent()).toBeNull()
+
+    writeSettings({ crewPayoutTdsPercent: '15' })
+    expect(readSettings().crewPayoutTdsPercent).toBe('15')
+    expect(getCrewPayoutTdsPercent()).toBe(15)
+
+    expect(() => writeSettings({ crewPayoutTdsPercent: '-5' })).toThrow(/cannot be negative/)
+    expect(() => writeSettings({ crewPayoutTdsPercent: '105' })).toThrow(/cannot exceed 100%/)
+    expect(() => writeSettings({ crewPayoutTdsPercent: 'abc' })).toThrow(/must be a number/)
+
+    writeSettings({ crewPayoutTdsPercent: '' })
+    expect(getCrewPayoutTdsPercent()).toBeNull()
   })
 
   it('reset clears every override', () => {

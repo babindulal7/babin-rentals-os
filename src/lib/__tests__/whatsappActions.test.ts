@@ -7,7 +7,12 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { whatsappActionsFor, type WaBookingFacts, type WaSettings } from '../whatsappActions'
+import {
+  whatsappActionsFor,
+  buildDeliveryRescheduleAction,
+  type WaBookingFacts,
+  type WaSettings,
+} from '../whatsappActions'
 import type { Paisa } from '../money'
 import type { SystemRole } from '../../types/database'
 
@@ -154,4 +159,60 @@ describe('dispatch manifest action (Pillar 3)', () => {
     expect(text).toContain('Babin Rentals')
   })
 })
+
+describe('delivery reschedule action (T4-02, Ruling D8)', () => {
+  it('builds a draft WhatsApp link with old and new times for valid phone number', () => {
+    const action = buildDeliveryRescheduleAction({
+      clientName: 'Sita Sharma',
+      clientPhone: '9841234567',
+      bookingNo: 'BK-2026-0042',
+      leg: 'Outbound',
+      oldTime: '10:00 AM',
+      newTime: '2:30 PM',
+      notes: 'Traffic congestion on Ring Road',
+      businessName: 'Babin Rentals',
+      businessPhone: '9800000000',
+    })
+
+    expect(action.href).toBeDefined()
+    expect(action.href).toContain('https://wa.me/9779841234567?text=')
+    expect(action.unavailable).toBeUndefined()
+
+    const text = decodeURIComponent(action.href!.split('?text=')[1]!)
+    expect(text).toContain('Namaste Sita,')
+    expect(text).toContain('Your delivery for booking #BK-2026-0042 has been rescheduled to 2:30 PM (previously 10:00 AM).')
+    expect(text).toContain('Note: Traffic congestion on Ring Road')
+    expect(text).toContain('If this time does not work for you, please let us know immediately.')
+    expect(text).toContain('Babin Rentals')
+  })
+
+  it('marks draft unavailable when phone number is missing or invalid', () => {
+    const action = buildDeliveryRescheduleAction({
+      clientName: 'Sita Sharma',
+      clientPhone: null,
+      bookingNo: 'BK-2026-0042',
+      leg: 'Outbound',
+      oldTime: '10:00 AM',
+      newTime: '2:30 PM',
+    })
+
+    expect(action.href).toBeNull()
+    expect(action.unavailable).toContain('No valid phone')
+  })
+
+  it('formats leg label as pickup return when leg is Return', () => {
+    const action = buildDeliveryRescheduleAction({
+      clientName: 'Hari Prasad',
+      clientPhone: '9812345678',
+      bookingNo: 'BK-9911',
+      leg: 'Return',
+      oldTime: '04:00 PM',
+      newTime: '06:00 PM',
+    })
+
+    const text = decodeURIComponent(action.href!.split('?text=')[1]!)
+    expect(text).toContain('Your pickup return for booking #BK-9911 has been rescheduled to 06:00 PM (previously 04:00 PM).')
+  })
+})
+
 

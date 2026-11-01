@@ -78,9 +78,13 @@ class SyncEngine {
 
   constructor() {
     if (typeof window !== 'undefined') {
+      let onlineTimer: ReturnType<typeof setTimeout> | null = null
       window.addEventListener('online', () => {
-        this.updateState({ status: 'syncing' })
-        this.syncAll().catch(() => {})
+        if (onlineTimer) clearTimeout(onlineTimer)
+        onlineTimer = setTimeout(() => {
+          this.updateState({ status: 'syncing' })
+          this.syncAll().catch(() => {})
+        }, 300)
       })
       window.addEventListener('offline', () => {
         this.updateState({ status: 'offline' })

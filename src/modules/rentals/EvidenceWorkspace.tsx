@@ -398,7 +398,7 @@ export default function EvidenceWorkspace() {
 
     try {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        throw new Error('Device is offline. Photo was kept on device and will upload when connectivity is restored.')
+        throw new Error('You are offline. This photo was not saved — take it again when you are back online.')
       }
 
       for (let i = 0; i < files.length; i++) {

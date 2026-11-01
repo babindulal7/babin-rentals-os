@@ -27,7 +27,7 @@
 
 > **Final local result, 20 October 2026:** **4,931 tests / 387 files PASS**, with lint, rebuild (168), financial/security (15 groups), lifecycle (31), contrast (82), final typecheck and production build all matching the same current-source fingerprint. Durable historical proof: `docs/verification/ASTRA_AVAILABILITY_CHECKPOINT_2026-10-20.json`. This supersedes “underway” statements in the earlier checkpoint note below. Migration 0170 is locally VERIFIED only. Shared workflows, legacy recovery, VAT/document/evidence acceptance, actual responsive devices and hosted JWT/Storage remain OPEN; no release approval or hosted application is implied.
 
-> **Earlier checkpoint history:** the financial checkpoint passed 4,879 tests on unchanged source; the later 4,899-test run changed during lint/tests. Both are retained for comparison and superseded by the final checkpoint above. Recovery branches and existing local work are preserved. Follow [`AUDIT_WORKTREE_PROGRESS.md`](../AUDIT_WORKTREE_PROGRESS.md) and the source-bound receipts in `docs/verification/`. No hosted database changes are authorized. The older baseline below is historical, not current certification.
+> **Earlier checkpoint history:** the financial checkpoint passed 4,879 tests on unchanged source; the later 4,899-test run changed during lint/tests. Both are retained for comparison and superseded by the final checkpoint above. Recovery branches and existing local work are preserved. Follow [`../archive/AUDIT_WORKTREE_PROGRESS.md`](../archive/AUDIT_WORKTREE_PROGRESS.md) and the source-bound receipts in `docs/verification/`. No hosted database changes are authorized. The older baseline below is historical, not current certification.
 
 ## ASTRA acceptance still required on current main
 
@@ -74,7 +74,7 @@ Despite the local test suite being 100% green, **production deployment remains o
 - **Priority:** P0 (Release Blocker)
 - **Status:** READY TO RUN
 - **Affected Subsystem:** Remote Supabase Database (`sxguwvgoserhdolewibb`)
-- **Specification:** [`BACKUP_PROTOCOL.md`](../BACKUP_PROTOCOL.md)
+- **Specification:** [`../archive/BACKUP_PROTOCOL.md`](../archive/BACKUP_PROTOCOL.md)
 - **Description:** Before any migration is applied to production, a non-destructive remote database dump must be generated using [`scripts/backup-db.ps1`](../scripts/backup-db.ps1). The backup script extracts schema, table rows, and authentication tables via Postgres SSL without requiring local Docker daemon installation.
 - **Verification Criteria:** Complete SQL dump verified for size and table integrity; backup stored in secure off-site archive.
 
@@ -110,7 +110,7 @@ Despite the local test suite being 100% green, **production deployment remains o
 - **Priority:** P0 (Release Blocker)
 - **Status:** HOLD (Gated on Tasks 1.1, 1.2, and 1.3)
 - **Affected Subsystem:** Remote Supabase Production Database
-- **Specification:** [`BACKUP_PROTOCOL.md`](../BACKUP_PROTOCOL.md) · [`docs/live/APPLY_PLAN_2026-10-03.md`](live/APPLY_PLAN_2026-10-03.md)
+- **Specification:** [`../archive/BACKUP_PROTOCOL.md`](../archive/BACKUP_PROTOCOL.md) · [`docs/live/APPLY_PLAN_2026-10-03.md`](live/APPLY_PLAN_2026-10-03.md)
 - **Description:** Under Rule N-5, only after successful staging certification and owner sign-off, apply pending migrations `0125` through `0160` to the production database via Supabase SQL Editor or approved migration runner.
 - **Verification Criteria:** PostgREST schema cache reloads cleanly (`NOTIFY pgrst, 'reload schema'`); all production tables and views report zero migration failure.
 

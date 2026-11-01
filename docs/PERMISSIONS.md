@@ -2,27 +2,42 @@
 **v1.0 · 22 Bhadra 2083 BS · 7 Sep 2026**
 Location: `docs/PERMISSIONS.md` (beside Foundation v3.0 and UI_UX.md)
 
-> ## ⏳ Ruled 26 Oct 2026, not yet in code — these cells change when their task lands
+> ## ⏳ Ruled 26–27 Oct 2026, not yet in code — these cells change when their task lands
 >
-> Babin's rulings in [`RULINGS-2026-10-26.md`](../RULINGS-2026-10-26.md) and
-> [`RULINGS-2026-10-26-workflow.md`](../RULINGS-2026-10-26-workflow.md) change the cells below.
+> Babin's rulings in [`RULINGS-2026-10-26.md`](../RULINGS-2026-10-26.md),
+> [`RULINGS-2026-10-26-workflow.md`](../RULINGS-2026-10-26-workflow.md) and
+> [`RULINGS-2026-10-27-booqable.md`](../RULINGS-2026-10-27-booqable.md) change the cells below.
 > Per B-3 each one is edited **in the same commit as its code, migration and T-1 fixture**, so until
 > then the tables in this file still describe what runs. Do not build against the new cells early,
 > and do not treat the old cells as the owner's intent.
 >
 > | Ruling | Cell(s) that will change | Task |
 > |---|---|---|
-> | D2 | §6.1 `gate.handover.receiver_unverified`: M+ → any staff allowed to hand over, reason ≥ 10 chars | T2-04 |
-> | D3 | §3 Technician: Pack 👁 → ✅, Handover → ✅, Return and Reset ✅ (money-blind unchanged) | T2-05 |
-> | D1 | §6.1 new rows: ID document satisfies the deposit gate; Close refused while an ID is held | T2-03 |
 > | D29 | §7 "no public signup" → client sign-up by verified email (one-time code) | T7-03 |
 > | D34 | §5 "Rental rates … Client: on request/quote only" and §7 "no catalogue in v1" → public daily rates | T7-02 |
 > | D30 | §7 client writes: add "pay online" (advance or invoice balance) | T7-05 |
-> | W43 | §6.1 new row: QC by the same person who cleaned, only with "alone on shift" ticked and audited (today a DB CHECK refuses it) | T2-13 |
 > | W49 | §3/§7 new access path: a one-time, job-scoped delivery link for a hired rider — no login, no money, expires | T4-08 |
-> | W53 | Sign-in: switch user on a shared device by name + 4-digit PIN, restoring that person's own session (not the screen-lock curtain) | T1-15 |
+> | W53 | Sign-in: switch user on a shared device by name + PIN (4 or 6 digits — O-18), restoring that person's own session (not the screen-lock curtain) | T1-15 |
 > | W88 | §4 new capability `rental.change`: booking-desk roles change items and dates after Confirm (today quote-only edits + extend) | T3-18 |
 > | W68 | §6.1 note: a Staff client's 20% discount is an ordinary discount line (Law 10, ungated) | T8-09 |
+> | B19 | §6.1 new row `gate.return.damage_unsigned`: a Return with a flagged unit needs a signature or a recorded refusal (reason ≥ 10 chars), by any staff allowed to do Return | T2-19 |
+> | B21, B40 | §5 mechanics: once Owner arms it, money rows and money writes need the second sign-in step (`aal2`) for Owner · Admin · Manager · Coordinator · Accounts; asked again every 30 days per device; Warehouse · Technician · Driver unchanged | T1-17 |
+> | B22, B23 | §4.10 new capability: read sign-in history — Owner · Admin; new-device email for Owner and Admin accounts only | T1-18 |
+> | B26 | §4.10 new capability: change the rental day start — Owner · Admin | T3-28 |
+> | B20 | §4.10 new capability: edit email and document texts — Owner · Admin | T5-13 |
+> | B32 | §4.4 / §6.1: change rates by a percentage in bulk — **Owner only**; every other bulk field follows the existing section-save cells (0173) | T4-12 |
+> | B12 (K4) | §4.4: "Allow overbooking" per product — the product-edit roles; a short line confirms with no extra approval, audited | T2-23 |
+> | B10 | §4.3: planned downtime — the `maintenance.create` roles (C+ · Floor) | T2-21 |
+> | B13, B47 | §5 new row: what a partner charges for temporary stock — money roles only | T2-24 |
+> | B35, B51 | §3.1 / §4.1: floor roles add consumable lines at Pack and Handover and start a counter sale — never shown a price; money roles take payment | T2-20, T3-30, T3-31 |
+> | B41 | §6.1 new row `gate.extend.clash`: an extension into another booking's dates needs an Owner · Admin · Manager decision | T3-29 |
+> | B43 | §4.8 / §8.2: send offer emails — Owner · Admin · Manager | T5-12 |
+> | B17 | §4.6 / §7: payment link — money roles make it; its public page takes payment for that booking only, amount set by the server | T7-15 |
+> | B28, B29 | §3 new access path: a personal calendar link per staff member — number, time, client name only; Driver and Technician see only their own jobs | T4-10 |
+> | B27 | Report a problem — any staff writes; each sees their own; Owner · Admin read all | T4-11 |
+>
+> *Landed and removed from this box (K7): D1 (0181, §6.1), D2 (0179, §6.1, §3.1 W2, §4.2),
+> D3 (0180, §2, §3, §4.2), W43 (0183, §6.1 `gate.reset.qc_self_check`).*
 
 > ## ⛔ VERIFIED 7 Sep 2026 — read §16 before building from §4, §5, §9 or §12
 >
@@ -165,7 +180,7 @@ Staff never see the Client Portal as themselves; a Coordinator opening it uses "
 | Code | Role | What "Limited" means |
 |---|---|---|
 | **W1** | Warehouse | May create and confirm a booking (matches applied RLS `bookings_insert`, `booking_stage_transitions_insert`). Cannot add a discount line (`booking_discounts_money_blind`) — the whole RPC is rejected, never silently dropped. Pricing rail, totals and advance figures not rendered. |
-| **W2** | Warehouse | Completes handover sessions: scan, checklist, signatures, evidence. Payment/deposit gates render **pass/fail with no amount**. May release with payment outstanding **after the warning, logged** (his ruling; 21 Jul soft gate). Cannot override receiver-verification. |
+| **W2** | Warehouse · Technician (D3) | Completes handover sessions: scan, checklist, signatures, evidence. Payment/deposit gates render **pass/fail with no amount**. May release with payment outstanding **after the warning, logged** (his ruling; 21 Jul soft gate). May override receiver-verification with a reason of at least 10 characters (D2, 0179; corrected 27 Oct, K7). |
 | **W3** | Warehouse · Technician | Full return triage (scan-in, OK/Flag, Damage photo, Missing note, condition). Enters damage description/evidence/severity — **no cost field**. Deductions and refund figures not rendered. |
 | **W4** | Warehouse · Technician | Raise a case, add evidence and notes. Cannot set disposition, cost or close. |
 | **W5** | Warehouse | List and detail without money; row action = the next floor verb only. No cancel, extend, edit dates. |
@@ -244,7 +259,7 @@ Ladder shorthand: `M+` = Owner · Admin · Manager. `C+` = M+ · Coordinator. `F
 |---|---|---|---|
 | `rental.pack` | C+ · Warehouse · Technician | D3 (26 Oct 2026) admits Technician to pack gear | ○ (packRental) |
 | `rental.pickup` (= Handover session) | C+ · Warehouse · Technician | soft gate: any of these may release with payment outstanding **after warning, logged** (D3 admits Tech) | ✓ |
-| `rental.pickup.override_receiver` | M+ | receiver-verification gate, reason ≥10 | ○ |
+| `rental.pickup.override_receiver` | C+ · Warehouse · Technician — any staff allowed to hand over (D2, 0179; corrected 27 Oct, K7) | receiver-verification gate, reason ≥10 | ○ |
 | `rental.return` (triage) | C+ · Floor | shared triage (21 Jul) | ✓ |
 | `rental.reset` | C+ · Floor | non-blocking stage | ○ (completeReset) |
 | `inspection.record` | C+ · Floor | condition, evidence, severity — **no cost** for Floor | ✓ (`inspection.*`) |
@@ -554,6 +569,21 @@ One page, no routes, sheets only. `auth_is_staff()` = false. Every read is joine
 | Sign agreement | Signature stored with device/IP/time; agreement → Signed |
 
 `portal_users`, `portal_sessions`, `portal_auth_challenges` are **deny-all today**. They stay deny-all until the session → `client_id` binding is written and tested (§12 D-5). Guessing it wrong exposes one client's data to another.
+
+### 7.1 Hired Rider Link (non-login access path · W49 · T4-08)
+
+For hired delivery riders who lack staff logins:
+- Staff issue an ephemeral single-job link by entering rider name and phone on a delivery job.
+- Access via 128-bit cryptographically secure raw token stored hashed (SHA-256) in Postgres (`delivery_job_links`). Raw tokens never touch database storage.
+- Non-login public access path via dedicated `/rider/:token` route and Edge Function.
+- **Strictly money-blind (Law 6)**: The rider endpoint and UI receive zero prices, rental rates, delivery charges, deposit requirements, invoice totals, or client financial statuses.
+- **Single-job boundary**: The link resolves exactly one delivery job. Cross-job traversal or enumeration is impossible.
+- **Permitted actions**:
+  1. View pickup location (shop branch) and drop address with contact phone.
+  2. View item summary (equipment descriptions and quantities; zero rates).
+  3. "Picked up from shop" transition (`status` -> `In Transit`).
+  4. "Complete delivery" transition with receiver name, drawn signature, and optional photo (`status` -> `Delivered`).
+- **Fail-closed security**: Once delivered, failed, revoked by staff, or after 24 hours, the link immediately ceases to function. A used link cannot deliver twice. Direct table access is denied to anon and authenticated; all mutations are governed by security-definer RPCs.
 
 ---
 

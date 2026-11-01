@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0186**
+**Next free number: 0195**
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
@@ -23,7 +23,18 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0182 | T2-12 | client-collectors-and-id-on-file | lane-a/T2-12-client-collectors-and-id-on-file | verified |
 | 0183 | T2-13 | reset-self-qc-when-alone | lane-a/T2-13-self-qc-when-alone | verified |
 | 0184 | T2-06 | repair-job-closes-damage | lane-a/T2-06-repair-job-closes-the-damage | verified |
-| 0185 | T2-15 | reset-damage-opens-case | lane-a/T2-15-damage-found-during-reset | verified |
+| 0185 | T4-04 | team-notes | lane-b/T4-04-team-notes-repair | verified |
+| 0186 | T4-05 | shift-handovers | lane-b/T4-05-shift-handover-on-the-database | verified |
+| 0187 | T4-01 | delivery-dispatch-rpcs | lane-b/T4-01-delivery-dispatch-on-the-database | verified |
+| 0188 | T3-smart-reservations | smart-reservation-holds | lane-c/T3-smart-reservations | verified |
+| 0189 | T4-07 | delivery-zones | lane-b/T4-07-delivery-zones | verified |
+| 0190 | T4-08 | one-time-rider-link | lane-b/T4-08-one-time-rider-link | verified |
+| 0191 | T4-02 | delivery-reschedule-rpc | lane-b/T4-02-reschedule-a-delivery | verified |
+| 0192 | T5-01 | notification-records | lane-b/T5-01-notification-records | claimed |
+| 0193 | T3-14a | invoice-write-hardening | lane-c/T3-14a-invoice-write-hardening | verified |
+| 0194 | T2-15 | reset-damage-opens-case | lane-a/T2-15-damage-found-during-reset | verified |
+| 0199 | T8-08 | tds-on-crew-payouts | lane-a/T8-08-tds-on-crew-payouts | verified |
+| 0200 | T3-14b | draft-at-confirm | lane-c/T3-14b-draft-at-confirm | claimed |
 
 ## Expected migrations (not yet claimed)
 
@@ -37,7 +48,6 @@ Listed so lanes can see what is coming. A card marked "if needed" may turn out n
 | T3-07 | Opening balances (append-only) |
 | T4-02 | Delivery reschedule RPC (if needed) |
 | T4-03 | Delivery proof evidence link (if needed) |
-| T4-04 | `team_notes` |
 | T4-05 | `shift_handovers` + acknowledgements |
 | T5-01 / T5-05 | `notifications`, event triggers, `notification_preferences` |
 | T5-03 | `email_log` |
@@ -65,3 +75,28 @@ Listed so lanes can see what is coming. A card marked "if needed" may turn out n
 | T5-09 | `push_subscriptions` |
 | T7-02 | `show_online`, `online_bundle_only` on products (with the catalogue view) |
 | T8-09 | staff-client link (if needed) |
+| T1-17 | `aal2` test in `auth_can_view_money()` and the money-write checks, behind an Owner-only setting (27 Oct) |
+| T1-18 | `sign_in_events` (definer-written, Owner/Admin read) |
+| T2-19 | Return gate: flagged lines need a signature or a recorded refusal |
+| T2-21 | planned downtime (a `Downtime` hold or its own table, guarded both ways) |
+| T2-22 | reservation range widened by turnaround or per-product prep/cleaning minutes |
+| T2-23 | `products.allow_overbooking`, short quantity on lines |
+| T2-24 | `temporary_stock` + partner units, money-masked cost |
+| T3-25 | `bookings.tags` + GIN index + set-tags function |
+| T3-26 | `bookings.project_name`, `shoot_location`; `create_booking` accepts both |
+| T3-27 | `Pro Forma` added to `document_type` |
+| T3-28 | `bookings.rental_day_start`; Owner/Admin-only setting row |
+| T3-29 | at-risk record; `gate.extend.clash` decision row |
+| T3-30 | `products.unit_sale_price`; restock movements; `add_consumable_line` |
+| T3-31 | `create_counter_sale(jsonb)` |
+| T4-09 | address map pin; route position on delivery jobs |
+| T4-10 | `calendar_feed_tokens` (hashed) + feed function |
+| T4-11 | `problem_reports` + private photo bucket |
+| T4-12 | `bulk_update_products` (reuses the 0173 section rules) |
+| T5-12 | `offer_campaigns` + recipients + unsubscribe tokens |
+| T5-13 | `message_templates` (versioned) |
+| T7-12 | `product_recommendations` + scheduled refresh |
+| T7-13 | `product_families`, `products.family_id`, `option_label` |
+| T7-14 | Away check in the request function (inside T7-04's migration if still open) |
+| T7-15 | payment links on `payment_intents` (booking, hashed token, expiry) |
+| T7-17 | old store slug beside `external_refs` (if a new entity type is needed) |
