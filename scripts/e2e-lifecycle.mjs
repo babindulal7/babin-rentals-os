@@ -840,67 +840,33 @@ const STEPS = [
     title: 'A partial return: one unit back, one missing',
     expect: 'green',
     async run() {
-      // Create a fresh booking for this test to avoid state pollution from L6
-      const returnTestKey = 'return_test'
-      await as('Coordinator', async () => {
-        await createBooking({
-          key: returnTestKey,
-          window: ['2105-06-01T04:00:00Z', '2105-06-03T04:00:00Z'],
-          actor: 'Coordinator',
-          lines: [
-            {
-              productId: SERIAL_PRODUCT,
-              description: 'Return Test Camera',
-              qty: 2,
-              days: 2,
-              rate: 350000,
-              units: [UNITS[0], UNITS[1]],
-            },
-          ],
-        })
-        await transition(returnTestKey, 'Quote', 'Booked', 'Coordinator')
-      })
       await as('Warehouse', async () => {
-        await actionPackRental({
-          key: returnTestKey,
-          actor: 'Warehouse',
-          units: [{ id: UNITS[0], serial: 'SN-A1' }, { id: UNITS[1], serial: 'SN-A2' }],
-        })
-        await actionHandoverRental({
-          key: returnTestKey,
-          actor: 'Warehouse',
-          signerName: 'Lifecycle Client Signer',
-          reason: 'Handover completed with client signature',
-        })
-      })
-
-      // Refuse moving to Returned with no Return session
-      await as('Warehouse', async () => {
+        // Refuse moving to Returned with no Return session
         await refuses(
           'moving to Returned with no Return session',
           `insert into booking_stage_transitions
              (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at)
            values (gen_random_uuid(), $1, $2, 'On Rent', 'Returned', $3, 'Warehouse', now())`,
-          [bookingIds[returnTestKey], BRANCH, U.Warehouse],
+          [bookingIds.a, BRANCH, U.Warehouse],
           /gate\.return\.session_missing/,
         )
 
         // Complete partial return through action: 1 unit back, 1 missing
         await actionReturnRental({
-          key: returnTestKey,
+          key: 'a',
           actor: 'Warehouse',
           returnedUnits: [UNITS[0]],
           missingUnits: [{ id: UNITS[1], reason: 'Lost on location during shoot' }],
         })
       })
 
-      assertEq(await stageOf(returnTestKey), 'Returned', 'the booking returned')
+      assertEq(await stageOf('a'), 'Returned', 'the booking returned')
 
-      const stillHeld = await liveHolds(returnTestKey)
+      const stillHeld = await liveHolds('a')
       assertEq(stillHeld, 0, 'every hold on a returned booking is released (R-26)')
 
       const cases = Number(
-        await one("select count(*) from cases where linked_booking_id = $1 and type = 'Missing'", [bookingIds[returnTestKey]]),
+        await one("select count(*) from cases where linked_booking_id = $1 and type = 'Missing'", [bookingIds.a]),
       )
       assert(cases > 0, 'no Missing case was opened for the unit that did not come back')
     },
@@ -1050,81 +1016,11 @@ const STEPS = [
     title: 'Closed needs a settled invoice',
     expect: 'green',
     async run() {
-      // Use a fresh booking for this test to avoid state pollution
-      const closeTestKey = 'close_test'
-      await as('Coordinator', async () => {
-        await createBooking({
-          key: closeTestKey,
-          window: ['2105-06-01T04:00:00Z', '2105-06-03T04:00:00Z'],
-          actor: 'Coordinator',
-          lines: [
-            {
-              productId: SERIAL_PRODUCT,
-              description: 'Close Test Camera',
-              qty: 2,
-              days: 2,
-              rate: 350000,
-              units: [UNITS[0], UNITS[1]],
-            },
-          ],
-        })
-        await transition(closeTestKey, 'Quote', 'Booked', 'Coordinator')
-      })
-      await as('Warehouse', async () => {
-        await actionPackRental({
-          key: closeTestKey,
-          actor: 'Warehouse',
-          units: [{ id: UNITS[0], serial: 'SN-A1' }, { id: UNITS[1], serial: 'SN-A2' }],
-        })
-        await actionHandoverRental({
-          key: closeTestKey,
-          actor: 'Warehouse',
-          signerName: 'Lifecycle Client Signer',
-          reason: 'Handover completed with client signature',
-        })
-      })
-      await as('Accounts', async () => {
-        const draftInvoiceId = await one('select id from invoices where booking_id = $1 and status = \'Draft\'', [bookingIds[closeTestKey]])
-        const issued = await one('select issue_invoice($1::jsonb)', [
-          JSON.stringify({
-            invoice_id: draftInvoiceId,
-            issued_by: U.Accounts,
-          }),
-        ])
-        assert(issued.invoice_no !== null && typeof issued.invoice_no === 'string', 'issued invoice has no number')
-        assertEq(issued.status, 'Sent', 'newly issued invoice without payments has status Sent')
-      })
-      await as('Warehouse', async () => {
-        await actionReturnRental({
-          key: closeTestKey,
-          actor: 'Warehouse',
-          returnedUnits: [UNITS[0]],
-          missingUnits: [{ id: UNITS[1], reason: 'Lost on location during shoot' }],
-        })
-      })
-      await as('Accounts', async () => {
-        const invoiceId = await one('select id from invoices where booking_id = $1 and status = \'Sent\'', [bookingIds[closeTestKey]])
-        for (const amount of [300000, 411900]) {
-          await q(
-            `insert into payments
-               (client_uuid, payment_no, booking_id, invoice_id, client_id, branch_id, amount, payment_type, payment_date, received_by)
-             values (gen_random_uuid(), next_document_number('payment'), $1, $2, $3, $4, $5, 'Advance Payment', now(), $6)`,
-            [bookingIds[closeTestKey], invoiceId, CLIENT, BRANCH, amount, U.Accounts],
-          )
-        }
-        // Verify invoice is marked as Paid
-        const paidCheck = await one('select status, outstanding_amount from invoices where id = $1', [invoiceId])
-        if (paidCheck.status !== 'Paid' || Number(paidCheck.outstanding_amount) !== 0) {
-          // Manually settle for test purposes (sync_payment_to_invoice trigger may not fire in test env)
-          await q('update invoices set status = \'Paid\', outstanding_amount = 0, paid_amount = total_amount where id = $1', [invoiceId])
-        }
-      })
-
       /* Refused while open cases exist (Gate 3e) */
       let closeWithOpenCaseRefused = false
       try {
         await as('Coordinator', async () => {
-          await transition(closeTestKey, 'Returned', 'Closed', 'Coordinator')
+          await transition('a', 'Returned', 'Closed', 'Coordinator')
         })
       } catch (err) {
         closeWithOpenCaseRefused = true
@@ -1139,21 +1035,21 @@ const STEPS = [
       await as('Manager', async () => {
         await q(
           `update cases set status = 'Resolved', settled_at = now() where linked_booking_id = $1 and type = 'Missing'`,
-          [bookingIds[closeTestKey]],
+          [bookingIds.a],
         )
       })
 
       /* The ACCEPTED half, on the booking this script has settled. */
       await as('Coordinator', async () => {
-        await transition(closeTestKey, 'Returned', 'Closed', 'Coordinator')
+        await transition('a', 'Returned', 'Closed', 'Coordinator')
       })
-      assertEq(await stageOf(closeTestKey), 'Closed', 'a settled booking closes')
+      assertEq(await stageOf('a'), 'Closed', 'a settled booking closes')
       assert(
-        (await one('select closed_at from bookings where id = $1', [bookingIds[closeTestKey]])) !== null,
+        (await one('select closed_at from bookings where id = $1', [bookingIds.a])) !== null,
         'closed_at was set by the transition',
       )
 
-      /* The REFUSED half, on booking `c` — Booked, and never invoiced. Undone,
+      /* The REFUSED half, on booking `c` — Booked, and never invoiced/settled. Undone,
          because walking a second booking to Closed for the sake of an assertion
          would leave a closed booking in the corpus and Closed is final. */
       const closedWithNoInvoice = await undone(async () => {
@@ -1163,8 +1059,7 @@ const STEPS = [
           await actionReturnRental({ key: 'c', actor: 'Warehouse', returnedUnits: [{ id: UNITS[0] }] })
         })
 
-        // Settle invoice before close to satisfy close gate
-        await settleInvoice('c', U.Accounts)
+        // Settle invoice is NOT called here because we are verifying that an unsettled booking CANNOT close!
         await as('Coordinator', async () => {
           try {
             await transition('c', 'Returned', 'Closed', 'Coordinator')
@@ -1661,7 +1556,7 @@ const STEPS = [
       await undone(async () => {
         await as('Manager', async () => {
           const paymentId = await one(
-            `select id from payments where booking_id = $1 and amount = 3000 order by created_at limit 1`,
+            `select id from payments where booking_id = $1 and amount = 300000 order by created_at limit 1`,
             [bookingIds.a],
           )
           assert(paymentId !== null, 'L19 needs L10\'s Rs 3,000 receipt.')
@@ -1669,7 +1564,7 @@ const STEPS = [
           await q(
             `insert into payment_reversals
                (client_uuid, reversal_no, original_payment_id, amount, reason, reversed_by, approved_by)
-             values (gen_random_uuid(), 'REV-L19-0001', $1, 2500, 'Lifecycle partial correction', $2, $2)`,
+             values (gen_random_uuid(), 'REV-L19-0001', $1, 250000, 'Lifecycle partial correction', $2, $2)`,
             [paymentId, U.Manager],
           )
 
@@ -1677,7 +1572,7 @@ const STEPS = [
             'a second partial reversal beyond the remaining Rs 500',
             `insert into payment_reversals
                (client_uuid, reversal_no, original_payment_id, amount, reason, reversed_by, approved_by)
-             values (gen_random_uuid(), 'REV-L19-0002', $1, 501, 'Lifecycle excess correction', $2, $2)`,
+             values (gen_random_uuid(), 'REV-L19-0002', $1, 50100, 'Lifecycle excess correction', $2, $2)`,
             [paymentId, U.Manager],
             /remaining reversible amount|exceeds/i,
           )
@@ -1773,25 +1668,27 @@ const STEPS = [
           [packingSessionId, bookingIds.cons, SERIAL_PRODUCT, UNITS[2], U.Warehouse],
         )
         await transition('cons', 'Booked', 'Packed', 'Warehouse')
+      })
 
-        // Settle invoice before handover to satisfy R-06 gate
-        await as('Accounts', async () => {
-          const draftInvoiceId = await one('select id from invoices where booking_id = $1 and status = \'Draft\'', [bookingIds.cons])
-          if (draftInvoiceId) {
-            await q('select issue_invoice($1::jsonb)', [
-              JSON.stringify({ invoice_id: draftInvoiceId, issued_by: U.Accounts })
-            ])
-            // Pay the outstanding amount
-            const outstanding = Number(await one('select outstanding_amount from invoices where id = $1', [draftInvoiceId]))
-            if (outstanding > 0) {
-              await q(
-                `insert into payments (client_uuid, payment_no, booking_id, invoice_id, client_id, branch_id, amount, payment_type, payment_date, received_by)
-                 values (gen_random_uuid(), next_document_number('payment'), $1, $2, $3, $4, $5, 'Advance Payment', now(), $6)`,
-              [bookingIds.cons, draftInvoiceId, CLIENT, BRANCH, outstanding, U.Accounts])
-            }
+      // Settle invoice before handover to satisfy R-06 gate (run independently so role is not clobbered)
+      await as('Accounts', async () => {
+        const draftInvoiceId = await one('select id from invoices where booking_id = $1 and status = \'Draft\'', [bookingIds.cons])
+        if (draftInvoiceId) {
+          await q('select issue_invoice($1::jsonb)', [
+            JSON.stringify({ invoice_id: draftInvoiceId, issued_by: U.Accounts })
+          ])
+          // Pay the outstanding amount
+          const outstanding = Number(await one('select outstanding_amount from invoices where id = $1', [draftInvoiceId]))
+          if (outstanding > 0) {
+            await q(
+              `insert into payments (client_uuid, payment_no, booking_id, invoice_id, client_id, branch_id, amount, payment_type, payment_date, received_by)
+               values (gen_random_uuid(), next_document_number('payment'), $1, $2, $3, $4, $5, 'Advance Payment', now(), $6)`,
+            [bookingIds.cons, draftInvoiceId, CLIENT, BRANCH, outstanding, U.Accounts])
           }
-        })
+        }
+      })
 
+      await as('Warehouse', async () => {
         const handoverSessionId = crypto.randomUUID()
         await q(
           `insert into operation_sessions (id, client_uuid, booking_id, operation, session_no, state, delivery_method, warehouse_staff_id, created_by, government_id_verified, booking_authorization_verified)
