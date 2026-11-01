@@ -62,6 +62,16 @@ New open items, each with a ⭐ default in [`PLAN.md` §4.2](../PLAN.md):
   time of a supply at the earliest of the invoice, the service or the payment, and has its own rule for
   part payments — so an advance or the handover may already require the invoice. The accountant decides;
   if needed the numbering moment becomes one setting, and T3-14's numbering step ships only after the answer.
+- **O-20** — what fee is on a custom-fee plan such as Elite (D22 implementation, T8-03 review). The
+  plans Babin sent leave Elite's annual fee blank: the price is negotiated per client. Until the plan
+  table answers it, the app refuses the change (`GATE:membership.custom_fee`) so an unpriced term can
+  never silently cost Rs 0 or credit the whole old fee; a negotiated fee typed into the dialog is
+  recorded on the membership row and prices any later change out of it (a renewal carries the recorded
+  fee onto the new term). A membership whose fee was never recorded and whose plan lists none is
+  likewise refused (`GATE:membership.fee_unknown`) — the unused days cannot be priced and Babin
+  decides the fee before the change can be sent. `TODO(decision)`: Babin sets Elite's pricing basis
+  (a listed fee, or per-client negotiation kept as is). *(Numbered O-20: main's O-18 is the
+  switch-user PIN length, O-19 the team-notes authority.)*
 
 ## 26 October 2026: Babin's ruling round — what it closed, what is still open
 

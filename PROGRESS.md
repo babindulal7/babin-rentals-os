@@ -1,5 +1,50 @@
 # Progress Log
 
+## 2026-11-02 — T8-04 review: renewal-aware money gates, modal honesty, L53 Elite renewal (Lane A · Size M)
+
+**Did**
+- Reviewed the as-received T8-04 tip (5ce573f9 — T2-15/main integrated; membership migrations renumbered 0197/0198, lifecycle steps L52/L53) and fixed what was red:
+  - `0197` (the T8-03 credit migration, renumbered): the same fixes as its 0188 origin — days clamp, custom-fee entry gate, fee_unknown exit gate, listing-or-negotiated basis, header.
+  - `0198` (the effective redefinition): days clamp; a renewal-aware custom-fee entry gate (a renewal of the same plan may price from the fee already on the row); the change-branch fee_unknown refusal (a renewal earns no credit, so it never needs the old fee); the new-fee basis `coalesce(listing, negotiated payload, renewal-recorded)`; and a renewal carry-forward — a custom-fee renewal records the fee it just charged onto the new term so later changes can still price it.
+  - L52 (T8-03's step, renumbered): the custom-fee / unknown-fee / backdate / negotiated-fee cases. 9a corrected for D23 semantics: a mid-term change of an unpriced live term is refused, while a change after the term ended proceeds as a renewal (credit 0 needs no old fee) — both pinned.
+  - L53 (T8-04's step, renumbered): added the Elite renewal carry case (the renewal charges the recorded Rs 25,000; the new row keeps it).
+  - Modal merged with T8-04's renewal features: settle-once membership read; old-fee basis by the row's plan id; paisa boundary conversion; negotiated-fee input (optional on a renewal that already has a recorded fee); renewal pricing shows the recorded/negotiated fee, not '—'; Apply is blocked while the row is still reading, without a priceable basis, or without a negotiated fee on a custom-fee change; the pinned footer phrase restored with variants; `feePaid` rides both the change and renewal payloads (renegotiation-on-renewal supported by the action).
+  - Mock parity on the integrated function: both gates + effective-date chain + listing-preferred basis + renewal carry; five new gate tests including the renewal carry.
+  - `StockMembershipFlows` fixture carries the real plan ids/fees; the payload asserts `planId`; the concurrent mock resolves the action's contract shape.
+  - Docs: O-20 (renumbered from the draft's O-18 — main claimed O-18 for the switch-user PIN length and O-19 for the team-notes authority) in `OPEN_DECISIONS.md` + `PLAN.md` §4.2.
+
+**Ruled**
+- Renewal semantics under the gates: a lapsed/ending term renews at the new fee with credit 0 — the old fee never needs pricing; a custom-fee renewal prices from the recorded fee and carries it forward; a mid-term change still needs a priceable old fee.
+- O-20 default: per-client fee negotiation kept for custom-fee plans.
+
+**Verified** (integrated tip + review; receipts bound to the source fingerprint)
+- `npm run typecheck`: clean, 0 errors.
+- Focused: 103/103 across the modal, inventory-flows, mock-RPC, change and renew suites.
+- `npm test -- --no-file-parallelism`: 526/526 files, 6495/6495 tests passed — receipt `artifacts/test-run-bf3a1aa4-d597-40c1-83fa-7ab6fe463543.json`, fingerprint matches.
+- `npm run check:pglite`: 199/199 applied, 0 failed; anon view/function leaks 0; definer search_paths pinned.
+- `npm run check:lifecycle`: 53/53 green — L52 and L53 hold with the new gates and cases.
+- `npm run lint`: clean (exit 0). `npm run check:contrast`: 106/106. `npm run build`: exit 0, PWA generated (275 precache entries).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 83 / 83 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 66 / 66 (100%) | +0 |
+| Lifecycle | steps green / total | 53 / 53 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 199 files · check:pglite 199/199 applied, 0 failed. Suite: PASS — 6495/6495 passed, 0 failed; source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- WRITTEN → VERIFIED locally (R-35). NOT merged, NOT APPLIED to any hosted database (N-5).
+- The reviewed T8-03 chain lives on `lane-a/T8-03-change-plan-with-credit-for-unused` (76e591ab review, deb1566e O-20 renumber); this branch carries the integrated, renumbered, renewal-aware version of the same fixes.
+- Next: T8-05 (member benefits at booking) verification; T8-08 push.
+
 ## 2026-11-01 — T8-01…T8-04 renumbered 0186–0189 → 0195–0198 on top of the T2-15 renumber (Lane A · collision fix)
 
 **Did**

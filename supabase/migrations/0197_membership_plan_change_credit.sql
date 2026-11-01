@@ -11,6 +11,12 @@
 --    Refuses retired plans (GATE:membership_plan.retired).
 --    Refuses deactivated clients (GATE:client.deactivated).
 --    Refuses changing to the same plan (GATE:membership.same_plan).
+--    Refuses moving ONTO a custom-fee plan without the negotiated fee
+--    (GATE:membership.custom_fee) — Elite's fee is per client; zero is not a price.
+--    Refuses moving OFF a membership whose fee was never recorded and whose plan
+--    lists none (GATE:membership.fee_unknown) — the credit cannot be priced.
+--    Caps days left at the term on file: a backdated effective date cannot
+--    credit more than the old fee charged.
 --    Restarts new term from effective change date.
 --    Audits old plan, new plan, days left, credit, new fee due, and account credit.
 -- 4. Unifies `enroll_client_membership` to delegate to `change_client_membership`,
@@ -180,6 +186,16 @@ begin
     raise exception 'GATE:membership_plan.retired: That membership plan is retired and cannot be assigned.' using errcode = '23514';
   end if;
 
+  -- A plan without a listed fee (Elite) is priced per client. Without the
+  -- negotiated fee there IS no price: pricing it at zero would silently sell
+  -- the remainder of the old term free and pay the old term's credit out as
+  -- account credit. The negotiated fee, when supplied as payload fee_paid, is
+  -- the new-fee basis (the plan's listing is preferred when it has one).
+  if v_plan.annual_fee is null and v_fee_paid_in is null then
+    raise exception 'GATE:membership.custom_fee: The % plan has a custom fee. Record the negotiated fee to put this client on it.', v_plan.level
+      using errcode = '23514';
+  end if;
+
   select * into v_old from public.client_memberships
    where client_id = v_client_id and superseded_at is null
    for update;
@@ -192,13 +208,26 @@ begin
       raise exception 'GATE:membership.same_plan: This client is already on the % plan.', v_plan.level using errcode = '23514';
     end if;
 
+    -- The credit is priced from the fee the old term actually carried: what was
+    -- recorded on the row, else the plan's listed fee. When BOTH are unknown
+    -- there is no honest arithmetic — refuse rather than credit zero (the
+    -- client loses their unused days) or credit everything (the studio pays).
+    if v_old.fee_paid is null and v_old_plan.annual_fee is null then
+      raise exception 'GATE:membership.fee_unknown: The fee on the client''s current membership was never recorded, so the unused days cannot be priced. Record the fee, then change the plan.'
+        using errcode = '23514';
+    end if;
+
     -- D22: credit = old fee * days left / days in old term (integer paisa, half-up)
     v_old_fee_paisa := round(coalesce(v_old.fee_paid, v_old_plan.annual_fee, 0) * 100);
     v_term_start := v_old.join_date;
     v_term_months := coalesce(v_old_plan.term_months, 12);
     v_term_end := (v_term_start + make_interval(months => v_term_months))::date;
     v_total_days := v_term_end - v_term_start;
-    v_days_left := greatest(0, v_term_end - v_effective_date);
+    -- Days left can never exceed the term that is actually on file. A change
+    -- whose effective date lands before the old term even started (backdated,
+    -- user-typed) must not credit MORE than the old fee charged: the credit is
+    -- a pro-rata share of the term the client paid for, capped at all of it.
+    v_days_left := least(v_total_days, greatest(0, v_term_end - v_effective_date));
 
     if v_total_days > 0 and v_days_left > 0 and v_old_fee_paisa > 0 then
       v_credit_paisa := round((v_old_fee_paisa::numeric * v_days_left::numeric) / v_total_days::numeric);
@@ -213,8 +242,10 @@ begin
     v_credit_paisa := 0;
   end if;
 
-  -- New plan economics
-  v_new_fee_paisa := round(coalesce(v_plan.annual_fee, 0) * 100);
+  -- New plan economics. The basis is the plan's listed fee; a custom-fee plan
+  -- (annual_fee NULL) has none, and the entry gate above guarantees a
+  -- negotiated payload fee — that is the basis then.
+  v_new_fee_paisa := round(coalesce(v_plan.annual_fee, v_fee_paid_in) * 100);
   v_new_fee_due_paisa := greatest(0, v_new_fee_paisa - v_credit_paisa);
   v_account_credit_paisa := greatest(0, v_credit_paisa - v_new_fee_paisa);
 

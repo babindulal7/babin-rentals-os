@@ -5,7 +5,7 @@ import { useToast } from '../../../components/ui/Toast'
 import { changeMembership, NOTE_MAX } from '../../../actions/clients/changeMembership'
 import { renewMembership } from '../../../actions/clients/renewMembership'
 import { useAuth } from '../../../lib/auth'
-import { formatMoney, grouped, rupees, toRupees, type Paisa } from '../../../lib/money'
+import { formatMoney, grouped, parseMoney, rupees, toRupees, type Paisa } from '../../../lib/money'
 import { useNetwork } from '../../../lib/network'
 import { useMembershipPlans } from '../../../lib/queries/useClients'
 import type { ClientRecord, MembershipTier } from '../../../lib/queries/clients'
@@ -56,6 +56,8 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership, 
   const [selected, setSelected] = useState<MembershipTier | ''>(isDirectRenew && current ? current : '')
   const [isRenewing, setIsRenewing] = useState<boolean>(isDirectRenew)
   const [note, setNote] = useState('')
+  /** The negotiated fee, in rupees-as-typed. Only a custom-fee plan needs it. */
+  const [feeInput, setFeeInput] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const submitting = useRef(false)
@@ -66,11 +68,18 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership, 
     joinDate: string
     feePaid: number | null
   } | null>(null)
+  /* The read settles EXACTLY once: with the live row, or without it. A read that
+     fails or cannot run leaves the dialog on the pinned tier's basis — the
+     database still enforces the true row, so the dialog must not sit waiting. */
+  const [membershipReadSettled, setMembershipReadSettled] = useState(false)
 
   useEffect(() => {
     let active = true
     async function loadActive() {
-      if (!hasMembership || !client.dbId) return
+      if (!hasMembership || !client.dbId) {
+        if (active) setMembershipReadSettled(true)
+        return
+      }
       try {
         const { data, error } = await supabase
           .from('client_memberships_v')
@@ -78,17 +87,21 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership, 
           .eq('client_id', client.dbId)
           .is('superseded_at', null)
           .maybeSingle()
+        if (!active) return
         if (error) return
-        if (active && data) {
+        if (data) {
           setActiveMembership({
             id: data.id,
             planId: data.plan_id,
             joinDate: data.join_date,
-            feePaid: data.fee_paid != null ? Number(data.fee_paid) : null,
+            // DB money is integer paisa; the dialog prices in rupees.
+            feePaid: data.fee_paid != null ? toRupees(Number(data.fee_paid) as Paisa) : null,
           })
         }
       } catch {
-        // Safe fallback
+        // Fall back to the pinned tier's plan below.
+      } finally {
+        if (active) setMembershipReadSettled(true)
       }
     }
     void loadActive()
@@ -121,16 +134,47 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership, 
       ? 'Renew Membership'
       : 'Apply Tier Change'
 
+  /* The old plan is the LIVE row's plan when the row is on file; only when the
+     row is absent does the pinned tier stand in. Falling back to the pinned
+     tier while the row exists would price the credit against a plan that is
+     not the one the client paid, and would call an unrecorded fee "known". */
   const oldPlan = hasMembership
-    ? (options.find((p) => (activeMembership && p.id === activeMembership.planId) || p.level === current) ?? null)
+    ? activeMembership
+      ? (options.find((p) => p.id === activeMembership.planId) ?? null)
+      : (options.find((p) => p.level === current) ?? null)
     : null
   const oldFeeRupees = activeMembership?.feePaid ?? (oldPlan?.annualFee != null ? toRupees(oldPlan.annualFee) : 0)
   const oldJoinDate = activeMembership?.joinDate ?? businessDayAd()
   const oldTermMonths = oldPlan?.termMonths ?? 12
-  const newFeePaisa = chosen?.annualFee ?? (0 as Paisa)
+
+  /* The old-fee basis is priced from what the membership row recorded, else the
+     old plan's listing. With NEITHER the credit for unused days cannot be
+     computed — it must never be shown, and never guessed as zero (Law 16).
+     When the custom-fee plan is chosen (listed fee withheld — Elite), the
+     negotiated fee is requested here; an absent fee has NO price, so the
+     database refuses one, and this dialog refuses to send it. On a RENEWAL of
+     a custom-fee plan the fee recorded on the live row is already a price. */
+  const membershipReadPending = hasMembership && !membershipReadSettled
+  const oldFeeBasisKnown = !hasMembership || oldPlan?.annualFee != null || activeMembership?.feePaid != null
+  const customFeeChosen = chosen !== null && chosen.annualFee == null
+  const parsedFee = feeInput.trim() !== '' ? parseMoney(feeInput.trim()) : null
+  const feeInvalid = feeInput.trim() !== '' && (parsedFee === null || !Number.isSafeInteger(parsedFee) || parsedFee < 0)
+  const negotiatedFeePaisa: Paisa | null = !feeInvalid && parsedFee !== null ? parsedFee : null
+  const newFeePaisa: Paisa | null = chosen === null
+    ? null
+    : customFeeChosen
+      ? negotiatedFeePaisa
+      : (chosen.annualFee ?? null)
+  /* What a renewal charges: the listing, a freshly negotiated fee, else the
+     fee already recorded on the live row (a custom-fee renewal). */
+  const renewalFeePaisa: Paisa | null = chosen === null
+    ? null
+    : chosen.annualFee != null
+      ? chosen.annualFee
+      : negotiatedFeePaisa ?? (activeMembership?.feePaid != null ? rupees(activeMembership.feePaid) : null)
 
   const creditWorking =
-    hasMembership && chosen && !unchanged
+    hasMembership && chosen && !unchanged && oldFeeBasisKnown && !membershipReadPending && newFeePaisa !== null
       ? calculateMembershipCredit({
           oldFeePaisa: rupees(oldFeeRupees),
           oldJoinDate,
@@ -140,7 +184,14 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership, 
         })
       : null
 
-  const canApply = Boolean(user) && chosen !== null && (!unchanged || isRenewal) && !tooLong && !saving && !plans.loading
+  /* A change is never submitted before its working can be shown: while the live
+     membership row is still being read, and when it settles without a priceable
+     fee basis, the dialog waits instead of sending a change it cannot price. A
+     custom-fee renewal is priceable from the fee already recorded on the row. */
+  const canApply =
+    Boolean(user) && chosen !== null && (!unchanged || isRenewal) && !tooLong && !saving && !plans.loading
+    && (!customFeeChosen || negotiatedFeePaisa !== null || (isRenewal && renewalFeePaisa !== null))
+    && (activating || (!membershipReadPending && oldFeeBasisKnown))
 
   async function apply() {
     if (submitting.current || !canApply || !user || !chosen) return
@@ -152,7 +203,7 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership, 
       setError('Connect to update client membership.')
       return
     }
-    const signature = JSON.stringify([client.dbId, chosen.level, isRenewal, note.trim()])
+    const signature = JSON.stringify([client.dbId, chosen.level, isRenewal, note.trim(), negotiatedFeePaisa])
     if (keyRef.current?.signature !== signature) keyRef.current = { signature, key: crypto.randomUUID() }
     submitting.current = true
     setSaving(true)
@@ -165,6 +216,9 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership, 
             clientCode: client.id,
             planLevel: chosen.level,
             ...(chosen.id ? { planId: chosen.id } : {}),
+            // A renegotiated renewal carries the new fee; on a custom-fee plan
+            // with nothing typed the database carries the recorded fee forward.
+            ...(negotiatedFeePaisa !== null ? { feePaid: negotiatedFeePaisa } : {}),
             note: note.trim() || undefined,
             clientUuid: keyRef.current.key,
           },
@@ -181,6 +235,9 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership, 
             clientCode: client.id,
             planLevel: chosen.level,
             ...(chosen.id ? { planId: chosen.id } : {}),
+            // A custom-fee plan is priced per client: the negotiated fee is the
+            // payload's fee_paid, and everything else stays out of the payload.
+            ...(negotiatedFeePaisa !== null ? { feePaid: negotiatedFeePaisa } : {}),
             note: note.trim() || undefined,
             clientUuid: keyRef.current.key,
           },
@@ -318,11 +375,67 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership, 
                   Discount{' '}
                   <span className="figure">{chosen.individualDiscountPct === null ? 'Negotiated' : `${chosen.individualDiscountPct}%`}</span>
                 </span>
-                {activating && (
-                  <span style={{ fontSize: 'var(--t-caption)', color: 'var(--muted)' }}>
-                    Taken from the membership plans on file. No fee is recorded by this change.
+                <span style={{ fontSize: 'var(--t-caption)', color: 'var(--muted)' }}>
+                  Taken from the membership plans on file.{' '}
+                  {customFeeChosen
+                    ? negotiatedFeePaisa !== null
+                      ? 'The negotiated fee is recorded with this change.'
+                      : isRenewal
+                        ? renewalFeePaisa !== null
+                          ? 'The fee already on record is charged; record a new fee to renegotiate.'
+                          : 'The fee is negotiated per client — record it below to price this renewal.'
+                        : 'The fee is negotiated per client — record it below to price this change.'
+                    : 'No fee is recorded by this change.'}
+                </span>
+              </div>
+            )}
+
+            {chosen && customFeeChosen && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label htmlFor={`fee-${selectId}`} style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
+                  Negotiated fee (NPR) {!isRenewal && <span aria-hidden="true" style={{ color: 'var(--danger)' }}>*</span>}
+                </label>
+                <input
+                  id={`fee-${selectId}`}
+                  aria-label="Negotiated fee"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="e.g. 25,000 — the fee Babin agreed for this client"
+                  value={feeInput}
+                  aria-invalid={feeInvalid}
+                  disabled={saving}
+                  onChange={(e) => {
+                    setFeeInput(e.target.value)
+                    setError(null)
+                  }}
+                  style={{
+                    minHeight: 44,
+                    padding: '8px 12px',
+                    borderRadius: 'var(--r-btn)',
+                    border: `1px solid ${feeInvalid ? 'var(--danger)' : 'var(--border)'}`,
+                    background: 'var(--card)',
+                    color: 'var(--text)',
+                    fontSize: 'var(--t-meta)',
+                  }}
+                />
+                {feeInvalid && (
+                  <span role="alert" style={{ color: 'var(--danger-text)', fontSize: 'var(--t-meta)' }}>
+                    Enter a valid non-negative negotiated fee.
                   </span>
                 )}
+              </div>
+            )}
+
+            {chosen && !unchanged && membershipReadPending && (
+              <div role="status" style={{ color: 'var(--text2)', fontSize: 'var(--t-meta)' }}>
+                Reading the current membership…
+              </div>
+            )}
+
+            {chosen && !unchanged && !membershipReadPending && !oldFeeBasisKnown && (
+              <div role="status" style={{ color: 'var(--text)', fontSize: 'var(--t-meta)', lineHeight: 1.45 }}>
+                The fee on the current membership was never recorded, so the unused days cannot be priced and the change cannot
+                be sent. Record the fee on the membership first — the database refuses this change until it can be priced.
               </div>
             )}
 
@@ -417,7 +530,7 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership, 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', rowGap: 6, columnGap: 12, fontSize: 'var(--t-meta)', marginTop: 4 }}>
                     <span style={{ color: 'var(--text2)' }}>Renewal plan fee:</span>
                     <span className="figure" style={{ fontWeight: 600, color: 'var(--text)' }}>
-                      {chosen?.annualFee != null ? formatMoney(chosen.annualFee) : '—'}
+                      {renewalFeePaisa !== null ? formatMoney(renewalFeePaisa) : '—'}
                     </span>
                     <span style={{ color: 'var(--text2)' }}>Credit for renewal:</span>
                     <span className="figure" style={{ fontWeight: 600, color: 'var(--muted)' }}>
@@ -426,7 +539,7 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership, 
                     <div style={{ gridColumn: '1 / -1', height: 1, background: 'var(--border)', margin: '4px 0' }} />
                     <span style={{ fontWeight: 700, color: 'var(--text)' }}>New fee due now:</span>
                     <span className="figure" style={{ fontWeight: 700, fontSize: 'var(--t-body)', color: 'var(--text)' }}>
-                      {chosen?.annualFee != null ? formatMoney(chosen.annualFee) : '—'}
+                      {renewalFeePaisa !== null ? formatMoney(renewalFeePaisa) : '—'}
                     </span>
                     <span style={{ gridColumn: '1 / -1', fontSize: 'var(--t-caption)', color: 'var(--muted)', marginTop: 2 }}>
                       Charges the full plan fee, starts a new term from today, and keeps previous term in history (Law 3).

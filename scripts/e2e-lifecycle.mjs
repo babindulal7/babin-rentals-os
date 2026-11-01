@@ -4933,6 +4933,141 @@ STEPS.push({
       const whClient = (await q(`select account_credit from clients_v where id = '${testClientId}'`)).rows[0]
       assertEq(whClient.account_credit, null, 'Law 6: Warehouse reads null for client account_credit')
     })
+
+    // 9. Custom-fee plans (Elite) — refuse unpriced moves, price with the negotiated fee
+    // (T8-03 review: the listed fee is NULL, so "new fee = plan fee" priced Elite at zero and
+    // paid the old term's credit out as account credit. Never invented; refused.)
+    let elitePlanId
+    await asOwnerOfTheDatabase(async () => {
+      const elite = (await q(`select id, annual_fee from membership_plans where level = 'Elite'`)).rows[0]
+      elitePlanId = elite.id
+      assertEq(elite.annual_fee, null, 'The seeded Elite plan carries a custom (NULL) listed fee')
+    })
+
+    // 9a. A LIVE Elite membership with no recorded fee is a term that cannot be
+    // priced: a mid-term change needs the old fee for its unused-days credit.
+    // (Term 2027-01-01 → 2028-01-01; the change is effective 2027-06-01, inside it.)
+    let unknownFeeClientId
+    await asOwnerOfTheDatabase(async () => {
+      const clientCode = await one("select next_document_number('client')")
+      unknownFeeClientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+        values (gen_random_uuid(), '${clientCode}', 'L45 Unknown-Fee Client', '+9779800009947', 'Active', '${U.Owner}')
+        returning id`)).rows[0].id
+      // Exactly the row the old code priced at zero: Elite (no listed fee), fee never recorded.
+      await q(`insert into client_memberships (client_uuid, client_id, plan_id, join_date, fee_paid, created_by)
+        values (gen_random_uuid(), '${unknownFeeClientId}', '${elitePlanId}', '2027-01-01', NULL, '${U.Owner}')`)
+    })
+
+    await as('Coordinator', async () => {
+      await refuses(
+        'A membership whose fee was never recorded is refused: unused days cannot be priced',
+        `select change_client_membership(jsonb_build_object(
+          'client_id', '${unknownFeeClientId}',
+          'client_uuid', gen_random_uuid(),
+          'plan_id', '${plan12kId}',
+          'effective_date', '2027-06-01'
+        ))`,
+        undefined,
+        /GATE:membership\.fee_unknown/i,
+      )
+
+      // A LAPSED term needs no old fee priced: credit is zero by definition, so
+      // the change proceeds as a renewal at the full new-plan fee.
+      const lapsedRes = (await q(`select change_client_membership(jsonb_build_object(
+        'client_id', '${unknownFeeClientId}',
+        'client_uuid', gen_random_uuid(),
+        'plan_id', '${plan12kId}',
+        'effective_date', '2028-02-01'
+      ))`)).rows[0]
+      const lapsedOut = typeof lapsedRes.change_client_membership === 'string'
+        ? JSON.parse(lapsedRes.change_client_membership)
+        : lapsedRes.change_client_membership
+      assertEq(lapsedOut.is_renewal, true, 'A change after the term ended is a renewal')
+      assertEq(Number(lapsedOut.credit), 0, 'A lapsed term earns no credit — the old fee never needs pricing')
+      assertEq(Number(lapsedOut.new_fee_due), 12000, 'The lapsed client pays the full new-plan fee')
+    })
+
+    // 9b. Moving ONTO the custom-fee plan without the negotiated fee is refused.
+    await as('Coordinator', async () => {
+      await refuses(
+        'The Elite plan is refused when no negotiated fee is supplied',
+        `select change_client_membership(jsonb_build_object(
+          'client_id', '${testClientId}',
+          'client_uuid', gen_random_uuid(),
+          'plan_id', '${elitePlanId}',
+          'effective_date', '2028-08-01'
+        ))`,
+        undefined,
+        /GATE:membership\.custom_fee/i,
+      )
+    })
+
+    // 9c. The backdated clamp: an effective date before the old term started must
+    // credit no more than the old fee itself (days capped at the term on file).
+    // The worked-example client is on Cinematographer (fee 6,000): term started
+    // 2028-07-02, ends 2029-07-02 = 365 days.
+    await as('Coordinator', async () => {
+      const backRes = (await q(`select change_client_membership(jsonb_build_object(
+        'client_id', '${testClientId}',
+        'client_uuid', gen_random_uuid(),
+        'plan_id', '${plan12kId}',
+        'effective_date', '2027-06-01'
+      ))`)).rows[0]
+      const backOut = typeof backRes.change_client_membership === 'string'
+        ? JSON.parse(backRes.change_client_membership)
+        : backRes.change_client_membership
+
+      assertEq(backOut.days_left, 365, 'Backdated effective date: days left capped at the whole term on file')
+      assertEq(backOut.total_days, 365, 'Term on file is 365 days (2028-07-02 to 2029-07-02)')
+      assertEq(Number(backOut.credit), 6000, 'Credit never exceeds the old fee the client actually paid')
+      assertEq(Number(backOut.new_fee_due), 6000, 'New fee due is 12,000 minus the capped 6,000 credit')
+      assertEq(Number(backOut.account_credit), 0, 'A capped credit cannot spill into account credit')
+    })
+
+    // 9d. Entering the custom-fee plan WITH the negotiated fee works, and the fee
+    // the row now carries prices any later change out of it (Rs 25,000 Elite row,
+    // then moving to Creator uses that fee as the old-fee basis).
+    let negotiatedClientId
+    await asOwnerOfTheDatabase(async () => {
+      const clientCode = await one("select next_document_number('client')")
+      negotiatedClientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+        values (gen_random_uuid(), '${clientCode}', 'L45 Negotiated-Fee Client', '+9779800009948', 'Active', '${U.Owner}')
+        returning id`)).rows[0].id
+    })
+
+    await as('Coordinator', async () => {
+      const eliteRes = (await q(`select change_client_membership(jsonb_build_object(
+        'client_id', '${negotiatedClientId}',
+        'client_uuid', gen_random_uuid(),
+        'plan_id', '${elitePlanId}',
+        'join_date', '2028-01-01',
+        'fee_paid', 25000.00
+      ))`)).rows[0]
+      const eliteOut = typeof eliteRes.change_client_membership === 'string'
+        ? JSON.parse(eliteRes.change_client_membership)
+        : eliteRes.change_client_membership
+
+      assertEq(Number(eliteOut.new_fee), 25000, 'The negotiated fee is the new-fee basis on a custom-fee plan')
+      assertEq(Number(eliteOut.credit), 0, 'A fresh activation earns no credit')
+      assertEq(Number(eliteOut.new_fee_due), 25000, 'A fresh activation charges the negotiated fee')
+
+      // Later change OUT of the negotiated Elite row: old fee = the recorded
+      // 25,000. Term 2028-01-01 to 2029-01-01 = 366 days; changed effective
+      // 2028-09-01 leaves 122 days = exactly a third -> credit 25,000/3 = 8,333.33.
+      const leaveRes = (await q(`select change_client_membership(jsonb_build_object(
+        'client_id', '${negotiatedClientId}',
+        'client_uuid', gen_random_uuid(),
+        'plan_id', '${plan20kId}',
+        'effective_date', '2028-09-01'
+      ))`)).rows[0]
+      const leaveOut = typeof leaveRes.change_client_membership === 'string'
+        ? JSON.parse(leaveRes.change_client_membership)
+        : leaveRes.change_client_membership
+
+      assertEq(Number(leaveOut.old_fee), 25000, 'The recorded negotiated fee prices the change OUT of Elite')
+      assertEq(Number(leaveOut.credit), 8333.33, 'One third of the recorded Elite term (122 of 366 days) credits 8,333.33')
+      assertEq(Number(leaveOut.new_fee_due), 11666.67, 'Creator fee 20,000 minus 8,333.33 credit')
+    })
   },
 })
 
@@ -5030,6 +5165,46 @@ STEPS.push({
       const auditNew = typeof audit.new_values === 'string' ? JSON.parse(audit.new_values) : audit.new_values
       assertEq(auditNew.is_renewal, true, 'Audit new_values indicates is_renewal true')
       assertEq(Number(auditNew.new_fee_due), expectedFee, 'Audit record holds new_fee_due')
+    })
+
+    // 5. A renewal of a custom-fee plan (Elite) keeps the recorded price: the
+    //    fee carries onto the new term so later changes can still be priced.
+    let elitePlanId
+    let eliteClientId
+    await asOwnerOfTheDatabase(async () => {
+      elitePlanId = (await q(`select id from membership_plans where level = 'Elite'`)).rows[0].id
+      const clientCode = await one("select next_document_number('client')")
+      eliteClientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+        values (gen_random_uuid(), '${clientCode}', 'L53 Elite Renewal Client', '+9779800009949', 'Active', '${U.Owner}')
+        returning id`)).rows[0].id
+    })
+
+    await as('Coordinator', async () => {
+      // Enter Elite with the negotiated fee (term 2028-01-01 → 2029-01-01).
+      await q(`select change_client_membership(jsonb_build_object(
+        'client_id', '${eliteClientId}',
+        'client_uuid', gen_random_uuid(),
+        'plan_id', '${elitePlanId}',
+        'join_date', '2028-01-01',
+        'fee_paid', 25000.00
+      ))`)
+
+      // Renew after the term lapsed; no new fee is negotiated.
+      const eliteRenew = (await q(`select renew_client_membership(jsonb_build_object(
+        'client_id', '${eliteClientId}',
+        'client_uuid', gen_random_uuid(),
+        'effective_date', '2029-02-01'
+      ))`)).rows[0]
+      const eliteOut = typeof eliteRenew.renew_client_membership === 'string'
+        ? JSON.parse(eliteRenew.renew_client_membership)
+        : eliteRenew.renew_client_membership
+
+      assertEq(eliteOut.is_renewal, true, 'The custom-fee renewal is marked as renewal')
+      assertEq(Number(eliteOut.new_fee), 25000, 'The renewal charges the recorded negotiated fee, not zero')
+      assertEq(Number(eliteOut.new_fee_due), 25000, 'The full negotiated fee is due on renewal')
+
+      const live = (await q(`select fee_paid from client_memberships_v where client_id = '${eliteClientId}' and superseded_at is null`)).rows[0]
+      assertEq(Number(live.fee_paid), 25000, 'The renewed row carries the recorded fee forward')
     })
   },
 })

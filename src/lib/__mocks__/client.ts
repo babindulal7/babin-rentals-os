@@ -1171,7 +1171,9 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
   const level = payload['plan_level'] ? String(payload['plan_level']).trim() : null
   const planId = payload['plan_id'] ? String(payload['plan_id']).trim() : null
   const note = String(payload['note'] ?? '').trim() || null
-  const effectiveDate = String(payload['effective_date'] ?? new Date(Date.now() + (5 * 60 + 45) * 60_000).toISOString().slice(0, 10))
+  // Matches the SQL's effective-date chain (0197/0198): effective_date, then
+  // join_date, then today's Kathmandu business day.
+  const effectiveDate = String(payload['effective_date'] ?? payload['join_date'] ?? new Date(Date.now() + (5 * 60 + 45) * 60_000).toISOString().slice(0, 10))
   const feePaid = payload['fee_paid'] != null ? Number(payload['fee_paid']) : null
   if (!clientId || !key || (!level && !planId && !isRenewal)) return fail('P0001', 'Client, request key and membership plan are required.')
   if (note !== null && note.length > 500) return fail('P0001', 'A note can be at most 500 characters.')
@@ -1200,6 +1202,13 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
   }
   if (!plan) return fail('P0001', 'That membership plan does not exist.')
   if (String(plan['status'] ?? 'Active') !== 'Active') return fail('P0001', 'That membership plan is retired and cannot be assigned.')
+  // A custom-fee plan (Elite: listed fee NULL) is priced per client — without a
+  // price there is none, and zero would sell the term free (T8-03 review). A
+  // renewal of the same plan may instead rely on the fee recorded on the live row.
+  if (plan['annual_fee'] == null && feePaid == null
+      && !(old && old['plan_id'] === plan['id'] && old['fee_paid'] != null)) {
+    return fail('P0001', `GATE:membership.custom_fee: The ${String(plan['level'])} plan has a custom fee. Record the negotiated fee to put this client on it.`)
+  }
 
   let previous: string | null = null
   let credit = 0
@@ -1214,7 +1223,7 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
     oldFee = Number(old['fee_paid'] ?? oldPlan?.['annual_fee'] ?? 0)
     const oldTermMonths = Number(oldPlan?.['term_months'] ?? 12)
     const oldJoinDate = String(old['join_date'] ?? effectiveDate)
-    const newFee = Number(feePaid ?? plan['annual_fee'] ?? 0)
+    const newFee = Number(plan['annual_fee'] ?? feePaid ?? 0)
 
     const calc = calculateMembershipCredit({
       oldFeePaisa: rupees(oldFee),
@@ -1233,13 +1242,20 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
       credit = 0
       daysLeft = 0
     } else {
+      // The credit is priced from the fee the old term carried (recorded, else
+      // the plan's listing). With BOTH unknown there is no honest arithmetic — refuse.
+      if (old['fee_paid'] == null && oldPlan?.['annual_fee'] == null) {
+        return fail('P0001', "GATE:membership.fee_unknown: The fee on the client's current membership was never recorded, so the unused days cannot be priced. Record the fee, then change the plan.")
+      }
       if (old['plan_id'] === plan['id']) return fail('P0001', `This client is already on the ${plan['level']} plan.`)
       credit = calc.creditPaisa / 100
       daysLeft = calc.daysLeft
     }
   }
 
-  const newFee = Number(feePaid ?? plan['annual_fee'] ?? 0)
+  // The new-fee basis prefers the plan's listing; a renewal of a custom-fee
+  // plan falls back to the fee recorded on the live row (T8-03 review).
+  const newFee = Number(plan['annual_fee'] ?? feePaid ?? (isRenewEffective && old && old['plan_id'] === plan['id'] ? old['fee_paid'] : null) ?? 0)
   const newFeeDue = Math.max(0, newFee - credit)
   const excessCredit = Math.max(0, credit - newFee)
 
@@ -1253,7 +1269,9 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
   if (old) hooks.update('client_memberships', { superseded_at: now, superseded_by_id: newId }, (r) => r['id'] === old['id'])
   commitInsert('client_memberships', {
     id: newId, client_uuid: key, client_id: clientId, plan_id: plan['id'], join_date: joinedOn,
-    fee_paid: feePaid, superseded_by_id: null, superseded_at: null, created_at: now, created_by: actor,
+    // A renewal of a custom-fee plan keeps the price it just charged (T8-03 review).
+    fee_paid: feePaid ?? (isRenewEffective && old && old['plan_id'] === plan['id'] && plan['annual_fee'] == null ? old['fee_paid'] : null),
+    superseded_by_id: null, superseded_at: null, created_at: now, created_by: actor,
   }, now)
   const result: Row = {
     client_id: clientId, plan_id: plan['id'], plan_level: plan['level'], previous_level: previous,
