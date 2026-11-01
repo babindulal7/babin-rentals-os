@@ -706,11 +706,13 @@ export function canExportClientPii(role: SystemRole): boolean {
 }
 
 /**
- * Create a team note — Coordinator and above (Owner, Admin, Manager, Coordinator).
- * Mirrors the RLS policy on `team_notes` INSERT (migration 0185).
+ * RULING 2026-11-01 (Team Notes, owner-approved): every authenticated internal
+ * staff role may create a note; Client is external and is always denied.
+ * Mirrors the staff-only INSERT RLS and create_team_note RPC in migration 0185.
+ * This does NOT change any money visibility, edit/archive or login permissions.
  */
 export function canCreateTeamNote(role: SystemRole): boolean {
-  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+  return isStaff(role)
 }
 
 /**
