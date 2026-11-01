@@ -69,6 +69,9 @@ describe('acknowledgeShiftHandover', () => {
       id: 'handover-123',
       status: 'acknowledged',
       acknowledged_by: 'tech-123',
+      cash_counted_paisa: null,
+      cash_status: null,
+      cash_variance_paisa: null,
     });
     expect(mockRpc).toHaveBeenCalledWith('acknowledge_shift_handover', {
       p_handover_id: 'handover-123',
