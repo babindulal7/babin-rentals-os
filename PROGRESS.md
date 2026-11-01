@@ -84,7 +84,7 @@ The 14 suite failures, all accounted for:
 | Permissions | capabilities mapped / declared | 64 / 64 (100%) | +0 |
 | Lifecycle | steps green / total | 47 / 47 (100%) | +0 |
 | Overall | structural mean of five | ≈ 97% | — |
-Migrations 191 files · check:pglite 191/191 applied, 0 failed (recorded 2026-11-01T14:57:49.771Z). Suite: NOT PASSING — 6401/6415 passed, 14 failed (recorded 2026-11-01T15:47:32.030Z); source fingerprint matches.
+Migrations 192 files · check:pglite 192/192 applied, 0 failed (recorded 2026-11-01T18:50:22.598Z). Suite: PASS — 6438/6438 passed, 0 failed (recorded 2026-11-01T19:20:45.857Z); source fingerprint matches.
 Coverage suite: NOT VERIFIED — invalid test receipt.
 Gates read from .lifecycle-result.json, written 2026-11-01T13:08:20.074Z.
 Counted by `npm run completion`, not typed. Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
@@ -102,6 +102,19 @@ Counted by `npm run completion`, not typed. Structural coverage only. Functional
 - `vitest run` — `DeliveryWorkspace` 4/4 (was 2 failing), `RiderDeliveryPage` 5/5, `riderLink` 10/10; with `buttonConsistency`, `liveTransportPlans` and all of `src/modules/operations`: 15 of 16 files pass; the 16th, `realWorkspaceGuidance` (7 tests), timed out while a typecheck ran alongside and passes 7/7 when run alone.
 - `tsc --noEmit` exit 0; eslint `--max-warnings 0` on the three changed files clean.
 - Driven in a real browser (mock-mode build from a clean scratch copy, `vite build` exit 0, signed in as the mock Warehouse user): `/operations/delivery` shows the status KPIs and the Dispatch Board with Stage Ready, Dispatch and Send to Rider on every non-delivered job, none on the delivered one, and no revenue figure for the money-blind role. Not run: a hosted database, so a real `create_rider_link` call for a UI-created job is untested; the full suite was not re-run after this change.
+
+**Verified (full gate list on `df7d6bff` — branch HEAD after PR #35 merge, SEC-1/2/3, FUNC-1, 0191, 0192; clean copy with its own temporary git repo)**
+| Gate | Result |
+|---|---|
+| `npm run lint`, `lint:progress`, `lint:shell` (847 files), `lint:ui-copy`, `check:contrast` | PASS |
+| `check:pglite` 192/192 applied · `check:lifecycle` 47/47 | PASS |
+| financial integrity · `check:security` · `test:partial-return` · receipt test | PASS |
+| `test:server-contracts` | **PASS** (was the one pre-existing red; fixed by the 8b7ddd21 assertion change) |
+| `npm run build` (`tsc --noEmit && vite build`) | PASS |
+| `VITE_DATA_SOURCE=mock npm test` | **PASS — 6438 / 6438 tests in 523 files** (first time green in one run on this branch) |
+| `test:coverage` | NOT RUN (long; required before a live batch) |
+
+How the run was assembled, for honesty: the gate copy's `node_modules` junction was removed by the environment partway through one run, which made `server_contracts`, `partial_return`, `build` and the suite fail instantly on a missing package (not code). Those four were re-run on the same `df7d6bff` copy with a driver that recreates the junction; the full suite ran once more alone and passed in 614 s on a quiet machine. The lint/database gates before the interruption are from the same source. The previous run's 11 "load timeout" failures (`listPageToolbars.render`, `realWorkspaceGuidance`) did not recur.
 
 **Did (FUNC-1 fixed — the rider sees "Delivery Complete" after a successful delivery)**
 - `src/modules/operations/RiderDeliveryPage.tsx` `handleComplete`: after `riderCompleteJobDelivery` succeeds it set `deliverySuccess` and then called `loadJob()`. The link is completed by then, so the server (correctly) refuses to serve it ("already been completed"), `error` was set, and the error branch (checked before the success branch) replaced the success screen with "Delivery Link Inactive". The re-fetch is removed; the success screen only needs `job.rider_name`, `job.booking_no` and the receiver the rider typed, all already in memory. Pickup still reloads (the link is still live then).
@@ -137,7 +150,7 @@ Counted by `npm run completion`, not typed. Structural coverage only. Functional
 - Verified: `node scripts/test-unit-lifecycle-and-contracts.mjs` — all 58 integration assertions pass, exit 0 (was 1 failing). Other gates not re-run for this one-assertion test change.
 
 ### Remaining
-- **Suite not yet confirmed green in a single run:** PR #35 is now merged here (its 3 tests pass); re-run the full gate list on the merged result, on a quiet machine, to confirm the 11 load-sensitive tests on a quiet machine to confirm the 11 load-sensitive tests (`listPageToolbars.render`, `realWorkspaceGuidance`) pass in one pass; consider a longer timeout or serial run for those two files — they take 40–170 s on this machine.
+- `test:coverage` has not been run on this branch (`npm run completion` therefore still exits 1: "Coverage suite: NOT VERIFIED"). `listPageToolbars.render` and `realWorkspaceGuidance` take 40–170 s on a loaded machine; consider a longer timeout or serial run for them.
 - Run `test:coverage` before any live batch.
 - Not reviewed: the notes feed still shows **Edit** on every note to a Warehouse user (seen in the browser check). Whether editing is allowed for floor roles is a separate question from R-0111-1.
 - Apply 0191 and 0192 to hosted Supabase only after Babin's backup step (N-5); not done. 0192 must reach the database before or with the Edge Function that calls the RPCs as `service_role`.

@@ -185,6 +185,8 @@ GitHub Actions run 41290665633: **UNVERIFIED** (HTTP 404; `gh` unauthenticated).
 | Full mock suite | **FAIL — 6401/6413**: 3 are PR #35's own repairs; 2 `DeliveryWorkspace` (T4-01) fail identically on untouched `main`; 7 `realWorkspaceGuidance` are load timeouts that pass alone |
 | `test:coverage` | NOT RUN |
 
+**Latest run — `df7d6bff` (PR #35 merged, SEC-1/2/3, FUNC-1, INT-1, 0191, 0192): every gate in the list PASSES, including `test:server-contracts` and the full suite (6438/6438); `test:coverage` NOT RUN.** Nothing was pushed, and 0191/0192 are written and verified locally only (not applied). The paragraph below is the earlier run, kept as history.
+
 **Re-run on `5046a9af` (after the INT-1 fix):** every gate above is unchanged except the suite — the 2 `DeliveryWorkspace` failures are gone (6401/6415: 3 are PR #35's repairs, 11 are load timeouts in `listPageToolbars.render` and `realWorkspaceGuidance` that pass 15/15 twice when re-run on the same commit). `test:server-contracts` still fails on the same single assertion. The suite was not seen fully green in one run, so "all gates green" is still not claimable.
 
 So on top of what this review found, **`main` already has two red gates unrelated to PR #35**: `test:server-contracts` and the two `DeliveryWorkspace` tests. The `DeliveryWorkspace` failure was investigated afterwards and is **not a stale test**: it is a real regression that also affects rider links (INT-1, §4). `test:server-contracts` was a stale assertion (migration 0188 makes the status gate answer first); Babin ruled "fix the test" and it now passes 58/58 on the branch. "All gates green" cannot be claimed for `main` today. PR #35 itself was **not** re-run through the full suite (only its targeted files, §6 table above).
