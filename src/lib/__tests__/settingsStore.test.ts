@@ -47,6 +47,18 @@ describe('settingsStore — defaults', () => {
     expect(SETTINGS_DEFAULTS.vatRatePercent).toBe(13)
   })
 
+  it('W68 staff rental discount is 20% by default and validates the money setting', () => {
+    expect(SETTINGS_DEFAULTS.staffDiscountPercent).toBe(20)
+    expect(getSetting('staffDiscountPercent')).toBe(20)
+    writeSettings({ staffDiscountPercent: 25 })
+    expect(getSetting('staffDiscountPercent')).toBe(25)
+    writeSettings({ staffDiscountPercent: 0 })
+    expect(getSetting('staffDiscountPercent')).toBe(0)
+    expect(() => writeSettings({ staffDiscountPercent: -1 })).toThrow(/negative/)
+    expect(() => writeSettings({ staffDiscountPercent: 101 })).toThrow(/exceed 100/)
+    expect(getSetting('staffDiscountPercent')).toBe(0)
+  })
+
   it('the crew fee default is derived from the crew engine, not retyped', () => {
     expect(SETTINGS_DEFAULTS.crewCoordinationFeeRupees).toBe(toRupees(FEE_PER_CREW_DAY_PAISA))
   })
@@ -118,6 +130,11 @@ describe('settingsStore — a stored value that stopped being valid', () => {
     // Hand-edited storage, or a spec that tightened after the value was written.
     window.localStorage.setItem('br.settings.vatRatePercent', '900')
     expect(readSettings().vatRatePercent).toBe(13)
+  })
+
+  it('does not propagate an invalid persisted Staff discount into a rental', () => {
+    window.localStorage.setItem('br.settings.staffDiscountPercent', '101')
+    expect(readSettings().staffDiscountPercent).toBe(20)
   })
 
   it('ignores a non-numeric value in a numeric slot', () => {

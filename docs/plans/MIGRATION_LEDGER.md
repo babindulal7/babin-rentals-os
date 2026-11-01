@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0194**
+**Next free number: 0195**
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
@@ -32,6 +32,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0191 | T4-02 | delivery-reschedule-rpc | lane-b/T4-02-reschedule-a-delivery | verified |
 | 0192 | T5-01 | notification-records | lane-b/T5-01-notification-records | claimed |
 | 0193 | T3-14a | invoice-write-hardening | lane-c/T3-14a-invoice-write-hardening | verified |
+| 0194 | W68/CI | staff-discount-money-setting | fix/2026-11-01-minimal-main-ci-repair | written (CI pending) |
 | 0199 | T8-08 | tds-on-crew-payouts | lane-a/T8-08-tds-on-crew-payouts | verified |
 | 0200 | T3-14b | draft-at-confirm | lane-c/T3-14b-draft-at-confirm | claimed |
 

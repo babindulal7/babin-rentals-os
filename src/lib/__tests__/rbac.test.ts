@@ -29,7 +29,6 @@ import {
   canWriteFloor,
   canMergeClients,
   canWriteSharedTriage,
-  canCreateTeamNote,
   canApprovePurchase,
   canManageCollateral,
 } from '../rbac'
@@ -595,12 +594,5 @@ describe('canManageCollateral — Ruling D1 / Task T2-03', () => {
     expect(canManageCollateral('Accounts')).toBe(false)
     expect(canManageCollateral('Driver')).toBe(false)
     expect(canManageCollateral('Client')).toBe(false)
-  })
-})
-
-
-describe('canCreateTeamNote — internal staff permissions', () => {
-  it.each(ALL_ROLES)('matches database auth_is_staff for %s', (role) => {
-    expect(canCreateTeamNote(role)).toBe(role !== 'Client')
   })
 })

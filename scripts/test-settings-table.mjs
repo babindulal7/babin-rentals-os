@@ -36,6 +36,9 @@ const set = (k, v, scope = 'org', loc = null, cu = uuid()) => db.query(`select *
 await as('Owner')
 await set('operationalDayStart', '06:00')
 await set('vatRatePercent', 13)
+await set('staffDiscountPercent', 20)
+check((await db.query("select is_money from settings where key = 'staffDiscountPercent'")).rows[0]?.is_money === true,
+  'W68 staff discount is marked as a money-gated setting')
 const cu = uuid()
 await set('operationalDayStart', '05:30', 'org', null, cu)
 await set('operationalDayStart', '05:30', 'org', null, cu)
@@ -57,7 +60,8 @@ check((await db.query(`select count(*)::int n from settings where key='vatRatePe
 await as('Warehouse')
 check(await fails(() => set('operationalDayStart', '04:00'), 'gate.settings.role'), 'Warehouse write refused')
 const wh = (await db.query(`select key from settings`)).rows.map((r) => r.key)
-check(wh.includes('operationalDayStart') && !wh.includes('vatRatePercent'), 'Warehouse reads operational settings but never a money setting (Law 6)')
+check(wh.includes('operationalDayStart') && !wh.includes('vatRatePercent') && !wh.includes('staffDiscountPercent'),
+  'Warehouse reads operational settings but never VAT or staff discount money settings (Law 6)')
 check((await db.query(`select count(*)::int n from settings_history`)).rows[0].n === 0, 'Warehouse reads no history')
 
 await db.exec('reset role')

@@ -41,6 +41,7 @@ export type SettingKey =
   | 'paymentTermsDays'
   | 'overdueStopDays'
   | 'latePaymentPercentPerMonth'
+  | 'staffDiscountPercent'
   | 'allowDepositSkipOnClose'
   | 'sessionTimeoutMinutes'
   | 'passwordPolicy'
@@ -196,6 +197,18 @@ export const SETTING_SPECS: Record<SettingKey, SettingSpec> = {
     kind: 'number',
     suffix: '% / month',
     validate: (v) => percent(v, 'Late payment interest'),
+  },
+  /**
+   * W68: the Staff-client rental discount is editable in Financial settings.
+   * The existing pricing pipeline's default is 20%; 0 disables the automatic
+   * discount. Never reuse this key for authorization or money visibility.
+   * Migration 0194 classifies its stored value as money-gated (Law 6).
+   */
+  staffDiscountPercent: {
+    default: 20,
+    kind: 'number',
+    suffix: '%',
+    validate: (v) => percent(v, 'Staff rental discount'),
   },
   /**
    * **RULING 2026-10-06 (migration 0155)** — whether Close offers "Skip deposit
