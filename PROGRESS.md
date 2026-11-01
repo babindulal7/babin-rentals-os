@@ -34,7 +34,7 @@ Counted by `npm run completion`, not typed. Structural coverage only; docs and a
 - **T1-02 (staging project cost approval) is still open** — the restore drill and every migration acceptance wait on it.
 - **Babin has not yet reviewed `docs/ONLINE_BOOKING_SPEC.md`** (§0 and the 13 ⭐ defaults). T7-02…T7-04 should not start until then.
 - **When T7-05 asks, Babin enters the Fonepay credentials as Edge Function secrets** (N-8); eSewa/Khalti stay switched off until their accounts are approved.
-- Unchanged: no card for Nepali on the public booking site; four `lint:ui-copy` violations in files outside this work.
+- Unchanged: four `lint:ui-copy` violations in files outside this work. (Earlier I said no card covers Nepali for the public booking site; wrong — T6's note and T10 already place it after go-live. Corrected in spec §2 and G5.)
 
 ## 2026-11-01 — Claude's two cards: T6-01 Nepali glossary and T7-01 online booking spec
 
@@ -69,7 +69,6 @@ Migrations 189 files · check:pglite not run this session. Counted by `npm run c
 ## Remaining
 - **Babin approves T6-01** (7 flagged rows first, ~30 min; target 6 Dec) and **T7-01** (spec §0 and the 13 ⭐ defaults). Nothing downstream may treat either as final until then.
 - **T7-02…T7-11 are unblocked on the spec** but still need their own cards built; T7-03 needs T1-05 and T1-09, T7-02 needs T1-07.
-- **No card schedules Nepali for the public booking site** (T6 is staff screens only) — needs a card after T6-09.
 - The four `lint:ui-copy` violations above need their owner.
 - Every other open card belongs to a build lane (Codex-1, Gemini, Codex-2) or to Babin; Claude's role for those is review (PLAN §6), so they were not started here.
 

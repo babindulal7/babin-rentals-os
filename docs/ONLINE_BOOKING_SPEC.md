@@ -63,8 +63,8 @@ that is what makes a fresh sign-up land safely, and it is why D-10 exists.
 
 One small bundle (`booking.html`, T7-02): **no staff code in it**, so a client cannot even download the
 staff app's screens. Phone first (360 px), 4G over a Kathmandu connection. English first. T6 covers the
-staff screens only, so Nepali for this public site is **not scheduled in any card yet** (TODO: add one after
-T6-09); when it is built it must use the approved glossary ([`src/i18n/glossary.ne.json`](../src/i18n/glossary.ne.json)).
+staff screens only; Nepali for this public site is already placed in **T10 (after go-live)** by the T6 note
+("the client booking site in Nepali … go to T10 unless Babin moves them up"). When it is built it must use the approved glossary ([`src/i18n/glossary.ne.json`](../src/i18n/glossary.ne.json)).
 BS leads in every date shown, AD underneath; stored in UTC (Law 7). Amounts in `NPR 12,500`, Latin
 digits. The word "customer" appears nowhere (Law 15). Errors inline; toasts for successes only (Law 12).
 
