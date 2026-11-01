@@ -33,8 +33,8 @@
   branch regression groups passed; new SEC-05 assertions passed in the harness.
 - GitHub Actions run `41351077728` on `main` SHA `315ba2a` passed through Build but remains in
   Coverage when rechecked. Run `41345532036` completed successfully at earlier SHA `94f07ce`.
-  This branch's push and PR runs (`41352962748`, `41352967825`) are `action_required`; no full CI
-  result yet certifies commit `5c20f9a`.
+  This branch's latest push and PR runs (`41353034956`, `41353038929`) are `action_required` at
+  final head `121d009` (zero jobs started); no full CI result certifies this branch.
 - `npm run completion` printed the following counts and exited 1 because the Vitest suite was not
   run this session and its coverage receipt is invalid:
 
