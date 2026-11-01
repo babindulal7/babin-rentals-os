@@ -67,7 +67,7 @@ that way.
 ```bash
 npm run typecheck
 npm run lint
-VITE_DATA_SOURCE=mock npm test        # keep the variable until T0-10: with a live URL in .env.local the runner would use live settings
+npm test                             # T0-10: always mock by default; .env.local credentials masked
 npm run check:pglite                  # with check:lifecycle, both green in one run = migration Verified (R-35)
 node scripts/test-booking-financial-integrity.mjs
 npm run check:security
@@ -80,11 +80,12 @@ npm run lint:shell
 npm run lint:ui-copy
 npm run check:contrast
 npm run build
-VITE_DATA_SOURCE=mock npm run test:coverage   # before each live batch (long)
+npm run test:coverage                # before each live batch (long); mock by default
 ```
 
-PowerShell: set the variable first — `$env:VITE_DATA_SOURCE='mock'` — then run the same lines without
-the `VITE_DATA_SOURCE=mock` prefix.
+PowerShell and Git Bash use the same commands. `npm test` and `npm run test:coverage` default to
+mock even with a live URL in `.env.local`. `npm test -- --live` is an explicit real-backend opt-in;
+never use it for normal gates. Runner regression tests: `node --test scripts/test-data-source.test.mjs`.
 
 Then drive the changed screen in `npm run dev:mock` at **375, 820 and 1440 px**, as each role the
 card names, and run the **screen check** in [`docs/USABILITY_TESTS.md`](../USABILITY_TESTS.md) §1 —
