@@ -22,6 +22,7 @@
 import type { SystemRole } from '../types/database'
 
 export type Role = SystemRole
+export type { SystemRole }
 
 export interface UserSession {
   id: string
@@ -182,7 +183,7 @@ export function canChangeMembership(role: SystemRole): boolean {
  * Check if role can manage membership plans (create, edit, retire, reactivate).
  * Owner, Admin, Manager only. Coordinator is read-only (T8-02, Law 3).
  *
- * Mirrors `save_membership_plan` and `retire_membership_plan` RPCs (0187).
+ * Mirrors `save_membership_plan` and `retire_membership_plan` RPCs (0196).
  */
 export function canManageMembershipPlans(role: SystemRole): boolean {
   return role === 'Owner' || role === 'Admin' || role === 'Manager'
@@ -397,6 +398,10 @@ export function canApproveDiscount(_role: SystemRole, percent: number, _isOnline
 /** Check if role can void an invoice */
 export function canVoidInvoice(role: SystemRole, isOnline: boolean = true): boolean {
   if (!isOnline) return false // Money action blocked offline
+  // RULING 2026-11-01: restored to Owner · Accounts. Commit 68485549 ("delivry") widened this to
+  // Admin, Manager and Coordinator; PERMISSIONS C6 says Coordinator cannot void, and
+  // rbac.test.ts + the Finance tests expect Owner · Accounts only (B-1: stricter wins).
+  // Revert = re-add the three roles.
   return role === 'Owner' || role === 'Accounts'
 }
 
@@ -713,3 +718,172 @@ export function canPublishTeamViews(role: SystemRole): boolean {
 export function canExportClientPii(role: SystemRole): boolean {
   return role === 'Owner' || role === 'Admin' || role === 'Manager'
 }
+
+/**
+ * Create a team note — every staff role (not Client).
+ * Mirrors the RLS policy on `team_notes` INSERT (migration 0185, `auth_is_staff()`).
+ * RULING 2026-11-01 (O-19): Babin — "all staff yes". Was Coordinator and above; widened to match the
+ * database, which already allowed every staff member. Revert = restore the four-role comparison.
+ */
+export function canCreateTeamNote(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Read/list team notes — all staff roles (not Client).
+ * Mirrors the RLS policy on `team_notes` SELECT (migration 0185).
+ */
+export function canReadTeamNotes(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Acknowledge a team note — all staff roles (not Client).
+ * Mirrors the RLS policy on `team_notes` UPDATE for acknowledge (migration 0185).
+ */
+export function canAcknowledgeTeamNote(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Create a delivery zone — Coordinator and above (Owner, Admin, Manager, Coordinator).
+ * Mirrors the RLS policy on `delivery_zones` INSERT (migration 0189).
+ */
+export function canCreateDeliveryZone(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+}
+
+/**
+ * Read/list delivery zones — all staff roles (not Client).
+ * Mirrors the RLS policy on `delivery_zones` SELECT (migration 0189).
+ */
+export function canReadDeliveryZones(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Update/deactivate a delivery zone — Coordinator and above.
+ * Mirrors the RLS policy on `delivery_zones` UPDATE/DELETE (migration 0189).
+ */
+export function canManageDeliveryZones(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+}
+
+/**
+ * Pin/unpin a team note — all staff roles (not Client).
+ * Mirrors pin_team_note RPC (migration 0185).
+ */
+export function canPinTeamNote(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Archive a team note — all staff roles (not Client).
+ * Mirrors archive_team_note RPC (migration 0185).
+ */
+export function canArchiveTeamNote(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Resolve/reopen a team note — all staff roles (not Client).
+ * Mirrors resolve_team_note RPC (migration 0185).
+ */
+export function canResolveTeamNote(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Create a shift handover — all staff roles (not Client).
+ * Mirrors create_shift_handover RPC and shift_handovers INSERT policy (migration 0186).
+ */
+export function canCreateShiftHandover(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Read/list shift handovers — all staff roles (not Client).
+ * Mirrors shift_handovers_v SELECT policy (migration 0186).
+ */
+export function canReadShiftHandovers(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Acknowledge a shift handover — all staff roles (not Client).
+ * Mirrors acknowledge_shift_handover RPC (migration 0186).
+ */
+export function canAcknowledgeShiftHandover(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Archive a shift handover — all staff roles (not Client).
+ * Mirrors archive_shift_handover RPC (migration 0186).
+ */
+export function canArchiveShiftHandover(role: SystemRole): boolean {
+  return isStaff(role)
+}
+
+/**
+ * Delivery job creation — Owner, Admin, Manager, Coordinator (migration 0165/0187).
+ * Mirrors the authorization in `delivery_create_job`.
+ */
+export function canCreateDeliveryJob(role: SystemRole | null | undefined): boolean {
+  if (!role) return false
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+}
+
+/**
+ * Driver assignment to delivery job — Owner, Admin, Manager, Coordinator (migration 0165/0187).
+ * Mirrors the authorization in `delivery_assign_driver`.
+ */
+export function canAssignDeliveryDriver(role: SystemRole | null | undefined): boolean {
+  if (!role) return false
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+}
+
+/**
+ * Delivery job status transition — Owner, Admin, Manager, Coordinator, Warehouse, Driver (migration 0165/0187).
+ * Specific transition rules and assignment checks are enforced inside `delivery_transition_job`.
+ */
+export function canTransitionDeliveryJob(
+  role: SystemRole | null | undefined,
+  _fromStatus?: string,
+  toStatus?: string
+): boolean {
+  if (!role) return false
+  if (role === 'Client') return false
+
+  if (toStatus === 'Ready') {
+    return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator' || role === 'Warehouse'
+  }
+  if (toStatus === 'In Transit') {
+    return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator' || role === 'Warehouse' || role === 'Driver'
+  }
+  if (toStatus === 'Delivered') {
+    return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Driver'
+  }
+  if (toStatus === 'Failed') {
+    return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator' || role === 'Driver'
+  }
+
+  return (
+    role === 'Owner' ||
+    role === 'Admin' ||
+    role === 'Manager' ||
+    role === 'Coordinator' ||
+    role === 'Warehouse' ||
+    role === 'Driver'
+  )
+}
+
+/**
+ * Reschedule delivery job — Owner, Admin, Manager, Coordinator (migration 0191, T4-02, Ruling D8).
+ * Mirrors the authorization in `delivery_reschedule_job`.
+ */
+export function canRescheduleDeliveryJob(role: SystemRole | null | undefined): boolean {
+  if (!role) return false
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+}
+

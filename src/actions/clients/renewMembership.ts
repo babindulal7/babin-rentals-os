@@ -11,7 +11,7 @@ import { toRupees, type Paisa } from '../../lib/money'
  * charges the full plan fee (credit = 0), starts a new term from the renewal date,
  * and keeps history (old term is superseded, never deleted or overwritten).
  *
- * Calls `renew_client_membership` RPC (migration 0189).
+ * Calls `renew_client_membership` RPC (migration 0198).
  *
  * Who may: Owner, Admin, Manager, Coordinator (`client.change_membership`).
  */

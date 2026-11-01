@@ -77,6 +77,12 @@ interface CrewBookingDbRow {
   location: string | null
   state: string
   payout_state: string
+  tds_rate_percent?: number | null
+  tds_amount?: number | null
+  net_payout?: number | null
+  payout_notes?: string | null
+  paid_at?: string | null
+  paid_by?: string | null
   cancelled_at: string | null
   created_at: string
 }
@@ -95,7 +101,7 @@ export async function listCrewAssignments(_filters?: ListFilters): Promise<ListQ
   try {
     const { data: bookingRows, error: bookingErr } = await supabase
       .from('crew_bookings_v')
-      .select('id, crew_booking_no, production_id, booking_id, crew_member_id, position, day_rate, days, start_date, end_date, location, state, payout_state, cancelled_at, created_at')
+      .select('id, crew_booking_no, production_id, booking_id, crew_member_id, position, day_rate, days, start_date, end_date, location, state, payout_state, tds_rate_percent, tds_amount, net_payout, payout_notes, paid_at, paid_by, cancelled_at, created_at')
       .order('start_date', { ascending: false })
 
     if (bookingErr) throw new Error(bookingErr.message)
@@ -153,6 +159,12 @@ export async function listCrewAssignments(_filters?: ListFilters): Promise<ListQ
         cancelled: Boolean(b.cancelled_at),
         payoutStatus,
         isInternalStaff: isInternal,
+        tdsRatePercent: b.tds_rate_percent != null ? Number(b.tds_rate_percent) : null,
+        tdsAmountPaisa: b.tds_amount != null ? rupees(Number(b.tds_amount)) : null,
+        netPayoutPaisa: b.net_payout != null ? rupees(Number(b.net_payout)) : null,
+        paidAt: b.paid_at ?? null,
+        paidBy: b.paid_by ?? null,
+        payoutNotes: b.payout_notes ?? null,
       }
     })
 

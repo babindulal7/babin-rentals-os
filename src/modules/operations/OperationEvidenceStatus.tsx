@@ -69,7 +69,7 @@ export function OperationEvidenceStatus({
 
     try {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        throw new Error('Device is offline. Photo was saved on device and will upload when connectivity is restored.')
+        throw new Error('You are offline. This photo was not saved — take it again when you are back online.')
       }
 
       for (let i = 0; i < files.length; i++) {
@@ -135,11 +135,11 @@ export function OperationEvidenceStatus({
 
     setIsUploading(true)
     setUploadError(null)
-    setUploadProgress('Retrying photo upload with same idempotency key…')
+    setUploadProgress('Trying the upload again…')
 
     try {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        throw new Error('Device is offline. Photo was saved on device and will upload when connectivity is restored.')
+        throw new Error('You are offline. The photo is not saved yet — tap Retry upload when you are back online.')
       }
 
       await uploadEvidencePhoto({
@@ -199,7 +199,7 @@ export function OperationEvidenceStatus({
             fontSize: 'var(--t-caption, 12px)',
           }}
         >
-          Device is currently offline. Photo uploads require network connectivity (Law 12 / R-40).
+          Device is offline. Connect to the internet to upload photos.
         </div>
       )}
 

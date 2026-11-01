@@ -8,7 +8,7 @@
 > **5,739 / 5,739** in 463 files with `VITE_DATA_SOURCE=mock` (as CI runs it; without it 132 files
 > fail on missing environment, not on code) · completion counter: actions 55/58, routes on the
 > database 50/60, capabilities 48/48. Not run: lint, contrast, build, coverage. **GitHub CI has not
-> passed since 15 Oct 19:23** — the run on PR #29 shows GitHub refusing to start the job for a billing
+> passed since 15 Oct 19:23 UTC** — the run on PR #29 shows GitHub refusing to start the job for a billing
 > reason; Babin ruled CI stays off and local checks are the gate (`RULINGS-2026-10-26-workflow.md` W75). Release stays
 > **HOLD**: per the 17 Oct ledger, live stops at 0164 with 19 files pending. **The plan to go-live by
 > 1 Feb 2027 (Booqable off before its 20 Mar renewal) is [`PLAN.md`](../PLAN.md); Babin's rulings
@@ -39,7 +39,7 @@
 
 > **Historical stable checkpoint, 20 October 2026:** all required local checks independently match source fingerprint `ae78994762597f7fd9df832378ef184b77eed5f5a2cbf7402882c1bbc4adb0f8`: **4,931 tests / 387 files**, lint, 168 migrations, financial integrity, 15 security groups, 31 lifecycle steps, 82 contrast checks, final typecheck and production build PASS. An early changed-source typecheck is retained and superseded by the final stable typecheck; its computed assessment is preserved in `docs/verification/ASTRA_AVAILABILITY_CHECKPOINT_2026-10-20.json`. This does not certify later source. Migration 0170 was locally VERIFIED, NOT APPLIED or PRODUCTION-VERIFIED. Main bundle measured 704.47 kB; later performance acceptance remains open.
 
-> **Earlier checkpoint history:** the unchanged-source financial run passed 4,879 tests; the subsequent 4,899-test run recorded source changes during lint/tests and could not certify newer source. Both receipts are retained separately. The final current-source checkpoint above supersedes them. See [`PROGRESS.md`](../PROGRESS.md) and [`AUDIT_WORKTREE_PROGRESS.md`](../AUDIT_WORKTREE_PROGRESS.md). Live local-only tools remain explicitly unavailable pending shared backends, preserving existing local entries. Older readiness percentages below are historical.
+> **Earlier checkpoint history:** the unchanged-source financial run passed 4,879 tests; the subsequent 4,899-test run recorded source changes during lint/tests and could not certify newer source. Both receipts are retained separately. The final current-source checkpoint above supersedes them. See [`PROGRESS.md`](../PROGRESS.md) and [`../archive/AUDIT_WORKTREE_PROGRESS.md`](../archive/AUDIT_WORKTREE_PROGRESS.md). Live local-only tools remain explicitly unavailable pending shared backends, preserving existing local entries. Older readiness percentages below are historical.
 
 > **14 October 2026 live verification notice — DO NOT USE THE FIGURES BELOW AS CURRENT RELEASE STATUS.** GitHub CI passed for the initial clean-source commit, but actual production release has **not** been verified. Live Supabase project `sxguwvgoserhdolewibb` had 133/133 public tables with RLS enabled and 0/30 public views selectable by `anon`, but six privileged business RPCs were anonymously executable and the security advisor raised additional view/function findings. Source contains 160 existing migrations through `0162`; live ledger had 155 entries and does not record the six latest names. Migration `0163` is proposed on a review branch, **not applied live**. Deployment stays **HOLD** pending backups, reconciliation, staging, real-JWT smoke tests and owner-approved N-5 cutover. See [the current evidence and action register](release/2026-10-14/LIVE_SECURITY_AUDIT.md). The report below is preserved as a historical snapshot dated 4 October.
 
@@ -64,7 +64,7 @@ The "100% of runtime gates", "150 migrations", "3,938 tests", "Phase 7", "P0 blo
 ## 2. Production Readiness Statement
 **Readiness: 100% of Runtime Gates Certified — Awaiting Live Supabase Migration Cutover.**
 
-All runtime suites, typechecks, ESLint checks, database constraint verifications, view/function anon leak gates, and lifecycle tests are green. All 52 backend actions are fully implemented with verified permissions mappings (including `SETTLE_DEPOSIT` / `deposit.release`). All 150 migrations have been authored and verified from scratch under PGlite with zero failures, with anon view access revoked across all 30 views and unauthorized RPC execution blocked. The remaining prerequisite for live release is executing the Docker-free production backup (`scripts/backup-db.ps1`) and applying the ordered pending set per `BACKUP_PROTOCOL.md` and `docs/live/APPLY_PLAN_2026-10-03.md` (Rule N-5).
+All runtime suites, typechecks, ESLint checks, database constraint verifications, view/function anon leak gates, and lifecycle tests are green. All 52 backend actions are fully implemented with verified permissions mappings (including `SETTLE_DEPOSIT` / `deposit.release`). All 150 migrations have been authored and verified from scratch under PGlite with zero failures, with anon view access revoked across all 30 views and unauthorized RPC execution blocked. The remaining prerequisite for live release is executing the Docker-free production backup (`scripts/backup-db.ps1`) and applying the ordered pending set per [`../archive/BACKUP_PROTOCOL.md`](../archive/BACKUP_PROTOCOL.md) and [`docs/live/APPLY_PLAN_2026-10-03.md`](live/APPLY_PLAN_2026-10-03.md) (Rule N-5).
 
 ---
 
@@ -112,7 +112,7 @@ Backend: **52/52 (100%)** · Real Data: **51 DB-only / 51 (100%)** · DB Enforce
 ---
 
 ## 5. Next Implementation Priorities
-1. **Live Database Backup:** Execute `scripts/backup-db.ps1` per `BACKUP_PROTOCOL.md` against remote Supabase project `sxguwvgoserhdolewibb`.
+1. **Live Database Backup:** Execute `scripts/backup-db.ps1` per [`../archive/BACKUP_PROTOCOL.md`](../archive/BACKUP_PROTOCOL.md) against remote Supabase project `sxguwvgoserhdolewibb`.
 2. **Apply Live Migrations:** Apply pending migrations (`0125` through `0151`) in filename order per `BACKUP_PROTOCOL.md` and `docs/live/APPLY_PLAN_2026-10-03.md`.
 3. **Smoke Verification on Live Instance:** Validate Owner, Coordinator, and Warehouse roles against live RLS.
 4. **Babin's Decision on Staff Roster Scope:** (`docs/OPEN_DECISIONS.md` §7).

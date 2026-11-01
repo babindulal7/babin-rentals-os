@@ -353,6 +353,48 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'case.resolve':
       return rbac.canApproveDamage(ctx.role, 'Manager');
 
+    // Team notes (T4-04, migration 0185)
+    case 'team_note.create':
+      return rbac.canCreateTeamNote(ctx.role);
+    case 'team_note.read':
+      return rbac.canReadTeamNotes(ctx.role);
+    case 'team_note.acknowledge':
+      return rbac.canAcknowledgeTeamNote(ctx.role);
+    case 'team_note.pin':
+      return rbac.canPinTeamNote(ctx.role);
+    case 'team_note.archive':
+      return rbac.canArchiveTeamNote(ctx.role);
+    case 'team_note.resolve':
+      return rbac.canResolveTeamNote(ctx.role);
+
+    // Shift handovers (T4-05, migration 0186)
+    case 'shift_handover.create':
+      return rbac.canCreateShiftHandover(ctx.role);
+    case 'shift_handover.read':
+      return rbac.canReadShiftHandovers(ctx.role);
+    case 'shift_handover.acknowledge':
+      return rbac.canAcknowledgeShiftHandover(ctx.role);
+    case 'shift_handover.archive':
+      return rbac.canArchiveShiftHandover(ctx.role);
+
+    // Delivery dispatch (T4-01, T4-02, migrations 0165/0187/0191)
+    case 'delivery.create':
+      return rbac.canCreateDeliveryJob(ctx.role);
+    case 'delivery.assign':
+      return rbac.canAssignDeliveryDriver(ctx.role);
+    case 'delivery.transition':
+      return rbac.canTransitionDeliveryJob(ctx.role);
+    case 'delivery.reschedule':
+      return rbac.canRescheduleDeliveryJob(ctx.role);
+
+    // Delivery zones (T4-07, migration 0189)
+    case 'delivery_zone.create':
+      return rbac.canCreateDeliveryZone(ctx.role);
+    case 'delivery_zone.read':
+      return rbac.canReadDeliveryZones(ctx.role);
+    case 'delivery_zone.manage':
+      return rbac.canManageDeliveryZones(ctx.role);
+
     // ⚠ FILED, not fixed: `crew.assign` is still `isStaff()`, but PERMISSIONS.md
     // §4.7 says `C+` and the §3 grid marks Crew Assist ✕ for Warehouse,
     // Technician and Driver. Left alone deliberately — there is no C+ role set

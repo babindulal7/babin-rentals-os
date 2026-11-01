@@ -13,7 +13,7 @@ import { toRupees, type Paisa } from '../../lib/money'
  *   new fee due = max(0, new fee − credit)
  * If credit > new fee (downgrade), excess becomes the client's account credit.
  *
- * One RPC, `change_client_membership` (0188 successor of 0174).
+ * One RPC, `change_client_membership` (0197 successor of 0174).
  *
  * Who may: Owner, Admin, Manager, Coordinator (`client.change_membership`).
  */

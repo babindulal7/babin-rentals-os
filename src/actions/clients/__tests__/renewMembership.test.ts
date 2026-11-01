@@ -3,7 +3,7 @@
  * charges the plan fee (credit = 0), starts a new term from the renewal date,
  * and keeps history.
  *
- * One RPC: `renew_client_membership` (0189).
+ * One RPC: `renew_client_membership` (0198).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { ActionPermissionError } from '../../core'

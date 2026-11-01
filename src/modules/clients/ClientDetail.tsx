@@ -755,6 +755,7 @@ function ClientDetailView() {
             <PageActions
               extra={
                 <>
+                  {(client.isStaff || client.isStaffClient) && <Tone text="Staff" entity icon="users" />}
                   {client.isVip && <Tone text="VIP" entity />}
                   {client.isBlocked && <Tone text="Blocked" tone="danger" icon="alert_triangle" />}
                   {creditStop?.onStop && (

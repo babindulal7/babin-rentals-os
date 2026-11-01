@@ -276,7 +276,8 @@ export const CONDITION_INK: Record<Condition, string> = {
  * which `data/nav.test.ts:236` pins.
  */
 // RULING 2026-10-07: four visible tabs; legacy Sub-Rentals URLs still resolve.
-export const TABS = ['Equipment', 'Bundles', 'Stock Check', 'Maintenance'] as const
+// T3-02 (2026-10-29): Deposit Setup added as fifth tab for product deposit configuration.
+export const TABS = ['Equipment', 'Bundles', 'Stock Check', 'Maintenance', 'Deposit Setup'] as const
 export type InventoryTab = (typeof TABS)[number] | 'Sub-Rentals'
 
 /**
@@ -300,11 +301,13 @@ export const TAB_SLUG: Record<InventoryTab, string> = {
   'Sub-Rentals': 'sub-rentals',
   'Stock Check': 'stock-check',
   Maintenance: 'maintenance',
+  'Deposit Setup': 'deposit-setup',
 }
 
 /** `?tab=` → the tab, or `Equipment` for a missing or unknown value. */
 export function tabFromSlug(slug: string | null): InventoryTab {
   if (slug === 'sub-rentals' || slug === 'sub-rental' || slug === 'subrental') return 'Sub-Rentals'
+  if (slug === 'deposit-setup' || slug === 'deposit setup') return 'Deposit Setup'
   return TABS.find((t) => TAB_SLUG[t] === slug) ?? 'Equipment'
 }
 

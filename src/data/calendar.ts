@@ -173,6 +173,7 @@ export const DEFAULT_ZOOM = 7
 export type BarKind =
   | 'Available'
   | 'Reserved'
+  | 'Hold'
   | 'On Rent'
   | 'Completed'
   | 'Quote'
@@ -253,6 +254,7 @@ export const BAR_STYLE: Record<BarKind, BarSkin> = {
      word on the bar is the carrier §7.4 requires. */
   Available: { bg: 'var(--st-in-bg)', fg: 'var(--st-in-fg)', ink: 'var(--success-text)', line: 'var(--success)' },
   Reserved: { bg: 'var(--st-primary-bg)', fg: 'var(--st-primary-fg)', ink: 'var(--primary-text)', line: 'var(--st-primary-fg)', icon: 'calendar_event' },
+  Hold: { bg: 'var(--st-progress-bg)', fg: 'var(--st-progress-fg)', ink: 'var(--ready-text)', line: 'var(--progress)', icon: 'timer' },
   Completed: { bg: 'var(--st-neutral-bg)', fg: 'var(--st-neutral-fg)', ink: 'var(--muted)', line: 'var(--border)', icon: 'check' },
   Quote: { bg: 'transparent', fg: 'var(--muted)', ink: 'var(--muted)', line: 'var(--border)', dash: true, icon: 'file' },
   Draft: { bg: 'transparent', fg: 'var(--muted)', ink: 'var(--muted)', line: 'var(--border)', dash: true, icon: 'file' },

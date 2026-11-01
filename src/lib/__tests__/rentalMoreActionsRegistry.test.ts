@@ -21,16 +21,17 @@ describe('rentalMoreActionsRegistry — Specification Matrix & Capabilities', ()
     outstandingAmount: 2500000,
   }
 
-  describe('Section 1 & 7: 5 Primary Action Groups', () => {
-    it('returns all 5 action groups for Owner on a Confirmed booking', () => {
+  // T3-01 (D9, merged 31 Oct) added the Re-book group, so there are six groups now.
+  describe('Section 1 & 7: 6 Primary Action Groups', () => {
+    it('returns all 6 action groups for Owner on a Confirmed booking', () => {
       const groups = evaluateRentalSecondaryActions({
         booking: baseBooking,
         userRole: 'Owner',
         selectedCount: 1,
         canViewMoney: true,
       })
-      expect(groups).toHaveLength(5)
-      expect(groups.map((g) => g.id)).toEqual(['quote', 'invoice', 'duplicate', 'audit', 'cancel'])
+      expect(groups).toHaveLength(6)
+      expect(groups.map((g) => g.id)).toEqual(['quote', 'invoice', 'duplicate', 'rebook', 'audit', 'cancel'])
     })
 
     it('disables actions when no booking is selected (selectedCount = 0)', () => {
@@ -40,7 +41,7 @@ describe('rentalMoreActionsRegistry — Specification Matrix & Capabilities', ()
         selectedCount: 0,
         canViewMoney: true,
       })
-      expect(groups).toHaveLength(5)
+      expect(groups).toHaveLength(6)
       expect(groups.every((g) => g.disabled)).toBe(true)
       expect(groups.find((g) => g.id === 'cancel')?.disabledReason).toContain('Select a rental')
     })

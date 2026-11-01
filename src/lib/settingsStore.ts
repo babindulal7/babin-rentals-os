@@ -36,10 +36,12 @@ export type SettingKey =
   | 'businessDescription'
   | 'vatNumber'
   | 'vatRatePercent'
+  | 'crewPayoutTdsPercent'
   | 'crewCoordinationFeeRupees'
   | 'paymentTermsDays'
   | 'overdueStopDays'
   | 'latePaymentPercentPerMonth'
+  | 'staffDiscountPercent'
   | 'allowDepositSkipOnClose'
   | 'sessionTimeoutMinutes'
   | 'passwordPolicy'
@@ -119,6 +121,24 @@ export const SETTING_SPECS: Record<SettingKey, SettingSpec> = {
      says the figure is "A PERCENTAGE (13, not 0.13) from Settings ▸ Finance".
      This is the Settings ▸ Finance that comment was pointing at. */
   vatRatePercent: { default: 13, kind: 'number', suffix: '%', validate: (v) => percent(v, 'VAT rate') },
+  /**
+   * **Ruling D25 / Task T8-08 (O-5)** — TDS rate on crew payouts.
+   * Rate set by the accountant. Blank ("Rate not set") by default — never coerced to zero.
+   */
+  crewPayoutTdsPercent: {
+    default: '',
+    kind: 'text',
+    suffix: '%',
+    validate: (v) => {
+      const s = String(v ?? '').trim()
+      if (s === '') return null
+      const n = Number(s)
+      if (!Number.isFinite(n)) return 'TDS rate must be a number, or leave blank if not set.'
+      if (n < 0) return 'TDS rate cannot be negative.'
+      if (n > 100) return 'TDS rate cannot exceed 100%.'
+      return null
+    },
+  },
   crewCoordinationFeeRupees: {
     /* Derived from `data/crew.ts`'s constant rather than retyped, so the
        default here and the figure the crew engine uses cannot disagree. Still
@@ -171,6 +191,15 @@ export const SETTING_SPECS: Record<SettingKey, SettingSpec> = {
       if (n > 365) return 'Past a year this is a write-off decision, not a stop threshold.'
       return null
     },
+  },
+  /* W68 / Law 10 — T8-09 reads this in the New Rental pricing pipeline; 20 is the figure it already assumed.
+     TODO(decision): `settings_is_money_key()` (0158) does not list it, so the database would let
+     money-blind roles read it. Adding it is a migration — T8-09 / Babin to decide. */
+  staffDiscountPercent: {
+    default: 20,
+    kind: 'number',
+    suffix: '%',
+    validate: (v) => percent(v, 'Staff discount'),
   },
   latePaymentPercentPerMonth: {
     default: 1.5,
@@ -622,7 +651,22 @@ export function getSetting(key: SettingKey): SettingValue {
 
 /** Read-mode rendering: the stored value plus its spec's suffix. */
 export function formatSetting(key: SettingKey, value: SettingValue): string {
+  if (key === 'crewPayoutTdsPercent') {
+    const s = String(value ?? '').trim()
+    return s ? `${s}%` : 'Rate not set'
+  }
+  if (value === '' || value === null || value === undefined) {
+    return '—'
+  }
   return `${value}${SETTING_SPECS[key].suffix ?? ''}`
+}
+
+/** Helper for crew payout calculations (Ruling D25, Task T8-08). */
+export function getCrewPayoutTdsPercent(): number | null {
+  const v = getSetting('crewPayoutTdsPercent')
+  if (v === '' || v === null || v === undefined) return null
+  const n = Number(v)
+  return Number.isFinite(n) && n >= 0 && n <= 100 ? n : null
 }
 
 /** Clears every stored override. Used by the screen's Reset and by tests. */

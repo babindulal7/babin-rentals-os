@@ -55,11 +55,12 @@ When an agent or developer encounters an ambiguity, missing requirement, or edge
 | [`docs/PRODUCT_RULES.md`](PRODUCT_RULES.md) | Non-negotiable domain laws (Laws 1–16) and active rulings | **Active Truth** |
 | [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) | Technical stack, data boundaries, offline queue architecture | **Active Truth** |
 | [`docs/UI_UX_RULES.md`](UI_UX_RULES.md) | Tap budget doctrine (R-39), responsive breakpoints, tokens | **Active Truth** |
+| [`docs/USABILITY_TESTS.md`](USABILITY_TESTS.md) | The screen check every UI card passes; the monthly 3-person usability test (Krug, in our words) | **Active Truth** |
 | [`docs/WORKFLOWS.md`](WORKFLOWS.md) | Custody stages, operations workspaces, transition contracts | **Active Truth** |
 | [`docs/OPEN_DECISIONS.md`](OPEN_DECISIONS.md) | Actively open product and architecture decisions | **Active Truth** |
 | [`docs/PERMISSIONS.md`](PERMISSIONS.md) | Full 39-capability security matrix and role definitions | **Active Truth** |
 | [`docs/PERMISSIONS_SUMMARY.md`](PERMISSIONS_SUMMARY.md) | Fast reference card for permission lookups | Reference |
-| [`docs/BABIN_RENTALS_MODERN_WEB_DESIGN_KNOWLEDGE_ATLAS.md`](BABIN_RENTALS_MODERN_WEB_DESIGN_KNOWLEDGE_ATLAS.md) | Modern web design knowledge atlas & 14 synthesized rules | Reference |
+| [`docs/archive/BABIN_RENTALS_MODERN_WEB_DESIGN_KNOWLEDGE_ATLAS.md`](archive/BABIN_RENTALS_MODERN_WEB_DESIGN_KNOWLEDGE_ATLAS.md) | Modern web design knowledge atlas & 14 synthesized rules | Reference |
 | `docs/audits/` | Point-in-time audits from Aug/Sep 2026 | Historical Only |
 | `docs/archive/completed-plans/` | Executed fix plans and sprint designs | Historical Only |
 | `docs/derivations/` | Background design reasoning & wireframe logs | Historical Only |

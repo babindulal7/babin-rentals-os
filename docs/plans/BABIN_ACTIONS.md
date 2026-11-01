@@ -7,17 +7,32 @@ editing this file or telling Claude at a check-in.
 ## Week 1 — by Sun 1 Nov 2026 (16 Kartik 2083)
 
 - [x] Review and merge the plan pull request (T0-01) — merged 26 Oct.
-- [ ] Apply the **26 Oct workflow package** (the zip from Claude) to your local repo and commit it.
+- [x] Apply the 26 Oct workflow package — on `main` since `6f01439`.
+- [x] The 26 Oct v3 package — on `main` since 31 Oct (`a8611ca`, merged in `02191a5`).
+- [ ] Apply the **31 Oct package** (the zip from Claude: the Booqable round of 27 Oct on `main` `9e219db`)
+      and commit it.
 - [ ] **Disable the GitHub CI workflow** — Actions → CI → ⋯ → Disable workflow (T0-09). CI stays off;
       local checks are the gate.
-- [ ] Set up the three agent worktrees: **Codex-1 (lane A), Gemini (lane B), Codex-2 (lane C)**
-      (PLAN.md §6) and paste the first prompts: `prompts/T2-16.md` (Codex-1), `prompts/T4-04.md`
-      (Gemini), `prompts/T3-01.md` (Codex-2).
-- [ ] Take a production backup — `scripts/backup-db.ps1`, ~30 min (T1-01).
+- [x] Set up the three agent worktrees: **Codex-1 (lane A), Gemini (lane B), Codex-2 (lane C)**
+      (PLAN.md §6) — the lanes are building (26–31 Oct). Next prompts: the 31 Oct APPLY note and
+      `docs/plans/prompts/README.md`.
+- [ ] Apply Claude's `fix-red-checks.patch` (31 Oct) **first**: on `main` `9e219db` the typecheck (20
+      errors — so `npm run build` fails), lint (3) and UI-copy (4) checks are red, and one error can crash
+      Booking Detail. The patch turns them green.
+- [x] Answer **O-18** — answered 1 Nov: **4 digits** (T1-15 changes the 0066
+      database rule from 6 to 4).
+- [x] Answer **O-19** — answered 1 Nov: **every staff member** may write team notes (the
+      red test is fixed).
+- [ ] From now on, run the **full check list** (`docs/plans/README.md`) before every push — CI no longer
+      catches anything (T0-11 makes it one command).
+- [x] Take a production backup — `scripts/backup-db.ps1`, ~30 min (T1-01). *Reported done by Babin 1 Nov 2026; T1-01 is `done` only once `npm run check:dump` passes and the SHA-256 is recorded.*
 - [ ] Approve the cost of a second Supabase project for staging (T1-02).
 - [ ] Create a Cloudflare account; later add three DNS records when asked: `app.`, `book.`, `staging-app.` (T1-07).
-- [ ] **Apply for eSewa and Khalti merchant accounts** — onboarding time is unknown, so start now (T7-06).
-- [ ] Ask your bank for the **Fonepay merchant API / dynamic QR credentials** for online payments (T7-05).
+- [x] **Apply for eSewa and Khalti merchant accounts** — onboarding time is unknown, so start now (T7-06). *Reported done by Babin 1 Nov 2026.*
+- [x] Ask your bank for the **Fonepay merchant API / dynamic QR credentials** for online payments (T7-05). *Reported done by Babin 1 Nov 2026. Enter them only as Edge Function secrets when T7-05 asks (N-8) — never in chat or the repo.*
+- [ ] **Do not switch on email sign-up in Supabase Auth** until T7-10 says go; then, in the dashboard, turn
+      on **CAPTCHA (Cloudflare Turnstile)** *first*, set the email code expiry to 10 minutes, and only then
+      allow sign-ups (`docs/ONLINE_BOOKING_SPEC.md` §4 step 7 and §11 — an Owner action, N-7).
 - [ ] Create the email-service account Claude recommends — plan for **~3,000–4,000 emails a month**
       (automatic client emails) — and add its DNS records to `babinrentals.com` (T1-09).
 - [ ] Send the **membership plan table** (template below) (T8-01).
@@ -36,6 +51,7 @@ editing this file or telling Claude at a check-in.
      part payments. (O-17)
 - [ ] Close the open GitHub PRs and old branches from Claude's triage list (T0-03, T0-04) — you or
       Codex-1; Claude never pushes.
+- [ ] Send the list of **sub-rent partners** — name, phone, what they usually lend (T3-13, T2-24).
 
 ## By Sun 22 Nov (6 Mangsir)
 
@@ -47,13 +63,21 @@ editing this file or telling Claude at a check-in.
 - [ ] Send the **rental agreement terms** text — it must allow signing by the client or on the
       client's behalf (O-11, T3-06, L3).
 - [ ] Pick the **label printer** and **Bluetooth scanner** from Claude's shortlist and buy them (O-16).
-- [ ] Answer O-1: what should `babinrentals.com` show after the Booqable store closes? (⭐ redirect to `book.`)
+- [x] O-1 answered 27 Oct (B5): the root redirects to `book.babinrentals.com` from day X; a full website
+      after go-live.
 
 ## By Sun 6 Dec (20 Mangsir)
 
-- [ ] Approve the **Nepali glossary** (~200 words, one sitting) (T6-01).
+- [x] Approve the **Nepali glossary** (265 terms, 7 flagged choices first, one sitting) — sheet:
+      `docs/plans/T6-01-GLOSSARY-REVIEW.md` (T6-01). *Approved as drafted, 1 Nov 2026.*
+- [ ] Read and approve the **online booking spec**, esp. §0 and the 13 ⭐ defaults in §13.2 —
+      `docs/ONLINE_BOOKING_SPEC.md` (T7-01).
 - [ ] **Live batch 1** — about an hour: fresh backup, then run the prepared apply script (T1-10).
 - [ ] Turn on `pg_cron` in the Supabase dashboard when asked (T5-04, T5-07).
+- [ ] Copy the **Google review link** from your Google Business Profile ("Ask for reviews") and send it
+      (B9, T5-07).
+- [ ] Create **Google Analytics 4** and a **Meta Pixel** for the booking site and send the two IDs —
+      they are public IDs, not passwords (B37, T7-16).
 
 ## December
 
@@ -62,6 +86,9 @@ editing this file or telling Claude at a check-in.
 - [ ] Label items with **QR + asset code** as you go — no deadline; unlabelled items are ticked by hand (W72).
 - [ ] **Nepali reviews** — about 2 hours a day as each wave's sheet arrives (T6-04 … T6-07).
 - [ ] Enter the Fonepay credentials as Edge Function secrets (Claude shows where; never paste them in chat) (T7-05).
+- [ ] Staff enter the **consumables**: unit price, stock count and reorder level for each (B14, T3-30).
+- [ ] When two-step sign-in reaches staging: everyone who sees money (Owner, Admin, Manager, Coordinator,
+      Accounts) installs an authenticator app and sets it up (B21, T1-17).
 
 ## By Sun 3 Jan 2027 (19 Poush)
 
@@ -72,7 +99,16 @@ editing this file or telling Claude at a check-in.
 
 - [ ] **Device day** with staff: iPhone 17 Pro, M4 iPad Pro, the counter PC, a laptop, the scanner;
       one night-shift return (T2-11).
-- [ ] Every staff member signs in once on each shared device and sets a **4-digit PIN** (T1-15, T1-13).
+- [ ] **Usability round 1** the same day: watch three staff (floor, desk, someone new) do the task cards
+      in `docs/USABILITY_TESTS.md`; rank the ten worst problems before you go home (T9-09). Claude sends
+      the task cards with real staging booking numbers the day before.
+- [ ] Every staff member signs in once on each shared device and sets a **4-digit PIN** (T1-15, T1-13;
+      O-18 answered 1 Nov).
+- [ ] By **Fri 15 Jan (1 Magh)** ⭐: pick **official product photos** online for every product shown online —
+      the maker's press images, or your own photos; note where each came from. No photos from other
+      rental shops (B45, B49, T7-02).
+- [ ] If you have Google Search Console for `babinrentals.com`, export its page list for the old-link
+      check (T7-17).
 - [ ] **Live batch 3** (T1-10).
 - [ ] Three short **staff training** sessions, including the night shift (T9-07).
 
@@ -80,14 +116,20 @@ editing this file or telling Claude at a check-in.
 
 - [ ] Every real job goes into Booqable **and** the OS (T9-03).
 - [ ] 10 minutes each evening on the reconcile sheet.
+- [ ] **Usability round 2 — Wed 20 Jan (6 Magh)** ⭐ (T9-09).
 
 ## Decide and switch
 
 - [ ] By **1 Feb**: read Booqable's cancellation notice terms (Account & billing) (T9-08).
 - [ ] **Fri 29 Jan (15 Magh) — go / no-go** against PLAN.md §1 (T9-04).
-- [ ] **Mon 1 Feb (18 Magh) — day X**: new rentals only in the OS; stop new Booqable bookings (T9-05).
+- [ ] **Mon 1 Feb (18 Magh) — day X**: new rentals only in the OS; stop new Booqable bookings; add the
+      Cloudflare redirect `babinrentals.com/*` → `book.babinrentals.com/*` (B5, T9-05).
+- [ ] At go-live: write the **first offer email**, or ask Claude for a draft — every email carries an
+      unsubscribe link (B31, T5-12).
 - [ ] By **1 Mar (17 Falgun)**: last Booqable rental closed; export the Booqable archive (T9-08).
 - [ ] By **10 Mar (26 Falgun)**: **cancel Booqable** (renews 20 Mar · 6 Chaitra) (T9-08).
+- [ ] **Every month from February:** usability round on the first Sunday, 11:00–13:00 ⭐ — 7 Feb
+      (24 Magh), 7 Mar (23 Falgun), 4 Apr (21 Chaitra) (T9-09).
 
 ---
 

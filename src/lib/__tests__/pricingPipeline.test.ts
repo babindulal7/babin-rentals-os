@@ -291,4 +291,55 @@ describe('New Rental pricing regressions — October 2026', () => {
     expect(quote.validationErrors).toHaveLength(1)
     expect(() => bookingDiscountRows(quote)).toThrow(/between 0% and 100%/)
   })
+
+  it('automatically applies 20% staff discount for staff client and converts to Staff row (W68)', () => {
+    const quote = evaluateDiscounts({ isStaffClient: true }, rupees(10000))
+    expect(quote.appliedPercent).toBe(20)
+    const staffSource = quote.sources.find((s) => s.discountSource === 'Staff')
+    expect(staffSource?.applied).toBe(true)
+    expect(staffSource?.percent).toBe(20)
+
+    const rows = bookingDiscountRows(quote)
+    expect(rows).toEqual([
+      {
+        discountSource: 'Staff',
+        percent: 20,
+        reason: 'Staff Discount (20%)',
+        approverId: null,
+      },
+    ])
+  })
+
+  it('respects custom staffDiscountPercent and staffDiscountRemoved toggle (W68 / Law 10)', () => {
+    // Custom percentage from settings
+    const quoteCustom = evaluateDiscounts({ isStaffClient: true, staffDiscountPercent: 25 }, rupees(10000))
+    expect(quoteCustom.appliedPercent).toBe(25)
+    expect(bookingDiscountRows(quoteCustom)).toEqual([
+      {
+        discountSource: 'Staff',
+        percent: 25,
+        reason: 'Staff Discount (25%)',
+        approverId: null,
+      },
+    ])
+
+    // Removed by user without approval gate
+    const quoteRemoved = evaluateDiscounts({ isStaffClient: true, staffDiscountRemoved: true }, rupees(10000))
+    expect(quoteRemoved.appliedPercent).toBe(0)
+    const staffSource = quoteRemoved.sources.find((s) => s.discountSource === 'Staff')
+    expect(staffSource?.applied).toBe(false)
+    expect(staffSource?.exclusionReason).toContain('removed')
+    expect(bookingDiscountRows(quoteRemoved)).toEqual([])
+  })
+
+  it('excludes staff discount from stacking with student bundles', () => {
+    const quote = evaluateDiscounts(
+      { isStudentBundle: true, bundleSavingPercent: 15, isStaffClient: true },
+      rupees(10000),
+    )
+    expect(quote.appliedPercent).toBe(15)
+    const staffSource = quote.sources.find((s) => s.discountSource === 'Staff')
+    expect(staffSource?.applied).toBe(false)
+    expect(staffSource?.exclusionReason).toContain('Student bundles do not stack')
+  })
 })

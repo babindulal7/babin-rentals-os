@@ -80,6 +80,12 @@ export const FINANCIAL_SECTIONS: Section[] = [
         readBy: 'Crew Assist’s payout ledger',
       },
       {
+        label: 'TDS on crew payouts',
+        note: 'Withheld on crew payouts per accountant instructions (O-5 / D25). Blank when not configured.',
+        settingKey: 'crewPayoutTdsPercent',
+        readBy: 'Crew Assist’s payout ledger and monthly TDS reports',
+      },
+      {
         label: 'Fiscal year',
         note: 'Nepali fiscal year runs Shrawan – Ashadh.',
         value: 'FY 2083/84',
@@ -154,6 +160,12 @@ export const FINANCIAL_SECTIONS: Section[] = [
     title: 'Booking rules',
     icon: 'lock',
     fields: [
+      {
+        label: 'Staff rental discount',
+        note: 'Automatic discount percentage applied on bookings for clients marked as Staff. Default 20%. Staff can change or remove it on each booking.',
+        settingKey: 'staffDiscountPercent',
+        readBy: 'New Rental pricing pipeline',
+      },
       {
         label: 'Allow overbooking',
         note: 'Off by default. When on, a booked/maintenance chip in Add Item becomes tappable and opens an override — sub-rent (preferred) or book anyway, both requiring a written reason and a named approver.',

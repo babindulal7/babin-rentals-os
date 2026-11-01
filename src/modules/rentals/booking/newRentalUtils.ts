@@ -30,6 +30,14 @@ export function readVatRatePercent(): number {
   return Number.isFinite(n) ? n : 0
 }
 
+/**
+ * The staff rental discount percentage is read from Settings ▸ Financial (W68), default 20.
+ */
+export function readStaffDiscountPercent(): number {
+  const n = Number(getSetting('staffDiscountPercent'))
+  return Number.isFinite(n) && n >= 0 ? n : 20
+}
+
 /** Canonical JSON serialisation for dirty checks — order-independent. */
 export function stableJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`
