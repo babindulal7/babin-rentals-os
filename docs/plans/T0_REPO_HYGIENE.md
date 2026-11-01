@@ -119,7 +119,7 @@ each check-in (7:38 AM / 7:38 PM) and reports anything red.
 **Done when** — no new red X appears on pushes; the first check-in report shows the gates on `main`.
 **Needs** — none.
 
-### T0-10 · Tests never run with live settings            status: todo · size: S · lane A · [go-live]
+### T0-10 · Tests never run with live settings            status: doing (draft change on lane-a/T0-10-safe-mock-test-runner; full local gates and merge pending) · size: S · lane A · [go-live]
 **What** — Since T0-02 (`3fca220`), `scripts/run-tests.mjs` picks mock data only when no
 `VITE_SUPABASE_URL` is found — and it reads `.env.local`. On a computer that runs the app against
 live (a `.env.local` with the live URL), `npm test` therefore runs with **live** settings, and Vitest
