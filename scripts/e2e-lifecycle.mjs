@@ -3387,6 +3387,22 @@ STEPS.push({
         assert(note3Id, 'create_team_note returned id for Driver')
       })
 
+      // 3b. Every other internal role creates a real note through the same
+      // staff-only SECURITY DEFINER RPC. Warehouse, Technician and Driver
+      // were individually exercised above. This closes the remaining role
+      // coverage, without changing the already-correct 0185 SQL contract.
+      for (const staffRole of ['Owner', 'Admin', 'Manager', 'Coordinator', 'Accounts']) {
+        await as(staffRole, async () => {
+          const staffNoteId = await one(
+            `select create_team_note($1, gen_random_uuid(), 'General', 'normal')`,
+            [`L42 role authorization: ${staffRole}`],
+          )
+          assert(staffNoteId, `create_team_note returned id for ${staffRole}`)
+          const authorRole = await one(`select author_role from team_notes where id = $1`, [staffNoteId])
+          assertEq(authorRole, staffRole, `author snapshot matches authenticated ${staffRole}`)
+        })
+      }
+
       // 4. Client cannot create team notes (refused)
       await as('Client', async () => {
         await q('savepoint client_create_note')
@@ -3400,6 +3416,23 @@ STEPS.push({
         } finally {
           await q('rollback to savepoint client_create_note')
           await q('release savepoint client_create_note')
+        }
+      })
+
+      // 4b. Even a direct INSERT (bypassing the action/UI) is denied by
+      // migration 0185's staff-only INSERT policy. Denial must precede write.
+      await as('Client', async () => {
+        await q('savepoint client_direct_note_insert')
+        try {
+          await refuses(
+            'Client direct table insert is not authorized',
+            `insert into team_notes(body, author_id) values ('Unauthorised note', $1)`,
+            [U.Client],
+            /row-level security|permission denied|insufficient privilege/i,
+          )
+        } finally {
+          await q('rollback to savepoint client_direct_note_insert')
+          await q('release savepoint client_direct_note_insert')
         }
       })
 
