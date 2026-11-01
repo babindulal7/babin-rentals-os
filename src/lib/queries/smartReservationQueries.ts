@@ -68,15 +68,30 @@ export async function queryBookingAvailability(
   // lines as physical demand (including repeated models across bundles).
   const bundleIds = [...new Set(lData.filter(line => line.line_type === 'Bundle')
     .map(line => line.bundle_id).filter((id): id is string => !!id))]
-  const bundleRequirements = bundleIds.length === 0 ? [] : await readCompleteAvailability<BundleRequirement>(
-    (from, to) => supabase
-      .from('bundle_items')
-      .select('id, bundle_id, product_id, quantity, is_mandatory')
-      .in('bundle_id', bundleIds)
-      .order('id', { ascending: true })
-      .range(from, to),
-    'bundle component requirements',
-  )
+  let bundleRequirements: BundleRequirement[] = []
+  if (bundleIds.length > 0) {
+    // 0134 added soft-deactivation of bundle items. On a legacy schema,
+    // fall back only for the known missing-column error; permission failures
+    // and all other partial reads must still fail closed.
+    const readRequirements = (withActive: boolean) => readCompleteAvailability<BundleRequirement>(
+      (from, to) => supabase
+        .from('bundle_items')
+        .select(withActive
+          ? 'id, bundle_id, product_id, quantity, is_mandatory, is_active'
+          : 'id, bundle_id, product_id, quantity, is_mandatory')
+        .in('bundle_id', bundleIds)
+        .order('id', { ascending: true })
+        .range(from, to),
+      'bundle component requirements',
+    )
+    try {
+      bundleRequirements = await readRequirements(true)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      if (!/column bundle_items(?:_\\d+)?\\.is_active does not exist/i.test(message)) throw err
+      bundleRequirements = await readRequirements(false)
+    }
+  }
   const linesToEval = buildBookingStockDemand(bookingNo, lData, bundleRequirements, bookingWindow)
 
   const productIds = [
