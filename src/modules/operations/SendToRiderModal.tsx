@@ -11,7 +11,6 @@ import Icon from '../../components/ui/Icon'
 import { useAuth } from '../../lib/auth'
 import { newClientUuid } from '../../lib/supabase'
 import { useToast } from '../../components/ui/Toast'
-import { newClientUuid } from '../../lib/supabase'
 import {
   createRiderLink,
   revokeRiderLink,
