@@ -10,7 +10,7 @@
  *   - 24-hour expiration ceiling with on-demand staff revocation.
  */
 
-import { supabase, IS_MOCK } from '../supabase'
+import { supabase, IS_MOCK, newClientUuid } from '../supabase'
 import type { Role } from '../rbac'
 
 export interface RiderJobData {
@@ -179,8 +179,6 @@ export async function createRiderLink(
     if (existing) {
       return {
         linkId: existing.id,
-        rawToken: null,
-        linkUrl: null,
         expiresAt: existing.expiresAt,
         alreadyIssued: true,
       }
