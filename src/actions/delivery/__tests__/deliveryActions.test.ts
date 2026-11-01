@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createDeliveryJob } from '../createDeliveryJob';
 import { assignDeliveryDriver } from '../assignDeliveryDriver';
 import { transitionDeliveryJob } from '../transitionDeliveryJob';
+import { rescheduleDeliveryJob } from '../rescheduleDeliveryJob';
 import { ActionNotImplementedError, ActionPermissionError } from '../../core';
 import { supabase } from '../../../lib/supabase';
 
@@ -22,6 +23,7 @@ vi.mock('../../../events/eventBus', () => ({
     DELIVERY_JOB_CREATED: 'delivery.job_created',
     DELIVERY_DRIVER_ASSIGNED: 'delivery.driver_assigned',
     DELIVERY_JOB_TRANSITIONED: 'delivery.job_transitioned',
+    DELIVERY_JOB_RESCHEDULED: 'delivery.job_rescheduled',
   },
 }));
 
@@ -248,6 +250,115 @@ describe('Delivery Actions (T4-01)', () => {
           coordinatorCtx
         )
       ).resolves.toEqual({ jobId: 'job-123' });
+    });
+  });
+
+  describe('rescheduleDeliveryJob (T4-02, Ruling D8)', () => {
+    it('is implemented and does not throw ActionNotImplementedError', async () => {
+      mockRpc.mockResolvedValue({ data: 'job-123', error: null } as any);
+      await expect(
+        rescheduleDeliveryJob(
+          { jobId: 'job-123', newScheduledAt: '2026-11-02T14:00:00Z' },
+          coordinatorCtx
+        )
+      ).resolves.not.toBeInstanceOf(ActionNotImplementedError);
+    });
+
+    it('requires session context', async () => {
+      await expect(
+        rescheduleDeliveryJob({ jobId: 'job-123', newScheduledAt: '2026-11-02T14:00:00Z' })
+      ).rejects.toThrow('was called without a session context');
+    });
+
+    it('allows Owner, Manager, and Coordinator', async () => {
+      mockRpc.mockResolvedValue({ data: 'job-123', error: null } as any);
+
+      const resOwner = await rescheduleDeliveryJob(
+        { jobId: 'job-123', newScheduledAt: '2026-11-02T14:00:00Z' },
+        ownerCtx
+      );
+      expect(resOwner).toEqual({ jobId: 'job-123', newScheduledAt: '2026-11-02T14:00:00Z' });
+
+      const resMgr = await rescheduleDeliveryJob(
+        { jobId: 'job-123', newScheduledAt: '2026-11-02T15:00:00Z' },
+        managerCtx
+      );
+      expect(resMgr).toEqual({ jobId: 'job-123', newScheduledAt: '2026-11-02T15:00:00Z' });
+
+      const resCoord = await rescheduleDeliveryJob(
+        { jobId: 'job-123', newScheduledAt: '2026-11-02T16:00:00Z' },
+        coordinatorCtx
+      );
+      expect(resCoord).toEqual({ jobId: 'job-123', newScheduledAt: '2026-11-02T16:00:00Z' });
+    });
+
+    it('denies Warehouse, Driver, and Client', async () => {
+      await expect(
+        rescheduleDeliveryJob(
+          { jobId: 'job-123', newScheduledAt: '2026-11-02T14:00:00Z' },
+          warehouseCtx
+        )
+      ).rejects.toThrow(ActionPermissionError);
+
+      await expect(
+        rescheduleDeliveryJob(
+          { jobId: 'job-123', newScheduledAt: '2026-11-02T14:00:00Z' },
+          driverCtx
+        )
+      ).rejects.toThrow(ActionPermissionError);
+
+      await expect(
+        rescheduleDeliveryJob(
+          { jobId: 'job-123', newScheduledAt: '2026-11-02T14:00:00Z' },
+          clientCtx
+        )
+      ).rejects.toThrow(ActionPermissionError);
+    });
+
+    it('validates jobId and newScheduledAt', async () => {
+      await expect(
+        rescheduleDeliveryJob({ jobId: '', newScheduledAt: '2026-11-02T14:00:00Z' }, coordinatorCtx)
+      ).rejects.toThrow('Valid delivery job ID is required to reschedule');
+
+      await expect(
+        rescheduleDeliveryJob({ jobId: 'job-123', newScheduledAt: '' }, coordinatorCtx)
+      ).rejects.toThrow('New scheduled date and time is required');
+
+      await expect(
+        rescheduleDeliveryJob({ jobId: 'job-123', newScheduledAt: 'not-a-date' }, coordinatorCtx)
+      ).rejects.toThrow('New scheduled date and time must be a valid timestamp');
+    });
+
+    it('calls delivery_reschedule_job RPC with correct parameters', async () => {
+      mockRpc.mockResolvedValue({ data: 'job-123', error: null } as any);
+
+      await rescheduleDeliveryJob(
+        {
+          jobId: 'job-123',
+          newScheduledAt: '2026-11-02T14:00:00Z',
+          notes: 'Client requested postponement',
+          requestKey: '11111111-1111-4111-8111-111111111111',
+        },
+        coordinatorCtx
+      );
+
+      expect(mockRpc).toHaveBeenCalledWith('delivery_reschedule_job', {
+        p_job_id: 'job-123',
+        p_new_scheduled_at: '2026-11-02T14:00:00Z',
+        p_request_key: '11111111-1111-4111-8111-111111111111',
+        p_notes: 'Client requested postponement',
+      });
+    });
+
+    it('propagates RPC error', async () => {
+      mockRpc.mockResolvedValue({ data: null, error: { message: 'Delivered or Failed delivery jobs cannot be rescheduled' } } as any);
+
+      await expect(
+        rescheduleDeliveryJob(
+          { jobId: 'job-123', newScheduledAt: '2026-11-02T14:00:00Z' },
+          coordinatorCtx
+        )
+      ).rejects.toThrow('Failed to reschedule delivery job: Delivered or Failed delivery jobs cannot be rescheduled');
     });
   });
 });

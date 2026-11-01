@@ -19,6 +19,33 @@
 - **Not verified, only reported by Babin:** the backup (no dump, SHA-256 or `check:dump` result is in the repo), the eSewa/Khalti applications, the Fonepay request, the glossary approval itself.
 - **Checked and not as reported:** commit `aec987b1` (T6-01 + T7-01) is on branch `claude/complete-all-tasks-ac9873` only; `main` (`6c199e66`) does not contain it, so "merged" is **not true yet**.
 
+## 2026-11-01 — T4-02: Reschedule a delivery (Lane B · Size S)
+
+**Did**
+- Claimed migration `0191` in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0191_delivery_reschedule_job.sql`:
+  - Enforces Ruling D8: "Change time" on a delivery job moves **only the job's scheduled time** (`delivery_jobs.scheduled_at`), while booking rental dates (`bookings.pickup_at`, `return_at`) stay strictly unchanged.
+  - Adds `delivery_reschedule_job(p_job_id uuid, p_new_scheduled_at timestamptz, p_request_key uuid, p_notes text default null)` RPC:
+    - Authorization: Owner, Admin, Manager, Coordinator for matching branch only (`delivery.reschedule` capability). Driver, Warehouse, and unauthorized roles refused with `42501`.
+    - Disallows rescheduling terminal states (`Delivered`, `Failed`).
+    - Law 8 request key idempotency: replaying with same key returns identical job ID.
+    - Appends event to `delivery_job_events` with `event_kind = 'Rescheduled'`, logging old and new scheduled timestamps and audit notes.
+- Added action `rescheduleDeliveryJob` in `src/actions/delivery/rescheduleDeliveryJob.ts` with permission `delivery.reschedule`.
+- Added `canRescheduleDeliveryJob` in `src/lib/rbac.ts` and wired into `src/actions/core.ts`.
+- Implemented WhatsApp reschedule draft generator in `src/lib/whatsappTemplates.ts` (`deliveryRescheduled`) and `src/lib/whatsappActions.ts` (`buildDeliveryRescheduleAction`) per 21 Jul comms lock (staff review only, never auto-sent).
+- Wired "Reschedule" action and modal into `src/modules/operations/DeliveryWorkspace.tsx` with date/time pickers, notes, reason display, and one-tap WhatsApp review button.
+- Added lifecycle step `L48` in `scripts/e2e-lifecycle.mjs` verifying scheduled time update, rental date immutability (D8), idempotency, event auditing, driver refusal, and terminal state refusal.
+- Added comprehensive unit tests in `src/actions/delivery/__tests__/deliveryActions.test.ts`, `src/lib/__tests__/whatsappActions.test.ts`, and `src/modules/operations/__tests__/DeliveryWorkspace.test.tsx`.
+
+**Ruled**
+- Ruling D8 (§4.64c): moving delivery job time does not shift booking period; booking dates stay unchanged.
+- 21 Jul comms lock: WhatsApp message prepared as a draft link for staff, never auto-sent.
+- Numbered migration as 0191 (avoiding collision with T4-08 which claimed 0190) and lifecycle step as L48.
+
+**Verified**
+- `npm run typecheck` → 0 errors.
+- `npm run check:pglite` → 190/190 applied, 0 failed, 35 views checked, 123 definer functions checked with pinned search_path.
+- `npx vitest run src/actions/delivery/__tests__/deliveryActions.test.ts src/lib/__tests__/whatsappActions.test.ts src/modules/operations/__tests__/DeliveryWorkspace.test.tsx` → 3 files passed, 32 tests passed (100%).
+
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
@@ -74,7 +101,6 @@ Migrations 189 files · check:pglite not run this session. Counted by `npm run c
 - **T7-02…T7-11 are unblocked on the spec** but still need their own cards built; T7-03 needs T1-05 and T1-09, T7-02 needs T1-07.
 - The four `lint:ui-copy` violations above need their owner.
 - Every other open card belongs to a build lane (Codex-1, Gemini, Codex-2) or to Babin; Claude's role for those is review (PLAN §6), so they were not started here.
-
 ## 2026-11-01 — Audit §15 follow-ups: Law 15 copy fix + the three lint errors — suite down to 4 failing tests
 
 **Did**
