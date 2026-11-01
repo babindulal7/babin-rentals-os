@@ -4374,6 +4374,56 @@ STEPS.push({
       assertEq(anonSelect, false, 'delivery_job_links table is NOT readable by anon')
       const anonExec = await one(`select has_function_privilege('anon', 'public.create_rider_link(uuid, text, text, text)', 'EXECUTE')`)
       assertEq(anonExec, false, 'create_rider_link is NOT executable by anon')
+
+      // R2/R3: Browser-issued token hashes are no longer accepted via staff RPC.
+      const authIssueOld = await one(`select has_function_privilege('authenticated', 'public.create_rider_link(uuid,text,text,text)', 'EXECUTE')`)
+      const authIssueNew = await one(`select has_function_privilege('authenticated', 'public.issue_rider_link_server(uuid,text,text,text,uuid,uuid)', 'EXECUTE')`)
+      const serviceIssueNew = await one(`select has_function_privilege('service_role', 'public.issue_rider_link_server(uuid,text,text,text,uuid,uuid)', 'EXECUTE')`)
+      assertEq(authIssueOld, false, 'authenticated cannot submit a client-chosen token hash')
+      assertEq(authIssueNew, false, 'authenticated cannot invoke privileged server issuance')
+      assertEq(serviceIssueNew, true, 'service_role can issue a server-minted rider token')
+
+      const issueJob = '00000000-0000-4000-8000-00000000b994'
+      const issueKey = '00000000-0000-4000-8000-00000000c994'
+      await q(`
+        insert into delivery_jobs (
+          id, client_uuid, booking_id, branch_id, leg, scheduled_at, status, created_by, updated_by
+        ) values (
+          $1, gen_random_uuid(), $2, $3, 'Outbound', now() + interval '2 hours', 'Scheduled', $4, $4
+        )
+      `, [issueJob, bookingIds.a, BRANCH, U.Coordinator])
+      const serverHash = createHash('sha256').update('server-generated-rider-token-for-test').digest('hex')
+      const issued = (await q(
+        `select * from issue_rider_link_server($1, $2, 'Test Rider', '9801234567', $3, $4)`,
+        [issueJob, serverHash, U.Coordinator, issueKey],
+      )).rows[0]
+      assert(issued.was_created === true, 'First server issuance creates the rider link')
+
+      const replayHash = createHash('sha256').update('different-token-not-persisted').digest('hex')
+      const replay = (await q(
+        `select * from issue_rider_link_server($1, $2, 'Test Rider', '9801234567', $3, $4)`,
+        [issueJob, replayHash, U.Coordinator, issueKey],
+      )).rows[0]
+      assertEq(replay.was_created, false, 'Idempotent replay does not mint another link')
+      assertEq(replay.link_id, issued.link_id, 'Idempotent replay returns the same link ID')
+      const saved = await q(`select token_hash from delivery_job_links where id = $1`, [issued.link_id])
+      assertEq(saved.rows[0].token_hash, serverHash, 'Replay never replaces the original token hash')
+
+      await refusesSavepoint(
+        'Second request key cannot issue a second active rider link',
+        `select * from issue_rider_link_server($1, $2, 'Test Rider', '9801234567', $3, $4)`,
+        [issueJob, replayHash, U.Coordinator, '00000000-0000-4000-8000-00000000c995'],
+        /active rider link already exists/i,
+      )
+      const liveCount = await one(`select count(*)::int from delivery_job_links where job_id = $1 and revoked_at is null and completed_at is null`, [issueJob])
+      assertEq(liveCount, 1, 'Only one active rider link exists per job')
+
+      await refusesSavepoint(
+        'Client cannot impersonate a staff issuer',
+        `select * from issue_rider_link_server($1, $2, 'Test Rider', '9801234567', $3, $4)`,
+        [issueJob, replayHash, U.Client, '00000000-0000-4000-8000-00000000c996'],
+        /Not authorized/i,
+      )
     })
   },
 })
