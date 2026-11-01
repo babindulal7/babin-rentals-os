@@ -4211,25 +4211,28 @@ STEPS.push({
       const rawToken = 'rider_sec_tok_128bit_test_payload_12345'
       const tokenHash = createHash('sha256').update(rawToken).digest('hex')
 
-      // 2. Security: Unauthorized role (Client) cannot create rider link
-      await as('Client', async () => {
-        await refusesSavepoint(
-          'Client attempting to create rider link',
-          `select create_rider_link($1, $2, 'Ram Rider', '9801234567')`,
-          [jobId, tokenHash],
-          /Unauthorized|42501/i,
-        )
-      })
+      // 2. Legacy client-selected token hashes must now be rejected at the
+      // SQL grant boundary, including for an authenticated staff session.
+      for (const role of ['Client', 'Coordinator']) {
+        await as(role, async () => {
+          await refusesSavepoint(
+            role + ' attempting legacy rider link issuance',
+            `select create_rider_link($1, $2, 'Ram Rider', '9801234567')`,
+            [jobId, tokenHash],
+            /permission denied/i,
+          )
+        })
+      }
 
-      // 3. Coordinator creates the rider link
-      let linkId
-      await as('Coordinator', async () => {
-        linkId = (await q(
-          `select create_rider_link($1, $2, 'Ram Rider', '9801234567') as id`,
-          [jobId, tokenHash],
-        )).rows[0].id
-        assert(linkId, 'Rider link created successfully')
-      })
+      // 3. Simulate the service-role Edge caller: the actor ID is verified
+      // from a staff JWT by the Edge handler, never supplied by the browser.
+      const firstKey = '00000000-0000-4000-8000-00000000c991'
+      const firstIssue = (await q(
+        `select * from issue_rider_link_server($1, $2, 'Ram Rider', '9801234567', $3, $4)`,
+        [jobId, tokenHash, U.Coordinator, firstKey],
+      )).rows[0]
+      const linkId = firstIssue.link_id
+      assert(linkId && firstIssue.was_created === true, 'Server-issued rider link created successfully')
 
       // 4. Money blindness (Law 6) & payload structure for rider
       const jobData = (await q(`select get_rider_job_by_token($1) as data`, [tokenHash])).rows[0].data
@@ -4293,15 +4296,12 @@ STEPS.push({
 
       const rawToken2 = 'rider_sec_tok_second_test_link_67890'
       const tokenHash2 = createHash('sha256').update(rawToken2).digest('hex')
-      let linkId2
+      const linkId2 = (await q(
+        `select link_id from issue_rider_link_server($1, $2, 'Hari Rider', '9812345678', $3, $4)`,
+        [jobId2, tokenHash2, U.Coordinator, '00000000-0000-4000-8000-00000000c992'],
+      )).rows[0].link_id
+      assert(linkId2, 'Second rider link created')
       await as('Coordinator', async () => {
-        linkId2 = (await q(
-          `select create_rider_link($1, $2, 'Hari Rider', '9812345678') as id`,
-          [jobId2, tokenHash2],
-        )).rows[0].id
-        assert(linkId2, 'Second rider link created')
-
-        // Coordinator revokes the link
         await q(`select revoke_rider_link($1)`, [linkId2])
       })
 
@@ -4331,12 +4331,10 @@ STEPS.push({
 
       const rawToken3 = 'rider_sec_tok_expired_test_link_11223'
       const tokenHash3 = createHash('sha256').update(rawToken3).digest('hex')
-      await as('Coordinator', async () => {
-        await q(
-          `select create_rider_link($1, $2, 'Gita Rider', '9823456789')`,
-          [jobId3, tokenHash3],
-        )
-      })
+      await q(
+        `select * from issue_rider_link_server($1, $2, 'Gita Rider', '9823456789', $3, $4)`,
+        [jobId3, tokenHash3, U.Coordinator, '00000000-0000-4000-8000-00000000c993'],
+      )
       await q(`update delivery_job_links set created_at = now() - interval '25 hours', expires_at = now() - interval '1 hour' where token_hash = $1`, [tokenHash3])
 
       await refusesSavepoint(
