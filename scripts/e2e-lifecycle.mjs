@@ -64,6 +64,7 @@ import { PGlite } from '@electric-sql/pglite'
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto'
 import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist'
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { beginVerification, finishVerification } from './test-receipt.mjs'
@@ -4180,6 +4181,179 @@ STEPS.push({
           assert(names.includes(expected), `Default zone "${expected}" is seeded and active`)
         }
       })
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L47',
+  title: 'One-time rider link: staff-issued, hashed-token, money-blind read, pickup and delivery verbs, 24h expiration and revocation guards (T4-08/W49)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      const refusesSavepoint = async (what, sql, params, matcher) => {
+        await db.exec('savepoint rider_probe;')
+        try {
+          await refuses(what, sql, params, matcher)
+        } finally {
+          await db.exec('rollback to savepoint rider_probe; release savepoint rider_probe;')
+        }
+      }
+
+      // 1. Setup a delivery job for booking a
+      const jobId = '00000000-0000-4000-8000-00000000b991'
+      await q(`
+        insert into delivery_jobs (
+          id, client_uuid, booking_id, branch_id, leg, scheduled_at, status, created_by, updated_by
+        ) values (
+          $1, gen_random_uuid(), $2, $3, 'Outbound', now() + interval '2 hours', 'Scheduled', $4, $4
+        )
+      `, [jobId, bookingIds.a, BRANCH, U.Coordinator])
+
+      // Generate token and hash (SHA-256)
+      const rawToken = 'rider_sec_tok_128bit_test_payload_12345'
+      const tokenHash = createHash('sha256').update(rawToken).digest('hex')
+
+      // 2. Security: Unauthorized role (Client) cannot create rider link
+      await as('Client', async () => {
+        await refusesSavepoint(
+          'Client attempting to create rider link',
+          `select create_rider_link($1, $2, 'Ram Rider', '9801234567')`,
+          [jobId, tokenHash],
+          /Unauthorized|42501/i,
+        )
+      })
+
+      // 3. Coordinator creates the rider link
+      let linkId
+      await as('Coordinator', async () => {
+        linkId = (await q(
+          `select create_rider_link($1, $2, 'Ram Rider', '9801234567') as id`,
+          [jobId, tokenHash],
+        )).rows[0].id
+        assert(linkId, 'Rider link created successfully')
+      })
+
+      // 4. Money blindness (Law 6) & payload structure for rider
+      const jobData = (await q(`select get_rider_job_by_token($1) as data`, [tokenHash])).rows[0].data
+      assertEq(jobData.job_id, jobId, 'Job data contains correct job_id')
+      assertEq(jobData.rider_name, 'Ram Rider', 'Job data contains rider name')
+      assertEq(jobData.rider_phone, '9801234567', 'Job data contains rider phone')
+      assertEq(jobData.status, 'Scheduled', 'Initial status is Scheduled')
+      assert(jobData.pickup_address, 'Pickup address is provided')
+      assert(jobData.delivery_address, 'Delivery address is provided')
+      assert(jobData.contact_name, 'Contact name is provided')
+
+      // Assert NO money leakage in jobData
+      const rawJson = JSON.stringify(jobData).toLowerCase()
+      const forbiddenTerms = ['paisa', 'price', 'rate', 'deposit', 'total_amount', 'discount', 'invoice', 'credit']
+      for (const term of forbiddenTerms) {
+        assert(!rawJson.includes(`"${term}"`), `Law 6 violation: rider job payload contains money term "${term}"`)
+      }
+
+      // 5. Rider verb: mark picked up
+      const pickupRes = (await q(`select rider_mark_picked_up($1) as res`, [tokenHash])).rows[0].res
+      assertEq(pickupRes.status, 'In Transit', 'Rider marked job picked up')
+      const statusAfterPickup = await one(`select status from delivery_jobs where id = $1`, [jobId])
+      assertEq(statusAfterPickup, 'In Transit', 'delivery_jobs status updated to In Transit')
+
+      // 6. Rider verb: complete delivery with receiver name, signature, and photo
+      const completeRes = (await q(
+        `select rider_complete_delivery($1, 'Suman Receiver', '<svg>sig</svg>', 'https://minio/proof.jpg') as res`,
+        [tokenHash],
+      )).rows[0].res
+      assertEq(completeRes.status, 'Delivered', 'Rider marked delivery complete')
+      assertEq(completeRes.received_by, 'Suman Receiver', 'Receiver recorded')
+
+      const jobAfterDelivered = (await q(`select status, received_by, delivered_at from delivery_jobs where id = $1`, [jobId])).rows[0]
+      assertEq(jobAfterDelivered.status, 'Delivered', 'Job status is Delivered')
+      assertEq(jobAfterDelivered.received_by, 'Suman Receiver', 'Received by stored on job')
+      assert(jobAfterDelivered.delivered_at, 'Delivered at recorded')
+
+      // 7. Token ceases working once completed (W49)
+      await refusesSavepoint(
+        'Re-reading completed rider job',
+        `select get_rider_job_by_token($1)`,
+        [tokenHash],
+        /already been completed|no longer active/i,
+      )
+      await refusesSavepoint(
+        'Delivering already completed job',
+        `select rider_complete_delivery($1, 'Another Person')`,
+        [tokenHash],
+        /already been completed|already marked as Delivered/i,
+      )
+
+      // 8. Revocation test (W49)
+      const jobId2 = '00000000-0000-4000-8000-00000000b992'
+      await q(`
+        insert into delivery_jobs (
+          id, client_uuid, booking_id, branch_id, leg, scheduled_at, status, created_by, updated_by
+        ) values (
+          $1, gen_random_uuid(), $2, $3, 'Return', now() + interval '4 hours', 'Scheduled', $4, $4
+        )
+      `, [jobId2, bookingIds.a, BRANCH, U.Coordinator])
+
+      const rawToken2 = 'rider_sec_tok_second_test_link_67890'
+      const tokenHash2 = createHash('sha256').update(rawToken2).digest('hex')
+      let linkId2
+      await as('Coordinator', async () => {
+        linkId2 = (await q(
+          `select create_rider_link($1, $2, 'Hari Rider', '9812345678') as id`,
+          [jobId2, tokenHash2],
+        )).rows[0].id
+        assert(linkId2, 'Second rider link created')
+
+        // Coordinator revokes the link
+        await q(`select revoke_rider_link($1)`, [linkId2])
+      })
+
+      // Revoked link cannot be read or used
+      await refusesSavepoint(
+        'Reading revoked rider link',
+        `select get_rider_job_by_token($1)`,
+        [tokenHash2],
+        /revoked/i,
+      )
+      await refusesSavepoint(
+        'Picking up with revoked rider link',
+        `select rider_mark_picked_up($1)`,
+        [tokenHash2],
+        /revoked/i,
+      )
+
+      // 9. Expiration test (24h limit W49)
+      const jobId3 = '00000000-0000-4000-8000-00000000b993'
+      await q(`
+        insert into delivery_jobs (
+          id, client_uuid, booking_id, branch_id, leg, scheduled_at, status, created_by, updated_by
+        ) values (
+          $1, gen_random_uuid(), $2, $3, 'Outbound', now() + interval '6 hours', 'Scheduled', $4, $4
+        )
+      `, [jobId3, bookingIds.b, BRANCH, U.Coordinator])
+
+      const rawToken3 = 'rider_sec_tok_expired_test_link_11223'
+      const tokenHash3 = createHash('sha256').update(rawToken3).digest('hex')
+      await as('Coordinator', async () => {
+        await q(
+          `select create_rider_link($1, $2, 'Gita Rider', '9823456789')`,
+          [jobId3, tokenHash3],
+        )
+      })
+      await q(`update delivery_job_links set created_at = now() - interval '25 hours', expires_at = now() - interval '1 hour' where token_hash = $1`, [tokenHash3])
+
+      await refusesSavepoint(
+        'Reading expired rider link',
+        `select get_rider_job_by_token($1)`,
+        [tokenHash3],
+        /expired/i,
+      )
+
+      // 10. Anon privilege boundary assertion
+      const anonSelect = await one(`select has_table_privilege('anon', 'public.delivery_job_links', 'SELECT')`)
+      assertEq(anonSelect, false, 'delivery_job_links table is NOT readable by anon')
+      const anonExec = await one(`select has_function_privilege('anon', 'public.create_rider_link(uuid, text, text, text)', 'EXECUTE')`)
+      assertEq(anonExec, false, 'create_rider_link is NOT executable by anon')
     })
   },
 })
