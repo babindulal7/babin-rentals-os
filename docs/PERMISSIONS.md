@@ -251,6 +251,7 @@ Ladder shorthand: `M+` = Owner · Admin · Manager. `C+` = M+ · Coordinator. `F
 | `evidence.capture` | all staff on the job | mandatory on Damaged/Lost lines | ○ |
 | `evidence.review` (accept/reject match, archive with reason) | M+ | soft-delete only | ✓ |
 | `scan` | all staff | identity by PIN (P8) | ○ |
+| `team_note.create` | **All eight authenticated internal staff roles** (Owner, Admin, Manager, Coordinator, Warehouse, Technician, Accounts, Driver); **Client denied** | `create_team_note()` requires `auth_is_staff()` and an authenticated actor; `team_notes_insert_staff` checks the same role boundary and matching author ID (0185). The UI and `checkCapability` use `canCreateTeamNote`. No money fields are exposed. | ✓ |
 
 **Branch scoping — RULING 2026-10-23 (P0-B second half, migration 0171).** The four
 floor grants above carry a **site dimension** in the database, on top of the role
