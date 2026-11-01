@@ -155,14 +155,14 @@ export async function createRiderLink(
     throw new Error('Rider phone must be at least 7 characters.')
   }
 
-  const rawToken = generateRiderRawToken()
-  const tokenHash = await hashRiderToken(rawToken)
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://app.babinrentals.com'
-  const linkUrl = `${origin}/rider/${rawToken}`
-  const now = new Date()
-  const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString()
-
   if (IS_MOCK) {
+    // Offline prototype remains self-contained; production never mints tokens
+    // or supplies a token hash to a browser-callable database function.
+    const rawToken = generateRiderRawToken()
+    const tokenHash = await hashRiderToken(rawToken)
+    const now = new Date()
+    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString()
     const linkId = `mock-link-${Date.now()}`
     const mockLinks = getMockLinks()
     mockLinks.push({
@@ -178,25 +178,47 @@ export async function createRiderLink(
       completedAt: null,
     })
     saveMockLinks(mockLinks)
-    return { linkId, rawToken, linkUrl, expiresAt }
+    return { linkId, rawToken, linkUrl: `${origin}/rider/${rawToken}`, expiresAt }
   }
 
-  const { data, error } = await supabase.rpc('create_rider_link', {
-    p_job_id: jobId,
-    p_token_hash: tokenHash,
-    p_rider_name: cleanName,
-    p_rider_phone: cleanPhone,
-  })
+  // The public rider Edge endpoint is also the *only* production issuer.
+  // crypto.randomUUID() supplies a per-request idempotency key, not a token.
+  // The Edge handler separately validates the user's JWT and generates a
+  // cryptographically secure bearer token with Web Crypto.
+  if (typeof crypto === 'undefined' || typeof crypto.randomUUID !== 'function') {
+    throw new Error('Secure request identity is unavailable; rider link issuance is blocked.')
+  }
+  const requestKey = crypto.randomUUID()
+  let response: Awaited<ReturnType<typeof supabase.functions.invoke>>
+  try {
+    response = await supabase.functions.invoke('rider-link', {
+      body: {
+        action: 'issue',
+        job_id: jobId,
+        rider_name: cleanName,
+        rider_phone: cleanPhone,
+        request_key: requestKey,
+      },
+    })
+  } catch {
+    throw new Error('Could not issue a rider link. Check your connection and existing links.')
+  }
 
-  if (error || !data) {
-    throw new Error(error?.message || 'Failed to create rider link on database.')
+  const issued = (response.data as {
+    data?: { linkId?: string; rawToken?: string; expiresAt?: string }
+    error?: string
+  } | null)?.data
+  if (response.error || !issued?.linkId ||
+      !issued?.rawToken || !/^[0-9a-f]{32}$/.test(issued.rawToken) ||
+      !issued.expiresAt) {
+    throw new Error('Could not issue a rider link. Check your permissions and existing links.')
   }
 
   return {
-    linkId: data as string,
-    rawToken,
-    linkUrl,
-    expiresAt,
+    linkId: issued.linkId,
+    rawToken: issued.rawToken,
+    linkUrl: `${origin}/rider/${issued.rawToken}`,
+    expiresAt: issued.expiresAt,
   }
 }
 
