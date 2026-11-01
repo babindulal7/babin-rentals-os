@@ -217,6 +217,7 @@ declare
   v_actor_id     uuid;
   v_booking      record;
   v_line         record;
+  v_existing     inventory_reservations%rowtype;
 begin
   v_role := auth_user_role();
   if v_role not in ('Owner', 'Admin', 'Manager', 'Coordinator') then
@@ -296,6 +297,40 @@ begin
     raise exception 'Hold period must exactly match the booking rental period.';
   end if;
   v_expires_at := now() + (coalesce(p_duration_minutes, 240) || ' minutes')::interval;
+
+  -- Law 8: retries must not reserve the same stock twice. The booking row
+  -- was locked above, serializing duplicate requests on this booking.
+  select * into v_existing
+    from inventory_reservations
+   where client_uuid = p_client_uuid
+     for update;
+  if found then
+    if v_existing.created_by is distinct from v_actor_id
+       or v_existing.booking_id is distinct from p_booking_id
+       or v_existing.booking_line_id is distinct from p_booking_line_id
+       or v_existing.asset_id is distinct from p_asset_id
+       or v_existing.product_id is distinct from p_product_id
+       or v_existing.qty is distinct from p_qty
+       or v_existing.period is distinct from v_period then
+      raise exception 'Hold idempotency key belongs to a different request.'
+        using errcode = '23505';
+    end if;
+    if v_existing.hold_state <> 'active_hold'
+       or v_existing.released_at is not null
+       or v_existing.expires_at is null
+       or v_existing.expires_at <= now() then
+      raise exception 'Hold idempotency key was already consumed; start a new hold request.'
+        using errcode = '23505';
+    end if;
+    return jsonb_build_object(
+      'success', true,
+      'reservation_id', v_existing.id,
+      'hold_state', 'active_hold',
+      'expires_at', v_existing.expires_at,
+      'qty', v_existing.qty,
+      'already_held', true
+    );
+  end if;
 
   -- Reclaim expired holds on this asset/product first
   if p_asset_id is not null then
