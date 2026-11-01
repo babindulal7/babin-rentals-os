@@ -52,7 +52,7 @@ Deno.serve(async (req: Request) => {
         })
       }
 
-      const bearer = req.headers.get('authorization')?.match(/^Bearer\\s+([^\\s]+)$/i)?.[1]
+      const bearer = req.headers.get('authorization')?.match(/^Bearer\s+([^\s]+)$/i)?.[1]
       if (!bearer) {
         return new Response(JSON.stringify({ error: 'Staff sign-in required' }), {
           status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
