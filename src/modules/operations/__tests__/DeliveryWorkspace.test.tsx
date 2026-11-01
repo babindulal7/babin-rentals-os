@@ -4,7 +4,6 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
 import { DeliveryWorkspace } from '../DeliveryWorkspace'
-import type { DeliveryRecord } from '../../../lib/queries/delivery'
 
 ;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
 
@@ -21,76 +20,14 @@ vi.mock('../../../lib/auth', () => ({
   }),
 }))
 
-const MOCK_JOBS: DeliveryRecord[] = [
-  {
-    id: 'DEL-001',
-    bookingNo: 'BR-1001',
-    clientName: 'Alpha Cinema',
-    clientPhone: '+977 9801111111',
-    address: 'Baluwatar, Kathmandu',
-    neighborhood: 'Baluwatar',
-    mode: 'Babin Delivery',
-    driverId: 'usr-driver-1',
-    driverName: 'Ramesh Thapa',
-    status: 'Ready',
-    scheduledDate: '2026-10-31',
-    scheduledTime: '10:00',
-    deliveryFeeNpr: 2500,
-  },
-  {
-    id: 'DEL-002',
-    bookingNo: 'BR-1002',
-    clientName: 'Beta Films',
-    clientPhone: '+977 9802222222',
-    address: 'Jhamsikhel, Lalitpur',
-    neighborhood: 'Jhamsikhel',
-    mode: 'Babin Delivery',
-    driverId: 'usr-other-driver',
-    driverName: 'Hari Sharma',
-    status: 'In Transit',
-    scheduledDate: '2026-10-31',
-    scheduledTime: '11:00',
-    deliveryFeeNpr: 3500,
-  },
-  {
-    id: 'DEL-003',
-    bookingNo: 'BR-1003',
-    clientName: 'Gamma Media',
-    clientPhone: '+977 9803333333',
-    address: 'Thamel, Kathmandu',
-    neighborhood: 'Thamel',
-    mode: 'Courier / Rider',
-    status: 'Scheduled',
-    scheduledDate: '2026-10-31',
-    scheduledTime: '14:00',
-    deliveryFeeNpr: 1500,
-  },
-]
-
-vi.mock('../../../lib/queries/delivery', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../lib/queries/delivery')>()
-  return {
-    ...actual,
-    fetchDeliveries: vi.fn(async (role: string | null) => {
-      if (role === 'Driver') {
-        return MOCK_JOBS.filter((j) => j.driverId === mockCurrentUser?.id)
-      }
-      return MOCK_JOBS
-    }),
-  }
-})
-
-vi.mock('../../../actions/delivery', () => ({
-  createDeliveryJob: vi.fn().mockResolvedValue({ jobId: 'DEL-NEW' }),
-  assignDeliveryDriver: vi.fn().mockResolvedValue({ jobId: 'DEL-003' }),
-  transitionDeliveryJob: vi.fn().mockResolvedValue({ jobId: 'DEL-001' }),
-}))
-
-describe('DeliveryWorkspace (T4-01)', () => {
+describe('DeliveryWorkspace — mock preview permission boundaries (T4-01)', () => {
   let container: HTMLDivElement
   let root: Root
 
   beforeEach(() => {
+    // The mock workspace reads getDeliveries() / localStorage, NOT
+    // fetchDeliveries(). Never mock the wrong reader and claim the UI was tested.
+    localStorage.removeItem('babin_rentals_deliveries_v1')
     container = document.createElement('div')
     document.body.appendChild(container)
     root = createRoot(container)
@@ -101,11 +38,11 @@ describe('DeliveryWorkspace (T4-01)', () => {
       root.unmount()
     })
     container.remove()
-    document.body.innerHTML = ''
     vi.restoreAllMocks()
+    localStorage.removeItem('babin_rentals_deliveries_v1')
   })
 
-  it('Driver seat view enforces RLS isolation and Law 6 money blindness', async () => {
+  it('Driver seat fails closed before verified assignment reads exist and hides all money/actions', async () => {
     mockCurrentUser = { id: 'usr-driver-1', name: 'Ramesh Thapa', role: 'Driver' }
 
     await act(async () => {
@@ -116,30 +53,21 @@ describe('DeliveryWorkspace (T4-01)', () => {
       )
     })
 
-    // Driver only sees assigned jobs (DEL-001)
-    expect(container.textContent).toContain('DEL-001')
-    expect(container.textContent).not.toContain('DEL-002')
-    expect(container.textContent).not.toContain('DEL-003')
-
-    // Law 6: Zero money or fee displays on Driver screen
-    expect(container.textContent).not.toContain('Delivery Revenue')
-    expect(container.textContent).not.toContain('2,500')
-    expect(container.textContent).not.toContain('3,500')
-    expect(container.textContent).not.toContain('FEE')
-
-    // Driver cannot create new dispatches, assign driver, or mark failed
-    expect(container.textContent).not.toContain('+ New Dispatch')
-    expect(container.textContent).not.toContain('Assign Driver')
-    expect(container.textContent).not.toContain('Mark Failed')
-
-    // Driver can see primary verb Dispatch Now for their Ready job
-    const dispatchBtn = Array.from(container.querySelectorAll('button')).find(
-      (b) => b.textContent?.includes('Dispatch'),
-    )
-    expect(dispatchBtn).toBeTruthy()
+    const text = container.textContent ?? ''
+    expect(text).toContain('Assigned delivery records are unavailable until verified trip assignment access is connected.')
+    // Never show unverified preview jobs as assigned deliveries.
+    expect(text).not.toContain('DEL-2601')
+    expect(text).not.toContain('DEL-2602')
+    expect(text).not.toContain('Delivery Revenue')
+    expect(text).not.toContain('Rs 3,500')
+    expect(text).not.toContain('FEE')
+    expect(text).not.toContain('+ New Dispatch')
+    expect(text).not.toContain('Assign Driver')
+    expect(text).not.toContain('Mark Failed')
+    expect(text).not.toContain('Dispatch Now')
   })
 
-  it('Coordinator seat view sees all jobs, revenue KPI, and dispatch management actions', async () => {
+  it('Coordinator sees clearly local preview data and money, but cannot mutate dispatches', async () => {
     mockCurrentUser = { id: 'usr-coord-1', name: 'Sita Coordinator', role: 'Coordinator' }
 
     await act(async () => {
@@ -150,18 +78,19 @@ describe('DeliveryWorkspace (T4-01)', () => {
       )
     })
 
-    // Coordinator sees all jobs
-    expect(container.textContent).toContain('DEL-001')
-    expect(container.textContent).toContain('DEL-002')
-    expect(container.textContent).toContain('DEL-003')
-
-    // Money allowed for Coordinator
-    expect(container.textContent).toContain('Delivery Revenue')
-    expect(container.textContent).toContain('FEE')
-
-    // Management actions present
-    expect(container.textContent).toContain('+ New Dispatch')
-    expect(container.textContent).toContain('Assign')
-    expect(container.textContent).toContain('Fail')
+    const text = container.textContent ?? ''
+    // The mock workspace reads getDeliveries(), whose bundled preview ids
+    // are DEL-2601+, not the obsolete DEL-001 fake fetchDeliveries fixture.
+    expect(text).toContain('DEL-2601')
+    expect(text).toContain('DEL-2602')
+    expect(text).toContain('DEL-2603')
+    expect(text).toContain('Delivery Revenue')
+    expect(text).toContain('FEE')
+    // Coordinator has no conservative mock dispatch-write gate. A UI action
+    // should not be shown until it can succeed through an authorized backend.
+    expect(text).toContain('Your role cannot change delivery records.')
+    expect(text).not.toContain('+ New Dispatch')
+    expect(text).not.toContain('Assign Driver')
+    expect(text).not.toContain('Mark Failed')
   })
 })
