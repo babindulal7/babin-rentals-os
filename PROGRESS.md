@@ -59,16 +59,32 @@ The 12 suite failures, all accounted for and none introduced by this branch:
 - Pre-existing, outside the suite: `test:server-contracts` expects `GATE:unit.retire.active_reservation` for retiring a unit held by a reservation; the database raises `GATE:unit.retire.active_status` first because the unit is already `Reserved` (identical on untouched main). Whether the test or the gate order is right is not decided here.
 - Two scripts (`check:pglite`/`check:lifecycle`/`npm test`) call `git`; the clean copy needed a throwaway git repo (outside this repository) for them to run.
 
+**Verified (full gate list re-run on `5046a9af`, after the INT-1 restore — clean copy with its own temporary git repo)**
+| Gate | Result |
+|---|---|
+| `npm run lint`, `lint:progress`, `lint:shell`, `lint:ui-copy`, `check:contrast` | PASS |
+| `check:pglite` 191/191 · `check:lifecycle` 47/47 | PASS (same run) |
+| financial integrity · `check:security` · `test:partial-return` 58/58 · receipt test | PASS |
+| `npm run build` (`tsc --noEmit && vite build`) | PASS |
+| `test:server-contracts` | **FAIL** — same single assertion as before (`active_status` vs `active_reservation`), pre-existing on untouched main |
+| `VITE_DATA_SOURCE=mock npm test` | **FAIL — 6401 / 6415 passed, 14 failed in 4 files** |
+| `test:coverage` | NOT RUN |
+
+The 14 suite failures, all accounted for:
+- **3 — PR #35's repairs** (`rentalMoreActionsRegistry` ×2, `useNewRentalTiming`): this branch does not contain PR #35.
+- **11 — load timeouts, not regressions:** `listPageToolbars.render` ×4 and `realWorkspaceGuidance` ×7 hit 30–90 s timeouts and "overlapping act()" warnings while other sessions held the CPU at ~83%. Re-run together on this same commit they passed 15/15 twice (83 s and 144 s); `listPageToolbars` alone 8/8; on untouched main 15/15. The suite has therefore **not** been seen fully green in one run on this branch.
+- **The 2 `DeliveryWorkspace` (T4-01) failures from the previous run are gone** — the INT-1 restore fixed them.
+
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 78 / 78 (100%) | — |
+| Backend | actions implemented / total | 78 / 78 (100%) | +0 |
 | Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
-| Permissions | capabilities mapped / declared | 64 / 64 (100%) | — |
-| Lifecycle | steps green / total | 47 / 47 (100%) | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 64 / 64 (100%) | +0 |
+| Lifecycle | steps green / total | 47 / 47 (100%) | +0 |
 | Overall | structural mean of five | ≈ 97% | — |
-Migrations 191 files · check:pglite 191/191 applied, 0 failed (recorded 2026-11-01T13:07:17.701Z). Suite: NOT PASSING — 6401/6413 passed, 12 failed (recorded 2026-11-01T13:36:54.581Z); source fingerprint matches.
+Migrations 191 files · check:pglite 191/191 applied, 0 failed (recorded 2026-11-01T14:57:49.771Z). Suite: NOT PASSING — 6401/6415 passed, 14 failed (recorded 2026-11-01T15:47:32.030Z); source fingerprint matches.
 Coverage suite: NOT VERIFIED — invalid test receipt.
 Gates read from .lifecycle-result.json, written 2026-11-01T13:08:20.074Z.
 Counted by `npm run completion`, not typed. Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
@@ -88,7 +104,7 @@ Counted by `npm run completion`, not typed. Structural coverage only. Functional
 - Driven in a real browser (mock-mode build from a clean scratch copy, `vite build` exit 0, signed in as the mock Warehouse user): `/operations/delivery` shows the status KPIs and the Dispatch Board with Stage Ready, Dispatch and Send to Rider on every non-delivered job, none on the delivered one, and no revenue figure for the money-blind role. Not run: a hosted database, so a real `create_rider_link` call for a UI-created job is untested; the full suite was not re-run after this change.
 
 ### Remaining
-- **Suite is not green:** merge PR #35 (clears 3); `realWorkspaceGuidance` needs a quiet machine to confirm (7, passes alone). Re-run the full suite on this branch — the 2 `DeliveryWorkspace` failures should now be gone.
+- **Suite is not green in a single run:** merge PR #35 (clears 3), then re-run the full suite on a quiet machine to confirm the 11 load-sensitive tests (`listPageToolbars.render`, `realWorkspaceGuidance`) pass in one pass; consider a longer timeout or serial run for those two files — they take 40–170 s on this machine.
 - **`test:server-contracts`:** decide test-vs-gate-order for the retire-while-reserved assertion.
 - Run `test:coverage` before any live batch.
 - Not reviewed: the notes feed still shows **Edit** on every note to a Warehouse user (seen in the browser check). Whether editing is allowed for floor roles is a separate question from R-0111-1.
