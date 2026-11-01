@@ -233,8 +233,10 @@ Ruled 26 Oct afternoon (W74–W78, W90, L5).
    [`docs/plans/prompts/`](docs/plans/prompts/README.md) — paste it into the lane's agent.
 4. **CI is off; these local checks are the gate** (W75). Before an agent says a card is done, and
    again before Babin merges it locally, run **every step `.github/workflows/ci.yml` ran, in its
-   order** — the list is in [`docs/plans/README.md`](docs/plans/README.md) until T0-11 makes it one
-   command: typecheck · lint · tests (mock data) · migrations from scratch · financial integrity ·
+   order** — use `npm run gates` after T0-11 merges (draft stacked on T0-10); its
+   command list must match `.github/workflows/ci.yml`, and `npm run gates -- --quick` skips coverage
+   only, so it is not a full release gate. The step-by-step list is in
+   [`docs/plans/README.md`](docs/plans/README.md): typecheck · lint · tests (mock data) · migrations from scratch · financial integrity ·
    security · lifecycle · server contracts · partial Return · lint:progress · receipt test · page
    shell · UI copy · contrast · build (coverage before each live batch). SQL changes need
    `check:pglite` and `check:lifecycle` green in the same run (R-35 "Verified"). Drive the changed
