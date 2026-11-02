@@ -12,10 +12,10 @@
 **Ruled**
 - None. Ledger rule 4.
 
-**Verified**
+**Verified** (`bro-lane-t8-06`, merged onto main `a00977c4`, final number `0205`)
 - `npm run typecheck` → 0.
-- `npm run check:pglite` → 196/196 applied, 0 failed. `npm run check:lifecycle` → 49/49 green, same run, so `0205` is Verified under R-35.
-- `vitest` on `src/actions/crew` + `CrewSection.test.tsx` → 24/24. Full suite NOT run; no UI driven; nothing applied to any Supabase project (N-5).
+- `npm run check:pglite` → 203/203 applied, 0 failed. `npm run check:lifecycle` → 55/55 green, same run, so `0205` is Verified under R-35.
+- `npm test -- src/actions/crew src/modules/crew src/modules/rentals/booking` → 27 files, 181/181 (mock mode, T0-10). Full suite NOT run; no UI driven; nothing applied to any Supabase project (N-5).
 
 **Blocked / open**
 - T8-07 and `lane-a/T8-06-crew-overtime-ui` need this merged in; the UI branch touches booking files main has changed and may conflict.
@@ -23,15 +23,15 @@
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 79 / 79 (100%) | +17 |
+| Backend | actions implemented / total | 83 / 83 (100%) | +4 |
 | Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
 | DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 65 / 65 (100%) | +14 |
-| Lifecycle | steps green / total | 49 / 49 (100%) | +7 |
+| Permissions | capabilities mapped / declared | 66 / 66 (100%) | +1 |
+| Lifecycle | steps green / total | 55 / 55 (100%) | +6 |
 | Overall | structural mean of five | ≈ 97% | — |
-Migrations 196 files · check:pglite 196/196 applied, 0 failed (recorded 2026-11-01T18:46:47.449Z). Suite: NOT VERIFIED — invalid test receipt.
+Migrations 203 files · check:pglite 203/203 applied, 0 failed (recorded 2026-11-02T11:15:28.312Z). Suite: NOT VERIFIED — focused or unspecified run: 181/181 passed, 0 failed (recorded 2026-11-02T11:17:26.179Z).
 Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written 2026-11-01T18:48:01.215Z.
+Gates read from .lifecycle-result.json, written 2026-11-02T11:16:08.526Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
