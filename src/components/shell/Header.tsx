@@ -107,6 +107,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
   const compactHeader = useCompactHeader()
   const isDispatch = crumbs.some((crumb) => crumb.label === 'Today' || crumb.label === 'Dashboard')
   const [profileOpen, setProfileOpen] = useState(false)
+  const [forgetDeviceOpen, setForgetDeviceOpen] = useState(false)
   const [showHandover, setShowHandover] = useState(false)
   const [notesOpen, setNotesOpen] = useState(false)
   const [notesVisited, setNotesVisited] = useState(false)
@@ -1128,11 +1129,9 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                   {(user?.role === 'Owner' || user?.role === 'Admin') && roster && roster.length > 0 && (
                     <button
                       type="button"
-                      onClick={async () => {
+                      onClick={() => {
                         setProfileOpen(false)
-                        if (window.confirm('Forget all stored sessions and roster on this device?')) {
-                          await forgetThisDevice()
-                        }
+                        setForgetDeviceOpen(true)
                       }}
                       style={{
                         display: 'flex',
@@ -1262,6 +1261,19 @@ export default function Header({ crumbs, actions }: HeaderProps) {
           </div>
         </aside>
       )}
+
+      <ConfirmDialog
+        isOpen={forgetDeviceOpen}
+        title="Forget this device?"
+        description="This removes every stored session and the roster on this device. Everyone will have to sign in again."
+        confirmLabel="Forget this device"
+        variant="danger"
+        onClose={() => setForgetDeviceOpen(false)}
+        onConfirm={() => {
+          setForgetDeviceOpen(false)
+          void forgetThisDevice()
+        }}
+      />
 
       {/* Confirmation Dialog for actions requiring confirmation */}
       {activeConfirmAction?.confirm && (
