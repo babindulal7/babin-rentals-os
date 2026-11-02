@@ -62,6 +62,9 @@ run that ends in a branch ready to merge and a PROGRESS.md entry.
 
 ## Gates every card must pass (CI is off — these are the gate, W75)
 
+**After T0-10 and T0-11 are merged:** run `npm run gates` for all checks in the exact CI order. `npm run gates -- --quick` skips only coverage and **does not** certify a release. Both force mock mode for tests even when `.env.local` contains live credentials. The script refuses to run if the workflow order changes; the list below remains the audit reference.
+
+
 The same steps `.github/workflows/ci.yml` ran, in its order (T0-11 turns this into one command).
 A gate that is skipped is how a red check reaches `main` — on 26 Oct the UI-copy check went red
 that way.

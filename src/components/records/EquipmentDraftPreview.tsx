@@ -1,7 +1,7 @@
 import { Card } from '../ui/Page'
 import type { RecordValues } from '../../lib/recordEditor'
 import { equipmentReadiness } from './equipmentAssist'
-import { buildEquipmentDraftPreview } from './equipmentDraftPreview'
+import { buildEquipmentDraftPreview } from './equipmentDraftPreviewModel'
 
 interface Props {
   values: RecordValues

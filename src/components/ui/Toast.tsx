@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import Icon from './Icon'
 
@@ -205,8 +205,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const removeToast = (id: string) => setToasts((prev) => prev.filter((t) => t.id !== id))
 
+  /* Stable identity: `showSuccessToast` never changes, so every consumer of
+     `useToast()` would otherwise re-render each time any toast appears. */
+  const toastValue = useMemo(() => ({ showSuccessToast }), [showSuccessToast])
+
   return (
-    <ToastContext.Provider value={{ showSuccessToast }}>
+    <ToastContext.Provider value={toastValue}>
       {children}
       <div
         style={{

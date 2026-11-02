@@ -435,6 +435,13 @@ export default function CustomReport() {
             </thead>
             <tbody>
               {rows.map((row, idx) => (
+                /*
+                 * Index key, deliberately: `CustomRow` is a bag of whatever
+                 * columns the chosen domain projects — no field is guaranteed
+                 * to exist in every domain, so there is no natural id. The rows
+                 * are read-only with no per-row state, so a positional key
+                 * cannot mis-associate anything.
+                 */
                 <tr key={idx}>
                   {activeColumnDefs.map((col) => {
                     const val = row[col.id]
