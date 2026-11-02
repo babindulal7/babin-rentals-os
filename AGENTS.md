@@ -31,6 +31,7 @@ npm run dev:local            # vite --mode localdb
 npm run typecheck            # tsc --noEmit
 npm run lint                 # eslint src --max-warnings 0 (src only; archive/scripts/supabase excluded)
 npm test                     # safe mock backend by default, even with live .env.local; --live requires explicit isolated-test opt-in (T0-10)
+npm run gates                # T0-11: all CI verification steps locally; -- --quick skips coverage (not a release pass)
 npx vitest run <path>        # single file, e.g. npx vitest run src/__tests__/e2e/tier1-features.test.tsx
 npm run build                # tsc --noEmit && vite build → dist/
 ```
