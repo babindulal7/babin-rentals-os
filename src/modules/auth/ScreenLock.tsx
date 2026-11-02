@@ -33,6 +33,7 @@ export default function ScreenLock({ onUnlock }: { onUnlock: () => void }) {
   const [verdict, setVerdict] = useState<PinVerdict | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [invalid, setInvalid] = useState(false)
+  const [confirmingForget, setConfirmingForget] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const invalidTimer = useRef<number | null>(null)
 
@@ -281,14 +282,10 @@ export default function ScreenLock({ onUnlock }: { onUnlock: () => void }) {
                 Sign in with another account
               </button>
 
-              {(user?.role === 'Owner' || user?.role === 'Admin') && (
+              {(user?.role === 'Owner' || user?.role === 'Admin') && !confirmingForget && (
                 <button
                   type="button"
-                  onClick={() => {
-                    if (window.confirm('Forget all stored sessions and roster on this device?')) {
-                      void forgetThisDevice()
-                    }
-                  }}
+                  onClick={() => setConfirmingForget(true)}
                   style={{
                     minHeight: 44,
                     background: 'transparent',
@@ -302,6 +299,68 @@ export default function ScreenLock({ onUnlock }: { onUnlock: () => void }) {
                 >
                   Forget this device
                 </button>
+              )}
+
+              {/* Inline confirmation, not ConfirmDialog: the lock screen sits at --z-system, above
+                  the modal layer, so a dialog opened from here would render behind it. */}
+              {(user?.role === 'Owner' || user?.role === 'Admin') && confirmingForget && (
+                <div
+                  role="alertdialog"
+                  aria-label="Forget this device"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 10,
+                    padding: 'var(--sp-md)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--r-sm)',
+                  }}
+                >
+                  <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text)' }}>
+                    Forget every stored session and the roster on this device? Everyone will have to sign in again.
+                  </span>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingForget(false)}
+                      style={{
+                        flex: 1,
+                        minHeight: 44,
+                        background: 'transparent',
+                        border: '1px solid var(--border)',
+                        borderRadius: 'var(--r-sm)',
+                        color: 'var(--text)',
+                        fontSize: 'var(--t-meta)',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setConfirmingForget(false)
+                        void forgetThisDevice()
+                      }}
+                      style={{
+                        flex: 1,
+                        minHeight: 44,
+                        background: 'var(--danger)',
+                        border: 'none',
+                        borderRadius: 'var(--r-sm)',
+                        color: 'var(--btn-primary-fg, #fff)',
+                        fontSize: 'var(--t-meta)',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                      }}
+                    >
+                      Forget this device
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           </div>
