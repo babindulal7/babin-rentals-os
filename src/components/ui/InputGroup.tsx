@@ -95,8 +95,10 @@ export const InputGroupAddon = forwardRef<HTMLDivElement, InputGroupAddonProps>(
     onMouseDown?.(e)
     const target = e.target as HTMLElement | null
     if (!target) return
-    const isInteractive = target.closest('button, a, input, select, textarea, [role="button"]')
-    if (isInteractive) return
+    const interactive = target.closest('button, a, input, select, textarea, [role="button"]')
+    // The addon is itself role="button" so it is keyboard-reachable; that must not count as
+    // a control inside it, or pressing the addon would never hand focus to the field.
+    if (interactive && interactive !== e.currentTarget) return
 
     e.preventDefault()
     const parent = e.currentTarget.parentElement
