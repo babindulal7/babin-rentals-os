@@ -2035,9 +2035,8 @@ function EquipmentGroupRow({
             border: '1px solid var(--border)',
             borderRadius: 'var(--r-btn)',
           }}
-          // Containment only: clicks on the unit chips must not also add the whole row.
-          role="presentation"
-          onClick={(e) => e.stopPropagation()}
+          // Each serial button below already stops propagation in its own
+          // onClick. Keep this wrapper non-interactive for keyboard and a11y.
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text2)' }}>
