@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0209**
+**Next free number: 0210**
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
@@ -47,6 +47,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0206 | T4-09 | delivery-route-map-pins | lane-b/T4-09-delivery-route-map-pins | verified |
 | 0207 | T8-06 | crew-overtime-half-full-day | lane-a/T8-06-crew-overtime-half-or-full-day | verified |
 | 0208 | T1-15 | staff-pin-four-digits | lane-a/T1-15-switch-user-with-name-plus-pin | verified |
+| 0209 | T4-09-security | delivery-route-branch-hardening | fix/t4-09-route-branch-hardening-0209 | claimed; staging required |
 
 ## Expected migrations (not yet claimed)
 
