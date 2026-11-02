@@ -6063,6 +6063,69 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L67',
+  title: 'extend_booking succeeds with no Draft invoice and leaves a numbered invoice untouched (T3-14b regression, 0205)',
+  expect: 'green',
+  run: async () => {
+    /* The Draft made at Confirm (W15) is numbered on full payment (W16). Once it is, the
+       booking has no Draft, and 0200 made extend_booking raise "no Draft invoice". */
+    await as('Coordinator', async () => {
+      await createBooking({
+        key: 'ext_nodraft',
+        window: ['2105-08-01T04:00:00Z', '2105-08-03T04:00:00Z'],
+        actor: 'Coordinator',
+        lines: [
+          {
+            productId: SERIAL_PRODUCT,
+            description: 'Extension Without Draft Test Camera',
+            qty: 1,
+            days: 2,
+            rate: 350000,
+            units: [UNITS[2]],
+          },
+        ],
+      })
+      await transition('ext_nodraft', 'Quote', 'Booked', 'Coordinator')
+    })
+    await settleInvoice('ext_nodraft')
+
+    const invoiceId = await one(
+      "select id from invoices where booking_id = $1 and status <> 'Void' order by created_at limit 1",
+      [bookingIds.ext_nodraft],
+    )
+    assert(invoiceId, 'the booking has an invoice to protect')
+    const drafts = Number(
+      await one("select count(*) from invoices where booking_id = $1 and status = 'Draft'", [bookingIds.ext_nodraft]),
+    )
+    assertEq(drafts, 0, 'no Draft invoice is left once the invoice is numbered')
+
+    const fingerprint = () =>
+      one(
+        "select md5(coalesce((select i::text from invoices i where i.id = $1::uuid), '') || coalesce((select string_agg(il::text, ',' order by il.id::text) from invoice_lines il where il.invoice_id = $1::uuid), ''))",
+        [invoiceId],
+      )
+    const before = await fingerprint()
+
+    let result
+    await as('Coordinator', async () => {
+      const res = await q(
+        "select extend_booking(jsonb_build_object('booking_id', $1::uuid, 'days', 1, 'reason', 'Extended one day after the invoice was already numbered')) as data",
+        [bookingIds.ext_nodraft],
+      )
+      result = res.rows[0].data
+    })
+    assertEq(result.success, true, 'extend_booking succeeded although the booking has no Draft invoice')
+    assertEq(result.days_added, 1, 'one day added')
+    assert(result.invoice_resync === null, 'no Draft, so nothing was re-synced (invoice_resync is null)')
+
+    const newReturnAt = await one('select return_at from bookings where id = $1', [bookingIds.ext_nodraft])
+    const diffMs = new Date(newReturnAt).getTime() - new Date('2105-08-03T04:00:00Z').getTime()
+    assertEq(diffMs, 24 * 60 * 60 * 1000, 'return_at moved forward exactly 1 day')
+    assertEq(await fingerprint(), before, 'the numbered invoice and its lines were not touched')
+  },
+})
+
 /* ΓöÇΓöÇ Run ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
 await seed()

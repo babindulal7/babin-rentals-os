@@ -1,5 +1,44 @@
 # Progress Log
 
+## 2026-11-02 — F2: extend_booking works with no Draft invoice (0205, T3-14b follow-up)
+
+**Did**
+- An ECC review of the app found `npm run check:anon` red on `main` (`b24675a8`): "Owner can extend an On Rent booking (resync_draft_invoice: no Draft invoice for booking 864.)". Cause: `0200` step 8 calls `resync_draft_invoice` unconditionally, and it raises when the booking has no Draft — a booking confirmed before 0200 (0200 has no backfill) or one whose invoice is already numbered (W16). `check:pglite` and `check:lifecycle` never extended a booking without a Draft, so both stayed green.
+- Claimed `0205` in `docs/plans/MIGRATION_LEDGER.md` and wrote `supabase/migrations/0205_extend_booking_without_draft.sql`. `extend_booking(jsonb)` is identical to 0200 except step 8 (diffed against 0200: one three-line statement replaced by a guarded call). It now calls the re-sync only `if exists` a Draft; with none, `invoice_resync` is null and no invoice is touched, which is what 0193 did before 0200. Post-conditions assert SECURITY DEFINER, the pinned `search_path`, the ACL (anon none, authenticated yes) and the guard.
+- Added lifecycle step **L67** to `scripts/e2e-lifecycle.mjs`: a booking is confirmed, its invoice numbered and paid, then `extend_booking` by 1 day succeeds, `invoice_resync` is null, `return_at` moves exactly one day and the invoice and its lines are unchanged (fingerprint compare).
+
+**Ruled**
+- Nothing new. What a change to a booking with a numbered invoice should do (second invoice, credit note, or a block with a message) stays O-14 / T3-14c; this migration leaves a numbered invoice exactly as 0193 did. Revert (B-6): restore the 0200 definition of `extend_booking(jsonb)`.
+
+**Verified** (this branch at `b24675a8` plus the changes above)
+- `npm run check:pglite` — 198/198 applied, 0 failed; 36 views 0 anon-readable; 20 functions 0 unauthorized; 137 definers pinned.
+- `npm run check:lifecycle` — 67/67 green, 0 known-red, 0 failed (run with `check:pglite` in the same session: R-35 "Verified").
+- Red then green: with `0205` set aside, `check:lifecycle` fails L67 (66/67); with it, 67/67.
+- `npm run check:anon` — exit 0 (was 1: the extend case now passes). `npm run check:security` — exit 0.
+- `vitest` on `extendRental.test.ts` and `roleSecurityMatrix.test.ts` — 113/113.
+- Not applied to any Supabase project (N-5). A hosted JWT/PostgREST check is still needed before the live apply.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 79 / 79 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 65 / 65 (100%) | +0 |
+| Lifecycle | steps green / total | 67 / 67 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 198 files · check:pglite 198/198 applied, 0 failed (recorded 2026-11-02T07:52:05.754Z). Suite: Historical suite: 6425/6425 passed, 0 failed (recorded 2026-11-01T20:48:00.227Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-02T07:52:28.428Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **Not mine to decide:** a change to a booking with a numbered invoice (O-14 / T3-14c).
+- **Gate list (Babin's call):** `check:anon` and `check:security` caught two regressions (0188 client view, 0200 extend) that the two gates `PLAN.md` §6.4 names, `check:pglite` and `check:lifecycle`, did not. Consider adding them to the required list.
+- **Still open from the same review:** rider-link edge function hardening (floating `esm.sh` import, raw error text, no rate limit, `Math.random` fallback at `src/lib/queries/riderLink.ts:105`); unused production dependency `opencode-chromium` (`package.json:69`); a stray `vite.config.ts.timestamp-1793571192106-1efcbcebe6bf88.mjs` committed at the repo root; seven `alert()` calls where Law 12 wants inline errors.
+- `0205` is `verified` in the ledger; staging and the live apply are Babin's.
+
 ## 2026-11-02 — T4-08 rider-link contract fix (P0 resolved): migration 0204, server-minted token, R1–R5 verified
 
 **Did**
