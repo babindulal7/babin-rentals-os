@@ -386,6 +386,8 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
       return rbac.canTransitionDeliveryJob(ctx.role);
     case 'delivery.reschedule':
       return rbac.canRescheduleDeliveryJob(ctx.role);
+    case 'delivery.view':
+      return rbac.canViewDayRoute(ctx.role);
 
     // Delivery zones (T4-07, migration 0189)
     case 'delivery_zone.create':
