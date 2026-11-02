@@ -914,3 +914,37 @@ export function canViewDayRoute(role: SystemRole | null | undefined): boolean {
   return ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Driver', 'Accounts'].includes(role)
 }
 
+/**
+ * Create own calendar feed token (T4-10) — any staff role.
+ * Mirrors `create_calendar_feed_token` authorization.
+ */
+export function canCreateCalendarFeedToken(role: SystemRole | null | undefined): boolean {
+  if (!role) return false
+  return ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Driver', 'Accounts'].includes(role)
+}
+
+/**
+ * Revoke calendar feed token (T4-10) — self or Owner/Admin.
+ * Mirrors `revoke_calendar_feed_token` authorization.
+ */
+export function canRevokeCalendarFeedToken(role: SystemRole | null | undefined, targetUserId?: string, currentUserId?: string): boolean {
+  if (!role) return false
+  // Self-revoke: any staff
+  if (targetUserId === currentUserId) {
+    return ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Driver', 'Accounts'].includes(role)
+  }
+  // Revoke others: Owner/Admin only
+  return role === 'Owner' || role === 'Admin'
+}
+
+/**
+ * View calendar feed token status (T4-10) — self or Owner/Admin.
+ */
+export function canViewCalendarFeedTokenStatus(role: SystemRole | null | undefined, targetUserId?: string, currentUserId?: string): boolean {
+  if (!role) return false
+  if (targetUserId === currentUserId) {
+    return ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Driver', 'Accounts'].includes(role)
+  }
+  return role === 'Owner' || role === 'Admin'
+}
+

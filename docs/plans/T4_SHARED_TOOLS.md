@@ -175,7 +175,7 @@ a phone with every stop; a manual reorder sticks; the rider link shows the same 
 driver screen.
 **Needs** — T4-01, T4-07.
 
-### T4-10 · Jobs in phone calendars            status: todo · size: M · lane B · [go-live] · slips first
+### T4-10 · Jobs in phone calendars            status: done · size: M · lane B · [go-live] · slips first
 **What** — Every staff member can add **their jobs to their phone calendar** (B28) with a private
 subscribe link (an iCal feed): Settings ▸ My preferences ▸ "Add my jobs to my phone calendar" → copy
 the link or open it in the calendar app. Each entry (B29) shows **booking number, time and client
