@@ -642,6 +642,7 @@ export function writeSettings(patch: Partial<SettingsRecord>): void {
     if (problem) throw new Error(problem)
     writeLocal(PREFIX + k, String(v))
   }
+  listeners.forEach((fn) => fn())
 }
 
 /** One setting, read fresh. For modules that need a value without the whole record. */
@@ -675,4 +676,5 @@ export function resetSettings(): void {
   for (const key of Object.keys(SETTING_SPECS) as SettingKey[]) {
     removeLocal(PREFIX + key)
   }
+  listeners.forEach((fn) => fn())
 }
