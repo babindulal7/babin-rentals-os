@@ -63,6 +63,20 @@ describe('getDeliveryZoneFee', () => {
     expect(result).toEqual({ feePaisa: 0 });
   });
 
+  it('refuses floor role fee lookup before making a network request', async () => {
+    await expect(getDeliveryZoneFee(
+      { zoneName: 'Ring Road' },
+      { userId: 'warehouse-123', role: 'Warehouse' as const },
+    )).rejects.toThrow('Delivery fee is restricted for this role')
+    expect(mockRpc).not.toHaveBeenCalled()
+  })
+
+  it('fails closed when the database masks fee_paisa', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: null } as any)
+    await expect(getDeliveryZoneFee({ zoneName: 'Ring Road' }, coordinatorContext))
+      .rejects.toThrow('Delivery fee is not available')
+  })
+
   it('trims whitespace from zone name', async () => {
     mockRpc.mockResolvedValue({ data: 350000, error: null } as any);
 
