@@ -9,8 +9,8 @@ const fieldRowSource = readFileSync('src/modules/settings/sections/shared.tsx', 
 const financeSource = readFileSync('src/modules/settings/sections/Financial.tsx', 'utf8')
 
 const unbuilt: ReadonlyArray<readonly [string, string]> = [
-  ['Return reminders', 'T5-08'],
-  ['Payment reminders', 'T5-07'],
+  ['Return reminders', 'T5-07'],
+  ['Payment reminders', 'T5-08'],
   ['Low stock alerts', 'T3-30'],
   ['Daily digest', 'T5-04'],
   ['Two-factor authentication', 'T1-17'],
