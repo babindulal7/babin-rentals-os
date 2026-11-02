@@ -49,7 +49,7 @@ export function RetireMembershipPlanModal({
       title={retire ? `Retire Plan: ${plan.level}` : `Reactivate Plan: ${plan.level}`}
       subtitle={
         retire
-          ? `Retiring ${plan.level} prevents any new client enrolments or plan upgrades. Existing members on this plan keep all benefits and terms until their renewal date (Law 3: nothing is deleted).`
+          ? `Retiring ${plan.level} prevents any new client enrolments or plan upgrades. Existing members on this plan keep all benefits and terms until their renewal date. Nothing is deleted.`
           : `Reactivating ${plan.level} will make it available again for new client enrolments and tier upgrades.`
       }
     >
