@@ -48,6 +48,7 @@
     "test:settings": "node scripts/test-settings-table.mjs",
     "test:saved-views": "node scripts/test-saved-views.mjs",
     "test:operations-grants": "node scripts/test-operations-grants.mjs",
+    "test:delivery-route-security": "node scripts/test-delivery-route-branch.mjs",
     "test:pricing-structures": "node scripts/test-pricing-structures.mjs",
     "test:race": "node scripts/test-last-unit-race.mjs",
     "test:server-contracts": "node scripts/test-unit-lifecycle-and-contracts.mjs",
