@@ -80,8 +80,8 @@ export const SYSTEM_SECTIONS: Section[] = [
          there is no save handler or delivery service behind it. Each future
          capability owns the actual settings/persistence and can replace its
          read-only marker when shipped. */
-      { label: 'Return reminders', note: 'Return-due notifications.', readOnlyWhy: 'Not built yet — arrives with T5-08.' },
-      { label: 'Payment reminders', note: 'Payment-due notifications.', readOnlyWhy: 'Not built yet — arrives with T5-07.' },
+      { label: 'Return reminders', note: 'Return-due notifications.', readOnlyWhy: 'Not built yet — arrives with T5-07.' },
+      { label: 'Payment reminders', note: 'Payment-due notifications.', readOnlyWhy: 'Not built yet — arrives with T5-08.' },
       { label: 'Low stock alerts', note: 'Inventory minimum-stock warnings.', readOnlyWhy: 'Not built yet — arrives with T3-30.' },
       { label: 'Daily digest', note: 'Morning operations summary.', readOnlyWhy: 'Not built yet — arrives with T5-04.' },
     ],
