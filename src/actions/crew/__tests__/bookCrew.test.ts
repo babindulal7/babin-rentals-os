@@ -4,6 +4,7 @@ const state = vi.hoisted(() => ({
   booking: { id: '11111111-1111-4111-8111-111111111111', booking_no: 'B-1', pickup_at: '2026-09-13T04:15:00Z', return_at: '2026-09-15T04:15:00Z', stage: 'Booked', cancelled_at: null as string | null, closed_at: null },
   people: [{ id: '22222222-2222-4222-8222-222222222222', crew_code: 'CR-1', primary_role: 'Sound', full_name: 'Crew One', daily_rate: 6500, is_active: true }],
   inserted: [] as Record<string, unknown>[], missingBooking: false, bookingError: false, insertError: false, duplicate: false,
+  duplicateApproverOverride: undefined as string | undefined,
 }))
 vi.mock('../../../lib/supabase', () => ({
   newClientUuid: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -59,7 +60,7 @@ vi.mock('../../../lib/supabase', () => ({
           }
           if (table === 'crew_assignments_v') {
             if (state.duplicate) {
-              const matched = state.inserted.map((ins) => ({ ...ins, id: 'saved' }))
+              const matched = state.inserted.map((ins) => ({ ...ins, id: 'saved', overtime_approved_by: state.duplicateApproverOverride ?? ins.overtime_approved_by }))
               return Promise.resolve({ data: matched, error: null }).then(resolve, reject)
             }
             return Promise.resolve({ data: [], error: null }).then(resolve, reject)
@@ -73,7 +74,7 @@ vi.mock('../../../lib/supabase', () => ({
 }))
 const ctx = { userId: '55555555-5555-4555-8555-555555555555', role: 'Owner' as const }
 const input = () => ({ bookingId: state.booking.id, crewIds: [state.people[0]!.id], clientUuid: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' })
-beforeEach(() => { state.inserted = []; state.missingBooking = false; state.bookingError = false; state.insertError = false; state.duplicate = false; state.booking.cancelled_at = null; state.booking.stage = 'Booked'; state.people[0]!.is_active = true })
+beforeEach(() => { state.duplicateApproverOverride = undefined; state.inserted = []; state.missingBooking = false; state.bookingError = false; state.insertError = false; state.duplicate = false; state.booking.cancelled_at = null; state.booking.stage = 'Booked'; state.people[0]!.is_active = true })
 describe('bookCrew confirmed writes', () => {
   it('saves the chosen booking and person with real default dates and rate', async () => {
     const { result, events } = await bookCrewConfig.execute(input(), ctx)
@@ -117,6 +118,12 @@ describe('bookCrew confirmed writes', () => {
     state.duplicate = true
     const { result } = await bookCrewConfig.execute(input(), ctx)
     expect(result.assignmentIds).toEqual(['saved'])
+  })
+  it('refuses a retried request when the stored approver differs', async () => {
+    state.duplicate = true
+    state.duplicateApproverOverride = '44444444-4444-4444-8444-444444444444'
+    await expect(bookCrewConfig.execute({ ...input(), overtimeDays: 0.5 }, ctx))
+      .rejects.toThrow('different assignment details')
   })
   it('refuses a priced assignment for Coordinator', async () => {
     await expect(bookCrewConfig.execute(input(), { ...ctx, role: 'Coordinator' })).rejects.toThrow('Owner, Admin, or Manager')
