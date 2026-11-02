@@ -8,6 +8,8 @@ on:
   push:
     branches: ['**']
   pull_request:
+  # Manual "Run workflow" button / `gh workflow run ci.yml`.
+  workflow_dispatch:
 
 # A second push to the same branch cancels the first — CI is a gate, not an
 # archive, and only the tip of a branch needs to be green.
@@ -21,7 +23,12 @@ permissions:
 jobs:
   verify:
     name: typecheck · test · build
-    runs-on: ubuntu-latest
+    # Self-hosted runner on Babin's Windows PC (GitHub-hosted minutes were the W75
+    # billing blocker). The default runner labels are self-hosted, Windows, X64.
+    runs-on: [self-hosted, Windows, X64]
+    # A self-hosted runner executes whatever the workflow says on Babin's machine,
+    # so never run code from a forked pull request.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     # Full mock suite + PGlite + build use ~15m; coverage needs additional time.
     # Do not weaken or skip any security, lifecycle, build, or coverage gates.
     timeout-minutes: 35
