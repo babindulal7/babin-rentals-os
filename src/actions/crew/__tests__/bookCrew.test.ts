@@ -71,7 +71,7 @@ vi.mock('../../../lib/supabase', () => ({
     },
   },
 }))
-const ctx = { userId: 'operator', role: 'Owner' as const }
+const ctx = { userId: '55555555-5555-4555-8555-555555555555', role: 'Owner' as const }
 const input = () => ({ bookingId: state.booking.id, crewIds: [state.people[0]!.id], clientUuid: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' })
 beforeEach(() => { state.inserted = []; state.missingBooking = false; state.bookingError = false; state.insertError = false; state.duplicate = false; state.booking.cancelled_at = null; state.booking.stage = 'Booked'; state.people[0]!.is_active = true })
 describe('bookCrew confirmed writes', () => {
@@ -144,16 +144,9 @@ describe('bookCrew confirmed writes', () => {
     expect(state.inserted[1]).toMatchObject({ crew_id: state.people[1]!.id, daily_rate: 8000 })
     expect(events[0]?.payload).toMatchObject({ crewCount: 2 })
   })
-  it('calculates line_total with overtime_days at daily rate and records overtime_approved_by (D24, T8-06)', async () => {
-    const approverId = '44444444-4444-4444-8444-444444444444'
+  it('calculates overtime at day rate and attributes it to the signed-in operator (D24, T8-06)', async () => {
     const { result, events } = await bookCrewConfig.execute(
-      {
-        ...input(),
-        days: 3,
-        dailyRate: 5000,
-        overtimeDays: 0.5,
-        overtimeApprovedBy: approverId,
-      },
+      { ...input(), days: 3, dailyRate: 5000, overtimeDays: 0.5 },
       ctx,
     )
     expect(result).toEqual({ success: true, count: 1, assignmentIds: ['saved-1'] })
@@ -161,7 +154,7 @@ describe('bookCrew confirmed writes', () => {
     expect(state.inserted[0]).toMatchObject({
       days: 3,
       overtime_days: 0.5,
-      overtime_approved_by: approverId,
+      overtime_approved_by: ctx.userId,
       daily_rate: 5000,
       line_total: 17500,
     })
@@ -170,6 +163,21 @@ describe('bookCrew confirmed writes', () => {
       overtimeDays: 0.5,
       billableDays: 3.5,
     })
+  })
+  it('rejects a supplied approver different from the signed-in user without writing', async () => {
+    await expect(bookCrewConfig.execute({
+      ...input(), overtimeDays: 0.5, overtimeApprovedBy: '44444444-4444-4444-8444-444444444444',
+    }, ctx)).rejects.toThrow('must match the signed-in operator')
+    expect(state.inserted).toHaveLength(0)
+  })
+  it('accepts a matching approver but still persists the session user ID', async () => {
+    await bookCrewConfig.execute({ ...input(), overtimeDays: 1, overtimeApprovedBy: ctx.userId }, ctx)
+    expect(state.inserted[0]).toMatchObject({ overtime_days: 1, overtime_approved_by: ctx.userId })
+  })
+  it('rejects crew overtime without a valid authenticated actor UUID', async () => {
+    await expect(bookCrewConfig.execute({ ...input(), overtimeDays: 0.5 }, { ...ctx, userId: 'operator' }))
+      .rejects.toThrow('authenticated user UUID')
+    expect(state.inserted).toHaveLength(0)
   })
   it.each([{ days: 1.5 }, { days: NaN }, { dailyRate: Infinity }, { dailyRate: -1 }, { clientUuid: 'bad-key' }, { bookingId: '' }, { callTime: 'bad date' }, { wrapTime: '2026-09-12T00:00:00Z' }, { overtimeDays: 0.3 }, { overtimeDays: -0.5 }, { overtimeApprovedBy: 'not-a-uuid' }])('refuses invalid input %j', async (override) => {
     await expect(bookCrewConfig.execute({ ...input(), ...override }, ctx)).rejects.toThrow()
