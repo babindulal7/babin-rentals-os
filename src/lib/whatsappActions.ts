@@ -26,6 +26,7 @@ import { buildWaLink, NO_PHONE_REASON, normalisePhone } from './whatsapp'
 import {
   balanceDue,
   bookingConfirmed,
+  deliveryRescheduled,
   dispatchManifest,
   gearReady,
   overdue,
@@ -236,14 +237,67 @@ function compose(
       )
     }
 
-    /* Composed by the payment flow and the closing screen, which hold figures
-       a booking row does not — they are not offered from a booking's menu. */
+    /* Composed by the payment flow, closing screen, and delivery reschedule,
+       which hold context a booking row does not — they are not offered from a booking's menu. */
     case 'payment_receipt':
     case 'daily_digest':
+    case 'delivery_rescheduled':
       return { reason: 'Sent from its own screen, not from the booking.' }
   }
 }
 
 function missingTime(which: 'pickup' | 'return'): string {
   return `No usual ${which} time is set, and this message states one. Add it under ${SETTINGS_PATH} — it is deliberately blank rather than guessed.`
+}
+
+export interface WaDeliveryRescheduleArgs {
+  clientName: string
+  clientPhone: string | null
+  bookingNo: string
+  leg: string
+  oldTime: string
+  newTime: string
+  notes?: string | undefined
+  businessName?: string | undefined
+  businessPhone?: string | undefined
+}
+
+/**
+ * Builds the prepared WhatsApp draft link for rescheduling a delivery (T4-02, Ruling D8).
+ * Never automatically sends; opens a wa.me draft link with pre-populated message for staff review.
+ */
+export function buildDeliveryRescheduleAction(args: WaDeliveryRescheduleArgs): {
+  text: string
+  href: string | null
+  unavailable?: string | undefined
+} {
+  const business: WaBusiness = {
+    businessName: args.businessName || 'Babin Rentals',
+    businessPhone: args.businessPhone || '',
+  }
+  const text = deliveryRescheduled(
+    {
+      clientName: args.clientName,
+      bookingNo: args.bookingNo,
+      leg: args.leg,
+      oldTime: args.oldTime,
+      newTime: args.newTime,
+      notes: args.notes,
+    },
+    business,
+  )
+
+  const phoneOk = normalisePhone(args.clientPhone) !== null
+  if (!phoneOk) {
+    return {
+      text,
+      href: null,
+      unavailable: NO_PHONE_REASON,
+    }
+  }
+
+  return {
+    text,
+    href: buildWaLink(args.clientPhone, text),
+  }
 }

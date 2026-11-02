@@ -498,7 +498,7 @@ export default function Finance() {
   /* Keyed on the DAY although the factory reads the clock: `businessNowAd()`
      cannot express "recompute at midnight", and the Overdue set has to. The
      lint rule sees an unused dependency; it is the one that makes this correct. */
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- dayAd is the trigger, not an input: the factory reads the clock and must re-run at each day boundary
   const overdueInvoiceSet = useMemo(() => overdueInvoices(businessNowAd()), [dayAd])
   const receivedInPeriod = useMemo(() => paymentsInPeriod(period.fromAd, period.toAd), [period])
 

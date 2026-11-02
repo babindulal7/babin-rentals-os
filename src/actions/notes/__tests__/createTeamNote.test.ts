@@ -22,17 +22,15 @@ describe('createTeamNote', () => {
   const validContext = { userId: 'user-123', role: 'Coordinator' as const };
   const ownerContext = { userId: 'owner-123', role: 'Owner' as const };
   const warehouseContext = { userId: 'warehouse-123', role: 'Warehouse' as const };
+  const driverContext = { userId: 'driver-123', role: 'Driver' as const };
   const clientContext = { userId: 'client-123', role: 'Client' as const };
-
-  const rpcOk = (data: unknown) => ({ data, error: null, count: null, status: 200, statusText: 'OK' } as any);
-  const rpcErr = (message: string) => ({ data: null, error: { message, details: '', hint: '', code: '42000', name: 'PostgrestError', toJSON: () => ({}) }, count: null, status: 400, statusText: 'Error' } as any);
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('is implemented, so it does not throw ActionNotImplementedError', async () => {
-    mockRpc.mockResolvedValue(rpcOk('note-uuid-123'));
+    mockRpc.mockResolvedValue({ data: 'note-uuid-123', error: null } as any);
     await expect(createTeamNote({ body: 'Test note' }, ownerContext)).resolves.not.toBeInstanceOf(
       ActionNotImplementedError
     );
@@ -44,10 +42,14 @@ describe('createTeamNote', () => {
     );
   });
 
-  it('throws ActionPermissionError for Warehouse role', async () => {
-    await expect(
-      createTeamNote({ body: 'Test note' }, warehouseContext)
-    ).rejects.toThrow(ActionPermissionError);
+  it('allows Warehouse and Driver staff roles to create notes', async () => {
+    mockRpc.mockResolvedValue({ data: 'note-uuid-wh', error: null } as any);
+    const whResult = await createTeamNote({ body: 'Gear needs QC' }, warehouseContext);
+    expect(whResult.noteId).toBe('note-uuid-wh');
+
+    mockRpc.mockResolvedValue({ data: 'note-uuid-dr', error: null } as any);
+    const drResult = await createTeamNote({ body: 'Traffic delay on Ring Road' }, driverContext);
+    expect(drResult.noteId).toBe('note-uuid-dr');
   });
 
   it('throws ActionPermissionError for Client role', async () => {
@@ -57,52 +59,53 @@ describe('createTeamNote', () => {
   });
 
   it('throws validation error for empty body', async () => {
-    await expect(
-      createTeamNote({ body: '' }, ownerContext)
-    ).rejects.toThrow('Note body cannot be empty');
+    await expect(createTeamNote({ body: '' }, validContext)).rejects.toThrow(
+      'Note body cannot be empty'
+    );
+    await expect(createTeamNote({ body: '   ' }, validContext)).rejects.toThrow(
+      'Note body cannot be empty'
+    );
   });
 
-  it('throws validation error for body too long', async () => {
-    const longBody = 'x'.repeat(10001);
-    await expect(
-      createTeamNote({ body: longBody }, ownerContext)
-    ).rejects.toThrow('Note body exceeds maximum length');
+  it('throws validation error for body exceeding 10,000 characters', async () => {
+    const longBody = 'a'.repeat(10001);
+    await expect(createTeamNote({ body: longBody }, validContext)).rejects.toThrow(
+      'Note body exceeds maximum length'
+    );
   });
 
-  it('creates note successfully for Owner', async () => {
-    mockRpc.mockResolvedValue(rpcOk('note-uuid-123'));
+  it('creates note successfully for Coordinator role with full metadata', async () => {
+    mockRpc.mockResolvedValue({ data: 'note-uuid-123', error: null } as any);
 
-    const result = await createTeamNote({ body: 'Test note' }, ownerContext);
+    const result = await createTeamNote(
+      {
+        body: 'Shift handover note',
+        clientUuid: '123e4567-e89b-12d3-a456-426614174000',
+        category: 'Shift Handover',
+        priority: 'high',
+        referenceId: 'BR-2613',
+        pinned: true,
+      },
+      validContext
+    );
 
     expect(result).toEqual({ noteId: 'note-uuid-123' });
     expect(mockRpc).toHaveBeenCalledWith('create_team_note', {
-      p_body: 'Test note',
-    });
-  });
-
-  it('creates note successfully for Coordinator', async () => {
-    mockRpc.mockResolvedValue(rpcOk('note-uuid-456'));
-
-    const result = await createTeamNote({ body: 'Coordinator note' }, validContext);
-
-    expect(result).toEqual({ noteId: 'note-uuid-456' });
-  });
-
-  it('trims whitespace from body', async () => {
-    mockRpc.mockResolvedValue(rpcOk('note-uuid-789'));
-
-    await createTeamNote({ body: '  Trimmed note  ' }, ownerContext);
-
-    expect(mockRpc).toHaveBeenCalledWith('create_team_note', {
-      p_body: 'Trimmed note',
+      p_body: 'Shift handover note',
+      p_client_uuid: '123e4567-e89b-12d3-a456-426614174000',
+      p_category: 'Shift Handover',
+      p_priority: 'high',
+      p_reference_id: 'BR-2613',
+      p_reference_ids: [],
+      p_pinned: true,
     });
   });
 
   it('throws on RPC error', async () => {
-    mockRpc.mockResolvedValue(rpcErr('DB error'));
+    mockRpc.mockResolvedValue({ data: null, error: { message: 'DB error' } } as any);
 
-    await expect(
-      createTeamNote({ body: 'Test note' }, ownerContext)
-    ).rejects.toThrow('Failed to create team note: DB error');
+    await expect(createTeamNote({ body: 'Test note' }, validContext)).rejects.toThrow(
+      'Failed to create team note: DB error'
+    );
   });
 });

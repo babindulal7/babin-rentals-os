@@ -147,4 +147,40 @@ describe('what it believes', () => {
     await expect(changeMembership(input(), ctx('Manager'))).rejects.toThrow(/not available on this server yet.*Nothing was changed/s)
     expect(heard).toHaveLength(0)
   })
+
+  it('supports D22 parameters: planId, effectiveDate, feePaid and returns credit breakdown', async () => {
+    db.response = {
+      data: confirmed({
+        plan_id: 'plan-id-99',
+        plan_level: 'Creator',
+        previous_level: 'Community',
+        old_fee: 12000,
+        days_left: 122,
+        total_days: 366,
+        credit: 4000,
+        new_fee: 20000,
+        new_fee_due: 16000,
+        account_credit: 0,
+      }),
+      error: null,
+    }
+    const result = await changeMembership(
+      input({
+        planId: 'plan-id-99',
+        effectiveDate: '2028-09-01',
+        feePaid: 2000000, // Rs 20,000 in paisa
+      }),
+      ctx('Manager'),
+    )
+    expect(result.credit).toBe(4000)
+    expect(result.new_fee_due).toBe(16000)
+    expect(result.days_left).toBe(122)
+    const [call] = db.calls
+    expect(call!.args['p_payload']).toMatchObject({
+      client_id: CLIENT_DB_ID,
+      plan_id: 'plan-id-99',
+      effective_date: '2028-09-01',
+      fee_paid: 20000,
+    })
+  })
 })

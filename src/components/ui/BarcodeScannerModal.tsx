@@ -565,7 +565,7 @@ export function BarcodeScannerModal({
               </div>
             </div>
 
-            <Button variant="primary" onClick={() => handleScanSubmit()}>
+            <Button type="submit" variant="primary">
               Scan
             </Button>
           </div>

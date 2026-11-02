@@ -18,6 +18,8 @@ lane without Babin moving it** (PLAN §7 scope creep).
 | **Second site** | D27 | Per-site grants already exist (0171/0172); add site admin screens and stock transfers when a site opens. |
 | **Client portal extras** | PERMISSIONS §7 | Extension requests, payment-proof upload, remote agreement signing. |
 | **Nepali documents and booking site** | T6 note | PDFs need an embedded Devanagari font. |
+| **A full company website at `babinrentals.com`** | B5 (27 Oct) | Until then the root redirects to `book.babinrentals.com` (T9-05). |
+| **AI helper, read-only** | B44 (27 Oct) | Answers staff questions from the app's own data; never writes; money-blind roles get no figures (Law 6, P4); computed numbers only (Law 16). |
 
 ## "Not built yet" screens and buttons (from the 26 Oct marker scan)
 
@@ -42,3 +44,8 @@ computation (Law 16), Android and iOS store builds (Capacitor / installed PWA fi
   policies) — review against real query plans, never drop by count.
 - Main bundle 704 kB (20 Oct) — after T1-14's first pass.
 - Coverage only measures `src/lib/**`.
+- **Seven global style layers** load on every screen (`src/main.tsx`: `theme.css`,
+  `preset-black-light.css`, `ui-v2.css`, `responsive.css`, `shadcn-preset-pilot.css`,
+  `shadcn-luma-ui.css`, `shadcn-rhea-ui.css`). Merge them into one token layer after go-live, behind
+  light/dark/role screenshot baselines and `check:contrast` (106/106 on 26 Oct). Until then, add no
+  further preset on top.

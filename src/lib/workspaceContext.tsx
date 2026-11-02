@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react'
 import type { IconName } from '../components/ui/Icon'
 import type { PageActionItem } from '../components/ui/header/pageActionRegistry'
 
@@ -126,21 +126,36 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
+  /*
+   * Every consumer of `useWorkspace()` — Header, Sidebar, page shells — sits
+   * under this provider. Rebuilding the value object on each render re-rendered
+   * all of them whenever any one of these 14 atoms moved. Setters from
+   * `useState` are stable, so the atom list is the complete dependency set.
+   */
+  const value = useMemo(() => ({
+    leftPanelElement, setLeftPanelElement,
+    rightPanelElement, setRightPanelElement,
+    headerActionsElement, setHeaderActionsElement,
+    headerSearchElement, setHeaderSearchElement, hasPageSearch, setHasPageSearch,
+    headerAddActionsElement, setHeaderAddActionsElement, hasPageAddActions, setHasPageAddActions,
+    headerPhoneSearchActionsElement, setHeaderPhoneSearchActionsElement,
+    headerSecondaryActionsElement, setHeaderSecondaryActionsElement,
+    headerMoreActionsElement, setHeaderMoreActionsElement,
+    headerRightActionsElement, setHeaderRightActionsElement,
+    hasPageRightActions, setHasPageRightActions,
+    pageInfo, setPageInfo,
+    headerData, setHeaderData,
+  }), [
+    leftPanelElement, rightPanelElement,
+    headerActionsElement, headerSearchElement, hasPageSearch,
+    headerAddActionsElement, hasPageAddActions,
+    headerPhoneSearchActionsElement, headerSecondaryActionsElement,
+    headerMoreActionsElement, headerRightActionsElement,
+    hasPageRightActions, pageInfo, headerData, setHeaderData,
+  ])
+
   return (
-    <WorkspaceContext.Provider value={{
-      leftPanelElement, setLeftPanelElement,
-      rightPanelElement, setRightPanelElement,
-      headerActionsElement, setHeaderActionsElement,
-      headerSearchElement, setHeaderSearchElement, hasPageSearch, setHasPageSearch,
-      headerAddActionsElement, setHeaderAddActionsElement, hasPageAddActions, setHasPageAddActions,
-      headerPhoneSearchActionsElement, setHeaderPhoneSearchActionsElement,
-      headerSecondaryActionsElement, setHeaderSecondaryActionsElement,
-      headerMoreActionsElement, setHeaderMoreActionsElement,
-      headerRightActionsElement, setHeaderRightActionsElement,
-      hasPageRightActions, setHasPageRightActions,
-      pageInfo, setPageInfo,
-      headerData, setHeaderData,
-    }}>
+    <WorkspaceContext.Provider value={value}>
       {children}
     </WorkspaceContext.Provider>
   )

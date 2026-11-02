@@ -38,6 +38,7 @@ import { clearFloorScan, loadFloorScan, saveFloorScan, recordFloorScanEvent } fr
 import { rentalDaysBetween } from '../../lib/rentalDays'
 import { NON_PACKABLE_LINE_TYPES } from '../../lib/bookingLineTypes'
 import { useFloorPresence } from '../../lib/floorPresence'
+import { useBarcodeBurst } from '../../lib/barcodeBurst'
 import {
   playScanSuccess,
   playScanError,
@@ -1001,6 +1002,7 @@ export default function PackingWorkspace({
   }
 
   const [ambientBarcode, setAmbientBarcode] = useState('')
+  const barcodeInputRef = useRef<HTMLInputElement>(null)
   const [scanPulse, setScanPulse] = useState<'success' | 'error' | null>(null)
 
   const triggerScanPulse = (verdict: 'success' | 'error') => {
@@ -1010,10 +1012,9 @@ export default function PackingWorkspace({
     }, 600)
   }
 
-  const handleAmbientBarcodeSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const processScannedCode = (rawCode: string) => {
     unlockAudioContext()
-    const code = ambientBarcode.trim().toLowerCase()
+    const code = rawCode.trim().toLowerCase()
     if (!code) return
 
     // 1. Direct individual equipment scan
@@ -1076,8 +1077,21 @@ export default function PackingWorkspace({
 
     triggerScanPulse('error')
     playScanError()
-    setScanLog((p) => [`✕ No equipment matching "${ambientBarcode.trim()}" in this booking`, ...p].slice(0, 5))
+    setScanLog((p) => [`✕ No equipment matching "${rawCode.trim()}" in this booking`, ...p].slice(0, 5))
     setAmbientBarcode('')
+  }
+
+  // Hardware Bluetooth & USB scanner burst listener at the packing bench (T2-09, S14)
+  useBarcodeBurst({
+    onScan: processScannedCode,
+    enabled: Boolean(floor) && !floorLoading && floorError === null && !showScanner && !dispatching && stageHeld === null,
+    targetInputRef: barcodeInputRef,
+    cooldownMs: 1200,
+  })
+
+  const handleAmbientBarcodeSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    processScannedCode(ambientBarcode)
   }
 
 
@@ -1270,7 +1284,7 @@ export default function PackingWorkspace({
     }
     registerActions(actions)
     onRegisterActions?.(actions)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- focusBlocker and discardRestoredScan are re-created each render; listing them would re-register the action bag on every render
   }, [registerActions, onRegisterActions, isOnline, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget, packedUnits, totalUnits])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */
@@ -1599,6 +1613,7 @@ export default function PackingWorkspace({
                         </span>
                         <Input
                           type="text"
+                          ref={barcodeInputRef}
                           value={ambientBarcode}
                           onChange={(e) => setAmbientBarcode(e.target.value)}
                           placeholder="Scan or type barcode/serial number and press Enter…"

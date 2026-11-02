@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { readLocal, writeLocal, onMediaChange } from './safeStorage'
 
 /* RULING 2026-10-13: 'glass' = the Obsidian Glass hybrid (dark theme + glass
@@ -86,11 +86,11 @@ export function ThemeProvider({ children, initial = 'light' }: { children: React
     writeLocal(KEY, mode)
   }, [mode, theme, glass])
 
-  const setMode = (newMode: ThemeMode) => {
+  const setMode = useCallback((newMode: ThemeMode) => {
     setModeState(newMode)
-  }
+  }, [])
 
-  const choose = (choice: ThemeChoice) => {
+  const choose = useCallback((choice: ThemeChoice) => {
     if (choice === 'glass') {
       setModeState(glass ? (theme === 'light' ? 'light' : 'dark') : theme === 'light' ? 'glass-light' : 'glass')
     } else if (choice === 'light') {
@@ -98,9 +98,9 @@ export function ThemeProvider({ children, initial = 'light' }: { children: React
     } else {
       setModeState(glass ? 'glass' : 'dark')
     }
-  }
+  }, [glass, theme])
 
-  const toggle = () => {
+  const toggle = useCallback(() => {
     setModeState((m) => {
       const current = m === 'system' ? systemTheme : m
       if (current === 'light' || current === 'glass-light') return 'dark'
@@ -108,10 +108,17 @@ export function ThemeProvider({ children, initial = 'light' }: { children: React
       if (current === 'glass') return 'high-contrast'
       return 'light'
     })
-  }
+  }, [systemTheme])
+
+  /* Consumers of `useTheme` are mounted above every route; an unmemoized value
+     object re-renders all of them on any provider render. */
+  const value = useMemo(
+    () => ({ mode, theme, glass, setMode, choose, toggle }),
+    [mode, theme, glass, setMode, choose, toggle],
+  )
 
   return (
-    <Ctx.Provider value={{ mode, theme, glass, setMode, choose, toggle }}>
+    <Ctx.Provider value={value}>
       {children}
     </Ctx.Provider>
   )

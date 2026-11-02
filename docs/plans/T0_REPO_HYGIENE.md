@@ -17,7 +17,7 @@ fresh clone without hand-set environment; root clutter archived; stale "current"
 at the new PLAN.md; 3) `npm run lint:progress` exits 0.
 **Needs** — Babin's review of the PR.
 
-### T0-02 · Test runner works on a fresh clone            status: done · size: S · lane A
+### T0-02 · Test runner works on a fresh clone            status: done (26 Oct, `3fca220`) · size: S · lane A
 **What** — `scripts/run-tests.mjs` sets `VITE_DATA_SOURCE=mock` when neither it nor
 `VITE_SUPABASE_URL` is set, and prints which data source it used. Same for `test:coverage`.
 **Why** — On 26 Oct a plain `npx vitest run` on a fresh clone failed **132 of 463 files** on
@@ -52,7 +52,7 @@ the list (W74 — Claude never closes or pushes); Babin or a local agent closes 
 2) every deleted unmerged branch has an `archive/` tag.
 **Needs** — Babin's OK to delete branches (GitHub settings may protect some).
 
-### T0-05 · Documents tell the truth            status: done · size: S · lane A
+### T0-05 · Documents tell the truth            status: done (26 Oct, `3fca220`) · size: S · lane A
 **What** — Already done in the plan PR: banners on `docs/REMAINING_WORK.md` and
 `docs/CURRENT_STATE.md` pointing at PLAN.md; `docs/OPEN_DECISIONS.md` maps every entry closed by
 RULINGS-2026-10-26; the stale "BS table stops at 2083" corrected (it covers 2078–2095). Still to do:
@@ -72,7 +72,9 @@ that the 26 Oct measurement contradicts.
 `repomix-output.xml` (1.2 MB), `repomix-part2.xml` (0.8 MB), `err.txt` (empty),
 `.coss-search-verify.mjs`, and dated reports that are not authorities
 (`AUDIT_WORKTREE_PROGRESS.md`, `BEFORE_AFTER_VISUAL_MATRIX.md`, `SHELL_PHASE1_*.md`,
-`PREMIUM_*.md`, `PRESET_MANIFEST.md`, `CLEAN_SOURCE_MANIFEST.md`, `LOCAL_IMPLEMENTATION_LOG.md`).
+`PREMIUM_*.md`, `PRESET_MANIFEST.md`, `CLEAN_SOURCE_MANIFEST.md`, `LOCAL_IMPLEMENTATION_LOG.md`),
+plus the files added to the root on 26 Oct (`31552cd`): `UX_AUDIT_LOCAL.md`, `UX_REVIEW_LOCAL.md`, and the
+root copy of `BABIN_RENTALS_MODERN_WEB_DESIGN_KNOWLEDGE_ATLAS.md` (identical to the one in `docs/`).
 Fix every link that pointed at them. Add `repomix-*.xml` to `.gitignore`.
 **Why** — The root should show what an agent must read: README, CLAUDE, AGENTS, PLAN, PROGRESS,
 RULINGS. Nothing is deleted (moved, Law 3 spirit).
@@ -82,7 +84,7 @@ RULINGS. Nothing is deleted (moved, Law 3 spirit).
 `*.md` finds no broken relative link introduced by the move.
 **Needs** — T0-03 (some PRs may touch those files).
 
-### T0-07 · Retire the three dead inspection stubs            status: done · size: S · lane A
+### T0-07 · Retire the three dead inspection stubs            status: done (26 Oct, `3fca220`) · size: S · lane A
 **What** — Move `src/actions/inspections/{startInspection,passInspection,failInspection}.ts` (and
 their tests, if any) to `src/archive/actions/inspections/`. Inspection lives inside the Return
 workspace; nothing calls these three.
@@ -95,7 +97,7 @@ workspace; nothing calls these three.
 3) grep finds no import of the moved files.
 **Needs** — none.
 
-### T0-08 · Lanes and worktrees in AGENTS.md            status: done · size: S · lane A
+### T0-08 · Lanes and worktrees in AGENTS.md            status: done (26 Oct — AGENTS.md on main `3fca220`; lanes, agents and local gates added by the workflow package) · size: S · lane A
 **What** — Add PLAN.md §6 (lanes, agents, worktrees, branch names, migration ledger, local gates)
 to `AGENTS.md` so Codex and Gemini follow the same protocol.
 **Why** — Several agents edited one checkout on 21–25 Oct and invalidated each other's receipts.
@@ -116,3 +118,35 @@ each check-in (7:38 AM / 7:38 PM) and reports anything red.
 **Database** — none.
 **Done when** — no new red X appears on pushes; the first check-in report shows the gates on `main`.
 **Needs** — none.
+
+### T0-10 · Tests never run with live settings            status: doing — fresh current-main safety fix on fix/T0-10-mock-safe-tests-current-main; CI and owner verification pending · size: S · lane A · [go-live]
+**What** — Since T0-02 (`3fca220`), `scripts/run-tests.mjs` picks mock data only when no
+`VITE_SUPABASE_URL` is found — and it reads `.env.local`. On a computer that runs the app against
+live (a `.env.local` with the live URL), `npm test` therefore runs with **live** settings, and Vitest
+loads the same file into `import.meta.env`. Tests must never depend on that file. Make the runner use
+mock data unless it is started with `--live` (print the data source either way), so the gate is just
+`npm test` on every computer and every shell (PowerShell has no `VAR=value cmd` form). Until this
+ships, run `VITE_DATA_SOURCE=mock npm test` (Git Bash) or `$env:VITE_DATA_SOURCE='mock'; npm test`
+(PowerShell).
+**Why** — Claude's review of `3fca220`; T1-04 (live still has six business functions anyone can call
+without signing in until batch 0); B-1 (the safer default wins).
+**Where** — `scripts/run-tests.mjs`; the gate lines in `AGENTS.md`, `docs/plans/README.md`, `PLAN.md` §6.
+**Database** — none.
+**Done when** — 1) with a `.env.local` holding a live URL, `npm test` prints "data source=mock" and
+passes; 2) `npm test -- --live` prints "data source=live"; 3) the docs show plain `npm test`.
+**Needs** — none.
+
+### T0-11 · One command for the local gate            status: doing — stacked on T0-10, new current-main local gate script and tests; CI and cross-platform validation pending · size: S · lane A · [go-live]
+**What** — Add `npm run gates`: runs every step of `.github/workflows/ci.yml` in its order (the list
+in `docs/plans/README.md`), with mock data for the tests, stops at the first red step, and ends with
+a one-screen summary (step · pass/fail · time). `npm run gates -- --quick` skips coverage. Then the
+docs, the prompts and the check-in say just `npm run gates`.
+**Why** — W75 (CI off, local checks are the gate) and R-39 (fewest steps): on 26 Oct `3fca220`
+reached `main` with `lint:ui-copy` red because that step was not in the short list people ran.
+**Where** — `scripts/run-gates.mjs` (new), `package.json`, `AGENTS.md`, `docs/plans/README.md`,
+`PLAN.md` §6.4.
+**Database** — none.
+**Done when** — 1) `npm run gates` on `main` runs the same steps as `ci.yml` and exits 0 only when all
+pass; 2) a seeded UI-copy violation makes it stop at that step with the file and line; 3) works in Git
+Bash and PowerShell.
+**Needs** — T0-10.

@@ -27,6 +27,8 @@ import { TIME_DEFAULTS } from './columnDefaults'
 import { PROJECT_TYPES } from '../projectTypes'
 import { MOCK_LOGINS } from '../devQuickLogins'
 import { parseBookingNoSearch } from '../format'
+import { calculateMembershipCredit } from '../membershipCredit'
+import { rupees } from '../money'
 
 const OVERLAY_KEY = 'babin.mock.overlay.v1'
 const SESSION_KEY = 'babin.mock.session.v1'
@@ -206,16 +208,51 @@ function commitInsert(table: string, row: Row, at: string): void {
  * — an exclusion over a range type is not something this store can express.
  */
 function applyTriggers(table: string, row: Row): void {
-  if (table !== 'booking_stage_transitions') return
-  const bookingId = row['booking_id']
-  const to = row['to_stage']
-  if (typeof bookingId !== 'string' || typeof to !== 'string') return
-  const bookings = store['bookings'] ?? []
-  for (const b of bookings) {
-    if (b['id'] !== bookingId) continue
-    const patch: Row = { stage: to, updated_at: row['occurred_at'] ?? row['created_at'] ?? new Date().toISOString() }
-    Object.assign(b, patch)
-    overlay.updates.push({ table: 'bookings', id: b['id'], patch })
+  if (table === 'booking_stage_transitions') {
+    const bookingId = row['booking_id']
+    const to = row['to_stage']
+    if (typeof bookingId !== 'string' || typeof to !== 'string') return
+    const bookings = store['bookings'] ?? []
+    for (const b of bookings) {
+      if (b['id'] !== bookingId) continue
+      const patch: Row = { stage: to, updated_at: row['occurred_at'] ?? row['created_at'] ?? new Date().toISOString() }
+      Object.assign(b, patch)
+      overlay.updates.push({ table: 'bookings', id: b['id'], patch })
+    }
+    return
+  }
+
+  if (table === 'damage_findings' && row['source'] === 'Cleaning' && !row['case_id']) {
+    const caseId = crypto.randomUUID()
+    const cases = (store['cases'] ??= [])
+    const nextNum = cases.length + 1
+    const year = new Date().getFullYear()
+    const caseNo = `CASE-${year}-${String(nextNum).padStart(4, '0')}`
+    const newCase: Row = {
+      id: caseId,
+      client_uuid: crypto.randomUUID(),
+      case_no: caseNo,
+      type: 'Damage',
+      title: `Damage found during reset — ${row['damage_type'] ?? 'Equipment'}`,
+      counterparty_kind: 'Client',
+      counterparty_name: 'Client',
+      priority: row['severity'] === 'Critical' || row['severity'] === 'High' ? row['severity'] : 'Medium',
+      status: 'Under Review',
+      disposition: 'Charge Client',
+      linked_booking_id: row['booking_id'] ?? null,
+      assessed_amount: 0,
+      deposit_held_amount: 0,
+      charged_to_client_amount: 0,
+      owner_id: row['created_by'] ?? '00000000-0000-0000-0000-000000000001',
+      created_by: row['created_by'] ?? '00000000-0000-0000-0000-000000000001',
+      opened_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    cases.push(newCase)
+    overlay.inserts.push({ table: 'cases', row: newCase })
+    row['case_id'] = caseId
+    return
   }
 }
 
@@ -1128,11 +1165,17 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
   const role = (store['users'] ?? []).find((u) => u['id'] === actor)?.['primary_role']
   if (!actor || !MEMBERSHIP_WRITERS.has(String(role))) return fail('42501', 'Only Coordinator or above can change a client membership.')
 
+  const isRenewal = Boolean(payload['is_renewal'])
   const clientId = String(payload['client_id'] ?? '')
   const key = String(payload['client_uuid'] ?? '')
-  const level = String(payload['plan_level'] ?? '').trim()
+  const level = payload['plan_level'] ? String(payload['plan_level']).trim() : null
+  const planId = payload['plan_id'] ? String(payload['plan_id']).trim() : null
   const note = String(payload['note'] ?? '').trim() || null
-  if (!clientId || !key || !level) return fail('P0001', 'Client, request key and membership plan are required.')
+  // Matches the SQL's effective-date chain (0197/0198): effective_date, then
+  // join_date, then today's Kathmandu business day.
+  const effectiveDate = String(payload['effective_date'] ?? payload['join_date'] ?? new Date(Date.now() + (5 * 60 + 45) * 60_000).toISOString().slice(0, 10))
+  const feePaid = payload['fee_paid'] != null ? Number(payload['fee_paid']) : null
+  if (!clientId || !key || (!level && !planId && !isRenewal)) return fail('P0001', 'Client, request key and membership plan are required.')
   if (note !== null && note.length > 500) return fail('P0001', 'A note can be at most 500 characters.')
 
   const client = (store['clients'] ?? []).find((c) => c['id'] === clientId)
@@ -1141,7 +1184,7 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
   const receipt = (store['audit_events'] ?? []).find((a) => a['client_uuid'] === key)
   if (receipt) {
     const kept = receipt['new_values'] as Row | undefined
-    if (receipt['actor_id'] === actor && kept?.['client_id'] === clientId && kept['plan_level'] === level && (receipt['reason'] ?? null) === note) {
+    if (receipt['actor_id'] === actor && kept?.['client_id'] === clientId && (!level || kept['plan_level'] === level) && (receipt['reason'] ?? null) === note) {
       return { data: kept, error: null }
     }
     return fail('P0001', 'Request key already belongs to another action.')
@@ -1149,29 +1192,93 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
 
   if (String(client['status']) === 'Deactivated') return fail('P0001', 'A deactivated client cannot take a membership.')
   const plans = store['membership_plans'] ?? []
-  const plan = plans.find((p) => String(p['level']) === level)
-  if (!plan) return fail('P0001', 'That membership plan does not exist.')
-  if (String(plan['status'] ?? 'Active') !== 'Active') return fail('P0001', 'That membership plan is retired and cannot be assigned.')
 
   const old = (store['client_memberships'] ?? []).find((m) => m['client_id'] === clientId && m['superseded_at'] == null)
+  if (isRenewal && !old) return fail('P0001', 'Cannot renew: client does not have an active or lapsed membership.')
+
+  let plan = plans.find((p) => (planId && p['id'] === planId) || (level && String(p['level']) === level))
+  if (!plan && isRenewal && old) {
+    plan = plans.find((p) => p['id'] === old['plan_id'])
+  }
+  if (!plan) return fail('P0001', 'That membership plan does not exist.')
+  if (String(plan['status'] ?? 'Active') !== 'Active') return fail('P0001', 'That membership plan is retired and cannot be assigned.')
+  // A custom-fee plan (Elite: listed fee NULL) is priced per client — without a
+  // price there is none, and zero would sell the term free (T8-03 review). A
+  // renewal of the same plan may instead rely on the fee recorded on the live row.
+  if (plan['annual_fee'] == null && feePaid == null
+      && !(old && old['plan_id'] === plan['id'] && old['fee_paid'] != null)) {
+    return fail('P0001', `GATE:membership.custom_fee: The ${String(plan['level'])} plan has a custom fee. Record the negotiated fee to put this client on it.`)
+  }
+
   let previous: string | null = null
+  let credit = 0
+  let daysInOldTerm = 0
+  let daysLeft = 0
+  let oldFee = 0
+  let isRenewEffective = isRenewal
   if (old) {
-    previous = String(plans.find((p) => p['id'] === old['plan_id'])?.['level'] ?? '') || null
-    if (old['plan_id'] === plan['id']) return fail('P0001', `This client is already on the ${level} plan.`)
+    const oldPlan = plans.find((p) => p['id'] === old['plan_id'])
+    previous = String(oldPlan?.['level'] ?? '') || null
+
+    oldFee = Number(old['fee_paid'] ?? oldPlan?.['annual_fee'] ?? 0)
+    const oldTermMonths = Number(oldPlan?.['term_months'] ?? 12)
+    const oldJoinDate = String(old['join_date'] ?? effectiveDate)
+    const newFee = Number(plan['annual_fee'] ?? feePaid ?? 0)
+
+    const calc = calculateMembershipCredit({
+      oldFeePaisa: rupees(oldFee),
+      oldJoinDate,
+      oldTermMonths,
+      effectiveDate,
+      newFeePaisa: rupees(newFee),
+    })
+    daysInOldTerm = calc.daysInOldTerm
+
+    if (calc.daysLeft <= 0) {
+      isRenewEffective = true
+    }
+
+    if (isRenewEffective) {
+      credit = 0
+      daysLeft = 0
+    } else {
+      // The credit is priced from the fee the old term carried (recorded, else
+      // the plan's listing). With BOTH unknown there is no honest arithmetic — refuse.
+      if (old['fee_paid'] == null && oldPlan?.['annual_fee'] == null) {
+        return fail('P0001', "GATE:membership.fee_unknown: The fee on the client's current membership was never recorded, so the unused days cannot be priced. Record the fee, then change the plan.")
+      }
+      if (old['plan_id'] === plan['id']) return fail('P0001', `This client is already on the ${plan['level']} plan.`)
+      credit = calc.creditPaisa / 100
+      daysLeft = calc.daysLeft
+    }
+  }
+
+  // The new-fee basis prefers the plan's listing; a renewal of a custom-fee
+  // plan falls back to the fee recorded on the live row (T8-03 review).
+  const newFee = Number(plan['annual_fee'] ?? feePaid ?? (isRenewEffective && old && old['plan_id'] === plan['id'] ? old['fee_paid'] : null) ?? 0)
+  const newFeeDue = Math.max(0, newFee - credit)
+  const excessCredit = Math.max(0, credit - newFee)
+
+  if (excessCredit > 0) {
+    client['account_credit'] = Number(client['account_credit'] ?? 0) + excessCredit
   }
 
   const now = new Date().toISOString()
   const newId = crypto.randomUUID()
-  // The business day is Nepal's (UTC+5:45), not the browser's — the same day the SQL function uses.
-  const joinedOn = new Date(Date.now() + (5 * 60 + 45) * 60_000).toISOString().slice(0, 10)
+  const joinedOn = effectiveDate
   if (old) hooks.update('client_memberships', { superseded_at: now, superseded_by_id: newId }, (r) => r['id'] === old['id'])
   commitInsert('client_memberships', {
     id: newId, client_uuid: key, client_id: clientId, plan_id: plan['id'], join_date: joinedOn,
-    fee_paid: null, superseded_by_id: null, superseded_at: null, created_at: now, created_by: actor,
+    // A renewal of a custom-fee plan keeps the price it just charged (T8-03 review).
+    fee_paid: feePaid ?? (isRenewEffective && old && old['plan_id'] === plan['id'] && plan['annual_fee'] == null ? old['fee_paid'] : null),
+    superseded_by_id: null, superseded_at: null, created_at: now, created_by: actor,
   }, now)
   const result: Row = {
-    client_id: clientId, plan_level: level, previous_level: previous,
+    client_id: clientId, plan_id: plan['id'], plan_level: plan['level'], previous_level: previous,
     membership_id: newId, superseded_membership_id: old ? old['id'] : null, joined_on: joinedOn,
+    is_renewal: isRenewEffective,
+    old_fee: oldFee, days_left: daysLeft, total_days: daysInOldTerm,
+    credit: credit, new_fee: newFee, new_fee_due: newFeeDue, account_credit: excessCredit,
   }
   commitInsert('audit_events', {
     id: crypto.randomUUID(), client_uuid: key, event_class: 'status change', category: 'Administration', module: 'Clients',
@@ -1353,6 +1460,10 @@ export const mockSupabase = {
       const payload = (args?.['p_payload'] ?? {}) as Record<string, unknown>
       return Promise.resolve(changeClientMembership(payload))
     }
+    if (name === 'renew_client_membership') {
+      const payload = (args?.['p_payload'] ?? {}) as Record<string, unknown>
+      return Promise.resolve(changeClientMembership({ ...payload, is_renewal: true }))
+    }
     if (name === 'create_invoice') {
       const payload = (args?.['p_payload'] ?? {}) as Record<string, unknown>
       return Promise.resolve(createInvoiceRpc(payload))
@@ -1401,6 +1512,94 @@ export const mockSupabase = {
         }
         return Promise.resolve({
           data: { success: true, id: mntId, record_no: mRec['record_no'], status: 'Completed' },
+          error: null,
+        })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    if (name === 'save_membership_plan') {
+      try {
+        const actor = readSession()?.user.id
+        const user = store['users']?.find(row => row['id'] === actor)
+        const role = user?.['primary_role'] as string | undefined
+        if (!role || !['Owner', 'Admin', 'Manager'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'GATE:membership_plan.manage.forbidden: Only Manager, Admin or Owner can create or edit membership plans.') })
+        }
+        const level = String(args?.['p_level'])
+        const label = String(args?.['p_label'])
+        const planId = args?.['p_plan_id'] as string | undefined
+        const plans = store['membership_plans'] ?? []
+        const plan = planId ? plans.find(p => p['id'] === planId) : plans.find(p => p['level'] === level)
+        if (plan) {
+          plan['level'] = level
+          plan['label'] = label
+          plan['annual_fee'] = args?.['p_annual_fee'] != null ? Number(args['p_annual_fee']) : null
+          plan['individual_discount_pct'] = args?.['p_individual_discount_pct'] != null ? Number(args['p_individual_discount_pct']) : null
+          plan['bundle_discount_pct'] = args?.['p_bundle_discount_pct'] != null ? Number(args['p_bundle_discount_pct']) : null
+          plan['monthly_booking_limit'] = args?.['p_monthly_booking_limit'] != null ? Number(args['p_monthly_booking_limit']) : null
+          plan['simultaneous_rental_limit'] = args?.['p_simultaneous_rental_limit'] != null ? Number(args['p_simultaneous_rental_limit']) : null
+          plan['authorized_users'] = args?.['p_authorized_users'] != null ? Number(args['p_authorized_users']) : null
+          plan['default_credit_limit'] = args?.['p_default_credit_limit'] != null ? Number(args['p_default_credit_limit']) : 0
+          plan['term_months'] = args?.['p_term_months'] != null ? Number(args['p_term_months']) : 12
+          plan['perks'] = Array.isArray(args?.['p_perks']) ? args['p_perks'] : []
+          plan['updated_at'] = new Date().toISOString()
+          return Promise.resolve({
+            data: { ok: true, plan_id: plan['id'], level, status: plan['status'] },
+            error: null,
+          })
+        } else {
+          const newId = crypto.randomUUID()
+          const newPlan = {
+            id: newId,
+            client_uuid: (args?.['p_client_uuid'] as string) || crypto.randomUUID(),
+            level,
+            label,
+            annual_fee: args?.['p_annual_fee'] != null ? Number(args['p_annual_fee']) : null,
+            individual_discount_pct: args?.['p_individual_discount_pct'] != null ? Number(args['p_individual_discount_pct']) : null,
+            bundle_discount_pct: args?.['p_bundle_discount_pct'] != null ? Number(args['p_bundle_discount_pct']) : null,
+            monthly_booking_limit: args?.['p_monthly_booking_limit'] != null ? Number(args['p_monthly_booking_limit']) : null,
+            simultaneous_rental_limit: args?.['p_simultaneous_rental_limit'] != null ? Number(args['p_simultaneous_rental_limit']) : null,
+            authorized_users: args?.['p_authorized_users'] != null ? Number(args['p_authorized_users']) : null,
+            default_credit_limit: args?.['p_default_credit_limit'] != null ? Number(args['p_default_credit_limit']) : 0,
+            term_months: args?.['p_term_months'] != null ? Number(args['p_term_months']) : 12,
+            perks: Array.isArray(args?.['p_perks']) ? args['p_perks'] : [],
+            display_order: Number(args?.['p_display_order'] ?? plans.length + 1),
+            status: 'Active',
+            retired_at: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }
+          plans.push(newPlan)
+          return Promise.resolve({
+            data: { ok: true, plan_id: newId, level, status: 'Active' },
+            error: null,
+          })
+        }
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    if (name === 'retire_membership_plan') {
+      try {
+        const actor = readSession()?.user.id
+        const user = store['users']?.find(row => row['id'] === actor)
+        const role = user?.['primary_role'] as string | undefined
+        if (!role || !['Owner', 'Admin', 'Manager'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'GATE:membership_plan.manage.forbidden: Only Manager, Admin or Owner can retire or reactivate membership plans.') })
+        }
+        const planId = String(args?.['p_plan_id'])
+        const retire = args?.['p_retire'] ?? true
+        const plans = store['membership_plans'] ?? []
+        const plan = plans.find(p => p['id'] === planId)
+        if (!plan) {
+          return Promise.resolve({ data: null, error: pgErr('P0002', `GATE:membership_plan.not_found: Membership plan with id ${planId} not found.`) })
+        }
+        plan['status'] = retire ? 'Retired' : 'Active'
+        plan['retired_at'] = retire ? new Date().toISOString() : null
+        plan['updated_at'] = new Date().toISOString()
+        return Promise.resolve({
+          data: { ok: true, plan_id: planId, level: plan['level'], status: plan['status'] },
           error: null,
         })
       } catch (e) {

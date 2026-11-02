@@ -23,6 +23,7 @@ export const recordFields: Record<RecordKind, RecordField[]> = {
     field('name','Name','Identity',{required:true}),
     field('org_subtype','Organisation type','Identity',{type:'select',options:['Production House','Rental House','College / Institution','Corporate / Agency','Government / NGO','Broadcaster','Other']}),
     field('pan_vat','PAN/VAT','Identity'),field('business_registration','Business registration','Identity'),
+    field('is_staff','Staff member (W68)','Identity',{type:'checkbox'}),field('staff_user_id','Staff user ID','Identity'),
     field('phone','Phone number','Contact',{required:true}),field('email','Email','Contact'),field('website','Website','Contact'),
     field('address_line','Address','Addresses'),field('city','City','Addresses'),field('district','District','Addresses'),field('postal_code','Postal code','Addresses'),field('country','Country','Addresses'),field('billing_address','Billing address','Addresses',{type:'textarea'}),
     field('notes','Notes','Notes',{type:'textarea'}),

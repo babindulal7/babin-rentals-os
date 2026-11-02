@@ -19,7 +19,7 @@ across the waves below.
 
 ---
 
-### T6-01 · Glossary first            status: todo · size: S · Claude drafts (arrives as a file) · Babin approves
+### T6-01 · Glossary first            status: done 1 Nov 2026 — 265 terms in `src/i18n/glossary.ne.json`, approved by Babin as drafted · size: S · Claude drafts (arrives as a file) · Babin approves
 **What** — Draft Nepali for ~200 core terms used everywhere: the 11 nav items, the six booking
 statuses and flags, the four floor verbs, gate names, roles, money words (advance, deposit,
 outstanding, VAT), common buttons (Save, Cancel, Confirm, Back, Retry), date words, error words.
@@ -27,7 +27,7 @@ Babin approves the glossary **in one sitting**; every later wave must use these 
 **Why** — S11. One approved word per idea keeps 4,400 strings consistent.
 **Where** — new `src/i18n/glossary.ne.json` (term → approved Nepali, with an English note).
 **Database** — none.
-**Done when** — Babin's approval recorded (date + "approved" per term) — target 6 Dec 2026.
+**Done when** — Babin's approval recorded (date + "approved" per term) — target 6 Dec 2026. **Recorded 1 Nov 2026.**
 **Needs** — none.
 
 ### T6-02 · String catalogue and lint            status: todo · size: L · lane B

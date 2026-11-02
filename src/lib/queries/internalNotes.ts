@@ -1,5 +1,6 @@
 import { formatAd } from '../bs'
 import { IS_MOCK } from '../supabase'
+import type { TeamNoteRow } from '../../actions/notes'
 /**
  * Canonical Team Internal Notes & Dispatch Log — Babin Rentals OS
  *
@@ -21,6 +22,7 @@ export type NoteStatus = 'open' | 'resolved'
 
 export interface InternalNote {
   id: string
+  clientUuid?: string | undefined
   author: string
   authorRole: string
   at: string // Formatted time string
@@ -30,10 +32,37 @@ export interface InternalNote {
   status?: NoteStatus | undefined
   resolvedAt?: number | undefined
   resolvedBy?: string | undefined
-  referenceId?: string | undefined | undefined // Auto-detected ID like BR-2613, INV-2041, Q-1049
-  referenceIds?: string[] | undefined | undefined
+  referenceId?: string | undefined // Auto-detected ID like BR-2613, INV-2041, Q-1049
+  referenceIds?: string[] | undefined
   text: string
   pinned?: boolean | undefined
+  isArchived?: boolean | undefined
+  acknowledgedBy?: string[] | undefined
+}
+
+export function teamNoteRowToInternalNote(row: TeamNoteRow): InternalNote {
+  const d = new Date(row.created_at)
+  const dateStr = formatAd(d)
+  const timeStr = d.toTimeString().slice(0, 5)
+  return {
+    id: row.id,
+    clientUuid: row.client_uuid ?? undefined,
+    author: row.author_name || (row.author_id ? row.author_id.slice(0, 8) : 'Staff'),
+    authorRole: row.author_role || 'Operations',
+    at: `${dateStr} · ${timeStr}`,
+    timestamp: isNaN(d.getTime()) ? Date.now() : d.getTime(),
+    category: (row.category as NoteCategory) || 'General',
+    priority: (row.priority as NotePriority) || 'normal',
+    status: (row.status as NoteStatus) || 'open',
+    resolvedAt: row.resolved_at ? new Date(row.resolved_at).getTime() : undefined,
+    resolvedBy: row.resolved_by ?? undefined,
+    referenceId: row.reference_id ?? undefined,
+    referenceIds: row.reference_ids && row.reference_ids.length > 0 ? row.reference_ids : (row.reference_id ? [row.reference_id] : undefined),
+    text: row.body,
+    pinned: Boolean(row.pinned),
+    isArchived: Boolean(row.is_archived),
+    acknowledgedBy: row.acknowledged_by ?? [],
+  }
 }
 
 const STORAGE_KEY = 'babin_internal_notes_v1'

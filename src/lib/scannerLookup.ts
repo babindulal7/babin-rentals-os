@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { getItemCardData, type ItemCardData } from './queries/inventory'
+export { BarcodeBurstDetector, useBarcodeBurst, type BarcodeBurstConfig } from './barcodeBurst'
 
 export type { ItemCardData }
 

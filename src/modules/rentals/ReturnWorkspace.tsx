@@ -43,6 +43,7 @@ import { deliveryTypeLabel } from '../../lib/format'
 import { formatGateError } from '../../lib/gates'
 import { clearFloorScan, loadFloorScan, saveFloorScan, recordFloorScanEvent } from '../../lib/floorScanStorage'
 import { rentalDaysBetween } from '../../lib/rentalDays'
+import { useBarcodeBurst } from '../../lib/barcodeBurst'
 import { NON_PACKABLE_LINE_TYPES } from '../../lib/bookingLineTypes'
 import {
   playScanSuccess,
@@ -1028,6 +1029,7 @@ export default function ReturnWorkspace({
     })
 
   const [ambientBarcode, setAmbientBarcode] = useState('')
+  const barcodeInputRef = useRef<HTMLInputElement>(null)
   const [activeSigningRole, setActiveSigningRole] = useState<'returning' | 'warehouse' | null>(null)
   const [scanPulse, setScanPulse] = useState<'success' | 'error' | null>(null)
   const [qcStatusMap, setQcStatusMap] = useState<Record<string, boolean>>({})
@@ -1094,91 +1096,6 @@ export default function ReturnWorkspace({
       playScanSuccess()
     }
     patchMark(key, { condition })
-  }
-
-  const handleAmbientBarcodeSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    unlockAudioContext()
-    const code = ambientBarcode.trim().toLowerCase()
-    if (!code) return
-
-    // 1. Direct equipment item match
-    const match = rows.find(
-      (r) =>
-        (r.serial && r.serial.toLowerCase() === code) ||
-        r.key.toLowerCase() === code ||
-        (r.name && r.name.toLowerCase() === code) ||
-        (r.assetId && r.assetId.toLowerCase() === code)
-    )
-
-    if (match) {
-      receive(match.key, 'scan')
-      setAmbientBarcode('')
-      return
-    }
-
-    // 2. Flight Case Master Tag match (Booqable audit §11 & Gemma Option C: Scan-to-Verify)
-    const isFlightCaseScan =
-      code.startsWith('pel-') ||
-      code.startsWith('case-') ||
-      rows.some((r) => r.group.toLowerCase().replace(/[^a-z0-9]/g, '').includes(code.replace(/[^a-z0-9]/g, '')))
-
-    if (isFlightCaseScan) {
-      const caseRows = rows.filter(
-        (r) =>
-          r.group.toLowerCase().replace(/[^a-z0-9]/g, '').includes(code.replace(/[^a-z0-9]/g, '')) ||
-          code.replace(/[^a-z0-9]/g, '').includes(r.group.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6))
-      )
-      if (caseRows.length > 0) {
-        const pendingInCase = caseRows.filter((r) => !r.alreadyReturned && marks[r.key]?.state !== 'Returned')
-        if (pendingInCase.length === 0) {
-          triggerScanPulse('error')
-          playScanError()
-          if (floor?.id) {
-            void recordFloorScanEvent({
-              bookingId: floor.id,
-              context: 'return',
-              code,
-              result: 'warning',
-              resultReason: `Flight Case "${caseRows[0]?.group}" is already fully returned`,
-            })
-          }
-          setScanLog((p) => [`• Flight Case "${caseRows[0]?.group}" is already fully returned`, ...p].slice(0, 5))
-        } else {
-          triggerScanPulse('success')
-          playScanSuccess()
-          if (floor?.id) {
-            void recordFloorScanEvent({
-              bookingId: floor.id,
-              context: 'return',
-              code,
-              result: 'accepted',
-              resultReason: `Flight Case "${caseRows[0]?.group}" identified`,
-            })
-          }
-          setScanLog((p) => [
-            `📦 Flight Case "${caseRows[0]?.group}" identified (${pendingInCase.length}/${caseRows.length} items to receive). Scan items to inspect.`,
-            ...p,
-          ].slice(0, 5))
-        }
-        setAmbientBarcode('')
-        return
-      }
-    }
-
-    triggerScanPulse('error')
-    playScanError()
-    if (floor?.id) {
-      void recordFloorScanEvent({
-        bookingId: floor.id,
-        context: 'return',
-        code: ambientBarcode.trim(),
-        result: 'rejected',
-        resultReason: `No equipment matching "${ambientBarcode.trim()}" in this booking`,
-      })
-    }
-    setScanLog((p) => [`✕ No equipment matching "${ambientBarcode.trim()}" in this booking`, ...p].slice(0, 5))
-    setAmbientBarcode('')
   }
 
   const receive = (key: string, via: 'scan' | 'manual' = 'manual') => {
@@ -1261,6 +1178,103 @@ export default function ReturnWorkspace({
     setScanLog((p) =>
       [`✓ ${row.name}${row.serial ? ` (${row.serial})` : ''} received — recorded when the session completes`, ...p].slice(0, 5),
     )
+  }
+
+  const processScannedCode = (rawCode: string) => {
+    unlockAudioContext()
+    const code = rawCode.trim().toLowerCase()
+    if (!code) return
+
+    // 1. Direct equipment item match
+    const match = rows.find(
+      (r) =>
+        (r.serial && r.serial.toLowerCase() === code) ||
+        r.key.toLowerCase() === code ||
+        (r.name && r.name.toLowerCase() === code) ||
+        (r.assetId && r.assetId.toLowerCase() === code)
+    )
+
+    if (match) {
+      receive(match.key, 'scan')
+      setAmbientBarcode('')
+      return
+    }
+
+    // 2. Flight Case Master Tag match (Booqable audit §11 & Gemma Option C: Scan-to-Verify)
+    const isFlightCaseScan =
+      code.startsWith('pel-') ||
+      code.startsWith('case-') ||
+      rows.some((r) => r.group.toLowerCase().replace(/[^a-z0-9]/g, '').includes(code.replace(/[^a-z0-9]/g, '')))
+
+    if (isFlightCaseScan) {
+      const caseRows = rows.filter(
+        (r) =>
+          r.group.toLowerCase().replace(/[^a-z0-9]/g, '').includes(code.replace(/[^a-z0-9]/g, '')) ||
+          code.replace(/[^a-z0-9]/g, '').includes(r.group.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6))
+      )
+      if (caseRows.length > 0) {
+        const pendingInCase = caseRows.filter((r) => !r.alreadyReturned && marks[r.key]?.state !== 'Returned')
+        if (pendingInCase.length === 0) {
+          triggerScanPulse('error')
+          playScanError()
+          if (floor?.id) {
+            void recordFloorScanEvent({
+              bookingId: floor.id,
+              context: 'return',
+              code,
+              result: 'warning',
+              resultReason: `Flight Case "${caseRows[0]?.group}" is already fully returned`,
+            })
+          }
+          setScanLog((p) => [`• Flight Case "${caseRows[0]?.group}" is already fully returned`, ...p].slice(0, 5))
+        } else {
+          triggerScanPulse('success')
+          playScanSuccess()
+          if (floor?.id) {
+            void recordFloorScanEvent({
+              bookingId: floor.id,
+              context: 'return',
+              code,
+              result: 'accepted',
+              resultReason: `Flight Case "${caseRows[0]?.group}" identified`,
+            })
+          }
+          setScanLog((p) => [
+            `📦 Flight Case "${caseRows[0]?.group}" identified (${pendingInCase.length}/${caseRows.length} items to receive). Scan items to inspect.`,
+            ...p,
+          ].slice(0, 5))
+        }
+        setAmbientBarcode('')
+        return
+      }
+    }
+
+    triggerScanPulse('error')
+    playScanError()
+    if (floor?.id) {
+      void recordFloorScanEvent({
+        bookingId: floor.id,
+        context: 'return',
+        code: rawCode.trim(),
+        result: 'rejected',
+        resultReason: `No equipment matching "${rawCode.trim()}" in this booking`,
+      })
+    }
+    setScanLog((p) => [`✕ No equipment matching "${rawCode.trim()}" in this booking`, ...p].slice(0, 5))
+    setAmbientBarcode('')
+  }
+
+  // Hardware Bluetooth & USB scanner burst listener at the return bench (T2-09, S14)
+  useBarcodeBurst({
+    onScan: processScannedCode,
+    enabled: Boolean(floor) && !floorLoading && floorError === null && !showScanner && !dispatching,
+    targetInputRef: barcodeInputRef,
+    cooldownMs: 1200,
+  })
+
+  const handleAmbientBarcodeSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    processScannedCode(ambientBarcode)
   }
 
   /** Bulk receipt records item marks only; QC and signatures require their own explicit capture. */
@@ -1423,7 +1437,7 @@ export default function ReturnWorkspace({
       discard: discardRestoredScan,
       progress: quantitiesVerified ? { done: backUnits, total: totalUnits } : undefined,
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- focusBlocker and discardRestoredScan are re-created each render; listing them would re-register the action bag on every render
   }, [onRegisterActions, isOnline, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget, backUnits, totalUnits, quantitiesVerified])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */
@@ -1821,6 +1835,7 @@ export default function ReturnWorkspace({
                         </span>
                         <Input
                           type="text"
+                          ref={barcodeInputRef}
                           value={ambientBarcode}
                           onChange={(e) => setAmbientBarcode(e.target.value)}
                           placeholder="Scan or type barcode/serial number to check in gear…"
@@ -2334,9 +2349,8 @@ export default function ReturnWorkspace({
                               <p style={{ margin: '5px 0 0', display: 'flex', gap: 5, alignItems: 'flex-start', fontSize: 'var(--t-meta)', color: 'var(--progress-text)', lineHeight: 1.45 }}>
                                 <Icon name="timer" size={12} style={{ flexShrink: 0, marginTop: 2 }} />
                                 <span>
-                                  “{mark.decision}” keeps this line open, so the booking stays On Rent and a later
-                                  session can receive the item. Choose a decision that ends the line instead if it
-                                  is not coming back.
+                                  “{mark.decision}” keeps this line open and the booking On Rent. Choose a decision
+                                  that ends the line if the item is not coming back.
                                 </span>
                               </p>
                             )}

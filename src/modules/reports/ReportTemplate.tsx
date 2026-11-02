@@ -349,6 +349,12 @@ export function ReportTemplate({ report, onBackToCatalog }: ReportTemplateProps)
                         {/* §9.7 — hover any figure for its working. `title` is
                             the hover; the disclosure below is the reachable
                             equivalent for touch and for a screen reader. */}
+                        {/*
+                          Index key, deliberately: `cells` is positional —
+                          `columns[i + 1]` names each one — so the column's
+                          position is its identity. A label key would collide
+                          when two projected columns share a heading.
+                        */}
                         {trimCells(r.cells, projection.columns, viewport).map((cell, i) => (
                           <td key={i} className="figure report-table-num" style={num} title={working}>
                             {cell}
@@ -485,6 +491,8 @@ function PhoneRows({ rows, columns }: { rows: TemplateRow[]; columns: readonly s
         <div key={r.label} style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ fontSize: 'var(--t-ui)', fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>{r.label}</div>
           {r.cells.map((cell, i) => (
+            /* Positional, like the table body above: `columns[i + 1]` labels
+               this value, so the column's position is its identity. */
             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 'var(--t-meta)' }}>
               <span style={{ color: 'var(--text2)' }}>{columns[i + 1] ?? ''}</span>
               <span className="figure" style={{ color: 'var(--text)' }}>{cell}</span>

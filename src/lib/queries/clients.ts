@@ -134,6 +134,8 @@ interface DirectoryRow {
    * mean the column was not selected.
    */
   is_blocked: boolean | null
+  is_staff?: boolean | null
+  staff_user_id?: string | null
 }
 
 /** numeric (rupees) -> Paisa, preserving null rather than collapsing it to 0. */
@@ -169,7 +171,8 @@ const DIRECTORY_COLUMNS =
   'outstanding_amount, deposit_held_amount, total_paid_amount, ' +
   'active_bookings_count, total_bookings_count, last_pickup_at, ' +
   'contact_name, contact_designation, contact_phone, membership_level, ' +
-  'kyc_docs_count, kyc_verified_count, is_blocked, deactivated_at, created_at'
+  'kyc_docs_count, kyc_verified_count, is_blocked, deactivated_at, created_at, ' +
+  'is_staff, staff_user_id'
 
 /**
  * Directory row -> the `ClientRecord` every clients surface already consumes.
@@ -207,6 +210,9 @@ export function toClientRecord(row: DirectoryRow): ClientRecord {
     id: row.client_code,
     dbId: row.id,
     name: row.name,
+    isStaff: Boolean(row.is_staff),
+    isStaffClient: Boolean(row.is_staff),
+    ...(row.staff_user_id ? { staffUserId: row.staff_user_id } : {}),
     clientType: (row.type_parent as ClientRecord['clientType']) ?? 'Unassigned',
     // ⚠ A `null` here means the client has NO membership row — see
     // `UNJOINED_MEMBERSHIP_PLACEHOLDER`. The placeholder is a type obligation,
@@ -804,6 +810,7 @@ export async function listReferrerOptions(): Promise<ReferrerOption[]> {
  * auth_is_staff()`, so a Client session gets no rows at all.
  */
 export interface MembershipPlanRow {
+  id?: string | undefined
   level: MembershipTier
   /** `membership_label` — the plan's own words. Levels are distinguished by label, never hue (0005). */
   label: string
@@ -811,12 +818,17 @@ export interface MembershipPlanRow {
   defaultCreditLimit: Paisa | null
   /** A PERCENTAGE, not an amount — stays numeric (lib/money §2.3). `null` for Elite ("Negotiated") AND for a money-blind session; the two are indistinguishable here by design. */
   individualDiscountPct: number | null
+  annualFee?: Paisa | null | undefined
+  termMonths?: number | undefined
   displayOrder: number
 }
 
 interface MembershipPlanViewRow {
+  id: string | null
   level: MembershipTier | null
   label: string | null
+  annual_fee: number | null
+  term_months: number | null
   default_credit_limit: number | null
   individual_discount_pct: number | null
   display_order: number | null
@@ -826,7 +838,7 @@ interface MembershipPlanViewRow {
 export async function listMembershipPlans(): Promise<MembershipPlanRow[]> {
   const { data, error } = await supabase
     .from('membership_plans_v')
-    .select('level, label, default_credit_limit, individual_discount_pct, display_order, status')
+    .select('id, level, label, annual_fee, term_months, default_credit_limit, individual_discount_pct, display_order, status')
     // Retire is terminal and a plan with historic members can never be deleted
     // (0005), so retired plans must be excluded here rather than shown as live
     // policy.
@@ -843,10 +855,13 @@ export async function listMembershipPlans(): Promise<MembershipPlanRow[]> {
     // unnamed tier.
     .filter((r): r is MembershipPlanViewRow & { level: MembershipTier } => r.level !== null)
     .map((r) => ({
+      id: r.id ?? undefined,
       level: r.level,
       label: r.label ?? r.level,
       defaultCreditLimit: toPaisa(r.default_credit_limit),
       individualDiscountPct: r.individual_discount_pct,
+      annualFee: toPaisa(r.annual_fee),
+      termMonths: r.term_months ?? 12,
       displayOrder: r.display_order ?? 0,
     }))
 }

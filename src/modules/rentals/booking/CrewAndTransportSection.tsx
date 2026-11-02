@@ -7,6 +7,7 @@ import { DeliverySection } from './DeliverySection'
 export interface TransportDetails {
   clientPickup: boolean
   deliveryType: 'Client Pickup' | 'Babin Delivery'
+  deliveryZone: string
   vehicle: string
   numberPlate: string
   driverContact: string
@@ -125,8 +126,11 @@ export function CrewAndTransportSection({
           onUpdateTransport({
             deliveryType: val,
             clientPickup: val === 'Client Pickup',
+            deliveryZone: val === 'Client Pickup' ? '' : transport.deliveryZone,
           })
         }
+        deliveryZone={transport.deliveryZone}
+        setDeliveryZone={(val) => onUpdateTransport({ deliveryZone: val })}
         vehicle={transport.vehicle}
         setVehicle={(val) => onUpdateTransport({ vehicle: val })}
         numberPlate={transport.numberPlate}

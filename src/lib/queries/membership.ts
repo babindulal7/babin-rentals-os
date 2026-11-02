@@ -68,3 +68,53 @@ export async function listMembers(): Promise<MemberListRow[]> {
   }
   return members
 }
+
+export interface MembershipPlanRecord {
+  id: string
+  clientUuid: string
+  level: MembershipTier
+  label: string
+  annualFee: number | null
+  individualDiscountPct: number | null
+  bundleDiscountPct: number | null
+  monthlyBookingLimit: number | null
+  simultaneousRentalLimit: number | null
+  authorizedUsers: number | null
+  defaultCreditLimit: number | null
+  termMonths: number
+  perks: string[]
+  displayOrder: number
+  status: 'Active' | 'Retired'
+  retiredAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export async function listMembershipPlans(): Promise<MembershipPlanRecord[]> {
+  const { data, error } = await supabase
+    .from('membership_plans_v')
+    .select('id, client_uuid, level, label, annual_fee, individual_discount_pct, bundle_discount_pct, monthly_booking_limit, simultaneous_rental_limit, authorized_users, default_credit_limit, term_months, perks, display_order, status, retired_at, created_at, updated_at')
+    .order('display_order', { ascending: true })
+
+  if (error) throw new Error(`listMembershipPlans failed: ${error.message}`)
+  return (data ?? []).map((p) => ({
+    id: p.id,
+    clientUuid: p.client_uuid,
+    level: p.level as MembershipTier,
+    label: p.label,
+    annualFee: p.annual_fee === null ? null : Number(p.annual_fee),
+    individualDiscountPct: p.individual_discount_pct === null ? null : Number(p.individual_discount_pct),
+    bundleDiscountPct: p.bundle_discount_pct === null ? null : Number(p.bundle_discount_pct),
+    monthlyBookingLimit: p.monthly_booking_limit === null ? null : Number(p.monthly_booking_limit),
+    simultaneousRentalLimit: p.simultaneous_rental_limit === null ? null : Number(p.simultaneous_rental_limit),
+    authorizedUsers: p.authorized_users === null ? null : Number(p.authorized_users),
+    defaultCreditLimit: p.default_credit_limit === null ? null : Number(p.default_credit_limit),
+    termMonths: Number(p.term_months ?? 12),
+    perks: Array.isArray(p.perks) ? p.perks.map(String) : [],
+    displayOrder: Number(p.display_order ?? 0),
+    status: (p.status as 'Active' | 'Retired') ?? 'Active',
+    retiredAt: p.retired_at,
+    createdAt: p.created_at,
+    updatedAt: p.updated_at,
+  }))
+}

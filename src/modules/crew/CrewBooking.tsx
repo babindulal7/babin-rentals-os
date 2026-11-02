@@ -13,6 +13,7 @@ import { EmptyState } from '../../components/ui/StateViews'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
 import { formatMoney } from '../../lib/money'
+import { getCrewPayoutTdsPercent } from '../../lib/settingsStore'
 import { useAuth } from '../../lib/auth'
 import { gateContext, canViewMoneyField, canViewPII } from '../../lib/fieldGating'
 import { IntelCard } from '../../components/ui/IntelCard'
@@ -251,7 +252,8 @@ export function CrewBooking() {
   const fill = useMemo(() => fillRate(crewAssignments, openRoleRequests), [crewAssignments, openRoleRequests])
 
   const crewBookedToday = useMemo(() => crewAssignments.filter((a) => onShootToday(a)).length, [crewAssignments])
-  const ledger = useMemo(() => payoutLedger(crewAssignments), [crewAssignments])
+  const tdsRatePercent = useMemo(() => getCrewPayoutTdsPercent(), [])
+  const ledger = useMemo(() => payoutLedger(crewAssignments, tdsRatePercent), [crewAssignments, tdsRatePercent])
 
   const chipCounts = useMemo(() => rosterChipCounts(crewMembers), [crewMembers])
   const roles = useMemo(() => [...new Set([...crewMembers.map((member) => member.role), ...crewAssignments.map((assignment) => assignment.role)])].sort(), [crewMembers, crewAssignments])
@@ -325,20 +327,29 @@ export function CrewBooking() {
 
       {/* §6.1's PAYOUT LEDGER — "(money roles only)", so it is OMITTED rather
           than masked for a money-blind role (Law 6). Gross is real; TDS and net
-          are `null` in the engine because no rate is ruled (PLAN.md §4.12), and
-          the card says "not tracked yet" rather than seeding a plausible one. */}
+          derive from the configured rate in Settings ▸ Financial (Ruling D25 / O-5).
+          Until a rate is configured, payouts show "TDS: rate not set". */}
       {canCrewMoney && (
         <RailSection title="Payout ledger" badge={`${ledger.count} assignment${ledger.count === 1 ? '' : 's'}`}>
           <SummaryRows
             rows={[
               { label: 'Gross', value: formatMoney(ledger.grossPaisa) },
               ...ledger.byStatus.map((s) => ({ label: s.status, value: `${s.count} · ${formatMoney(s.grossPaisa)}` })),
-              { label: 'TDS withheld', value: 'Not tracked yet' },
-              { label: 'Net payable', value: 'Not tracked yet' },
+              {
+                label: ledger.tdsRatePercent !== null ? `TDS withheld (${ledger.tdsRatePercent}%)` : 'TDS withheld',
+                value: ledger.tdsPaisa !== null ? formatMoney(ledger.tdsPaisa) : 'TDS: rate not set',
+              },
+              {
+                label: 'Net payable',
+                value: ledger.netPaisa !== null ? formatMoney(ledger.netPaisa) : 'TDS: rate not set',
+              },
             ]}
           />
           <div style={{ marginTop: 8, fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-            {/* TDS needs a ruled rate — PLAN.md §4.12. Never derived from an assumed one. */}Tax deductions are not tracked yet. </div>
+            {ledger.tdsRatePercent !== null
+              ? `TDS calculated at ${ledger.tdsRatePercent}% per Settings ▸ Financial.`
+              : 'TDS: rate not set. Configure in Settings ▸ Financial.'}
+          </div>
         </RailSection>
       )}
 
@@ -1098,8 +1109,13 @@ function AlertsList({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      {rows.map((r, i) => {
+      {rows.map((r) => {
         const tone = STATUS[r.severity === 'Critical' ? 'danger' : 'progress']
+        /* `title` repeats (every conflict is "Double booking"), `detail` carries
+           the booking numbers / names, so the pair is the row's real identity.
+           An index key would re-associate a link with a different alert when
+           one clears. */
+        const rowKey = `${r.title}|${r.detail}`
         const body = (
           <>
             <span style={{ width: 26, height: 26, borderRadius: 7, background: tone.bg, color: tone.fg, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
@@ -1114,7 +1130,7 @@ function AlertsList({
 
         if (r.to) {
           return (
-            <Link key={i} to={r.to} className="crew-alert-row" style={ALERT_ROW_LAYOUT}>
+            <Link key={rowKey} to={r.to} className="crew-alert-row" style={ALERT_ROW_LAYOUT}>
               {body}
             </Link>
           )
@@ -1122,7 +1138,7 @@ function AlertsList({
         if (r.onSelect) {
           return (
             <button
-              key={i}
+              key={rowKey}
               type="button"
               onClick={r.onSelect}
               className="press crew-alert-row"
@@ -1133,7 +1149,7 @@ function AlertsList({
           )
         }
         return (
-          <div key={i} className="crew-alert-row" style={ALERT_ROW_LAYOUT}>
+          <div key={rowKey} className="crew-alert-row" style={ALERT_ROW_LAYOUT}>
             {body}
           </div>
         )

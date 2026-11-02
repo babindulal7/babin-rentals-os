@@ -608,9 +608,8 @@ export function CreateInvoiceModal({ isOpen, onClose, bookingNo, onSuccess }: Cr
               <Row label="Payment terms" value={preview.paymentTerms} />
               <Row label="Due" value={<BsAdDate date={preview.dueDateAd} layout="inline" />} />
               <span style={{ color: 'var(--muted)' }}>
-                An invoice is created as a Draft and stays a Draft for the whole rental, so damage and late fees can
-                still be added to it. A Draft carries no number — it is minted at issue, so the numbering has no gap
-                for a draft that was abandoned.
+                A Draft invoice is created at Confirm (W15), carries no number, and follows the booking — lines and
+                totals update as the booking changes. It is numbered when the accountant's rule fires (W16).
               </span>
             </div>
 

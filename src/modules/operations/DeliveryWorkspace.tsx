@@ -1,8 +1,8 @@
-import { IS_MOCK } from '../../lib/supabase'
-import LiveTransportPlans from './LiveTransportPlans'
-import { DateField } from '../../components/ui/DateField'
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
+import LiveTransportPlans from './LiveTransportPlans'
+import { SendToRiderModal } from './SendToRiderModal'
+import { DateField } from '../../components/ui/DateField'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
 import { PageHeader, PageActions, Button } from '../../components/ui/Page'
@@ -12,24 +12,40 @@ import { DataTableShell } from '../../components/ui/DataTable'
 import { Modal } from '../../components/ui/Modal'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { SearchInput } from '../../components/ui/SearchInput'
-import { EmptyState } from '../../components/ui/StateViews'
+import { EmptyState, LoadingSkeleton } from '../../components/ui/StateViews'
 import { formatMoney, rupees } from '../../lib/money'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
 import { useAuth } from '../../lib/auth'
-import { useNetwork } from '../../lib/network'
-import { canPerformOperations, canViewMoney } from '../../lib/rbac'
 import {
-  getDeliveries,
-  updateDeliveryStatus,
-  assignDeliveryRider,
-  createDeliveryRecord,
-  deliveryMutationRefusal,
-  deliveryReadRefusal,
+  canCreateDeliveryJob,
+  canAssignDeliveryDriver,
+  canTransitionDeliveryJob,
+  canRescheduleDeliveryJob,
+  canSetDeliveryRoutePosition,
+  canSetClientMapPin,
+  canViewDayRoute,
+} from '../../lib/rbac'
+import {
+  fetchDeliveries,
+  liveDeliveryReadRefusal,
   type DeliveryRecord,
   type DeliveryStatus,
-  type DeliveryMode,
 } from '../../lib/queries/delivery'
+import {
+  createDeliveryJob,
+  assignDeliveryDriver,
+  transitionDeliveryJob,
+  rescheduleDeliveryJob,
+  setRoutePosition,
+  setClientMapPin,
+  getDayRoute,
+  generateMapLinks,
+  type DayRouteStop,
+} from '../../actions/delivery'
+import { buildDeliveryRescheduleAction } from '../../lib/whatsappActions'
+import { useDomainEvent } from '../../events/useDomainEvent'
+import { EVENT_TYPES } from '../../events/eventBus'
 import { useToast } from '../../components/ui/Toast'
 import { businessDayAd } from '../../lib/bs'
 import './delivery.css'
@@ -43,32 +59,67 @@ const STATUS_BADGE_STYLE: Record<DeliveryStatus, { bg: string; color: string; bo
 }
 
 type ViewMode = 'table' | 'kanban'
+type WorkspaceTab = 'dispatches' | 'transport' | 'route'
 
 export function DeliveryWorkspace() {
-  return IS_MOCK ? <MockDeliveryWorkspace /> : <LiveTransportPlans />
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>('dispatches')
+
+  if (activeTab === 'transport') {
+    return (
+      <div>
+        <div style={{ padding: '8px 16px', background: 'var(--surface2)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Button variant="secondary" size="sm" onClick={() => setActiveTab('dispatches')}>
+            ← Back to Delivery Dispatches
+          </Button>
+          <span style={{ fontSize: '12px', color: 'var(--text3)' }}>Viewing Transport Overview Plans</span>
+        </div>
+        <LiveTransportPlans />
+      </div>
+    )
+  }
+
+  if (activeTab === 'route') {
+    return (
+      <div>
+        <div style={{ padding: '8px 16px', background: 'var(--surface2)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Button variant="secondary" size="sm" onClick={() => setActiveTab('dispatches')}>
+            ← Back to Delivery Dispatches
+          </Button>
+          <span style={{ fontSize: '12px', color: 'var(--text3)' }}>Viewing Route Planner</span>
+        </div>
+        <RoutePlannerView />
+      </div>
+    )
+  }
+
+  return <ActiveDeliveryWorkspace onSwitchToTransport={() => setActiveTab('transport')} />
 }
 
-function MockDeliveryWorkspace() {
+function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport: () => void }) {
   const { user } = useAuth()
-  const [deliveries, setDeliveries] = useState<DeliveryRecord[]>(() => getDeliveries(user?.role ?? null))
-  useEffect(() => { setDeliveries(getDeliveries(user?.role ?? null)) }, [user?.role])
+  const role = user?.role ?? null
+  const readRefusal = liveDeliveryReadRefusal(role)
+  const canMoney = useCanViewMoney()
+  const isDriver = role === 'Driver'
+
+  const [deliveries, setDeliveries] = useState<DeliveryRecord[]>([])
+  const [loading, setLoading] = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
+  const [mutationError, setMutationError] = useState<string | null>(null)
+
   const [statusFilter, setStatusFilter] = useState<'All' | DeliveryStatus>('All')
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<ViewMode>('table')
-  const canMoney = useCanViewMoney()
-  const isOnline = useNetwork()
-  const writeContext = { role: user?.role ?? null, isOnline }
-  // Conservative local preview: transport writes exclude money-blind roles.
-  // A real delivery permission/action contract is still unimplemented.
-  const canChange = !!user && canPerformOperations(user.role) && canViewMoney(user.role)
-  const writeRefusal = deliveryMutationRefusal(writeContext)
-  const readRefusal = deliveryReadRefusal(user?.role ?? null)
-  const [mutationError, setMutationError] = useState<string | null>(null)
+
   const viewport = useViewport()
   const isMobile = viewport === 'phone'
   const { showSuccessToast } = useToast()
 
-  // Modal states
+  // Permission capabilities
+  const canCreate = canCreateDeliveryJob(role)
+  const canAssign = canAssignDeliveryDriver(role)
+
+  // Modals state
   const [assignTarget, setAssignTarget] = useState<DeliveryRecord | null>(null)
   const [driverName, setDriverName] = useState('')
   const [driverPhone, setDriverPhone] = useState('')
@@ -78,19 +129,56 @@ function MockDeliveryWorkspace() {
   const [recipientName, setRecipientName] = useState('')
   const [deliveryNote, setDeliveryNote] = useState('')
 
+  const [failTarget, setFailTarget] = useState<DeliveryRecord | null>(null)
+  const [failReason, setFailReason] = useState('')
+
+  const [rescheduleTarget, setRescheduleTarget] = useState<DeliveryRecord | null>(null)
+  const [rescheduleDate, setRescheduleDate] = useState('')
+  const [rescheduleTime, setRescheduleTime] = useState('')
+  const [rescheduleNotes, setRescheduleNotes] = useState('')
+  const [rescheduleWaLink, setRescheduleWaLink] = useState<{ text: string; href: string | null; unavailable?: string | undefined } | null>(null)
+  const [rescheduleIsSaving, setRescheduleIsSaving] = useState(false)
+
   const [newModalOpen, setNewModalOpen] = useState(false)
+  const [newBookingId, setNewBookingId] = useState('')
   const [newBookingNo, setNewBookingNo] = useState('')
-  const [newClientName, setNewClientName] = useState('')
-  const [newClientPhone, setNewClientPhone] = useState('')
-  const [newAddress, setNewAddress] = useState('')
-  const [newNeighborhood, setNewNeighborhood] = useState('')
-  const [newMode, setNewMode] = useState<DeliveryMode>('Babin Delivery')
+  const [newLeg, setNewLeg] = useState<'Outbound' | 'Return'>('Outbound')
   const [newDate, setNewDate] = useState(() => businessDayAd())
   const [newTime, setNewTime] = useState('10:00')
-  const [newNotes, setNewNotes] = useState('')
-  const [createError, setCreateError] = useState<string | null>(null)
+  const [newVehicle, setNewVehicle] = useState('')
+  const [newRiderName, setNewRiderName] = useState('')
+  const [newRiderPhone, setNewRiderPhone] = useState('')
 
   const [gatePassSlip, setGatePassSlip] = useState<DeliveryRecord | null>(null)
+  const [riderModalTarget, setRiderModalTarget] = useState<DeliveryRecord | null>(null)
+
+  const loadData = useCallback(() => {
+    if (readRefusal) return
+    setLoading(true)
+    fetchDeliveries(role)
+      .then((data) => {
+        setDeliveries(data)
+        setLoading(false)
+        setFetchError(null)
+      })
+      .catch((err: unknown) => {
+        setFetchError(err instanceof Error ? err.message : 'Deliveries unavailable')
+        setLoading(false)
+      })
+  }, [role, readRefusal])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  // Realtime live domain events
+  useDomainEvent(EVENT_TYPES.DELIVERY_JOB_CREATED, loadData)
+  useDomainEvent(EVENT_TYPES.DELIVERY_DRIVER_ASSIGNED, loadData)
+  useDomainEvent(EVENT_TYPES.DELIVERY_JOB_TRANSITIONED, loadData)
+  useDomainEvent(EVENT_TYPES.RENTAL_PACKED, loadData)
+  useDomainEvent(EVENT_TYPES.RENTAL_HANDED_OVER, loadData)
+  useDomainEvent(EVENT_TYPES.RENTAL_CONFIRMED, loadData)
+  useDomainEvent(EVENT_TYPES.DELIVERY_JOB_RESCHEDULED, loadData)
 
   const filtered = useMemo(() => {
     return deliveries.filter((d) => {
@@ -101,8 +189,8 @@ function MockDeliveryWorkspace() {
           d.id.toLowerCase().includes(q) ||
           d.bookingNo.toLowerCase().includes(q) ||
           d.clientName.toLowerCase().includes(q) ||
-          d.neighborhood.toLowerCase().includes(q) ||
           d.address.toLowerCase().includes(q) ||
+          (d.neighborhood && d.neighborhood.toLowerCase().includes(q)) ||
           (d.driverName && d.driverName.toLowerCase().includes(q))
         if (!match) return false
       }
@@ -115,10 +203,129 @@ function MockDeliveryWorkspace() {
   const readyCount = deliveries.filter((d) => d.status === 'Ready').length
   const scheduledCount = deliveries.filter((d) => d.status === 'Scheduled').length
   const deliveredCount = deliveries.filter((d) => d.status === 'Delivered').length
-  const totalRevenue = deliveries.reduce((acc, d) => acc + (d.status === 'Delivered' ? d.deliveryFeeNpr : 0), 0)
+  const failedCount = deliveries.filter((d) => d.status === 'Failed').length
+  const totalRevenue = canMoney
+    ? deliveries.reduce((acc, d) => acc + (d.status === 'Delivered' ? d.deliveryFeeNpr : 0), 0)
+    : 0
+
+  // Transition Handlers
+  const handleMarkReady = async (rec: DeliveryRecord) => {
+    if (!user?.id || !user?.role) {
+      setMutationError('User authentication required')
+      return
+    }
+    setMutationError(null)
+    try {
+      await transitionDeliveryJob(
+        {
+          jobId: rec.id,
+          expectedStatus: 'Scheduled',
+          nextStatus: 'Ready',
+        },
+        { userId: user.id, role: user.role },
+      )
+      showSuccessToast(`Dispatch ${rec.id} staged Ready for transit`)
+      loadData()
+    } catch (err) {
+      setMutationError(err instanceof Error ? err.message : 'Failed to transition to Ready')
+    }
+  }
+
+  const handleStartTransit = async (rec: DeliveryRecord) => {
+    if (!user?.id || !user?.role) {
+      setMutationError('User authentication required')
+      return
+    }
+    setMutationError(null)
+    try {
+      await transitionDeliveryJob(
+        {
+          jobId: rec.id,
+          expectedStatus: 'Ready',
+          nextStatus: 'In Transit',
+        },
+        { userId: user.id, role: user.role },
+      )
+      showSuccessToast(`Dispatch ${rec.id} marked In Transit · Driver en route`)
+      loadData()
+    } catch (err) {
+      setMutationError(err instanceof Error ? err.message : 'Failed to start transit')
+    }
+  }
+
+  const handleOpenDeliver = (rec: DeliveryRecord) => {
+    setMutationError(null)
+    setDeliverTarget(rec)
+    setRecipientName(rec.recipientName || rec.clientName)
+    setDeliveryNote('')
+  }
+
+  const handleConfirmDelivered = async () => {
+    if (!deliverTarget) return
+    if (!user?.id || !user?.role) {
+      setMutationError('User authentication required')
+      return
+    }
+    if (recipientName.trim().length < 2) {
+      setMutationError('Recipient name must be at least 2 characters.')
+      return
+    }
+    setMutationError(null)
+    try {
+      await transitionDeliveryJob(
+        {
+          jobId: deliverTarget.id,
+          expectedStatus: 'In Transit',
+          nextStatus: 'Delivered',
+          recipient: recipientName.trim(),
+          note: deliveryNote.trim() || undefined,
+        },
+        { userId: user.id, role: user.role },
+      )
+      showSuccessToast(`Dispatch ${deliverTarget.id} delivered to ${recipientName.trim()}`)
+      setDeliverTarget(null)
+      loadData()
+    } catch (err) {
+      setMutationError(err instanceof Error ? err.message : 'Failed to confirm delivery')
+    }
+  }
+
+  const handleOpenFail = (rec: DeliveryRecord) => {
+    setMutationError(null)
+    setFailTarget(rec)
+    setFailReason('')
+  }
+
+  const handleConfirmFailed = async () => {
+    if (!failTarget) return
+    if (!user?.id || !user?.role) {
+      setMutationError('User authentication required')
+      return
+    }
+    if (failReason.trim().length < 10) {
+      setMutationError('Failure reason must be explained in at least 10 characters.')
+      return
+    }
+    setMutationError(null)
+    try {
+      await transitionDeliveryJob(
+        {
+          jobId: failTarget.id,
+          expectedStatus: failTarget.status,
+          nextStatus: 'Failed',
+          note: failReason.trim(),
+        },
+        { userId: user.id, role: user.role },
+      )
+      showSuccessToast(`Dispatch ${failTarget.id} marked as Failed`)
+      setFailTarget(null)
+      loadData()
+    } catch (err) {
+      setMutationError(err instanceof Error ? err.message : 'Failed to mark job as failed')
+    }
+  }
 
   const handleOpenAssign = (rec: DeliveryRecord) => {
-    if (writeRefusal) { setMutationError(writeRefusal); return }
     setMutationError(null)
     setAssignTarget(rec)
     setDriverName(rec.driverName ?? '')
@@ -126,77 +333,123 @@ function MockDeliveryWorkspace() {
     setVehiclePlate(rec.vehiclePlate ?? '')
   }
 
-  const handleSaveAssign = () => {
+  const handleSaveAssign = async () => {
     if (!assignTarget) return
-    try {
-      const updated = assignDeliveryRider(assignTarget.id, driverName, driverPhone, vehiclePlate, writeContext)
-      setDeliveries(updated)
-      setAssignTarget(null)
-      setMutationError(null)
-      showSuccessToast(`Local preview: rider/driver assigned to ${assignTarget.id}`)
-    } catch (error) { setMutationError(error instanceof Error ? error.message : 'Delivery changes could not be saved.') }
-  }
-
-  const handleStartTransit = (rec: DeliveryRecord) => {
-    try {
-      const updated = updateDeliveryStatus(rec.id, 'In Transit', writeContext)
-      setDeliveries(updated)
-      setMutationError(null)
-      showSuccessToast(`Local preview: ${rec.id} marked In Transit · Driver en route`)
-    } catch (error) { setMutationError(error instanceof Error ? error.message : 'Delivery changes could not be saved.') }
-  }
-
-  const handleOpenDeliver = (rec: DeliveryRecord) => {
-    if (writeRefusal) { setMutationError(writeRefusal); return }
-    setMutationError(null)
-    setDeliverTarget(rec)
-    setRecipientName(rec.recipientName || rec.clientName)
-    setDeliveryNote('')
-  }
-
-  const handleConfirmDelivered = () => {
-    if (!deliverTarget) return
-    if (!recipientName.trim()) { setMutationError('Enter the name of the person who received the delivery.'); return }
-    try {
-      const updated = updateDeliveryStatus(deliverTarget.id, 'Delivered', writeContext, {
-        recipientName: recipientName.trim(),
-        notes: deliveryNote,
-      })
-      setDeliveries(updated)
-      setDeliverTarget(null)
-      setMutationError(null)
-      showSuccessToast(`Local preview: ${deliverTarget.id} marked Delivered to ${recipientName}`)
-    } catch (error) { setMutationError(error instanceof Error ? error.message : 'Delivery changes could not be saved.') }
-  }
-
-  const handleCreateDelivery = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (writeRefusal) { setCreateError(writeRefusal); return }
-    if (!newBookingNo || !newClientName || !newAddress) {
-      setCreateError('Please fill all required delivery details (Booking Number, Client Name, and Delivery Address).')
+    if (!user?.id || !user?.role) {
+      setMutationError('User authentication required')
       return
     }
-    setCreateError(null)
+    if (!driverName.trim()) {
+      setMutationError('Please specify a driver or courier rider name.')
+      return
+    }
+    setMutationError(null)
     try {
-    const created = createDeliveryRecord({
-      bookingNo: newBookingNo.toUpperCase(),
-      clientName: newClientName,
-      clientPhone: newClientPhone,
-      address: newAddress,
-      neighborhood: newNeighborhood || 'Kathmandu Valley',
-      mode: newMode,
-      status: 'Scheduled',
-      scheduledDate: newDate,
-      scheduledTime: newTime,
-      deliveryFeeNpr: newMode === 'Babin Delivery' ? 3500 : 1500,
-      notes: newNotes,
-      gatePassNo: `GP-${Math.floor(1000 + Math.random() * 9000)}`,
-      packageSealNo: `BR-SEAL-${Math.floor(100 + Math.random() * 900)}`,
-    }, writeContext)
-    setDeliveries([created, ...deliveries])
-    setNewModalOpen(false)
-    showSuccessToast(`Local preview: created delivery order ${created.id}`)
-    } catch (error) { setCreateError(error instanceof Error ? error.message : 'Delivery changes could not be saved.') }
+      await assignDeliveryDriver(
+        {
+          jobId: assignTarget.id,
+          riderName: driverName.trim(),
+          riderPhone: driverPhone.trim() || undefined,
+          vehicle: vehiclePlate.trim() || undefined,
+        },
+        { userId: user.id, role: user.role },
+      )
+      showSuccessToast(`Driver / Rider assigned to ${assignTarget.id}`)
+      setAssignTarget(null)
+      loadData()
+    } catch (err) {
+      setMutationError(err instanceof Error ? err.message : 'Failed to assign driver')
+    }
+  }
+
+  const handleOpenReschedule = (rec: DeliveryRecord) => {
+    setMutationError(null)
+    setRescheduleTarget(rec)
+    setRescheduleDate(rec.scheduledDate || businessDayAd())
+    setRescheduleTime(rec.scheduledTime || '10:00')
+    setRescheduleNotes('')
+    setRescheduleWaLink(null)
+  }
+
+  const handleConfirmReschedule = async () => {
+    if (!rescheduleTarget) return
+    if (!user?.id || !user?.role) {
+      setMutationError('User authentication required')
+      return
+    }
+    if (!rescheduleDate || !rescheduleTime) {
+      setMutationError('Both a valid date and time are required to reschedule.')
+      return
+    }
+    setMutationError(null)
+    setRescheduleIsSaving(true)
+
+    const isoTimestamp = `${rescheduleDate}T${rescheduleTime}:00+05:45`
+
+    try {
+      await rescheduleDeliveryJob(
+        {
+          jobId: rescheduleTarget.id,
+          newScheduledAt: new Date(isoTimestamp).toISOString(),
+          notes: rescheduleNotes.trim() || undefined,
+        },
+        { userId: user.id, role: user.role },
+      )
+
+      const oldDisplayTime = `${rescheduleTarget.scheduledDate} ${rescheduleTarget.scheduledTime}`
+      const newDisplayTime = `${rescheduleDate} ${rescheduleTime}`
+
+      const waAction = buildDeliveryRescheduleAction({
+        clientName: rescheduleTarget.clientName,
+        clientPhone: rescheduleTarget.clientPhone || null,
+        bookingNo: rescheduleTarget.bookingNo,
+        leg: rescheduleTarget.mode === 'Courier / Rider' ? 'Courier Dispatch' : 'Babin Delivery',
+        oldTime: oldDisplayTime,
+        newTime: newDisplayTime,
+        notes: rescheduleNotes.trim() || undefined,
+      })
+
+      setRescheduleWaLink(waAction)
+      showSuccessToast(`Dispatch ${rescheduleTarget.id} rescheduled to ${newDisplayTime}`)
+      loadData()
+    } catch (err) {
+      setMutationError(err instanceof Error ? err.message : 'Failed to reschedule delivery')
+    } finally {
+      setRescheduleIsSaving(false)
+    }
+  }
+
+  const handleCreateDelivery = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user?.id || !user?.role) {
+      setMutationError('User authentication required')
+      return
+    }
+    if (!newBookingId.trim() && !newBookingNo.trim()) {
+      setMutationError('Please provide a valid Booking ID or Number.')
+      return
+    }
+    setMutationError(null)
+    const bookingIdentifier = newBookingId.trim() || newBookingNo.trim()
+    const scheduledIso = `${newDate}T${newTime}:00Z`
+    try {
+      await createDeliveryJob(
+        {
+          bookingId: bookingIdentifier,
+          leg: newLeg,
+          scheduledAt: scheduledIso,
+          vehicle: newVehicle.trim() || undefined,
+          riderName: newRiderName.trim() || undefined,
+          riderPhone: newRiderPhone.trim() || undefined,
+        },
+        { userId: user.id, role: user.role },
+      )
+      showSuccessToast('New delivery dispatch order created')
+      setNewModalOpen(false)
+      loadData()
+    } catch (err) {
+      setMutationError(err instanceof Error ? err.message : 'Failed to create delivery dispatch')
+    }
   }
 
   return (
@@ -213,18 +466,41 @@ function MockDeliveryWorkspace() {
           }}
           actions={
             <PageActions
+              secondary={
+                <Button variant="secondary" size="sm" onClick={onSwitchToTransport}>
+                  Transport Plans Overview →
+                </Button>
+              }
               primary={
-                canChange ? <Button variant="primary" disabled={!!writeRefusal} onClick={() => setNewModalOpen(true)}>
-                  <Icon name="truck" size={16} /> + New Dispatch
-                </Button> : null
+                canCreate ? (
+                  <Button variant="primary" onClick={() => setNewModalOpen(true)}>
+                    <Icon name="truck" size={16} /> + New Dispatch
+                  </Button>
+                ) : null
               }
             />
           }
         />
       }
     >
-      <PageBody error={readRefusal}>
-        {(writeRefusal || mutationError) && <div role="alert" style={{ padding: 12, color: 'var(--st-danger-fg)', background: 'var(--st-danger-bg)' }}>{mutationError || writeRefusal}</div>}
+      <PageBody error={readRefusal || fetchError}>
+        {mutationError && (
+          <div
+            role="alert"
+            style={{
+              padding: 12,
+              marginBottom: 16,
+              borderRadius: 'var(--r-sm)',
+              color: 'var(--st-danger-fg)',
+              background: 'var(--st-danger-bg)',
+              fontWeight: 600,
+              fontSize: '13px',
+            }}
+          >
+            {mutationError}
+          </div>
+        )}
+
         <div className="delivery-workspace">
           {/* KPI Strip */}
           <div className="delivery-kpi-grid">
@@ -308,7 +584,7 @@ function MockDeliveryWorkspace() {
                   { id: 'Ready', label: 'Ready', badge: readyCount > 0 ? readyCount : undefined },
                   { id: 'Scheduled', label: 'Scheduled', badge: scheduledCount > 0 ? scheduledCount : undefined },
                   { id: 'Delivered', label: 'Delivered' },
-                  { id: 'Failed', label: 'Failed' },
+                  { id: 'Failed', label: 'Failed', badge: failedCount > 0 ? failedCount : undefined },
                 ]}
                 value={statusFilter}
                 onChange={(val) => setStatusFilter(val as 'All' | DeliveryStatus)}
@@ -344,7 +620,11 @@ function MockDeliveryWorkspace() {
           </div>
 
           {/* Main Content: Table or Kanban Board */}
-          {filtered.length === 0 ? (
+          {loading && deliveries.length === 0 ? (
+            <div style={{ padding: '40px 16px' }}>
+              <LoadingSkeleton rows={4} type="table" />
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="delivery-table-wrapper" style={{ padding: '48px 16px' }}>
               <EmptyState
                 kind={searchQuery || statusFilter !== 'All' ? 'no-results' : 'nothing-yet'}
@@ -352,19 +632,21 @@ function MockDeliveryWorkspace() {
                 description={
                   searchQuery || statusFilter !== 'All'
                     ? 'No dispatch records matched your active search query or status filter.'
-                    : 'Dispatch records and courier runs will appear here as bookings get scheduled for delivery.'
+                    : isDriver
+                      ? 'No delivery dispatches are currently assigned to you.'
+                      : 'Dispatch records and courier runs will appear here as bookings get scheduled for delivery.'
                 }
-                {...((searchQuery || statusFilter !== 'All' || (canChange && !writeRefusal)) ? {
-                  actionLabel: searchQuery || statusFilter !== 'All' ? 'Clear Filters' : '+ New Dispatch'
+                {...(searchQuery || statusFilter !== 'All' || canCreate ? {
+                  actionLabel: searchQuery || statusFilter !== 'All' ? 'Clear Filters' : '+ New Dispatch',
+                  onAction: () => {
+                    if (searchQuery || statusFilter !== 'All') {
+                      setSearchQuery('')
+                      setStatusFilter('All')
+                    } else if (canCreate) {
+                      setNewModalOpen(true)
+                    }
+                  },
                 } : {})}
-                onAction={() => {
-                  if (searchQuery || statusFilter !== 'All') {
-                    setSearchQuery('')
-                    setStatusFilter('All')
-                  } else {
-                    if (!writeRefusal) setNewModalOpen(true)
-                  }
-                }}
               />
             </div>
           ) : viewMode === 'kanban' && !isMobile ? (
@@ -391,135 +673,192 @@ function MockDeliveryWorkspace() {
                           No jobs in {colStatus}
                         </div>
                       ) : (
-                        colDeliveries.map((d) => (
-                          <div key={d.id} className="delivery-card-item">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                              <div>
-                                <span className="identifier" style={{ fontWeight: 800, color: 'var(--accent2)', fontSize: '13px' }}>
-                                  {d.id}
-                                </span>
-                                <div style={{ marginTop: 2 }}>
-                                  <Link
-                                    to={`/rentals/${d.bookingNo}`}
-                                    style={{
-                                      fontSize: '12px',
-                                      fontWeight: 600,
-                                      color: 'var(--text)',
-                                      textDecoration: 'none',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: 4,
-                                    }}
-                                  >
-                                    <Icon name="truck" size={12} /> {d.bookingNo}
-                                  </Link>
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                title="Print Gate Pass"
-                                aria-label={`Print Gate Pass for ${d.id}`}
-                                onClick={() => setGatePassSlip(d)}
-                                style={{
-                                  minWidth: 'var(--tap, 44px)',
-                                  minHeight: 'var(--tap, 44px)',
-                                  padding: '4px 6px',
-                                  borderRadius: 'var(--r-xs)',
-                                  background: 'var(--surface2)',
-                                  border: '1px solid var(--border)',
-                                  color: 'var(--text2)',
-                                  cursor: 'pointer',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                }}
-                              >
-                                <Icon name="file" size={13} />
-                              </button>
-                            </div>
+                        colDeliveries.map((d) => {
+                          const canReady = canTransitionDeliveryJob(role, 'Scheduled', 'Ready')
+                          const canTransit = canTransitionDeliveryJob(role, 'Ready', 'In Transit')
+                          const canDeliver = canTransitionDeliveryJob(role, 'In Transit', 'Delivered')
+                          const canFail = canTransitionDeliveryJob(role, d.status, 'Failed')
+                          const canReschedule = canRescheduleDeliveryJob(role) && d.status !== 'Delivered' && d.status !== 'Failed'
+                          const hasDriver = !!(d.driverId || d.driverName)
 
-                            <div>
-                              <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text)' }}>
-                                {d.clientName}
-                              </div>
-                              <div style={{ fontSize: '12px', color: 'var(--text3)', marginTop: 2, display: 'flex', alignItems: 'flex-start', gap: 4 }}>
-                                <span style={{ flexShrink: 0, marginTop: 1 }}><Icon name="truck" size={12} /></span>
-                                <span style={{ wordBreak: 'break-word' }}>{d.address}</span>
-                              </div>
-                              {d.clientPhone && (
-                                <a
-                                  href={`tel:${d.clientPhone}`}
+                          return (
+                            <div key={d.id} className="delivery-card-item">
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <div>
+                                  <span className="identifier" style={{ fontWeight: 800, color: 'var(--accent2)', fontSize: '13px' }}>
+                                    {d.id}
+                                  </span>
+                                  <div style={{ marginTop: 2 }}>
+                                    <Link
+                                      to={`/rentals/${d.bookingNo}`}
+                                      style={{
+                                        fontSize: '12px',
+                                        fontWeight: 600,
+                                        color: 'var(--text)',
+                                        textDecoration: 'none',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 4,
+                                      }}
+                                    >
+                                      <Icon name="truck" size={12} /> {d.bookingNo}
+                                    </Link>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  title="Print Gate Pass"
+                                  aria-label={`Print Gate Pass for ${d.id}`}
+                                  onClick={() => setGatePassSlip(d)}
                                   style={{
-                                    fontSize: '11px',
-                                    color: 'var(--info)',
-                                    textDecoration: 'none',
-                                    display: 'inline-block',
-                                    marginTop: 3,
+                                    minWidth: 'var(--tap, 44px)',
+                                    minHeight: 'var(--tap, 44px)',
+                                    padding: '4px 6px',
+                                    borderRadius: 'var(--r-xs)',
+                                    background: 'var(--surface2)',
+                                    border: '1px solid var(--border)',
+                                    color: 'var(--text2)',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
                                   }}
                                 >
-                                  📞 {d.clientPhone}
-                                </a>
-                              )}
-                            </div>
+                                  <Icon name="file" size={13} />
+                                </button>
+                              </div>
 
-                            <div style={{ borderTop: '1px dashed var(--border)', paddingTop: 8, fontSize: '11px', color: 'var(--text3)' }}>
-                              <div><strong>Scheduled:</strong> {d.scheduledDate} {d.scheduledTime}</div>
-                              {d.driverName ? (
-                                <div style={{ color: 'var(--text)', marginTop: 2 }}>
-                                  <strong>Driver:</strong> {d.driverName} {d.vehiclePlate ? `(${d.vehiclePlate})` : ''}
+                              <div>
+                                <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text)' }}>
+                                  {d.clientName}
                                 </div>
-                              ) : (
-                                <div style={{ color: 'var(--warn-text)', marginTop: 2 }}>
-                                  <em>Rider Unassigned</em>
+                                <div style={{ fontSize: '12px', color: 'var(--text3)', marginTop: 2, display: 'flex', alignItems: 'flex-start', gap: 4 }}>
+                                  <span style={{ flexShrink: 0, marginTop: 1 }}><Icon name="truck" size={12} /></span>
+                                  <span style={{ wordBreak: 'break-word' }}>{d.address}</span>
                                 </div>
-                              )}
-                            </div>
+                                {d.clientPhone && (
+                                  <a
+                                    href={`tel:${d.clientPhone}`}
+                                    style={{
+                                      fontSize: '11px',
+                                      color: 'var(--info)',
+                                      textDecoration: 'none',
+                                      display: 'inline-block',
+                                      marginTop: 3,
+                                    }}
+                                  >
+                                    📞 {d.clientPhone}
+                                  </a>
+                                )}
+                              </div>
 
-                            {/* Card action footer */}
-                            <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-                              {canChange && d.status === 'Scheduled' && (
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  style={{ width: '100%' }}
-                                  disabled={!!writeRefusal}
-                                  onClick={() => handleOpenAssign(d)}
-                                >
-                                  Assign Driver
-                                </Button>
-                              )}
-                              {canChange && d.status === 'Ready' && (
-                                <Button
-                                  variant="primary"
-                                  data-primary-verb
-                                  size="sm"
-                                  style={{ width: '100%' }}
-                                  disabled={!!writeRefusal}
-                                  onClick={() => handleStartTransit(d)}
-                                >
-                                  Dispatch Now
-                                </Button>
-                              )}
-                              {canChange && d.status === 'In Transit' && (
-                                <Button
-                                  variant="primary"
-                                  data-primary-verb
-                                  size="sm"
-                                  style={{ width: '100%' }}
-                                  disabled={!!writeRefusal}
-                                  onClick={() => handleOpenDeliver(d)}
-                                >
-                                  Confirm Delivered ✓
-                                </Button>
-                              )}
-                              {d.status === 'Delivered' && (
-                                <div style={{ fontSize: '11px', color: 'var(--text3)', width: '100%', textAlign: 'center', padding: '4px' }}>
-                                  ✓ Received{d.recipientName ? ` by ${d.recipientName}` : ''}
+                              <div style={{ borderTop: '1px dashed var(--border)', paddingTop: 8, fontSize: '11px', color: 'var(--text3)' }}>
+                                <div><strong>Scheduled:</strong> {d.scheduledDate} {d.scheduledTime}</div>
+                                {d.notes && (
+                                  <div style={{ marginTop: 3, color: d.status === 'Failed' ? 'var(--st-danger-fg)' : 'var(--text2)', background: 'var(--surface2)', padding: '2px 5px', borderRadius: 3, fontSize: '10.5px' }}>
+                                    {d.status === 'Failed' ? '⚠ ' : '🕒 '}{d.notes}
+                                  </div>
+                                )}
+                                {d.driverName ? (
+                                  <div style={{ color: 'var(--text)', marginTop: 2 }}>
+                                    <strong>Driver:</strong> {d.driverName} {d.vehiclePlate ? `(${d.vehiclePlate})` : ''}
+                                  </div>
+                                ) : (
+                                  <div style={{ color: 'var(--warn-text)', marginTop: 2 }}>
+                                    <em>Rider Unassigned</em>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Card action footer */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
+                                <div style={{ display: 'flex', gap: 6 }}>
+                                  {canAssign && d.status === 'Scheduled' && (
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
+                                      style={{ width: '100%' }}
+                                      onClick={() => handleOpenAssign(d)}
+                                    >
+                                      Assign Driver
+                                    </Button>
+                                  )}
+                                  {canAssign && d.status !== 'Delivered' && d.status !== 'Failed' && (
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
+                                      style={{ width: '100%' }}
+                                      onClick={() => setRiderModalTarget(d)}
+                                      title="Generate one-time rider link (T4-08/W49)"
+                                    >
+                                      <Icon name="external_link" size={13} /> Rider Link
+                                    </Button>
+                                  )}
+                                  {canReady && d.status === 'Scheduled' && (
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
+                                      style={{ width: '100%' }}
+                                      onClick={() => handleMarkReady(d)}
+                                    >
+                                      Stage Ready
+                                    </Button>
+                                  )}
+                                  {canTransit && d.status === 'Ready' && (
+                                    <Button
+                                      variant="primary"
+                                      data-primary-verb
+                                      size="sm"
+                                      style={{ width: '100%' }}
+                                      disabled={!hasDriver}
+                                      onClick={() => handleStartTransit(d)}
+                                    >
+                                      Dispatch Now
+                                    </Button>
+                                  )}
+                                  {canDeliver && d.status === 'In Transit' && (
+                                    <Button
+                                      variant="primary"
+                                      data-primary-verb
+                                      size="sm"
+                                      style={{ width: '100%' }}
+                                      onClick={() => handleOpenDeliver(d)}
+                                    >
+                                      Confirm Delivered ✓
+                                    </Button>
+                                  )}
                                 </div>
-                              )}
+
+                                {canReschedule && (
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    style={{ width: '100%' }}
+                                    onClick={() => handleOpenReschedule(d)}
+                                  >
+                                    Change Time
+                                  </Button>
+                                )}
+
+                                {canFail && (d.status === 'Scheduled' || d.status === 'Ready' || d.status === 'In Transit') && (
+                                  <Button
+                                    variant="danger"
+                                    size="sm"
+                                    onClick={() => handleOpenFail(d)}
+                                  >
+                                    Mark Failed
+                                  </Button>
+                                )}
+
+                                {d.status === 'Delivered' && (
+                                  <div style={{ fontSize: '11px', color: 'var(--text3)', width: '100%', textAlign: 'center', padding: '4px' }}>
+                                    ✓ Received{d.recipientName ? ` by ${d.recipientName}` : ''}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ))
+                          )
+                        })
                       )}
                     </div>
                   </div>
@@ -531,6 +870,13 @@ function MockDeliveryWorkspace() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
               {filtered.map((d) => {
                 const badge = STATUS_BADGE_STYLE[d.status]
+                const canReady = canTransitionDeliveryJob(role, 'Scheduled', 'Ready')
+                const canTransit = canTransitionDeliveryJob(role, 'Ready', 'In Transit')
+                const canDeliver = canTransitionDeliveryJob(role, 'In Transit', 'Delivered')
+                const canFail = canTransitionDeliveryJob(role, d.status, 'Failed')
+                const canReschedule = canRescheduleDeliveryJob(role) && d.status !== 'Delivered' && d.status !== 'Failed'
+                const hasDriver = !!(d.driverId || d.driverName)
+
                 return (
                   <article
                     key={d.id}
@@ -665,6 +1011,11 @@ function MockDeliveryWorkspace() {
                         <div style={{ fontWeight: 600, color: 'var(--text)', marginTop: 2 }}>
                           {d.scheduledDate} · {d.scheduledTime}
                         </div>
+                        {d.notes && (
+                          <div style={{ fontSize: '11px', color: d.status === 'Failed' ? 'var(--st-danger-fg)' : 'var(--text2)', background: 'var(--surface2)', padding: '2px 5px', borderRadius: 3, marginTop: 4 }}>
+                            {d.status === 'Failed' ? '⚠ ' : '🕒 '}{d.notes}
+                          </div>
+                        )}
                       </div>
                       <div>
                         <div style={{ fontSize: '10.5px', color: 'var(--text3)', textTransform: 'uppercase', fontWeight: 600 }}>
@@ -676,7 +1027,7 @@ function MockDeliveryWorkspace() {
                       </div>
                     </div>
 
-                    {/* Delivery Fee if money permitted */}
+                    {/* Delivery Fee if money permitted (Law 6) */}
                     {canMoney && (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px' }}>
                         <span style={{ color: 'var(--text2)' }}>Delivery Fee:</span>
@@ -687,42 +1038,77 @@ function MockDeliveryWorkspace() {
                     )}
 
                     {/* Actions */}
-                    <div style={{ marginTop: 2 }}>
-                      {canChange && d.status === 'Scheduled' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 2 }}>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        {canAssign && d.status === 'Scheduled' && (
+                          <Button
+                            variant="secondary"
+                            style={{ flex: 1, minHeight: 44, justifyContent: 'center' }}
+                            onClick={() => handleOpenAssign(d)}
+                          >
+                            Assign Driver
+                          </Button>
+                        )}
+                        {canReady && d.status === 'Scheduled' && (
+                          <Button
+                            variant="secondary"
+                            style={{ flex: 1, minHeight: 44, justifyContent: 'center' }}
+                            onClick={() => handleMarkReady(d)}
+                          >
+                            Stage Ready
+                          </Button>
+                        )}
+                        {canTransit && d.status === 'Ready' && (
+                          <Button
+                            variant="primary"
+                            data-primary-verb
+                            style={{ width: '100%', minHeight: 48, justifyContent: 'center', fontWeight: 600 }}
+                            disabled={!hasDriver}
+                            onClick={() => handleStartTransit(d)}
+                          >
+                            Dispatch Now
+                          </Button>
+                        )}
+                        {canDeliver && d.status === 'In Transit' && (
+                          <Button
+                            variant="primary"
+                            data-primary-verb
+                            style={{ width: '100%', minHeight: 48, justifyContent: 'center', fontWeight: 600 }}
+                            onClick={() => handleOpenDeliver(d)}
+                          >
+                            Confirm Delivered ✓
+                          </Button>
+                        )}
+                      </div>
+
+                      {canReschedule && (
                         <Button
                           variant="secondary"
-                          style={{ width: '100%', minHeight: 44, justifyContent: 'center' }}
-                          disabled={!!writeRefusal}
-                          onClick={() => handleOpenAssign(d)}
+                          style={{ minHeight: 44, justifyContent: 'center' }}
+                          onClick={() => handleOpenReschedule(d)}
                         >
-                          Assign Driver
+                          Change Time
                         </Button>
                       )}
-                      {canChange && d.status === 'Ready' && (
+
+                      {canFail && (d.status === 'Scheduled' || d.status === 'Ready' || d.status === 'In Transit') && (
                         <Button
-                          variant="primary"
-                          data-primary-verb
-                          style={{ width: '100%', minHeight: 48, justifyContent: 'center', fontWeight: 600 }}
-                          disabled={!!writeRefusal}
-                          onClick={() => handleStartTransit(d)}
+                          variant="danger"
+                          style={{ minHeight: 40, justifyContent: 'center' }}
+                          onClick={() => handleOpenFail(d)}
                         >
-                          Dispatch Now
+                          Mark Failed
                         </Button>
                       )}
-                      {canChange && d.status === 'In Transit' && (
-                        <Button
-                          variant="primary"
-                          data-primary-verb
-                          style={{ width: '100%', minHeight: 48, justifyContent: 'center', fontWeight: 600 }}
-                          disabled={!!writeRefusal}
-                          onClick={() => handleOpenDeliver(d)}
-                        >
-                          Confirm Delivered ✓
-                        </Button>
-                      )}
+
                       {d.status === 'Delivered' && (
                         <div style={{ fontSize: '12px', color: 'var(--success-text)', textAlign: 'center', padding: '6px' }}>
                           ✓ Delivered{d.recipientName ? ` to ${d.recipientName}` : ''}
+                        </div>
+                      )}
+                      {d.status === 'Failed' && (
+                        <div style={{ fontSize: '12px', color: 'var(--st-danger-fg)', textAlign: 'center', padding: '6px' }}>
+                          ✕ Delivery Failed {d.notes ? `(${d.notes})` : ''}
                         </div>
                       )}
                     </div>
@@ -749,6 +1135,13 @@ function MockDeliveryWorkspace() {
                   <tbody>
                     {filtered.map((d) => {
                       const badge = STATUS_BADGE_STYLE[d.status]
+                      const canReady = canTransitionDeliveryJob(role, 'Scheduled', 'Ready')
+                      const canTransit = canTransitionDeliveryJob(role, 'Ready', 'In Transit')
+                      const canDeliver = canTransitionDeliveryJob(role, 'In Transit', 'Delivered')
+                      const canFail = canTransitionDeliveryJob(role, d.status, 'Failed')
+                      const canReschedule = canRescheduleDeliveryJob(role) && d.status !== 'Delivered' && d.status !== 'Failed'
+                      const hasDriver = !!(d.driverId || d.driverName)
+
                       return (
                         <tr key={d.id} className="delivery-row">
                           {/* Dispatch & Booking */}
@@ -825,16 +1218,17 @@ function MockDeliveryWorkspace() {
                                   </a>
                                 )}
                               </div>
-                            ) : canChange ? (
+                            ) : canAssign ? (
                               <Button
                                 type="button"
                                 variant="secondary"
-                                disabled={!!writeRefusal}
-                                  onClick={() => handleOpenAssign(d)}
+                                onClick={() => handleOpenAssign(d)}
                               >
                                 + Assign Rider
                               </Button>
-                            ) : <span>Rider unassigned</span>}
+                            ) : (
+                              <span style={{ fontSize: '12px', color: 'var(--text4)' }}>Unassigned</span>
+                            )}
                           </td>
 
                           {/* Status */}
@@ -861,9 +1255,14 @@ function MockDeliveryWorkspace() {
                                 at {d.deliveredAt.slice(11)}
                               </div>
                             )}
+                            {d.notes && d.status === 'Failed' && (
+                              <div style={{ fontSize: '10.5px', color: 'var(--st-danger-fg)', marginTop: '3px', maxWidth: 180 }}>
+                                {d.notes}
+                              </div>
+                            )}
                           </td>
 
-                          {/* Fee */}
+                          {/* Fee (Law 6: Hidden from Driver and Warehouse) */}
                           {canMoney && (
                             <td style={{ fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
                               {formatMoney(rupees(d.deliveryFeeNpr))}
@@ -897,38 +1296,77 @@ function MockDeliveryWorkspace() {
                                 <span>Slip</span>
                               </button>
 
-                              {canChange && d.status === 'Scheduled' && (
+                              {canAssign && d.status === 'Scheduled' && (
                                 <Button
                                   variant="secondary"
                                   size="sm"
-                                  disabled={!!writeRefusal}
                                   onClick={() => handleOpenAssign(d)}
                                 >
                                   Assign
                                 </Button>
                               )}
 
-                              {canChange && d.status === 'Ready' && (
+                              {canAssign && d.status !== 'Delivered' && d.status !== 'Failed' && (
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => setRiderModalTarget(d)}
+                                  title="Generate one-time rider link (T4-08/W49)"
+                                >
+                                  <Icon name="external_link" size={13} /> Rider
+                                </Button>
+                              )}
+
+                              {canReady && d.status === 'Scheduled' && (
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => handleMarkReady(d)}
+                                >
+                                  Ready
+                                </Button>
+                              )}
+
+                              {canTransit && d.status === 'Ready' && (
                                 <Button
                                   variant="primary"
                                   data-primary-verb
                                   size="sm"
-                                  disabled={!!writeRefusal}
+                                  disabled={!hasDriver}
                                   onClick={() => handleStartTransit(d)}
                                 >
                                   Dispatch
                                 </Button>
                               )}
 
-                              {canChange && d.status === 'In Transit' && (
+                              {canDeliver && d.status === 'In Transit' && (
                                 <Button
                                   variant="primary"
                                   data-primary-verb
                                   size="sm"
-                                  disabled={!!writeRefusal}
                                   onClick={() => handleOpenDeliver(d)}
                                 >
                                   Delivered ✓
+                                </Button>
+                              )}
+
+                              {canReschedule && (
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
+                                  onClick={() => handleOpenReschedule(d)}
+                                >
+                                  Change Time
+                                </Button>
+                              )}
+
+                      {canFail && (d.status === 'Scheduled' || d.status === 'Ready' || d.status === 'In Transit') && (
+                                <Button
+                                  variant="danger"
+                                  size="sm"
+                                  onClick={() => handleOpenFail(d)}
+                                >
+                                  Fail
                                 </Button>
                               )}
                             </div>
@@ -950,7 +1388,7 @@ function MockDeliveryWorkspace() {
               title={`Assign Driver / Rider — ${assignTarget.id}`}
             >
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-                {mutationError && <div role="alert">{mutationError}</div>}
+                {mutationError && <div role="alert" style={{ color: 'var(--st-danger-fg)' }}>{mutationError}</div>}
                 <div
                   style={{
                     padding: '12px 14px',
@@ -963,7 +1401,7 @@ function MockDeliveryWorkspace() {
                 >
                   Dispatch for booking <strong>{assignTarget.bookingNo}</strong> · {assignTarget.clientName}
                   <div style={{ color: 'var(--text3)', fontSize: '12px', marginTop: 2 }}>
-                    Destination: {assignTarget.address} ({assignTarget.neighborhood})
+                    Destination: {assignTarget.address} {assignTarget.neighborhood ? `(${assignTarget.neighborhood})` : ''}
                   </div>
                 </div>
 
@@ -974,7 +1412,7 @@ function MockDeliveryWorkspace() {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Suman Rai (Babin Staff) / Ramesh Thapa"
+                    placeholder="e.g. Suman Rai (Staff Driver) or Ramesh Thapa (Courier Rider)"
                     value={driverName}
                     onChange={(e) => setDriverName(e.target.value)}
                     style={{
@@ -1021,7 +1459,7 @@ function MockDeliveryWorkspace() {
                     type="text"
                     value={vehiclePlate}
                     onChange={(e) => setVehiclePlate(e.target.value)}
-                    placeholder="e.g. Ba 3 Cha 8821 (Scorpio Van) or Pathao 2-Wheeler"
+                    placeholder="e.g. Ba 3 Cha 8821 (Scorpio Van), Hired Bike, or Own Scooter"
                     style={{
                       width: '100%',
                       minHeight: '44px',
@@ -1039,8 +1477,8 @@ function MockDeliveryWorkspace() {
                   <Button variant="secondary" onClick={() => setAssignTarget(null)}>
                     Cancel
                   </Button>
-                  <Button variant="primary" onClick={handleSaveAssign} disabled={!!writeRefusal}>
-                    Save & Stage (Ready)
+                  <Button variant="primary" onClick={handleSaveAssign}>
+                    Save & Assign
                   </Button>
                 </div>
               </div>
@@ -1055,13 +1493,13 @@ function MockDeliveryWorkspace() {
               title={`Confirm Equipment Delivery — ${deliverTarget.id}`}
             >
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-                {mutationError && <div role="alert">{mutationError}</div>}
+                {mutationError && <div role="alert" style={{ color: 'var(--st-danger-fg)' }}>{mutationError}</div>}
                 <div
                   style={{
                     padding: '12px 14px',
                     borderRadius: 'var(--r-md)',
-                    background: 'rgba(46, 204, 143, 0.08)',
-                    border: '1px solid rgba(46, 204, 143, 0.3)',
+                    background: 'var(--surface2)',
+                    border: '1px solid var(--border)',
                     fontSize: '13px',
                     lineHeight: 1.5,
                   }}
@@ -1119,10 +1557,250 @@ function MockDeliveryWorkspace() {
                   <Button variant="secondary" onClick={() => setDeliverTarget(null)}>
                     Cancel
                   </Button>
-                  <Button variant="primary" onClick={handleConfirmDelivered} disabled={!!writeRefusal || !recipientName.trim()}>
+                  <Button
+                    variant="primary"
+                    data-primary-verb
+                    onClick={handleConfirmDelivered}
+                    disabled={recipientName.trim().length < 2}
+                  >
                     Confirm Delivery ✓
                   </Button>
                 </div>
+              </div>
+            </Modal>
+          )}
+
+          {/* Modal: Mark Failed */}
+          {failTarget && (
+            <Modal
+              isOpen
+              onClose={() => setFailTarget(null)}
+              title={`Mark Delivery Failed — ${failTarget.id}`}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+                {mutationError && <div role="alert" style={{ color: 'var(--st-danger-fg)' }}>{mutationError}</div>}
+                <div
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: 'var(--r-md)',
+                    background: 'var(--st-danger-bg)',
+                    color: 'var(--st-danger-fg)',
+                    fontSize: '13px',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Marking dispatch <strong>{failTarget.id}</strong> as Failed. Delivery failure is an immutable terminal state.
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>
+                    Failure Reason (At least 10 characters) *
+                  </label>
+                  <textarea
+                    rows={4}
+                    required
+                    value={failReason}
+                    onChange={(e) => setFailReason(e.target.value)}
+                    placeholder="e.g. Recipient phone switched off and shooting location gate locked after 45 minutes of waiting."
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: 'var(--r-btn)',
+                      background: 'var(--card)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text)',
+                      fontSize: '13px',
+                      fontFamily: 'inherit',
+                    }}
+                  />
+                  <div style={{ fontSize: '11px', color: failReason.trim().length >= 10 ? 'var(--text3)' : 'var(--st-danger-fg)', marginTop: 4 }}>
+                    {failReason.trim().length} / 10 minimum characters
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
+                  <Button variant="secondary" onClick={() => setFailTarget(null)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="danger"
+                    onClick={handleConfirmFailed}
+                    disabled={failReason.trim().length < 10}
+                  >
+                    Confirm Failure
+                  </Button>
+                </div>
+              </div>
+            </Modal>
+          )}
+
+          {/* Modal: Reschedule Delivery (T4-02, Ruling D8) */}
+          {rescheduleTarget && (
+            <Modal
+              isOpen
+              onClose={() => setRescheduleTarget(null)}
+              title={`Reschedule Dispatch — ${rescheduleTarget.id}`}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+                {mutationError && <div role="alert" style={{ color: 'var(--st-danger-fg)' }}>{mutationError}</div>}
+
+                <div
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: 'var(--r-md)',
+                    background: 'var(--surface2)',
+                    border: '1px solid var(--border)',
+                    fontSize: '13px',
+                    lineHeight: 1.5,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: 'var(--text)' }}>
+                    <Icon name="timer" size={14} />
+                    Booking #{rescheduleTarget.bookingNo} · {rescheduleTarget.clientName}
+                  </div>
+                  <div style={{ color: 'var(--text3)', fontSize: '12px', marginTop: 4 }}>
+                    Current schedule: <strong>{rescheduleTarget.scheduledDate} at {rescheduleTarget.scheduledTime}</strong>
+                  </div>
+                  <div
+                    style={{
+                      color: 'var(--info)',
+                      fontSize: '11.5px',
+                      marginTop: 6,
+                      padding: '4px 8px',
+                      background: 'var(--surface)',
+                      borderRadius: 4,
+                      border: '1px solid var(--border)',
+                    }}
+                  >
+                    ℹ <strong>Ruling D8:</strong> Rescheduling changes the dispatch departure time only. Booking rental dates and billing remain strictly unchanged.
+                  </div>
+                </div>
+
+                {!rescheduleWaLink ? (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-sm)' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text2)', marginBottom: 4 }}>
+                          New Scheduled Date *
+                        </label>
+                        <input
+                          type="date"
+                          value={rescheduleDate}
+                          onChange={(e) => setRescheduleDate(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            borderRadius: 'var(--r-btn)',
+                            border: '1px solid var(--border)',
+                            background: 'var(--surface)',
+                            color: 'var(--text)',
+                            fontSize: '13px',
+                            fontFamily: 'inherit',
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text2)', marginBottom: 4 }}>
+                          New Scheduled Time *
+                        </label>
+                        <input
+                          type="time"
+                          value={rescheduleTime}
+                          onChange={(e) => setRescheduleTime(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '8px 10px',
+                            borderRadius: 'var(--r-btn)',
+                            border: '1px solid var(--border)',
+                            background: 'var(--surface)',
+                            color: 'var(--text)',
+                            fontSize: '13px',
+                            fontFamily: 'inherit',
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text2)', marginBottom: 4 }}>
+                        Reason / Notes (optional)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Client requested 2:30 PM delivery, traffic delay..."
+                        value={rescheduleNotes}
+                        onChange={(e) => setRescheduleNotes(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '8px 10px',
+                          borderRadius: 'var(--r-btn)',
+                          border: '1px solid var(--border)',
+                          background: 'var(--surface)',
+                          color: 'var(--text)',
+                          fontSize: '13px',
+                          fontFamily: 'inherit',
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--sp-sm)', marginTop: 'var(--sp-sm)' }}>
+                      <Button variant="secondary" onClick={() => setRescheduleTarget(null)}>
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="primary"
+                        onClick={handleConfirmReschedule}
+                        disabled={rescheduleIsSaving || !rescheduleDate || !rescheduleTime}
+                      >
+                        {rescheduleIsSaving ? 'Rescheduling...' : 'Confirm Reschedule'}
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', padding: '8px 0' }}>
+                    <div style={{ color: 'var(--st-success-fg)', fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span>✓</span> Successfully rescheduled to {rescheduleDate} at {rescheduleTime}
+                    </div>
+
+                    <div style={{ fontSize: '12.5px', color: 'var(--text2)', lineHeight: 1.5 }}>
+                      A WhatsApp draft has been prepared with the updated departure time for staff to review and send (never automatically sent):
+                    </div>
+
+                    {rescheduleWaLink.href ? (
+                      <a
+                        href={rescheduleWaLink.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 8,
+                          padding: '10px 16px',
+                          borderRadius: 'var(--r-btn)',
+                          background: '#25D366',
+                          color: '#ffffff',
+                          textDecoration: 'none',
+                          fontWeight: 600,
+                          fontSize: '13.5px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <span>💬</span> Open WhatsApp Draft ({rescheduleTarget.clientPhone || 'Client'})
+                      </a>
+                    ) : (
+                      <div style={{ fontSize: '12px', color: 'var(--text4)', fontStyle: 'italic' }}>
+                        WhatsApp draft unavailable: {rescheduleWaLink.unavailable}
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--sp-sm)' }}>
+                      <Button variant="secondary" onClick={() => setRescheduleTarget(null)}>
+                        Done
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </Modal>
           )}
@@ -1133,12 +1811,12 @@ function MockDeliveryWorkspace() {
               isOpen
               onClose={() => {
                 setNewModalOpen(false)
-                setCreateError(null)
+                setMutationError(null)
               }}
               title="Create New Delivery Dispatch"
             >
               <form onSubmit={handleCreateDelivery} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {createError && (
+                {mutationError && (
                   <div
                     style={{
                       padding: '10px 14px',
@@ -1149,20 +1827,23 @@ function MockDeliveryWorkspace() {
                       fontWeight: 600,
                     }}
                   >
-                    {createError}
+                    {mutationError}
                   </div>
                 )}
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>
-                      Booking Number *
+                      Booking ID / Number *
                     </label>
                     <input
                       type="text"
                       required
-                      placeholder="e.g. BR-2616"
+                      placeholder="e.g. BR-2616 or UUID"
                       value={newBookingNo}
-                      onChange={(e) => setNewBookingNo(e.target.value)}
+                      onChange={(e) => {
+                        setNewBookingNo(e.target.value)
+                        setNewBookingId(e.target.value)
+                      }}
                       style={{
                         width: '100%',
                         minHeight: '44px',
@@ -1177,11 +1858,11 @@ function MockDeliveryWorkspace() {
                   </div>
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>
-                      Delivery Mode
+                      Delivery Leg
                     </label>
                     <select
-                      value={newMode}
-                      onChange={(e) => setNewMode(e.target.value as DeliveryMode)}
+                      value={newLeg}
+                      onChange={(e) => setNewLeg(e.target.value as 'Outbound' | 'Return')}
                       style={{
                         width: '100%',
                         minHeight: '44px',
@@ -1193,9 +1874,8 @@ function MockDeliveryWorkspace() {
                         fontSize: '13.5px',
                       }}
                     >
-                      <option value="Babin Delivery">Babin Delivery (Van / Staff)</option>
-                      <option value="Courier / Rider">Courier / Rider (Pathao / Cargo)</option>
-                      <option value="Self Pickup">Self Pickup</option>
+                      <option value="Outbound">Outbound (Warehouse → Client)</option>
+                      <option value="Return">Return (Client → Warehouse)</option>
                     </select>
                   </div>
                 </div>
@@ -1203,14 +1883,13 @@ function MockDeliveryWorkspace() {
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>
-                      Client Name *
+                      Rider / Carrier Name
                     </label>
                     <input
                       type="text"
-                      required
-                      placeholder="Production House or Director"
-                      value={newClientName}
-                      onChange={(e) => setNewClientName(e.target.value)}
+                      placeholder="e.g. Suman Rai / Pathao Courier"
+                      value={newRiderName}
+                      onChange={(e) => setNewRiderName(e.target.value)}
                       style={{
                         width: '100%',
                         minHeight: '44px',
@@ -1225,14 +1904,14 @@ function MockDeliveryWorkspace() {
                   </div>
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>
-                      Client Phone
+                      Rider Contact Phone
                     </label>
                     <input
                       type="tel"
                       inputMode="tel"
                       placeholder="+977 98..."
-                      value={newClientPhone}
-                      onChange={(e) => setNewClientPhone(e.target.value)}
+                      value={newRiderPhone}
+                      onChange={(e) => setNewRiderPhone(e.target.value)}
                       style={{
                         width: '100%',
                         minHeight: '44px',
@@ -1247,39 +1926,16 @@ function MockDeliveryWorkspace() {
                   </div>
                 </div>
 
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>
-                    Delivery Full Address *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Street, Landmark, Ward, City"
-                    value={newAddress}
-                    onChange={(e) => setNewAddress(e.target.value)}
-                    style={{
-                      width: '100%',
-                      minHeight: '44px',
-                      padding: '8px 12px',
-                      borderRadius: 'var(--r-btn)',
-                      background: 'var(--card)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--text)',
-                      fontSize: '13.5px',
-                    }}
-                  />
-                </div>
-
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>
-                      Neighborhood / Area
+                      Vehicle / Transportation
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. Jhamsikhel, Naxal, Baluwatar"
-                      value={newNeighborhood}
-                      onChange={(e) => setNewNeighborhood(e.target.value)}
+                      placeholder="e.g. Ba 3 Cha 8821 (Scorpio Van), Hired Bike"
+                      value={newVehicle}
+                      onChange={(e) => setNewVehicle(e.target.value)}
                       style={{
                         width: '100%',
                         minHeight: '44px',
@@ -1322,33 +1978,11 @@ function MockDeliveryWorkspace() {
                   </div>
                 </div>
 
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>
-                    Logistics & Cargo Notes
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={newNotes}
-                    onChange={(e) => setNewNotes(e.target.value)}
-                    placeholder="Security check details, floor number, fragile equipment instructions…"
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: 'var(--r-btn)',
-                      background: 'var(--card)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--text)',
-                      fontSize: '13px',
-                      fontFamily: 'inherit',
-                    }}
-                  />
-                </div>
-
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
                   <Button variant="secondary" onClick={() => setNewModalOpen(false)}>
                     Cancel
                   </Button>
-                  <Button variant="primary" type="submit" disabled={!!writeRefusal}>
+                  <Button variant="primary" type="submit">
                     Create Dispatch Order
                   </Button>
                 </div>
@@ -1396,7 +2030,7 @@ function MockDeliveryWorkspace() {
                   <div><strong>Vehicle Plate:</strong> {gatePassSlip.vehiclePlate || 'N/A'}</div>
                 </div>
 
-                {canMoney && gatePassSlip.notes && (
+                {gatePassSlip.notes && (
                   <div style={{ border: '1px dashed var(--border)', padding: '10px 12px', borderRadius: 'var(--r-xs)', marginBottom: '20px', background: 'var(--surface2)' }}>
                     <strong>Special Instructions:</strong> {gatePassSlip.notes}
                   </div>
@@ -1428,7 +2062,451 @@ function MockDeliveryWorkspace() {
               </div>
             </Modal>
           )}
+
+          {/* Modal: Send To Rider (T4-08, W49) */}
+          {riderModalTarget && (
+            <SendToRiderModal
+              isOpen={!!riderModalTarget}
+              onClose={() => setRiderModalTarget(null)}
+              jobId={riderModalTarget.id}
+              bookingNo={riderModalTarget.bookingNo}
+              clientName={riderModalTarget.clientName}
+              destination={riderModalTarget.address}
+            />
+          )}
         </div>
+      </PageBody>
+    </PageShell>
+  )
+}
+
+// Route Planner View (T4-09) — drag-to-reorder, Google Maps links, map pins
+function RoutePlannerView() {
+  const { user } = useAuth()
+  const role = user?.role ?? null
+  const canMoney = useCanViewMoney()
+  const canViewRoute = canViewDayRoute(role)
+  const canSetRoute = canSetDeliveryRoutePosition(role)
+  const canSetPin = canSetClientMapPin(role)
+  const { branchId } = user ?? { branchId: '' }
+  const { showSuccessToast, showErrorToast } = useToast()
+
+  const [date, setDate] = useState(() => businessDayAd())
+  const [loading, setLoading] = useState(false)
+  const [stops, setStops] = useState<DayRouteStop[]>([])
+  const [mapLinks, setMapLinks] = useState<Array<{ stops: string[]; url: string }>>([])
+  const [fetchError, setFetchError] = useState<string | null>(null)
+  const [generatingLinks, setGeneratingLinks] = useState(false)
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [pinModalOpen, setPinModalOpen] = useState(false)
+  const [pinTarget, setPinTarget] = useState<DayRouteStop | null>(null)
+  const [pinLat, setPinLat] = useState('')
+  const [pinLng, setPinLng] = useState('')
+  const [pinSaving, setPinSaving] = useState(false)
+
+  const loadRoute = useCallback(async () => {
+    if (!branchId || !canViewRoute) return
+    setLoading(true)
+    setFetchError(null)
+    try {
+      const { result } = await getDayRoute({ branchId, date })
+      setStops(result.stops)
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : 'Failed to load route')
+    } finally {
+      setLoading(false)
+    }
+  }, [branchId, date, canViewRoute])
+
+  const generateLinks = useCallback(async () => {
+    if (!branchId) return
+    setGeneratingLinks(true)
+    try {
+      const { result } = await generateMapLinks({ branchId, date })
+      setMapLinks(result.links)
+      showSuccessToast(`Generated ${result.links.length} map link${result.links.length !== 1 ? 's' : ''}`)
+    } catch (err) {
+      showErrorToast(err instanceof Error ? err.message : 'Failed to generate map links')
+    } finally {
+      setGeneratingLinks(false)
+    }
+  }, [branchId, date, showSuccessToast, showErrorToast])
+
+  const handleDragStart = (e: React.DragEvent, stopId: string) => {
+    if (!canSetRoute) {
+      e.preventDefault()
+      return
+    }
+    setDraggingId(stopId)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }
+
+  const handleDrop = async (e: React.DragEvent, targetId: string) => {
+    e.preventDefault()
+    if (!draggingId || draggingId === targetId) return
+
+    const dragIndex = stops.findIndex((s) => s.id === draggingId)
+    const targetIndex = stops.findIndex((s) => s.id === targetId)
+    if (dragIndex === -1 || targetIndex === -1) return
+
+    const newStops = [...stops]
+    const [dragged] = newStops.splice(dragIndex, 1)
+    newStops.splice(targetIndex, 0, dragged)
+
+    // Update route positions
+    const updatedStops = newStops.map((s, i) => ({ ...s, routePosition: i + 1 }))
+    setStops(updatedStops)
+
+    // Persist each changed position
+    for (const stop of updatedStops) {
+      try {
+        await setRoutePosition({ jobId: stop.id, routePosition: stop.routePosition! })
+      } catch {
+        // Ignore individual failures; user can retry
+      }
+    }
+
+    showSuccessToast('Route order updated')
+  }
+
+  const handleDragEnd = () => {
+    setDraggingId(null)
+  }
+
+  const openPinModal = (stop: DayRouteStop) => {
+    if (!canSetPin) return
+    setPinTarget(stop)
+    setPinLat(stop.mapPinLat?.toString() ?? '')
+    setPinLng(stop.mapPinLng?.toString() ?? '')
+    setPinModalOpen(true)
+  }
+
+  const savePin = async () => {
+    if (!pinTarget) return
+    const lat = Number(pinLat)
+    const lng = Number(pinLng)
+    if (Number.isNaN(lat) || Number.isNaN(lng)) {
+      showErrorToast('Please enter valid latitude and longitude')
+      return
+    }
+    setPinSaving(true)
+    try {
+      await setClientMapPin({ clientId: pinTarget.bookingId, lat, lng })
+      showSuccessToast('Map pin saved')
+      setPinModalOpen(false)
+      loadRoute()
+    } catch (err) {
+      showErrorToast(err instanceof Error ? err.message : 'Failed to save map pin')
+    } finally {
+      setPinSaving(false)
+    }
+  }
+
+  if (!canViewRoute) {
+    return (
+      <PageShell>
+        <PageHeader
+          title="Route Planner"
+          subtitle={`Route for ${date}`}
+          action={
+            <DateField
+              value={date}
+              onChange={setDate}
+              disabled={loading}
+            />
+          }
+        />
+        <PageBody>
+          <EmptyState
+            icon="lock"
+            title="Access denied"
+            message="Your role cannot view the route planner."
+          />
+        </PageBody>
+      </PageShell>
+    )
+  }
+
+  return (
+    <PageShell>
+      <PageHeader
+        title="Route Planner"
+        subtitle={`Route for ${date}`}
+        action={
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <DateField
+              value={date}
+              onChange={(d) => { setDate(d); loadRoute(); }}
+              disabled={loading}
+            />
+            <Button
+              variant="primary"
+              onClick={loadRoute}
+              disabled={loading}
+              loading={loading}
+            >
+              Refresh
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={generateLinks}
+              disabled={generatingLinks || stops.length === 0}
+              loading={generatingLinks}
+            >
+              Generate Map Links
+            </Button>
+          </div>
+        }
+      />
+      <PageBody>
+        {fetchError && (
+          <div style={{ padding: '12px', background: 'var(--st-danger-bg)', border: '1px solid var(--st-danger-border)', borderRadius: '8px', color: 'var(--st-danger-fg)', marginBottom: '16px' }}>
+            {fetchError}
+          </div>
+        )}
+
+        {mapLinks.length > 0 && (
+          <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--surface2)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 600 }}>Google Maps Links</h3>
+            <p style={{ margin: '0 0 12px', fontSize: '12px', color: 'var(--text3)' }}>
+              Tap a link to open in Google Maps. Phone browsers support up to 3 stops per link.
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {mapLinks.map((link, i) => (
+                <a
+                  key={i}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    padding: '8px 12px',
+                    background: 'var(--primary)',
+                    color: 'white',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    textDecoration: 'none',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Link {i + 1} ({link.stops.length} stops)
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {loading ? (
+          <LoadingSkeleton count={5} />
+        ) : stops.length === 0 ? (
+          <EmptyState
+            icon="map"
+            title="No deliveries scheduled"
+            message="No active delivery jobs for this date. Check another date or create a dispatch."
+          />
+        ) : (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+            }}
+            role="list"
+            aria-label="Delivery route stops"
+          >
+            {stops.map((stop, index) => (
+              <div
+                key={stop.id}
+                draggable={canSetRoute}
+                onDragStart={(e) => handleDragStart(e, stop.id)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, stop.id)}
+                onDragEnd={handleDragEnd}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 16px',
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  opacity: draggingId === stop.id ? 0.5 : 1,
+                  cursor: canSetRoute ? 'grab' : 'default',
+                  transition: 'opacity 0.1s',
+                }}
+                role="listitem"
+                aria-grabbed={draggingId === stop.id}
+              >
+                {/* Drag handle / position */}
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'var(--surface2)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    fontWeight: 600,
+                    fontSize: '14px',
+                    color: draggingId === stop.id ? 'var(--primary)' : 'var(--text)',
+                  }}
+                  aria-label={`Stop ${index + 1}`}
+                >
+                  {index + 1}
+                </div>
+
+                {/* Status badge */}
+                <div
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: STATUS_BADGE_STYLE[stop.status as DeliveryStatus]?.bg ?? 'var(--st-neutral-bg)',
+                    color: STATUS_BADGE_STYLE[stop.status as DeliveryStatus]?.color ?? 'var(--text)',
+                    border: STATUS_BADGE_STYLE[stop.status as DeliveryStatus]?.border ?? '1px solid var(--border)',
+                    borderRadius: '6px',
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                  title={stop.status}
+                >
+                  <Icon name={STATUS_BADGE_STYLE[stop.status as DeliveryStatus]?.icon ?? 'timer'} size={12} />
+                </div>
+
+                {/* Client info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span style={{ fontWeight: 600, fontSize: '14px' }}>{stop.clientName}</span>
+                    <span style={{ fontSize: '12px', color: 'var(--text3)' }}>{stop.bookingNo}</span>
+                    <span style={{ fontSize: '12px', color: 'var(--text3)' }}>{stop.scheduledAt.slice(11, 16)}</span>
+                    {stop.zoneName && (
+                      <span style={{ fontSize: '11px', padding: '2px 6px', background: 'var(--surface2)', borderRadius: '4px', color: 'var(--text2)' }}>
+                        {stop.zoneName}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {stop.address}, {stop.neighborhood}
+                    {stop.mapPinLat && stop.mapPinLng && (
+                      <> · 📍 Pinned</>
+                    )}
+                  </div>
+                </div>
+
+                {/* Map pin button */}
+                {canSetPin && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => openPinModal(stop)}
+                    disabled={pinSaving}
+                    title={stop.mapPinLat ? 'Edit map pin' : 'Drop map pin'}
+                    aria-label={stop.mapPinLat ? 'Edit map pin' : 'Drop map pin'}
+                  >
+                    <Icon name={stop.mapPinLat ? 'map_pin' : 'map_pin_plus'} size={18} />
+                  </Button>
+                )}
+
+                {/* Open in Maps */}
+                {stop.mapPinLat && stop.mapPinLng && (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${stop.mapPinLat},${stop.mapPinLng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      padding: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'var(--primary)',
+                      textDecoration: 'none',
+                    }}
+                    title="Open in Google Maps"
+                    aria-label="Open in Google Maps"
+                  >
+                    <Icon name="external_link" size={18} />
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Pin Modal */}
+        {pinModalOpen && pinTarget && (
+          <Modal
+            isOpen
+            onClose={() => setPinModalOpen(false)}
+            title="Drop Map Pin"
+            size="sm"
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <p style={{ margin: 0, fontSize: '14px', color: 'var(--text2)' }}>
+                Enter coordinates for <strong>{pinTarget.clientName}</strong> ({pinTarget.address}, {pinTarget.neighborhood})
+              </p>
+              <p style={{ margin: 0, fontSize: '12px', color: 'var(--text3)' }}>
+                Paste from Google Maps (right-click → "What's here?") or use a coordinate finder.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, marginBottom: '4px' }}>
+                    Latitude
+                  </label>
+                  <input
+                    type="text"
+                    value={pinLat}
+                    onChange={(e) => setPinLat(e.target.value)}
+                    placeholder="e.g., 27.7172"
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '1px solid var(--border)',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      background: 'var(--surface)',
+                      color: 'var(--text)',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, marginBottom: '4px' }}>
+                    Longitude
+                  </label>
+                  <input
+                    type="text"
+                    value={pinLng}
+                    onChange={(e) => setPinLng(e.target.value)}
+                    placeholder="e.g., 85.3240"
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '1px solid var(--border)',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      background: 'var(--surface)',
+                      color: 'var(--text)',
+                    }}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
+                <Button variant="secondary" onClick={() => setPinModalOpen(false)}>Cancel</Button>
+                <Button variant="primary" onClick={savePin} loading={pinSaving}>Save</Button>
+              </div>
+            </div>
+          </Modal>
+        )}
       </PageBody>
     </PageShell>
   )
