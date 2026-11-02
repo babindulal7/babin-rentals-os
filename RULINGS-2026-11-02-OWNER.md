@@ -23,19 +23,19 @@
 | T2-09 / O-16 | **Scanner / label-printer selection approved in principle**. | Exact models and purchase prices were not specified; only order after a concrete compatible shortlist is selected. |
 | Lanes A/B/C | **All three development lanes may proceed** with their assigned independent tasks. | Approval is for source work, not production migration, merge, billing, staging expense, or deployment. |
 
-## Cancellation policy — owner answer received, timing requires clarification (T3-03; O-10/O-13)
+## Cancellation policy — booking-duration threshold clarified (T3-03; O-10/O-13)
 
 Babin specified all of these:
 - Charge **one rental day's fee** for a cancellation **within 24 hours**.
-- A **50% cancellation charge** for a case described as **"more than 2 days"**.
+- A **50% cancellation charge applies to a booking whose rental duration is **more than 2 rental days** (owner clarified 2 Nov). This is **not** a rule about cancelling more than 48 hours before pickup.
 - Staff may **override** a suggested cancellation fee.
 
-The exact reference point of "more than 2 days" (before pickup? after booking?) and the fee for cancellations between 24 and 48 hours are **not defined** by that answer. "One-day charge" must use the authoritative day-pricing engine; do not invent a flat amount. Leave unconfirmed tier thresholds unconfigured rather than charging silently. Existing plan default for percentage-fee base is booking rental total before VAT, pending any later explicit change. Existing RBAC must still restrict who can override charges; require reason and audit, and preserve immutable payment/refund reversal behavior. VAT treatment of a cancellation fee still needs accountant approval.
+**Clarification:** "more than 2 days" refers to **booking duration**, not notice given before pickup. "One-day charge" must use the authoritative day-pricing engine; do not invent a flat amount. Existing plan default for percentage-fee base is booking rental total before VAT, pending any later explicit change. **Still undecided:** what "cancelled within 24 hours" is measured from (booking creation vs scheduled pickup), and which fee prevails when a >2-day rental is cancelled within that 24-hour period. For 1–2-day rentals cancelled outside the 24-hour period, fee policy is not specified. Leave these cases unconfigured rather than charging silently. Existing RBAC must still restrict who can override charges; require reason and audit, and preserve immutable payment/refund reversal behavior. VAT treatment of a cancellation fee still needs accountant approval.
 
 ## Required follow-up decisions / verification (do not guess)
 
 1. **O-17 — tax-invoice issuance timing:** must a VAT invoice be issued at first advance, at handover, or at full payment? Confirm with accountant under applicable Nepal law. This is **different** from the answered rule for *additional bills after issuance*.
-2. **Cancellation:** Is 50% for cancellation **more than 48 hours before pickup**? What fee applies **24–48 hours before pickup**, and what are exact authorized override roles? Owner must specify.
+2. **Cancellation:** The 50% threshold is **rental duration >2 days**, already answered. Still confirm whether the one-day rule applies when cancellation occurs within 24 hours **after booking creation** or **before scheduled pickup**; which rule takes precedence when both 50% and one-day apply; what applies to bookings of 1–2 days cancelled outside that window; and authorized override roles.
 3. **Elite annual fixed fee:** supply the NPR amount and whether VAT applies.
 4. **Delivery:** define inside/outside boundary; provide van prices for each configured area and how far-valley/out-of-valley quotes work.
 5. **IRD and non-VAT:** accountant must verify e-billing applicability, eligible non-VAT supplies, invoice layout, cancellation VAT, and crew/service 1.5% withholding treatment before live release.
