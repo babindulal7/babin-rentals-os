@@ -1,5 +1,40 @@
 # Progress Log
 
+## 2026-11-02 — main's red gates fixed (typecheck, UI copy, server-contracts) and verified on the self-hosted Windows runner
+
+**Did**
+- `e111ca56` — **main was red at `bfa6ce6d`: `tsc` 15 errors, `lint:ui-copy` 2.** Route Planner (`DeliveryWorkspace.tsx`, `getDayRoute.ts`) was written against APIs that do not exist. Branch id now comes from `users.branch_id` through the new `src/modules/operations/useStaffBranchId.ts` (`AuthUser` has no `branchId`, so the route could never load); actions' outputs read as `stops` / `links` (not `{ result }`); failures are inline (Law 12, `useToast` has only `showSuccessToast`); `PageHeader` `description`/`actions`, `DateField` `ariaLabel`, `EmptyState` `description` + Icon node, `LoadingSkeleton` `rows`, registry icons; dragged-stop guard; blank pin coordinates rejected (`Number('')` is 0); route reloads on date change. Two "(Law 3…)" strings removed from staff copy in `RetireMembershipPlanModal.tsx` and `UpgradeTierModal.tsx`.
+- `c5580ce4` — **`test:server-contracts` was red since the T8-04 membership migrations (0195–0198) merged**: `test-unit-lifecycle-and-contracts.mjs` inserted a `Cinematographer` plan that 0195 now seeds (`membership_plans_level_key`), expected "Permission denied" where the RPC now says "Only Coordinator or above can change a client membership", and read `result.id` where the RPC returns `membership_id`. Test file only; no migration or application code changed.
+- Registered a GitHub Actions runner (`DESKTOP-99FC3AO`, labels `self-hosted, Windows, X64`, started by hand with `run.cmd`, not a service) and switched `ci.yml` to it on branch `ci/windows-self-hosted-runner` (fork PRs skipped, `workflow_dispatch`, 120-minute timeout). **That change is not on `main`**: `main`'s `ci.yml` still says `ubuntu-latest`, and hosted minutes are exhausted.
+
+**Ruled**
+- Nothing new on `main`. The ruling that CI is back on (`RULINGS-2026-11-02-ci.md`, C1–C5, and the doc edits that say so) lives on branch `claude/equipment-draft-preview-rename-a5f063`, not on `main`; `CLAUDE.md` / `PLAN.md` / `AGENTS.md` on `main` still say CI is off.
+
+**Verified**
+- **Full CI on the runner, green:** branch `ci/verify-contracts-fix` at `f0b72db1` (= `main` at `e111ca56` + the `ci.yml` change + the `c5580ce4` test fix) — runner log `Job result after all job steps finish: Succeeded`, all 22 steps ran for real durations (none skipped), no non-zero exit, ~29 min, including PGlite, financial integrity, security, lifecycle, server contracts, partial return, build and coverage. Source is the runner's own log on the PC; GitHub's run page was not seen (`gh` not logged in).
+- Earlier runs, for the record: the first run (35-min limit) was cancelled at the Test step; a run of `bfa6ce6d` failed Typecheck; a run of `f393e1c6` passed Typecheck/Lint/guards and was cancelled mid-Test when someone re-ran an older run on the same ref (concurrency group), then `server-contracts` failed on the drift above until `c5580ce4`.
+- Local: `tsc` 0; `eslint` 0 at `e111ca56`; `lint:ui-copy`, `lint:shell`, `lint:progress`, `check:contrast`, `test:local-api-guards`, receipt test pass; `test:server-contracts` 58/58 and `test:partial-return` 58/58; `npm run build` ok; operations/delivery tests 237 and client tests 169 pass.
+- **Not verified:** the Route Planner in a browser (mock mode returns no stops); a draft PR for the CI change (none exists). **`main` at `db45dae8`/`c5580ce4` is red on ESLint: 51 `jsx-a11y` errors from another session's commit "Add jsx-a11y linting…", none in files touched here** — left for that session; CI on current `main` would stop at Lint. The full-CI run above does not include that commit.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 86 / 86 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 67 / 67 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 206 files · check:pglite not run this session (pass --migrations to run). Suite: NOT VERIFIED — invalid test receipt. Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed. Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **Other session:** fix the 51 `jsx-a11y` ESLint errors on `main` (`npm run lint`), or CI stops at Lint.
+- **Babin:** merge `ci/windows-self-hosted-runner` (re-merge `main` first) so CI runs on `main`; the CI-on ruling and doc edits on `claude/equipment-draft-preview-rename-a5f063` are not on `main` yet. Register the runner as a Windows service (admin shell, fresh token) so CI does not depend on an open window. Do not use "Re-run" on an old run while a newer one is in progress.
+- Drive the Route Planner in `npm run dev` against a branch with real data (sign in as a role that can view routes) — it has never been seen on screen.
+- Delete the throwaway branches `ci/verify-fix-e111ca56` and `ci/verify-contracts-fix`.
+
 ## 2026-11-02 — T1-15 renumbered 0186 → 0208 on top of main (Lane A · collision fix)
 
 **Did**
