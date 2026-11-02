@@ -1,5 +1,43 @@
 # Progress Log
 
+## 2026-11-03 — main red again after two sessions' a11y fixes collided; fixed on one branch and green on the self-hosted runner (51 jsx-a11y errors → 0 included)
+
+**Did**
+- **51 `jsx-a11y` ESLint errors → 0 with real behaviour, no rule disabled** (`e8b0d99c`, `a2c6873c`; merged to `main` by PR #70 as `a4372434`). Escape now closes `EvidenceThumbnail` and `CreationDrawer` (neither had any); menus and the date grid are focusable; option rows (`CommandPalette`, `Select`, `AddItemPanel`) select on Enter/Space and ignore keys from nested controls; the booking conflict row is a disclosure with `aria-expanded`; nine empty column headers got `sr-only` names; `ScannerFab`'s silent video-only viewfinder is `muted` + named (no fake captions track); `ClientCombobox`'s outer wrapper was a second `role="listbox"` (invalid ARIA, 2 placement tests red) and is now `role="presentation"`. PR #70 was merged by the `babindulal7` account one minute after its last push, before CI finished — not by this session.
+- **CI #1005 on `main` (`39b053d0`) failed Typecheck: `TS17001` duplicate JSX attributes** in `InputGroup.tsx` and the `AddItemPanel` serial panel. Cause: commit `74a9536f` ("Add Electron secure storage and fix a11y lint errors", another session, 00:00) fixed the same elements independently of `a4372434`; the merge kept both. Kept the other session's complete versions and removed mine (`2dec45d6`).
+- That same collision left two `eslint-disable jsx-a11y/...` comments (`shadcn/pagination.tsx`, `ui/Charts.tsx`) that became unused and failed `--max-warnings 0`; removed (`2dec45d6`). **No `jsx-a11y` suppression remains in `src`.**
+- **Real bug from the other session's change:** the `InputGroup` addon became `role="button"`, and its mousedown handler skipped anything inside a `[role="button"]`, so it matched the addon itself and never focused the input (`cossPrimitives` "transfers focus to input when clicking on non-interactive addon" was red on `main`). Only a different interactive element between the target and the addon now counts (`90f5a1b6`).
+- **`lint:shell` was red on `main` since the T1-15 switch-user commit `9e5bc9b9`** (native `window.confirm` in `Header.tsx` and `ScreenLock.tsx`). The fix on `main`'s lineage is `3e79a846` (another session), which is **byte-identical** to this session's `fix/shell-native-confirm` (`4d094b7b`); merged in here (`1ebc0324`). Header uses `ConfirmDialog`; the lock screen confirms inline because it sits at `--z-system`, above the modal layer.
+
+**Ruled**
+- Nothing new. No product, permission, money or migration decision was made.
+
+**Verified**
+- **Green on the runner:** run `41514544707`, branch `fix/main-green-20261103`, commit `1ebc0324` (= `main` `39b053d0` + the fixes above) — runner log `Job result after all job steps finish: Succeeded`, all 22 steps ran for real durations, no non-zero exit, ~32 min, including Typecheck, Lint, local API guards, full mock tests, PGlite, financial integrity, security, lifecycle, server contracts, partial return, `lint:shell`, `lint:ui-copy`, contrast, Build and Coverage plus both artifact uploads. Source: the runner's own log on `DESKTOP-99FC3AO`; GitHub's run page was not seen (`gh` not logged in, repo private).
+- Earlier green run of the same confirm fix on the older lineage: `41487111932` (`4d094b7b`) and `41493258321` (`d7390aa9`).
+- Red before this: CI #1005 (`39b053d0`) failed Typecheck (2 × `TS17001`); runs of `a4372434` and PR #70 failed at `lint:shell`.
+- Local on the final head: `tsc` 0; `eslint` 0; `lint:shell` 864 files; `lint:ui-copy`, `lint:progress`, `check:contrast`, `test:local-api-guards` and the receipt test pass; `cossPrimitives` 5/5.
+- **Not verified:** none of the changed components has been driven in a browser (Escape on the evidence viewer and drawer, the conflict-row disclosure, the lock-screen confirmation, the input-group addon focus). A `RecordForm` focus test failed 3 times under full-suite CPU load earlier and 0 of 42 times alone; its cause is unproven.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 86 / 86 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 67 / 67 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 206 files · check:pglite not run this session (pass --migrations to run). Suite: NOT VERIFIED — invalid test receipt. Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed. Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **Babin:** merge `fix/main-green-20261103` (it carries the other session's `3e79a846`). Until then `main` is red (Typecheck, ESLint, `lint:shell`, `cossPrimitives`). `fix/shell-native-confirm` and `fix/shell-native-confirm-current-main-20261103` are now redundant and can be deleted.
+- **Babin / sessions:** two sessions editing the same a11y code produced the collision. Before another bulk lint pass, agree who owns it and run `npm run lint` + `tsc` on the merged tree before merging; check whether auto-merge is on (PR #70 merged within a minute of its last push).
+- Drive the changed components with a keyboard in `npm run dev`; none has been seen on screen.
+- Stale docs on `main`: `CLAUDE.md` / `PLAN.md` / `AGENTS.md` still say CI is off; `RULINGS-2026-11-02-ci.md` exists only on `claude/equipment-draft-preview-rename-a5f063`. Register the runner as a Windows service so CI does not depend on an open window.
+
 ## 2026-11-02 — main's red gates fixed (typecheck, UI copy, server-contracts) and verified on the self-hosted Windows runner
 
 **Did**
