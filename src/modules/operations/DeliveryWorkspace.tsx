@@ -22,6 +22,9 @@ import {
   canAssignDeliveryDriver,
   canTransitionDeliveryJob,
   canRescheduleDeliveryJob,
+  canSetDeliveryRoutePosition,
+  canSetClientMapPin,
+  canViewDayRoute,
 } from '../../lib/rbac'
 import {
   fetchDeliveries,
@@ -34,6 +37,11 @@ import {
   assignDeliveryDriver,
   transitionDeliveryJob,
   rescheduleDeliveryJob,
+  setRoutePosition,
+  setClientMapPin,
+  getDayRoute,
+  generateMapLinks,
+  type DayRouteStop,
 } from '../../actions/delivery'
 import { buildDeliveryRescheduleAction } from '../../lib/whatsappActions'
 import { useDomainEvent } from '../../events/useDomainEvent'
@@ -51,7 +59,7 @@ const STATUS_BADGE_STYLE: Record<DeliveryStatus, { bg: string; color: string; bo
 }
 
 type ViewMode = 'table' | 'kanban'
-type WorkspaceTab = 'dispatches' | 'transport'
+type WorkspaceTab = 'dispatches' | 'transport' | 'route'
 
 export function DeliveryWorkspace() {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('dispatches')
@@ -66,6 +74,20 @@ export function DeliveryWorkspace() {
           <span style={{ fontSize: '12px', color: 'var(--text3)' }}>Viewing Transport Overview Plans</span>
         </div>
         <LiveTransportPlans />
+      </div>
+    )
+  }
+
+  if (activeTab === 'route') {
+    return (
+      <div>
+        <div style={{ padding: '8px 16px', background: 'var(--surface2)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Button variant="secondary" size="sm" onClick={() => setActiveTab('dispatches')}>
+            ← Back to Delivery Dispatches
+          </Button>
+          <span style={{ fontSize: '12px', color: 'var(--text3)' }}>Viewing Route Planner</span>
+        </div>
+        <RoutePlannerView />
       </div>
     )
   }
@@ -2053,6 +2075,438 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
             />
           )}
         </div>
+      </PageBody>
+    </PageShell>
+  )
+}
+
+// Route Planner View (T4-09) — drag-to-reorder, Google Maps links, map pins
+function RoutePlannerView() {
+  const { user } = useAuth()
+  const role = user?.role ?? null
+  const canMoney = useCanViewMoney()
+  const canViewRoute = canViewDayRoute(role)
+  const canSetRoute = canSetDeliveryRoutePosition(role)
+  const canSetPin = canSetClientMapPin(role)
+  const { branchId } = user ?? { branchId: '' }
+  const { showSuccessToast, showErrorToast } = useToast()
+
+  const [date, setDate] = useState(() => businessDayAd())
+  const [loading, setLoading] = useState(false)
+  const [stops, setStops] = useState<DayRouteStop[]>([])
+  const [mapLinks, setMapLinks] = useState<Array<{ stops: string[]; url: string }>>([])
+  const [fetchError, setFetchError] = useState<string | null>(null)
+  const [generatingLinks, setGeneratingLinks] = useState(false)
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [pinModalOpen, setPinModalOpen] = useState(false)
+  const [pinTarget, setPinTarget] = useState<DayRouteStop | null>(null)
+  const [pinLat, setPinLat] = useState('')
+  const [pinLng, setPinLng] = useState('')
+  const [pinSaving, setPinSaving] = useState(false)
+
+  const loadRoute = useCallback(async () => {
+    if (!branchId || !canViewRoute) return
+    setLoading(true)
+    setFetchError(null)
+    try {
+      const { result } = await getDayRoute({ branchId, date })
+      setStops(result.stops)
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : 'Failed to load route')
+    } finally {
+      setLoading(false)
+    }
+  }, [branchId, date, canViewRoute])
+
+  const generateLinks = useCallback(async () => {
+    if (!branchId) return
+    setGeneratingLinks(true)
+    try {
+      const { result } = await generateMapLinks({ branchId, date })
+      setMapLinks(result.links)
+      showSuccessToast(`Generated ${result.links.length} map link${result.links.length !== 1 ? 's' : ''}`)
+    } catch (err) {
+      showErrorToast(err instanceof Error ? err.message : 'Failed to generate map links')
+    } finally {
+      setGeneratingLinks(false)
+    }
+  }, [branchId, date, showSuccessToast, showErrorToast])
+
+  const handleDragStart = (e: React.DragEvent, stopId: string) => {
+    if (!canSetRoute) {
+      e.preventDefault()
+      return
+    }
+    setDraggingId(stopId)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }
+
+  const handleDrop = async (e: React.DragEvent, targetId: string) => {
+    e.preventDefault()
+    if (!draggingId || draggingId === targetId) return
+
+    const dragIndex = stops.findIndex((s) => s.id === draggingId)
+    const targetIndex = stops.findIndex((s) => s.id === targetId)
+    if (dragIndex === -1 || targetIndex === -1) return
+
+    const newStops = [...stops]
+    const [dragged] = newStops.splice(dragIndex, 1)
+    newStops.splice(targetIndex, 0, dragged)
+
+    // Update route positions
+    const updatedStops = newStops.map((s, i) => ({ ...s, routePosition: i + 1 }))
+    setStops(updatedStops)
+
+    // Persist each changed position
+    for (const stop of updatedStops) {
+      try {
+        await setRoutePosition({ jobId: stop.id, routePosition: stop.routePosition! })
+      } catch {
+        // Ignore individual failures; user can retry
+      }
+    }
+
+    showSuccessToast('Route order updated')
+  }
+
+  const handleDragEnd = () => {
+    setDraggingId(null)
+  }
+
+  const openPinModal = (stop: DayRouteStop) => {
+    if (!canSetPin) return
+    setPinTarget(stop)
+    setPinLat(stop.mapPinLat?.toString() ?? '')
+    setPinLng(stop.mapPinLng?.toString() ?? '')
+    setPinModalOpen(true)
+  }
+
+  const savePin = async () => {
+    if (!pinTarget) return
+    const lat = Number(pinLat)
+    const lng = Number(pinLng)
+    if (Number.isNaN(lat) || Number.isNaN(lng)) {
+      showErrorToast('Please enter valid latitude and longitude')
+      return
+    }
+    setPinSaving(true)
+    try {
+      await setClientMapPin({ clientId: pinTarget.bookingId, lat, lng })
+      showSuccessToast('Map pin saved')
+      setPinModalOpen(false)
+      loadRoute()
+    } catch (err) {
+      showErrorToast(err instanceof Error ? err.message : 'Failed to save map pin')
+    } finally {
+      setPinSaving(false)
+    }
+  }
+
+  if (!canViewRoute) {
+    return (
+      <PageShell>
+        <PageHeader
+          title="Route Planner"
+          subtitle={`Route for ${date}`}
+          action={
+            <DateField
+              value={date}
+              onChange={setDate}
+              disabled={loading}
+            />
+          }
+        />
+        <PageBody>
+          <EmptyState
+            icon="lock"
+            title="Access denied"
+            message="Your role cannot view the route planner."
+          />
+        </PageBody>
+      </PageShell>
+    )
+  }
+
+  return (
+    <PageShell>
+      <PageHeader
+        title="Route Planner"
+        subtitle={`Route for ${date}`}
+        action={
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <DateField
+              value={date}
+              onChange={(d) => { setDate(d); loadRoute(); }}
+              disabled={loading}
+            />
+            <Button
+              variant="primary"
+              onClick={loadRoute}
+              disabled={loading}
+              loading={loading}
+            >
+              Refresh
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={generateLinks}
+              disabled={generatingLinks || stops.length === 0}
+              loading={generatingLinks}
+            >
+              Generate Map Links
+            </Button>
+          </div>
+        }
+      />
+      <PageBody>
+        {fetchError && (
+          <div style={{ padding: '12px', background: 'var(--st-danger-bg)', border: '1px solid var(--st-danger-border)', borderRadius: '8px', color: 'var(--st-danger-fg)', marginBottom: '16px' }}>
+            {fetchError}
+          </div>
+        )}
+
+        {mapLinks.length > 0 && (
+          <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--surface2)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 600 }}>Google Maps Links</h3>
+            <p style={{ margin: '0 0 12px', fontSize: '12px', color: 'var(--text3)' }}>
+              Tap a link to open in Google Maps. Phone browsers support up to 3 stops per link.
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {mapLinks.map((link, i) => (
+                <a
+                  key={i}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    padding: '8px 12px',
+                    background: 'var(--primary)',
+                    color: 'white',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    textDecoration: 'none',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Link {i + 1} ({link.stops.length} stops)
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {loading ? (
+          <LoadingSkeleton count={5} />
+        ) : stops.length === 0 ? (
+          <EmptyState
+            icon="map"
+            title="No deliveries scheduled"
+            message="No active delivery jobs for this date. Check another date or create a dispatch."
+          />
+        ) : (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+            }}
+            role="list"
+            aria-label="Delivery route stops"
+          >
+            {stops.map((stop, index) => (
+              <div
+                key={stop.id}
+                draggable={canSetRoute}
+                onDragStart={(e) => handleDragStart(e, stop.id)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, stop.id)}
+                onDragEnd={handleDragEnd}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 16px',
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  opacity: draggingId === stop.id ? 0.5 : 1,
+                  cursor: canSetRoute ? 'grab' : 'default',
+                  transition: 'opacity 0.1s',
+                }}
+                role="listitem"
+                aria-grabbed={draggingId === stop.id}
+              >
+                {/* Drag handle / position */}
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'var(--surface2)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    fontWeight: 600,
+                    fontSize: '14px',
+                    color: draggingId === stop.id ? 'var(--primary)' : 'var(--text)',
+                  }}
+                  aria-label={`Stop ${index + 1}`}
+                >
+                  {index + 1}
+                </div>
+
+                {/* Status badge */}
+                <div
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: STATUS_BADGE_STYLE[stop.status as DeliveryStatus]?.bg ?? 'var(--st-neutral-bg)',
+                    color: STATUS_BADGE_STYLE[stop.status as DeliveryStatus]?.color ?? 'var(--text)',
+                    border: STATUS_BADGE_STYLE[stop.status as DeliveryStatus]?.border ?? '1px solid var(--border)',
+                    borderRadius: '6px',
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                  title={stop.status}
+                >
+                  <Icon name={STATUS_BADGE_STYLE[stop.status as DeliveryStatus]?.icon ?? 'timer'} size={12} />
+                </div>
+
+                {/* Client info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span style={{ fontWeight: 600, fontSize: '14px' }}>{stop.clientName}</span>
+                    <span style={{ fontSize: '12px', color: 'var(--text3)' }}>{stop.bookingNo}</span>
+                    <span style={{ fontSize: '12px', color: 'var(--text3)' }}>{stop.scheduledAt.slice(11, 16)}</span>
+                    {stop.zoneName && (
+                      <span style={{ fontSize: '11px', padding: '2px 6px', background: 'var(--surface2)', borderRadius: '4px', color: 'var(--text2)' }}>
+                        {stop.zoneName}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--text3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {stop.address}, {stop.neighborhood}
+                    {stop.mapPinLat && stop.mapPinLng && (
+                      <> · 📍 Pinned</>
+                    )}
+                  </div>
+                </div>
+
+                {/* Map pin button */}
+                {canSetPin && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => openPinModal(stop)}
+                    disabled={pinSaving}
+                    title={stop.mapPinLat ? 'Edit map pin' : 'Drop map pin'}
+                    aria-label={stop.mapPinLat ? 'Edit map pin' : 'Drop map pin'}
+                  >
+                    <Icon name={stop.mapPinLat ? 'map_pin' : 'map_pin_plus'} size={18} />
+                  </Button>
+                )}
+
+                {/* Open in Maps */}
+                {stop.mapPinLat && stop.mapPinLng && (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${stop.mapPinLat},${stop.mapPinLng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      padding: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'var(--primary)',
+                      textDecoration: 'none',
+                    }}
+                    title="Open in Google Maps"
+                    aria-label="Open in Google Maps"
+                  >
+                    <Icon name="external_link" size={18} />
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Pin Modal */}
+        {pinModalOpen && pinTarget && (
+          <Modal
+            isOpen
+            onClose={() => setPinModalOpen(false)}
+            title="Drop Map Pin"
+            size="sm"
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <p style={{ margin: 0, fontSize: '14px', color: 'var(--text2)' }}>
+                Enter coordinates for <strong>{pinTarget.clientName}</strong> ({pinTarget.address}, {pinTarget.neighborhood})
+              </p>
+              <p style={{ margin: 0, fontSize: '12px', color: 'var(--text3)' }}>
+                Paste from Google Maps (right-click → "What's here?") or use a coordinate finder.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, marginBottom: '4px' }}>
+                    Latitude
+                  </label>
+                  <input
+                    type="text"
+                    value={pinLat}
+                    onChange={(e) => setPinLat(e.target.value)}
+                    placeholder="e.g., 27.7172"
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '1px solid var(--border)',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      background: 'var(--surface)',
+                      color: 'var(--text)',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 500, marginBottom: '4px' }}>
+                    Longitude
+                  </label>
+                  <input
+                    type="text"
+                    value={pinLng}
+                    onChange={(e) => setPinLng(e.target.value)}
+                    placeholder="e.g., 85.3240"
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '1px solid var(--border)',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      background: 'var(--surface)',
+                      color: 'var(--text)',
+                    }}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
+                <Button variant="secondary" onClick={() => setPinModalOpen(false)}>Cancel</Button>
+                <Button variant="primary" onClick={savePin} loading={pinSaving}>Save</Button>
+              </div>
+            </div>
+          </Modal>
+        )}
       </PageBody>
     </PageShell>
   )

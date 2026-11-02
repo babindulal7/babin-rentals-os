@@ -157,7 +157,7 @@ appear for staff; a second use, an expired link and a guessed link all fail; a s
 is in `docs/verification/` and Claude has reviewed it at a check-in.
 **Needs** — T4-01, T2-01, T2-02.
 
-### T4-09 · Delivery route: suggested order and map links            status: todo · size: M · lane B · [go-live] · slips first
+### T4-09 · Delivery route: suggested order and map links            status: done · size: M · lane B · [go-live] · slips first
 **What** — For a day's deliveries and collections (T4-01), show a **suggested order** and **Google
 Maps links** (B30). Each stop has "Open in Maps"; the run has "Open route" with the stops in order.
 Google's Maps links take up to **3 stops in between on a phone browser** (9 elsewhere), so split a long

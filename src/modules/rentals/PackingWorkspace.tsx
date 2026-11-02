@@ -1284,7 +1284,7 @@ export default function PackingWorkspace({
     }
     registerActions(actions)
     onRegisterActions?.(actions)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- focusBlocker and discardRestoredScan are re-created each render; listing them would re-register the action bag on every render
   }, [registerActions, onRegisterActions, isOnline, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget, packedUnits, totalUnits])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */

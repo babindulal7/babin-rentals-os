@@ -1,4 +1,4 @@
--- 0205_crew_overtime_half_full_day.sql
+-- 0207_crew_overtime_half_full_day.sql
 -- Crew overtime: half or full day (Ruling D24, Task T8-06)
 -- 1. Add overtime_days column to crew_assignments (numeric, allows 0.5 increments)
 -- 2. Add overtime_approved_by column to track who approved the overtime
@@ -27,7 +27,7 @@ grant select (overtime_days, overtime_approved_by) on public.crew_assignments to
 alter table public.crew_assignments enable row level security;
 
 -- 4. Update crew_assignments_v to include overtime_days and overtime_approved_by
--- (renumbered 0186 -> 0205 on 2 Nov 2026: 0199_tds_on_crew_payouts now runs first and already
+-- (renumbered 0186 -> 0207 on 2 Nov 2026: 0199_tds_on_crew_payouts now runs first and already
 -- extended this view with the payout/TDS columns, so they are kept here and the two overtime
 -- columns are appended after them. create or replace view cannot drop columns.)
 create or replace view public.crew_assignments_v as

@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0206**
+**Next free number: 0208**
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
@@ -43,7 +43,9 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0202 | T8-09 | staff-discount-is-money-setting | claude/file-update-d4b7b1 | verified |
 | 0203 | SEC-05/W68 | restore-driver-client-view-scopes | fix/2026-11-01-driver-client-view-scope-0203 | written; staging required |
 | 0204 | T4-08 | rider-link-v2-contract-fix | fix/2026-11-02-rider-link-contract-0204 | verified |
-| 0205 | T8-06 | crew-overtime-half-full-day | lane-a/T8-06-crew-overtime-half-or-full-day | verified |
+| 0205 | T3-14b | extend-booking-without-draft | claude/ecc-repo-setup-728bf3 | verified |
+| 0206 | T4-09 | delivery-route-map-pins | lane-b/T4-09-delivery-route-map-pins | verified |
+| 0207 | T8-06 | crew-overtime-half-full-day | lane-a/T8-06-crew-overtime-half-or-full-day | written |
 
 ## Expected migrations (not yet claimed)
 
