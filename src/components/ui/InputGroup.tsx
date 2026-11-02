@@ -130,6 +130,9 @@ export const InputGroupAddon = forwardRef<HTMLDivElement, InputGroupAddonProps>(
   }
 
   return (
+    // This is a mouse focus-forwarder, not a standalone button: the real input
+    // remains keyboard-accessible. Do not invent an interactive ARIA role.
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <div
       ref={ref}
       role="presentation"
