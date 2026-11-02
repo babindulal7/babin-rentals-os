@@ -12,10 +12,10 @@
 **Ruled**
 - None. Ledger rule 4.
 
-**Verified** (`bro-lane-t8-06`, merged onto main `a00977c4`, final number `0207`)
-- `npm run typecheck` → 0.
-- `npm run check:pglite` → 203/203 applied, 0 failed. `npm run check:lifecycle` → 55/55 green, same run, so `0207` is Verified under R-35.
-- `npm test -- src/actions/crew src/modules/crew src/modules/rentals/booking` → 27 files, 181/181 (mock mode, T0-10). Full suite NOT run; no UI driven; nothing applied to any Supabase project (N-5).
+**Verified** (`bro-lane-t8-06` merged onto main `bfa6ce6d`, final number `0207`)
+- `npm run check:pglite` → 205/205 applied, 0 failed. `npm run check:lifecycle` → 56/56 green, same run, so `0207` is Verified under R-35.
+- `npm test -- src/actions/crew src/modules/crew src/modules/rentals/booking` → 27 files, 181/181 (mock mode). Full suite NOT run; no UI driven; nothing applied to any Supabase project (N-5).
+- `npm run typecheck` → **15 errors, all in `src/actions/delivery/getDayRoute.ts` and `src/modules/operations/DeliveryWorkspace.tsx`**, files this lane does not change (identical to main). They come from main's own T4-09 route-pins work. This lane adds none, but typecheck is NOT green on the merged tree. I did not run tsc on main separately.
 
 **Blocked / open**
 - T8-07 and `lane-a/T8-06-crew-overtime-ui` need this merged in; the UI branch touches booking files main has changed and may conflict.
@@ -23,15 +23,15 @@
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 83 / 83 (100%) | +4 |
+| Backend | actions implemented / total | 86 / 86 (100%) | +3 |
 | Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
 | DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 66 / 66 (100%) | +1 |
-| Lifecycle | steps green / total | 55 / 55 (100%) | +6 |
+| Permissions | capabilities mapped / declared | 67 / 67 (100%) | +1 |
+| Lifecycle | steps green / total | 56 / 56 (100%) | +1 |
 | Overall | structural mean of five | ≈ 97% | — |
-Migrations 203 files · check:pglite 203/203 applied, 0 failed (recorded 2026-11-02T11:15:28.312Z). Suite: NOT VERIFIED — focused or unspecified run: 181/181 passed, 0 failed (recorded 2026-11-02T11:17:26.179Z).
+Migrations 205 files · check:pglite 205/205 applied, 0 failed (recorded 2026-11-02T12:41:20.713Z). Suite: NOT VERIFIED — focused or unspecified run: 181/181 passed, 0 failed (recorded 2026-11-02T12:46:03.371Z).
 Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written 2026-11-02T11:16:08.526Z.
+Gates read from .lifecycle-result.json, written 2026-11-02T12:42:42.584Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
