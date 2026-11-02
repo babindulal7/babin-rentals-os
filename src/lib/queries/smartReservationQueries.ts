@@ -125,6 +125,8 @@ export async function queryBookingAvailability(
       productId: c.productId,
       state: c.state,
       condition: c.condition ?? undefined,
+      safetyHold: c.safetyHold,
+      retiredAt: c.retiredAt,
     }))
     unitsByProductMap.set(pId, list)
   }
