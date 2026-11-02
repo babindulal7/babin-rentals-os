@@ -484,7 +484,7 @@ export function EquipmentRecordEditor({
                   <th style={{ width: 100 }}>Status</th>
                   <th style={{ width: 140 }}>Condition</th>
                   <th style={{ width: 160 }}>Warehouse</th>
-                  {!recordId && <th style={{ width: 50 }}></th>}
+                  {!recordId && <th style={{ width: 50 }}><span className="sr-only">Remove unit</span></th>}
                 </tr>
               </thead>
               <tbody>

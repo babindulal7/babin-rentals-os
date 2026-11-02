@@ -250,6 +250,7 @@ export function Modal({
   const modalNode = (
     <div
       className="app-modal"
+      role="presentation"
       onKeyDown={handleTrapKeyDown}
       style={{
         position: 'fixed',

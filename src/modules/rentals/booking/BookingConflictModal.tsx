@@ -84,8 +84,11 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
                   backgroundColor: 'var(--surface-raised, #ffffff)',
                 }}
               >
-                {/* Header row */}
+                {/* Header row — a disclosure: focusable, announces expanded/collapsed, Enter/Space toggle. */}
                 <div
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={isExpanded}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -94,6 +97,12 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
                     userSelect: 'none',
                   }}
                   onClick={() => setExpandedLineId(isExpanded ? null : item.lineId)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setExpandedLineId(isExpanded ? null : item.lineId)
+                    }
+                  }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <Badge tone="danger" label={item.status === 'hold_conflict' ? 'Hold Conflict' : 'Unavailable'} />

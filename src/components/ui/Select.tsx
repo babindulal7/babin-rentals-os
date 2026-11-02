@@ -418,10 +418,20 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
                     key={opt.value}
                     id={optionId(i)}
                     role="option"
+                    tabIndex={-1}
                     aria-selected={isSelected}
                     aria-disabled={opt.disabled || undefined}
+                    // Keep focus on the trigger when an option is pressed (select-only combobox).
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => {
                       if (!opt.disabled) handleSelect(opt.value)
+                    }}
+                    onKeyDown={(e) => {
+                      // Keys normally arrive on the trigger; this covers an option that holds focus.
+                      if ((e.key === 'Enter' || e.key === ' ') && !opt.disabled) {
+                        e.preventDefault()
+                        handleSelect(opt.value)
+                      }
                     }}
                     onMouseEnter={() => {
                       if (!opt.disabled) setHighlight(i)
