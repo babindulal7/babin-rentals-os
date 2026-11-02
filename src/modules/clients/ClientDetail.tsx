@@ -342,6 +342,7 @@ function ClientDetailView() {
   const [tab, setTab] = useState<TabKey>('overview')
   const [isAdjustCreditOpen, setIsAdjustCreditOpen] = useState(false)
   const [isUpgradeTierOpen, setIsUpgradeTierOpen] = useState(false)
+  const [tierModalMode, setTierModalMode] = useState<'change' | 'renew'>('change')
   const [isVerifyKycOpen, setIsVerifyKycOpen] = useState(false)
 
   /* ── Block / Unblock — CL-06 ────────────────────────────────────────────
@@ -706,7 +707,28 @@ function ClientDetailView() {
         ]
       : []),
     ...(canChangeTier
-      ? [{ label: tierActionLabel, icon: 'sparkles' as const, onClick: () => setIsUpgradeTierOpen(true) }]
+      ? [
+          {
+            label: tierActionLabel,
+            icon: 'sparkles' as const,
+            onClick: () => {
+              setTierModalMode('change')
+              setIsUpgradeTierOpen(true)
+            },
+          },
+          ...(hasMembership
+            ? [
+                {
+                  label: 'Renew Membership',
+                  icon: 'refresh' as const,
+                  onClick: () => {
+                    setTierModalMode('renew')
+                    setIsUpgradeTierOpen(true)
+                  },
+                },
+              ]
+            : []),
+        ]
       : []),
   ]
 
@@ -934,8 +956,27 @@ function ClientDetailView() {
             action={
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {canChangeTier && (
-                  <Button variant="secondary" icon="activity" onClick={() => setIsUpgradeTierOpen(true)}>
+                  <Button
+                    variant="secondary"
+                    icon="activity"
+                    onClick={() => {
+                      setTierModalMode('change')
+                      setIsUpgradeTierOpen(true)
+                    }}
+                  >
                     {tierActionLabel}
+                  </Button>
+                )}
+                {canChangeTier && hasMembership && (
+                  <Button
+                    variant="secondary"
+                    icon="refresh"
+                    onClick={() => {
+                      setTierModalMode('renew')
+                      setIsUpgradeTierOpen(true)
+                    }}
+                  >
+                    Renew Membership
                   </Button>
                 )}
                 {moneyScope(gctx) === 'full' && (
@@ -1581,6 +1622,7 @@ function ClientDetailView() {
             onClose={() => setIsUpgradeTierOpen(false)}
             client={client}
             hasMembership={hasMembership}
+            initialMode={tierModalMode}
             onSuccess={(newTier: MembershipTier) => {
               setDraft((d) => (d ? { ...d, membership: newTier } : d))
               // Re-read: the screen shows what the database now holds, not what this tab remembers.

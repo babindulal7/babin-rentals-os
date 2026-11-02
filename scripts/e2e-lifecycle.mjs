@@ -2439,10 +2439,8 @@ STEPS.push({
 
     await undone(async () => {
       await asOwnerOfTheDatabase(() => q(
-        `insert into membership_plans (client_uuid, level, label, default_credit_limit, display_order, status, retired_at) values
-           (gen_random_uuid(), 'Academy', 'Access Member', 100000, 1, 'Active', null),
-           (gen_random_uuid(), 'Creator', 'Partner', 250000, 2, 'Active', null),
-           (gen_random_uuid(), 'Elite', 'Elite Member', 0, 3, 'Retired', now())`))
+        `update membership_plans set status = 'Retired', retired_at = now() where level = 'Elite'`
+      ))
 
       // 1 ┬╖ Activate: a client with no live membership gets one. Coordinator is allowed (PERMISSIONS C5).
       const k1 = crypto.randomUUID()
@@ -4034,12 +4032,12 @@ STEPS.push({
 
 STEPS.push({
   id: 'L46',
-  title: 'Delivery zones CRUD and permission matrix (T4-07, migration 0189)',
+  title: 'Delivery zones CRUD and permission matrix (T4-07, migration 0189) — Law 6 fee masking, no DELETE, Owner/Admin/Manager write',
   expect: 'green',
   run: async () => {
     await undone(async () => {
-      // 1. Coordinator can create a delivery zone
-      const zoneId = await as('Coordinator', async () => {
+      // 1. Manager can create a delivery zone (Owner/Admin/Manager only)
+      const zoneId = await as('Manager', async () => {
         const id = await one(`select create_delivery_zone($1, $2, $3)`, [
           'Test Valley Zone',
           'Test zone for lifecycle',
@@ -4049,17 +4047,25 @@ STEPS.push({
       })
       assert(zoneId, 'create_delivery_zone returns a zone ID')
 
-      // 2. Zone appears in list for all staff roles
+      // 2. Zone appears in list for all staff roles, but fee_paisa is NULL for money-blind (Law 6)
       await as('Warehouse', async () => {
         const zones = await q(`select * from list_delivery_zones(50, 0, true)`)
         const found = zones.rows.find((z) => z.id === zoneId)
         assert(found, 'Warehouse can read active zones')
         assertEq(found.name, 'Test Valley Zone', 'Zone name matches')
-        assertEq(Number(found.fee_paisa), 350000, 'Zone fee in paisa')
+        assertEq(found.fee_paisa, null, 'Warehouse (money-blind) gets NULL fee_paisa (Law 6)')
       })
 
-      // 3. Coordinator can update the zone
-      await as('Coordinator', async () => {
+      // 3. Manager can see fee_paisa (money-enabled role)
+      await as('Manager', async () => {
+        const zones = await q(`select * from list_delivery_zones(50, 0, true)`)
+        const found = zones.rows.find((z) => z.id === zoneId)
+        assert(found, 'Manager can read active zones')
+        assertEq(Number(found.fee_paisa), 350000, 'Manager (money-enabled) sees fee_paisa')
+      })
+
+      // 4. Manager can update the zone
+      await as('Manager', async () => {
         const updated = await one(`select update_delivery_zone($1, $2, $3, $4, $5)`, [
           zoneId,
           'Test Valley Zone Updated',
@@ -4070,21 +4076,52 @@ STEPS.push({
         assertEq(updated, true, 'update_delivery_zone returns true')
       })
 
-      // 4. Verify update reflected
+      // 5. Verify update reflected
       await as('Manager', async () => {
         const zone = (await q(`select name, fee_paisa from delivery_zones where id = $1`, [zoneId])).rows[0]
         assertEq(zone.name, 'Test Valley Zone Updated', 'Zone name updated')
         assertEq(Number(zone.fee_paisa), 400000, 'Zone fee updated')
       })
 
-      // 5. Warehouse CANNOT create a zone (insufficient privilege)
+      // 6. Coordinator CANNOT create a zone (only Owner/Admin/Manager)
+      await as('Coordinator', async () => {
+        await q('savepoint coord_create_probe')
+        try {
+          await refuses(
+            'Coordinator cannot create delivery zones',
+            `select create_delivery_zone('Coord Zone', 'Should fail', 300000)`,
+            /Only Manager\+ can create delivery zones/i,
+          )
+        } finally {
+          await q('rollback to savepoint coord_create_probe')
+          await q('release savepoint coord_create_probe')
+        }
+      })
+
+      // 7. Coordinator CANNOT update a zone
+      await as('Coordinator', async () => {
+        await q('savepoint coord_update_probe')
+        try {
+          await refuses(
+            'Coordinator cannot update delivery zones',
+            `select update_delivery_zone($1, $2, $3, $4, $5)`,
+            [zoneId, 'Coord Update', 'Should fail', 500000, true],
+            /Only Manager\+ can update delivery zones/i,
+          )
+        } finally {
+          await q('rollback to savepoint coord_update_probe')
+          await q('release savepoint coord_update_probe')
+        }
+      })
+
+      // 8. Warehouse CANNOT create a zone
       await as('Warehouse', async () => {
         await q('savepoint wh_create_probe')
         try {
           await refuses(
             'Warehouse cannot create delivery zones',
             `select create_delivery_zone('WH Zone', 'Should fail', 300000)`,
-            /Only Coordinator\+ can create delivery zones/i,
+            /Only Manager\+ can create delivery zones/i,
           )
         } finally {
           await q('rollback to savepoint wh_create_probe')
@@ -4092,7 +4129,7 @@ STEPS.push({
         }
       })
 
-      // 6. Client CANNOT read zones (RLS denies)
+      // 9. Client CANNOT read zones (RLS denies)
       await as('Client', async () => {
         await q('savepoint client_read_probe')
         try {
@@ -4107,7 +4144,7 @@ STEPS.push({
         }
       })
 
-      // 7. anon CANNOT execute RPCs
+      // 10. anon CANNOT execute RPCs
       await as('Anon', async () => {
         await q('savepoint anon_probe')
         try {
@@ -4122,20 +4159,36 @@ STEPS.push({
         }
       })
 
-      // 8. Deactivate (soft delete) by Coordinator
-      await as('Coordinator', async () => {
+      // 11. Deactivate (soft delete) by Manager — no hard DELETE allowed (Law 3)
+      await as('Manager', async () => {
         const deactivated = await one(`select deactivate_delivery_zone($1)`, [zoneId])
         assertEq(deactivated, true, 'deactivate_delivery_zone returns true')
       })
 
-      // 9. Deactivated zone not in active-only list
+      // 12. Coordinator CANNOT deactivate
       await as('Coordinator', async () => {
+        await q('savepoint coord_deactivate_probe')
+        try {
+          await refuses(
+            'Coordinator cannot deactivate delivery zones',
+            `select deactivate_delivery_zone($1)`,
+            [zoneId],
+            /Only Manager\+ can deactivate delivery zones/i,
+          )
+        } finally {
+          await q('rollback to savepoint coord_deactivate_probe')
+          await q('release savepoint coord_deactivate_probe')
+        }
+      })
+
+      // 13. Deactivated zone not in active-only list
+      await as('Manager', async () => {
         const zones = await q(`select * from list_delivery_zones(50, 0, true)`)
         const found = zones.rows.find((z) => z.id === zoneId)
         assert(!found, 'Deactivated zone excluded from active-only list')
       })
 
-      // 10. Deactivated zone still visible with activeOnly=false
+      // 14. Deactivated zone still visible with activeOnly=false
       await as('Manager', async () => {
         const zones = await q(`select * from list_delivery_zones(50, 0, false)`)
         const found = zones.rows.find((z) => z.id === zoneId)
@@ -4143,19 +4196,36 @@ STEPS.push({
         assertEq(found.is_active, false, 'Zone is_active is false')
       })
 
-      // 11. get_delivery_zone_fee works for active zone
-      await as('Coordinator', async () => {
-        const feeZoneId = await one(`select create_delivery_zone($1, $2, $3)`, [
+      // 15. get_delivery_zone_fee works for money-enabled role (Manager)
+      const feeZoneId = await as('Manager', async () => {
+        return await one(`select create_delivery_zone($1, $2, $3)`, [
           'Fee Lookup Zone',
           'For fee lookup test',
           500000,
         ])
-        const fee = await one(`select get_delivery_zone_fee($1)`, ['Fee Lookup Zone'])
-        assertEq(Number(fee), 500000, 'get_delivery_zone_fee returns correct fee')
+      })
+      const fee = await as('Manager', async () => {
+        return await one(`select get_delivery_zone_fee($1)`, ['Fee Lookup Zone'])
+      })
+      assertEq(Number(fee), 500000, 'get_delivery_zone_fee returns correct fee for Manager')
+
+      // 16. get_delivery_zone_fee fails for money-blind role (Warehouse)
+      await as('Warehouse', async () => {
+        await q('savepoint wh_fee_probe')
+        try {
+          await refuses(
+            'Warehouse cannot call get_delivery_zone_fee (money-blind)',
+            `select get_delivery_zone_fee('Fee Lookup Zone')`,
+            /Zone fee requires money-view permission/i,
+          )
+        } finally {
+          await q('rollback to savepoint wh_fee_probe')
+          await q('release savepoint wh_fee_probe')
+        }
       })
 
-      // 12. get_delivery_zone_fee fails for inactive zone
-      await as('Coordinator', async () => {
+      // 17. get_delivery_zone_fee fails for inactive zone
+      await as('Manager', async () => {
         await q('savepoint fee_inactive_probe')
         try {
           await refuses(
@@ -4169,8 +4239,8 @@ STEPS.push({
         }
       })
 
-      // 13. Default Kathmandu zones seeded
-      await as('Coordinator', async () => {
+      // 18. Default Kathmandu zones seeded
+      await as('Manager', async () => {
         const zones = await q(`select name from delivery_zones where is_active = true order by name`)
         const names = zones.rows.map((r) => r.name)
         const expectedZones = ['Bhaktapur', 'Boudha', 'Kirtipur', 'Outside Valley', 'Patan', 'Ring Road', 'Swoyambhu']
@@ -4709,6 +4779,635 @@ STEPS.push({
         const vRow = (await q(`select assessed_amount, case_no from cases_v where id = $1`, [caseRow.case_id])).rows[0]
         assertEq(Number(vRow.assessed_amount), 0, 'Manager reads unmasked assessed_amount on cases_v')
       })
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L50',
+  title: 'Membership plans are loaded with full economics, discount caps and tiered credit limits (D21, D32, T8-01)',
+  expect: 'green',
+  run: async () => {
+    // 1. All five plans are present in display order
+    const plans = (await q(`select level::text as level, label::text as label, annual_fee, individual_discount_pct, bundle_discount_pct, monthly_booking_limit, simultaneous_rental_limit, authorized_users, default_credit_limit, perks, display_order, status::text as status from membership_plans order by display_order`)).rows
+    assertEq(plans.length, 5, 'all five membership plans are loaded')
+    assertEq(plans.map((p) => p.level), ['Academy', 'Creator', 'Cinematographer', 'Production Alliance', 'Elite'], 'five levels in correct order')
+    assertEq(plans.map((p) => p.status), ['Active', 'Active', 'Active', 'Active', 'Active'], 'all plans active')
+
+    // 2. Check Academy, Cinematographer and Production Alliance economics
+    const academy = plans[0]
+    assertEq(Number(academy.annual_fee), 6000, 'Academy annual fee is 6000')
+    assertEq(Number(academy.individual_discount_pct), 10, 'Academy individual discount is 10%')
+    assertEq(Number(academy.bundle_discount_pct), 5, 'Academy bundle discount is 5%')
+    assertEq(Number(academy.monthly_booking_limit), 3, 'Academy booking limit is 3')
+    assertEq(Number(academy.default_credit_limit), 0, 'Academy default credit limit is 0')
+
+    const cine = plans[2]
+    assertEq(Number(cine.annual_fee), 35000, 'Cinematographer fee is 35000')
+    assertEq(Number(cine.individual_discount_pct), 20, 'Cinematographer individual discount is 20%')
+    assertEq(Number(cine.default_credit_limit), 100000, 'Cinematographer default credit limit is 100000')
+
+    const alliance = plans[3]
+    assertEq(Number(alliance.annual_fee), 80000, 'Production Alliance fee is 80000')
+    assertEq(Number(alliance.bundle_discount_pct), 12, 'Production Alliance bundle discount is 12%')
+    assertEq(Number(alliance.default_credit_limit), 250000, 'Production Alliance default credit limit is 250000')
+    assert(String(alliance.perks).includes('Priority Booking'), 'Production Alliance has Priority Booking perk')
+
+    const elite = plans[4]
+    assertEq(elite.annual_fee, null, 'Elite has custom fee (NULL)')
+    assertEq(elite.monthly_booking_limit, null, 'Elite has unlimited monthly bookings (NULL)')
+    assertEq(Number(elite.default_credit_limit), 500000, 'Elite default credit limit is 500000')
+
+    // 3. Discount cap <= 25% enforced by database constraint
+    await asOwnerOfTheDatabase(async () => {
+      let capRefused = false
+      try {
+        await q(`update membership_plans set individual_discount_pct = 26 where level = 'Academy'`)
+      } catch (err) {
+        capRefused = /membership_plans_discount_hard_cap/i.test(err.message)
+      }
+      assert(capRefused, 'discount exceeding 25% must be refused by membership_plans_discount_hard_cap CHECK constraint')
+    })
+
+    // 4. Law 6: Warehouse reads null for money columns on membership_plans_v; Manager reads unmasked amounts
+    await as('Warehouse', async () => {
+      const vRows = (await q(`select level, annual_fee, default_credit_limit, individual_discount_pct, bundle_discount_pct from membership_plans_v where level = 'Academy'`)).rows
+      assertEq(vRows.length, 1, 'Warehouse can read membership_plans_v')
+      assertEq(vRows[0].annual_fee, null, 'Warehouse cannot read annual_fee (Law 6)')
+      assertEq(vRows[0].default_credit_limit, null, 'Warehouse cannot read default_credit_limit (Law 6)')
+      assertEq(vRows[0].individual_discount_pct, null, 'Warehouse cannot read individual_discount_pct (Law 6)')
+      assertEq(vRows[0].bundle_discount_pct, null, 'Warehouse cannot read bundle_discount_pct (Law 6)')
+    })
+
+    await as('Manager', async () => {
+      const vRows = (await q(`select level, annual_fee, default_credit_limit, individual_discount_pct, bundle_discount_pct from membership_plans_v where level = 'Academy'`)).rows
+      assertEq(Number(vRows[0].annual_fee), 6000, 'Manager reads unmasked annual_fee')
+      assertEq(Number(vRows[0].default_credit_limit), 0, 'Manager reads unmasked default_credit_limit')
+      assertEq(Number(vRows[0].individual_discount_pct), 10, 'Manager reads unmasked individual_discount_pct')
+      assertEq(Number(vRows[0].bundle_discount_pct), 5, 'Manager reads unmasked bundle_discount_pct')
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L51',
+  title: 'Membership plans admin: create, edit, retire and reactivate audited RPCs (Law 3, Law 6, T8-02)',
+  expect: 'green',
+  run: async () => {
+    // 1. Law 3: Hard DELETE on membership_plans is forbidden by trigger
+    await asOwnerOfTheDatabase(async () => {
+      let deleteRefused = false
+      try {
+        await q(`delete from membership_plans where level = 'Academy'`)
+      } catch (err) {
+        deleteRefused = /GATE:membership_plan\.delete\.forbidden/i.test(err.message)
+      }
+      assert(deleteRefused, 'Law 3: direct DELETE on membership_plans must be refused by prevent_membership_plans_delete trigger')
+    })
+
+    // 2. Authority: Coordinator is read-only (save_membership_plan and retire_membership_plan refused with 42501)
+    await as('Coordinator', async () => {
+      let saveRefused = false
+      try {
+        await q(`select save_membership_plan('Creator', 'Partner', 20000, 15, 8, 5, 3, 2, 50000, 12, '{"Priority Booking"}'::text[])`)
+      } catch (err) {
+        saveRefused = /GATE:membership_plan\.manage\.forbidden/i.test(err.message)
+      }
+      assert(saveRefused, 'Coordinator must be refused permission to save membership plans')
+
+      const planRow = (await q(`select id from membership_plans_v where level = 'Creator'`)).rows[0]
+      let retireRefused = false
+      try {
+        await q(`select retire_membership_plan('${planRow.id}'::uuid, true)`)
+      } catch (err) {
+        retireRefused = /GATE:membership_plan\.manage\.forbidden/i.test(err.message)
+      }
+      assert(retireRefused, 'Coordinator must be refused permission to retire membership plans')
+    })
+
+    // 3. Manager can edit an existing plan via save_membership_plan and audit row is generated
+    let planId
+    await as('Manager', async () => {
+      const res = (await q(`select save_membership_plan('Creator', 'Partner', 22000, 15, 8, 6, 4, 2, 75000, 12, '{"Priority Booking", "Dedicated Manager"}'::text[])`)).rows[0]
+      const out = typeof res.save_membership_plan === 'string' ? JSON.parse(res.save_membership_plan) : res.save_membership_plan
+      assert(out.ok, 'save_membership_plan succeeded for Manager')
+      planId = out.plan_id
+
+      const updated = (await q(`select annual_fee, individual_discount_pct, monthly_booking_limit, default_credit_limit, perks from membership_plans_v where id = '${planId}'`)).rows[0]
+      assertEq(Number(updated.annual_fee), 22000, 'Creator annual fee updated to 22000')
+      assertEq(Number(updated.individual_discount_pct), 15, 'Creator individual discount updated to 15%')
+      assertEq(Number(updated.monthly_booking_limit), 6, 'Creator monthly booking limit updated to 6')
+      assertEq(Number(updated.default_credit_limit), 75000, 'Creator default credit limit updated to 75000')
+
+      // Check audit row
+      const audit = (await q(`select action, table_name, reason from audit_events where record_id = '${planId}' order by created_at desc limit 1`)).rows[0]
+      assertEq(audit?.reason, 'membership_plan.updated', 'audit_events recorded membership_plan.updated')
+    })
+
+    // 4. Manager can retire a plan via retire_membership_plan
+    await as('Manager', async () => {
+      const res = (await q(`select retire_membership_plan('${planId}'::uuid, true)`)).rows[0]
+      const out = typeof res.retire_membership_plan === 'string' ? JSON.parse(res.retire_membership_plan) : res.retire_membership_plan
+      assert(out.ok, 'retire_membership_plan succeeded')
+      assertEq(out.status, 'Retired', 'plan status is now Retired')
+
+      const retiredRow = (await q(`select status::text as status, retired_at from membership_plans_v where id = '${planId}'`)).rows[0]
+      assertEq(retiredRow.status, 'Retired', 'plan record is Retired')
+      assert(retiredRow.retired_at !== null, 'retired_at timestamp is populated')
+
+      // Check audit row
+      const audit = (await q(`select action, table_name, reason from audit_events where record_id = '${planId}' order by created_at desc limit 1`)).rows[0]
+      assertEq(audit?.reason, 'membership_plan.retired', 'audit_events recorded membership_plan.retired')
+    })
+
+    // 5. Retired plan cannot take new members (enroll_client_membership refused)
+    await as('Coordinator', async () => {
+      const clientRow = (await q(`select id from clients_v limit 1`)).rows[0]
+      let enrollRefused = false
+      try {
+        await q(`select enroll_client_membership('${clientRow.id}'::uuid, '${planId}'::uuid, current_date, 22000, 'Test enroll', gen_random_uuid())`)
+      } catch (err) {
+        enrollRefused = /GATE:membership_plan\.retired/i.test(err.message)
+      }
+      assert(enrollRefused, 'enroll_client_membership into a retired plan must be refused')
+    })
+
+    // 6. Manager can reactivate the plan
+    await as('Manager', async () => {
+      const res = (await q(`select retire_membership_plan('${planId}'::uuid, false)`)).rows[0]
+      const out = typeof res.retire_membership_plan === 'string' ? JSON.parse(res.retire_membership_plan) : res.retire_membership_plan
+      assert(out.ok, 'reactivate plan succeeded')
+      assertEq(out.status, 'Active', 'plan status is Active again')
+
+      const reactivatedRow = (await q(`select status::text as status, retired_at from membership_plans_v where id = '${planId}'`)).rows[0]
+      assertEq(reactivatedRow.status, 'Active', 'plan status is Active')
+      assertEq(reactivatedRow.retired_at, null, 'retired_at reset to null')
+
+      // Check audit row
+      const audit = (await q(`select action, table_name, reason from audit_events where record_id = '${planId}' order by created_at desc limit 1`)).rows[0]
+      assertEq(audit?.reason, 'membership_plan.reactivated', 'audit_events recorded membership_plan.reactivated')
+    })
+  },
+},
+
+{
+  id: 'L52',
+  title: 'Change plan with credit for unused days and unified write paths (D22, T8-03)',
+  expect: 'green',
+  run: async () => {
+    // 1. Role gate: Warehouse is refused with 42501
+    await as('Warehouse', async () => {
+      let changeRefused = false
+      try {
+        await q(`select change_client_membership(jsonb_build_object(
+          'client_id', gen_random_uuid(),
+          'client_uuid', gen_random_uuid(),
+          'plan_level', 'Creator'
+        ))`)
+      } catch (err) {
+        changeRefused = /42501|Only Coordinator or above/i.test(err.message)
+      }
+      assert(changeRefused, 'Warehouse must be refused permission to change membership')
+    })
+
+    // 2. Setup client and plans for worked example
+    let testClientId
+    let plan12kId
+    let plan20kId
+    let plan6kId
+
+    await asOwnerOfTheDatabase(async () => {
+      // Create a test client using canonical next_document_number
+      const clientCode = await one("select next_document_number('client')")
+      const cRes = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+        values (gen_random_uuid(), '${clientCode}', 'L45 Test Client', '+9779800009945', 'Active', '${U.Owner}')
+        returning id`)).rows[0]
+      testClientId = cRes.id
+
+      // Create test plans with exact term and fees
+      const p1 = (await q(`insert into membership_plans (client_uuid, level, label, annual_fee, term_months, display_order, status)
+        values (gen_random_uuid(), 'Academy', 'Access Member', 12000.00, 12, 91, 'Active')
+        on conflict (level) do update set annual_fee = 12000.00, term_months = 12, status = 'Active'
+        returning id`)).rows[0]
+      plan12kId = p1.id
+
+      const p2 = (await q(`insert into membership_plans (client_uuid, level, label, annual_fee, term_months, display_order, status)
+        values (gen_random_uuid(), 'Creator', 'Partner', 20000.00, 12, 92, 'Active')
+        on conflict (level) do update set annual_fee = 20000.00, term_months = 12, status = 'Active'
+        returning id`)).rows[0]
+      plan20kId = p2.id
+
+      const p3 = (await q(`insert into membership_plans (client_uuid, level, label, annual_fee, term_months, display_order, status)
+        values (gen_random_uuid(), 'Cinematographer', 'Partner', 6000.00, 12, 93, 'Active')
+        on conflict (level) do update set annual_fee = 6000.00, term_months = 12, status = 'Active'
+        returning id`)).rows[0]
+      plan6kId = p3.id
+    })
+
+    // 3. Stricter rule: deactivated client refused
+    await as('Coordinator', async () => {
+      let deactRefused = false
+      await asOwnerOfTheDatabase(async () => {
+        await q(`update clients set status = 'Deactivated' where id = '${testClientId}'`)
+      })
+      try {
+        await q(`select change_client_membership(jsonb_build_object(
+          'client_id', '${testClientId}',
+          'client_uuid', gen_random_uuid(),
+          'plan_id', '${plan12kId}'
+        ))`)
+      } catch (err) {
+        deactRefused = /GATE:client\.deactivated/i.test(err.message)
+      }
+      assert(deactRefused, 'Deactivated client must be refused membership change')
+
+      // Restore client to Active
+      await asOwnerOfTheDatabase(async () => {
+        await q(`update clients set status = 'Active' where id = '${testClientId}'`)
+      })
+    })
+
+    // 4. Enroll client on Plan 12k with join_date 2028-01-01 (leap year: 366-day term)
+    // At effectiveChangeDate 2028-09-01: 122 days left out of 366 (exactly 4 of 12 months, 1/3 of term)
+    const effectiveChangeDate = '2028-09-01'
+    const joinDateLeap = '2028-01-01'
+
+    await as('Coordinator', async () => {
+      // First enrollment via unified enroll_client_membership
+      const enrollRes = (await q(`select enroll_client_membership(
+        '${testClientId}'::uuid,
+        '${plan12kId}'::uuid,
+        '${joinDateLeap}'::date,
+        12000.00,
+        'Initial 12k plan enrollment',
+        gen_random_uuid()
+      )`)).rows[0]
+      const enrollOut = typeof enrollRes.enroll_client_membership === 'string'
+        ? JSON.parse(enrollRes.enroll_client_membership)
+        : enrollRes.enroll_client_membership
+      assertEq(Number(enrollOut.new_fee_due), 12000, 'Initial enrollment fee due is full 12,000')
+      assertEq(Number(enrollOut.credit), 0, 'Initial enrollment credit is 0')
+    })
+
+    // 5. Stricter rule: changing to the same plan is refused
+    await as('Coordinator', async () => {
+      let samePlanRefused = false
+      try {
+        await q(`select change_client_membership(jsonb_build_object(
+          'client_id', '${testClientId}',
+          'client_uuid', gen_random_uuid(),
+          'plan_id', '${plan12kId}',
+          'effective_date', '${effectiveChangeDate}'
+        ))`)
+      } catch (err) {
+        samePlanRefused = /GATE:membership\.same_plan/i.test(err.message)
+      }
+      assert(samePlanRefused, 'Changing to the same plan must be refused')
+    })
+
+    // 6. The Worked Example (D22): fee 12,000, 4 of 12 months left (122/366 days) -> credit 4,000
+    // Change from 12k plan to 20k plan. New fee due = 20,000 - 4,000 = 16,000.
+    const changeKey = '00000000-0000-0000-0000-000000000045'
+    await as('Coordinator', async () => {
+      const changeRes = (await q(`select change_client_membership(jsonb_build_object(
+        'client_id', '${testClientId}',
+        'client_uuid', '${changeKey}',
+        'plan_id', '${plan20kId}',
+        'effective_date', '${effectiveChangeDate}',
+        'note', 'Worked example plan upgrade'
+      ))`)).rows[0]
+      const changeOut = typeof changeRes.change_client_membership === 'string'
+        ? JSON.parse(changeRes.change_client_membership)
+        : changeRes.change_client_membership
+
+      assertEq(Number(changeOut.old_fee), 12000, 'Old fee matches 12,000')
+      assertEq(changeOut.days_left, 122, 'Days left is 122')
+      assertEq(changeOut.total_days, 366, 'Total days in term is 366')
+      assertEq(Number(changeOut.credit), 4000, 'Worked example: 4 of 12 months left on Rs 12,000 yields exactly Rs 4,000 credit')
+      assertEq(Number(changeOut.new_fee), 20000, 'New fee is 20,000')
+      assertEq(Number(changeOut.new_fee_due), 16000, 'New fee due is 16,000 (20,000 - 4,000)')
+      assertEq(Number(changeOut.account_credit), 0, 'No excess account credit for upgrade')
+    })
+
+    // Verify audit trail holds old plan, new plan, credit, new_fee_due
+    await asOwnerOfTheDatabase(async () => {
+      const audit = (await q(`select old_values, new_values, reason from audit_events where client_uuid = '${changeKey}'`)).rows[0]
+      const auditNew = typeof audit.new_values === 'string' ? JSON.parse(audit.new_values) : audit.new_values
+      assertEq(Number(auditNew.credit), 4000, 'Audit record holds credit 4000')
+      assertEq(Number(auditNew.new_fee_due), 16000, 'Audit record holds new_fee_due 16000')
+      assertEq(audit.reason, 'Worked example plan upgrade', 'Audit reason preserved')
+    })
+
+    // 7. Downgrade with excess credit credited to client's account_credit (D22)
+    // Client is on 20k plan with join_date 2028-01-01.
+    // At effectiveChangeDate 2028-07-02: 183 days left out of 366 (exactly 1/2 of term) -> credit 10,000.
+    // Downgrade to 6k plan. New fee = 6,000. Credit = 10,000.
+    // Fee due = 0. Excess credit = 4,000 added to clients.account_credit!
+    await asOwnerOfTheDatabase(async () => {
+      await q(`update client_memberships set join_date = '2028-01-01', fee_paid = 20000.00 where client_id = '${testClientId}' and superseded_at is null`)
+      // Ensure starting account_credit is 0
+      await q(`update clients set account_credit = 0.00 where id = '${testClientId}'`)
+    })
+
+    await as('Coordinator', async () => {
+      const downRes = (await q(`select change_client_membership(jsonb_build_object(
+        'client_id', '${testClientId}',
+        'client_uuid', gen_random_uuid(),
+        'plan_id', '${plan6kId}',
+        'effective_date', '2028-07-02',
+        'note', 'Downgrade with account credit'
+      ))`)).rows[0]
+      const downOut = typeof downRes.change_client_membership === 'string'
+        ? JSON.parse(downRes.change_client_membership)
+        : downRes.change_client_membership
+
+      assertEq(Number(downOut.credit), 10000, 'Downgrade credit is 10,000')
+      assertEq(Number(downOut.new_fee), 6000, 'New fee is 6,000')
+      assertEq(Number(downOut.new_fee_due), 0, 'New fee due is 0 (capped at zero)')
+      assertEq(Number(downOut.account_credit), 4000, 'Excess credit of 4,000 granted as account credit')
+
+      // Check clients table has updated account_credit
+      const clientAfter = (await q(`select account_credit from clients_v where id = '${testClientId}'`)).rows[0]
+      assertEq(Number(clientAfter.account_credit), 4000, 'Client account_credit balance increased by 4,000')
+    })
+
+    // 8. Law 6: Warehouse reads null for account_credit on clients_v
+    await as('Warehouse', async () => {
+      const whClient = (await q(`select account_credit from clients_v where id = '${testClientId}'`)).rows[0]
+      assertEq(whClient.account_credit, null, 'Law 6: Warehouse reads null for client account_credit')
+    })
+
+    // 9. Custom-fee plans (Elite) — refuse unpriced moves, price with the negotiated fee
+    // (T8-03 review: the listed fee is NULL, so "new fee = plan fee" priced Elite at zero and
+    // paid the old term's credit out as account credit. Never invented; refused.)
+    let elitePlanId
+    await asOwnerOfTheDatabase(async () => {
+      const elite = (await q(`select id, annual_fee from membership_plans where level = 'Elite'`)).rows[0]
+      elitePlanId = elite.id
+      assertEq(elite.annual_fee, null, 'The seeded Elite plan carries a custom (NULL) listed fee')
+    })
+
+    // 9a. A LIVE Elite membership with no recorded fee is a term that cannot be
+    // priced: a mid-term change needs the old fee for its unused-days credit.
+    // (Term 2027-01-01 → 2028-01-01; the change is effective 2027-06-01, inside it.)
+    let unknownFeeClientId
+    await asOwnerOfTheDatabase(async () => {
+      const clientCode = await one("select next_document_number('client')")
+      unknownFeeClientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+        values (gen_random_uuid(), '${clientCode}', 'L45 Unknown-Fee Client', '+9779800009947', 'Active', '${U.Owner}')
+        returning id`)).rows[0].id
+      // Exactly the row the old code priced at zero: Elite (no listed fee), fee never recorded.
+      await q(`insert into client_memberships (client_uuid, client_id, plan_id, join_date, fee_paid, created_by)
+        values (gen_random_uuid(), '${unknownFeeClientId}', '${elitePlanId}', '2027-01-01', NULL, '${U.Owner}')`)
+    })
+
+    await as('Coordinator', async () => {
+      await refuses(
+        'A membership whose fee was never recorded is refused: unused days cannot be priced',
+        `select change_client_membership(jsonb_build_object(
+          'client_id', '${unknownFeeClientId}',
+          'client_uuid', gen_random_uuid(),
+          'plan_id', '${plan12kId}',
+          'effective_date', '2027-06-01'
+        ))`,
+        undefined,
+        /GATE:membership\.fee_unknown/i,
+      )
+
+      // A LAPSED term needs no old fee priced: credit is zero by definition, so
+      // the change proceeds as a renewal at the full new-plan fee.
+      const lapsedRes = (await q(`select change_client_membership(jsonb_build_object(
+        'client_id', '${unknownFeeClientId}',
+        'client_uuid', gen_random_uuid(),
+        'plan_id', '${plan12kId}',
+        'effective_date', '2028-02-01'
+      ))`)).rows[0]
+      const lapsedOut = typeof lapsedRes.change_client_membership === 'string'
+        ? JSON.parse(lapsedRes.change_client_membership)
+        : lapsedRes.change_client_membership
+      assertEq(lapsedOut.is_renewal, true, 'A change after the term ended is a renewal')
+      assertEq(Number(lapsedOut.credit), 0, 'A lapsed term earns no credit — the old fee never needs pricing')
+      assertEq(Number(lapsedOut.new_fee_due), 12000, 'The lapsed client pays the full new-plan fee')
+    })
+
+    // 9b. Moving ONTO the custom-fee plan without the negotiated fee is refused.
+    await as('Coordinator', async () => {
+      await refuses(
+        'The Elite plan is refused when no negotiated fee is supplied',
+        `select change_client_membership(jsonb_build_object(
+          'client_id', '${testClientId}',
+          'client_uuid', gen_random_uuid(),
+          'plan_id', '${elitePlanId}',
+          'effective_date', '2028-08-01'
+        ))`,
+        undefined,
+        /GATE:membership\.custom_fee/i,
+      )
+    })
+
+    // 9c. The backdated clamp: an effective date before the old term started must
+    // credit no more than the old fee itself (days capped at the term on file).
+    // The worked-example client is on Cinematographer (fee 6,000): term started
+    // 2028-07-02, ends 2029-07-02 = 365 days.
+    await as('Coordinator', async () => {
+      const backRes = (await q(`select change_client_membership(jsonb_build_object(
+        'client_id', '${testClientId}',
+        'client_uuid', gen_random_uuid(),
+        'plan_id', '${plan12kId}',
+        'effective_date', '2027-06-01'
+      ))`)).rows[0]
+      const backOut = typeof backRes.change_client_membership === 'string'
+        ? JSON.parse(backRes.change_client_membership)
+        : backRes.change_client_membership
+
+      assertEq(backOut.days_left, 365, 'Backdated effective date: days left capped at the whole term on file')
+      assertEq(backOut.total_days, 365, 'Term on file is 365 days (2028-07-02 to 2029-07-02)')
+      assertEq(Number(backOut.credit), 6000, 'Credit never exceeds the old fee the client actually paid')
+      assertEq(Number(backOut.new_fee_due), 6000, 'New fee due is 12,000 minus the capped 6,000 credit')
+      assertEq(Number(backOut.account_credit), 0, 'A capped credit cannot spill into account credit')
+    })
+
+    // 9d. Entering the custom-fee plan WITH the negotiated fee works, and the fee
+    // the row now carries prices any later change out of it (Rs 25,000 Elite row,
+    // then moving to Creator uses that fee as the old-fee basis).
+    let negotiatedClientId
+    await asOwnerOfTheDatabase(async () => {
+      const clientCode = await one("select next_document_number('client')")
+      negotiatedClientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+        values (gen_random_uuid(), '${clientCode}', 'L45 Negotiated-Fee Client', '+9779800009948', 'Active', '${U.Owner}')
+        returning id`)).rows[0].id
+    })
+
+    await as('Coordinator', async () => {
+      const eliteRes = (await q(`select change_client_membership(jsonb_build_object(
+        'client_id', '${negotiatedClientId}',
+        'client_uuid', gen_random_uuid(),
+        'plan_id', '${elitePlanId}',
+        'join_date', '2028-01-01',
+        'fee_paid', 25000.00
+      ))`)).rows[0]
+      const eliteOut = typeof eliteRes.change_client_membership === 'string'
+        ? JSON.parse(eliteRes.change_client_membership)
+        : eliteRes.change_client_membership
+
+      assertEq(Number(eliteOut.new_fee), 25000, 'The negotiated fee is the new-fee basis on a custom-fee plan')
+      assertEq(Number(eliteOut.credit), 0, 'A fresh activation earns no credit')
+      assertEq(Number(eliteOut.new_fee_due), 25000, 'A fresh activation charges the negotiated fee')
+
+      // Later change OUT of the negotiated Elite row: old fee = the recorded
+      // 25,000. Term 2028-01-01 to 2029-01-01 = 366 days; changed effective
+      // 2028-09-01 leaves 122 days = exactly a third -> credit 25,000/3 = 8,333.33.
+      const leaveRes = (await q(`select change_client_membership(jsonb_build_object(
+        'client_id', '${negotiatedClientId}',
+        'client_uuid', gen_random_uuid(),
+        'plan_id', '${plan20kId}',
+        'effective_date', '2028-09-01'
+      ))`)).rows[0]
+      const leaveOut = typeof leaveRes.change_client_membership === 'string'
+        ? JSON.parse(leaveRes.change_client_membership)
+        : leaveRes.change_client_membership
+
+      assertEq(Number(leaveOut.old_fee), 25000, 'The recorded negotiated fee prices the change OUT of Elite')
+      assertEq(Number(leaveOut.credit), 8333.33, 'One third of the recorded Elite term (122 of 366 days) credits 8,333.33')
+      assertEq(Number(leaveOut.new_fee_due), 11666.67, 'Creator fee 20,000 minus 8,333.33 credit')
+    })
+  },
+})
+
+// ── L46: Renew a lapsed membership (Ruling D23, T8-04) ──────────────────────
+STEPS.push({
+  id: 'L53',
+  title: 'Renew a lapsed membership: charges plan fee, starts new term, keeps history (D23, T8-04)',
+  expect: 'green',
+  run: async () => {
+    let testClientId
+    let creatorPlanId
+    let expectedFee = 20000
+    const renewKey = '00000000-0000-4000-8000-000000000046'
+
+    await asOwnerOfTheDatabase(async () => {
+      // Find Creator plan
+      const creatorPlan = (await q(`select id, annual_fee from membership_plans where level = 'Creator' and status = 'Active'`)).rows[0]
+      creatorPlanId = creatorPlan.id
+      expectedFee = Number(creatorPlan.annual_fee)
+
+      // Create test client with a LAPSED membership (joined 2025-01-01, 12 month term ended 2026-01-01)
+      const clientCode = (await one("select next_document_number('client')"))
+      const clientRes = (await q(`insert into clients (client_code, name, phone, client_uuid)
+        values ('${clientCode}', 'Lapsed Member Client', '+9779800009946', gen_random_uuid())
+        returning id`)).rows[0]
+      testClientId = clientRes.id
+
+      // Seed lapsed membership (superseded_at is null, but term ended in Jan 2026)
+      await q(`insert into client_memberships (
+        client_uuid, client_id, plan_id, join_date, fee_paid
+      ) values (
+        gen_random_uuid(), '${testClientId}', '${creatorPlanId}', '2025-01-01', 15000.00
+      )`)
+    })
+
+    // 1. Permission check: Warehouse refused (42501)
+    await as('Warehouse', async () => {
+      let renewRefused = false
+      try {
+        await q(`select renew_client_membership(jsonb_build_object(
+          'client_id', '${testClientId}',
+          'client_uuid', gen_random_uuid(),
+          'plan_id', '${creatorPlanId}'
+        ))`)
+      } catch (err) {
+        renewRefused = /42501|Only Coordinator or above/i.test(err.message)
+      }
+      assert(renewRefused, 'Warehouse must be refused permission to renew membership')
+    })
+
+    // 2. Coordinator renews the lapsed membership on the same plan (D23)
+    await as('Coordinator', async () => {
+      const renewRes = (await q(`select renew_client_membership(jsonb_build_object(
+        'client_id', '${testClientId}',
+        'client_uuid', '${renewKey}',
+        'effective_date', '2026-10-28',
+        'note', 'Renewing lapsed membership'
+      ))`)).rows[0]
+
+      const out = typeof renewRes.renew_client_membership === 'string'
+        ? JSON.parse(renewRes.renew_client_membership)
+        : renewRes.renew_client_membership
+
+      assertEq(out.is_renewal, true, 'Marked as renewal')
+      assertEq(out.plan_level, 'Creator', 'Renewed on Creator plan')
+      assertEq(out.previous_level, 'Creator', 'Previous level was Creator')
+      assertEq(Number(out.credit), 0, 'No credit for lapsed term')
+      assertEq(Number(out.new_fee), expectedFee, 'New fee is full plan fee')
+      assertEq(Number(out.new_fee_due), expectedFee, 'Full fee charged on renewal')
+      assertEq(out.joined_on, '2026-10-28', 'New term starts from renewal date')
+      assert(out.superseded_membership_id !== null, 'Old membership was superseded')
+
+      // 3. History shows both terms (Law 3: nothing is deleted)
+      const allTerms = (await q(`select id, join_date::text as join_date, superseded_at, superseded_by_id from client_memberships
+        where client_id = '${testClientId}' order by join_date asc`)).rows
+      assertEq(allTerms.length, 2, 'History shows both terms')
+      assertEq(allTerms[0].join_date, '2025-01-01', 'First term preserved in history')
+      assert(allTerms[0].superseded_at !== null, 'First term is marked superseded')
+      assertEq(allTerms[0].superseded_by_id, out.membership_id, 'First term points to second term')
+
+      assertEq(allTerms[1].join_date, '2026-10-28', 'Second term starts from renewal date')
+      assertEq(allTerms[1].superseded_at, null, 'Second term is the currently active term')
+
+      // Exactly one live membership row
+      const live = (await q(`select id from client_memberships_v where client_id = '${testClientId}' and superseded_at is null`)).rows
+      assertEq(live.length, 1, 'Exactly one live membership row exists')
+      assertEq(live[0].id, out.membership_id, 'Live row is the renewed membership')
+    })
+
+    // 4. Audit trail holds renewal action
+    await asOwnerOfTheDatabase(async () => {
+      const audit = (await q(`select action, old_values, new_values, reason from audit_events where client_uuid = '${renewKey}'`)).rows[0]
+      assertEq(audit.action, 'Update', 'Audit event recorded with action Update')
+      assertEq(audit.reason, 'Renewing lapsed membership', 'Audit reason preserved')
+      const auditNew = typeof audit.new_values === 'string' ? JSON.parse(audit.new_values) : audit.new_values
+      assertEq(auditNew.is_renewal, true, 'Audit new_values indicates is_renewal true')
+      assertEq(Number(auditNew.new_fee_due), expectedFee, 'Audit record holds new_fee_due')
+    })
+
+    // 5. A renewal of a custom-fee plan (Elite) keeps the recorded price: the
+    //    fee carries onto the new term so later changes can still be priced.
+    let elitePlanId
+    let eliteClientId
+    await asOwnerOfTheDatabase(async () => {
+      elitePlanId = (await q(`select id from membership_plans where level = 'Elite'`)).rows[0].id
+      const clientCode = await one("select next_document_number('client')")
+      eliteClientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+        values (gen_random_uuid(), '${clientCode}', 'L53 Elite Renewal Client', '+9779800009949', 'Active', '${U.Owner}')
+        returning id`)).rows[0].id
+    })
+
+    await as('Coordinator', async () => {
+      // Enter Elite with the negotiated fee (term 2028-01-01 → 2029-01-01).
+      await q(`select change_client_membership(jsonb_build_object(
+        'client_id', '${eliteClientId}',
+        'client_uuid', gen_random_uuid(),
+        'plan_id', '${elitePlanId}',
+        'join_date', '2028-01-01',
+        'fee_paid', 25000.00
+      ))`)
+
+      // Renew after the term lapsed; no new fee is negotiated.
+      const eliteRenew = (await q(`select renew_client_membership(jsonb_build_object(
+        'client_id', '${eliteClientId}',
+        'client_uuid', gen_random_uuid(),
+        'effective_date', '2029-02-01'
+      ))`)).rows[0]
+      const eliteOut = typeof eliteRenew.renew_client_membership === 'string'
+        ? JSON.parse(eliteRenew.renew_client_membership)
+        : eliteRenew.renew_client_membership
+
+      assertEq(eliteOut.is_renewal, true, 'The custom-fee renewal is marked as renewal')
+      assertEq(Number(eliteOut.new_fee), 25000, 'The renewal charges the recorded negotiated fee, not zero')
+      assertEq(Number(eliteOut.new_fee_due), 25000, 'The full negotiated fee is due on renewal')
+
+      const live = (await q(`select fee_paid from client_memberships_v where client_id = '${eliteClientId}' and superseded_at is null`)).rows[0]
+      assertEq(Number(live.fee_paid), 25000, 'The renewed row carries the recorded fee forward')
     })
   },
 })

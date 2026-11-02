@@ -64,7 +64,38 @@ npm run build
 
 4. Use **synthetic** users and fixtures only. Create test staff accounts *in local Auth* and corresponding local `users` rows according to the application's supported identity bridge. Do not reuse production passwords, JWTs, phone numbers, or client data.
 
-## C. Hosted-path simulation and acceptance matrix (local only)
+## C. Automated local Auth/PostgREST access gate
+
+Run the local-only checker against **synthetic** Owner and Driver identities. It validates the loopback URL and the anon/publishable API key before making any network request; it does not write records.
+
+1. In gitignored `.env.localdb.local`, use **only local** settings and synthetic user passwords:
+
+```dotenv
+LOCAL_SUPABASE_URL=http://127.0.0.1:54321
+LOCAL_SUPABASE_ANON_KEY=<local anon/publishable key from npx supabase status>
+LOCAL_OWNER_EMAIL=local.owner@example.test
+LOCAL_OWNER_PASSWORD=<synthetic Owner test password>
+LOCAL_DRIVER_EMAIL=local.driver@example.test
+LOCAL_DRIVER_PASSWORD=<synthetic Driver test password>
+```
+
+Create those synthetic accounts in the **local** Supabase Auth instance and associate each with a local `users` record using the supported identity bridge. The checker verifies actual `Owner`/`Driver` roles from the local database; it fails if a role or fixture is missing. Do not use production email addresses, passwords, JWTs, client records or a service-role key.
+
+2. Run the no-network guard self-tests and the local Auth/PostgREST checks:
+
+```sh
+npm run test:local-api-guards
+npm run check:local-api -- --phase unassigned
+```
+
+The checker requires Owner-visible client rows and at least one Owner-visible synthetic financial fixture; otherwise the result is **inconclusive/failing**, not a false security pass. It checks `clients_v` and `client_directory_v` with Owner and Driver sessions and checks financial-table access. It returns only counts (never private rows).
+
+3. In the local database, arrange synthetic assigned, completed and failed delivery jobs, and rerun with `--phase assigned`, `--phase completed`, and `--phase failed`. **The flag is an operator label, not proof of the actual job status.** Verify the associated job state separately. This script alone does not certify scoped booking/trip RPC behavior.
+
+Only loopback API URLs are accepted. Real hosted JWT/PostgREST parity and production migration readiness remain separate release gates.
+
+---
+## D. Hosted-path simulation and acceptance matrix (local only)
 
 Exercise real local GoTrue sessions and the PostgREST HTTP API using the local **publishable/anon** key. Never impersonate a role using the service key.
 
@@ -81,7 +112,7 @@ Check `clients_v`, `client_directory_v`, `bookings`, `booking_lines_v`, and the 
 
 **Limit:** Even a green local stack cannot establish parity with production's current historical data, applied migration order, hosting defaults, or deployed code. This is a *pre-production gate*, not deployment approval.
 
-## D. Read-only production drift reconciliation
+## E. Read-only production drift reconciliation
 
 The connected live migration ledger and repository SQL files are not in one-to-one agreement: the 2 Nov audit found **49 unmatched local filenames**, including **34 filenames numbered 0165–0203**. Some older differences are known renames. The existing `scripts/plan-migrations.mjs` intentionally fails closed on unexplained renames; its default historical snapshot is stale.
 
@@ -97,7 +128,7 @@ The connected live migration ledger and repository SQL files are not in one-to-o
 3. Run `npm run db:plan:selftest` to verify the planner itself. After safely saving a *fresh* non-sensitive version/name snapshot under `docs/live/`, use `node scripts/plan-migrations.mjs <snapshot-path>`. Treat exit code 2 as a blocker, never an authorization to force changes.
 4. Do not use `supabase db push`, `supabase migration repair`, `supabase db reset --linked`, live `apply_migration` or automatic deployment to force alignment. Production change control, backup/restore, and approved migration sequence are a **separate future task**.
 
-## E. Done criteria and cleanup
+## F. Done criteria and cleanup
 
 - [ ] Local complete migration rebuild (no skipped Law 6 mask)
 - [ ] Local API identity/role matrix passes; evidence saved without credentials
