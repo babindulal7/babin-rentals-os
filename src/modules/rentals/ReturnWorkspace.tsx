@@ -2000,7 +2000,9 @@ export default function ReturnWorkspace({
                                 mark={mark}
                                 name={r.name}
                                 onDescription={(v) => patchMark(r.key, { damageDescription: v })}
-                                onRefreshEvidence={savedEvidence.refresh}
+                                bookingId={floor?.id ?? null}
+                                itemId={r.assetId}
+                                evidenceStatus={savedEvidence}
                               />
                             )}
                             {mark?.state === 'Returned' && mark.returnedAtIso && (
@@ -2163,7 +2165,9 @@ export default function ReturnWorkspace({
                                         mark={mark}
                                         name={r.name}
                                         onDescription={(v) => patchMark(r.key, { damageDescription: v })}
-                                        onRefreshEvidence={savedEvidence.refresh}
+                                        bookingId={floor?.id ?? null}
+                                        itemId={r.assetId}
+                                        evidenceStatus={savedEvidence}
                                       />
                                     </td>
                                   </tr>
@@ -2599,23 +2603,25 @@ function ConditionPicker({
 }
 
 /**
- * Damage detail for a Damaged / Lost row. The description and the local photo
- * tally ride the session notes on dispatch; no `evidence_files` write path
- * exists on this screen, and the panel says so instead of dressing the counter
- * up as an upload. The seed build's "Send for Manager Approval" flip is gone:
- * nothing was routed anywhere, and a control that claims routing it does not
- * perform fabricates success.
+ * A damaged/lost physical unit needs its OWN persisted evidence reference.
+ * Damage-stage evidence is intentionally session-free: the photo is captured
+ * before Return is committed and must not mint a second Return session.
+ * Quantity-only rows have no product_units.id and cannot claim per-unit proof.
  */
 function DamagePanel({
   mark,
   name,
   onDescription,
-  onRefreshEvidence,
+  bookingId,
+  itemId,
+  evidenceStatus,
 }: {
   mark: Mark
   name: string
   onDescription: (v: string) => void
-  onRefreshEvidence: () => void
+  bookingId: string | null
+  itemId: string | null
+  evidenceStatus: ReturnType<typeof useOperationEvidence>
 }) {
   const photos = mark.damagePhotos ?? 0
   return (
@@ -2628,14 +2634,22 @@ function DamagePanel({
         data-operation-target={!(mark.damageDescription ?? '').trim() ? 'return-damage' : undefined}
         style={{ width: '100%', minHeight: 46, padding: 7, borderRadius: 'var(--r-input)', border: `1px solid ${(mark.damageDescription ?? '').trim() === '' ? 'var(--danger)' : 'var(--input-border)'}`, background: 'var(--input-bg)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontFamily: 'inherit', resize: 'vertical' }}
       />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', flexWrap: 'wrap' }}>
-        <span className="figure" style={{ fontSize: 'var(--t-meta)', color: photos > 0 ? 'var(--success-text)' : 'var(--danger-text)' }}>
-          {photos} photo(s)
-        </span>
-        <span data-operation-target={!photos ? 'return-damage' : undefined}><RowAction label="Refresh saved photos" onClick={onRefreshEvidence} /></span>
-        <span style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-          Only saved photos linked to this unit satisfy the evidence requirement.
-        </span>
+      <div data-operation-target={!photos ? 'return-damage' : undefined}>
+        {itemId ? (
+          <OperationEvidenceStatus
+            status={evidenceStatus}
+            bookingId={bookingId}
+            itemId={itemId}
+            itemLabel={name}
+            stage="Damage"
+            category="Damage"
+          />
+        ) : (
+          <p role="alert" style={{ fontSize: 'var(--t-meta)', color: 'var(--danger-text)' }}>
+            This quantity-tracked line has no individual unit ID. A per-unit damage photo cannot be attached;
+            keep Return blocked and ask inventory staff to resolve the unit assignment.
+          </p>
+        )}
       </div>
     </div>
   )
