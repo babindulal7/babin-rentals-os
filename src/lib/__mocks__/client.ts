@@ -206,16 +206,51 @@ function commitInsert(table: string, row: Row, at: string): void {
  * — an exclusion over a range type is not something this store can express.
  */
 function applyTriggers(table: string, row: Row): void {
-  if (table !== 'booking_stage_transitions') return
-  const bookingId = row['booking_id']
-  const to = row['to_stage']
-  if (typeof bookingId !== 'string' || typeof to !== 'string') return
-  const bookings = store['bookings'] ?? []
-  for (const b of bookings) {
-    if (b['id'] !== bookingId) continue
-    const patch: Row = { stage: to, updated_at: row['occurred_at'] ?? row['created_at'] ?? new Date().toISOString() }
-    Object.assign(b, patch)
-    overlay.updates.push({ table: 'bookings', id: b['id'], patch })
+  if (table === 'booking_stage_transitions') {
+    const bookingId = row['booking_id']
+    const to = row['to_stage']
+    if (typeof bookingId !== 'string' || typeof to !== 'string') return
+    const bookings = store['bookings'] ?? []
+    for (const b of bookings) {
+      if (b['id'] !== bookingId) continue
+      const patch: Row = { stage: to, updated_at: row['occurred_at'] ?? row['created_at'] ?? new Date().toISOString() }
+      Object.assign(b, patch)
+      overlay.updates.push({ table: 'bookings', id: b['id'], patch })
+    }
+    return
+  }
+
+  if (table === 'damage_findings' && row['source'] === 'Cleaning' && !row['case_id']) {
+    const caseId = crypto.randomUUID()
+    const cases = (store['cases'] ??= [])
+    const nextNum = cases.length + 1
+    const year = new Date().getFullYear()
+    const caseNo = `CASE-${year}-${String(nextNum).padStart(4, '0')}`
+    const newCase: Row = {
+      id: caseId,
+      client_uuid: crypto.randomUUID(),
+      case_no: caseNo,
+      type: 'Damage',
+      title: `Damage found during reset — ${row['damage_type'] ?? 'Equipment'}`,
+      counterparty_kind: 'Client',
+      counterparty_name: 'Client',
+      priority: row['severity'] === 'Critical' || row['severity'] === 'High' ? row['severity'] : 'Medium',
+      status: 'Under Review',
+      disposition: 'Charge Client',
+      linked_booking_id: row['booking_id'] ?? null,
+      assessed_amount: 0,
+      deposit_held_amount: 0,
+      charged_to_client_amount: 0,
+      owner_id: row['created_by'] ?? '00000000-0000-0000-0000-000000000001',
+      created_by: row['created_by'] ?? '00000000-0000-0000-0000-000000000001',
+      opened_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    cases.push(newCase)
+    overlay.inserts.push({ table: 'cases', row: newCase })
+    row['case_id'] = caseId
+    return
   }
 }
 

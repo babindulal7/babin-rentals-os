@@ -32,6 +32,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0191 | T4-02 | delivery-reschedule-rpc | lane-b/T4-02-reschedule-a-delivery | verified |
 | 0192 | T5-01 | notification-records | lane-b/T5-01-notification-records | claimed |
 | 0193 | T3-14a | invoice-write-hardening | lane-c/T3-14a-invoice-write-hardening | verified |
+| 0194 | T2-15 | reset-damage-opens-case | lane-a/T2-15-damage-found-during-reset | verified |
 | 0199 | T8-08 | tds-on-crew-payouts | lane-a/T8-08-tds-on-crew-payouts | verified |
 | 0200 | T3-14b | draft-at-confirm | lane-c/T3-14b-draft-at-confirm | claimed |
 | 0201 | T8-09 | collateral-masking-chars | (main, 1 Nov) | written |

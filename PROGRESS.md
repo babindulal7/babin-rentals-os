@@ -39,6 +39,110 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - **Still open from the same review:** rider-link edge function hardening (floating `esm.sh` import, raw error text, no rate limit, `Math.random` fallback at `src/lib/queries/riderLink.ts:105`); unused production dependency `opencode-chromium` (`package.json:69`); a stray `vite.config.ts.timestamp-1793571192106-1efcbcebe6bf88.mjs` committed at the repo root; seven `alert()` calls where Law 12 wants inline errors.
 - `0205` is `verified` in the ledger; staging and the live apply are Babin's.
 
+## 2026-11-01 — T2-15 renumbered 0185 → 0194 and brought up to main (Lane A · collision fix)
+
+**Did**
+- Merged `main` into `lane-a/T2-15-damage-found-during-reset` (local merge, not pushed). The branch forked before main's `0185`–`0201`, so its `0185_reset_damage_opens_case.sql` collided with main's `0185_team_notes.sql`.
+- Renamed the file to `supabase/migrations/0194_reset_damage_opens_case.sql` (ledger rule 4: the later merge renumbers). Added ledger row `0194` (`verified`); updated the number cited in the SQL header and in `src/actions/rentals/floorVerb.ts`. The file content is otherwise unchanged.
+- The lifecycle step for T2-15 was `L42`, which main already uses for team notes; it is now `L56` (main's last step was `L48`).
+- Conflicts in `PROGRESS.md`, `MIGRATION_LEDGER.md` and `scripts/e2e-lifecycle.mjs` resolved by taking main's version and re-adding the T2-15 content; nothing of main's was dropped.
+- The same `0185` file also sits inside `lane-a/T8-04-…` and `lane-a/T8-05-…`. Those branches still carry the old name and must be rebased onto this one (or renumber the same file identically) before they merge.
+
+**Ruled**
+- None. This applies ledger rule 4; no product decision was made.
+
+**Verified** (in `bro-lane-t2-15`, `node_modules` junctioned from the main checkout — identical lockfile)
+- `npm run typecheck` → exit 0.
+- `npm run check:pglite` → 195/195 applied, 0 failed; view, function and definer gates clean.
+- `npm run check:lifecycle` → 49/49 green, including `L56` (damage found during reset). Same run as pglite, so `0194` is Verified under R-35. Re-run on 2 Nov after the step was re-id'd to `L56`: `check:pglite` 195/195 and `check:lifecycle` 49/49, same run.
+- `vitest` on `createCase.test.ts` + `damage.test.ts` → 27/27. The full suite was **not** run.
+- `npm run lint:progress` → passes.
+- Not done: no UI drive of the Reset workspace; nothing applied to any Supabase project (N-5).
+
+**Blocked / open**
+- `lane-a/T8-04-…`, `T8-05-…` (and any other branch holding the old `0185` file) need rebasing onto this branch; their own `0186`–`0189` membership migrations still collide with main and are the next renumber.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 80 / 80 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 66 / 66 (100%) | +1 |
+| Lifecycle | steps green / total | 49 / 49 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 195 files · check:pglite 195/195 applied, 0 failed. Full test suite: NOT run this session.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Renumber the T8-01…T8-04 membership migrations (`0186`–`0189`) next; then T8-06, T1-15, T4-03, then lane-c's `0182`–`0184`.
+- Fix the ledger gap for T8-09's `0188_staff_renting_gear` (main has two `0188` files; only one has a row).
+
+## 2026-10-27 — T2-15: Damage found during reset opens a case (Lane A · Size S)
+
+**Did**
+- Claimed migration `0185` (renumbered to `0194` on 1 Nov 2026, see below) in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0194_reset_damage_opens_case.sql`:
+  - Added trigger function `open_damage_case_on_cleaning_finding` and trigger `trg_open_damage_case_on_cleaning_finding` on `damage_findings` for `source = 'Cleaning'`.
+  - Automatically creates a linked case in `cases` table with type `'Damage'`, status `'Under Review'` (W23), disposition `'Charge Client'` (W44), `assessed_amount = 0` (W23), sequential `CASE-YYYY-NNNN` number, and links `damage_findings.case_id`.
+  - Links evidence references from cleaning queue entry or unit to the new case.
+  - Implemented RPC `create_damage_case(p_booking_id, p_unit_id, p_damage_type, p_description, p_severity, p_disposition, p_client_uuid)` allowing floor staff (Warehouse, Technician) and managers to create damage cases directly with validation and sequential numbering.
+- Implemented and verified lifecycle step **`L42`** in `scripts/e2e-lifecycle.mjs`:
+  - Staff records a cleaning queue entry and reports damage with `source = 'Cleaning'`.
+  - Database trigger opens linked case with type `'Damage'`, status `'Under Review'`, disposition `'Charge Client'`, and `assessed_amount = 0`.
+  - Verified Law 6: Warehouse reads null for `assessed_amount` on `cases_v`; Manager reads unmasked amount.
+- Updated `src/lib/damage.ts`:
+  - Added `DEFAULT_POST_RETURN_DAMAGE_DISPOSITION = 'Charge Client'` (W44).
+  - Added `POST_RETURN_DAMAGE_INITIAL_STATUS = 'Under Review'` (W23).
+  - Added `validateResetDamageReport` requiring >= 1 saved evidence photo (W27) and description >= 5 characters.
+  - Added `buildResetDamageClientNotice` formatting unpriced client notice ("under review with photos") per Ruling W23.
+- Implemented `createCase` action in `src/actions/cases/createCase.ts`:
+  - Implements `case.create` capability mapped in `src/actions/core.ts` to `rbac.isStaff(ctx.role)`.
+  - Uses RPC `create_damage_case` fast path and idempotent insert fallback with `generateClientUuid()` (Law 8).
+  - Emits `EVENT_TYPES.CASE_CREATED`.
+- Updated `src/modules/rentals/ResetWorkspace.tsx`:
+  - Replaced outdated helper text with Ruling W44/W23 notice: "Raises an open damage case on this booking, defaulting to client claim under review without an amount until approved by Manager (< Rs 25,000) or Owner (≥ Rs 25,000)."
+  - Fixed evidence photo upload category to `'Damage'`.
+  - Added toast feedback on reset completion indicating damage case opened for Manager review.
+- Authored test suites:
+  - `src/lib/__tests__/damage.test.ts`: verified `validateResetDamageReport` and `buildResetDamageClientNotice` (23/23 passed).
+  - `src/actions/cases/__tests__/createCase.test.ts`: verified `createCase` validation, permissions, and W44/W23 defaults (4/4 passed).
+- Updated mock store `applyTriggers` in `src/lib/__mocks__/client.ts` to emulate case creation when `damage_findings` is inserted with `source === 'Cleaning'`.
+
+**Ruled**
+- Ruling W44: Damage found at reset/cleaning after client has left defaults to claiming from the client (`disposition = 'Charge Client'`, `counterparty_kind = 'Client'`).
+- Ruling W23: Damage cases opened post-return start with `status = 'Under Review'` and `assessed_amount = 0`. The client receives an unpriced notice ("found, under review with photos"); the charge only follows after a Manager (< Rs 25,000) or Owner (≥ Rs 25,000) approves (PERMISSIONS §7 P1).
+- Law 6: Floor roles (Warehouse, Technician) cannot view or write monetary figures on cases or findings.
+
+**Verified**
+- `npm run check:pglite`: 182/182 applied, 0 failed.
+- `npm run check:lifecycle`: 42/42 steps green, 0 failed.
+- `npm run typecheck`: passed, 0 errors.
+- `npm test`: 481 test files passed, 5854/5854 tests passed.
+- `npm run lint`: passed with 0 warnings (`eslint src --max-warnings 0`).
+- `npm run build`: built in 10m 52s, 8154 modules transformed, dist generated cleanly.
+- `npm run completion`: counted and verified.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 60 / 60 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 49 / 49 (100%) | +1 |
+| Lifecycle | steps green / total | 42 / 42 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 182 files · check:pglite 182/182 applied, 0 failed (recorded 2026-10-27T17:38:30.935Z). Suite: PASS — 5854/5854 passed, 0 failed (recorded 2026-10-27T17:42:11.520Z); source fingerprint matches.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-27T17:39:01.899Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- T5-07 will build the actual email sending worker using `buildResetDamageClientNotice` output; currently tracked under Lane B (T5).
+- Nothing open from T2-15. Ready to merge on Lane A.
+
 ## 2026-11-02 — T4-08 rider-link contract fix (P0 resolved): migration 0204, server-minted token, R1–R5 verified
 
 **Did**
