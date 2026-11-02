@@ -1,5 +1,20 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 2 November 2026 — Owner replies, implementation and tax checks still pending
+
+The latest owner decisions are recorded in [RULINGS-2026-11-02-OWNER.md](../RULINGS-2026-11-02-OWNER.md). This is a **docs-only record**; no financial rule has been shipped or verified in the app.
+
+**Answered in business terms:** O-4 digest 05:30 NPT; O-12 excess membership credit remains account credit; O-14 new separate invoice for additional charges once the original is issued, while unissued drafts are updated in place; O-20 Elite has a **fixed** (amount not yet supplied) annual fee; O-15 scooter inside/outside fees NPR 150/250 and vehicle-zone prices configurable in Settings; Booqable renewal **18 February 2027**; staged launch and A/B/C development lanes approved in principle.
+
+**Owner answer recorded but not enough to ship:** O-5 owner specified 1.5% withholding on services, requiring accountant validation; O-6 owner believes certified IRD e-billing not needed, requiring accountant/regulatory validation; O-7 expressly non-VAT bills have no VAT but legal tax classification and register treatment still need accountant validation; O-10 cancellation within 24 h = one rental day's fee and a 50% rule for "more than two days" with staff override, but the precise 50% cutoff and 24–48 h fee are unspecified; O-11 agreement approach approved but exact approved terms text missing; O-16 purchase approved in principle but exact scanner/printer models not selected; O-20 Elite amount missing.
+
+**Still unanswered:** O-17 VAT invoice tax timing; cancellation cutoff ambiguity; van zone rates and inside/outside boundaries; Elite fixed amount; final agreement text, scanner models and compliance review. The user did **not** authorize incurring staging costs by approving development lanes A/B/C.
+
+**Safety:** Retain the P0 release HOLD. Do not alter issued invoices in place, assume tax compliance, deploy, or create paid staging without explicit approvals. Treat the above dated ruling as newer than the historic entries below.
+
+---
+
+
 ## 28 October 2026: switch-user PIN length (T1-15) — ANSWERED 1 Nov: 4 digits (O-18)
 
 **Answered 1 Nov 2026 by Babin ("4 pin"): the switch-user PIN is 4 digits.** T1-15 carries the migration
