@@ -22,7 +22,9 @@ jobs:
   verify:
     name: typecheck · test · build
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Full mock suite + PGlite + build use ~15m; coverage needs additional time.
+    # Do not weaken or skip any security, lifecycle, build, or coverage gates.
+    timeout-minutes: 35
 
     steps:
       - name: Checkout

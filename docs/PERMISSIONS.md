@@ -570,12 +570,14 @@ One page, no routes, sheets only. `auth_is_staff()` = false. Every read is joine
 
 `portal_users`, `portal_sessions`, `portal_auth_challenges` are **deny-all today**. They stay deny-all until the session → `client_id` binding is written and tested (§12 D-5). Guessing it wrong exposes one client's data to another.
 
-### 7.1 Hired Rider Link (non-login access path · W49 · T4-08)
+### 7.1 Hired Rider Link (non-login access path · W49 · T4-08 · R1–R5)
 
 For hired delivery riders who lack staff logins:
-- Staff issue an ephemeral single-job link by entering rider name and phone on a delivery job.
-- Access via 128-bit cryptographically secure raw token stored hashed (SHA-256) in Postgres (`delivery_job_links`). Raw tokens never touch database storage.
-- Non-login public access path via dedicated `/rider/:token` route and Edge Function.
+- Staff issue an ephemeral single-job link (`create_rider_link(client_uuid, job_id, rider_name, rider_phone)`) with Law 8 idempotency (`client_uuid`). Replaying the same key returns the existing link with `already_issued: true` without re-minting.
+- **Server-minted token (R3)**: Generated on the server (128+ bits entropy) and returned once; only SHA-256 hash is persisted in `delivery_job_links.token_hash`. Raw tokens never touch database storage, audit events, or server logs.
+- **Credential masking (R1)**: `delivery_job_links.token_hash` is excluded from staff SELECT grants — direct `select token_hash` by Coordinator or Warehouse is refused at the column level.
+- **Service-role only RPCs (R1 / D-10.6)**: Rider-facing RPCs (`get_rider_job_by_token`, `rider_mark_picked_up`, `rider_complete_delivery`) are granted exclusively to `service_role` and revoked from `public, anon, authenticated`. Direct RPC execution by any signed-in user or stranger is refused at the grant.
+- **Edge Function mediation & error masking (R4)**: Public access path via dedicated `/rider/:token` route and `rider-link` Edge Function. Auth/permission refusals (42501) map to a uniform message ("This link is no longer valid") without logging or leaking tokens, hashes, phones, or names.
 - **Strictly money-blind (Law 6)**: The rider endpoint and UI receive zero prices, rental rates, delivery charges, deposit requirements, invoice totals, or client financial statuses.
 - **Single-job boundary**: The link resolves exactly one delivery job. Cross-job traversal or enumeration is impossible.
 - **Permitted actions**:

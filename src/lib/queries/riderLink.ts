@@ -175,7 +175,7 @@ export async function createRiderLink(
 
   if (IS_MOCK) {
     const mockLinks = getMockLinks()
-    const existing = mockLinks.find((l) => l.clientUuid === key)
+    const existing = mockLinks.find((l) => l.clientUuid === key && l.jobId === jobId)
     if (existing) {
       return {
         linkId: existing.id,
@@ -221,6 +221,7 @@ export async function createRiderLink(
     throw new Error(error?.message || 'Failed to create rider link on database.')
   }
 
+  // New contract returns jsonb {link_id, raw_token, already_issued}
   const res = data as {
     link_id: string
     raw_token: string | null

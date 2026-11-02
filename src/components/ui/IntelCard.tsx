@@ -324,7 +324,7 @@ export function IntelCard({ children, glance, detailTitle, detailSubtitle, detai
       document.removeEventListener('keydown', esc)
       document.removeEventListener('pointermove', move)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- doClose/goBack/scheduleClose are re-created each render but read only refs and functional setters; listing them would re-bind three document listeners on every render
   }, [open, pinned, linkedStack.length])
 
   useEffect(
