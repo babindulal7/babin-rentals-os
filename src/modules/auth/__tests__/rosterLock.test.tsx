@@ -237,21 +237,37 @@ describe('RosterLock — shared device lock and user switching', () => {
     expect(mockLogout).toHaveBeenCalledTimes(1)
   })
 
-  it('offers "Forget this device" for Owner/Admin', async () => {
-    // Mock confirm
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
+  it('offers "Forget this device" for Owner/Admin and only forgets after an explicit confirm', async () => {
+    // The lock screen sits above the modal layer, so the confirmation is inline — never a
+    // browser-native window.confirm (the shell lint forbids it).
+    const nativeConfirm = vi.spyOn(window, 'confirm')
 
     await mount()
 
-    const forgetBtn = Array.from(container.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Forget this device'),
-    )
-    expect(forgetBtn).toBeTruthy()
+    const findButton = (label: string, root: ParentNode = container) =>
+      Array.from(root.querySelectorAll('button')).find((b) => b.textContent?.trim() === label)
+    const click = async (el: Element | undefined) => {
+      expect(el).toBeTruthy()
+      await act(async () => {
+        el!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      })
+    }
 
-    await act(async () => {
-      forgetBtn!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-    })
+    // 1st tap asks; it must not forget anything yet.
+    await click(findButton('Forget this device'))
+    const confirmation = container.querySelector('[role="alertdialog"]')
+    expect(confirmation).not.toBeNull()
+    expect(mockForgetThisDevice).not.toHaveBeenCalled()
 
+    // Cancel backs out and restores the original button.
+    await click(findButton('Cancel', confirmation!))
+    expect(container.querySelector('[role="alertdialog"]')).toBeNull()
+    expect(mockForgetThisDevice).not.toHaveBeenCalled()
+
+    // Ask again, then confirm: exactly one forget.
+    await click(findButton('Forget this device'))
+    await click(findButton('Forget this device', container.querySelector('[role="alertdialog"]')!))
     expect(mockForgetThisDevice).toHaveBeenCalledTimes(1)
+    expect(nativeConfirm).not.toHaveBeenCalled()
   })
 })
