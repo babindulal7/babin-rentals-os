@@ -12,10 +12,10 @@
 **Ruled**
 - None. Ledger rule 4.
 
-**Verified**
-- `npm run check:pglite` → 196/196 applied, 0 failed. `npm run check:lifecycle` → 48/48 green, same run, so `0208` is Verified under R-35.
-- `npm run typecheck` → 0, and `vitest` on `deviceSession.test.ts` + `src/modules/auth` → 39/39 — **both ran with the two uncommitted files in the working tree**, so they do not prove the committed state alone.
-- Full suite NOT run; no UI driven; nothing applied to any Supabase project (N-5).
+**Verified** (`bro-lane-t1-15` merged onto main `d4a3a550`, final number `0208`)
+- `npm run check:pglite` → 206/206 applied, 0 failed. `npm run check:lifecycle` → 56/56 green, same run, so `0208` is Verified under R-35.
+- `npm test -- src/lib/__tests__/deviceSession.test.ts src/modules/auth` → 5 files, 56/56 (mock mode). Full suite NOT run; no UI driven; nothing applied to any Supabase project (N-5).
+- `npm run typecheck` → 15 errors, all in `getDayRoute.ts` and `DeliveryWorkspace.tsx` (main's own T4-09 files, not changed by this lane). **Typecheck and the unit tests also saw the two uncommitted files** (`auth.tsx`, `secureStorage.ts`) that are NOT in this commit, so they do not prove the committed state alone.
 
 **Blocked / open**
 - The uncommitted `secureStorage.ts` work needs an owner decision: commit it to this branch or drop it.
@@ -23,15 +23,15 @@
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 79 / 79 (100%) | +20 |
+| Backend | actions implemented / total | 86 / 86 (100%) | +7 |
 | Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
 | DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 65 / 65 (100%) | +17 |
-| Lifecycle | steps green / total | 48 / 48 (100%) | +7 |
+| Permissions | capabilities mapped / declared | 67 / 67 (100%) | +2 |
+| Lifecycle | steps green / total | 56 / 56 (100%) | +8 |
 | Overall | structural mean of five | ≈ 97% | — |
-Migrations 196 files · check:pglite 196/196 applied, 0 failed (recorded 2026-11-01T18:32:02.176Z). Suite: Historical suite: 5872/5872 passed, 0 failed (recorded 2026-10-31T11:21:15.684Z); current source NOT VERIFIED.
+Migrations 206 files · check:pglite 206/206 applied, 0 failed (recorded 2026-11-02T13:06:12.786Z). Suite: NOT VERIFIED — focused or unspecified run: 56/56 passed, 0 failed (recorded 2026-11-02T13:08:29.317Z).
 Coverage suite: Historical suite: 5872/5872 passed, 0 failed (recorded 2026-10-30T11:13:42.203Z); current source NOT VERIFIED.
-Gates read from .lifecycle-result.json, written 2026-11-01T18:33:15.945Z.
+Gates read from .lifecycle-result.json, written 2026-11-02T13:07:13.482Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
