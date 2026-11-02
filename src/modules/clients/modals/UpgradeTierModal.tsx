@@ -542,7 +542,7 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership, 
                       {renewalFeePaisa !== null ? formatMoney(renewalFeePaisa) : '—'}
                     </span>
                     <span style={{ gridColumn: '1 / -1', fontSize: 'var(--t-caption)', color: 'var(--muted)', marginTop: 2 }}>
-                      Charges the full plan fee, starts a new term from today, and keeps previous term in history (Law 3).
+                      Charges the full plan fee, starts a new term from today, and keeps the previous term in history.
                     </span>
                   </div>
                 )}

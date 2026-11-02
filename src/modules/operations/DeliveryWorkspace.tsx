@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import LiveTransportPlans from './LiveTransportPlans'
 import { SendToRiderModal } from './SendToRiderModal'
+import { useStaffBranchId } from './useStaffBranchId'
 import { DateField } from '../../components/ui/DateField'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
@@ -2084,12 +2085,12 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
 function RoutePlannerView() {
   const { user } = useAuth()
   const role = user?.role ?? null
-  const canMoney = useCanViewMoney()
   const canViewRoute = canViewDayRoute(role)
   const canSetRoute = canSetDeliveryRoutePosition(role)
   const canSetPin = canSetClientMapPin(role)
-  const { branchId } = user ?? { branchId: '' }
-  const { showSuccessToast, showErrorToast } = useToast()
+  const { branchId, error: branchError } = useStaffBranchId(user?.id)
+  // Law 12: toasts are for successes only — every failure below is shown inline.
+  const { showSuccessToast } = useToast()
 
   const [date, setDate] = useState(() => businessDayAd())
   const [loading, setLoading] = useState(false)
@@ -2103,14 +2104,15 @@ function RoutePlannerView() {
   const [pinLat, setPinLat] = useState('')
   const [pinLng, setPinLng] = useState('')
   const [pinSaving, setPinSaving] = useState(false)
+  const [pinError, setPinError] = useState<string | null>(null)
 
   const loadRoute = useCallback(async () => {
     if (!branchId || !canViewRoute) return
     setLoading(true)
     setFetchError(null)
     try {
-      const { result } = await getDayRoute({ branchId, date })
-      setStops(result.stops)
+      const day = await getDayRoute({ branchId, date })
+      setStops(day.stops)
     } catch (err) {
       setFetchError(err instanceof Error ? err.message : 'Failed to load route')
     } finally {
@@ -2118,19 +2120,26 @@ function RoutePlannerView() {
     }
   }, [branchId, date, canViewRoute])
 
+  // Load on arrival and whenever the date or branch changes. loadRoute is rebuilt
+  // from `date`, so a date change reloads the new day rather than the one just left.
+  useEffect(() => {
+    void loadRoute()
+  }, [loadRoute])
+
   const generateLinks = useCallback(async () => {
     if (!branchId) return
     setGeneratingLinks(true)
+    setFetchError(null)
     try {
-      const { result } = await generateMapLinks({ branchId, date })
-      setMapLinks(result.links)
-      showSuccessToast(`Generated ${result.links.length} map link${result.links.length !== 1 ? 's' : ''}`)
+      const generated = await generateMapLinks({ branchId, date })
+      setMapLinks(generated.links)
+      showSuccessToast(`Generated ${generated.links.length} map link${generated.links.length !== 1 ? 's' : ''}`)
     } catch (err) {
-      showErrorToast(err instanceof Error ? err.message : 'Failed to generate map links')
+      setFetchError(err instanceof Error ? err.message : 'Failed to generate map links')
     } finally {
       setGeneratingLinks(false)
     }
-  }, [branchId, date, showSuccessToast, showErrorToast])
+  }, [branchId, date, showSuccessToast])
 
   const handleDragStart = (e: React.DragEvent, stopId: string) => {
     if (!canSetRoute) {
@@ -2156,6 +2165,7 @@ function RoutePlannerView() {
 
     const newStops = [...stops]
     const [dragged] = newStops.splice(dragIndex, 1)
+    if (!dragged) return
     newStops.splice(targetIndex, 0, dragged)
 
     // Update route positions
@@ -2183,6 +2193,7 @@ function RoutePlannerView() {
     setPinTarget(stop)
     setPinLat(stop.mapPinLat?.toString() ?? '')
     setPinLng(stop.mapPinLng?.toString() ?? '')
+    setPinError(null)
     setPinModalOpen(true)
   }
 
@@ -2190,18 +2201,20 @@ function RoutePlannerView() {
     if (!pinTarget) return
     const lat = Number(pinLat)
     const lng = Number(pinLng)
-    if (Number.isNaN(lat) || Number.isNaN(lng)) {
-      showErrorToast('Please enter valid latitude and longitude')
+    // Number('') is 0, so a blank field must be rejected before the NaN check.
+    if (!pinLat.trim() || !pinLng.trim() || Number.isNaN(lat) || Number.isNaN(lng)) {
+      setPinError('Please enter valid latitude and longitude')
       return
     }
     setPinSaving(true)
+    setPinError(null)
     try {
       await setClientMapPin({ clientId: pinTarget.bookingId, lat, lng })
       showSuccessToast('Map pin saved')
       setPinModalOpen(false)
-      loadRoute()
+      void loadRoute()
     } catch (err) {
-      showErrorToast(err instanceof Error ? err.message : 'Failed to save map pin')
+      setPinError(err instanceof Error ? err.message : 'Failed to save map pin')
     } finally {
       setPinSaving(false)
     }
@@ -2212,9 +2225,10 @@ function RoutePlannerView() {
       <PageShell>
         <PageHeader
           title="Route Planner"
-          subtitle={`Route for ${date}`}
-          action={
+          description={`Route for ${date}`}
+          actions={
             <DateField
+              ariaLabel="Route date"
               value={date}
               onChange={setDate}
               disabled={loading}
@@ -2223,9 +2237,9 @@ function RoutePlannerView() {
         />
         <PageBody>
           <EmptyState
-            icon="lock"
+            icon={<Icon name="lock" size={32} />}
             title="Access denied"
-            message="Your role cannot view the route planner."
+            description="Your role cannot view the route planner."
           />
         </PageBody>
       </PageShell>
@@ -2236,12 +2250,13 @@ function RoutePlannerView() {
     <PageShell>
       <PageHeader
         title="Route Planner"
-        subtitle={`Route for ${date}`}
-        action={
+        description={`Route for ${date}`}
+        actions={
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <DateField
+              ariaLabel="Route date"
               value={date}
-              onChange={(d) => { setDate(d); loadRoute(); }}
+              onChange={setDate}
               disabled={loading}
             />
             <Button
@@ -2264,9 +2279,9 @@ function RoutePlannerView() {
         }
       />
       <PageBody>
-        {fetchError && (
-          <div style={{ padding: '12px', background: 'var(--st-danger-bg)', border: '1px solid var(--st-danger-border)', borderRadius: '8px', color: 'var(--st-danger-fg)', marginBottom: '16px' }}>
-            {fetchError}
+        {(branchError ?? fetchError) && (
+          <div role="alert" style={{ padding: '12px', background: 'var(--st-danger-bg)', border: '1px solid var(--st-danger-border)', borderRadius: '8px', color: 'var(--st-danger-fg)', marginBottom: '16px' }}>
+            {branchError ?? fetchError}
           </div>
         )}
 
@@ -2302,12 +2317,12 @@ function RoutePlannerView() {
         )}
 
         {loading ? (
-          <LoadingSkeleton count={5} />
+          <LoadingSkeleton rows={5} type="card" label="Loading route…" />
         ) : stops.length === 0 ? (
           <EmptyState
-            icon="map"
+            icon={<Icon name="truck" size={32} />}
             title="No deliveries scheduled"
-            message="No active delivery jobs for this date. Check another date or create a dispatch."
+            description="No active delivery jobs for this date. Check another date or create a dispatch."
           />
         ) : (
           <div
@@ -2414,7 +2429,7 @@ function RoutePlannerView() {
                     title={stop.mapPinLat ? 'Edit map pin' : 'Drop map pin'}
                     aria-label={stop.mapPinLat ? 'Edit map pin' : 'Drop map pin'}
                   >
-                    <Icon name={stop.mapPinLat ? 'map_pin' : 'map_pin_plus'} size={18} />
+                    <Icon name={stop.mapPinLat ? 'edit' : 'plus'} size={18} />
                   </Button>
                 )}
 
@@ -2500,6 +2515,11 @@ function RoutePlannerView() {
                   />
                 </div>
               </div>
+              {pinError && (
+                <div role="alert" style={{ padding: '10px 12px', background: 'var(--st-danger-bg)', border: '1px solid var(--st-danger-border)', borderRadius: '8px', color: 'var(--st-danger-fg)', fontSize: '13px' }}>
+                  {pinError}
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
                 <Button variant="secondary" onClick={() => setPinModalOpen(false)}>Cancel</Button>
                 <Button variant="primary" onClick={savePin} loading={pinSaving}>Save</Button>
