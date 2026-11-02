@@ -78,7 +78,7 @@ older receipt.
 | Actions implemented (`npm run completion`) | **55 / 58** — the 3 missing are inspection stubs nothing calls |
 | Routed screens on the database | **50 / 60** — 0 on seed data; the other 10 are sign-in, 404, onboarding and three static pages |
 | Capabilities mapped | **48 / 48** |
-| GitHub CI | **Off.** No run has passed since 15 Oct 19:23 UTC; the run on PR #29 (25 Oct) shows GitHub refusing to start the job for a billing reason. Babin ruled CI stays off; local checks are the gate (W75, §6.4). |
+| GitHub CI | **On, self-hosted (2 Nov 2026, `RULINGS-2026-11-02-ci.md` C1, supersedes W75).** The 25 Oct run on PR #29 was refused for billing on GitHub-hosted runners; `ci.yml` now runs on the runner on Babin's PC. First green run: 2 Nov, ~48 min, branch `claude/equipment-draft-preview-rename-a5f063` (runner log; `main` not yet run). It runs only while the runner window is open, so the local gates stay the merge gate (§6.4). |
 
 What stops go-live today:
 
@@ -263,7 +263,7 @@ Ruled 26 Oct afternoon (W74–W78, W90, L5).
 3. **One card = one branch.** Branch name `lane-<a|b|c>/<card-id>-<slug>`, e.g.
    `lane-a/T2-01-camera-evidence`. Each card has a ready prompt in
    [`docs/plans/prompts/`](docs/plans/prompts/README.md) — paste it into the lane's agent.
-4. **CI is off; these local checks are the gate** (W75). Before an agent says a card is done, and
+4. **CI is on (self-hosted, 2 Nov) but only while Babin's runner is open; these local checks stay the gate** (W75 superseded by `RULINGS-2026-11-02-ci.md` C2). Before an agent says a card is done, and
    again before Babin merges it locally, run **every step `.github/workflows/ci.yml` ran, in its
    order** — the list is in [`docs/plans/README.md`](docs/plans/README.md) until T0-11 makes it one
    command: typecheck · lint · tests (mock data) · migrations from scratch · financial integrity ·
@@ -305,7 +305,7 @@ Ruled 26 Oct afternoon (W74–W78, W90, L5).
 | Photo storage growth | Storage quota warnings | Compress on device (⭐ long edge 1600 px); monthly size check |
 | One person approves everything | Owner actions slip | [`BABIN_ACTIONS.md`](docs/plans/BABIN_ACTIONS.md) has dated owner tasks |
 | Scope creep | New ideas land in go-live tracks | Anything not in §1 goes to T10 |
-| CI is off | A merge breaks `main` unnoticed | Local gates before every merge (§6.4); Claude re-runs the fast checks on `main` twice a day and reports red at once |
+| CI runs only while Babin's self-hosted runner is open | A merge breaks `main` unnoticed while the PC is off or the runner window is closed | Local gates before every merge (§6.4); Claude re-runs the fast checks on `main` twice a day and reports red at once; runner as a Windows service (C5) |
 | Automatic client emails go wrong | Wrong time, wrong client, an amount before approval | Server-built emails only (never browser text); one send per booking + event; the T5-06 register and its test; staging dry run with test clients |
 | ~283 agent sessions open (31 Oct count), ~68 of them slips first | A lane falls behind its weekly pace (about 5–6 core sessions); lane C merged ≈ 3 sessions of cards in the week to 31 Oct against ≈ 106 open | Slips-first cards move after day X first (B56), then [soon] cards; Claude reports each lane's pace at the check-ins and flags a lane more than a week behind; if one stays behind for two check-ins, Babin decides what else moves to T10 |
 | Five cards change availability (downtime, time between rentals, overbooking, temporary stock, day start) | Two cards edit the same availability code; a booking slips through | One lane owns the stock changes (K1); each such card has a design note and lifecycle steps; the double-booking guard is never bypassed (K4) |

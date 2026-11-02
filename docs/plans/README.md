@@ -60,7 +60,7 @@ Needs    — cards or Babin actions that must be done first.
 Sizes: **S** ≤ 1 session · **M** 2–3 · **L** 4–6 · **XL** 7+. A session is one focused agent
 run that ends in a branch ready to merge and a PROGRESS.md entry.
 
-## Gates every card must pass (CI is off — these are the gate, W75)
+## Gates every card must pass (CI runs these on the self-hosted runner when it is open — you still run them, 2 Nov C2)
 
 The same steps `.github/workflows/ci.yml` ran, in its order (T0-11 turns this into one command).
 A gate that is skipped is how a red check reaches `main` — on 26 Oct the UI-copy check went red

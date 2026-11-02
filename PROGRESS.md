@@ -1,5 +1,40 @@
 # Progress Log
 
+## 2026-11-02 — CI back on: self-hosted runner, `ci.yml` switched, W75 superseded
+
+**Did**
+- Verified the `equipmentDraftPreviewModel` rename (case-clash fix for Windows/macOS) is already in `main`'s history: `npx tsc --noEmit` exit 0; `VITE_DATA_SOURCE=mock npx vitest run src/components/records` 4 files / 61 tests green. No code change.
+- Registered a GitHub Actions runner (v2.338.0, SHA256 checked) as `DESKTOP-99FC3AO` in `C:\actions-runner` for `babindulal7/babin-rentals-os`. Babin ran the token step; it is started by hand with `.\run.cmd`, not yet a Windows service.
+- `.github/workflows/ci.yml`: `runs-on: [self-hosted, Windows, X64]`, added `workflow_dispatch`, skipped pull requests from forks (`if:` on the job), `timeout-minutes` 35 → 120. Commits `613c2183`, `0b6735ba` on `claude/equipment-draft-preview-rename-a5f063`.
+- Wrote `RULINGS-2026-11-02-ci.md` (C1–C5) and updated `CLAUDE.md`, `AGENTS.md`, `PLAN.md` (§4.1 row, §6.4 item 4, risk row) and `docs/plans/README.md` to say CI is on, self-hosted, and that the local gates still stand.
+
+**Ruled**
+- C1 CI on via the self-hosted runner (supersedes W75) · C2 local gates unchanged and still required · C3 fork PRs skipped · C4 120-minute limit · C5 runner-as-service deferred to Babin. Full rows with reverts in `RULINGS-2026-11-02-ci.md`.
+
+**Verified**
+- First run (35-minute limit): cancelled by the timeout at the Test step; `npm ci` 22 min, typecheck 9.4 min. Not a code failure.
+- Second run (120-minute limit): runner log reports `Job result after all job steps finish: Succeeded`, ~48 min, every step through Coverage and both artifact uploads ran in order. **Source is the runner's own log on the PC; GitHub's run page was not seen** (`gh` was not logged in), and only this branch has run — `main` has not.
+- A disk-full error (`ENOSPC`, 2.2 GB free afterwards) hit one doc edit mid-session; it was re-applied and the changed files were checked intact against `git diff`.
+- Not run by this session: `check:pglite`, `check:lifecycle`, `lint`, full `npm test` locally (the worktree's `node_modules` lacks `vitest.mjs`, so `npm test` fails here) — the CI run above is the only evidence for those.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 79 / 79 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 65 / 65 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 197 files · check:pglite not run this session. Suite: NOT VERIFIED — invalid test receipt. Coverage suite: NOT VERIFIED — invalid test receipt.
+Counted by `npm run completion`, not typed. Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **Babin:** merge the branch so CI runs on `main`; check the Actions tab shows the green run and keep the CI workflow enabled.
+- **Babin:** register the runner as a Windows service (administrator shell, fresh registration token) so CI does not depend on an open window (C5).
+- Run `npm install` in this worktree so `npm test` works here, then re-run `check:pglite` and `check:lifecycle` for a counted Lifecycle row.
+- Fix the 22-minute `npm ci` and 9-minute typecheck on this PC if CI time matters (likely contention/antivirus; unmeasured).
+
 ## 2026-11-02 — T4-08 rider-link contract fix (P0 resolved): migration 0204, server-minted token, R1–R5 verified
 
 **Did**
