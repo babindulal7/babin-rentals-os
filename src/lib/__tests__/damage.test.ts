@@ -11,6 +11,8 @@ import {
   settleDeposit,
   approvalEffect,
   submitState,
+  validateResetDamageReport,
+  buildResetDamageClientNotice,
 } from '../damage'
 import { rupees, toRupees } from '../money'
 
@@ -156,3 +158,49 @@ describe('submitState', () => {
     expect(submitState(validateDamageReport({ ...GOOD, photos: 0 }))).toBe('Draft')
   })
 })
+
+describe('validateResetDamageReport (W27, W44)', () => {
+  it('accepts valid reset damage report with photos and description', () => {
+    const res = validateResetDamageReport({
+      bookingId: '00000000-0000-0000-0000-000000000001',
+      unitId: '00000000-0000-0000-0000-000000000002',
+      damageType: 'Optical',
+      description: 'Scratched front element',
+      photos: 1,
+    })
+    expect(res.valid).toBe(true)
+    expect(res.errors).toHaveLength(0)
+  })
+
+  it('rejects reset damage report without photos (W27)', () => {
+    const res = validateResetDamageReport({
+      bookingId: '00000000-0000-0000-0000-000000000001',
+      unitId: '00000000-0000-0000-0000-000000000002',
+      damageType: 'Optical',
+      description: 'Scratched front element',
+      photos: 0,
+    })
+    expect(res.valid).toBe(false)
+    expect(res.errors.some((e) => e.includes('photo'))).toBe(true)
+  })
+})
+
+describe('buildResetDamageClientNotice (W23, T5-07)', () => {
+  it('builds an unpriced under-review client notice with photos count', () => {
+    const notice = buildResetDamageClientNotice({
+      bookingNo: 'BK-2026-0001',
+      clientName: 'Aayush Maharjan',
+      equipmentName: 'Sony FX3',
+      description: 'Scratched front element found during reset',
+      photosCount: 2,
+    })
+
+    expect(notice.status).toBe('Under Review')
+    expect(notice.subject).toContain('Under Review')
+    expect(notice.subject).toContain('Sony FX3')
+    expect(notice.body).toContain('2 photos')
+    expect(notice.body).toContain('No charges have been assessed at this time')
+    expect(notice.body).not.toMatch(/Rs|\$|\d+,\d+/)
+  })
+})
+

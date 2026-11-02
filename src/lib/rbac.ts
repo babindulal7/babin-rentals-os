@@ -180,6 +180,16 @@ export function canChangeMembership(role: SystemRole): boolean {
 }
 
 /**
+ * Check if role can manage membership plans (create, edit, retire, reactivate).
+ * Owner, Admin, Manager only. Coordinator is read-only (T8-02, Law 3).
+ *
+ * Mirrors `save_membership_plan` and `retire_membership_plan` RPCs (0196).
+ */
+export function canManageMembershipPlans(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager'
+}
+
+/**
  * Check if role can create a bundle.
  *
  * **Ruled 15 Aug 2026 by mirroring the database**, closing the fourth gap —
@@ -875,5 +885,32 @@ export function canTransitionDeliveryJob(
 export function canRescheduleDeliveryJob(role: SystemRole | null | undefined): boolean {
   if (!role) return false
   return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+}
+
+/**
+ * Set delivery route position (T4-09) — Owner, Admin, Manager, Coordinator, Warehouse.
+ * Mirrors `set_delivery_route_position` authorization.
+ */
+export function canSetDeliveryRoutePosition(role: SystemRole | null | undefined): boolean {
+  if (!role) return false
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator' || role === 'Warehouse'
+}
+
+/**
+ * Set client map pin (T4-09) — Owner, Admin, Manager, Coordinator, Warehouse.
+ * Mirrors `set_client_map_pin` authorization.
+ */
+export function canSetClientMapPin(role: SystemRole | null | undefined): boolean {
+  if (!role) return false
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator' || role === 'Warehouse'
+}
+
+/**
+ * View day route and generate map links (T4-09) — any staff role.
+ * Mirrors `get_day_route` / `generate_google_maps_links` authorization.
+ */
+export function canViewDayRoute(role: SystemRole | null | undefined): boolean {
+  if (!role) return false
+  return ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Driver', 'Accounts'].includes(role)
 }
 

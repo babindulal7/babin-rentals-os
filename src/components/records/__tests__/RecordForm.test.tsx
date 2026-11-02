@@ -229,6 +229,25 @@ describe('RecordForm - shared client form (Add)', () => {
     expect(where()).toBe('/clients?tab=new&q=rai')
   })
 
+  it('previews the unsaved equipment draft without saving or losing edits', async () => {
+    await mount('equipment', undefined, '/inventory/new')
+    await type('name', 'Unsaved Cinema Camera')
+    expect(button('Preview')).toBeDefined()
+    await click(button('Preview'))
+    expect(document.body.textContent).toContain('Unsaved preview. No equipment')
+    expect(document.body.textContent).toContain('Unsaved Cinema Camera')
+    expect(saveRecord).not.toHaveBeenCalled()
+    const back = [...document.body.querySelectorAll('button')]
+      .find((b) => b.textContent?.trim() === 'Back to editing')
+    expect(back).toBeDefined()
+    await click(back)
+    // Shared Modal retains content for the 200 ms close animation.
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 260)) })
+    expect(document.body.textContent).not.toContain('Unsaved preview. No equipment')
+    expect(field('name')?.value).toBe('Unsaved Cinema Camera')
+    expect(saveRecord).not.toHaveBeenCalled()
+  })
+
   it('offers Create & add another on new equipment, but never on a bundle or an edit', async () => {
     await mount('equipment', undefined, '/inventory/new')
     expect(button('Create & add another')).toBeDefined()

@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0206**
+**Next free number: 0209**
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
@@ -32,13 +32,21 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0191 | T4-02 | delivery-reschedule-rpc | lane-b/T4-02-reschedule-a-delivery | verified |
 | 0192 | T5-01 | notification-records | lane-b/T5-01-notification-records | claimed |
 | 0193 | T3-14a | invoice-write-hardening | lane-c/T3-14a-invoice-write-hardening | verified |
+| 0194 | T2-15 | reset-damage-opens-case | lane-a/T2-15-damage-found-during-reset | verified |
+| 0195 | T8-01 | load-membership-plans | lane-a/T8-01-load-babin-s-plans | verified |
+| 0196 | T8-02 | membership-plans-admin | lane-a/T8-02-plans-admin-screen | verified |
+| 0197 | T8-03 | membership-plan-change-credit | lane-a/T8-03-change-plan-with-credit-for-unused | verified |
+| 0198 | T8-04 | renew-client-membership | lane-a/T8-04-renew-a-lapsed-membership | verified |
 | 0199 | T8-08 | tds-on-crew-payouts | lane-a/T8-08-tds-on-crew-payouts | verified |
 | 0200 | T3-14b | draft-at-confirm | lane-c/T3-14b-draft-at-confirm | claimed |
 | 0201 | T8-09 | collateral-masking-chars | (main, 1 Nov) | written |
 | 0202 | T8-09 | staff-discount-is-money-setting | claude/file-update-d4b7b1 | verified |
-| 0203 | T8-06 | crew-overtime-half-full-day | lane-a/T8-06-crew-overtime-half-or-full-day | claimed |
-| 0204 | T1-15 | staff-pin-four-digits | lane-a/T1-15-switch-user-with-name-plus-pin | written |
-| 0205 | T4-03 | delivery-proof | lane-b/T4-03-delivery-proof | claimed |
+| 0203 | SEC-05/W68 | restore-driver-client-view-scopes | fix/2026-11-01-driver-client-view-scope-0203 | written; staging required |
+| 0204 | T4-08 | rider-link-v2-contract-fix | fix/2026-11-02-rider-link-contract-0204 | verified |
+| 0205 | T3-14b | extend-booking-without-draft | claude/ecc-repo-setup-728bf3 | verified |
+| 0206 | T4-09 | delivery-route-map-pins | lane-b/T4-09-delivery-route-map-pins | verified |
+| 0207 | T8-06 | crew-overtime-half-full-day | lane-a/T8-06-crew-overtime-half-or-full-day | verified |
+| 0208 | T1-15 | staff-pin-four-digits | lane-a/T1-15-switch-user-with-name-plus-pin | written |
 
 ## Expected migrations (not yet claimed)
 

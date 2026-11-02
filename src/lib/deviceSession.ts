@@ -8,7 +8,7 @@
  * - LIMBO state: restore B's token → verify PIN → unlock / abort
  * - Refresh tokens re-encrypted on every TOKEN_REFRESHED (single-use rotation)
  * - PINs NEVER on device; verified server-side via verify_staff_pin (0066)
- * - PINs: 4 digits (Babin 28 Oct 2026; migration 0204)
+ * - PINs: 4 digits (Babin 28 Oct 2026; migration 0208)
  * - Roster capped at 15 staff members per device
  *
  * Threat model: protects at-rest data (file copy, backup, casual snooping).

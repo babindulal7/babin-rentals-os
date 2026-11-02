@@ -80,7 +80,7 @@ the existing CSP and stays a separate concern.
 
 1. ~~**4 vs 6 digits — the card and the shipped security parameter disagree.**~~
    **RESOLVED by Babin, 28 Oct: 4 digits.** W53 and the card stood; the shipped `0066`
-   parameter is relaxed by his explicit instruction in migration **0204** (claimed in the
+   parameter is relaxed by his explicit instruction in migration **0208** (claimed in the
    ledger, written on this branch): `set_staff_pin` enforces exactly 4 (weak rules
    re-scaled: four identical, four sequential, last-4-of-mobile — which for a 4-digit PIN
    compares the whole PIN); `verify_staff_pin` accepts 4 **or** 6 during the transition so

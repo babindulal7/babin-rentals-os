@@ -104,12 +104,13 @@ export function CrewAndTransportSection({
         onToggle={onToggleCrew}
         crew={crew}
         days={days}
-        canCrewMoney={canCrewMoney}
+        canCrewMoney={canCrewMoney || Boolean(canBookingMoney)}
         liveCrew={liveCrew}
         onAddCrew={onAddCrew}
         onRemoveCrew={onRemoveCrew}
         onClearCrew={onClearCrew}
         onUpdateCrewExtras={handleUpdateCrewExtras}
+        onUpdateCrewLine={onUpdateCrew}
         crewChargesPaisa={crewChargesPaisa}
         isPhone={isPhone}
         {...(crewTitle ? { title: crewTitle } : {})}

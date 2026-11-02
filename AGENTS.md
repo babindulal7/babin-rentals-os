@@ -30,12 +30,13 @@ npm run dev:mock             # vite --mode mock, VITE_DATA_SOURCE=mock local cor
 npm run dev:local            # vite --mode localdb
 npm run typecheck            # tsc --noEmit
 npm run lint                 # eslint src --max-warnings 0 (src only; archive/scripts/supabase excluded)
-npm test                     # vitest run (full suite) — mock mode only if no VITE_SUPABASE_URL is found, and it reads .env.local (T0-02); run VITE_DATA_SOURCE=mock npm test until T0-10
+npm test                     # safe mock backend by default, even with live .env.local; --live requires explicit isolated-test opt-in (T0-10)
+npm run gates                # T0-11: all CI verification steps locally; -- --quick skips coverage (not a release pass)
 npx vitest run <path>        # single file, e.g. npx vitest run src/__tests__/e2e/tier1-features.test.tsx
 npm run build                # tsc --noEmit && vite build → dist/
 ```
 
-Verification order for any change: `typecheck → test → check:pglite + check:lifecycle → build`. **GitHub CI is off since 26 Oct 2026** (billing; Babin ruled W75 — `RULINGS-2026-10-26-workflow.md`): run **every step it ran, in its order**, yourself before you report a card done, and paste the results into PROGRESS.md — the list is in `docs/plans/README.md` ("Gates every card must pass"): typecheck, lint, `VITE_DATA_SOURCE=mock npm test` (keep the variable until T0-10 — with a live URL in `.env.local` the runner uses live settings), `check:pglite`, financial integrity, `check:security`, `check:lifecycle`, `test:server-contracts`, `test:partial-return`, `lint:progress`, the receipt test, `lint:shell`, `lint:ui-copy`, `check:contrast`, build (coverage before each live batch). The workflow file `.github/workflows/ci.yml` stays as the reference list.
+Verification order for any change: `typecheck → test → check:pglite + check:lifecycle → build`. **GitHub CI is off since 26 Oct 2026** (billing; Babin ruled W75 — `RULINGS-2026-10-26-workflow.md`): run **every step it ran, in its order**, yourself before you report a card done, and paste the results into PROGRESS.md — the list is in `docs/plans/README.md` ("Gates every card must pass"): typecheck, lint, `npm test` (T0-10 forces mock settings, even if `.env.local` contains a live URL), `check:pglite`, financial integrity, `check:security`, `check:lifecycle`, `test:server-contracts`, `test:partial-return`, `lint:progress`, the receipt test, `lint:shell`, `lint:ui-copy`, `check:contrast`, build (coverage before each live batch). The workflow file `.github/workflows/ci.yml` stays as the reference list.
 
 DB / lifecycle gates (allowed in `opencode.jsonc`, never prompt-blocked):
 ```bash

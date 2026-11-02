@@ -41,18 +41,53 @@ vi.mock('../../../actions/clients/changeMembership', () => ({
     return { client_id: input['clientDbId'], plan_level: input['planLevel'] }
   }),
 }))
+vi.mock('../../../actions/clients/renewMembership', () => ({
+  NOTE_MAX: 500,
+  renewMembership: vi.fn(async (input: Record<string, unknown>, ctx: Record<string, unknown>) => {
+    state.calls.push({ input: { ...input, isRenewal: true }, ctx })
+    if (state.outcome.hold) await state.outcome.hold
+    if (state.outcome.fail) throw new Error(state.outcome.fail)
+    return { client_id: input['clientDbId'], plan_level: input['planLevel'], is_renewal: true }
+  }),
+}))
+
+/* The dialog reads the live membership row itself (id, plan, join date, fee).
+   One row per test by default: a recorded fee, so legacy cases behave as the
+   dialog has always behaved; a test sets `membershipRow.data = null` or a
+   feeless row to pin the honesty paths. */
+const membershipRow = vi.hoisted(() => ({
+  data: null as Record<string, unknown> | null,
+  /** Set to keep the read in flight and pin the "still loading" state. */
+  hold: null as Promise<void> | null,
+}))
+vi.mock('../../../lib/supabase', () => ({
+  supabase: {
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          is: () => ({
+            maybeSingle: async () => {
+              if (membershipRow.hold) await membershipRow.hold
+              return { data: membershipRow.data, error: null }
+            },
+          }),
+        }),
+      }),
+    }),
+  },
+}))
 
 ;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
 
 const { UpgradeTierModal } = await import('../modals/UpgradeTierModal')
 
-const plan = (level: string, label: string, credit: number | null, pct: number | null, order: number) => ({
-  level, label, defaultCreditLimit: credit, individualDiscountPct: pct, displayOrder: order,
+const plan = (id: string, level: string, label: string, annualFee: number | null, credit: number | null, pct: number | null, order: number) => ({
+  id, level, label, annualFee, termMonths: 12, defaultCreditLimit: credit, individualDiscountPct: pct, displayOrder: order,
 })
 const PLANS = [
-  plan('Academy', 'Access Member', 5_000_000, 5, 1),
-  plan('Creator', 'Partner', 25_000_000, 10, 2),
-  plan('Elite', 'Elite Member', null, null, 3),
+  plan('plan-academy', 'Academy', 'Access Member', 6_000_000, 5_000_000, 5, 1),
+  plan('plan-creator', 'Creator', 'Partner', 15_000_000, 25_000_000, 10, 2),
+  plan('plan-elite', 'Elite', 'Elite Member', null, null, null, 3),
 ]
 
 const client = { id: 'C-0042', dbId: '11111111-1111-4111-8111-111111111111', name: 'Asha Rai', membership: 'Creator' } as unknown as ClientRecord
@@ -62,7 +97,7 @@ let host: HTMLDivElement | undefined
 let onClose = vi.fn()
 let onSuccess = vi.fn()
 
-async function mount(over: { hasMembership?: boolean; client?: ClientRecord } = {}) {
+async function mount(over: { hasMembership?: boolean; client?: ClientRecord; initialMode?: 'change' | 'renew' } = {}) {
   host = document.createElement('div')
   document.body.appendChild(host)
   root = createRoot(host)
@@ -74,9 +109,18 @@ async function mount(over: { hasMembership?: boolean; client?: ClientRecord } = 
         onSuccess={onSuccess}
         client={over.client ?? client}
         hasMembership={over.hasMembership ?? true}
+        initialMode={over.initialMode}
       />,
     )
   })
+  // The dialog reads the live membership row itself; flush that read so every
+  // assertion sees one settled state. (With no row the pending note stays up.)
+  if (over.hasMembership ?? true) {
+    for (let i = 0; i < 10; i++) {
+      await act(async () => {})
+      if (!document.body.textContent?.includes('Reading the current membership')) break
+    }
+  }
 }
 
 const text = () => document.body.textContent ?? ''
@@ -100,6 +144,15 @@ async function type(value: string) {
     el.dispatchEvent(new Event('input', { bubbles: true }))
   })
 }
+const feeBox = () => document.body.querySelector<HTMLInputElement>('input[aria-label="Negotiated fee"]')
+async function typeFee(value: string) {
+  await act(async () => {
+    const el = feeBox()
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!
+    setter.call(el, value)
+    el?.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+}
 async function click(label: string) {
   await act(async () => {
     button(label)!.click()
@@ -113,6 +166,8 @@ beforeEach(() => {
   state.outcome.hold = null
   state.toasts = []
   state.online = true
+  membershipRow.data = { id: 'membership-fixture', plan_id: 'row-plan-not-in-options', join_date: '2026-01-01', fee_paid: 1200000 }
+  membershipRow.hold = null
   onClose = vi.fn()
   onSuccess = vi.fn()
 })
@@ -296,5 +351,132 @@ describe('applying', () => {
     await act(async () => { release?.() })
     expect(onSuccess).toHaveBeenCalledWith('Academy')
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('renewing a membership (Ruling D23)', () => {
+  it('allows renewal on the current plan when checkbox is checked', async () => {
+    await mount()
+    await choose('Creator')
+    expect(button('Apply Tier Change')!.hasAttribute('disabled')).toBe(true)
+
+    const checkbox = document.body.querySelector<HTMLInputElement>('input[type="checkbox"]')!
+    expect(checkbox).not.toBeNull()
+    await act(async () => {
+      checkbox.click()
+    })
+
+    expect(text()).toContain('Renew Membership')
+    expect(text()).toContain('Charges the full plan fee, starts a new term from today')
+    expect(button('Renew Membership')!.hasAttribute('disabled')).toBe(false)
+
+    await click('Renew Membership')
+    expect(state.calls).toHaveLength(1)
+    expect(state.calls[0]!.input).toMatchObject({
+      clientDbId: client.dbId,
+      clientCode: 'C-0042',
+      planLevel: 'Creator',
+      isRenewal: true,
+    })
+    expect(state.toasts).toEqual(["Asha Rai's Creator membership has been renewed for a new term."])
+    expect(onSuccess).toHaveBeenCalledWith('Creator')
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('opens directly in renewal mode when initialMode is renew', async () => {
+    await mount({ initialMode: 'renew' })
+    expect(text()).toContain('Renew Membership')
+    expect(text()).toContain('Asha Rai is renewing their Creator plan.')
+    expect(select()!.value).toBe('Creator')
+    expect(button('Renew Membership')!.hasAttribute('disabled')).toBe(false)
+
+    await click('Renew Membership')
+    expect(state.calls).toHaveLength(1)
+    expect(state.calls[0]!.input).toMatchObject({
+      clientDbId: client.dbId,
+      planLevel: 'Creator',
+      isRenewal: true,
+    })
+  })
+})
+
+describe('pricing honesty (D22 gate parity)', () => {
+  it('shows the working from the recorded membership fee, and never prices a withheld fee as zero', async () => {
+    await mount()
+    await choose('Academy')
+    expect(text()).toContain('Credit for unused days (Ruling D22)')
+    expect(text()).toContain('Current plan fee:')
+    expect(text()).toContain('12,000')
+    await choose('Elite')
+    // The custom fee is not negotiated here, so there is no price to show —
+    // and certainly not a made-up zero.
+    expect(text()).not.toContain('Credit for unused days (Ruling D22)')
+    expect(text()).not.toMatch(/Rs\s?0\b/)
+    expect(button('Apply Tier Change')!.hasAttribute('disabled')).toBe(true)
+    expect(text()).toContain('Negotiated fee (NPR)')
+  })
+
+  it('asks for the negotiated fee on the custom-fee plan and sends it in paisa', async () => {
+    await mount({ hasMembership: false })
+    await choose('Elite')
+    expect(button('Activate Membership')!.hasAttribute('disabled')).toBe(true)
+    await typeFee('25,000')
+    expect(text()).toContain('The negotiated fee is recorded with this change.')
+    expect(button('Activate Membership')!.hasAttribute('disabled')).toBe(false)
+    await click('Activate Membership')
+    expect(state.calls).toHaveLength(1)
+    expect(state.calls[0]!.input['feePaid']).toBe(2_500_000)
+  })
+
+  it('refuses an unparsable or negative negotiated fee inline, and sends nothing', async () => {
+    await mount({ hasMembership: false })
+    await choose('Elite')
+    await typeFee('-5')
+    expect(document.body.querySelector('[role="alert"]')?.textContent).toContain('valid non-negative')
+    expect(button('Activate Membership')!.hasAttribute('disabled')).toBe(true)
+    await click('Activate Membership')
+    expect(state.calls).toHaveLength(0)
+  })
+
+  it('says when the current membership has no fee basis, and does not send an unpriceable change', async () => {
+    membershipRow.data = { id: 'membership-fixture', plan_id: 'row-plan-not-in-options', join_date: '2026-01-01', fee_paid: null }
+    await mount()
+    await choose('Academy')
+    expect(text()).toContain('never recorded')
+    expect(text()).not.toContain('Credit for unused days (Ruling D22)')
+    expect(button('Apply Tier Change')!.hasAttribute('disabled')).toBe(true)
+    await click('Apply Tier Change')
+    expect(state.calls).toHaveLength(0)
+  })
+
+  it('says plainly that it is reading the membership while the recorded row is still loading, and does not price from a guess', async () => {
+    membershipRow.hold = new Promise<void>(() => {})
+    await mount()
+    await choose('Academy')
+    expect(text()).toContain('Reading the current membership')
+    expect(text()).not.toContain('Credit for unused days (Ruling D22)')
+    expect(button('Apply Tier Change')!.hasAttribute('disabled')).toBe(true)
+  })
+
+  it('prices a custom-fee renewal from the recorded fee, and asks for one when nothing is on record', async () => {
+    const eliteClient = { ...client, membership: 'Elite' } as ClientRecord
+    membershipRow.data = { id: 'membership-fixture', plan_id: 'plan-elite', join_date: '2026-01-01', fee_paid: 2_500_000 }
+    await mount({ initialMode: 'renew', client: eliteClient })
+    expect(text()).toContain('The fee already on record is charged')
+    expect(text()).toContain('25,000')
+    expect(button('Renew Membership')!.hasAttribute('disabled')).toBe(false)
+    await click('Renew Membership')
+    expect(state.calls).toHaveLength(1)
+    expect(state.calls[0]!.input).toMatchObject({ planLevel: 'Elite', isRenewal: true })
+    expect(state.calls[0]!.input).not.toHaveProperty('feePaid')
+
+    // With nothing on record the renewal cannot be priced — it waits for a fee.
+    await act(async () => root?.unmount())
+    host?.remove()
+    document.body.innerHTML = ''
+    membershipRow.data = { id: 'membership-fixture', plan_id: 'plan-elite', join_date: '2026-01-01', fee_paid: null }
+    await mount({ initialMode: 'renew', client: eliteClient })
+    expect(text()).toContain('record it below to price this renewal')
+    expect(button('Renew Membership')!.hasAttribute('disabled')).toBe(true)
   })
 })

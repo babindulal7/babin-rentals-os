@@ -1,5 +1,5 @@
 -- =============================================================================
--- Migration 0204: staff PIN is FOUR digits — Babin's ruling, 28 October 2026.
+-- Migration 0208: staff PIN is FOUR digits — Babin's ruling, 28 October 2026.
 --
 -- The T1-15 card and ruling W53 say "tap name + 4-digit PIN". Migration 0066
 -- shipped `^[0-9]{6}$`. This was logged as a TODO(decision) on 28 Oct
@@ -101,7 +101,7 @@ begin
   end if;
 
   -- Shape. Enforced here as well as in the UI because the RPC is reachable
-  -- without the numpad. 0204 (Babin, 28 Oct): exactly FOUR digits.
+  -- without the numpad. 0208 (Babin, 28 Oct): exactly FOUR digits.
   if p_pin is null or p_pin !~ '^[0-9]{4}$' then
     raise exception 'A PIN must be exactly 4 digits.';
   end if;
@@ -149,7 +149,7 @@ end;
 $$;
 
 comment on function set_staff_pin(text) is
-  'Enrol or rotate the caller''s OWN staff PIN. 0204 (Babin, 28 Oct 2026): exactly 4 digits. '
+  'Enrol or rotate the caller''s OWN staff PIN. 0208 (Babin, 28 Oct 2026): exactly 4 digits. '
   'Freshness gate: the password sign-in must be <= 15 minutes old (amr). Weak PINs refused: four '
   'identical, four sequential, last four of the caller''s mobile. Rotation is revoke + insert (Law 3).';
 
@@ -198,9 +198,9 @@ begin
     return jsonb_build_object('ok', false, 'reason', 'inactive');
   end if;
 
-  -- 0204: 4 from now on, 6 kept so hashes enrolled before the ruling still
+  -- 0208: 4 from now on, 6 kept so hashes enrolled before the ruling still
   -- verify until their owners rotate. Tighten to 4-only once the live roster
-  -- has rotated (follow-up, logged in the 0204 header).
+  -- has rotated (follow-up, logged in the 0208 header).
   if p_pin is null or p_pin !~ '^([0-9]{4}|[0-9]{6})$' then
     return jsonb_build_object('ok', false, 'reason', 'malformed');
   end if;
@@ -239,7 +239,7 @@ $$;
 
 comment on function verify_staff_pin(text) is
   'Is this the caller''s PIN? Fails closed; 5 consecutive failures lock that person only, '
-  '15 minutes. 0204: accepts 4 digits (the ruling) and keeps 6 so pre-ruling hashes verify '
+  '15 minutes. 0208: accepts 4 digits (the ruling) and keeps 6 so pre-ruling hashes verify '
   'until rotated — set_staff_pin enforces exactly 4 from now on.';
 
 revoke all on function verify_staff_pin(text) from public, anon;
