@@ -110,6 +110,11 @@ describe('evidence queries', () => {
     expect(query.eq).toHaveBeenCalledWith('booking_id', 'booking-1')
   })
 
+  it('allows a verified empty result without treating it as an error', async () => {
+    mockSavedEvidenceRead({ data: [], error: null })
+    await expect(fetchBookingEvidenceFiles('booking-1')).resolves.toEqual([])
+  })
+
   it('rejects a failed booking evidence query instead of claiming zero photos', async () => {
     mockSavedEvidenceRead({ data: null, error: { message: 'RLS denied' } })
     await expect(fetchBookingEvidenceFiles('booking-1')).rejects.toThrow('Could not load photos: RLS denied')
