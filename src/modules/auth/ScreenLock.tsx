@@ -1,63 +1,60 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Icon from '../../components/ui/Icon'
 import { PinPad } from '../../components/ui/PinPad'
 import { ErrorBanner } from '../../components/ui/StateViews'
-import { useAuth } from '../../lib/auth'
-import type { PinVerdict } from '../../lib/auth'
+import { useAuth, type PinVerdict, type RosterEntry } from '../../lib/auth'
 import './auth.css'
 
 /**
- * **The session lock.**
+ * **The session lock & device roster switcher (T1-15).**
  *
- * Rewritten 24 Aug 2026. What was here before accepted **any six digits**:
- *
- * ```ts
- * if (newPin.length === 6) {
- *   // Mock unlock on any 6 digit pin
- *   setTimeout(() => onUnlock(), 200)
- * }
- * ```
- *
- * — and offered "Sign out as Ramesh", a name belonging to nobody, over a button
- * that set `window.location.href = '/login'` without signing out at all. So the
- * lock could be opened by a stranger typing 000000, and the escape hatch left
- * the session live and merely navigated away from it. Both are the shape
- * `SUCCESS_FABRICATION_REGISTER_2026-08-12.md` exists to catch.
- *
- * ## What this is, precisely
- *
- * Session RE-ENTRY. The session never ended: the JWT and refresh token are
- * still held, `AuthProvider` still has the user, and nothing was signed out.
- * This overlay is a curtain, and the PIN opens the curtain.
- *
- * It is emphatically NOT a sign-in. `verifyStaffPin` cannot mint a session —
- * see its comment in `lib/auth.tsx` and 0066's header for why a PIN that
- * *appeared* to sign someone in would rebuild the `VITE_DEV_AUTH_BYPASS`
- * outage: React user set, no JWT, every read denied by RLS, empty screens under
- * a header saying "Owner".
- *
- * ## Why it names who is signed in
- *
- * This runs on shared warehouse tablets. The person who walks up is very often
- * not the person who walked away, and every row written after an unlock carries
- * the unlocked session's identity as `created_by`. Without the name on screen,
- * B unlocks A's session with B's PIN — impossible, since the PIN is checked
- * against A's row — but more importantly B *tries*, fails five times, and locks
- * A's account out. Naming the session turns that into "not mine, sign out".
+ * ## What this is
+ * - On shared devices (roster.length > 0): displays the roster of enrolled staff
+ *   members (names, avatars, ≤15). Staff tap their name, enter their 4-digit PIN,
+ *   and restore their real session via server-side `verify_staff_pin` (0066).
+ * - On solo devices (roster.length === 0): displays the session lock curtain for
+ *   the active user.
+ * - Fails closed: offline switching refuses; wrong PINs decrement server attempts;
+ *   5 wrong PINs lock that person only.
+ * - Abort / wrong PIN returns to the roster. Never an automatic restore of previous session.
  */
 export default function ScreenLock({ onUnlock }: { onUnlock: () => void }) {
-  const { user, verifyStaffPin, logout } = useAuth()
+  const { user, roster, verifyStaffPin, switchUser, logout, forgetThisDevice } = useAuth()
+  const hasRoster = Boolean(roster && roster.length > 0)
+
+  // On shared devices with enrolled staff, start on the roster list.
+  // On solo devices without a roster, start directly on the active user's PIN pad.
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(() => {
+    return hasRoster ? null : (user?.id ?? null)
+  })
+
   const [pin, setPin] = useState('')
   const [busy, setBusy] = useState(false)
   const [verdict, setVerdict] = useState<PinVerdict | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [invalid, setInvalid] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const invalidTimer = useRef<number | null>(null)
 
-  // Cleared on a TIMER, never on `animationend`. Under
-  // `prefers-reduced-motion` the shake animation is suppressed globally
-  // (theme.css) and that event never fires, which would leave the pad stuck in
-  // its rejected state — the same trap the filter drawer documents.
+  const selectedMember = useMemo((): RosterEntry | null => {
+    if (!selectedUserId) return null
+    if (roster && roster.length > 0) {
+      const found = roster.find((m) => m.userId === selectedUserId)
+      if (found) return found
+    }
+    if (user && user.id === selectedUserId) {
+      return {
+        userId: user.id,
+        name: user.name,
+        initials: (user.name || 'ST').slice(0, 2).toUpperCase() || 'ST',
+        avatarTone: 'var(--accent-blue, #6366f1)',
+        hasPin: true,
+        lastSeen: Date.now(),
+      }
+    }
+    return null
+  }, [selectedUserId, roster, user])
+
   const flashInvalid = useCallback(() => {
     setInvalid(true)
     if (invalidTimer.current !== null) window.clearTimeout(invalidTimer.current)
@@ -68,22 +65,11 @@ export default function ScreenLock({ onUnlock }: { onUnlock: () => void }) {
     if (invalidTimer.current !== null) window.clearTimeout(invalidTimer.current)
   }, [])
 
-  // Focus lands inside the overlay so the first Tab cannot reach the page
-  // behind it, and so a screen reader announces the dialog rather than whatever
-  // the operator was last on.
   useEffect(() => {
     containerRef.current?.focus()
   }, [])
 
-  /*
-   * A minimal focus trap. Tab cycles within the overlay; nothing behind the
-   * curtain is reachable.
-   *
-   * Escape is deliberately NOT bound. On every other dialog in the app Escape
-   * dismisses, and muscle memory would make dismissing a lock screen the
-   * fastest way to defeat it. The only ways out are the correct PIN and
-   * signing out — both explicit.
-   */
+  // Minimal focus trap within overlay
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Tab') return
@@ -111,45 +97,89 @@ export default function ScreenLock({ onUnlock }: { onUnlock: () => void }) {
     return () => window.removeEventListener('keydown', onKeyDown, true)
   }, [])
 
-  const lockedUntil = verdict?.reason === 'locked' ? verdict.lockedUntil : null
+  const lockedUntil =
+    (selectedMember?.lockedUntil && new Date(selectedMember.lockedUntil).getTime() > Date.now())
+      ? selectedMember.lockedUntil
+      : verdict?.reason === 'locked'
+        ? verdict.lockedUntil
+        : null
+
   const isLockedOut = Boolean(lockedUntil && new Date(lockedUntil).getTime() > Date.now())
-  // 'no_pin' means this identity never enrolled one. The honest response is to
-  // refuse, not to accept anything — the old build's exact mistake.
-  const noPin = verdict?.reason === 'no_pin'
+  const unlockTime = lockedUntil
+    ? new Date(lockedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : null
+
+  const noPin = selectedMember?.hasPin === false || verdict?.reason === 'no_pin'
   const unavailable = verdict?.reason === 'unavailable'
 
   const submit = useCallback(
     async (entered: string) => {
-      if (busy) return
+      if (busy || !selectedUserId) return
       setBusy(true)
-      const result = await verifyStaffPin(entered)
-      setBusy(false)
-      setVerdict(result)
+      setErrorMessage(null)
 
-      if (result.ok) {
-        onUnlock()
-        return
+      try {
+        if (selectedUserId === user?.id) {
+          const result = await verifyStaffPin(entered)
+          setVerdict(result)
+          if (result.ok) {
+            onUnlock()
+            return
+          }
+          setPin('')
+          flashInvalid()
+          if (result.reason === 'locked') {
+            if (hasRoster) {
+              setSelectedUserId(null)
+            } else {
+              logout()
+            }
+          }
+          return
+        }
+
+        // Switching to target user
+        const outcome = await switchUser(selectedUserId, entered)
+        if (outcome.success) {
+          onUnlock()
+          return
+        }
+
+        setPin('')
+        flashInvalid()
+        setErrorMessage(outcome.error ?? 'Incorrect PIN')
+        setVerdict({
+          ok: false,
+          reason: 'incorrect',
+          message: outcome.error,
+        })
+      } finally {
+        setBusy(false)
       }
-
-      setPin('')
-      flashInvalid()
-
-      /*
-       * The fifth failure ends the session rather than merely blocking the pad.
-       *
-       * Leaving a locked-out session sitting on the device would leave a live
-       * JWT behind a curtain that no longer has a key, for fifteen minutes, on
-       * a tablet somebody is holding. Signing out is both safer and the honest
-       * next step, since the only way back in is now the password.
-       */
-      if (result.reason === 'locked') logout()
     },
-    [busy, verifyStaffPin, onUnlock, flashInvalid, logout],
+    [busy, selectedUserId, user?.id, verifyStaffPin, switchUser, onUnlock, flashInvalid, hasRoster, logout],
   )
 
-  const unlockTime = lockedUntil
-    ? new Date(lockedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : null
+  const handleSelectUser = (member: RosterEntry) => {
+    if (member.lockedUntil && new Date(member.lockedUntil).getTime() > Date.now()) {
+      const timeStr = new Date(member.lockedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      setErrorMessage(`This account is locked until ${timeStr}. Sign in with your password.`)
+      return
+    }
+    setSelectedUserId(member.userId)
+    setPin('')
+    setVerdict(null)
+    setErrorMessage(null)
+  }
+
+  const handleBackToRoster = () => {
+    setSelectedUserId(null)
+    setPin('')
+    setVerdict(null)
+    setErrorMessage(null)
+  }
+
+  const isOffline = typeof navigator !== 'undefined' && !navigator.onLine
 
   return (
     <div
@@ -160,116 +190,274 @@ export default function ScreenLock({ onUnlock }: { onUnlock: () => void }) {
       tabIndex={-1}
       className="screenlock-overlay"
     >
-      <div className="screenlock-card">
+      <div className={`screenlock-card ${hasRoster && !selectedUserId ? 'roster-card' : ''}`}>
         <div className="screenlock-icon-badge">
           <Icon name="lock" size={32} />
         </div>
 
-        <h2 style={{ fontSize: 'clamp(20px, 2vw, 24px)', fontWeight: 600, margin: '0 0 8px', color: 'var(--text)' }}>
-          Session Locked
-        </h2>
+        {/* ── View 1: Roster List (Shared Device) ─────────────────────────── */}
+        {hasRoster && !selectedUserId ? (
+          <div>
+            <h2 style={{ fontSize: 'clamp(20px, 2vw, 24px)', fontWeight: 600, margin: '0 0 8px', color: 'var(--text)' }}>
+              Who is working?
+            </h2>
+            <p style={{ margin: '0 0 16px', color: 'var(--text2)', fontSize: 'var(--t-meta)' }}>
+              Tap your name to unlock your session
+            </p>
 
-        {/*
-          The identity line. `user.name` is the empty string when the staff row
-          carries no name — `loadProfile` guarantees that rather than inventing a
-          placeholder — so this falls back to naming the state, never to a
-          fabricated person. It must never read like a name that is not one.
-        */}
-        <p style={{ margin: '0 0 4px', color: 'var(--text)', fontSize: 'var(--t-meta)', fontWeight: 600 }}>
-          {user?.name ? `Signed in as ${user.name}` : 'This session has no named staff row'}
-        </p>
-        <p style={{ margin: '0 0 28px', color: 'var(--text2)', fontSize: 'var(--t-meta)' }}>
-          {isLockedOut
-            ? 'Too many incorrect attempts.'
-            : noPin
-              ? 'No PIN is set for this account.'
-              : 'Enter your PIN to resume this session'}
-        </p>
+            {isOffline && (
+              <div style={{ margin: '0 0 16px', textAlign: 'left' }}>
+                <ErrorBanner
+                  title="Offline"
+                  message="Switching users requires a server connection to verify PINs. You can continue on the active session or sign in with your password."
+                />
+              </div>
+            )}
 
-        {(noPin || unavailable) && (
-          <div style={{ margin: '0 0 24px', textAlign: 'left' }}>
-            <ErrorBanner
-              title={noPin ? 'No PIN is set' : 'Cannot check your PIN right now'}
-              message={
-                noPin
-                  ? 'This account has no PIN. Set one in Settings ▸ System ▸ Security once you are back in. Sign out and use your password to continue.'
-                  : (verdict?.message ??
-                    'The PIN could not be verified. Sign out and use your password to continue.')
-              }
-            />
+            {errorMessage && (
+              <div style={{ margin: '0 0 16px', textAlign: 'left' }}>
+                <ErrorBanner title="Account Locked" message={errorMessage} />
+              </div>
+            )}
+
+            <div className="roster-list" role="list">
+              {roster.map((member) => {
+                const memberLocked = Boolean(member.lockedUntil && new Date(member.lockedUntil).getTime() > Date.now())
+                const memberLockTime = member.lockedUntil
+                  ? new Date(member.lockedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                  : null
+
+                return (
+                  <button
+                    key={member.userId}
+                    type="button"
+                    className="roster-item-btn"
+                    onClick={() => handleSelectUser(member)}
+                    disabled={busy}
+                    aria-label={`Unlock as ${member.name}`}
+                  >
+                    <div
+                      className="roster-avatar"
+                      style={{ background: member.avatarTone || 'var(--accent-blue, #6366f1)' }}
+                    >
+                      {member.initials || 'ST'}
+                    </div>
+
+                    <div className="roster-name-col">
+                      <span className="roster-name-text">{member.name}</span>
+                      {memberLocked && (
+                        <span className="roster-status-badge locked">
+                          Locked until {memberLockTime}
+                        </span>
+                      )}
+                      {!memberLocked && member.userId === user?.id && (
+                        <span className="roster-status-badge active">
+                          Active session
+                        </span>
+                      )}
+                    </div>
+
+                    <Icon name="chevron_right" size={18} />
+                  </button>
+                )
+              })}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 'var(--sp-lg)' }}>
+              <button
+                type="button"
+                onClick={logout}
+                style={{
+                  minHeight: 44,
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--primary)',
+                  fontSize: 'var(--t-meta)',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                Sign in with another account
+              </button>
+
+              {(user?.role === 'Owner' || user?.role === 'Admin') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm('Forget all stored sessions and roster on this device?')) {
+                      void forgetThisDevice()
+                    }
+                  }}
+                  style={{
+                    minHeight: 44,
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--muted)',
+                    fontSize: 'var(--t-th)',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  Forget this device
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* ── View 2: PIN Pad (Selected user or Solo device) ──────────────── */
+          <div>
+            {hasRoster && (
+              <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 12 }}>
+                <button
+                  type="button"
+                  onClick={handleBackToRoster}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    minHeight: 44,
+                    padding: '0 8px',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--primary)',
+                    fontSize: 'var(--t-meta)',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <Icon name="arrow_left" size={16} />
+                  Back to staff list
+                </button>
+              </div>
+            )}
+
+            <h2 style={{ fontSize: 'clamp(20px, 2vw, 24px)', fontWeight: 600, margin: '0 0 8px', color: 'var(--text)' }}>
+              Session Locked
+            </h2>
+
+            <p style={{ margin: '0 0 4px', color: 'var(--text)', fontSize: 'var(--t-meta)', fontWeight: 600 }}>
+              {selectedMember?.name
+                ? `Signed in as ${selectedMember.name}`
+                : user?.name
+                  ? `Signed in as ${user.name}`
+                  : 'This session has no named staff row'}
+            </p>
+
+            <p style={{ margin: '0 0 28px', color: 'var(--text2)', fontSize: 'var(--t-meta)' }}>
+              {isLockedOut
+                ? 'Too many incorrect attempts.'
+                : noPin
+                  ? 'No PIN is set for this account.'
+                  : 'Enter your PIN to resume this session'}
+            </p>
+
+            {(noPin || unavailable) && (
+              <div style={{ margin: '0 0 24px', textAlign: 'left' }}>
+                <ErrorBanner
+                  title={noPin ? 'No PIN is set' : 'Cannot check your PIN right now'}
+                  message={
+                    noPin
+                      ? 'This account has no PIN. Set one in Settings ▸ System ▸ Security once you are back in. Sign out and use your password to continue.'
+                      : (verdict?.message ??
+                        'The PIN could not be verified. Sign out and use your password to continue.')
+                  }
+                />
+              </div>
+            )}
+
+            {isLockedOut ? (
+              <p
+                role="alert"
+                style={{
+                  margin: '0 0 24px',
+                  padding: '13px 14px',
+                  borderRadius: 'var(--r-card)',
+                  background: 'var(--st-danger-bg)',
+                  color: 'var(--st-danger-fg)',
+                  fontSize: 'var(--t-meta)',
+                  fontWeight: 600,
+                  textAlign: 'left',
+                }}
+              >
+                PIN locked until {unlockTime}. Sign in with your password.
+              </p>
+            ) : (
+              <PinPad
+                label="Enter your PIN to resume this session"
+                length={4}
+                value={pin}
+                onChange={setPin}
+                onComplete={submit}
+                disabled={busy || noPin || unavailable}
+                invalid={invalid}
+              />
+            )}
+
+            {verdict?.reason === 'incorrect' && typeof verdict.attemptsRemaining === 'number' && (
+              <p
+                role="alert"
+                style={{
+                  margin: '16px 0 0',
+                  fontSize: 'var(--t-meta)',
+                  color: 'var(--danger-text)',
+                  fontWeight: 600,
+                }}
+              >
+                Incorrect PIN — {verdict.attemptsRemaining}{' '}
+                {verdict.attemptsRemaining === 1 ? 'attempt' : 'attempts'} left
+              </p>
+            )}
+
+            {verdict?.reason === 'inactive' && (
+              <p
+                role="alert"
+                style={{
+                  margin: '16px 0 0',
+                  fontSize: 'var(--t-meta)',
+                  color: 'var(--danger-text)',
+                  fontWeight: 600,
+                }}
+              >
+                This staff account is no longer active. Sign out to continue.
+              </p>
+            )}
+
+            {errorMessage && !verdict?.attemptsRemaining && (
+              <p
+                role="alert"
+                style={{
+                  margin: '16px 0 0',
+                  fontSize: 'var(--t-meta)',
+                  color: 'var(--danger-text)',
+                  fontWeight: 600,
+                }}
+              >
+                {errorMessage}
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={logout}
+              style={{
+                marginTop: 'var(--sp-3xl)',
+                minHeight: 44,
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--danger)',
+                fontSize: 'var(--t-meta)',
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              Sign out instead
+            </button>
           </div>
         )}
-
-        {isLockedOut ? (
-          <p
-            role="alert"
-            style={{
-              margin: '0 0 24px',
-              padding: '13px 14px',
-              borderRadius: 'var(--r-card)',
-              background: 'var(--st-danger-bg)',
-              color: 'var(--st-danger-fg)',
-              fontSize: 'var(--t-meta)',
-              fontWeight: 600,
-              textAlign: 'left',
-            }}
-          >
-            PIN locked until {unlockTime}. Sign in with your password.
-          </p>
-        ) : (
-          <PinPad
-            label="Enter your PIN to resume this session"
-            value={pin}
-            onChange={setPin}
-            onComplete={submit}
-            disabled={busy || noPin || unavailable}
-            invalid={invalid}
-          />
-        )}
-
-        {/* Attempts remaining, in words. Never a colour, never a shrinking bar.
-
-            --danger-text, not --st-danger-fg: unlike the locked-out banner
-            above, these two alerts carry NO fill of their own, and the fg half
-            of a status pair is white ink meant for a solid red block. Bare on
-            this overlay (--bg, #fafaf8 under the light default) it was white on
-            near-white — the attempt counter was announced to screen readers but
-            invisible to the operator holding the tablet. */}
-        {verdict?.reason === 'incorrect' && typeof verdict.attemptsRemaining === 'number' && (
-          <p role="alert" style={{ margin: '16px 0 0', fontSize: 'var(--t-meta)', color: 'var(--danger-text)', fontWeight: 600 }}>
-            Incorrect PIN — {verdict.attemptsRemaining}{' '}
-            {verdict.attemptsRemaining === 1 ? 'attempt' : 'attempts'} left
-          </p>
-        )}
-
-        {verdict?.reason === 'inactive' && (
-          <p role="alert" style={{ margin: '16px 0 0', fontSize: 'var(--t-meta)', color: 'var(--danger-text)', fontWeight: 600 }}>
-            This staff account is no longer active. Sign out to continue.
-          </p>
-        )}
-
-        {/*
-          A real sign-out, not a navigation. The old build set
-          `window.location.href = '/login'`, which left the session live — a
-          shared tablet showing the login screen over a signed-in Owner.
-        */}
-        <button
-          type="button"
-          onClick={logout}
-          style={{
-            marginTop: 'var(--sp-3xl)',
-            minHeight: 44,
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--danger)',
-            fontSize: 'var(--t-meta)',
-            fontWeight: 600,
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-          }}
-        >
-          Sign out instead
-        </button>
       </div>
     </div>
   )

@@ -400,6 +400,8 @@ export function ClientCombobox({
   return (
     <div
       ref={rootRef}
+      role="group"
+      tabIndex={-1}
       /* `flexWrap` is here for the error paragraph below, which used to be
          `position: absolute; top: 100%` — out of flow, and therefore drawn
          straight over whatever the calling page had put in the next row. It
@@ -623,6 +625,8 @@ function ClientListbox({
   // Portal to document.body to avoid any ancestor overflow clipping
   return createPortal(
     <div
+      role="listbox"
+      tabIndex={-1}
       style={{
         ...placement,
         position: 'fixed',
@@ -765,12 +769,14 @@ function ClientOptionRow({
       id={id}
       role="option"
       aria-selected={selected}
+      tabIndex={-1}
       // The health reaches assistive tech as words, never as a colour.
       aria-label={`${healthAccessibleName(client, verdict)}${client.isStaff || client.isStaffClient ? '. Staff client' : ''}${client.isVip ? '. VIP client' : ''}${
         outstanding ? `. ${outstanding}` : ''
       }. Phone ${client.phone}`}
       onMouseMove={onHover}
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
       style={{
         display: 'grid',
         gap: 3,
@@ -943,9 +949,11 @@ function ActionRow({
       id={id}
       role="option"
       aria-selected={false}
+      tabIndex={-1}
       aria-label={`${label}. ${hint}`}
       onMouseMove={onHover}
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
       style={{
         display: 'flex',
         alignItems: 'center',

@@ -388,9 +388,9 @@ export function SignOnGlassModal({
             />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: 'var(--t-meta, 12px)', fontWeight: 600, color: 'var(--text2)', marginBottom: 6 }}>
+            <span style={{ display: 'block', fontSize: 'var(--t-meta, 12px)', fontWeight: 600, color: 'var(--text2)', marginBottom: 6 }}>
               Designation / Role
-            </label>
+            </span>
             <div
               style={{
                 height: 42,
@@ -492,12 +492,14 @@ export function SignOnGlassModal({
 
         {/* Receiver Government ID Verification Checkbox */}
         {role === 'receiver' && (
-          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', fontSize: 'var(--t-meta, 12px)', color: 'var(--text)' }}>
+          <label htmlFor="sign-verify-gov-id" style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', fontSize: 'var(--t-meta, 12px)', color: 'var(--text)' }}>
             <input
+              id="sign-verify-gov-id"
               type="checkbox"
               checked={verifiedGovId}
               onChange={(e) => setVerifiedGovId(e.target.checked)}
               style={{ width: 18, height: 18, marginTop: 2, accentColor: 'var(--primary, #2563eb)' }}
+              aria-label="Verify Government Photo ID (Citizenship / National ID / Passport)"
             />
             <div>
               <strong>Verify Government Photo ID (Citizenship / National ID / Passport)</strong>
@@ -509,12 +511,14 @@ export function SignOnGlassModal({
         )}
 
         {/* Terms Agreement Checkbox */}
-        <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', fontSize: 'var(--t-meta, 12px)', color: 'var(--text)' }}>
+        <label htmlFor="sign-terms" style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', fontSize: 'var(--t-meta, 12px)', color: 'var(--text)' }}>
           <input
+            id="sign-terms"
             type="checkbox"
             checked={agreedToTerms}
             onChange={(e) => setAgreedToTerms(e.target.checked)}
             style={{ width: 18, height: 18, marginTop: 2, accentColor: 'var(--primary, #2563eb)' }}
+            aria-label="I acknowledge and accept this digital signature as a legally binding certification"
           />
           <div>
             <strong>I acknowledge and accept this digital signature as a legally binding certification.</strong>
