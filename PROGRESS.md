@@ -10,26 +10,29 @@
 **Ruled**
 - Nothing new. What a change to a booking with a numbered invoice should do (second invoice, credit note, or a block with a message) stays O-14 / T3-14c; this migration leaves a numbered invoice exactly as 0193 did. Revert (B-6): restore the 0200 definition of `extend_booking(jsonb)`.
 
-**Verified** (this branch at `b24675a8` plus the changes above)
-- `npm run check:pglite` — 198/198 applied, 0 failed; 36 views 0 anon-readable; 20 functions 0 unauthorized; 137 definers pinned.
-- `npm run check:lifecycle` — 67/67 green, 0 known-red, 0 failed (run with `check:pglite` in the same session: R-35 "Verified").
-- Red then green: with `0205` set aside, `check:lifecycle` fails L67 (66/67); with it, 67/67.
-- `npm run check:anon` — exit 0 (was 1: the extend case now passes). `npm run check:security` — exit 0.
-- `vitest` on `extendRental.test.ts` and `roleSecurityMatrix.test.ts` — 113/113.
-- Not applied to any Supabase project (N-5). A hosted JWT/PostgREST check is still needed before the live apply.
+**Verified** (merged branch: `main` at `9fbba3d9` plus 0205; every step `.github/workflows/ci.yml` ran, run locally, in its order)
+- `npm run typecheck` — 0 errors. `npm run lint` — 0 errors, 0 warnings.
+- `npm test` (mock data) — **522/522 files, 6,433/6,433 tests**, source fingerprint matches. A first run with three other gate chains running at the same time failed one load-sensitive file, `realWorkspaceGuidance.test.tsx` (7 tests, mock-client timing); it passes 7/7 alone and the whole suite is green when run alone.
+- `npm run check:pglite` — 199/199 applied, 0 failed; 36 views 0 anon-readable; 20 functions 0 unauthorized; 139 definers pinned.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS.
+- `npm run check:security` — exit 0. `npm run check:lifecycle` — **51/51 green**, 0 known-red, 0 failed; it includes main's L56 and my L67, and the total fell from 67 only because main removed 17 duplicate copies of L49. `check:pglite` and `check:lifecycle` were green in the same session (R-35 "Verified").
+- `npm run test:server-contracts` — 58/58. `npm run test:partial-return` — 58/58.
+- `node --test scripts/test-receipt.test.mjs`, `lint:shell`, `lint:ui-copy`, `check:contrast`, `npm run build` — all pass. `npm run check:anon` — exit 0 (it was 1 before 0205: the extend case).
+- Red then green: with `0205` set aside, `check:lifecycle` fails L67; with it, green. `vitest` on `extendRental.test.ts` and `roleSecurityMatrix.test.ts` — 113/113.
+- Not run: `test:coverage` (PLAN §6.4: before each live batch), the browser (no screen changed). Not applied to any Supabase project (N-5); a hosted JWT/PostgREST check is still needed before the live apply.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 79 / 79 (100%) | +0 |
+| Backend | actions implemented / total | 80 / 80 (100%) | +1 |
 | Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
 | DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 65 / 65 (100%) | +0 |
-| Lifecycle | steps green / total | 67 / 67 (100%) | +1 |
+| Permissions | capabilities mapped / declared | 66 / 66 (100%) | +1 |
+| Lifecycle | steps green / total | 51 / 51 (100%) | -16 |
 | Overall | structural mean of five | ≈ 97% | — |
-Migrations 198 files · check:pglite 198/198 applied, 0 failed (recorded 2026-11-02T07:52:05.754Z). Suite: Historical suite: 6425/6425 passed, 0 failed (recorded 2026-11-01T20:48:00.227Z); current source NOT VERIFIED.
+Migrations 199 files · check:pglite 199/199 applied, 0 failed (recorded 2026-11-02T10:45:31.717Z). Suite: PASS — 6433/6433 passed, 0 failed (recorded 2026-11-02T11:16:55.412Z); source fingerprint matches.
 Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written 2026-11-02T07:52:28.428Z.
+Gates read from .lifecycle-result.json, written 2026-11-02T10:47:19.326Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
