@@ -15,6 +15,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 export const GATES = Object.freeze([
   { label: 'Typecheck', command: 'npm', args: ['run', 'typecheck'] },
   { label: 'Lint source', command: 'npm', args: ['run', 'lint'] },
+  { label: 'Local API verification safety guards', command: 'npm', args: ['run', 'test:local-api-guards'] },
   { label: 'Test (offline mock backend)', command: 'npm', args: ['run', 'test'], mock: true },
   { label: 'Migrations build from scratch', command: 'npm', args: ['run', 'check:pglite'] },
   { label: 'Booking and invoice financial integrity', command: 'node', args: ['scripts/test-booking-financial-integrity.mjs'] },

@@ -50,7 +50,7 @@ beforeEach(() => {
 })
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); document.body.innerHTML = ''; localStorage.clear(); sessionStorage.clear() })
 
-describe('real embedded workspace guidance and draft boundaries', () => {
+describe('real embedded workspace guidance and draft boundaries', { timeout: 60_000 }, () => {
   it('starts Packing at Pending and jumps to its actual evidence action without inventing a photo', async () => {
     await mount('Pack')
     expect(document.querySelector('[aria-label="Filter packing checklist items"] [aria-selected="true"]')?.textContent).toContain('Pending')

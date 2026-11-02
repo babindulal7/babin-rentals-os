@@ -1252,7 +1252,7 @@ export default function ResetWorkspace({
       discard: () => { setMarks(persistedMarks); setProblemDraft({}); setQcReason({}); setBatchQcReason(''); setSelected(new Set()) },
       progress: { done: readyUnits, total: totalUnits },
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- focusBlocker is re-created each render; listing it would re-register the action bag on every render
   }, [onRegisterActions, isOnline, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget, persistedMarks, readyUnits, totalUnits])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */

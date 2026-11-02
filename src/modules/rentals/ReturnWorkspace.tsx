@@ -1437,7 +1437,7 @@ export default function ReturnWorkspace({
       discard: discardRestoredScan,
       progress: quantitiesVerified ? { done: backUnits, total: totalUnits } : undefined,
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- focusBlocker and discardRestoredScan are re-created each render; listing them would re-register the action bag on every render
   }, [onRegisterActions, isOnline, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget, backUnits, totalUnits, quantitiesVerified])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */

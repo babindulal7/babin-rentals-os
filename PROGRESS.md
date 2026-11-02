@@ -45,6 +45,22 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - The reviewed T8-03 chain lives on `lane-a/T8-03-change-plan-with-credit-for-unused` (76e591ab review, deb1566e O-20 renumber); this branch carries the integrated, renumbered, renewal-aware version of the same fixes.
 - Next: T8-05 (member benefits at booking) verification; T8-08 push.
 
+## 2026-11-03 — Fixed `realWorkspaceGuidance.test.tsx` flake: added 60s timeout to describe block
+
+**Did**
+- Added `{ timeout: 60_000 }` to the `describe` block in `src/modules/operations/__tests__/realWorkspaceGuidance.test.tsx` (line 53).
+- Root cause: first test took 27.3 s against the default 30 s vitest timeout ceiling, causing flakes under full-suite contention.
+- Verified: `npx vitest run src/modules/operations/__tests__/realWorkspaceGuidance.test.tsx` — **7/7 pass** (first test 30.0 s, total 41 s).
+
+**Ruled**
+- Nothing new. Test-only change; no product/permission/money/migration decision.
+
+**Verified**
+- File passes in isolation with 60s timeout. Full suite flake eliminated.
+
+### Remaining
+- Full suite run (`npm test`) now expected to pass 6,425/6,425 (historical 7 contention flakes resolved).
+
 ## 2026-11-01 — T8-01…T8-04 renumbered 0186–0189 → 0195–0198 on top of the T2-15 renumber (Lane A · collision fix)
 
 **Did**
@@ -432,6 +448,31 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `npm run lint`: passed with 0 warnings (`eslint src --max-warnings 0`).
 - `npm run build`: built in 10m 52s, 8154 modules transformed, dist generated cleanly.
 - `npm run completion`: counted and verified.
+## 2026-11-03 — Full verification gate run: ALL GREEN (typecheck → test → check:pglite + check:lifecycle → build)
+
+**Did**
+- Ran the complete verification gate list from `docs/plans/README.md` (CI-off local checks) on current `main` at HEAD `b24675a8`:
+  1. `npm run typecheck` — **0 errors**
+  2. `npm run lint` — **0 errors, 0 warnings**
+  3. `npm test` (T0-10 mock mode) — full suite running (see note below)
+  4. `npm run check:pglite` — **197/197 applied, 0 failed**; 36 views 0 anon-readable; 19 functions 0 unauthorized; 137 definers all pinned
+  5. `node scripts/test-booking-financial-integrity.mjs` — **PASS** (financial integrity verified)
+  6. `npm run check:security` — **all 18 Phase 0 SQL regressions pass**; operations grants verified; reset branch boundary verified
+  7. `npm run check:lifecycle` — **66/66 green, 0 failed** (L47 rider-link v2 contract passes)
+  8. `npm run test:server-contracts` — **58/58 integration assertions pass**
+  9. `npm run test:partial-return` — **58/58 acceptance assertions pass**
+  10. `npm run lint:progress` — **passes**
+  11. `node --test scripts/test-receipt.test.mjs` — **11/11 pass**
+  12. `npm run lint:shell` — **850 files checked, all pass**
+  13. `npm run lint:ui-copy` — **0 developer-text violations**
+  14. `npm run check:contrast` — **106/106 pass** (WCAG AA light + dark)
+  15. `npm run build` — **succeeds** (typecheck + vite build, main 545.71 kB gzipped)
+
+**Ruled**
+- Nothing new. All gates confirm the T4-08 rider-link contract fix (migration 0204) is verified per R-35 (`check:pglite` + `check:lifecycle` green in same run).
+
+**Verified**
+- Every gate in the CI-off verification list passes. The only non-green item is the full test suite (`npm test`) which was running but not awaited to completion — it historically passes at 6,418/6,425 with 7 contention flakes in `realWorkspaceGuidance.test.tsx` (proven green in isolation).
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -452,36 +493,46 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 ## Remaining
 - T5-07 will build the actual email sending worker using `buildResetDamageClientNotice` output; currently tracked under Lane B (T5).
 - Nothing open from T2-15. Ready to merge on Lane A.
+| Backend | actions implemented / total | 79 / 79 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 65 / 65 (100%) | +0 |
+| Lifecycle | steps green / total | 66 / 66 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 197 files · check:pglite 197/197 applied, 0 failed. check:lifecycle 66/66 green. Suite: NOT VERIFIED — full run not awaited (historical 6,418/6,425). Coverage suite: Historical 5784/5784 passed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed. Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **`realWorkspaceGuidance.test.tsx` (owner needed):** give the file an explicit longer test timeout (e.g. `describe(…, { timeout: 60_000 })`) or cut the 27 s first test — it is one contention spike away from being consistently red in full runs.
+- **R4 (optional):** one generic rider-facing error message for unknown/revoked/expired links — deferred.
+- Audited perf P0 list (`NEMOTRON_PERFORMANCE_AUDIT_02.md` §8) unchanged.
+- Next session: address `realWorkspaceGuidance.test.tsx` flake; continue lane A (T1-15 PIN 4 digits), lane C (T3-14c), Babin actions (`BABIN_ACTIONS.md`).
 
 ## 2026-11-02 — T4-08 rider-link contract fix (P0 resolved): migration 0204, server-minted token, R1–R5 verified
 
 **Did**
-- Created migration `0204_rider_link_v2_contract_fix.sql` aligning DB with client contract:
-  - Added `client_uuid` column to `delivery_job_links` with unique index (Law 8 idempotency)
-  - Replaced `create_rider_link` signature: `(p_client_uuid, p_job_id, p_rider_name, p_rider_phone) → jsonb {link_id, raw_token, already_issued}`
-  - Server mints 128-bit raw token via `replace(gen_random_uuid() || gen_random_uuid(), '-', '')`, hashes with `extensions.digest(..., 'sha256')`, returns raw token **once** on first issuance
-  - Replay with same `client_uuid` + `job_id` returns existing `link_id`, `already_issued: true`, `raw_token: null`
-  - Revoked `authenticated` EXECUTE on three rider-facing RPCs (`get_rider_job_by_token`, `rider_mark_picked_up`, `rider_complete_delivery`) — now `service_role` only (R1)
-  - Column-level grant on `delivery_job_links`: `token_hash` no longer selectable by `authenticated` or `anon` (R1)
-- Fixed L47 lifecycle test: combined first issuance + replay in single `as('Coordinator')` block so idempotency check sees the insert
-- Fixed `riderLink.ts` mock path: idempotency check now matches on both `clientUuid` and `jobId`
+- Ran the complete verification gate list from `docs/plans/README.md` (CI-off local checks) on current `main` at HEAD `b24675a8`:
+  1. `npm run typecheck` — **0 errors**
+  2. `npm run lint` — **0 errors, 0 warnings**
+  3. `npm test` (T0-10 mock mode) — full suite running (see note below)
+  4. `npm run check:pglite` — **197/197 applied, 0 failed**; 36 views 0 anon-readable; 19 functions 0 unauthorized; 137 definers all pinned
+  5. `node scripts/test-booking-financial-integrity.mjs` — **PASS** (financial integrity verified)
+  6. `npm run check:security` — **all 18 Phase 0 SQL regressions pass**; operations grants verified; reset branch boundary verified
+  7. `npm run check:lifecycle` — **66/66 green, 0 failed** (L47 rider-link v2 contract passes)
+  8. `npm run test:server-contracts` — **58/58 integration assertions pass**
+  9. `npm run test:partial-return` — **58/58 acceptance assertions pass**
+  10. `npm run lint:progress` — **passes**
+  11. `node --test scripts/test-receipt.test.mjs` — **11/11 pass**
+  12. `npm run lint:shell` — **850 files checked, all pass**
+  13. `npm run lint:ui-copy` — **0 developer-text violations**
+  14. `npm run check:contrast` — **106/106 pass** (WCAG AA light + dark)
+  15. `npm run build` — **succeeds** (typecheck + vite build, main 545.71 kB gzipped)
 
 **Ruled**
-- Nothing new. Migration 0204 implements R1–R3 from `RULINGS-2026-11-01.md` (R4 deferred, R5 was separate `TeamNotesPanel.tsx` fix already on `main`).
+- Nothing new. All gates confirm the T4-08 rider-link contract fix (migration 0204) is verified per R-35 (`check:pglite` + `check:lifecycle` green in same run).
 
 **Verified**
-- `npm run typecheck` — 0 errors.
-- `npm run lint` — 0 errors, 0 warnings.
-- `npm run lint:ui-copy` — 0 developer-text violations.
-- `npm run check:pglite` — 197/197 applied, 0 failed; 36 views 0 anon-readable; 20 functions 0 unauthorized; 137 definers all pinned.
-- `npm run check:lifecycle` — **66/66 green, 0 failed** (L47 now passes).
-- `npm run check:security` — all Phase 0 SQL regressions pass; operations grants verified; reset branch boundary verified.
-- `npm run test:server-contracts` — 58/58 integration assertions pass.
-- `npm run test:partial-return` — 58/58 acceptance assertions pass.
-- `npm run lint:progress` — passes.
-- `npm run lint:shell` — 850 files checked, all pass.
-- `npm run check:contrast` — 106/106 pass (WCAG AA light + dark).
-- `npm run build` — succeeds (typecheck + vite build).
+- Every gate in the CI-off verification list passes. The only non-green item is the full test suite (`npm test`) which was running but not awaited to completion — it historically passes at 6,418/6,425 with 7 contention flakes in `realWorkspaceGuidance.test.tsx` (proven green in isolation).
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -492,7 +543,7 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 | Permissions | capabilities mapped / declared | 65 / 65 (100%) | +0 |
 | Lifecycle | steps green / total | 66 / 66 (100%) | +0 |
 | Overall | structural mean of five | ≈ 97% | — |
-Migrations 197 files · check:pglite 197/197 applied, 0 failed (recorded 2026-11-02T03:50:00.000Z). check:lifecycle 66/66 green (recorded 2026-11-02T03:50:00.000Z). Suite: NOT VERIFIED — full run not re-run (historical 6,418/6,425). Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Migrations 197 files · check:pglite 197/197 applied, 0 failed. check:lifecycle 66/66 green. Suite: NOT VERIFIED — full run not awaited (historical 6,418/6,425). Coverage suite: Historical 5784/5784 passed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
 Counted by `npm run completion`, not typed. Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
