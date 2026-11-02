@@ -11,7 +11,7 @@ export type DeliveryZoneRow = {
   id: string;
   name: string;
   description: string | null;
-  fee_paisa: number;
+  fee_paisa: number | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -34,7 +34,6 @@ export const listDeliveryZones = createAction<ListDeliveryZonesInput, ListDelive
     }
   },
   execute: async (input, ctx) => {
-    void ctx;
     const limit = input.limit ?? 50;
     const offset = input.offset ?? 0;
     const activeOnly = input.activeOnly ?? true;
@@ -50,7 +49,12 @@ export const listDeliveryZones = createAction<ListDeliveryZonesInput, ListDelive
     }
 
     return {
-      result: { zones: (data as DeliveryZoneRow[]) ?? [] },
+      result: {
+        zones: ((data as DeliveryZoneRow[]) ?? []).map(zone => ({
+          ...zone,
+          fee_paisa: ['Warehouse', 'Technician', 'Driver'].includes(ctx.role) ? null : zone.fee_paisa,
+        })),
+      },
       events: [],
     };
   },
