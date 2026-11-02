@@ -2025,10 +2025,6 @@ function EquipmentGroupRow({
 
       {!bulk && (
         <div
-          role="region"
-          tabIndex={-1}
-          onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation() } }}
           style={{
             display: 'flex',
             flexDirection: 'column',
