@@ -53,6 +53,11 @@ jobs:
       - name: Lint source
         run: npm run lint
 
+      # Pure, no-network check: local API verification must reject hosted URLs,
+      # privileged keys, and inconclusive/failed RLS reads.
+      - name: Local API verification safety guards
+        run: npm run test:local-api-guards
+
       - name: Test (offline mock backend)
         env:
           VITE_DATA_SOURCE: mock
