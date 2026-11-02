@@ -289,7 +289,8 @@ export const CommandPalette: React.FC = () => {
         background: 'rgba(0, 0, 0, 0.6)',
       }}
     >
-      <div style={{ position: 'fixed', inset: 0 }} onClick={() => setIsOpen(false)} />
+      {/* Pointer-only scrim: keyboard users close with Escape or the Close button. */}
+      <div aria-hidden="true" style={{ position: 'fixed', inset: 0 }} onClick={() => setIsOpen(false)} />
 
       <div
         ref={dialogRef}
@@ -448,6 +449,15 @@ export const CommandPalette: React.FC = () => {
                   onClick={() => {
                     item.onSelect()
                     setIsOpen(false)
+                  }}
+                  onKeyDown={(e) => {
+                    // Focus normally stays on the search input (aria-activedescendant); if an
+                    // option itself holds focus, Enter or Space chooses it like a click does.
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      item.onSelect()
+                      setIsOpen(false)
+                    }
                   }}
                   onMouseEnter={() => setSelectedIndex(idx)}
                   style={{

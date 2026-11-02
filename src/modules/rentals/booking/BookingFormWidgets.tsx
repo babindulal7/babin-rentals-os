@@ -198,8 +198,11 @@ export function Section({
   const expanded = !collapsible || open
   return (
     <section id={id} className={`new-rental-section-card ${expanded ? 'is-active' : ''}`} style={{ ...cardStyle, minWidth: 0, padding: 0 }}>
+      {/* The heading row is a pointer convenience; the keyboard-accessible disclosure is
+          the real expand/collapse button inside it. */}
       <div
         className="new-rental-section-heading"
+        role="presentation"
         onClick={collapsible ? onToggle : undefined}
         style={{
           display: 'flex',
@@ -239,6 +242,7 @@ export function Section({
         )}
         {expanded && action && (
           <span
+            role="presentation"
             onClick={(e) => e.stopPropagation()}
             style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}
           >

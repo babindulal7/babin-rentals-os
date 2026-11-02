@@ -1061,7 +1061,7 @@ function MonthGrid({
           </div>
         ))}
       </div>
-      <div ref={gridRef} className="calendar-month-grid" onKeyDown={onGridKeyDown} style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0,1fr))', gap: phone ? 3 : 6 }}>
+      <div ref={gridRef} className="calendar-month-grid" role="group" aria-label="Days of the month" onKeyDown={onGridKeyDown} style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0,1fr))', gap: phone ? 3 : 6 }}>
         {Array.from({ length: lead }, (_, i) => (
           <div key={`lead-${i}`} aria-hidden className="calendar-day-lead" style={{ minHeight: cellMin, borderRadius: 'var(--r-sm)', background: 'var(--card2)', opacity: 0.4 }} />
         ))}
