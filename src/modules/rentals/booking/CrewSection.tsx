@@ -381,8 +381,9 @@ export function CrewSection({
                                 alignItems: 'center',
                               }}
                             >
-                              <Field label="Overtime (Rs) *">
+                              <Field label="Overtime (Rs) *" id="crew-overtime">
                                 <Input
+                                  id="crew-overtime"
                                   type="number"
                                   min={0}
                                   value={c.overtimePaisa > 0 ? c.overtimePaisa / 100 : ''}
@@ -397,8 +398,9 @@ export function CrewSection({
                                   style={{ ...inputStyle, minHeight: 44, fontSize: 'var(--t-meta)' }}
                                 />
                               </Field>
-                              <Field label="Meals (Rs) *">
+                              <Field label="Meals (Rs) *" id="crew-meals">
                                 <Input
+                                  id="crew-meals"
                                   type="number"
                                   min={0}
                                   value={c.mealsPaisa > 0 ? c.mealsPaisa / 100 : ''}
@@ -413,8 +415,9 @@ export function CrewSection({
                                   style={{ ...inputStyle, minHeight: 44, fontSize: 'var(--t-meta)' }}
                                 />
                               </Field>
-                              <Field label="Accommodation (Rs) *">
+                              <Field label="Accommodation (Rs) *" id="crew-accommodation">
                                 <Input
+                                  id="crew-accommodation"
                                   type="number"
                                   min={0}
                                   value={c.accommodationPaisa > 0 ? c.accommodationPaisa / 100 : ''}

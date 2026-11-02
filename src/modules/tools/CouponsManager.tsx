@@ -504,10 +504,11 @@ export default function CouponsManager() {
             )}
 
             <div>
-              <label style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
+              <label htmlFor="coupon-code" style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
                 Voucher Code *
               </label>
               <input
+                id="coupon-code"
                 type="text"
                 required
                 value={newCode}
@@ -529,10 +530,11 @@ export default function CouponsManager() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-md)' }}>
               <div>
-                <label style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
+                <label htmlFor="coupon-discount-type" style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
                   Discount Type
                 </label>
                 <select
+                  id="coupon-discount-type"
                   value={newType}
                   onChange={e => setNewType(e.target.value as 'pct' | 'flat')}
                   style={{
@@ -550,10 +552,11 @@ export default function CouponsManager() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
+                <label htmlFor="coupon-value" style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
                   {newType === 'pct' ? 'Percentage (%)' : 'Amount (NPR)'} *
                 </label>
                 <input
+                  id="coupon-value"
                   type="number"
                   required
                   value={newValue}
@@ -573,10 +576,11 @@ export default function CouponsManager() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-md)' }}>
               <div>
-                <label style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
+                <label htmlFor="coupon-min-spend" style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
                   Min Booking Spend (NPR)
                 </label>
                 <input
+                  id="coupon-min-spend"
                   type="number"
                   value={newMinSpend}
                   onChange={e => setNewMinSpend(e.target.value)}
@@ -593,10 +597,11 @@ export default function CouponsManager() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
+                <label htmlFor="coupon-cap" style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
                   Maximum Discount Cap (NPR)
                 </label>
                 <input
+                  id="coupon-cap"
                   type="number"
                   value={newCapNpr}
                   onChange={e => setNewCapNpr(e.target.value)}
@@ -615,26 +620,27 @@ export default function CouponsManager() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-md)' }}>
               <div>
-                <label style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
+                <label htmlFor="coupon-valid-from" style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
                   Valid From
                 </label>
-                <DateField ariaLabel="Valid From" value={newFrom} onChange={setNewFrom} style={{ minHeight: 44 }} />
+                <DateField id="coupon-valid-from" ariaLabel="Valid From" value={newFrom} onChange={setNewFrom} style={{ minHeight: 44 }} />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
+                <label htmlFor="coupon-valid-until" style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
                   Valid Until
                 </label>
-                <DateField ariaLabel="Valid Until" value={newTo} onChange={setNewTo} style={{ minHeight: 44 }} />
+                <DateField id="coupon-valid-until" ariaLabel="Valid Until" value={newTo} onChange={setNewTo} style={{ minHeight: 44 }} />
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-md)' }}>
               <div>
-                <label style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
+                <label htmlFor="coupon-limit" style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
                   Total Redemption Quota
                 </label>
                 <input
+                  id="coupon-limit"
                   type="number"
                   value={newLimit}
                   onChange={e => setNewLimit(e.target.value)}
@@ -651,10 +657,11 @@ export default function CouponsManager() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
+                <label htmlFor="coupon-client-type" style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
                   Target Client Group
                 </label>
                 <select
+                  id="coupon-client-type"
                   value={newClientType}
                   onChange={e => setNewClientType(e.target.value)}
                   style={{

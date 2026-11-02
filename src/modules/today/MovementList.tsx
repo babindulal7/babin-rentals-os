@@ -786,6 +786,8 @@ export default function MovementList({
               <div
                 key={r.id}
                 {...(phone ? {} : { className: 'movement-row' })}
+                role="button"
+                tabIndex={0}
                 onClick={() => {
                   // The click a completed long-press emits must not navigate away
                   // from the card it just opened.
@@ -795,6 +797,7 @@ export default function MovementList({
                   }
                   navigate(`/rentals/${r.bookingNo}`)
                 }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/rentals/${r.bookingNo}`) } }}
                 onMouseEnter={() => scheduleHover(r.id)}
                 onMouseLeave={cancelHover}
                 onTouchStart={() => holdStart(r.id)}

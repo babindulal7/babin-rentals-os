@@ -985,6 +985,7 @@ export default function OperationsQueues() {
         className="operations-v2__queues"
         role="tablist"
         aria-label="Operational queues"
+        tabIndex={0}
         onKeyDown={onQueueKeyDown}
       >
         <button

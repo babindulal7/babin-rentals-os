@@ -990,8 +990,8 @@ function DemoPulse({ states }: { states: PulseStates }) {
                       <button
                         key={v}
                         type="button"
+                        role="button"
                         onClick={() => setView(v)}
-                        aria-pressed={on}
                         style={{
                           height: 28,
                           padding: '0 10px',
