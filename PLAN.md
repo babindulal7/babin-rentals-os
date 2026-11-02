@@ -174,6 +174,8 @@ starts it, the desk takes payment, T3-31).
 
 ### §4.2 Still open
 
+**Owner update, 2 November 2026 (takes precedence over older defaults below):** See [RULINGS-2026-11-02-OWNER.md](RULINGS-2026-11-02-OWNER.md) and [latest Open Decisions entry](docs/OPEN_DECISIONS.md). O-4 05:30 digest and O-12 excess credit are confirmed. O-14: issued invoice → separate additional invoice for new charges; draft → edit the same draft, subject to O-17 accounting sign-off. Scooter delivery NPR 150 inside / NPR 250 outside; van fee per vehicle × zone in Settings, amounts pending. O-20 Elite fixed annual fee, amount pending. O-5 owner states 1.5% TDS for service, O-6 owner states IRD-certified e-billing is not needed, O-7 no VAT on explicitly Non-VAT bills; all three require accountant/legal classification validation before automating. O-10 cancellation thresholds are partly specified but ambiguous and must **not** be guessed. Staff may override cancellation suggestions only within audited authorized roles. O-11 agreement approach and O-16 printer/scanner selection approved in principle, final terms/models still due. Booqable renewal confirmed by owner as **18 February 2027**; any March 2027 renewal/cancellation references are stale and cutover chronology must be reconciled. The staged rollout approach and development lanes A/B/C are approved; **paid staging resources are not independently authorized** by that approval. This update is documentation, not completed implementation or permission to deploy.
+
 Each has a ⭐ default the build may use until Babin answers (CLAUDE.md B-5). Full text and history
 stay in [`docs/OPEN_DECISIONS.md`](docs/OPEN_DECISIONS.md).
 
