@@ -1,5 +1,40 @@
 # Progress Log
 
+## 2026-11-02 — 51 jsx-a11y errors fixed for real, PR #70 merged, and the last red gate (`lint:shell`) fixed on a branch and green on the runner
+
+**Did**
+- **51 `jsx-a11y` ESLint errors → 0, no rule disabled** (`eslint.config.js` untouched; no `eslint-disable`/`@ts-*` added). Commits `e8b0d99c`, `a2c6873c`. Real behaviour, not suppression: `EvidenceThumbnail` and `CreationDrawer` had no Escape handling at all (both close on Escape now; the drawer stands down while its discard prompt is open; the evidence viewer is a real dialog that takes and returns focus); menus and the date grid are focusable; option rows (`CommandPalette`, `Select`, `AddItemPanel` items/crew/transport) select on Enter/Space and ignore keys from nested controls; the booking conflict row is a disclosure with `aria-expanded`; nine empty column headers got `sr-only` names; packing bar, chart bars and pagination links got names/content; `ScannerFab`'s silent video-only viewfinder is `muted` + named (no fake captions track). Pointer-only scrims/containment wrappers are `aria-hidden`/`role="presentation"` only where Escape or a real button covers the keyboard. `ClientCombobox`'s outer wrapper was a second `role="listbox"` around the real one (invalid ARIA; 2 placement tests were red on `main` since `db45dae8`) — now `role="presentation"`.
+- **PR #70 (CI on the self-hosted Windows runner + the a11y fixes) was merged into `main` at 21:47 NPT as `a4372434`** by the `babindulal7` account, one minute after the last push and before any CI run finished; not by this session. `main`'s `ci.yml` now targets `[self-hosted, Windows, X64]`.
+- **`lint:shell` was already red on `main` before PR #70** (passes at `e111ca56`, fails at `d3f57569`): `Header.tsx:1133` and `ScreenLock.tsx:288` called `window.confirm(...)` (from the T1-15 switch-user commit `9e5bc9b9`). Fixed on branch `fix/shell-native-confirm` (`4d094b7b`, **not merged**): `Header` uses the shared `ConfirmDialog`; `ScreenLock` confirms inline (`role="alertdialog"`) because the lock screen sits at `--z-system`, above the modal layer, and a dialog would render behind it. Still two taps. The `rosterLock` test now asserts the first tap forgets nothing, Cancel backs out, and only the explicit confirm calls `forgetThisDevice` once.
+
+**Ruled**
+- Nothing new. No product, permission, money or migration decision was made.
+
+**Verified**
+- **Green on the runner:** run `41487111932`, branch `fix/shell-native-confirm`, commit `4d094b7b` (= `main` `a4372434` + the confirm fix) — runner log `Job result after all job steps finish: Succeeded`, all 22 steps ran for real durations, no non-zero exit, ~33 min, including Typecheck, Lint (0 a11y), local API guards, full mock tests, PGlite, financial integrity, security, lifecycle, server contracts, partial return, `lint:shell`, `lint:ui-copy`, contrast, Build and Coverage plus both artifact uploads. Source is the runner's own log (`DESKTOP-99FC3AO`); GitHub's run page was not seen (`gh` not logged in, repo private).
+- **Red on the runner before that:** PR #70's push run `41477511143` (`981e2581`), its pull_request run `41477520737` (`refs/pull/70/merge`) and the push to `main` `41477590534` (`a4372434`) all failed at `lint:shell` (~2.5 s) and skipped every later step, so Build and Coverage had never run on the merged tree.
+- Local: `tsc` 0; `eslint` 0; `lint:shell` 864 files pass; `lint:ui-copy`, `check:contrast`, `build` pass; booking tests 142 pass; auth + shell tests 184 pass; full mock suite 6,527 pass with 3 failures (2 `ClientCombobox.placement` — red on pure `main`, since fixed; 1 `RecordForm` focus test that did not reproduce in 42 further local runs and passed in all 3 CI runs).
+- **Not verified:** the changed components have not been driven in a browser. The `RecordForm` focus test failed 3 times under full-suite CPU load on this branch and 0 of 42 times when run alone; its cause is unproven.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 86 / 86 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 67 / 67 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 206 files · check:pglite not run this session (pass --migrations to run). Suite: NOT VERIFIED — invalid test receipt. Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed. Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **Babin:** review and merge `fix/shell-native-confirm`. Until then `main` (`a4372434`) is red at `lint:shell`; with it, the runner run above is the proof that the whole gate list passes.
+- **Babin:** drive the changed components with a keyboard in `npm run dev` (Escape on the evidence viewer and the creation drawer; the conflict-row disclosure; the lock screen "Forget this device" confirmation) — none has been seen on screen.
+- Watch the `RecordForm` "clickable summary" focus test; if it fails again in CI, treat it as a regression from the a11y changes, not noise.
+- Stale docs on `main`: `CLAUDE.md` / `PLAN.md` / `AGENTS.md` still say CI is off, and `RULINGS-2026-11-02-ci.md` (C1–C5) only exists on branch `claude/equipment-draft-preview-rename-a5f063`. Register the runner as a Windows service so CI does not depend on an open window. Delete the throwaway branches `ci/verify-fix-e111ca56` (keep `backup/pr70-f0b72db1` until the owner is done with PR #70).
+
 ## 2026-11-02 — main's red gates fixed (typecheck, UI copy, server-contracts) and verified on the self-hosted Windows runner
 
 **Did**
